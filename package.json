@@ -1,0 +1,55 @@
+{
+  "name": "tablecast-poc",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "livekit"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev:prepare": "bun --no-env-file scripts/tablecast-dev.ts prepare",
+    "dev": "bun --no-env-file scripts/tablecast-dev.ts start",
+    "dev:parity": "bun --no-env-file scripts/tablecast-dev.ts parity",
+    "dev:status": "bun --no-env-file scripts/tablecast-dev.ts status",
+    "dev:stop": "bun --no-env-file scripts/tablecast-dev.ts stop",
+    "db:seed": "bun --no-env-file scripts/tablecast-seed.ts",
+    "demo:reset": "bun --no-env-file scripts/tablecast-dev.ts reset",
+    "demo:play": "bun --no-env-file scripts/tablecast-demo.ts",
+    "storybook": "bun --no-env-file scripts/tablecast-dev.ts storybook",
+    "build": "turbo run build",
+    "typecheck": "tsc --noEmit && turbo run typecheck",
+    "lint": "oxlint --type-aware --deny-warnings && turbo run lint",
+    "format": "oxfmt --write . && turbo run format",
+    "format:check": "oxfmt --check . && turbo run format:check",
+    "test": "vitest run --config vitest.config.ts && turbo run test",
+    "test:browser": "turbo run test:browser",
+    "test:e2e": "bun run --cwd apps/web test:e2e",
+    "test:voice:live": "bun run --cwd livekit test:voice:live",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
+    "hooks:install": "lefthook install"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260903.1",
+    "@playwright/test": "1.63.0",
+    "@types/bun": "1.4.1",
+    "@types/node": "24.13.3",
+    "jsonc-parser": "3.3.1",
+    "lefthook": "2.1.12",
+    "livekit-server-sdk": "2.18.0",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "portless": "0.15.6",
+    "turbo": "2.10.12",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.129.0",
+    "zod": "4.5.4"
+  },
+  "engines": {
+    "bun": ">=1.3.13",
+    "node": ">=24.7.0"
+  },
+  "packageManager": "bun@1.3.13"
+}

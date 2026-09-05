@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "tablecast-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "vars": {
+    "TABLECAST_PUBLIC_ORIGIN": "http://localhost:3000",
+    "TABLECAST_ENV": "development",
+    "TABLECAST_RELEASE_SHA": "local",
+    "TABLECAST_VOICE_ENABLED": "false",
+  },
+  "d1_databases": [
+    {
+      "binding": "TABLECAST_DB",
+      "database_name": "tablecast-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "durable_objects": { "bindings": [{ "name": "TABLECAST_EVENTS", "class_name": "StoreEvents" }] },
+  "migrations": [{ "tag": "tablecast-v1", "new_sqlite_classes": ["StoreEvents"] }],
+  "r2_buckets": [{ "binding": "TABLECAST_MEDIA", "bucket_name": "tablecast-media" }],
+  "images": { "binding": "TABLECAST_IMAGES" },
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+}

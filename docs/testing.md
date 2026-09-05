@@ -11,15 +11,15 @@
 
 ## 実行層
 
-| 層 | 対象・runtime | 主な検出対象 |
-|---|---|---|
-| 静的 | Oxlint・型・Oxfmt・ty・ruff | 型、禁止import、asyncの取り扱い、設定 |
-| 純粋ロジック | Vitest / pytest | 価格、数量、プラン、snapshot、読上げ表記 |
-| API統合 | Cloudflare公式Vitest連携、実local D1/DO | 認証、SQL制約、原子性、失効、MCP、stream |
-| UI統合 | Storybook Vitest addon、Browser Mode | 状態、操作、日英、focus、a11y |
-| 音声接続 | pytest + official pluginのfixture/ローカル接続 | 話者変換、Mastra stream、取消、タグ整形 |
-| 決定的E2E | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie |
-| 有料・実機 | 実LLM/STT/TTS、iPad | 読み、演技、騒音、エコー、barge-in、実遅延 |
+| 層           | 対象・runtime                                  | 主な検出対象                               |
+| ------------ | ---------------------------------------------- | ------------------------------------------ |
+| 静的         | Oxlint・型・Oxfmt・ty・ruff                    | 型、禁止import、asyncの取り扱い、設定      |
+| 純粋ロジック | Vitest / pytest                                | 価格、数量、プラン、snapshot、読上げ表記   |
+| API統合      | Cloudflare公式Vitest連携、実local D1/DO        | 認証、SQL制約、原子性、失効、MCP、stream   |
+| UI統合       | Storybook Vitest addon、Browser Mode           | 状態、操作、日英、focus、a11y              |
+| 音声接続     | pytest + official pluginのfixture/ローカル接続 | 話者変換、Mastra stream、取消、タグ整形    |
+| 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え    | 音声・GUI・管理の配線、再読込、Cookie      |
+| 有料・実機   | 実LLM/STT/TTS、iPad                            | 読み、演技、騒音、エコー、barge-in、実遅延 |
 
 Cloudflareのテストは採用Wranglerと対応した公式runnerで行う。通常のSQLiteだけを使ってD1の挙動を検証済みにしない。[S12](sources.md#s12)
 Playwrightは実行ツールであって、全ケースをE2Eに分類する理由ではない。
@@ -44,7 +44,7 @@ Pythonは上流pluginのレスポンス変換と自作の接続部分を重点�
 命名は条件・操作・観測結果を表し、内部メソッドを呼んだというだけのテストを増やさない。
 
 ```ts
-it('確認後にカートが変わった場合は古い承認で注文を送信できない', async () => {
+it("確認後にカートが変わった場合は古い承認で注文を送信できない", async () => {
   // 確認済みのカートに別の商品を追加する。
   // 古い確認IDの要求が失敗し、注文が一件も増えないことを確認する。
 });

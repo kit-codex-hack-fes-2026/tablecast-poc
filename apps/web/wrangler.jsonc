@@ -1,0 +1,9 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "tablecast-web",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-09-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [{ "binding": "TABLECAST_API", "service": "tablecast-api" }],
+  "observability": { "enabled": true },
+}

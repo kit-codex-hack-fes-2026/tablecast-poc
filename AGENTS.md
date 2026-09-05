@@ -58,11 +58,11 @@ https://github.com/ReoHakase/enterprise-agentic-saas-starter
 
 ## タスク別入口
 
-| 変更 | 読むもの |
-|---|---|
-| UI・言語・音声停止 | [UI仕様](docs/ui.md) |
-| API・DB・認証 | [製品仕様](docs/product.md)、[構成](docs/architecture.md) |
+| 変更                   | 読むもの                                                            |
+| ---------------------- | ------------------------------------------------------------------- |
+| UI・言語・音声停止     | [UI仕様](docs/ui.md)                                                |
+| API・DB・認証          | [製品仕様](docs/product.md)、[構成](docs/architecture.md)           |
 | 音声・Mastra接続・演技 | [接続](docs/voice/integration.md)、[発話仕様](docs/voice/speech.md) |
-| fork・上流PR | [パッチ方針](docs/voice/upstream-patch.md) |
-| ローカル・worktree | [開発環境](docs/development.md) |
-| 品質設定・テスト | [静的解析](docs/static-analysis.md)、[テスト戦略](docs/testing.md) |
+| fork・上流PR           | [パッチ方針](docs/voice/upstream-patch.md)                          |
+| ローカル・worktree     | [開発環境](docs/development.md)                                     |
+| 品質設定・テスト       | [静的解析](docs/static-analysis.md)、[テスト戦略](docs/testing.md)  |

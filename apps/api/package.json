@@ -1,0 +1,38 @@
+{
+  "name": "@tablecast/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./src/schema.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cf:typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false --include-runtime=false --env-interface TablecastEnv src/cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "4.0.60",
+    "@better-auth/drizzle-adapter": "1.7.2",
+    "@better-auth/oauth-provider": "1.7.2",
+    "@hono/mcp": "0.3.2",
+    "@hono/zod-validator": "0.9.1",
+    "@mastra/core": "1.64.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "better-auth": "1.7.2",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.13.7",
+    "livekit-server-sdk": "2.18.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.1.4",
+    "@cloudflare/workers-types": "5.20260903.1",
+    "drizzle-kit": "0.31.10",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.129.0"
+  }
+}

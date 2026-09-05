@@ -1,0 +1,62 @@
+export type StoreRecord = {
+  id: string;
+  organization_id: string;
+  name: string;
+  config_version: number;
+  config_json: string;
+  updated_at: number;
+};
+export type TableRecord = {
+  id: string;
+  store_id: string;
+  table_id: string;
+  locale: "ja" | "en";
+  status: "open" | "closed";
+  guest_count: number;
+  cart_version: number;
+  cart_json: string;
+  mutation_id: string | null;
+  voice_state: "active" | "stopped" | "error";
+  voice_session_id: string | null;
+  voice_version: number;
+  active_turn_id: string | null;
+  staff_called: number;
+  plan_json: string | null;
+  opened_at: number;
+  closed_at: number | null;
+};
+export type ConfirmationRecord = {
+  id: string;
+  store_id: string;
+  table_session_id: string;
+  cart_version: number;
+  config_version: number;
+  channel: "gui" | "voice";
+  voice_session_id: string | null;
+  created_turn_id: string | null;
+  read_at: number | null;
+  status: "pending" | "read" | "invalid" | "submitted";
+  snapshot_json: string;
+  expires_at: number;
+  created_at: number;
+};
+export type OrderRecord = {
+  id: string;
+  store_id: string;
+  table_session_id: string;
+  snapshot_id: string;
+  idempotency_key: string;
+  status: "submitted" | "accepted" | "served" | "cancelled" | "rejected";
+  snapshot_json: string;
+  total: number;
+  created_at: number;
+  updated_at: number;
+};
+export type EventRecord = {
+  cursor: number;
+  store_id: string;
+  table_session_id: string | null;
+  kind: string;
+  data_json: string;
+  created_at: number;
+};

@@ -1,0 +1,364 @@
+From 2f36303643f00c9c521d9dc27a785a6f273bbfb1 Mon Sep 17 00:00:00 2001
+From: Reo Hakuta <reonaldhkt@gmail.com>
+Date: Sun, 6 Sep 2026 07:02:00 +0900
+Subject: [PATCH] =?UTF-8?q?feat(inworld):=20=E2=9C=A8=20add=20opt-in=20spe?=
+ =?UTF-8?q?aker=20and=20word=20timing=20metadata?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Preserve Inworld word timestamps and stream-scoped speaker labels through the official LiveKit speech events. Keep the default request and transcript behaviour unchanged and avoid assigning mixed or missing labels to one speaker.
+
+Cover zero-valued speakers, absent or invalid timestamps, reconnection scope, Japanese and English text, partial results, and empty final events with provider-free fixtures.
+---
+ .../livekit-plugins-inworld/README.md         |  11 ++
+ .../livekit/plugins/inworld/stt.py            | 103 ++++++++++++++-
+ .../tests/test_diarization.py                 | 122 ++++++++++++++++++
+ 3 files changed, 232 insertions(+), 4 deletions(-)
+ create mode 100644 livekit-plugins/livekit-plugins-inworld/tests/test_diarization.py
+
+diff --git a/livekit-plugins/livekit-plugins-inworld/README.md b/livekit-plugins/livekit-plugins-inworld/README.md
+index 45f2e45..c5efac5 100644
+--- a/livekit-plugins/livekit-plugins-inworld/README.md
++++ b/livekit-plugins/livekit-plugins-inworld/README.md
+@@ -204,3 +204,14 @@ session = AgentSession(
+    # ... llm, etc.
+ )
+ ```
++
++## 実験的な話者ラベルと単語時刻
++
++`STT(enable_speaker_diarization=True)` はInworldの実験的な話者ラベルと単語時刻を要求する。
++時刻だけを必要とする場合は `STT(include_word_timestamps=True)` を使う。どちらも既定では無効。
++`SpeechData.words` の `TimedString` に単語、秒単位の時刻、話者を保持する。
++話者番号にはWebSocket接続の識別子を含め、再接続後に同じ人物と判断しない。
++欠損した話者・時刻を直前の値で埋めない。暫定結果の話者番号は確定値として扱わない。
++複数話者や未帰属語が混ざった発話の `SpeechData.speaker_id` は `None` とし、単語ごとのラベルを参照する。
++この場合、MultiSpeakerAdapterは発話全体を一人のRMSへ帰属させない。
++属性を有効にしても、重複音声の完全分離、本人識別、話者帰属の正しさは保証しない。
+diff --git a/livekit-plugins/livekit-plugins-inworld/livekit/plugins/inworld/stt.py b/livekit-plugins/livekit-plugins-inworld/livekit/plugins/inworld/stt.py
+index d3608c7..249c7b2 100644
+--- a/livekit-plugins/livekit-plugins-inworld/livekit/plugins/inworld/stt.py
++++ b/livekit-plugins/livekit-plugins-inworld/livekit/plugins/inworld/stt.py
+@@ -17,6 +17,7 @@ from __future__ import annotations
+ import asyncio
+ import base64
+ import json
++import math
+ import os
+ import weakref
+ from dataclasses import dataclass
+@@ -39,6 +40,7 @@ from livekit.agents.types import (
+     NOT_GIVEN,
+     APIConnectOptions,
+     NotGivenOr,
++    TimedString,
+ )
+ 
+ from ._utils import PeriodicCollector
+@@ -64,6 +66,8 @@ class _STTOptions:
+     sample_rate: int
+     num_channels: int
+     enable_voice_profile: bool
++    enable_speaker_diarization: bool
++    include_word_timestamps: bool
+     voice_profile_top_n: int
+     vad_threshold: NotGivenOr[float]
+     min_end_of_turn_silence_when_confident: int
+@@ -80,6 +84,8 @@ class STT(stt.STT):
+         sample_rate: NotGivenOr[int] = NOT_GIVEN,
+         num_channels: NotGivenOr[int] = NOT_GIVEN,
+         enable_voice_profile: bool = True,
++        enable_speaker_diarization: bool = False,
++        include_word_timestamps: bool = False,
+         voice_profile_top_n: int = 1,
+         vad_threshold: NotGivenOr[float] = NOT_GIVEN,
+         min_end_of_turn_silence_when_confident: int = 200,
+@@ -98,6 +104,9 @@ class STT(stt.STT):
+             language: Language code. Defaults to "en-US".
+             sample_rate: Audio sample rate in Hz. Defaults to 16000.
+             num_channels: Number of audio channels. Defaults to 1.
++            enable_speaker_diarization: 話者ラベルを要求する。単語時刻も有効になる。
++                既定は無効。ラベルの有効範囲は一つのWebSocket接続内に限る。
++            include_word_timestamps: 単語時刻を公開SpeechData.wordsへ渡す。既定は無効。
+             enable_voice_profile: Enable voice profiling (age, gender, emotion, accent).
+                 Defaults to True.
+             voice_profile_top_n: Number of top voice profile results per category.
+@@ -111,7 +120,13 @@ class STT(stt.STT):
+         """
+         super().__init__(
+             capabilities=stt.STTCapabilities(
+-                streaming=True, interim_results=True, offline_recognize=False
++                streaming=True,
++                interim_results=True,
++                offline_recognize=False,
++                diarization=enable_speaker_diarization,
++                aligned_transcript="word"
++                if include_word_timestamps or enable_speaker_diarization
++                else False,
+             ),
+         )
+ 
+@@ -130,6 +145,8 @@ class STT(stt.STT):
+             sample_rate=sample_rate if utils.is_given(sample_rate) else DEFAULT_SAMPLE_RATE,
+             num_channels=num_channels if utils.is_given(num_channels) else DEFAULT_NUM_CHANNELS,
+             enable_voice_profile=enable_voice_profile,
++            enable_speaker_diarization=enable_speaker_diarization,
++            include_word_timestamps=include_word_timestamps or enable_speaker_diarization,
+             voice_profile_top_n=voice_profile_top_n,
+             vad_threshold=vad_threshold,
+             min_end_of_turn_silence_when_confident=min_end_of_turn_silence_when_confident,
+@@ -230,6 +247,8 @@ class SpeechStream(stt.SpeechStream):
+         self._reconnect_event = asyncio.Event()
+         self._speaking = False
+         self._request_id = ""
++        self._sent_duration = 0.0
++        self._stream_offset = 0.0
+         self._audio_duration_collector: PeriodicCollector[float] = PeriodicCollector(
+             callback=self._on_audio_duration_report,
+             duration=5.0,
+@@ -250,6 +269,11 @@ class SpeechStream(stt.SpeechStream):
+             "language": self._language,
+         }
+ 
++        if opts.include_word_timestamps:
++            config["includeWordTimestamps"] = True
++        if opts.enable_speaker_diarization:
++            config["enableSpeakerDiarization"] = True
++
+         if opts.enable_voice_profile:
+             config["voiceProfileConfig"] = {
+                 "enableVoiceProfile": True,
+@@ -280,6 +304,7 @@ class SpeechStream(stt.SpeechStream):
+         )
+ 
+         self._request_id = utils.shortuuid()
++        self._stream_offset = self._sent_duration
+         await ws.send_str(json.dumps({"transcribeConfig": self._build_transcribe_config()}))
+         logger.debug("Inworld STT WebSocket connection established")
+         return ws
+@@ -353,6 +378,7 @@ class SpeechStream(stt.SpeechStream):
+                 audio_b64 = base64.b64encode(pcm_bytes).decode()
+                 try:
+                     await self._ws.send_str(json.dumps({"audioChunk": {"content": audio_b64}}))
++                    self._sent_duration += data.duration
+                 except Exception as e:
+                     logger.error(f"Error sending audio chunk: {e}")
+                     break
+@@ -446,9 +472,13 @@ class SpeechStream(stt.SpeechStream):
+                     type=event_type,
+                     request_id=self._request_id,
+                     alternatives=[
+-                        stt.SpeechData(
+-                            text=text,
+-                            language=LanguageCode(self._language),
++                        transcription_to_speech_data(
++                            t,
++                            language=self._language,
++                            request_id=self._request_id,
++                            start_time_offset=self._stream_offset,
++                            include_word_timestamps=self._stt._opts.include_word_timestamps,
++                            enable_speaker_diarization=self._stt._opts.enable_speaker_diarization,
+                             metadata=metadata,
+                         )
+                     ],
+@@ -463,3 +493,68 @@ class SpeechStream(stt.SpeechStream):
+                     request_id=self._request_id,
+                 )
+             )
++
++
++def transcription_to_speech_data(
++    transcription: dict,
++    *,
++    language: str,
++    request_id: str,
++    start_time_offset: float,
++    include_word_timestamps: bool,
++    enable_speaker_diarization: bool,
++    metadata: dict | None = None,
++) -> stt.SpeechData:
++    """単語を原文のまま保持し、欠損した話者や時刻を補完しない。"""
++    words: list[TimedString] = []
++    for word in transcription.get("wordTimestamps", []) if include_word_timestamps else []:
++        start, end = word.get("startTimeMs"), word.get("endTimeMs")
++        valid_time = (
++            isinstance(start, (int, float))
++            and not isinstance(start, bool)
++            and isinstance(end, (int, float))
++            and not isinstance(end, bool)
++            and math.isfinite(start)
++            and math.isfinite(end)
++            and 0 <= start <= end
++        )
++        speaker = word.get("speaker")
++        speaker_id = (
++            f"{request_id}:{speaker}"
++            if enable_speaker_diarization
++            and transcription.get("isFinal")
++            and isinstance(speaker, int)
++            and not isinstance(speaker, bool)
++            and speaker >= 0
++            else None
++        )
++        confidence = word.get("confidence")
++        words.append(
++            TimedString(
++                text=word.get("word", ""),
++                start_time=start / 1000 + start_time_offset if valid_time else NOT_GIVEN,
++                end_time=end / 1000 + start_time_offset if valid_time else NOT_GIVEN,
++                start_time_offset=start_time_offset if valid_time else NOT_GIVEN,
++                confidence=confidence
++                if isinstance(confidence, (int, float))
++                and not isinstance(confidence, bool)
++                and math.isfinite(confidence)
++                and 0 <= confidence <= 1
++                else NOT_GIVEN,
++                speaker_id=speaker_id,
++            )
++        )
++    # 複数話者や未帰属語が混ざった発話を一人に帰属させない。
++    speakers = {word.speaker_id for word in words}
++    speaker_id = next(iter(speakers)) if len(speakers) == 1 else None
++    start_times = [word.start_time for word in words if utils.is_given(word.start_time)]
++    end_times = [word.end_time for word in words if utils.is_given(word.end_time)]
++    return stt.SpeechData(
++        text=transcription.get("transcript", ""),
++        language=LanguageCode(language),
++        start_time=start_times[0] if start_times else 0.0,
++        end_time=end_times[-1] if end_times else 0.0,
++        speaker_id=speaker_id,
++        words=words or None,
++        metadata=metadata,
++    )
+diff --git a/livekit-plugins/livekit-plugins-inworld/tests/test_diarization.py b/livekit-plugins/livekit-plugins-inworld/tests/test_diarization.py
+new file mode 100644
+index 0000000..d34881b
+--- /dev/null
++++ b/livekit-plugins/livekit-plugins-inworld/tests/test_diarization.py
+@@ -0,0 +1,122 @@
++"""実プロバイダーに接続せず、変換と既定互換性を検証する。"""
++
++import pytest
++
++from livekit.agents import stt
++from livekit.agents.types import NOT_GIVEN
++from livekit.plugins.inworld.stt import STT, transcription_to_speech_data
++
++
++def convert(words, *, final=True, request_id="stream-1", offset=0, enabled=True, text="はい二杯"):
++    return transcription_to_speech_data(
++        {"transcript": text, "isFinal": final, "wordTimestamps": words},
++        language="ja-JP",
++        request_id=request_id,
++        start_time_offset=offset,
++        include_word_timestamps=enabled,
++        enable_speaker_diarization=enabled,
++    )
++
++
++def test_話者ゼロと日本語単語とミリ秒を保持する():
++    value = convert(
++        [
++            {"word": "はい", "startTimeMs": 0, "endTimeMs": 100, "speaker": 0},
++            {"word": "二杯", "startTimeMs": 120, "endTimeMs": 250, "speaker": 0},
++        ],
++        offset=3,
++    )
++    assert value.text == "はい二杯"
++    assert value.speaker_id == "stream-1:0"
++    assert value.words[0] == "はい"
++    assert value.words[0].start_time == 3.0
++    assert value.words[1].end_time == 3.25
++    assert value.start_time == 3.0
++
++
++def test_複数話者と未帰属語を一人へまとめない():
++    value = convert([{"word": "はい", "speaker": 0}, {"word": "二", "speaker": 1}, {"word": "杯"}])
++    assert value.speaker_id is None
++    assert [word.speaker_id for word in value.words] == ["stream-1:0", "stream-1:1", None]
++
++
++@pytest.mark.parametrize(
++    "start,end",
++    [(None, 1), (-1, 1), (2, 1), (float("nan"), 2), (True, 2)],
++    ids=["欠損", "負値", "逆転", "非数", "真偽"],
++)
++def test_不正時刻をゼロ秒へ偽装しない(start, end):
++    value = convert([{"word": "はい", "startTimeMs": start, "endTimeMs": end}])
++    assert value.words[0].start_time is NOT_GIVEN
++    assert value.words[0].end_time is NOT_GIVEN
++
++
++def test_再接続すると同じ番号でも別の話者スコープになる():
++    word = [{"word": "はい", "speaker": 0}]
++    assert convert(word).speaker_id != convert(word, request_id="stream-2").speaker_id
++
++
++def test_暫定発話を確定した話者として扱わない():
++    value = convert([{"word": "はい", "speaker": 0}], final=False)
++    assert value.speaker_id is None
++    assert value.words[0].speaker_id is None
++
++
++def test_無効時は既定の単一候補と原文を保持する():
++    value = convert([{"word": "はい", "speaker": 0}], enabled=False)
++    assert value == stt.SpeechData(language="ja-JP", text="はい二杯")
++
++
++async def test_既定設定は話者を要求せず明示設定だけが両方要求する():
++    normal = STT(api_key="tablecast-test", enable_voice_profile=False)
++    enabled = STT(
++        api_key="tablecast-test", enable_voice_profile=False, enable_speaker_diarization=True
++    )
++    a, b = normal.stream(), enabled.stream()
++    try:
++        assert "enableSpeakerDiarization" not in a._build_transcribe_config()
++        assert "includeWordTimestamps" not in a._build_transcribe_config()
++        assert b._build_transcribe_config()["enableSpeakerDiarization"] is True
++        assert b._build_transcribe_config()["includeWordTimestamps"] is True
++        assert enabled.capabilities.diarization is True
++    finally:
++        await a.aclose()
++        await b.aclose()
++        await normal.aclose()
++        await enabled.aclose()
++
++
++async def test_暫定再送と空finalで発話境界を増やさない():
++    engine = STT(
++        api_key="tablecast-test", enable_voice_profile=False, enable_speaker_diarization=True
++    )
++    stream = engine.stream()
++    try:
++        stream._process_stream_event({"result": {"speechStarted": {}}})
++        stream._process_stream_event(
++            {"result": {"transcription": {"transcript": "はい", "isFinal": False}}}
++        )
++        stream._process_stream_event(
++            {"result": {"transcription": {"transcript": "はい", "isFinal": False}}}
++        )
++        stream._process_stream_event(
++            {"result": {"transcription": {"transcript": "", "isFinal": True}}}
++        )
++        events = [stream._event_ch.recv_nowait() for _ in range(4)]
++        assert [event.type for event in events] == [
++            stt.SpeechEventType.START_OF_SPEECH,
++            stt.SpeechEventType.INTERIM_TRANSCRIPT,
++            stt.SpeechEventType.INTERIM_TRANSCRIPT,
++            stt.SpeechEventType.END_OF_SPEECH,
++        ]
++    finally:
++        await stream.aclose()
++        await engine.aclose()
++
++
++def test_英語原文と単語の綴りを再構成せず保持する():
++    value = convert(
++        [{"word": "Two", "speaker": 0}, {"word": "teas.", "speaker": 0}], text="Two teas."
++    )
++    assert value.text == "Two teas."
++    assert [str(word) for word in value.words] == ["Two", "teas."]
+-- 
+2.54.0
+

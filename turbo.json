@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts"],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".output/**"] },
+    "@tablecast/web#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/api/src/**",
+        "$TURBO_ROOT$/apps/api/wrangler.jsonc"
+      ],
+      "outputs": ["dist/**"]
+    },
+    "dev": { "cache": false, "persistent": true },
+    "typecheck": { "dependsOn": ["^typecheck"] },
+    "lint": {},
+    "format": { "cache": false },
+    "format:check": {},
+    "test": { "dependsOn": ["^typecheck"] },
+    "test:browser": { "cache": false },
+    "test:e2e": { "cache": false }
+  }
+}

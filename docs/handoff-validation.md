@@ -6,16 +6,16 @@
 
 ## 実施済み
 
-| 検査 | 結果 |
-|---|---|
-| 納品範囲 | 23ファイル。AGENTS.md、docs、4つのskill、ignore設定のみ |
-| Markdown | 21件のUTF-8、改行、コードフェンスを検査 |
-| 相対リンク | 94件の参照先と指定anchorの存在を検査 |
-| skill | 4件のYAML frontmatter、名前、description、配置を検査 |
-| .gitignore | Git check-ignoreで43ケースを検査 |
-| .worktreeinclude | 開発モデル資格用の1ファイルだけを列挙していることを検査 |
-| ZIP | 余分な親フォルダーなし、隠しファイル含有、CRC、全ファイルの内容一致を検査 |
-| 不要物 | アプリコード、秘密情報の実値、DB、生成物、実行環境パスを含めない |
+| 検査             | 結果                                                                      |
+| ---------------- | ------------------------------------------------------------------------- |
+| 納品範囲         | 23ファイル。AGENTS.md、docs、4つのskill、ignore設定のみ                   |
+| Markdown         | 21件のUTF-8、改行、コードフェンスを検査                                   |
+| 相対リンク       | 94件の参照先と指定anchorの存在を検査                                      |
+| skill            | 4件のYAML frontmatter、名前、description、配置を検査                      |
+| .gitignore       | Git check-ignoreで43ケースを検査                                          |
+| .worktreeinclude | 開発モデル資格用の1ファイルだけを列挙していることを検査                   |
+| ZIP              | 余分な親フォルダーなし、隠しファイル含有、CRC、全ファイルの内容一致を検査 |
+| 不要物           | アプリコード、秘密情報の実値、DB、生成物、実行環境パスを含めない          |
 
 ignore検査では秘密情報・state・仮想環境を除外し、bun.lock、uv.lock、migration、fixture、patch、snapshot、skillsを除外しないことを確認した。
 外部参照URLは出典として記録している。梱包検査は外部URLの永続的な到達性や将来のAPI互換性を保証しない。

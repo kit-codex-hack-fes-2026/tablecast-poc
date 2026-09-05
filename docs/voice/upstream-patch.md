@@ -15,13 +15,13 @@ Inworld STT APIには実験的な話者ダイアライゼーションと単語�
 
 ## 許容する差分
 
-| 項目 | 内容 |
-|---|---|
-| 公開option | diarizationと単語時刻をopt-inで要求する |
-| request | `enableSpeakerDiarization`、`includeWordTimestamps` を既存設定へ追加 |
-| result | 既存の公式STTイベントへspeakerと時刻を変換 |
-| capabilities | 実際に提供できる能力だけを宣言 |
-| test/docs | off互換性、欠損、複数話者、日英、再接続、制約 |
+| 項目         | 内容                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| 公開option   | diarizationと単語時刻をopt-inで要求する                              |
+| request      | `enableSpeakerDiarization`、`includeWordTimestamps` を既存設定へ追加 |
+| result       | 既存の公式STTイベントへspeakerと時刻を変換                           |
+| capabilities | 実際に提供できる能力だけを宣言                                       |
+| test/docs    | off互換性、欠損、複数話者、日英、再接続、制約                        |
 
 TableCastの店舗、注文、キャスト設定をpluginへ混ぜない。名前は上流の既存慣例に合わせる。
 `speaker == 0` と欠損を区別し、未帰属の単語を前の話者へ勝手に割り当てない。再接続で話者IDの有効範囲を分ける。

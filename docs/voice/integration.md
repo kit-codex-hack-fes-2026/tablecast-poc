@@ -35,7 +35,7 @@ Inworldへ直接つなぐ公式pluginを使う。LiveKit Inference経由の課�
 `POST /internal/voice/turns` は音声Agent専用tokenで認証する。少数の必要な入力はturn ID、voice session ID、応答言語、会話文脈、参考の話者情報とする。
 店舗・卓の権限はtokenとDBで決め、本文のIDだけでは決めない。要求と応答のschemaはAPI側が所有する。
 HTTPのchunkを文・文字の境界とみなさず、httpxの既存デコーダーとLiveKitの文分割を使用する。独自SSE形式、LLM実行ループ、全APIの別SDKを作らない。
-HonoへのMastra統合は公式adapterを使う。[S08](../sources.md#s08)
+Honoで認可したコンテキストを公式 `RequestContext` に設定し、公式 `Agent.stream` へ直接渡す。固定版 `@mastra/hono` 1.7.6のcontext middlewareは、未使用の管理route経由でNode用 `createRequire(import.meta.url)` をbundleへ含め、ビルド済みworkerdの起動に失敗したため採用しない。独自adapterを追加せず、公開プリミティブで同じ認可と業務操作を維持する。[S08](../sources.md#s08)
 
 ## 会話文脈とキャンセル
 

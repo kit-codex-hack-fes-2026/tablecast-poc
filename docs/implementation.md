@@ -63,12 +63,12 @@ Workerのbuild・migration・secret・Service Bindingをデプロイし、Python
 
 ## worktreeでの担当分割
 
-| 担当 | 主な所有範囲 | 同時変更を避ける箇所 |
-|---|---|---|
-| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合 | lockfile、共通設定 |
-| Web | kiosk、admin、日英、Storybook | APIの内部実装 |
-| 業務API | 認証、catalog、cart/order/billing、MCP、DB、DO | root起動構成 |
-| 音声 | root livekit、Mastra接続、発話、upstream patch、実機試験 | APIの業務ロジック |
+| 担当       | 主な所有範囲                                             | 同時変更を避ける箇所 |
+| ---------- | -------------------------------------------------------- | -------------------- |
+| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合      | lockfile、共通設定   |
+| Web        | kiosk、admin、日英、Storybook                            | APIの内部実装        |
+| 業務API    | 認証、catalog、cart/order/billing、MCP、DB、DO           | root起動構成         |
+| 音声       | root livekit、Mastra接続、発話、upstream patch、実機試験 | APIの業務ロジック    |
 
 契約の変更は所有API側で先に確定し、consumerのテストも同じ変更で更新する。
 担当を分けるためだけにpackageを増やさない。ディレクトリ所有と小さいPRで十分である。

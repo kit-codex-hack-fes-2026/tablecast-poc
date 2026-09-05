@@ -10,16 +10,16 @@
 
 ## 初期設定ファイル
 
-| ファイル | 意図 |
-|---|---|
-| root package.json / bun.lock | Bun workspaces、正確なpackageManager、再現可能な依存 |
-| turbo.json | build/test/checkの依存関係、devはpersistentかつcache無効 |
-| oxlint.config.ts | 小さな共通ルールとWeb/API/testのoverride |
-| oxfmt.config.ts | TS/JSON/Markdown等の統一した整形 |
-| lefthook.yml | 段階的な検証、部分stageの保全 |
-| apps/webのtsconfig / Vite / Storybook | クライアントとSSR、部品試験 |
-| apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration |
-| livekit/pyproject.toml / uv.lock | Python依存、ruff、ty、pytest |
+| ファイル                                         | 意図                                                     |
+| ------------------------------------------------ | -------------------------------------------------------- |
+| root package.json / bun.lock                     | Bun workspaces、正確なpackageManager、再現可能な依存     |
+| turbo.json                                       | build/test/checkの依存関係、devはpersistentかつcache無効 |
+| oxlint.config.ts                                 | 小さな共通ルールとWeb/API/testのoverride                 |
+| oxfmt.config.ts                                  | TS/JSON/Markdown等の統一した整形                         |
+| lefthook.yml                                     | 段階的な検証、部分stageの保全                            |
+| apps/webのtsconfig / Vite / Storybook            | クライアントとSSR、部品試験                              |
+| apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration                            |
+| livekit/pyproject.toml / uv.lock                 | Python依存、ruff、ty、pytest                             |
 
 このZIPは設定の意図を規定する。依存バージョン未確定の実行用設定を先に大量生成しない。
 固定された互換組合せで公式exampleを通してから設定をcommitする。config共有packageは初期不要。
@@ -28,18 +28,18 @@
 
 全ルールを一括有効化せず、correctness・suspiciousを基礎に必要なものを明示する。各rule名・option・対応状況は導入版のschemaで確認する。[S20](sources.md#s20)
 
-| 目的 | ルール候補・設定方針 |
-|---|---|
-| 非同期処理の脱落 | `typescript/no-floating-promises`、`typescript/no-misused-promises` を型付き解析で検査 |
+| 目的             | ルール候補・設定方針                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| 非同期処理の脱落 | `typescript/no-floating-promises`、`typescript/no-misused-promises` を型付き解析で検査    |
 | 不明な入力の扱い | `typescript/no-explicit-any`、危険なassignment/call/returnの検査。外部値はunknownから絞る |
-| 型の強制 | `typescript/no-non-null-assertion`、危険な型assertion。`as unknown as` で不整合を隠さない |
-| 型だけのimport | `typescript/consistent-type-imports`、type-only export |
-| 循環・自己参照 | `import/no-cycle`、`import/no-self-import`、重複import |
-| runtime境界 | `no-restricted-imports` でWebからAPI内部DB/auth/agentを禁止 |
-| 危険な実行 | eval、動的Function生成、予期しないthrow/catchや比較を検出 |
-| React | hooksの正しい呼出しと依存、key、使用するJSXアクセシビリティ規則 |
-| テスト | exclusive test、不正なexpect、未awaitの非同期テストを検出 |
-| 無効化の管理 | 不要なdisable directiveを報告し、広いファイル・フォルダーignoreを避ける |
+| 型の強制         | `typescript/no-non-null-assertion`、危険な型assertion。`as unknown as` で不整合を隠さない |
+| 型だけのimport   | `typescript/consistent-type-imports`、type-only export                                    |
+| 循環・自己参照   | `import/no-cycle`、`import/no-self-import`、重複import                                    |
+| runtime境界      | `no-restricted-imports` でWebからAPI内部DB/auth/agentを禁止                               |
+| 危険な実行       | eval、動的Function生成、予期しないthrow/catchや比較を検出                                 |
+| React            | hooksの正しい呼出しと依存、key、使用するJSXアクセシビリティ規則                           |
+| テスト           | exclusive test、不正なexpect、未awaitの非同期テストを検出                                 |
+| 無効化の管理     | 不要なdisable directiveを報告し、広いファイル・フォルダーignoreを避ける                   |
 
 採用版で未対応のルール名を置いて通ったことにしない。必要な安全性をTypeScript・testで補い、代替策と理由を記録する。
 `void promise` だけでエラー処理を省略しない。意図した非同期処理にはcatchと記録、Workersでは必要に応じてctx.waitUntilを使う。

@@ -14,12 +14,12 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 
 ## 通常開発と本番相当試験
 
-| モード | 起動方式 | 用途 |
-|---|---|---|
-| 通常 | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding |
-| 本番相当 | build済みWebとAPIをWranglerの複数configで起動 | Service Binding、build、stream、Cookieの接続確認 |
-| UI部品 | apps/web内のStorybook | 固定状態とブラウザー操作検証 |
-| 音声 | ローカルLiveKit ServerとPython Agent | AEC、ターン、Inworld、Mastra |
+| モード   | 起動方式                                                       | 用途                                             |
+| -------- | -------------------------------------------------------------- | ------------------------------------------------ |
+| 通常     | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding                               |
+| 本番相当 | build済みWebとAPIをWranglerの複数configで起動                  | Service Binding、build、stream、Cookieの接続確認 |
+| UI部品   | apps/web内のStorybook                                          | 固定状態とブラウザー操作検証                     |
+| 音声     | ローカルLiveKit ServerとPython Agent                           | AEC、ターン、Inworld、Mastra                     |
 
 Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、同じAPI WorkerをVite補助と独立Wranglerで二重起動しない。[S11](sources.md#s11)
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
@@ -30,17 +30,17 @@ D1 migration・seedのCLIにも同じローカル保存先と同じ生成config�
 正規化したworktree実パスとrepository識別子から短いhashを作る。branch名を正本にせず、detached HEADでも一意にする。
 独自リソース名には `tablecast` を含める。
 
-| 対象 | 例・分離内容 |
-|---|---|
-| Webのホスト | `tablecast-<id>.localhost` |
-| LiveKit signaling | `livekit-tablecast-<id>.localhost` |
-| Worker | `tablecast-<id>-web`、`tablecast-<id>-api` |
-| 公開環境値 | `TABLECAST_PUBLIC_ORIGIN` 等 |
-| 保存先 | `<worktree>/.local/state`、生成設定とログも `.local` |
-| Python | `<worktree>/livekit/.venv` |
-| JS依存 | worktree固有node_modules、Bunの不変cacheは共有可 |
-| 認証 | worktree固有secret、正確な公開origin |
-| LiveKit | 専用Server、ports、Room、dispatch名、開発鍵 |
+| 対象              | 例・分離内容                                         |
+| ----------------- | ---------------------------------------------------- |
+| Webのホスト       | `tablecast-<id>.localhost`                           |
+| LiveKit signaling | `livekit-tablecast-<id>.localhost`                   |
+| Worker            | `tablecast-<id>-web`、`tablecast-<id>-api`           |
+| 公開環境値        | `TABLECAST_PUBLIC_ORIGIN` 等                         |
+| 保存先            | `<worktree>/.local/state`、生成設定とログも `.local` |
+| Python            | `<worktree>/livekit/.venv`                           |
+| JS依存            | worktree固有node_modules、Bunの不変cacheは共有可     |
+| 認証              | worktree固有secret、正確な公開origin                 |
+| LiveKit           | 専用Server、ports、Room、dispatch名、開発鍵          |
 
 Cookieはポートでは分離されないため、単にlocalhostのポートだけを変える構成にしない。host-only Cookieとホスト分離を使う。[S18](sources.md#s18)
 `.localhost` の解決・HTTPS・ブラウザー対応は環境ごとに起動診断する。iPadには到達可能なLANホスト名と信頼された証明書が別途必要。
@@ -78,22 +78,22 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 
 ## 提供するscript契約
 
-以下は実装時に作るコマンドであり、本ZIPだけではまだ実行できない。
+以下のコマンドを実装済み。初回はDockerを起動して依存を導入する。外部音声設定が未登録でもGUI注文とローカルLiveKitは起動する。
 
-| コマンド | 役割 |
-|---|---|
-| `bun install` | 固定方針に従ってJS依存を導入 |
-| `uv sync --project livekit` | Python依存を導入 |
-| `bun run dev:prepare` | worktree ID・ports・config・local migration・初期seed |
-| `bun run dev` | Web/API、ローカルLiveKit、Python Agentを起動 |
-| `bun run dev:parity` | build済みWorkersのローカル疎通 |
-| `bun run dev:status` | URL・port・process・stateの対応を表示。秘密情報は除外 |
-| `bun run storybook` | Web内のStorybookだけを起動 |
-| `bun run db:seed -- --profile demo` | 自worktreeのlocal seed |
-| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行 |
-| `bun run dev:stop` | 自worktreeで開始したものだけ停止 |
+| コマンド                                   | 役割                                                  |
+| ------------------------------------------ | ----------------------------------------------------- |
+| `bun install`                              | 固定方針に従ってJS依存を導入                          |
+| `uv sync --project livekit`                | Python依存を導入                                      |
+| `bun run dev:prepare`                      | worktree ID・ports・config・local migration・初期seed |
+| `bun run dev`                              | Web/API、ローカルLiveKit、Python Agentを起動          |
+| `bun run dev:parity`                       | build済みWorkersのローカル疎通                        |
+| `bun run dev:status`                       | URL・port・process・stateの対応を表示。秘密情報は除外 |
+| `bun run storybook`                        | Web内のStorybookだけを起動                            |
+| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                |
+| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                              |
+| `bun run dev:stop`                         | 自worktreeで開始したものだけ停止                      |
 
-実装ファイル例は `scripts/tablecast-dev.ts` とし、標準CLIの接続に必要な小ささを保つ。
+実装は `scripts/tablecast-dev.ts` と `scripts/tablecast-runtime.ts`。起動時はWeb/APIとLiveKitの疎通を確認し、状態とログの場所を表示する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
 破壊的操作はlocal targetとworktree所有を検査し、remote/productionを拒否する。アプリが書込み中のDBファイルを無造作に削除しない。
 同じ番号のmigrationとlockfileを並列生成しないよう統合担当を決める。Git hooksは各checkoutの現行設定を使い、共通Git設定を勝手に変更しない。
 

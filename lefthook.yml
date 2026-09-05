@@ -1,0 +1,13 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,tsx,js,json,jsonc,md,yml,yaml,css}"
+      run: bunx --no-install oxfmt --check {staged_files}
+    lint:
+      glob: "*.{ts,tsx,js}"
+      run: bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
+pre-push:
+  commands:
+    check:
+      run: bun run check

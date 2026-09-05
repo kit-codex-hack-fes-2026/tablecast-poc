@@ -6,6 +6,7 @@
 公式APIやプランは更新されるため、実装時に採用版の公開仕様へ照合する。モデル名やライブラリの番号を推測で固定しない。
 
 <a id="reference-repositories"></a>
+
 ## ユーザー指定リポジトリ
 
 ### enterprise-agentic-saas-starter
@@ -19,16 +20,16 @@
 - [文書索引](https://github.com/ReoHakase/enterprise-agentic-saas-starter/blob/3aa43d3dee9b162a57b5017178633c7d02a952b5/docs/README.md)
 - [Lefthook設定](https://github.com/ReoHakase/enterprise-agentic-saas-starter/blob/3aa43d3dee9b162a57b5017178633c7d02a952b5/lefthook.yml)
 
-| 採用 | 縮小または不採用 |
-|---|---|
-| Bun/Turbo、lockfile、taskの費用別分離 | 巨大なdependency catalogのコピー |
-| Webのfeature、APIのmodule、純粋判断とI/Oの分離 | 全moduleにport/repository/serviceを一式作ること |
-| 公開exportsとimport境界 | 使い手のない共有package、contractsやdomainの独立workspace |
-| 統合テスト、代表的なE2E、実モデル試験の分離 | 多数のテスト層記号、同じシナリオの重複 |
-| app内Storybookとcolocated Story | 別Storybookアプリ |
-| 短い指示→必要docs→対象testの順 | 大量のskills、ADR、実行計画に同じ規範を重複 |
-| 必要なasync・型・依存制約 | 行数回避の分割、構文の好みだけの厳格ルール |
-| 既存のローカル起動ツール活用 | 独自topology packageや大きな監視環境の丸ごと移植 |
+| 採用                                           | 縮小または不採用                                          |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| Bun/Turbo、lockfile、taskの費用別分離          | 巨大なdependency catalogのコピー                          |
+| Webのfeature、APIのmodule、純粋判断とI/Oの分離 | 全moduleにport/repository/serviceを一式作ること           |
+| 公開exportsとimport境界                        | 使い手のない共有package、contractsやdomainの独立workspace |
+| 統合テスト、代表的なE2E、実モデル試験の分離    | 多数のテスト層記号、同じシナリオの重複                    |
+| app内Storybookとcolocated Story                | 別Storybookアプリ                                         |
+| 短い指示→必要docs→対象testの順                 | 大量のskills、ADR、実行計画に同じ規範を重複               |
+| 必要なasync・型・依存制約                      | 行数回避の分割、構文の好みだけの厳格ルール                |
+| 既存のローカル起動ツール活用                   | 独自topology packageや大きな監視環境の丸ごと移植          |
 
 参照リポジトリのNext.js・Elysia・libSQL・email等の構成はTableCastへ移植しない。
 本ZIPの仕様とskillsは本案件向けに新しく整理しており、スターターのコードや長い規約をそのまま同梱していない。
@@ -88,7 +89,9 @@ textStream、AbortSignal、実行オプション。実際の音声取消とDB書
 
 [Mastra Hono adapter](https://mastra.ai/reference/server/hono-adapter)
 
-Hono内へMastraを組み込み、認証コンテキストとAPIを同じ境界で扱う。
+[Mastra RequestContext](https://mastra.ai/docs/server/request-context)
+
+Hono内へMastraを組み込み、認証コンテキストとAPIを同じ境界で扱う。固定版のadapterはNode管理routeを含むbundleがworkerdで起動しなかったため、実装は公式RequestContextをAgent.streamへ直接渡す。
 
 ## S09
 
