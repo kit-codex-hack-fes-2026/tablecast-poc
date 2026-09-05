@@ -3,7 +3,6 @@ import { execFile } from "node:child_process";
 import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { z } from "zod";
 import {
   localEnvironment,
   readRuntime,
@@ -18,11 +17,17 @@ import type { TablecastRuntime } from "./tablecast-runtime";
 const execute = promisify(execFile);
 const script = join(tablecastRoot, "scripts/tablecast-dev.ts");
 const bin = (name: string) => join(tablecastRoot, "node_modules/.bin", name);
+process.umask(0o077);
 
-async function run(command: string[], runtime: TablecastRuntime, cwd = tablecastRoot) {
+async function run(
+  command: string[],
+  runtime: TablecastRuntime,
+  cwd = tablecastRoot,
+  extra: Record<string, string> = {},
+) {
   const child = Bun.spawn(command, {
     cwd,
-    env: localEnvironment(runtime),
+    env: { ...localEnvironment(runtime), ...extra },
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -162,37 +167,19 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
       ],
       runtime,
     );
-    if (parity) {
-      launch([
-        bin("wrangler"),
-        "dev",
-        "--local",
-        "--config",
-        join(tablecastLocal, "parity.wrangler.json"),
-        "--config",
-        join(tablecastLocal, "parity-api.wrangler.json"),
+    launch(
+      [
+        join(tablecastRoot, "apps/web/node_modules/.bin/vite"),
+        parity ? "preview" : "dev",
+        "--host",
+        "127.0.0.1",
         "--port",
         String(runtime.ports.web),
-        "--inspector-port",
-        String(runtime.ports.inspector),
-        "--persist-to",
-        runtime.state,
-      ]);
-    } else {
-      launch(
-        [
-          join(tablecastRoot, "apps/web/node_modules/.bin/vite"),
-          "dev",
-          "--host",
-          "127.0.0.1",
-          "--port",
-          String(runtime.ports.web),
-          "--strictPort",
-        ],
-        {},
-        join(tablecastRoot, "apps/web"),
-      );
-    }
+        "--strictPort",
+      ],
+      {},
+      join(tablecastRoot, "apps/web"),
+    );
     const secrets = parseEnv(await readFile(join(tablecastLocal, ".dev.vars"), "utf8"));
     const key = secrets.TABLECAST_LIVEKIT_API_KEY;
     const secret = secrets.TABLECAST_LIVEKIT_API_SECRET;
@@ -263,7 +250,7 @@ async function start(parity: boolean) {
   const mode = parity ? "parity" : "development";
   const previous = await optionalRuntime();
   if (previous && (await ownerRunning(previous))) {
-    if ((previous.mode ?? "development") === mode) {
+    if (!parity && (previous.mode ?? "development") === mode) {
       console.info(previous.origin);
       return;
     }
@@ -272,32 +259,12 @@ async function start(parity: boolean) {
   const runtime = await prepare();
   runtime.mode = mode;
   if (parity) {
-    await run([bin("turbo"), "run", "build"], runtime);
-    const output = join(tablecastRoot, "apps/web/dist/server");
-    const config = {
-      name: `tablecast-${runtime.id}-web`,
-      main: join(output, "index.js"),
-      compatibility_date: "2026-09-03",
-      compatibility_flags: ["nodejs_compat"],
-      no_bundle: true,
-      rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-      services: [{ binding: "TABLECAST_API", service: `tablecast-${runtime.id}-api` }],
-      assets: { directory: join(tablecastRoot, "apps/web/dist/client"), binding: "ASSETS" },
-    };
-    await writeFile(join(tablecastLocal, "parity.wrangler.json"), JSON.stringify(config, null, 2));
-    const apiConfig: unknown = JSON.parse(await readFile(runtime.apiConfig, "utf8"));
-    await writeFile(
-      join(tablecastLocal, "parity-api.wrangler.json"),
-      JSON.stringify(
-        {
-          ...z.record(z.string(), z.unknown()).parse(apiConfig),
-          main: join(tablecastRoot, "apps/web/dist/tablecast_api/index.js"),
-          no_bundle: true,
-          rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-        },
-        null,
-        2,
-      ),
+    // ローカルの資源名・秘密を含む成果物を共有build cacheへ入れない。
+    await run(
+      [process.execPath, "--no-env-file", "run", "build"],
+      runtime,
+      join(tablecastRoot, "apps/web"),
+      { TABLECAST_LOCAL_BUILD: "1" },
     );
   }
   runtime.nonce = randomUUID().replaceAll("-", "");

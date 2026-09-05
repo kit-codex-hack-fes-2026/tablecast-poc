@@ -190,6 +190,7 @@ export function localEnvironment(runtime: TablecastRuntime) {
     PORTLESS_SYNC_HOSTS: "0",
     PORTLESS_HTTPS: "0",
     WRANGLER_SEND_METRICS: "false",
+    WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   };
   if (process.env.UV_CACHE_DIR) env.UV_CACHE_DIR = process.env.UV_CACHE_DIR;

@@ -10,7 +10,7 @@
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/api/wrangler.jsonc"
       ],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**", ".wrangler/deploy/**"]
     },
     "dev": { "cache": false, "persistent": true },
     "typecheck": { "dependsOn": ["^typecheck"] },
