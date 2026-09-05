@@ -17,7 +17,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 | モード   | 起動方式                                                       | 用途                                             |
 | -------- | -------------------------------------------------------------- | ------------------------------------------------ |
 | 通常     | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding                               |
-| 本番相当 | build済みWebとAPIをWranglerの複数configで起動                  | Service Binding、build、stream、Cookieの接続確認 |
+| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動               | Service Binding、build、stream、Cookieの接続確認 |
 | UI部品   | apps/web内のStorybook                                          | 固定状態とブラウザー操作検証                     |
 | 音声     | ローカルLiveKit ServerとPython Agent                           | AEC、ターン、Inworld、Mastra                     |
 
@@ -56,6 +56,10 @@ Cookieはポートでは分離されないため、単にlocalhostのポート�
 
 ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
 共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
+
+Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。`dev:parity` は実行ごとに自環境を停止し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
+
+公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時には通常buildを実行し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
 
 ## Service BindingとCookie
 

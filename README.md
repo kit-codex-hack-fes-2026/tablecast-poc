@@ -50,9 +50,12 @@ bun --no-env-file run test:browser
 bun --no-env-file run test:e2e
 bun --no-env-file run dev:parity
 bun --no-env-file run test:e2e
+bun --no-env-file scripts/tablecast-livekit-check.ts
 ```
 
-`test:e2e` は起動済みのローカル環境を使い、T12を実際の業務APIから操作する。`dev:parity` は開発モードを終了し、ビルド済みWebとAPIをWranglerのService Bindingで接続する。通常モードへ戻すには `bun --no-env-file run dev`。
+`test:e2e` は起動済みのローカル環境を使い、T12を実際の業務APIから操作する。`dev:parity` はこのworktreeの設定で毎回ビルドし、Cloudflare公式Vite previewでWebとAPIをService Binding接続する。通常モードへ戻すには `bun --no-env-file run dev`。
+
+`tablecast-livekit-check.ts` は実マイクを使わず、一時Roomの2ブラウザー間で合成音声の受信・復号と切断を確認する。外部AIの品質やiPadの音響試験とは別の検証である。
 
 ```sh
 bun --no-env-file run hooks:install

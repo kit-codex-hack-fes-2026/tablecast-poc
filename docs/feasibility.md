@@ -2,37 +2,41 @@
 
 確認日: 2026-09-06。対象はこのリポジトリの実装と固定した依存版。
 
-Hono、Mastra、LiveKit、Inworldを組み合わせる構成は、業務ロジックを重複させず実装できる。実際にWorkers上のMastraから本文をストリームし、同じD1のカート・確認操作を呼ぶ経路を検証した。一方、外部設定は後で用意するというユーザーの指定に従い、実Inworld・実LLM・iPadでの音声往復は実施していない。現時点の結果はAPI接続とローカル安全性の実証であり、店舗での音声注文全体の受入完了を意味しない。
+Hono、Mastra、LiveKit、Inworldを組み合わせる構成は、業務ロジックを重複させず実装できる。実際にWorkers上のMastraから本文をストリームし、同じD1のカート・確認操作を呼ぶ経路を検証した。ローカルのLiveKit Serverでは、別々のブラウザー参加者間で合成音声を送受信し、復号後のサンプルまで確認した。一方、外部設定は後で用意するというユーザーの指定に従い、実Inworld・実LLM・iPadでの音声往復は実施していない。現時点の結果はAPI接続、ローカルWebRTC通信、安全性の実証であり、店舗での音声注文全体の受入完了を意味しない。
 
 ## 実装した接続
 
-| 境界             | 採用した実装                                            | 確認できたこと                                                              |
-| ---------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Web → API        | 同一オリジンのHTTP、Service Binding、端末認可           | 店舗・卓の権限と業務状態をAPIで決定する                                     |
-| API → Mastra     | `@mastra/core` 1.64.0の`RequestContext`と`Agent.stream` | 公式AgentとToolsがWorkersで動き、汎用管理経路を公開せず使える               |
-| Python → API     | 公開`llm_node`、httpx、`text/plain`                     | UTF-8の分断、取消、停止済みsessionの拒否を処理する                          |
-| Python → Inworld | `livekit-agents` / 公式Inworld plugin 1.8.0             | 公開constructor、STT/TTS設定、Agent CLIのimportが成立する。外部音声は未確認 |
-| Agent → Web      | LiveKitの音声track・字幕・公開agent state               | WebのRoom処理を実装済み。実WebRTCと音響の評価は別途必要                     |
+| 境界                 | 採用した実装                                            | 確認できたこと                                                              |
+| -------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Web → API            | 同一オリジンのHTTP、Service Binding、端末認可           | 店舗・卓の権限と業務状態をAPIで決定する                                     |
+| API → Mastra         | `@mastra/core` 1.64.0の`RequestContext`と`Agent.stream` | 公式AgentとToolsがWorkersで動き、汎用管理経路を公開せず使える               |
+| Python → API         | 公開`llm_node`、httpx、`text/plain`                     | UTF-8の分断、取消、停止済みsessionの拒否を処理する                          |
+| Python → Inworld     | `livekit-agents` / 公式Inworld plugin 1.8.0             | 公開constructor、STT/TTS設定、Agent CLIのimportが成立する。外部音声は未確認 |
+| Agent → Web          | LiveKitの音声track・字幕・公開agent state               | WebのRoom処理を実装済み。実Agentとの音声往復・音響評価は別途必要            |
+| Web ↔ LiveKit Server | 公式ブラウザーSDK 2.22.2、ローカルServer 1.13.6         | 合成音声のpublish・subscribe・復号と、Room削除時の両参加者の切断を実証      |
 
 Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKitの再生・中断を反映した会話履歴を毎turn Mastraへ渡し、Mastra側の独立memoryは有効にしていない。履歴と字幕の必要な整形だけを公開nodeへ置いた。[LiveKit公開node](https://docs.livekit.io/agents/logic/nodes/)、[Mastra Agent.stream](https://mastra.ai/reference/streaming/agents/stream)
 
-固定版`@mastra/hono` 1.7.6のcontext middlewareは、未使用の管理routeもimportし、Node向け`createRequire(import.meta.url)`をbundleに含めていた。Vitestの経路は成功したが、Vite・esbuildで生成したWorkerはworkerdの起動時に失敗した。そこでHonoが認可したActorを公式`RequestContext<{ actor: Actor }>`に設定し、公式`Agent.stream`へ直接渡す構成へ修正した。独自adapterは追加していない。この修正後に同じ音声HTTP試験12件と型検査が成功した。配備用bundleの起動結果は[配備手順](deployment.md)で別に記録する。[公式RequestContext](https://mastra.ai/docs/server/request-context)
+固定版`@mastra/hono` 1.7.6のcontext middlewareは、未使用の管理routeもimportし、Node向け`createRequire(import.meta.url)`をbundleに含めていた。Vitestの経路は成功したが、Vite・esbuildで生成したWorkerはworkerdの起動時に失敗した。そこでHonoが認可したActorを公式`RequestContext<{ actor: Actor }>`に設定し、公式`Agent.stream`へ直接渡す構成へ修正した。独自adapterは追加していない。この修正後に同じ音声HTTP試験12件と型検査が成功し、API担当がViteの本番bundleを実workerdで起動してhealth 200を確認した。Webとの結合は[配備手順](deployment.md)で別に記録する。[公式RequestContext](https://mastra.ai/docs/server/request-context)
 
 関連実装: [音声HTTP](../apps/api/src/voice.ts)、[Mastra Tools](../apps/api/src/agent/cast.ts)、[Python Agent](../livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
 
 ## 実施した試験と未実施の試験
 
-| 対象                                   | 最終結果                                                   | 試験の境界                                                              |
-| -------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Python接続・字幕・話者変換             | pytest 66件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture、SDKの公開型を使用                  |
-| 音声HTTPとMastra                       | WorkersのVitest 12件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture        |
-| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用 |
-| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                               |
-| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                              |
+| 対象                                   | 最終結果                                                   | 試験の境界                                                                  |
+| -------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Python接続・字幕・話者変換             | pytest 66件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture、SDKの公開型を使用                      |
+| 音声HTTPとMastra                       | WorkersのVitest 12件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture            |
+| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用     |
+| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                                   |
+| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                                  |
+| ローカルWebRTC音声通信                 | Chromium 153.0.8010.12で成功                               | 実LiveKit Serverと2参加者を使用。440 Hzの合成音声のみ。実マイク・外部AIなし |
 
 Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。以前の途中件数を最終結果として再利用しない。
 
 再実行方法は [Python README](../livekit/README.md) と [patch記録](../patches/livekit-inworld/README.md)。実AIの疎通は明示的な有料試験として分離した。メモリ内の合成音声を再認識するだけなので、それが成功しても実マイクや店舗品質の証明にはならない。
+
+WebRTCの再実行は、ローカル起動後に`bun --no-env-file scripts/tablecast-livekit-check.ts`を使う。PlaywrightのChromiumが必要であり、未導入なら`bun --no-env-file x playwright install chromium`で導入する。このworktreeの設定に一致するloopbackのLiveKitだけに接続し、検証専用Roomを作成・削除する。製品API、実マイク、外部AIは使わない。2026-09-06の実行では41 packets、10,200 bytes、38,400音声サンプル、RMS 0.070536を受信した。公式`track.attach`による再生開始とWebAudio analyserで復号を確認し、Room削除後は両参加者が切断された。音は端末スピーカーへ出さず、生音声も保存しない。秘密を含まない結果は`.local/livekit-check.json`に保存する。[検証スクリプト](../scripts/tablecast-livekit-check.ts)
 
 ## 取消と注文確定の評価
 
@@ -75,6 +79,8 @@ LiveKit 1.8.0の公開型で、turn別遅延は`ChatMessage.metrics`、累積利
 費用にはSTT/TTS/LLMの従量、Pythonの常駐計算資源、LiveKitの帯域、Web/API/DB/ストレージが含まれる。実請求や月額をまだ測っていないため、低価格だと断定しない。店舗数・同時接客卓数・接続時間・発話時間・注文当たりのmodel step数を計測し、契約時点の単価で見積もる。停止しても既に処理済みの推論利用量は取り消せない。
 
 ## 配備と運用の制限
+
+Wrangler 4.129.0の複数configによるローカル起動では、ProxyControllerがリクエスト切断の `Network connection lost` を致命的エラーとして扱い、全体が終了した。DOの予約コード修正とは別問題で、[同じ症状の報告](https://github.com/cloudflare/workers-sdk/issues/15317)と[未反映の修正PR](https://github.com/cloudflare/workers-sdk/pull/15207)を確認した。本実装は導入済みの公式Vite previewへ切り替え、Web/APIのbuild成果物を1つのMiniflareから起動する。独立preview環境では、正常WebSocket終了10回とタブ閉鎖10回の後も毎回health 200、認証とプロセスを維持した。これはローカル開発proxyの対処であり、公開Workersの可用性を証明する試験ではない。[公式Vite preview](https://developers.cloudflare.com/workers/vite-plugin/)
 
 Web/APIのruntimeはworkerd、Python Agentは別プロセス、LiveKitはWebRTCメディアサーバーとなる。Bun採用はWorkersをBun runtimeへ置き換える意味ではない。WorkersのHTTP streamingはクライアント接続中継続できるが、CPU・メモリ・subrequestの上限、切断やruntime更新を考慮する。応答後の処理を無制限の`waitUntil`へ逃がさない。[Workers公式limits](https://developers.cloudflare.com/workers/platform/limits/)
 

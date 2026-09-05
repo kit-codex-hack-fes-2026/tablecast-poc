@@ -48,6 +48,8 @@ jobs:
         run: bun --no-env-file run test:browser
       - name: ローカル営業環境を起動
         run: bun --no-env-file run dev
+      - name: 合成音声の実WebRTC送受信と切断
+        run: bun --no-env-file scripts/tablecast-livekit-check.ts
       - name: CI内のブラウザー用ホスト解決
         run: bun --no-env-file -e 'const runtime = await Bun.file(".local/runtime.json").json(); console.log("127.0.0.1 " + new URL(runtime.origin).hostname)' | sudo tee -a /etc/hosts
       - name: 日英注文・受付・会計をブラウザーから検証

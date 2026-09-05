@@ -40,6 +40,7 @@ test("日英の端末認可からカスタマイズ注文・提供・会計ま�
       const table = tableStateSchema.parse(await opened.json());
       sessionId = table.id;
       await staff.reload();
+      await staff.getByRole("combobox", { name: "店舗", exact: true }).selectOption(storeId);
     }
     await guest.goto("/");
     await guest.getByRole("button", { name: "端末を接続する" }).click();
