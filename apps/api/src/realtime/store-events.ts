@@ -20,7 +20,8 @@ export class StoreEvents extends DurableObject<TablecastEnv> {
   override webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
     if (message === "ping") socket.send("pong");
   }
-  override webSocketClose(socket: WebSocket, code: number) {
-    socket.close(code);
+  override webSocketClose(socket: WebSocket) {
+    // 異常切断の予約コードを送信せず、採用runtimeで終了応答を完了する。
+    socket.close(1000);
   }
 }

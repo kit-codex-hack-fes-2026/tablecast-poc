@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { Agent } from "@mastra/core/agent";
+import { Mastra } from "@mastra/core/mastra";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import type { Actor } from "../auth";
@@ -27,7 +28,7 @@ export function createCastAgent(
     signal.throwIfAborted();
     await getSession(env, actor);
   };
-  return new Agent({
+  const agent = new Agent({
     id: "tablecast-cast",
     name: "TableCast",
     instructions: `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。最初にgetTableStateとgetCatalogで現状を確認する。prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。`,
@@ -97,4 +98,6 @@ export function createCastAgent(
       }),
     },
   });
+  // providerの例外が会話本文を含むため、詳細ログは出さずAPIの失敗状態で追跡する。
+  return new Mastra({ agents: { cast: agent }, logger: false }).getAgent("cast");
 }
