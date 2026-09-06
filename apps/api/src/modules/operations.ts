@@ -399,13 +399,14 @@ export async function prepareConfirmation(
     total: cart.total,
     locale: session.locale,
     text: confirmationText(cart.lines, cart.total, session.locale, snapshotPlan),
-    expiresAt: plan
-      ? Math.min(
-          now + 120000,
-          plan.startedAt +
-            (plan.rules.durationMinutes - plan.rules.lastOrderMinutesBeforeEnd) * 60000,
-        )
-      : now + 120000,
+    expiresAt:
+      plan && cart.lines.some((line) => line.planCovered)
+        ? Math.min(
+            now + 120000,
+            plan.startedAt +
+              (plan.rules.durationMinutes - plan.rules.lastOrderMinutesBeforeEnd) * 60000,
+          )
+        : now + 120000,
     channel: input.channel,
     status: "pending",
     createdTurnId: actor.turnId ?? null,

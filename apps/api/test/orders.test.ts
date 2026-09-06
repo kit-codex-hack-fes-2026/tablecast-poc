@@ -19,13 +19,60 @@ import {
   updateDraft,
   validateDraft,
 } from "../src/modules/configuration";
-import { device, deviceToken, setupFixture } from "./fixture";
+import { device, deviceToken, setupFixture, text } from "./fixture";
 import { finishVoiceTurn } from "../src/voice";
-import { tableStateSchema } from "../src/schema";
+import { planSchema, tableStateSchema } from "../src/schema";
 import app from "../src/app";
 
 const teaLine = { id: "line-1", productId: "tea", quantity: 2, selections: [] };
 const tea = [teaLine];
+it("プランのラストオーダー後も対象外商品は通常価格で確認・注文できる", async () => {
+  await setupFixture();
+  const rules = planSchema.parse({
+    id: "tablecast-coffee-plan",
+    text: text("ラテのプラン", "Latte plan"),
+    pricePerPerson: 1800,
+    durationMinutes: 90,
+    lastOrderMinutesBeforeEnd: 10,
+    productIds: ["coffee"],
+    categoryIds: [],
+    tags: [],
+    maxPerOrder: 4,
+    maxTotalPerPerson: 10,
+    intervalSeconds: 30,
+    excludedOptionIds: [],
+    includedOptionSurcharge: true,
+  });
+  await env.TABLECAST_DB.prepare("UPDATE table_sessions SET plan_json=? WHERE id=?")
+    .bind(
+      JSON.stringify({ id: rules.id, startedAt: Date.now() - 81 * 60_000, rules }),
+      device.tableSessionId,
+    )
+    .run();
+
+  const snapshot = await confirmed();
+  expect(snapshot.expiresAt).toBeGreaterThan(Date.now());
+  const order = await submitOrder(env, device, {
+    snapshotId: snapshot.id,
+    idempotencyKey: "tablecast-after-plan-last-order",
+    approved: true,
+  });
+  expect(order.total).toBe(800);
+  expect(order.snapshot.lines.every((line) => !line.planCovered)).toBe(true);
+  await expect(
+    updateCart(env, device, {
+      expectedVersion: 2,
+      lines: [
+        {
+          id: "latte",
+          productId: "coffee",
+          quantity: 1,
+          selections: [{ optionId: "dairy", quantity: 1 }],
+        },
+      ],
+    }),
+  ).rejects.toMatchObject({ code: "PLAN_LAST_ORDER" });
+});
 async function confirmed() {
   await updateCart(env, device, { expectedVersion: 0, lines: tea });
   return prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" });
