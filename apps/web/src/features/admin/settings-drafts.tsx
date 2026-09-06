@@ -1,5 +1,5 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { configDraftSchema } from "@tablecast/api/schema";
+import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
@@ -86,7 +86,7 @@ export function SettingsDrafts({
       ) && <p className="empty-note">{t("admin_no_drafts")}</p>}
       {selectedId && selected.data && (
         <DraftDialog
-          key={selectedId}
+          key={`${storeId}:${selectedId}`}
           initialDraft={selected.data}
           base={base}
           onSaved={(draft) => {
@@ -112,6 +112,11 @@ function DraftDialog({
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const catalog = useQuery({
+    queryKey: ["tablecast-admin-catalog", initialDraft.storeId],
+    queryFn: ({ signal }) =>
+      api(`/api/admin/stores/${initialDraft.storeId}/catalog`, { signal }, catalogSchema),
+  });
   const [draft, setDraft] = useState(initialDraft);
   const [configuration, setConfiguration] = useState(initialDraft.configuration);
   const [editorVersion, setEditorVersion] = useState(0);
@@ -196,12 +201,17 @@ function DraftDialog({
                   save.mutate(configuration);
                 }}
               >
+                <ErrorNotice error={catalog.error} onRetry={() => void catalog.refetch()} />
                 <ConfigurationEditor
                   key={editorVersion}
                   value={configuration}
                   onChange={setConfiguration}
                   disabled={busy || !editable}
-                  voices={initialDraft.configuration.cast.voice}
+                  voices={
+                    catalog.data
+                      ? [catalog.data.configuration.cast.voice, draft.configuration.cast.voice]
+                      : [draft.configuration.cast.voice]
+                  }
                 />
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Button type="submit" disabled={!dirty || busy || !editable}>

@@ -56,6 +56,7 @@ export function Admin() {
   });
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["tablecast-admin", currentStore] });
+    void client.invalidateQueries({ queryKey: ["tablecast-admin-catalog", currentStore] });
     void client.invalidateQueries({ queryKey: ["tablecast-table-detail"] });
     void client.invalidateQueries({ queryKey: ["tablecast-session-events", currentStore] });
     void client.invalidateQueries({ queryKey: ["tablecast-visit-history", currentStore] });

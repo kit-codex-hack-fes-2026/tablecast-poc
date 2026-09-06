@@ -25,7 +25,7 @@ export function ConfigurationEditor({
   value: Configuration;
   onChange: (value: Configuration) => void;
   disabled: boolean;
-  voices: Configuration["cast"]["voice"];
+  voices: Configuration["cast"]["voice"][];
 }) {
   const { t } = useI18n();
   const [section, setSection] = useState("products");
@@ -591,14 +591,14 @@ function PlansEditor({ value, onChange, disabled }: EditorProps) {
   );
 }
 
-function CastEditor({
+export function CastEditor({
   value,
   voices,
   onChange,
   disabled,
 }: {
   value: Configuration["cast"];
-  voices: Configuration["cast"]["voice"];
+  voices: Configuration["cast"]["voice"][];
   onChange: (value: Configuration["cast"]) => void;
   disabled: boolean;
 }) {
@@ -637,7 +637,7 @@ function CastEditor({
               }
             >
               <option value="">{t("editor_not_configured")}</option>
-              {[...new Set([voices[language], value.voice[language]])]
+              {[...new Set([...voices.map((voice) => voice[language]), value.voice[language]])]
                 .filter((voice) => voice !== null)
                 .map((voice) => (
                   <option key={voice} value={voice}>
