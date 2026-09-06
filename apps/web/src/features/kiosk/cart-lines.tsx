@@ -1,0 +1,86 @@
+import type { PricedLine } from "@tablecast/api/schema";
+import { ChevronRight, ShoppingBag } from "lucide-react";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { money, useI18n } from "../../i18n/locale";
+
+export function CartLines({
+  lines,
+  onEdit,
+  onRemove,
+  disabled = false,
+}: {
+  lines: PricedLine[];
+  onEdit?: (line: PricedLine) => void;
+  onRemove?: (line: PricedLine) => void;
+  disabled?: boolean;
+}) {
+  const { locale, t } = useI18n();
+  if (lines.length === 0)
+    return (
+      <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_p]:text-xs [&_p]:leading-loose">
+        <ShoppingBag size={32} strokeWidth={1.2} aria-hidden="true" />
+        <h3 className="text-sm font-medium">{t("kiosk_cart_empty")}</h3>
+      </div>
+    );
+  return (
+    <ul className="cart-lines list-none py-0 px-4 [&_>_li:last-child]:border-0">
+      {lines.map((line) => (
+        <li className="py-4 px-0 border-b border-b-border" key={line.id}>
+          <div className="flex gap-3 justify-between text-sm">
+            <strong className="font-medium">{line.name[locale]}</strong>
+            <span className="whitespace-nowrap text-xs">{money(line.total, locale)}</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {line.options.map((option) => (
+              <span
+                className="text-xs text-muted-foreground bg-background py-0.5 px-1.5 rounded-sm"
+                key={option.id}
+              >
+                {option.name[locale]}
+                {option.quantity > 1 && ` × ${option.quantity}`}
+                {option.priceDelta !== 0 && ` (${money(option.priceDelta, locale)})`}
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center flex-wrap gap-y-1.5 gap-x-3 mt-1 [&_[data-slot=button][data-size=text]]:text-xs [&_[data-slot=button][data-size=text]]:min-h-8">
+            <span className="text-muted-foreground text-xs">
+              {t("common_quantity")} {line.quantity} · {money(line.unitPrice, locale)}
+            </span>
+            {line.planCovered && <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>}
+            {onEdit && (
+              <Button
+                size="text"
+                variant="link"
+                type="button"
+
+                disabled={disabled}
+                onClick={() => onEdit(line)}
+              >
+                {t("kiosk_edit")}
+                <ChevronRight size={14} aria-hidden="true" />
+              </Button>
+            )}
+            {onRemove && (
+              <Button
+                size="text"
+                variant="link"
+                type="button"
+                className="text-muted-foreground"
+                disabled={disabled}
+                onClick={() => onRemove(line)}
+              >
+                {t("common_remove")}
+              </Button>
+            )}
+          </div>
+          {line.missing.length > 0 && (
+            <span className="text-xs text-destructive inline-flex mt-1.5">
+              {t("kiosk_missing")}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}

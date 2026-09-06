@@ -3,6 +3,7 @@ import type { Product } from "@tablecast/api/schema";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 
 export function emptyText(): Product["text"] {
@@ -24,9 +25,9 @@ export function BooleanField({
   disabled?: boolean;
 }) {
   return (
-    <label className="checkbox-label flex-row">
+    <label className="flex items-center gap-3 flex-row">
       <Checkbox.Root
-        className="checkbox-control"
+        className="flex items-center justify-center border border-border rounded-md w-5 h-5 shrink-0 [&[data-checked]]:bg-primary [&[data-checked]]:border-primary [&[data-checked]]:text-card [&_span]:flex"
         checked={value}
         disabled={disabled}
         onCheckedChange={onChange}
@@ -142,7 +143,7 @@ export function ReferencesField({
   return (
     <label>
       {label}
-      <select
+      <NativeSelect
         multiple
         className="min-h-24 rounded-lg border border-input p-2 text-sm"
         size={Math.min(6, Math.max(2, options.length))}
@@ -164,7 +165,7 @@ export function ReferencesField({
             {option.label}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </label>
   );
 }
@@ -187,12 +188,12 @@ export function BilingualFields({
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       {(["ja", "en"] as const).map((language) => (
-        <fieldset key={language} className="stacked-form min-w-0 pt-0" disabled={disabled}>
+        <fieldset key={language} className="flex flex-col gap-4 min-w-0 pt-0" disabled={disabled}>
           <legend className="mb-3 font-semibold">
             {t(language === "ja" ? "common_ja" : "common_en")}
           </legend>
           {fields.map(({ key, label }) => (
-            <label key={key}>
+            <label className="flex flex-col gap-2 text-xs" key={key}>
               {label}
               {key === "description" ? (
                 <textarea

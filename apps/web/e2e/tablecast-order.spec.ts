@@ -247,7 +247,7 @@ for (const { staffLanguage, labels } of [
       expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
       expect(ordered.billRequested).toBe(false);
       const billingMetric = staff
-        .locator(".metric")
+        .locator("[data-slot=metric]")
         .filter({ has: staff.getByText(labels.admin_billing, { exact: true }) })
         .locator("strong");
       const previousBilling = Number(await billingMetric.innerText());

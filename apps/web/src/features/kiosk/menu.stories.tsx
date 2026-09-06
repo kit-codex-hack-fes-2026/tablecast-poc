@@ -2,14 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { productSchema, type CartLine, type Product } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
-import { CartLines, ProductDialog, ProductMenu } from "./menu";
+import { CartLines } from "./cart-lines";
+import { ProductMenu } from "./menu";
+import { ProductDialog } from "./product-dialog";
 
 const meta = {
   title: "客向け/メニューと注文",
   component: ProductMenu,
   decorators: [
     (Story) => (
-      <div className="menu-panel" style={{ maxWidth: 430, paddingTop: 20 }}>
+      <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
         <Story />
       </div>
     ),
@@ -250,7 +252,7 @@ export const LongDescription: Story = {
       close.focus();
       await userEvent.tab();
       await expect(firstOption).toHaveFocus();
-      const scroll = firstOption.closest(".dialog-scroll");
+      const scroll = firstOption.closest("[data-slot=dialog-scroll]");
       if (!scroll) throw new Error("選択欄のスクロール領域がありません。");
       await expect(scroll.clientHeight).toBeGreaterThan(0);
       await expect(firstOption.getBoundingClientRect().top).toBeGreaterThanOrEqual(

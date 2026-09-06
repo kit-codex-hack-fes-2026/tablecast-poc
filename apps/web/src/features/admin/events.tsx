@@ -46,7 +46,8 @@ export function ActivityLog({
   includeDate?: boolean;
 }) {
   const { locale, t } = useI18n();
-  if (!events.length) return <p className="empty-note">{t("common_empty")}</p>;
+  if (!events.length)
+    return <p className="py-12 px-6 text-muted-foreground text-center">{t("common_empty")}</p>;
   const dateTime = includeDate
     ? new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-GB", {
         dateStyle: "medium",
@@ -55,22 +56,39 @@ export function ActivityLog({
       })
     : null;
   return (
-    <ol className="activity-log" data-with-date={includeDate || undefined}>
+    <ol
+      className="activity-log list-none py-1 px-0 [&_>_li::before]:content-[''] [&_>_li::before]:absolute [&_>_li::before]:left-14 [&_>_li::before]:top-8 [&_>_li::before]:-bottom-2.5 [&_>_li::before]:w-px [&_>_li::before]:bg-border [&_>_li:last-child::before]:hidden [&[data-with-date]_time]:w-24 [&[data-with-date]_>_li::before]:left-28"
+      data-with-date={includeDate || undefined}
+    >
       {events.map((event) => (
-        <li key={event.cursor} data-event-cursor={event.cursor}>
-          <time dateTime={new Date(event.createdAt).toISOString()}>
+        <li
+          className="flex items-start gap-3.5 py-3.5 px-0 relative"
+          key={event.cursor}
+          data-event-cursor={event.cursor}
+        >
+          <time
+            className="text-xs w-9 shrink-0 text-muted-foreground mt-0.5"
+            dateTime={new Date(event.createdAt).toISOString()}
+          >
             {dateTime?.format(event.createdAt) ?? time(event.createdAt, locale)}
           </time>
-          <span className={`event-dot ${event.kind.split(".")[0]}`} aria-hidden="true" />
+          <span
+            data-state={event.kind.split(".")[0]}
+            className="w-2 h-2 rounded-full bg-muted shrink-0 mt-1 [&[data-state=order]]:bg-success [&[data-state=staff]]:bg-accent"
+            aria-hidden="true"
+          />
           <div>
-            <strong>
+            <strong className="text-xs font-medium">
               <EventLabel event={event} />
             </strong>
             {typeof event.data.text === "string" && (
-              <p lang={event.data.locale === "en" ? "en" : "ja"}>
+              <p
+                className="text-xs mt-1 text-muted-foreground leading-loose whitespace-pre-wrap"
+                lang={event.data.locale === "en" ? "en" : "ja"}
+              >
                 {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
                 {event.data.text}
-                <small>
+                <small className="block text-xs text-muted-foreground mt-0.5">
                   {event.data.locale === "en" ? "English" : "日本語"}
                   {typeof event.data.source === "string" &&
                     event.data.source.startsWith("synthetic-") &&

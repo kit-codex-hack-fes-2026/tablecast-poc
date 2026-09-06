@@ -16,7 +16,7 @@ export const Route = createRootRoute({
   }),
   component: Root,
   notFoundComponent: () => (
-    <main className="empty-page">
+    <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
       <h1>404</h1>
       <a href="/">TableCast</a>
     </main>

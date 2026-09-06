@@ -171,15 +171,18 @@ export function ConfigurationChanges({
             .reverse()
             .find((part) => !/^\d+$/.test(part)) ?? "";
         return (
-          <div className="config-change" key={change.path}>
-            <strong>{title(change.path)}</strong>
-            <div>
+          <div
+            className="config-change py-5 px-0 border-b border-b-border [&_pre]:bg-background [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:overflow-auto [&_pre]:text-xs [&_pre]:max-h-64 [&_pre]:m-0"
+            key={change.path}
+          >
+            <strong className="font-mono text-xs wrap-anywhere">{title(change.path)}</strong>
+            <div className="grid grid-cols-2 gap-3 mt-3.5 max-sm:grid-cols-1">
               {[
                 { label: t("admin_before"), value: change.before },
                 { label: t("admin_after"), value: change.after },
               ].map(({ label, value }) => (
-                <section key={label}>
-                  <h4>{label}</h4>
+                <section className="min-w-0" key={label}>
+                  <h4 className="text-muted-foreground text-xs mb-1.5">{label}</h4>
                   <div className="whitespace-pre-wrap break-words text-sm">
                     {valueText(value, key)}
                   </div>

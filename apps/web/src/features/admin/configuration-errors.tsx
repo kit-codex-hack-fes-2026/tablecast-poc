@@ -67,7 +67,7 @@ export function ConfigurationErrors({
   const { t, locale } = useI18n();
   if (!errors.length) return null;
   return (
-    <ul className="validation-errors" aria-label={t("config_error_list")}>
+    <ul className="text-destructive py-3.5 px-5 text-xs" aria-label={t("config_error_list")}>
       {errors.map((issue, index) => {
         const voiceLocale =
           issue.path[0] === "cast" && issue.path[1] === "voice" ? issue.path[2] : undefined;

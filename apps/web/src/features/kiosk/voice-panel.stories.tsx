@@ -7,7 +7,7 @@ const meta = {
   component: VoicePanel,
   decorators: [
     (Story) => (
-      <div style={{ height: 650, maxWidth: 610 }}>
+      <div className="h-160 max-w-2xl">
         <Story />
       </div>
     ),
