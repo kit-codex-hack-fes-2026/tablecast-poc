@@ -1,5 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { assertLocalRuntime, worktreeId } from "./tablecast-runtime";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { assertLocalRuntime, localReleaseSha, worktreeId } from "./tablecast-runtime";
+
+it("起動版は実GitのHEADを使い未commitの変更を区別し無視対象を含めない", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tablecast-release-"));
+  const execute = promisify(execFile);
+  const git = (...args: string[]) => execute("git", args, { cwd: root });
+  try {
+    // 独立したリポジトリで実際の状態変化を確認する。
+    await git("init", "--quiet");
+    await writeFile(join(root, ".gitignore"), ".local\n");
+    await git("add", ".gitignore");
+    await git(
+      "-c",
+      "user.name=TableCast Test",
+      "-c",
+      "user.email=tablecast@example.invalid",
+      "-c",
+      "commit.gpgSign=false",
+      "-c",
+      "core.hooksPath=/dev/null",
+      "commit",
+      "--quiet",
+      "-m",
+      "tablecast fixture",
+    );
+    const { stdout } = await git("rev-parse", "HEAD");
+    const sha = stdout.trim();
+    expect(await localReleaseSha(root)).toBe(sha);
+    await writeFile(join(root, ".local"), "tablecast ignored fixture");
+    expect(await localReleaseSha(root)).toBe(sha);
+    await writeFile(join(root, "tablecast-new.txt"), "tablecast fixture");
+    expect(await localReleaseSha(root)).toBe(`${sha}-dirty`);
+    await rm(join(root, "tablecast-new.txt"));
+    await writeFile(join(root, ".gitignore"), ".local\n.tablecast-test\n");
+    expect(await localReleaseSha(root)).toBe(`${sha}-dirty`);
+    await git("add", ".gitignore");
+    expect(await localReleaseSha(root)).toBe(`${sha}-dirty`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 describe("開発資源の所有境界", () => {
   it("同じブランチでもworktree実パスが違う場合は識別子が分かれる", () => {

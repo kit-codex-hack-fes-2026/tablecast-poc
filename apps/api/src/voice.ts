@@ -29,6 +29,50 @@ const sessionBody = z.object({ voiceSessionId: id, turnId: id });
 const proactiveCondition =
   "AND json_array_length(cart_json)=0 AND staff_called=0 AND EXISTS(SELECT 1 FROM stores WHERE id=table_sessions.store_id AND json_extract(config_json,'$.cast.proactive')=1) AND NOT EXISTS(SELECT 1 FROM confirmations WHERE table_session_id=table_sessions.id AND status IN ('pending','read') AND expires_at>?)";
 const proactiveReservationCondition = `${proactiveCondition} AND (active_turn_id IS NULL OR EXISTS(SELECT 1 FROM voice_turns WHERE id=active_turn_id AND status<>'started')) AND NOT EXISTS(SELECT 1 FROM table_events WHERE store_id=table_sessions.store_id AND table_session_id=table_sessions.id AND kind='voice.proactive' AND created_at>?)`;
+type VoiceDiagnostics = {
+  traceId: string;
+  releaseSha: string;
+  storeId?: string;
+  tableSessionId?: string;
+  voiceSessionId?: string;
+  turnId?: string;
+  runId?: string;
+};
+type VoicePhase = "accepted" | "generated" | "rejected" | "interrupted" | "failed" | "skipped";
+const diagnosticCodes = new Set([
+  "INVALID_INPUT",
+  "VOICE_UNAUTHORIZED",
+  "VOICE_SESSION_STALE",
+  "VOICE_LOCALE_STALE",
+  "PROACTIVE_TURN_STALE",
+  "PROACTIVE_SPEAKER_FORBIDDEN",
+  "USER_TURN_REQUIRED",
+  "VOICE_NOT_CONFIGURED",
+  "VOICE_MODEL_FAILED",
+  "VOICE_CANCELLED",
+]);
+function voiceErrorCode(error: unknown) {
+  return error instanceof DomainError && diagnosticCodes.has(error.code)
+    ? error.code
+    : "VOICE_INTERNAL_ERROR";
+}
+function logVoiceTurn(diagnostics: VoiceDiagnostics, phase: VoicePhase, code?: string) {
+  console.info(
+    JSON.stringify({
+      event: "tablecast.voice_turn",
+      operation: "turn",
+      phase,
+      traceId: diagnostics.traceId,
+      releaseSha: diagnostics.releaseSha,
+      storeId: diagnostics.storeId,
+      tableSessionId: diagnostics.tableSessionId,
+      voiceSessionId: diagnostics.voiceSessionId,
+      turnId: diagnostics.turnId,
+      runId: diagnostics.runId,
+      code,
+    }),
+  );
+}
 
 async function currentVoiceTurn(
   env: TablecastEnv,
@@ -131,7 +175,25 @@ async function voiceActor(
   return actor;
 }
 
-export const voiceRoutes = new Hono<{ Bindings: TablecastEnv }>();
+export const voiceRoutes = new Hono<{
+  Bindings: TablecastEnv;
+  Variables: { traceId: string; voiceDiagnostics: VoiceDiagnostics };
+}>();
+voiceRoutes.use("/turns", async (c, next) => {
+  const diagnostics = { traceId: c.get("traceId"), releaseSha: c.env.TABLECAST_RELEASE_SHA };
+  c.set("voiceDiagnostics", diagnostics);
+  await next();
+  if (c.res.status >= 400)
+    logVoiceTurn(
+      diagnostics,
+      c.error instanceof DomainError && c.error.code === "VOICE_CANCELLED"
+        ? "interrupted"
+        : c.res.status >= 500
+          ? "failed"
+          : "rejected",
+      c.res.status === 413 ? "BODY_TOO_LARGE" : voiceErrorCode(c.error),
+    );
+});
 voiceRoutes.use("*", bodyLimit({ maxSize: 256 * 1024 }));
 voiceRoutes.use("*", async (c, next) => {
   const token = c.env.TABLECAST_VOICE_API_TOKEN;
@@ -163,8 +225,20 @@ voiceRoutes.get("/config", async (c) => {
   });
 });
 voiceRoutes.post("/turns", async (c) => {
-  const input = voiceTurnSchema.parse(await c.req.json());
+  const body: unknown = await c.req.json().catch(() => {
+    throw new DomainError("INVALID_INPUT", 422, "INVALID_INPUT");
+  });
+  const parsed = voiceTurnSchema.safeParse(body);
+  ensure(parsed.success, "INVALID_INPUT", 422);
+  const input = parsed.data;
   const actor = await voiceActor(c.env, input.voiceSessionId);
+  const diagnostics = c.get("voiceDiagnostics");
+  Object.assign(diagnostics, {
+    storeId: actor.storeId,
+    tableSessionId: actor.tableSessionId,
+    voiceSessionId: actor.voiceSessionId,
+    turnId: input.turnId,
+  });
   const session = await getSession(c.env, actor);
   ensure(input.locale === session.locale, "VOICE_LOCALE_STALE", 409);
   const proactive = input.trigger === "proactive";
@@ -178,7 +252,10 @@ voiceRoutes.post("/turns", async (c) => {
     )
       .bind(session.id, startedAt, startedAt - 180_000)
       .first("id");
-    if (!eligible) return c.body(null, 204);
+    if (!eligible) {
+      logVoiceTurn(diagnostics, "skipped");
+      return c.body(null, 204);
+    }
   }
   ensure(c.env.TABLECAST_MODEL_API_KEY && c.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
   const result = await c.env.TABLECAST_DB.batch([
@@ -231,15 +308,20 @@ voiceRoutes.post("/turns", async (c) => {
         ]
       : []),
   ]);
-  if (proactive && result[0]?.meta.changes !== 1) return c.body(null, 204);
+  if (proactive && result[0]?.meta.changes !== 1) {
+    logVoiceTurn(diagnostics, "skipped");
+    return c.body(null, 204);
+  }
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
+  logVoiceTurn(diagnostics, "accepted");
   const currentActor = { ...actor, turnId: input.turnId };
   const cancellation = new AbortController();
   const signal = AbortSignal.any([c.req.raw.signal, cancellation.signal]);
   let generationFailed = false;
   const agent = createCastAgent(c.env, currentActor, input.locale, signal, input.trigger);
-  const requestContext = new RequestContext<{ actor: Actor }>();
+  const requestContext = new RequestContext<{ actor: Actor; diagnostics: VoiceDiagnostics }>();
   requestContext.set("actor", currentActor);
+  requestContext.set("diagnostics", diagnostics);
   const output = await agent
     .stream(input.messages, {
       abortSignal: signal,
@@ -260,19 +342,29 @@ voiceRoutes.post("/turns", async (c) => {
         input.turnId,
         signal.aborted ? "interrupted" : "failed",
       );
+      if (signal.aborted) throw new DomainError("VOICE_CANCELLED", 409, "VOICE_CANCELLED");
       throw error;
     });
+  diagnostics.runId = output.runId;
   c.executionCtx.waitUntil(notifyStore(c.env, actor.storeId));
   const reader = output.textStream.getReader();
   const encoder = new TextEncoder();
+  let streamFinished = false;
+  const logStreamEnd = (phase: "generated" | "interrupted" | "failed", code?: string) => {
+    if (streamFinished) return;
+    streamFinished = true;
+    logVoiceTurn(diagnostics, phase, code);
+  };
   const response = new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         signal.throwIfAborted();
         const next = await reader.read();
+        signal.throwIfAborted();
         ensure(!generationFailed, "VOICE_MODEL_FAILED", 503);
         await currentVoiceTurn(c.env, currentActor, input.locale, input.trigger);
         if (next.done) {
+          logStreamEnd("generated");
           controller.close();
           reader.releaseLock();
           return;
@@ -283,6 +375,7 @@ voiceRoutes.post("/turns", async (c) => {
           signal.aborted || (error instanceof DomainError && error.status === 409)
             ? "interrupted"
             : "failed";
+        logStreamEnd(status, signal.aborted ? "VOICE_CANCELLED" : voiceErrorCode(error));
         cancellation.abort();
         controller.error(error);
         await reader.cancel().catch(() => {});
@@ -290,6 +383,7 @@ voiceRoutes.post("/turns", async (c) => {
       }
     },
     async cancel(reason) {
+      logStreamEnd("interrupted", "VOICE_CANCELLED");
       cancellation.abort();
       try {
         await reader.cancel(reason);

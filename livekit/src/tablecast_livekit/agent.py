@@ -4,7 +4,8 @@ import asyncio
 import json
 import logging
 import os
-from collections.abc import AsyncIterable, AsyncIterator, Coroutine
+from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Coroutine
+from contextlib import aclosing
 from typing import Any
 from uuid import uuid4
 
@@ -44,6 +45,17 @@ class TablecastAgent(Agent):
         )
         self.api = api
         self.config = config
+        self.api.config = config
+        self.log = logging.LoggerAdapter(
+            logger,
+            {
+                "event": "tablecast.voice_turn",
+                "tableSessionId": config.tableSessionId,
+                "voiceSessionId": config.voiceSessionId,
+                "releaseSha": config.releaseSha,
+            },
+            merge_extra=True,
+        )
         self.turn_id: str | None = None
         self.tasks: set[asyncio.Task[None]] = set()
         self.stopped = False
@@ -68,15 +80,36 @@ class TablecastAgent(Agent):
             self.proactive_attempted = True
             self.proactive_speech = self.session.generate_reply(allow_interruptions=True)
 
-    def background(self, operation: Coroutine[Any, Any, None]) -> None:
+    def background(
+        self,
+        operation: Coroutine[Any, Any, None],
+        log: logging.LoggerAdapter,
+        name: str,
+    ) -> None:
         task = asyncio.create_task(operation)
         self.tasks.add(task)
 
         def completed(done: asyncio.Task[None]) -> None:
             self.tasks.discard(done)
-            if not done.cancelled() and done.exception() is not None:
+            if done.cancelled():
+                log.info(
+                    "tablecast.voice_background",
+                    extra={
+                        "event": "tablecast.voice_background",
+                        "operation": name,
+                        "phase": "interrupted",
+                    },
+                )
+            elif done.exception() is not None:
                 # 例外本文にプロバイダー応答や秘密情報が含まれる可能性がある。
-                logger.error("tablecast_voice_operation_failed")
+                log.error(
+                    "tablecast.voice_background",
+                    extra={
+                        "event": "tablecast.voice_background",
+                        "operation": name,
+                        "phase": "failed",
+                    },
+                )
 
         task.add_done_callback(completed)
 
@@ -100,12 +133,24 @@ class TablecastAgent(Agent):
                 self.speaker = speaker_reference(event)
             yield event
 
-    async def response(self, chat_ctx: llm.ChatContext) -> AsyncIterator[str]:
+    async def response(self, chat_ctx: llm.ChatContext, sdk_request_id: str) -> AsyncGenerator[str]:
         if self.stopped:
             return
         turn_id = str(uuid4())
         self.turn_id = turn_id
         speech = self.session.current_speech
+        # このturnの値を保持する。旧turnの後処理に現在のself.turn_idを使わない。
+        log = logging.LoggerAdapter(
+            self.log,
+            {
+                "turnId": turn_id,
+                "sdkRequestId": sdk_request_id,
+                "speechId": speech.id if speech is not None else None,
+                "operation": "turn",
+            },
+            merge_extra=True,
+        )
+        log.info("tablecast.voice_turn", extra={"phase": "started"})
         proactive = speech is not None and speech is self.proactive_speech
         messages = [
             {
@@ -123,64 +168,103 @@ class TablecastAgent(Agent):
         formatter = CaptionFormatter(preserve_markup=True)
         first_chunk = True
         try:
-            async for text in self.api.stream_turn(
-                turn_id,
-                self.config.locale,
-                messages,
-                None if proactive else self.speaker,
-                trigger="proactive" if proactive else "user",
-            ):
-                if self.stopped or self.turn_id != turn_id:
-                    status = "interrupted"
-                    return
-                valid = formatter.push(text)
-                if valid:
-                    yield ("[reset]" if first_chunk else "") + valid
-                    first_chunk = False
+            async with aclosing(
+                self.api.stream_turn(
+                    turn_id,
+                    self.config.locale,
+                    messages,
+                    None if proactive else self.speaker,
+                    trigger="proactive" if proactive else "user",
+                )
+            ) as stream:
+                async for text in stream:
+                    if self.stopped or self.turn_id != turn_id:
+                        status = "interrupted"
+                        return
+                    valid = formatter.push(text)
+                    if valid:
+                        yield ("[reset]" if first_chunk else "") + valid
+                        first_chunk = False
             formatter.finish()
             status = "completed"
             if not proactive:
-                self.background(self.read_confirmation(turn_id))
+                self.background(
+                    self.read_confirmation(turn_id),
+                    logging.LoggerAdapter(self.log, {"turnId": turn_id}, merge_extra=True),
+                    "confirmation",
+                )
         except TurnSkipped:
             status = None
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, GeneratorExit):
             status = "interrupted"
             raise
         finally:
+            log.info("tablecast.voice_turn", extra={"phase": status or "skipped"})
             # 取消通知は新turnの状態を上書きしないAPIへ送る。
             if status is not None:
-                self.background(self.api.end_turn(turn_id, status))
+                self.background(self.api.end_turn(turn_id, status), log, "end_turn")
                 if speech is not None:
-                    self.background(self.record_playback(turn_id, speech))
+                    self.background(self.record_playback(turn_id, speech), log, "playback")
 
-    async def record_playback(self, turn_id: str, speech: SpeechHandle) -> None:
-        await speech.wait_for_playout()
-        if speech.exception() is not None:
-            await self.api.end_turn(turn_id, "failed")
-        elif speech.interrupted:
-            await self.api.end_turn(turn_id, "interrupted")
-        for item in speech.chat_items:
-            if isinstance(item, llm.ChatMessage) and item.role == "assistant" and item.text_content:
-                await self.api.record_played(
-                    turn_id,
-                    caption(item.text_content, interrupted=item.interrupted),
-                    item.interrupted,
-                )
+    async def record_playback(
+        self, turn_id: str, speech: SpeechHandle, *, confirmation: bool = False
+    ) -> None:
+        log = logging.LoggerAdapter(
+            self.log,
+            {
+                "event": "tablecast.voice_speech",
+                "turnId": turn_id,
+                "speechId": speech.id,
+                "operation": "confirmation_playback" if confirmation else "playback",
+            },
+            merge_extra=True,
+        )
+        phase = "failed"
+        log.info("tablecast.voice_speech", extra={"phase": "started"})
+        try:
+            await speech.wait_for_playout()
+            if speech.exception() is not None:
+                await self.api.end_turn(turn_id, "failed")
+            elif speech.interrupted:
+                await self.api.end_turn(turn_id, "interrupted")
+            for item in speech.chat_items:
+                if (
+                    isinstance(item, llm.ChatMessage)
+                    and item.role == "assistant"
+                    and item.text_content
+                ):
+                    await self.api.record_played(
+                        turn_id,
+                        caption(item.text_content, interrupted=item.interrupted),
+                        item.interrupted,
+                        speech_id=speech.id,
+                    )
+            phase = (
+                "failed"
+                if speech.exception() is not None
+                else "interrupted"
+                if speech.interrupted
+                else "completed"
+            )
+        except asyncio.CancelledError:
+            phase = "interrupted"
+            raise
+        finally:
+            log.info("tablecast.voice_speech", extra={"phase": phase})
 
     async def read_confirmation(self, turn_id: str) -> None:
         action = await self.api.confirmation(turn_id)
         if not action or self.stopped or self.turn_id != turn_id:
             return
         speech = self.session.say("[reset]" + action.text, allow_interruptions=True)
-        await speech.wait_for_playout()
-        await self.record_playback(turn_id, speech)
+        await self.record_playback(turn_id, speech, confirmation=True)
         if (
             speech.exception() is None
             and not speech.interrupted
             and not self.stopped
             and self.turn_id == turn_id
         ):
-            await self.api.confirmation_read(turn_id, action.id)
+            await self.api.confirmation_read(turn_id, action.id, speech_id=speech.id)
 
     async def transcription_node(
         self, text: AsyncIterable[str | TimedString], model_settings: ModelSettings
@@ -195,6 +279,7 @@ async def entrypoint(ctx: JobContext) -> None:
     voice_session_id = metadata.get("voiceSessionId")
     if not isinstance(voice_session_id, str) or not voice_session_id:
         raise ValueError("音声セッションの認証情報がありません")
+    ctx.log_context_fields = {"voiceSessionId": voice_session_id}
     client = httpx.AsyncClient(
         base_url=os.environ["TABLECAST_API_URL"],
         headers={"Authorization": f"Bearer {os.environ['TABLECAST_VOICE_API_TOKEN']}"},

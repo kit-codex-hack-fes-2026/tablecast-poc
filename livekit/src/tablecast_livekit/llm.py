@@ -1,15 +1,16 @@
 """LiveKitのLLM拡張境界へ認証済みTableCast応答を登録する。"""
 
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncGenerator, Callable
+from contextlib import aclosing
 from typing import Any
 from uuid import uuid4
 
-from livekit.agents import APIConnectOptions, llm
+from livekit.agents import APIConnectOptions, APIError, llm
 from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, NOT_GIVEN, NotGivenOr
 
 
 class TablecastLLM(llm.LLM):
-    def __init__(self, response: Callable[[llm.ChatContext], AsyncIterator[str]]) -> None:
+    def __init__(self, response: Callable[[llm.ChatContext, str], AsyncGenerator[str]]) -> None:
         super().__init__()
         self.response = response
 
@@ -44,7 +45,14 @@ class TablecastStream(llm.LLMStream):
 
     async def _run(self) -> None:
         request_id = str(uuid4())
-        async for text in self.response(self.chat_ctx):
-            self._event_ch.send_nowait(
-                llm.ChatChunk(id=request_id, delta=llm.ChoiceDelta(role="assistant", content=text))
-            )
+        try:
+            async with aclosing(self.response(self.chat_ctx, request_id)) as response:
+                async for text in response:
+                    self._event_ch.send_nowait(
+                        llm.ChatChunk(
+                            id=request_id, delta=llm.ChoiceDelta(role="assistant", content=text)
+                        )
+                    )
+        except Exception:
+            # SDKの例外ログへHTTP・providerの本文やURLを渡さない。
+            raise APIError("音声APIの応答生成に失敗しました", retryable=False) from None

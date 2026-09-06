@@ -43,6 +43,14 @@ export function worktreeId(root: string, common: string) {
   return createHash("sha256").update(`${common}\0${root}`).digest("hex").slice(0, 10);
 }
 
+export async function localReleaseSha(root: string) {
+  const [{ stdout: sha }, { stdout: status }] = await Promise.all([
+    execute("git", ["rev-parse", "HEAD"], { cwd: root }),
+    execute("git", ["status", "--porcelain", "--untracked-files=normal"], { cwd: root }),
+  ]);
+  return `${sha.trim()}${status ? "-dirty" : ""}`;
+}
+
 export function assertLocalRuntime(runtime: TablecastRuntime, root: string) {
   const local = join(root, ".local");
   if (
@@ -220,7 +228,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         vars: {
           TABLECAST_ENV: "development",
           TABLECAST_PUBLIC_ORIGIN: runtime.origin,
-          TABLECAST_RELEASE_SHA: "local",
+          TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
         },
         d1_databases: [
           {

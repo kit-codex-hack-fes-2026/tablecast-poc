@@ -101,5 +101,8 @@ WebRTCのAEC（音響エコー除去）を有効にする。通常のTTS中は�
 ## ログ
 
 API、Mastra、Pythonに同じtable session ID、voice session ID、turn ID、request ID、release SHAを渡す。秘密情報をRoom名やログへ入れない。
+APIが発行した `X-Request-Id` を `traceId` として使い、呼出し元からの同名headerは信頼しない。認可後のturn記録へ卓・音声・turn IDを追加し、Mastraの公開 `runId` と `RequestContext` の診断値を対応付ける。生成終了と再生終了を区別し、本文streamがHTTP 200の後に失敗しても記録する。
+PythonはHTTPの応答headerを本文より先に取得する。HTTPごとの `traceId`、生成ごとの `sdkRequestId`、公開 `SpeechHandle.id` の `speechId` をturnへ対応付け、遅れて終わる旧turnの後処理にも元の値を保持する。応答headerを受け取れない失敗では `traceId` は不明のままとし、架空のIDを補わない。通常生成と固定確認の再生IDは別々に記録する。
+標準loggerの構造化フィールドだけを使い、会話本文、話者情報、header全体、例外全文は診断ログへ出さない。Mastraの汎用loggerは引き続き無効にし、業務履歴の本文保存と診断を混同しない。[Workersの構造化ログ](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)
 ローカルは各プロセスの構造化ログ、業務履歴はD1。本番はWorkers Logsと利用可能なLiveKitの観測を併用する。
 Mastra Studioを店舗ダッシュボードに転用せず、D1だけで全Mastraトレースが永続表示できるとも仮定しない。独自監視基盤を必須起動依存にしない。
