@@ -21,8 +21,10 @@ import { DomainError, ensure } from "./errors";
 import {
   cartUpdateSchema,
   configurationSchema,
+  historyQuerySchema,
   localeSchema,
   prepareSchema,
+  sessionEventsQuerySchema,
   submitSchema,
 } from "./schema";
 import {
@@ -33,7 +35,9 @@ import {
   getAdminState,
   getCatalog,
   getEvents,
+  getHistory,
   getSession,
+  getSessionEvents,
   getTableState,
   openTable,
   prepareConfirmation,
@@ -62,6 +66,16 @@ const validate = <T extends z.ZodType>(schema: T) =>
       throw new DomainError(
         "INVALID_INPUT",
         422,
+        "INVALID_INPUT",
+        result.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
+      );
+  });
+const validateQuery = <T extends z.ZodType>(schema: T) =>
+  zValidator("query", schema, (result) => {
+    if (!result.success)
+      throw new DomainError(
+        "INVALID_INPUT",
+        400,
         "INVALID_INPUT",
         result.error.issues.map((issue) => ({ path: issue.path, code: issue.code })),
       );
@@ -314,8 +328,16 @@ const admin = new Hono<ApiEnv>().use("*", async (c, next) => {
 const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
 admin.get("/", async (c) => c.json(await getAdminState(c.env, c.get("actor"))));
 admin.get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)));
+admin.get("/history", validateQuery(historyQuerySchema), async (c) =>
+  c.json(await getHistory(c.env, c.get("actor"), c.req.valid("query"))),
+);
 admin.get("/tables/:id", async (c) =>
   c.json(await getTableState(c.env, scoped(c.get("actor"), c.req.param("id")))),
+);
+admin.get("/tables/:id/events", validateQuery(sessionEventsQuerySchema), async (c) =>
+  c.json(
+    await getSessionEvents(c.env, scoped(c.get("actor"), c.req.param("id")), c.req.valid("query")),
+  ),
 );
 admin.post(
   "/tables/open",

@@ -14,12 +14,17 @@ import {
   tablePlanSchema,
   eventDataSchema,
   type AdminState,
+  type Bill,
   type Cart,
   type CartLine,
   type CartUpdate,
   type Catalog,
+  type HistoryPage,
+  type HistoryQuery,
   type Locale,
   type Order,
+  type SessionEventsPage,
+  type SessionEventsQuery,
   type Snapshot,
   type TableEvent,
   type TableState,
@@ -215,6 +220,104 @@ export async function getEvents(
     cursor: rows.results.at(-1)?.cursor ?? after,
   };
 }
+function billValue(
+  totals: Omit<Bill, "due" | "planTotal">,
+  plan: TableState["plan"],
+  guestCount: number,
+): Bill {
+  const planTotal = plan ? plan.rules.pricePerPerson * guestCount : 0;
+  return {
+    ...totals,
+    planTotal,
+    due: totals.orderedTotal + totals.adjustmentTotal + planTotal - totals.paidTotal,
+  };
+}
+export async function getHistory(
+  env: TablecastEnv,
+  actor: Actor,
+  query: HistoryQuery,
+): Promise<HistoryPage> {
+  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+  const cursor =
+    query.beforeClosedAt !== undefined && query.beforeId !== undefined
+      ? { sql: " AND (s.closed_at,s.id)<(?,?)", values: [query.beforeClosedAt, query.beforeId] }
+      : { sql: "", values: [] };
+  const rows = await env.TABLECAST_DB.prepare(
+    `WITH page AS (
+      SELECT s.id,s.store_id,s.table_id,t.name AS table_name,s.locale,s.guest_count,s.opened_at,s.closed_at,s.plan_json
+      FROM table_sessions s JOIN restaurant_tables t ON t.id=s.table_id AND t.store_id=s.store_id
+      WHERE s.store_id=? AND s.status='closed' AND s.closed_at IS NOT NULL${cursor.sql}
+      ORDER BY s.closed_at DESC,s.id DESC LIMIT ?
+    )
+    SELECT page.*,
+      (SELECT COALESCE(SUM(o.total),0) FROM orders o WHERE o.table_session_id=page.id AND o.store_id=page.store_id AND o.status NOT IN ('cancelled','rejected')) AS ordered_total,
+      (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.table_session_id=page.id AND p.store_id=page.store_id AND p.kind='adjustment') AS adjustment_total,
+      (SELECT COALESCE(SUM(p.amount),0) FROM payments p WHERE p.table_session_id=page.id AND p.store_id=page.store_id AND p.kind='payment') AS paid_total
+    FROM page
+    ORDER BY page.closed_at DESC,page.id DESC`,
+  )
+    .bind(actor.storeId, ...cursor.values, query.limit + 1)
+    .all<{
+      id: string;
+      table_id: string;
+      table_name: string;
+      locale: Locale;
+      guest_count: number;
+      opened_at: number;
+      closed_at: number;
+      plan_json: string | null;
+      ordered_total: number;
+      adjustment_total: number;
+      paid_total: number;
+    }>();
+  const sessions = rows.results.slice(0, query.limit).map((row) => ({
+    id: row.id,
+    tableId: row.table_id,
+    tableName: row.table_name,
+    locale: row.locale,
+    guestCount: row.guest_count,
+    openedAt: row.opened_at,
+    closedAt: row.closed_at,
+    bill: billValue(
+      {
+        orderedTotal: row.ordered_total,
+        adjustmentTotal: row.adjustment_total,
+        paidTotal: row.paid_total,
+        cartTotal: 0,
+      },
+      row.plan_json ? tablePlanSchema.parse(JSON.parse(row.plan_json)) : null,
+      row.guest_count,
+    ),
+  }));
+  const last = sessions.at(-1);
+  return {
+    sessions,
+    nextCursor:
+      rows.results.length > query.limit && last ? { closedAt: last.closedAt, id: last.id } : null,
+  };
+}
+export async function getSessionEvents(
+  env: TablecastEnv,
+  actor: Actor,
+  query: SessionEventsQuery,
+): Promise<SessionEventsPage> {
+  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+  const row = await getSession(env, actor);
+  const cursor =
+    query.before === undefined
+      ? { sql: "", values: [] }
+      : { sql: " AND cursor<?", values: [query.before] };
+  const rows = await env.TABLECAST_DB.prepare(
+    `SELECT * FROM table_events WHERE table_session_id=? AND store_id=?${cursor.sql} ORDER BY cursor DESC LIMIT ?`,
+  )
+    .bind(row.id, actor.storeId, ...cursor.values, query.limit + 1)
+    .all<EventRecord>();
+  const events = rows.results.slice(0, query.limit).reverse().map(eventValue);
+  return {
+    events,
+    nextBefore: rows.results.length > query.limit ? (events[0]?.cursor ?? null) : null,
+  };
+}
 export async function getTableState(env: TablecastEnv, actor: Actor): Promise<TableState> {
   const row = await getSession(env, actor);
   const catalog = await getCatalog(env, row.store_id);
@@ -256,7 +359,6 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
     .reduce((sum, order) => sum + order.total, 0);
   const adjustmentTotal = payments.results.find((p) => p.kind === "adjustment")?.total ?? 0;
   const paidTotal = payments.results.find((p) => p.kind === "payment")?.total ?? 0;
-  const planTotal = plan ? plan.rules.pricePerPerson * row.guest_count : 0;
   return {
     id: row.id,
     tableId: row.table_id,
@@ -273,14 +375,11 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
     orders,
     events: history.results.map(eventValue),
     cursor: history.results.at(-1)?.cursor ?? 0,
-    bill: {
-      orderedTotal,
-      adjustmentTotal,
-      paidTotal,
-      due: orderedTotal + adjustmentTotal + planTotal - paidTotal,
-      cartTotal: cart.total,
-      planTotal,
-    },
+    bill: billValue(
+      { orderedTotal, adjustmentTotal, paidTotal, cartTotal: cart.total },
+      plan,
+      row.guest_count,
+    ),
     plan,
     staffCalled: !!row.staff_called,
     snapshot:
@@ -804,12 +903,13 @@ export async function resolveCall(env: TablecastEnv, actor: Actor) {
   ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
   const row = await getSession(env, actor);
   const mutation = crypto.randomUUID();
-  await env.TABLECAST_DB.batch([
+  const result = await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "UPDATE table_sessions SET staff_called=0,mutation_id=? WHERE id=? AND store_id=?",
+      "UPDATE table_sessions SET staff_called=0,mutation_id=? WHERE id=? AND store_id=? AND status='open'",
     ).bind(mutation, row.id, actor.storeId),
     eventStatement(env, actor, mutation, "staff.resolved", {}),
   ]);
+  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
   await notifyStore(env, actor.storeId);
   return getTableState(env, actor);
 }

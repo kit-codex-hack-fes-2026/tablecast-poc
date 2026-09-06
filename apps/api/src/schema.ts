@@ -283,6 +283,28 @@ export const prepareSchema = z
 export const submitSchema = z
   .object({ snapshotId: id, idempotencyKey: z.string().min(8).max(100), approved: z.literal(true) })
   .strict();
+const decimalQuerySchema = z.string().regex(/^\d+$/).transform(Number);
+const pageLimitSchema = decimalQuerySchema.pipe(z.number().int().min(1).max(100));
+export const historyQuerySchema = z
+  .object({
+    beforeClosedAt: decimalQuerySchema
+      .pipe(z.number().int().nonnegative().max(8_640_000_000_000_000))
+      .optional(),
+    beforeId: id.refine((value) => value.trim().length > 0).optional(),
+    limit: pageLimitSchema.default(30),
+  })
+  .strict()
+  .refine((query) => (query.beforeClosedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+export const sessionEventsQuerySchema = z
+  .object({
+    before: decimalQuerySchema.pipe(z.number().int().positive()).optional(),
+    limit: pageLimitSchema.default(100),
+  })
+  .strict();
+export type HistoryQuery = z.infer<typeof historyQuerySchema>;
+export type SessionEventsQuery = z.infer<typeof sessionEventsQuerySchema>;
 export const voiceTriggerSchema = z.enum(["user", "proactive"]);
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 export const voiceTurnSchema = z
@@ -390,6 +412,27 @@ export const billSchema: z.ZodType<Bill> = z.object({
   cartTotal: z.number().int(),
   planTotal: z.number().int(),
 });
+export const closedSessionSummarySchema = z.object({
+  id: z.string(),
+  tableId: z.string(),
+  tableName: z.string(),
+  locale: localeSchema,
+  guestCount: z.number().int().positive(),
+  openedAt: z.number().int(),
+  closedAt: z.number().int(),
+  bill: billSchema,
+});
+export const historyPageSchema = z.object({
+  sessions: z.array(closedSessionSummarySchema),
+  nextCursor: z.object({ closedAt: z.number().int(), id: z.string() }).nullable(),
+});
+export const sessionEventsPageSchema = z.object({
+  events: z.array(tableEventSchema),
+  nextBefore: z.number().int().positive().nullable(),
+});
+export type ClosedSessionSummary = z.infer<typeof closedSessionSummarySchema>;
+export type HistoryPage = z.infer<typeof historyPageSchema>;
+export type SessionEventsPage = z.infer<typeof sessionEventsPageSchema>;
 export const tableStateSchema: z.ZodType<TableState> = z.object({
   id: z.string(),
   tableId: z.string(),
