@@ -208,6 +208,58 @@ export type AdminState = {
   events: TableEvent[];
   cursor: number;
 };
+const configurationIssueBase = z.object({
+  path: z.array(z.union([z.string(), z.number().int().nonnegative()])),
+});
+export const configurationIssueSchema = z.discriminatedUnion("code", [
+  configurationIssueBase.extend({
+    code: z.literal("DUPLICATE_ID"),
+    params: z.object({ id: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("CATEGORY_NOT_FOUND"),
+    params: z.object({ categoryId: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("MODIFIER_SELECTION_RANGE"),
+    params: z
+      .object({ min: z.number(), max: z.number(), kind: modifierSchema.shape.kind })
+      .strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("MODIFIER_CAPACITY"),
+    params: z.object({ max: z.number(), capacity: z.number() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("OPTION_REFERENCE_INVALID"),
+    params: z
+      .object({
+        optionId: z.string(),
+        referenceId: z.string(),
+        relation: z.enum(["requires", "excludes"]),
+      })
+      .strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("PLAN_LAST_ORDER_INVALID"),
+    params: z
+      .object({ durationMinutes: z.number(), lastOrderMinutesBeforeEnd: z.number() })
+      .strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("PLAN_TARGET_EMPTY"),
+    params: z.object({}).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("PRODUCT_NOT_FOUND"),
+    params: z.object({ productId: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("OPTION_NOT_FOUND"),
+    params: z.object({ optionId: z.string() }).strict(),
+  }),
+]);
+export type ConfigurationIssue = z.infer<typeof configurationIssueSchema>;
 export type ConfigDraft = {
   id: string;
   storeId: string;
@@ -215,7 +267,7 @@ export type ConfigDraft = {
   version: number;
   status: "draft" | "ready" | "published" | "discarded";
   configuration: Configuration;
-  errors: string[];
+  errors: ConfigurationIssue[];
   changes: { path: string; before: unknown; after: unknown; sensitive: boolean }[];
 };
 export type ApiError = {
@@ -383,7 +435,7 @@ export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   version: z.number().int(),
   status: z.enum(["draft", "ready", "published", "discarded"]),
   configuration: configurationSchema,
-  errors: z.array(z.string()),
+  errors: z.array(configurationIssueSchema),
   changes: z.array(
     z.object({ path: z.string(), before: z.unknown(), after: z.unknown(), sensitive: z.boolean() }),
   ),

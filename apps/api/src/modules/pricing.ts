@@ -1,66 +1,121 @@
 import { ensure } from "../errors";
-import type { Cart, CartLine, Configuration, Locale, Plan, PricedLine, Snapshot } from "../schema";
+import type {
+  Cart,
+  CartLine,
+  Configuration,
+  ConfigurationIssue,
+  Locale,
+  Plan,
+  PricedLine,
+  Snapshot,
+} from "../schema";
 
-export function configurationErrors(config: Configuration): string[] {
-  const errors: string[] = [];
-  const unique = (ids: string[], path: string) => {
-    if (new Set(ids).size !== ids.length) errors.push(`${path}: IDが重複しています`);
+export function configurationErrors(config: Configuration): ConfigurationIssue[] {
+  const errors: ConfigurationIssue[] = [];
+  const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {
+    const seen = new Set<string>();
+    for (const [index, item] of items.entries()) {
+      if (seen.has(item.id))
+        errors.push({
+          code: "DUPLICATE_ID",
+          path: [...path, index, "id"],
+          params: { id: item.id },
+        });
+      seen.add(item.id);
+    }
   };
-  unique(
-    config.categories.map((c) => c.id),
-    "categories",
-  );
-  unique(
-    config.products.map((p) => p.id),
-    "products",
-  );
-  unique(
-    config.plans.map((p) => p.id),
-    "plans",
-  );
+  unique(config.categories, ["categories"]);
+  unique(config.products, ["products"]);
+  unique(config.plans, ["plans"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
-  for (const product of config.products) {
-    if (!categories.has(product.categoryId)) errors.push(`${product.id}: カテゴリがありません`);
-    unique(
-      product.modifiers.map((m) => m.id),
-      product.id,
-    );
+  for (const [productIndex, product] of config.products.entries()) {
+    const productPath = ["products", productIndex];
+    if (!categories.has(product.categoryId))
+      errors.push({
+        code: "CATEGORY_NOT_FOUND",
+        path: [...productPath, "categoryId"],
+        params: { categoryId: product.categoryId },
+      });
+    unique(product.modifiers, [...productPath, "modifiers"]);
     const options = product.modifiers.flatMap((m) => m.options);
     const optionIds = new Set(options.map((o) => o.id));
-    unique(
-      options.map((o) => o.id),
-      `${product.id}.options`,
-    );
-    for (const group of product.modifiers) {
+    const seenOptions = new Set<string>();
+    for (const [groupIndex, group] of product.modifiers.entries()) {
+      const groupPath = [...productPath, "modifiers", groupIndex];
       if (group.min > group.max || (group.kind === "single" && group.max !== 1))
-        errors.push(`${group.id}: 選択数が不正です`);
-      if (
-        group.max >
-        group.options.reduce((sum, o) => sum + (group.kind === "quantity" ? o.maxQuantity : 1), 0)
-      )
-        errors.push(`${group.id}: 最大数が選択肢を超えています`);
-      for (const option of group.options) {
-        for (const reference of [...option.requires, ...option.excludes])
-          if (!optionIds.has(reference) || reference === option.id)
-            errors.push(`${option.id}: 依存先が不正です`);
+        errors.push({
+          code: "MODIFIER_SELECTION_RANGE",
+          path: [...groupPath, "max"],
+          params: { min: group.min, max: group.max, kind: group.kind },
+        });
+      const capacity = group.options.reduce(
+        (sum, o) => sum + (group.kind === "quantity" ? o.maxQuantity : 1),
+        0,
+      );
+      if (group.max > capacity)
+        errors.push({
+          code: "MODIFIER_CAPACITY",
+          path: [...groupPath, "max"],
+          params: { max: group.max, capacity },
+        });
+      for (const [optionIndex, option] of group.options.entries()) {
+        const optionPath = [...groupPath, "options", optionIndex];
+        if (seenOptions.has(option.id))
+          errors.push({
+            code: "DUPLICATE_ID",
+            path: [...optionPath, "id"],
+            params: { id: option.id },
+          });
+        seenOptions.add(option.id);
+        for (const relation of ["requires", "excludes"] as const)
+          for (const [referenceIndex, referenceId] of option[relation].entries())
+            if (!optionIds.has(referenceId) || referenceId === option.id)
+              errors.push({
+                code: "OPTION_REFERENCE_INVALID",
+                path: [...optionPath, relation, referenceIndex],
+                params: { optionId: option.id, referenceId, relation },
+              });
       }
     }
   }
   const allOptions = new Set(
     config.products.flatMap((p) => p.modifiers.flatMap((m) => m.options.map((o) => o.id))),
   );
-  for (const plan of config.plans) {
+  for (const [planIndex, plan] of config.plans.entries()) {
+    const planPath = ["plans", planIndex];
     if (plan.lastOrderMinutesBeforeEnd >= plan.durationMinutes)
-      errors.push(`${plan.id}: ラストオーダーが開始以前です`);
+      errors.push({
+        code: "PLAN_LAST_ORDER_INVALID",
+        path: [...planPath, "lastOrderMinutesBeforeEnd"],
+        params: {
+          durationMinutes: plan.durationMinutes,
+          lastOrderMinutesBeforeEnd: plan.lastOrderMinutesBeforeEnd,
+        },
+      });
     if (![...plan.productIds, ...plan.categoryIds, ...plan.tags].length)
-      errors.push(`${plan.id}: 対象が空です`);
-    for (const product of plan.productIds)
-      if (!products.has(product)) errors.push(`${plan.id}: 商品がありません`);
-    for (const category of plan.categoryIds)
-      if (!categories.has(category)) errors.push(`${plan.id}: カテゴリがありません`);
-    for (const option of plan.excludedOptionIds)
-      if (!allOptions.has(option)) errors.push(`${plan.id}: 対象外選択肢がありません`);
+      errors.push({ code: "PLAN_TARGET_EMPTY", path: planPath, params: {} });
+    for (const [index, productId] of plan.productIds.entries())
+      if (!products.has(productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: [...planPath, "productIds", index],
+          params: { productId },
+        });
+    for (const [index, categoryId] of plan.categoryIds.entries())
+      if (!categories.has(categoryId))
+        errors.push({
+          code: "CATEGORY_NOT_FOUND",
+          path: [...planPath, "categoryIds", index],
+          params: { categoryId },
+        });
+    for (const [index, optionId] of plan.excludedOptionIds.entries())
+      if (!allOptions.has(optionId))
+        errors.push({
+          code: "OPTION_NOT_FOUND",
+          path: [...planPath, "excludedOptionIds", index],
+          params: { optionId },
+        });
   }
   return errors;
 }

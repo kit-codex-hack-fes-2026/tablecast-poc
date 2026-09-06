@@ -2,7 +2,12 @@ import { z } from "zod";
 import type { Actor } from "../auth";
 import { requireManager } from "../auth";
 import { ensure } from "../errors";
-import { configurationSchema, type ConfigDraft, type Configuration } from "../schema";
+import {
+  configurationIssueSchema,
+  configurationSchema,
+  type ConfigDraft,
+  type Configuration,
+} from "../schema";
 import { getCatalog, notifyStore } from "./operations";
 import { configurationErrors } from "./pricing";
 
@@ -16,6 +21,14 @@ type DraftRecord = {
   errors_json: string;
   publish_key: string | null;
 };
+function hasSensitiveField(value: unknown, path: string): boolean {
+  return (
+    /price|allergen|vegan|crossContact|plans/.test(path) ||
+    (value !== null &&
+      typeof value === "object" &&
+      Object.entries(value).some(([key, child]) => hasSensitiveField(child, key)))
+  );
+}
 function differences(before: unknown, after: unknown, path = ""): ConfigDraft["changes"] {
   if (JSON.stringify(before) === JSON.stringify(after)) return [];
   if (
@@ -35,7 +48,7 @@ function differences(before: unknown, after: unknown, path = ""): ConfigDraft["c
       path,
       before: before ?? null,
       after: after ?? null,
-      sensitive: /price|allergen|vegan|crossContact|plans/.test(path),
+      sensitive: hasSensitiveField(before, path) || hasSensitiveField(after, path),
     },
   ];
 }
@@ -48,6 +61,13 @@ export async function getDraft(env: TablecastEnv, actor: Actor, id: string): Pro
   ensure(row, "DRAFT_NOT_FOUND", 404);
   const catalog = await getCatalog(env, actor.storeId);
   const configuration = configurationSchema.parse(JSON.parse(row.config_json));
+  const storedErrors: unknown = JSON.parse(row.errors_json);
+  const legacyErrors = z.array(z.string()).safeParse(storedErrors);
+  // 旧形式は文言を解析せず保存設定から再評価する。読み取りでは検証状態・版を更新しない。
+  const errors =
+    legacyErrors.success && legacyErrors.data.length > 0
+      ? configurationErrors(configuration)
+      : z.array(configurationIssueSchema).parse(storedErrors);
   return {
     id: row.id,
     storeId: row.store_id,
@@ -55,7 +75,7 @@ export async function getDraft(env: TablecastEnv, actor: Actor, id: string): Pro
     version: row.version,
     status: row.status,
     configuration,
-    errors: z.array(z.string()).parse(JSON.parse(row.errors_json)),
+    errors,
     changes: differences(catalog.configuration, configuration),
   };
 }

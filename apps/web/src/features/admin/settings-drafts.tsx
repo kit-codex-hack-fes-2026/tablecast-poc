@@ -1,16 +1,17 @@
-import { Checkbox } from "@base-ui/react/checkbox";
 import { Dialog } from "@base-ui/react/dialog";
 import { configDraftSchema } from "@tablecast/api/schema";
-import type { ConfigDraft, Configuration, Product } from "@tablecast/api/schema";
+import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { money, useI18n } from "../../i18n/locale";
+import { useI18n } from "../../i18n/locale";
 import { api, json } from "../../lib/api";
 import { draftsSchema } from "../../lib/responses";
+import { ConfigurationChanges } from "./configuration-changes";
+import { ConfigurationEditor } from "./configuration-editor";
+import { ConfigurationErrors } from "./configuration-errors";
 
 export function SettingsDrafts({
   storeId,
@@ -35,10 +36,28 @@ export function SettingsDrafts({
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  const create = useMutation({
+    mutationFn: () => api(base, json("POST", {}), configDraftSchema),
+    onSuccess: (draft) => {
+      client.setQueryData(["tablecast-draft", storeId, draft.id], draft);
+      setSelectedId(draft.id);
+      void drafts.refetch();
+    },
+  });
   return (
     <section className="settings-panel">
       <h2>{t("admin_drafts")}</h2>
-      <ErrorNotice error={drafts.error || selected.error} />
+      <Button
+        className="my-4"
+        variant="outline"
+        type="button"
+        disabled={create.isPending}
+        onClick={() => create.mutate()}
+      >
+        <Plus size={16} />
+        {t("editor_create_draft")}
+      </Button>
+      <ErrorNotice error={drafts.error || selected.error || create.error} />
       {drafts.data?.drafts
         .filter((draft) => draft.status === "draft" || draft.status === "ready")
         .map((draft) => (
@@ -52,7 +71,12 @@ export function SettingsDrafts({
                 {draft.changes.length} {t("admin_change_count")}
               </p>
             </div>
-            <Button variant="outline" type="button" onClick={() => setSelectedId(draft.id)}>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={create.isPending}
+              onClick={() => setSelectedId(draft.id)}
+            >
               {t("admin_review_draft")}
             </Button>
           </div>
@@ -87,12 +111,11 @@ function DraftDialog({
   onSaved: (draft: ConfigDraft) => void;
   onClose: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft);
   const [configuration, setConfiguration] = useState(initialDraft.configuration);
-  const [productId, setProductId] = useState(initialDraft.configuration.products[0]?.id ?? "");
+  const [editorVersion, setEditorVersion] = useState(0);
   const [publishKey] = useState(() => crypto.randomUUID());
-  const product = configuration.products.find((item) => item.id === productId);
   const dirty = JSON.stringify(configuration) !== JSON.stringify(draft.configuration);
   const editable = draft.status === "draft" || draft.status === "ready";
   function saved(next: ConfigDraft) {
@@ -135,20 +158,19 @@ function DraftDialog({
       onClose();
     },
   });
-  const busy = save.isPending || validate.isPending || publish.isPending;
-  function changeProduct(change: Partial<Product>) {
-    setConfiguration((current) => ({
-      ...current,
-      products: current.products.map((item) =>
-        item.id === productId ? { ...item, ...change } : item,
+  const discard = useMutation({
+    mutationFn: () =>
+      api(
+        `${base}/${draft.id}/discard`,
+        json("POST", { expectedVersion: draft.version }),
+        configDraftSchema,
       ),
-    }));
-  }
-  const fields = [
-    { key: "displayName", label: t("admin_display_name") },
-    { key: "speechName", label: t("admin_speech_name") },
-    { key: "description", label: t("admin_description") },
-  ] as const;
+    onSuccess: (discarded) => {
+      onSaved(discarded);
+      onClose();
+    },
+  });
+  const busy = save.isPending || validate.isPending || publish.isPending || discard.isPending;
   return (
     <Dialog.Root
       open
@@ -174,181 +196,48 @@ function DraftDialog({
                   save.mutate(configuration);
                 }}
               >
-                <fieldset className="stacked-form min-w-0 pt-0" disabled={busy || !editable}>
-                  <label>
-                    {t("admin_product")}
-                    <select
-                      className="h-12 rounded-lg border border-input px-3 text-sm"
-                      value={productId}
-                      onChange={(event) => {
-                        if (event.currentTarget.form?.reportValidity())
-                          setProductId(event.target.value);
-                      }}
-                    >
-                      {configuration.products.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.text[locale].displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {product && (
-                    <>
-                      <label>
-                        {t("admin_unit_price")}
-                        <Input
-                          type="number"
-                          min={0}
-                          max={10_000_000}
-                          step={1}
-                          required
-                          value={Number.isFinite(product.price) ? product.price : ""}
-                          onChange={(event) => changeProduct({ price: event.target.valueAsNumber })}
-                        />
-                      </label>
-                      <label className="checkbox-label flex-row">
-                        <Checkbox.Root
-                          className="checkbox-control"
-                          checked={product.available}
-                          disabled={busy || !editable}
-                          onCheckedChange={(available) => changeProduct({ available })}
-                        >
-                          <Checkbox.Indicator>
-                            <Check size={16} />
-                          </Checkbox.Indicator>
-                        </Checkbox.Root>
-                        <span>{t("admin_available")}</span>
-                      </label>
-                      <div className="grid gap-5 sm:grid-cols-2">
-                        {(["ja", "en"] as const).map((language) => (
-                          <fieldset key={language} className="stacked-form min-w-0 pt-0">
-                            <legend className="mb-3 font-semibold">
-                              {t(language === "ja" ? "common_ja" : "common_en")}
-                            </legend>
-                            {fields.map(({ key, label }) => (
-                              <label key={key}>
-                                {label}
-                                {key === "description" ? (
-                                  <textarea
-                                    className="min-h-24 w-full rounded-lg border border-input p-2 text-sm"
-                                    maxLength={3000}
-                                    value={product.text[language][key]}
-                                    onChange={(event) =>
-                                      changeProduct({
-                                        text: {
-                                          ...product.text,
-                                          [language]: {
-                                            ...product.text[language],
-                                            [key]: event.target.value,
-                                          },
-                                        },
-                                      })
-                                    }
-                                  />
-                                ) : (
-                                  <Input
-                                    required
-                                    maxLength={150}
-                                    value={product.text[language][key]}
-                                    onChange={(event) =>
-                                      changeProduct({
-                                        text: {
-                                          ...product.text,
-                                          [language]: {
-                                            ...product.text[language],
-                                            [key]: event.target.value,
-                                          },
-                                        },
-                                      })
-                                    }
-                                  />
-                                )}
-                              </label>
-                            ))}
-                          </fieldset>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        <Button type="submit" disabled={!dirty}>
-                          {t("common_save")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          disabled={!dirty}
-                          onClick={() => setConfiguration(draft.configuration)}
-                        >
-                          {t("common_cancel")}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </fieldset>
+                <ConfigurationEditor
+                  key={editorVersion}
+                  value={configuration}
+                  onChange={setConfiguration}
+                  disabled={busy || !editable}
+                  voices={initialDraft.configuration.cast.voice}
+                />
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button type="submit" disabled={!dirty || busy || !editable}>
+                    {t("common_save")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled={!dirty || busy || !editable}
+                    onClick={() => {
+                      setConfiguration(draft.configuration);
+                      setEditorVersion((version) => version + 1);
+                    }}
+                  >
+                    {t("common_cancel")}
+                  </Button>
+                </div>
               </form>
               {dirty && <output className="notice">{t("admin_unsaved")}</output>}
-              {draft.errors.length > 0 && (
-                <ul className="validation-errors">
-                  {draft.errors.map((error) => (
-                    <li key={error}>{error}</li>
-                  ))}
-                </ul>
-              )}
+              <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
               <h3 className="mt-6 font-semibold">{t("admin_saved_changes")}</h3>
               {draft.changes.some((change) => change.sensitive) && (
                 <div className="notice">{t("admin_sensitive")}</div>
               )}
-              {draft.changes.map((change) => {
-                const [collection, index, section, language] = change.path.split(".");
-                const changedLanguage =
-                  section === "text" && (language === "ja" || language === "en")
-                    ? t(language === "ja" ? "common_ja" : "common_en")
-                    : undefined;
-                const changedProduct =
-                  collection === "products"
-                    ? draft.configuration.products[Number(index)]
-                    : undefined;
-                const field = changedLanguage
-                  ? fields.find(
-                      (item) => change.path === `products.${index}.text.${language}.${item.key}`,
-                    )
-                  : [
-                      { key: "price", label: t("admin_unit_price") },
-                      { key: "available", label: t("admin_available") },
-                    ].find((item) => change.path === `products.${index}.${item.key}`);
-                return (
-                  <div className="config-change" key={change.path}>
-                    <strong>
-                      {changedProduct && field
-                        ? [changedProduct.text[locale].displayName, changedLanguage, field.label]
-                            .filter(Boolean)
-                            .join(" · ")
-                        : change.path}
-                    </strong>
-                    <div>
-                      {[
-                        { label: t("admin_before"), value: change.before },
-                        { label: t("admin_after"), value: change.after },
-                      ].map(({ label, value }) => (
-                        <section key={label}>
-                          <h4>{label}</h4>
-                          <pre>
-                            {field?.key === "price" && typeof value === "number"
-                              ? money(value, locale)
-                              : field?.key === "available" && typeof value === "boolean"
-                                ? t(value ? "admin_available" : "kiosk_sold_out")
-                                : typeof value === "string"
-                                  ? value
-                                  : JSON.stringify(value, null, 2)}
-                          </pre>
-                        </section>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+              <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
             </div>
-            <ErrorNotice error={save.error || validate.error || publish.error} />
+            <ErrorNotice error={save.error || validate.error || publish.error || discard.error} />
             <div className="dialog-actions">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={!editable || busy}
+                onClick={() => discard.mutate()}
+              >
+                {t("editor_discard_draft")}
+              </Button>
               <Button
                 variant="outline"
                 type="button"

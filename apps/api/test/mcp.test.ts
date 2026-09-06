@@ -200,7 +200,11 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     configDraftSchema,
   );
   expect(invalid.status).toBe("draft");
-  expect(invalid.errors).toContain("tablecast-tea-plan: 商品がありません");
+  expect(invalid.errors).toContainEqual({
+    code: "PRODUCT_NOT_FOUND",
+    path: ["plans", 0, "productIds", 0],
+    params: { productId: "tablecast-missing-product" },
+  });
   configuration.plans = configuration.plans.map((plan) => ({ ...plan, productIds: ["tea"] }));
   draft = toolData(
     await client.callTool({

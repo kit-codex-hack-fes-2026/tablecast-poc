@@ -465,7 +465,7 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
   for (const initialStore of demoStores(credentials.profile)) {
     const store: Store = initialStore;
     const errors = configurationErrors(store.configuration);
-    if (errors.length) throw new Error(errors.join("\n"));
+    if (errors.length) throw new Error(JSON.stringify(errors));
     const owner = organizations.get(store.organization);
     if (!owner) throw new Error("デモ店舗の所属組織がありません。");
     const existing = await db
