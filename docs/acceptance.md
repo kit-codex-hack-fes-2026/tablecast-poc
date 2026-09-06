@@ -2,7 +2,7 @@
 
 [索引](README.md)
 
-2026-09-06の最終ローカル受入では、ビルド済みWeb/APIのService Bindingを使い、Chromium/WebKitの日英注文・提供・会計・OAuth同意・通知復旧・設定公開・文字拡大・キーボード操作に加え、商品編集・明示公開と管理画面の通知復旧と設定の手動編集・外部カートの不足補完と競合・閉卓履歴を含む32件が成功した。APIは開卓と設定公開の競合・rollback・通知境界、MCP認可と自発接客を含む85件成功。3worktreeの同時稼働、Cookie・DB・LiveKit分離、片方のreset/stop後の状態保持と一時環境の後片付けも確認した。ローカルLiveKitの合成音声送受信とRoom削除による切断は成功し、実マイク・外部AI・iPadの試験とは区別する。詳細は[実装・検証記録](progress.md)。以下の未実施項目はこの結果で自動的に受入済みとはしない。
+2026-09-06の閉卓履歴までのローカル受入では、ビルド済みWeb/APIのService Bindingを使い、Chromium/WebKitの日英注文・提供・会計・OAuth同意・通知復旧・設定公開・文字拡大・キーボード操作に加え、商品編集・明示公開と管理画面の通知復旧と設定の手動編集・外部カートの不足補完と競合・閉卓履歴を含む32件が成功した。APIは開卓と設定公開の競合・rollback・通知境界、MCP認可・自発接客と今回の診断を含む92件成功。3worktreeの同時稼働、Cookie・DB・LiveKit分離、片方のreset/stop後の状態保持と一時環境の後片付けも確認した。ローカルLiveKitの合成音声送受信とRoom削除による切断は成功し、実マイク・外部AI・iPadの試験とは区別する。詳細は[実装・検証記録](progress.md)。以下の未実施項目はこの結果で自動的に受入済みとはしない。
 
 以下は実装の完了条件であり、文書の存在だけで達成済みとはしない。未測定を合格扱いにしない。
 
@@ -78,6 +78,12 @@
 - 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](../apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](../apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。標準voice一覧と外部MCPクライアントの実接続は後続である。
 
 管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はあかり一商品の価格だけを一時変更し、元設定を新しい版として復元する。
+
+## 診断と音声候補の追加検証
+
+APIの新規診断7件は実workerd/D1/Mastraで要求ID、認可済みturn、公開runId、拒否・途中失敗・取消・204と非漏洩を検証する。Pythonの新規10件はHTTPと実AgentSessionを使い、要求・生成・通常再生・固定確認・遅い旧turnのIDを対応付ける。APIの応答headerを受信できない時と、SDKが失敗metricsを発行しない時は不明を補わない。[API診断試験](../apps/api/test/voice-diagnostics.test.ts)、[Python診断試験](../livekit/tests/test_diagnostics.py)
+
+新しいビルドでは、実HTTPの401応答headerとJSONログのID、Git HEAD由来の実行版の一致、health 200を確認した。音声候補は公開設定・下書き・編集値の範囲で復帰と店舗切替を部品試験し、Storybookは33件成功。日英・両ブラウザーの設定編集4件も再実行して成功した。前節の全32件のE2Eとは実行範囲を区別する。標準provider一覧の取得と実際のTTS再生は未実施である。
 
 ## 音声評価の記録
 

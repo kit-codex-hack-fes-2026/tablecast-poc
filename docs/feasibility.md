@@ -25,16 +25,16 @@ Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKi
 
 ## 実施した試験と未実施の試験
 
-| 対象                                   | 最終結果                                                   | 試験の境界                                                                          |
-| -------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Python接続・字幕・話者変換             | pytest 72件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture。実AgentSessionの応答・取消・204・失敗6件を含む |
-| 音声HTTPとMastra                       | WorkersのVitest 23件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture                    |
-| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用             |
-| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                                           |
-| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                                          |
-| ローカルWebRTC音声通信                 | Chromium 153.0.8010.12で成功                               | 実LiveKit Serverと2参加者を使用。440 Hzの合成音声のみ。実マイク・外部AIなし         |
+| 対象                                   | 最終結果                                                   | 試験の境界                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Python接続・字幕・話者変換             | pytest 82件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture。実AgentSessionの応答・取消・204・失敗と診断の試験を含む |
+| 音声HTTPとMastra                       | WorkersのVitest 30件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture                             |
+| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用                      |
+| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                                                    |
+| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                                                   |
+| ローカルWebRTC音声通信                 | Chromium 153.0.8010.12で成功                               | 実LiveKit Serverと2参加者を使用。440 Hzの合成音声のみ。実マイク・外部AIなし                  |
 
-Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。今回はこの66件に実AgentSessionの6件を追加し、72件が成功した。以前の途中件数を最終結果として再利用していない。
+Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。この66件に実AgentSessionの6件、その後に診断の10件を追加し、最終82件が成功した。以前の途中件数を最終結果として再利用していない。
 
 再実行方法は [Python README](../livekit/README.md) と [patch記録](../patches/livekit-inworld/README.md)。実AIの疎通は明示的な有料試験として分離した。メモリ内の合成音声を再認識するだけなので、それが成功しても実マイクや店舗品質の証明にはならない。
 
@@ -99,7 +99,7 @@ STT/TTSのvoiceと日英の自然さ、店内Wi-Fi、iPadのautoplay/マイク�
 1. 試聴済みの日英voiceと外部設定を用意し、まず小さい有料STT/TTS疎通、次にAPI・Roomを含む実音声往復を行う。失敗時に別モデルへ自動切替しない。
 2. iPadで通常注文、確認途中の訂正、停止中の言語変更、ネットワーク断、TTSだけが話す場面を試す。停止後のマイク表示とprovider送音停止を両方確認する。
 3. forkの公開先を確定して完全SHAでlockし、話者変換のfixtureとMultiSpeakerAdapterの結合試験を通す。公式releaseで同じ契約を満たしたらforkを外す。
-4. APIが返す `X-Request-Id` とPythonのturn、LiveKitの生成IDを対応付ける診断記録を先に接続する。現在はPython起動時の卓・音声session・release SHAとAPIの要求IDが別々に記録され、HTTP途中失敗や旧turnの後処理まで一続きには追えない。会話本文や秘密を出さず、成功・拒否・途中失敗の対応関係をローカルで検証してから、上表のmetricsと合わせて遅延・利用量を集める。性能課題が分かってから、長い応答、過大なcatalog、不要なtool step、接続初期化を対象に小さく調整する。
+4. 接続済みの `traceId`・turn・Mastra `runId`・LiveKit `sdkRequestId`・`speechId` と上表のmetricsを合わせ、実音声の遅延・利用量を集める。成功・拒否・途中失敗・取消・旧turnの後処理の対応と非漏洩はローカルで検証した。SDKは失敗時にmetricsを出さないため、診断記録と公開errorも使う。本文のみのHTTP接続から課金tokenを推測しない。性能課題が分かってから、長い応答、過大なcatalog、不要なtool step、接続初期化を対象に小さく調整する。
 5. 外部providerの失敗を客向けエラー表示まで追跡し、GUI復旧を確認する。認識の自信が不明な注文や曖昧な承認の会話評価を日英で蓄積する。
 
 この改善のために汎用Agent基盤、第二のLLM、Pythonの業務ツール、独自音声推論loopを追加する必要はない。現在の公開SDK境界とAPIの業務操作を保ち、測定で必要性が示された箇所だけを変える。
