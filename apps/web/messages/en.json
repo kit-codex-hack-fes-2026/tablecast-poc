@@ -200,5 +200,16 @@
   "oauth_allow": "Allow connection",
   "oauth_continue": "Continue",
   "common_synthetic": "Synthetic demo",
-  "kiosk_voice_already_active": "Voice is already connected. Stop voice before starting again."
+  "kiosk_voice_already_active": "Voice is already connected. Stop voice before starting again.",
+  "admin_review_draft": "Review draft",
+  "admin_product": "Product",
+  "admin_unit_price": "Unit price (JPY, including tax)",
+  "admin_available": "Available",
+  "admin_display_name": "Display name",
+  "admin_speech_name": "Spoken name",
+  "admin_description": "Description",
+  "admin_unsaved": "You have unsaved changes. Save before validating.",
+  "admin_saved_changes": "Saved changes",
+  "admin_published_version": "Published version",
+  "admin_draft_version": "Draft version"
 }

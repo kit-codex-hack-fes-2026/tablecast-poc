@@ -200,5 +200,16 @@
   "oauth_allow": "接続を許可",
   "oauth_continue": "続ける",
   "common_synthetic": "合成デモ",
-  "kiosk_voice_already_active": "すでに音声に接続しています。音声を停止してから再開してください。"
+  "kiosk_voice_already_active": "すでに音声に接続しています。音声を停止してから再開してください。",
+  "admin_review_draft": "下書きを確認",
+  "admin_product": "商品",
+  "admin_unit_price": "単価（税込・円）",
+  "admin_available": "販売中",
+  "admin_display_name": "表示名",
+  "admin_speech_name": "読上げ名",
+  "admin_description": "説明",
+  "admin_unsaved": "未保存の変更があります。保存してから検証してください。",
+  "admin_saved_changes": "保存済みの変更",
+  "admin_published_version": "公開版",
+  "admin_draft_version": "下書き版"
 }

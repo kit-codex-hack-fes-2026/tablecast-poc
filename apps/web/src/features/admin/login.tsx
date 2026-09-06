@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { useMutation } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LanguageSwitch } from "../../components/language-switch";
@@ -12,6 +12,7 @@ import { api, json } from "../../lib/api";
 export function Login() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
+  const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   useEffect(() => {
@@ -35,7 +36,11 @@ export function Login() {
         .object({ redirect: z.literal(true), url: z.string().min(1) })
         .safeParse(result);
       if (redirected.success) window.location.assign(redirected.data.url);
-      else void navigate({ to: "/admin/live" });
+      else
+        void navigate({
+          to: "/admin/live",
+          search: { storeId: returnStoreId, draftId: returnDraftId },
+        });
     },
   });
   return (

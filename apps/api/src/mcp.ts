@@ -107,7 +107,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
         draftId,
         version: draft.version,
         status: "human_approval_required",
-        reviewUrl: `${c.env.TABLECAST_PUBLIC_ORIGIN}/admin?storeId=${encodeURIComponent(actor.storeId)}&draftId=${encodeURIComponent(draftId)}`,
+        reviewUrl: `${c.env.TABLECAST_PUBLIC_ORIGIN}/admin/live?storeId=${encodeURIComponent(actor.storeId)}&draftId=${encodeURIComponent(draftId)}`,
       });
     },
   );

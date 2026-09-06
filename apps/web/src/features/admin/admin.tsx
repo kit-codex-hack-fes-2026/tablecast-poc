@@ -1,11 +1,11 @@
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { storesSchema, draftsSchema } from "../../lib/responses";
-import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import { storesSchema } from "../../lib/responses";
+import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { Dialog } from "@base-ui/react/dialog";
-import type { AdminState, ConfigDraft } from "@tablecast/api/schema";
+import type { AdminState } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   Activity,
   ArrowUpRight,
@@ -27,16 +27,18 @@ import { api, ApiFailure, json } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { TableDetail } from "./table-detail";
 import { TableTimeline } from "./table-timeline";
+import { SettingsDrafts } from "./settings-drafts";
 
 export function Admin() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
+  const search = useSearch({ from: "/admin/live" });
   const client = useQueryClient();
-  const [storeId, setStoreId] = useState<string>();
+  const [storeId, setStoreId] = useState(search.storeId);
   const [selected, setSelected] = useState<string>();
   const [pairOpen, setPairOpen] = useState(false);
   const [opening, setOpening] = useState<{ id: string; name: string }>();
-  const [tab, setTab] = useState<"live" | "settings">("live");
+  const [tab, setTab] = useState<"live" | "settings">(search.draftId ? "settings" : "live");
   const stores = useQuery({
     queryKey: ["tablecast-stores"],
     queryFn: () => api("/api/admin/stores", {}, storesSchema),
@@ -70,8 +72,11 @@ export function Admin() {
   }, [setLocale]);
   useEffect(() => {
     if (stores.error instanceof ApiFailure && stores.error.status === 401)
-      void navigate({ to: "/login" });
-  }, [stores.error, navigate]);
+      void navigate({
+        to: "/login",
+        search: { returnStoreId: search.storeId, returnDraftId: search.draftId },
+      });
+  }, [stores.error, navigate, search.storeId, search.draftId]);
   const tables = state.data?.tables ?? [];
   const billing = tables.filter(
     (table) => table.events.some((event) => event.kind === "bill.requested") && table.bill.due > 0,
@@ -222,7 +227,13 @@ export function Admin() {
             </section>
           </>
         ) : (
-          currentStore && <SettingsDrafts storeId={currentStore} />
+          currentStore && (
+            <SettingsDrafts
+              key={`${currentStore}:${currentStore === search.storeId ? (search.draftId ?? "") : ""}`}
+              storeId={currentStore}
+              initialDraftId={currentStore === search.storeId ? search.draftId : undefined}
+            />
+          )
         )}
       </main>
       {selected && currentStore && (
@@ -436,160 +447,5 @@ function ApproveDevice({ state, onClose }: { state: AdminState; onClose: () => v
         </Dialog.Viewport>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function SettingsDrafts({ storeId }: { storeId: string }) {
-  const { t } = useI18n();
-  const base = `/api/admin/stores/${storeId}/drafts`;
-  const drafts = useQuery({
-    queryKey: ["tablecast-drafts", storeId],
-    queryFn: () => api(base, {}, draftsSchema),
-  });
-  const [selected, setSelected] = useState<ConfigDraft>();
-  const validate = useMutation({
-    mutationFn: (draft: ConfigDraft) =>
-      api(
-        `${base}/${draft.id}/validate`,
-        json("POST", { expectedVersion: draft.version }),
-        configDraftSchema,
-      ),
-    onSuccess: (draft) => {
-      setSelected(draft);
-      void drafts.refetch();
-    },
-  });
-  const [publishKey, setPublishKey] = useState(() => crypto.randomUUID());
-  const publish = useMutation({
-    mutationFn: (draft: ConfigDraft) =>
-      api(
-        `${base}/${draft.id}/publish`,
-        json("POST", {
-          expectedVersion: draft.version,
-          baseVersion: draft.baseVersion,
-          idempotencyKey: publishKey,
-          approved: true,
-        }),
-        configDraftSchema,
-      ),
-    onSuccess: () => {
-      setSelected(undefined);
-      setPublishKey(crypto.randomUUID());
-      void drafts.refetch();
-    },
-  });
-  return (
-    <section className="settings-panel">
-      <h2>{t("admin_drafts")}</h2>
-      <p>{t("admin_draft_note")}</p>
-      <ErrorNotice error={drafts.error || validate.error || publish.error} />
-      {drafts.data?.drafts
-        .filter((draft) => draft.status === "draft" || draft.status === "ready")
-        .map((draft) => (
-          <div key={draft.id} className="draft-card">
-            <div>
-              <strong>
-                v{draft.baseVersion} → v{draft.version}
-              </strong>
-              <p>
-                {draft.changes.length} {t("admin_change_count")}
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                setSelected(draft);
-                setPublishKey(crypto.randomUUID());
-              }}
-            >
-              {t("kiosk_review")}
-            </Button>
-          </div>
-        ))}
-      {drafts.data?.drafts.every(
-        (draft) => draft.status !== "draft" && draft.status !== "ready",
-      ) && <p className="empty-note">{t("admin_no_drafts")}</p>}
-      <Dialog.Root
-        open={!!selected}
-        onOpenChange={(open) => {
-          if (!open) setSelected(undefined);
-        }}
-      >
-        <Dialog.Portal>
-          <Dialog.Backdrop className="dialog-backdrop" />
-          <Dialog.Viewport className="dialog-viewport">
-            <Dialog.Popup className="dialog config-dialog">
-              <div className="dialog-heading">
-                <Dialog.Close className="icon-button" aria-label={t("common_close")}>
-                  <X size={22} />
-                </Dialog.Close>
-              </div>
-              <Dialog.Title>{t("admin_config")}</Dialog.Title>
-              <Dialog.Description>{t("admin_draft_note")}</Dialog.Description>
-              {selected && (
-                <>
-                  <div className="dialog-scroll">
-                    {selected.changes.some((change) => change.sensitive) && (
-                      <div className="notice">{t("admin_sensitive")}</div>
-                    )}
-                    {selected.errors.length > 0 && (
-                      <ul className="validation-errors">
-                        {selected.errors.map((error) => (
-                          <li key={error}>{error}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {selected.changes.map((change) => (
-                      <div className="config-change" key={change.path}>
-                        <strong>{change.path}</strong>
-                        <div>
-                          <section>
-                            <h4>{t("admin_before")}</h4>
-                            <pre>{JSON.stringify(change.before, null, 2)}</pre>
-                          </section>
-                          <section>
-                            <h4>{t("admin_after")}</h4>
-                            <pre>{JSON.stringify(change.after, null, 2)}</pre>
-                          </section>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <ErrorNotice error={validate.error || publish.error} />
-                  <div className="dialog-actions">
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className="secondary-button"
-                      disabled={validate.isPending || publish.isPending}
-                      onClick={() => validate.mutate(selected)}
-                    >
-                      {t("admin_validate")}
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="lg"
-                      type="button"
-                      className="primary-button"
-                      disabled={
-                        selected.status !== "ready" ||
-                        selected.errors.length > 0 ||
-                        publish.isPending ||
-                        validate.isPending
-                      }
-                      onClick={() => publish.mutate(selected)}
-                    >
-                      {t("admin_publish")}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </Dialog.Popup>
-          </Dialog.Viewport>
-        </Dialog.Portal>
-      </Dialog.Root>
-    </section>
   );
 }

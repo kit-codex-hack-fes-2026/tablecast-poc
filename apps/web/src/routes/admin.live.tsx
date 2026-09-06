@@ -1,4 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { Admin } from "../features/admin/admin";
 
-export const Route = createFileRoute("/admin/live")({ component: Admin });
+export const Route = createFileRoute("/admin/live")({
+  validateSearch: z.object({
+    storeId: z.string().optional().catch(undefined),
+    draftId: z.string().optional().catch(undefined),
+  }),
+  component: AdminRoute,
+});
+
+function AdminRoute() {
+  const { storeId, draftId } = Route.useSearch();
+  return <Admin key={JSON.stringify([storeId, draftId])} />;
+}
