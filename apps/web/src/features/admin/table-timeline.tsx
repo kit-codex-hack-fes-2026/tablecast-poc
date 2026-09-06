@@ -107,7 +107,7 @@ export function TableTimeline({
                         className={`timeline-tick ${event.kind.split(".")[0]}`}
                       >
                         <span className="timeline-tooltip">
-                          <EventLabel kind={event.kind} /> · {time(event.createdAt, locale)}
+                          <EventLabel event={event} /> · {time(event.createdAt, locale)}
                         </span>
                       </span>
                     ))}

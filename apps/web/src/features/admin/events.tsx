@@ -5,35 +5,36 @@ import type { m } from "../../paraglide/messages.js";
 const eventKeys: Record<string, keyof typeof m> = {
   "cart.updated": "event_cart_updated",
   "order.submitted": "event_order_submitted",
-  "order.accepted": "event_order_accepted",
-  "order.served": "event_order_served",
-  "order.cancelled": "event_order_cancelled",
-  "order.rejected": "event_order_rejected",
   "staff.called": "event_staff_called",
   "staff.resolved": "event_staff_resolved",
   "voice.started": "event_voice_started",
   "voice.stopped": "event_voice_stopped",
   "voice.error": "event_voice_error",
   "locale.changed": "event_locale_changed",
-  "payment.recorded": "event_payment_recorded",
-  "bill.adjusted": "event_bill_adjusted",
+  "billing.payment": "event_payment_recorded",
+  "billing.adjustment": "event_bill_adjusted",
   "bill.requested": "admin_billing",
-  "config.published": "event_config_published",
+  "configuration.published": "event_config_published",
   "table.closed": "event_session_closed",
   "table.opened": "event_session_opened",
   "voice.user": "event_conversation",
   "voice.assistant": "event_conversation",
-  "session.closed": "event_session_closed",
-  "session.opened": "event_session_opened",
-  "confirmation.created": "event_confirmation_created",
-  "transcript.final": "event_conversation",
-  "conversation.user": "event_conversation",
-  "conversation.assistant": "event_conversation",
+  "confirmation.prepared": "event_confirmation_created",
+};
+const orderStatusKeys: Record<string, keyof typeof m> = {
+  accepted: "event_order_accepted",
+  served: "event_order_served",
+  cancelled: "event_order_cancelled",
+  rejected: "event_order_rejected",
 };
 
-export function EventLabel({ kind }: { kind: string }) {
+export function EventLabel({ event }: { event: TableEvent }) {
   const { t } = useI18n();
-  return <>{t(eventKeys[kind] ?? "event_activity")}</>;
+  const key =
+    event.kind === "order.status" && typeof event.data.status === "string"
+      ? orderStatusKeys[event.data.status]
+      : eventKeys[event.kind];
+  return <>{t(key ?? "event_activity")}</>;
 }
 
 export function ActivityLog({ events }: { events: TableEvent[] }) {
@@ -47,7 +48,7 @@ export function ActivityLog({ events }: { events: TableEvent[] }) {
           <span className={`event-dot ${event.kind.split(".")[0]}`} aria-hidden="true" />
           <div>
             <strong>
-              <EventLabel kind={event.kind} />
+              <EventLabel event={event} />
             </strong>
             {typeof event.data.text === "string" && (
               <p lang={event.data.locale === "en" ? "en" : "ja"}>

@@ -1688,7 +1688,7 @@
     background: #cd9165;
     height: 26px;
   }
-  .timeline-tick.payment,
+  .timeline-tick.billing,
   .timeline-tick.bill {
     background: #baa575;
     height: 24px;

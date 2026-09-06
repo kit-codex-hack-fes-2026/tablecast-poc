@@ -136,7 +136,7 @@ export const table: TableState = {
       cursor: 1,
       storeId: "tablecast-story",
       tableSessionId: "tablecast-session",
-      kind: "session.opened",
+      kind: "table.opened",
       data: {},
       createdAt: 1788645000000,
     },
