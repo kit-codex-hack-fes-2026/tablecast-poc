@@ -4,6 +4,7 @@ import { expect, within } from "storybook/test";
 import { ActivityLog } from "./events";
 
 const cases: { kind: string; data: TableEvent["data"]; ja: string; en: string }[] = [
+  { kind: "voice.proactive", data: {}, ja: "自発接客を開始", en: "Proactive service started" },
   { kind: "order.status", data: { status: "accepted" }, ja: "注文を受付", en: "Order accepted" },
   { kind: "order.status", data: { status: "served" }, ja: "商品を提供", en: "Order served" },
   { kind: "order.status", data: { status: "cancelled" }, ja: "注文を取消", en: "Order cancelled" },

@@ -14,7 +14,7 @@ import {
   submitOrder,
   updateCart,
 } from "../modules/operations";
-import { cartUpdateSchema, submitSchema, type Locale } from "../schema";
+import { cartUpdateSchema, submitSchema, type Locale, type VoiceTrigger } from "../schema";
 import { castInstructions } from "./prompt";
 
 export function createCastAgent(
@@ -22,6 +22,7 @@ export function createCastAgent(
   actor: Actor,
   locale: Locale,
   signal: AbortSignal,
+  trigger: VoiceTrigger = "user",
 ) {
   const openai = createOpenAI({ apiKey: env.TABLECAST_MODEL_API_KEY });
   const guard = async () => {
@@ -31,7 +32,7 @@ export function createCastAgent(
   const agent = new Agent({
     id: "tablecast-cast",
     name: "TableCast",
-    instructions: `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。最初にgetTableStateとgetCatalogで現状を確認する。prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。`,
+    instructions: `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。最初にgetTableStateとgetCatalogで現状を確認する。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。"}`,
     model: openai.chat(env.TABLECAST_MODEL),
     tools: {
       getCatalog: createTool({
@@ -54,48 +55,55 @@ export function createCastAgent(
           return getTableState(env, actor);
         },
       }),
-      updateCart: createTool({
-        id: "updateCart",
-        description:
-          "現行版に対してカートを更新する。既存行を保持し、必須選択回答では同じ行IDを使う。価格はAPIが検証する。",
-        inputSchema: cartUpdateSchema,
-        execute: async (input) => {
-          await guard();
-          return updateCart(env, actor, input);
-        },
-      }),
-      prepareConfirmation: createTool({
-        id: "prepareConfirmation",
-        description:
-          "確定内容のスナップショットと専用読み上げactionを作る。この後の説明や確認本文を生成しない。注文はまだ送信されない。",
-        inputSchema: z.object({ expectedVersion: z.number().int().nonnegative() }).strict(),
-        execute: async (input) => {
-          await guard();
-          const snapshot = await prepareConfirmation(env, actor, { ...input, channel: "voice" });
-          return { snapshotId: snapshot.id, queuedForReadout: true };
-        },
-      }),
-      submitOrder: createTool({
-        id: "submitOrder",
-        description:
-          "固定確認の読み上げが完了した後の新しい客発話で、明示的な承認があったときだけ呼ぶ。訂正・質問・曖昧な相づち・背景会話は承認ではない。",
-        inputSchema: submitSchema,
-        execute: async (input) => {
-          await guard();
-          ensure(input.approved, "APPROVAL_REQUIRED", 422);
-          return submitOrder(env, actor, input);
-        },
-      }),
-      callStaff: createTool({
-        id: "callStaff",
-        description:
-          "アレルギーや交差接触の根拠が不明、聞き取りが曖昧、客が希望した際にスタッフを呼ぶ。",
-        inputSchema: z.object({}).strict(),
-        execute: async () => {
-          await guard();
-          return callStaff(env, actor);
-        },
-      }),
+      ...(trigger === "user"
+        ? {
+            updateCart: createTool({
+              id: "updateCart",
+              description:
+                "現行版に対してカートを更新する。既存行を保持し、必須選択回答では同じ行IDを使う。価格はAPIが検証する。",
+              inputSchema: cartUpdateSchema,
+              execute: async (input) => {
+                await guard();
+                return updateCart(env, actor, input);
+              },
+            }),
+            prepareConfirmation: createTool({
+              id: "prepareConfirmation",
+              description:
+                "確定内容のスナップショットと専用読み上げactionを作る。この後の説明や確認本文を生成しない。注文はまだ送信されない。",
+              inputSchema: z.object({ expectedVersion: z.number().int().nonnegative() }).strict(),
+              execute: async (input) => {
+                await guard();
+                const snapshot = await prepareConfirmation(env, actor, {
+                  ...input,
+                  channel: "voice",
+                });
+                return { snapshotId: snapshot.id, queuedForReadout: true };
+              },
+            }),
+            submitOrder: createTool({
+              id: "submitOrder",
+              description:
+                "固定確認の読み上げが完了した後の新しい客発話で、明示的な承認があったときだけ呼ぶ。訂正・質問・曖昧な相づち・背景会話は承認ではない。",
+              inputSchema: submitSchema,
+              execute: async (input) => {
+                await guard();
+                ensure(input.approved, "APPROVAL_REQUIRED", 422);
+                return submitOrder(env, actor, input);
+              },
+            }),
+            callStaff: createTool({
+              id: "callStaff",
+              description:
+                "アレルギーや交差接触の根拠が不明、聞き取りが曖昧、客が希望した際にスタッフを呼ぶ。",
+              inputSchema: z.object({}).strict(),
+              execute: async () => {
+                await guard();
+                return callStaff(env, actor);
+              },
+            }),
+          }
+        : {}),
     },
   });
   // providerの例外が会話本文を含むため、詳細ログは出さずAPIの失敗状態で追跡する。

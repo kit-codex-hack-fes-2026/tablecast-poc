@@ -296,5 +296,6 @@
   "config_error_option_missing": "対象外の選択肢が見つかりません。",
   "config_change_enabled": "有効",
   "config_change_disabled": "無効",
-  "config_change_content": "表示・読み上げ内容"
+  "config_change_content": "表示・読み上げ内容",
+  "event_voice_proactive": "自発接客を開始"
 }

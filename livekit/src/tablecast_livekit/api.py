@@ -17,6 +17,11 @@ class VoiceConfiguration(BaseModel):
     locale: Literal["ja", "en"]
     voice: str
     releaseSha: str
+    proactive: bool
+
+
+class TurnSkipped(Exception):
+    """APIが現在の卓に自発接客を開始しないと判断した。"""
 
 
 class Confirmation(BaseModel):
@@ -43,6 +48,8 @@ class VoiceAPI:
         locale: str,
         messages: list[dict[str, str]],
         speaker: SpeakerReference | None = None,
+        *,
+        trigger: Literal["user", "proactive"] = "user",
     ) -> AsyncIterator[str]:
         # httpxのデコーダーでUTF-8のHTTP境界を吸収し、取消時には接続を閉じる。
         async with self.client.stream(
@@ -53,9 +60,12 @@ class VoiceAPI:
                 "voiceSessionId": self.voice_session_id,
                 "locale": locale,
                 "messages": messages,
+                "trigger": trigger,
                 **({"speaker": speaker} if speaker is not None else {}),
             },
         ) as response:
+            if response.status_code == 204 and trigger == "proactive":
+                raise TurnSkipped
             response.raise_for_status()
             if not response.headers.get("content-type", "").startswith("text/plain"):
                 raise ValueError("音声APIの応答形式が不正です")

@@ -296,5 +296,6 @@
   "config_error_option_missing": "The excluded option could not be found.",
   "config_change_enabled": "Enabled",
   "config_change_disabled": "Disabled",
-  "config_change_content": "Display and speech content"
+  "config_change_content": "Display and speech content",
+  "event_voice_proactive": "Proactive service started"
 }

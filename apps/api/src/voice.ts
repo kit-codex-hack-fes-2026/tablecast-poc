@@ -14,7 +14,7 @@ import { z } from "zod";
 import { createCastAgent } from "./agent/cast";
 import type { Actor } from "./auth";
 import type { TableRecord } from "./db/records";
-import { ensure } from "./errors";
+import { DomainError, ensure } from "./errors";
 import {
   getCatalog,
   getSession,
@@ -22,10 +22,33 @@ import {
   markConfirmationRead,
   notifyStore,
 } from "./modules/operations";
-import { voiceTurnSchema } from "./schema";
+import { voiceTurnSchema, type VoiceTrigger } from "./schema";
 
 const id = z.string().min(1).max(100);
 const sessionBody = z.object({ voiceSessionId: id, turnId: id });
+const proactiveCondition =
+  "AND json_array_length(cart_json)=0 AND staff_called=0 AND EXISTS(SELECT 1 FROM stores WHERE id=table_sessions.store_id AND json_extract(config_json,'$.cast.proactive')=1) AND NOT EXISTS(SELECT 1 FROM confirmations WHERE table_session_id=table_sessions.id AND status IN ('pending','read') AND expires_at>?)";
+const proactiveReservationCondition = `${proactiveCondition} AND (active_turn_id IS NULL OR EXISTS(SELECT 1 FROM voice_turns WHERE id=active_turn_id AND status<>'started')) AND NOT EXISTS(SELECT 1 FROM table_events WHERE store_id=table_sessions.store_id AND table_session_id=table_sessions.id AND kind='voice.proactive' AND created_at>?)`;
+
+async function currentVoiceTurn(
+  env: TablecastEnv,
+  actor: Actor,
+  locale: string,
+  trigger: VoiceTrigger,
+) {
+  const session = await getSession(env, actor);
+  ensure(session.locale === locale, "VOICE_LOCALE_STALE", 409);
+  if (trigger === "proactive")
+    ensure(
+      await env.TABLECAST_DB.prepare(
+        `SELECT id FROM table_sessions WHERE id=? AND active_turn_id=? ${proactiveCondition}`,
+      )
+        .bind(session.id, actor.turnId ?? null, Date.now())
+        .first("id"),
+      "PROACTIVE_TURN_STALE",
+      409,
+    );
+}
 export const voiceParticipantIdentity = (voiceSessionId: string) =>
   `tablecast-device-${voiceSessionId}`;
 
@@ -135,6 +158,7 @@ voiceRoutes.get("/config", async (c) => {
     participantIdentity: voiceParticipantIdentity(voiceSessionId),
     locale: session.locale,
     voice: catalog.configuration.cast.voice[session.locale],
+    proactive: catalog.configuration.cast.proactive,
     releaseSha: c.env.TABLECAST_RELEASE_SHA,
   });
 });
@@ -143,15 +167,32 @@ voiceRoutes.post("/turns", async (c) => {
   const actor = await voiceActor(c.env, input.voiceSessionId);
   const session = await getSession(c.env, actor);
   ensure(input.locale === session.locale, "VOICE_LOCALE_STALE", 409);
-  ensure(input.messages.at(-1)?.role === "user", "USER_TURN_REQUIRED", 422);
-  ensure(c.env.TABLECAST_MODEL_API_KEY && c.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
+  const proactive = input.trigger === "proactive";
+  if (proactive) ensure(!input.speaker, "PROACTIVE_SPEAKER_FORBIDDEN", 422);
+  else ensure(input.messages.at(-1)?.role === "user", "USER_TURN_REQUIRED", 422);
   const startedAt = Date.now();
+  // 任意の接客は業務状態が許可するときだけモデル資格を必要とする。
+  if (proactive) {
+    const eligible = await c.env.TABLECAST_DB.prepare(
+      `SELECT id FROM table_sessions WHERE id=? ${proactiveReservationCondition}`,
+    )
+      .bind(session.id, startedAt, startedAt - 180_000)
+      .first("id");
+    if (!eligible) return c.body(null, 204);
+  }
+  ensure(c.env.TABLECAST_MODEL_API_KEY && c.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
   const result = await c.env.TABLECAST_DB.batch([
     c.env.TABLECAST_DB.prepare(
-      "UPDATE table_sessions SET active_turn_id=? WHERE id=? AND voice_state='active' AND voice_session_id=? AND status='open' AND locale=?",
-    ).bind(input.turnId, session.id, input.voiceSessionId, input.locale),
+      `UPDATE table_sessions SET active_turn_id=? WHERE id=? AND voice_state='active' AND voice_session_id=? AND status='open' AND locale=? ${proactive ? proactiveReservationCondition : ""}`,
+    ).bind(
+      input.turnId,
+      session.id,
+      input.voiceSessionId,
+      input.locale,
+      ...(proactive ? [startedAt, startedAt - 180_000] : []),
+    ),
     c.env.TABLECAST_DB.prepare(
-      "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,locale,status,started_at) SELECT ?,?,id,store_id,locale,'started',? FROM table_sessions WHERE id=? AND active_turn_id=? AND voice_state='active' AND voice_session_id=?",
+      "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,locale,status,started_at) SELECT ?,?,id,store_id,locale,'started',? FROM table_sessions WHERE id=? AND active_turn_id=? AND voice_state='active' AND voice_session_id=? AND changes()=1",
     ).bind(
       input.turnId,
       input.voiceSessionId,
@@ -161,36 +202,49 @@ voiceRoutes.post("/turns", async (c) => {
       input.voiceSessionId,
     ),
     c.env.TABLECAST_DB.prepare(
-      "UPDATE confirmations SET status='invalid' WHERE table_session_id=? AND channel='voice' AND status='pending' AND EXISTS(SELECT 1 FROM table_sessions WHERE id=? AND active_turn_id=?)",
-    ).bind(session.id, session.id, input.turnId),
-    c.env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,'voice.user',?,? FROM table_sessions WHERE id=? AND active_turn_id=?",
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,?,?,? FROM table_sessions WHERE id=? AND active_turn_id=? AND changes()=1",
     ).bind(
-      JSON.stringify({
-        turnId: input.turnId,
-        role: "user",
-        locale: input.locale,
-        text: input.messages.at(-1)?.content,
-        speaker: input.speaker ?? null,
-      }),
+      proactive ? "voice.proactive" : "voice.user",
+      JSON.stringify(
+        proactive
+          ? { turnId: input.turnId, trigger: "proactive", locale: input.locale }
+          : {
+              turnId: input.turnId,
+              role: "user",
+              locale: input.locale,
+              text: input.messages.at(-1)?.content,
+              speaker: input.speaker ?? null,
+            },
+      ),
       startedAt,
       session.id,
       input.turnId,
     ),
+    c.env.TABLECAST_DB.prepare(
+      "UPDATE voice_turns SET status='interrupted',ended_at=? WHERE table_session_id=? AND id<>? AND status='started' AND changes()=1",
+    ).bind(startedAt, session.id, input.turnId),
+    ...(!proactive
+      ? [
+          c.env.TABLECAST_DB.prepare(
+            "UPDATE confirmations SET status='invalid' WHERE table_session_id=? AND channel='voice' AND status='pending' AND EXISTS(SELECT 1 FROM table_sessions WHERE id=? AND active_turn_id=?)",
+          ).bind(session.id, session.id, input.turnId),
+        ]
+      : []),
   ]);
+  if (proactive && result[0]?.meta.changes !== 1) return c.body(null, 204);
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
   const currentActor = { ...actor, turnId: input.turnId };
   const cancellation = new AbortController();
   const signal = AbortSignal.any([c.req.raw.signal, cancellation.signal]);
   let generationFailed = false;
-  const agent = createCastAgent(c.env, currentActor, input.locale, signal);
+  const agent = createCastAgent(c.env, currentActor, input.locale, signal, input.trigger);
   const requestContext = new RequestContext<{ actor: Actor }>();
   requestContext.set("actor", currentActor);
   const output = await agent
     .stream(input.messages, {
       abortSignal: signal,
       requestContext,
-      maxSteps: 8,
+      maxSteps: proactive ? 3 : 8,
       onError: () => {
         generationFailed = true;
       },
@@ -217,15 +271,18 @@ voiceRoutes.post("/turns", async (c) => {
         signal.throwIfAborted();
         const next = await reader.read();
         ensure(!generationFailed, "VOICE_MODEL_FAILED", 503);
+        await currentVoiceTurn(c.env, currentActor, input.locale, input.trigger);
         if (next.done) {
           controller.close();
           reader.releaseLock();
           return;
         }
-        await getSession(c.env, currentActor);
         controller.enqueue(encoder.encode(next.value));
       } catch (error) {
-        const status = signal.aborted ? "interrupted" : "failed";
+        const status =
+          signal.aborted || (error instanceof DomainError && error.status === 409)
+            ? "interrupted"
+            : "failed";
         cancellation.abort();
         controller.error(error);
         await reader.cancel().catch(() => {});
@@ -297,36 +354,43 @@ voiceRoutes.post("/playback", async (c) => {
     .strict()
     .parse(await c.req.json());
   const turn = await c.env.TABLECAST_DB.prepare(
-    "SELECT store_id,table_session_id,locale FROM voice_turns WHERE id=? AND voice_session_id=?",
+    "SELECT store_id,table_session_id,locale,EXISTS(SELECT 1 FROM table_events WHERE store_id=voice_turns.store_id AND table_session_id=voice_turns.table_session_id AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=voice_turns.id) AS proactive FROM voice_turns WHERE id=? AND voice_session_id=?",
   )
     .bind(input.turnId, input.voiceSessionId)
-    .first<{ store_id: string; table_session_id: string; locale: string }>();
+    .first<{ store_id: string; table_session_id: string; locale: string; proactive: number }>();
   ensure(turn, "VOICE_TURN_NOT_FOUND", 404);
-  await c.env.TABLECAST_DB.batch([
+  const proactive = turn.proactive === 1;
+  const result = await c.env.TABLECAST_DB.batch([
     c.env.TABLECAST_DB.prepare(
-      "UPDATE voice_turns SET status=CASE WHEN status='interrupted' THEN status ELSE ? END,ended_at=? WHERE id=? AND voice_session_id=? AND status<>'failed'",
+      `UPDATE voice_turns SET status=CASE WHEN status='interrupted' THEN status ELSE ? END,ended_at=? WHERE id=? AND voice_session_id=? AND status<>'failed' ${proactive ? `AND EXISTS(SELECT 1 FROM table_sessions WHERE id=? AND active_turn_id=? AND voice_session_id=? AND voice_state='active' AND status='open' AND locale=? ${proactiveCondition})` : ""}`,
     ).bind(
       input.interrupted ? "interrupted" : "completed",
       Date.now(),
       input.turnId,
       input.voiceSessionId,
+      ...(proactive
+        ? [turn.table_session_id, input.turnId, input.voiceSessionId, turn.locale, Date.now()]
+        : []),
     ),
     c.env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'voice.assistant',?,?)",
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT ?,?,'voice.assistant',?,? WHERE ?=0 OR changes()=1",
     ).bind(
       turn.store_id,
       turn.table_session_id,
       JSON.stringify({
         turnId: input.turnId,
         role: "assistant",
+        trigger: proactive ? "proactive" : "user",
         locale: turn.locale,
         text: input.text,
         interrupted: input.interrupted,
         playbackRange: input.interrupted ? "sdk-reported" : "complete",
       }),
       Date.now(),
+      proactive ? 1 : 0,
     ),
   ]);
+  if (proactive) ensure(result[0]?.meta.changes === 1, "PROACTIVE_TURN_STALE", 409);
   await notifyStore(c.env, turn.store_id);
   return c.json({ ok: true });
 });

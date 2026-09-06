@@ -283,11 +283,14 @@ export const prepareSchema = z
 export const submitSchema = z
   .object({ snapshotId: id, idempotencyKey: z.string().min(8).max(100), approved: z.literal(true) })
   .strict();
+export const voiceTriggerSchema = z.enum(["user", "proactive"]);
+export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 export const voiceTurnSchema = z
   .object({
     turnId: id,
     voiceSessionId: id,
     locale: localeSchema,
+    trigger: voiceTriggerSchema.default("user"),
     messages: z
       .array(
         z.discriminatedUnion("role", [
@@ -295,7 +298,6 @@ export const voiceTurnSchema = z
           z.object({ role: z.literal("assistant"), content: z.string().max(10000) }).strict(),
         ]),
       )
-      .min(1)
       .max(100),
     speaker: z
       .object({

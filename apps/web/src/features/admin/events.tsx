@@ -19,6 +19,7 @@ const eventKeys: Record<string, keyof typeof m> = {
   "table.opened": "event_session_opened",
   "voice.user": "event_conversation",
   "voice.assistant": "event_conversation",
+  "voice.proactive": "event_voice_proactive",
   "confirmation.prepared": "event_confirmation_created",
 };
 const orderStatusKeys: Record<string, keyof typeof m> = {
