@@ -90,7 +90,9 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     product: Product;
     line?: CartLine;
     configVersion: number;
+    cartVersion: number;
   }>();
+  const [promptedCartVersion, setPromptedCartVersion] = useState(-1);
   const [prepared, setSnapshot] = useState<Snapshot>();
   const [ordered, setOrdered] = useState(false);
   const [section, setSection] = useState("menu");
@@ -125,13 +127,10 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     voice.synchronise(data.voiceSessionId, data.voiceState === "active");
   }, [data.voiceSessionId, data.voiceState, voice]);
   const updateCart = useMutation({
-    mutationFn: (lines: CartLine[]) =>
-      api(
-        "/api/table/cart",
-        json("PUT", { expectedVersion: data.cart.version, lines }),
-        tableStateSchema,
-      ),
+    mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
+      api("/api/table/cart", json("PUT", { expectedVersion, lines }), tableStateSchema),
     onSuccess: (updated) => {
+      setPromptedCartVersion(updated.cart.version);
       client.setQueryData(tableKey, updated);
       setChosen(undefined);
       setSnapshot(undefined);
@@ -182,6 +181,33 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     },
     onError: refresh,
   });
+  if (
+    (!chosen || chosen.configVersion !== data.configVersion) &&
+    !updateCart.isPending &&
+    !snapshot &&
+    !ordered &&
+    catalog.data &&
+    promptedCartVersion < data.cart.version
+  ) {
+    const line = data.cart.lines.find(
+      (item) =>
+        item.missing.length > 0 &&
+        catalog.data.configuration.products.some(
+          (product) => product.id === item.productId && product.available,
+        ),
+    );
+    const product = catalog.data.configuration.products.find((item) => item.id === line?.productId);
+    if (line && product) {
+      // 同じ版の不足項目は一度だけ開き、閉じた操作や編集中の入力を尊重する。
+      setPromptedCartVersion(data.cart.version);
+      setChosen({
+        product,
+        line,
+        configVersion: data.configVersion,
+        cartVersion: data.cart.version,
+      });
+    }
+  }
   function currentLines(): CartLine[] {
     return (
       data.cart.lines.map(({ id, productId, quantity, selections }) => ({
@@ -194,7 +220,15 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   }
   function edit(line: PricedLine) {
     const product = catalog.data?.configuration.products.find((item) => item.id === line.productId);
-    if (product) setChosen({ product, line, configVersion: data.configVersion });
+    if (product) {
+      updateCart.reset();
+      setChosen({
+        product,
+        line,
+        configVersion: data.configVersion,
+        cartVersion: data.cart.version,
+      });
+    }
   }
   const voiceActive = view.error === "active" || !["idle", "paused", "error"].includes(view.status);
 
@@ -303,9 +337,14 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                 {catalog.data && (
                   <ProductMenu
                     catalog={catalog.data}
-                    onChoose={(product) =>
-                      setChosen({ product, configVersion: data.configVersion })
-                    }
+                    onChoose={(product) => {
+                      updateCart.reset();
+                      setChosen({
+                        product,
+                        configVersion: data.configVersion,
+                        cartVersion: data.cart.version,
+                      });
+                    }}
                   />
                 )}
                 <ErrorNotice
@@ -320,7 +359,10 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                   lines={data.cart.lines}
                   onEdit={edit}
                   onRemove={(line) =>
-                    updateCart.mutate(currentLines().filter((item) => item.id !== line.id))
+                    updateCart.mutate({
+                      lines: currentLines().filter((item) => item.id !== line.id),
+                      expectedVersion: data.cart.version,
+                    })
                   }
                   disabled={updateCart.isPending}
                 />
@@ -422,9 +464,16 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
           product={chosen.product}
           initial={chosen.line}
           busy={updateCart.isPending}
-          onClose={() => setChosen(undefined)}
+          error={updateCart.error}
+          onClose={() => {
+            updateCart.reset();
+            setChosen(undefined);
+          }}
           onSave={(line) =>
-            updateCart.mutate([...currentLines().filter((item) => item.id !== line.id), line])
+            updateCart.mutate({
+              lines: [...currentLines().filter((item) => item.id !== line.id), line],
+              expectedVersion: chosen.cartVersion,
+            })
           }
         />
       )}

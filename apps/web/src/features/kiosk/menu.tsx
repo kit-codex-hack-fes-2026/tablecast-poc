@@ -6,6 +6,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Catalog, PricedLine, Product } from "@tablecast/api/schema";
 import { Check, ChevronRight, ImageOff, Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useState } from "react";
+import { ErrorNotice } from "../../components/error-notice";
 import { money, useI18n } from "../../i18n/locale";
 
 export function ProductMenu({
@@ -161,12 +162,14 @@ export function ProductDialog({
   product,
   initial,
   busy,
+  error,
   onClose,
   onSave,
 }: {
   product: Product;
   initial?: CartLine;
   busy: boolean;
+  error?: unknown;
   onClose: () => void;
   onSave: (line: CartLine) => void;
 }) {
@@ -227,12 +230,20 @@ export function ProductDialog({
                         if (typeof value === "string")
                           select(
                             value,
-                            1,
+                            value === "" ? 0 : 1,
                             group.options.map((option) => option.id),
                           );
                       }}
                       aria-label={group.text[locale].displayName}
                     >
+                      {group.min === 0 && (
+                        <label className="option-row">
+                          <Radio.Root className="radio-control" value="" disabled={busy}>
+                            <Radio.Indicator className="radio-dot" />
+                          </Radio.Root>
+                          <span>{t("kiosk_no_selection")}</span>
+                        </label>
+                      )}
                       {group.options.map((option) => (
                         <label className="option-row" key={option.id}>
                           <Radio.Root
@@ -322,6 +333,7 @@ export function ProductDialog({
                 <small>{t("kiosk_allergen_note")}</small>
               </div>
             </div>
+            <ErrorNotice error={error} />
             <div className="dialog-actions">
               <div className="quantity-control">
                 <Button
