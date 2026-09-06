@@ -1,7 +1,7 @@
 # TableCast音声Agent
 
 公式LiveKit 1.8.0とInworld STT/TTSを使用し、接客と注文操作をHono/Mastraへ委譲するPython Agent。
-通常のチェックは外部AIを呼ばない。実Inworld、iPadのエコー・停止、日英の自然さは未検証。
+通常のチェックは外部AIを呼ばない。実マイク、iPadのエコー・停止、日英の自然さは未検証。
 STT話者対応は [隔離検証済みパッチ](../patches/livekit-inworld/README.md) の公開forkとSHA固定待ちであり、現在の通常起動には未適用。
 
 ルートの `bun run dev` がworktree専用のLiveKitとAPIを起動する。既存 `.env.local` を自動使用しない。
@@ -41,7 +41,9 @@ TABLECAST_RUN_PAID_VOICE_TESTS=1 bun --no-env-file run test:voice:live
 ```
 
 この試験は人手の自然さ評価、実マイク、LiveKit転送、iPadのAEC、騒音、複数話者の評価を代替しない。
-今回の実装中にこの有料試験は実行していない。
+2026-09-06に既存の開発資格で実行し、日本語Asukaの合成2.55秒と確定認識、英国英語Oliviaの合成2.49秒と確定認識を確認した。日本語の認識結果はホージチャを二杯お願いします。、英語はTwo roasted green teas, please.だった。疎通は最初の確定認識で完了し、WebSocketがサーバー側で閉じることを待たない。生音声ファイルは保存していない。
+
+同じ設定でMastraから `gpt-5.4-mini-2026-03-17` の短い応答を取得した。標準音声の一覧取得・店舗設定の検証と公開も実サービスを通した。これらは各接続の疎通であり、LiveKit Room・実マイク・業務ツールを通す音声注文全体の受入ではない。
 
 自発接客はSDKの30秒の相互無言通知から開始し、最新設定・業務状態・180秒の間隔はAPIで検証する。客の発話を捏造せず、応答のない沈黙では一度だけ試みる。APIの204では履歴・再生記録を作らず、客の発話で進行中の自発応答を中断する。注文操作のツールは自発接客へ渡さない。録音は `record=False` で無効にする。
 

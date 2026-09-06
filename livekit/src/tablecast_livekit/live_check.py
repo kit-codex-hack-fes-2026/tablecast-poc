@@ -26,6 +26,8 @@ async def check_language(language: str, voice: str, text: str) -> dict[str, obje
             async for event in stream:
                 if event.type == stt.SpeechEventType.FINAL_TRANSCRIPT and event.alternatives:
                     transcripts.append(event.alternatives[0].text)
+                    # 疎通は確定認識で完了し、サーバーのWebSocket切断を待たない。
+                    return
 
         receive_task = asyncio.create_task(receive())
         try:

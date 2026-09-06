@@ -16,25 +16,30 @@ const providerPageSchema = z.object({
   nextPageToken: z.string().max(2048).default(""),
 });
 const voiceOrigin = "https://api.inworld.ai/voices/v1/voices";
-async function requestMetadata<T>(
+async function requestPage(
   env: TablecastEnv,
-  url: URL,
-  schema: z.ZodType<T>,
-  allowMissing = false,
-): Promise<T | null> {
+  filter: string,
+  pageToken?: string,
+  signal = AbortSignal.timeout(5000),
+) {
   ensure(env.TABLECAST_INWORLD_VOICES_API_KEY, "VOICE_CATALOG_NOT_CONFIGURED", 503);
+  const url = new URL(voiceOrigin);
+  url.searchParams.set("filter", filter);
+  url.searchParams.set("orderBy", "display_name asc");
+  url.searchParams.set("pageSize", "50");
+  if (pageToken) url.searchParams.set("pageToken", pageToken);
   try {
+    signal.throwIfAborted();
     const response = await fetch(url, {
       headers: {
         Authorization: `Basic ${env.TABLECAST_INWORLD_VOICES_API_KEY}`,
         Accept: "application/json",
       },
-      redirect: "error",
-      signal: AbortSignal.timeout(5000),
+      redirect: "manual",
+      signal,
     });
     if (!response.ok) {
       await response.body?.cancel();
-      if (allowMissing && response.status === 404) return null;
       throw new Error("音声一覧の取得に失敗しました");
     }
     ensure(response.body, "VOICE_CATALOG_UNAVAILABLE", 503);
@@ -48,7 +53,7 @@ async function requestMetadata<T>(
         },
       }),
     );
-    return schema.parse(await new Response(limited).json());
+    return providerPageSchema.parse(await new Response(limited).json());
   } catch {
     // providerの本文・headers・例外をHTTP/MCP応答や一般ログへ渡さない。
     throw new DomainError("VOICE_CATALOG_UNAVAILABLE", 503, "VOICE_CATALOG_UNAVAILABLE");
@@ -63,13 +68,11 @@ export async function listVoices(
   input: VoiceListQuery,
 ): Promise<VoicePage> {
   ensure(actor.kind === "staff" || actor.kind === "mcp", "STAFF_REQUIRED", 403);
-  const url = new URL(voiceOrigin);
-  url.searchParams.set("filter", `source = "SYSTEM" AND lang_code = "${input.locale}"`);
-  url.searchParams.set("orderBy", "display_name asc");
-  url.searchParams.set("pageSize", "50");
-  if (input.pageToken) url.searchParams.set("pageToken", input.pageToken);
-  const page = await requestMetadata(env, url, providerPageSchema);
-  ensure(page, "VOICE_CATALOG_UNAVAILABLE", 503);
+  const page = await requestPage(
+    env,
+    `source = "SYSTEM" AND lang_code = "${input.locale}"`,
+    input.pageToken,
+  );
   const ids = new Set<string>();
   return {
     voices: page.voices
@@ -92,31 +95,43 @@ export async function voiceConfigurationErrors(
   configuration: Configuration,
   published: Configuration,
 ): Promise<ConfigurationIssue[]> {
-  const results = await Promise.all(
-    (["ja", "en"] as const).map(async (locale): Promise<ConfigurationIssue[]> => {
-      const voiceId = configuration.cast.voice[locale];
-      if (voiceId === null || voiceId === published.cast.voice[locale]) return [];
-      const voice = await requestMetadata(
-        env,
-        new URL(`${voiceOrigin}/${encodeURIComponent(voiceId)}`),
-        voiceMetadataSchema,
-        true,
-      );
-      const path = ["cast", "voice", locale];
-      if (!voice) return [{ code: "VOICE_NOT_FOUND", path, params: { voiceId } }];
-      ensure(voice.voiceId === voiceId, "VOICE_CATALOG_UNAVAILABLE", 503);
-      if (voice.source !== "SYSTEM")
-        return [{ code: "VOICE_NOT_STANDARD", path, params: { voiceId } }];
-      if (!matchesLanguage(voice.langCode, locale))
-        return [
-          {
-            code: "VOICE_LANGUAGE_MISMATCH",
-            path,
-            params: { voiceId, locale, langCode: voice.langCode },
-          },
-        ];
-      return [];
-    }),
-  );
-  return results.flat();
+  const changed = (["ja", "en"] as const).flatMap((locale) => {
+    const voiceId = configuration.cast.voice[locale];
+    return voiceId === null || voiceId === published.cast.voice[locale]
+      ? []
+      : [{ locale, voiceId }];
+  });
+  if (!changed.length) return [];
+  const missing = new Set(changed.map(({ voiceId }) => voiceId));
+  const voices = new Map<string, z.infer<typeof voiceMetadataSchema>>();
+  const tokens = new Set<string>([""]);
+  const signal = AbortSignal.timeout(5000);
+  let pageToken = "";
+  for (;;) {
+    // 標準音声は単体GETでは取得できない。全言語の一覧を共有し、走査は40ページ/5秒で打ち切る。
+    ensure(tokens.size <= 40, "VOICE_CATALOG_UNAVAILABLE", 503);
+    const page = await requestPage(env, 'source = "SYSTEM"', pageToken, signal);
+    for (const voice of page.voices)
+      if (missing.delete(voice.voiceId)) voices.set(voice.voiceId, voice);
+    if (!missing.size || !page.nextPageToken) break;
+    ensure(!tokens.has(page.nextPageToken), "VOICE_CATALOG_UNAVAILABLE", 503);
+    pageToken = page.nextPageToken;
+    tokens.add(pageToken);
+  }
+  return changed.flatMap(({ locale, voiceId }): ConfigurationIssue[] => {
+    const voice = voices.get(voiceId);
+    const path = ["cast", "voice", locale];
+    if (!voice) return [{ code: "VOICE_NOT_FOUND", path, params: { voiceId } }];
+    if (voice.source !== "SYSTEM")
+      return [{ code: "VOICE_NOT_STANDARD", path, params: { voiceId } }];
+    if (!matchesLanguage(voice.langCode, locale))
+      return [
+        {
+          code: "VOICE_LANGUAGE_MISMATCH",
+          path,
+          params: { voiceId, locale, langCode: voice.langCode },
+        },
+      ];
+    return [];
+  });
 }

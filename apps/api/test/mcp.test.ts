@@ -454,10 +454,10 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
     source: "IVC",
   };
   const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    expect(input instanceof Request ? input.url : input.toString()).toBe(
-      "https://api.inworld.ai/voices/v1/voices/tablecast-new-ja",
-    );
-    return Response.json(voice);
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
+    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM"');
+    return Response.json({ voices: [voice], nextPageToken: "" });
   });
 
   const mcp = toolData(

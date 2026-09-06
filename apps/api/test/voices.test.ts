@@ -51,7 +51,7 @@ it("一覧を標準音声と主言語に絞って重複を除き、opaqueカー�
     expect(url.searchParams.get("orderBy")).toBe("display_name asc");
     expect(url.searchParams.get("pageSize")).toBe("50");
     expect(new Headers(init?.headers).get("Authorization")).toBe(`Basic ${secret}`);
-    expect(init?.redirect).toBe("error");
+    expect(new Request(url, init).redirect).toBe("manual");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
     expect([null, pageToken]).toContain(url.searchParams.get("pageToken"));
     if (url.searchParams.has("pageToken")) {
@@ -132,7 +132,10 @@ it.each([
 ])("providerの%sを秘密本文のない503へ揃える", async (scenario) => {
   const { cookie } = await setupFixture();
   const logger = vi.spyOn(console, "error");
-  vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input instanceof Request ? input : input.toString(), init);
+    expect(request.redirect).toBe("manual");
+    expect(new URL(request.url).origin).toBe("https://api.inworld.ai");
     if (scenario === "通信例外") throw new Error(`${secret}: ${privateBody}`);
     if (scenario === "認証失敗" || scenario === "一時障害")
       return new Response(`${secret}: ${privateBody}`, {
@@ -158,6 +161,7 @@ it.each([
   expect(JSON.stringify(result)).not.toContain(secret);
   expect(JSON.stringify(result)).not.toContain(privateBody);
   expect(logger).not.toHaveBeenCalled();
+  expect(provider).toHaveBeenCalledTimes(1);
 });
 
 it("音声一覧の応答待ちを5秒で中止する", async () => {
@@ -187,15 +191,15 @@ it.each([
     name: "不在",
     source: "SYSTEM",
     langCode: "JA_JP",
-    status: 404,
+    exists: false,
     code: "VOICE_NOT_FOUND",
     params: { voiceId: "tablecast-system-ja" },
   },
   {
-    name: "独自音声",
+    name: "SYSTEM条件に反する独自音声の応答",
     source: "IVC",
     langCode: "JA_JP",
-    status: 200,
+    exists: true,
     code: "VOICE_NOT_STANDARD",
     params: { voiceId: "tablecast-system-ja" },
   },
@@ -203,16 +207,19 @@ it.each([
     name: "主言語不一致",
     source: "SYSTEM",
     langCode: "EN_US",
-    status: 200,
+    exists: true,
     code: "VOICE_LANGUAGE_MISMATCH",
     params: { voiceId: "tablecast-system-ja", locale: "ja", langCode: "EN_US" },
   },
 ])(
   "変更した音声が$nameなら構造化エラーを保存しreadyにしない",
-  async ({ source, langCode, status, code, params }) => {
+  async ({ source, langCode, exists, code, params }) => {
     const { staff, draft } = await changedDraft();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      Response.json(metadata("tablecast-system-ja", langCode, source), { status }),
+      Response.json({
+        voices: exists ? [metadata("tablecast-system-ja", langCode, source)] : [],
+        nextPageToken: "",
+      }),
     );
     const result = await validateDraft(configured(), staff, draft.id, draft.version);
     expect(result.status).toBe("draft");
@@ -231,13 +238,13 @@ it("検証時の一時障害は下書きの状態・版・既存エラーを変�
   expect(await getDraft(env, staff, draft.id)).toEqual(before);
 });
 
-it("公開時にも音声を再確認し、成功済みの同じ公開要求ではproviderを再照会しない", async () => {
-  const { staff, cookie, draft } = await changedDraft("tablecast/system voice");
+it("公開時にも標準音声一覧を再確認し、成功済みの同じ公開要求ではproviderを再照会しない", async () => {
+  const { staff, cookie, draft } = await changedDraft("Asuka");
   const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    expect(input instanceof Request ? input.url : input.toString()).toBe(
-      "https://api.inworld.ai/voices/v1/voices/tablecast%2Fsystem%20voice",
-    );
-    return Response.json(metadata("tablecast/system voice"));
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
+    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM"');
+    return Response.json({ voices: [metadata("Asuka")], totalSize: 1, nextPageToken: "" });
   });
   await validateDraft(configured(), staff, draft.id, draft.version);
   const payload = {
@@ -256,7 +263,7 @@ it("公開時にも音声を再確認し、成功済みの同じ公開要求で�
       },
       configured(),
     );
-  provider.mockResolvedValueOnce(new Response(privateBody, { status: 404 }));
+  provider.mockResolvedValueOnce(Response.json({ voices: [], nextPageToken: "" }));
   const rejected = await publish();
   expect(rejected.status).toBe(422);
   expect(await rejected.json()).toMatchObject({
@@ -266,7 +273,7 @@ it("公開時にも音声を再確認し、成功済みの同じ公開要求で�
         {
           code: "VOICE_NOT_FOUND",
           path: ["cast", "voice", "ja"],
-          params: { voiceId: "tablecast/system voice" },
+          params: { voiceId: "Asuka" },
         },
       ],
     },
@@ -280,6 +287,99 @@ it("公開時にも音声を再確認し、成功済みの同じ公開要求で�
   expect((await publish()).status).toBe(200);
   expect(provider).toHaveBeenCalledTimes(3);
 });
+
+it("変更した日英の標準音声を同じ一覧走査で照合し、次ページのAsukaも検証できる", async () => {
+  const { staff, draft: initial } = await changedDraft("Asuka");
+  const configuration = structuredClone(initial.configuration);
+  configuration.cast.voice.en = "Olivia";
+  const draft = await updateDraft(env, staff, initial.id, {
+    expectedVersion: initial.version,
+    configuration,
+  });
+  const pageToken = "next+/=&?opaque";
+  const signals: (AbortSignal | null | undefined)[] = [];
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
+    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM"');
+    expect(url.searchParams.get("pageSize")).toBe("50");
+    signals.push(init?.signal);
+    if (url.searchParams.get("pageToken") === pageToken)
+      return Response.json({
+        voices: [
+          {
+            ...metadata("Asuka"),
+            name: "workspaces/inworld/voices/Asuka",
+            promptLanguages: ["ja-JP"],
+          },
+        ],
+        totalSize: 2,
+        nextPageToken: "",
+      });
+    return Response.json({
+      voices: [metadata("Olivia", "EN_US")],
+      totalSize: 2,
+      nextPageToken: pageToken,
+    });
+  });
+
+  const ready = await validateDraft(configured(), staff, draft.id, draft.version);
+
+  expect(ready.status).toBe("ready");
+  expect(ready.errors).toEqual([]);
+  expect(provider).toHaveBeenCalledTimes(2);
+  expect(signals[0]).toBeInstanceOf(AbortSignal);
+  expect(signals[1]).toBe(signals[0]);
+});
+
+it("空ページに次cursorがある間は探索し、終端まで見つからなかったIDだけを不在とする", async () => {
+  const { staff, draft } = await changedDraft("tablecast-missing-voice");
+  const provider = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(Response.json({ voices: [], nextPageToken: "tablecast-next-page" }))
+    .mockResolvedValueOnce(Response.json({ voices: [metadata("Asuka")], nextPageToken: "" }));
+
+  const result = await validateDraft(configured(), staff, draft.id, draft.version);
+
+  expect(result.errors).toEqual([
+    {
+      code: "VOICE_NOT_FOUND",
+      path: ["cast", "voice", "ja"],
+      params: { voiceId: "tablecast-missing-voice" },
+    },
+  ]);
+  expect(provider).toHaveBeenCalledTimes(2);
+});
+
+it.each(["cursor循環", "走査上限", "次ページ障害"])(
+  "一覧探索中の%sは不在と誤認せず固定503にし、下書きや秘密を変更・出力しない",
+  async (scenario) => {
+    const { staff, draft } = await changedDraft("tablecast-missing-voice");
+    const before = await getDraft(env, staff, draft.id);
+    const logger = vi.spyOn(console, "error");
+    let calls = 0;
+    const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      calls += 1;
+      if (scenario === "次ページ障害" && calls === 2)
+        return new Response(`${secret}: ${privateBody}`, { status: 503 });
+      return Response.json({
+        voices: [],
+        nextPageToken: scenario === "cursor循環" ? "tablecast-repeated" : `tablecast-page-${calls}`,
+      });
+    });
+
+    const error: unknown = await validateDraft(configured(), staff, draft.id, draft.version).catch(
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toMatchObject({ code: "VOICE_CATALOG_UNAVAILABLE", status: 503 });
+    expect(JSON.stringify(error)).not.toContain(secret);
+    expect(JSON.stringify(error)).not.toContain(privateBody);
+    expect(await getDraft(env, staff, draft.id)).toEqual(before);
+    expect(provider).toHaveBeenCalledTimes(scenario === "走査上限" ? 40 : 2);
+    expect(logger).not.toHaveBeenCalled();
+  },
+);
 
 it.each(["未設定", "一時障害"])(
   "音声の維持・解除と他項目の編集は一覧用資格が%sでも検証・公開できる",
