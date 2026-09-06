@@ -179,6 +179,7 @@ export type TableState = {
   tableName: string;
   storeId: string;
   storeName: string;
+  configVersion: number;
   locale: Locale;
   status: "open" | "closed";
   voiceState: "stopped" | "active" | "error";
@@ -341,6 +342,7 @@ export const tableStateSchema: z.ZodType<TableState> = z.object({
   tableName: z.string(),
   storeId: z.string(),
   storeName: z.string(),
+  configVersion: z.number().int().positive(),
   locale: localeSchema,
   status: z.enum(["open", "closed"]),
   voiceState: z.enum(["stopped", "active", "error"]),

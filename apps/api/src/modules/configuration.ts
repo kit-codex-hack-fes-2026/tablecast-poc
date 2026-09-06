@@ -168,16 +168,18 @@ export async function publishDraft(
     );
     return draft;
   }
+  ensure(draft.version === input.expectedVersion, "DRAFT_CONFLICT");
   ensure(
     draft.baseVersion === input.baseVersion && !configurationErrors(draft.configuration).length,
     "DRAFT_INVALID",
     422,
   );
   const guard =
-    "EXISTS(SELECT 1 FROM config_drafts WHERE id=? AND store_id=? AND status='published' AND publish_key=?)";
+    "changes()=1 AND EXISTS(SELECT 1 FROM config_drafts WHERE id=? AND store_id=? AND status='published' AND publish_key=?)";
+  // 1件の更新を順に連鎖し、最初のCASが不成立なら後続も実行しない。
   const result = await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "UPDATE config_drafts SET status='published',publish_key=?,updated_at=? WHERE id=? AND store_id=? AND status='ready' AND version=? AND base_version=? AND EXISTS(SELECT 1 FROM stores WHERE id=? AND config_version=?)",
+      "UPDATE config_drafts SET status='published',publish_key=?,updated_at=? WHERE id=? AND store_id=? AND status='ready' AND version=? AND base_version=? AND EXISTS(SELECT 1 FROM stores WHERE id=? AND config_version=?) AND NOT EXISTS(SELECT 1 FROM config_drafts WHERE store_id=? AND publish_key=?)",
     ).bind(
       input.idempotencyKey,
       now,
@@ -187,6 +189,8 @@ export async function publishDraft(
       input.baseVersion,
       actor.storeId,
       input.baseVersion,
+      actor.storeId,
+      input.idempotencyKey,
     ),
     env.TABLECAST_DB.prepare(
       `UPDATE stores SET config_json=?,config_version=config_version+1,updated_at=? WHERE id=? AND config_version=? AND ${guard}`,
@@ -203,9 +207,6 @@ export async function publishDraft(
       `INSERT INTO config_releases(store_id,version,config_json,published_by,created_at) SELECT id,config_version,config_json,?,? FROM stores WHERE id=? AND ${guard}`,
     ).bind(actor.userId, now, actor.storeId, id, actor.storeId, input.idempotencyKey),
     env.TABLECAST_DB.prepare(
-      `UPDATE confirmations SET status='invalid' WHERE store_id=? AND status IN ('pending','read') AND ${guard}`,
-    ).bind(actor.storeId, id, actor.storeId, input.idempotencyKey),
-    env.TABLECAST_DB.prepare(
       `INSERT INTO table_events(store_id,kind,data_json,created_at) SELECT id,'configuration.published',?,? FROM stores WHERE id=? AND ${guard}`,
     ).bind(
       JSON.stringify({ version: input.baseVersion + 1, draftId: id, actorId: actor.userId }),
@@ -215,8 +216,26 @@ export async function publishDraft(
       actor.storeId,
       input.idempotencyKey,
     ),
+    // 失効する確認は0件以上なので、1件連鎖の最後に置く。
+    env.TABLECAST_DB.prepare(
+      `UPDATE confirmations SET status='invalid' WHERE store_id=? AND status IN ('pending','read') AND ${guard}`,
+    ).bind(actor.storeId, id, actor.storeId, input.idempotencyKey),
   ]);
-  ensure(result[0]?.meta.changes === 1, "DRAFT_CONFLICT");
+  if (result[0]?.meta.changes !== 1) {
+    const retry = await env.TABLECAST_DB.prepare(
+      "SELECT id,version,base_version FROM config_drafts WHERE store_id=? AND publish_key=?",
+    )
+      .bind(actor.storeId, input.idempotencyKey)
+      .first<{ id: string; version: number; base_version: number }>();
+    ensure(retry, "DRAFT_CONFLICT");
+    ensure(
+      retry.id === id &&
+        retry.version === input.expectedVersion &&
+        retry.base_version === input.baseVersion,
+      "IDEMPOTENCY_CONFLICT",
+    );
+    return getDraft(env, actor, id);
+  }
   await notifyStore(env, actor.storeId);
   return getDraft(env, actor, id);
 }

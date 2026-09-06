@@ -80,13 +80,17 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
   const catalog = useQuery({
-    queryKey: ["tablecast-catalog", data.storeId],
+    queryKey: ["tablecast-catalog", data.storeId, data.configVersion],
     queryFn: () => api("/api/table/catalog", {}, catalogSchema),
     enabled: true,
   });
   const [view, setView] = useState<VoiceView>({ status: "idle" });
   const [voice] = useState(() => new VoiceConnection(setView, refresh));
-  const [chosen, setChosen] = useState<{ product: Product; line?: CartLine }>();
+  const [chosen, setChosen] = useState<{
+    product: Product;
+    line?: CartLine;
+    configVersion: number;
+  }>();
   const [prepared, setSnapshot] = useState<Snapshot>();
   const [ordered, setOrdered] = useState(false);
   const [section, setSection] = useState("menu");
@@ -190,7 +194,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   }
   function edit(line: PricedLine) {
     const product = catalog.data?.configuration.products.find((item) => item.id === line.productId);
-    if (product) setChosen({ product, line });
+    if (product) setChosen({ product, line, configVersion: data.configVersion });
   }
   const voiceActive = view.error === "active" || !["idle", "paused", "error"].includes(view.status);
 
@@ -299,7 +303,9 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                 {catalog.data && (
                   <ProductMenu
                     catalog={catalog.data}
-                    onChoose={(product) => setChosen({ product })}
+                    onChoose={(product) =>
+                      setChosen({ product, configVersion: data.configVersion })
+                    }
                   />
                 )}
                 <ErrorNotice
@@ -410,7 +416,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
           </div>
         </aside>
       </div>
-      {chosen && (
+      {chosen && chosen.configVersion === data.configVersion && (
         <ProductDialog
           key={chosen.line?.id ?? chosen.product.id}
           product={chosen.product}

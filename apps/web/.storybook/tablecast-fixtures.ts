@@ -88,6 +88,7 @@ export const table: TableState = {
   tableName: "T03",
   storeId: "tablecast-story",
   storeName: "こもれび",
+  configVersion: 1,
   locale: "ja",
   status: "open",
   voiceState: "stopped",

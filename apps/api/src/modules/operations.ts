@@ -196,7 +196,7 @@ export async function getEvents(
 ): Promise<{ events: TableEvent[]; cursor: number }> {
   const rows = actor.tableSessionId
     ? await env.TABLECAST_DB.prepare(
-        "SELECT * FROM table_events WHERE store_id=? AND table_session_id=? AND cursor>? ORDER BY cursor LIMIT 500",
+        "SELECT * FROM table_events WHERE store_id=? AND (table_session_id=? OR (table_session_id IS NULL AND kind='configuration.published')) AND cursor>? ORDER BY cursor LIMIT 500",
       )
         .bind(actor.storeId, actor.tableSessionId, after)
         .all<EventRecord>()
@@ -205,7 +205,15 @@ export async function getEvents(
       )
         .bind(actor.storeId, after)
         .all<EventRecord>();
-  return { events: rows.results.map(eventValue), cursor: rows.results.at(-1)?.cursor ?? after };
+  return {
+    events: rows.results.map((row) => {
+      const event = eventValue(row);
+      // 卓へは設定更新の通知だけを渡し、公開者や下書きの情報を渡さない。
+      if (actor.tableSessionId && row.table_session_id === null) event.data = {};
+      return event;
+    }),
+    cursor: rows.results.at(-1)?.cursor ?? after,
+  };
 }
 export async function getTableState(env: TablecastEnv, actor: Actor): Promise<TableState> {
   const row = await getSession(env, actor);
@@ -255,6 +263,7 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
     tableName: table?.name ?? "",
     storeId: row.store_id,
     storeName: catalog.storeName,
+    configVersion: catalog.version,
     locale: row.locale,
     status: row.status,
     voiceState: row.voice_state,
