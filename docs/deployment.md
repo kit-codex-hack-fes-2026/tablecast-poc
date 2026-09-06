@@ -40,7 +40,32 @@
 | `TABLECAST_INWORLD_VOICES_API_KEY`                             | 標準音声metadataの一覧・実在性確認用。Read権限だけを持つ別のInworldキー                |
 | `TABLECAST_GOOGLE_CLIENT_ID`, `TABLECAST_GOOGLE_CLIENT_SECRET` | Googleログインを有効にする場合のみ。callbackはWeb originの `/api/auth/callback/google` |
 
-初回の管理者、組織、店舗team、店舗・卓、公開カタログはまだ公開用bootstrapがない。公開前に対象環境を固定した一回限りの管理スクリプトを用意し、Better AuthのサーバーAPIで認証ユーザー・組織・teamを作成する必要がある。公開HTTPの認証回避経路を追加せず、開発seedの環境制約も外さない。店舗の `team_id` と所属組織の一致、非管理者の店舗team所属、初期 `config_releases` を確認する。
+初回の管理者・組織・店舗team・店舗・卓・公開カタログは、migration適用後に管理CLI `db:bootstrap` で作る。Better AuthのサーバーAPIを使い、公開HTTPへ管理用の認証回避経路は追加しない。開発seedは公開環境で使えないままにする。
+
+WranglerのJSON/JSONC設定に実在する `account_id` を明示し、`env.staging` または `env.production` にWorker名、`TABLECAST_ENV`、HTTPSの `TABLECAST_PUBLIC_ORIGIN`、対象の `TABLECAST_DB` を明示する。rootの開発bindingを暗黙に継承する入力は拒否する。DB名とWorker名は `tablecast` を含める。
+
+入力は所有者だけが読める通常JSONファイル（例: `.local/tablecast-staging-bootstrap.json`、mode `0600`）として作る。次の項目を持ち、秘密を含むためGit・チャット・コマンド引数へ内容を貼らない。
+
+| JSON項目       | 内容                                                                   |
+| -------------- | ---------------------------------------------------------------------- |
+| `authSecret`   | 対象APIへ登録したものと同じ認証secret。32文字以上                      |
+| `admin`        | `name`、`email`、12文字以上の `password`、`locale`（`ja` または `en`） |
+| `organization` | `name`、新規の `slug`                                                  |
+| `store`        | 新規の `id`、`name`、レビュー済みの `configuration`                    |
+| `tables`       | 新規の `{ "id": "...", "name": "T01" }` の配列                         |
+
+`configuration` は [APIの正本schema](../apps/api/src/schema.ts) と同じ日英カテゴリ・商品・プラン・キャスト設定である。初期voiceは `ja`、`en` とも `null` にする。実音声の確認後に通常の下書き検証・明示公開で設定する。価格・参照関係・卓IDの重複も書込み前に検証する。
+
+次の一つ目は入力検査と対象表示だけで、DB接続や書込みを行わない。表示したaccount ID・DB ID・origin・店舗IDが配備対象と一致してから、同じ入力へ `--apply` を付ける。遠隔の接続にはWranglerの認証と公式remote D1 bindingを使用する。[Wrangler API](https://developers.cloudflare.com/workers/wrangler/api/)
+
+```sh
+bun --no-env-file run db:bootstrap --config apps/api/wrangler.jsonc --env staging --input .local/tablecast-staging-bootstrap.json --remote
+bun --no-env-file run db:bootstrap --config apps/api/wrangler.jsonc --env staging --input .local/tablecast-staging-bootstrap.json --remote --apply
+```
+
+ローカルでのリハーサルは `--remote` を `--local --persist-to /absolute/path/tablecast-bootstrap-state` へ置き換える。同じ設定・環境を指定した `wrangler d1 migrations apply TABLECAST_DB --local --persist-to ...` を先に実施し、開発デモとは別の保存先を使う。CLIはD1だけの一時configを作り、周辺の `.dev.vars` や `.env.local` を読まない。入力ファイルやD1の内容は実行後も保存される。
+
+既存email・組織slug・店舗ID・卓IDが一つでもあれば、成功済みの再実行を含めて変更せず拒否する。認証ユーザーや組織の作成は複数のBetter Auth APIをまたぐため全体の原子性はない。中途失敗時は作成段階と判明したIDを確認し、対象DBの状態を管理者が調査する。IDの `null` は未取得を意味し、資源が作られなかった証明にはならない。自動削除や既存資源の再採用はしない。店舗・初期 `config_releases`・卓は一つのD1 batchで反映する。成功後は店舗のteamと組織の一致、ログイン、初期公開版、別店舗へのアクセス拒否を確認する。
 
 R2へ商品画像を登録する場合は `tablecast/` 配下のkeyをカタログに設定する。生成画像は `imageKind=illustration` とし、[画像の出所](../assets/demo/README.md)を保持する。DB・Cookie・実来店ログをローカルから移植しない。
 
@@ -102,4 +127,4 @@ D1を復元する必要がある場合は、営業書込みと音声を停止し
 bun --no-env-file x wrangler d1 time-travel restore TABLECAST_DB --bookmark "$TABLECAST_RESTORE_BOOKMARK" --config apps/api/wrangler.jsonc --env staging
 ```
 
-stagingで復旧まで確認できてから、同じ手順を実際のproduction設定へ適用する。公開資格、初期bootstrap、Agent配置、実iPadと有料音声の確認が残っている間は公開受入完了としない。
+stagingで復旧まで確認できてから、同じ手順を実際のproduction設定へ適用する。公開資格、対象環境でのbootstrap実行、Agent配置、実iPadと有料音声の確認が残っている間は公開受入完了としない。

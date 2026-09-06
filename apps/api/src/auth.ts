@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { drizzle } from "drizzle-orm/d1";
 import { getCookie } from "hono/cookie";
@@ -18,7 +18,12 @@ export type Actor = {
   canWrite?: boolean;
 };
 export type ApiEnv = { Bindings: TablecastEnv; Variables: { actor: Actor; traceId: string } };
-export function createAuth(env: TablecastEnv) {
+export type AuthEnv = Pick<
+  TablecastEnv,
+  "TABLECAST_DB" | "TABLECAST_AUTH_SECRET" | "TABLECAST_PUBLIC_ORIGIN"
+> &
+  Partial<Pick<TablecastEnv, "TABLECAST_GOOGLE_CLIENT_ID" | "TABLECAST_GOOGLE_CLIENT_SECRET">>;
+export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
   ensure(
     env.TABLECAST_AUTH_SECRET && env.TABLECAST_AUTH_SECRET.length >= 32,
     "AUTH_NOT_CONFIGURED",
@@ -26,6 +31,7 @@ export function createAuth(env: TablecastEnv) {
   );
   return betterAuth({
     ...authOptions(env.TABLECAST_PUBLIC_ORIGIN, env.TABLECAST_AUTH_SECRET),
+    logger,
     database: drizzleAdapter(drizzle(env.TABLECAST_DB), { provider: "sqlite", schema }),
     socialProviders:
       env.TABLECAST_GOOGLE_CLIENT_ID && env.TABLECAST_GOOGLE_CLIENT_SECRET

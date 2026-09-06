@@ -27,7 +27,8 @@
     "test:e2e": "bun run --cwd apps/web test:e2e",
     "test:voice:live": "bun run --cwd livekit test:voice:live",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
-    "hooks:install": "lefthook install"
+    "hooks:install": "lefthook install",
+    "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",

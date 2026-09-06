@@ -70,4 +70,4 @@ Lefthookはstageされたファイルだけを検査し、自動stageは行わ�
 
 実モデル試験には明示的な有料実行フラグが必要。[音声の起動と試験](livekit/README.md)に従う。Inworld公式版の話者情報には不足があり、[固定SHAのパッチ](patches/livekit-inworld/README.md)はまだ公開fork依存として採用していない。
 
-[仕様索引](docs/README.md) · [実装・検証記録](docs/progress.md) · [構成の実現可能性と技術課題](docs/feasibility.md) · [デモのデータと画像](docs/demo.md)
+[仕様索引](docs/README.md) · [実装・検証記録](docs/progress.md) · [構成の実現可能性と技術課題](docs/feasibility.md) · [公開環境の初期設定・配備](docs/deployment.md) · [デモのデータと画像](docs/demo.md)
