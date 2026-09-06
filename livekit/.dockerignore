@@ -1,0 +1,14 @@
+# 配備に必要なmanifestとPythonソースだけをbuild contextへ含める。
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!src/**
+**/__pycache__/
+**/*.py[cod]
+**/.env*
+**/.dev.vars*
+**/*.pem
+**/*.key
+**/*.log

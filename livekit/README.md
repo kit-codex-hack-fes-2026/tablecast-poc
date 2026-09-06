@@ -44,3 +44,21 @@ TABLECAST_RUN_PAID_VOICE_TESTS=1 bun --no-env-file run test:voice:live
 今回の実装中にこの有料試験は実行していない。
 
 自発接客はSDKの30秒の相互無言通知から開始し、最新設定・業務状態・180秒の間隔はAPIで検証する。客の発話を捏造せず、応答のない沈黙では一度だけ試みる。APIの204では履歴・再生記録を作らず、客の発話で進行中の自発応答を中断する。注文操作のツールは自発接客へ渡さない。録音は `record=False` で無効にする。
+
+## Python Agentの配備用イメージ
+
+[LiveKit公式テンプレート](https://docs.livekit.io/deploy/agents/builds/)と[uvのDocker手順](https://docs.astral.sh/uv/guides/integration/docker/)に沿い、Python 3.13・uv 0.11.26の公式イメージをmanifest digestへ固定する。依存は `uv sync --locked --no-dev` で導入し、アプリを非editableでインストールする。非rootの `tablecast` ユーザーが既存の `tablecast-voice start` を直接起動する。
+
+ビルド中に公開CLIの `python -m livekit.agents download-files` を実行する。固定版Silero 1.8.0のONNXはwheelに同梱されるため、さらにネットワークを無効にした `silero.VAD.load()` で資産とnative libraryを確認する。モデルAPI資格はビルドに不要。
+
+リポジトリルートから次を実行する。build contextは `livekit` に限定し、`.dockerignore` で秘密・仮想環境・試験結果を除外する。最終イメージへコピーするのはインストール済み環境だけである。
+
+```sh
+docker build --platform linux/amd64 -t tablecast-voice:local -f livekit/Dockerfile livekit
+docker run --rm --network none tablecast-voice:local --help
+docker run --rm --network none --entrypoint python tablecast-voice:local -c 'import os; from livekit.plugins import silero; import tablecast_livekit.agent; assert os.getuid() != 0; silero.VAD.load()'
+```
+
+起動とhealthは、既存の開発環境と分離したローカルLiveKitへ接続して確認する。専用の環境ファイルを権限 `0600` で用意し、このLiveKitの `LIVEKIT_URL`・`LIVEKIT_API_KEY`・`LIVEKIT_API_SECRET` だけを `docker run --env-file` で渡す。Room jobをdispatchしなければ、待受登録とhealthの検査は外部AIを呼ばない。既定health portは `8081` で、コンテナ内の `http://127.0.0.1:8081/` を確認する。外部へhealth portを公開する必要はない。
+
+公開時は同じイメージへ上表の対象環境の資格を実行時に渡し、`TABLECAST_API_URL` を公開WebのHTTPS originへ設定する。イメージ内に資格を焼き込まない。実際の配備・Room dispatch・STT/TTS・実iPadでの受入と、ここにある資格不要のイメージ検査は別に記録する。
