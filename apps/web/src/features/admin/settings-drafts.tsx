@@ -203,6 +203,7 @@ function DraftDialog({
               >
                 <ErrorNotice error={catalog.error} onRetry={() => void catalog.refetch()} />
                 <ConfigurationEditor
+                  storeId={draft.storeId}
                   key={editorVersion}
                   value={configuration}
                   onChange={setConfiguration}

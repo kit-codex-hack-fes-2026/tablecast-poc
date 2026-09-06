@@ -289,6 +289,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     TABLECAST_LIVEKIT_URL: `ws://127.0.0.1:${runtime.ports.signaling}`,
   };
   for (const key of [
+    "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
     "TABLECAST_GOOGLE_CLIENT_ID",

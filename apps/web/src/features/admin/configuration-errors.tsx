@@ -11,6 +11,9 @@ const messages = {
   PLAN_TARGET_EMPTY: "config_error_empty_target",
   PRODUCT_NOT_FOUND: "config_error_product_missing",
   OPTION_NOT_FOUND: "config_error_option_missing",
+  VOICE_NOT_FOUND: "config_error_voice_missing",
+  VOICE_NOT_STANDARD: "config_error_voice_not_standard",
+  VOICE_LANGUAGE_MISMATCH: "config_error_voice_language_mismatch",
 } as const satisfies Record<ConfigurationIssue["code"], string>;
 
 function subject(configuration: Configuration, path: ConfigurationIssue["path"], locale: Locale) {
@@ -45,6 +48,10 @@ function reference(issue: ConfigurationIssue) {
       return issue.params.optionId;
     case "OPTION_REFERENCE_INVALID":
       return issue.params.referenceId;
+    case "VOICE_NOT_FOUND":
+    case "VOICE_NOT_STANDARD":
+    case "VOICE_LANGUAGE_MISMATCH":
+      return issue.params.voiceId;
     default:
       return null;
   }
@@ -62,7 +69,12 @@ export function ConfigurationErrors({
   return (
     <ul className="validation-errors" aria-label={t("config_error_list")}>
       {errors.map((issue, index) => {
-        const name = subject(configuration, issue.path, locale);
+        const voiceLocale =
+          issue.path[0] === "cast" && issue.path[1] === "voice" ? issue.path[2] : undefined;
+        const name =
+          voiceLocale === "ja" || voiceLocale === "en"
+            ? `${t("editor_voice")} / ${t(voiceLocale === "ja" ? "common_ja" : "common_en")}`
+            : subject(configuration, issue.path, locale);
         const id = reference(issue);
         return (
           <li key={JSON.stringify([issue.code, issue.path, index])}>

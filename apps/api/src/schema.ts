@@ -258,6 +258,18 @@ export const configurationIssueSchema = z.discriminatedUnion("code", [
     code: z.literal("OPTION_NOT_FOUND"),
     params: z.object({ optionId: z.string() }).strict(),
   }),
+  configurationIssueBase.extend({
+    code: z.literal("VOICE_NOT_FOUND"),
+    params: z.object({ voiceId: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("VOICE_NOT_STANDARD"),
+    params: z.object({ voiceId: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
+    code: z.literal("VOICE_LANGUAGE_MISMATCH"),
+    params: z.object({ voiceId: z.string(), locale: localeSchema, langCode: z.string() }).strict(),
+  }),
 ]);
 export type ConfigurationIssue = z.infer<typeof configurationIssueSchema>;
 export type ConfigDraft = {
@@ -305,6 +317,21 @@ export const sessionEventsQuerySchema = z
   .strict();
 export type HistoryQuery = z.infer<typeof historyQuerySchema>;
 export type SessionEventsQuery = z.infer<typeof sessionEventsQuerySchema>;
+export const voiceListQuerySchema = z
+  .object({ locale: localeSchema, pageToken: z.string().max(2048).optional() })
+  .strict();
+export const voiceSummarySchema = z.object({
+  voiceId: id,
+  displayName: z.string().min(1).max(150),
+  langCode: z.string().min(2).max(35),
+});
+export const voicePageSchema = z.object({
+  voices: z.array(voiceSummarySchema).max(50),
+  nextPageToken: z.string().max(2048).nullable(),
+});
+export type VoiceSummary = z.infer<typeof voiceSummarySchema>;
+export type VoicePage = z.infer<typeof voicePageSchema>;
+export type VoiceListQuery = z.infer<typeof voiceListQuerySchema>;
 export const voiceTriggerSchema = z.enum(["user", "proactive"]);
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 export const voiceTurnSchema = z

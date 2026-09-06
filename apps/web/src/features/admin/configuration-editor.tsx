@@ -13,15 +13,18 @@ import {
   emptyText,
 } from "./configuration-fields";
 import { ModifiersEditor } from "./modifiers-editor";
+import { StandardVoiceSelect } from "./standard-voice-select";
 
 const selectClass = "h-12 rounded-lg border border-input px-3 text-sm";
 
 export function ConfigurationEditor({
+  storeId,
   value,
   onChange,
   disabled,
   voices,
 }: {
+  storeId: string;
   value: Configuration;
   onChange: (value: Configuration) => void;
   disabled: boolean;
@@ -55,6 +58,7 @@ export function ConfigurationEditor({
       {section === "plans" && <PlansEditor value={value} onChange={onChange} disabled={disabled} />}
       {section === "cast" && (
         <CastEditor
+          storeId={storeId}
           value={value.cast}
           voices={voices}
           disabled={disabled}
@@ -592,11 +596,13 @@ function PlansEditor({ value, onChange, disabled }: EditorProps) {
 }
 
 export function CastEditor({
+  storeId,
   value,
   voices,
   onChange,
   disabled,
 }: {
+  storeId: string;
   value: Configuration["cast"];
   voices: Configuration["cast"]["voice"][];
   onChange: (value: Configuration["cast"]) => void;
@@ -624,28 +630,16 @@ export function CastEditor({
               }
             />
           </label>
-          <label>
-            {t("editor_voice")}
-            <select
-              className={selectClass}
-              value={value.voice[language] ?? ""}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  voice: { ...value.voice, [language]: event.target.value || null },
-                })
-              }
-            >
-              <option value="">{t("editor_not_configured")}</option>
-              {[...new Set([...voices.map((voice) => voice[language]), value.voice[language]])]
-                .filter((voice) => voice !== null)
-                .map((voice) => (
-                  <option key={voice} value={voice}>
-                    {voice}
-                  </option>
-                ))}
-            </select>
-          </label>
+          <StandardVoiceSelect
+            storeId={storeId}
+            language={language}
+            value={value.voice[language]}
+            retained={voices.map((voice) => voice[language])}
+            disabled={disabled}
+            onChange={(voiceId) =>
+              onChange({ ...value, voice: { ...value.voice, [language]: voiceId } })
+            }
+          />
         </fieldset>
       ))}
       <BooleanField

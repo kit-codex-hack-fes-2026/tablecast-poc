@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createAuth, type Actor, type ApiEnv } from "./auth";
 import { ensure } from "./errors";
-import { configurationSchema } from "./schema";
+import { configurationSchema, voiceListQuerySchema } from "./schema";
 import {
   createDraft,
   discardDraft,
@@ -13,6 +13,7 @@ import {
   validateDraft,
 } from "./modules/configuration";
 import { getCatalog } from "./modules/operations";
+import { listVoices } from "./modules/voices";
 
 export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
   let principal;
@@ -51,6 +52,16 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
         schema: z.toJSONSchema(configurationSchema),
         locales: ["ja", "en"],
       }),
+  );
+  server.registerTool(
+    "list_voices",
+    {
+      description:
+        "指定した言語を主言語とするInworldの標準音声を取得する。次のページは返されたnextPageTokenをpageTokenへ渡して取得する。",
+      inputSchema: voiceListQuerySchema.shape,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => result(await listVoices(c.env, actor, input)),
   );
   server.registerTool(
     "create_draft",

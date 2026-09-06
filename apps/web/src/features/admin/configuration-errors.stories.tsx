@@ -46,6 +46,21 @@ const errors: ConfigurationIssue[] = [
     path: ["plans", 0, "excludedOptionIds", 0],
     params: { optionId: "tablecast-excluded-option" },
   },
+  {
+    code: "VOICE_NOT_FOUND",
+    path: ["cast", "voice", "ja"],
+    params: { voiceId: "tablecast-missing-voice" },
+  },
+  {
+    code: "VOICE_NOT_STANDARD",
+    path: ["cast", "voice", "en"],
+    params: { voiceId: "tablecast-custom-voice" },
+  },
+  {
+    code: "VOICE_LANGUAGE_MISMATCH",
+    path: ["cast", "voice", "ja"],
+    params: { voiceId: "tablecast-english-voice", locale: "ja", langCode: "en-US" },
+  },
 ];
 
 const meta = {
@@ -91,7 +106,7 @@ export const Japanese: Story = {
   play: async ({ canvasElement }) => {
     const list = within(canvasElement).getByRole("list", { name: "設定の検証エラー" });
     const rows = within(list).getAllByRole("listitem");
-    await expect(rows).toHaveLength(9);
+    await expect(rows).toHaveLength(12);
     await expect(rows[0]).toHaveTextContent("こもれび 月凪 純米吟醸: IDが重複しています。");
     await expect(rows[1]).toHaveTextContent("カテゴリが見つかりません。");
     await expect(rows[2]).toHaveTextContent("容量: 最小・最大選択数と選択方法が一致していません。");
@@ -107,6 +122,15 @@ export const Japanese: Story = {
     await expect(rows[8]).toHaveTextContent(
       "対象外の選択肢が見つかりません。 (tablecast-excluded-option)",
     );
+    await expect(rows[9]).toHaveTextContent(
+      "音声設定 / 日本語: 標準音声が見つかりません。 (tablecast-missing-voice)",
+    );
+    await expect(rows[10]).toHaveTextContent(
+      "音声設定 / 英語: この音声は標準音声ではありません。 (tablecast-custom-voice)",
+    );
+    await expect(rows[11]).toHaveTextContent(
+      "音声設定 / 日本語: この音声は対象の言語に対応していません。 (tablecast-english-voice)",
+    );
   },
 };
 export const English: Story = {
@@ -115,7 +139,7 @@ export const English: Story = {
   play: async ({ canvasElement }) => {
     const list = within(canvasElement).getByRole("list", { name: "Settings validation errors" });
     const rows = within(list).getAllByRole("listitem");
-    await expect(rows).toHaveLength(9);
+    await expect(rows).toHaveLength(12);
     await expect(list).not.toHaveTextContent(/[\u3040-\u30ff\u4e00-\u9fff]/);
     await expect(rows[0]).toHaveTextContent(
       "Komorebi Tsukinagi, a fragrant and gently dry junmai ginjo sake: This ID is used more than once.",
@@ -143,6 +167,15 @@ export const English: Story = {
     );
     await expect(rows[8]).toHaveTextContent(
       "The excluded option could not be found. (tablecast-excluded-option)",
+    );
+    await expect(rows[9]).toHaveTextContent(
+      "Voice setting / Japanese: The standard voice could not be found. (tablecast-missing-voice)",
+    );
+    await expect(rows[10]).toHaveTextContent(
+      "Voice setting / English: This voice is not a standard voice. (tablecast-custom-voice)",
+    );
+    await expect(rows[11]).toHaveTextContent(
+      "Voice setting / Japanese: This voice does not support the selected language. (tablecast-english-voice)",
     );
   },
 };

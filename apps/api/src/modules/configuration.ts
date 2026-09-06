@@ -10,6 +10,7 @@ import {
 } from "../schema";
 import { getCatalog, notifyStore } from "./operations";
 import { configurationErrors } from "./pricing";
+import { voiceConfigurationErrors } from "./voices";
 
 type DraftRecord = {
   id: string;
@@ -132,7 +133,12 @@ export async function validateDraft(
 ) {
   requireManager(actor);
   const draft = await getDraft(env, actor, id);
-  const errors = configurationErrors(draft.configuration);
+  ensure(draft.version === expectedVersion, "DRAFT_CONFLICT");
+  const catalog = await getCatalog(env, actor.storeId);
+  const errors = [
+    ...configurationErrors(draft.configuration),
+    ...(await voiceConfigurationErrors(env, draft.configuration, catalog.configuration)),
+  ];
   const result = await env.TABLECAST_DB.prepare(
     "UPDATE config_drafts SET status=?,errors_json=?,updated_at=? WHERE id=? AND store_id=? AND version=? AND status IN ('draft','ready')",
   )
@@ -194,6 +200,14 @@ export async function publishDraft(
     "DRAFT_INVALID",
     422,
   );
+  ensure(draft.status === "ready", "DRAFT_CONFLICT");
+  const catalog = await getCatalog(env, actor.storeId);
+  const voiceErrors = await voiceConfigurationErrors(
+    env,
+    draft.configuration,
+    catalog.configuration,
+  );
+  ensure(!voiceErrors.length, "DRAFT_INVALID", 422, voiceErrors);
   const guard =
     "changes()=1 AND EXISTS(SELECT 1 FROM config_drafts WHERE id=? AND store_id=? AND status='published' AND publish_key=?)";
   // 1件の更新を順に連鎖し、最初のCASが不成立なら後続も実行しない。

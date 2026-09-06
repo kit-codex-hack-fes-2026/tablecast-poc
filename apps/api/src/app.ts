@@ -26,6 +26,7 @@ import {
   prepareSchema,
   sessionEventsQuerySchema,
   submitSchema,
+  voiceListQuerySchema,
 } from "./schema";
 import {
   callStaff,
@@ -59,6 +60,7 @@ import {
 } from "./modules/configuration";
 import { mcpRoutes } from "./mcp";
 import { issueVoiceToken, stopVoiceRoom, voiceRoutes } from "./voice";
+import { listVoices } from "./modules/voices";
 
 const validate = <T extends z.ZodType>(schema: T) =>
   zValidator("json", schema, (result) => {
@@ -328,6 +330,9 @@ const admin = new Hono<ApiEnv>().use("*", async (c, next) => {
 const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
 admin.get("/", async (c) => c.json(await getAdminState(c.env, c.get("actor"))));
 admin.get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)));
+admin.get("/voices", validateQuery(voiceListQuerySchema), async (c) =>
+  c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query"))),
+);
 admin.get("/history", validateQuery(historyQuerySchema), async (c) =>
   c.json(await getHistory(c.env, c.get("actor"), c.req.valid("query"))),
 );

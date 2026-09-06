@@ -2,11 +2,19 @@ import { env, exports } from "cloudflare:workers";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { expect, it, onTestFinished } from "vitest";
+import { expect, it, onTestFinished, vi, afterEach } from "vitest";
 import { z } from "zod";
 import { createAuth } from "../src/auth";
-import { catalogSchema, configDraftSchema, configurationSchema } from "../src/schema";
+import {
+  catalogSchema,
+  configDraftSchema,
+  configurationSchema,
+  voicePageSchema,
+} from "../src/schema";
 import { setupFixture, text } from "./fixture";
+import app from "../src/app";
+
+afterEach(() => vi.restoreAllMocks());
 
 const origin = "http://localhost:3000";
 async function post(path: string, body: unknown, headers: HeadersInit = {}) {
@@ -95,7 +103,7 @@ async function authorise(cookie: string, scope = "tablecast:read tablecast:write
   };
 }
 
-async function connect(token: string, storeId = "tablecast-store") {
+async function connect(token: string, storeId = "tablecast-store", configured?: TablecastEnv) {
   const client = new Client({ name: "tablecast-integration", version: "1.0.0" });
   onTestFinished(() => client.close());
   await client.connect(
@@ -103,7 +111,10 @@ async function connect(token: string, storeId = "tablecast-store") {
       new URL(`${origin}/mcp?storeId=${encodeURIComponent(storeId)}`),
       {
         requestInit: { headers: { Authorization: `Bearer ${token}` } },
-        fetch: (url, init) => exports.default.fetch(new Request(url, init)),
+        fetch: async (url, init) =>
+          await (configured
+            ? app.fetch(new Request(url, init), configured)
+            : exports.default.fetch(new Request(url, init))),
       },
     ),
   );
@@ -356,4 +367,165 @@ it("MCPはOAuth対象組織・店舗team・現行roleを要求ごとに照合す
   await expect(other.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject({
     code: 403,
   });
+});
+
+it("読み取りOAuthからも共通の標準音声一覧を取得し、未設定時は安全なエラーを返す", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie, "tablecast:read");
+  const configured = { ...env, TABLECAST_INWORLD_VOICES_API_KEY: "tablecast-mcp-metadata-key" };
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
+    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM" AND lang_code = "en"');
+    expect(url.searchParams.get("pageToken")).toBe("tablecast-mcp-next+/=");
+    expect(new Headers(init?.headers).get("Authorization")).toBe(
+      "Basic tablecast-mcp-metadata-key",
+    );
+    return Response.json({
+      voices: [
+        {
+          voiceId: "tablecast-system-en",
+          displayName: "Standard voice",
+          langCode: "EN_US",
+          source: "SYSTEM",
+        },
+        {
+          voiceId: "tablecast-private-clone",
+          displayName: "Private clone",
+          langCode: "EN_US",
+          source: "IVC",
+        },
+      ],
+      nextPageToken: "",
+    });
+  });
+  const client = await connect(token, "tablecast-store", configured);
+  const page = toolData(
+    await client.callTool({
+      name: "list_voices",
+      arguments: { locale: "en", pageToken: "tablecast-mcp-next+/=" },
+    }),
+    voicePageSchema,
+  );
+  expect(page).toEqual({
+    voices: [{ voiceId: "tablecast-system-en", displayName: "Standard voice", langCode: "EN_US" }],
+    nextPageToken: null,
+  });
+  expect(
+    (await client.listTools()).tools.find((tool) => tool.name === "list_voices")?.annotations
+      ?.readOnlyHint,
+  ).toBe(true);
+  const unconfigured = await connect(token, "tablecast-store", {
+    ...env,
+    TABLECAST_INWORLD_VOICES_API_KEY: "",
+  });
+  toolError(
+    await unconfigured.callTool({ name: "list_voices", arguments: { locale: "en" } }),
+    "VOICE_CATALOG_NOT_CONFIGURED",
+  );
+  expect(provider).toHaveBeenCalledTimes(1);
+});
+
+it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開直前にも標準音声を照合する", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const configured = { ...env, TABLECAST_INWORLD_VOICES_API_KEY: "tablecast-mcp-metadata-key" };
+  const client = await connect(token, "tablecast-store", configured);
+  let draft = toolData(
+    await client.callTool({ name: "create_draft", arguments: {} }),
+    configDraftSchema,
+  );
+  const configuration = structuredClone(draft.configuration);
+  const product = configuration.products[0];
+  if (!product) throw new Error("商品fixtureがありません");
+  product.categoryId = "tablecast-missing-category";
+  configuration.cast.voice.ja = "tablecast-new-ja";
+  draft = toolData(
+    await client.callTool({
+      name: "update_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version, configuration },
+    }),
+    configDraftSchema,
+  );
+  const voice = {
+    voiceId: "tablecast-new-ja",
+    displayName: "標準音声",
+    langCode: "JA_JP",
+    source: "IVC",
+  };
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    expect(input instanceof Request ? input.url : input.toString()).toBe(
+      "https://api.inworld.ai/voices/v1/voices/tablecast-new-ja",
+    );
+    return Response.json(voice);
+  });
+
+  const mcp = toolData(
+    await client.callTool({
+      name: "validate_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version },
+    }),
+    configDraftSchema,
+  );
+  const gui = await app.request(
+    `/api/admin/stores/tablecast-store/drafts/${draft.id}/validate`,
+    {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedVersion: draft.version }),
+    },
+    configured,
+  );
+  expect(gui.status).toBe(200);
+  expect(configDraftSchema.parse(await gui.json()).errors).toEqual(mcp.errors);
+  expect(mcp.errors).toEqual([
+    {
+      code: "CATEGORY_NOT_FOUND",
+      path: ["products", 0, "categoryId"],
+      params: { categoryId: "tablecast-missing-category" },
+    },
+    {
+      code: "VOICE_NOT_STANDARD",
+      path: ["cast", "voice", "ja"],
+      params: { voiceId: "tablecast-new-ja" },
+    },
+  ]);
+  product.categoryId = "drinks";
+  voice.source = "SYSTEM";
+  draft = toolData(
+    await client.callTool({
+      name: "update_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version, configuration },
+    }),
+    configDraftSchema,
+  );
+  const ready = toolData(
+    await client.callTool({
+      name: "validate_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version },
+    }),
+    configDraftSchema,
+  );
+  expect(ready.status).toBe("ready");
+  voice.source = "IVC";
+  const publication = await app.request(
+    `/api/admin/stores/tablecast-store/drafts/${draft.id}/publish`,
+    {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        expectedVersion: draft.version,
+        baseVersion: draft.baseVersion,
+        idempotencyKey: "tablecast-mcp-voice-publication",
+        approved: true,
+      }),
+    },
+    configured,
+  );
+  expect(publication.status).toBe(422);
+  expect(await publication.json()).toMatchObject({
+    error: { code: "DRAFT_INVALID", details: [{ code: "VOICE_NOT_STANDARD" }] },
+  });
+  expect(provider).toHaveBeenCalledTimes(4);
+  expect((await client.listTools()).tools.map((tool) => tool.name)).not.toContain("publish_draft");
 });
