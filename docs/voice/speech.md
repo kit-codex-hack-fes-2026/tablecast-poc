@@ -92,6 +92,8 @@ Markdown、見出し、箇条書き記号、絵文字、URL、商品IDは読み�
 対象は `inworld-tts-2`。低遅延版 `inworld-tts-2-flash` は自由文steeringに対応しないため、本仕様の代替として自動選択しない。[S05](../sources.md#s05)
 モデル・voiceの具体的選定は標準voiceで日英を試聴して決める。プロンプトだけで年齢・声質・アクセントを完全に指定できるとは保証しない。
 
+候補はInworldの現行Voice APIから `source = "SYSTEM"` と対象の `lang_code` で取得する。主言語は日英の選択を制限するために使い、英国アクセントや店のキャラクターへの適性の証明にはしない。新しい非nullのIDへ変更するときは下書き検証と公開時に実在性・標準音声・主言語を確認する。公開中の値を保持する編集と未設定への解除は、一覧用キーがない時やprovider障害時も継続できる。[標準音声一覧](https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/list-voices)、[音声の単体確認](https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/get-voice)
+
 | 目的                   | 形式                             | スコープと注意                                         |
 | ---------------------- | -------------------------------- | ------------------------------------------------------ |
 | 感情・口調・速度・強弱 | `[自然言語の英語指示]`           | 直後から適用。次の指示またはresetまで継続              |

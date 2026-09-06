@@ -37,6 +37,7 @@
 | `TABLECAST_LIVEKIT_URL`                                        | ブラウザーとAgentから到達可能なLiveKitの `wss://` URL                                  |
 | `TABLECAST_LIVEKIT_API_KEY`, `TABLECAST_LIVEKIT_API_SECRET`    | この環境専用のLiveKit資格                                                              |
 | `TABLECAST_MODEL`, `TABLECAST_MODEL_API_KEY`                   | 検証対象モデルとその資格                                                               |
+| `TABLECAST_INWORLD_VOICES_API_KEY`                             | 標準音声metadataの一覧・実在性確認用。Read権限だけを持つ別のInworldキー                |
 | `TABLECAST_GOOGLE_CLIENT_ID`, `TABLECAST_GOOGLE_CLIENT_SECRET` | Googleログインを有効にする場合のみ。callbackはWeb originの `/api/auth/callback/google` |
 
 初回の管理者、組織、店舗team、店舗・卓、公開カタログはまだ公開用bootstrapがない。公開前に対象環境を固定した一回限りの管理スクリプトを用意し、Better AuthのサーバーAPIで認証ユーザー・組織・teamを作成する必要がある。公開HTTPの認証回避経路を追加せず、開発seedの環境制約も外さない。店舗の `team_id` と所属組織の一致、非管理者の店舗team所属、初期 `config_releases` を確認する。
@@ -74,9 +75,13 @@ bun --no-env-file x wrangler deploy --config "$TABLECAST_WEB_BUILD_CONFIG"
 
 ## 音声の有効化
 
-LiveKit Cloudまたは対応するコンテナ環境へPython Agentを配置する。コンテナ定義・クラウドへの自動deployは未提供。`livekit/uv.lock` を固定した環境で `uv run --directory livekit tablecast-voice start` を起動し、[音声README](../livekit/README.md)の変数を設定する。`TABLECAST_API_URL` は公開WebのHTTPS origin、LiveKit URLはAPIの接続先と同じ環境にする。
+LiveKit Cloudまたは対応するコンテナ環境へPython Agentを配置する。[Dockerfile](../livekit/Dockerfile)は公式uv/Pythonのdigestと `livekit/uv.lock` を使い、既存の `tablecast-voice start` を非rootで起動する。[音声README](../livekit/README.md)のbuild・検査手順と対象環境の変数を使う。コンテナを使わない場合は固定したuv環境で `uv run --directory livekit tablecast-voice start` を起動する。`TABLECAST_API_URL` は公開WebのHTTPS origin、LiveKit URLはAPIの接続先と同じ環境にする。クラウドへの自動deployは未提供。
+
+linux/amd64の実イメージをbuildし、ネットワーク無しのCLI・import・VAD読込みとUID 10001を確認した。外部へ通信できない専用Dockerネットワーク内のLiveKitへ待受登録し、health 200も確認した。AI資格とRoom jobは使わず、検証後は専用コンテナ・ネットワーク・鍵ファイルを片付けた。これは公開Agent dispatchや日英音声往復の受入を代替しない。
 
 Agent登録、health、Room dispatch、Inworld STT/TTS、APIのモデル応答、日英の標準voiceを先に確認する。`INWORLD_API_KEY` はPythonだけへ渡し、LiveKit/API内部tokenをブラウザーへ渡さない。接続前提が揃ったstagingで `TABLECAST_VOICE_ENABLED=true` を明示してAPIを再deployし、店舗の `cast.voice.ja/en` を試聴した実在IDで公開する。再生停止・送音停止・Room退出・進行turnの失効、割込み中の注文拒否をstagingと実iPadで検証する。その受入結果が揃うまではproductionのフラグを有効にしない。
+
+APIの一覧確認用キーは `TABLECAST_INWORLD_VOICES_API_KEY` として別に登録し、GETのmetadata取得だけに使う。このキーだけではAgentや音声受付を有効化しない。標準音声の一覧と単体確認は現行の `/voices/v1/voices` を使い、独自のSTT/TTSクライアントを追加しない。[Inworld一覧とRead権限](https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/list-voices)
 
 停止中でもGUI注文を使えることを確認する。APIの有効フラグは稼働監視を代替しない。プロバイダー障害・Agent停止時は新しい開始を無効化して既存Roomを終了させる。
 

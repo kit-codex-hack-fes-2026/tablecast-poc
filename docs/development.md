@@ -100,6 +100,8 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 実装は `scripts/tablecast-dev.ts` と `scripts/tablecast-runtime.ts`。起動時はWeb/APIとLiveKitの疎通を確認し、状態とログの場所を表示する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
 
 ローカルの `TABLECAST_RELEASE_SHA` は設定生成時のGit HEADを使う。追跡対象の変更や未追跡ファイルがある場合は `-dirty` を付け、commitと完全一致する実行と区別する。無視対象の `.local` や秘密設定は対象外とする。編集中の全状態を復元できる識別子ではなく、変更後は再起動して診断情報を更新する。
+
+標準音声の一覧・検証だけを使う場合は、開発用Read権限キーを `.env.secrets.local` の `TABLECAST_INWORLD_VOICES_API_KEY` に設定して再起動する。APIの `.local/.dev.vars` へだけ渡し、ブラウザーとPythonへは渡さない。このキー単独では音声受付・Agentを起動しない。実在候補の取得には外部接続が必要で、無資格の試験はprovider境界のfixtureと区別する。
 破壊的操作はlocal targetとworktree所有を検査し、remote/productionを拒否する。アプリが書込み中のDBファイルを無造作に削除しない。
 同じ番号のmigrationとlockfileを並列生成しないよう統合担当を決める。Git hooksは各checkoutの現行設定を使い、共通Git設定を勝手に変更しない。
 

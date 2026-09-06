@@ -86,7 +86,7 @@ Wrangler 4.129.0の複数configによるローカル起動では、ProxyControll
 
 Web/APIのruntimeはworkerd、Python Agentは別プロセス、LiveKitはWebRTCメディアサーバーとなる。Bun採用はWorkersをBun runtimeへ置き換える意味ではない。WorkersのHTTP streamingはクライアント接続中継続できるが、CPU・メモリ・subrequestの上限、切断やruntime更新を考慮する。応答後の処理を無制限の`waitUntil`へ逃がさない。[Workers公式limits](https://developers.cloudflare.com/workers/platform/limits/)
 
-ローカルのHTTP・Docker起動は公開配備の証明にはならない。実端末から接続可能なHTTPS/WSS、信頼された証明書、UDP到達性、必要なTURN/TLS、ファイアウォール、DNSが必要になる。PythonはAPIへHTTPSで到達でき、LiveKitは同じAgentをdispatchできる必要がある。[LiveKit公式配備](https://docs.livekit.io/transport/self-hosting/deployment/)
+Pythonの配備用Dockerfileは公式uv/Pythonのdigestとuv.lockで固定した。実linux/amd64 imageを非rootで起動し、外部通信できない専用ネットワーク内のLiveKit登録とhealthを確認した。Room jobはdispatchしておらず、実際のAPI・Inworldとの音声往復は未確認である。ローカルのHTTP・Docker起動は公開配備の証明にはならない。実端末から接続可能なHTTPS/WSS、信頼された証明書、UDP到達性、必要なTURN/TLS、ファイアウォール、DNSが必要になる。PythonはAPIへHTTPSで到達でき、LiveKitは同じAgentをdispatchできる必要がある。[LiveKit公式配備](https://docs.livekit.io/transport/self-hosting/deployment/)
 
 STT/TTSのvoiceと日英の自然さ、店内Wi-Fi、iPadのautoplay/マイク許可、配置とスピーカー音量は実測が必要。AECは有効にするが、自己音声ループや背景音声の誤注文がゼロになる保証ではない。安全に迷う場面はスタッフ・GUIへ戻す。
 
@@ -94,9 +94,9 @@ STT/TTSのvoiceと日英の自然さ、店内Wi-Fi、iPadのautoplay/マイク�
 
 ## 次に行う改善
 
-自発接客の開始経路は実装し、SDKの相互無言通知、APIでの最新設定・業務状態・180秒制限、競合予約、参照専用ツール、客の割込みと明示停止をローカルで検証した。実店舗の無言検出・声掛け頻度・自然さは未評価である。標準voiceの一覧取得と実際の言語適性も外部設定後に確認する。
+自発接客の開始経路は実装し、SDKの相互無言通知、APIでの最新設定・業務状態・180秒制限、競合予約、参照専用ツール、客の割込みと明示停止をローカルで検証した。実店舗の無言検出・声掛け頻度・自然さは未評価である。標準voiceの一覧取得と、変更するIDの実在性・SYSTEM・主言語の検証は実装した。管理HTTPとMCPで同じ処理を使い、provider境界のfixtureで確認済みだが、実一覧の取得・英国英語のアクセント・店のキャラクターとの適性は外部設定後の試聴で確認する。
 
-1. 試聴済みの日英voiceと外部設定を用意し、まず小さい有料STT/TTS疎通、次にAPI・Roomを含む実音声往復を行う。失敗時に別モデルへ自動切替しない。
+1. 公開用bootstrapを実装・隔離DBで検証した上で、試聴済みの日英voiceと外部設定を用意し、まず小さい有料STT/TTS疎通、次にAPI・Roomを含む実音声往復を行う。失敗時に別モデルへ自動切替しない。
 2. iPadで通常注文、確認途中の訂正、停止中の言語変更、ネットワーク断、TTSだけが話す場面を試す。停止後のマイク表示とprovider送音停止を両方確認する。
 3. forkの公開先を確定して完全SHAでlockし、話者変換のfixtureとMultiSpeakerAdapterの結合試験を通す。公式releaseで同じ契約を満たしたらforkを外す。
 4. 接続済みの `traceId`・turn・Mastra `runId`・LiveKit `sdkRequestId`・`speechId` と上表のmetricsを合わせ、実音声の遅延・利用量を集める。成功・拒否・途中失敗・取消・旧turnの後処理の対応と非漏洩はローカルで検証した。SDKは失敗時にmetricsを出さないため、診断記録と公開errorも使う。本文のみのHTTP接続から課金tokenを推測しない。性能課題が分かってから、長い応答、過大なcatalog、不要なtool step、接続初期化を対象に小さく調整する。
