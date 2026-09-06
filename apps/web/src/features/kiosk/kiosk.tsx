@@ -234,8 +234,8 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
 
   return (
     <div className="kiosk-shell">
-      <header className="kiosk-header">
-        <div className="restaurant-lockup">
+      <header className="kiosk-header flex-wrap">
+        <div className="restaurant-lockup grow shrink-0 basis-auto">
           <a className="brand" href="/">
             TableCast<span>·</span>
           </a>
@@ -246,7 +246,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
             <strong>{data.tableName}</strong>
           </div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions max-w-full flex-wrap [&>.language-switch]:min-w-max">
           <LanguageSwitch
             onChange={(next) => language.mutate(next)}
             disabled={language.isPending}
@@ -429,7 +429,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
             <Button
               variant="ghost"
               type="button"
-              className="basket-total"
+              className="basket-total h-auto min-h-12 whitespace-normal"
               onClick={() => setSection("cart")}
             >
               <ShoppingBag size={20} aria-hidden="true" />

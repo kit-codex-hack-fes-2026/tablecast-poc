@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { CartLine } from "@tablecast/api/schema";
+import { productSchema, type CartLine, type Product } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import { CartLines, ProductDialog, ProductMenu } from "./menu";
@@ -87,6 +87,196 @@ export const EnglishOptionalCustomisation: Story = {
   ...OptionalCustomisation,
   name: "英語で任意の単一選択をカート編集から解除する",
   globals: { locale: "en" },
+};
+
+const relationText = (ja: string, en: string) => ({
+  ja: { ...product.text.ja, displayName: ja, speechName: ja },
+  en: { ...product.text.en, displayName: en, speechName: en },
+});
+const relatedProduct: Product = {
+  ...product,
+  text: relationText("デザート", "Dessert"),
+  modifiers: [
+    {
+      id: "tablecast-sauce",
+      text: relationText("ソース", "Sauce"),
+      kind: "multiple",
+      min: 0,
+      max: 2,
+      options: [
+        {
+          id: "tablecast-yoghurt",
+          text: relationText("ヨーグルトソース", "Yoghurt sauce"),
+          priceDelta: 0,
+          available: true,
+          maxQuantity: 1,
+          requires: ["tablecast-berries"],
+          excludes: ["tablecast-chocolate"],
+        },
+        {
+          id: "tablecast-chocolate",
+          text: relationText("チョコソース", "Chocolate sauce"),
+          priceDelta: 0,
+          available: true,
+          maxQuantity: 1,
+          requires: [],
+          excludes: ["tablecast-yoghurt"],
+        },
+      ],
+    },
+    {
+      id: "tablecast-fruit",
+      text: relationText("フルーツ追加", "Extra fruit"),
+      kind: "quantity",
+      min: 0,
+      max: 2,
+      options: [
+        {
+          id: "tablecast-berries",
+          text: relationText("ベリー", "Berries"),
+          priceDelta: 100,
+          available: true,
+          maxQuantity: 2,
+          requires: [],
+          excludes: [],
+        },
+      ],
+    },
+  ],
+};
+const relatedLine: CartLine = {
+  id: "tablecast-related-line",
+  productId: relatedProduct.id,
+  quantity: 2,
+  selections: [{ optionId: "tablecast-chocolate", quantity: 1 }],
+};
+const saveRelated = fn<(line: CartLine) => void>();
+export const RelatedCustomisation: Story = {
+  name: "相互排他の選択を外し、別グループの依存条件をタッチで満たす",
+  render: () => (
+    <ProductDialog
+      product={relatedProduct}
+      initial={relatedLine}
+      busy={false}
+      onClose={fn()}
+      onSave={saveRelated}
+    />
+  ),
+  play: async ({ canvasElement, globals, step }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const english = globals.locale === "en";
+    const chocolate = body.getByRole("checkbox", {
+      name: english ? "Chocolate sauce" : "チョコソース",
+    });
+    const yoghurt = body.getByRole("checkbox", {
+      name: english ? "Yoghurt sauce" : "ヨーグルトソース",
+    });
+    saveRelated.mockClear();
+    await step("前提: 相互排他となるソースが選択されている", async () => {
+      await expect(chocolate).toBeChecked();
+      await expect(yoghurt).not.toBeChecked();
+    });
+    await step("操作: ソースを選び直し、依存するベリーを2つ追加して更新する", async () => {
+      await userEvent.click(chocolate);
+      await userEvent.click(yoghurt);
+      const increase = body.getByRole("button", {
+        name: english ? "Berries: Increase quantity" : "ベリー: 数量を増やす",
+      });
+      await userEvent.click(increase);
+      await userEvent.click(increase);
+      await userEvent.click(body.getByRole("button", { name: english ? "Update" : "更新する" }));
+    });
+    await step("結果: 商品数量を維持し、依存を含み排他対象を含まない選択を送る", async () => {
+      await expect(chocolate).not.toBeChecked();
+      await expect(yoghurt).toBeChecked();
+      await expect(saveRelated).toHaveBeenCalledTimes(1);
+      await expect(saveRelated).toHaveBeenCalledWith({
+        ...relatedLine,
+        selections: [
+          { optionId: "tablecast-yoghurt", quantity: 1 },
+          { optionId: "tablecast-berries", quantity: 2 },
+        ],
+      });
+      await expect(body.queryByRole("textbox")).not.toBeInTheDocument();
+    });
+  },
+};
+export const EnglishRelatedCustomisation: Story = {
+  ...RelatedCustomisation,
+  name: "英語で相互排他の選択を外し、依存条件をタッチで満たす",
+  globals: { locale: "en" },
+};
+const longProduct = productSchema.parse({
+  ...product,
+  text: {
+    ja: {
+      ...product.text.ja,
+      displayName: "季節の料理に合う、香りと余韻を楽しむ日本酒。".repeat(10).slice(0, 150),
+      description: "香りや味わい、料理との組み合わせについての商品説明です。"
+        .repeat(120)
+        .slice(0, 3000),
+    },
+    en: {
+      ...product.text.en,
+      displayName: "A fragrant sake with a gentle finish, served alongside seasonal dishes. "
+        .repeat(3)
+        .slice(0, 150),
+      description: "This description explains the flavour, aroma and pairing with seasonal dishes. "
+        .repeat(50)
+        .slice(0, 3000),
+    },
+  },
+});
+const saveLongProduct = fn<(line: CartLine) => void>();
+export const LongDescription: Story = {
+  name: "上限の長い商品名と説明でも選択欄と注文ボタンへ到達する",
+  globals: { locale: "en" },
+  render: () => (
+    <ProductDialog product={longProduct} busy={false} onClose={fn()} onSave={saveLongProduct} />
+  ),
+  play: async ({ canvasElement, step }) => {
+    const document = canvasElement.ownerDocument;
+    const body = within(document.body);
+    const add = body.getByRole("button", { name: "Add to basket" });
+    const close = body.getByRole("button", { name: "Close" });
+    const firstOption = body.getByRole("radio", { name: "60 mL" });
+    saveLongProduct.mockClear();
+    await step("前提: 長い本文でも固定操作は画面内にある", async () => {
+      const viewportHeight = document.documentElement.clientHeight;
+      await expect(close.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+      await expect(add.getBoundingClientRect().bottom).toBeLessThanOrEqual(viewportHeight);
+    });
+    await step("操作: キーボードで選択欄へ移動し、スクロールして選択する", async () => {
+      close.focus();
+      await userEvent.tab();
+      await expect(firstOption).toHaveFocus();
+      const scroll = firstOption.closest(".dialog-scroll");
+      if (!scroll) throw new Error("選択欄のスクロール領域がありません。");
+      await expect(scroll.clientHeight).toBeGreaterThan(0);
+      await expect(firstOption.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        scroll.getBoundingClientRect().top,
+      );
+      await expect(firstOption.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+        scroll.getBoundingClientRect().bottom,
+      );
+      await userEvent.keyboard("[Space]");
+      await expect(firstOption).toBeChecked();
+    });
+    await step("結果: 下端の注文操作にもTabで到達し、選択を送信できる", async () => {
+      for (let count = 0; count < 5 && document.activeElement !== add; count += 1) {
+        await userEvent.tab();
+      }
+      await expect(add).toHaveFocus();
+      await userEvent.keyboard("[Enter]");
+      await expect(saveLongProduct).toHaveBeenCalledWith(
+        expect.objectContaining({
+          productId: product.id,
+          quantity: 1,
+          selections: [{ optionId: "tablecast-glass", quantity: 1 }],
+        }),
+      );
+    });
+  },
 };
 export const Basket: Story = {
   name: "変更内容と合計を表示",

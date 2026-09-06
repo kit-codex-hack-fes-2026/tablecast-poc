@@ -5,10 +5,14 @@ import { expect, test } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import type { CartLine } from "@tablecast/api/schema";
+import { enlargeText, expectReadableControl, tabTo } from "./tablecast-accessibility";
 
 const credentials = z
   .object({ email: z.string(), password: z.string() })
   .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+
+// スタッフの認証入力を含むため、通信traceを保存しない。
+test.use({ trace: "off" });
 
 for (const { staffLanguage, labels } of [
   { staffLanguage: "日本語", labels: ja },
@@ -81,6 +85,22 @@ for (const { staffLanguage, labels } of [
         return product;
       });
       const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
+      await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-normal-ja.png") });
+      // 客画面も文字を200%にして、常設操作と商品選択を実際に使う。
+      await enlargeText(guest.locator(".kiosk-shell"));
+      for (const name of ["日本語", "English", "音声を開始", "店員を呼ぶ"])
+        await expectReadableControl(
+          guest.locator("header").getByRole("button", { name, exact: true }),
+        );
+      const identity = await guest.locator(".restaurant-lockup").boundingBox();
+      const controls = await guest.locator(".header-actions").boundingBox();
+      if (!identity || !controls) throw new Error("ヘッダーの領域を取得できません。");
+      expect(
+        identity.x + identity.width <= controls.x + 1 ||
+          identity.y + identity.height <= controls.y + 1,
+      ).toBe(true);
+      await expectReadableControl(guest.locator(".basket-total"));
+      await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-text-200-ja.png") });
       for (const product of products) {
         await test.step(`${product.text.ja.displayName}をカスタマイズする`, async () => {
           await guest.getByRole("tab", { name: "おしながき", exact: true }).click();
@@ -88,6 +108,22 @@ for (const { staffLanguage, labels } of [
             .getByRole("button")
             .filter({ has: guest.getByText(product.text.ja.displayName, { exact: true }) })
             .click();
+          const title = guest.getByRole("heading", {
+            name: product.text.ja.displayName,
+            exact: true,
+          });
+          const originalSize = await title.evaluate((element) =>
+            Number.parseFloat(getComputedStyle(element).fontSize),
+          );
+          await enlargeText(guest.getByRole("dialog"));
+          expect(
+            await title.evaluate((element) =>
+              Number.parseFloat(getComputedStyle(element).fontSize),
+            ),
+          ).toBe(originalSize * 2);
+          await expectReadableControl(
+            guest.getByRole("button", { name: "注文かごに追加", exact: true }),
+          );
           const selections: CartLine["selections"] = [];
           for (const modifier of product.modifiers) {
             const options = modifier.options.filter(
@@ -163,21 +199,46 @@ for (const { staffLanguage, labels } of [
       ).toBeVisible();
       await guest.getByRole("button", { name: "English", exact: true }).click();
       await expect(guest.getByRole("button", { name: "Review order", exact: true })).toBeEnabled();
+      await expectReadableControl(guest.getByRole("button", { name: "Review order", exact: true }));
+      await expectReadableControl(guest.locator(".basket-total"));
+      for (const name of ["日本語", "English", "Reconnect voice", "Call staff"])
+        await expectReadableControl(
+          guest.locator("header").getByRole("button", { name, exact: true }),
+        );
       expect(voiceRequests).toHaveLength(1);
       await expect(
         staff.getByRole("heading", { name: labels.admin_live, exact: true }),
       ).toBeVisible();
       await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-landscape.png") });
       await guest.setViewportSize({ width: 768, height: 1024 });
+      await expectReadableControl(guest.locator("header .language-switch"));
+      for (const name of ["日本語", "English", "Reconnect voice", "Call staff"])
+        await expectReadableControl(
+          guest.locator("header").getByRole("button", { name, exact: true }),
+        );
       await expect(
         guest.locator("header").getByRole("button", { name: "Reconnect voice", exact: true }),
       ).toBeInViewport();
       await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-portrait.png") });
       await guest.setViewportSize({ width: 1024, height: 768 });
-      await guest.getByRole("button", { name: "Review order", exact: true }).click();
+      await guest.getByRole("tab", { name: /^Your basket/ }).click();
+      await tabTo(guest, guest.getByRole("button", { name: "Review order", exact: true }));
+      await guest.keyboard.press("Enter");
+      const reviewDialog = guest.getByRole("dialog");
+      await enlargeText(reviewDialog);
+      await expectReadableControl(
+        reviewDialog.getByRole("button", { name: "Confirm and place order", exact: true }),
+      );
+      await guest.screenshot({
+        path: testInfo.outputPath("tablecast-confirmation-text-200-en.png"),
+      });
       for (const product of products)
         await expect(guest.getByRole("dialog")).toContainText(product.text.en.displayName);
-      await guest.getByRole("button", { name: "Confirm and place order", exact: true }).click();
+      await tabTo(
+        guest,
+        guest.getByRole("button", { name: "Confirm and place order", exact: true }),
+      );
+      await guest.keyboard.press("Enter");
       await expect(guest.getByRole("heading", { name: "Your order is in" })).toBeVisible();
       await guest.getByRole("button", { name: "Close", exact: true }).click();
       const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());

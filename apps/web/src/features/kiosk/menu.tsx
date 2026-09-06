@@ -204,12 +204,14 @@ export function ProductDialog({
                 <X size={22} />
               </Dialog.Close>
             </div>
-            <Dialog.Title>{product.text[locale].displayName}</Dialog.Title>
-            <Dialog.Description>{product.text[locale].description}</Dialog.Description>
-            <div className="product-base-price">
-              {money(product.price, locale)} <small>{t("common_price_note")}</small>
-            </div>
-            <div className="dialog-scroll">
+            <div className="dialog-scroll mt-0">
+              <Dialog.Title>{product.text[locale].displayName}</Dialog.Title>
+              <Dialog.Description className="text-xs leading-[1.9] text-muted-foreground">
+                {product.text[locale].description}
+              </Dialog.Description>
+              <div className="product-base-price mb-4">
+                {money(product.price, locale)} <small>{t("common_price_note")}</small>
+              </div>
               {product.modifiers.map((group) => (
                 <fieldset className="modifier-group" key={group.id}>
                   <legend>
