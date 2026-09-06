@@ -85,9 +85,7 @@ export function Admin() {
       });
   }, [stores.error, navigate, search.storeId, search.draftId]);
   const tables = state.data?.tables ?? [];
-  const billing = tables.filter(
-    (table) => table.events.some((event) => event.kind === "bill.requested") && table.bill.due > 0,
-  ).length;
+  const billing = tables.filter((table) => table.billRequested && table.bill.due > 0).length;
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">

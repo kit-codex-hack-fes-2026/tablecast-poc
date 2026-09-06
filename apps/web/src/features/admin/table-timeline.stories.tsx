@@ -41,3 +41,60 @@ export const EnglishStaff: Story = {
   },
 };
 export const Empty: Story = { name: "まだ卓がない状態", args: { tables: [] } };
+
+const now = 1788650400000;
+const recentTable = {
+  ...table,
+  openedAt: now - 90 * 60_000,
+  staffCalled: false,
+  events: [
+    {
+      cursor: 105,
+      storeId: table.storeId,
+      tableSessionId: table.id,
+      kind: "cart.updated",
+      data: {},
+      createdAt: now - 2 * 60_000,
+    },
+  ],
+  cursor: 105,
+};
+export const BeyondRecentEvents: Story = {
+  name: "表示ログに開卓と会計依頼がなくても経過時間と優先順を保つ",
+  beforeEach: () => {
+    const clock = Date.now;
+    Date.now = () => now;
+    return () => {
+      Date.now = clock;
+    };
+  },
+  args: {
+    tables: [
+      { ...recentTable, id: "tablecast-error", tableName: "T01", voiceState: "error" },
+      { ...recentTable, id: "tablecast-billing", tableName: "T02", billRequested: true },
+      { ...recentTable, id: "tablecast-called", tableName: "T03", staffCalled: true },
+      {
+        ...recentTable,
+        id: "tablecast-paid",
+        tableName: "T04",
+        billRequested: true,
+        bill: { ...table.bill, paidTotal: 1500, due: 0 },
+      },
+    ],
+  },
+  play: async ({ canvasElement, step }) => {
+    const canvas = within(canvasElement);
+    await step("結果: 2分前の表示ログではなく90分前の開卓から数える", async () => {
+      const pending = within(canvas.getByRole("row", { name: /T02/ }));
+      await expect(pending.getByRole("cell", { name: "90 分" })).toBeInTheDocument();
+    });
+    await step("結果: 要対応・未精算の会計依頼・音声異常・精算済みの順に並ぶ", async () => {
+      await expect(
+        canvas
+          .getAllByRole("row")
+          .slice(1)
+          .map((row) => within(row).getAllByRole("cell")[0]?.getAttribute("aria-label")),
+      ).toEqual(["T03", "T02", "T01", "T04"]);
+    });
+  },
+};

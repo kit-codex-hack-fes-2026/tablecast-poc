@@ -185,9 +185,11 @@ export type TableState = {
   voiceState: "stopped" | "active" | "error";
   voiceSessionId: string | null;
   guestCount: number;
+  openedAt: number;
   cart: Cart;
   orders: Order[];
   bill: Bill;
+  billRequested: boolean;
   events: TableEvent[];
   cursor: number;
   plan: { id: string; startedAt: number; rules: Plan } | null;
@@ -472,9 +474,11 @@ export const tableStateSchema: z.ZodType<TableState> = z.object({
   voiceState: z.enum(["stopped", "active", "error"]),
   voiceSessionId: z.string().nullable(),
   guestCount: z.number().int(),
+  openedAt: z.number().int(),
   cart: cartSchema,
   orders: z.array(orderSchema),
   bill: billSchema,
+  billRequested: z.boolean(),
   events: z.array(tableEventSchema),
   cursor: z.number().int(),
   plan: tablePlanSchema.nullable(),

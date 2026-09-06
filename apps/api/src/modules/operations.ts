@@ -322,10 +322,10 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
   const row = await getSession(env, actor);
   const catalog = await getCatalog(env, row.store_id);
   const table = await env.TABLECAST_DB.prepare(
-    "SELECT name FROM restaurant_tables WHERE id=? AND store_id=?",
+    "SELECT name,EXISTS(SELECT 1 FROM table_events WHERE store_id=? AND table_session_id=? AND kind='bill.requested') AS bill_requested FROM restaurant_tables WHERE id=? AND store_id=?",
   )
-    .bind(row.table_id, row.store_id)
-    .first<{ name: string }>();
+    .bind(row.store_id, row.id, row.table_id, row.store_id)
+    .first<{ name: string; bill_requested: number }>();
   const orderRows = await env.TABLECAST_DB.prepare(
     "SELECT * FROM orders WHERE table_session_id=? AND store_id=? ORDER BY created_at",
   )
@@ -371,6 +371,7 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
     voiceState: row.voice_state,
     voiceSessionId: row.voice_session_id,
     guestCount: row.guest_count,
+    openedAt: row.opened_at,
     cart,
     orders,
     events: history.results.map(eventValue),
@@ -380,6 +381,7 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
       plan,
       row.guest_count,
     ),
+    billRequested: !!table?.bill_requested,
     plan,
     staffCalled: !!row.staff_called,
     snapshot:

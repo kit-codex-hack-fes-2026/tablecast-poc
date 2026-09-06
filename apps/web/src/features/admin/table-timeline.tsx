@@ -57,7 +57,6 @@ export function TableTimeline({
         <tbody>
           {ordered.map((table) => {
             const last = table.events.at(-1);
-            const first = table.events.at(0);
             return (
               <tr key={table.id} className={table.staffCalled ? "needs-attention" : ""}>
                 <td aria-label={table.tableName}>
@@ -75,9 +74,7 @@ export function TableTimeline({
                   </Button>
                 </td>
                 <td>
-                  {first
-                    ? `${Math.max(0, Math.floor((now - first.createdAt) / 60_000))} ${t("kiosk_minutes")}`
-                    : "—"}
+                  {Math.max(0, Math.floor((now - table.openedAt) / 60_000))} {t("kiosk_minutes")}
                 </td>
                 <td>
                   <Badge variant="outline" className={`status-chip ${table.status}`}>
@@ -172,7 +169,7 @@ export function TableTimeline({
 
 function priority(table: TableState) {
   if (table.staffCalled) return 0;
-  if (table.bill.due > 0 && table.events.some((event) => event.kind === "bill.requested")) return 1;
+  if (table.billRequested && table.bill.due > 0) return 1;
   if (table.voiceState === "error") return 2;
   return 3;
 }

@@ -245,6 +245,15 @@ for (const { staffLanguage, labels } of [
       expect(ordered.cart.lines).toHaveLength(0);
       expect(ordered.orders).toHaveLength(1);
       expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
+      expect(ordered.billRequested).toBe(false);
+      const billingMetric = staff
+        .locator(".metric")
+        .filter({ has: staff.getByText(labels.admin_billing, { exact: true }) })
+        .locator("strong");
+      const previousBilling = Number(await billingMetric.innerText());
+      await guest.getByRole("tab", { name: en.kiosk_bill, exact: true }).click();
+      await guest.getByRole("button", { name: en.kiosk_bill_request, exact: true }).click();
+      await expect(billingMetric).toHaveText(String(previousBilling + 1));
       await staff.getByRole("button", { name: /^T12/ }).click();
       await staff.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_accept, exact: true }).click();
@@ -262,6 +271,7 @@ for (const { staffLanguage, labels } of [
           return result.bill.due;
         })
         .toBe(0);
+      await expect(billingMetric).toHaveText(String(previousBilling));
       await staff.getByRole("tab", { name: labels.admin_overview, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_close_session, exact: true }).click();
       await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();

@@ -84,6 +84,8 @@ export const catalog: Catalog = {
 };
 export const table: TableState = {
   id: "tablecast-session",
+  openedAt: 1788645000000,
+  billRequested: false,
   tableId: "tablecast-table",
   tableName: "T03",
   storeId: "tablecast-story",
