@@ -99,7 +99,7 @@ STT/TTSのvoiceと日英の自然さ、店内Wi-Fi、iPadのautoplay/マイク�
 1. 試聴済みの日英voiceと外部設定を用意し、まず小さい有料STT/TTS疎通、次にAPI・Roomを含む実音声往復を行う。失敗時に別モデルへ自動切替しない。
 2. iPadで通常注文、確認途中の訂正、停止中の言語変更、ネットワーク断、TTSだけが話す場面を試す。停止後のマイク表示とprovider送音停止を両方確認する。
 3. forkの公開先を確定して完全SHAでlockし、話者変換のfixtureとMultiSpeakerAdapterの結合試験を通す。公式releaseで同じ契約を満たしたらforkを外す。
-4. 上表の既存metricsとrequest/turn IDで遅延・利用量を集める。性能課題が分かってから、長い応答、過大なcatalog、不要なtool step、接続初期化を対象に小さく調整する。
+4. APIが返す `X-Request-Id` とPythonのturn、LiveKitの生成IDを対応付ける診断記録を先に接続する。現在はPython起動時の卓・音声session・release SHAとAPIの要求IDが別々に記録され、HTTP途中失敗や旧turnの後処理まで一続きには追えない。会話本文や秘密を出さず、成功・拒否・途中失敗の対応関係をローカルで検証してから、上表のmetricsと合わせて遅延・利用量を集める。性能課題が分かってから、長い応答、過大なcatalog、不要なtool step、接続初期化を対象に小さく調整する。
 5. 外部providerの失敗を客向けエラー表示まで追跡し、GUI復旧を確認する。認識の自信が不明な注文や曖昧な承認の会話評価を日英で蓄積する。
 
 この改善のために汎用Agent基盤、第二のLLM、Pythonの業務ツール、独自音声推論loopを追加する必要はない。現在の公開SDK境界とAPIの業務操作を保ち、測定で必要性が示された箇所だけを変える。
