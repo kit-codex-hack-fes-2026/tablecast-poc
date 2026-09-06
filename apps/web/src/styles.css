@@ -1379,8 +1379,9 @@
   .admin-sidebar {
     position: sticky;
     top: 0;
-    width: 205px;
+    width: max-content;
     min-width: 205px;
+    flex-shrink: 0;
     height: 100dvh;
     padding: 30px 23px 22px;
     border-right: 1px solid var(--line);
@@ -2034,7 +2035,6 @@
       padding: 24px 25px 0;
     }
     .admin-sidebar {
-      width: 175px;
       min-width: 175px;
       padding-inline: 17px;
     }
@@ -2162,7 +2162,6 @@
       font-size: 12px;
     }
     .admin-sidebar {
-      width: 150px;
       min-width: 150px;
       padding-inline: 12px;
     }
