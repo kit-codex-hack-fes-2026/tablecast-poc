@@ -23,19 +23,29 @@ Inworldへ直接つなぐ公式pluginを使う。LiveKit Inference経由の課�
 
 ## Pythonからの薄い接続
 
-公式のPython版MastraLLMがあると仮定しない。LiveKitの公開 `llm_node` とMastraの `Agent.stream().textStream` を接続する。[S04](../sources.md#s04) [S07](../sources.md#s07)
+公式のPython版MastraLLMがあると仮定しない。LiveKitの公式 `LLM` / `LLMStream` 拡張とMastraの `Agent.stream().textStream` を接続する。[S04](../sources.md#s04) [S07](../sources.md#s07)
 
 1. Honoが端末権限を確認し、卓セッションと音声セッションを関連付け、LiveKit参加情報を発行する。
 2. Python Agentが認証済みAPIから店舗・言語・キャスト設定を取得する。
 3. LiveKitが確定した発話と実際の会話文脈を、PythonがHonoへ送る。
 4. Hono内のMastraが同じTypeScriptの注文操作を呼ぶ。自Workerの公開URLへ再度HTTPを送らない。
-5. 読み上げ本文だけを `text/plain; charset=utf-8` のstreamで返し、Pythonが公開nodeへyieldする。
+5. 読み上げ本文だけを `text/plain; charset=utf-8` のstreamで返し、Pythonが `ChatChunk` に包んで既定のLLM nodeへ渡す。
 6. LiveKitの公式Inworld pluginが合成・再生を担当する。
 
 `POST /internal/voice/turns` は音声Agent専用tokenで認証する。少数の必要な入力はturn ID、voice session ID、応答言語、会話文脈、参考の話者情報とする。
 店舗・卓の権限はtokenとDBで決め、本文のIDだけでは決めない。要求と応答のschemaはAPI側が所有する。
 HTTPのchunkを文・文字の境界とみなさず、httpxの既存デコーダーとLiveKitの文分割を使用する。独自SSE形式、LLM実行ループ、全APIの別SDKを作らない。
 Honoで認可したコンテキストを公式 `RequestContext` に設定し、公式 `Agent.stream` へ直接渡す。固定版 `@mastra/hono` 1.7.6のcontext middlewareは、未使用の管理route経由でNode用 `createRequire(import.meta.url)` をbundleへ含め、ビルド済みworkerdの起動に失敗したため採用しない。独自adapterを追加せず、公開プリミティブで同じ認可と業務操作を維持する。[S08](../sources.md#s08)
+
+固定版LiveKit 1.8.0では `llm_node` だけの上書きは `generate_reply` のLLM有無検査を通らない。認証済みHTTPへ接続する薄い `TablecastLLM` をAgentへ登録し、公式 `AgentSession` と `SpeechHandle` を使う試験で応答開始・取消・失敗を検証する。SDK側の自動再試行は0回とし、業務要求を重複実行しない。[公式LLM拡張](https://docs.livekit.io/reference/python/livekit/agents/llm/)
+
+## 自発接客
+
+SDKの `user_away_timeout=30` と公開 `user_state_changed` の `away` 通知を使う。Agentが待機中で進行中の発話がない場合だけ、客の入力を作らずに応答を開始する。応答のない沈黙では一度だけ試み、実際の客発話で次の機会を許可する。客が話し始めたら自発接客の `SpeechHandle` だけを中断する。[公式セッション](https://docs.livekit.io/agents/logic/sessions/)
+
+内部要求は `trigger: user | proactive` を持ち、自発接客だけは空の会話履歴を許可する。APIが最新の `cast.proactive`、音声・卓・言語、カート、注文確認、スタッフ呼出、進行中turn、前回から180秒の間隔を判定する。開始予約はD1 batchで競合を防ぎ、対象外はモデルを呼ぶ前に204で返す。自発接客では商品と卓状態の参照ツールだけを渡し、注文・確認・スタッフ呼出ツールは渡さない。生成中と再生通知でも最新状態を確認する。
+
+自発接客の開始は `voice.proactive` として記録し、客の発話eventと混同しない。204ではPythonも会話・終了・再生通知を作らない。停止や別turnへの移行後の自発再生通知は409で拒否するため、DBの記録が全中断音声の再生範囲を保証するとは扱わない。
 
 ## 会話文脈とキャンセル
 

@@ -10,7 +10,7 @@ Hono、Mastra、LiveKit、Inworldを組み合わせる構成は、業務ロジ�
 | -------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
 | Web → API            | 同一オリジンのHTTP、Service Binding、端末認可           | 店舗・卓の権限と業務状態をAPIで決定する                                     |
 | API → Mastra         | `@mastra/core` 1.64.0の`RequestContext`と`Agent.stream` | 公式AgentとToolsがWorkersで動き、汎用管理経路を公開せず使える               |
-| Python → API         | 公開`llm_node`、httpx、`text/plain`                     | UTF-8の分断、取消、停止済みsessionの拒否を処理する                          |
+| Python → API         | 公式`LLM` / `LLMStream`、httpx、`text/plain`            | UTF-8の分断、取消、停止済みsessionの拒否を処理する                          |
 | Python → Inworld     | `livekit-agents` / 公式Inworld plugin 1.8.0             | 公開constructor、STT/TTS設定、Agent CLIのimportが成立する。外部音声は未確認 |
 | Agent → Web          | LiveKitの音声track・字幕・公開agent state               | WebのRoom処理を実装済み。実Agentとの音声往復・音響評価は別途必要            |
 | Web ↔ LiveKit Server | 公式ブラウザーSDK 2.22.2、ローカルServer 1.13.6         | 合成音声のpublish・subscribe・復号と、Room削除時の両参加者の切断を実証      |
@@ -19,20 +19,22 @@ Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKi
 
 固定版`@mastra/hono` 1.7.6のcontext middlewareは、未使用の管理routeもimportし、Node向け`createRequire(import.meta.url)`をbundleに含めていた。Vitestの経路は成功したが、Vite・esbuildで生成したWorkerはworkerdの起動時に失敗した。そこでHonoが認可したActorを公式`RequestContext<{ actor: Actor }>`に設定し、公式`Agent.stream`へ直接渡す構成へ修正した。独自adapterは追加していない。この修正後に同じ音声HTTP試験12件と型検査が成功し、API担当がViteの本番bundleを実workerdで起動してhealth 200を確認した。Webとの結合は[配備手順](deployment.md)で別に記録する。[公式RequestContext](https://mastra.ai/docs/server/request-context)
 
+固定版LiveKit 1.8.0の実セッション試験では、LLMを登録せず `llm_node` のみ上書きした以前の実装が応答開始時に失敗した。公式 `LLM` / `LLMStream` 拡張へ同じHTTP接続を登録して解消し、通常応答・自発応答・204・取消・停止・503時の再試行禁止を実SDKで確認した。外部LLMをPythonにも置いたわけではない。
+
 関連実装: [音声HTTP](../apps/api/src/voice.ts)、[Mastra Tools](../apps/api/src/agent/cast.ts)、[Python Agent](../livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
 
 ## 実施した試験と未実施の試験
 
-| 対象                                   | 最終結果                                                   | 試験の境界                                                                  |
-| -------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Python接続・字幕・話者変換             | pytest 66件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture、SDKの公開型を使用                      |
-| 音声HTTPとMastra                       | WorkersのVitest 12件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture            |
-| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用     |
-| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                                   |
-| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                                  |
-| ローカルWebRTC音声通信                 | Chromium 153.0.8010.12で成功                               | 実LiveKit Serverと2参加者を使用。440 Hzの合成音声のみ。実マイク・外部AIなし |
+| 対象                                   | 最終結果                                                   | 試験の境界                                                                          |
+| -------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Python接続・字幕・話者変換             | pytest 72件成功、ruff・format・ty成功                      | 外部AIなし。HTTP transportはfixture。実AgentSessionの応答・取消・204・失敗6件を含む |
+| 音声HTTPとMastra                       | WorkersのVitest 23件成功、API型検査成功                    | 実workerd・D1・Mastra・OpenAI SDKを使用。外部HTTP応答だけfixture                    |
+| Inworld最小patch                       | 隔離環境のpytest 13件成功、ruff成功                        | 公式pluginを正規インストールした変換・イベントfixture。アプリには未適用             |
+| CLIと有料試験の入口                    | `tablecast-voice --help`成功、明示flagなしの有料試験を拒否 | 外部keyを使う前に拒否する                                                           |
+| 日英STT/TTS・自然さ・騒音・AEC・実端末 | 未実施                                                     | 数値、遅延、聞き取り成功率を推測で埋めない                                          |
+| ローカルWebRTC音声通信                 | Chromium 153.0.8010.12で成功                               | 実LiveKit Serverと2参加者を使用。440 Hzの合成音声のみ。実マイク・外部AIなし         |
 
-Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。以前の途中件数を最終結果として再利用しない。
+Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。今回はこの66件に実AgentSessionの6件を追加し、72件が成功した。以前の途中件数を最終結果として再利用していない。
 
 再実行方法は [Python README](../livekit/README.md) と [patch記録](../patches/livekit-inworld/README.md)。実AIの疎通は明示的な有料試験として分離した。メモリ内の合成音声を再認識するだけなので、それが成功しても実マイクや店舗品質の証明にはならない。
 
@@ -92,7 +94,7 @@ STT/TTSのvoiceと日英の自然さ、店内Wi-Fi、iPadのautoplay/マイク�
 
 ## 次に行う改善
 
-ローカル実装には自発接客の未接続箇所がある。`cast.proactive` は設定として保存・公開できるが、現在の音声configとPythonの公開nodeには沈黙時の発話開始経路がない。設定編集と自発発話の成立を区別し、次の実装では停止・確認読上げ・客の発話中に割り込まず、無効設定では開始しないことを検証する。標準voiceの一覧取得と実際の言語適性も外部設定後に確認する。
+自発接客の開始経路は実装し、SDKの相互無言通知、APIでの最新設定・業務状態・180秒制限、競合予約、参照専用ツール、客の割込みと明示停止をローカルで検証した。実店舗の無言検出・声掛け頻度・自然さは未評価である。標準voiceの一覧取得と実際の言語適性も外部設定後に確認する。
 
 1. 試聴済みの日英voiceと外部設定を用意し、まず小さい有料STT/TTS疎通、次にAPI・Roomを含む実音声往復を行う。失敗時に別モデルへ自動切替しない。
 2. iPadで通常注文、確認途中の訂正、停止中の言語変更、ネットワーク断、TTSだけが話す場面を試す。停止後のマイク表示とprovider送音停止を両方確認する。

@@ -29,7 +29,7 @@ uv run --directory livekit ty check src tests
 uv run --directory livekit pytest
 ```
 
-`llm_node` はhttpxのUTF-8デコーダーを通して読み上げ本文をstreamする。エラーや取消で接続を閉じ、業務操作を自動再試行しない。
+公式 `LLM` / `LLMStream` 拡張の `TablecastLLM` が、httpxのUTF-8デコーダーを通して読み上げ本文を既定のLLM nodeへstreamする。固定SDKでは `llm_node` の上書きだけでは応答を開始できないため、実際の `AgentSession.generate_reply` でも接続を検証する。エラーや取消で接続を閉じ、業務操作を自動再試行しない。
 `transcription_node` は生成文の英語演技指示とbreakだけを除去する。客の原文は加工しない。
 注文確認は同じAPIスナップショットを `session.say` で一度読み、`SpeechHandle.wait_for_playout` の完了後だけ読み上げ完了を送る。
 音声停止はRoom退出とAgentSessionの即時終了へ伝わり、DB側でもvoice sessionとturnを失効させる。カートや確定注文のロールバックは行わない。
@@ -42,3 +42,5 @@ TABLECAST_RUN_PAID_VOICE_TESTS=1 bun --no-env-file run test:voice:live
 
 この試験は人手の自然さ評価、実マイク、LiveKit転送、iPadのAEC、騒音、複数話者の評価を代替しない。
 今回の実装中にこの有料試験は実行していない。
+
+自発接客はSDKの30秒の相互無言通知から開始し、最新設定・業務状態・180秒の間隔はAPIで検証する。客の発話を捏造せず、応答のない沈黙では一度だけ試みる。APIの204では履歴・再生記録を作らず、客の発話で進行中の自発応答を中断する。注文操作のツールは自発接客へ渡さない。録音は `record=False` で無効にする。
