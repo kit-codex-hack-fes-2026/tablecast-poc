@@ -38,14 +38,29 @@ export function EventLabel({ event }: { event: TableEvent }) {
   return <>{t(key ?? "event_activity")}</>;
 }
 
-export function ActivityLog({ events }: { events: TableEvent[] }) {
+export function ActivityLog({
+  events,
+  includeDate = false,
+}: {
+  events: TableEvent[];
+  includeDate?: boolean;
+}) {
   const { locale, t } = useI18n();
   if (!events.length) return <p className="empty-note">{t("common_empty")}</p>;
+  const dateTime = includeDate
+    ? new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Tokyo",
+      })
+    : null;
   return (
-    <ol className="activity-log">
+    <ol className="activity-log" data-with-date={includeDate || undefined}>
       {events.map((event) => (
-        <li key={event.cursor}>
-          <time>{time(event.createdAt, locale)}</time>
+        <li key={event.cursor} data-event-cursor={event.cursor}>
+          <time dateTime={new Date(event.createdAt).toISOString()}>
+            {dateTime?.format(event.createdAt) ?? time(event.createdAt, locale)}
+          </time>
           <span className={`event-dot ${event.kind.split(".")[0]}`} aria-hidden="true" />
           <div>
             <strong>

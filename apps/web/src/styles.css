@@ -1848,6 +1848,12 @@
     color: var(--muted-foreground);
     margin-top: 2px;
   }
+  .activity-log[data-with-date] time {
+    width: 96px;
+  }
+  .activity-log[data-with-date] > li::before {
+    left: 117px;
+  }
   .event-dot {
     width: 9px;
     height: 9px;

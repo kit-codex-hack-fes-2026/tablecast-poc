@@ -55,3 +55,38 @@ export const English: Story = {
   globals: { locale: "en" },
   play: ({ canvasElement }) => verifyLabels(canvasElement, "en"),
 };
+
+const datedEvents: TableEvent[] = ["2026-09-05T14:59:00Z", "2026-09-05T15:01:00Z"].map(
+  (createdAt, index) => ({
+    cursor: index + 1,
+    storeId: "tablecast-story",
+    tableSessionId: "tablecast-session",
+    kind: "order.status",
+    data: { status: "served" },
+    createdAt: Date.parse(createdAt),
+  }),
+);
+async function verifyDates(canvasElement: HTMLElement, locale: "ja" | "en") {
+  const rows = within(canvasElement).getAllByRole("listitem");
+  await expect(rows).toHaveLength(2);
+  const expected =
+    locale === "ja"
+      ? [/2026.*9.*5.*23:59/, /2026.*9.*6.*0:01/]
+      : [/5 Sep(?:t)? 2026.*23:59/, /6 Sep(?:t)? 2026.*00:01/];
+  for (const [index, row] of rows.entries()) {
+    const date = expected[index];
+    if (!date) throw new Error("対応する履歴日時がありません");
+    await expect(within(row).getByText(date)).toBeVisible();
+  }
+}
+export const DatedJapanese: Story = {
+  name: "閉卓履歴の日跨ぎを日本語の店舗日時で区別する",
+  args: { events: datedEvents, includeDate: true },
+  play: ({ canvasElement }) => verifyDates(canvasElement, "ja"),
+};
+export const DatedEnglish: Story = {
+  ...DatedJapanese,
+  name: "閉卓履歴の日跨ぎを英語の店舗日時で区別する",
+  globals: { locale: "en" },
+  play: ({ canvasElement }) => verifyDates(canvasElement, "en"),
+};

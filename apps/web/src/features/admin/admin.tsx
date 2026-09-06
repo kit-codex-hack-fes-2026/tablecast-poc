@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   Bell,
   CircleDollarSign,
+  History,
   LayoutDashboard,
   LogOut,
   MonitorSmartphone,
@@ -28,6 +29,7 @@ import { useRealtime } from "../../lib/use-realtime";
 import { TableDetail } from "./table-detail";
 import { TableTimeline } from "./table-timeline";
 import { SettingsDrafts } from "./settings-drafts";
+import { VisitHistory } from "./visit-history";
 
 export function Admin() {
   const { t, setLocale } = useI18n();
@@ -38,7 +40,9 @@ export function Admin() {
   const [selected, setSelected] = useState<string>();
   const [pairOpen, setPairOpen] = useState(false);
   const [opening, setOpening] = useState<{ id: string; name: string }>();
-  const [tab, setTab] = useState<"live" | "settings">(search.draftId ? "settings" : "live");
+  const [tab, setTab] = useState<"live" | "history" | "settings">(
+    search.draftId ? "settings" : "live",
+  );
   const stores = useQuery({
     queryKey: ["tablecast-stores"],
     queryFn: () => api("/api/admin/stores", {}, storesSchema),
@@ -53,6 +57,8 @@ export function Admin() {
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["tablecast-admin", currentStore] });
     void client.invalidateQueries({ queryKey: ["tablecast-table-detail"] });
+    void client.invalidateQueries({ queryKey: ["tablecast-session-events", currentStore] });
+    void client.invalidateQueries({ queryKey: ["tablecast-visit-history", currentStore] });
   };
   const connected = useRealtime(
     currentStore ? `/api/admin/stores/${currentStore}` : undefined,
@@ -96,6 +102,15 @@ export function Admin() {
           >
             <LayoutDashboard size={19} aria-hidden="true" />
             {t("admin_live")}
+          </Button>
+          <Button
+            variant="ghost"
+            type="button"
+            aria-current={tab === "history" ? "page" : undefined}
+            onClick={() => setTab("history")}
+          >
+            <History size={19} aria-hidden="true" />
+            {t("admin_history")}
           </Button>
           <Button
             variant="ghost"
@@ -161,7 +176,13 @@ export function Admin() {
         </header>
         <section className="admin-page-heading">
           <div>
-            <h1>{tab === "live" ? t("admin_live") : t("admin_config")}</h1>
+            <h1>
+              {tab === "live"
+                ? t("admin_live")
+                : tab === "history"
+                  ? t("admin_history")
+                  : t("admin_config")}
+            </h1>
           </div>
           <span className={`live-status ${connected ? "connected" : ""}`}>
             <span className="tiny-dot" />
@@ -226,6 +247,10 @@ export function Admin() {
               )}
             </section>
           </>
+        ) : tab === "history" ? (
+          currentStore && (
+            <VisitHistory key={currentStore} storeId={currentStore} onSelect={setSelected} />
+          )
         ) : (
           currentStore && (
             <SettingsDrafts
@@ -238,6 +263,7 @@ export function Admin() {
       </main>
       {selected && currentStore && (
         <TableDetail
+          key={`${currentStore}:${selected}`}
           storeId={currentStore}
           tableId={selected}
           onClose={() => setSelected(undefined)}

@@ -12,6 +12,7 @@ import { money, time, useI18n } from "../../i18n/locale";
 import { api, json } from "../../lib/api";
 import { CartLines } from "../kiosk/menu";
 import { ActivityLog } from "./events";
+import { SessionActivity } from "./session-activity";
 
 export function TableDetail({
   storeId,
@@ -27,9 +28,9 @@ export function TableDetail({
   const { t, locale } = useI18n();
   const base = `/api/admin/stores/${storeId}`;
   const detail = useQuery({
-    queryKey: ["tablecast-table-detail", tableId],
-    queryFn: () => api(`${base}/tables/${tableId}`, {}, tableStateSchema),
-    refetchInterval: 5000,
+    queryKey: ["tablecast-table-detail", storeId, tableId],
+    queryFn: ({ signal }) => api(`${base}/tables/${tableId}`, { signal }, tableStateSchema),
+    refetchInterval: (query) => (query.state.data?.status === "closed" ? false : 5000),
   });
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
@@ -124,17 +125,19 @@ export function TableDetail({
                     {table.staffCalled && (
                       <div className="attention-box">
                         <strong>{t("admin_attention")}</strong>
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="secondary-button"
-                          disabled={action.isPending}
-                          onClick={() =>
-                            action.mutate({ path: `tables/${tableId}/call/resolve`, body: {} })
-                          }
-                        >
-                          {t("admin_acknowledge")}
-                        </Button>
+                        {table.status === "open" && (
+                          <Button
+                            variant="outline"
+                            type="button"
+                            className="secondary-button"
+                            disabled={action.isPending}
+                            onClick={() =>
+                              action.mutate({ path: `tables/${tableId}/call/resolve`, body: {} })
+                            }
+                          >
+                            {t("admin_acknowledge")}
+                          </Button>
+                        )}
                       </div>
                     )}
                     {table.plan && (
@@ -143,19 +146,28 @@ export function TableDetail({
                       </p>
                     )}
                     <h3>{t("admin_updated")}</h3>
-                    <ActivityLog events={table.events.slice(-5)} />
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      className="text-button danger"
-                      disabled={action.isPending || table.status === "closed"}
-                      onClick={() => action.mutate({ path: `tables/${tableId}/close`, body: {} })}
-                    >
-                      {t("admin_close_session")}
-                    </Button>
+                    <ActivityLog
+                      events={table.events.slice(-5)}
+                      includeDate={table.status === "closed"}
+                    />
+                    {table.status === "open" && (
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        className="text-button danger"
+                        disabled={action.isPending}
+                        onClick={() => action.mutate({ path: `tables/${tableId}/close`, body: {} })}
+                      >
+                        {t("admin_close_session")}
+                      </Button>
+                    )}
                   </Tabs.Panel>
                   <Tabs.Panel value="logs">
-                    <ActivityLog events={table.events} />
+                    <SessionActivity
+                      storeId={storeId}
+                      sessionId={table.id}
+                      closed={table.status === "closed"}
+                    />
                   </Tabs.Panel>
                   <Tabs.Panel value="orders">
                     <h3>{t("kiosk_cart")}</h3>
@@ -169,54 +181,56 @@ export function TableDetail({
                           <strong>{money(order.total, locale)}</strong>
                         </div>
                         <CartLines lines={order.snapshot.lines} />
-                        <div className="order-actions">
-                          {order.status === "submitted" && (
-                            <>
+                        {table.status === "open" && (
+                          <div className="order-actions">
+                            {order.status === "submitted" && (
+                              <>
+                                <Button
+                                  variant="default"
+                                  size="lg"
+                                  type="button"
+                                  className="primary-button"
+                                  disabled={action.isPending}
+                                  onClick={() => orderStatus(order, "accepted")}
+                                >
+                                  {t("admin_accept")}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  type="button"
+                                  className="text-button danger"
+                                  disabled={action.isPending}
+                                  onClick={() => orderStatus(order, "rejected")}
+                                >
+                                  {t("admin_reject")}
+                                </Button>
+                              </>
+                            )}
+                            {order.status === "accepted" && (
                               <Button
                                 variant="default"
                                 size="lg"
                                 type="button"
                                 className="primary-button"
                                 disabled={action.isPending}
-                                onClick={() => orderStatus(order, "accepted")}
+                                onClick={() => orderStatus(order, "served")}
                               >
-                                {t("admin_accept")}
+                                {t("admin_serve")}
                               </Button>
+                            )}
+                            {(order.status === "submitted" || order.status === "accepted") && (
                               <Button
                                 variant="ghost"
                                 type="button"
                                 className="text-button danger"
                                 disabled={action.isPending}
-                                onClick={() => orderStatus(order, "rejected")}
+                                onClick={() => orderStatus(order, "cancelled")}
                               >
-                                {t("admin_reject")}
+                                {t("admin_cancel_order")}
                               </Button>
-                            </>
-                          )}
-                          {order.status === "accepted" && (
-                            <Button
-                              variant="default"
-                              size="lg"
-                              type="button"
-                              className="primary-button"
-                              disabled={action.isPending}
-                              onClick={() => orderStatus(order, "served")}
-                            >
-                              {t("admin_serve")}
-                            </Button>
-                          )}
-                          {(order.status === "submitted" || order.status === "accepted") && (
-                            <Button
-                              variant="ghost"
-                              type="button"
-                              className="text-button danger"
-                              disabled={action.isPending}
-                              onClick={() => orderStatus(order, "cancelled")}
-                            >
-                              {t("admin_cancel_order")}
-                            </Button>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </article>
                     ))}
                   </Tabs.Panel>
@@ -245,81 +259,83 @@ export function TableDetail({
                         </div>
                       </dl>
                     </div>
-                    <form
-                      className="payment-form"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        payment.mutate();
-                      }}
-                    >
-                      <h3>{t("admin_payment")}</h3>
-                      <p>{t("admin_payment_note")}</p>
-                      <div className="form-segment">
-                        <label>
-                          <Input
-                            type="radio"
-                            name="paymentKind"
-                            value="payment"
-                            checked={paymentKind === "payment"}
-                            onChange={() => {
-                              setPaymentKind("payment");
-                              setPaymentKey(crypto.randomUUID());
-                            }}
-                          />
-                          {t("admin_payment")}
-                        </label>
-                        <label>
-                          <Input
-                            type="radio"
-                            name="paymentKind"
-                            value="adjustment"
-                            checked={paymentKind === "adjustment"}
-                            onChange={() => {
-                              setPaymentKind("adjustment");
-                              setPaymentKey(crypto.randomUUID());
-                            }}
-                          />
-                          {t("admin_adjustment")}
-                        </label>
-                      </div>
-                      <label>
-                        {t("admin_amount")}
-                        <Input
-                          type="number"
-                          step="1"
-                          min={paymentKind === "payment" ? 1 : undefined}
-                          required
-                          value={amount}
-                          onChange={(event) => {
-                            setAmount(event.target.value);
-                            setPaymentKey(crypto.randomUUID());
-                          }}
-                        />
-                      </label>
-                      <label>
-                        {t("admin_reason")}
-                        <Input
-                          type="text"
-                          required
-                          maxLength={500}
-                          value={reason}
-                          onChange={(event) => {
-                            setReason(event.target.value);
-                            setPaymentKey(crypto.randomUUID());
-                          }}
-                        />
-                      </label>
-                      <ErrorNotice error={payment.error} />
-                      <Button
-                        variant="default"
-                        size="lg"
-                        className="primary-button"
-                        type="submit"
-                        disabled={payment.isPending}
+                    {table.status === "open" && (
+                      <form
+                        className="payment-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          payment.mutate();
+                        }}
                       >
-                        {paymentKind === "payment" ? t("admin_payment") : t("admin_adjustment")}
-                      </Button>
-                    </form>
+                        <h3>{t("admin_payment")}</h3>
+                        <p>{t("admin_payment_note")}</p>
+                        <div className="form-segment">
+                          <label>
+                            <Input
+                              type="radio"
+                              name="paymentKind"
+                              value="payment"
+                              checked={paymentKind === "payment"}
+                              onChange={() => {
+                                setPaymentKind("payment");
+                                setPaymentKey(crypto.randomUUID());
+                              }}
+                            />
+                            {t("admin_payment")}
+                          </label>
+                          <label>
+                            <Input
+                              type="radio"
+                              name="paymentKind"
+                              value="adjustment"
+                              checked={paymentKind === "adjustment"}
+                              onChange={() => {
+                                setPaymentKind("adjustment");
+                                setPaymentKey(crypto.randomUUID());
+                              }}
+                            />
+                            {t("admin_adjustment")}
+                          </label>
+                        </div>
+                        <label>
+                          {t("admin_amount")}
+                          <Input
+                            type="number"
+                            step="1"
+                            min={paymentKind === "payment" ? 1 : undefined}
+                            required
+                            value={amount}
+                            onChange={(event) => {
+                              setAmount(event.target.value);
+                              setPaymentKey(crypto.randomUUID());
+                            }}
+                          />
+                        </label>
+                        <label>
+                          {t("admin_reason")}
+                          <Input
+                            type="text"
+                            required
+                            maxLength={500}
+                            value={reason}
+                            onChange={(event) => {
+                              setReason(event.target.value);
+                              setPaymentKey(crypto.randomUUID());
+                            }}
+                          />
+                        </label>
+                        <ErrorNotice error={payment.error} />
+                        <Button
+                          variant="default"
+                          size="lg"
+                          className="primary-button"
+                          type="submit"
+                          disabled={payment.isPending}
+                        >
+                          {paymentKind === "payment" ? t("admin_payment") : t("admin_adjustment")}
+                        </Button>
+                      </form>
+                    )}
                   </Tabs.Panel>
                   <Tabs.Panel value="diagnostics">
                     <dl className="diagnostics">
