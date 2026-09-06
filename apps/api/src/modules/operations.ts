@@ -843,9 +843,9 @@ export async function openTable(
   if (input.planId) ensure(plan, "PLAN_NOT_FOUND", 422);
   const now = Date.now();
   const sessionId = crypto.randomUUID();
-  await env.TABLECAST_DB.batch([
+  const result = await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,plan_json,opened_at) VALUES(?,?,?,?,?,?,?)",
+      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,plan_json,opened_at) SELECT ?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=? AND status='open')",
     ).bind(
       sessionId,
       actor.storeId,
@@ -854,9 +854,10 @@ export async function openTable(
       input.guestCount,
       plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null,
       now,
+      input.tableId,
     ),
     env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,?,?,?)",
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT ?,?,?,?,? WHERE changes()=1",
     ).bind(
       actor.storeId,
       sessionId,
@@ -865,6 +866,7 @@ export async function openTable(
       now,
     ),
   ]);
+  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
   await notifyStore(env, actor.storeId);
   return getTableState(env, { ...actor, tableSessionId: sessionId });
 }
