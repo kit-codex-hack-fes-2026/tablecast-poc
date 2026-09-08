@@ -22,6 +22,8 @@ export function authOptions(
       { identifier: `${origin}/mcp`, allowedScopes: ["tablecast:read", "tablecast:write"] },
     ],
     allowDynamicClientRegistration: true,
+    allowUnauthenticatedClientRegistration: true,
+    allowPublicClientPrelogin: true,
     clientRegistrationDefaultResources: [`${origin}/mcp`],
     postLogin: {
       page: "/consent",

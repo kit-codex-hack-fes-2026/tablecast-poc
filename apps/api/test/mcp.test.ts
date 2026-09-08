@@ -529,3 +529,25 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
   expect(provider).toHaveBeenCalledTimes(4);
   expect((await client.listTools()).tools.map((tool) => tool.name)).not.toContain("publish_draft");
 });
+
+it("未ログインのMCPクライアントは公開クライアント登録できるが店舗トークンを得ない", async () => {
+  const response = await exports.default.fetch(
+    new Request("http://localhost:3000/api/auth/oauth2/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: "TableCast Codex acceptance",
+        application_type: "native",
+        redirect_uris: ["http://127.0.0.1:54321/callback"],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code"],
+        response_types: ["code"],
+        scope: "tablecast:read",
+      }),
+    }),
+  );
+  expect(response.status).toBe(201);
+  const client = z.object({ client_id: z.string() }).parse(await response.json());
+  expect(client.client_id).toBeTruthy();
+  expect(response.headers.getSetCookie().join()).not.toContain("session_token");
+});
