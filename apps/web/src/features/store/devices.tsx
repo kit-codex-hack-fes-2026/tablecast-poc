@@ -15,6 +15,7 @@ import { useI18n } from "../../i18n/locale";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { useStore } from "./store-shell";
+import { DeviceQrReader } from "./device-qr-reader";
 const loadDevices = (storeId: string) =>
   parseResponse(rpc.api.admin.stores[":storeId"].devices.$get({ param: { storeId } }));
 type Device = Awaited<ReturnType<typeof loadDevices>>["devices"][number];
@@ -106,6 +107,16 @@ export function RegisterDevice({ userCode, tableId }: { userCode: string; tableI
       </Button>
       <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
       <p className="text-base text-muted-foreground">{t("device_register_note")}</p>
+      <DeviceQrReader
+        onRead={(code) =>
+          void navigate({
+            to: "/admin/stores/$storeId/devices/new",
+            params: { storeId },
+            search: { user_code: code, tableId },
+            replace: true,
+          })
+        }
+      />
       <form
         className="space-y-5"
         onSubmit={(event) => {

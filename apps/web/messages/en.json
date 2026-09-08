@@ -387,7 +387,7 @@
   "device_active": "Registered",
   "device_search": "Search tables and devices",
   "device_empty": "No devices registered. Choose Register a device to add a table device.",
-  "device_register_note": "Enter the code shown on the table device, then choose its table.",
+  "device_register_note": "Scan the QR code or enter the code, then choose the table for this device.",
   "device_search_table": "Search for a table",
   "common_selected": "Selected",
   "common_select": "Select",
@@ -414,5 +414,14 @@
   "nav_management": "Management",
   "common_actions": "Actions",
   "mcp_revoke": "Revoke access",
-  "device_revoke": "Unregister device"
+  "device_revoke": "Unregister device",
+  "device_scan_start": "Scan QR code",
+  "device_scan_stop": "Stop scanning",
+  "device_scan_image": "Choose QR image",
+  "device_scan_camera": "QR code camera",
+  "device_scan_aim": "Point the camera at the QR code shown on the device.",
+  "device_scan_success": "Code scanned. Check the table and code before approving.",
+  "device_scan_invalid": "This QR code is not a device registration link for this environment.",
+  "device_scan_camera_error": "Cannot open the camera. Check camera permissions and connection, choose a QR image, or enter the code.",
+  "device_scan_image_error": "Could not read a QR code. Choose a clear QR image."
 }

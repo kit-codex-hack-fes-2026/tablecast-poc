@@ -387,7 +387,7 @@
   "device_active": "登録済み",
   "device_search": "卓・端末を検索",
   "device_empty": "登録済みの端末はありません。端末を登録から卓上端末を追加できます。",
-  "device_register_note": "卓上端末で表示されたコードを入力し、設置する卓を選んでください。",
+  "device_register_note": "QRコードを読み取るかコードを入力し、設置する卓を選んでください。",
   "device_search_table": "割り当て先の卓を検索",
   "common_selected": "選択中",
   "common_select": "選択",
@@ -414,5 +414,14 @@
   "nav_management": "管理",
   "common_actions": "操作",
   "mcp_revoke": "連携を解除",
-  "device_revoke": "端末の登録を解除"
+  "device_revoke": "端末の登録を解除",
+  "device_scan_start": "QRコードを読み取る",
+  "device_scan_stop": "読み取りを停止",
+  "device_scan_image": "QR画像を選ぶ",
+  "device_scan_camera": "QRコード用カメラ",
+  "device_scan_aim": "端末に表示されたQRコードをカメラに向けてください。",
+  "device_scan_success": "コードを読み取りました。卓とコードを確認して承認してください。",
+  "device_scan_invalid": "この環境の端末登録QRコードではありません。",
+  "device_scan_camera_error": "カメラを開けません。カメラの権限と接続を確認するか、QR画像・コード入力を使ってください。",
+  "device_scan_image_error": "QRコードを読み取れませんでした。鮮明なQR画像を選んでください。"
 }
