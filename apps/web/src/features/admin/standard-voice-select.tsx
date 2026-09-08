@@ -53,7 +53,7 @@ export function StandardVoiceSelect({
       <label>
         {t("editor_voice")}
         <NativeSelect
-          className="h-12 rounded-lg border border-input px-3 text-sm"
+          className="h-12 rounded-lg border border-input px-3 text-base"
           value={value ?? ""}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value || null)}
@@ -69,7 +69,7 @@ export function StandardVoiceSelect({
       {voices.isPending && <output className="block">{t("common_loading")}</output>}
       {catalogError ? (
         <div
-          className="flex gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0 items-center justify-between"
+          className="flex gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0 items-center justify-between"
           role={code === "VOICE_CATALOG_NOT_CONFIGURED" ? "status" : "alert"}
         >
           <span>

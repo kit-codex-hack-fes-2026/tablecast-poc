@@ -57,7 +57,7 @@ export function OpenTable({
     >
       <DialogContent>
         <DialogHeader>
-          <span className="eyebrow block text-xs leading-relaxed tracking-widest font-semibold text-muted-foreground">
+          <span className="eyebrow block text-sm leading-relaxed tracking-widest font-semibold text-muted-foreground">
             {table.name}
           </span>
           <DialogClose aria-label={t("common_close")}>
@@ -72,7 +72,7 @@ export function OpenTable({
             open.mutate();
           }}
         >
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("admin_guest_count")}
             <Input
               type="number"
@@ -83,7 +83,7 @@ export function OpenTable({
               onChange={(event) => setGuests(Number(event.target.value))}
             />
           </label>
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("admin_locale")}
             <NativeSelect
               value={guestLocale}
@@ -93,7 +93,7 @@ export function OpenTable({
               <option value="en">English</option>
             </NativeSelect>
           </label>
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("kiosk_plan")}
             <NativeSelect value={plan} onChange={(event) => setPlan(event.target.value)}>
               <option value="">{t("admin_no_plan")}</option>

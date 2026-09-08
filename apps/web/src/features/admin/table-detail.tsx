@@ -84,7 +84,7 @@ export function TableDetail({
     >
       <DialogContent side="right">
         <DialogHeader>
-          <span className="eyebrow block text-xs leading-relaxed tracking-widest font-semibold text-muted-foreground">
+          <span className="eyebrow block text-sm leading-relaxed tracking-widest font-semibold text-muted-foreground">
             {t("admin_details")}
           </span>
           <DialogClose aria-label={t("common_close")}>
@@ -100,7 +100,7 @@ export function TableDetail({
         <ErrorNotice error={detail.error || action.error} />
         {table && (
           <Tabs.Root className="flex min-h-0 flex-1 flex-col" defaultValue="overview">
-            <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
+            <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-sm [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
               <Tabs.Tab value="overview">{t("admin_overview")}</Tabs.Tab>
               <Tabs.Tab value="logs">{t("admin_logs")}</Tabs.Tab>
               <Tabs.Tab value="orders">{t("admin_orders")}</Tabs.Tab>
@@ -111,17 +111,17 @@ export function TableDetail({
               <Tabs.Panel value="overview">
                 <div className="grid grid-cols-3 border border-border rounded-md [&_>_div:last-child]:border-0 max-sm:grid-cols-2 max-sm:[&_>_div:last-child]:col-span-full max-sm:[&_>_div:last-child]:border-t max-sm:[&_>_div:last-child]:border-t-border">
                   <div className="py-4 px-3.5 border-r border-r-border">
-                    <span className="text-muted-foreground text-xs">{t("admin_due")}</span>
+                    <span className="text-muted-foreground text-sm">{t("admin_due")}</span>
                     <strong className="block text-lg mt-2">{money(table.bill.due, locale)}</strong>
                   </div>
                   <div className="py-4 px-3.5 border-r border-r-border">
-                    <span className="text-muted-foreground text-xs">{t("admin_cart")}</span>
+                    <span className="text-muted-foreground text-sm">{t("admin_cart")}</span>
                     <strong className="block text-lg mt-2">
                       {money(table.cart.total, locale)}
                     </strong>
                   </div>
                   <div className="py-4 px-3.5 border-r border-r-border">
-                    <span className="text-muted-foreground text-xs">{t("admin_voice")}</span>
+                    <span className="text-muted-foreground text-sm">{t("admin_voice")}</span>
                     <strong className="block text-lg mt-2">
                       {table.voiceState === "active"
                         ? t("admin_active_voice")
@@ -133,10 +133,10 @@ export function TableDetail({
                 </div>
                 {table.staffCalled && (
                   <div className="flex justify-between items-center bg-accent-soft p-3.5 rounded-md mt-5 gap-3.5">
-                    <strong className="text-sm">{t("admin_attention")}</strong>
+                    <strong className="text-base">{t("admin_attention")}</strong>
                     {table.status === "open" && (
                       <Button
-                        className="min-h-11 text-xs"
+                        className="min-h-11 text-sm"
                         size="lg"
                         variant="outline"
                         type="button"
@@ -190,14 +190,14 @@ export function TableDetail({
                     key={order.id}
                     className="order-card border border-border rounded-md m-3.5 overflow-hidden"
                   >
-                    <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-xs">
+                    <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-sm">
                       <time>{time(order.createdAt, locale)}</time>
                       <Badge variant="secondary">{t(`order_${order.status}`)}</Badge>
-                      <strong className="text-sm">{money(order.total, locale)}</strong>
+                      <strong className="text-base">{money(order.total, locale)}</strong>
                     </div>
                     <CartLines lines={order.snapshot.lines} />
                     {table.status === "open" && (
-                      <div className="flex gap-2.5 pt-0 px-3.5 pb-3.5 flex-wrap [&_[data-slot=button][data-variant=default]]:min-h-11 [&_[data-slot=button][data-variant=default]]:text-xs">
+                      <div className="flex gap-2.5 pt-0 px-3.5 pb-3.5 flex-wrap [&_[data-slot=button][data-variant=default]]:min-h-11 [&_[data-slot=button][data-variant=default]]:text-sm">
                         {order.status === "submitted" && (
                           <>
                             <Button
@@ -252,7 +252,7 @@ export function TableDetail({
                 ))}
               </Tabs.Panel>
               <Tabs.Panel value="billing">
-                <div className="bill-summary py-6 px-5 [&_h3]:mb-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_.bill-total]:border-t [&_.bill-total]:border-t-border [&_.bill-total]:pt-4 [&_.bill-total]:mt-2.5 [&_.bill-total_dd]:text-2xl [&_.bill-total_dd]:font-semibold [&_p]:text-muted-foreground [&_p]:text-xs [&_p]:mt-2.5 [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full">
+                <div className="bill-summary py-6 px-5 [&_h3]:mb-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-base [&_.bill-total]:border-t [&_.bill-total]:border-t-border [&_.bill-total]:pt-4 [&_.bill-total]:mt-2.5 [&_.bill-total_dd]:text-2xl [&_.bill-total_dd]:font-semibold [&_p]:text-muted-foreground [&_p]:text-sm [&_p]:mt-2.5 [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full">
                   <dl>
                     <div>
                       <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
@@ -285,9 +285,9 @@ export function TableDetail({
                     }}
                   >
                     <h3 className="m-0">{t("admin_payment")}</h3>
-                    <p className="text-muted-foreground text-xs">{t("admin_payment_note")}</p>
+                    <p className="text-muted-foreground text-sm">{t("admin_payment_note")}</p>
                     <div className="flex flex-wrap gap-5">
-                      <label className="flex gap-2 items-center text-xs min-h-11">
+                      <label className="flex gap-2 items-center text-sm min-h-11">
                         <Input
                           type="radio"
                           name="paymentKind"
@@ -300,7 +300,7 @@ export function TableDetail({
                         />
                         {t("admin_payment")}
                       </label>
-                      <label className="flex gap-2 items-center text-xs min-h-11">
+                      <label className="flex gap-2 items-center text-sm min-h-11">
                         <Input
                           type="radio"
                           name="paymentKind"
@@ -314,7 +314,7 @@ export function TableDetail({
                         {t("admin_adjustment")}
                       </label>
                     </div>
-                    <label className="flex flex-col gap-2 text-xs">
+                    <label className="flex flex-col gap-2 text-sm">
                       {t("admin_amount")}
                       <Input
                         type="number"
@@ -328,7 +328,7 @@ export function TableDetail({
                         }}
                       />
                     </label>
-                    <label className="flex flex-col gap-2 text-xs">
+                    <label className="flex flex-col gap-2 text-sm">
                       {t("admin_reason")}
                       <Input
                         type="text"
@@ -357,22 +357,22 @@ export function TableDetail({
               <Tabs.Panel value="diagnostics">
                 <dl className="">
                   <div className="border-b border-b-border py-3.5 px-0">
-                    <dt className="text-xs text-muted-foreground">tableSessionId</dt>
-                    <dd className="font-mono text-xs wrap-anywhere mt-1">{table.id}</dd>
+                    <dt className="text-sm text-muted-foreground">tableSessionId</dt>
+                    <dd className="font-mono text-sm wrap-anywhere mt-1">{table.id}</dd>
                   </div>
                   <div className="border-b border-b-border py-3.5 px-0">
-                    <dt className="text-xs text-muted-foreground">voiceSessionId</dt>
-                    <dd className="font-mono text-xs wrap-anywhere mt-1">
+                    <dt className="text-sm text-muted-foreground">voiceSessionId</dt>
+                    <dd className="font-mono text-sm wrap-anywhere mt-1">
                       {table.voiceSessionId ?? "—"}
                     </dd>
                   </div>
                   <div className="border-b border-b-border py-3.5 px-0">
-                    <dt className="text-xs text-muted-foreground">cursor</dt>
-                    <dd className="font-mono text-xs wrap-anywhere mt-1">{table.cursor}</dd>
+                    <dt className="text-sm text-muted-foreground">cursor</dt>
+                    <dd className="font-mono text-sm wrap-anywhere mt-1">{table.cursor}</dd>
                   </div>
                   <div className="border-b border-b-border py-3.5 px-0">
-                    <dt className="text-xs text-muted-foreground">cart.version</dt>
-                    <dd className="font-mono text-xs wrap-anywhere mt-1">{table.cart.version}</dd>
+                    <dt className="text-sm text-muted-foreground">cart.version</dt>
+                    <dd className="font-mono text-sm wrap-anywhere mt-1">{table.cart.version}</dd>
                   </div>
                 </dl>
               </Tabs.Panel>

@@ -4,6 +4,7 @@ import { Admin } from "../features/admin/admin";
 
 export const Route = createFileRoute("/admin/live")({
   validateSearch: z.object({
+    section: z.enum(["live", "history", "settings"]).optional(),
     storeId: z.string().optional().catch(undefined),
     draftId: z.string().optional().catch(undefined),
   }),
@@ -11,6 +12,6 @@ export const Route = createFileRoute("/admin/live")({
 });
 
 function AdminRoute() {
-  const { storeId, draftId } = Route.useSearch();
-  return <Admin key={JSON.stringify([storeId, draftId])} />;
+  const { storeId, draftId, section } = Route.useSearch();
+  return <Admin key={JSON.stringify([storeId, draftId, section])} />;
 }

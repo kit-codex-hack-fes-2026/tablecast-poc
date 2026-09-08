@@ -80,7 +80,7 @@ export function SettingsDrafts({
                 {t("admin_published_version")} {draft.baseVersion} · {t("admin_draft_version")}{" "}
                 {draft.version}
               </strong>
-              <p className="text-muted-foreground text-xs mt-2">
+              <p className="text-muted-foreground text-sm mt-2">
                 {draft.changes.length} {t("admin_change_count")}
               </p>
             </div>
@@ -97,7 +97,7 @@ export function SettingsDrafts({
       {drafts.data?.drafts.every(
         (draft) => draft.status !== "draft" && draft.status !== "ready",
       ) && (
-        <p className="py-12 px-6 text-center text-muted-foreground text-xs mt-2.5 mx-0 mb-6">
+        <p className="py-12 px-6 text-center text-muted-foreground text-sm mt-2.5 mx-0 mb-6">
           {t("admin_no_drafts")}
         </p>
       )}
@@ -246,14 +246,14 @@ function DraftDialog({
             </div>
           </form>
           {dirty && (
-            <output className="flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0">
+            <output className="flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0">
               {t("admin_unsaved")}
             </output>
           )}
           <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
           <h3 className="mt-6 font-semibold">{t("admin_saved_changes")}</h3>
           {draft.changes.some((change) => change.sensitive) && (
-            <div className="flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0">
+            <div className="flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0">
               {t("admin_sensitive")}
             </div>
           )}

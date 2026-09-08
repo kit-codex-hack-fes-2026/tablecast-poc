@@ -359,5 +359,11 @@
   "auth_check_email": "メールを送信しました。メール内のリンクを開いてください。",
   "org_add_member": "追加",
   "org_team_name": "チーム名",
-  "org_create_team": "チームを作成"
+  "org_create_team": "チームを作成",
+  "admin_navigation": "ナビゲーション",
+  "account_no_passkeys": "パスキーは未登録です。追加すると、顔認証や指紋でログインできます。",
+  "account_keep_current": "この端末以外をログアウトします。",
+  "org_empty_title": "最初の組織を作成",
+  "org_empty_hint": "店舗を管理する組織を作成してください。招待を受けた方は、招待メールのリンクから参加できます。",
+  "org_manage": "組織を設定"
 }

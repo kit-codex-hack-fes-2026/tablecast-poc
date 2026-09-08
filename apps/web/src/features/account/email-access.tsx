@@ -90,7 +90,7 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
           )}
         </form>
       )}
-      <a className="block text-sm underline" href={callbackURL}>
+      <a className="block text-base underline" href={callbackURL}>
         {t("auth_sign_in")}
       </a>
     </main>

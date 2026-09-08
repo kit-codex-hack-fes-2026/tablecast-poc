@@ -16,7 +16,7 @@ export function LanguageSwitch({
       aria-label={t("common_language")}
     >
       <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-xs max-sm:px-1.5"
+        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
         variant="ghost"
         type="button"
         lang="ja"
@@ -33,7 +33,7 @@ export function LanguageSwitch({
         日本語
       </Button>
       <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-xs max-sm:px-1.5"
+        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
         variant="ghost"
         type="button"
         lang="en"

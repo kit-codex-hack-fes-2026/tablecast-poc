@@ -65,7 +65,7 @@ export function ModifiersEditor({
             <label className="grid gap-2">
               {t("editor_kind")}
               <NativeSelect
-                className="h-12 rounded-lg border border-input px-3 text-sm"
+                className="h-12 rounded-lg border border-input px-3 text-base"
                 value={group.kind}
                 disabled={disabled}
                 onChange={(event) => {

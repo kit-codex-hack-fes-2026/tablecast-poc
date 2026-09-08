@@ -87,7 +87,7 @@ export function StringListField({
   const { t } = useI18n();
   return (
     <fieldset className="grid min-w-0 gap-2" disabled={disabled}>
-      <legend className="mb-2 text-sm">{label}</legend>
+      <legend className="mb-2 text-base">{label}</legend>
       {value.map((item, index) => (
         <div className="flex items-center gap-2" key={index}>
           <Input
@@ -145,7 +145,7 @@ export function ReferencesField({
       {label}
       <NativeSelect
         multiple
-        className="min-h-24 rounded-lg border border-input p-2 text-sm"
+        className="min-h-24 rounded-lg border border-input p-2 text-base"
         size={Math.min(6, Math.max(2, options.length))}
         value={value}
         disabled={disabled}
@@ -193,11 +193,11 @@ export function BilingualFields({
             {t(language === "ja" ? "common_ja" : "common_en")}
           </legend>
           {fields.map(({ key, label }) => (
-            <label className="flex flex-col gap-2 text-xs" key={key}>
+            <label className="flex flex-col gap-2 text-sm" key={key}>
               {label}
               {key === "description" ? (
                 <textarea
-                  className="min-h-24 w-full rounded-lg border border-input p-2 text-sm"
+                  className="min-h-24 w-full rounded-lg border border-input p-2 text-base"
                   maxLength={3000}
                   value={value[language][key]}
                   onChange={(event) =>

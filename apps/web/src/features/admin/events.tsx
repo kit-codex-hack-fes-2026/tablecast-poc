@@ -67,7 +67,7 @@ export function ActivityLog({
           data-event-cursor={event.cursor}
         >
           <time
-            className="text-xs w-9 shrink-0 text-muted-foreground mt-0.5"
+            className="text-sm w-9 shrink-0 text-muted-foreground mt-0.5"
             dateTime={new Date(event.createdAt).toISOString()}
           >
             {dateTime?.format(event.createdAt) ?? time(event.createdAt, locale)}
@@ -78,17 +78,17 @@ export function ActivityLog({
             aria-hidden="true"
           />
           <div>
-            <strong className="text-xs font-medium">
+            <strong className="text-sm font-medium">
               <EventLabel event={event} />
             </strong>
             {typeof event.data.text === "string" && (
               <p
-                className="text-xs mt-1 text-muted-foreground leading-loose whitespace-pre-wrap"
+                className="text-sm mt-1 text-muted-foreground leading-loose whitespace-pre-wrap"
                 lang={event.data.locale === "en" ? "en" : "ja"}
               >
                 {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
                 {event.data.text}
-                <small className="block text-xs text-muted-foreground mt-0.5">
+                <small className="block text-sm text-muted-foreground mt-0.5">
                   {event.data.locale === "en" ? "English" : "日本語"}
                   {typeof event.data.source === "string" &&
                     event.data.source.startsWith("synthetic-") &&

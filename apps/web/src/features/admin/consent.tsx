@@ -99,23 +99,23 @@ export function Consent() {
         <h1 className="text-3xl mt-3 max-sm:text-2xl">
           {t(postLogin ? "oauth_organisation" : "oauth_title")}
         </h1>
-        <p className="text-muted-foreground text-sm leading-loose mt-5 mx-0 mb-7">
+        <p className="text-muted-foreground text-base leading-loose mt-5 mx-0 mb-7">
           {t("oauth_note")}
         </p>
         <dl className="w-full text-left">
           <div className="border-b border-b-border py-3.5 px-0">
-            <dt className="text-xs text-muted-foreground">{t("oauth_client")}</dt>
-            <dd className="font-mono text-xs wrap-anywhere mt-1">{search.get("client_id")}</dd>
+            <dt className="text-sm text-muted-foreground">{t("oauth_client")}</dt>
+            <dd className="font-mono text-sm wrap-anywhere mt-1">{search.get("client_id")}</dd>
           </div>
           <div className="border-b border-b-border py-3.5 px-0">
-            <dt className="text-xs text-muted-foreground">{t("oauth_permissions")}</dt>
-            <dd className="font-mono text-xs wrap-anywhere mt-1">
+            <dt className="text-sm text-muted-foreground">{t("oauth_permissions")}</dt>
+            <dd className="font-mono text-sm wrap-anywhere mt-1">
               {search.get("scope")?.split(" ").join(" · ")}
             </dd>
           </div>
         </dl>
         {postLogin && (
-          <label className="[&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-xs flex flex-col gap-4 pt-6 w-full">
+          <label className="[&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-sm flex flex-col gap-4 pt-6 w-full">
             {t("oauth_organisation")}
             <NativeSelect
               value={selected}

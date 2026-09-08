@@ -1,3 +1,5 @@
+import { UserPlus, Trash2 } from "lucide-react";
+import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -9,7 +11,7 @@ export function TeamMembers({
 }: {
   teamId: string;
   organizationId: string;
-  members: { userId: string; user: { name: string } }[];
+  members: { userId: string; user: { name: string; email: string; image?: string | null } }[];
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -40,12 +42,13 @@ export function TeamMembers({
         const included = list.data?.some((item) => item.userId === member.userId);
         return (
           <div key={member.userId} className="flex items-center justify-between gap-3">
-            <span>{member.user.name}</span>
+            <UserIdentity user={member.user} />
             <Button
-              variant="outline"
+              variant={included ? "destructive" : "outline"}
               disabled={change.isPending || list.isPending}
               onClick={() => change.mutate({ userId: member.userId, remove: !!included })}
             >
+              {included ? <Trash2 /> : <UserPlus />}
               {t(included ? "account_remove" : "org_add_member")}
             </Button>
           </div>

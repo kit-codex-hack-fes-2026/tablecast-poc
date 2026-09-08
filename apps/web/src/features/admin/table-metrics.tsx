@@ -47,7 +47,7 @@ export function TableMetrics({
           className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 data-attention:border-accent/30 data-attention:bg-accent-soft"
         >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <span className="text-sm text-muted-foreground">{label}</span>
             <Icon
               className="size-5 shrink-0 text-muted-foreground group-data-attention:text-accent-foreground"
               aria-hidden="true"
