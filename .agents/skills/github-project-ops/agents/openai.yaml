@@ -1,0 +1,6 @@
+interface:
+  display_name: "GitHub Project Ops"
+  short_description: "GitHub Projectsの項目・ビュー・進捗・予定を管理"
+  icon_small: "./assets/github-project-ops-small.png"
+  icon_large: "./assets/github-project-ops.png"
+  default_prompt: "$github-project-ops を使い、Computer Use / Codex Browserを優先してGitHub Projectを整備してください。Priorityを必須としてトリアージし、Status・ビュー・進捗を整えてください。工数と予定日は概算として更新してください。"

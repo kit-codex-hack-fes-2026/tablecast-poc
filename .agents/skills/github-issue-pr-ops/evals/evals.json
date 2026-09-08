@@ -1,0 +1,35 @@
+{
+  "skill_name": "github-issue-pr-ops",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Issue #12は未割当だが古いlinked branchがある。着手して。",
+      "expected_output": "Assigneeを設定して確認する。branchは再利用可否を調べるが追加ロックにしない。"
+    },
+    {
+      "id": 2,
+      "prompt": "Issue #12は別の担当者に割当済み。修正して。",
+      "expected_output": "明示的な引き継ぎがなければ担当を確認する。"
+    },
+    {
+      "id": 3,
+      "prompt": "ProjectsにTypeがある。機能・修正・文書・epicを起票して。",
+      "expected_output": "それぞれfeat・fix・docs・epicラベルを付け、Projectsとの重複を許容する。"
+    },
+    {
+      "id": 4,
+      "prompt": "画面のエラー表示を直した。PRを作って。",
+      "expected_output": "実動作の画像か動画を撮影してPRに添付し、表示・再生を確認する。撮影不能なら未完了を報告する。"
+    },
+    {
+      "id": 5,
+      "prompt": "CLIの出力を変えた。PRを作って。",
+      "expected_output": "実行と結果の画像か動画も添付する。テキストログだけで済ませない。"
+    },
+    {
+      "id": 6,
+      "prompt": "大きい機能をIssueに分割して。",
+      "expected_output": "成果と受け入れ条件で分け、実行体制をスコープに含めない。"
+    }
+  ]
+}

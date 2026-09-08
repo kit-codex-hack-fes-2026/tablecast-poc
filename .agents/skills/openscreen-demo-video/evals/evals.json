@@ -1,0 +1,15 @@
+{
+  "skill_name": "openscreen-demo-video",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "この録画に字幕とzoomを付けてMP4にして。",
+      "expected_output": "元素材を残し、GUIで編集する。cut確定後に字幕を修正し、書き出したMP4を再生して確認する。"
+    },
+    {
+      "id": 2,
+      "prompt": "GUIのprojectをCLIが読めない。",
+      "expected_output": "独自JSON変換を作らずGUIで編集・書き出しする。"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Issue / PR Ops"
+  short_description: "Issue分割と、通常PR・stacked PRの引き継ぎ・マージを管理"
+  default_prompt: "$github-issue-pr-ops を使い、GitHub Projectsの有無に依存せず、GitHubの正式名称・項目名・状態値・コマンド以外は日本語で、Issue分割と通常PR・stacked PRの設計からマージまでを運用してください。"
