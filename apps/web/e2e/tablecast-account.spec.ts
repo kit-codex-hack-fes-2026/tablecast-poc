@@ -1,18 +1,15 @@
-import { readFileSync } from "node:fs";
-import { test, expect, request } from "@playwright/test";
+import { expect, request, test } from "@playwright/test";
 import { z } from "zod";
-const runtime = z
-  .object({ ports: z.object({ mailpit: z.number() }) })
-  .parse(
-    JSON.parse(readFileSync(new URL("../../../.local/runtime.json", import.meta.url), "utf8")),
-  );
+import { runtime } from "./support/runtime";
+
+test.use({ trace: "off" });
 
 const cleanup: (() => Promise<void>)[] = [];
 test.afterEach(async () => {
-  for (const action of cleanup.splice(0).reverse()) await action();
+  for (const action of cleanup.splice(0).toReversed()) await action();
 });
 
-test("Googleログインから名前変更・組織作成・招待メールまで利用できる", async ({
+test("Googleログインから名前変更・店舗作成・招待メールまで利用できる", async ({
   page,
   baseURL,
 }) => {
@@ -20,7 +17,7 @@ test("Googleログインから名前変更・組織作成・招待メールま�
   await page.getByRole("button", { name: "Googleでログイン" }).click();
   await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
-  await expect(page.getByRole("heading", { name: "組織", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   const session = z
     .object({ user: z.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() }) })
     .parse(await (await page.request.get("/api/auth/get-session")).json());
@@ -51,40 +48,33 @@ test("Googleログインから名前変更・組織作成・招待メールま�
   await expect(page.getByRole("status")).toHaveText("更新しました");
   await page.goto("/organisations");
   const slug = `tablecast-acceptance-${Date.now()}`;
-  cleanup.push(async () => {
-    const organisations = z
-      .array(z.object({ id: z.string(), slug: z.string() }))
-      .parse(await (await owner.get("/api/auth/organization/list")).json());
-    const created = organisations.find((organisation) => organisation.slug === slug);
-    if (created)
-      expect(
-        (
-          await owner.post("/api/auth/organization/delete", {
-            headers: { Origin: baseURL ?? "" },
-            data: { organizationId: created.id },
-          })
-        ).ok(),
-      ).toBe(true);
-  });
-  await page.getByRole("button", { name: "組織を作成", exact: true }).click();
-  await page.getByLabel("組織名", { exact: true }).fill("TableCast 受入試験");
+  await page.getByRole("link", { name: "店舗を作成", exact: true }).click();
+  await expect(page).toHaveURL(/\/stores\/new$/);
+  const storeName = `TableCast 受入試験 ${slug}`;
+  await page.getByLabel("店舗名", { exact: true }).fill(storeName);
   await page.getByLabel("識別名").fill(slug);
-  await page.getByRole("dialog").getByRole("button", { name: "組織を作成", exact: true }).click();
-  await expect(page.getByLabel("組織を選択").locator("option:checked")).toHaveText(
-    "TableCast 受入試験",
+  await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
+  await expect(page).toHaveURL(/\/menu\/products$/);
+  await page.getByRole("link", { name: "メンバー", exact: true }).click();
+  await expect(
+    page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: "招待", exact: true }).click();
+  await page.getByRole("link", { name: "メンバーを招待", exact: true }).click();
+  await expect(page).toHaveURL(/\/invitations\/new$/);
+  await expect(page.getByRole("heading", { name: "メンバーを招待", exact: true })).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "メールアドレス", exact: true })
+    .fill("tablecast-member@example.test");
+  await expect(page.getByRole("textbox", { name: "メールアドレス", exact: true })).toHaveValue(
+    "tablecast-member@example.test",
   );
-  const members = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "メンバー", exact: true }) });
-  await expect(members.getByText("tablecast-owner@example.test", { exact: true })).toBeVisible();
-  await expect(members.getByText("tablecast-member@example.test", { exact: true })).toHaveCount(0);
-  await page.getByLabel("メールアドレス", { exact: true }).fill("tablecast-member@example.test");
   await page.getByRole("button", { name: "招待メールを送信" }).click();
   await expect(
-    page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "メンバーを招待", exact: true }) })
-      .getByText("tablecast-member@example.test", { exact: false }),
+    page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
   ).toBeVisible();
   const messages = await page.request.get(
     `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`,
@@ -92,7 +82,7 @@ test("Googleログインから名前変更・組織作成・招待メールま�
   const mail = z
     .object({ messages: z.array(z.object({ ID: z.string(), Subject: z.string() })) })
     .parse(await messages.json())
-    .messages.find((item) => item.Subject.includes("Organisation invitation"));
+    .messages.find((item) => item.Subject.includes("Restaurant invitation"));
   expect(mail).toBeDefined();
   const content = z
     .object({ HTML: z.string() })
@@ -111,8 +101,8 @@ test("Googleログインから名前変更・組織作成・招待メールま�
   await page.getByRole("button", { name: /tablecast-member@example.test/ }).click();
   await page.getByRole("button", { name: "参加する", exact: true }).click();
   await expect(page).toHaveURL(/\/organisations$/);
-  await expect(page.getByRole("heading", { name: "組織", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "メンバー", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
+  await expect(page.getByRole("table").getByText(storeName, { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "メンバーを招待", exact: true })).toHaveCount(0);
 });
 
@@ -134,7 +124,7 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await page.getByRole("button", { name: "Googleでログイン" }).click();
   await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
-  await expect(page.getByRole("heading", { name: "組織", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   await page.goto("/account");
   const keyName = `TableCast Chromium ${Date.now()}`;
   const owner = await request.newContext({
@@ -169,7 +159,7 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
   await expect(page).toHaveURL(/\/organisations$/);
-  await expect(page.getByRole("heading", { name: "組織", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
 });
 
 test("確認済みメールのパスワードとGoogleで同じユーザーへログインする", async ({
@@ -237,11 +227,11 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
   await page.getByRole("button", { name: "Googleでログイン" }).click();
   await page.getByRole("button", { name: /tablecast-link@example.test/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
-  await expect(page.getByRole("heading", { name: "組織", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "最初の組織を作成" })).toBeVisible();
-  await page.getByRole("button", { name: "組織を作成", exact: true }).click();
-  await expect(page.getByRole("dialog").getByLabel("組織名", { exact: true })).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "閉じる", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "店舗を作成", exact: true }).click();
+  await expect(page).toHaveURL(/\/stores\/new$/);
+  await expect(page.getByLabel("店舗名", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const links = z
     .array(z.object({ providerId: z.string() }))
     .parse(await (await page.request.get("/api/auth/list-accounts")).json());

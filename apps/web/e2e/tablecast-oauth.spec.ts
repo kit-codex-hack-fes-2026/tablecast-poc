@@ -1,13 +1,11 @@
-import { readFileSync } from "node:fs";
+import { expect, test } from "@playwright/test";
 import { createHash } from "node:crypto";
-import { test, expect } from "@playwright/test";
 import { z } from "zod";
+import { credentials } from "./support/runtime";
 
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+test.use({ trace: "off" });
 
-test("MCP接続はメールログイン・店舗選択・明示同意を経て認可コードを返す", async ({
+test("MCP接続はメールログイン・店舗選択・明示同意を経て認可コードを返し、利用者が連携を失効できる", async ({
   page,
   request,
   baseURL,
@@ -75,4 +73,35 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
     },
   });
   expect(tokenResponse.ok()).toBeTruthy();
+  const token = z.object({ access_token: z.string() }).parse(await tokenResponse.json());
+  const callMcp = () =>
+    request.post("/mcp", {
+      headers: {
+        Authorization: `Bearer ${token.access_token}`,
+        Accept: "application/json, text/event-stream",
+      },
+      data: {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "tablecast-e2e", version: "1.0.0" },
+        },
+      },
+    });
+  expect((await callMcp()).status()).toBe(200);
+  await page.goto("/account/mcp-sessions");
+  const connection = page.getByRole("row").filter({ hasText: "TableCast browser acceptance" });
+  await expect(connection).toContainText("tablecast:read");
+  await expect(connection).toContainText("tablecast:write");
+  await expect(connection.locator("time")).toHaveCount(3);
+  await connection.getByRole("button", { name: "Revoke access", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Revoke access", exact: true })
+    .click();
+  await expect(connection).toHaveCount(0);
+  expect((await callMcp()).status()).toBe(401);
 });

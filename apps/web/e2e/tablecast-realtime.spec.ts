@@ -1,11 +1,6 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
-import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import { expect, test, type WebSocketRoute } from "@playwright/test";
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
+import { credentials } from "./support/runtime";
 
 test("通知切断中の変更を回復し、古い確認と期限切れの確認を閉じて重複表示しない", async ({
   page,

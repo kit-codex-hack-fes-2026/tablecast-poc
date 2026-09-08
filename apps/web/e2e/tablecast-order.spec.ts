@@ -1,15 +1,10 @@
-import { z } from "zod";
-import { readFileSync } from "node:fs";
-import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import { expect, test } from "@playwright/test";
-import ja from "../messages/ja.json" with { type: "json" };
-import en from "../messages/en.json" with { type: "json" };
 import type { CartLine } from "@tablecast/api/schema";
+import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
+import en from "../messages/en.json" with { type: "json" };
+import ja from "../messages/ja.json" with { type: "json" };
+import { credentials } from "./support/runtime";
 import { enlargeText, expectReadableControl, tabTo } from "./tablecast-accessibility";
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
 
 // スタッフの認証入力を含むため、通信traceを保存しない。
 test.use({ trace: "off" });
@@ -31,17 +26,15 @@ for (const { staffLanguage, labels } of [
     const storeId = "tablecast-komorebi";
     let sessionId = "";
     try {
-      await staff.goto("/login");
+      await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
       await staff
         .getByRole("button", { name: staffLanguage === "英語" ? "English" : "日本語", exact: true })
         .click();
       await staff.getByLabel(labels.auth_email).fill(credentials.email);
       await staff.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
       await staff.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
-      await expect(staff).toHaveURL(/\/admin\/live$/);
-      await staff
-        .getByRole("combobox", { name: labels.admin_store, exact: true })
-        .selectOption(storeId);
+      await expect(staff).toHaveURL(new RegExp(`/admin/stores/${storeId}/floor$`));
+      await expect(staff.getByRole("main")).toBeVisible();
       const current = adminStateSchema.parse(
         await (await staff.request.get(`/api/admin/stores/${storeId}`)).json(),
       );
@@ -55,16 +48,18 @@ for (const { staffLanguage, labels } of [
       const table = tableStateSchema.parse(await opened.json());
       sessionId = table.id;
       await staff.reload();
-      await staff
-        .getByRole("combobox", { name: labels.admin_store, exact: true })
-        .selectOption(storeId);
+      await staff.goto(`/admin/stores/${storeId}/floor`);
       await guest.goto("/");
       await guest.getByRole("button", { name: "端末を接続する" }).click();
       const code = await guest.getByLabel("端末に表示されたコード").textContent();
       expect(code).toBeTruthy();
-      await staff.getByRole("button", { name: labels.admin_pair, exact: true }).click();
+      await staff.goto(`/admin/stores/${storeId}/devices/new`);
       await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
-      await staff.getByLabel(labels.admin_pair_table).selectOption(tableId);
+      await staff
+        .getByRole("row")
+        .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
+        .getByRole("button")
+        .click();
       await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
       await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
       await guest.getByRole("button", { name: "日本語", exact: true }).click();
@@ -85,7 +80,7 @@ for (const { staffLanguage, labels } of [
       const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
       await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-normal-ja.png") });
       // 客画面も文字を200%にして、常設操作と商品選択を実際に使う。
-      await enlargeText(guest.locator(".kiosk-shell"));
+      await enlargeText(guest.locator("[data-ui='kiosk-shell']"));
       for (const name of ["日本語", "English", "店員を呼ぶ"])
         await expectReadableControl(
           guest.getByRole("banner").getByRole("button", { name, exact: true }),
@@ -108,7 +103,7 @@ for (const { staffLanguage, labels } of [
             bounds.y + bounds.height <= identity.y + 1,
         ).toBe(true);
       }
-      await expectReadableControl(guest.locator(".basket-total"));
+      await expectReadableControl(guest.locator("[data-ui='basket-total']"));
       await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-text-200-ja.png") });
       for (const product of products) {
         await test.step(`${product.text.ja.displayName}をカスタマイズする`, async () => {
@@ -257,7 +252,7 @@ for (const { staffLanguage, labels } of [
       await expect(guest.getByRole("button", { name: "Review order", exact: true })).toBeEnabled();
       await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-landscape.png") });
       await expectReadableControl(guest.getByRole("button", { name: "Review order", exact: true }));
-      await expectReadableControl(guest.locator(".basket-total"));
+      await expectReadableControl(guest.locator("[data-ui='basket-total']"));
       for (const name of ["日本語", "English", "Call staff"])
         await expectReadableControl(
           guest.getByRole("banner").getByRole("button", { name, exact: true }),
@@ -266,11 +261,12 @@ for (const { staffLanguage, labels } of [
         guest.locator("footer").getByRole("button", { name: en.kiosk_voice_retry, exact: true }),
       );
       expect(voiceRequests).toHaveLength(1);
+      await staff.goto(`/admin/stores/${storeId}/floor`);
       await expect(
         staff.getByRole("heading", { name: labels.admin_live, exact: true }),
       ).toBeVisible();
       await guest.setViewportSize({ width: 768, height: 1024 });
-      await expectReadableControl(guest.getByRole("banner").locator(".language-switch"));
+      await expectReadableControl(guest.getByRole("banner").locator("[data-ui='language-switch']"));
       for (const name of ["日本語", "English", "Call staff"])
         await expectReadableControl(
           guest.getByRole("banner").getByRole("button", { name, exact: true }),
@@ -307,6 +303,7 @@ for (const { staffLanguage, labels } of [
       expect(ordered.orders).toHaveLength(1);
       expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
       expect(ordered.billRequested).toBe(false);
+      await staff.goto(`/admin/stores/${storeId}/floor`);
       const billingMetric = staff
         .locator("[data-slot=metric]")
         .filter({ has: staff.getByText(labels.admin_billing, { exact: true }) })
@@ -332,7 +329,9 @@ for (const { staffLanguage, labels } of [
           return result.bill.due;
         })
         .toBe(0);
+      await staff.goto(`/admin/stores/${storeId}/floor`);
       await expect(billingMetric).toHaveText(String(previousBilling));
+      await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
       await staff.getByRole("tab", { name: labels.admin_overview, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_close_session, exact: true }).click();
       await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();

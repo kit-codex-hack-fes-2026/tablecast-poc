@@ -1,10 +1,16 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import process from "node:process";
 
 export async function tabTo(page: Page, target: Locator) {
   await expect(target).toBeVisible();
-  for (let count = 0; count < 40; count += 1) {
+  // macOSのWebKitでは、リンクを含む移動にOption+Tabを使う。
+  const key =
+    process.platform === "darwin" && page.context().browser()?.browserType().name() === "webkit"
+      ? "Alt+Tab"
+      : "Tab";
+  for (let count = 0; count < 80; count += 1) {
     if (await target.evaluate((element) => element === document.activeElement)) break;
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(key);
   }
   await expect(target).toBeFocused();
   await expect(target).toBeInViewport();

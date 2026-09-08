@@ -1,18 +1,13 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
+import { expect, test } from "@playwright/test";
 import {
   historyPageSchema,
   sessionEventsPageSchema,
   tableStateSchema,
   type TableEvent,
 } from "@tablecast/api/schema";
-import { expect, test } from "@playwright/test";
-import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import ja from "../messages/ja.json" with { type: "json" };
+import { credentials } from "./support/runtime";
 
 test.use({ trace: "off", actionTimeout: 15_000 });
 
@@ -72,10 +67,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
           await route.continue({ url: url.toString() });
         },
       );
-      await page.goto(`/admin/live?storeId=${storeId}`);
-      // 店舗データを読み込んで操作可能になってから履歴へ移動する。
-      await expect(page.getByRole("combobox", { name: ja.admin_store })).toHaveValue(storeId);
-      await expect(page.getByRole("table")).toBeVisible();
+      await page.goto(`/admin/stores/${storeId}/floor`);
       await page.getByRole("button", { name: language, exact: true }).click();
       const firstHistoryResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());
@@ -83,9 +75,9 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
           url.pathname === `${base}/history` && !url.searchParams.has("beforeId") && response.ok()
         );
       });
-      await page.getByRole("button", { name: labels.admin_history, exact: true }).click();
+      await page.getByRole("link", { name: labels.admin_history, exact: true }).click();
       const firstHistoryPage = historyPageSchema.parse(await (await firstHistoryResponse).json());
-      const history = page.getByRole("region", { name: labels.admin_history, exact: true });
+      const history = page.getByRole("main");
       await expect(history.locator("tbody tr")).toHaveCount(Math.min(2, initial.sessions.length));
       const moreVisits = page.getByRole("button", { name: labels.admin_more_visits, exact: true });
       if (initial.sessions.length > 2) {
@@ -97,7 +89,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
           String(firstHistoryPage.nextCursor?.closedAt),
         );
       }
-      const row = history.locator(`[data-session-id="${target.id}"]`);
+      const row = history.locator(`[data-row-id="${target.id}"]`);
       const targetIndex = initial.sessions.findIndex((session) => session.id === target.id);
       for (let loaded = 4; loaded <= targetIndex; loaded += 2) {
         await moreVisits.click();
@@ -107,7 +99,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       }
       const displayedIds = await history
         .locator("tbody tr")
-        .evaluateAll((rows) => rows.map((item) => item.getAttribute("data-session-id")));
+        .evaluateAll((rows) => rows.map((item) => item.getAttribute("data-row-id")));
       expect(displayedIds).toEqual(
         initial.sessions.slice(0, displayedIds.length).map((session) => session.id),
       );
@@ -115,7 +107,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
         ({ startedAt, closedAt, amount, selectedLocale }) => {
           const displayLocale = selectedLocale === "ja" ? "ja-JP" : "en-GB";
           const date = new Intl.DateTimeFormat(displayLocale, {
-            dateStyle: "short",
+            dateStyle: "medium",
             timeStyle: "short",
             timeZone: "Asia/Tokyo",
           });
@@ -141,36 +133,38 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       await expect(row).toContainText(dates.total);
       await page.screenshot({ path: testInfo.outputPath("tablecast-history-list.png") });
       await row.getByRole("button", { name: labels.admin_details, exact: true }).click();
-      const dialog = page.getByRole("dialog", { name: target.tableName, exact: true });
-      await expect(dialog).toBeVisible();
+      const detailPage = page.getByRole("main");
+      await expect(page).toHaveURL(new RegExp(`/visits/${target.id}`));
+      await page.reload();
+      await expect(detailPage).toBeVisible();
       await expect(
-        dialog.getByRole("button", { name: labels.admin_close_session, exact: true }),
+        detailPage.getByRole("button", { name: labels.admin_close_session, exact: true }),
       ).toHaveCount(0);
       await expect(
-        dialog.getByRole("button", { name: labels.admin_acknowledge, exact: true }),
+        detailPage.getByRole("button", { name: labels.admin_acknowledge, exact: true }),
       ).toHaveCount(0);
-      await dialog.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
-      await expect(dialog.locator(".order-card")).toHaveCount(detail.orders.length);
+      await detailPage.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
+      await expect(detailPage.locator("[data-ui='order-card']")).toHaveCount(detail.orders.length);
       for (const [index, order] of detail.orders.entries()) {
-        const card = dialog.locator(".order-card").nth(index);
+        const card = detailPage.locator("[data-ui='order-card']").nth(index);
         for (const line of order.snapshot.lines) {
           await expect(card).toContainText(line.name[locale]);
           for (const option of line.options) await expect(card).toContainText(option.name[locale]);
         }
         await expect(card.getByRole("button")).toHaveCount(0);
       }
-      await dialog.screenshot({ path: testInfo.outputPath("tablecast-history-orders.png") });
-      await dialog.getByRole("tab", { name: labels.admin_payments, exact: true }).click();
-      await expect(dialog.locator(".bill-summary")).toBeVisible();
-      await expect(dialog.locator("form, input, textarea, select")).toHaveCount(0);
+      await detailPage.screenshot({ path: testInfo.outputPath("tablecast-history-orders.png") });
+      await detailPage.getByRole("tab", { name: labels.admin_payments, exact: true }).click();
+      await expect(detailPage.locator("[data-ui='bill-summary']")).toBeVisible();
+      await expect(detailPage.locator("form, input, textarea, select")).toHaveCount(0);
 
       const latestPage = page.waitForResponse((response) => {
         const url = new URL(response.url());
         return url.pathname === eventPath && !url.searchParams.has("before") && response.ok();
       });
-      await dialog.getByRole("tab", { name: labels.admin_logs, exact: true }).click();
+      await detailPage.getByRole("tab", { name: labels.admin_logs, exact: true }).click();
       let eventPage = sessionEventsPageSchema.parse(await (await latestPage).json());
-      await expect(dialog.locator("[data-event-cursor]")).toHaveCount(eventPage.events.length);
+      await expect(detailPage.locator("[data-event-cursor]")).toHaveCount(eventPage.events.length);
       const expectedBefore: (string | null)[] = [null];
       let shown = eventPage.events.length;
       while (eventPage.nextBefore !== null) {
@@ -184,13 +178,15 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
             response.ok()
           );
         });
-        await dialog.getByRole("button", { name: labels.admin_older_events, exact: true }).click();
+        await detailPage
+          .getByRole("button", { name: labels.admin_older_events, exact: true })
+          .click();
         eventPage = sessionEventsPageSchema.parse(await (await previousPage).json());
         shown += eventPage.events.length;
-        await expect(dialog.locator("[data-event-cursor]")).toHaveCount(shown);
+        await expect(detailPage.locator("[data-event-cursor]")).toHaveCount(shown);
       }
       expect([...new Set(eventRequests)]).toEqual(expectedBefore);
-      const cursors = await dialog
+      const cursors = await detailPage
         .locator("[data-event-cursor]")
         .evaluateAll((events) =>
           events.map((item) => Number(item.getAttribute("data-event-cursor"))),
@@ -198,16 +194,16 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       expect(cursors).toEqual(expectedEvents.map((event) => event.cursor));
       expect(new Set(cursors).size).toBe(cursors.length);
       await expect(
-        dialog.getByRole("button", { name: labels.admin_older_events, exact: true }),
+        detailPage.getByRole("button", { name: labels.admin_older_events, exact: true }),
       ).toHaveCount(0);
-      const timestamps = await dialog
-        .locator(".activity-log time")
+      const timestamps = await detailPage
+        .locator("[data-ui='activity-log'] time")
         .evaluateAll((times) => times.map((item) => item.getAttribute("datetime")));
       expect(timestamps).toEqual(
         expectedEvents.map((event) => new Date(event.createdAt).toISOString()),
       );
-      await dialog.screenshot({ path: testInfo.outputPath("tablecast-history-activity.png") });
-      await dialog.getByRole("button", { name: labels.common_close, exact: true }).click();
+      await detailPage.screenshot({ path: testInfo.outputPath("tablecast-history-activity.png") });
+      await page.goto(`/admin/stores/${storeId}/visits`);
 
       // 言語と店舗を切り替え、以前の来店IDやページcursorを引き継がない。
       await page.getByRole("button", { name: nextLanguage, exact: true }).click();
@@ -221,20 +217,20 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       expect(otherResponse.status()).toBe(200);
       const other = historyPageSchema.parse(await otherResponse.json());
       expect(other.sessions.length).toBeGreaterThan(0);
-      await page
-        .getByRole("combobox", { name: nextLabels.admin_store, exact: true })
-        .selectOption(otherStoreId);
-      const otherHistory = page.getByRole("region", {
-        name: nextLabels.admin_history,
-        exact: true,
-      });
+      await page.getByRole("combobox", { name: nextLabels.stores_title, exact: true }).click();
+      await page.getByRole("option", { name: /あかり|Akari/ }).click();
+      await expect(page).toHaveURL(new RegExp(`/admin/stores/${otherStoreId}/floor`));
+      await page.getByRole("link", { name: nextLabels.admin_history, exact: true }).click();
+      const otherHistory = page.getByRole("main");
       await expect(otherHistory.locator("tbody tr")).toHaveCount(other.sessions.length);
-      expect(
-        await otherHistory
-          .locator("tbody tr")
-          .evaluateAll((rows) => rows.map((item) => item.getAttribute("data-session-id"))),
-      ).toEqual(other.sessions.map((session) => session.id));
-      await expect(page.locator(`[data-session-id="${target.id}"]`)).toHaveCount(0);
+      await expect
+        .poll(() =>
+          otherHistory
+            .locator("tbody tr")
+            .evaluateAll((rows) => rows.map((item) => item.getAttribute("data-row-id"))),
+        )
+        .toEqual(other.sessions.map((session) => session.id));
+      await expect(page.locator(`[data-row-id="${target.id}"]`)).toHaveCount(0);
       const otherRequest = historyRequests.find((url) => url.pathname.includes(otherStoreId));
       expect(otherRequest?.searchParams.has("beforeId")).toBe(false);
       expect(otherRequest?.searchParams.has("beforeClosedAt")).toBe(false);
