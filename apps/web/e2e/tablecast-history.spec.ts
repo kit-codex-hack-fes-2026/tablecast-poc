@@ -73,6 +73,9 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
         },
       );
       await page.goto(`/admin/live?storeId=${storeId}`);
+      // 店舗データを読み込んで操作可能になってから履歴へ移動する。
+      await expect(page.getByRole("combobox", { name: ja.admin_store })).toHaveValue(storeId);
+      await expect(page.getByRole("table")).toBeVisible();
       await page.getByRole("button", { name: language, exact: true }).click();
       const firstHistoryResponse = page.waitForResponse((response) => {
         const url = new URL(response.url());

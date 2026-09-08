@@ -21,7 +21,6 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
   baseURL,
 }, testInfo) => {
   const storeId = "tablecast-komorebi";
-  const tableId = `${storeId}-table-12`;
   const base = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
   let sessionId = "";
@@ -32,10 +31,9 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
     const stateResponse = await staff.get(base);
     expect(stateResponse.status()).toBe(200);
     const state = adminStateSchema.parse(await stateResponse.json());
-    expect(
-      state.vacantTables.some((table) => table.id === tableId),
-      "既存の利用卓を変更しない",
-    ).toBe(true);
+    const vacant = state.vacantTables[0];
+    if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
+    const tableId = vacant.id;
     const opened = await staff.post(`${base}/tables/open`, {
       headers,
       data: { tableId, guestCount: 2, locale: "ja" },
@@ -50,7 +48,7 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
         await staff.post(`${base}/devices/approve`, { headers, data: { userCode, tableId } })
       ).status(),
     ).toBe(200);
-    await expect(page.locator(".restaurant-name")).toContainText("T12");
+    await expect(page.locator(".restaurant-name")).toContainText(vacant.name);
     const catalogResponse = await page.request.get("/api/table/catalog");
     expect(catalogResponse.status()).toBe(200);
     const catalog = catalogSchema.parse(await catalogResponse.json());
