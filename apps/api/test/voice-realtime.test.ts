@@ -68,6 +68,67 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect((await tool("setSpeechSpeed", { speed: 1.5 })).status).toBe(200);
     expect((await getTableState(env, device)).speechSpeed).toBe(1.5);
   });
+  it("失敗後の新セッションへ同じ来店の発話と再生済み部分だけを時系列で復元する", async () => {
+    await setup();
+    await request("transcript", {
+      voiceSessionId: voiceId,
+      turnId: "tablecast-turn",
+      text: "香りのよい日本酒が好きです",
+    });
+    await request("turns/tablecast-turn/end", { voiceSessionId: voiceId, status: "failed" });
+    await request("playback", {
+      voiceSessionId: voiceId,
+      turnId: "tablecast-turn",
+      text: "そらしずくと、",
+      interrupted: true,
+    });
+    expect(
+      await env.TABLECAST_DB.prepare(
+        "SELECT status FROM voice_turns WHERE id='tablecast-turn'",
+      ).first<string>("status"),
+    ).toBe("failed");
+    // 別の来店と画面用イベントは、会話文脈へ混ぜない。
+    await env.TABLECAST_DB.prepare(
+      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at,status) VALUES('tablecast-other-visit','tablecast-store','tablecast-table','ja',1,0,'closed')",
+    ).run();
+    await env.TABLECAST_DB.prepare(
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-other-visit','voice.user',?,0)",
+    )
+      .bind(JSON.stringify({ text: "別の来店の秘密" }))
+      .run();
+    await start("tablecast-tools");
+    await tool("getCatalog", {}, "tablecast-tools");
+    await start("tablecast-empty-caption");
+    await setVoiceSession(env, device, null);
+    await setVoiceSession(env, device, "tablecast-resumed");
+    const response = await request("realtime?voiceSessionId=tablecast-resumed");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      history: [
+        { role: "user", content: "香りのよい日本酒が好きです", interrupted: false },
+        { role: "assistant", content: "そらしずくと、", interrupted: true },
+      ],
+    });
+    expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
+    expect((await getTableState(env, device)).orders).toHaveLength(0);
+  });
+  it("復元履歴は新しい発話を優先して本文量を制限する", async () => {
+    await setup();
+    for (const text of ["古い話", "あ".repeat(9000), "い".repeat(9000), "直前の希望"]) {
+      await env.TABLECAST_DB.prepare(
+        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-session','voice.user',?,0)",
+      )
+        .bind(JSON.stringify({ text }))
+        .run();
+    }
+    const response = await request(`realtime?voiceSessionId=${voiceId}`);
+    expect(await response.json()).toMatchObject({
+      history: [
+        { role: "user", content: "い".repeat(9000), interrupted: false },
+        { role: "user", content: "直前の希望", interrupted: false },
+      ],
+    });
+  });
   it("不正な引数と新ターン開始後の旧ツールを拒否する", async () => {
     await setup();
     expect((await tool("setSpeechSpeed", { speed: 1.6 })).status).toBe(422);

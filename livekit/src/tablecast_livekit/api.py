@@ -26,11 +26,19 @@ class VoiceConfiguration(BaseModel):
     speechSpeed: float = Field(default=1.0, ge=0.5, le=1.5, multiple_of=0.1)
 
 
+class RealtimeMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["user", "assistant"]
+    content: str
+    interrupted: bool = False
+
+
 class RealtimeConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model: Literal["gpt-realtime-2.1"]
     instructions: str
     tools: list[dict[str, object]]
+    history: list[RealtimeMessage] = Field(default_factory=list)
 
 
 class TurnSkipped(Exception):
