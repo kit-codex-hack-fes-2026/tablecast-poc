@@ -29,7 +29,6 @@ for (const { staffLanguage, labels } of [
     });
     const guest = await guestContext.newPage();
     const storeId = "tablecast-komorebi";
-    const tableId = `${storeId}-table-12`;
     let sessionId = "";
     try {
       await staff.goto("/login");
@@ -46,10 +45,9 @@ for (const { staffLanguage, labels } of [
       const current = adminStateSchema.parse(
         await (await staff.request.get(`/api/admin/stores/${storeId}`)).json(),
       );
-      expect(
-        current.vacantTables.some((table) => table.id === tableId),
-        "既存の利用卓を変更しない",
-      ).toBe(true);
+      const vacant = current.vacantTables[0];
+      if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
+      const tableId = vacant.id;
       const opened = await staff.request.post(`/api/admin/stores/${storeId}/tables/open`, {
         data: { tableId, guestCount: 2, locale: "ja" },
       });
@@ -68,7 +66,7 @@ for (const { staffLanguage, labels } of [
       await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
       await staff.getByLabel(labels.admin_pair_table).selectOption(tableId);
       await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
-      await expect(guest.getByRole("banner").getByText("T12", { exact: true })).toBeVisible();
+      await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
       await guest.getByRole("button", { name: "日本語", exact: true }).click();
       await expect(guest.getByRole("tab", { name: "おしながき", exact: true })).toBeVisible();
       const catalogue = catalogSchema.parse(
@@ -97,7 +95,7 @@ for (const { staffLanguage, labels } of [
       );
       const identity = await guest
         .getByRole("banner")
-        .getByText("T12", { exact: true })
+        .getByText(vacant.name, { exact: true })
         .boundingBox();
       if (!identity) throw new Error("卓名の領域を取得できません。");
       for (const control of await guest.getByRole("banner").getByRole("button").all()) {
@@ -317,7 +315,7 @@ for (const { staffLanguage, labels } of [
       await guest.getByRole("tab", { name: en.kiosk_bill, exact: true }).click();
       await guest.getByRole("button", { name: en.kiosk_bill_request, exact: true }).click();
       await expect(billingMetric).toHaveText(String(previousBilling + 1));
-      await staff.getByRole("button", { name: /^T12/ }).click();
+      await staff.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
       await staff.getByRole("tab", { name: labels.admin_orders, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_accept, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_serve, exact: true }).click();

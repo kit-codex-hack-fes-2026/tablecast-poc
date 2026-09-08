@@ -116,6 +116,14 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     onSuccess: receive,
     onError: refresh,
   });
+  const { mutate: changeScreen } = screen;
+  const previousConfigVersion = useRef(data.configVersion);
+  useEffect(() => {
+    if (previousConfigVersion.current !== data.configVersion) {
+      previousConfigVersion.current = data.configVersion;
+      changeScreen({ section: "menu", productId: null });
+    }
+  }, [data.configVersion, changeScreen]);
   const section = screen.isPending ? screen.variables.section : data.uiSection;
   const selectedProductId = screen.isPending ? screen.variables.productId : data.selectedProductId;
   const setSection = (next: UiSection) => {
