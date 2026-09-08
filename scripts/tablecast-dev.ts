@@ -9,6 +9,7 @@ import {
   reserveRuntime,
   saveRuntime,
   tablecastLocal,
+  tablecastContainer,
   tablecastRoot,
   writeLocalConfigs,
 } from "./tablecast-runtime";
@@ -112,7 +113,7 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     if (closing) return;
     closing = true;
     for (const child of children) child.kill("SIGTERM");
-    for (const service of ["livekit", "mailpit"]) {
+    for (const service of tablecastContainer ? [] : ["livekit", "mailpit"]) {
       const containerName = `tablecast-${runtime.id}-${service}`;
       try {
         const { stdout } = await execute("docker", [
@@ -152,48 +153,73 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     launch([process.execPath, "--no-env-file", "run", "--cwd", "apps/emulate", "dev"], {
       TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
     });
-    launch([
-      "docker",
-      "run",
-      "--rm",
-      "--name",
-      `tablecast-${runtime.id}-mailpit`,
-      "--label",
-      `tablecast.root=${tablecastRoot}`,
-      "-p",
-      `127.0.0.1:${runtime.ports.mailpit}:8025`,
-      "-p",
-      `127.0.0.1:${runtime.ports.smtp}:1025`,
-      "axllent/mailpit:v1.29.2",
-    ]);
-    launch([
-      bin("portless"),
-      "proxy",
-      "start",
-      "--foreground",
-      "--no-tls",
-      "--port",
-      String(runtime.ports.proxy),
-    ]);
-    await run(
-      [bin("portless"), "alias", `tablecast-${runtime.id}`, String(runtime.ports.web)],
-      runtime,
-    );
-    await run(
-      [
+    if (tablecastContainer)
+      launch([
+        "mailpit",
+        "--listen",
+        `0.0.0.0:${runtime.ports.mailpit}`,
+        "--smtp",
+        `0.0.0.0:${runtime.ports.smtp}`,
+      ]);
+    else
+      launch([
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        `tablecast-${runtime.id}-mailpit`,
+        "--label",
+        `tablecast.root=${tablecastRoot}`,
+        "-p",
+        `127.0.0.1:${runtime.ports.mailpit}:8025`,
+        "-p",
+        `127.0.0.1:${runtime.ports.smtp}:1025`,
+        "axllent/mailpit:v1.29.2",
+      ]);
+    if (tablecastContainer)
+      launch([
+        "caddy",
+        "run",
+        "--config",
+        join(tablecastRoot, ".devcontainer/Caddyfile"),
+        "--adapter",
+        "caddyfile",
+      ]);
+    else {
+      launch([
         bin("portless"),
-        "alias",
-        `livekit-tablecast-${runtime.id}`,
-        String(runtime.ports.signaling),
-      ],
-      runtime,
-    );
+        "proxy",
+        "start",
+        "--foreground",
+        "--no-tls",
+        "--port",
+        String(runtime.ports.proxy),
+      ]);
+      await run(
+        [
+          bin("portless"),
+          "alias",
+          new URL(runtime.origin).hostname.replace(/\.localhost$/, ""),
+          String(runtime.ports.web),
+        ],
+        runtime,
+      );
+      await run(
+        [
+          bin("portless"),
+          "alias",
+          `livekit-${new URL(runtime.origin).hostname.replace(/\.localhost$/, "")}`,
+          String(runtime.ports.signaling),
+        ],
+        runtime,
+      );
+    }
     launch(
       [
         join(tablecastRoot, "apps/web/node_modules/.bin/vite"),
         parity ? "preview" : "dev",
         "--host",
-        "127.0.0.1",
+        tablecastContainer ? "0.0.0.0" : "127.0.0.1",
         "--port",
         String(runtime.ports.web),
         "--strictPort",
@@ -210,26 +236,29 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
       `port: ${runtime.ports.signaling}\nbind_addresses: ["0.0.0.0"]\nrtc:\n  tcp_port: ${runtime.ports.rtcTcp}\n  udp_port: ${runtime.ports.rtcUdp}\n  node_ip: 127.0.0.1\n  use_external_ip: false\nkeys:\n  ${key}: ${JSON.stringify(secret)}\nlogging:\n  level: warn\n`,
       { mode: 0o600 },
     );
-    launch([
-      "docker",
-      "run",
-      "--rm",
-      "--name",
-      `tablecast-${runtime.id}-livekit`,
-      "--label",
-      `tablecast.root=${tablecastRoot}`,
-      "--mount",
-      `type=bind,source=${join(tablecastLocal, "livekit.yaml")},target=/etc/tablecast-livekit.yaml,readonly`,
-      "-p",
-      `127.0.0.1:${runtime.ports.signaling}:${runtime.ports.signaling}`,
-      "-p",
-      `127.0.0.1:${runtime.ports.rtcTcp}:${runtime.ports.rtcTcp}`,
-      "-p",
-      `127.0.0.1:${runtime.ports.rtcUdp}:${runtime.ports.rtcUdp}/udp`,
-      "livekit/livekit-server:v1.13.6@sha256:e37d68f172556d02aa77968b9fc55ef481468c0315fa38e4fa6c56ce72e3a815",
-      "--config",
-      "/etc/tablecast-livekit.yaml",
-    ]);
+    if (tablecastContainer)
+      launch(["livekit-server", "--config", join(tablecastLocal, "livekit.yaml")]);
+    else
+      launch([
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        `tablecast-${runtime.id}-livekit`,
+        "--label",
+        `tablecast.root=${tablecastRoot}`,
+        "--mount",
+        `type=bind,source=${join(tablecastLocal, "livekit.yaml")},target=/etc/tablecast-livekit.yaml,readonly`,
+        "-p",
+        `127.0.0.1:${runtime.ports.signaling}:${runtime.ports.signaling}`,
+        "-p",
+        `127.0.0.1:${runtime.ports.rtcTcp}:${runtime.ports.rtcTcp}`,
+        "-p",
+        `127.0.0.1:${runtime.ports.rtcUdp}:${runtime.ports.rtcUdp}/udp`,
+        "livekit/livekit-server:v1.13.6@sha256:e37d68f172556d02aa77968b9fc55ef481468c0315fa38e4fa6c56ce72e3a815",
+        "--config",
+        "/etc/tablecast-livekit.yaml",
+      ]);
     let external: ReturnType<typeof parseEnv> = {};
     try {
       external = parseEnv(await readFile(join(tablecastRoot, ".env.secrets.local"), "utf8"));
@@ -327,6 +356,19 @@ async function start(parity: boolean) {
         fetch(`http://127.0.0.1:${runtime.ports.signaling}/`, {
           signal: AbortSignal.timeout(1000),
         }),
+        fetch(`http://127.0.0.1:${runtime.ports.oauth}/.well-known/openid-configuration`, {
+          signal: AbortSignal.timeout(1000),
+        }),
+        fetch(`http://127.0.0.1:${runtime.ports.mailpit}/api/v1/info`, {
+          signal: AbortSignal.timeout(1000),
+        }),
+        ...(tablecastContainer
+          ? [
+              fetch(`http://127.0.0.1:${runtime.ports.proxy}/api/health`, {
+                signal: AbortSignal.timeout(1000),
+              }),
+            ]
+          : []),
       ]);
       if (responses.every((response) => response.ok)) {
         ready = true;
@@ -339,7 +381,7 @@ async function start(parity: boolean) {
   }
   if (!ready) {
     await stop(runtime);
-    throw new Error("Web/API/LiveKitの起動確認がタイムアウトしました。");
+    throw new Error("Web/API/LiveKit/OAuth/Mailpitの起動確認がタイムアウトしました。");
   }
   console.info(`TableCast: ${runtime.origin}\n起動ログ: ${join(tablecastLocal, "logs/dev.log")}`);
 }

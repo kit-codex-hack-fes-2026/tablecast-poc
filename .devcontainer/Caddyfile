@@ -1,0 +1,19 @@
+{
+	auto_https off
+	admin off
+}
+:3000 {
+	@tablecastOAuthCallback path /o/oauth2/v2/auth/callback
+	handle @tablecastOAuthCallback {
+		reverse_proxy 127.0.0.1:3008
+	}
+	handle_path /_tablecast/oauth/* {
+		reverse_proxy 127.0.0.1:3008
+	}
+	handle_path /_tablecast/livekit/* {
+		reverse_proxy 127.0.0.1:7880
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3001
+	}
+}

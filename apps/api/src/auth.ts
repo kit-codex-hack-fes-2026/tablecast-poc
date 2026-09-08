@@ -33,6 +33,7 @@ export type AuthEnv = Pick<
       | "TABLECAST_GOOGLE_CLIENT_ID"
       | "TABLECAST_GOOGLE_CLIENT_SECRET"
       | "TABLECAST_GOOGLE_EMULATOR_URL"
+      | "TABLECAST_GOOGLE_AUTHORIZE_URL"
       | "TABLECAST_ENV"
     >
   > &
@@ -76,7 +77,7 @@ export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
                 {
                   providerId: "google",
                   accountIssuer: tablecastGoogleMockIssuer,
-                  authorizationUrl: `${emulator}/o/oauth2/v2/auth`,
+                  authorizationUrl: `${env.TABLECAST_GOOGLE_AUTHORIZE_URL || emulator}/o/oauth2/v2/auth`,
                   tokenUrl: `${emulator}/oauth2/token`,
                   // emulateのsubは再起動で変わるため、確認済みメールを開発用IDとする。
                   accountSubject: ({ profile }) => z.email().parse(profile.email).toLowerCase(),

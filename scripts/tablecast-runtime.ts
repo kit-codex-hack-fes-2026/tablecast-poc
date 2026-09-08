@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createSocket } from "node:dgram";
 import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv, promisify } from "node:util";
 import { execFile } from "node:child_process";
@@ -12,6 +12,11 @@ import type { ParseError } from "jsonc-parser";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+const { stdout: tablecastCommonPath } = await execute("git", ["rev-parse", "--git-common-dir"], {
+  cwd: tablecastRoot,
+});
+const tablecastCommon = await realpath(resolve(tablecastRoot, tablecastCommonPath.trim()));
+export const tablecastContainer = process.env.TABLECAST_CONTAINER === "1";
 export const tablecastLocal = join(tablecastRoot, ".local");
 const portSchema = z.number().int().min(1024).max(65535);
 const portsSchema = z.object({
@@ -46,6 +51,29 @@ export function worktreeId(root: string, common: string) {
   return createHash("sha256").update(`${common}\0${root}`).digest("hex").slice(0, 10);
 }
 
+function domainLabel(value: string) {
+  const name = value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!name || name.length > 63)
+    throw new Error("worktree名とrepo名には短い英数字の名前を使用してください。");
+  return name;
+}
+
+export function worktreeHost(root: string, common = join(root, ".git")) {
+  const repository = dirname(common);
+  return `${domainLabel(root === repository ? "main" : basename(root))}.${domainLabel(basename(repository))}`;
+}
+
+function localHost(root: string, common: string) {
+  return tablecastContainer &&
+    process.env.TABLECAST_WORKTREE_NAME &&
+    process.env.TABLECAST_REPO_NAME
+    ? `${domainLabel(process.env.TABLECAST_WORKTREE_NAME)}.${domainLabel(process.env.TABLECAST_REPO_NAME)}`
+    : worktreeHost(root, common);
+}
+
 export async function localReleaseSha(root: string) {
   const [{ stdout: sha }, { stdout: status }] = await Promise.all([
     execute("git", ["rev-parse", "HEAD"], { cwd: root }),
@@ -54,14 +82,24 @@ export async function localReleaseSha(root: string) {
   return `${sha.trim()}${status ? "-dirty" : ""}`;
 }
 
-export function assertLocalRuntime(runtime: TablecastRuntime, root: string) {
+export function assertLocalRuntime(
+  runtime: TablecastRuntime,
+  root: string,
+  common = root === tablecastRoot ? tablecastCommon : join(root, ".git"),
+) {
   const local = join(root, ".local");
   if (
     runtime.root !== root ||
     runtime.state !== join(local, "state") ||
     runtime.apiConfig !== join(local, "api.wrangler.json") ||
     runtime.webConfig !== join(local, "web.wrangler.json") ||
-    runtime.origin !== `http://tablecast-${runtime.id}.localhost:${runtime.ports.proxy}` ||
+    !(
+      runtime.origin === `http://${localHost(root, common)}.localhost:${runtime.ports.proxy}` ||
+      (tablecastContainer &&
+        (runtime.origin === "http://localhost:3000" ||
+          runtime.origin === `http://${localHost(root, common)}.container.localhost:3000` ||
+          runtime.origin === `https://${localHost(root, common)}.orb.local`))
+    ) ||
     new Set(Object.values(runtime.ports)).size !== Object.values(runtime.ports).length
   ) {
     throw new Error("別worktree・非ローカル・不整合の設定を操作できません。");
@@ -105,11 +143,33 @@ export async function portAvailable(port: number, udp = false): Promise<boolean>
 
 export async function reserveRuntime() {
   await mkdir(tablecastLocal, { recursive: true, mode: 0o700 });
-  const { stdout } = await execute("git", ["rev-parse", "--git-common-dir"], {
-    cwd: tablecastRoot,
-  });
-  const common = await realpath(resolve(tablecastRoot, stdout.trim()));
+  const common = tablecastCommon;
   const id = worktreeId(tablecastRoot, common);
+  if (tablecastContainer) {
+    const runtime: TablecastRuntime = {
+      id,
+      root: tablecastRoot,
+      ports: {
+        proxy: 3000,
+        web: 3001,
+        inspector: 3002,
+        signaling: 7880,
+        rtcTcp: 7881,
+        rtcUdp: 7882,
+        agent: 8081,
+        storybook: 6006,
+        oauth: 3008,
+        mailpit: 8025,
+        smtp: 1025,
+      },
+      origin: process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000",
+      state: join(tablecastLocal, "state"),
+      apiConfig: join(tablecastLocal, "api.wrangler.json"),
+      webConfig: join(tablecastLocal, "web.wrangler.json"),
+    };
+    await saveRuntime(runtime);
+    return runtime;
+  }
   const lock = join(common, "tablecast-ports.lock");
   await mkdir(lock).catch(() => {
     throw new Error("ポート予約が使用中です。初期化の終了後に再試行してください。");
@@ -122,6 +182,16 @@ export async function reserveRuntime() {
       ledger = ledgerSchema.parse(value);
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    }
+    const host = worktreeHost(tablecastRoot, common);
+    if (
+      Object.values(ledger).some(
+        (entry) => entry.root !== tablecastRoot && worktreeHost(entry.root, common) === host,
+      )
+    ) {
+      throw new Error(
+        "同じ開発ドメインになるworktreeがあります。worktreeのフォルダー名を変更してください。",
+      );
     }
     const occupied = new Set(
       Object.entries(ledger)
@@ -174,7 +244,7 @@ export async function reserveRuntime() {
       id,
       root: tablecastRoot,
       ports,
-      origin: `http://tablecast-${id}.localhost:${ports.proxy}`,
+      origin: `http://${host}.localhost:${ports.proxy}`,
       state: join(tablecastLocal, "state"),
       apiConfig: join(tablecastLocal, "api.wrangler.json"),
       webConfig: join(tablecastLocal, "web.wrangler.json"),
@@ -198,7 +268,15 @@ export function localEnvironment(runtime: TablecastRuntime) {
     TABLECAST_STATE_PATH: runtime.state,
     TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
     PORT: String(runtime.ports.web),
-    HOST: "127.0.0.1",
+    HOST: tablecastContainer ? "0.0.0.0" : "127.0.0.1",
+    TABLECAST_CONTAINER: tablecastContainer ? "1" : "0",
+    TABLECAST_WORKTREE_NAME:
+      process.env.TABLECAST_WORKTREE_NAME ??
+      localHost(runtime.root, tablecastCommon).split(".")[0] ??
+      "main",
+    TABLECAST_REPO_NAME:
+      process.env.TABLECAST_REPO_NAME ?? domainLabel(basename(dirname(tablecastCommon))),
+    TABLECAST_CONTAINER_ORIGIN: runtime.origin,
     PORTLESS_PORT: String(runtime.ports.proxy),
     PORTLESS_STATE_DIR: join(tablecastLocal, "portless"),
     PORTLESS_SYNC_HOSTS: "0",
@@ -236,6 +314,9 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
           TABLECAST_PUBLIC_ORIGIN: runtime.origin,
           TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
           TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
+          ...(tablecastContainer
+            ? { TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth` }
+            : {}),
           TABLECAST_MAILPIT_URL: `http://127.0.0.1:${runtime.ports.mailpit}`,
           TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
         },
@@ -294,7 +375,9 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     TABLECAST_LIVEKIT_API_KEY: `tablecast-${runtime.id}`,
     TABLECAST_LIVEKIT_API_SECRET:
       previous.TABLECAST_LIVEKIT_API_SECRET ?? randomUUID().replaceAll("-", ""),
-    TABLECAST_LIVEKIT_URL: `ws://127.0.0.1:${runtime.ports.signaling}`,
+    TABLECAST_LIVEKIT_URL: tablecastContainer
+      ? `${runtime.origin.replace(/^http/, "ws")}/_tablecast/livekit`
+      : `ws://127.0.0.1:${runtime.ports.signaling}`,
   };
   for (const key of [
     "TABLECAST_INWORLD_VOICES_API_KEY",
