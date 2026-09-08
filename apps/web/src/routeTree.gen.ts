@@ -17,8 +17,26 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
+import { Route as StoresNewRouteImport } from './routes/stores.new'
+import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
+import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
+import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
+import { Route as AdminStoresStoreIdDevicesIndexRouteImport } from './routes/admin.stores.$storeId.devices.index'
+import { Route as AdminStoresStoreIdDevicesNewRouteImport } from './routes/admin.stores.$storeId.devices.new'
+import { Route as AdminStoresStoreIdInvitationsIndexRouteImport } from './routes/admin.stores.$storeId.invitations.index'
+import { Route as AdminStoresStoreIdInvitationsNewRouteImport } from './routes/admin.stores.$storeId.invitations.new'
+import { Route as AdminStoresStoreIdMenuSectionRouteImport } from './routes/admin.stores.$storeId.menu.$section'
+import { Route as AdminStoresStoreIdVisitsIndexRouteImport } from './routes/admin.stores.$storeId.visits.index'
+import { Route as AdminStoresStoreIdVisitsSessionIdRouteImport } from './routes/admin.stores.$storeId.visits.$sessionId'
+import { Route as AdminStoresStoreIdMenuSectionItemIdRouteImport } from './routes/admin.stores.$storeId.menu.$section_.$itemId'
+import { Route as AdminStoresStoreIdMenuChangesIndexRouteImport } from './routes/admin.stores.$storeId.menu.changes.index'
+import { Route as AdminStoresStoreIdMenuChangesDraftIdRouteImport } from './routes/admin.stores.$storeId.menu.changes.$draftId'
+import { Route as AdminStoresStoreIdTablesTableIdOpenRouteImport } from './routes/admin.stores.$storeId.tables.$tableId.open'
+import { Route as AdminStoresStoreIdMenuChangesDraftIdSectionRouteImport } from './routes/admin.stores.$storeId.menu.changes.$draftId_.$section'
+import { Route as AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRouteImport } from './routes/admin.stores.$storeId.menu.changes.$draftId_.$section_.$itemId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +78,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountMcpSessionsRoute = AccountMcpSessionsRouteImport.update({
+  id: '/account_/mcp-sessions',
+  path: '/account/mcp-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLiveRoute = AdminLiveRouteImport.update({
   id: '/admin/live',
   path: '/admin/live',
@@ -70,6 +93,105 @@ const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
   path: '/invitations/$invitationId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoresNewRoute = StoresNewRouteImport.update({
+  id: '/stores/new',
+  path: '/stores/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
+  id: '/admin/stores/$storeId',
+  path: '/admin/stores/$storeId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
+  id: '/floor',
+  path: '/floor',
+  getParentRoute: () => AdminStoresStoreIdRoute,
+} as any)
+const AdminStoresStoreIdMembersRoute =
+  AdminStoresStoreIdMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdDevicesIndexRoute =
+  AdminStoresStoreIdDevicesIndexRouteImport.update({
+    id: '/devices/',
+    path: '/devices/',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdDevicesNewRoute =
+  AdminStoresStoreIdDevicesNewRouteImport.update({
+    id: '/devices/new',
+    path: '/devices/new',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdInvitationsIndexRoute =
+  AdminStoresStoreIdInvitationsIndexRouteImport.update({
+    id: '/invitations/',
+    path: '/invitations/',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdInvitationsNewRoute =
+  AdminStoresStoreIdInvitationsNewRouteImport.update({
+    id: '/invitations/new',
+    path: '/invitations/new',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuSectionRoute =
+  AdminStoresStoreIdMenuSectionRouteImport.update({
+    id: '/menu/$section',
+    path: '/menu/$section',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdVisitsIndexRoute =
+  AdminStoresStoreIdVisitsIndexRouteImport.update({
+    id: '/visits/',
+    path: '/visits/',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdVisitsSessionIdRoute =
+  AdminStoresStoreIdVisitsSessionIdRouteImport.update({
+    id: '/visits/$sessionId',
+    path: '/visits/$sessionId',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuSectionItemIdRoute =
+  AdminStoresStoreIdMenuSectionItemIdRouteImport.update({
+    id: '/menu/$section_/$itemId',
+    path: '/menu/$section/$itemId',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuChangesIndexRoute =
+  AdminStoresStoreIdMenuChangesIndexRouteImport.update({
+    id: '/menu/changes/',
+    path: '/menu/changes/',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuChangesDraftIdRoute =
+  AdminStoresStoreIdMenuChangesDraftIdRouteImport.update({
+    id: '/menu/changes/$draftId',
+    path: '/menu/changes/$draftId',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdTablesTableIdOpenRoute =
+  AdminStoresStoreIdTablesTableIdOpenRouteImport.update({
+    id: '/tables/$tableId/open',
+    path: '/tables/$tableId/open',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuChangesDraftIdSectionRoute =
+  AdminStoresStoreIdMenuChangesDraftIdSectionRouteImport.update({
+    id: '/menu/changes/$draftId_/$section',
+    path: '/menu/changes/$draftId/$section',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute =
+  AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRouteImport.update({
+    id: '/menu/changes/$draftId_/$section_/$itemId',
+    path: '/menu/changes/$draftId/$section/$itemId',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,8 +202,26 @@ export interface FileRoutesByFullPath {
   '/organisations': typeof OrganisationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/stores/new': typeof StoresNewRoute
+  '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
+  '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
+  '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
+  '/admin/stores/$storeId/invitations/': typeof AdminStoresStoreIdInvitationsIndexRoute
+  '/admin/stores/$storeId/visits/': typeof AdminStoresStoreIdVisitsIndexRoute
+  '/admin/stores/$storeId/menu/$section/$itemId': typeof AdminStoresStoreIdMenuSectionItemIdRoute
+  '/admin/stores/$storeId/menu/changes/$draftId': typeof AdminStoresStoreIdMenuChangesDraftIdRoute
+  '/admin/stores/$storeId/tables/$tableId/open': typeof AdminStoresStoreIdTablesTableIdOpenRoute
+  '/admin/stores/$storeId/menu/changes/': typeof AdminStoresStoreIdMenuChangesIndexRoute
+  '/admin/stores/$storeId/menu/changes/$draftId/$section': typeof AdminStoresStoreIdMenuChangesDraftIdSectionRoute
+  '/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId': typeof AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,8 +232,26 @@ export interface FileRoutesByTo {
   '/organisations': typeof OrganisationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/stores/new': typeof StoresNewRoute
+  '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
+  '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
+  '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/devices': typeof AdminStoresStoreIdDevicesIndexRoute
+  '/admin/stores/$storeId/invitations': typeof AdminStoresStoreIdInvitationsIndexRoute
+  '/admin/stores/$storeId/visits': typeof AdminStoresStoreIdVisitsIndexRoute
+  '/admin/stores/$storeId/menu/$section/$itemId': typeof AdminStoresStoreIdMenuSectionItemIdRoute
+  '/admin/stores/$storeId/menu/changes/$draftId': typeof AdminStoresStoreIdMenuChangesDraftIdRoute
+  '/admin/stores/$storeId/tables/$tableId/open': typeof AdminStoresStoreIdTablesTableIdOpenRoute
+  '/admin/stores/$storeId/menu/changes': typeof AdminStoresStoreIdMenuChangesIndexRoute
+  '/admin/stores/$storeId/menu/changes/$draftId/$section': typeof AdminStoresStoreIdMenuChangesDraftIdSectionRoute
+  '/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId': typeof AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,8 +263,26 @@ export interface FileRoutesById {
   '/organisations': typeof OrganisationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/stores/new': typeof StoresNewRoute
+  '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
+  '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
+  '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
+  '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
+  '/admin/stores/$storeId/invitations/': typeof AdminStoresStoreIdInvitationsIndexRoute
+  '/admin/stores/$storeId/visits/': typeof AdminStoresStoreIdVisitsIndexRoute
+  '/admin/stores/$storeId/menu/$section_/$itemId': typeof AdminStoresStoreIdMenuSectionItemIdRoute
+  '/admin/stores/$storeId/menu/changes/$draftId': typeof AdminStoresStoreIdMenuChangesDraftIdRoute
+  '/admin/stores/$storeId/tables/$tableId/open': typeof AdminStoresStoreIdTablesTableIdOpenRoute
+  '/admin/stores/$storeId/menu/changes/': typeof AdminStoresStoreIdMenuChangesIndexRoute
+  '/admin/stores/$storeId/menu/changes/$draftId_/$section': typeof AdminStoresStoreIdMenuChangesDraftIdSectionRoute
+  '/admin/stores/$storeId/menu/changes/$draftId_/$section_/$itemId': typeof AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,8 +295,26 @@ export interface FileRouteTypes {
     | '/organisations'
     | '/register'
     | '/reset-password'
+    | '/account/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/stores/new'
+    | '/admin/stores/$storeId'
+    | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/devices/new'
+    | '/admin/stores/$storeId/invitations/new'
+    | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/devices/'
+    | '/admin/stores/$storeId/invitations/'
+    | '/admin/stores/$storeId/visits/'
+    | '/admin/stores/$storeId/menu/$section/$itemId'
+    | '/admin/stores/$storeId/menu/changes/$draftId'
+    | '/admin/stores/$storeId/tables/$tableId/open'
+    | '/admin/stores/$storeId/menu/changes/'
+    | '/admin/stores/$storeId/menu/changes/$draftId/$section'
+    | '/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,8 +325,26 @@ export interface FileRouteTypes {
     | '/organisations'
     | '/register'
     | '/reset-password'
+    | '/account/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/stores/new'
+    | '/admin/stores/$storeId'
+    | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/devices/new'
+    | '/admin/stores/$storeId/invitations/new'
+    | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/devices'
+    | '/admin/stores/$storeId/invitations'
+    | '/admin/stores/$storeId/visits'
+    | '/admin/stores/$storeId/menu/$section/$itemId'
+    | '/admin/stores/$storeId/menu/changes/$draftId'
+    | '/admin/stores/$storeId/tables/$tableId/open'
+    | '/admin/stores/$storeId/menu/changes'
+    | '/admin/stores/$storeId/menu/changes/$draftId/$section'
+    | '/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId'
   id:
     | '__root__'
     | '/'
@@ -143,8 +355,26 @@ export interface FileRouteTypes {
     | '/organisations'
     | '/register'
     | '/reset-password'
+    | '/account_/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/stores/new'
+    | '/admin/stores/$storeId'
+    | '/admin/stores/$storeId/floor'
+    | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/devices/new'
+    | '/admin/stores/$storeId/invitations/new'
+    | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/devices/'
+    | '/admin/stores/$storeId/invitations/'
+    | '/admin/stores/$storeId/visits/'
+    | '/admin/stores/$storeId/menu/$section_/$itemId'
+    | '/admin/stores/$storeId/menu/changes/$draftId'
+    | '/admin/stores/$storeId/tables/$tableId/open'
+    | '/admin/stores/$storeId/menu/changes/'
+    | '/admin/stores/$storeId/menu/changes/$draftId_/$section'
+    | '/admin/stores/$storeId/menu/changes/$draftId_/$section_/$itemId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,8 +386,11 @@ export interface RootRouteChildren {
   OrganisationsRoute: typeof OrganisationsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  AccountMcpSessionsRoute: typeof AccountMcpSessionsRoute
   AdminLiveRoute: typeof AdminLiveRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
+  StoresNewRoute: typeof StoresNewRoute
+  AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -218,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account_/mcp-sessions': {
+      id: '/account_/mcp-sessions'
+      path: '/account/mcp-sessions'
+      fullPath: '/account/mcp-sessions'
+      preLoaderRoute: typeof AccountMcpSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/live': {
       id: '/admin/live'
       path: '/admin/live'
@@ -232,8 +472,174 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvitationsInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stores/new': {
+      id: '/stores/new'
+      path: '/stores/new'
+      fullPath: '/stores/new'
+      preLoaderRoute: typeof StoresNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/stores/$storeId': {
+      id: '/admin/stores/$storeId'
+      path: '/admin/stores/$storeId'
+      fullPath: '/admin/stores/$storeId'
+      preLoaderRoute: typeof AdminStoresStoreIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/stores/$storeId/floor': {
+      id: '/admin/stores/$storeId/floor'
+      path: '/floor'
+      fullPath: '/admin/stores/$storeId/floor'
+      preLoaderRoute: typeof AdminStoresStoreIdFloorRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/members': {
+      id: '/admin/stores/$storeId/members'
+      path: '/members'
+      fullPath: '/admin/stores/$storeId/members'
+      preLoaderRoute: typeof AdminStoresStoreIdMembersRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/devices/': {
+      id: '/admin/stores/$storeId/devices/'
+      path: '/devices'
+      fullPath: '/admin/stores/$storeId/devices/'
+      preLoaderRoute: typeof AdminStoresStoreIdDevicesIndexRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/devices/new': {
+      id: '/admin/stores/$storeId/devices/new'
+      path: '/devices/new'
+      fullPath: '/admin/stores/$storeId/devices/new'
+      preLoaderRoute: typeof AdminStoresStoreIdDevicesNewRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/invitations/': {
+      id: '/admin/stores/$storeId/invitations/'
+      path: '/invitations'
+      fullPath: '/admin/stores/$storeId/invitations/'
+      preLoaderRoute: typeof AdminStoresStoreIdInvitationsIndexRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/invitations/new': {
+      id: '/admin/stores/$storeId/invitations/new'
+      path: '/invitations/new'
+      fullPath: '/admin/stores/$storeId/invitations/new'
+      preLoaderRoute: typeof AdminStoresStoreIdInvitationsNewRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/$section': {
+      id: '/admin/stores/$storeId/menu/$section'
+      path: '/menu/$section'
+      fullPath: '/admin/stores/$storeId/menu/$section'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuSectionRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/visits/': {
+      id: '/admin/stores/$storeId/visits/'
+      path: '/visits'
+      fullPath: '/admin/stores/$storeId/visits/'
+      preLoaderRoute: typeof AdminStoresStoreIdVisitsIndexRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/visits/$sessionId': {
+      id: '/admin/stores/$storeId/visits/$sessionId'
+      path: '/visits/$sessionId'
+      fullPath: '/admin/stores/$storeId/visits/$sessionId'
+      preLoaderRoute: typeof AdminStoresStoreIdVisitsSessionIdRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/$section_/$itemId': {
+      id: '/admin/stores/$storeId/menu/$section_/$itemId'
+      path: '/menu/$section/$itemId'
+      fullPath: '/admin/stores/$storeId/menu/$section/$itemId'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuSectionItemIdRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/changes/': {
+      id: '/admin/stores/$storeId/menu/changes/'
+      path: '/menu/changes'
+      fullPath: '/admin/stores/$storeId/menu/changes/'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuChangesIndexRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/changes/$draftId': {
+      id: '/admin/stores/$storeId/menu/changes/$draftId'
+      path: '/menu/changes/$draftId'
+      fullPath: '/admin/stores/$storeId/menu/changes/$draftId'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuChangesDraftIdRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/tables/$tableId/open': {
+      id: '/admin/stores/$storeId/tables/$tableId/open'
+      path: '/tables/$tableId/open'
+      fullPath: '/admin/stores/$storeId/tables/$tableId/open'
+      preLoaderRoute: typeof AdminStoresStoreIdTablesTableIdOpenRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/changes/$draftId_/$section': {
+      id: '/admin/stores/$storeId/menu/changes/$draftId_/$section'
+      path: '/menu/changes/$draftId/$section'
+      fullPath: '/admin/stores/$storeId/menu/changes/$draftId/$section'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuChangesDraftIdSectionRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/menu/changes/$draftId_/$section_/$itemId': {
+      id: '/admin/stores/$storeId/menu/changes/$draftId_/$section_/$itemId'
+      path: '/menu/changes/$draftId/$section/$itemId'
+      fullPath: '/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
   }
 }
+
+interface AdminStoresStoreIdRouteChildren {
+  AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
+  AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
+  AdminStoresStoreIdDevicesNewRoute: typeof AdminStoresStoreIdDevicesNewRoute
+  AdminStoresStoreIdInvitationsNewRoute: typeof AdminStoresStoreIdInvitationsNewRoute
+  AdminStoresStoreIdMenuSectionRoute: typeof AdminStoresStoreIdMenuSectionRoute
+  AdminStoresStoreIdVisitsSessionIdRoute: typeof AdminStoresStoreIdVisitsSessionIdRoute
+  AdminStoresStoreIdDevicesIndexRoute: typeof AdminStoresStoreIdDevicesIndexRoute
+  AdminStoresStoreIdInvitationsIndexRoute: typeof AdminStoresStoreIdInvitationsIndexRoute
+  AdminStoresStoreIdVisitsIndexRoute: typeof AdminStoresStoreIdVisitsIndexRoute
+  AdminStoresStoreIdMenuSectionItemIdRoute: typeof AdminStoresStoreIdMenuSectionItemIdRoute
+  AdminStoresStoreIdMenuChangesDraftIdRoute: typeof AdminStoresStoreIdMenuChangesDraftIdRoute
+  AdminStoresStoreIdTablesTableIdOpenRoute: typeof AdminStoresStoreIdTablesTableIdOpenRoute
+  AdminStoresStoreIdMenuChangesIndexRoute: typeof AdminStoresStoreIdMenuChangesIndexRoute
+  AdminStoresStoreIdMenuChangesDraftIdSectionRoute: typeof AdminStoresStoreIdMenuChangesDraftIdSectionRoute
+  AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute: typeof AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute
+}
+
+const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
+  AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
+  AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
+  AdminStoresStoreIdDevicesNewRoute: AdminStoresStoreIdDevicesNewRoute,
+  AdminStoresStoreIdInvitationsNewRoute: AdminStoresStoreIdInvitationsNewRoute,
+  AdminStoresStoreIdMenuSectionRoute: AdminStoresStoreIdMenuSectionRoute,
+  AdminStoresStoreIdVisitsSessionIdRoute:
+    AdminStoresStoreIdVisitsSessionIdRoute,
+  AdminStoresStoreIdDevicesIndexRoute: AdminStoresStoreIdDevicesIndexRoute,
+  AdminStoresStoreIdInvitationsIndexRoute:
+    AdminStoresStoreIdInvitationsIndexRoute,
+  AdminStoresStoreIdVisitsIndexRoute: AdminStoresStoreIdVisitsIndexRoute,
+  AdminStoresStoreIdMenuSectionItemIdRoute:
+    AdminStoresStoreIdMenuSectionItemIdRoute,
+  AdminStoresStoreIdMenuChangesDraftIdRoute:
+    AdminStoresStoreIdMenuChangesDraftIdRoute,
+  AdminStoresStoreIdTablesTableIdOpenRoute:
+    AdminStoresStoreIdTablesTableIdOpenRoute,
+  AdminStoresStoreIdMenuChangesIndexRoute:
+    AdminStoresStoreIdMenuChangesIndexRoute,
+  AdminStoresStoreIdMenuChangesDraftIdSectionRoute:
+    AdminStoresStoreIdMenuChangesDraftIdSectionRoute,
+  AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute:
+    AdminStoresStoreIdMenuChangesDraftIdSectionItemIdRoute,
+}
+
+const AdminStoresStoreIdRouteWithChildren =
+  AdminStoresStoreIdRoute._addFileChildren(AdminStoresStoreIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -244,8 +650,11 @@ const rootRouteChildren: RootRouteChildren = {
   OrganisationsRoute: OrganisationsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  AccountMcpSessionsRoute: AccountMcpSessionsRoute,
   AdminLiveRoute: AdminLiveRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
+  StoresNewRoute: StoresNewRoute,
+  AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

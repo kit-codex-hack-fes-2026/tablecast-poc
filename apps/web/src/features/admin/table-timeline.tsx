@@ -1,12 +1,16 @@
 import type { TableState } from "@tablecast/api/schema";
-import { Bell, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Bell, ChevronRight, CirclePause, Mic, TriangleAlert } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { DataTable } from "../../components/data-table";
+import { DateTime } from "../../components/date-time";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Table, TableCell, TableHead } from "../../components/ui/table";
-import { money, time, useI18n } from "../../i18n/locale";
+import { money } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 import { EventLabel } from "./events";
 
+type FloorRow = { id: string; name: string; visit: TableState | null };
 export function TableTimeline({
   tables,
   vacantTables = [],
@@ -19,171 +23,194 @@ export function TableTimeline({
   onOpen?: (table: { id: string; name: string }) => void;
 }) {
   const { locale, t } = useI18n();
-  const [initialOrder] = useState(
-    () =>
-      new Map(
-        [...tables]
-          .sort((a, b) => priority(a) - priority(b) || a.tableName.localeCompare(b.tableName))
-          .map((table, index) => [table.id, index]),
-      ),
-  );
-  const ordered = [...tables].sort(
-    (a, b) =>
-      (initialOrder.get(a.id) ?? Infinity) - (initialOrder.get(b.id) ?? Infinity) ||
-      a.tableName.localeCompare(b.tableName),
-  );
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);
   }, []);
+  const [initialOrder] = useState(
+    () =>
+      new Map(
+        [...tables]
+          .toSorted((a, b) => priority(a) - priority(b) || a.tableName.localeCompare(b.tableName))
+          .map((item, index) => [item.id, index]),
+      ),
+  );
+  const rows: FloorRow[] = [
+    ...[...tables]
+      .toSorted(
+        (a, b) =>
+          (initialOrder.get(a.id) ?? Infinity) - (initialOrder.get(b.id) ?? Infinity) ||
+          a.tableName.localeCompare(b.tableName),
+      )
+      .map((visit) => ({ id: visit.id, name: visit.tableName, visit })),
+    ...vacantTables.map((item) => ({ ...item, visit: null })),
+  ];
+  const columns = useMemo(
+    () => tableTimelineColumns(t, locale, now, onSelect, onOpen),
+    [t, locale, now, onSelect, onOpen],
+  );
   return (
-    <div className="overflow-x-auto">
-      <Table className="border-collapse text-left w-full whitespace-nowrap [&_th:first-child]:pl-5 [&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-card [&_th:first-child]:z-1 [&_th:first-child]:border-r [&_th:first-child]:border-r-border [&_td:first-child]:pl-5 [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-card [&_td:first-child]:z-1 [&_td:first-child]:border-r [&_td:first-child]:border-r-border [&_tr:last-child_td]:border-b-0 [&_.needs-attention]:bg-accent-soft [&_.needs-attention_td:first-child]:bg-accent-soft">
-        <thead>
-          <tr>
-            <TableHead>{t("admin_table")}</TableHead>
-            <TableHead>{t("admin_elapsed")}</TableHead>
-            <TableHead>{t("common_status")}</TableHead>
-            <TableHead>{t("admin_voice")}</TableHead>
-            <TableHead>{t("admin_locale")}</TableHead>
-            <TableHead>{t("admin_timeline")}</TableHead>
-            <TableHead>{t("admin_cart")}</TableHead>
-            <TableHead>{t("admin_ordered")}</TableHead>
-            <TableHead>{t("admin_due")}</TableHead>
-            <TableHead>{t("admin_attention")}</TableHead>
-            <TableHead>{t("admin_updated")}</TableHead>
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((table) => {
-            const last = table.events.at(-1);
-            return (
-              <tr key={table.id} className={table.staffCalled ? "needs-attention" : ""}>
-                <TableCell aria-label={table.tableName}>
-                  <Button
-                    variant="ghost"
-                    type="button"
-                    className="text-left p-0 min-h-12 min-w-20 block h-auto whitespace-normal"
-                    onClick={() => onSelect(table.id)}
-                  >
-                    <strong className="block text-lg font-semibold">{table.tableName}</strong>
-                    <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-sm">
-                      {table.guestCount} {t("admin_guests")}
-                      <ChevronRight size={14} aria-hidden="true" />
-                    </span>
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  {Math.max(0, Math.floor((now - table.openedAt) / 60_000))} {t("kiosk_minutes")}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    data-state={table.status}
-                    className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-sm text-success bg-success-soft [&[data-state=closed]]:text-muted-foreground [&[data-state=closed]]:bg-surface-subtle [&[data-state=closed]]:border-border"
-                  >
-                    {table.status === "open" ? t("admin_open") : t("admin_closed")}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span
-                    data-state={table.voiceState}
-                    className="inline-flex items-center gap-1 text-muted-foreground text-sm [&_>_span]:w-1 [&_>_span]:h-1 [&_>_span]:rounded-full [&_>_span]:bg-muted [&[data-state=active]_>_span]:bg-success [&[data-state=error]_>_span]:bg-accent"
-                  >
-                    <span />
-                    {table.voiceState === "active"
-                      ? t("admin_active_voice")
-                      : table.voiceState === "error"
-                        ? t("admin_error_voice")
-                        : t("admin_stopped")}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-muted-foreground">
-                    {table.locale === "ja" ? "日本語" : "English"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div className="relative flex items-center gap-1 w-32 h-5 border-b border-b-border">
-                    {table.events.slice(-10).map((event) => (
-                      <span
-                        key={event.cursor}
-                        data-state={event.kind.split(".")[0]}
-                        className="w-1.5 h-4 rounded-sm bg-muted relative [&[data-state=order]]:bg-success [&[data-state=order]]:h-5 [&[data-state=staff]]:bg-accent [&[data-state=staff]]:h-6 [&[data-state=billing]]:bg-accent [&[data-state=billing]]:h-6 [&[data-state=bill]]:bg-accent [&[data-state=bill]]:h-6 [&:hover_.timeline-tooltip]:block"
-                      >
-                        <span className="timeline-tooltip hidden absolute left-0 bottom-full p-1 bg-foreground text-card rounded-sm z-2 text-sm">
-                          <EventLabel event={event} /> · {time(event.createdAt, locale)}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>{money(table.cart.total, locale)}</TableCell>
-                <TableCell>{money(table.bill.orderedTotal, locale)}</TableCell>
-                <TableCell>
-                  <strong>{money(table.bill.due, locale)}</strong>
-                </TableCell>
-                <TableCell>
-                  {table.staffCalled ? (
-                    <span className="flex items-center gap-1 text-accent-foreground text-sm">
-                      <Bell size={16} aria-hidden="true" />
-                      {t("admin_attention")}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell>{last ? time(last.createdAt, locale) : "—"}</TableCell>
-              </tr>
-            );
-          })}
-          {vacantTables.map((table) => (
-            <tr key={table.id}>
-              <TableCell aria-label={table.name}>
-                <Button
-                  variant="ghost"
-                  type="button"
-                  className="text-left p-0 min-h-12 min-w-20 block h-auto whitespace-normal"
-                  onClick={() => onOpen?.(table)}
-                >
-                  <strong className="block text-lg font-semibold">{table.name}</strong>
-                  <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-sm">
-                    {t("admin_open_table")}
-                  </span>
-                </Button>
-              </TableCell>
-              <TableCell>—</TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-sm text-success bg-success-soft [&.closed]:text-muted-foreground [&.closed]:bg-surface-subtle [&.closed]:border-border closed"
-                >
-                  {t("admin_vacant")}
-                </Badge>
-              </TableCell>
-              <TableCell>—</TableCell>
-              <TableCell>—</TableCell>
-              <TableCell>—</TableCell>
-              <TableCell>{money(0, locale)}</TableCell>
-              <TableCell>{money(0, locale)}</TableCell>
-              <TableCell>{money(0, locale)}</TableCell>
-              <TableCell>—</TableCell>
-              <TableCell>—</TableCell>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-      {!tables.length && !vacantTables.length && (
-        <p className="py-12 px-6 text-muted-foreground text-center">{t("admin_no_tables")}</p>
-      )}
-    </div>
+    <DataTable
+      data={rows}
+      columns={columns}
+      getRowId={(row) => row.id}
+      searchLabel={t("device_search_table")}
+      empty={t("admin_no_tables")}
+      pagination={false}
+    />
   );
 }
-
 function priority(table: TableState) {
   if (table.staffCalled) return 0;
   if (table.billRequested && table.bill.due > 0) return 1;
   if (table.voiceState === "error") return 2;
   return 3;
+}
+
+function tableTimelineColumns(
+  t: ReturnType<typeof useI18n>["t"],
+  locale: ReturnType<typeof useI18n>["locale"],
+  now: number,
+  onSelect: (id: string) => void,
+  onOpen: ((table: { id: string; name: string }) => void) | undefined,
+): ColumnDef<FloorRow>[] {
+  return [
+    {
+      accessorKey: "name",
+      header: t("admin_table"),
+      cell: ({ row }) => (
+        <Button
+          className="h-auto min-h-12 justify-start px-0 text-left"
+          variant="ghost"
+          onClick={() =>
+            row.original.visit
+              ? onSelect(row.original.id)
+              : onOpen?.({ id: row.original.id, name: row.original.name })
+          }
+        >
+          <div>
+            <strong className="block text-base">{row.original.name}</strong>
+            <span className="block text-sm text-muted-foreground">
+              {row.original.visit
+                ? `${row.original.visit.guestCount} ${t("admin_guests")}`
+                : t("admin_open_table")}
+            </span>
+          </div>
+          <ChevronRight className="size-4" />
+        </Button>
+      ),
+    },
+    {
+      id: "elapsed",
+      header: t("admin_elapsed"),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap tabular-nums">
+          {row.original.visit
+            ? `${Math.max(0, Math.floor((now - row.original.visit.openedAt) / 60_000))} ${t("kiosk_minutes")}`
+            : "—"}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: t("common_status"),
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          className={
+            row.original.visit
+              ? "bg-success-soft text-success"
+              : "bg-secondary text-muted-foreground"
+          }
+        >
+          {t(row.original.visit ? "admin_open" : "admin_vacant")}
+        </Badge>
+      ),
+    },
+    {
+      id: "voice",
+      header: t("admin_voice"),
+      cell: ({ row }) => {
+        const status = row.original.visit?.voiceState;
+        return status ? (
+          <span
+            className={`flex items-center gap-2 whitespace-nowrap text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}
+          >
+            {status === "active" ? (
+              <Mic className="size-4" />
+            ) : status === "error" ? (
+              <TriangleAlert className="size-4" />
+            ) : (
+              <CirclePause className="size-4" />
+            )}
+            {t(
+              status === "active"
+                ? "admin_active_voice"
+                : status === "error"
+                  ? "admin_error_voice"
+                  : "admin_stopped",
+            )}
+          </span>
+        ) : (
+          "—"
+        );
+      },
+    },
+    {
+      id: "locale",
+      header: t("admin_locale"),
+      cell: ({ row }) =>
+        row.original.visit ? (row.original.visit.locale === "ja" ? "日本語" : "English") : "—",
+    },
+    {
+      id: "cart",
+      header: t("admin_cart"),
+      cell: ({ row }) => money(row.original.visit?.cart.total ?? 0, locale),
+    },
+    {
+      id: "ordered",
+      header: t("admin_ordered"),
+      cell: ({ row }) => money(row.original.visit?.bill.orderedTotal ?? 0, locale),
+    },
+    {
+      id: "due",
+      header: t("admin_due"),
+      cell: ({ row }) => (
+        <strong className="whitespace-nowrap tabular-nums">
+          {money(row.original.visit?.bill.due ?? 0, locale)}
+        </strong>
+      ),
+    },
+    {
+      id: "attention",
+      header: t("admin_attention"),
+      cell: ({ row }) =>
+        row.original.visit?.staffCalled ? (
+          <Badge className="bg-accent-soft text-accent-foreground">
+            <Bell className="size-4" />
+            {t("admin_attention")}
+          </Badge>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      id: "latest",
+      header: t("admin_updated"),
+      cell: ({ row }) => {
+        const event = row.original.visit?.events.at(-1);
+        return event ? (
+          <div className="min-w-40 space-y-1 text-sm">
+            <EventLabel event={event} />
+            <div>
+              <DateTime value={event.createdAt} />
+            </div>
+          </div>
+        ) : (
+          "—"
+        );
+      },
+    },
+  ];
 }

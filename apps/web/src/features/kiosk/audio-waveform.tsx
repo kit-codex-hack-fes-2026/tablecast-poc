@@ -1,4 +1,3 @@
-import { animate, mix } from "motion";
 import { SmokeRing } from "@paper-design/shaders-react";
 import { createAudioAnalyser, type LocalAudioTrack, type RemoteAudioTrack } from "livekit-client";
 import {
@@ -11,6 +10,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { animate, mix } from "motion";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { VoiceStatus } from "./voice-connection";
 
@@ -190,7 +190,7 @@ export function AudioWaveform({
           />
         </div>
         {state === "tool" && (
-          <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:[animation-duration:6s]" />
+          <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:animation-duration-[6s]" />
         )}
       </div>
       <div className="min-w-0 flex-1">

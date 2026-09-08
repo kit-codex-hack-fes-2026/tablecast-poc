@@ -9,12 +9,6 @@ import type {
   UiSection,
   UiSectionInput,
 } from "@tablecast/api/schema";
-import {
-  catalogSchema,
-  orderSchema,
-  snapshotSchema,
-  tableStateSchema,
-} from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -22,22 +16,21 @@ import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { money, time, useI18n } from "../../i18n/locale";
-import { api, ApiFailure, json } from "../../lib/api";
+import { money, time } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
+import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { CartLines } from "./cart-lines";
+import { conversationLines } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { Pairing } from "./pairing";
 import { ProductPage } from "./product-dialog";
+import { latestTable } from "./table-cache";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
-import { conversationLines, VoicePanel } from "./voice-panel";
+import { VoicePanel } from "./voice-panel";
 
 const tableKey = ["tablecast-table"];
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
-export function latestTable(current: TableState | undefined | null, incoming: TableState) {
-  return current?.id === incoming.id && current.cursor > incoming.cursor ? current : incoming;
-}
-
 export function Kiosk() {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -46,7 +39,7 @@ export function Kiosk() {
     queryKey: tableKey,
     queryFn: async () => {
       try {
-        const result = await api("/api/table", {}, tableStateSchema);
+        const result = await parseResponse(rpc.api.table.$get());
         setWasConnected(true);
         return latestTable(client.getQueryData<TableState | null>(tableKey), result);
       } catch (error) {
@@ -62,7 +55,10 @@ export function Kiosk() {
   if ((table.data === null && wasConnected) || table.data?.status === "closed")
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
-        <span className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl">
+        <span
+          data-ui="brand"
+          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
+        >
           TableCast
         </span>
         <h1>{t("kiosk_closed")}</h1>
@@ -73,7 +69,8 @@ export function Kiosk() {
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
         <a
-          className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
+          data-ui="brand"
+          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
           href="/"
         >
           TableCast
@@ -88,12 +85,12 @@ export function Kiosk() {
   return <TableSession key={table.data.id} data={table.data} refresh={refresh} />;
 }
 
-function TableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
+function useTableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
   const catalog = useQuery({
     queryKey: ["tablecast-catalog", data.storeId, data.configVersion],
-    queryFn: () => api("/api/table/catalog", {}, catalogSchema),
+    queryFn: () => parseResponse(rpc.api.table.catalog.$get()),
     enabled: true,
   });
   const [view, setView] = useState<VoiceView>({ status: "idle" });
@@ -111,8 +108,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
   const screen = useMutation({
     scope: { id: `tablecast-ui-${data.id}` },
-    mutationFn: (input: UiSectionInput) =>
-      api("/api/table/ui", json("PATCH", input), tableStateSchema),
+    mutationFn: (input: UiSectionInput) => parseResponse(rpc.api.table.ui.$patch({ json: input })),
     onSuccess: receive,
     onError: refresh,
   });
@@ -153,12 +149,12 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   const speed = useMutation({
     scope: { id: `tablecast-speed-${data.id}` },
     mutationFn: (value: number) =>
-      api("/api/table/voice/speed", json("PATCH", { speed: value }), tableStateSchema),
+      parseResponse(rpc.api.table.voice.speed.$patch({ json: { speed: value } })),
     onSuccess: receive,
     onError: refresh,
   });
   const [submitKey, setSubmitKey] = useState("");
-  useRealtime("/api/table", data.cursor, refresh);
+  useRealtime("table", data.cursor, refresh);
   const snapshot =
     prepared &&
     prepared.cartVersion === data.cart.version &&
@@ -193,7 +189,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   }, [data.voiceSessionId, data.voiceState, voice]);
   const updateCart = useMutation({
     mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
-      api("/api/table/cart", json("PUT", { expectedVersion, lines }), tableStateSchema),
+      parseResponse(rpc.api.table.cart.$put({ json: { expectedVersion, lines } })),
     onSuccess: (updated) => {
       receive(updated);
       setChosen(undefined);
@@ -204,10 +200,10 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   });
   const prepare = useMutation({
     mutationFn: () =>
-      api(
-        "/api/table/confirm",
-        json("POST", { expectedVersion: data.cart.version, channel: "gui" }),
-        snapshotSchema,
+      parseResponse(
+        rpc.api.table.confirm.$post({
+          json: { expectedVersion: data.cart.version, channel: "gui" },
+        }),
       ),
     onSuccess: (confirmation) => {
       client.setQueryData<TableState>(tableKey, (current) =>
@@ -220,28 +216,31 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     onError: refresh,
   });
   const submit = useMutation({
-    mutationFn: () =>
-      api(
-        "/api/table/orders",
-        json("POST", { snapshotId: snapshot?.id, idempotencyKey: submitKey, approved: true }),
-        orderSchema,
-      ),
+    mutationFn: () => {
+      if (!snapshot) throw new ApiFailure(409, "SNAPSHOT_REQUIRED");
+      return parseResponse(
+        rpc.api.table.orders.$post({
+          json: { snapshotId: snapshot.id, idempotencyKey: submitKey, approved: true },
+        }),
+      );
+    },
     onSuccess: () => {
       setSnapshot(undefined);
       setOrdered(true);
+      void client.invalidateQueries({ queryKey: tableKey });
       refresh();
     },
     onError: refresh,
   });
   const call = useMutation({
     mutationFn: (bill: boolean) =>
-      api(bill ? "/api/table/bill/request" : "/api/table/call", json("POST", {}), tableStateSchema),
+      parseResponse(bill ? rpc.api.table.bill.request.$post() : rpc.api.table.call.$post()),
     onSuccess: receive,
   });
   const language = useMutation({
     mutationFn: async (next: Locale) => {
       await voice.stop({ existingSession: view.error === "active" });
-      return api("/api/table/locale", json("PATCH", { locale: next }), tableStateSchema);
+      return parseResponse(rpc.api.table.locale.$patch({ json: { locale: next } }));
     },
     onSuccess: (updated) => {
       receive(updated);
@@ -274,8 +273,64 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
   }
   const voiceActive = view.error === "active" || !["idle", "paused", "error"].includes(view.status);
 
+  return {
+    locale,
+    t,
+    catalog,
+    view,
+    voice,
+    setSnapshot,
+    confirmationHeading,
+    ordered,
+    setOrdered,
+    screen,
+    section,
+    selectedProductId,
+    setSection,
+    choose,
+    selection,
+    speed,
+    snapshot,
+    updateCart,
+    prepare,
+    submit,
+    call,
+    language,
+    currentLines,
+    edit,
+    voiceActive,
+  };
+}
+function TableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
+  const {
+    locale,
+    t,
+    catalog,
+    view,
+    voice,
+    setSnapshot,
+    confirmationHeading,
+    ordered,
+    setOrdered,
+    screen,
+    section,
+    selectedProductId,
+    setSection,
+    choose,
+    selection,
+    speed,
+    snapshot,
+    updateCart,
+    prepare,
+    submit,
+    call,
+    language,
+    currentLines,
+    edit,
+    voiceActive,
+  } = useTableSession({ data, refresh });
   return (
-    <div className="kiosk-shell h-dvh flex flex-col overflow-hidden">
+    <div data-ui="kiosk-shell" className="h-dvh flex flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-white/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2">
         <a className="text-xl font-bold tracking-tight" href="/">
           TableCast<span className="text-accent">·</span>
@@ -339,11 +394,14 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                 setSection(value);
             }}
           >
-            <Tabs.List className="menu-tabs flex border-b border-b-border py-0 px-3.5 gap-0 [&_button]:flex-1 [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2 [&_button]:px-1.5 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button[data-active]]:border-b-primary [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold max-lg:[&_button]:min-h-14 max-lg:[&_button]:text-xs">
+            <Tabs.List
+              data-ui="menu-tabs"
+              className="flex border-b border-b-border py-0 px-3.5 gap-0 [&_button]:flex-1 [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2 [&_button]:px-1.5 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button[data-active]]:border-b-primary [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold max-lg:[&_button]:min-h-14 max-lg:[&_button]:text-xs"
+            >
               <Tabs.Tab value="menu">{t("kiosk_menu")}</Tabs.Tab>
               <Tabs.Tab value="cart">
                 {t("kiosk_cart")}
-                <span className="count rounded-2xl py-px px-1 text-xs bg-secondary">
+                <span data-ui="count" className="rounded-2xl py-px px-1 text-xs bg-secondary">
                   {data.cart.lines.reduce((sum, line) => sum + line.quantity, 0)}
                 </span>
               </Tabs.Tab>
@@ -352,7 +410,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
             </Tabs.List>
             <div
               key={`${section}:${selectedProductId ?? ""}`}
-              className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]"
+              className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
             >
               <Tabs.Panel value="menu">
                 {selection ? (
@@ -458,69 +516,8 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                   </>
                 )}
               </Tabs.Panel>
-              <Tabs.Panel value="orders">
-                {data.orders.length === 0 ? (
-                  <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_h3]:text-sm [&_h3]:font-medium [&_p]:text-xs [&_p]:leading-loose">
-                    {t("common_empty")}
-                  </div>
-                ) : (
-                  data.orders.map((order) => (
-                    <article
-                      className="order-card border border-border rounded-md m-3.5 overflow-hidden"
-                      key={order.id}
-                    >
-                      <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-xs [&_strong]:text-sm">
-                        <time>{time(order.createdAt, locale)}</time>
-                        <Badge variant="outline">{t(`order_${order.status}`)}</Badge>
-                      </div>
-                      <CartLines
-                        lines={order.snapshot.lines}
-                        products={catalog.data?.configuration.products}
-                      />
-                    </article>
-                  ))
-                )}
-              </Tabs.Panel>
-              <Tabs.Panel value="bill">
-                <div className="bill-summary py-6 px-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_.bill-total]:border-t [&_.bill-total]:border-t-border [&_.bill-total]:pt-4 [&_.bill-total]:mt-2.5 [&_.bill-total_dd]:text-2xl [&_.bill-total_dd]:font-semibold [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full">
-                  <h3 className="mb-5">{t("kiosk_bill")}</h3>
-                  <dl>
-                    <div>
-                      <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
-                      <dd>{money(data.bill.orderedTotal, locale)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
-                      <dd>{money(data.bill.planTotal, locale)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
-                      <dd>{money(data.bill.adjustmentTotal, locale)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
-                      <dd>{money(data.bill.paidTotal, locale)}</dd>
-                    </div>
-                    <div className="bill-total">
-                      <dt className="text-muted-foreground">{t("kiosk_due")}</dt>
-                      <dd>{money(data.bill.due, locale)}</dd>
-                    </div>
-                  </dl>
-                  <p className="text-muted-foreground text-xs mt-2.5">
-                    {t("kiosk_not_sent")}: {money(data.bill.cartTotal, locale)}
-                  </p>
-                  <Button
-                    variant="default"
-                    size="lg"
-                    type="button"
-
-                    onClick={() => call.mutate(true)}
-                    disabled={call.isPending}
-                  >
-                    {t("kiosk_bill_request")}
-                  </Button>
-                </div>
-              </Tabs.Panel>
+              <KioskOrders data={data} catalog={catalog} />
+              <KioskBilling data={data} call={call} />
             </div>
           </Tabs.Root>
           <ErrorNotice
@@ -530,7 +527,8 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
             <Button
               variant="ghost"
               type="button"
-              className="basket-total col-span-2 max-lg:col-span-1 flex min-w-0 items-center gap-2 p-0 text-left h-auto min-h-11 whitespace-normal"
+              data-ui="basket-total"
+              className="col-span-2 max-lg:col-span-1 flex min-w-0 items-center gap-2 p-0 text-left h-auto min-h-11 whitespace-normal"
               onClick={() => setSection("cart")}
             >
               <ShoppingBag size={20} aria-hidden="true" />
@@ -562,5 +560,96 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
         </aside>
       </div>
     </div>
+  );
+}
+
+function KioskOrders({
+  data,
+  catalog,
+}: {
+  data: TableState;
+  catalog: ReturnType<typeof useTableSession>["catalog"];
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <Tabs.Panel value="orders">
+      {data.orders.length === 0 ? (
+        <div className="text-muted-foreground flex items-center flex-col text-center py-10 px-5 gap-2.5 [&_h3]:text-sm [&_h3]:font-medium [&_p]:text-xs [&_p]:leading-loose">
+          {t("common_empty")}
+        </div>
+      ) : (
+        data.orders.map((order) => (
+          <article
+            data-ui="order-card"
+            className="border border-border rounded-md m-3.5 overflow-hidden"
+            key={order.id}
+          >
+            <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-xs [&_strong]:text-sm">
+              <time>{time(order.createdAt, locale)}</time>
+              <Badge variant="outline">{t(`order_${order.status}`)}</Badge>
+            </div>
+            <CartLines
+              lines={order.snapshot.lines}
+              products={catalog.data?.configuration.products}
+            />
+          </article>
+        ))
+      )}
+    </Tabs.Panel>
+  );
+}
+
+function KioskBilling({
+  data,
+  call,
+}: {
+  data: TableState;
+  call: NonNullable<ReturnType<typeof useTableSession>["call"]>;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <Tabs.Panel value="bill">
+      <div
+        data-ui="bill-summary"
+        className="py-6 px-5 [&_dl_>_div]:flex [&_dl_>_div]:items-center [&_dl_>_div]:justify-between [&_dl_>_div]:py-2 [&_dl_>_div]:px-0 [&_dl_>_div]:gap-3 [&_dl_>_div]:text-sm [&_[data-ui=bill-total]]:border-t [&_[data-ui=bill-total]]:border-t-border [&_[data-ui=bill-total]]:pt-4 [&_[data-ui=bill-total]]:mt-2.5 [&_[data-ui=bill-total]_dd]:text-2xl [&_[data-ui=bill-total]_dd]:font-semibold [&_[data-slot=button][data-variant=default]]:mt-6 [&_[data-slot=button][data-variant=default]]:w-full"
+      >
+        <h3 className="mb-5">{t("kiosk_bill")}</h3>
+        <dl>
+          <div>
+            <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
+            <dd>{money(data.bill.orderedTotal, locale)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
+            <dd>{money(data.bill.planTotal, locale)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
+            <dd>{money(data.bill.adjustmentTotal, locale)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
+            <dd>{money(data.bill.paidTotal, locale)}</dd>
+          </div>
+          <div data-ui="bill-total" className="">
+            <dt className="text-muted-foreground">{t("kiosk_due")}</dt>
+            <dd>{money(data.bill.due, locale)}</dd>
+          </div>
+        </dl>
+        <p className="text-muted-foreground text-xs mt-2.5">
+          {t("kiosk_not_sent")}: {money(data.bill.cartTotal, locale)}
+        </p>
+        <Button
+          variant="default"
+          size="lg"
+          type="button"
+
+          onClick={() => call.mutate(true)}
+          disabled={call.isPending}
+        >
+          {t("kiosk_bill_request")}
+        </Button>
+      </div>
+    </Tabs.Panel>
   );
 }

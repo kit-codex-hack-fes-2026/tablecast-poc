@@ -4,6 +4,7 @@ import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { useI18n } from "../../i18n/locale";
+
 import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
 
 export function AdminShell({
@@ -44,7 +45,14 @@ export function AdminShell({
             <PanelLeft />
           </Button>
           <div className="min-w-0 flex-1 truncate border-l border-border pl-3 text-base font-medium">
-            {header ?? t(sidebar.tab === "organisations" ? "org_title" : "account_title")}
+            {header ??
+              t(
+                sidebar.tab === "organisations"
+                  ? "stores_title"
+                  : sidebar.tab === "mcp"
+                    ? "mcp_sessions"
+                    : "account_title",
+              )}
           </div>
           <LanguageSwitch onChange={setLocale} />
         </header>

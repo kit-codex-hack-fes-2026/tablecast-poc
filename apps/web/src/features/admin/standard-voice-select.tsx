@@ -1,10 +1,11 @@
-import { voicePageSchema, type Locale } from "@tablecast/api/schema";
+import { type Locale } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
-import { api, ApiFailure } from "../../lib/api";
+
+import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 
 export function StandardVoiceSelect({
   storeId,
@@ -25,9 +26,15 @@ export function StandardVoiceSelect({
   const voices = useInfiniteQuery({
     queryKey: ["tablecast-standard-voices", storeId, language],
     queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) => {
-      const query = new URLSearchParams({ locale: language });
-      if (pageParam !== null) query.set("pageToken", pageParam);
-      return api(`/api/admin/stores/${storeId}/voices?${query}`, { signal }, voicePageSchema);
+      return parseResponse(
+        rpc.api.admin.stores[":storeId"].voices.$get(
+          {
+            param: { storeId },
+            query: { locale: language, ...(pageParam !== null ? { pageToken: pageParam } : {}) },
+          },
+          { init: { signal } },
+        ),
+      );
     },
     initialPageParam: null,
     getNextPageParam: (page) => page.nextPageToken,

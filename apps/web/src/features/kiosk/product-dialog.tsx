@@ -7,7 +7,8 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
-import { money, useI18n } from "../../i18n/locale";
+import { money } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 
 const allergenLabels: Record<string, { ja: string; en: string }> = {
   fish: { ja: "魚類", en: "Fish" },
@@ -39,10 +40,9 @@ export function ProductPage({
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
+    const replaced = new Set(replaceIds);
     setSelections((current) => [
-      ...current.filter(
-        (item) => item.optionId !== optionId && !replaceIds.includes(item.optionId),
-      ),
+      ...current.filter((item) => item.optionId !== optionId && !replaced.has(item.optionId)),
       ...(amount > 0 ? [{ optionId, quantity: amount }] : []),
     ]);
   }
@@ -96,14 +96,14 @@ export function ProductPage({
                 aria-label={group.text[locale].displayName}
               >
                 {group.min === 0 && (
-                  <label className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_>_small]:ml-auto [&_>_small]:text-muted-foreground [&_>_small]:text-xs [&_>_small]:whitespace-nowrap [&_.quantity-control_button]:w-9 [&_.quantity-control_button]:min-h-11 max-sm:flex-wrap">
+                  <label className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_>_small]:ml-auto [&_>_small]:text-muted-foreground [&_>_small]:text-xs [&_>_small]:whitespace-nowrap [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap">
                     <RadioGroupItem value="" disabled={busy}></RadioGroupItem>
                     <span>{t("kiosk_no_selection")}</span>
                   </label>
                 )}
                 {group.options.map((option) => (
                   <label
-                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_.quantity-control_button]:w-9 [&_.quantity-control_button]:min-h-11 max-sm:flex-wrap"
+                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap"
                     key={option.id}
                   >
                     <RadioGroupItem
@@ -127,7 +127,7 @@ export function ProductPage({
                   selections.find((item) => item.optionId === option.id)?.quantity ?? 0;
                 return (
                   <div
-                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_.quantity-control_button]:w-9 [&_.quantity-control_button]:min-h-11 max-sm:flex-wrap"
+                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap"
                     key={option.id}
                   >
                     {group.kind === "multiple" ? (
@@ -150,7 +150,10 @@ export function ProductPage({
                           : ""}
                     </small>
                     {group.kind === "quantity" && (
-                      <div className="quantity-control inline-flex items-center border border-border rounded-md shrink-0">
+                      <div
+                        data-ui="quantity-control"
+                        className="inline-flex items-center border border-border rounded-md shrink-0"
+                      >
                         <Button
                           className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
                           variant="ghost"
@@ -207,7 +210,10 @@ export function ProductPage({
       </div>
       <ErrorNotice error={error} />
       <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3">
-        <div className="quantity-control inline-flex items-center border border-border rounded-md shrink-0">
+        <div
+          data-ui="quantity-control"
+          className="inline-flex items-center border border-border rounded-md shrink-0"
+        >
           <Button
             className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
             variant="ghost"

@@ -64,7 +64,6 @@ export type BootstrapEnv = AuthEnv & Pick<TablecastEnv, "TABLECAST_ENV">;
 export type BootstrapResult = {
   userId: string;
   organizationId: string;
-  teamId: string;
   storeId: string;
   tableIds: string[];
   configVersion: 1;
@@ -84,8 +83,7 @@ export async function bootstrapDatabase(
     stage: "preflight" | "administrator" | "organization" | "store";
     userId: string | null;
     organizationId: string | null;
-    teamId: string | null;
-  } = { stage: "preflight", userId: null, organizationId: null, teamId: null };
+  } = { stage: "preflight", userId: null, organizationId: null };
   try {
     const conflict = await db
       .prepare(
@@ -111,25 +109,15 @@ export async function bootstrapDatabase(
     });
     ensure(organization, "BOOTSTRAP_FAILED", 503);
     progress.organizationId = organization.id;
-    // Better Authの標準default teamと作成者の所属をそのまま店舗に使用する。
-    const team = await db
-      .prepare(
-        "SELECT t.id FROM team t JOIN team_member tm ON tm.team_id=t.id JOIN member m ON m.organization_id=t.organization_id AND m.user_id=tm.user_id WHERE t.organization_id=? AND tm.user_id=? AND m.role='owner'",
-      )
-      .bind(organization.id, user.id)
-      .first<{ id: string }>();
-    ensure(team, "BOOTSTRAP_FAILED", 503);
-    progress.teamId = team.id;
-
     progress.stage = "store";
     const now = Date.now();
     const configJson = JSON.stringify(input.store.configuration);
     await db.batch([
       db
         .prepare(
-          "INSERT INTO stores(id,organization_id,team_id,name,config_json,updated_at) VALUES(?,?,?,?,?,?)",
+          "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES(?,?,?,?,?)",
         )
-        .bind(input.store.id, organization.id, team.id, input.store.name, configJson, now),
+        .bind(input.store.id, organization.id, input.store.name, configJson, now),
       db
         .prepare(
           "INSERT INTO config_releases(store_id,version,config_json,published_by,created_at) VALUES(?,1,?,?,?)",
@@ -144,7 +132,6 @@ export async function bootstrapDatabase(
     return {
       userId: user.id,
       organizationId: organization.id,
-      teamId: team.id,
       storeId: input.store.id,
       tableIds: input.tables.map((table) => table.id),
       configVersion: 1,

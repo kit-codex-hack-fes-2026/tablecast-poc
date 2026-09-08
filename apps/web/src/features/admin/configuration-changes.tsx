@@ -1,6 +1,8 @@
+import { Children } from "react";
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
-import { money, useI18n } from "../../i18n/locale";
+import { money } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 
 const labels = {
   categories: "editor_categories",
@@ -88,8 +90,9 @@ export function ConfigurationChanges({
       item?.text[locale].displayName ?? fieldLabel(collection ?? ""),
       ...parts
         .slice(item ? 2 : 1)
-        .filter((part) => part !== "text")
-        .map((part) => (/^\d+$/.test(part) ? String(Number(part) + 1) : fieldLabel(part))),
+        .flatMap((part) =>
+          part !== "text" ? [/^\d+$/.test(part) ? String(Number(part) + 1) : fieldLabel(part)] : [],
+        ),
     ].join(" · ");
   }
   function valueText(value: unknown, key: string): ReactNode {
@@ -140,9 +143,7 @@ export function ConfigurationChanges({
     if (Array.isArray(value))
       return value.length ? (
         <ul className="list-inside list-disc">
-          {value.map((item, index) => (
-            <li key={index}>{valueText(item, key)}</li>
-          ))}
+          {Children.toArray(value.map((item) => <li>{valueText(item, key)}</li>))}
         </ul>
       ) : (
         "—"
@@ -168,11 +169,12 @@ export function ConfigurationChanges({
         const key =
           change.path
             .split(".")
-            .reverse()
+            .toReversed()
             .find((part) => !/^\d+$/.test(part)) ?? "";
         return (
           <div
-            className="config-change py-5 px-0 border-b border-b-border [&_pre]:bg-background [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:overflow-auto [&_pre]:text-sm [&_pre]:max-h-64 [&_pre]:m-0"
+            data-ui="config-change"
+            className="py-5 px-0 border-b border-b-border [&_pre]:bg-background [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:overflow-auto [&_pre]:text-sm [&_pre]:max-h-64 [&_pre]:m-0"
             key={change.path}
           >
             <strong className="font-mono text-sm wrap-anywhere">{title(change.path)}</strong>
@@ -183,7 +185,7 @@ export function ConfigurationChanges({
               ].map(({ label, value }) => (
                 <section className="min-w-0" key={label}>
                   <h4 className="text-muted-foreground text-sm mb-1.5">{label}</h4>
-                  <div className="whitespace-pre-wrap break-words text-base">
+                  <div className="whitespace-pre-wrap wrap-break-word text-base">
                     {valueText(value, key)}
                   </div>
                 </section>

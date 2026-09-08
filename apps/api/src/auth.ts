@@ -51,8 +51,8 @@ export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
       await sendAccountEmail(
         env,
         data.email,
-        "組織への招待 / Organisation invitation",
-        `${data.organization.name} に招待されました。You have been invited to join this organisation.`,
+        "店舗への招待 / Restaurant invitation",
+        `${data.organization.name} に招待されました。You have been invited to join this restaurant.`,
         "招待を確認 / View invitation",
         `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
       );
@@ -170,7 +170,7 @@ export async function staffActor(
 ): Promise<Actor> {
   const session = await staffIdentity(c);
   const membership = await c.env.TABLECAST_DB.prepare(
-    "SELECT m.role FROM member m JOIN stores s ON s.organization_id=m.organization_id WHERE m.user_id=? AND s.id=? AND (m.role IN ('owner','admin') OR EXISTS(SELECT 1 FROM team_member tm JOIN team t ON t.id=tm.team_id WHERE tm.user_id=m.user_id AND t.id=s.team_id AND t.organization_id=s.organization_id))",
+    "SELECT m.role FROM member m JOIN stores s ON s.organization_id=m.organization_id WHERE m.user_id=? AND s.id=?",
   )
     .bind(session.user.id, storeId)
     .first<{ role: string }>();

@@ -1,21 +1,20 @@
-import { eventsSchema } from "./responses";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { api, ApiFailure } from "./api";
+import { ApiFailure, parseResponse, rpc } from "./api";
 
 export function useRealtime(
-  base: string | undefined,
+  scope: "table" | { storeId: string } | undefined,
   snapshotCursor: number,
   onChange: () => void,
 ) {
+  const storeId = typeof scope === "object" ? scope.storeId : undefined;
+  const enabled = scope !== undefined;
   const [connected, setConnected] = useState(false);
   const notify = useEffectEvent(onChange);
   const cursor = useRef(snapshotCursor);
   const getSnapshotCursor = useEffectEvent(() => snapshotCursor);
   useEffect(() => {
-    cursor.current = Math.max(cursor.current, snapshotCursor);
-  }, [snapshotCursor]);
-  useEffect(() => {
-    if (!base) return undefined;
+    if (!enabled) return undefined;
+
     cursor.current = getSnapshotCursor();
     let disposed = false;
     let fetching = false;
@@ -26,10 +25,16 @@ export function useRealtime(
       if (fetching || disposed) return;
       fetching = true;
       try {
-        const result = await api(
-          `${base}/events?after=${cursor.current}`,
-          { signal: controller.signal },
-          eventsSchema,
+        const result = await parseResponse(
+          storeId
+            ? rpc.api.admin.stores[":storeId"].events.$get(
+                { param: { storeId }, query: { after: String(cursor.current) } },
+                { init: { signal: controller.signal } },
+              )
+            : rpc.api.table.events.$get(
+                { query: { after: String(cursor.current) } },
+                { init: { signal: controller.signal } },
+              ),
         );
         if (!disposed) {
           cursor.current = Math.max(cursor.current, result.cursor);
@@ -46,23 +51,28 @@ export function useRealtime(
     }
     function connect() {
       if (disposed) return;
-      const url = new URL(`${base}/live`, window.location.href);
+      const url = new URL(
+        storeId
+          ? rpc.api.admin.stores[":storeId"].live.$url({ param: { storeId } })
+          : rpc.api.table.live.$url(),
+        window.location.href,
+      );
       url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
       socket = new WebSocket(url);
-      socket.onopen = () => {
+      socket.addEventListener("open", () => {
         setConnected(true);
         void synchronise();
-      };
-      socket.onmessage = () => {
+      });
+      socket.addEventListener("message", () => {
         void synchronise();
-      };
-      socket.onclose = () => {
+      });
+      socket.addEventListener("close", () => {
         setConnected(false);
         if (!disposed) retry = setTimeout(connect, 3000);
-      };
-      socket.onerror = () => {
+      });
+      socket.addEventListener("error", () => {
         socket?.close();
-      };
+      });
     }
     connect();
     const poll = setInterval(() => {
@@ -75,6 +85,6 @@ export function useRealtime(
       clearTimeout(retry);
       socket?.close();
     };
-  }, [base]);
+  }, [storeId, enabled]);
   return connected;
 }

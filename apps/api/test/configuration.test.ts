@@ -151,7 +151,7 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
   expect((await table()).configVersion).toBe(1);
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-store',organization_id,'別店舗',config_json,updated_at FROM stores WHERE id=?",
+      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-store','tablecast-fixture-other-org','別店舗',config_json,updated_at FROM stores WHERE id=?",
     ).bind(staff.storeId),
     env.TABLECAST_DB.prepare(
       "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-other-table',?,'02')",

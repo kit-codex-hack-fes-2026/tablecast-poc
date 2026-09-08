@@ -108,11 +108,8 @@ export const planSchema = z
   .strict();
 export const configurationSchema = z
   .object({
-    categories: z
-      .array(z.object({ id, text: bilingualSchema }).strict())
-      .min(1)
-      .max(100),
-    products: z.array(productSchema).min(1).max(2000),
+    categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
+    products: z.array(productSchema).max(2000),
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
@@ -318,6 +315,8 @@ export type ConfigDraft = {
   status: "draft" | "ready" | "published" | "discarded";
   configuration: Configuration;
   errors: ConfigurationIssue[];
+  createdAt: number;
+  updatedAt: number;
   changes: { path: string; before: unknown; after: unknown; sensitive: boolean }[];
 };
 export type ApiError = {
@@ -545,6 +544,8 @@ export const adminStateSchema: z.ZodType<AdminState> = z.object({
   cursor: z.number().int(),
 });
 export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
+  createdAt: z.number().int(),
+  updatedAt: z.number().int(),
   id: z.string(),
   storeId: z.string(),
   baseVersion: z.number().int(),
@@ -553,6 +554,11 @@ export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   configuration: configurationSchema,
   errors: z.array(configurationIssueSchema),
   changes: z.array(
-    z.object({ path: z.string(), before: z.unknown(), after: z.unknown(), sensitive: z.boolean() }),
+    z.object({ path: z.string(), before: z.json(), after: z.json(), sensitive: z.boolean() }),
   ),
+});
+
+export const eventsSchema = z.object({
+  events: z.array(tableEventSchema),
+  cursor: z.number().int(),
 });

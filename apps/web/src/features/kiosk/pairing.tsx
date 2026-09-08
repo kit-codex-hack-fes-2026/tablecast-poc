@@ -1,28 +1,27 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { MonitorSmartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
-import { Button, buttonVariants } from "../../components/ui/button";
+import { Button } from "../../components/ui/button";
+import { buttonVariants } from "../../components/ui/button-variants";
 import { useI18n } from "../../i18n/locale";
-import { api, json } from "../../lib/api";
-import { pairingCodeSchema, pairingStatusSchema } from "../../lib/responses";
+
+import { parseResponse, rpc } from "../../lib/api";
 
 export function Pairing({ onReady }: { onReady: () => void }) {
   const { t, setLocale } = useI18n();
   const request = useMutation({
-    mutationFn: () => api("/api/devices/request", json("POST", {}), pairingCodeSchema),
+    mutationFn: () => parseResponse(rpc.api.devices.request.$post()),
   });
+  const deviceCode = request.data?.device_code;
   const poll = useQuery({
-    queryKey: ["tablecast-device-poll", request.data?.device_code],
-    queryFn: () =>
-      api(
-        "/api/devices/poll",
-        json("POST", { device_code: request.data?.device_code }),
-        pairingStatusSchema,
-      ),
+    queryKey: ["tablecast-device-poll", deviceCode],
+    queryFn: deviceCode
+      ? () => parseResponse(rpc.api.devices.poll.$post({ json: { device_code: deviceCode } }))
+      : skipToken,
     enabled: !!request.data,
     refetchInterval: (query) =>
       query.state.data?.ready ? false : (request.data?.interval ?? 5) * 1000,
@@ -34,7 +33,8 @@ export function Pairing({ onReady }: { onReady: () => void }) {
     <main className="min-h-dvh">
       <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
         <a
-          className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
+          data-ui="brand"
+          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
           href="/"
         >
           TableCast<span className="text-accent ml-px text-4xl">·</span>
@@ -42,7 +42,7 @@ export function Pairing({ onReady }: { onReady: () => void }) {
         <LanguageSwitch onChange={setLocale} />
       </header>
       <div className="mt-12 mx-auto mb-10 max-w-144 p-10 flex items-center flex-col text-center [&_>_[data-slot=button][data-size=text]]:mt-7 [&_>_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6 max-sm:mt-9">
-        <span className="flex items-center justify-center w-24 h-24 bg-secondary text-muted-foreground rounded-full mb-6">
+        <span className="flex items-center justify-center bg-secondary text-muted-foreground rounded-full mb-6 size-24">
           <MonitorSmartphone size={36} strokeWidth={1.3} />
         </span>
         <h1 className="text-3xl mt-3 max-sm:text-2xl">{t("pair_title")}</h1>
@@ -65,7 +65,7 @@ export function Pairing({ onReady }: { onReady: () => void }) {
               {request.data.user_code}
             </output>
             <div className="text-muted-foreground text-xs mt-5 flex items-center gap-2">
-              <span className="inline-block w-1.5 h-1.5 bg-current rounded-full shrink-0" />
+              <span className="inline-block bg-current rounded-full shrink-0 size-1.5" />
               {t("pair_waiting")}
             </div>
           </>

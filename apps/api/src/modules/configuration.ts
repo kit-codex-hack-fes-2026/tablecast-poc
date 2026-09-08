@@ -21,6 +21,8 @@ type DraftRecord = {
   config_json: string;
   errors_json: string;
   publish_key: string | null;
+  created_at: number;
+  updated_at: number;
 };
 function hasSensitiveField(value: unknown, path: string): boolean {
   return (
@@ -47,8 +49,8 @@ function differences(before: unknown, after: unknown, path = ""): ConfigDraft["c
   return [
     {
       path,
-      before: before ?? null,
-      after: after ?? null,
+      before: z.json().parse(before ?? null),
+      after: z.json().parse(after ?? null),
       sensitive: hasSensitiveField(before, path) || hasSensitiveField(after, path),
     },
   ];
@@ -71,6 +73,8 @@ export async function getDraft(env: TablecastEnv, actor: Actor, id: string): Pro
       : z.array(configurationIssueSchema).parse(storedErrors);
   return {
     id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
     storeId: row.store_id,
     baseVersion: row.base_version,
     version: row.version,

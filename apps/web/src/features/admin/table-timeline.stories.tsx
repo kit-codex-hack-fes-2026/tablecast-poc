@@ -93,8 +93,8 @@ export const BeyondRecentEvents: Story = {
         canvas
           .getAllByRole("row")
           .slice(1)
-          .map((row) => within(row).getAllByRole("cell")[0]?.getAttribute("aria-label")),
-      ).toEqual(["T03", "T02", "T01", "T04"]);
+          .map((row) => within(row).getByRole("button", { name: /^T0/ }).textContent),
+      ).toEqual(["T032 名", "T022 名", "T012 名", "T042 名"]);
     });
   },
 };

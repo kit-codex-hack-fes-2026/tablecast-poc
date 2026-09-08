@@ -1,10 +1,11 @@
-import { createAuthClient } from "better-auth/react";
-import { organizationClient } from "better-auth/client/plugins";
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
+import { organizationClient } from "better-auth/client/plugins";
+import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
   basePath: "/api/auth",
-  plugins: [organizationClient({ teams: { enabled: true } }), passkeyClient()],
+  plugins: [organizationClient(), passkeyClient(), oauthProviderClient()],
 });
 export function authResult<T>(result: { data: T | null; error: { message?: string } | null }): T {
   if (result.error || result.data === null)

@@ -59,44 +59,21 @@ it("公式device承認を店舗と卓へ制限し、端末へ店員sessionを渡
     ).status,
   ).toBe(404);
 });
-it("同組織でもteam未所属の店員は別店舗へアクセスできない", async () => {
+it("店舗のmemberは担当店だけへアクセスでき、所属取消後は同じCookieでも拒否される", async () => {
   const { cookie, staff } = await setupFixture();
-  await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare("UPDATE member SET role='member' WHERE user_id=?").bind(staff.userId),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO team(id,name,organization_id,created_at) VALUES('tablecast-team','店舗担当','tablecast-org',?)",
-    ).bind(Date.now()),
-    env.TABLECAST_DB.prepare(
-      "UPDATE stores SET team_id='tablecast-team' WHERE id='tablecast-store'",
-    ),
-  ]);
-  expect(
-    (
-      await exports.default.fetch(
-        new Request(origin + "/api/admin/stores/tablecast-store", { headers: { Cookie: cookie } }),
-      )
-    ).status,
-  ).toBe(403);
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO team_member(id,team_id,user_id,created_at) VALUES('tablecast-team-member','tablecast-team',?,?)",
-  )
-    .bind(staff.userId, Date.now())
+  await env.TABLECAST_DB.prepare("UPDATE member SET role='member' WHERE user_id=?")
+    .bind(staff.userId)
     .run();
-  expect(
-    (
-      await exports.default.fetch(
-        new Request(origin + "/api/admin/stores/tablecast-store", { headers: { Cookie: cookie } }),
-      )
-    ).status,
-  ).toBe(200);
-  expect(
-    (
-      await exports.default.fetch(
-        new Request(origin + "/api/admin/stores/other-store", { headers: { Cookie: cookie } }),
-      )
-    ).status,
-  ).toBe(403);
+  const read = (store: string) =>
+    exports.default.fetch(
+      new Request(origin + `/api/admin/stores/${store}`, { headers: { Cookie: cookie } }),
+    );
+  expect((await read("tablecast-store")).status).toBe(200);
+  expect((await read("other-store")).status).toBe(403);
+  await env.TABLECAST_DB.prepare("DELETE FROM member WHERE user_id=?").bind(staff.userId).run();
+  expect((await read("tablecast-store")).status).toBe(403);
 });
+
 it("cross-site変更要求を拒否する", async () => {
   const { cookie } = await setupFixture();
   const response = await exports.default.fetch(

@@ -242,7 +242,7 @@ it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧�
   await setupFixture();
   const before = await getTableState(env, device);
   await env.TABLECAST_DB.prepare(
-    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-foreign-store','tablecast-org','別店舗',?,?)",
+    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-foreign-store','tablecast-fixture-other-org','別店舗',?,?)",
   )
     .bind(
       JSON.stringify({
@@ -387,7 +387,7 @@ it.each(["音声停止", "古いturn", "古い音声セッション", "別卓", 
       ]);
     if (condition === "別店舗")
       await env.TABLECAST_DB.prepare(
-        "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-org','別店舗',?,?)",
+        "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-fixture-other-org','別店舗',?,?)",
       )
         .bind(JSON.stringify(configuration), Date.now())
         .run();
@@ -476,7 +476,7 @@ it("売切商品の情報カードも表示でき、注文可能とは扱わな�
 it("未知の商品と別店舗だけに存在する商品をカードへ含める要求は全体を拒否する", async () => {
   await setupVoice();
   await env.TABLECAST_DB.prepare(
-    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-org','別店舗',?,?)",
+    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-fixture-other-org','別店舗',?,?)",
   )
     .bind(
       JSON.stringify({

@@ -53,3 +53,5 @@ apps/web/src/paraglide/
 
 # ローカルCodex接続先
 .codex/config.toml
+
+**/.tanstack/

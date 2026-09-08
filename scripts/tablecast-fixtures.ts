@@ -909,7 +909,7 @@ function allergenRecord(
 }
 
 export function demoStores(profile: "smoke" | "demo" | "history") {
-  return stores.map((store, storeIndex) => {
+  return stores.map((store) => {
     const groups: Modifier[] = groupDefinitions.map((group) => ({
       id: `${store.id}-${group.key}`,
       text: bilingual(group.ja, group.en),
@@ -1094,7 +1094,6 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
     return {
       id: store.id,
       name: store.name,
-      organization: storeIndex === 2 ? "tablecast-koharu-group" : "tablecast-komorebi-group",
       configuration,
       tableCount: profile === "smoke" ? 2 : 12,
     };

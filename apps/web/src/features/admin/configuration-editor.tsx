@@ -1,84 +1,29 @@
 import { productSchema, type Configuration, type Plan, type Product } from "@tablecast/api/schema";
-import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
+
 import {
   BilingualFields,
   BooleanField,
   NumericField,
   ReferencesField,
   StringListField,
-  emptyText,
 } from "./configuration-fields";
 import { ModifiersEditor } from "./modifiers-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
 const selectClass = "h-12 rounded-lg border border-input px-3 text-base";
 
-export function ConfigurationEditor({
-  storeId,
-  value,
-  onChange,
-  disabled,
-  voices,
-}: {
-  storeId: string;
-  value: Configuration;
-  onChange: (value: Configuration) => void;
-  disabled: boolean;
-  voices: Configuration["cast"]["voice"][];
-}) {
-  const { t } = useI18n();
-  const [section, setSection] = useState("products");
-  return (
-    <fieldset className="flex flex-col gap-4 min-w-0 pt-0" disabled={disabled}>
-      <label className="flex flex-col gap-2 text-sm">
-        {t("editor_section")}
-        <NativeSelect
-          className={selectClass}
-          value={section}
-          onChange={(event) => {
-            if (event.currentTarget.form?.reportValidity()) setSection(event.target.value);
-          }}
-        >
-          <option value="products">{t("editor_products")}</option>
-          <option value="categories">{t("editor_categories")}</option>
-          <option value="plans">{t("editor_plans")}</option>
-          <option value="cast">{t("editor_cast")}</option>
-        </NativeSelect>
-      </label>
-      {section === "products" && (
-        <ProductsEditor value={value} onChange={onChange} disabled={disabled} />
-      )}
-      {section === "categories" && (
-        <CategoriesEditor value={value} onChange={onChange} disabled={disabled} />
-      )}
-      {section === "plans" && <PlansEditor value={value} onChange={onChange} disabled={disabled} />}
-      {section === "cast" && (
-        <CastEditor
-          storeId={storeId}
-          value={value.cast}
-          voices={voices}
-          disabled={disabled}
-          onChange={(cast) => onChange({ ...value, cast })}
-        />
-      )}
-    </fieldset>
-  );
-}
-
 type EditorProps = {
   value: Configuration;
   onChange: (value: Configuration) => void;
   disabled: boolean;
+  selectedId: string;
 };
 
-function ProductsEditor({ value, onChange, disabled }: EditorProps) {
+export function ProductsEditor({ value, onChange, disabled, selectedId }: EditorProps) {
   const { t, locale } = useI18n();
-  const [selectedId, setSelectedId] = useState(value.products[0]?.id ?? "");
   const product = value.products.find((item) => item.id === selectedId);
   function update(change: Partial<Product>) {
     onChange({
@@ -90,74 +35,6 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
   }
   return (
     <>
-      <label>
-        {t("admin_product")}
-        <NativeSelect
-          className={selectClass}
-          value={selectedId}
-          onChange={(event) => {
-            if (event.currentTarget.form?.reportValidity()) setSelectedId(event.target.value);
-          }}
-        >
-          {value.products.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.text[locale].displayName || t("editor_new_product")}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
-          type="button"
-          disabled={value.products.length >= 2000}
-          onClick={(event) => {
-            if (!event.currentTarget.form?.reportValidity()) return;
-            const id = crypto.randomUUID();
-            onChange({
-              ...value,
-              products: [
-                ...value.products,
-                {
-                  id,
-                  categoryId: value.categories[0]?.id ?? "",
-                  text: emptyText(),
-                  price: 0,
-                  available: false,
-                  tags: [],
-                  imageKey: null,
-                  imageKind: "illustration",
-                  modifiers: [],
-                  allergens: {
-                    contains: [],
-                    evidence: "unknown",
-                    crossContact: "unknown",
-                    vegan: "unknown",
-                    note: { ja: "", en: "" },
-                  },
-                },
-              ],
-            });
-            setSelectedId(id);
-          }}
-        >
-          <Plus size={16} />
-          {t("editor_add_product")}
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          disabled={value.products.length <= 1 || !product}
-          onClick={() => {
-            const products = value.products.filter((item) => item.id !== selectedId);
-            onChange({ ...value, products });
-            setSelectedId(products[0]?.id ?? "");
-          }}
-        >
-          <Trash2 size={16} />
-          {t("editor_remove_product")}
-        </Button>
-      </div>
       {product && (
         <>
           <NumericField
@@ -179,10 +56,8 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
             disabled={disabled}
             onChange={(text) => update({ text })}
           />
-          <details className="rounded-lg border border-input p-4">
-            <summary className="cursor-pointer font-semibold">
-              {t("editor_product_details")}
-            </summary>
+          <section className="rounded-lg border border-input p-4">
+            <h2 className="font-semibold">{t("editor_product_details")}</h2>
             <div className="flex flex-col gap-4 pt-6">
               <label className="flex flex-col gap-2 text-sm">
                 {t("editor_id")}
@@ -235,9 +110,9 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 </NativeSelect>
               </label>
             </div>
-          </details>
-          <details className="rounded-lg border border-input p-4">
-            <summary className="cursor-pointer font-semibold">{t("kiosk_allergens")}</summary>
+          </section>
+          <section className="rounded-lg border border-input p-4">
+            <h2 className="font-semibold">{t("kiosk_allergens")}</h2>
             <div className="flex flex-col gap-4 pt-6">
               <StringListField
                 label={t("editor_contains")}
@@ -323,9 +198,9 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 </label>
               ))}
             </div>
-          </details>
-          <details className="rounded-lg border border-input p-4">
-            <summary className="cursor-pointer font-semibold">{t("editor_modifiers")}</summary>
+          </section>
+          <section className="rounded-lg border border-input p-4">
+            <h2 className="font-semibold">{t("editor_modifiers")}</h2>
             <div className="pt-5">
               <ModifiersEditor
                 key={product.id}
@@ -334,64 +209,18 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 onChange={(modifiers) => update({ modifiers })}
               />
             </div>
-          </details>
+          </section>
         </>
       )}
     </>
   );
 }
 
-function CategoriesEditor({ value, onChange, disabled }: EditorProps) {
-  const { t, locale } = useI18n();
-  const [selectedId, setSelectedId] = useState(value.categories[0]?.id ?? "");
+export function CategoriesEditor({ value, onChange, disabled, selectedId }: EditorProps) {
+  const { t } = useI18n();
   const category = value.categories.find((item) => item.id === selectedId);
   return (
     <>
-      <label>
-        {t("editor_category")}
-        <NativeSelect
-          className={selectClass}
-          value={selectedId}
-          onChange={(event) => {
-            if (event.currentTarget.form?.reportValidity()) setSelectedId(event.target.value);
-          }}
-        >
-          {value.categories.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.text[locale].displayName || t("editor_new_category")}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
-          type="button"
-          disabled={value.categories.length >= 100}
-          onClick={(event) => {
-            if (!event.currentTarget.form?.reportValidity()) return;
-            const id = crypto.randomUUID();
-            onChange({ ...value, categories: [...value.categories, { id, text: emptyText() }] });
-            setSelectedId(id);
-          }}
-        >
-          <Plus size={16} />
-          {t("editor_add_category")}
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          disabled={value.categories.length <= 1 || !category}
-          onClick={() => {
-            const categories = value.categories.filter((item) => item.id !== selectedId);
-            onChange({ ...value, categories });
-            setSelectedId(categories[0]?.id ?? "");
-          }}
-        >
-          <Trash2 size={16} />
-          {t("editor_remove_category")}
-        </Button>
-      </div>
       {category && (
         <>
           <label>
@@ -416,9 +245,8 @@ function CategoriesEditor({ value, onChange, disabled }: EditorProps) {
   );
 }
 
-function PlansEditor({ value, onChange, disabled }: EditorProps) {
+export function PlansEditor({ value, onChange, disabled, selectedId }: EditorProps) {
   const { t, locale } = useI18n();
-  const [selectedId, setSelectedId] = useState(value.plans[0]?.id ?? "");
   const plan = value.plans.find((item) => item.id === selectedId);
   function update(change: Partial<Plan>) {
     onChange({
@@ -428,72 +256,6 @@ function PlansEditor({ value, onChange, disabled }: EditorProps) {
   }
   return (
     <>
-      <label>
-        {t("editor_plan")}
-        <NativeSelect
-          className={selectClass}
-          value={selectedId}
-          onChange={(event) => {
-            if (event.currentTarget.form?.reportValidity()) setSelectedId(event.target.value);
-          }}
-        >
-          {!value.plans.length && <option value="">{t("admin_no_plan")}</option>}
-          {value.plans.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.text[locale].displayName || t("editor_new_plan")}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
-          type="button"
-          disabled={value.plans.length >= 30}
-          onClick={(event) => {
-            if (!event.currentTarget.form?.reportValidity()) return;
-            const id = crypto.randomUUID();
-            onChange({
-              ...value,
-              plans: [
-                ...value.plans,
-                {
-                  id,
-                  text: emptyText(),
-                  pricePerPerson: 0,
-                  durationMinutes: 60,
-                  lastOrderMinutesBeforeEnd: 10,
-                  productIds: [],
-                  categoryIds: [],
-                  tags: [],
-                  maxPerOrder: 1,
-                  maxTotalPerPerson: 1,
-                  intervalSeconds: 0,
-                  excludedOptionIds: [],
-                  includedOptionSurcharge: false,
-                },
-              ],
-            });
-            setSelectedId(id);
-          }}
-        >
-          <Plus size={16} />
-          {t("editor_add_plan")}
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          disabled={!plan}
-          onClick={() => {
-            const plans = value.plans.filter((item) => item.id !== selectedId);
-            onChange({ ...value, plans });
-            setSelectedId(plans[0]?.id ?? "");
-          }}
-        >
-          <Trash2 size={16} />
-          {t("editor_remove_plan")}
-        </Button>
-      </div>
       {plan && (
         <>
           <label>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { table as tablecastTableState } from "../../../.storybook/tablecast-fixtures";
-import { latestTable } from "./kiosk";
+import { latestTable } from "./table-cache";
 
 describe("卓の画面状態の応答順序", () => {
   it("Agentの商品ページ選択後に届く古い応答では画面を巻き戻さない", () => {

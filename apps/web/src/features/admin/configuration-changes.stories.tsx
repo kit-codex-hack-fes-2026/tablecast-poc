@@ -33,7 +33,7 @@ type Story = StoryObj<typeof meta>;
 export const Japanese: Story = {
   name: "価格・安全情報と新規選択肢の全内容を日本語の差分で確認",
   play: async ({ canvasElement }) => {
-    const rows = canvasElement.querySelectorAll(".config-change");
+    const rows = canvasElement.querySelectorAll("[data-ui='config-change']");
     await expect(rows).toHaveLength(6);
     await expect(rows[0]).toHaveTextContent("単価（税込・円）");
     await expect(rows[0]).toHaveTextContent("￥750");
@@ -51,7 +51,7 @@ export const English: Story = {
   name: "英語の安全情報・参照名を表示し店舗の原文は保持",
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
-    const rows = canvasElement.querySelectorAll(".config-change");
+    const rows = canvasElement.querySelectorAll("[data-ui='config-change']");
     await expect(rows[0]).toHaveTextContent("Unit price (JPY, including tax)");
     await expect(rows[1]).toHaveTextContent("Vegan suitability");
     await expect(rows[1]).toHaveTextContent("Unconfirmed");

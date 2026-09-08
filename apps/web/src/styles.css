@@ -6,6 +6,7 @@
 @source "../node_modules/streamdown/dist/*.js";
 
 @theme inline {
+  --background-image-voice-spectrum: var(--voice-spectrum);
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
   --font-serif: "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;

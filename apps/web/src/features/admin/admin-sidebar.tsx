@@ -1,6 +1,6 @@
 import { Menu } from "@base-ui/react/menu";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
@@ -9,30 +9,36 @@ import {
   LayoutDashboard,
   LogOut,
   MonitorSmartphone,
+  Plug,
   Settings2,
   UserRound,
+  Users,
   UtensilsCrossed,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { NativeSelect } from "../../components/ui/native-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
+
+import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
 export type AdminSidebarProps = {
-  tab: Tab | "account" | "organisations";
-  onTabChange?: (tab: Tab) => void;
-  onPair?: () => void;
-  pairDisabled?: boolean;
+  tab: Tab | "account" | "organisations" | "mcp";
+  storeId?: string;
   onSignOut?: () => void;
   signingOut?: boolean;
 };
 export function AdminSidebar({
   tab,
-  onTabChange,
-  onPair,
-  pairDisabled,
+  storeId,
   onSignOut,
   signingOut,
   collapsed = false,
@@ -40,18 +46,32 @@ export function AdminSidebar({
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
   const session = authClient.useSession();
+  const navigate = useNavigate();
+  const client = useQueryClient();
   const active = authClient.useActiveOrganization();
-  const organisations = useQuery({
-    queryKey: ["tablecast-organisations"],
-    queryFn: async () => authResult(await authClient.organization.list()),
+  const stores = useQuery({
+    queryKey: ["tablecast-stores"],
+    queryFn: () => parseResponse(rpc.api.admin.stores.$get()),
     enabled: !!session.data,
   });
+  const selectedStore =
+    storeId ??
+    stores.data?.stores.find((store) => store.organizationId === active.data?.id)?.id ??
+    stores.data?.stores[0]?.id;
   const changeOrganisation = useMutation({
-    mutationFn: async (organizationId: string) =>
-      authResult(await authClient.organization.setActive({ organizationId })),
+    mutationFn: async (nextStoreId: string) => {
+      const store = stores.data?.stores.find((item) => item.id === nextStoreId);
+      if (!store) throw new Error("STORE_NOT_FOUND");
+      authResult(await authClient.organization.setActive({ organizationId: store.organizationId }));
+      return nextStoreId;
+    },
+    onSuccess: async (nextStoreId) => {
+      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
+      await navigate({ to: "/admin/stores/$storeId/floor", params: { storeId: nextStoreId } });
+    },
   });
   const item =
-    "flex h-auto min-h-11 w-full items-center justify-start gap-2 whitespace-normal text-left rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium";
+    "flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium data-[status=active]:bg-secondary data-[status=active]:font-medium";
   return (
     <>
       <Link
@@ -68,22 +88,30 @@ export function AdminSidebar({
       {!collapsed && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-white p-2">
           <Building2 className="size-8 shrink-0 rounded-md bg-secondary p-1.5" />
-          <NativeSelect
-            className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-base shadow-none"
-            aria-label={t("org_select")}
-            value={active.data?.id ?? organisations.data?.[0]?.id ?? ""}
+          <Select
+            items={
+              stores.data?.stores.map((store) => ({ value: store.id, label: store.name })) ?? []
+            }
+            value={selectedStore ?? null}
             disabled={changeOrganisation.isPending}
-            onChange={(event) => changeOrganisation.mutate(event.target.value)}
+            onValueChange={(value) => {
+              if (value) changeOrganisation.mutate(value);
+            }}
           >
-            <option value="" disabled>
-              {t("org_select")}
-            </option>
-            {organisations.data?.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger
+              className="min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none"
+              aria-label={t("stores_title")}
+            >
+              <SelectValue placeholder={t("stores_title")} />
+            </SelectTrigger>
+            <SelectContent>
+              {stores.data?.stores.map((store) => (
+                <SelectItem key={store.id} value={store.id}>
+                  {store.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
       {changeOrganisation.error && (
@@ -98,89 +126,95 @@ export function AdminSidebar({
         {!collapsed && (
           <p className="px-2 pb-2 text-sm font-medium text-muted-foreground">{t("admin_store")}</p>
         )}
-        {(
-          [
-            { key: "live", label: t("admin_live"), Icon: LayoutDashboard },
-            { key: "history", label: t("admin_history"), Icon: History },
-            { key: "settings", label: t("admin_config"), Icon: Settings2 },
-          ] as const
-        ).map(({ key, label, Icon }) =>
-          onTabChange ? (
-            <Button
-              variant="ghost"
-              key={key}
-              className={item}
-              title={label}
-              aria-label={label}
-              aria-current={tab === key ? "page" : undefined}
-              onClick={() => {
-                onTabChange(key);
-                onNavigate?.();
-              }}
-            >
-              <Icon className="size-5 shrink-0" />
-              {!collapsed && label}
-            </Button>
-          ) : (
+        {selectedStore ? (
+          <>
             <Link
-              key={key}
               className={item}
-              title={label}
-              aria-label={label}
-              to="/admin/live"
-              search={{ section: key }}
+              to="/admin/stores/$storeId/floor"
+              params={{ storeId: selectedStore }}
               onClick={onNavigate}
+              title={t("admin_live")}
             >
-              <Icon className="size-5 shrink-0" />
-              {!collapsed && label}
+              <LayoutDashboard className="size-5 shrink-0" />
+              {!collapsed && t("admin_live")}
             </Link>
-          ),
-        )}
-        {onPair ? (
-          <Button
-            variant="ghost"
-            className={item}
-            disabled={pairDisabled}
-            title={t("admin_pair")}
-            aria-label={t("admin_pair")}
-            onClick={() => {
-              onPair();
-              onNavigate?.();
-            }}
-          >
-            <MonitorSmartphone className="size-5 shrink-0" />
-            {!collapsed && t("admin_pair")}
-          </Button>
+            <Link
+              className={item}
+              to="/admin/stores/$storeId/visits"
+              params={{ storeId: selectedStore }}
+              onClick={onNavigate}
+              title={t("admin_history")}
+            >
+              <History className="size-5 shrink-0" />
+              {!collapsed && t("admin_history")}
+            </Link>
+            <Link
+              className={item}
+              to="/admin/stores/$storeId/menu/$section"
+              params={{ storeId: selectedStore, section: "products" }}
+              onClick={onNavigate}
+              title={t("admin_config")}
+            >
+              <Settings2 className="size-5 shrink-0" />
+              {!collapsed && t("admin_config")}
+            </Link>
+            <Link
+              className={item}
+              to="/admin/stores/$storeId/members"
+              params={{ storeId: selectedStore }}
+              onClick={onNavigate}
+              title={t("org_members")}
+            >
+              <Users className="size-5 shrink-0" />
+              {!collapsed && t("org_members")}
+            </Link>
+            <Link
+              className={item}
+              to="/admin/stores/$storeId/devices"
+              params={{ storeId: selectedStore }}
+              onClick={onNavigate}
+              title={t("device_title")}
+            >
+              <MonitorSmartphone className="size-5 shrink-0" />
+              {!collapsed && t("device_title")}
+            </Link>
+          </>
         ) : (
-          <Link
-            className={item}
-            to="/device"
-            title={t("admin_pair")}
-            aria-label={t("admin_pair")}
-            onClick={onNavigate}
-          >
-            <MonitorSmartphone className="size-5 shrink-0" />
-            {!collapsed && t("admin_pair")}
+          <Link className={item} to="/organisations" onClick={onNavigate}>
+            <Building2 className="size-5 shrink-0" />
+            {!collapsed && t("org_manage")}
           </Link>
         )}
         <div className="h-4" />
         {!collapsed && (
-          <p className="px-2 pb-2 text-sm font-medium text-muted-foreground">{t("org_title")}</p>
+          <p className="px-2 pb-2 text-sm font-medium text-muted-foreground">
+            {t("nav_management")}
+          </p>
         )}
         <Link
           className={item}
           to="/organisations"
-          title={t("org_title")}
-          aria-label={t("org_title")}
+          title={t("stores_title")}
+          aria-label={t("stores_title")}
           aria-current={tab === "organisations" ? "page" : undefined}
           onClick={onNavigate}
         >
           <Building2 className="size-5 shrink-0" />
-          {!collapsed && t("org_members")}
+          {!collapsed && t("stores_title")}
+        </Link>
+        <Link
+          className={item}
+          to="/account/mcp-sessions"
+          onClick={onNavigate}
+          title={t("mcp_sessions")}
+        >
+          <Plug className="size-5 shrink-0" />
+          {!collapsed && t("mcp_sessions")}
         </Link>
         <Link
           className={item}
           to="/account"
+          activeOptions={{ exact: true }}
           title={t("account_title")}
           aria-label={t("account_title")}
           aria-current={tab === "account" ? "page" : undefined}

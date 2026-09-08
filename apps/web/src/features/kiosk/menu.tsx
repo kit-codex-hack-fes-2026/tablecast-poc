@@ -2,7 +2,8 @@ import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
-import { money, useI18n } from "../../i18n/locale";
+import { money } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 
 export function ProductMenu({
   catalog,
@@ -15,16 +16,17 @@ export function ProductMenu({
 }) {
   const { locale, t } = useI18n();
   const [category, setCategory] = useState("all");
+  const selectedIds = new Set(productIds);
   const products = catalog.configuration.products.filter((product) =>
     productIds
-      ? productIds.includes(product.id)
+      ? selectedIds.has(product.id)
       : category === "all" || product.categoryId === category,
   );
   return (
     <>
       {!productIds && (
         <fieldset
-          className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 [scrollbar-width:none]"
+          className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 scrollbar-none"
           aria-label={t("kiosk_menu")}
         >
           <Button
@@ -66,7 +68,7 @@ export function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:transition-transform [&_img]:duration-200 [&_img]:ease-in-out">
+            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center [&_img]:object-cover [&_img]:transition-transform [&_img]:duration-200 [&_img]:ease-in-out [&_img]:size-full">
               {product.imageKey ? (
                 <img src={`/media/${product.imageKey}`} alt="" loading="lazy" />
               ) : (
@@ -93,7 +95,7 @@ export function ProductMenu({
               <span className="flex items-center justify-between gap-1 text-xs font-semibold mt-1">
                 {money(product.price, locale)}
                 <span
-                  className="flex items-center justify-center w-7 h-7 rounded-full bg-muted"
+                  className="flex items-center justify-center rounded-full bg-muted size-7"
                   aria-hidden="true"
                 >
                   <Plus size={16} />

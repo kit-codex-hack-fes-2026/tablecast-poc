@@ -124,11 +124,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens.note.ja,
       ).toContain("詳しい原材料は未登録");
       expect(
-        await db
-          .prepare(
-            "SELECT COUNT(*) AS count FROM stores s JOIN team t ON t.id=s.team_id AND t.organization_id=s.organization_id",
-          )
-          .first(),
+        await db.prepare("SELECT COUNT(DISTINCT organization_id) AS count FROM stores").first(),
       ).toEqual({ count: 3 });
       expect(
         await db
@@ -204,23 +200,21 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           { issuer: "https://tablecast-google.localhost", account_id: credentials.email },
         ],
       });
-      expect(await db.prepare("SELECT name FROM organization ORDER BY slug").all()).toMatchObject({
-        results: [{ name: "こはるフードサービス" }, { name: "こもれびダイニング" }],
-      });
       expect(
         await db
           .prepare(
-            "SELECT COUNT(*) AS count FROM team_member JOIN stores ON stores.team_id=team_member.team_id",
+            "SELECT COUNT(*) count FROM stores s JOIN organization o ON o.id=s.organization_id AND o.name=s.name",
           )
           .first(),
-      ).toEqual({
-        count: 4,
-      });
+      ).toEqual({ count: 3 });
       expect(
         await db
-          .prepare("SELECT COUNT(*) AS count FROM team WHERE name LIKE 'tablecast-%'")
+          .prepare(
+            "SELECT COUNT(*) count FROM member m JOIN stores s ON s.organization_id=m.organization_id",
+          )
           .first(),
-      ).toEqual({ count: 0 });
+      ).toEqual({ count: 42 });
+      expect(await db.prepare("SELECT COUNT(*) count FROM team").first()).toEqual({ count: 0 });
       expect(repeated).toEqual(counts);
       expect(
         await db

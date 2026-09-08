@@ -8,7 +8,17 @@ Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider
 
 Google の選択画面では `tablecast-owner@example.test` と `tablecast-member@example.test` を利用できる。これらは実在ユーザーを表さない。デモ管理者の認証情報は `.local/demo.json`。デモ seed だけが開発用管理者のメールを確認済みにする。
 
-`/account` で名前・画像・セッション・Google連携・パスキーを管理する。`/organisations` で組織作成、招待、役割変更、退会処理を行う。一般メンバーの店舗アクセスは店舗に紐づくチームへの所属が必要。端末のQRは `/device?user_code=...` を開き、ログイン済みスタッフが店舗と卓を選んで承認する。コードの読取りだけでは承認しない。
+`/account` で名前・画像・ログイン中の端末・Google連携・パスキーを管理する。店舗とBetter Authの組織は1対1で、チーム階層を使わない。`/organisations` は店舗一覧、`/stores/new` は店舗作成、`/admin/stores/:storeId/members` はその店舗のメンバー、`/admin/stores/:storeId/invitations` は招待一覧である。
+
+端末QRは `/device?user_code=...` から店舗を選び、`/admin/stores/:storeId/devices/new?user_code=...&tableId=...` へ進む。コード・割当先はURLから再現できる。コードの読取りや卓の選択だけでは登録せず、明示操作で承認する。
+
+## 外部アプリへのOAuth
+
+`@better-auth/oauth-provider@1.7.2` はBetter Auth公式のOAuth 2.1 Providerである。2.1は規格名で、npmパッケージのバージョンではない。認可コード・PKCE・同意・トークン検証はこのプラグインを使う。
+
+MCP連携は `/account/mcp-sessions` でアプリ・承認対象の店舗・scope・承認日時・更新日時・アクセストークンの有効期限を確認し、取り消せる。取消は同じユーザー・アプリ・店舗のアクセストークンとリフレッシュトークンを失効させ、同意を削除する。即時失効が必要なため、公式の `disableJwtPlugin: true` でDB管理のopaqueアクセストークンを発行する。以前のJWTを発行していた環境では外部アプリを再連携する。
+
+TanStack Routerには参照スターターのflat query処理を採用する。OAuthの署名付きクエリに含まれる繰り返しの `ba_param` や文字列をJSONへ変換しない。署名検証を省略せず、元のクエリを保持して公式クライアントへ渡す。
 
 ## 公開環境
 
@@ -24,4 +34,4 @@ Googleモックでは佐藤 晴香（`tablecast-owner@example.test`、こもれ�
 
 emulateは起動ごとに`sub`を生成するため、開発用Googleに限りissuerを`https://tablecast-google.localhost`、subjectを確認済みメールに固定する。seedは旧localhost issuerの重複だけを統合する。実Googleのissuer・subjectは変更しない。
 
-管理画面の組織切替はサイドバーに集約する。未所属の場合は組織作成と招待メールからの参加方法を表示し、所属済みの場合はメンバー管理を優先する。Google連携解除・パスキー削除・セッション失効・メンバー削除は対象を確認して実行する。
+管理画面の店舗切替はサイドバーに集約する。未所属の場合は店舗作成へのリンクと招待メールからの参加方法を表示する。Google連携解除・パスキー削除・セッション失効・メンバー削除は対象を確認して実行する。

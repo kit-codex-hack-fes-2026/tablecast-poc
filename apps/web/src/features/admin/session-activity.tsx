@@ -1,9 +1,9 @@
-import { sessionEventsPageSchema } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { api } from "../../lib/api";
+
+import { parseResponse, rpc } from "../../lib/api";
 import { ActivityLog } from "./events";
 
 export function SessionActivity({
@@ -19,12 +19,14 @@ export function SessionActivity({
   const activity = useInfiniteQuery({
     queryKey: ["tablecast-session-events", storeId, sessionId],
     queryFn: ({ pageParam, signal }: { pageParam: number | null; signal: AbortSignal }) => {
-      const search = new URLSearchParams({ limit: "100" });
-      if (pageParam !== null) search.set("before", String(pageParam));
-      return api(
-        `/api/admin/stores/${storeId}/tables/${sessionId}/events?${search}`,
-        { signal },
-        sessionEventsPageSchema,
+      return parseResponse(
+        rpc.api.admin.stores[":storeId"].tables[":id"].events.$get(
+          {
+            param: { storeId, id: sessionId },
+            query: { limit: "100", ...(pageParam !== null ? { before: String(pageParam) } : {}) },
+          },
+          { init: { signal } },
+        ),
       );
     },
     initialPageParam: null,
@@ -53,7 +55,7 @@ export function SessionActivity({
       )}
       {activity.data && (
         <ActivityLog
-          events={[...activity.data.pages].reverse().flatMap((page) => page.events)}
+          events={[...activity.data.pages].toReversed().flatMap((page) => page.events)}
           includeDate
         />
       )}

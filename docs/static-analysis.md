@@ -89,6 +89,10 @@ CIはbun.lockとuv.lockの存在を検査し、frozen指定で導入する。未
 Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複数の同種静的ツールを一括必須化しない。
 生成型・migrationの差分を確認する。デプロイ、seed、reset、外部モデルの実行はTurbo cacheの再利用対象にしない。
 
+## Webの追加ルール
+
+`apps/web/oxlint.config.ts` でReact Doctor、jsx-a11y、TanStack Query/Router、Tailwindを有効にする。TailwindのCSS入口は設定ファイルから絶対パスへ解決し、ルートとworkspaceのどちらから実行しても同じ検査になる。`--deny-warnings` により警告も検証失敗にする。React Compilerを採用していないため、その導入を前提に手動memo化を禁止するルールは適用しない。
+
 ## CIの実行単位
 
 GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2E、合成音声WebRTCを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。

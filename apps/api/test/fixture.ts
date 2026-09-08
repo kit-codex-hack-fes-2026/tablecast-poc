@@ -82,6 +82,9 @@ export async function setupFixture() {
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
+      "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-fixture-other-org','他店舗','tablecast-fixture-other-org',?)",
+    ).bind(now),
+    env.TABLECAST_DB.prepare(
       "INSERT INTO organization(id,name,slug,created_at) VALUES(?,?,?,?)",
     ).bind("tablecast-org", "店舗", "tablecast-test", now),
     env.TABLECAST_DB.prepare(

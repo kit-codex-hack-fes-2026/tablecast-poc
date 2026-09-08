@@ -9,9 +9,9 @@ import {
   LoaderCircle,
   Mic,
   MicOff,
+  Rabbit,
   ShoppingBag,
   Turtle,
-  Rabbit,
 } from "lucide-react";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { Streamdown } from "streamdown";
@@ -21,86 +21,15 @@ import {
   ConversationScrollButton,
 } from "../../components/ai-elements/conversation";
 import { Button } from "../../components/ui/button";
-import { time, useI18n } from "../../i18n/locale";
+import { time } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
+import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import type { VoiceView } from "./voice-connection";
 
 const AudioWaveform = lazy(() =>
   import("./audio-waveform").then((module) => ({ default: module.AudioWaveform })),
 );
-
-export type ConversationLine = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  locale: "ja" | "en";
-  createdAt: number;
-  interrupted: boolean;
-  speaker?: string;
-  streamId?: string;
-  synthetic?: boolean;
-  turnId?: string;
-  rawText?: string;
-  live?: boolean;
-  displayIncomplete?: boolean;
-};
-
-export function conversationLines(events: TableEvent[]): ConversationLine[] {
-  return events.flatMap((event) => {
-    const data = event.data;
-    if (
-      (data.role !== "user" && data.role !== "assistant") ||
-      typeof data.text !== "string" ||
-      (data.locale !== "ja" && data.locale !== "en")
-    )
-      return [];
-    const speaker = data.speaker && typeof data.speaker === "object" ? data.speaker : undefined;
-    return [
-      {
-        id: String(event.cursor),
-        role: data.role,
-        text: data.text,
-        locale: data.locale,
-        createdAt: event.createdAt,
-        interrupted: data.interrupted === true,
-        synthetic: typeof data.source === "string" && data.source.startsWith("synthetic-"),
-        turnId: typeof data.turnId === "string" ? data.turnId : undefined,
-        speaker:
-          speaker && "id" in speaker && typeof speaker.id === "string" ? speaker.id : undefined,
-        streamId:
-          speaker && "streamId" in speaker && typeof speaker.streamId === "string"
-            ? speaker.streamId
-            : undefined,
-      },
-    ];
-  });
-}
-
-export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: "ja" | "en") {
-  const merged = lines.filter((line) => line.text.trim());
-  for (const message of view.messages ?? []) {
-    if (!message.text && (message.role === "user" || message.final)) continue;
-    const index = merged.findIndex(
-      (line) =>
-        line.role === message.role &&
-        (message.turnId
-          ? line.turnId === message.turnId
-          : line.text === message.text && Math.abs(line.createdAt - message.createdAt) < 15000),
-    );
-    if (index >= 0) {
-      const line = merged[index];
-      if (line) merged[index] = { ...line, rawText: message.rawText };
-    } else
-      merged.push({
-        ...message,
-        id: `live-${message.role}-${message.id}`,
-        locale: message.locale ?? locale,
-        interrupted: message.interrupted ?? false,
-        live: !message.final,
-      });
-  }
-  return merged.sort((a, b) => a.createdAt - b.createdAt);
-}
 
 const speakerColours = [
   "bg-sky-100 text-sky-900",
@@ -202,7 +131,7 @@ function ConversationMessage({
           <summary className="cursor-pointer">
             {locale === "ja" ? "発話タグ・生成原文" : "Speech tags and generated text"}
           </summary>
-          <pre className="mt-2 whitespace-pre-wrap break-words font-mono">{line.rawText}</pre>
+          <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
         </details>
       )}
       {debug && line.role === "user" && !line.speaker && (
@@ -232,6 +161,192 @@ const toolLabels: Record<string, [string, string]> = {
   setUiSection: ["注文画面を切り替え", "Changing the order view"],
 };
 
+function useVoicePanel({
+  view,
+  lines,
+  events = [],
+  catalog,
+  onChoose,
+}: {
+  view: VoiceView;
+  lines: ConversationLine[];
+  onStart: () => void;
+  events?: TableEvent[];
+  catalog?: Catalog;
+  onChoose?: (product: Product) => void;
+  snapshot?: Snapshot | null;
+  onReview?: () => void;
+  reviewPending?: boolean;
+  controlDisabled?: boolean;
+  speechSpeed?: number;
+  onSpeedChange?: (value: number) => void;
+}) {
+  const { locale, t } = useI18n();
+  const [debug, setDebug] = useState(false);
+  const merged = mergeConversation(lines, view, locale);
+  const tools = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
+      tools.set(event.data.toolCallId, event);
+  const failedTurns = new Set(
+    events.flatMap((event) => (event.kind === "voice.failed" ? [event.data.turnId] : [])),
+  );
+  const latestUserTurn = [...events].toReversed().find((event) => event.kind === "voice.user")
+    ?.data.turnId;
+  const running = [...tools.values()].filter(
+    (event) =>
+      event.data.state === "running" &&
+      !failedTurns.has(event.data.turnId) &&
+      (!latestUserTurn || event.data.turnId === latestUserTurn),
+  );
+  const active = !["idle", "paused", "error", "stopping"].includes(view.status);
+  const status = {
+    idle: t("kiosk_voice_paused"),
+    paused: t("kiosk_voice_paused"),
+    connecting: t("kiosk_voice_connecting"),
+    listening: t("kiosk_voice_listening"),
+    thinking: t("kiosk_voice_thinking"),
+    speaking: t("kiosk_voice_speaking"),
+    stopping: t("kiosk_voice_stopping"),
+    error: t("kiosk_voice_error"),
+  }[view.status];
+  const usingTools =
+    running.length > 0 && (view.status === "thinking" || view.status === "speaking");
+  const visualState: VoiceView["status"] | "tool" =
+    usingTools && view.status === "thinking" ? "tool" : view.status;
+  const toolPhase = locale === "ja" ? "ツール実行中" : "Using tools";
+  const phase = visualState === "tool" ? toolPhase : status;
+  const assistantTurns = new Set(
+    merged.flatMap((line) => (line.role === "assistant" ? [line.turnId] : [])),
+  );
+  function toolCards(turnId?: string) {
+    return [...tools.values()].flatMap((event) => {
+      if (event.data.turnId !== turnId) return [];
+      const failed = event.data.state === "error";
+      const pending = event.data.state === "running";
+      const stale =
+        pending &&
+        (!active ||
+          failedTurns.has(turnId) ||
+          Boolean(latestUserTurn && turnId !== latestUserTurn));
+      const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
+      const title =
+        toolLabels[name]?.[locale === "ja" ? 0 : 1] ?? (locale === "ja" ? "処理" : "Action");
+      return [
+        <div
+          key={String(event.data.toolCallId)}
+          className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
+          data-tool-state={stale ? "interrupted" : String(event.data.state)}
+        >
+          {failed ? (
+            <CircleAlert className="size-4 text-destructive" />
+          ) : pending && !stale ? (
+            <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
+          ) : stale ? (
+            <MicOff className="size-4" />
+          ) : (
+            <Check className="size-4 text-success" />
+          )}
+          <span className="flex-1">
+            {title}
+            {failed && (
+              <span className="mt-1 block text-destructive">
+                {locale === "ja"
+                  ? "処理を完了できませんでした。画面から再度操作できます。"
+                  : "This action could not be completed. You can try it again on screen."}
+              </span>
+            )}
+          </span>
+          <span className="text-muted-foreground">
+            {failed
+              ? locale === "ja"
+                ? "エラー"
+                : "Failed"
+              : stale
+                ? locale === "ja"
+                  ? "中断"
+                  : "Interrupted"
+                : pending
+                  ? locale === "ja"
+                    ? "実行中"
+                    : "Running"
+                  : locale === "ja"
+                    ? "完了"
+                    : "Complete"}
+          </span>
+          {debug && (
+            <code>
+              {name}
+              {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
+            </code>
+          )}
+        </div>,
+      ];
+    });
+  }
+  function products(turnId?: string) {
+    if (!catalog || !onChoose) return null;
+    return events.flatMap((event) =>
+      event.kind === "voice.products" && event.data.turnId === turnId
+        ? [
+            <div className="mt-3" key={event.cursor}>
+              <ProductMenu
+                catalog={catalog}
+                productIds={
+                  Array.isArray(event.data.productIds)
+                    ? event.data.productIds.filter((id): id is string => typeof id === "string")
+                    : []
+                }
+                onChoose={onChoose}
+              />
+            </div>,
+          ]
+        : [],
+    );
+  }
+  const timeline: { id: string; createdAt: number; line?: ConversationLine; turnId?: string }[] =
+    merged.map((line) => ({ id: line.id, createdAt: line.createdAt, line }));
+  for (const turnId of new Set(
+    [...tools.values()].map((event) =>
+      typeof event.data.turnId === "string" ? event.data.turnId : undefined,
+    ),
+  )) {
+    if (merged.some((line) => line.turnId === turnId)) continue;
+    const first = events.find(
+      (event) => event.kind === "voice.tool" && event.data.turnId === turnId,
+    );
+    if (first) timeline.push({ id: `tool-${first.cursor}`, createdAt: first.createdAt, turnId });
+  }
+  timeline.toSorted((left, right) => left.createdAt - right.createdAt);
+  const liveRole: ConversationLine["role"] = view.status === "listening" ? "user" : "assistant";
+  const speakingLine =
+    view.status === "speaking"
+      ? [...merged].toReversed().find((line) => line.role === "assistant")
+      : undefined;
+  const hasLive =
+    Boolean(speakingLine) || merged.some((line) => line.live && line.role === liveRole);
+  return {
+    locale,
+    t,
+    debug,
+    setDebug,
+    merged,
+    latestUserTurn,
+    active,
+    status,
+    usingTools,
+    visualState,
+    toolPhase,
+    phase,
+    assistantTurns,
+    toolCards,
+    products,
+    timeline,
+    liveRole,
+    speakingLine,
+    hasLive,
+  };
+}
 export function VoicePanel({
   view,
   lines,
@@ -259,148 +374,39 @@ export function VoicePanel({
   speechSpeed?: number;
   onSpeedChange?: (value: number) => void;
 }) {
-  const { locale, t } = useI18n();
-  const [debug, setDebug] = useState(false);
-  const merged = mergeConversation(lines, view, locale);
-  const tools = new Map<string, TableEvent>();
-  for (const event of events)
-    if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
-      tools.set(event.data.toolCallId, event);
-  const failedTurns = new Set(
-    events.filter((event) => event.kind === "voice.failed").map((event) => event.data.turnId),
-  );
-  const latestUserTurn = [...events].reverse().find((event) => event.kind === "voice.user")
-    ?.data.turnId;
-  const running = [...tools.values()].filter(
-    (event) =>
-      event.data.state === "running" &&
-      !failedTurns.has(event.data.turnId) &&
-      (!latestUserTurn || event.data.turnId === latestUserTurn),
-  );
-  const active = !["idle", "paused", "error", "stopping"].includes(view.status);
-  const status = {
-    idle: t("kiosk_voice_paused"),
-    paused: t("kiosk_voice_paused"),
-    connecting: t("kiosk_voice_connecting"),
-    listening: t("kiosk_voice_listening"),
-    thinking: t("kiosk_voice_thinking"),
-    speaking: t("kiosk_voice_speaking"),
-    stopping: t("kiosk_voice_stopping"),
-    error: t("kiosk_voice_error"),
-  }[view.status];
-  const usingTools =
-    running.length > 0 && (view.status === "thinking" || view.status === "speaking");
-  const visualState = usingTools && view.status === "thinking" ? "tool" : view.status;
-  const toolPhase = locale === "ja" ? "ツール実行中" : "Using tools";
-  const phase = visualState === "tool" ? toolPhase : status;
-  const assistantTurns = new Set(
-    merged.filter((line) => line.role === "assistant").map((line) => line.turnId),
-  );
-  function toolCards(turnId?: string) {
-    return [...tools.values()]
-      .filter((event) => event.data.turnId === turnId)
-      .map((event) => {
-        const failed = event.data.state === "error";
-        const pending = event.data.state === "running";
-        const stale =
-          pending &&
-          (!active ||
-            failedTurns.has(turnId) ||
-            Boolean(latestUserTurn && turnId !== latestUserTurn));
-        const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
-        const title =
-          toolLabels[name]?.[locale === "ja" ? 0 : 1] ?? (locale === "ja" ? "処理" : "Action");
-        return (
-          <div
-            key={String(event.data.toolCallId)}
-            className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
-            data-tool-state={stale ? "interrupted" : String(event.data.state)}
-          >
-            {failed ? (
-              <CircleAlert className="size-4 text-destructive" />
-            ) : pending && !stale ? (
-              <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
-            ) : stale ? (
-              <MicOff className="size-4" />
-            ) : (
-              <Check className="size-4 text-success" />
-            )}
-            <span className="flex-1">
-              {title}
-              {failed && (
-                <span className="mt-1 block text-destructive">
-                  {locale === "ja"
-                    ? "処理を完了できませんでした。画面から再度操作できます。"
-                    : "This action could not be completed. You can try it again on screen."}
-                </span>
-              )}
-            </span>
-            <span className="text-muted-foreground">
-              {failed
-                ? locale === "ja"
-                  ? "エラー"
-                  : "Failed"
-                : stale
-                  ? locale === "ja"
-                    ? "中断"
-                    : "Interrupted"
-                  : pending
-                    ? locale === "ja"
-                      ? "実行中"
-                      : "Running"
-                    : locale === "ja"
-                      ? "完了"
-                      : "Complete"}
-            </span>
-            {debug && (
-              <code>
-                {name}
-                {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
-              </code>
-            )}
-          </div>
-        );
-      });
-  }
-  function products(turnId?: string) {
-    if (!catalog || !onChoose) return null;
-    return events
-      .filter((event) => event.kind === "voice.products" && event.data.turnId === turnId)
-      .map((event) => (
-        <div className="mt-3" key={event.cursor}>
-          <ProductMenu
-            catalog={catalog}
-            productIds={
-              Array.isArray(event.data.productIds)
-                ? event.data.productIds.filter((id): id is string => typeof id === "string")
-                : []
-            }
-            onChoose={onChoose}
-          />
-        </div>
-      ));
-  }
-  const timeline: { id: string; createdAt: number; line?: ConversationLine; turnId?: string }[] =
-    merged.map((line) => ({ id: line.id, createdAt: line.createdAt, line }));
-  for (const turnId of new Set(
-    [...tools.values()].map((event) =>
-      typeof event.data.turnId === "string" ? event.data.turnId : undefined,
-    ),
-  )) {
-    if (merged.some((line) => line.turnId === turnId)) continue;
-    const first = events.find(
-      (event) => event.kind === "voice.tool" && event.data.turnId === turnId,
-    );
-    if (first) timeline.push({ id: `tool-${first.cursor}`, createdAt: first.createdAt, turnId });
-  }
-  timeline.sort((left, right) => left.createdAt - right.createdAt);
-  const liveRole = view.status === "listening" ? "user" : "assistant";
-  const speakingLine =
-    view.status === "speaking"
-      ? [...merged].reverse().find((line) => line.role === "assistant")
-      : undefined;
-  const hasLive =
-    Boolean(speakingLine) || merged.some((line) => line.live && line.role === liveRole);
+  const {
+    locale,
+    t,
+    debug,
+    setDebug,
+    merged,
+    latestUserTurn,
+    active,
+    usingTools,
+    visualState,
+    toolPhase,
+    phase,
+    assistantTurns,
+    toolCards,
+    products,
+    timeline,
+    liveRole,
+    speakingLine,
+    hasLive,
+  } = useVoicePanel({
+    view,
+    lines,
+    onStart,
+    events,
+    catalog,
+    onChoose,
+    snapshot,
+    onReview,
+    reviewPending,
+    controlDisabled,
+    speechSpeed,
+    onSpeedChange,
+  });
   return (
     <section
       className="relative flex h-full min-h-0 min-w-0 flex-col px-3"
@@ -566,7 +572,7 @@ export function VoicePanel({
           />
         </Suspense>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-md shadow-violet-500/15">
+          <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
             <Button
               className="h-11 rounded-[inherit]"
               variant="voice"

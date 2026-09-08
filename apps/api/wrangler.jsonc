@@ -3,7 +3,7 @@
   "name": "tablecast-api",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-03",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_do_not_populate_process_env"],
   "workers_dev": false,
   "vars": {
     "TABLECAST_PUBLIC_ORIGIN": "http://localhost:3000",

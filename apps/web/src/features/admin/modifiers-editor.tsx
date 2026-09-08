@@ -2,10 +2,11 @@ import type { Modifier, Product } from "@tablecast/api/schema";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
+import { emptyText } from "./configuration-defaults";
+
 import {
   BilingualFields,
   BooleanField,
-  emptyText,
   NumericField,
   ReferencesField,
 } from "./configuration-fields";
