@@ -374,6 +374,7 @@ export const voiceTriggerSchema = z.enum(["user", "proactive"]);
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 export const voiceTurnSchema = z
   .object({
+    transport: z.enum(["cascade", "realtime"]).default("cascade"),
     turnId: id,
     voiceSessionId: id,
     locale: localeSchema,

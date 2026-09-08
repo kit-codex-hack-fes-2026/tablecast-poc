@@ -11,7 +11,7 @@ from livekit import rtc
 from livekit.agents import AgentSession, JobContext, UserStateChangedEvent
 
 from tablecast_livekit.agent import TablecastAgent, entrypoint
-from tablecast_livekit.api import VoiceAPI, VoiceConfiguration
+from tablecast_livekit.api import RealtimeConfiguration, VoiceAPI, VoiceConfiguration
 
 
 def configuration() -> VoiceConfiguration:
@@ -30,6 +30,16 @@ async def test_接続完了を待ってから参加者指定の実Sessionを開�
     monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
     monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
     monkeypatch.setenv("INWORLD_API_KEY", "tablecast-test-inworld-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "tablecast-test-openai-key")
+    monkeypatch.setattr(
+        VoiceAPI,
+        "realtime_configuration",
+        AsyncMock(
+            return_value=RealtimeConfiguration(
+                model="gpt-realtime-2.1", instructions="テスト", tools=[]
+            )
+        ),
+    )
     monkeypatch.setattr(VoiceAPI, "configuration", AsyncMock(return_value=configuration()))
     room = rtc.Room()
     ctx = create_autospec(JobContext, instance=True)

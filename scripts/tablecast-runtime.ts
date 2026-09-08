@@ -276,7 +276,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       "TABLECAST_INWORLD_VOICE_JA",
       "TABLECAST_INWORLD_VOICE_EN",
       "TABLECAST_MODEL_API_KEY",
-      "TABLECAST_MODEL",
     ]
       .every((key) => Boolean(external[key]))
       .toString(),

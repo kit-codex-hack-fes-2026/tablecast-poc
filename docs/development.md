@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono/Mastra、D1、DO、R2、Imagesの対応範囲、LiveKit Server、Python Agent、MCP、Storybook。
-外部通信はLLM、Inworld STT、Inworld TTSを基本とする。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声の外部通信はOpenAI Realtime 2.1とInworld TTSを使う。開発ランチャーは `.env.secrets.local` の `TABLECAST_MODEL_API_KEY` をPythonの `OPENAI_API_KEY` として渡す。`TABLECAST_MODEL` は既存のテキスト比較試験用で、通常音声モデルは `gpt-realtime-2.1` に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験

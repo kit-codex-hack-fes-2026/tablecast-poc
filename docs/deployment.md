@@ -104,7 +104,7 @@ LiveKit Cloudまたは対応するコンテナ環境へPython Agentを配置す�
 
 linux/amd64の実イメージをbuildし、ネットワーク無しのCLI・import・VAD読込みとUID 10001を確認した。外部へ通信できない専用Dockerネットワーク内のLiveKitへ待受登録し、health 200も確認した。AI資格とRoom jobは使わず、検証後は専用コンテナ・ネットワーク・鍵ファイルを片付けた。これは公開Agent dispatchや日英音声往復の受入を代替しない。
 
-Agent登録、health、Room dispatch、Inworld STT/TTS、APIのモデル応答、日英の標準voiceを先に確認する。`INWORLD_API_KEY` はPythonだけへ渡し、LiveKit/API内部tokenをブラウザーへ渡さない。接続前提が揃ったstagingで `TABLECAST_VOICE_ENABLED=true` を明示してAPIを再deployし、店舗の `cast.voice.ja/en` を試聴した実在IDで公開する。再生停止・送音停止・Room退出・進行turnの失効、割込み中の注文拒否をstagingと実iPadで検証する。その受入結果が揃うまではproductionのフラグを有効にしない。
+Agent登録、health、Room dispatch、OpenAI Realtime 2.1の音声入力・テキスト出力、Inworld TTS、API業務ツール、日英の標準voiceを先に確認する。Pythonへ `OPENAI_API_KEY` を配備し、`gpt-realtime-2.1` へのアクセスを検証する。`INWORLD_API_KEY` はPythonだけへ渡し、LiveKit/API内部tokenをブラウザーへ渡さない。接続前提が揃ったstagingで `TABLECAST_VOICE_ENABLED=true` を明示してAPIを再deployし、店舗の `cast.voice.ja/en` を試聴した実在IDで公開する。再生停止・送音停止・Room退出・進行turnの失効、割込み中の注文拒否をstagingと実iPadで検証する。その受入結果が揃うまではproductionのフラグを有効にしない。
 
 APIの一覧確認用キーは `TABLECAST_INWORLD_VOICES_API_KEY` として別に登録し、GETのmetadata取得だけに使う。このキーだけではAgentや音声受付を有効化しない。標準音声の一覧と単体確認は現行の `/voices/v1/voices` を使い、独自のSTT/TTSクライアントを追加しない。[Inworld一覧とRead権限](https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/list-voices)
 

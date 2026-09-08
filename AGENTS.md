@@ -27,7 +27,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 - Bun workspaces + Turborepo。JS依存はルート `bun.lock`、Pythonは `livekit/pyproject.toml` と `livekit/uv.lock`。
 - `apps/web`: TanStack Start、Base UI、日英UI。Storybookは `apps/web/.storybook`、Storyは部品に隣接。
 - `apps/api`: Hono、Mastra、Better Auth、Drizzle、D1、DO、R2、Images、MCP。DBと業務判断の所有者。
-- `livekit`: Python LiveKit Agent、Inworld STT/TTS。uv、ty、ruff、pytestを使用。
+- `livekit`: Python LiveKit Agent、OpenAI Realtime 2.1音声入力・テキスト出力 + Inworld TTSのhalf-cascade。uv、ty、ruff、pytestを使用。
 - 初期実装では `packages/domain`、`packages/contracts`、`packages/ui`、`apps/storybook` を作らない。
 - ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。
 

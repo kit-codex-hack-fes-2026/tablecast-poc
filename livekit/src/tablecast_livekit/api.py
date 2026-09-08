@@ -26,6 +26,13 @@ class VoiceConfiguration(BaseModel):
     speechSpeed: float = Field(default=1.0, ge=0.5, le=1.5, multiple_of=0.1)
 
 
+class RealtimeConfiguration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model: Literal["gpt-realtime-2.1"]
+    instructions: str
+    tools: list[dict[str, object]]
+
+
 class TurnSkipped(Exception):
     """APIが現在の卓に自発接客を開始しないと判断した。"""
 
@@ -62,6 +69,8 @@ class VoiceAPI:
                 # 拒否や本文の途中失敗でも、受信済みの診断IDを失わない。
                 trace_id = response.headers.get("X-Request-Id")
                 http_status = response.status_code
+                if response.is_error:
+                    await response.aread()
                 response.raise_for_status()
                 yield response
                 phase = "completed"
@@ -101,6 +110,64 @@ class VoiceAPI:
             await response.aread()
             self.config = VoiceConfiguration.model_validate(response.json())
             return self.config
+
+    async def realtime_configuration(self) -> RealtimeConfiguration:
+        async with self._request(
+            "realtime",
+            "GET",
+            "/internal/voice/realtime",
+            params={"voiceSessionId": self.voice_session_id},
+        ) as response:
+            await response.aread()
+            return RealtimeConfiguration.model_validate(response.json())
+
+    async def start_turn(self, turn_id: str, locale: str, *, proactive: bool = False) -> None:
+        async with self._request(
+            "start_turn",
+            "POST",
+            "/internal/voice/turns",
+            turn_id=turn_id,
+            json={
+                "voiceSessionId": self.voice_session_id,
+                "turnId": turn_id,
+                "locale": locale,
+                "transport": "realtime",
+                "trigger": "proactive" if proactive else "user",
+                "messages": [] if proactive else [{"role": "user", "content": ""}],
+            },
+        ) as response:
+            await response.aread()
+            if response.status_code == 204:
+                raise TurnSkipped
+
+    async def tool(
+        self, turn_id: str, name: str, call_id: str, arguments: dict[str, object]
+    ) -> object:
+        async with self._request(
+            "tool",
+            "POST",
+            "/internal/voice/tools",
+            turn_id=turn_id,
+            json={
+                "voiceSessionId": self.voice_session_id,
+                "turnId": turn_id,
+                "toolName": name,
+                "toolCallId": call_id,
+                "arguments": arguments,
+            },
+        ) as response:
+            await response.aread()
+            return response.json()["result"]
+
+    async def transcript(self, turn_id: str, text: str) -> None:
+        async with self._request(
+            "transcript",
+            "POST",
+            "/internal/voice/transcript",
+            turn_id=turn_id,
+            json={"voiceSessionId": self.voice_session_id, "turnId": turn_id, "text": text},
+        ) as response:
+            await response.aread()
 
     async def stream_turn(
         self,

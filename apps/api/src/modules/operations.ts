@@ -542,6 +542,7 @@ export async function recordVoiceEvent(
   env: TablecastEnv,
   actor: Actor,
   event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
+  reserve = false,
 ) {
   ensure(actor.kind === "voice" && actor.turnId && actor.voiceSessionId, "VOICE_REQUIRED", 403);
   const data = voiceToolEventSchema.parse({
@@ -550,7 +551,7 @@ export async function recordVoiceEvent(
   });
   const gate = voiceCondition(actor);
   const result = await env.TABLECAST_DB.prepare(
-    `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,?,?,? FROM table_sessions WHERE id=? AND store_id=? AND status='open'${gate.sql}`,
+    `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,?,?,? FROM table_sessions WHERE id=? AND store_id=? AND status='open'${gate.sql} AND (?<>'running' OR NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=? AND kind='voice.tool' AND json_extract(data_json,'$.toolCallId')=? AND json_extract(data_json,'$.state')='running'))`,
   )
     .bind(
       event.kind,
@@ -559,6 +560,9 @@ export async function recordVoiceEvent(
       actor.tableSessionId,
       actor.storeId,
       ...gate.values,
+      reserve ? data.state : "",
+      actor.tableSessionId,
+      data.toolCallId,
     )
     .run();
   if (result.meta.changes === 1) await notifyStore(env, actor.storeId);

@@ -40,10 +40,19 @@ server = AgentServer(port=int(os.environ.get("TABLECAST_AGENT_HEALTH_PORT", "0")
 
 
 class TablecastAgent(Agent):
-    def __init__(self, api: VoiceAPI, config: VoiceConfiguration) -> None:
+    def __init__(
+        self,
+        api: VoiceAPI,
+        config: VoiceConfiguration,
+        *,
+        model: llm.RealtimeModel | None = None,
+        instructions: str = "接客と業務操作は認証済みTableCast APIへ委譲します。",
+        tools: list[llm.Tool] | None = None,
+    ) -> None:
         super().__init__(
-            instructions="接客と業務操作は認証済みTableCast APIへ委譲します。",
-            llm=TablecastLLM(self.response),
+            instructions=instructions,
+            tools=tools,
+            llm=model if model is not None else TablecastLLM(self.response),
         )
         self.api = api
         self.config = config
@@ -406,7 +415,9 @@ async def entrypoint(ctx: JobContext) -> None:
     api = VoiceAPI(client, voice_session_id)
     try:
         config = await api.configuration()
-        agent = TablecastAgent(api, config)
+        from .realtime import RealtimeTablecastAgent
+
+        agent = RealtimeTablecastAgent(api, config, await api.realtime_configuration())
         ctx.log_context_fields = {
             "tableSessionId": config.tableSessionId,
             "voiceSessionId": config.voiceSessionId,
@@ -423,12 +434,6 @@ async def entrypoint(ctx: JobContext) -> None:
             speaking_rate=config.speechSpeed,
         )
         session: AgentSession = AgentSession(
-            stt=inworld.STT(
-                language=language,
-                enable_voice_profile=False,
-                enable_speaker_diarization=True,
-                include_word_timestamps=True,
-            ),
             tts=synthesizer,
             vad=silero.VAD.load(),
             turn_handling=TurnHandlingOptions(

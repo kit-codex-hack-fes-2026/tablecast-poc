@@ -5,7 +5,7 @@ description = "TableCastのLiveKit音声接続"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-  "livekit-agents[inworld,silero]==1.8.0",
+  "livekit-agents[inworld,openai,silero]==1.8.0",
   "livekit-plugins-inworld==1.8.0",
   "httpx>=0.28.1,<0.29",
   "python-dotenv>=1.2,<2",
