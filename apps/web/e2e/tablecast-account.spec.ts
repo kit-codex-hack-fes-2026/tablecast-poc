@@ -52,6 +52,8 @@ test("Googleログインから名前変更・組織作成・招待メールま�
     );
   const invitation = content.HTML.match(/href="([^"]*\/invitations\/[^"?]+)"/u)?.[1];
   expect(invitation).toBeTruthy();
+  // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。
+  await page.goto("about:blank");
   await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL ?? "" }, data: {} });
   await page.goto(invitation ?? "/organisations");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
@@ -86,6 +88,8 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await page.getByLabel("パスキーの名前").fill(`TableCast Chromium ${Date.now()}`);
   await page.getByRole("button", { name: "パスキーを追加" }).click();
   await expect(page.getByRole("status")).toHaveText("更新しました");
+  // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。
+  await page.goto("about:blank");
   await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL ?? "" }, data: {} });
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
@@ -151,6 +155,8 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
   }
   const userSchema = z.object({ user: z.object({ id: z.string() }) });
   const before = userSchema.parse(await (await page.request.get("/api/auth/get-session")).json());
+  // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。
+  await page.goto("about:blank");
   await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL ?? "" }, data: {} });
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
