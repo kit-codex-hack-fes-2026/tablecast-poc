@@ -102,7 +102,9 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.getByRole("button", { name: "参加する", exact: true }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
-  await expect(page.getByRole("table").getByText(storeName, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("table").getByRole("cell").filter({ hasText: storeName }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "メンバーを招待", exact: true })).toHaveCount(0);
 });
 

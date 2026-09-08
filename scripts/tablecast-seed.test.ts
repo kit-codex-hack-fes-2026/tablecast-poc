@@ -27,6 +27,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         TABLECAST_PUBLIC_ORIGIN: "http://localhost:3999",
         TABLECAST_AUTH_SECRET: "tablecast-seed-test-secret-not-used-in-deployment",
       },
+      r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-seed-test-media" }],
       d1_databases: [
         {
           binding: "TABLECAST_DB",
@@ -187,7 +188,38 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
               .bind(`tablecast-mock-${index}`, issuer, `subject-${index}`, owner.id),
         ),
       );
+      const seededIcons = await db
+        .prepare("SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization")
+        .all<{ url: string | null }>();
+      expect(seededIcons.results.length).toBeGreaterThan(40);
+      for (const { url } of seededIcons.results) {
+        expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
+        const image = await platform.env.TABLECAST_MEDIA.get(
+          `tablecast/avatars/${url?.split("/").at(-1)}`,
+        );
+        expect(image?.httpMetadata?.contentType).toBe("image/svg+xml");
+      }
+      // 店舗とユーザーが変更した画像は、再投入で初期画像へ戻さない。
+      await db
+        .prepare("UPDATE user SET image='https://example.test/custom-user.png' WHERE id=?")
+        .bind(owner.id)
+        .run();
+      await db
+        .prepare(
+          "UPDATE organization SET logo='https://example.test/custom-store.png' WHERE id=(SELECT organization_id FROM stores WHERE id='tablecast-komorebi')",
+        )
+        .run();
       const repeated = await seedDemoDatabase(platform.env, credentials);
+      expect(await db.prepare("SELECT image FROM user WHERE id=?").bind(owner.id).first()).toEqual({
+        image: "https://example.test/custom-user.png",
+      });
+      expect(
+        await db
+          .prepare(
+            "SELECT logo FROM organization WHERE id=(SELECT organization_id FROM stores WHERE id='tablecast-komorebi')",
+          )
+          .first(),
+      ).toEqual({ logo: "https://example.test/custom-store.png" });
       expect(
         await db
           .prepare(

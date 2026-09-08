@@ -11,6 +11,7 @@ import { AdminShell } from "../admin/admin-shell";
 const StoreContext = createContext<{
   id: string;
   name: string;
+  logo: string | null;
   role: string;
   organizationId: string;
 } | null>(null);

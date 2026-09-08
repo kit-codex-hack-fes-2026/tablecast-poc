@@ -425,5 +425,9 @@
   "device_scan_camera_error": "カメラを開けません。カメラの権限と接続を確認するか、QR画像・コード入力を使ってください。",
   "device_scan_image_error": "QRコードを読み取れませんでした。鮮明なQR画像を選んでください。",
   "admin_resize_sidebar": "サイドバーの幅を調整",
-  "kiosk_resize_panes": "会話と注文の表示領域を調整"
+  "kiosk_resize_panes": "会話と注文の表示領域を調整",
+  "store_profile": "店舗設定",
+  "store_icon_change": "店舗アイコンを変更",
+  "store_icon_hint": "角丸の正方形で表示します。PNG・JPEG・WebP、1MB以内。",
+  "store_icon_permission": "店舗アイコンは管理者が変更できます。"
 }

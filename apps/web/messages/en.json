@@ -425,5 +425,9 @@
   "device_scan_camera_error": "Cannot open the camera. Check camera permissions and connection, choose a QR image, or enter the code.",
   "device_scan_image_error": "Could not read a QR code. Choose a clear QR image.",
   "admin_resize_sidebar": "Resize sidebar",
-  "kiosk_resize_panes": "Resize conversation and order panes"
+  "kiosk_resize_panes": "Resize conversation and order panes",
+  "store_profile": "Restaurant settings",
+  "store_icon_change": "Change restaurant icon",
+  "store_icon_hint": "Shown as a rounded square. PNG, JPEG or WebP, up to 1MB.",
+  "store_icon_permission": "Only restaurant administrators can change the icon."
 }

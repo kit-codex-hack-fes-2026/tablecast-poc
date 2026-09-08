@@ -24,6 +24,7 @@ import { Route as StoresNewRouteImport } from './routes/stores.new'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
+import { Route as AdminStoresStoreIdProfileRouteImport } from './routes/admin.stores.$storeId.profile'
 import { Route as AdminStoresStoreIdDevicesIndexRouteImport } from './routes/admin.stores.$storeId.devices.index'
 import { Route as AdminStoresStoreIdDevicesNewRouteImport } from './routes/admin.stores.$storeId.devices.new'
 import { Route as AdminStoresStoreIdInvitationsIndexRouteImport } from './routes/admin.stores.$storeId.invitations.index'
@@ -112,6 +113,12 @@ const AdminStoresStoreIdMembersRoute =
   AdminStoresStoreIdMembersRouteImport.update({
     id: '/members',
     path: '/members',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdProfileRoute =
+  AdminStoresStoreIdProfileRouteImport.update({
+    id: '/profile',
+    path: '/profile',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
 const AdminStoresStoreIdDevicesIndexRoute =
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
@@ -239,6 +247,7 @@ export interface FileRoutesByTo {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
@@ -270,6 +279,7 @@ export interface FileRoutesById {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
@@ -500,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdMembersRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId/profile': {
+      id: '/admin/stores/$storeId/profile'
+      path: '/profile'
+      fullPath: '/admin/stores/$storeId/profile'
+      preLoaderRoute: typeof AdminStoresStoreIdProfileRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/devices/': {
       id: '/admin/stores/$storeId/devices/'
       path: '/devices'
@@ -597,6 +617,7 @@ declare module '@tanstack/react-router' {
 interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
+  AdminStoresStoreIdProfileRoute: typeof AdminStoresStoreIdProfileRoute
   AdminStoresStoreIdDevicesNewRoute: typeof AdminStoresStoreIdDevicesNewRoute
   AdminStoresStoreIdInvitationsNewRoute: typeof AdminStoresStoreIdInvitationsNewRoute
   AdminStoresStoreIdMenuSectionRoute: typeof AdminStoresStoreIdMenuSectionRoute
@@ -615,6 +636,7 @@ interface AdminStoresStoreIdRouteChildren {
 const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
+  AdminStoresStoreIdProfileRoute: AdminStoresStoreIdProfileRoute,
   AdminStoresStoreIdDevicesNewRoute: AdminStoresStoreIdDevicesNewRoute,
   AdminStoresStoreIdInvitationsNewRoute: AdminStoresStoreIdInvitationsNewRoute,
   AdminStoresStoreIdMenuSectionRoute: AdminStoresStoreIdMenuSectionRoute,
@@ -659,12 +681,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

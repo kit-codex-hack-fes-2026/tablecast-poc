@@ -1,5 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { MenuNavigation } from "../store/menu-navigation";
+import { StoreIcon } from "../../components/store-icon";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState, useParams } from "@tanstack/react-router";
@@ -8,6 +9,7 @@ import {
   Building2,
   ChevronsUpDown,
   ChevronRight,
+  Store,
   History,
   LayoutDashboard,
   LogOut,
@@ -93,7 +95,13 @@ export function AdminSidebar({
       </Link>
       {!collapsed && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-white p-2">
-          <Building2 className="size-8 shrink-0 rounded-md bg-secondary p-1.5" />
+          <StoreIcon
+            name={
+              stores.data?.stores.find((store) => store.id === selectedStore)?.name ??
+              t("admin_store")
+            }
+            logo={stores.data?.stores.find((store) => store.id === selectedStore)?.logo}
+          />
           <Select
             items={
               stores.data?.stores.map((store) => ({ value: store.id, label: store.name })) ?? []
@@ -113,7 +121,10 @@ export function AdminSidebar({
             <SelectContent>
               {stores.data?.stores.map((store) => (
                 <SelectItem key={store.id} value={store.id}>
-                  {store.name}
+                  <span className="flex items-center gap-2">
+                    <StoreIcon name={store.name} logo={store.logo} />
+                    {store.name}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -199,6 +210,16 @@ export function AdminSidebar({
             >
               <MonitorSmartphone className="size-5 shrink-0" />
               {!collapsed && t("device_title")}
+            </Link>
+            <Link
+              className={item}
+              to="/admin/stores/$storeId/profile"
+              params={{ storeId: selectedStore }}
+              title={t("store_profile")}
+              onClick={onNavigate}
+            >
+              <Store className="size-5 shrink-0" />
+              {!collapsed && t("store_profile")}
             </Link>
           </>
         ) : (

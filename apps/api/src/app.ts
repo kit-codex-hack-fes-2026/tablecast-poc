@@ -1,3 +1,4 @@
+import { saveIdentityImage } from "./modules/identity-images";
 import { getMcpSessions } from "./modules/mcp-sessions";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
@@ -15,6 +16,7 @@ import {
   hashDeviceToken,
   staffActor,
   staffIdentity,
+  requireManager,
   type Actor,
   type ApiEnv,
 } from "./auth";
@@ -162,30 +164,10 @@ const publicRoutes = app
     async (c) => {
       await staffIdentity(c);
       const { image } = c.req.valid("form");
-      ensure(
-        image instanceof File && image.size > 0 && image.size <= 1024 * 1024,
-        "INVALID_IMAGE",
-        422,
-      );
-      const bytes = new Uint8Array(await image.arrayBuffer());
-      const valid =
-        (image.type === "image/png" &&
-          bytes[0] === 137 &&
-          bytes[1] === 80 &&
-          bytes[2] === 78 &&
-          bytes[3] === 71) ||
-        (image.type === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) ||
-        (image.type === "image/webp" &&
-          new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
-          new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP");
-      ensure(valid, "INVALID_IMAGE", 422);
-      const key = crypto.randomUUID();
-      await c.env.TABLECAST_MEDIA.put(`tablecast/avatars/${key}`, bytes, {
-        httpMetadata: { contentType: image.type },
-      });
+      const url = await saveIdentityImage(c.env, image);
       await createAuth(c.env).api.updateUser({
         headers: c.req.raw.headers,
-        body: { image: `${c.env.TABLECAST_PUBLIC_ORIGIN}/api/avatars/${key}` },
+        body: { image: url },
       });
       return c.json({ ok: true });
     },
@@ -402,10 +384,16 @@ const tableRoutes = publicRoutes
   .get("/api/admin/stores", async (c) => {
     const session = await staffIdentity(c);
     const rows = await c.env.TABLECAST_DB.prepare(
-      "SELECT s.id,s.name,m.role,s.organization_id AS organizationId FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=? ORDER BY s.name",
+      "SELECT s.id,s.name,o.logo,m.role,s.organization_id AS organizationId FROM stores s JOIN organization o ON o.id=s.organization_id JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=? ORDER BY s.name",
     )
       .bind(session.user.id)
-      .all<{ id: string; name: string; role: string; organizationId: string }>();
+      .all<{
+        id: string;
+        name: string;
+        logo: string | null;
+        role: string;
+        organizationId: string;
+      }>();
     return c.json({ stores: rows.results, locale: session.user.locale });
   })
   .post(
@@ -478,6 +466,20 @@ const admin = new Hono<ApiEnv>()
     await next();
   })
   .get("/", async (c) => c.json(await getAdminState(c.env, c.get("actor"))))
+  .post("/icon", zValidator("form", z.object({ image: z.instanceof(File) })), async (c) => {
+    const actor = c.get("actor");
+    requireManager(actor);
+    const store = await c.env.TABLECAST_DB.prepare("SELECT organization_id FROM stores WHERE id=?")
+      .bind(actor.storeId)
+      .first<{ organization_id: string }>();
+    ensure(store, "STORE_NOT_FOUND", 404);
+    const logo = await saveIdentityImage(c.env, c.req.valid("form").image);
+    await createAuth(c.env).api.updateOrganization({
+      headers: c.req.raw.headers,
+      body: { organizationId: store.organization_id, data: { logo } },
+    });
+    return c.json({ logo });
+  })
   .get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)))
   .get("/voices", validateQuery(voiceListQuerySchema), async (c) =>
     c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query"))),

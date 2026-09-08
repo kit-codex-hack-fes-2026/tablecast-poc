@@ -1,3 +1,4 @@
+import { seedIdentityIcon } from "./tablecast-seed-icons";
 import { fakerJA as faker } from "@faker-js/faker";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/auth";
 import { configurationErrors, confirmationText, priceCart } from "../apps/api/src/modules/pricing";
@@ -480,7 +481,10 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
       .bind(email)
       .first<{ id: string }>();
     const user = existing ?? (await auth.api.signUpEmail({ body: { email, password, name } })).user;
-    await db.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
+    await db
+      .prepare("UPDATE user SET email_verified=1,image=COALESCE(image,?) WHERE id=?")
+      .bind(await seedIdentityIcon(env, "user", user.id), user.id)
+      .run();
     owners.push(user.id);
   }
   faker.seed(20260909);
@@ -538,7 +542,10 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
           body: { email: person.email, name: person.name, password: crypto.randomUUID() },
         })
       ).user;
-    await db.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
+    await db
+      .prepare("UPDATE user SET email_verified=1,image=COALESCE(image,?) WHERE id=?")
+      .bind(await seedIdentityIcon(env, "user", user.id), user.id)
+      .run();
     staffIds.set(person.email, user.id);
   }
   for (const initialStore of demoStores(credentials.profile)) {
@@ -559,6 +566,10 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
         body: { name: store.name, slug: `tablecast-store-${store.id}`, userId },
       }));
     if (!organization) throw new Error("デモ店舗を作成できませんでした。");
+    await db
+      .prepare("UPDATE organization SET logo=COALESCE(logo,?) WHERE id=?")
+      .bind(await seedIdentityIcon(env, "store", store.id), organization.id)
+      .run();
     const owner: Owner = { id: organization.id, userId };
     const existing = await db
       .prepare("SELECT id,config_json,config_version FROM stores WHERE id=?")

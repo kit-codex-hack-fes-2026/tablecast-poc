@@ -1,7 +1,8 @@
+import { StoreIcon } from "../../components/store-icon";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpRight, Plus, Store } from "lucide-react";
+import { ArrowUpRight, Plus, Settings2 } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -47,7 +48,7 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): ColumnDef<StoreRow>[]
       header: t("admin_store"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <Store className="size-5" />
+          <StoreIcon name={row.original.name} logo={row.original.logo} />
           {row.original.name}
         </div>
       ),
@@ -72,6 +73,17 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): ColumnDef<StoreRow>[]
           >
             {t("admin_live")}
             <ArrowUpRight />
+          </Button>
+          <Button
+            variant="ghost"
+            nativeButton={false}
+            role="link"
+            render={
+              <Link to="/admin/stores/$storeId/profile" params={{ storeId: row.original.id }} />
+            }
+          >
+            <Settings2 />
+            {t("store_profile")}
           </Button>
           <Button
             variant="outline"

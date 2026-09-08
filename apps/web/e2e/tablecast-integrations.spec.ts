@@ -49,3 +49,42 @@ test("メニューの子ページをサイドバーから開き、再読込と�
   await expect(page).toHaveURL(/\/menu\/products$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
+
+test("店舗アイコンを変更し、再読込後の設定とサイドバーに同じ画像が表示される", async ({
+  page,
+}, testInfo) => {
+  // Given: 画像付きのseedと管理者。
+  await page.goto("/admin/stores/tablecast-komorebi/profile");
+  await expect(page.getByRole("heading", { name: ja.store_profile, exact: true })).toBeVisible();
+  const initial = page.getByRole("region", { name: ja.store_profile, exact: true }).locator("img");
+  await expect(initial).toHaveAttribute("src", /\/api\/avatars\//);
+  await expect
+    .poll(() =>
+      initial.evaluate(
+        (element) =>
+          element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0,
+      ),
+    )
+    .toBe(true);
+  // When: 画像を選ぶと店舗アイコンを保存する。
+  await page.getByLabel(ja.store_icon_change).setInputFiles({
+    name: "tablecast-icon.png",
+    mimeType: "image/png",
+    buffer: await initial.screenshot(),
+  });
+  await expect(page.getByRole("status")).toContainText(ja.account_saved);
+  const imageUrl = await initial.getAttribute("src");
+  await page.reload();
+  // Then: ページとサイドバーで保存画像を共有する。
+  await expect(initial).toHaveAttribute("src", imageUrl ?? "");
+  await expect
+    .poll(() =>
+      initial.evaluate(
+        (element) =>
+          element instanceof HTMLImageElement && element.complete && element.naturalWidth > 0,
+      ),
+    )
+    .toBe(true);
+  await expect(page.locator("aside img").first()).toHaveAttribute("src", imageUrl ?? "");
+  await page.screenshot({ path: testInfo.outputPath("tablecast-store-icon.png") });
+});
