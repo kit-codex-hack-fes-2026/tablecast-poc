@@ -29,7 +29,8 @@
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "hooks:install": "lefthook install",
     "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts",
-    "codegen": "bun run --cwd apps/web i18n:compile"
+    "codegen": "bun run --cwd apps/web i18n:compile",
+    "prepare": "bun run hooks:install"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",

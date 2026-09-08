@@ -1,3 +1,5 @@
+lefthook: bunx --no-install lefthook
+
 pre-commit:
   parallel: true
   commands:
@@ -6,7 +8,7 @@ pre-commit:
       run: bunx --no-install oxfmt --check {staged_files}
     lint:
       glob: "*.{ts,tsx,js}"
-      run: bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
+      run: bun run codegen && bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
 pre-push:
   commands:
     check:

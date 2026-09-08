@@ -25,6 +25,12 @@ Cloudflareはmultiworkerのローカル起動と資源の永続化を提供す�
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
 D1 migration・seedのCLIにも同じローカル保存先と同じ生成configを渡す。別ディレクトリの空DBへ投入する事故を防ぐ。
 
+## checkoutの準備とGit hooks
+
+新しいclone・worktreeでは `bun install --frozen-lockfile` を実行する。rootの `prepare` が `lefthook install` を実行するため、依存キャッシュを再利用する場合もhookを導入する。Dev Containerの `postCreateCommand` も同じ経路を使う。`--ignore-scripts` はCIの依存導入専用で、通常のworktree初期化には使わない。
+
+hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル版や別OSの絶対パスに依存せず、依存がなければコミットを失敗させる。型付きlint前にはParaglideを生成する。既存checkoutの修復は `bun run hooks:install` を使い、`core.hooksPath` の上書きや検査回避は行わない。
+
 ## worktree識別子
 
 正規化したworktree実パスとrepository識別子から短いhashを作る。branch名を正本にせず、detached HEADでも一意にする。
