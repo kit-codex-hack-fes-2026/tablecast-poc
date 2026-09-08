@@ -18,8 +18,8 @@
     "demo:play": "bun --no-env-file scripts/tablecast-demo.ts",
     "storybook": "bun --no-env-file scripts/tablecast-dev.ts storybook",
     "build": "turbo run build",
-    "typecheck": "tsc --noEmit && turbo run typecheck",
-    "lint": "oxlint --type-aware --deny-warnings && turbo run lint",
+    "typecheck": "bun run codegen && tsc --noEmit && turbo run typecheck",
+    "lint": "bun run codegen && oxlint --type-aware --deny-warnings && turbo run lint",
     "format": "oxfmt --write . && turbo run format",
     "format:check": "oxfmt --check . && turbo run format:check",
     "test": "vitest run --config vitest.config.ts && turbo run test",
@@ -28,7 +28,8 @@
     "test:voice:live": "bun run --cwd livekit test:voice:live",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "hooks:install": "lefthook install",
-    "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts"
+    "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts",
+    "codegen": "bun run --cwd apps/web i18n:compile"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",
