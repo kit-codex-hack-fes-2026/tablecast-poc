@@ -85,3 +85,11 @@ pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混�
 Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼び、tyとruffも同じ場所で別scriptから実行する。ルートから直接試す場合は `uv run --directory livekit pytest` とする。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。
 テスト結果、未実行範囲、実機条件を記録し、台本付きモデルの成功を実音声精度の証明にしない。
+
+## E2Eの隔離
+
+`bun run test:e2e` は `apps/web/e2e/support` で実行ごとのD1・R2・Googleモック・Mailpit・Web/APIを作る。ビルド済みWeb/API WorkersとService Bindingを `vite preview` で起動する。専用のlocalhostポートと `.local/tablecast-e2e-*` を使い、開発サーバーのDB・Cookie・`.local/demo.json` を参照しない。DockerがMailpitの起動に必要である。テストが作成した店舗や認証器は隔離環境内に閉じ、終了時に実行用ディレクトリとプロセスを削除する。
+
+macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
+
+開発用seedは3店舗と36卓、固定の商品・利用場面にFakerのスタッフ36名を加える。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。

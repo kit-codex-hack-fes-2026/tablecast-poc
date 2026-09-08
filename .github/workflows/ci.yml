@@ -64,21 +64,9 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
       - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps ${{ matrix.browser }}
-      - run: bun --no-env-file run dev
-      - name: CI内のブラウザー用ホスト解決
-        run: bun --no-env-file -e 'const runtime = await Bun.file(".local/runtime.json").json(); console.log("127.0.0.1 " + new URL(runtime.origin).hostname)' | sudo tee -a /etc/hosts
-      - name: 日英注文・受付・会計を検証
+      - name: 隔離したWorkersで日英注文・認証・会計を検証
         run: bun --no-env-file run test:e2e --project=tablecast-${{ matrix.browser }}
-      - name: 本番相当のService Bindingを検証
-        run: |
-          bun --no-env-file run dev:parity
-          bun --no-env-file run test:e2e --project=tablecast-${{ matrix.browser }}
-      - name: 自worktreeのプロセスを終了
-        if: always()
-        run: bun --no-env-file run dev:stop
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
