@@ -232,6 +232,7 @@ it.each(["客の発話", "設定の無効化"])(
       const user = await post("/internal/voice/turns", {
         ...input("tablecast-new-user"),
         trigger: "user",
+        speaker: { id: "0", streamId: "tablecast-test-stream", words: [] },
         messages: [{ role: "user", content: "すみません" }],
       });
       userResult = { status: user.response.status, text: await user.response.text() };

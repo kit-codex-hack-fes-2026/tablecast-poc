@@ -12,7 +12,7 @@ export function LanguageSwitch({
   const { locale, t } = useI18n();
   return (
     <fieldset
-      className="language-switch flex p-1 bg-muted border border-border rounded-lg shrink-0 max-lg:flex-1 max-lg:max-w-44 max-sm:max-w-36"
+      className="language-switch flex p-1 bg-muted border border-border rounded-lg shrink-0"
       aria-label={t("common_language")}
     >
       <Button

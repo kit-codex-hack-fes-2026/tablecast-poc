@@ -13,19 +13,35 @@ from livekit.plugins import inworld
 
 async def check_language(language: str, voice: str, text: str) -> dict[str, object]:
     async with aiohttp.ClientSession() as http:
-        recognizer = inworld.STT(language=language, enable_voice_profile=False, http_session=http)
+        recognizer = inworld.STT(
+            language=language,
+            enable_voice_profile=False,
+            enable_speaker_diarization=True,
+            include_word_timestamps=True,
+            http_session=http,
+        )
         synthesizer = inworld.TTS(
             model="inworld-tts-2", voice=voice, language=language, http_session=http
         )
         options = APIConnectOptions(max_retry=0, timeout=20)
         stream = recognizer.stream(conn_options=options)
         transcripts: list[str] = []
+        speakers: set[str] = set()
+        word_count = 0
         duration = 0.0
 
         async def receive() -> None:
+            nonlocal word_count
             async for event in stream:
                 if event.type == stt.SpeechEventType.FINAL_TRANSCRIPT and event.alternatives:
-                    transcripts.append(event.alternatives[0].text)
+                    speech = event.alternatives[0]
+                    transcripts.append(speech.text)
+                    word_count += len(speech.words or [])
+                    speakers.update(
+                        word.speaker_id
+                        for word in speech.words or []
+                        if word.speaker_id is not None
+                    )
                     # 疎通は確定認識で完了し、サーバーのWebSocket切断を待たない。
                     return
 
@@ -40,7 +56,17 @@ async def check_language(language: str, voice: str, text: str) -> dict[str, obje
                 await receive_task
             if duration <= 0 or not any(transcripts):
                 raise RuntimeError("合成音声または確定した認識結果を取得できませんでした")
-            return {"language": language, "audioSeconds": duration, "transcripts": transcripts}
+            if not speakers or not word_count:
+                raise RuntimeError(
+                    "パッチを適用したSTTから話者または単語情報を取得できませんでした"
+                )
+            return {
+                "language": language,
+                "audioSeconds": duration,
+                "transcripts": transcripts,
+                "speakerIds": sorted(speakers),
+                "wordCount": word_count,
+            }
         finally:
             receive_task.cancel()
             await asyncio.gather(receive_task, return_exceptions=True)
@@ -51,8 +77,17 @@ async def check_language(language: str, voice: str, text: str) -> dict[str, obje
 
 async def run() -> None:
     samples = [
-        ("ja-JP", os.environ["TABLECAST_INWORLD_VOICE_JA"], "ほうじ茶を二杯お願いします。"),
-        ("en-GB", os.environ["TABLECAST_INWORLD_VOICE_EN"], "Two roasted green teas, please."),
+        (
+            "ja-JP",
+            os.environ["TABLECAST_INWORLD_VOICE_JA"],
+            "[warm and inviting with a light conversational pace]ほうじ茶を二杯お願いします。",
+        ),
+        (
+            "en-GB",
+            os.environ["TABLECAST_INWORLD_VOICE_EN"],
+            "[gently apologetic and clear with a composed pace]"
+            "Sorry, two roasted green teas, please.",
+        ),
     ]
     for language, voice, text in samples:
         print(json.dumps(await check_language(language, voice, text), ensure_ascii=False))

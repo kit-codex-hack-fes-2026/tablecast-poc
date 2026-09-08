@@ -27,6 +27,8 @@ import {
   sessionEventsQuerySchema,
   submitSchema,
   voiceListQuerySchema,
+  uiSectionInputSchema,
+  speechSpeedInputSchema,
 } from "./schema";
 import {
   callStaff,
@@ -46,6 +48,8 @@ import {
   requestBill,
   resolveCall,
   setVoiceSession,
+  setUiSection,
+  setSpeechSpeed,
   submitOrder,
   updateCart,
 } from "./modules/operations";
@@ -235,6 +239,12 @@ const table = new Hono<ApiEnv>()
   })
   .get("/", async (c) => c.json(await getTableState(c.env, c.get("actor"))))
   .get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)))
+  .patch("/ui", validate(uiSectionInputSchema), async (c) =>
+    c.json(await setUiSection(c.env, c.get("actor"), c.req.valid("json"))),
+  )
+  .patch("/voice/speed", validate(speechSpeedInputSchema), async (c) =>
+    c.json(await setSpeechSpeed(c.env, c.get("actor"), c.req.valid("json"))),
+  )
   .put("/cart", validate(cartUpdateSchema), async (c) =>
     c.json(await updateCart(c.env, c.get("actor"), c.req.valid("json"))),
   )

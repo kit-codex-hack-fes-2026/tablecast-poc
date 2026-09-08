@@ -15,7 +15,7 @@ const credentials = z
 
 test.use({ trace: "off", actionTimeout: 15_000 });
 
-test("外部の未完了カートを選択画面へ渡し、編集中の内容とカート版を保つ", async ({
+test("外部の未完了カートを明示編集し、編集中の内容とカート版を保つ", async ({
   page,
   request: staff,
   baseURL,
@@ -48,7 +48,7 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
         await staff.post(`${base}/devices/approve`, { headers, data: { userCode, tableId } })
       ).status(),
     ).toBe(200);
-    await expect(page.locator(".restaurant-name")).toContainText(vacant.name);
+    await expect(page.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
     const catalogResponse = await page.request.get("/api/table/catalog");
     expect(catalogResponse.status()).toBe(200);
     const catalog = catalogSchema.parse(await catalogResponse.json());
@@ -87,19 +87,20 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
         name: new RegExp(plain.text.ja.displayName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
       })
       .click();
-    const plainDialog = page.getByRole("dialog", { name: plain.text.ja.displayName, exact: true });
-    await plainDialog.getByRole("button", { name: ja.common_increase, exact: true }).click();
+    const plainPage = page.getByRole("region", { name: plain.text.ja.displayName, exact: true });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await plainPage.getByRole("button", { name: ja.common_increase, exact: true }).click();
     await expect(
-      plainDialog.getByRole("status", { name: ja.common_quantity, exact: true }),
+      plainPage.getByRole("status", { name: ja.common_quantity, exact: true }),
     ).toHaveText("2");
     const incomplete = await update([
       { id: lineId, productId: customised.id, quantity: 3, selections: [] },
     ]);
     expect(incomplete.cart.complete).toBe(false);
     await expect(page.locator(".menu-tabs .count")).toHaveText("3");
-    await expect(plainDialog).toBeVisible();
+    await expect(plainPage).toBeVisible();
     await expect(
-      plainDialog.getByRole("status", { name: ja.common_quantity, exact: true }),
+      plainPage.getByRole("status", { name: ja.common_quantity, exact: true }),
     ).toHaveText("2");
 
     // 古い編集版で保存しても、外部更新を上書きせず画面内に競合を示す。
@@ -108,34 +109,43 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
         new URL(response.url()).pathname === "/api/table/cart" &&
         response.request().method() === "PUT",
     );
-    await plainDialog.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
+    await plainPage.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
     expect((await savingStale).status()).toBe(409);
-    await expect(plainDialog.getByRole("alert")).toContainText(ja.common_conflict);
+    await expect(plainPage.getByRole("alert")).toContainText(ja.common_conflict);
     await expect(
-      plainDialog.getByRole("status", { name: ja.common_quantity, exact: true }),
+      plainPage.getByRole("status", { name: ja.common_quantity, exact: true }),
     ).toHaveText("2");
-    await plainDialog.screenshot({ path: testInfo.outputPath("tablecast-cart-edit-conflict.png") });
+    await plainPage.screenshot({ path: testInfo.outputPath("tablecast-cart-edit-conflict.png") });
     const unchanged = tableStateSchema.parse(await (await page.request.get("/api/table")).json());
     expect(unchanged.cart).toEqual(incomplete.cart);
-    await plainDialog.getByRole("button", { name: ja.common_close, exact: true }).click();
+    await plainPage.getByRole("button", { name: ja.kiosk_menu, exact: true }).click();
 
-    // 編集画面を閉じた後で不足行へ渡し、同じ版を閉じたら通知だけでは開き直さない。
-    const missingDialog = page.getByRole("dialog", {
+    // 未完了行は自動で開かず、カートの不足表示から明示的に編集する。
+    const missingPage = page.getByRole("region", {
       name: customised.text.ja.displayName,
       exact: true,
     });
-    await expect(missingDialog).toBeVisible();
+    await expect(missingPage).not.toBeVisible();
+    await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await expect(
-      missingDialog.getByRole("status", { name: ja.common_quantity, exact: true }),
+      page.getByRole("tabpanel").getByText(ja.kiosk_missing, { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("tabpanel")
+      .getByRole("button", { name: ja.kiosk_edit, exact: true })
+      .click();
+    await expect(missingPage).toBeVisible();
+    await expect(
+      missingPage.getByRole("status", { name: ja.common_quantity, exact: true }),
     ).toHaveText("3");
-    await expect(missingDialog.getByRole("alert")).not.toBeVisible();
-    await missingDialog.screenshot({ path: testInfo.outputPath("tablecast-missing-choice.png") });
-    await missingDialog.getByRole("button", { name: ja.common_close, exact: true }).click();
+    await expect(missingPage.getByRole("alert")).not.toBeVisible();
+    await missingPage.screenshot({ path: testInfo.outputPath("tablecast-missing-choice.png") });
+    await missingPage.getByRole("button", { name: ja.kiosk_menu, exact: true }).click();
     expect((await page.request.post("/api/table/call", { headers, data: {} })).status()).toBe(200);
     await expect(
       page.getByRole("button", { name: ja.kiosk_called_staff, exact: true }),
     ).toBeVisible();
-    await expect(missingDialog).not.toBeVisible();
+    await expect(missingPage).not.toBeVisible();
     await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await page
       .getByRole("tabpanel")
@@ -146,7 +156,7 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
       const index = group.options.findIndex((option) => option.available);
       const option = group.options[index];
       if (!option) throw new Error("選択可能な項目がありません");
-      await missingDialog
+      await missingPage
         .getByRole("radiogroup", { name: group.text.ja.displayName, exact: true })
         .getByRole("radio")
         .nth(index)
@@ -158,7 +168,7 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
         new URL(response.url()).pathname === "/api/table/cart" &&
         response.request().method() === "PUT",
     );
-    await missingDialog.getByRole("button", { name: ja.common_update, exact: true }).click();
+    await missingPage.getByRole("button", { name: ja.common_update, exact: true }).click();
     const savedResponse = await saving;
     expect(savedResponse.status()).toBe(200);
     const saved = tableStateSchema.parse(await savedResponse.json());
@@ -170,13 +180,21 @@ test("外部の未完了カートを選択画面へ渡し、編集中の内容�
       quantity: 3,
       selections,
     });
-    await expect(missingDialog).not.toBeVisible();
+    await expect(missingPage).not.toBeVisible();
 
-    // 次のカート版に新しい不足が出たときは、再びその行の同じIDで入力を開く。
+    // 次のカート版の不足も通知で開かず、同じ行を明示編集して新数量を引き継ぐ。
     await update([{ id: lineId, productId: customised.id, quantity: 4, selections: [] }]);
-    await expect(missingDialog).toBeVisible();
     await expect(
-      missingDialog.getByRole("status", { name: ja.common_quantity, exact: true }),
+      page.getByRole("tabpanel").getByText(ja.kiosk_missing, { exact: true }),
+    ).toBeVisible();
+    await expect(missingPage).not.toBeVisible();
+    await page
+      .getByRole("tabpanel")
+      .getByRole("button", { name: ja.kiosk_edit, exact: true })
+      .click();
+    await expect(missingPage).toBeVisible();
+    await expect(
+      missingPage.getByRole("status", { name: ja.common_quantity, exact: true }),
     ).toHaveText("4");
   } finally {
     try {

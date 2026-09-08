@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 import httpx
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .speaker import SpeakerReference
 
@@ -23,6 +23,7 @@ class VoiceConfiguration(BaseModel):
     voice: str
     releaseSha: str
     proactive: bool
+    speechSpeed: float = Field(default=1.0, ge=0.5, le=1.5, multiple_of=0.1)
 
 
 class TurnSkipped(Exception):

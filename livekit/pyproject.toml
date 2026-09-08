@@ -6,9 +6,17 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "livekit-agents[inworld,silero]==1.8.0",
+  "livekit-plugins-inworld==1.8.0",
   "httpx>=0.28.1,<0.29",
   "python-dotenv>=1.2,<2",
 ]
+
+[tool.uv]
+# forkのworkspace sourceをcoreへ広げず、公式releaseへの依存を維持する。
+no-sources-package = ["livekit-agents"]
+
+[tool.uv.sources]
+livekit-plugins-inworld = { git = "https://github.com/ReoHakase/tablecast-livekit-agents", rev = "2f36303643f00c9c521d9dc27a785a6f273bbfb1", subdirectory = "livekit-plugins/livekit-plugins-inworld" }
 
 [project.scripts]
 tablecast-voice = "tablecast_livekit.agent:main"

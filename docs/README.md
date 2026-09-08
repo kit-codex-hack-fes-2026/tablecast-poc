@@ -1,12 +1,12 @@
 # TableCast 実装用仕様索引
 
-版: **0.4** / 更新日: **2026-09-06** / 状態: **ローカル統合検証中、外部音声受入は未実施**
+版: **0.4** / 更新日: **2026-09-07** / 状態: **ローカル実音声接続を検証済み、実iPad・公開環境の受入は未実施**
 
 起動方法は [ルートREADME](../README.md)、実施した検証と残件は [進捗記録](progress.md) を参照する。Codexの作業方針は [AGENTS.md](../AGENTS.md) に置く。
 
 ## 最新の決定
 
-デモは日本酒28種を含む和食居酒屋3店舗。UIはshadcn、Base UI、Tailwind、Lucide、Simple Flagsで統一する。商品画像12点は内蔵imagegenで生成したイメージ画像として扱う。
+デモは日本酒28種を含む和食居酒屋3店舗。UIはshadcn、Base UI、Tailwind、Lucide、Simple Flagsで統一する。商品画像35点は内蔵imagegenで生成したイメージ画像として扱う。
 
 客向け・店側UIとも日英対応。客向けは会話領域を主役にし、会話ログ、言語選択、音声停止・再開を常設する。自由文入力は置かない。
 Web/APIを2 Workersに保ち、Python音声Agentだけ別runtimeへ置く。Bun + Turborepoを使い、業務・契約・UIを名目だけの共有packageに切り出さない。
@@ -50,6 +50,6 @@ Web/APIを2 Workersに保ち、Python音声Agentだけ別runtimeへ置く。Bun 
 
 ## 同梱範囲
 
-仕様、Web/API/Python実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modules・仮想環境はGit管理しない。通常起動ではInworld公式版を使用し、話者対応patchは復元可能なbundleとして保存しているが依存へ未適用。
+仕様、Web/API/Python実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modules・仮想環境はGit管理しない。Inworld公式pluginの話者対応patchを公開forkの完全SHAへ固定して使用し、復元可能なbundleと差分も保存する。
 
-旧ZIPの梱包記録は当時の記録として残す。実行結果は現行の進捗記録と受入条件の証拠を使い、外部サービスや実iPadを試験済みとは扱わない。
+旧ZIPの梱包記録は当時の記録として残す。実行結果は現行の進捗記録と受入条件の証拠を使い、ローカル実音声接続の成功を実iPad・実店舗・公開環境の受入成功とは扱わない。

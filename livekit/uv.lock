@@ -534,13 +534,9 @@ wheels = [
 [[package]]
 name = "livekit-plugins-inworld"
 version = "1.8.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/ReoHakase/tablecast-livekit-agents?subdirectory=livekit-plugins%2Flivekit-plugins-inworld&rev=2f36303643f00c9c521d9dc27a785a6f273bbfb1#2f36303643f00c9c521d9dc27a785a6f273bbfb1" }
 dependencies = [
     { name = "livekit-agents" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/67/dee10db7e818ba0453aff6a5c3caae123acad311a8ebdaacca01e5ea69dc/livekit_plugins_inworld-1.8.0.tar.gz", hash = "sha256:679a7364e8170d00127688e16cada5a0f4b939f6a8de9b524faf4c91fd45280a", size = 22027, upload-time = "2026-09-05T00:10:59.791Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/a8/434425952d43774bd4661c1aa51c6af3de3c6fadc2d4a09fd87af8f48e0f/livekit_plugins_inworld-1.8.0-py3-none-any.whl", hash = "sha256:00faef1c6141ccdd0072c8f762ec6ba5be5507db4ce8e6d46817666fbee96d46", size = 23947, upload-time = "2026-09-05T00:10:58.695Z" },
 ]
 
 [[package]]
@@ -1139,6 +1135,7 @@ source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "livekit-agents", extra = ["inworld", "silero"] },
+    { name = "livekit-plugins-inworld" },
     { name = "python-dotenv" },
 ]
 
@@ -1154,6 +1151,7 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "livekit-agents", extras = ["inworld", "silero"], specifier = "==1.8.0" },
+    { name = "livekit-plugins-inworld", git = "https://github.com/ReoHakase/tablecast-livekit-agents?subdirectory=livekit-plugins%2Flivekit-plugins-inworld&rev=2f36303643f00c9c521d9dc27a785a6f273bbfb1" },
     { name = "python-dotenv", specifier = ">=1.2,<2" },
 ]
 

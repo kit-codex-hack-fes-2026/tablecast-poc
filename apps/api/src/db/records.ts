@@ -20,6 +20,9 @@ export type TableRecord = {
   voice_session_id: string | null;
   voice_version: number;
   active_turn_id: string | null;
+  ui_section: "menu" | "cart" | "orders" | "bill";
+  selected_product_id: string | null;
+  speech_speed: number;
   staff_called: number;
   plan_json: string | null;
   opened_at: number;

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "streamdown/styles.css";
+@source "../node_modules/streamdown/dist/*.js";
 
 @theme inline {
   --font-sans:
@@ -10,7 +12,7 @@
   --color-surface-subtle: var(--muted);
   --color-success: #507137;
   --color-success-soft: #f0f5e8;
-  --color-focus: #be7344;
+  --color-focus: #18181b;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -36,26 +38,36 @@
 }
 
 :root {
-  --brand-accent: #b85536;
+  --voice-spectrum: conic-gradient(
+    #6366f1,
+    #a855f7,
+    #ec4899,
+    #fb923c,
+    #facc15,
+    #2dd4bf,
+    #38bdf8,
+    #6366f1
+  );
+  --brand-accent: #18181b;
   --radius: 0.625rem;
-  --background: #f7f6f1;
-  --foreground: #283b34;
-  --card: #fffefa;
-  --card-foreground: #283b34;
-  --popover: #fffefa;
-  --popover-foreground: #283b34;
-  --primary: #2e5144;
-  --primary-foreground: #fffefa;
-  --secondary: #e8eee5;
-  --secondary-foreground: #283b34;
-  --muted: #eeeee7;
-  --muted-foreground: #626d61;
-  --accent: #f7e9df;
-  --accent-foreground: #803d27;
+  --background: #f5f5f7;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --secondary: #ededf0;
+  --secondary-foreground: #18181b;
+  --muted: #e9e9ed;
+  --muted-foreground: #52525b;
+  --accent: #ededf0;
+  --accent-foreground: #18181b;
   --destructive: #ad3429;
-  --border: #dedfd5;
-  --input: #dedfd5;
-  --ring: #b85536;
+  --border: #d4d4d8;
+  --input: #85858b;
+  --ring: #18181b;
 }
 
 @layer base {

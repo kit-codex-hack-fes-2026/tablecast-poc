@@ -7,44 +7,56 @@ import { money, useI18n } from "../../i18n/locale";
 export function ProductMenu({
   catalog,
   onChoose,
+  productIds,
 }: {
   catalog: Catalog;
   onChoose: (product: Product) => void;
+  productIds?: string[];
 }) {
   const { locale, t } = useI18n();
   const [category, setCategory] = useState("all");
-  const products = catalog.configuration.products.filter(
-    (product) => category === "all" || product.categoryId === category,
+  const products = catalog.configuration.products.filter((product) =>
+    productIds
+      ? productIds.includes(product.id)
+      : category === "all" || product.categoryId === category,
   );
   return (
     <>
-      <fieldset
-        className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 [scrollbar-width:none] max-lg:px-6"
-        aria-label={t("kiosk_menu")}
-      >
-        <Button
-          className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
-          variant="ghost"
-          type="button"
-          aria-pressed={category === "all"}
-          onClick={() => setCategory("all")}
+      {!productIds && (
+        <fieldset
+          className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 [scrollbar-width:none]"
+          aria-label={t("kiosk_menu")}
         >
-          {t("kiosk_all")}
-        </Button>
-        {catalog.configuration.categories.map((item) => (
           <Button
             className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
             variant="ghost"
             type="button"
-            key={item.id}
-            aria-pressed={category === item.id}
-            onClick={() => setCategory(item.id)}
+            aria-pressed={category === "all"}
+            onClick={() => setCategory("all")}
           >
-            {item.text[locale].displayName}
+            {t("kiosk_all")}
           </Button>
-        ))}
-      </fieldset>
-      <div className="grid grid-cols-2 gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3 max-lg:grid-cols-3 max-lg:px-6 max-lg:gap-y-5 max-lg:gap-x-4 max-sm:grid-cols-2">
+          {catalog.configuration.categories.map((item) => (
+            <Button
+              className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
+              variant="ghost"
+              type="button"
+              key={item.id}
+              aria-pressed={category === item.id}
+              onClick={() => setCategory(item.id)}
+            >
+              {item.text[locale].displayName}
+            </Button>
+          ))}
+        </fieldset>
+      )}
+      <div
+        className={
+          productIds
+            ? "grid grid-cols-2 gap-3"
+            : "grid grid-cols-2 gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3"
+        }
+      >
         {products.map((product) => (
           <Button
             variant="ghost"

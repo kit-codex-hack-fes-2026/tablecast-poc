@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./schema": "./src/schema.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./speech": "./src/agent/prompt.ts"
   },
   "scripts": {
     "dev": "wrangler dev",

@@ -2,7 +2,7 @@
 
 公式LiveKit 1.8.0とInworld STT/TTSを使用し、接客と注文操作をHono/Mastraへ委譲するPython Agent。
 通常のチェックは外部AIを呼ばない。実マイク、iPadのエコー・停止、日英の自然さは未検証。
-STT話者対応は [隔離検証済みパッチ](../patches/livekit-inworld/README.md) の公開forkとSHA固定待ちであり、現在の通常起動には未適用。
+STT話者対応は [公開forkの最小パッチ](../patches/livekit-inworld/README.md) を完全SHAへ固定して適用済み。話者・単語時刻を有効にし、欠損した話者は未識別として扱う。
 
 ルートの `bun run dev` がworktree専用のLiveKitとAPIを起動する。既存 `.env.local` を自動使用しない。
 外部設定を追加する場合はルート `.env.secrets.local` の `INWORLD_API_KEY` と試聴した標準voice IDを設定し、店舗設定の `cast.voice.ja/en` も公開する。
@@ -30,7 +30,9 @@ uv run --directory livekit pytest
 ```
 
 公式 `LLM` / `LLMStream` 拡張の `TablecastLLM` が、httpxのUTF-8デコーダーを通して読み上げ本文を既定のLLM nodeへstreamする。固定SDKでは `llm_node` の上書きだけでは応答を開始できないため、実際の `AgentSession.generate_reply` でも接続を検証する。エラーや取消で接続を閉じ、業務操作を自動再試行しない。
+Roomへの `ctx.connect()` 完了後に参加者を指定して `AgentSession.start()` を呼ぶ。未接続のRoomで音声出力を初期化すると、SDKがローカル参加者を取得できず起動に失敗する。割込み判定はSileroのVADを明示し、ローカルLiveKit資格でCloudのAdaptive Interruptionへ接続しない。
 `transcription_node` は生成文の英語演技指示とbreakだけを除去する。客の原文は加工しない。
+接続中の認識・生成本文は `tablecast.voice` topicで対象端末だけへ80ms単位で送る。逐次字幕とデバッグ用原文を分け、容量超過は表示同期待ちとして扱う。発話済み履歴の正本はAPIに維持する。TTSの公開 `max_buffer_delay_ms` は300msとし、短い応答のバッファ待ちを抑える。
 注文確認は同じAPIスナップショットを `session.say` で一度読み、`SpeechHandle.wait_for_playout` の完了後だけ読み上げ完了を送る。
 音声停止はRoom退出とAgentSessionの即時終了へ伝わり、DB側でもvoice sessionとturnを失効させる。カートや確定注文のロールバックは行わない。
 
@@ -41,9 +43,11 @@ TABLECAST_RUN_PAID_VOICE_TESTS=1 bun --no-env-file run test:voice:live
 ```
 
 この試験は人手の自然さ評価、実マイク、LiveKit転送、iPadのAEC、騒音、複数話者の評価を代替しない。
+2026-09-07のパッチ適用後は演技タグ付きの日英合成と話者・単語情報も検証する。日本語3.09秒・5単語、英語3.69秒・6単語の音声で、両方の話者0を取得した。別途、ローカルRoom経由でも話者情報と演技タグ付き返答を確認した。短い発話では話者が欠損する場合があるため、話者番号の取得を常時保証しない。
 2026-09-06に既存の開発資格で実行し、日本語Asukaの合成2.55秒と確定認識、英国英語Oliviaの合成2.49秒と確定認識を確認した。日本語の認識結果はホージチャを二杯お願いします。、英語はTwo roasted green teas, please.だった。疎通は最初の確定認識で完了し、WebSocketがサーバー側で閉じることを待たない。生音声ファイルは保存していない。
 
-同じ設定でMastraから `gpt-5.4-mini-2026-03-17` の短い応答を取得した。標準音声の一覧取得・店舗設定の検証と公開も実サービスを通した。これらは各接続の疎通であり、LiveKit Room・実マイク・業務ツールを通す音声注文全体の受入ではない。
+APIのモデルは `.env.secrets.local` の `TABLECAST_MODEL=gpt-5.6-luna` を使用する。MastraのChat Completions呼出しでは `providerOptions.openai.reasoningEffort="none"` を指定する。実サービスで、推論を有効にしたLunaとfunction toolsの組合せはHTTP 400となり、この指定でツール呼出しが成功することを確認した。
+2026-09-06に空席のこもれびT11を試験用に開き、合成した日本語の質問を実LiveKit Roomへ送った。Inworldの確定認識、Mastra/Lunaの日本酒提案、Inworld TTS、受信側の非無音フレーム2092個、`listening → thinking → speaking → listening` と会話ログの再生完了を確認した。試験後は音声を停止し、空の来店セッションを閉じた。これは合成音声による転送試験であり、実マイク、iPad、音声による注文確定は未検証。
 
 自発接客はSDKの30秒の相互無言通知から開始し、最新設定・業務状態・180秒の間隔はAPIで検証する。客の発話を捏造せず、応答のない沈黙では一度だけ試みる。APIの204では履歴・再生記録を作らず、客の発話で進行中の自発応答を中断する。注文操作のツールは自発接客へ渡さない。録音は `record=False` で無効にする。
 

@@ -1,5 +1,5 @@
-import type { PricedLine } from "@tablecast/api/schema";
-import { ChevronRight, ShoppingBag } from "lucide-react";
+import type { PricedLine, Product } from "@tablecast/api/schema";
+import { ChevronRight, ShoppingBag, Minus, Plus } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money, useI18n } from "../../i18n/locale";
@@ -8,12 +8,16 @@ export function CartLines({
   lines,
   onEdit,
   onRemove,
+  onQuantity,
+  products = [],
   disabled = false,
 }: {
   lines: PricedLine[];
   onEdit?: (line: PricedLine) => void;
   onRemove?: (line: PricedLine) => void;
   disabled?: boolean;
+  products?: Product[];
+  onQuantity?: (line: PricedLine, quantity: number) => void;
 }) {
   const { locale, t } = useI18n();
   if (lines.length === 0)
@@ -28,7 +32,14 @@ export function CartLines({
       {lines.map((line) => (
         <li className="py-4 px-0 border-b border-b-border" key={line.id}>
           <div className="flex gap-3 justify-between text-sm">
-            <strong className="font-medium">{line.name[locale]}</strong>
+            {products.find((product) => product.id === line.productId)?.imageKey && (
+              <img
+                className="size-16 shrink-0 rounded-lg object-cover"
+                src={`/media/${products.find((product) => product.id === line.productId)?.imageKey}`}
+                alt=""
+              />
+            )}
+            <strong className="flex-1 font-medium">{line.name[locale]}</strong>
             <span className="whitespace-nowrap text-xs">{money(line.total, locale)}</span>
           </div>
           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -47,6 +58,29 @@ export function CartLines({
             <span className="text-muted-foreground text-xs">
               {t("common_quantity")} {line.quantity} · {money(line.unitPrice, locale)}
             </span>
+            {onQuantity && (
+              <div className="flex items-center rounded-lg border border-border">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  disabled={disabled || line.quantity <= 1}
+                  aria-label={`${line.name[locale]}: ${t("common_decrease")}`}
+                  onClick={() => onQuantity(line, line.quantity - 1)}
+                >
+                  <Minus />
+                </Button>
+                <output className="min-w-6 text-center text-sm">{line.quantity}</output>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  disabled={disabled || line.quantity >= 20}
+                  aria-label={`${line.name[locale]}: ${t("common_increase")}`}
+                  onClick={() => onQuantity(line, line.quantity + 1)}
+                >
+                  <Plus />
+                </Button>
+              </div>
+            )}
             {line.planCovered && <Badge variant="secondary">{t("kiosk_plan_included")}</Badge>}
             {onEdit && (
               <Button
