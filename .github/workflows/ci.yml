@@ -83,7 +83,10 @@ jobs:
         if: failure()
         with:
           name: tablecast-e2e-${{ matrix.browser }}
-          path: apps/web/test-results/
+          path: |
+            apps/web/test-results/
+            .local/logs/dev.log
+          include-hidden-files: true
           retention-days: 7
 
   webrtc:

@@ -11,7 +11,7 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 
 const navigationButton =
-  "flex min-h-12 items-center gap-2 rounded-md p-3 text-left text-xs text-muted-foreground aria-[current=page]:bg-secondary aria-[current=page]:font-semibold aria-[current=page]:text-foreground max-sm:h-auto max-sm:min-w-0 max-sm:flex-col max-sm:gap-1 max-sm:p-2 max-sm:whitespace-normal max-sm:text-center";
+  "flex h-auto min-h-12 min-w-0 items-center gap-2 rounded-md p-3 text-left text-xs whitespace-normal text-muted-foreground aria-[current=page]:bg-secondary aria-[current=page]:font-semibold aria-[current=page]:text-foreground max-sm:flex-col max-sm:gap-1 max-sm:p-2 max-sm:text-center";
 export function AdminSidebar({
   tab,
   onTabChange,
