@@ -9,12 +9,20 @@ const items = [
   { section: "plans", Icon: LayoutList },
   { section: "cast", Icon: Mic },
 ] as const;
-export function MenuNavigation({ storeId, draftId }: { storeId: string; draftId?: string }) {
+export function MenuNavigation({
+  storeId,
+  draftId,
+  onNavigate,
+}: {
+  storeId: string;
+  draftId?: string;
+  onNavigate?: () => void;
+}) {
   const { t } = useI18n();
   const className =
-    "inline-flex min-h-11 items-center gap-2 whitespace-nowrap border-b-2 border-transparent px-3 text-base text-muted-foreground hover:text-foreground data-[status=active]:border-primary data-[status=active]:font-semibold data-[status=active]:text-foreground";
+    "flex min-h-11 items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary data-[status=active]:bg-secondary data-[status=active]:font-semibold";
   return (
-    <nav className="flex overflow-x-auto border-b border-border" aria-label={t("admin_config")}>
+    <nav className="ml-4 space-y-1 border-l border-border pl-3" aria-label={t("admin_config")}>
       {items.map(({ section, Icon }) =>
         draftId ? (
           <Link
@@ -22,6 +30,7 @@ export function MenuNavigation({ storeId, draftId }: { storeId: string; draftId?
             to="/admin/stores/$storeId/menu/changes/$draftId/$section"
             params={{ storeId, draftId, section }}
             className={className}
+            onClick={onNavigate}
           >
             <Icon className="size-4" />
             {t(menuLabels[section])}
@@ -32,6 +41,7 @@ export function MenuNavigation({ storeId, draftId }: { storeId: string; draftId?
             to="/admin/stores/$storeId/menu/$section"
             params={{ storeId, section }}
             className={className}
+            onClick={onNavigate}
           >
             <Icon className="size-4" />
             {t(menuLabels[section])}
@@ -47,6 +57,7 @@ export function MenuNavigation({ storeId, draftId }: { storeId: string; draftId?
         params={{ storeId, draftId: draftId ?? "" }}
         activeOptions={{ exact: true }}
         className={className}
+        onClick={onNavigate}
       >
         <FileClock className="size-4" />
         {t("admin_drafts")}

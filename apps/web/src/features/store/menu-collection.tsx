@@ -12,7 +12,6 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { menuLabels, type MenuSection } from "./menu-model";
-import { MenuNavigation } from "./menu-navigation";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
@@ -118,7 +117,7 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
             </Button>
           ))}
       </div>
-      <MenuNavigation storeId={storeId} draftId={draftId} />
+
       <ErrorNotice error={catalog.error || draft.error || create.error} />
       {configuration ? (
         <DataTable

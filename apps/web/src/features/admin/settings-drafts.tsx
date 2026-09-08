@@ -21,7 +21,6 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 
 import { parseResponse, rpc } from "../../lib/api";
-import { MenuNavigation } from "../store/menu-navigation";
 import { draftOptions } from "../store/menu-query";
 import { useStore } from "../store/store-shell";
 import { ConfigurationChanges } from "./configuration-changes";
@@ -60,7 +59,7 @@ export function SettingsDrafts() {
           </Button>
         )}
       </div>
-      <MenuNavigation storeId={storeId} />
+
       <ErrorNotice error={drafts.error || create.error} />
       {drafts.isPending ? (
         <p role="status">{t("common_loading")}</p>
@@ -155,7 +154,7 @@ export function DraftPage({ draftId }: { draftId: string }) {
           </Badge>
         )}
       </div>
-      <MenuNavigation storeId={storeId} draftId={draftId} />
+
       <ErrorNotice error={query.error || validate.error || publish.error || discard.error} />
       {draft ? (
         <>

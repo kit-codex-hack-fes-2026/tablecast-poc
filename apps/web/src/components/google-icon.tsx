@@ -1,8 +1,14 @@
 import type { ComponentProps } from "react";
+import { cn } from "cn";
 
-export function GoogleIcon(props: ComponentProps<"svg">) {
+export function GoogleIcon({ className, ...props }: ComponentProps<"svg">) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={cn("size-5 shrink-0", className)}
+      {...props}
+    >
       <path
         fill="#4285F4"
         d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"

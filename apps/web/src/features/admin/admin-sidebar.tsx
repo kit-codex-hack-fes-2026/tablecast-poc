@@ -1,10 +1,13 @@
+import { Collapsible } from "@base-ui/react/collapsible";
+import { MenuNavigation } from "../store/menu-navigation";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState, useParams } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
   ChevronsUpDown,
+  ChevronRight,
   History,
   LayoutDashboard,
   LogOut,
@@ -46,6 +49,9 @@ export function AdminSidebar({
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
   const session = authClient.useSession();
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const { draftId } = useParams({ strict: false });
+  const inMenu = path.includes("/menu/");
   const navigate = useNavigate();
   const client = useQueryClient();
   const active = authClient.useActiveOrganization();
@@ -148,16 +154,32 @@ export function AdminSidebar({
               <History className="size-5 shrink-0" />
               {!collapsed && t("admin_history")}
             </Link>
-            <Link
-              className={item}
-              to="/admin/stores/$storeId/menu/$section"
-              params={{ storeId: selectedStore, section: "products" }}
-              onClick={onNavigate}
-              title={t("admin_config")}
-            >
-              <Settings2 className="size-5 shrink-0" />
-              {!collapsed && t("admin_config")}
-            </Link>
+            {collapsed ? (
+              <Link
+                className={item}
+                to="/admin/stores/$storeId/menu/$section"
+                params={{ storeId: selectedStore, section: "products" }}
+                title={t("admin_config")}
+                onClick={onNavigate}
+              >
+                <Settings2 className="size-5 shrink-0" />
+              </Link>
+            ) : (
+              <Collapsible.Root key={`${selectedStore}-${inMenu}`} defaultOpen={inMenu}>
+                <Collapsible.Trigger className={`${item} group`}>
+                  <Settings2 className="size-5 shrink-0" />
+                  {t("admin_config")}
+                  <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />
+                </Collapsible.Trigger>
+                <Collapsible.Panel>
+                  <MenuNavigation
+                    storeId={selectedStore}
+                    draftId={draftId}
+                    onNavigate={onNavigate}
+                  />
+                </Collapsible.Panel>
+              </Collapsible.Root>
+            )}
             <Link
               className={item}
               to="/admin/stores/$storeId/members"
