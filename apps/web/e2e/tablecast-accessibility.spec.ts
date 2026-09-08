@@ -105,7 +105,7 @@ test("文字を200%に拡大してもログインと管理画面の主要操作�
   await signInWithKeyboard(page);
 
   // 操作: 管理画面と端末承認画面でも同じ文字拡大を適用する。承認は送信しない。
-  await enlargeText(page.locator(".admin-shell"));
+  await enlargeText(page.locator("body"));
   const trigger = page.getByRole("button", { name: "端末を承認", exact: true });
   for (const name of ["フロアの様子", "設定の公開", "端末を承認", "日本語", "English"])
     await expectReadableControl(page.getByRole("button", { name, exact: true }));

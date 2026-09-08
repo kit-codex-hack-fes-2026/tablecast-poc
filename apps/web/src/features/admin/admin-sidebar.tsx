@@ -51,7 +51,7 @@ export function AdminSidebar({
       authResult(await authClient.organization.setActive({ organizationId })),
   });
   const item =
-    "flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium";
+    "flex h-auto min-h-11 w-full items-center justify-start gap-2 whitespace-normal text-left rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium";
   return (
     <>
       <Link
@@ -106,7 +106,8 @@ export function AdminSidebar({
           ] as const
         ).map(({ key, label, Icon }) =>
           onTabChange ? (
-            <button
+            <Button
+              variant="ghost"
               key={key}
               className={item}
               title={label}
@@ -119,7 +120,7 @@ export function AdminSidebar({
             >
               <Icon className="size-5 shrink-0" />
               {!collapsed && label}
-            </button>
+            </Button>
           ) : (
             <Link
               key={key}
@@ -136,7 +137,8 @@ export function AdminSidebar({
           ),
         )}
         {onPair ? (
-          <button
+          <Button
+            variant="ghost"
             className={item}
             disabled={pairDisabled}
             title={t("admin_pair")}
@@ -148,7 +150,7 @@ export function AdminSidebar({
           >
             <MonitorSmartphone className="size-5 shrink-0" />
             {!collapsed && t("admin_pair")}
-          </button>
+          </Button>
         ) : (
           <Link
             className={item}
