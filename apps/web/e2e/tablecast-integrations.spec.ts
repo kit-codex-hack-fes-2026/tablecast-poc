@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
+import en from "../messages/en.json" with { type: "json" };
 import { credentials } from "./support/runtime";
 
 // 認証情報をtraceへ保存しない。
@@ -48,6 +49,38 @@ test("メニューの子ページをサイドバーから開き、再読込と�
     .click();
   await expect(page).toHaveURL(/\/menu\/products$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("導入手順の個別URL・現在の接続URL・スキル配布とOAuth一覧を日英で利用できる", async ({
+  page,
+  baseURL,
+}, testInfo) => {
+  // Given: プラグイン導入ページ。
+  await page.goto("/account/integrations/plugins");
+  for (const [language, labels] of [
+    ["日本語", ja],
+    ["English", en],
+  ] as const) {
+    await page.getByRole("button", { name: language, exact: true }).click();
+    await expect(page.getByText(labels.mcp_unpublished, { exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: labels.mcp_endpoint, exact: true })).toHaveValue(
+      `${baseURL}/mcp`,
+    );
+    // When: 手動導入へ移動し、スキルを保存する。
+    await page.getByRole("link", { name: labels.mcp_manual_install, exact: true }).click();
+    await expect(page).toHaveURL(/\/account\/integrations\/manual$/);
+    const downloaded = page.waitForEvent("download");
+    await page.getByRole("link", { name: labels.mcp_skill_download, exact: true }).click();
+    expect((await downloaded).suggestedFilename()).toBe("SKILL.md");
+    // Then: 対象環境と権限が表示され、OAuth一覧にも進める。
+    await expect(page.getByRole("textbox", { name: "Codex CLI", exact: true })).toHaveValue(
+      new RegExp(`${new URL(baseURL ?? "").port}/mcp`),
+    );
+    await page.getByRole("link", { name: labels.mcp_oauth_sessions, exact: true }).click();
+    await expect(page.getByRole("searchbox", { name: labels.mcp_session_search })).toBeVisible();
+    await page.getByRole("link", { name: labels.mcp_plugin_install, exact: true }).click();
+  }
+  await page.screenshot({ path: testInfo.outputPath("tablecast-plugin-guide.png") });
 });
 
 test("店舗アイコンを変更し、再読込後の設定とサイドバーに同じ画像が表示される", async ({

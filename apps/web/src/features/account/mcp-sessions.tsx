@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plug, ShieldOff } from "lucide-react";
+import { Plug, ShieldOff, CheckCircle2, Clock, Eye, FilePenLine } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
@@ -9,7 +9,7 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { SettingsShell } from "./settings-shell";
+import { IntegrationsShell } from "./integrations-shell";
 const load = () => parseResponse(rpc.api.account["mcp-sessions"].$get());
 type Session = Awaited<ReturnType<typeof load>>["sessions"][number];
 export function McpSessions() {
@@ -26,8 +26,8 @@ export function McpSessions() {
     [t, revoke.isPending, revoke.mutate],
   );
   return (
-    <SettingsShell>
-      <h1 className="text-2xl font-semibold">{t("mcp_sessions")}</h1>
+    <IntegrationsShell>
+      <h2 className="text-xl font-semibold">{t("mcp_oauth_sessions")}</h2>
       <ErrorNotice error={sessions.error || revoke.error} />
       {sessions.isPending ? (
         <p role="status">{t("common_loading")}</p>
@@ -35,10 +35,12 @@ export function McpSessions() {
         <DataTable
           data={sessions.data?.sessions ?? []}
           columns={columns}
+          searchLabel={t("mcp_session_search")}
+          empty={t("mcp_session_empty")}
           getRowId={(row) => row.id}
         />
       )}
-    </SettingsShell>
+    </IntegrationsShell>
   );
 }
 function sessionColumns(
@@ -51,13 +53,42 @@ function sessionColumns(
       id: "client",
       header: t("mcp_application"),
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Plug className="size-5" />
-          {row.original.clientName ?? row.original.clientId}
+        <div className="flex min-w-56 items-center gap-2">
+          <Plug className="size-5 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-medium">{row.original.clientName ?? row.original.clientId}</p>
+            <p
+              className="max-w-64 truncate text-sm text-muted-foreground"
+              title={row.original.clientId}
+            >
+              {row.original.clientId}
+            </p>
+          </div>
         </div>
       ),
     },
     { accessorKey: "storeName", header: t("admin_store") },
+    {
+      accessorKey: "status",
+      header: t("mcp_status"),
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          className={
+            row.original.status === "active"
+              ? "bg-success/10 text-success"
+              : "bg-secondary text-muted-foreground"
+          }
+        >
+          {row.original.status === "active" ? (
+            <CheckCircle2 className="size-4" />
+          ) : (
+            <Clock className="size-4" />
+          )}
+          {t(row.original.status === "active" ? "mcp_active" : "mcp_expired")}
+        </Badge>
+      ),
+    },
     {
       id: "scopes",
       header: t("mcp_scopes"),
@@ -65,6 +96,11 @@ function sessionColumns(
         <div className="flex flex-wrap gap-1">
           {row.original.scopes.map((scope) => (
             <Badge key={scope} variant="outline">
+              {scope === "tablecast:read" ? (
+                <Eye className="size-4" />
+              ) : scope === "tablecast:write" ? (
+                <FilePenLine className="size-4" />
+              ) : null}
               {scope}
             </Badge>
           ))}
@@ -83,8 +119,13 @@ function sessionColumns(
     },
     {
       accessorKey: "expiresAt",
-      header: t("invite_expires_at"),
+      header: t("mcp_access_expires"),
       cell: ({ row }) => <DateTime value={row.original.expiresAt} />,
+    },
+    {
+      accessorKey: "refreshExpiresAt",
+      header: t("mcp_refresh_expires"),
+      cell: ({ row }) => <DateTime value={row.original.refreshExpiresAt} />,
     },
     {
       id: "actions",

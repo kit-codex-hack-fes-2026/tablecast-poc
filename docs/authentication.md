@@ -12,11 +12,13 @@ Google の選択画面では `tablecast-owner@example.test` と `tablecast-membe
 
 端末QRは `/device?user_code=...` から店舗を選び、`/admin/stores/:storeId/devices/new?user_code=...&tableId=...` へ進む。コード・割当先はURLから再現できる。コードの読取りや卓の選択だけでは登録せず、明示操作で承認する。
 
+端末登録ページでは `qr-scanner` でカメラまたはQR画像からコードを読み取れる。背面カメラを優先し、成功・中止・ページ移動で映像を停止する。現在のオリジンの `/device` URLだけを受け付け、読取結果のURLへ直接遷移しない。権限拒否や読取失敗時にもコード入力を継続できる。カメラはHTTPSまたはブラウザーが安全と認めるlocalhostと、利用者のカメラ許可を必要とする。
+
 ## 外部アプリへのOAuth
 
 `@better-auth/oauth-provider@1.7.2` はBetter Auth公式のOAuth 2.1 Providerである。2.1は規格名で、npmパッケージのバージョンではない。認可コード・PKCE・同意・トークン検証はこのプラグインを使う。
 
-MCP連携は `/account/mcp-sessions` でアプリ・承認対象の店舗・scope・承認日時・更新日時・アクセストークンの有効期限を確認し、取り消せる。取消は同じユーザー・アプリ・店舗のアクセストークンとリフレッシュトークンを失効させ、同意を削除する。即時失効が必要なため、公式の `disableJwtPlugin: true` でDB管理のopaqueアクセストークンを発行する。以前のJWTを発行していた環境では外部アプリを再連携する。
+MCP連携は `/account/mcp-sessions` でアプリ・承認対象の店舗・scope・承認日時・更新日時・アクセストークンとリフレッシュトークンの有効期限を確認し、取り消せる。有効なトークンが残る接続と期限切れを区別する。取消は同じユーザー・アプリ・店舗のアクセストークンとリフレッシュトークンを失効させ、同意を削除する。即時失効が必要なため、公式の `disableJwtPlugin: true` でDB管理のopaqueアクセストークンを発行する。以前のJWTを発行していた環境では外部アプリを再連携する。
 
 TanStack Routerには参照スターターのflat query処理を採用する。OAuthの署名付きクエリに含まれる繰り返しの `ba_param` や文字列をJSONへ変換しない。署名検証を省略せず、元のクエリを保持して公式クライアントへ渡す。
 
@@ -32,10 +34,8 @@ Cloudflare Email Service で送信ドメインを検証し、送信可能なメ�
 
 Googleモックでは佐藤 晴香（`tablecast-owner@example.test`、こもれびの管理者）、田中 蓮（`tablecast-member@example.test`、こもれび担当）、小林 直子（`tablecast-akari@example.test`、あかり担当）、山本 翼（`tablecast-koharu@example.test`、こはるの管理者）を選べる。伊藤 葵（`tablecast-link@example.test`）は未所属からの導線確認用。すべて架空の人物である。名前・画像を変更した既存ユーザーのプロフィールはseedで上書きしない。
 
+seedはユーザー画像と店舗アイコンをローカルで生成し、R2へ保存する。未設定の場合だけ補い、保存済みの画像を保持する。店舗アイコンはBetter Authの組織の`logo`を使用し、`/admin/stores/$storeId/profile`で責任者・管理者が変更できる。ユーザー画像と共通の形式・サイズ検証を行う。
+
 emulateは起動ごとに`sub`を生成するため、開発用Googleに限りissuerを`https://tablecast-google.localhost`、subjectを確認済みメールに固定する。seedは旧localhost issuerの重複だけを統合する。実Googleのissuer・subjectは変更しない。
 
 管理画面の店舗切替はサイドバーに集約する。未所属の場合は店舗作成へのリンクと招待メールからの参加方法を表示する。Google連携解除・パスキー削除・セッション失効・メンバー削除は対象を確認して実行する。
-
-端末登録ページでは `qr-scanner` でカメラまたはQR画像からコードを読み取れる。背面カメラを優先し、成功・中止・ページ移動で映像を停止する。現在のオリジンの `/device` URLだけを受け付け、読取結果のURLへ直接遷移しない。権限拒否や読取失敗時にもコード入力を継続できる。カメラはHTTPSまたはブラウザーが安全と認めるlocalhostと、利用者のカメラ許可を必要とする。
-
-seedはユーザー画像と店舗アイコンをローカルで生成し、R2へ保存する。未設定の場合だけ補い、保存済みの画像を保持する。店舗アイコンはBetter Authの組織の`logo`を使用し、`/admin/stores/$storeId/profile`で責任者・管理者が変更できる。ユーザー画像と共通の形式・サイズ検証を行う。

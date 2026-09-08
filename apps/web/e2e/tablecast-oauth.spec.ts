@@ -9,7 +9,7 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
   page,
   request,
   baseURL,
-}) => {
+}, testInfo) => {
   if (!baseURL) throw new Error("ローカル公開URLがありません");
   const callback = "http://127.0.0.1:6274/oauth/callback";
   await page.route(`${callback}**`, (route) =>
@@ -96,7 +96,10 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
   const connection = page.getByRole("row").filter({ hasText: "TableCast browser acceptance" });
   await expect(connection).toContainText("tablecast:read");
   await expect(connection).toContainText("tablecast:write");
+  await expect(connection).toContainText("Active");
+  await expect(page.getByRole("columnheader", { name: "Refresh token expiry" })).toBeVisible();
   await expect(connection.locator("time")).toHaveCount(3);
+  await page.screenshot({ path: testInfo.outputPath("tablecast-oauth-connections.png") });
   await connection.getByRole("button", { name: "Revoke access", exact: true }).click();
   await page
     .getByRole("alertdialog")

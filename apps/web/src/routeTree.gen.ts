@@ -21,6 +21,8 @@ import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-se
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
 import { Route as StoresNewRouteImport } from './routes/stores.new'
+import { Route as AccountIntegrationsManualRouteImport } from './routes/account_.integrations.manual'
+import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
@@ -99,6 +101,18 @@ const StoresNewRoute = StoresNewRouteImport.update({
   path: '/stores/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountIntegrationsManualRoute =
+  AccountIntegrationsManualRouteImport.update({
+    id: '/account_/integrations/manual',
+    path: '/account/integrations/manual',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AccountIntegrationsPluginsRoute =
+  AccountIntegrationsPluginsRouteImport.update({
+    id: '/account_/integrations/plugins',
+    path: '/account/integrations/plugins',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
   id: '/admin/stores/$storeId',
   path: '/admin/stores/$storeId',
@@ -213,6 +227,8 @@ export interface FileRoutesByFullPath {
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/account/integrations/manual': typeof AccountIntegrationsManualRoute
+  '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -244,6 +260,8 @@ export interface FileRoutesByTo {
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/account/integrations/manual': typeof AccountIntegrationsManualRoute
+  '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -276,6 +294,8 @@ export interface FileRoutesById {
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
+  '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -309,6 +329,8 @@ export interface FileRouteTypes {
     | '/admin/live'
     | '/invitations/$invitationId'
     | '/stores/new'
+    | '/account/integrations/manual'
+    | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
@@ -340,6 +362,8 @@ export interface FileRouteTypes {
     | '/admin/live'
     | '/invitations/$invitationId'
     | '/stores/new'
+    | '/account/integrations/manual'
+    | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
@@ -371,6 +395,8 @@ export interface FileRouteTypes {
     | '/admin/live'
     | '/invitations/$invitationId'
     | '/stores/new'
+    | '/account_/integrations/manual'
+    | '/account_/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
@@ -403,6 +429,8 @@ export interface RootRouteChildren {
   AdminLiveRoute: typeof AdminLiveRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
   StoresNewRoute: typeof StoresNewRoute
+  AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
+  AccountIntegrationsPluginsRoute: typeof AccountIntegrationsPluginsRoute
   AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
 }
 
@@ -490,6 +518,20 @@ declare module '@tanstack/react-router' {
       path: '/stores/new'
       fullPath: '/stores/new'
       preLoaderRoute: typeof StoresNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_/integrations/manual': {
+      id: '/account_/integrations/manual'
+      path: '/account/integrations/manual'
+      fullPath: '/account/integrations/manual'
+      preLoaderRoute: typeof AccountIntegrationsManualRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account_/integrations/plugins': {
+      id: '/account_/integrations/plugins'
+      path: '/account/integrations/plugins'
+      fullPath: '/account/integrations/plugins'
+      preLoaderRoute: typeof AccountIntegrationsPluginsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/stores/$storeId': {
@@ -676,8 +718,19 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLiveRoute: AdminLiveRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
   StoresNewRoute: StoresNewRoute,
+  AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,
+  AccountIntegrationsPluginsRoute: AccountIntegrationsPluginsRoute,
   AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

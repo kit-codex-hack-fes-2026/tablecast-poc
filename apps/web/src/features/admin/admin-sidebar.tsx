@@ -248,6 +248,7 @@ export function AdminSidebar({
         <Link
           className={item}
           to="/account/mcp-sessions"
+          data-status={tab === "mcp" ? "active" : undefined}
           onClick={onNavigate}
           title={t("mcp_sessions")}
         >

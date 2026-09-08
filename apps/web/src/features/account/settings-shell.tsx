@@ -20,7 +20,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
       tab={
         path === "/organisations" || path === "/stores/new"
           ? "organisations"
-          : path === "/account/mcp-sessions"
+          : path === "/account/mcp-sessions" || path.startsWith("/account/integrations/")
             ? "mcp"
             : "account"
       }
