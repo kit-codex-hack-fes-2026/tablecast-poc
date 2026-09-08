@@ -476,7 +476,7 @@ type Food = {
   en: string;
   price: number;
   category: string;
-  image?: string;
+  image: string;
   groups: GroupKey[];
   ingredients: readonly [string, string];
   contains: string[] | null;
@@ -518,6 +518,7 @@ const foods: Food[] = [
     en: "Salmon sashimi",
     price: 890,
     category: "sashimi",
+    image: "salmon-sashimi",
     groups: ["garnish"],
     ingredients: ["さけを生で提供します", "Salmon, served raw"],
     contains: ["fish"],
@@ -528,6 +529,7 @@ const foods: Food[] = [
     en: "Tuna sashimi",
     price: 980,
     category: "sashimi",
+    image: "tuna-sashimi",
     groups: ["garnish"],
     ingredients: ["まぐろの赤身を生で提供します", "Lean tuna, served raw"],
     contains: ["fish"],
@@ -552,6 +554,7 @@ const foods: Food[] = [
     en: "Two chicken meatball skewers",
     price: 620,
     category: "grilled",
+    image: "tsukune",
     groups: ["seasoning", "spice"],
     ingredients: [
       "鶏ひき肉、卵、小麦粉を合わせて焼きます",
@@ -591,6 +594,7 @@ const foods: Food[] = [
     en: "Chilled tofu",
     price: 440,
     category: "small-plates",
+    image: "tofu",
     groups: ["garnish"],
     ingredients: ["大豆の豆腐に薬味を添えます", "Chilled soya tofu with garnishes"],
     contains: ["soya"],
@@ -601,6 +605,7 @@ const foods: Food[] = [
     en: "Seasonal Japanese pickles",
     price: 450,
     category: "small-plates",
+    image: "pickles",
     groups: [],
     ingredients: [
       "季節によって野菜と漬け床が変わります。詳しい原材料は未登録です",
@@ -614,6 +619,7 @@ const foods: Food[] = [
     en: "Izakaya potato salad",
     price: 520,
     category: "small-plates",
+    image: "potato-salad",
     groups: ["spice"],
     ingredients: [
       "じゃがいも、きゅうり、卵入りマヨネーズを使います",
@@ -627,6 +633,7 @@ const foods: Food[] = [
     en: "Smashed cucumber with sesame",
     price: 420,
     category: "small-plates",
+    image: "cucumber",
     groups: ["spice"],
     ingredients: [
       "きゅうりをごま油としょうゆで和えます",
@@ -651,6 +658,7 @@ const foods: Food[] = [
     en: "Grilled split Atka mackerel",
     price: 980,
     category: "grilled",
+    image: "hokke",
     groups: ["garnish"],
     ingredients: ["ほっけの干物を焼きます", "Dried Atka mackerel, grilled"],
     contains: ["fish"],
@@ -661,6 +669,7 @@ const foods: Food[] = [
     en: "Miso-glazed aubergine",
     price: 580,
     category: "grilled",
+    image: "aubergine",
     groups: ["spice"],
     ingredients: [
       "なすに大豆の味噌だれを塗って焼きます",
@@ -674,6 +683,7 @@ const foods: Food[] = [
     en: "Charcoal-grilled shiitake mushrooms",
     price: 560,
     category: "grilled",
+    image: "shiitake",
     groups: ["seasoning"],
     ingredients: [
       "しいたけを炭火で焼きます。たれには小麦と大豆を含みます",
@@ -701,6 +711,7 @@ const foods: Food[] = [
     en: "Prawn tempura",
     price: 920,
     category: "fried",
+    image: "prawn-tempura",
     groups: [],
     ingredients: ["海老を小麦粉と卵の衣で揚げます", "Prawns fried in a wheat-flour and egg batter"],
     contains: ["prawn", "wheat", "egg"],
@@ -712,6 +723,7 @@ const foods: Food[] = [
     en: "Fried tofu in dashi broth",
     price: 610,
     category: "fried",
+    image: "agedashi-tofu",
     groups: ["topping"],
     ingredients: [
       "豆腐を揚げ、かつお出汁としょうゆを合わせます",
@@ -725,6 +737,7 @@ const foods: Food[] = [
     en: "Japanese beef and potato stew",
     price: 690,
     category: "small-plates",
+    image: "nikujaga",
     groups: [],
     ingredients: [
       "牛肉、じゃがいも、玉ねぎをしょうゆで煮ます",
@@ -738,6 +751,7 @@ const foods: Food[] = [
     en: "Slow-braised pork belly",
     price: 880,
     category: "small-plates",
+    image: "kakuni",
     groups: ["garnish"],
     ingredients: [
       "豚ばら肉をしょうゆ、砂糖、しょうがで煮ます",
@@ -762,6 +776,7 @@ const foods: Food[] = [
     en: "Salmon rice with dashi broth",
     price: 680,
     category: "rice",
+    image: "ochazuke",
     groups: ["broth", "topping"],
     ingredients: [
       "ご飯、焼きざけ、選んだ出汁を合わせます",
@@ -775,6 +790,7 @@ const foods: Food[] = [
     en: "Udon noodles in broth",
     price: 590,
     category: "rice",
+    image: "udon",
     groups: ["broth", "topping"],
     ingredients: [
       "小麦のうどんと選んだ出汁を合わせます",
@@ -802,6 +818,7 @@ const drinks: Food[] = [
     en: "Whisky highball",
     price: 520,
     category: "drinks",
+    image: "highball",
     groups: [],
     ingredients: ["ウイスキーと炭酸水を合わせます", "Whisky topped with sparkling water"],
     contains: [],
@@ -812,6 +829,7 @@ const drinks: Food[] = [
     en: "Lemon sour",
     price: 490,
     category: "drinks",
+    image: "lemon-sour",
     groups: [],
     ingredients: ["焼酎、レモン、炭酸水を合わせます", "Shochu, lemon and sparkling water"],
     contains: [],
@@ -822,6 +840,7 @@ const drinks: Food[] = [
     en: "Umeshu plum liqueur on ice",
     price: 560,
     category: "drinks",
+    image: "plum-wine",
     groups: [],
     ingredients: ["梅のリキュールを氷と提供します", "Japanese plum liqueur served over ice"],
     contains: [],
@@ -832,6 +851,7 @@ const drinks: Food[] = [
     en: "Sweet-potato shochu with water",
     price: 540,
     category: "drinks",
+    image: "shochu",
     groups: [],
     ingredients: ["芋焼酎を水で割ります", "Sweet-potato shochu diluted with water"],
     contains: [],
@@ -842,6 +862,7 @@ const drinks: Food[] = [
     en: "Oolong tea",
     price: 340,
     category: "drinks",
+    image: "oolong",
     groups: ["ice"],
     ingredients: ["烏龍茶を選んだ温度で提供します", "Oolong tea served at your chosen temperature"],
     contains: [],
@@ -853,6 +874,7 @@ const drinks: Food[] = [
     en: "Japanese green tea",
     price: 340,
     category: "drinks",
+    image: "green-tea",
     groups: ["ice"],
     ingredients: ["緑茶を選んだ温度で提供します", "Green tea served at your chosen temperature"],
     contains: [],
@@ -863,21 +885,25 @@ const drinks: Food[] = [
     en: "Yuzu citrus soda",
     price: 410,
     category: "drinks",
+    image: "yuzu-soda",
     groups: [],
     ingredients: ["ゆず果汁と炭酸水を合わせます", "Yuzu juice mixed with sparkling water"],
     contains: [],
   },
 ];
 
-function allergenRecord(contains: string[] | null): Product["allergens"] {
+function allergenRecord(
+  contains: string[] | null,
+  ingredients: readonly [string, string],
+): Product["allergens"] {
   return {
     contains: contains ?? [],
     evidence: contains === null ? "unknown" : "verified",
     crossContact: "unknown",
     vegan: "unknown",
     note: {
-      ja: "出汁・たれ・追加品によって含有が変わります。",
-      en: "Broth, glaze and extras may change allergens.",
+      ja: `合成デモの登録原材料・調理情報：${ingredients[0]}。選択・追加品による成分の違いと、製造・調理・提供時の混入は未確認です。アレルギーはスタッフにご確認ください。`,
+      en: `Recorded ingredients and preparation for this fictional demo: ${ingredients[1]}. Ingredient changes from options or extras and cross-contact during production, preparation and service are unverified. Please ask staff about allergies.`,
     },
   };
 }
@@ -925,7 +951,13 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           imageKey: `tablecast/demo/${kind === "nigori" ? "nigori" : "sake"}.png`,
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
-          allergens: allergenRecord([]),
+          allergens: allergenRecord(
+            [],
+            [
+              `${kindJa}。製造原材料の詳細は未登録です`,
+              `${kindEn}; detailed production ingredients are not recorded`,
+            ],
+          ),
         };
       },
     );
@@ -954,10 +986,10 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           ...(["sashimi", "karaage", "yakitori"].includes(item.id) ? ["popular"] : []),
           ...(drinks.slice(0, 5).some((drink) => drink.id === item.id) ? ["alcohol"] : []),
         ],
-        imageKey: item.image ? `tablecast/demo/${item.image}.png` : null,
+        imageKey: `tablecast/demo/${item.image}.png`,
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
-        allergens: allergenRecord(item.contains),
+        allergens: allergenRecord(item.contains, item.ingredients),
       };
     });
     const featuredIds = [

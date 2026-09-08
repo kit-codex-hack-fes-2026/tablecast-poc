@@ -1,0 +1,121 @@
+{
+  "tool": "built-in image_gen",
+  "prompt": "Use case: product-mockup. Create one square menu product image for a fictional Japanese izakaya TableCast demo. Subject: {subject}. Natural realistic food photography, 45-degree overhead angle, complete single serving centred on simple handmade Japanese ceramic dish or an appropriate drink glass, warm neutral off-white table, soft daylight, compact framing. No text, no labels, no people, no other dishes. Output a single image for {id}.",
+  "items": [
+    {
+      "id": "salmon-sashimi",
+      "subject": "Salmon sashimi",
+      "file": "salmon-sashimi.png"
+    },
+    {
+      "id": "tuna-sashimi",
+      "subject": "Tuna sashimi",
+      "file": "tuna-sashimi.png"
+    },
+    {
+      "id": "tsukune",
+      "subject": "Two chicken meatball skewers",
+      "file": "tsukune.png"
+    },
+    {
+      "id": "tofu",
+      "subject": "Chilled tofu with ginger and spring onion",
+      "file": "tofu.png"
+    },
+    {
+      "id": "pickles",
+      "subject": "Seasonal Japanese pickles",
+      "file": "pickles.png"
+    },
+    {
+      "id": "potato-salad",
+      "subject": "Japanese izakaya potato salad",
+      "file": "potato-salad.png"
+    },
+    {
+      "id": "cucumber",
+      "subject": "Smashed cucumber with sesame",
+      "file": "cucumber.png"
+    },
+    {
+      "id": "hokke",
+      "subject": "Grilled split Atka mackerel",
+      "file": "hokke.png"
+    },
+    {
+      "id": "aubergine",
+      "subject": "Miso-glazed aubergine",
+      "file": "aubergine.png"
+    },
+    {
+      "id": "shiitake",
+      "subject": "Charcoal-grilled shiitake mushrooms",
+      "file": "shiitake.png"
+    },
+    {
+      "id": "prawn-tempura",
+      "subject": "Prawn tempura",
+      "file": "prawn-tempura.png"
+    },
+    {
+      "id": "agedashi-tofu",
+      "subject": "Fried tofu in dashi broth",
+      "file": "agedashi-tofu.png"
+    },
+    {
+      "id": "nikujaga",
+      "subject": "Japanese beef and potato stew",
+      "file": "nikujaga.png"
+    },
+    {
+      "id": "kakuni",
+      "subject": "Slow-braised pork belly",
+      "file": "kakuni.png"
+    },
+    {
+      "id": "ochazuke",
+      "subject": "Salmon rice with dashi broth",
+      "file": "ochazuke.png"
+    },
+    {
+      "id": "udon",
+      "subject": "Udon noodles in clear broth",
+      "file": "udon.png"
+    },
+    {
+      "id": "highball",
+      "subject": "Whisky highball with ice",
+      "file": "highball.png"
+    },
+    {
+      "id": "lemon-sour",
+      "subject": "Japanese lemon sour cocktail",
+      "file": "lemon-sour.png"
+    },
+    {
+      "id": "plum-wine",
+      "subject": "Umeshu plum liqueur on ice",
+      "file": "plum-wine.png"
+    },
+    {
+      "id": "shochu",
+      "subject": "Sweet potato shochu with water and ice",
+      "file": "shochu.png"
+    },
+    {
+      "id": "oolong",
+      "subject": "Iced oolong tea",
+      "file": "oolong.png"
+    },
+    {
+      "id": "green-tea",
+      "subject": "Japanese green tea in ceramic cup",
+      "file": "green-tea.png"
+    },
+    {
+      "id": "yuzu-soda",
+      "subject": "Yuzu citrus soda",
+      "file": "yuzu-soda.png"
+    }
+  ]
+}
