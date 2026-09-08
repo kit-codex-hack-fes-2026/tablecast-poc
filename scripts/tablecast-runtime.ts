@@ -23,6 +23,9 @@ const portsSchema = z.object({
   rtcUdp: portSchema,
   agent: portSchema,
   storybook: portSchema,
+  oauth: portSchema.optional(),
+  mailpit: portSchema.optional(),
+  smtp: portSchema.optional(),
 });
 const runtimeSchema = z.object({
   id: z.string().regex(/^[a-f0-9]{10}$/),
@@ -59,7 +62,7 @@ export function assertLocalRuntime(runtime: TablecastRuntime, root: string) {
     runtime.apiConfig !== join(local, "api.wrangler.json") ||
     runtime.webConfig !== join(local, "web.wrangler.json") ||
     runtime.origin !== `http://tablecast-${runtime.id}.localhost:${runtime.ports.proxy}` ||
-    new Set(Object.values(runtime.ports)).size !== 8
+    new Set(Object.values(runtime.ports)).size !== Object.values(runtime.ports).length
   ) {
     throw new Error("別worktree・非ローカル・不整合の設定を操作できません。");
   }
@@ -130,7 +133,7 @@ export async function reserveRuntime() {
     let ports: z.infer<typeof portsSchema> | undefined;
     for (let attempt = 0; attempt < 200; attempt++) {
       const candidate =
-        attempt === 0 && existing
+        attempt === 0 && existing?.oauth && existing.mailpit && existing.smtp
           ? existing
           : portsSchema.parse(
               Object.fromEntries(
@@ -143,6 +146,9 @@ export async function reserveRuntime() {
                   "rtcUdp",
                   "agent",
                   "storybook",
+                  "oauth",
+                  "mailpit",
+                  "smtp",
                 ].map((key, index) => [
                   key,
                   20000 + ((base - 20000 + attempt * 8 + index) % 30000),
@@ -229,6 +235,9 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
           TABLECAST_ENV: "development",
           TABLECAST_PUBLIC_ORIGIN: runtime.origin,
           TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
+          TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
+          TABLECAST_MAILPIT_URL: `http://127.0.0.1:${runtime.ports.mailpit}`,
+          TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
         },
         d1_databases: [
           {

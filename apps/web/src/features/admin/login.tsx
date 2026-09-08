@@ -1,3 +1,4 @@
+import { authClient, authResult } from "../../lib/auth-client";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
@@ -9,10 +10,35 @@ import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
 import { api, json } from "../../lib/api";
 
+function safeReturn() {
+  const requested = new URLSearchParams(window.location.search).get("returnTo");
+  return requested?.startsWith("/") && !requested.startsWith("//") ? requested : undefined;
+}
+
 export function Login() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
   const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
+  const social = useMutation({
+    mutationFn: async (method: "google" | "passkey") => {
+      const query = new URLSearchParams(window.location.search);
+      const requested = query.get("returnTo");
+      const callbackURL =
+        requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/organisations";
+      if (method === "passkey") {
+        authResult(await authClient.signIn.passkey());
+        window.location.assign(
+          query.has("sig") ? `/consent${window.location.search}` : callbackURL,
+        );
+      } else
+        authResult(
+          await authClient.signIn.social({
+            provider: "google",
+            callbackURL: query.has("sig") ? `/consent${window.location.search}` : callbackURL,
+          }),
+        );
+    },
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   useEffect(() => {
@@ -36,6 +62,7 @@ export function Login() {
         .object({ redirect: z.literal(true), url: z.string().min(1) })
         .safeParse(result);
       if (redirected.success) window.location.assign(redirected.data.url);
+      else if (safeReturn()) window.location.assign(safeReturn() ?? "/organisations");
       else
         void navigate({
           to: "/admin/live",
@@ -68,6 +95,27 @@ export function Login() {
           }}
         >
           <h1 className="text-2xl mb-3">{t("auth_subtitle")}</h1>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={social.isPending}
+            onClick={() => social.mutate("google")}
+          >
+            {t("auth_google")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={social.isPending}
+            onClick={() => social.mutate("passkey")}
+          >
+            {t("auth_passkey")}
+          </Button>
+          {social.error && (
+            <p role="alert" className="text-destructive">
+              {t("auth_failed")}
+            </p>
+          )}
           <label className="flex flex-col gap-2 text-xs">
             {t("auth_email")}
             <Input
@@ -108,6 +156,12 @@ export function Login() {
             {t("auth_sign_in")}
             <ArrowRight size={20} aria-hidden="true" />
           </Button>
+          <a className="text-sm underline" href={`/register${window.location.search}`}>
+            {t("auth_register")}
+          </a>
+          <a className="text-sm underline" href="/reset-password">
+            {t("auth_reset")}
+          </a>
           <Link
             to="/"
             data-slot="button"

@@ -9,6 +9,7 @@
     "test/**/*.ts",
     "vitest.config.ts",
     "drizzle.config.ts",
-    "auth.config.ts"
+    "auth.config.ts",
+    "src/**/*.tsx"
   ]
 }

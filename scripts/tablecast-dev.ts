@@ -112,23 +112,25 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     if (closing) return;
     closing = true;
     for (const child of children) child.kill("SIGTERM");
-    const containerName = `tablecast-${runtime.id}-livekit`;
-    try {
-      const { stdout } = await execute("docker", [
-        "inspect",
-        "--format",
-        '{{index .Config.Labels "tablecast.root"}}',
-        containerName,
-      ]);
-      if (stdout.trim() === tablecastRoot)
-        await execute("docker", ["stop", "--time", "5", containerName]);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        !error.message.includes("No such") &&
-        !error.message.includes("not found")
-      )
-        console.error("ローカルLiveKitの停止状態を確認できません。");
+    for (const service of ["livekit", "mailpit"]) {
+      const containerName = `tablecast-${runtime.id}-${service}`;
+      try {
+        const { stdout } = await execute("docker", [
+          "inspect",
+          "--format",
+          '{{index .Config.Labels "tablecast.root"}}',
+          containerName,
+        ]);
+        if (stdout.trim() === tablecastRoot)
+          await execute("docker", ["stop", "--time", "5", containerName]);
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          !error.message.includes("No such") &&
+          !error.message.includes("not found")
+        )
+          console.error("ローカルLiveKitの停止状態を確認できません。");
+      }
     }
     await Promise.all(children.map((child) => child.exited));
     const current = await readRuntime();
@@ -145,6 +147,25 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
         .catch(() => process.exit(1));
     });
   try {
+    if (!runtime.ports.oauth || !runtime.ports.mailpit || !runtime.ports.smtp)
+      throw new Error("開発サービスのポートがありません。");
+    launch([process.execPath, "--no-env-file", "run", "--cwd", "apps/emulate", "dev"], {
+      TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
+    });
+    launch([
+      "docker",
+      "run",
+      "--rm",
+      "--name",
+      `tablecast-${runtime.id}-mailpit`,
+      "--label",
+      `tablecast.root=${tablecastRoot}`,
+      "-p",
+      `127.0.0.1:${runtime.ports.mailpit}:8025`,
+      "-p",
+      `127.0.0.1:${runtime.ports.smtp}:1025`,
+      "axllent/mailpit:v1.29.2",
+    ]);
     launch([
       bin("portless"),
       "proxy",

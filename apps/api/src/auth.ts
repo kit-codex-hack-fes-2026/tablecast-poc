@@ -3,9 +3,14 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { drizzle } from "drizzle-orm/d1";
 import { getCookie } from "hono/cookie";
 import type { Context } from "hono";
+import { z } from "zod";
+import { genericOAuth } from "better-auth/plugins";
+import { sendAccountEmail, type MailEnv } from "./emails/send";
 import { authOptions } from "./auth-options";
 import * as schema from "./db/auth-schema";
 import { ensure } from "./errors";
+
+export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
 
 export type Actor = {
   kind: "device" | "staff" | "voice" | "mcp";
@@ -22,19 +27,112 @@ export type AuthEnv = Pick<
   TablecastEnv,
   "TABLECAST_DB" | "TABLECAST_AUTH_SECRET" | "TABLECAST_PUBLIC_ORIGIN"
 > &
-  Partial<Pick<TablecastEnv, "TABLECAST_GOOGLE_CLIENT_ID" | "TABLECAST_GOOGLE_CLIENT_SECRET">>;
+  Partial<
+    Pick<
+      TablecastEnv,
+      | "TABLECAST_GOOGLE_CLIENT_ID"
+      | "TABLECAST_GOOGLE_CLIENT_SECRET"
+      | "TABLECAST_GOOGLE_EMULATOR_URL"
+      | "TABLECAST_ENV"
+    >
+  > &
+  MailEnv;
 export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
   ensure(
     env.TABLECAST_AUTH_SECRET && env.TABLECAST_AUTH_SECRET.length >= 32,
     "AUTH_NOT_CONFIGURED",
     503,
   );
+  const options = authOptions(
+    env.TABLECAST_PUBLIC_ORIGIN,
+    env.TABLECAST_AUTH_SECRET,
+    async (data) => {
+      await sendAccountEmail(
+        env,
+        data.email,
+        "組織への招待 / Organisation invitation",
+        `${data.organization.name} に招待されました。You have been invited to join this organisation.`,
+        "招待を確認 / View invitation",
+        `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
+      );
+    },
+  );
+  const emulator = env.TABLECAST_GOOGLE_EMULATOR_URL;
+  if (emulator)
+    ensure(
+      env.TABLECAST_ENV === "development" &&
+        ["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname),
+      "OAUTH_EMULATOR_LOCAL_ONLY",
+      503,
+    );
   return betterAuth({
-    ...authOptions(env.TABLECAST_PUBLIC_ORIGIN, env.TABLECAST_AUTH_SECRET),
+    ...options,
+    plugins: [
+      ...options.plugins,
+      ...(emulator
+        ? [
+            genericOAuth({
+              config: [
+                {
+                  providerId: "google",
+                  accountIssuer: tablecastGoogleMockIssuer,
+                  authorizationUrl: `${emulator}/o/oauth2/v2/auth`,
+                  tokenUrl: `${emulator}/oauth2/token`,
+                  // emulateのsubは再起動で変わるため、確認済みメールを開発用IDとする。
+                  accountSubject: ({ profile }) => z.email().parse(profile.email).toLowerCase(),
+                  getUserInfo: async (tokens) => {
+                    const response = await fetch(`${emulator}/oauth2/v2/userinfo`, {
+                      headers: { authorization: `Bearer ${tokens.accessToken}` },
+                    });
+                    if (!response.ok) return null;
+                    const profile = z
+                      .object({
+                        sub: z.string(),
+                        email: z.email(),
+                        email_verified: z.literal(true),
+                        name: z.string(),
+                      })
+                      .parse(await response.json());
+                    return { ...profile, id: profile.sub, emailVerified: true };
+                  },
+                  clientId: "tablecast-local-google",
+                  clientSecret: "tablecast-local-google-secret",
+                  scopes: ["openid", "email", "profile"],
+                  pkce: true,
+                },
+              ],
+            }),
+          ]
+        : []),
+    ],
+    emailVerification: {
+      sendOnSignUp: Boolean(env.TABLECAST_EMAIL_FROM),
+      sendVerificationEmail: async ({ user, url }) =>
+        sendAccountEmail(
+          env,
+          user.email,
+          "メールアドレスの確認 / Verify your email",
+          "メールアドレスを確認してください。Please verify your email address.",
+          "確認 / Verify",
+          url,
+        ),
+    },
+    emailAndPassword: {
+      ...options.emailAndPassword,
+      sendResetPassword: async ({ user, url }) =>
+        sendAccountEmail(
+          env,
+          user.email,
+          "パスワードの再設定 / Reset password",
+          "新しいパスワードを設定してください。Please choose a new password.",
+          "再設定 / Reset",
+          url,
+        ),
+    },
     logger,
     database: drizzleAdapter(drizzle(env.TABLECAST_DB), { provider: "sqlite", schema }),
     socialProviders:
-      env.TABLECAST_GOOGLE_CLIENT_ID && env.TABLECAST_GOOGLE_CLIENT_SECRET
+      !emulator && env.TABLECAST_GOOGLE_CLIENT_ID && env.TABLECAST_GOOGLE_CLIENT_SECRET
         ? {
             google: {
               clientId: env.TABLECAST_GOOGLE_CLIENT_ID,

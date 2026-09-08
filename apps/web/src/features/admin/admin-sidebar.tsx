@@ -82,6 +82,8 @@ export function AdminSidebar({
         </Button>
       </nav>
       <div className="mt-auto pt-5 border-t border-t-border flex flex-col gap-2 [&_>_a]:flex [&_>_a]:items-center [&_>_a]:justify-between [&_>_a]:min-h-9 [&_>_a]:text-xs [&_>_a]:text-muted-foreground [&_>_a]:text-left max-sm:hidden">
+        <Link to="/account">{t("account_title")}</Link>
+        <Link to="/organisations">{t("org_title")}</Link>
         <Link to="/">
           {t("auth_guest")}
           <ArrowUpRight size={16} aria-hidden="true" />

@@ -154,6 +154,49 @@ app.onError((error, c) => {
     500,
   );
 });
+app.post("/api/account/avatar", async (c) => {
+  await staffIdentity(c);
+  const form = await c.req.formData();
+  const image = form.get("image");
+  ensure(
+    image instanceof File && image.size > 0 && image.size <= 1024 * 1024,
+    "INVALID_IMAGE",
+    422,
+  );
+  const bytes = new Uint8Array(await image.arrayBuffer());
+  const valid =
+    (image.type === "image/png" &&
+      bytes[0] === 137 &&
+      bytes[1] === 80 &&
+      bytes[2] === 78 &&
+      bytes[3] === 71) ||
+    (image.type === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) ||
+    (image.type === "image/webp" &&
+      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP");
+  ensure(valid, "INVALID_IMAGE", 422);
+  const key = crypto.randomUUID();
+  await c.env.TABLECAST_MEDIA.put(`tablecast/avatars/${key}`, bytes, {
+    httpMetadata: { contentType: image.type },
+  });
+  await createAuth(c.env).api.updateUser({
+    headers: c.req.raw.headers,
+    body: { image: `${c.env.TABLECAST_PUBLIC_ORIGIN}/api/avatars/${key}` },
+  });
+  return c.json({ ok: true });
+});
+app.get("/api/avatars/:key", async (c) => {
+  const key = z.uuid().parse(c.req.param("key"));
+  const image = await c.env.TABLECAST_MEDIA.get(`tablecast/avatars/${key}`);
+  ensure(image, "IMAGE_NOT_FOUND", 404);
+  return new Response(image.body, {
+    headers: {
+      "Content-Type": image.httpMetadata?.contentType ?? "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+});
 app.get("/api/health", (c) => c.json({ status: "ok", releaseSha: c.env.TABLECAST_RELEASE_SHA }));
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   ensure(
