@@ -1,5 +1,5 @@
 import { Radio } from "@base-ui/react/radio";
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 
 export { RadioGroup } from "@base-ui/react/radio-group";
 

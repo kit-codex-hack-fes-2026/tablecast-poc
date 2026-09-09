@@ -1,9 +1,17 @@
+import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
+
+const productGrid = tv({
+  base: "grid grid-cols-2",
+  variants: {
+    recommended: { true: "gap-3", false: "gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3" },
+  },
+});
 
 export function ProductMenu({
   catalog,
@@ -52,13 +60,7 @@ export function ProductMenu({
           ))}
         </fieldset>
       )}
-      <div
-        className={
-          productIds
-            ? "grid grid-cols-2 gap-3"
-            : "grid grid-cols-2 gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3"
-        }
-      >
+      <div className={productGrid({ recommended: Boolean(productIds) })}>
         {products.map((product) => (
           <Button
             variant="ghost"

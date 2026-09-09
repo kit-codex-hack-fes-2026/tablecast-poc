@@ -1,5 +1,5 @@
 import { Avatar } from "@base-ui/react/avatar";
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 
 export function StoreIcon({
   name,

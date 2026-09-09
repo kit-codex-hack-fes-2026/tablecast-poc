@@ -92,14 +92,7 @@ export function MenuOverview({
                 <span className="block text-2xl font-semibold tabular-nums">
                   {money(product.price, locale)}
                 </span>
-                <Badge
-                  variant="outline"
-                  className={
-                    product.available
-                      ? "bg-success-soft text-success"
-                      : "bg-secondary text-muted-foreground"
-                  }
-                >
+                <Badge variant={product.available ? "success" : "inactive"}>
                   {product.available ? (
                     <Check className="size-4" />
                   ) : (

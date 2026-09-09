@@ -1,3 +1,4 @@
+import { tv, type VariantProps } from "tailwind-variants";
 import { Slider } from "@base-ui/react/slider";
 import type { Catalog, Product, Snapshot, TableEvent } from "@tablecast/api/schema";
 import { castInstructions } from "@tablecast/api/speech";
@@ -31,20 +32,36 @@ const AudioWaveform = lazy(() =>
   import("./audio-waveform").then((module) => ({ default: module.AudioWaveform })),
 );
 
-const speakerColours = [
-  "bg-sky-100 text-sky-900",
-  "bg-violet-100 text-violet-900",
-  "bg-amber-100 text-amber-900",
-  "bg-teal-100 text-teal-900",
-];
-function speakerColour(line: ConversationLine) {
-  if (!line.speaker) return "bg-secondary text-secondary-foreground";
+const speakerBadge = tv({
+  base: "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+  variants: {
+    colour: {
+      assistant: "bg-primary/10 text-primary",
+      guest: "bg-secondary text-secondary-foreground",
+      sky: "bg-sky-100 text-sky-900",
+      violet: "bg-violet-100 text-violet-900",
+      amber: "bg-amber-100 text-amber-900",
+      teal: "bg-teal-100 text-teal-900",
+    },
+  },
+});
+const speakerColours = ["sky", "violet", "amber", "teal"] as const;
+function speakerColour(line: ConversationLine): VariantProps<typeof speakerBadge>["colour"] {
+  if (line.role === "assistant") return "assistant";
+  if (!line.speaker) return "guest";
   const hash = Array.from(`${line.streamId ?? ""}:${line.speaker}`).reduce(
     (sum, letter) => (sum * 31 + letter.charCodeAt(0)) | 0,
     0,
   );
   return speakerColours[Math.abs(hash) % speakerColours.length];
 }
+
+const activityDot = tv({
+  base: "size-2 rounded-full",
+  variants: {
+    active: { true: "bg-success motion-safe:animate-pulse", false: "bg-muted-foreground" },
+  },
+});
 
 const markdownComponents = {
   a: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
@@ -71,9 +88,7 @@ function ConversationMessage({
       lang={line.locale}
     >
       <div className="mb-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span
-          className={`inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold ${line.role === "user" ? speakerColour(line) : "bg-primary/10 text-primary"}`}
-        >
+        <span className={speakerBadge({ colour: speakerColour(line) })}>
           {line.role === "assistant" ? (
             <AudioLines className="size-3.5" aria-hidden="true" />
           ) : (
@@ -161,13 +176,7 @@ const toolLabels: Record<string, [string, string]> = {
   setUiSection: ["注文画面を切り替え", "Changing the order view"],
 };
 
-function useVoicePanel({
-  view,
-  lines,
-  events = [],
-  catalog,
-  onChoose,
-}: {
+type VoicePanelProps = {
   view: VoiceView;
   lines: ConversationLine[];
   onStart: () => void;
@@ -180,7 +189,15 @@ function useVoicePanel({
   controlDisabled?: boolean;
   speechSpeed?: number;
   onSpeedChange?: (value: number) => void;
-}) {
+};
+
+function useVoicePanel({
+  view,
+  lines,
+  events = [],
+  catalog,
+  onChoose,
+}: Pick<VoicePanelProps, "view" | "lines" | "events" | "catalog" | "onChoose">) {
   const { locale, t } = useI18n();
   const [debug, setDebug] = useState(false);
   const merged = mergeConversation(lines, view, locale);
@@ -360,20 +377,7 @@ export function VoicePanel({
   controlDisabled = false,
   speechSpeed = 1,
   onSpeedChange,
-}: {
-  view: VoiceView;
-  lines: ConversationLine[];
-  onStart: () => void;
-  events?: TableEvent[];
-  catalog?: Catalog;
-  onChoose?: (product: Product) => void;
-  snapshot?: Snapshot | null;
-  onReview?: () => void;
-  reviewPending?: boolean;
-  controlDisabled?: boolean;
-  speechSpeed?: number;
-  onSpeedChange?: (value: number) => void;
-}) {
+}: VoicePanelProps) {
   const {
     locale,
     t,
@@ -393,20 +397,7 @@ export function VoicePanel({
     liveRole,
     speakingLine,
     hasLive,
-  } = useVoicePanel({
-    view,
-    lines,
-    onStart,
-    events,
-    catalog,
-    onChoose,
-    snapshot,
-    onReview,
-    reviewPending,
-    controlDisabled,
-    speechSpeed,
-    onSpeedChange,
-  });
+  } = useVoicePanel({ view, lines, events, catalog, onChoose });
   return (
     <section
       className="relative flex h-full min-h-0 min-w-0 flex-col px-3"
@@ -418,9 +409,7 @@ export function VoicePanel({
           className="ml-auto flex items-center gap-2 text-xs font-medium text-foreground"
           aria-live="polite"
         >
-          <span
-            className={`size-2 rounded-full ${active ? "bg-success motion-safe:animate-pulse" : "bg-muted-foreground"}`}
-          />
+          <span className={activityDot({ active })} />
           {phase}
         </output>
         <Button

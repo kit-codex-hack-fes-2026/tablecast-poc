@@ -72,14 +72,7 @@ function sessionColumns(
       accessorKey: "status",
       header: t("mcp_status"),
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.status === "active"
-              ? "bg-success/10 text-success"
-              : "bg-secondary text-muted-foreground"
-          }
-        >
+        <Badge variant={row.original.status === "active" ? "active" : "inactive"}>
           {row.original.status === "active" ? (
             <CheckCircle2 className="size-4" />
           ) : (

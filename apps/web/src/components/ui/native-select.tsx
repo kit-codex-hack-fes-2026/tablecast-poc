@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 import type { ComponentProps } from "react";
 
 export function NativeSelect({ className, ...props }: ComponentProps<"select">) {

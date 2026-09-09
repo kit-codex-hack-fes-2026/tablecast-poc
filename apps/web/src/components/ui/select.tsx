@@ -1,5 +1,5 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 import { Check, ChevronsUpDown } from "lucide-react";
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;

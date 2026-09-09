@@ -1,5 +1,10 @@
 import { Avatar } from "@base-ui/react/avatar";
-import { cn } from "cn";
+import { tv } from "tailwind-variants";
+
+const userAvatar = tv({
+  base: "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary font-semibold text-foreground ring-1 ring-border",
+  variants: { compact: { true: "size-9 text-sm", false: "size-11 text-base" } },
+});
 
 export function UserIdentity({
   user,
@@ -10,12 +15,7 @@ export function UserIdentity({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Avatar.Root
-        className={cn(
-          "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary font-semibold text-foreground ring-1 ring-border",
-          compact ? "size-9 text-sm" : "size-11 text-base",
-        )}
-      >
+      <Avatar.Root className={userAvatar({ compact })}>
         <Avatar.Image src={user.image ?? undefined} alt="" className="size-full object-cover" />
         <Avatar.Fallback>{user.name.slice(0, 2).toUpperCase()}</Avatar.Fallback>
       </Avatar.Root>

@@ -45,7 +45,7 @@ export default defineConfig({
     react: { version: "19.2.8" },
     tailwindcss: {
       entryPoint: fileURLToPath(new URL("./src/styles.css", import.meta.url)),
-      callees: ["cn", "cva", "clsx"],
+      callees: ["cn", "tv"],
     },
   },
   ignorePatterns: ["src/paraglide/**", "src/routeTree.gen.ts", "dist/**", "storybook-static/**"],

@@ -1,3 +1,4 @@
+import { tv } from "tailwind-variants";
 import { SmokeRing } from "@paper-design/shaders-react";
 import { createAudioAnalyser, type LocalAudioTrack, type RemoteAudioTrack } from "livekit-client";
 import {
@@ -13,6 +14,14 @@ import {
 import { animate, mix } from "motion";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { VoiceStatus } from "./voice-connection";
+
+const waveformIcon = tv({
+  base: "size-4",
+  variants: {
+    error: { true: "text-destructive", false: "text-foreground" },
+    connecting: { true: "motion-safe:animate-spin" },
+  },
+});
 
 export type VoiceVisualState = VoiceStatus | "tool";
 
@@ -186,7 +195,10 @@ export function AudioWaveform({
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <Icon
-            className={`size-4 ${state === "error" ? "text-destructive" : "text-foreground"} ${state === "connecting" ? "motion-safe:animate-spin" : ""}`}
+            className={waveformIcon({
+              error: state === "error",
+              connecting: state === "connecting",
+            })}
           />
         </div>
         {state === "tool" && (

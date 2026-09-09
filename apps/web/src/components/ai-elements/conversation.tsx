@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { ArrowDown } from "lucide-react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { Button } from "../ui/button";
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 
 export function Conversation({ className, ...props }: ComponentProps<typeof StickToBottom>) {
   return (

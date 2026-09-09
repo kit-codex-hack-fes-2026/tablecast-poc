@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 import { GripVertical } from "lucide-react";
 import {
   Group,

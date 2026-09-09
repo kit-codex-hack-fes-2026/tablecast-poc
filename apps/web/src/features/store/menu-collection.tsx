@@ -185,14 +185,7 @@ function menuCollectionColumns(
             accessorKey: "available",
             header: t("common_status"),
             cell: ({ row }) => (
-              <Badge
-                variant="outline"
-                className={
-                  row.original.available
-                    ? "bg-success-soft text-success"
-                    : "bg-secondary text-muted-foreground"
-                }
-              >
+              <Badge variant={row.original.available ? "success" : "inactive"}>
                 {t(row.original.available ? "editor_available" : "kiosk_sold_out")}
               </Badge>
             ),
