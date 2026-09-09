@@ -2,7 +2,10 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts"],
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".output/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".output/**"]
+    },
     "@tablecast/web#build": {
       "dependsOn": ["^build"],
       "inputs": [
@@ -10,15 +13,46 @@
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/api/wrangler.jsonc"
       ],
-      "outputs": ["dist/**", ".wrangler/deploy/**"]
+      "outputs": ["dist/**", ".wrangler/deploy/**"],
+      "env": [
+        "TABLECAST_LOCAL_BUILD",
+        "TABLECAST_WEB_CONFIG",
+        "TABLECAST_API_CONFIG",
+        "TABLECAST_STATE_PATH",
+        "TABLECAST_INSPECTOR_PORT",
+        "TABLECAST_PUBLIC_ORIGIN",
+        "TABLECAST_VITE_CACHE_DIR"
+      ]
     },
-    "dev": { "cache": false, "persistent": true },
-    "typecheck": { "dependsOn": ["^typecheck"] },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
     "lint": {},
-    "format": { "cache": false },
+    "format": {
+      "cache": false
+    },
     "format:check": {},
-    "test": { "dependsOn": ["^typecheck"] },
-    "test:browser": { "cache": false },
-    "test:e2e": { "cache": false }
+    "test": {
+      "dependsOn": ["^typecheck"],
+      "cache": false
+    },
+    "test:browser": {
+      "cache": false
+    },
+    "test:e2e": {
+      "cache": false
+    },
+    "@tablecast/web#build:storybook": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/api/src/**"],
+      "outputs": ["storybook-static/**"]
+    },
+    "@tablecast/api#typecheck": {
+      "dependsOn": ["^typecheck"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/**"]
+    }
   }
 }

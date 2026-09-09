@@ -5,7 +5,7 @@ export default defineConfig({
   globalSetup: "./e2e/support/global-setup.ts",
   timeout: 90_000,
   expect: { timeout: 15_000 },
-  workers: 2,
+  workers: 4,
   fullyParallel: true,
   retries: 0,
   reporter: "list",

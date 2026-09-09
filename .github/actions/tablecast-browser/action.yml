@@ -1,0 +1,21 @@
+name: Headless browser binaries
+description: Playwrightの固定版のブラウザー本体を復元し、不足時だけ取得する
+inputs:
+  browsers:
+    description: Playwrightのブラウザー名（スペース区切り）
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: version
+      shell: bash
+      run: bun -e 'console.log("value=" + require("@playwright/test/package.json").version)' >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      id: cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: tablecast-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.value }}-${{ inputs.browsers }}-shell
+    - name: Download headless browsers
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: bunx --no-install playwright install --only-shell ${{ inputs.browsers }}

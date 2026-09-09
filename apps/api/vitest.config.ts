@@ -20,7 +20,7 @@ const bindings = {
     name: "bindings",
     include: ["test/**/*.test.ts"],
     exclude: ["test/pricing.test.ts"],
-    fileParallelism: false,
+    fileParallelism: true,
     testTimeout: 30000,
     hookTimeout: 30000,
     provide: { tablecastMigrations: await readD1Migrations("./migrations") },
@@ -28,6 +28,7 @@ const bindings = {
 };
 export default defineConfig({
   test: {
+    maxWorkers: 4,
     projects: [
       { test: { name: "unit", include: ["test/pricing.test.ts"], environment: "node" } },
       bindings,

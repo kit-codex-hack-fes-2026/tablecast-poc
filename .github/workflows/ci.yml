@@ -1,4 +1,4 @@
-name: TableCast CI
+name: CI
 
 on:
   pull_request:
@@ -18,69 +18,8 @@ env:
   ORT_DISABLE_TELEMETRY: "1"
 
 jobs:
-  checks:
-    name: ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: 静的解析
-            python: "true"
-            command: bun run format:check && bun run lint && bun run typecheck
-          - name: 単体・実Binding・音声接続テスト
-            python: "true"
-            command: bunx --no-install vitest run --project scripts-unit && bunx --no-install turbo run test
-          - name: 開発環境の実CLI・seed統合
-            python: "false"
-            command: bunx --no-install vitest run --project scripts-runtime
-          - name: Workers・Storybookビルド
-            python: "false"
-            command: bun run build && bun run --cwd apps/web build:storybook
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          python: ${{ matrix.python }}
-      - name: 検証
-        run: ${{ matrix.command }}
-
-  components:
-    name: UI部品・アクセシビリティ
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: ./.github/actions/tablecast-setup
-      - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps chromium webkit
-      - run: bun --no-env-file run test:browser
-
-  e2e:
-    name: E2E (${{ matrix.browser }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, webkit]
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - uses: ./.github/actions/tablecast-setup
-      - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps ${{ matrix.browser }}
-      - name: 隔離したWorkersで日英注文・認証・会計を検証
-        run: bun --no-env-file run test:e2e --project=tablecast-${{ matrix.browser }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: failure()
-        with:
-          name: tablecast-e2e-${{ matrix.browser }}
-          path: |
-            apps/web/test-results/
-          include-hidden-files: true
-          retention-days: 7
-
-  webrtc:
-    name: 合成音声の実WebRTC送受信・切断
+  static:
+    name: Static · Oxfmt / Oxlint / TypeScript / Ruff / ty
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -88,9 +27,132 @@ jobs:
       - uses: ./.github/actions/tablecast-setup
         with:
           python: "true"
-      - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps chromium
-      - run: bun --no-env-file run dev
+          turbo: "true"
+      # codegenを共有するlint/typecheckは順に実行する。
+      - run: bun run format:check && bun run lint && bun run typecheck
+
+  unit-web:
+    name: Unit · Vitest · Web / seed fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - parallel:
+          - name: Seed fixtures
+            run: bunx --no-install vitest run --project scripts-unit
+          - name: Web
+            run: bun run --cwd apps/web test
+
+  agent:
+    name: Unit + Integration · pytest · LiveKit Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          python: "true"
+      - run: bun run --cwd livekit test
+
+  api:
+    name: Unit + Integration · Vitest · API / D1 / MCP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - run: bun run --cwd apps/api test
+
+  dev-runtime:
+    name: Integration · Vitest · Dev CLI / D1 seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - run: bunx --no-install vitest run --project scripts-runtime
+
+  workers-build:
+    name: Build · Vite / Wrangler · Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          turbo: "true"
+      - run: bun run build
+
+  storybook-build:
+    name: Build · Storybook · Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          turbo: "true"
+      - run: bunx --no-install turbo run build:storybook
+
+  components:
+    name: Component + a11y · Vitest Browser / Storybook · Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - parallel:
+          - uses: ./.github/actions/tablecast-browser
+            with:
+              browsers: chromium webkit
+          - name: Browser OS dependencies
+            run: bunx --no-install playwright install-deps chromium webkit
+      - run: bun run test:browser
+
+  e2e:
+    name: E2E · Playwright · Web / API / OAuth
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - parallel:
+          - uses: ./.github/actions/tablecast-browser
+            with:
+              browsers: chromium webkit
+          - name: Browser OS dependencies
+            run: bunx --no-install playwright install-deps chromium webkit
+          - name: Mailpit image
+            run: docker pull axllent/mailpit:v1.29.2
+      - name: Isolated cases · 4 workers · no retries
+        run: bun run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: failure()
+        with:
+          name: tablecast-e2e
+          path: apps/web/test-results/
+          include-hidden-files: true
+          retention-days: 7
+
+  webrtc:
+    name: Integration · Playwright · LiveKit WebRTC
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          python: "true"
+      - parallel:
+          - uses: ./.github/actions/tablecast-browser
+            with:
+              browsers: chromium
+          - name: Browser OS dependencies
+            run: bunx --no-install playwright install-deps chromium
+          - name: Local services
+            run: bun --no-env-file run dev
       - run: bun --no-env-file scripts/tablecast-livekit-check.ts
-      - name: 自worktreeのプロセスを終了
+      - name: Stop local services
         if: always()
         run: bun --no-env-file run dev:stop
