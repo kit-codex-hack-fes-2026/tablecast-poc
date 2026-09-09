@@ -5,24 +5,40 @@ import process from "node:process";
 import { z } from "zod";
 
 const root = resolve(import.meta.dirname, "../../../..");
-async function freePort() {
-  const server = createServer();
-  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("テスト用ポートを確保できません。");
-  await new Promise<void>((done, reject) =>
-    server.close((error) => (error ? reject(error) : done())),
-  );
-  return address.port;
+async function freePorts() {
+  // 全ポートを同時に確保し、同じcaseへの番号の再割当を防ぐ。
+  const servers = Array.from({ length: 4 }, () => createServer());
+  try {
+    const ports = [];
+    for (const server of servers) {
+      await new Promise<void>((done, reject) => {
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", done);
+      });
+      const address = server.address();
+      if (!address || typeof address === "string")
+        throw new Error("テスト用ポートを確保できません。");
+      ports.push(address.port);
+    }
+    return z.tuple([z.number(), z.number(), z.number(), z.number()]).parse(ports);
+  } finally {
+    await Promise.all(
+      servers
+        .filter((server) => server.listening)
+        .map(
+          (server) =>
+            new Promise<void>((done, reject) =>
+              server.close((error) => (error ? reject(error) : done())),
+            ),
+        ),
+    );
+  }
 }
 const existing = z.string().optional().parse(process.env.TABLECAST_E2E_DIRECTORY);
 if (!existing) {
   mkdirSync(join(root, ".local"), { recursive: true });
   const directory = mkdtempSync(join(root, ".local/tablecast-e2e-"));
-  const web = await freePort(),
-    oauth = await freePort(),
-    mailpit = await freePort(),
-    inspector = await freePort();
+  const [web, oauth, mailpit, inspector] = await freePorts();
   writeFileSync(
     join(directory, "runtime.json"),
     JSON.stringify({
@@ -58,10 +74,7 @@ export const credentials = {
 // templateはglobal setupで閉じた後は読み取り専用。各caseへstorageを複製する。
 export async function createCaseRuntime() {
   const directory = mkdtempSync(join(runtime.directory, "tablecast-case-"));
-  const web = await freePort(),
-    oauth = await freePort(),
-    mailpit = await freePort(),
-    inspector = await freePort();
+  const [web, oauth, mailpit, inspector] = await freePorts();
   return {
     directory,
     origin: `http://localhost:${web}`,

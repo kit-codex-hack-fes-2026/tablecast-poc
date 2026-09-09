@@ -1,30 +1,38 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import {
-  callStaff,
-  changeLocale,
-  closeTable,
-  getEvents,
-  getTableState,
-  markConfirmationRead,
-  prepareConfirmation,
-  recordPayment,
-  setVoiceSession,
-  submitOrder,
-  updateCart,
-} from "../src/modules/operations";
+import app from "../src/app";
+import * as businessTables from "../src/db/business-schema";
 import {
   createDraft,
   publishDraft,
   updateDraft,
   validateDraft,
-} from "../src/modules/configuration";
-import { device, deviceToken, setupFixture, text } from "./fixture";
-import { finishVoiceTurn } from "../src/voice";
+} from "../src/modules/configuration/service";
+import {
+  markConfirmationRead,
+  prepareConfirmation,
+  recordPayment,
+  submitOrder,
+  updateCart,
+} from "../src/modules/orders/service";
+import { getEvents } from "../src/modules/stores/queries";
+import { getTableState } from "../src/modules/tables/queries";
+import { callStaff, changeLocale, closeTable } from "../src/modules/tables/service";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
+import { createApiServices } from "../src/platform/context";
 import { planSchema, tableStateSchema } from "../src/schema";
-import app from "../src/app";
+import { insertFixture } from "./database-fixture";
+import { device, deviceToken, setupFixture, text } from "./fixture";
+
+const stop = (voiceSessionId: string) =>
+  exports.default.fetch(
+    new Request("http://localhost:3000/api/table/voice/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: `tablecast.device=${deviceToken}` },
+      body: JSON.stringify({ voiceSessionId }),
+    }),
+  );
 
 const teaLine = { id: "line-1", productId: "tea", quantity: 2, selections: [] };
 const tea = [teaLine];
@@ -54,7 +62,7 @@ it("プランのラストオーダー後も対象外商品は通常価格で確�
 
   const snapshot = await confirmed();
   expect(snapshot.expiresAt).toBeGreaterThan(Date.now());
-  const order = await submitOrder(env, device, {
+  const order = await submitOrder(createApiServices(env), device, {
     snapshotId: snapshot.id,
     idempotencyKey: "tablecast-after-plan-last-order",
     approved: true,
@@ -62,7 +70,7 @@ it("プランのラストオーダー後も対象外商品は通常価格で確�
   expect(order.total).toBe(800);
   expect(order.snapshot.lines.every((line) => !line.planCovered)).toBe(true);
   await expect(
-    updateCart(env, device, {
+    updateCart(createApiServices(env), device, {
       expectedVersion: 2,
       lines: [
         {
@@ -76,22 +84,25 @@ it("プランのラストオーダー後も対象外商品は通常価格で確�
   ).rejects.toMatchObject({ code: "PLAN_LAST_ORDER" });
 });
 async function confirmed() {
-  await updateCart(env, device, { expectedVersion: 0, lines: tea });
-  return prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" });
+  await updateCart(createApiServices(env), device, { expectedVersion: 0, lines: tea });
+  return prepareConfirmation(createApiServices(env), device, {
+    expectedVersion: 1,
+    channel: "gui",
+  });
 }
 describe("実D1の注文契約", () => {
   it("必須選択を下書きとして保持し、同じ行を完成して税込価格を計算する", async () => {
     await setupFixture();
-    const draft = await updateCart(env, device, {
+    const draft = await updateCart(createApiServices(env), device, {
       expectedVersion: 0,
       lines: [{ id: "coffee-line", productId: "coffee", quantity: 1, selections: [] }],
     });
     expect(draft.cart.complete).toBe(false);
     expect(draft.cart.lines[0]?.missing).toContain("milk");
     await expect(
-      prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" }),
+      prepareConfirmation(createApiServices(env), device, { expectedVersion: 1, channel: "gui" }),
     ).rejects.toMatchObject({ code: "CART_INCOMPLETE" });
-    const state = await updateCart(env, device, {
+    const state = await updateCart(createApiServices(env), device, {
       expectedVersion: 1,
       lines: [
         {
@@ -108,16 +119,18 @@ describe("実D1の注文契約", () => {
   it("同時カート変更の片方だけ成立し、不成立バッチからイベントを作らない", async () => {
     await setupFixture();
     const results = await Promise.allSettled([
-      updateCart(env, device, { expectedVersion: 0, lines: tea }),
-      updateCart(env, device, {
+      updateCart(createApiServices(env), device, { expectedVersion: 0, lines: tea }),
+      updateCart(createApiServices(env), device, {
         expectedVersion: 0,
         lines: [{ ...teaLine, id: "other", quantity: 1 }],
       }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
-    expect((await getTableState(env, device)).cart.version).toBe(1);
+    expect((await getTableState(createApiServices(env), device)).cart.version).toBe(1);
     expect(
-      (await getEvents(env, device)).events.filter((event) => event.kind === "cart.updated"),
+      (await getEvents(createApiServices(env), device)).events.filter(
+        (event) => event.kind === "cart.updated",
+      ),
     ).toHaveLength(1);
   });
   it.each([false, undefined])("承認値が%sのHTTP注文は保存せず拒否する", async (approved) => {
@@ -135,34 +148,37 @@ describe("実D1の注文契約", () => {
       }),
     );
     expect(response.status).toBe(422);
-    const state = await getTableState(env, device);
+    const state = await getTableState(createApiServices(env), device);
     expect(state.orders).toEqual([]);
     expect(state.cart.lines).toHaveLength(1);
   });
   it("古い確認を拒否し、同じ冪等キーの並行送信と再送で注文を一件に保つ", async () => {
     await setupFixture();
     const old = await confirmed();
-    await updateCart(env, device, { expectedVersion: 1, lines: tea });
+    await updateCart(createApiServices(env), device, { expectedVersion: 1, lines: tea });
     await expect(
-      submitOrder(env, device, {
+      submitOrder(createApiServices(env), device, {
         snapshotId: old.id,
         idempotencyKey: "tablecast-order-old",
         approved: true,
       }),
     ).rejects.toMatchObject({ code: "CONFIRMATION_STALE" });
-    const snapshot = await prepareConfirmation(env, device, { expectedVersion: 2, channel: "gui" });
+    const snapshot = await prepareConfirmation(createApiServices(env), device, {
+      expectedVersion: 2,
+      channel: "gui",
+    });
     const payload = {
       snapshotId: snapshot.id,
       idempotencyKey: "tablecast-order-once",
       approved: true as const,
     };
     const orders = await Promise.all([
-      submitOrder(env, device, payload),
-      submitOrder(env, device, payload),
+      submitOrder(createApiServices(env), device, payload),
+      submitOrder(createApiServices(env), device, payload),
     ]);
     expect(orders[0]?.id).toBe(orders[1]?.id);
-    expect((await submitOrder(env, device, payload)).id).toBe(orders[0]?.id);
-    const state = await getTableState(env, device);
+    expect((await submitOrder(createApiServices(env), device, payload)).id).toBe(orders[0]?.id);
+    const state = await getTableState(createApiServices(env), device);
     expect(state.orders).toHaveLength(1);
     expect(state.bill.orderedTotal).toBe(800);
     expect(state.cart.lines).toHaveLength(0);
@@ -174,13 +190,13 @@ describe("実D1の注文契約", () => {
       "CREATE TRIGGER tablecast_fail_order BEFORE INSERT ON orders BEGIN SELECT RAISE(ABORT,'tablecast-test-failure'); END",
     );
     await expect(
-      submitOrder(env, device, {
+      submitOrder(createApiServices(env), device, {
         snapshotId: snapshot.id,
         idempotencyKey: "tablecast-failed-order",
         approved: true,
       }),
     ).rejects.toThrow("tablecast-test-failure");
-    const state = await getTableState(env, device);
+    const state = await getTableState(createApiServices(env), device);
     expect(state.cart.version).toBe(1);
     expect(state.cart.total).toBe(800);
     expect(state.orders).toHaveLength(0);
@@ -194,9 +210,9 @@ describe("実D1の注文契約", () => {
       body: JSON.stringify({ expectedVersion: 0, lines: [{ ...teaLine, price: 1 }] }),
     });
     expect((await exports.default.fetch(request)).status).toBe(422);
-    await expect(getTableState(env, { ...device, storeId: "another-store" })).rejects.toMatchObject(
-      { code: "TABLE_NOT_FOUND" },
-    );
+    await expect(
+      getTableState(createApiServices(env), { ...device, storeId: "another-store" }),
+    ).rejects.toMatchObject({ code: "TABLE_NOT_FOUND" });
     expect(
       (
         await exports.default.fetch(
@@ -210,20 +226,20 @@ describe("実D1の注文契約", () => {
   it("注文済みだけを請求し、未送信カートと冪等支払を分離する", async () => {
     const { staff } = await setupFixture();
     const snapshot = await confirmed();
-    await submitOrder(env, device, {
+    await submitOrder(createApiServices(env), device, {
       snapshotId: snapshot.id,
       idempotencyKey: "tablecast-paid-order",
       approved: true,
     });
-    await updateCart(env, device, { expectedVersion: 2, lines: tea });
+    await updateCart(createApiServices(env), device, { expectedVersion: 2, lines: tea });
     const input = {
       amount: 800,
       kind: "payment" as const,
       reason: "モック支払",
       idempotencyKey: "tablecast-pay-once",
     };
-    await recordPayment(env, staff, input);
-    const state = await recordPayment(env, staff, input);
+    await recordPayment(createApiServices(env), staff, input);
+    const state = await recordPayment(createApiServices(env), staff, input);
     expect(state.bill.due).toBe(0);
     expect(state.bill.paidTotal).toBe(800);
     expect(state.bill.cartTotal).toBe(800);
@@ -231,15 +247,15 @@ describe("実D1の注文契約", () => {
   it("設定公開は人の権限と検証版が必要で、価格変更後の確認を失効させる", async () => {
     const { staff } = await setupFixture();
     const snapshot = await confirmed();
-    let draft = await createDraft(env, staff);
+    let draft = await createDraft(createApiServices(env), staff);
     draft.configuration.products = draft.configuration.products.map((product) =>
       product.id === "tea" ? { ...product, price: 450 } : product,
     );
-    draft = await updateDraft(env, staff, draft.id, {
+    draft = await updateDraft(createApiServices(env), staff, draft.id, {
       expectedVersion: 1,
       configuration: draft.configuration,
     });
-    await validateDraft(env, staff, draft.id, 2);
+    await validateDraft(createApiServices(env), staff, draft.id, 2);
     const input = {
       expectedVersion: 2,
       baseVersion: 1,
@@ -247,12 +263,17 @@ describe("実D1の注文契約", () => {
       approved: true as const,
     };
     await expect(
-      publishDraft(env, { ...staff, kind: "mcp", canWrite: true }, draft.id, input),
+      publishDraft(
+        createApiServices(env),
+        { ...staff, kind: "mcp", canWrite: true },
+        draft.id,
+        input,
+      ),
     ).rejects.toMatchObject({ code: "HUMAN_APPROVAL_REQUIRED" });
-    await publishDraft(env, staff, draft.id, input);
-    await publishDraft(env, staff, draft.id, input);
+    await publishDraft(createApiServices(env), staff, draft.id, input);
+    await publishDraft(createApiServices(env), staff, draft.id, input);
     await expect(
-      submitOrder(env, device, {
+      submitOrder(createApiServices(env), device, {
         snapshotId: snapshot.id,
         idempotencyKey: "tablecast-stale-price",
         approved: true,
@@ -261,7 +282,7 @@ describe("実D1の注文契約", () => {
   });
   it("音声停止と古いturn中断で確定カートを保持し、遅延した追加操作を拒否する", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, "tablecast-voice-session");
+    await setVoiceSession(createApiServices(env), device, "tablecast-voice-session");
     await env.TABLECAST_DB.prepare(
       "UPDATE table_sessions SET active_turn_id='tablecast-turn' WHERE id=?",
     )
@@ -282,38 +303,45 @@ describe("実D1の注文契約", () => {
       voiceSessionId: "tablecast-voice-session",
       turnId: "tablecast-turn",
     };
-    await updateCart(env, voice, { expectedVersion: 0, lines: tea });
-    await setVoiceSession(env, device, null);
-    await finishVoiceTurn(env, "tablecast-voice-session", "tablecast-turn", "interrupted");
-    await expect(updateCart(env, voice, { expectedVersion: 1, lines: [] })).rejects.toMatchObject({
+    await updateCart(createApiServices(env), voice, { expectedVersion: 0, lines: tea });
+    await setVoiceSession(createApiServices(env), device, null);
+    await finishVoiceTurn(
+      createApiServices(env),
+      "tablecast-voice-session",
+      "tablecast-turn",
+      "interrupted",
+    );
+    await expect(
+      updateCart(createApiServices(env), voice, { expectedVersion: 1, lines: [] }),
+    ).rejects.toMatchObject({
       code: "VOICE_SESSION_STALE",
     });
-    const state = await getTableState(env, device);
+    const state = await getTableState(createApiServices(env), device);
     expect(state.cart.total).toBe(800);
     expect(state.voiceState).toBe("stopped");
   });
   it("DO通知の接続がなくても永続カーソルから欠落と重複を復旧する", async () => {
     await setupFixture();
-    const before = await getEvents(env, device);
-    await callStaff(env, device);
-    await updateCart(env, device, { expectedVersion: 0, lines: tea });
-    const after = await getEvents(env, device, before.cursor);
+    const before = await getEvents(createApiServices(env), device);
+    await callStaff(createApiServices(env), device);
+    await updateCart(createApiServices(env), device, { expectedVersion: 0, lines: tea });
+    const after = await getEvents(createApiServices(env), device, before.cursor);
     expect(after.events.map((e) => e.kind)).toEqual(["staff.called", "cart.updated"]);
-    expect((await getEvents(env, device, after.cursor)).events).toHaveLength(0);
+    expect((await getEvents(createApiServices(env), device, after.cursor)).events).toHaveLength(0);
   });
 });
 
 it("停止操作が先行した場合は遅れて完了した音声開始をDBでも拒否する", async () => {
   await setupFixture();
-  await setVoiceSession(env, device, null);
+  await setVoiceSession(createApiServices(env), device, null);
   await expect(
-    setVoiceSession(env, device, "tablecast-late-start", undefined, 0),
+    setVoiceSession(createApiServices(env), device, "tablecast-late-start", undefined, 0),
   ).rejects.toMatchObject({ code: "SESSION_STALE" });
-  expect((await getTableState(env, device)).voiceState).toBe("stopped");
+  expect((await getTableState(createApiServices(env), device)).voiceState).toBe("stopped");
 });
 it("別タブからの二重音声開始を拒否して元のRoomを維持する", async () => {
   await setupFixture();
-  await setVoiceSession(env, device, "tablecast-original-voice");
+  await setVoiceSession(createApiServices(env), device, "tablecast-original-voice");
   const response = await exports.default.fetch(
     new Request("http://localhost:3000/api/table/voice/start", {
       method: "POST",
@@ -354,7 +382,7 @@ it.each(["false", "true"])(
       },
     );
     expect(response.status).toBe(enabled === "true" ? 200 : 503);
-    expect((await getTableState(env, device)).voiceState).toBe(
+    expect((await getTableState(createApiServices(env), device)).voiceState).toBe(
       enabled === "true" ? "active" : "stopped",
     );
   },
@@ -363,7 +391,7 @@ it.each(["音声停止", "言語変更", "閉卓"])(
   "%sの同じDB更新で進行中turnを中断し、完了済みturnと遅延通知を区別する",
   async (operation) => {
     const { staff } = await setupFixture();
-    await setVoiceSession(env, device, "tablecast-lifecycle-voice");
+    await setVoiceSession(createApiServices(env), device, "tablecast-lifecycle-voice");
     await insertFixture(businessTables.voiceTurns, [
       {
         id: "tablecast-inflight",
@@ -384,10 +412,15 @@ it.each(["音声停止", "言語変更", "閉卓"])(
         ended_at: 2,
       },
     ]).run();
-    if (operation === "音声停止") await setVoiceSession(env, device, null);
-    else if (operation === "言語変更") await changeLocale(env, device, "en");
-    else await closeTable(env, staff);
-    await finishVoiceTurn(env, "tablecast-lifecycle-voice", "tablecast-inflight", "completed");
+    if (operation === "音声停止") await setVoiceSession(createApiServices(env), device, null);
+    else if (operation === "言語変更") await changeLocale(createApiServices(env), device, "en");
+    else await closeTable(createApiServices(env), staff);
+    await finishVoiceTurn(
+      createApiServices(env),
+      "tablecast-lifecycle-voice",
+      "tablecast-inflight",
+      "completed",
+    );
     const interrupted = await env.TABLECAST_DB.prepare(
       "SELECT status,ended_at FROM voice_turns WHERE id='tablecast-inflight'",
     ).first<{ status: string; ended_at: number | null }>();
@@ -402,23 +435,16 @@ it.each(["音声停止", "言語変更", "閉卓"])(
 );
 it("遅延した旧音声停止は新しい会話を維持し、別卓のRoomを指定した停止を拒否する", async () => {
   await setupFixture();
-  await setVoiceSession(env, device, "tablecast-old-voice");
-  await setVoiceSession(env, device, null);
-  await setVoiceSession(env, device, "tablecast-new-voice");
-  const stop = (voiceSessionId: string) =>
-    exports.default.fetch(
-      new Request("http://localhost:3000/api/table/voice/stop", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Cookie: `tablecast.device=${deviceToken}` },
-        body: JSON.stringify({ voiceSessionId }),
-      }),
-    );
+  await setVoiceSession(createApiServices(env), device, "tablecast-old-voice");
+  await setVoiceSession(createApiServices(env), device, null);
+  await setVoiceSession(createApiServices(env), device, "tablecast-new-voice");
+
   const response = await stop("tablecast-old-voice");
   expect(response.status).toBe(200);
   expect(tableStateSchema.parse(await response.json()).voiceState).toBe("active");
   expect((await stop("tablecast-other-table-voice")).status).toBe(404);
   expect((await stop("tablecast-new-voice")).status).toBe(200);
-  expect((await getTableState(env, device)).voiceState).toBe("stopped");
+  expect((await getTableState(createApiServices(env), device)).voiceState).toBe("stopped");
 });
 it.each([
   ["商品削除", "PRODUCT_NOT_FOUND"],
@@ -426,7 +452,7 @@ it.each([
   ["選択肢削除", "OPTION_NOT_FOUND"],
 ])("公開した%sでカートが無効になっても画面取得と修正ができる", async (change, code) => {
   const { staff } = await setupFixture();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [
       {
@@ -437,8 +463,11 @@ it.each([
       },
     ],
   });
-  const old = await prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" });
-  let draft = await createDraft(env, staff);
+  const old = await prepareConfirmation(createApiServices(env), device, {
+    expectedVersion: 1,
+    channel: "gui",
+  });
+  let draft = await createDraft(createApiServices(env), staff);
   if (change === "商品削除")
     draft.configuration.products = draft.configuration.products.filter(
       (product) => product.id !== "coffee",
@@ -451,12 +480,12 @@ it.each([
       for (const modifier of coffee.modifiers)
         modifier.options = modifier.options.filter((option) => option.id !== "oat");
   }
-  draft = await updateDraft(env, staff, draft.id, {
+  draft = await updateDraft(createApiServices(env), staff, draft.id, {
     expectedVersion: 1,
     configuration: draft.configuration,
   });
-  await validateDraft(env, staff, draft.id, 2);
-  await publishDraft(env, staff, draft.id, {
+  await validateDraft(createApiServices(env), staff, draft.id, 2);
+  await publishDraft(createApiServices(env), staff, draft.id, {
     expectedVersion: 2,
     baseVersion: 1,
     idempotencyKey: "tablecast-catalog-invalidation",
@@ -472,18 +501,21 @@ it.each([
   expect(displayed.cart.complete).toBe(false);
   expect(displayed.cart.lines[0]?.id).toBe("coffee-line");
   await expect(
-    submitOrder(env, device, {
+    submitOrder(createApiServices(env), device, {
       snapshotId: old.id,
       idempotencyKey: "tablecast-invalid-catalog-order",
       approved: true,
     }),
   ).rejects.toMatchObject({ code });
-  await updateCart(env, device, { expectedVersion: displayed.cart.version, lines: tea });
-  const repaired = await getTableState(env, device);
+  await updateCart(createApiServices(env), device, {
+    expectedVersion: displayed.cart.version,
+    lines: tea,
+  });
+  const repaired = await getTableState(createApiServices(env), device);
   expect(repaired.cart.complete).toBe(true);
   expect(
     (
-      await prepareConfirmation(env, device, {
+      await prepareConfirmation(createApiServices(env), device, {
         expectedVersion: repaired.cart.version,
         channel: "gui",
       })
@@ -492,7 +524,7 @@ it.each([
 });
 it("音声確認の読了後に開始した新しいturnだけが承認できる", async () => {
   await setupFixture();
-  await setVoiceSession(env, device, "tablecast-voice-session");
+  await setVoiceSession(createApiServices(env), device, "tablecast-voice-session");
   await insertFixture(businessTables.voiceTurns, {
     id: "tablecast-first",
     voice_session_id: "tablecast-voice-session",
@@ -510,17 +542,20 @@ it("音声確認の読了後に開始した新しいturnだけが承認できる
     voiceSessionId: "tablecast-voice-session",
     turnId: "tablecast-first",
   };
-  await updateCart(env, first, { expectedVersion: 0, lines: tea });
-  const snapshot = await prepareConfirmation(env, first, { expectedVersion: 1, channel: "voice" });
+  await updateCart(createApiServices(env), first, { expectedVersion: 0, lines: tea });
+  const snapshot = await prepareConfirmation(createApiServices(env), first, {
+    expectedVersion: 1,
+    channel: "voice",
+  });
   const input = {
     snapshotId: snapshot.id,
     idempotencyKey: "tablecast-spoken-order",
     approved: true as const,
   };
-  await expect(submitOrder(env, first, input)).rejects.toMatchObject({
+  await expect(submitOrder(createApiServices(env), first, input)).rejects.toMatchObject({
     code: "NEW_APPROVAL_TURN_REQUIRED",
   });
-  await markConfirmationRead(env, first, snapshot.id);
+  await markConfirmationRead(createApiServices(env), first, snapshot.id);
   await env.TABLECAST_DB.prepare(
     "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) SELECT 'tablecast-approval','tablecast-voice-session','tablecast-session','tablecast-store','started',read_at+1 FROM confirmations WHERE id=?",
   )
@@ -529,7 +564,11 @@ it("音声確認の読了後に開始した新しいturnだけが承認できる
   await env.TABLECAST_DB.prepare(
     "UPDATE table_sessions SET active_turn_id='tablecast-approval' WHERE id='tablecast-session'",
   ).run();
-  const order = await submitOrder(env, { ...first, turnId: "tablecast-approval" }, input);
+  const order = await submitOrder(
+    createApiServices(env),
+    { ...first, turnId: "tablecast-approval" },
+    input,
+  );
   expect(order.total).toBe(800);
 });
 it("DOのWebSocket通知後に切断しても、再接続時に永続イベントを回収する", async () => {
@@ -544,11 +583,11 @@ it("DOのWebSocket通知後に切断しても、再接続時に永続イベン�
   const notification = new Promise<string>((resolve) => {
     socket.addEventListener("message", (event) => resolve(String(event.data)), { once: true });
   });
-  await callStaff(env, device);
+  await callStaff(createApiServices(env), device);
   expect(await notification).toContain("cursor");
-  const cursor = (await getEvents(env, device)).cursor;
+  const cursor = (await getEvents(createApiServices(env), device)).cursor;
   socket.close(1000);
-  await updateCart(env, device, { expectedVersion: 0, lines: tea });
-  const recovered = await getEvents(env, device, cursor);
+  await updateCart(createApiServices(env), device, { expectedVersion: 0, lines: tea });
+  const recovered = await getEvents(createApiServices(env), device, cursor);
   expect(recovered.events.map((event) => event.kind)).toEqual(["cart.updated"]);
 });

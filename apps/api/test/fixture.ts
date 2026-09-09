@@ -1,12 +1,13 @@
-import { fixtureDb, insertFixture } from "./database-fixture";
-import * as authTables from "../src/db/auth-schema";
-import * as businessTables from "../src/db/business-schema";
-import { eq } from "drizzle-orm";
 import { reset } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { createAuth, hashDeviceToken, type Actor } from "../src/auth";
+import { eq } from "drizzle-orm";
+import * as authTables from "../src/db/auth-schema";
+import * as businessTables from "../src/db/business-schema";
+import { type Actor } from "../src/modules/auth/model";
+import { createAuth, hashDeviceToken } from "../src/modules/auth/service";
+import { ensure } from "../src/platform/errors";
 import { configuration } from "./configuration-fixture";
-import { ensure } from "../src/errors";
+import { fixtureDb, insertFixture } from "./database-fixture";
 
 export const device = {
   kind: "device",

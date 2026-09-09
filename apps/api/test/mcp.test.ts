@@ -1,21 +1,21 @@
-import * as businessTables from "../src/db/business-schema";
-import { insertFixture } from "./database-fixture";
-import * as authTables from "../src/db/auth-schema";
-import { env, exports } from "cloudflare:workers";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
-import { expect, it, onTestFinished, vi, afterEach } from "vitest";
+import { env, exports } from "cloudflare:workers";
+import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
-import { createAuth } from "../src/auth";
+import app from "../src/app";
+import * as authTables from "../src/db/auth-schema";
+import * as businessTables from "../src/db/business-schema";
+import { createAuth } from "../src/modules/auth/service";
 import {
   catalogSchema,
   configDraftSchema,
   configurationSchema,
   voicePageSchema,
 } from "../src/schema";
+import { insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
-import app from "../src/app";
 
 afterEach(() => vi.restoreAllMocks());
 

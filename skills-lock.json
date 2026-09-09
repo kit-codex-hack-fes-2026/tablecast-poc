@@ -1,11 +1,23 @@
 {
   "version": 1,
   "skills": {
+    "animate": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/animate/SKILL.md",
+      "computedHash": "609e30351bf518b21a8cfe87cd1111554855527075d6563605bafe61963252f7"
+    },
     "conventional-commit": {
       "source": "ReoHakase/skills",
       "sourceType": "github",
       "skillPath": "conventional-commit/SKILL.md",
       "computedHash": "3d5f561355d53d32c8702df40ca14daac58cd91bf9a78f326e07e4a96a4d7142"
+    },
+    "emil-design-eng": {
+      "source": "emilkowalski/skill",
+      "sourceType": "github",
+      "skillPath": "skills/emil-design-eng/SKILL.md",
+      "computedHash": "41b0a4dc1a27164fe297845a6c6850a39e9242c42c9be999967fcee9df2c5974"
     },
     "fullstack-web-testing": {
       "source": "ReoHakase/skills",
@@ -24,6 +36,12 @@
       "sourceType": "github",
       "skillPath": "github-project-ops/SKILL.md",
       "computedHash": "a919e2a6dd91aee1face140115e93b04534c4d89f87a6e6953ff4369f3340b06"
+    },
+    "mastra": {
+      "source": "mastra-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/mastra/SKILL.md",
+      "computedHash": "6482dad39fb72d1fe9d02078c15c3ee708774fd026a8557b4c7dc37fb554977a"
     },
     "minimum-impl": {
       "source": "ReoHakase/skills",

@@ -1,22 +1,20 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
-import type { Actor } from "../src/auth";
+import * as businessTables from "../src/db/business-schema";
+import type { Actor } from "../src/modules/auth/model";
+import { prepareConfirmation, updateCart } from "../src/modules/orders/service";
+import { getEvents } from "../src/modules/stores/queries";
+import { getTableState } from "../src/modules/tables/queries";
 import {
-  closeTable,
   changeLocale,
-  getEvents,
-  getTableState,
-  prepareConfirmation,
-  recordVoiceEvent,
+  closeTable,
   setUiSection,
-  setSpeechSpeed,
-  setVoiceSession,
   showProducts,
-  updateCart,
-} from "../src/modules/operations";
+} from "../src/modules/tables/service";
+import { recordVoiceEvent, setSpeechSpeed, setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
+import { insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
 const deviceCookie = `tablecast.device=${deviceToken}`;
@@ -54,22 +52,22 @@ it("状態取得中のタブ変更は返却cursorより後のイベントとし�
   const prepare = env.TABLECAST_DB.prepare.bind(env.TABLECAST_DB);
   vi.spyOn(env.TABLECAST_DB, "prepare").mockImplementation((sql) => {
     const statement = prepare(sql);
-    if (sql === "SELECT * FROM stores WHERE id=?") {
+    if (sql.includes('from "stores"')) {
       const bind = statement.bind.bind(statement);
       vi.spyOn(statement, "bind").mockImplementation((...values) => {
         const bound = bind(...values);
-        const first = bound.first.bind(bound);
-        vi.spyOn(bound, "first").mockImplementation(async <T>(column?: string) => {
+        const raw = bound.raw.bind(bound);
+        vi.spyOn(bound, "raw").mockImplementation(async <T>() => {
           readingCatalog.resolve();
           await release.promise;
-          return column === undefined ? first<T>() : first<T>(column);
+          return raw<T>();
         });
         return bound;
       });
     }
     return statement;
   });
-  const reading = getTableState(env, device);
+  const reading = getTableState(createApiServices(env), device);
   try {
     await readingCatalog.promise;
     await env.TABLECAST_DB.batch([
@@ -89,7 +87,7 @@ it("状態取得中のタブ変更は返却cursorより後のイベントとし�
     release.resolve();
   }
   const state = await reading;
-  const recovery = await getEvents(env, device, state.cursor);
+  const recovery = await getEvents(createApiServices(env), device, state.cursor);
   expect(state.uiSection).toBe("menu");
   expect(recovery.events).toHaveLength(1);
   expect(recovery.events[0]).toMatchObject({ kind: "table.ui", data: { section: "orders" } });
@@ -97,7 +95,7 @@ it("状態取得中のタブ変更は返却cursorより後のイベントとし�
 
 async function setupVoice() {
   const fixture = await setupFixture();
-  await setVoiceSession(env, device, voice.voiceSessionId);
+  await setVoiceSession(createApiServices(env), device, voice.voiceSessionId);
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare("UPDATE table_sessions SET active_turn_id=? WHERE id=?").bind(
       voice.turnId,
@@ -117,12 +115,12 @@ async function setupVoice() {
 
 it("初期メニューからGUIでカートへ切り替えると同卓の再取得へ反映され、注文確認を維持する", async () => {
   await setupFixture();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 2, selections: [] }],
   });
-  await prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" });
-  const before = await getTableState(env, device);
+  await prepareConfirmation(createApiServices(env), device, { expectedVersion: 1, channel: "gui" });
+  const before = await getTableState(createApiServices(env), device);
   expect(before.uiSection).toBe("menu");
   expect(before.selectedProductId).toBeNull();
   expect(before.speechSpeed).toBe(1.0);
@@ -156,7 +154,7 @@ it.each(["端末Cookieなし", "店員Cookieのみ", "失効した端末"])(
       await env.TABLECAST_DB.prepare("UPDATE devices SET revoked_at=? WHERE id='tablecast-device'")
         .bind(Date.now())
         .run();
-    const before = await getTableState(env, device);
+    const before = await getTableState(createApiServices(env), device);
 
     const response = await patchUi(
       { section: "orders" },
@@ -164,7 +162,7 @@ it.each(["端末Cookieなし", "店員Cookieのみ", "失効した端末"])(
     );
 
     expect(response.status).toBe(401);
-    expect(await getTableState(env, device)).toEqual(before);
+    expect(await getTableState(createApiServices(env), device)).toEqual(before);
   },
 );
 
@@ -186,59 +184,61 @@ it("端末が別卓の来店IDを指定した表示変更は拒否され、ど�
     }),
   ]);
   const other = { ...device, tableSessionId: "tablecast-other-session" };
-  const before = await getTableState(env, device);
-  const otherBefore = await getTableState(env, other);
+  const before = await getTableState(createApiServices(env), device);
+  const otherBefore = await getTableState(createApiServices(env), other);
 
   const response = await patchUi({ section: "bill", tableSessionId: other.tableSessionId });
 
   expect(response.status).toBe(422);
   expect(await response.json()).toMatchObject({ error: { code: "INVALID_INPUT" } });
-  expect(await getTableState(env, device)).toEqual(before);
-  expect(await getTableState(env, other)).toEqual(otherBefore);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), other)).toEqual(otherBefore);
 });
 
 it("閉卓後の端末による表示変更はHTTPと共有操作の双方で拒否される", async () => {
   const { staff } = await setupFixture();
-  await closeTable(env, staff);
-  const before = await getTableState(env, staff);
+  await closeTable(createApiServices(env), staff);
+  const before = await getTableState(createApiServices(env), staff);
 
   expect((await patchUi({ section: "orders" })).status).toBe(401);
-  await expect(setUiSection(env, device, { section: "orders" })).rejects.toMatchObject({
+  await expect(
+    setUiSection(createApiServices(env), device, { section: "orders" }),
+  ).rejects.toMatchObject({
     code: "SESSION_CLOSED",
     status: 403,
   });
 
-  expect(await getTableState(env, staff)).toEqual(before);
+  expect(await getTableState(createApiServices(env), staff)).toEqual(before);
 });
 
 it("音声の表示変更は確定カートを維持して自卓へ保存される", async () => {
   await setupVoice();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 1, selections: [] }],
   });
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
 
-  const changed = await setUiSection(env, voice, { section: "orders" });
+  const changed = await setUiSection(createApiServices(env), voice, { section: "orders" });
 
   expect(changed.uiSection).toBe("orders");
   expect(changed.cart).toEqual(before.cart);
-  expect((await getTableState(env, device)).uiSection).toBe("orders");
+  expect((await getTableState(createApiServices(env), device)).uiSection).toBe("orders");
   expect(changed.events.at(-1)).toMatchObject({ kind: "table.ui", data: { section: "orders" } });
 });
 
 it("商品詳細と話速を同時更新しても互いの状態やカートを上書きしない", async () => {
   await setupVoice();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 1, selections: [] }],
   });
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
   await Promise.all([
-    setUiSection(env, voice, { section: "menu", productId: "tea" }),
-    setSpeechSpeed(env, device, { speed: 1.3 }),
+    setUiSection(createApiServices(env), voice, { section: "menu", productId: "tea" }),
+    setSpeechSpeed(createApiServices(env), device, { speed: 1.3 }),
   ]);
-  const state = await getTableState(env, device);
+  const state = await getTableState(createApiServices(env), device);
   expect(state).toMatchObject({
     uiSection: "menu",
     selectedProductId: "tea",
@@ -274,7 +274,7 @@ it("GUIで商品詳細を選び、商品省略・明示解除・他タブへの�
 
 it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧でき、削除後は選択を表示しない", async () => {
   await setupFixture();
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
   await insertFixture(businessTables.stores, {
     id: "tablecast-foreign-store",
     organization_id: "tablecast-fixture-other-org",
@@ -291,7 +291,7 @@ it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧�
   const denied = await patchUi({ section: "menu", productId: "foreign-tea" });
   expect(denied.status).toBe(422);
   expect(await denied.json()).toMatchObject({ error: { code: "PRODUCT_NOT_FOUND" } });
-  expect(await getTableState(env, device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
   await env.TABLECAST_DB.prepare(
     "UPDATE stores SET config_json=json_set(config_json,'$.products[0].available',json('false')) WHERE id=?",
   )
@@ -305,22 +305,22 @@ it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧�
   )
     .bind(device.storeId)
     .run();
-  expect((await getTableState(env, device)).selectedProductId).toBeNull();
+  expect((await getTableState(createApiServices(env), device)).selectedProductId).toBeNull();
 });
 
 it("話速の上下限を保存して音声configへ返し、送音とturnと注文確認を維持する", async () => {
   await setupVoice();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 1, selections: [] }],
   });
-  await prepareConfirmation(env, device, { expectedVersion: 1, channel: "gui" });
+  await prepareConfirmation(createApiServices(env), device, { expectedVersion: 1, channel: "gui" });
   await env.TABLECAST_DB.prepare(
     "UPDATE stores SET config_json=json_set(config_json,'$.cast.voice.ja','tablecast-voice-fixture') WHERE id=?",
   )
     .bind(device.storeId)
     .run();
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
   for (const speed of [0.5, 1, 1.5]) {
     const changed = await patchSpeed({ speed });
     expect(changed.status).toBe(200);
@@ -353,7 +353,7 @@ it("話速の上下限を保存して音声configへ返し、送音とturnと注
 
 it("話速の範囲外・文字列・非数値・別卓IDと無認可を拒否して状態を維持する", async () => {
   await setupFixture();
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
   for (const body of [
     { speed: 0.49 },
     { speed: 1.6 },
@@ -365,20 +365,20 @@ it("話速の範囲外・文字列・非数値・別卓IDと無認可を拒否�
     expect((await patchSpeed(body)).status).toBe(422);
   }
   expect((await patchSpeed({ speed: 1.2 }, "")).status).toBe(401);
-  expect(await getTableState(env, device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
 });
 
 it("実行中の音声ツールイベントは保存し、音声停止後の遅延イベントは保存しない", async () => {
   await setupVoice();
-  const cursor = (await getEvents(env, device)).cursor;
+  const cursor = (await getEvents(createApiServices(env), device)).cursor;
 
   expect(
-    await recordVoiceEvent(env, voice, {
+    await recordVoiceEvent(createApiServices(env), voice, {
       kind: "voice.tool",
       data: { toolCallId: "tablecast-tool-call", toolName: "getCatalog", state: "running" },
     }),
   ).toBe(true);
-  expect((await getEvents(env, device, cursor)).events).toMatchObject([
+  expect((await getEvents(createApiServices(env), device, cursor)).events).toMatchObject([
     {
       storeId: voice.storeId,
       tableSessionId: voice.tableSessionId,
@@ -391,24 +391,24 @@ it("実行中の音声ツールイベントは保存し、音声停止後の遅�
       },
     },
   ]);
-  await setVoiceSession(env, device, null);
-  const stopped = await getEvents(env, device);
+  await setVoiceSession(createApiServices(env), device, null);
+  const stopped = await getEvents(createApiServices(env), device);
 
   expect(
-    await recordVoiceEvent(env, voice, {
+    await recordVoiceEvent(createApiServices(env), voice, {
       kind: "voice.tool",
       data: { toolCallId: "tablecast-tool-call", toolName: "getCatalog", state: "completed" },
     }),
   ).toBe(false);
-  expect(await getEvents(env, device)).toEqual(stopped);
+  expect(await getEvents(createApiServices(env), device)).toEqual(stopped);
 });
 
 it.each(["音声停止", "古いturn", "古い音声セッション", "別卓", "別店舗", "閉卓"])(
   "%sの音声からは表示変更も商品カードも追加されない",
   async (condition) => {
     const { staff } = await setupVoice();
-    if (condition === "音声停止") await setVoiceSession(env, device, null);
-    if (condition === "閉卓") await closeTable(env, staff);
+    if (condition === "音声停止") await setVoiceSession(createApiServices(env), device, null);
+    if (condition === "閉卓") await closeTable(createApiServices(env), staff);
     if (condition === "別卓")
       await env.TABLECAST_DB.batch([
         insertFixture(businessTables.restaurantTables, {
@@ -443,16 +443,20 @@ it.each(["音声停止", "古いturn", "古い音声セッション", "別卓", 
       ...(condition === "別卓" ? { tableSessionId: "tablecast-other-session" } : {}),
       ...(condition === "別店舗" ? { storeId: "tablecast-other-store" } : {}),
     };
-    const before = await getTableState(env, staff);
+    const before = await getTableState(createApiServices(env), staff);
     const code = condition === "別店舗" ? "TABLE_NOT_FOUND" : "VOICE_SESSION_STALE";
 
     await expect(
-      setUiSection(env, actor, { section: "menu", productId: "tea" }),
+      setUiSection(createApiServices(env), actor, { section: "menu", productId: "tea" }),
     ).rejects.toMatchObject({ code });
-    await expect(setSpeechSpeed(env, actor, { speed: 1.2 })).rejects.toMatchObject({ code });
-    await expect(showProducts(env, actor, { productIds: ["tea"] })).rejects.toMatchObject({ code });
+    await expect(
+      setSpeechSpeed(createApiServices(env), actor, { speed: 1.2 }),
+    ).rejects.toMatchObject({ code });
+    await expect(
+      showProducts(createApiServices(env), actor, { productIds: ["tea"] }),
+    ).rejects.toMatchObject({ code });
 
-    expect(await getTableState(env, staff)).toEqual(before);
+    expect(await getTableState(createApiServices(env), staff)).toEqual(before);
   },
 );
 
@@ -483,12 +487,14 @@ it.each([
         device.storeId,
       )
       .run();
-    const before = await getTableState(env, device);
-    const cursor = (await getEvents(env, device)).cursor;
+    const before = await getTableState(createApiServices(env), device);
+    const cursor = (await getEvents(createApiServices(env), device)).cursor;
 
-    expect(await showProducts(env, voice, { productIds })).toEqual({ productIds: expected });
+    expect(await showProducts(createApiServices(env), voice, { productIds })).toEqual({
+      productIds: expected,
+    });
 
-    expect((await getEvents(env, device, cursor)).events).toMatchObject([
+    expect((await getEvents(createApiServices(env), device, cursor)).events).toMatchObject([
       {
         storeId: device.storeId,
         tableSessionId: device.tableSessionId,
@@ -496,7 +502,7 @@ it.each([
         data: { turnId: voice.turnId, productIds: expected },
       },
     ]);
-    const after = await getTableState(env, device);
+    const after = await getTableState(createApiServices(env), device);
     expect(after.cart).toEqual(before.cart);
     expect(after.uiSection).toBe(before.uiSection);
   },
@@ -514,8 +520,10 @@ it("売切商品の情報カードも表示でき、注文可能とは扱わな�
     )
     .run();
 
-  expect(await showProducts(env, voice, { productIds: ["tea"] })).toEqual({ productIds: ["tea"] });
-  expect((await getTableState(env, device)).cart.lines).toEqual([]);
+  expect(await showProducts(createApiServices(env), voice, { productIds: ["tea"] })).toEqual({
+    productIds: ["tea"],
+  });
+  expect((await getTableState(createApiServices(env), device)).cart.lines).toEqual([]);
 });
 
 it("未知の商品と別店舗だけに存在する商品をカードへ含める要求は全体を拒否する", async () => {
@@ -533,17 +541,17 @@ it("未知の商品と別店舗だけに存在する商品をカードへ含め�
     }),
     updated_at: Date.now(),
   }).run();
-  const before = await getEvents(env, device);
+  const before = await getEvents(createApiServices(env), device);
 
   for (const productId of ["missing", "other-tea"])
     await expect(
-      showProducts(env, voice, { productIds: ["tea", productId] }),
+      showProducts(createApiServices(env), voice, { productIds: ["tea", productId] }),
     ).rejects.toMatchObject({
       code: "PRODUCT_NOT_FOUND",
       status: 422,
     });
 
-  expect(await getEvents(env, device)).toEqual(before);
+  expect(await getEvents(createApiServices(env), device)).toEqual(before);
 });
 
 it.each([
@@ -551,47 +559,49 @@ it.each([
   { condition: "上限超過", productIds: ["tea", "coffee", "tea", "coffee", "tea"] },
 ])("表示する商品IDが$conditionの場合はイベントを保存しない", async ({ productIds }) => {
   await setupVoice();
-  const before = await getEvents(env, device);
+  const before = await getEvents(createApiServices(env), device);
 
-  await expect(showProducts(env, voice, { productIds })).rejects.toMatchObject({
+  await expect(showProducts(createApiServices(env), voice, { productIds })).rejects.toMatchObject({
     code: "INVALID_INPUT",
     status: 422,
   });
 
-  expect(await getEvents(env, device)).toEqual(before);
+  expect(await getEvents(createApiServices(env), device)).toEqual(before);
 });
 
 it("端末から音声商品カードを発行する共有操作は拒否する", async () => {
   await setupVoice();
-  const before = await getEvents(env, device);
+  const before = await getEvents(createApiServices(env), device);
 
-  await expect(showProducts(env, device, { productIds: ["tea"] })).rejects.toMatchObject({
+  await expect(
+    showProducts(createApiServices(env), device, { productIds: ["tea"] }),
+  ).rejects.toMatchObject({
     status: 403,
   });
 
-  expect(await getEvents(env, device)).toEqual(before);
+  expect(await getEvents(createApiServices(env), device)).toEqual(before);
 });
 
 it("画面イベントの保存が失敗したら表示状態の変更もロールバックする", async () => {
   await setupFixture();
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
   await env.TABLECAST_DB.exec(
     "CREATE TRIGGER tablecast_fail_presentation BEFORE INSERT ON table_events WHEN NEW.kind='table.ui' BEGIN SELECT RAISE(ABORT,'tablecast-test-presentation-failure'); END",
   );
 
-  await expect(setUiSection(env, device, { section: "bill" })).rejects.toThrow(
+  await expect(setUiSection(createApiServices(env), device, { section: "bill" })).rejects.toThrow(
     "tablecast-test-presentation-failure",
   );
 
-  expect(await getTableState(env, device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
 });
 
 it("停止後の古い音声turnは言語を書き換えずGUIの状態を保つ", async () => {
   await setupVoice();
-  await setVoiceSession(env, device, null);
-  const before = await getTableState(env, device);
-  await expect(changeLocale(env, voice, "en")).rejects.toMatchObject({
+  await setVoiceSession(createApiServices(env), device, null);
+  const before = await getTableState(createApiServices(env), device);
+  await expect(changeLocale(createApiServices(env), voice, "en")).rejects.toMatchObject({
     code: "VOICE_SESSION_STALE",
   });
-  expect(await getTableState(env, device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
 });

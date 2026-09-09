@@ -1,12 +1,15 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
-import { getEvents, setVoiceSession, updateCart } from "../src/modules/operations";
-import { finishVoiceTurn } from "../src/voice";
+import * as businessTables from "../src/db/business-schema";
+import { updateCart } from "../src/modules/orders/service";
+import { getEvents } from "../src/modules/stores/queries";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
+import { createApiServices } from "../src/platform/context";
+import { insertFixture } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -29,7 +32,7 @@ const input = (turnId: string) => ({
 });
 async function setupProactive() {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
+  await setVoiceSession(createApiServices(env), device, voiceId);
   await env.TABLECAST_DB.prepare(
     "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('true')) WHERE id=?",
   )
@@ -69,7 +72,7 @@ it.each(["設定無効", "カート編集中", "スタッフ対応中", "確認�
         .bind(device.storeId)
         .run();
     if (reason === "カート編集中")
-      await updateCart(env, device, {
+      await updateCart(createApiServices(env), device, {
         expectedVersion: 0,
         lines: [{ id: "tea-line", productId: "tea", quantity: 1, selections: [] }],
       });
@@ -129,7 +132,7 @@ it.each(["設定無効", "カート編集中", "スタッフ対応中", "確認�
       ).first("id"),
     ).toBeNull();
     expect(
-      (await getEvents(env, device)).events.filter(
+      (await getEvents(createApiServices(env), device)).events.filter(
         (event) => event.kind.startsWith("voice.") && event.kind !== "voice.started",
       ),
     ).toEqual([]);
@@ -141,7 +144,7 @@ it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生
   const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
     if (typeof init?.body !== "string") throw new Error("モデル要求がJSONではありません");
     const request = providerRequestSchema.parse(JSON.parse(init.body));
-    expect(request.tools.map((tool) => tool.function.name).sort()).toEqual([
+    expect(request.tools.map((tool) => tool.function.name).toSorted()).toEqual([
       "getCatalog",
       "getTableState",
     ]);
@@ -154,14 +157,16 @@ it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生
     post("/internal/voice/turns", input("tablecast-proactive-a")),
     post("/internal/voice/turns", input("tablecast-proactive-b")),
   ]);
-  expect(attempts.map(({ response }) => response.status).sort((a, b) => a - b)).toEqual([200, 204]);
+  expect(attempts.map(({ response }) => response.status).toSorted((a, b) => a - b)).toEqual([
+    200, 204,
+  ]);
   for (const { response, context } of attempts) {
     expect(await response.text()).toBe(
       response.status === 200 ? "季節のお茶もご用意しています。" : "",
     );
     await waitOnExecutionContext(context);
   }
-  const events = (await getEvents(env, device)).events;
+  const events = (await getEvents(createApiServices(env), device)).events;
   const accepted = events.filter((event) => event.kind === "voice.proactive");
   expect(accepted).toHaveLength(1);
   expect(events.some((event) => event.kind === "voice.user")).toBe(false);
@@ -169,7 +174,7 @@ it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生
     .object({ turnId: z.string(), trigger: z.literal("proactive"), locale: z.literal("ja") })
     .strict()
     .parse(accepted[0]?.data);
-  await finishVoiceTurn(env, voiceId, metadata.turnId, "completed");
+  await finishVoiceTurn(createApiServices(env), voiceId, metadata.turnId, "completed");
   const playback = await post("/internal/voice/playback", {
     voiceSessionId: voiceId,
     turnId: metadata.turnId,
@@ -269,7 +274,7 @@ it.each(["客の発話", "設定の無効化"])(
     });
     expect(playback.response.status).toBe(409);
     expect(
-      (await getEvents(env, device)).events.some(
+      (await getEvents(createApiServices(env), device)).events.some(
         (event) =>
           event.kind === "voice.assistant" && event.data["turnId"] === "tablecast-old-proactive",
       ),

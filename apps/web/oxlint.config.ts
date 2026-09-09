@@ -6,6 +6,8 @@ export default defineConfig({
   extends: [rootConfig],
   jsPlugins: [
     "oxlint-tailwindcss",
+    { name: "storybook", specifier: "eslint-plugin-storybook" },
+    { name: "playwright", specifier: "eslint-plugin-playwright" },
     { name: "react-doctor", specifier: "oxlint-plugin-react-doctor" },
     { name: "query", specifier: "@tanstack/eslint-plugin-query" },
     { name: "router", specifier: "@tanstack/eslint-plugin-router" },
@@ -36,6 +38,33 @@ export default defineConfig({
     "tailwindcss/no-unnecessary-whitespace": "error",
   },
   overrides: [
+    {
+      files: ["e2e/**/*.ts"],
+      rules: {
+        "playwright/missing-playwright-await": "error",
+        "playwright/no-element-handle": "error",
+        "playwright/no-focused-test": "error",
+        "playwright/no-force-option": "error",
+        "playwright/no-networkidle": "error",
+        "playwright/no-page-pause": "error",
+        "playwright/no-wait-for-timeout": "error",
+        "playwright/prefer-native-locators": "error",
+        "playwright/prefer-web-first-assertions": "error",
+        "playwright/valid-expect": "error",
+      },
+    },
+    {
+      files: ["src/**/*.stories.{ts,tsx}"],
+      rules: {
+        "storybook/await-interactions": "error",
+        "storybook/context-in-play-function": "error",
+        "storybook/default-exports": "error",
+        "storybook/no-renderer-packages": "error",
+        "storybook/story-exports": "error",
+        "storybook/use-storybook-expect": "error",
+        "storybook/use-storybook-testing-library": "error",
+      },
+    },
     {
       files: ["src/i18n/locale.tsx"],
       rules: { "import/namespace": ["error", { allowComputed: true }] },

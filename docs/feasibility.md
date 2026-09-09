@@ -21,7 +21,7 @@ Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKi
 
 固定版LiveKit 1.8.0の実セッション試験では、LLMを登録せず `llm_node` のみ上書きした以前の実装が応答開始時に失敗した。公式 `LLM` / `LLMStream` 拡張へ同じHTTP接続を登録して解消し、通常応答・自発応答・204・取消・停止・503時の再試行禁止を実SDKで確認した。外部LLMをPythonにも置いたわけではない。
 
-関連実装: [音声HTTP](../apps/api/src/voice.ts)、[Mastra Tools](../apps/api/src/agent/cast.ts)、[Python Agent](../livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
+関連実装: [音声HTTP](../apps/api/src/modules/voice/routes.ts)、[Mastra Tools](../apps/api/src/modules/voice/agent.ts)、[Python Agent](../livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
 
 ## 実施した試験と未実施の試験
 

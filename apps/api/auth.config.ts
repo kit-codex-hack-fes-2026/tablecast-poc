@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { authOptions } from "./src/auth-options";
+import { authOptions } from "./src/modules/auth/options";
 
 // schema生成のCLIだけが読み込み、Workerの公開入口からは参照しない。
 export const auth = betterAuth(

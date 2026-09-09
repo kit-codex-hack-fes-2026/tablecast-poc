@@ -99,7 +99,6 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
         });
         start("docker", [
           "run",
-          "--rm",
           "--name",
           container,
           "-e",

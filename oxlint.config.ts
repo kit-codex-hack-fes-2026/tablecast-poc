@@ -62,6 +62,9 @@ export default defineConfig({
     },
   ],
   ignorePatterns: [
+    ".agents/skills/animate/**",
+    ".agents/skills/emil-design-eng/**",
+    ".agents/skills/mastra/**",
     "**/dist/**",
     "**/storybook-static/**",
     "**/worker-configuration.d.ts",

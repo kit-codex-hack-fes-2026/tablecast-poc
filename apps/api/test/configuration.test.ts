@@ -1,23 +1,37 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
+import * as businessTables from "../src/db/business-schema";
+import { getCatalog } from "../src/modules/catalog/queries";
 import {
   createDraft,
   getDraft,
   publishDraft,
   updateDraft,
   validateDraft,
-} from "../src/modules/configuration";
-import { getCatalog, getEvents, prepareConfirmation, updateCart } from "../src/modules/operations";
+} from "../src/modules/configuration/service";
+import { prepareConfirmation, updateCart } from "../src/modules/orders/service";
+import { getEvents } from "../src/modules/stores/queries";
+import { createApiServices } from "../src/platform/context";
 import { configDraftSchema, configurationIssueSchema, tableStateSchema } from "../src/schema";
+import { insertFixture } from "./database-fixture";
 import {
-  configuration as fixtureConfiguration,
   device,
   deviceToken,
+  configuration as fixtureConfiguration,
   setupFixture,
   text,
 } from "./fixture";
+
+const table = async () =>
+  tableStateSchema.parse(
+    await (
+      await exports.default.fetch(
+        new Request("http://localhost:3000/api/table", {
+          headers: { Cookie: `tablecast.device=${deviceToken}` },
+        }),
+      )
+    ).json(),
+  );
 
 it.each([
   { name: "追加", remove: false },
@@ -26,7 +40,7 @@ it.each([
   "商品・グループ・選択肢の$nameでは内包する価格と安全情報を重要な差分として返す",
   async ({ remove }) => {
     const { staff, cookie } = await setupFixture();
-    const original = (await getCatalog(env, staff.storeId)).configuration;
+    const original = (await getCatalog(createApiServices(env), staff.storeId)).configuration;
     const extended = structuredClone(original);
     const tea = extended.products[0];
     const coffee = extended.products[1];
@@ -46,8 +60,8 @@ it.each([
     await env.TABLECAST_DB.prepare("UPDATE stores SET config_json=? WHERE id=?")
       .bind(JSON.stringify(before), staff.storeId)
       .run();
-    const draft = await createDraft(env, staff);
-    await updateDraft(env, staff, draft.id, {
+    const draft = await createDraft(createApiServices(env), staff);
+    await updateDraft(createApiServices(env), staff, draft.id, {
       expectedVersion: draft.version,
       configuration: after,
     });
@@ -79,14 +93,14 @@ it.each([
   { name: "現在の規則では整合する", invalid: false },
 ])("旧形式の$name下書きを構造化して読み、版・未検証状態を変更しない", async ({ invalid }) => {
   const { staff, cookie } = await setupFixture();
-  const created = await createDraft(env, staff);
+  const created = await createDraft(createApiServices(env), staff);
   const configuration = structuredClone(created.configuration);
   if (invalid) {
     const product = configuration.products[0];
     if (!product) throw new Error("商品fixtureがありません");
     product.categoryId = "missing-category";
   }
-  const draft = await updateDraft(env, staff, created.id, {
+  const draft = await updateDraft(createApiServices(env), staff, created.id, {
     expectedVersion: created.version,
     configuration,
   });
@@ -123,16 +137,16 @@ it.each([
       .first(),
   ).toEqual({ status: "draft", version: draft.version, errors_json: legacyErrors });
   await expect(
-    publishDraft(env, staff, draft.id, {
+    publishDraft(createApiServices(env), staff, draft.id, {
       expectedVersion: draft.version,
       baseVersion: draft.baseVersion,
       idempotencyKey: "tablecast-legacy-draft-publication",
       approved: true,
     }),
   ).rejects.toMatchObject({ code: invalid ? "DRAFT_INVALID" : "DRAFT_CONFLICT" });
-  expect((await getCatalog(env, staff.storeId)).version).toBe(draft.baseVersion);
+  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(draft.baseVersion);
 
-  const validated = await validateDraft(env, staff, draft.id, draft.version);
+  const validated = await validateDraft(createApiServices(env), staff, draft.id, draft.version);
   expect(validated.errors).toEqual(read.errors);
   expect(validated.status).toBe(invalid ? "draft" : "ready");
   const persisted = await env.TABLECAST_DB.prepare(
@@ -146,16 +160,7 @@ it.each([
 
 it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata・他卓・他店舗を渡さない", async () => {
   const { staff } = await setupFixture();
-  const table = async () =>
-    tableStateSchema.parse(
-      await (
-        await exports.default.fetch(
-          new Request("http://localhost:3000/api/table", {
-            headers: { Cookie: `tablecast.device=${deviceToken}` },
-          }),
-        )
-      ).json(),
-    );
+
   expect((await table()).configVersion).toBe(1);
   await env.TABLECAST_DB.batch([
     insertFixture(businessTables.stores, {
@@ -209,10 +214,10 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
       },
     ]),
   ]);
-  const draft = await createDraft(env, staff);
-  await validateDraft(env, staff, draft.id, draft.version);
+  const draft = await createDraft(createApiServices(env), staff);
+  await validateDraft(createApiServices(env), staff, draft.id, draft.version);
 
-  await publishDraft(env, staff, draft.id, {
+  await publishDraft(createApiServices(env), staff, draft.id, {
     expectedVersion: draft.version,
     baseVersion: draft.baseVersion,
     idempotencyKey: "tablecast-visible-publication",
@@ -221,8 +226,10 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
 
   const state = await table();
   expect(state.configVersion).toBe(2);
-  expect(state.configVersion).toBe((await getCatalog(env, staff.storeId)).version);
-  const received = await getEvents(env, device);
+  expect(state.configVersion).toBe(
+    (await getCatalog(createApiServices(env), staff.storeId)).version,
+  );
+  const received = await getEvents(createApiServices(env), device);
   expect(received.events.map((event) => event.kind)).toEqual([
     "staff.called",
     "configuration.published",
@@ -230,8 +237,8 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
   expect(received.events.map((event) => event.storeId)).toEqual([staff.storeId, staff.storeId]);
   expect(received.events[1]?.tableSessionId).toBeNull();
   expect(received.events[1]?.data).toEqual({});
-  expect((await getEvents(env, device, received.cursor)).events).toEqual([]);
-  const admin = await getEvents(env, { ...staff, tableSessionId: undefined });
+  expect((await getEvents(createApiServices(env), device, received.cursor)).events).toEqual([]);
+  const admin = await getEvents(createApiServices(env), { ...staff, tableSessionId: undefined });
   expect(admin.events.find((event) => event.kind === "configuration.published")?.data).toEqual({
     version: 2,
     draftId: draft.id,
@@ -241,8 +248,8 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
 
 it("同じ公開要求が並行しても一度だけ公開し、両方へ同じ結果を返す", async () => {
   const { staff } = await setupFixture();
-  const draft = await createDraft(env, staff);
-  await validateDraft(env, staff, draft.id, draft.version);
+  const draft = await createDraft(createApiServices(env), staff);
+  await validateDraft(createApiServices(env), staff, draft.id, draft.version);
   const input = {
     expectedVersion: draft.version,
     baseVersion: draft.baseVersion,
@@ -251,29 +258,29 @@ it("同じ公開要求が並行しても一度だけ公開し、両方へ同じ�
   };
 
   const results = await Promise.all([
-    publishDraft(env, staff, draft.id, input),
-    publishDraft(env, staff, draft.id, input),
+    publishDraft(createApiServices(env), staff, draft.id, input),
+    publishDraft(createApiServices(env), staff, draft.id, input),
   ]);
   expect(results.map((result) => result.status)).toEqual(["published", "published"]);
-  expect((await getCatalog(env, staff.storeId)).version).toBe(2);
+  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(2);
   expect(
     await env.TABLECAST_DB.prepare("SELECT COUNT(*) AS count FROM config_releases").first("count"),
   ).toBe(1);
   expect(
-    (await getEvents(env, { ...staff, tableSessionId: undefined })).events.filter(
-      (event) => event.kind === "configuration.published",
-    ),
+    (
+      await getEvents(createApiServices(env), { ...staff, tableSessionId: undefined })
+    ).events.filter((event) => event.kind === "configuration.published"),
   ).toHaveLength(1);
 
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 1, selections: [] }],
   });
-  const confirmation = await prepareConfirmation(env, device, {
+  const confirmation = await prepareConfirmation(createApiServices(env), device, {
     expectedVersion: 1,
     channel: "gui",
   });
-  await publishDraft(env, staff, draft.id, input);
+  await publishDraft(createApiServices(env), staff, draft.id, input);
   expect(
     await env.TABLECAST_DB.prepare("SELECT status FROM confirmations WHERE id=?")
       .bind(confirmation.id)
@@ -286,12 +293,16 @@ it.each([
   { name: "異なるキーの同じ公開元版", sameKey: false, code: "DRAFT_CONFLICT" },
 ])("$nameが競合すると、一方だけ公開し他方から履歴を作らない", async ({ sameKey, code }) => {
   const { staff } = await setupFixture();
-  const drafts = await Promise.all([createDraft(env, staff), createDraft(env, staff)]);
-  for (const draft of drafts) await validateDraft(env, staff, draft.id, draft.version);
+  const drafts = await Promise.all([
+    createDraft(createApiServices(env), staff),
+    createDraft(createApiServices(env), staff),
+  ]);
+  for (const draft of drafts)
+    await validateDraft(createApiServices(env), staff, draft.id, draft.version);
 
   const results = await Promise.allSettled(
     drafts.map((draft, index) =>
-      publishDraft(env, staff, draft.id, {
+      publishDraft(createApiServices(env), staff, draft.id, {
         expectedVersion: draft.version,
         baseVersion: draft.baseVersion,
         idempotencyKey: `tablecast-conflicting-publication-${sameKey ? "same" : index}`,
@@ -303,14 +314,14 @@ it.each([
   const rejected = results.filter((result) => result.status === "rejected");
   expect(rejected).toHaveLength(1);
   for (const result of rejected) expect(result.reason).toMatchObject({ code });
-  expect((await getCatalog(env, staff.storeId)).version).toBe(2);
+  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(2);
   expect(
     await env.TABLECAST_DB.prepare("SELECT COUNT(*) AS count FROM config_releases").first("count"),
   ).toBe(1);
   expect(
-    (await getEvents(env, { ...staff, tableSessionId: undefined })).events.filter(
-      (event) => event.kind === "configuration.published",
-    ),
+    (
+      await getEvents(createApiServices(env), { ...staff, tableSessionId: undefined })
+    ).events.filter((event) => event.kind === "configuration.published"),
   ).toHaveLength(1);
   expect(
     await env.TABLECAST_DB.prepare(
@@ -321,30 +332,30 @@ it.each([
 
 it("設定公開の途中失敗では公開版・下書き・履歴・既存確認をまとめて復元する", async () => {
   const { staff } = await setupFixture();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 1, selections: [] }],
   });
-  const confirmation = await prepareConfirmation(env, device, {
+  const confirmation = await prepareConfirmation(createApiServices(env), device, {
     expectedVersion: 1,
     channel: "gui",
   });
-  const draft = await createDraft(env, staff);
-  await validateDraft(env, staff, draft.id, draft.version);
+  const draft = await createDraft(createApiServices(env), staff);
+  await validateDraft(createApiServices(env), staff, draft.id, draft.version);
   await env.TABLECAST_DB.exec(
     "CREATE TRIGGER tablecast_fail_publication BEFORE INSERT ON table_events WHEN NEW.kind='configuration.published' BEGIN SELECT RAISE(ABORT,'tablecast-test-publication-failure'); END",
   );
 
   await expect(
-    publishDraft(env, staff, draft.id, {
+    publishDraft(createApiServices(env), staff, draft.id, {
       expectedVersion: draft.version,
       baseVersion: draft.baseVersion,
       idempotencyKey: "tablecast-failed-publication",
       approved: true,
     }),
   ).rejects.toThrow("tablecast-test-publication-failure");
-  expect((await getCatalog(env, staff.storeId)).version).toBe(1);
-  expect((await getDraft(env, staff, draft.id)).status).toBe("ready");
+  expect((await getCatalog(createApiServices(env), staff.storeId)).version).toBe(1);
+  expect((await getDraft(createApiServices(env), staff, draft.id)).status).toBe("ready");
   expect(
     await env.TABLECAST_DB.prepare("SELECT COUNT(*) AS count FROM config_releases").first("count"),
   ).toBe(0);

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { configurationErrors, priceCart, type PlanContext } from "../src/modules/pricing";
+import { configurationErrors, priceCart, type PlanContext } from "../src/modules/catalog/pricing";
 import { configurationIssueSchema } from "../src/schema";
 import { configuration, text } from "./configuration-fixture";
 
