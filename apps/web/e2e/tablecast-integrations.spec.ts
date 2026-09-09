@@ -29,6 +29,9 @@ test("メニューの子ページをサイドバーから開き、再読込と�
   await categories.click();
   await expect(page).toHaveURL(/\/menu\/categories$/);
   await expect(categories).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("main").getByRole("heading", { name: ja.editor_categories, exact: true }),
+  ).toBeVisible();
   await page.reload({ waitUntil: "commit" });
   // Then: ページ内に同じタブを重複させず、現在の子ページを表示する。
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
