@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -446,11 +448,15 @@ describe("音声HTTPとMastraの接続契約", () => {
       await setupFixture();
       await setVoiceSession(env, device, voiceId);
       const turnId = "tablecast-turn-playback";
-      await env.TABLECAST_DB.prepare(
-        "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,locale,status,started_at) VALUES(?,?,?,?,'ja','completed',?)",
-      )
-        .bind(turnId, voiceId, device.tableSessionId, device.storeId, Date.now())
-        .run();
+      await insertFixture(businessTables.voiceTurns, {
+        id: turnId,
+        voice_session_id: voiceId,
+        table_session_id: device.tableSessionId,
+        store_id: device.storeId,
+        locale: "ja",
+        status: "completed",
+        started_at: Date.now(),
+      }).run();
       await finishVoiceTurn(env, voiceId, turnId, status);
       await env.TABLECAST_DB.prepare("UPDATE table_sessions SET locale='en' WHERE id=?")
         .bind(device.tableSessionId)

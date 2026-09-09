@@ -1,3 +1,6 @@
+import { fixtureDb } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
+import { eq } from "drizzle-orm";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import { z } from "zod";
@@ -61,16 +64,17 @@ it("公式device承認を店舗と卓へ制限し、端末へ店員sessionを渡
 });
 it("店舗のmemberは担当店だけへアクセスでき、所属取消後は同じCookieでも拒否される", async () => {
   const { cookie, staff } = await setupFixture();
-  await env.TABLECAST_DB.prepare("UPDATE member SET role='member' WHERE user_id=?")
-    .bind(staff.userId)
-    .run();
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "member" })
+    .where(eq(authTables.member.userId, staff.userId));
   const read = (store: string) =>
     exports.default.fetch(
       new Request(origin + `/api/admin/stores/${store}`, { headers: { Cookie: cookie } }),
     );
   expect((await read("tablecast-store")).status).toBe(200);
   expect((await read("other-store")).status).toBe(403);
-  await env.TABLECAST_DB.prepare("DELETE FROM member WHERE user_id=?").bind(staff.userId).run();
+  await fixtureDb.delete(authTables.member).where(eq(authTables.member.userId, staff.userId));
   expect((await read("tablecast-store")).status).toBe(403);
 });
 

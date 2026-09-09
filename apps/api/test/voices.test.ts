@@ -1,3 +1,6 @@
+import { fixtureDb } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
+import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
@@ -102,7 +105,7 @@ it("未認証端末・別店舗・不正localeや長いカーソルはprovider�
   ];
   for (const entry of cases)
     expect((await get(entry.path, entry.cookie)).status).toBe(entry.status);
-  await env.TABLECAST_DB.prepare("DELETE FROM member WHERE user_id=?").bind(staff.userId).run();
+  await fixtureDb.delete(authTables.member).where(eq(authTables.member.userId, staff.userId));
   expect((await get(`${base}/voices?locale=ja`, cookie)).status).toBe(403);
   expect(provider).not.toHaveBeenCalled();
 });

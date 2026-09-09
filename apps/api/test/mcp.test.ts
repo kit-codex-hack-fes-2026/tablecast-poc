@@ -1,3 +1,6 @@
+import * as businessTables from "../src/db/business-schema";
+import { insertFixture } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
 import { env, exports } from "cloudflare:workers";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -11,7 +14,7 @@ import {
   configurationSchema,
   voicePageSchema,
 } from "../src/schema";
-import { setupFixture, text } from "./fixture";
+import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 import app from "../src/app";
 
 afterEach(() => vi.restoreAllMocks());
@@ -323,15 +326,26 @@ it("MCPはOAuth対象店舗・現行roleを要求ごとに照合する", async (
   const client = await connect(token);
   toolData(await client.callTool({ name: "create_draft", arguments: {} }), configDraftSchema);
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-other-org','別組織','tablecast-other-org',?)",
-    ).bind(Date.now()),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO member(id,organization_id,user_id,role,created_at) VALUES('tablecast-other-member','tablecast-other-org',?,'owner',?)",
-    ).bind(staff.userId, Date.now()),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-org-store','tablecast-other-org','別組織店',config_json,updated_at FROM stores WHERE id='tablecast-store'",
-    ),
+    insertFixture(authTables.organization, {
+      id: "tablecast-other-org",
+      name: "別組織",
+      slug: "tablecast-other-org",
+      createdAt: new Date(),
+    }),
+    insertFixture(authTables.member, {
+      id: "tablecast-other-member",
+      organizationId: "tablecast-other-org",
+      userId: staff.userId,
+      role: "owner",
+      createdAt: new Date(),
+    }),
+    insertFixture(businessTables.stores, {
+      id: "tablecast-other-org-store",
+      organization_id: "tablecast-other-org",
+      name: "別組織店",
+      config_json: JSON.stringify(fixtureConfiguration),
+      updated_at: Date.now(),
+    }),
   ]);
   await expect(connect(token, "tablecast-other-org-store")).rejects.toMatchObject({ code: 403 });
   await env.TABLECAST_DB.batch([

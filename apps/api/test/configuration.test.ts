@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import {
@@ -9,7 +11,13 @@ import {
 } from "../src/modules/configuration";
 import { getCatalog, getEvents, prepareConfirmation, updateCart } from "../src/modules/operations";
 import { configDraftSchema, configurationIssueSchema, tableStateSchema } from "../src/schema";
-import { device, deviceToken, setupFixture, text } from "./fixture";
+import {
+  configuration as fixtureConfiguration,
+  device,
+  deviceToken,
+  setupFixture,
+  text,
+} from "./fixture";
 
 it.each([
   { name: "追加", remove: false },
@@ -150,27 +158,56 @@ it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata�
     );
   expect((await table()).configVersion).toBe(1);
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-store','tablecast-fixture-other-org','別店舗',config_json,updated_at FROM stores WHERE id=?",
-    ).bind(staff.storeId),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-other-table',?,'02')",
-    ).bind(staff.storeId),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at) VALUES('tablecast-other-session',?,'tablecast-other-table','ja',2,?)",
-    ).bind(staff.storeId, Date.now()),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'staff.called','{}',?),(?,'tablecast-other-session','cart.updated','{}',?),('tablecast-other-store',NULL,'configuration.published','{\"actorId\":\"private-other-store\"}',?),(?,NULL,'staff.private','{\"actorId\":\"private-store-event\"}',?)",
-    ).bind(
-      staff.storeId,
-      device.tableSessionId,
-      Date.now(),
-      staff.storeId,
-      Date.now(),
-      Date.now(),
-      staff.storeId,
-      Date.now(),
-    ),
+    insertFixture(businessTables.stores, {
+      id: "tablecast-other-store",
+      organization_id: "tablecast-fixture-other-org",
+      name: "別店舗",
+      config_json: JSON.stringify(fixtureConfiguration),
+      updated_at: Date.now(),
+    }),
+    insertFixture(businessTables.restaurantTables, {
+      id: "tablecast-other-table",
+      store_id: staff.storeId,
+      name: "02",
+    }),
+    insertFixture(businessTables.tableSessions, {
+      id: "tablecast-other-session",
+      store_id: staff.storeId,
+      table_id: "tablecast-other-table",
+      locale: "ja",
+      guest_count: 2,
+      opened_at: Date.now(),
+    }),
+    insertFixture(businessTables.tableEvents, [
+      {
+        store_id: staff.storeId,
+        table_session_id: device.tableSessionId,
+        kind: "staff.called",
+        data_json: "{}",
+        created_at: Date.now(),
+      },
+      {
+        store_id: staff.storeId,
+        table_session_id: "tablecast-other-session",
+        kind: "cart.updated",
+        data_json: "{}",
+        created_at: Date.now(),
+      },
+      {
+        store_id: "tablecast-other-store",
+        table_session_id: null,
+        kind: "configuration.published",
+        data_json: JSON.stringify({ actorId: "private-other-store" }),
+        created_at: Date.now(),
+      },
+      {
+        store_id: staff.storeId,
+        table_session_id: null,
+        kind: "staff.private",
+        data_json: JSON.stringify({ actorId: "private-store-event" }),
+        created_at: Date.now(),
+      },
+    ]),
   ]);
   const draft = await createDraft(env, staff);
   await validateDraft(env, staff, draft.id, draft.version);

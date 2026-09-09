@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import { getTableState, openTable, updateCart } from "../src/modules/operations";
@@ -27,9 +29,11 @@ it("開卓済みの卓への再要求を409にし、先行セッションとカ�
 
 it("空卓の同時開卓は一方だけ成立し、セッションと開卓イベントを一つだけ作る", async () => {
   const { cookie } = await setupFixture();
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-vacant-table','tablecast-store','02')",
-  ).run();
+  await insertFixture(businessTables.restaurantTables, {
+    id: "tablecast-vacant-table",
+    store_id: "tablecast-store",
+    name: "02",
+  }).run();
   const open = () =>
     exports.default.fetch(
       new Request("http://localhost:3000/api/admin/stores/tablecast-store/tables/open", {
@@ -65,9 +69,11 @@ it("空卓の同時開卓は一方だけ成立し、セッションと開卓イ�
 
 it("開卓イベント保存が途中で失敗したら新しいセッションも残さない", async () => {
   const { staff } = await setupFixture();
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-vacant-table','tablecast-store','02')",
-  ).run();
+  await insertFixture(businessTables.restaurantTables, {
+    id: "tablecast-vacant-table",
+    store_id: "tablecast-store",
+    name: "02",
+  }).run();
   await env.TABLECAST_DB.exec(
     "CREATE TRIGGER tablecast_fail_open BEFORE INSERT ON table_events WHEN NEW.kind='table.opened' BEGIN SELECT RAISE(ABORT,'tablecast-test-open-failure'); END",
   );
