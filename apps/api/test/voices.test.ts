@@ -1,3 +1,6 @@
+import { fixtureDb } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
+import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
@@ -102,7 +105,7 @@ it("未認証端末・別店舗・不正localeや長いカーソルはprovider�
   ];
   for (const entry of cases)
     expect((await get(entry.path, entry.cookie)).status).toBe(entry.status);
-  await env.TABLECAST_DB.prepare("DELETE FROM member WHERE user_id=?").bind(staff.userId).run();
+  await fixtureDb.delete(authTables.member).where(eq(authTables.member.userId, staff.userId));
   expect((await get(`${base}/voices?locale=ja`, cookie)).status).toBe(403);
   expect(provider).not.toHaveBeenCalled();
 });
@@ -132,10 +135,7 @@ it.each([
 ])("providerの%sを秘密本文のない503へ揃える", async (scenario) => {
   const { cookie } = await setupFixture();
   const logger = vi.spyOn(console, "error");
-  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const request = new Request(input instanceof Request ? input : input.toString(), init);
-    expect(request.redirect).toBe("manual");
-    expect(new URL(request.url).origin).toBe("https://api.inworld.ai");
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
     if (scenario === "通信例外") throw new Error(`${secret}: ${privateBody}`);
     if (scenario === "認証失敗" || scenario === "一時障害")
       return new Response(`${secret}: ${privateBody}`, {
@@ -162,14 +162,24 @@ it.each([
   expect(JSON.stringify(result)).not.toContain(privateBody);
   expect(logger).not.toHaveBeenCalled();
   expect(provider).toHaveBeenCalledTimes(1);
+  const call = provider.mock.calls[0];
+  if (!call) throw new Error("providerへの要求がありません");
+  const [input, init] = call;
+  const sent = new Request(input instanceof Request ? input : input.toString(), init);
+  expect(sent.redirect).toBe("manual");
+  expect(new URL(sent.url).origin).toBe("https://api.inworld.ai");
 });
 
-it("音声一覧の応答待ちを5秒で中止する", async () => {
+it("音声一覧は5秒の期限を指定し、中止された要求を503へ変換する", async () => {
   const { cookie } = await setupFixture();
+  const controller = new AbortController();
+  const deadline = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+  const reached = Promise.withResolvers<void>();
   const aborted = Promise.withResolvers<void>();
   vi.spyOn(globalThis, "fetch").mockImplementation(
     (_url, init) =>
       new Promise((_resolve, reject) => {
+        reached.resolve();
         init?.signal?.addEventListener(
           "abort",
           () => {
@@ -180,7 +190,14 @@ it("音声一覧の応答待ちを5秒で中止する", async () => {
         );
       }),
   );
-  const response = await get(`${base}/voices?locale=ja`, cookie);
+  const pending = get(`${base}/voices?locale=ja`, cookie);
+  try {
+    await reached.promise;
+    expect(deadline).toHaveBeenCalledWith(5000);
+  } finally {
+    controller.abort();
+  }
+  const response = await pending;
   await aborted.promise;
   expect(response.status).toBe(503);
   expect(await response.json()).toMatchObject({ error: { code: "VOICE_CATALOG_UNAVAILABLE" } });

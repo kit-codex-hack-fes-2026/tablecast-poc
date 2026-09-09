@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
@@ -88,14 +90,22 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
       ).first<string>("status"),
     ).toBe("failed");
     // 別の来店と画面用イベントは、会話文脈へ混ぜない。
-    await env.TABLECAST_DB.prepare(
-      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at,status) VALUES('tablecast-other-visit','tablecast-store','tablecast-table','ja',1,0,'closed')",
-    ).run();
-    await env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-other-visit','voice.user',?,0)",
-    )
-      .bind(JSON.stringify({ text: "別の来店の秘密" }))
-      .run();
+    await insertFixture(businessTables.tableSessions, {
+      id: "tablecast-other-visit",
+      store_id: "tablecast-store",
+      table_id: "tablecast-table",
+      locale: "ja",
+      guest_count: 1,
+      opened_at: 0,
+      status: "closed",
+    }).run();
+    await insertFixture(businessTables.tableEvents, {
+      store_id: "tablecast-store",
+      table_session_id: "tablecast-other-visit",
+      kind: "voice.user",
+      data_json: JSON.stringify({ text: "別の来店の秘密" }),
+      created_at: 0,
+    }).run();
     await start("tablecast-tools");
     await tool("getCatalog", {}, "tablecast-tools");
     await start("tablecast-empty-caption");
@@ -115,11 +125,13 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
   it("復元履歴は新しい発話を優先して本文量を制限する", async () => {
     await setup();
     for (const text of ["古い話", "あ".repeat(9000), "い".repeat(9000), "直前の希望"]) {
-      await env.TABLECAST_DB.prepare(
-        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-session','voice.user',?,0)",
-      )
-        .bind(JSON.stringify({ text }))
-        .run();
+      await insertFixture(businessTables.tableEvents, {
+        store_id: "tablecast-store",
+        table_session_id: "tablecast-session",
+        kind: "voice.user",
+        data_json: JSON.stringify({ text }),
+        created_at: 0,
+      }).run();
     }
     const response = await request(`realtime?voiceSessionId=${voiceId}`);
     expect(await response.json()).toMatchObject({
@@ -139,10 +151,15 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
   it("同じcall IDの並行要求を一回だけ実行する", async () => {
     await setup();
     const responses = await Promise.all([
-      tool("getCatalog", {}, "tablecast-turn", "tablecast-call"),
-      tool("getCatalog", {}, "tablecast-turn", "tablecast-call"),
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
     ]);
     expect(responses.map((response) => response.status).sort((a, b) => a - b)).toEqual([200, 409]);
+    expect((await getTableState(env, device)).speechSpeed).toBe(1.2);
+    const events = await env.TABLECAST_DB.prepare(
+      "SELECT kind FROM table_events WHERE kind='voice.speed'",
+    ).all();
+    expect(events.results).toHaveLength(1);
   });
   it("遅れて届いた字幕を元のターンだけへ保存する", async () => {
     await setup();

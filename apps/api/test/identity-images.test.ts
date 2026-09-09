@@ -1,3 +1,6 @@
+import { fixtureDb } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
+import { eq } from "drizzle-orm";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import { setupFixture } from "./fixture";
@@ -52,9 +55,10 @@ it("店舗画像の変更を未認証・他店舗・通常メンバーへ許可�
   // When / Then: 認証・店舗・役割の境界を越える変更を拒否する。
   expect((await upload("/api/admin/stores/tablecast-store/icon", "")).status).toBe(401);
   expect((await upload("/api/admin/stores/other-store/icon", cookie)).status).toBe(403);
-  await env.TABLECAST_DB.prepare("UPDATE member SET role='member' WHERE user_id=?")
-    .bind(staff.userId)
-    .run();
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "member" })
+    .where(eq(authTables.member.userId, staff.userId));
   expect((await upload("/api/admin/stores/tablecast-store/icon", cookie)).status).toBe(403);
   expect(
     await env.TABLECAST_DB.prepare(

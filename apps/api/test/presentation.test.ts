@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Actor } from "../src/auth";
@@ -48,24 +50,44 @@ function patchSpeed(body: unknown, cookie = deviceCookie) {
 it("状態取得中のタブ変更は返却cursorより後のイベントとして回復できる", async () => {
   await setupFixture();
   const readingCatalog = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
   const prepare = env.TABLECAST_DB.prepare.bind(env.TABLECAST_DB);
   vi.spyOn(env.TABLECAST_DB, "prepare").mockImplementation((sql) => {
-    if (sql === "SELECT * FROM stores WHERE id=?") readingCatalog.resolve();
-    return prepare(sql);
+    const statement = prepare(sql);
+    if (sql === "SELECT * FROM stores WHERE id=?") {
+      const bind = statement.bind.bind(statement);
+      vi.spyOn(statement, "bind").mockImplementation((...values) => {
+        const bound = bind(...values);
+        const first = bound.first.bind(bound);
+        vi.spyOn(bound, "first").mockImplementation(async <T>(column?: string) => {
+          readingCatalog.resolve();
+          await release.promise;
+          return column === undefined ? first<T>() : first<T>(column);
+        });
+        return bound;
+      });
+    }
+    return statement;
   });
   const reading = getTableState(env, device);
-  await readingCatalog.promise;
-  await env.TABLECAST_DB.batch([
-    prepare("UPDATE table_sessions SET ui_section='orders' WHERE id=?").bind(device.tableSessionId),
-    prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'table.ui',?,?)",
-    ).bind(
-      device.storeId,
-      device.tableSessionId,
-      JSON.stringify({ section: "orders" }),
-      Date.now(),
-    ),
-  ]);
+  try {
+    await readingCatalog.promise;
+    await env.TABLECAST_DB.batch([
+      prepare("UPDATE table_sessions SET ui_section='orders' WHERE id=?").bind(
+        device.tableSessionId,
+      ),
+      prepare(
+        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'table.ui',?,?)",
+      ).bind(
+        device.storeId,
+        device.tableSessionId,
+        JSON.stringify({ section: "orders" }),
+        Date.now(),
+      ),
+    ]);
+  } finally {
+    release.resolve();
+  }
   const state = await reading;
   const recovery = await getEvents(env, device, state.cursor);
   expect(state.uiSection).toBe("menu");
@@ -81,9 +103,14 @@ async function setupVoice() {
       voice.turnId,
       device.tableSessionId,
     ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) VALUES(?,?,?,?,'started',?)",
-    ).bind(voice.turnId, voice.voiceSessionId, voice.tableSessionId, voice.storeId, Date.now()),
+    insertFixture(businessTables.voiceTurns, {
+      id: voice.turnId,
+      voice_session_id: voice.voiceSessionId,
+      table_session_id: voice.tableSessionId,
+      store_id: voice.storeId,
+      status: "started",
+      started_at: Date.now(),
+    }),
   ]);
   return fixture;
 }
@@ -144,12 +171,19 @@ it.each(["端末Cookieなし", "店員Cookieのみ", "失効した端末"])(
 it("端末が別卓の来店IDを指定した表示変更は拒否され、どちらの卓にも影響しない", async () => {
   await setupFixture();
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-other-table','tablecast-store','02')",
-    ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at) VALUES('tablecast-other-session','tablecast-store','tablecast-other-table','ja',2,?)",
-    ).bind(Date.now()),
+    insertFixture(businessTables.restaurantTables, {
+      id: "tablecast-other-table",
+      store_id: "tablecast-store",
+      name: "02",
+    }),
+    insertFixture(businessTables.tableSessions, {
+      id: "tablecast-other-session",
+      store_id: "tablecast-store",
+      table_id: "tablecast-other-table",
+      locale: "ja",
+      guest_count: 2,
+      opened_at: Date.now(),
+    }),
   ]);
   const other = { ...device, tableSessionId: "tablecast-other-session" };
   const before = await getTableState(env, device);
@@ -241,20 +275,19 @@ it("GUIで商品詳細を選び、商品省略・明示解除・他タブへの�
 it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧でき、削除後は選択を表示しない", async () => {
   await setupFixture();
   const before = await getTableState(env, device);
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-foreign-store','tablecast-fixture-other-org','別店舗',?,?)",
-  )
-    .bind(
-      JSON.stringify({
-        ...configuration,
-        products: configuration.products.map((product) => ({
-          ...product,
-          id: `foreign-${product.id}`,
-        })),
-      }),
-      Date.now(),
-    )
-    .run();
+  await insertFixture(businessTables.stores, {
+    id: "tablecast-foreign-store",
+    organization_id: "tablecast-fixture-other-org",
+    name: "別店舗",
+    config_json: JSON.stringify({
+      ...configuration,
+      products: configuration.products.map((product) => ({
+        ...product,
+        id: `foreign-${product.id}`,
+      })),
+    }),
+    updated_at: Date.now(),
+  }).run();
   const denied = await patchUi({ section: "menu", productId: "foreign-tea" });
   expect(denied.status).toBe(422);
   expect(await denied.json()).toMatchObject({ error: { code: "PRODUCT_NOT_FOUND" } });
@@ -378,19 +411,31 @@ it.each(["音声停止", "古いturn", "古い音声セッション", "別卓", 
     if (condition === "閉卓") await closeTable(env, staff);
     if (condition === "別卓")
       await env.TABLECAST_DB.batch([
-        env.TABLECAST_DB.prepare(
-          "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-other-table','tablecast-store','02')",
-        ),
-        env.TABLECAST_DB.prepare(
-          "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at,voice_state,voice_session_id,active_turn_id) VALUES('tablecast-other-session','tablecast-store','tablecast-other-table','ja',2,?,'active','tablecast-other-voice','tablecast-other-turn')",
-        ).bind(Date.now()),
+        insertFixture(businessTables.restaurantTables, {
+          id: "tablecast-other-table",
+          store_id: "tablecast-store",
+          name: "02",
+        }),
+        insertFixture(businessTables.tableSessions, {
+          id: "tablecast-other-session",
+          store_id: "tablecast-store",
+          table_id: "tablecast-other-table",
+          locale: "ja",
+          guest_count: 2,
+          opened_at: Date.now(),
+          voice_state: "active",
+          voice_session_id: "tablecast-other-voice",
+          active_turn_id: "tablecast-other-turn",
+        }),
       ]);
     if (condition === "別店舗")
-      await env.TABLECAST_DB.prepare(
-        "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-fixture-other-org','別店舗',?,?)",
-      )
-        .bind(JSON.stringify(configuration), Date.now())
-        .run();
+      await insertFixture(businessTables.stores, {
+        id: "tablecast-other-store",
+        organization_id: "tablecast-fixture-other-org",
+        name: "別店舗",
+        config_json: JSON.stringify(configuration),
+        updated_at: Date.now(),
+      }).run();
     const actor: Actor = {
       ...voice,
       ...(condition === "古いturn" ? { turnId: "tablecast-old-turn" } : {}),
@@ -475,20 +520,19 @@ it("売切商品の情報カードも表示でき、注文可能とは扱わな�
 
 it("未知の商品と別店舗だけに存在する商品をカードへ含める要求は全体を拒否する", async () => {
   await setupVoice();
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-fixture-other-org','別店舗',?,?)",
-  )
-    .bind(
-      JSON.stringify({
-        ...configuration,
-        products: configuration.products.map((product) => ({
-          ...product,
-          id: `other-${product.id}`,
-        })),
-      }),
-      Date.now(),
-    )
-    .run();
+  await insertFixture(businessTables.stores, {
+    id: "tablecast-other-store",
+    organization_id: "tablecast-fixture-other-org",
+    name: "別店舗",
+    config_json: JSON.stringify({
+      ...configuration,
+      products: configuration.products.map((product) => ({
+        ...product,
+        id: `other-${product.id}`,
+      })),
+    }),
+    updated_at: Date.now(),
+  }).run();
   const before = await getEvents(env, device);
 
   for (const productId of ["missing", "other-tea"])

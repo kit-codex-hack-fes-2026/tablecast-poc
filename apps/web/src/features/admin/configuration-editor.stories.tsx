@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { act, useEffect, useState } from "react";
 import { expect, fn, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../../components/ui/button";
 import { CastEditor } from "./configuration-editor";
@@ -10,17 +10,21 @@ let finishOldRequest = () => {};
 let oldSignal: AbortSignal | null | undefined;
 
 function mockVoices() {
-  const original = globalThis.fetch;
+  const unexpected: string[] = [];
   const mocked = spyOn(globalThis, "fetch").mockImplementation((input, options) => {
     const url = new URL(input instanceof Request ? input.url : input, window.location.origin);
     if (/^\/api\/admin\/stores\/tablecast-story-[ab]\/voices$/.test(url.pathname)) {
       return Promise.resolve(requests(url, options));
     }
-    return original(input, options);
+    unexpected.push(url.pathname);
+    return Promise.resolve(
+      Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 }),
+    );
   });
   return () => {
     finishOldRequest();
     mocked.mockRestore();
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
   };
 }
 
@@ -47,6 +51,7 @@ const meta = {
   decorators: [
     function WithQueries(Story) {
       const [client] = useState(() => new QueryClient());
+      useEffect(() => () => client.clear(), [client]);
       return (
         <QueryClientProvider client={client}>
           <Story />
@@ -238,7 +243,9 @@ export const CancelPreviousStore: Story = {
       await english.findByRole("option", { name: "Dennis — current store" }),
     ).toBeInTheDocument();
     await expect(oldSignal?.aborted).toBe(true);
-    finishOldRequest();
+    await act(async () => {
+      finishOldRequest();
+    });
     await waitFor(async () => {
       await expect(english.queryByRole("option", { name: /Ashley/ })).not.toBeInTheDocument();
       await expect(english.queryByRole("option", { name: "Olivia" })).not.toBeInTheDocument();

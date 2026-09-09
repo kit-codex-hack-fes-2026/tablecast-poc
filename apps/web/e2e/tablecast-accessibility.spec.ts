@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { test } from "./support/test";
+import { expect, type Page } from "@playwright/test";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";

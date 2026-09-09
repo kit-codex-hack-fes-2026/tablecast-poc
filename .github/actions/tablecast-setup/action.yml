@@ -4,6 +4,9 @@ inputs:
   python:
     description: Python依存を導入する
     default: "false"
+  turbo:
+    description: 決定的な静的解析・ビルドのTurborepoキャッシュを復元する
+    default: "false"
 runs:
   using: composite
   steps:
@@ -32,3 +35,9 @@ runs:
     - shell: bash
       if: inputs.python == 'true'
       run: uv sync --project livekit --locked
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      if: inputs.turbo == 'true'
+      with:
+        path: .turbo
+        key: tablecast-turbo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'livekit/uv.lock') }}-${{ github.job }}-${{ github.sha }}
+        restore-keys: tablecast-turbo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'livekit/uv.lock') }}-${{ github.job }}-

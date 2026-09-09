@@ -20,12 +20,6 @@ async def transport():
     packets: asyncio.Queue[dict] = asyncio.Queue()
 
     async def publish(payload, **options):
-        assert options == {
-            "reliable": True,
-            "topic": "tablecast.voice",
-            "destination_identities": ["tablecast-device"],
-        }
-        assert len(payload) <= 15 * 1024
         packets.put_nowait(json.loads(payload))
 
     participant.publish_data.side_effect = publish
@@ -34,6 +28,13 @@ async def transport():
         yield publisher, packets, participant
     finally:
         await publisher.aclose()
+        for call in participant.publish_data.await_args_list:
+            assert call.kwargs == {
+                "reliable": True,
+                "topic": "tablecast.voice",
+                "destination_identities": ["tablecast-device"],
+            }
+            assert len(call.args[0]) <= 15 * 1024
 
 
 async def test_累積表示を合流し旧turnの未送信本文を破棄する(transport):

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { test } from "./support/test";
+import { expect, type Page } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
 
@@ -47,99 +48,26 @@ test("端末のQR画像でコードと選択した卓を保持し、明示承認
   expect(approvals).toBe(0);
   await page.reload();
   await expect(page.getByLabel(ja.admin_pair_code, { exact: true })).toHaveValue(code);
+  await expect(
+    page
+      .getByRole("row", { name: `T10 ${ja.common_selected}`, exact: true })
+      .getByRole("button", { name: ja.common_selected, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: ja.admin_approve, exact: true }).click();
   await expect(page).toHaveURL(/\/devices$/);
   expect(approvals).toBe(1);
 });
 
-test("カメラ映像のQRを読み取り、成功・中止・ページ移動で送像を停止する", async ({ page }) => {
-  // Given: 実端末のQRを描いた映像をカメラ入力の境界から供給する。
-  const { code, buffer } = await deviceQr(page);
-  await page.goto(registration);
-  await page.evaluate(
-    (dataUrl) => {
-      Object.defineProperty(navigator, "mediaDevices", {
-        configurable: true,
-        value: {
-          getUserMedia: async () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = canvas.height = 640;
-            const context = canvas.getContext("2d");
-            if (!context) throw new Error("テスト映像を描画できません。");
-            context.fillStyle = "white";
-            context.fillRect(0, 0, 640, 640);
-            const image = new Image();
-            image.src = dataUrl;
-            await image.decode();
-            context.drawImage(image, 176, 176, 288, 288);
-            const stream = canvas.captureStream(10);
-            const timer = setInterval(() => {
-              context.drawImage(image, 176, 176, 288, 288);
-              if (stream.getTracks().every((track) => track.readyState === "ended"))
-                clearInterval(timer);
-            }, 200);
-            return stream;
-          },
-        },
-      });
-    },
-    `data:image/png;base64,${btoa(Array.from(buffer, (byte) => String.fromCharCode(byte)).join(""))}`,
-  );
-  // When: カメラを開始し、映像を読み取る。
-  await page.getByRole("button", { name: ja.device_scan_start, exact: true }).click();
-  await expect(page.getByLabel(ja.admin_pair_code, { exact: true })).toHaveValue(code);
-  await expect(page.locator("video")).toHaveCount(0);
-  // Then: 中止とページ移動でも開始した映像トラックを終了する。
-  await page.evaluate(() => {
-    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
-      configurable: true,
-      value: async () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = canvas.height = 640;
-        canvas.getContext("2d")?.fillRect(0, 0, 640, 640);
-        return canvas.captureStream(10);
-      },
-    });
-  });
-  for (const action of ["stop", "navigate"] as const) {
-    await page.getByRole("button", { name: ja.device_scan_start, exact: true }).click();
-    await expect
-      .poll(() =>
-        page
-          .locator("video")
-          .evaluate(
-            (video) => video instanceof HTMLVideoElement && video.srcObject instanceof MediaStream,
-          ),
-      )
-      .toBe(true);
-    const stream = await page
-      .locator("video")
-      .evaluateHandle((video) => (video instanceof HTMLVideoElement ? video.srcObject : null));
-    if (action === "stop")
-      await page.getByRole("button", { name: ja.device_scan_stop, exact: true }).click();
-    else await page.getByRole("link", { name: ja.device_title, exact: true }).last().click();
-    await expect
-      .poll(() =>
-        stream.evaluate(
-          (value) =>
-            value instanceof MediaStream &&
-            value.getTracks().every((track) => track.readyState === "ended"),
-        ),
-      )
-      .toBe(true);
-  }
-});
+// カメラの成功・中止・unmountはDeviceQrReaderのBrowser Modeで実トラックを検証する。
 
 test("カメラ拒否と画像の読み取り失敗を説明し、コードを手入力できる", async ({ page }) => {
   // Given: カメラの利用を許可しない環境。
   await page.goto(registration);
   await page.evaluate(() => {
-    Object.defineProperty(navigator, "mediaDevices", {
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
       configurable: true,
-      value: {
-        getUserMedia: async () => {
-          throw new DOMException("拒否", "NotAllowedError");
-        },
+      value: async () => {
+        throw new DOMException("拒否", "NotAllowedError");
       },
     });
   });

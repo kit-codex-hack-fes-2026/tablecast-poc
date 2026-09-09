@@ -1,6 +1,6 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
-export default defineConfig({
+const bindings = {
   plugins: [
     cloudflareTest({
       wrangler: { configPath: "./wrangler.jsonc" },
@@ -17,10 +17,21 @@ export default defineConfig({
   ],
   test: {
     setupFiles: ["./test/setup.ts"],
+    name: "bindings",
     include: ["test/**/*.test.ts"],
-    fileParallelism: false,
+    exclude: ["test/pricing.test.ts"],
+    fileParallelism: true,
     testTimeout: 30000,
     hookTimeout: 30000,
     provide: { tablecastMigrations: await readD1Migrations("./migrations") },
+  },
+};
+export default defineConfig({
+  test: {
+    maxWorkers: 4,
+    projects: [
+      { test: { name: "unit", include: ["test/pricing.test.ts"], environment: "node" } },
+      bindings,
+    ],
   },
 });

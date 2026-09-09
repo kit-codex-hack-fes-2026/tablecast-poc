@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import { configDraftSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
@@ -107,6 +108,7 @@ test("端末登録はURLで再現でき、卓の選択で列幅が動かない",
   const before = await table.boundingBox();
   // When: 一覧から卓を選択し、同じURLを再読み込みする。
   await table.getByRole("button", { name: ja.common_select, exact: true }).first().click();
+  await expect(page).toHaveURL(/tableId=/);
   const selectedUrl = page.url();
   expect(new URL(selectedUrl).searchParams.get("tableId")).toBeTruthy();
   const after = await table.boundingBox();

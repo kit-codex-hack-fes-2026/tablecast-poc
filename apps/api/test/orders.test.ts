@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import {
@@ -118,7 +120,26 @@ describe("実D1の注文契約", () => {
       (await getEvents(env, device)).events.filter((event) => event.kind === "cart.updated"),
     ).toHaveLength(1);
   });
-  it("古い確認と未承認を拒否し、同じ冪等キーの二重送信や応答喪失から一件に復元する", async () => {
+  it.each([false, undefined])("承認値が%sのHTTP注文は保存せず拒否する", async (approved) => {
+    await setupFixture();
+    const snapshot = await confirmed();
+    const response = await exports.default.fetch(
+      new Request("http://localhost:3000/api/table/orders", {
+        method: "POST",
+        headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshotId: snapshot.id,
+          idempotencyKey: "tablecast-no-approval",
+          approved,
+        }),
+      }),
+    );
+    expect(response.status).toBe(422);
+    const state = await getTableState(env, device);
+    expect(state.orders).toEqual([]);
+    expect(state.cart.lines).toHaveLength(1);
+  });
+  it("古い確認を拒否し、同じ冪等キーの並行送信と再送で注文を一件に保つ", async () => {
     await setupFixture();
     const old = await confirmed();
     await updateCart(env, device, { expectedVersion: 1, lines: tea });
@@ -246,11 +267,15 @@ describe("実D1の注文契約", () => {
     )
       .bind(device.tableSessionId)
       .run();
-    await env.TABLECAST_DB.prepare(
-      "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at,ended_at) VALUES('tablecast-turn','tablecast-voice-session','tablecast-session','tablecast-store','started',?,NULL)",
-    )
-      .bind(Date.now())
-      .run();
+    await insertFixture(businessTables.voiceTurns, {
+      id: "tablecast-turn",
+      voice_session_id: "tablecast-voice-session",
+      table_session_id: "tablecast-session",
+      store_id: "tablecast-store",
+      status: "started",
+      started_at: Date.now(),
+      ended_at: null,
+    }).run();
     const voice = {
       ...device,
       kind: "voice" as const,
@@ -339,9 +364,26 @@ it.each(["音声停止", "言語変更", "閉卓"])(
   async (operation) => {
     const { staff } = await setupFixture();
     await setVoiceSession(env, device, "tablecast-lifecycle-voice");
-    await env.TABLECAST_DB.prepare(
-      "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at,ended_at) VALUES('tablecast-inflight','tablecast-lifecycle-voice','tablecast-session','tablecast-store','started',1,NULL),('tablecast-complete','tablecast-lifecycle-voice','tablecast-session','tablecast-store','completed',1,2)",
-    ).run();
+    await insertFixture(businessTables.voiceTurns, [
+      {
+        id: "tablecast-inflight",
+        voice_session_id: "tablecast-lifecycle-voice",
+        table_session_id: "tablecast-session",
+        store_id: "tablecast-store",
+        status: "started",
+        started_at: 1,
+        ended_at: null,
+      },
+      {
+        id: "tablecast-complete",
+        voice_session_id: "tablecast-lifecycle-voice",
+        table_session_id: "tablecast-session",
+        store_id: "tablecast-store",
+        status: "completed",
+        started_at: 1,
+        ended_at: 2,
+      },
+    ]).run();
     if (operation === "音声停止") await setVoiceSession(env, device, null);
     else if (operation === "言語変更") await changeLocale(env, device, "en");
     else await closeTable(env, staff);
@@ -451,11 +493,14 @@ it.each([
 it("音声確認の読了後に開始した新しいturnだけが承認できる", async () => {
   await setupFixture();
   await setVoiceSession(env, device, "tablecast-voice-session");
-  await env.TABLECAST_DB.prepare(
-    "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) VALUES('tablecast-first','tablecast-voice-session','tablecast-session','tablecast-store','started',?)",
-  )
-    .bind(Date.now())
-    .run();
+  await insertFixture(businessTables.voiceTurns, {
+    id: "tablecast-first",
+    voice_session_id: "tablecast-voice-session",
+    table_session_id: "tablecast-session",
+    store_id: "tablecast-store",
+    status: "started",
+    started_at: Date.now(),
+  }).run();
   await env.TABLECAST_DB.prepare(
     "UPDATE table_sessions SET active_turn_id='tablecast-first' WHERE id='tablecast-session'",
   ).run();

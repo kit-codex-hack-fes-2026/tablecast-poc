@@ -1,66 +1,20 @@
+import { fixtureDb, insertFixture } from "./database-fixture";
+import * as authTables from "../src/db/auth-schema";
+import * as businessTables from "../src/db/business-schema";
+import { eq } from "drizzle-orm";
 import { reset } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { createAuth, hashDeviceToken, type Actor } from "../src/auth";
-import { configurationSchema, type Configuration } from "../src/schema";
+import { configuration } from "./configuration-fixture";
 import { ensure } from "../src/errors";
 
-export const device: Actor = {
+export const device = {
   kind: "device",
   storeId: "tablecast-store",
   tableSessionId: "tablecast-session",
-};
+} satisfies Actor;
 export const deviceToken = "tablecast-fixture-device-token";
-export const text = (ja: string, en: string) => ({
-  ja: { displayName: ja, speechName: ja, description: `${ja}の説明`, aliases: [] },
-  en: { displayName: en, speechName: en, description: `${en} description`, aliases: [] },
-});
-const allergens = {
-  contains: [] as string[],
-  evidence: "unknown" as const,
-  crossContact: "unknown" as const,
-  vegan: "unknown" as const,
-  note: { ja: "スタッフにご確認ください", en: "Please ask a member of staff" },
-};
-export const configuration: Configuration = configurationSchema.parse({
-  categories: [{ id: "drinks", text: text("飲み物", "Drinks") }],
-  products: [
-    {
-      id: "tea",
-      categoryId: "drinks",
-      text: text("ほうじ茶", "Roasted green tea"),
-      price: 400,
-      available: true,
-      allergens,
-    },
-    {
-      id: "coffee",
-      categoryId: "drinks",
-      text: text("カフェラテ", "Caffè latte"),
-      price: 500,
-      available: true,
-      allergens,
-      modifiers: [
-        {
-          id: "milk",
-          text: text("ミルク", "Milk"),
-          kind: "single",
-          min: 1,
-          max: 1,
-          options: [
-            { id: "dairy", text: text("牛乳", "Dairy milk"), priceDelta: 0, available: true },
-            { id: "oat", text: text("オーツミルク", "Oat milk"), priceDelta: 100, available: true },
-          ],
-        },
-      ],
-    },
-  ],
-  plans: [],
-  cast: {
-    instructions: { ja: "丁寧な接客", en: "Polite service" },
-    voice: { ja: null, en: null },
-    proactive: false,
-  },
-});
+export { configuration, text } from "./configuration-fixture";
 export async function resetFixtureStorage() {
   // workerd 1.20260903.1は停止中のD1をreset対象から漏らすため、直前に起動する。
   await env.TABLECAST_DB.prepare("SELECT 1").first();
@@ -77,47 +31,69 @@ export async function setupFixture() {
     asResponse: true,
   });
   ensure(registration.ok, "FIXTURE_AUTH_FAILED", 503);
-  const user = await env.TABLECAST_DB.prepare("SELECT id FROM user WHERE email=?")
-    .bind("tablecast-staff@example.test")
-    .first<{ id: string }>();
+  const user = await fixtureDb
+    .select({ id: authTables.user.id })
+    .from(authTables.user)
+    .where(eq(authTables.user.email, "tablecast-staff@example.test"))
+    .get();
   ensure(user, "FIXTURE_USER_MISSING", 503);
-  await env.TABLECAST_DB.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
+  await fixtureDb
+    .update(authTables.user)
+    .set({ emailVerified: true })
+    .where(eq(authTables.user.id, user.id));
   const response = await createAuth(env).api.signInEmail({
     body: { email: "tablecast-staff@example.test", password: "tablecast-local-fixture-password" },
     asResponse: true,
   });
   const now = Date.now();
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-fixture-other-org','他店舗','tablecast-fixture-other-org',?)",
-    ).bind(now),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO organization(id,name,slug,created_at) VALUES(?,?,?,?)",
-    ).bind("tablecast-org", "店舗", "tablecast-test", now),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO member(id,organization_id,user_id,role,created_at) VALUES(?,?,?,?,?)",
-    ).bind("tablecast-member", "tablecast-org", user.id, "owner", now),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES(?,?,?,?,?)",
-    ).bind("tablecast-store", "tablecast-org", "卓上喫茶", JSON.stringify(configuration), now),
-    env.TABLECAST_DB.prepare("INSERT INTO restaurant_tables(id,store_id,name) VALUES(?,?,?)").bind(
-      "tablecast-table",
-      "tablecast-store",
-      "01",
-    ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at) VALUES(?,?,?,?,?,?)",
-    ).bind("tablecast-session", "tablecast-store", "tablecast-table", "ja", 2, now),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO devices(id,token_hash,store_id,table_id,approved_by,created_at) VALUES(?,?,?,?,?,?)",
-    ).bind(
-      "tablecast-device",
-      await hashDeviceToken(deviceToken),
-      "tablecast-store",
-      "tablecast-table",
-      user.id,
-      now,
-    ),
+    insertFixture(authTables.organization, {
+      id: "tablecast-fixture-other-org",
+      name: "他店舗",
+      slug: "tablecast-fixture-other-org",
+      createdAt: new Date(now),
+    }),
+    insertFixture(authTables.organization, {
+      id: "tablecast-org",
+      name: "店舗",
+      slug: "tablecast-test",
+      createdAt: new Date(now),
+    }),
+    insertFixture(authTables.member, {
+      id: "tablecast-member",
+      organizationId: "tablecast-org",
+      userId: user.id,
+      role: "owner",
+      createdAt: new Date(now),
+    }),
+    insertFixture(businessTables.stores, {
+      id: "tablecast-store",
+      organization_id: "tablecast-org",
+      name: "卓上喫茶",
+      config_json: JSON.stringify(configuration),
+      updated_at: now,
+    }),
+    insertFixture(businessTables.restaurantTables, {
+      id: "tablecast-table",
+      store_id: "tablecast-store",
+      name: "01",
+    }),
+    insertFixture(businessTables.tableSessions, {
+      id: "tablecast-session",
+      store_id: "tablecast-store",
+      table_id: "tablecast-table",
+      locale: "ja",
+      guest_count: 2,
+      opened_at: now,
+    }),
+    insertFixture(businessTables.devices, {
+      id: "tablecast-device",
+      token_hash: await hashDeviceToken(deviceToken),
+      store_id: "tablecast-store",
+      table_id: "tablecast-table",
+      approved_by: user.id,
+      created_at: now,
+    }),
   ]);
   return {
     staff: {

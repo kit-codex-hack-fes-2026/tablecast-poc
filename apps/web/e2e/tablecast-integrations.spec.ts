@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import { credentials } from "./support/runtime";
@@ -118,6 +119,6 @@ test("店舗アイコンを変更し、再読込後の設定とサイドバー�
       ),
     )
     .toBe(true);
-  await expect(page.locator("aside img").first()).toHaveAttribute("src", imageUrl ?? "");
+  await expect(page.locator(`aside img[src="${imageUrl}"]`)).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("tablecast-store-icon.png") });
 });

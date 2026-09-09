@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import {
   historyPageSchema,
   sessionEventsPageSchema,
@@ -31,7 +32,9 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       const initialResponse = await page.request.get(`${base}/history?limit=100`);
       expect(initialResponse.status()).toBe(200);
       const initial = historyPageSchema.parse(await initialResponse.json());
-      const target = initial.sessions.find((session) => session.bill.orderedTotal > 0);
+      const target = initial.sessions.find(
+        (session) => session.id === `${storeId}-table-11-session`,
+      );
       if (!target) throw new Error("注文のある既存の閉卓来店が必要です");
       const detailResponse = await page.request.get(`${base}/tables/${target.id}`);
       expect(detailResponse.status()).toBe(200);

@@ -1,7 +1,7 @@
 import { applyD1Migrations } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { expect, it, inject } from "vitest";
-import { setupFixture } from "./fixture";
+import { setupFixture, resetFixtureStorage, configuration } from "./fixture";
 it("店舗作成は所有者・空メニュー・指定卓を同時に作り、同一店舗の組織を重複させない", async () => {
   // Given: ログイン済みの店長。
   const { cookie, staff } = await setupFixture();
@@ -46,8 +46,32 @@ it("店舗作成は所有者・空メニュー・指定卓を同時に作り、�
 });
 it("旧複数店舗の移行は店員の担当とカートを維持して組織を店舗ごとに分割する", async () => {
   // Given: 旧形式で二店舗を運営し、一般店員は二店舗目だけを担当する。
-  const { staff } = await setupFixture();
-  await env.TABLECAST_DB.prepare("DROP INDEX stores_organization_id_unique").run();
+  await resetFixtureStorage();
+  const migrations = inject("tablecastMigrations");
+  const index = migrations.findIndex((item) => item.name.startsWith("0011_"));
+  if (index < 0) throw new Error("店舗移行がありません。");
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
+  const staff = { userId: "tablecast-legacy-user" };
+  await env.TABLECAST_DB.batch([
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO user(id,name,email,email_verified,created_at,updated_at) VALUES(?,'店員','tablecast-legacy@example.test',1,0,0)",
+    ).bind(staff.userId),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-org','旧店舗','tablecast-legacy',0)",
+    ),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO member(id,organization_id,user_id,role,created_at) VALUES('tablecast-member','tablecast-org',?,'member',0)",
+    ).bind(staff.userId),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-store','tablecast-org','一号店',?,0)",
+    ).bind(JSON.stringify(configuration)),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-table','tablecast-store','01')",
+    ),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO table_sessions(id,store_id,table_id,locale,guest_count,opened_at,cart_json,cart_version) VALUES('tablecast-session','tablecast-store','tablecast-table','ja',2,0,?,3)",
+    ).bind(JSON.stringify([{ id: "tea-line", productId: "tea", quantity: 2, selections: [] }])),
+  ]);
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
       "INSERT INTO team(id,name,organization_id,created_at) VALUES('tablecast-old-team','担当店','tablecast-org',0)",
@@ -63,15 +87,8 @@ it("旧複数店舗の移行は店員の担当とカートを維持して組織�
   const before = await env.TABLECAST_DB.prepare(
     "SELECT id,cart_json,cart_version FROM table_sessions",
   ).all();
-  const migration = inject("tablecastMigrations").find((item) =>
-    item.name.includes("0011_tablecast_store_membership"),
-  );
-  if (!migration) throw new Error("店舗移行がありません。");
-  await env.TABLECAST_DB.prepare("DELETE FROM d1_migrations WHERE name=?")
-    .bind(migration.name)
-    .run();
-  // When: 本番と同じD1 migrationを適用する。
-  await applyD1Migrations(env.TABLECAST_DB, [migration]);
+  // When: 前版の実DBへ本番と同じ後続migrationを適用する。
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(index));
   // Then: 二店舗目への所属だけを引き継ぎ、既存の注文カートを変えない。
   const memberships = await env.TABLECAST_DB.prepare(
     "SELECT s.id FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=?",

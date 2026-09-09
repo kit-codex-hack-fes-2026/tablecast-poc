@@ -1,3 +1,5 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
@@ -76,22 +78,29 @@ it.each(["設定無効", "カート編集中", "スタッフ対応中", "確認�
         .bind(device.tableSessionId)
         .run();
     if (reason === "確認待ち" || reason === "読了確認待ち")
-      await env.TABLECAST_DB.prepare(
-        "INSERT INTO confirmations(id,store_id,table_session_id,cart_version,config_version,channel,status,snapshot_json,expires_at,created_at) VALUES('tablecast-proactive-confirmation',?,?,0,1,'voice',?,'{}',?,?)",
-      )
-        .bind(
-          device.storeId,
-          device.tableSessionId,
-          reason === "確認待ち" ? "pending" : "read",
-          Date.now() + 60_000,
-          Date.now(),
-        )
-        .run();
+      await insertFixture(businessTables.confirmations, {
+        id: "tablecast-proactive-confirmation",
+        store_id: device.storeId,
+        table_session_id: device.tableSessionId,
+        cart_version: 0,
+        config_version: 1,
+        channel: "voice",
+        status: reason === "確認待ち" ? "pending" : "read",
+        snapshot_json: "{}",
+        expires_at: Date.now() + 60_000,
+        created_at: Date.now(),
+      }).run();
     if (reason === "応答生成中")
       await env.TABLECAST_DB.batch([
-        env.TABLECAST_DB.prepare(
-          "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,locale,status,started_at) VALUES('tablecast-active-turn',?,?,?,'ja','started',?)",
-        ).bind(voiceId, device.tableSessionId, device.storeId, Date.now()),
+        insertFixture(businessTables.voiceTurns, {
+          id: "tablecast-active-turn",
+          voice_session_id: voiceId,
+          table_session_id: device.tableSessionId,
+          store_id: device.storeId,
+          locale: "ja",
+          status: "started",
+          started_at: Date.now(),
+        }),
         env.TABLECAST_DB.prepare(
           "UPDATE table_sessions SET active_turn_id='tablecast-active-turn' WHERE id=?",
         ).bind(device.tableSessionId),

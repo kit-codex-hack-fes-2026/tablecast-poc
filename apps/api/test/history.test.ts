@@ -1,3 +1,6 @@
+import { insertFixture } from "./database-fixture";
+import * as businessTables from "../src/db/business-schema";
+import * as authTables from "../src/db/auth-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import {
@@ -31,9 +34,16 @@ function closedSession(
   storeId = "tablecast-store",
   tableId = "tablecast-table",
 ) {
-  return env.TABLECAST_DB.prepare(
-    "INSERT INTO table_sessions(id,store_id,table_id,locale,status,guest_count,opened_at,closed_at) VALUES(?,?,?,'ja','closed',2,?,?)",
-  ).bind(id, storeId, tableId, closedAt - 3_600_000, time);
+  return insertFixture(businessTables.tableSessions, {
+    id,
+    store_id: storeId,
+    table_id: tableId,
+    locale: "ja",
+    status: "closed",
+    guest_count: 2,
+    opened_at: closedAt - 3_600_000,
+    closed_at: time,
+  });
 }
 async function history(path: string, cookie: string) {
   const response = await get(path, cookie);
@@ -168,18 +178,30 @@ it("100件を超える一来店のログを古い方向へ全件辿り、他卓�
   await closedSession("tablecast-history").run();
   await env.TABLECAST_DB.batch(
     Array.from({ length: 205 }, (_, index) =>
-      env.TABLECAST_DB.prepare(
-        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-history','voice.user',?,?)",
-      ).bind(JSON.stringify({ text: `履歴 ${index}`, locale: "ja" }), closedAt - 205 + index),
+      insertFixture(businessTables.tableEvents, {
+        store_id: "tablecast-store",
+        table_session_id: "tablecast-history",
+        kind: "voice.user",
+        data_json: JSON.stringify({ text: `履歴 ${index}`, locale: "ja" }),
+        created_at: closedAt - 205 + index,
+      }),
     ),
   );
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store','tablecast-session','voice.user','{}',?)",
-    ).bind(closedAt),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-store',NULL,'configuration.published','{}',?)",
-    ).bind(closedAt),
+    insertFixture(businessTables.tableEvents, {
+      store_id: "tablecast-store",
+      table_session_id: "tablecast-session",
+      kind: "voice.user",
+      data_json: "{}",
+      created_at: closedAt,
+    }),
+    insertFixture(businessTables.tableEvents, {
+      store_id: "tablecast-store",
+      table_session_id: null,
+      kind: "configuration.published",
+      data_json: "{}",
+      created_at: closedAt,
+    }),
   ]);
   const path = `${base}/tables/tablecast-history/events`;
 
@@ -210,15 +232,24 @@ it("100件を超える一来店のログを古い方向へ全件辿り、他卓�
 it("認可した店舗の履歴だけを返し、別店舗IDの差替えと端末Cookieによる参照を拒否する", async () => {
   const { cookie } = await setupFixture();
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-other-org','別組織','tablecast-other',?)",
-    ).bind(closedAt),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-other-org','別店舗',?,?)",
-    ).bind(JSON.stringify(configuration), closedAt),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO restaurant_tables(id,store_id,name) VALUES('tablecast-other-table','tablecast-other-store','別卓')",
-    ),
+    insertFixture(authTables.organization, {
+      id: "tablecast-other-org",
+      name: "別組織",
+      slug: "tablecast-other",
+      createdAt: new Date(closedAt),
+    }),
+    insertFixture(businessTables.stores, {
+      id: "tablecast-other-store",
+      organization_id: "tablecast-other-org",
+      name: "別店舗",
+      config_json: JSON.stringify(configuration),
+      updated_at: closedAt,
+    }),
+    insertFixture(businessTables.restaurantTables, {
+      id: "tablecast-other-table",
+      store_id: "tablecast-other-store",
+      name: "別卓",
+    }),
     closedSession("tablecast-history"),
     closedSession(
       "tablecast-other-history",
@@ -226,9 +257,13 @@ it("認可した店舗の履歴だけを返し、別店舗IDの差替えと端�
       "tablecast-other-store",
       "tablecast-other-table",
     ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES('tablecast-other-store','tablecast-other-history','voice.user','{}',?)",
-    ).bind(closedAt),
+    insertFixture(businessTables.tableEvents, {
+      store_id: "tablecast-other-store",
+      table_session_id: "tablecast-other-history",
+      kind: "voice.user",
+      data_json: "{}",
+      created_at: closedAt,
+    }),
   ]);
 
   expect((await history(`${base}/history`, cookie)).sessions.map((session) => session.id)).toEqual([
