@@ -16,7 +16,7 @@ import {
 import { ModifiersEditor } from "./modifiers-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
-const selectClass = "h-12 rounded-lg border border-input px-3 text-sm";
+const selectClass = "h-12 rounded-lg border border-input px-3 text-base";
 
 export function ConfigurationEditor({
   storeId,
@@ -35,7 +35,7 @@ export function ConfigurationEditor({
   const [section, setSection] = useState("products");
   return (
     <fieldset className="flex flex-col gap-4 min-w-0 pt-0" disabled={disabled}>
-      <label className="flex flex-col gap-2 text-xs">
+      <label className="flex flex-col gap-2 text-sm">
         {t("editor_section")}
         <NativeSelect
           className={selectClass}
@@ -184,11 +184,11 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
               {t("editor_product_details")}
             </summary>
             <div className="flex flex-col gap-4 pt-6">
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_id")}
                 <Input value={product.id} readOnly />
               </label>
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_category")}
                 <NativeSelect
                   className={selectClass}
@@ -213,7 +213,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 disabled={disabled}
                 onChange={(tags) => update({ tags })}
               />
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_image")}
                 <Input
                   maxLength={300}
@@ -221,7 +221,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   onChange={(event) => update({ imageKey: event.target.value || null })}
                 />
               </label>
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_image_kind")}
                 <NativeSelect
                   className={selectClass}
@@ -245,7 +245,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 disabled={disabled}
                 onChange={(contains) => update({ allergens: { ...product.allergens, contains } })}
               />
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_evidence")}
                 <NativeSelect
                   className={selectClass}
@@ -265,7 +265,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   <option value="verified">{t("editor_verified")}</option>
                 </NativeSelect>
               </label>
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_cross_contact")}
                 <NativeSelect
                   className={selectClass}
@@ -286,7 +286,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   <option value="controlled">{t("editor_controlled")}</option>
                 </NativeSelect>
               </label>
-              <label className="flex flex-col gap-2 text-xs">
+              <label className="flex flex-col gap-2 text-sm">
                 {t("editor_vegan")}
                 <NativeSelect
                   className={selectClass}
@@ -306,10 +306,10 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 </NativeSelect>
               </label>
               {(["ja", "en"] as const).map((language) => (
-                <label className="flex flex-col gap-2 text-xs" key={language}>
+                <label className="flex flex-col gap-2 text-sm" key={language}>
                   {t("editor_safety_note")} · {t(language === "ja" ? "common_ja" : "common_en")}
                   <textarea
-                    className="min-h-24 rounded-lg border border-input p-2 text-sm"
+                    className="min-h-24 rounded-lg border border-input p-2 text-base"
                     value={product.allergens.note[language]}
                     onChange={(event) =>
                       update({
@@ -617,10 +617,10 @@ export function CastEditor({
           <legend className="mb-3 font-semibold">
             {t(language === "ja" ? "common_ja" : "common_en")}
           </legend>
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("editor_cast_instructions")}
             <textarea
-              className="min-h-40 rounded-lg border border-input p-2 text-sm"
+              className="min-h-40 rounded-lg border border-input p-2 text-base"
               maxLength={5000}
               value={value.instructions[language]}
               onChange={(event) =>

@@ -359,5 +359,11 @@
   "auth_check_email": "Check your inbox and follow the link in the email.",
   "org_add_member": "Add",
   "org_team_name": "Team name",
-  "org_create_team": "Create team"
+  "org_create_team": "Create team",
+  "admin_navigation": "Navigation",
+  "account_no_passkeys": "Add a passkey to sign in with your face or fingerprint.",
+  "account_keep_current": "All other devices will be signed out.",
+  "org_empty_title": "Create your first organisation",
+  "org_empty_hint": "Create an organisation to manage your venues. If you have been invited, join using the link in your invitation email.",
+  "org_manage": "Set up an organisation"
 }

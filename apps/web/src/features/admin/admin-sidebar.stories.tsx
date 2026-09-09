@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -13,12 +14,16 @@ const meta = {
   component: AdminSidebar,
   decorators: [
     (Story) => (
-      <RouterProvider
-        router={createRouter({
-          routeTree: createRootRoute({ component: Story }),
-          history: createMemoryHistory({ initialEntries: ["/"] }),
-        })}
-      />
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={createRouter({
+            routeTree: createRootRoute({ component: Story }),
+            history: createMemoryHistory({ initialEntries: ["/"] }),
+          })}
+        />
+      </QueryClientProvider>
     ),
   ],
   args: {

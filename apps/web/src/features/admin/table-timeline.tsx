@@ -68,7 +68,7 @@ export function TableTimeline({
                     onClick={() => onSelect(table.id)}
                   >
                     <strong className="block text-lg font-semibold">{table.tableName}</strong>
-                    <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-xs">
+                    <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-sm">
                       {table.guestCount} {t("admin_guests")}
                       <ChevronRight size={14} aria-hidden="true" />
                     </span>
@@ -81,7 +81,7 @@ export function TableTimeline({
                   <Badge
                     variant="outline"
                     data-state={table.status}
-                    className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-xs text-success bg-success-soft [&[data-state=closed]]:text-muted-foreground [&[data-state=closed]]:bg-surface-subtle [&[data-state=closed]]:border-border"
+                    className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-sm text-success bg-success-soft [&[data-state=closed]]:text-muted-foreground [&[data-state=closed]]:bg-surface-subtle [&[data-state=closed]]:border-border"
                   >
                     {table.status === "open" ? t("admin_open") : t("admin_closed")}
                   </Badge>
@@ -89,7 +89,7 @@ export function TableTimeline({
                 <TableCell>
                   <span
                     data-state={table.voiceState}
-                    className="inline-flex items-center gap-1 text-muted-foreground text-xs [&_>_span]:w-1 [&_>_span]:h-1 [&_>_span]:rounded-full [&_>_span]:bg-muted [&[data-state=active]_>_span]:bg-success [&[data-state=error]_>_span]:bg-accent"
+                    className="inline-flex items-center gap-1 text-muted-foreground text-sm [&_>_span]:w-1 [&_>_span]:h-1 [&_>_span]:rounded-full [&_>_span]:bg-muted [&[data-state=active]_>_span]:bg-success [&[data-state=error]_>_span]:bg-accent"
                   >
                     <span />
                     {table.voiceState === "active"
@@ -100,7 +100,7 @@ export function TableTimeline({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     {table.locale === "ja" ? "日本語" : "English"}
                   </span>
                 </TableCell>
@@ -112,7 +112,7 @@ export function TableTimeline({
                         data-state={event.kind.split(".")[0]}
                         className="w-1.5 h-4 rounded-sm bg-muted relative [&[data-state=order]]:bg-success [&[data-state=order]]:h-5 [&[data-state=staff]]:bg-accent [&[data-state=staff]]:h-6 [&[data-state=billing]]:bg-accent [&[data-state=billing]]:h-6 [&[data-state=bill]]:bg-accent [&[data-state=bill]]:h-6 [&:hover_.timeline-tooltip]:block"
                       >
-                        <span className="timeline-tooltip hidden absolute left-0 bottom-full p-1 bg-foreground text-card rounded-sm z-2 text-xs">
+                        <span className="timeline-tooltip hidden absolute left-0 bottom-full p-1 bg-foreground text-card rounded-sm z-2 text-sm">
                           <EventLabel event={event} /> · {time(event.createdAt, locale)}
                         </span>
                       </span>
@@ -126,7 +126,7 @@ export function TableTimeline({
                 </TableCell>
                 <TableCell>
                   {table.staffCalled ? (
-                    <span className="flex items-center gap-1 text-accent-foreground text-xs">
+                    <span className="flex items-center gap-1 text-accent-foreground text-sm">
                       <Bell size={16} aria-hidden="true" />
                       {t("admin_attention")}
                     </span>
@@ -148,7 +148,7 @@ export function TableTimeline({
                   onClick={() => onOpen?.(table)}
                 >
                   <strong className="block text-lg font-semibold">{table.name}</strong>
-                  <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-xs">
+                  <span className="flex items-center gap-2.5 mt-1 text-muted-foreground text-sm">
                     {t("admin_open_table")}
                   </span>
                 </Button>
@@ -157,7 +157,7 @@ export function TableTimeline({
               <TableCell>
                 <Badge
                   variant="outline"
-                  className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-xs text-success bg-success-soft [&.closed]:text-muted-foreground [&.closed]:bg-surface-subtle [&.closed]:border-border closed"
+                  className="inline-flex items-center border border-border rounded-2xl py-1 px-2 text-sm text-success bg-success-soft [&.closed]:text-muted-foreground [&.closed]:bg-surface-subtle [&.closed]:border-border closed"
                 >
                   {t("admin_vacant")}
                 </Badge>

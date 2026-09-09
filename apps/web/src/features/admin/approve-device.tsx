@@ -51,7 +51,7 @@ export function ApproveDevice({ state, onClose }: { state: AdminState; onClose: 
             approve.mutate();
           }}
         >
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("admin_pair_code")}
             <Input
               autoComplete="off"
@@ -61,7 +61,7 @@ export function ApproveDevice({ state, onClose }: { state: AdminState; onClose: 
               maxLength={30}
             />
           </label>
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("admin_pair_table")}
             <NativeSelect
               value={tableId}

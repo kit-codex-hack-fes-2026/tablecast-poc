@@ -87,7 +87,7 @@ export function VisitHistoryTable({
       className="overflow-x-auto rounded-xl border border-border bg-card"
       aria-label={t("admin_history")}
     >
-      <Table className="w-full min-w-176 text-left text-sm">
+      <Table className="w-full min-w-176 text-left text-base">
         <thead className="border-b border-border text-muted-foreground">
           <tr>
             <TableHead scope="col" className="px-4 py-4 font-medium">
@@ -116,7 +116,7 @@ export function VisitHistoryTable({
             >
               <TableHead scope="row" className="px-4 py-3 text-left font-medium">
                 {session.tableName}
-                <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                <span className="mt-1 block text-sm font-normal text-muted-foreground">
                   {session.guestCount} {t("admin_guests")}
                 </span>
               </TableHead>

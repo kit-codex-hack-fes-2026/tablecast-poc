@@ -1,3 +1,4 @@
+import { GoogleIcon } from "../../components/google-icon";
 import { authClient, authResult } from "../../lib/auth-client";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -101,6 +102,7 @@ export function Login() {
             disabled={social.isPending}
             onClick={() => social.mutate("google")}
           >
+            <GoogleIcon className="size-5" />
             {t("auth_google")}
           </Button>
           <Button
@@ -116,7 +118,7 @@ export function Login() {
               {t("auth_failed")}
             </p>
           )}
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("auth_email")}
             <Input
               type="email"
@@ -127,7 +129,7 @@ export function Login() {
               disabled={login.isPending}
             />
           </label>
-          <label className="flex flex-col gap-2 text-xs">
+          <label className="flex flex-col gap-2 text-sm">
             {t("auth_password")}
             <Input
               type="password"
@@ -140,7 +142,7 @@ export function Login() {
           </label>
           {login.error && (
             <p
-              className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
+              className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
               role="alert"
             >
               {t("auth_failed")}
@@ -156,10 +158,10 @@ export function Login() {
             {t("auth_sign_in")}
             <ArrowRight size={20} aria-hidden="true" />
           </Button>
-          <a className="text-sm underline" href={`/register${window.location.search}`}>
+          <a className="text-base underline" href={`/register${window.location.search}`}>
             {t("auth_register")}
           </a>
-          <a className="text-sm underline" href="/reset-password">
+          <a className="text-base underline" href="/reset-password">
             {t("auth_reset")}
           </a>
           <Link
