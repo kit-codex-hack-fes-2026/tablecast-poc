@@ -1,3 +1,4 @@
+import { reset } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { createAuth, hashDeviceToken, type Actor } from "../src/auth";
 import { configurationSchema, type Configuration } from "../src/schema";
@@ -60,6 +61,12 @@ export const configuration: Configuration = configurationSchema.parse({
     proactive: false,
   },
 });
+export async function resetFixtureStorage() {
+  // workerd 1.20260903.1は停止中のD1をreset対象から漏らすため、直前に起動する。
+  await env.TABLECAST_DB.prepare("SELECT 1").first();
+  await reset();
+}
+
 export async function setupFixture() {
   const registration = await createAuth(env).api.signUpEmail({
     body: {
