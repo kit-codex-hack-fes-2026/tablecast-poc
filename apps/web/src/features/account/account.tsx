@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
@@ -13,14 +13,16 @@ import {
   Unlink,
   UserRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { GoogleIcon } from "../../components/google-icon";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { z } from "zod";
+import { useAppForm } from "../../components/form";
+import { ActionFeedback } from "../../components/action-feedback";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
@@ -32,17 +34,15 @@ import {
 
 import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
-import { SettingsShell } from "./settings-shell";
+import { SettingsShell } from "../shell/settings-shell";
 
 function useAccount() {
   const { t } = useI18n();
   const session = useQuery(sessionOptions);
   const client = useQueryClient();
-  const [name, setName] = useState<string>();
-  const [passkeyName, setPasskeyName] = useState("");
-  const sessions = useQuery(accountSessionsOptions);
-  const accounts = useQuery(accountLinksOptions);
-  const keys = useQuery(accountKeysOptions);
+  const [sessions, accounts, keys] = useSuspenseQueries({
+    queries: [accountSessionsOptions, accountLinksOptions, accountKeysOptions],
+  });
   const change = useMutation({
     mutationFn: (action: () => Promise<void>) => action(),
     onSuccess: () => {
@@ -55,10 +55,6 @@ function useAccount() {
     t,
     session,
     client,
-    name,
-    setName,
-    passkeyName,
-    setPasskeyName,
     sessions,
     accounts,
     keys,
@@ -73,23 +69,13 @@ export function Account() {
     <SettingsShell>
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t("account_title")}</h1>
-        <output className="flex min-h-6 items-center gap-2 text-base" aria-live="polite">
-          {change.isSuccess && (
-            <>
-              <Check className="size-5" />
-              {t("account_saved")}
-            </>
-          )}
-        </output>
       </div>
-      {(change.error || sessions.error || accounts.error || keys.error) && (
-        <p
-          role="alert"
-          className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-destructive"
-        >
-          {t("account_failed")}
-        </p>
-      )}
+      <ActionFeedback
+        pending={change.isPending}
+        error={change.error || sessions.error || accounts.error || keys.error}
+        success={change.isSuccess}
+        successMessage={t("account_saved")}
+      />
       <AccountProfile controller={controller} />
       <AccountConnections controller={controller} />
       <AccountPasskeys controller={controller} />
@@ -99,7 +85,17 @@ export function Account() {
 }
 
 function AccountProfile({ controller }: { controller: ReturnType<typeof useAccount> }) {
-  const { t, session, name, setName, change, section } = controller;
+  const { t, session, change, section } = controller;
+  const form = useAppForm({
+    defaultValues: { name: session.data?.user.name ?? "" },
+    onSubmit: async ({ value }) => {
+      await change
+        .mutateAsync(async () => {
+          authResult(await authClient.updateUser(value));
+        })
+        .catch(() => undefined);
+    },
+  });
   return (
     <section className={section}>
       <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -127,28 +123,31 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
         </label>
       </div>
       <form
+        noValidate
         className="flex max-w-2xl flex-wrap items-end gap-3"
         onSubmit={(event) => {
           event.preventDefault();
-          change.mutate(async () => {
-            authResult(
-              await authClient.updateUser({ name: name ?? session.data?.user.name ?? "" }),
-            );
-          });
+          void form.handleSubmit();
         }}
       >
-        <label className="min-w-48 flex-1 space-y-2">
-          {t("account_name")}
-          <Input
-            required
-            maxLength={100}
-            value={name ?? session.data?.user.name ?? ""}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <Button type="submit" disabled={change.isPending}>
-          {t("account_save")}
-        </Button>
+        <div className="min-w-48 flex-1">
+          <form.AppField
+            name="name"
+            validators={{ onChange: z.string().trim().min(1, t("form_required")).max(100) }}
+          >
+            {(field) => (
+              <field.TextField
+                label={t("account_name")}
+                required
+                maxLength={100}
+                autoComplete="name"
+              />
+            )}
+          </form.AppField>
+        </div>
+        <form.AppForm>
+          <form.SubmitButton disabled={change.isPending}>{t("account_save")}</form.SubmitButton>
+        </form.AppForm>
       </form>
       {!session.data?.user.emailVerified && (
         <Button
@@ -267,11 +266,21 @@ function connectionColumns(
   ];
 }
 function AccountPasskeys({ controller }: { controller: AccountController }) {
-  const { t, keys, passkeyName, setPasskeyName, change, section } = controller;
+  const { t, keys, change, section } = controller;
   const columns = useMemo(
     () => passkeyColumns(t, change.isPending, change.mutate),
     [t, change.isPending, change.mutate],
   );
+  const form = useAppForm({
+    defaultValues: { name: "" },
+    onSubmit: async ({ value }) => {
+      await change
+        .mutateAsync(async () => {
+          authResult(await authClient.passkey.addPasskey({ name: value.name || "TableCast" }));
+        })
+        .catch(() => undefined);
+    },
+  });
   return (
     <section className={section}>
       <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -288,26 +297,24 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
         empty={t("account_no_passkeys")}
       />
       <form
+        noValidate
         className="flex max-w-2xl flex-wrap items-end gap-3"
         onSubmit={(event) => {
           event.preventDefault();
-          change.mutate(async () => {
-            authResult(await authClient.passkey.addPasskey({ name: passkeyName || "TableCast" }));
-          });
+          void form.handleSubmit();
         }}
       >
-        <label className="min-w-48 flex-1 space-y-2">
-          {t("account_key_name")}
-          <Input
-            maxLength={100}
-            value={passkeyName}
-            onChange={(e) => setPasskeyName(e.target.value)}
-          />
-        </label>
-        <Button type="submit" disabled={change.isPending}>
-          <Plus />
-          {t("account_add_passkey")}
-        </Button>
+        <div className="min-w-48 flex-1">
+          <form.AppField name="name" validators={{ onChange: z.string().max(100) }}>
+            {(field) => <field.TextField label={t("account_key_name")} maxLength={100} />}
+          </form.AppField>
+        </div>
+        <form.AppForm>
+          <form.SubmitButton disabled={change.isPending}>
+            <Plus />
+            {t("account_add_passkey")}
+          </form.SubmitButton>
+        </form.AppForm>
       </form>
     </section>
   );

@@ -1,5 +1,6 @@
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { useAppForm } from "../../components/form";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, MailPlus, X } from "lucide-react";
@@ -10,12 +11,11 @@ import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { membershipOptions } from "./membership-query";
-import { RoleBadge } from "./role-badge";
+import { RoleBadge } from "../../components/role-badge";
 import { useStore } from "./store-shell";
 const load = async (organizationId: string) =>
   authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
@@ -24,7 +24,7 @@ export function Invitations() {
   const store = useStore(),
     { t } = useI18n(),
     client = useQueryClient();
-  const query = useQuery(membershipOptions(store.organizationId));
+  const query = useSuspenseQuery(membershipOptions(store.organizationId));
   const cancel = useMutation({
     mutationFn: async (invitationId: string) =>
       authResult(await authClient.organization.cancelInvitation({ invitationId })),
@@ -52,8 +52,7 @@ export function Invitations() {
       </div>
       <ErrorNotice error={query.error || cancel.error} onRetry={() => void query.refetch()} />
       <DataTable
-        data={query.data?.invitations ?? []}
-        pending={query.isPending}
+        data={query.data.invitations}
         error={query.error}
         onRetry={() => void query.refetch()}
         columns={columns}
@@ -131,10 +130,10 @@ export function InviteMember() {
       await navigate({ to: "/admin/stores/$storeId/invitations", params: { storeId: store.id } });
     },
   });
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: { email: "", role: "member" as "member" | "admin" | "owner" },
-    onSubmit: ({ value }) => {
-      invite.mutate(value);
+    onSubmit: async ({ value }) => {
+      await invite.mutateAsync(value).catch(() => undefined);
     },
   });
   return (
@@ -150,25 +149,18 @@ export function InviteMember() {
       </Button>
       <h1 className="text-2xl font-semibold">{t("org_invite")}</h1>
       <form
+        noValidate
         className="max-w-xl space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
           void form.handleSubmit();
         }}
       >
-        <form.Field name="email">
+        <form.AppField name="email" validators={{ onChange: z.email({ error: t("form_email") }) }}>
           {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("auth_email")}
-              <Input
-                type="email"
-                required
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </label>
+            <field.TextField label={t("auth_email")} type="email" required autoComplete="email" />
           )}
-        </form.Field>
+        </form.AppField>
         <form.Field name="role">
           {(field) => (
             <label className="flex flex-col gap-2">
@@ -189,10 +181,12 @@ export function InviteMember() {
           )}
         </form.Field>
         <ErrorNotice error={invite.error} />
-        <Button type="submit" disabled={invite.isPending}>
-          <MailPlus />
-          {t("org_send_invitation")}
-        </Button>
+        <form.AppForm>
+          <form.SubmitButton>
+            <MailPlus />
+            {t("org_send_invitation")}
+          </form.SubmitButton>
+        </form.AppForm>
       </form>
     </>
   );

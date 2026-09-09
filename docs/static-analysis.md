@@ -111,3 +111,11 @@ APIは`eslint-plugin-boundaries`の`boundaries/files`で、`modules/<業務>`の
 routeからDB・Drizzle、serviceからHono・route、queryから更新・Agent、modelから実行コードへの依存を拒否する。modelは他のmodelとZodのみ、DBはDB schemaとDrizzleのみを参照する。Contextへの依存は型だけ許可し、moduleでのAuth再生成も禁止する。route合成は`app.ts`と`stores/routes.ts`の明示した子moduleに限定する。
 
 配置や依存の追加時は、この対応表と構成文書を同じ差分で更新する。`scripts/tablecast-import-rules.test.ts`は隔離workspaceへ実設定を複製し、導入済みOxlint CLIで禁止・許可importと未知の配置を検証する。標準機能への対応は[JS BoundariesのOxlint統合](https://www.jsboundaries.dev/docs/guides/oxlint-integration/)に従う。
+
+### Webのimport・配置
+
+`apps/web/oxlint.config.ts`はeslint-plugin-boundariesとTypeScript resolverで実ファイルを分類する。route、feature画面、query、model、共通shell、components、UI、lib、transport、server、i18nと生成物・テストの位置を定義する。未分類ファイルもエラーにする。
+
+UIから業務やAPIへの参照、共通部品からfeatureへの参照、query/modelから画面への参照、featureからrouteや別featureの内部画面への参照を拒否する。WebはAPI内部・Drizzle・Hono・Bun runtimeへ依存しない。新しい役割・配置を追加するときは、同じ差分でこの契約とルールを更新する。
+
+`scripts/tablecast-import-rules.test.ts`はAPIとWebそれぞれの実設定を隔離workspaceへ複製し、実Oxlintで禁止・許可のimportと未分類の配置を確認する。

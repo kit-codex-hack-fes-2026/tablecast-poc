@@ -10,7 +10,7 @@ import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
-import { RoleBadge } from "../store/role-badge";
+import { RoleBadge } from "../../components/role-badge";
 import type { loadStores } from "../store/store-query";
 import { storesOptions } from "../store/store-query";
 

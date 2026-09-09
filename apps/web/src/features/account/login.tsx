@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { GoogleIcon } from "../../components/google-icon";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
-import { Input } from "../../components/ui/input";
+import { z } from "zod";
+import { useAppForm } from "../../components/form";
 import { useI18n } from "../../i18n/locale";
 
 import { authClient, authResult } from "../../lib/auth-client";
@@ -39,14 +40,13 @@ export function Login() {
         );
     },
   });
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   useEffect(() => {
     const saved = localStorage.getItem("tablecast_staff_locale");
     if (saved === "ja" || saved === "en") setLocale(saved);
   }, [setLocale]);
   const login = useMutation({
-    mutationFn: async () => authResult(await authClient.signIn.email({ email, password })),
+    mutationFn: async (value: { email: string; password: string }) =>
+      authResult(await authClient.signIn.email(value)),
     onSuccess: () => {
       if (new URLSearchParams(searchStr).has("sig")) window.location.assign(`/consent${searchStr}`);
       else if (safeReturn()) window.location.assign(safeReturn() ?? "/organisations");
@@ -55,6 +55,12 @@ export function Login() {
           to: "/admin/live",
           search: { storeId: returnStoreId, draftId: returnDraftId },
         });
+    },
+  });
+  const form = useAppForm({
+    defaultValues: { email: "", password: "" },
+    onSubmit: async ({ value }) => {
+      await login.mutateAsync(value).catch(() => undefined);
     },
   });
   return (
@@ -76,10 +82,11 @@ export function Login() {
           />
         </header>
         <form
+          noValidate
           className="m-auto w-full max-w-96 flex flex-col gap-6 pt-14 px-0 pb-6 max-sm:pt-9"
           onSubmit={(event) => {
             event.preventDefault();
-            login.mutate();
+            void form.handleSubmit();
           }}
         >
           <h1 className="text-2xl mb-3">{t("auth_subtitle")}</h1>
@@ -105,28 +112,34 @@ export function Login() {
               {t("auth_failed")}
             </p>
           )}
-          <label className="flex flex-col gap-2 text-sm">
-            {t("auth_email")}
-            <Input
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              disabled={login.isPending}
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm">
-            {t("auth_password")}
-            <Input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              disabled={login.isPending}
-            />
-          </label>
+          <form.AppField
+            name="email"
+            validators={{ onChange: z.email({ error: t("form_email") }) }}
+          >
+            {(field) => (
+              <field.TextField
+                label={t("auth_email")}
+                type="email"
+                autoComplete="username"
+                required
+                disabled={login.isPending}
+              />
+            )}
+          </form.AppField>
+          <form.AppField
+            name="password"
+            validators={{ onChange: z.string().min(1, t("form_required")) }}
+          >
+            {(field) => (
+              <field.TextField
+                label={t("auth_password")}
+                type="password"
+                autoComplete="current-password"
+                required
+                disabled={login.isPending}
+              />
+            )}
+          </form.AppField>
           {login.error && (
             <p
               className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
@@ -135,16 +148,12 @@ export function Login() {
               {t("auth_failed")}
             </p>
           )}
-          <Button
-            variant="default"
-            size="lg"
-
-            type="submit"
-            disabled={login.isPending}
-          >
-            {t("auth_sign_in")}
-            <ArrowRight size={20} aria-hidden="true" />
-          </Button>
+          <form.AppForm>
+            <form.SubmitButton size="lg" disabled={social.isPending}>
+              {t("auth_sign_in")}
+              <ArrowRight size={20} aria-hidden="true" />
+            </form.SubmitButton>
+          </form.AppForm>
           <a className="text-base underline" href={`/register${searchStr}`}>
             {t("auth_register")}
           </a>

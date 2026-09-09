@@ -3,7 +3,7 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
-import { SettingsShell } from "./settings-shell";
+import { SettingsShell } from "../shell/settings-shell";
 
 export function Invitation({ id }: { id: string }) {
   const { t } = useI18n();

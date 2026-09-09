@@ -1,10 +1,10 @@
 import type { PricedLine, Product } from "@tablecast/api/schema";
 import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
-import { ProductImage } from "../../components/product-image";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { money } from "../../i18n/format";
-import { useI18n } from "../../i18n/locale";
+import { ProductImage } from "./product-image";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { money } from "../i18n/format";
+import { useI18n } from "../i18n/locale";
 
 export function CartLines({
   lines,

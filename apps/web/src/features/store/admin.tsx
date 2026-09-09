@@ -3,7 +3,7 @@ import { Building2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 
-import { AdminShell } from "./admin-shell";
+import { AdminShell } from "../shell/admin-shell";
 
 export function Admin() {
   const { t } = useI18n();

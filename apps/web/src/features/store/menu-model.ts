@@ -1,6 +1,6 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { z } from "zod";
-import { emptyText } from "../admin/configuration-defaults";
+import { emptyText } from "./configuration-defaults";
 export const menuSectionSchema = z.enum(["products", "categories", "plans", "cast"]);
 export type MenuSection = z.infer<typeof menuSectionSchema>;
 export const menuLabels = {

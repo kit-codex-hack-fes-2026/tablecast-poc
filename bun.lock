@@ -123,6 +123,8 @@
         "@types/react-dom": "^19.0.0",
         "@vitejs/plugin-react": "6.1.1",
         "@vitest/browser-playwright": "4.1.11",
+        "eslint-import-resolver-typescript": "4.4.5",
+        "eslint-plugin-boundaries": "7.2.0",
         "eslint-plugin-playwright": "2.11.0",
         "eslint-plugin-storybook": "10.6.0",
         "oxlint-plugin-react-doctor": "0.9.11",

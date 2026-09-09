@@ -1,5 +1,5 @@
 import type { TableEvent } from "@tablecast/api/schema";
-import type { VoiceView } from "./voice-connection";
+import type { VoiceView } from "./voice-model";
 export type ConversationLine = {
   id: string;
   role: "user" | "assistant";

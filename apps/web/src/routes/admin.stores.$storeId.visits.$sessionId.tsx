@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { TableDetail } from "../features/admin/table-detail";
+import { TableDetail } from "../features/store/table-detail";
 import { tableDetailOptions } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
   validateSearch: z.object({

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ImagePlus, Store } from "lucide-react";
-import { ErrorNotice } from "../../components/error-notice";
+import { ImagePlus, Store } from "lucide-react";
+import { ActionFeedback } from "../../components/action-feedback";
 import { StoreIcon } from "../../components/store-icon";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
@@ -59,17 +59,12 @@ export function StoreProfile() {
           )}
         </div>
         {!manager && <p className="text-sm text-muted-foreground">{t("store_icon_permission")}</p>}
-        <ErrorNotice error={upload.error} />
-        <output className="flex min-h-6 items-center gap-2" aria-live="polite">
-          {upload.isPending ? (
-            t("common_loading")
-          ) : upload.isSuccess ? (
-            <>
-              <Check className="size-5" />
-              {t("account_saved")}
-            </>
-          ) : null}
-        </output>
+        <ActionFeedback
+          pending={upload.isPending}
+          error={upload.error}
+          success={upload.isSuccess}
+          successMessage={t("account_saved")}
+        />
       </section>
     </>
   );

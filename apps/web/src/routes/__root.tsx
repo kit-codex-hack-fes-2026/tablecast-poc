@@ -1,3 +1,4 @@
+import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
 import { PanelLayoutProvider } from "../lib/panel-layout";
 import type { QueryClient } from "@tanstack/react-query";
@@ -54,7 +55,9 @@ function Root({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <LocaleProvider>{children}</LocaleProvider>
+        <LocaleProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </LocaleProvider>
         <Scripts />
       </body>
     </html>

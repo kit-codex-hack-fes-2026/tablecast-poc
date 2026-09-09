@@ -12,12 +12,7 @@ import { useI18n } from "../../i18n/locale";
 import { MenuOverview } from "./menu-overview";
 
 import { parseResponse, rpc } from "../../lib/api";
-import {
-  CastEditor,
-  CategoriesEditor,
-  PlansEditor,
-  ProductsEditor,
-} from "../admin/configuration-editor";
+import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
 import { addMenuItem, menuLabels, type MenuSection } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
@@ -32,7 +27,7 @@ export function MenuItem({
   draftId?: string;
 }) {
   const store = useStore();
-  const catalog = useQuery(catalogOptions(store.id));
+  const catalog = useQuery({ ...catalogOptions(store.id), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(store.id, draftId ?? ""),
     queryFn: draftId ? draftOptions(store.id, draftId).queryFn : skipToken,
@@ -89,8 +84,8 @@ function ItemForm({
   );
   const form = useForm({
     defaultValues: { configuration: initial },
-    onSubmit: ({ value }) => {
-      save.mutate(value.configuration);
+    onSubmit: async ({ value }) => {
+      await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
   useBlocker({

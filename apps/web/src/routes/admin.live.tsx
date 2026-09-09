@@ -2,7 +2,7 @@ import { storesOptions } from "../features/store/store-query";
 import { sessionOptions } from "../lib/session-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { z } from "zod";
-import { Admin } from "../features/admin/admin";
+import { Admin } from "../features/store/admin";
 
 export const Route = createFileRoute("/admin/live")({
   validateSearch: z.object({

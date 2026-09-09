@@ -41,7 +41,7 @@ export type {
   PricedLine,
   Snapshot,
 } from "./modules/orders/model";
-export { adminStateSchema, storeSummarySchema } from "./modules/stores/model";
+export { adminStateSchema, createStoreSchema, storeSummarySchema } from "./modules/stores/model";
 export type { AdminState, StoreSummary } from "./modules/stores/model";
 export {
   closedSessionSummarySchema,

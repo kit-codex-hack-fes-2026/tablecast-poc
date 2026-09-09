@@ -1,9 +1,17 @@
 import { AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useI18n } from "../i18n/locale";
-import { ApiFailure } from "../lib/api";
+import { ApiFailure } from "../lib/api-error";
 
-export function ErrorNotice({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+export function ErrorNotice({
+  error,
+  onRetry,
+  retrying = false,
+}: {
+  error: unknown;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
   const { t } = useI18n();
   if (!error) return null;
   let message = t("common_error");
@@ -22,7 +30,14 @@ export function ErrorNotice({ error, onRetry }: { error: unknown; onRetry?: () =
       <AlertCircle size={20} aria-hidden="true" />
       <span>{message}</span>
       {onRetry && (
-        <Button size="text" variant="link" type="button" onClick={onRetry}>
+        <Button
+          size="text"
+          variant="link"
+          type="button"
+          onClick={onRetry}
+          disabled={retrying}
+          aria-busy={retrying}
+        >
           {t("common_retry")}
         </Button>
       )}

@@ -1,22 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpRight, Plus, Settings2 } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { RoleBadge } from "../store/role-badge";
+import { RoleBadge } from "../../components/role-badge";
 import type { loadStores } from "../store/store-query";
 import { storesOptions } from "../store/store-query";
-import { SettingsShell } from "./settings-shell";
+import { SettingsShell } from "../shell/settings-shell";
 type StoreRow = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function Organisations() {
   const { t } = useI18n();
-  const stores = useQuery(storesOptions);
+  const stores = useSuspenseQuery(storesOptions);
   const columns = useMemo(() => storeColumns(t), [t]);
   return (
     <SettingsShell>
@@ -28,17 +27,13 @@ export function Organisations() {
         </Button>
       </div>
       <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
-      {stores.isPending ? (
-        <LoadingState />
-      ) : !stores.data ? null : (
-        <DataTable
-          data={stores.data?.stores ?? []}
-          columns={columns}
-          getRowId={(row) => row.id}
-          searchLabel={t("stores_search")}
-          empty={t("stores_empty")}
-        />
-      )}
+      <DataTable
+        data={stores.data.stores}
+        columns={columns}
+        getRowId={(row) => row.id}
+        searchLabel={t("stores_search")}
+        empty={t("stores_empty")}
+      />
     </SettingsShell>
   );
 }

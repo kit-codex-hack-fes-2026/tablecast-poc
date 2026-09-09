@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { MailPlus, Trash2 } from "lucide-react";
@@ -7,7 +7,6 @@ import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { UserIdentity } from "../../components/user-identity";
@@ -15,7 +14,7 @@ import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
 import { membershipOptions } from "./membership-query";
-import { RoleBadge } from "./role-badge";
+import { RoleBadge } from "../../components/role-badge";
 import { useStore } from "./store-shell";
 type Role = "owner" | "admin" | "member";
 const load = async (organizationId: string) =>
@@ -26,8 +25,8 @@ export function Members() {
   const store = useStore(),
     { t } = useI18n(),
     client = useQueryClient(),
-    session = useQuery(sessionOptions);
-  const query = useQuery(membershipOptions(store.organizationId));
+    session = useSuspenseQuery(sessionOptions);
+  const query = useSuspenseQuery(membershipOptions(store.organizationId));
   const change = useMutation({
     mutationFn: async (action: Action) => {
       if (action.kind === "remove")
@@ -69,16 +68,13 @@ export function Members() {
         )}
       </div>
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
-      {query.isPending ? (
-        <LoadingState />
-      ) : !query.data ? null : (
-        <DataTable
-          data={query.data?.members ?? []}
-          columns={columns}
-          getRowId={(member) => member.id}
-          searchLabel={t("auth_email")}
-        />
-      )}
+
+      <DataTable
+        data={query.data.members}
+        columns={columns}
+        getRowId={(member) => member.id}
+        searchLabel={t("auth_email")}
+      />
     </>
   );
 }

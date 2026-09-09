@@ -29,7 +29,7 @@ import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
-import { CartLines } from "./cart-lines";
+import { CartLines } from "../../components/cart-lines";
 import { conversationLines } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { Pairing } from "./pairing";
@@ -72,11 +72,7 @@ export function Kiosk() {
         >
           TableCast
         </a>
-        {table.isPending ? (
-          <LoadingState />
-        ) : !table.data ? null : (
-          <ErrorNotice error={table.error} onRetry={refresh} />
-        )}
+        {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
       </main>
     );
   return <TableSession key={table.data.id} data={table.data} refresh={refresh} />;

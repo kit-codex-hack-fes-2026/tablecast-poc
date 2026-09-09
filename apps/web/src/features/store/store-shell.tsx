@@ -8,7 +8,7 @@ import { useI18n } from "../../i18n/locale";
 import { storesOptions } from "./store-query";
 
 import { ApiFailure } from "../../lib/api";
-import { AdminShell } from "../admin/admin-shell";
+import { AdminShell } from "../shell/admin-shell";
 
 const StoreContext = createContext<{
   id: string;

@@ -31,7 +31,7 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
   const storeId = store.id;
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const catalog = useQuery(catalogOptions(storeId));
+  const catalog = useQuery({ ...catalogOptions(storeId), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(storeId, draftId ?? ""),
     queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,

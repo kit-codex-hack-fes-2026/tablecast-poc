@@ -5,7 +5,7 @@ import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { sessionOptions } from "../../lib/session-query";
 
-import { AdminShell } from "../admin/admin-shell";
+import { AdminShell } from "./admin-shell";
 
 export function SettingsShell({ children }: { children: ReactNode }) {
   const session = useQuery(sessionOptions);

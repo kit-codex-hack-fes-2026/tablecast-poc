@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { VisitHistory } from "../features/admin/visit-history";
+import { VisitHistory } from "../features/store/visit-history";
 import { historyOptions } from "../features/store/history-query";
 import { useI18n } from "../i18n/locale";
 

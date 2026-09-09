@@ -30,7 +30,7 @@ import {
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
-import { MenuNavigation } from "../store/menu-navigation";
+import { MenuNavigation } from "./menu-navigation";
 import { storesOptions } from "../store/store-query";
 
 import { authClient, authResult } from "../../lib/auth-client";

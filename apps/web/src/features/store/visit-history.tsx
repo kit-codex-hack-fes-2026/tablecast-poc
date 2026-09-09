@@ -10,7 +10,7 @@ import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { historyOptions } from "../store/history-query";
+import { historyOptions } from "./history-query";
 
 export function VisitHistory({
   storeId,

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { FileClock, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
 
-import { menuLabels } from "./menu-model";
+import { menuLabels } from "../store/menu-model";
 const items = [
   { section: "products", Icon: UtensilsCrossed },
   { section: "categories", Icon: Tags },

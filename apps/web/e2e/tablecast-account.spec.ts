@@ -59,8 +59,19 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   });
   await page.getByRole("link", { name: "アカウント", exact: true }).click();
   await expect(page).toHaveURL(/\/account$/);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const update = Promise.withResolvers<void>();
+  await page.route("**/api/auth/update-user", async (route) => {
+    await update.promise;
+    await route.continue();
+  });
   await page.getByLabel("名前", { exact: true }).fill("TableCast テストオーナー");
   await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
+  const feedback = page.getByRole("status").filter({ hasText: "送信中" });
+  await expect(feedback).toBeVisible();
+  await expect(feedback.locator("svg")).toHaveCSS("animation-name", "none");
+  update.resolve();
   await expect(page.getByRole("status")).toHaveText("更新しました");
   await page.goto("/organisations");
   const slug = `tablecast-acceptance-${Date.now()}`;

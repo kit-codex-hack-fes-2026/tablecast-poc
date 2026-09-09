@@ -11,7 +11,7 @@ import { sessionOptions } from "../../lib/session-query";
 import type { loadStores } from "../store/store-query";
 import { storesOptions } from "../store/store-query";
 
-import { SettingsShell } from "./settings-shell";
+import { SettingsShell } from "../shell/settings-shell";
 type Store = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function DeviceApproval() {
   const searchStr = useLocation({ select: (location) => location.searchStr });

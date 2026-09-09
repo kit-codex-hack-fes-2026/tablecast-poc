@@ -1,20 +1,19 @@
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Order } from "@tablecast/api/schema";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { PaymentForm } from "./payment-form";
 import { money, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
-import { CartLines } from "../kiosk/cart-lines";
-import { tableDetailOptions } from "../store/store-query";
+import { CartLines } from "../../components/cart-lines";
+import { tableDetailOptions } from "./store-query";
 import { ActivityLog } from "./events";
 import { SessionActivity } from "./session-activity";
 
@@ -30,20 +29,12 @@ function useTableDetail({
   const { t, locale } = useI18n();
   const route = rpc.api.admin.stores[":storeId"];
   const param = { storeId, id: tableId };
-  const detail = useQuery(tableDetailOptions(storeId, tableId));
+  const detail = useSuspenseQuery(tableDetailOptions(storeId, tableId));
   const client = useQueryClient();
-  useRealtime(
-    detail.data?.status === "open" ? { storeId } : undefined,
-    detail.data?.cursor ?? 0,
-    () => {
-      void client.invalidateQueries({ queryKey: ["tablecast-table-detail", storeId, tableId] });
-      void client.invalidateQueries({ queryKey: ["tablecast-session-events", storeId, tableId] });
-    },
-  );
-  const [amount, setAmount] = useState("");
-  const [reason, setReason] = useState("");
-  const [paymentKind, setPaymentKind] = useState<"payment" | "adjustment">("payment");
-  const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
+  useRealtime(detail.data.status === "open" ? { storeId } : undefined, detail.data.cursor, () => {
+    void client.invalidateQueries({ queryKey: ["tablecast-table-detail", storeId, tableId] });
+    void client.invalidateQueries({ queryKey: ["tablecast-session-events", storeId, tableId] });
+  });
   const action = useMutation({
     mutationFn: async (
       operation:
@@ -66,21 +57,6 @@ function useTableDetail({
       void detail.refetch();
     },
   });
-  const payment = useMutation({
-    mutationFn: () =>
-      parseResponse(
-        route.tables[":id"].payments.$post({
-          param,
-          json: { amount: Number(amount), kind: paymentKind, reason, idempotencyKey: paymentKey },
-        }),
-      ),
-    onSuccess: () => {
-      setAmount("");
-      setReason("");
-      setPaymentKey(crypto.randomUUID());
-      void detail.refetch();
-    },
-  });
   function orderStatus(order: Order, status: Exclude<Order["status"], "submitted">) {
     action.mutate({ kind: "order", id: order.id, status });
   }
@@ -89,15 +65,7 @@ function useTableDetail({
     t,
     locale,
     detail,
-    amount,
-    setAmount,
-    reason,
-    setReason,
-    paymentKind,
-    setPaymentKind,
-    setPaymentKey,
     action,
-    payment,
     orderStatus,
     table,
   };
@@ -114,22 +82,12 @@ export function TableDetail({
   onViewChange: (view: "overview" | "logs" | "orders" | "billing" | "diagnostics") => void;
 }) {
   const hydrated = useHydrated();
-  const {
-    t,
-    locale,
-    detail,
-    amount,
-    setAmount,
-    reason,
-    setReason,
-    paymentKind,
-    setPaymentKind,
-    setPaymentKey,
-    action,
-    payment,
-    orderStatus,
-    table,
-  } = useTableDetail({ storeId, tableId, view, onViewChange });
+  const { t, locale, detail, action, orderStatus, table } = useTableDetail({
+    storeId,
+    tableId,
+    view,
+    onViewChange,
+  });
   return (
     <section className="space-y-5">
       <Button
@@ -280,83 +238,7 @@ export function TableDetail({
                   </div>
                 </dl>
               </div>
-              {table.status === "open" && (
-                <form
-                  className="flex flex-col gap-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    payment.mutate();
-                  }}
-                >
-                  <h3 className="m-0">{t("admin_payment")}</h3>
-                  <p className="text-muted-foreground text-sm">{t("admin_payment_note")}</p>
-                  <div className="flex flex-wrap gap-5">
-                    <label className="flex gap-2 items-center text-sm min-h-11">
-                      <Input
-                        type="radio"
-                        name="paymentKind"
-                        value="payment"
-                        checked={paymentKind === "payment"}
-                        onChange={() => {
-                          setPaymentKind("payment");
-                          setPaymentKey(crypto.randomUUID());
-                        }}
-                      />
-                      {t("admin_payment")}
-                    </label>
-                    <label className="flex gap-2 items-center text-sm min-h-11">
-                      <Input
-                        type="radio"
-                        name="paymentKind"
-                        value="adjustment"
-                        checked={paymentKind === "adjustment"}
-                        onChange={() => {
-                          setPaymentKind("adjustment");
-                          setPaymentKey(crypto.randomUUID());
-                        }}
-                      />
-                      {t("admin_adjustment")}
-                    </label>
-                  </div>
-                  <label className="flex flex-col gap-2 text-sm">
-                    {t("admin_amount")}
-                    <Input
-                      type="number"
-                      step="1"
-                      min={paymentKind === "payment" ? 1 : undefined}
-                      required
-                      value={amount}
-                      onChange={(event) => {
-                        setAmount(event.target.value);
-                        setPaymentKey(crypto.randomUUID());
-                      }}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm">
-                    {t("admin_reason")}
-                    <Input
-                      type="text"
-                      required
-                      maxLength={500}
-                      value={reason}
-                      onChange={(event) => {
-                        setReason(event.target.value);
-                        setPaymentKey(crypto.randomUUID());
-                      }}
-                    />
-                  </label>
-                  <ErrorNotice error={payment.error} />
-                  <Button
-                    variant="default"
-                    size="lg"
-
-                    type="submit"
-                    disabled={payment.isPending}
-                  >
-                    {paymentKind === "payment" ? t("admin_payment") : t("admin_adjustment")}
-                  </Button>
-                </form>
-              )}
+              {table.status === "open" && <PaymentForm storeId={storeId} sessionId={table.id} />}
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">
               <dl className="">

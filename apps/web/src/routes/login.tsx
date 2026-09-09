@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { Login } from "../features/admin/login";
+import { Login } from "../features/account/login";
 
 export const Route = createFileRoute("/login")({
   validateSearch: z.looseObject({

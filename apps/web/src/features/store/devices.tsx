@@ -1,5 +1,10 @@
+import { Field } from "@base-ui/react/field";
+import { useStore as useFormStore } from "@tanstack/react-form";
+import { z } from "zod";
+import { useAppForm } from "../../components/form";
+import { FieldErrors } from "../../components/ui/field-errors";
 import { tv } from "tailwind-variants";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, Check, MonitorSmartphone, Plus, ShieldOff } from "lucide-react";
@@ -8,7 +13,6 @@ import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -30,7 +34,7 @@ export function Devices() {
   const { id: storeId } = useStore();
   const { t } = useI18n();
   const client = useQueryClient();
-  const devices = useQuery(devicesOptions(storeId));
+  const devices = useSuspenseQuery(devicesOptions(storeId));
   const revoke = useMutation({
     mutationFn: (id: string) =>
       parseResponse(
@@ -56,17 +60,13 @@ export function Devices() {
         </Button>
       </div>
       <ErrorNotice error={devices.error || revoke.error} onRetry={() => void devices.refetch()} />
-      {devices.isPending ? (
-        <LoadingState />
-      ) : !devices.data ? null : (
-        <DataTable
-          data={devices.data?.devices ?? []}
-          columns={columns}
-          getRowId={(row) => row.id}
-          searchLabel={t("device_search")}
-          empty={t("device_empty")}
-        />
-      )}
+      <DataTable
+        data={devices.data.devices}
+        columns={columns}
+        getRowId={(row) => row.id}
+        searchLabel={t("device_search")}
+        empty={t("device_empty")}
+      />
     </>
   );
 }
@@ -78,15 +78,14 @@ export function RegisterDevice({
   tableId?: string;
 }) {
   const hydrated = useHydrated();
-  const [userCode, setUserCode] = useState(initialCode);
   const [tableId, setTableId] = useState(initialTableId);
   const { id: storeId } = useStore();
   const { t } = useI18n();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const devices = useQuery(devicesOptions(storeId));
+  const devices = useSuspenseQuery(devicesOptions(storeId));
   const approve = useMutation({
-    mutationFn: () => {
+    mutationFn: (userCode: string) => {
       if (!tableId) throw new Error("TABLE_REQUIRED");
       return parseResponse(
         rpc.api.admin.stores[":storeId"].devices.approve.$post({
@@ -100,6 +99,13 @@ export function RegisterDevice({
       void navigate({ to: "/admin/stores/$storeId/devices", params: { storeId } });
     },
   });
+  const form = useAppForm({
+    defaultValues: { userCode: initialCode },
+    onSubmit: async ({ value }) => {
+      await approve.mutateAsync(value.userCode).catch(() => undefined);
+    },
+  });
+  const userCode = useFormStore(form.store, (state) => state.values.userCode);
   const columns = useMemo(
     () =>
       registrationColumns(t, tableId, (nextTableId) => {
@@ -128,7 +134,7 @@ export function RegisterDevice({
       <p className="text-base text-muted-foreground">{t("device_register_note")}</p>
       <DeviceQrReader
         onRead={(code) => {
-          setUserCode(code);
+          form.setFieldValue("userCode", code);
           void navigate({
             to: "/admin/stores/$storeId/devices/new",
             params: { storeId },
@@ -138,50 +144,62 @@ export function RegisterDevice({
         }}
       />
       <form
+        noValidate
         className="space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
-          approve.mutate();
+          void form.handleSubmit();
         }}
       >
         <fieldset disabled={!hydrated} className="space-y-5">
-          <label className="flex max-w-sm flex-col gap-2 text-base">
-            {t("admin_pair_code")}
-            <Input
-              autoComplete="off"
-              required
-              value={userCode}
-              maxLength={30}
-              onChange={(event) => {
-                const code = event.target.value.toUpperCase();
-                setUserCode(code);
-                void navigate({
-                  to: "/admin/stores/$storeId/devices/new",
-                  params: { storeId },
-                  search: { user_code: code, tableId },
-                  replace: true,
-                });
-              }}
-            />
-          </label>
-          {devices.isPending ? (
-            <LoadingState />
-          ) : !devices.data ? null : (
-            <DataTable
-              data={devices.data?.tables ?? []}
-              columns={columns}
-              getRowId={(row) => row.id}
-              searchLabel={t("device_search_table")}
-            />
-          )}
+          <form.Field
+            name="userCode"
+            validators={{ onChange: z.string().trim().min(1, t("form_required")).max(30) }}
+          >
+            {(field) => (
+              <Field.Root
+                name={field.name}
+                invalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                className="flex max-w-sm flex-col gap-2"
+              >
+                <Field.Label>{t("admin_pair_code")}</Field.Label>
+                <Input
+                  autoComplete="off"
+                  required
+                  maxLength={30}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => {
+                    const code = event.target.value.toUpperCase();
+                    field.handleChange(code);
+                    void navigate({
+                      to: "/admin/stores/$storeId/devices/new",
+                      params: { storeId },
+                      search: { user_code: code, tableId },
+                      replace: true,
+                    });
+                  }}
+                />
+                {field.state.meta.isTouched && <FieldErrors errors={field.state.meta.errors} />}
+              </Field.Root>
+            )}
+          </form.Field>
+          <DataTable
+            data={devices.data.tables}
+            columns={columns}
+            getRowId={(row) => row.id}
+            searchLabel={t("device_search_table")}
+          />
           <ErrorNotice
             error={devices.error || approve.error}
             onRetry={() => void devices.refetch()}
           />
-          <Button type="submit" disabled={approve.isPending || !tableId || !userCode}>
-            <Check />
-            {t("admin_approve")}
-          </Button>
+          <form.AppForm>
+            <form.SubmitButton disabled={!tableId}>
+              <Check />
+              {t("admin_approve")}
+            </form.SubmitButton>
+          </form.AppForm>
         </fieldset>
       </form>
     </section>
