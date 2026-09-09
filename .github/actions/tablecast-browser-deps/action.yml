@@ -1,0 +1,26 @@
+name: Browser OS dependencies
+description: APTの取得済みパッケージを復元し、Playwright公式CLIでOS依存を導入する
+inputs:
+  browsers:
+    description: Playwrightのブラウザー名（スペース区切り）
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: version
+      shell: bash
+      run: |
+        bun -e 'console.log("playwright=" + require("@playwright/test/package.json").version)' >> "$GITHUB_OUTPUT"
+        echo "image=$ImageOS" >> "$GITHUB_OUTPUT"
+        echo "revision=$ImageVersion" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: /tmp/tablecast-apt/*.deb
+        key: tablecast-apt-${{ runner.arch }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.playwright }}-${{ inputs.browsers }}-${{ steps.version.outputs.revision }}
+        restore-keys: tablecast-apt-${{ runner.arch }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.playwright }}-${{ inputs.browsers }}-
+    - name: Install browser OS dependencies
+      shell: bash
+      run: |
+        mkdir -p /tmp/tablecast-apt
+        echo 'Dir::Cache::archives "/tmp/tablecast-apt";' | sudo tee /etc/apt/apt.conf.d/99-tablecast-cache > /dev/null
+        bunx --no-install playwright install-deps ${{ inputs.browsers }}

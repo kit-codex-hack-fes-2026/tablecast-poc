@@ -5,7 +5,7 @@
 ## 原則
 
 テスト本数ではなく、失敗リスクを必要十分に検出する。最も小さく速い境界から始め、実際のD1・HTTP・DOMを使う統合を重視する。
-同じ安全規則を単体、部品、全画面、全構成ですべて重複列挙しない。上位は接続が正しいことの代表例に絞る。
+同じ安全規則を単体、Component、全画面、全構成ですべて重複列挙しない。上位は接続が正しいことの代表例に絞る。
 ライブラリの内部機能を再テストせず、TableCastが選んだ設定、変換、認可、状態遷移、接続を検証する。
 テストはコード所有者の近くに置く。層名を理由に大量の専用パッケージやfixture frameworkを作らない。
 
@@ -31,7 +31,7 @@ D1 batchの途中失敗、条件不成立で更新件数0、古いturnの後続�
 カート・注文・会計・table eventが整合し、DO通知失敗後にもDBから再同期できることを検査する。
 
 UIは状態をprops/既存query fixtureで再現し、Storybookから実LiveKitや本番APIへ接続しない。
-外部I/Oと表示を分ける必要がある部品だけ薄い境界を作り、単純な部品を必ずcontroller/viewの二枚にしない。
+外部I/Oと表示を分ける必要があるComponentだけ薄い境界を作り、単純なComponentを必ずcontroller/viewの二枚にしない。
 VoicePanel、言語切替、音声停止再開、会話履歴、商品選択、確認、卓タイムライン、会計のStoryをWebに併置する。
 StorybookとCloudflareのVite設定は丸ごと共有せず、React・CSS・i18n等の必要部分だけ共用する。Storybook起動だけでWorkersを起動させない。[S14](sources.md#s14)
 
@@ -80,7 +80,7 @@ pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混�
 
 ## 公開scriptとCI
 
-`test` は外部費用なしの単体・軽量統合、`test:browser` は部品・Web内統合、`test:e2e` は決定的な全構成、`test:voice:live` は有料実音声に分ける。
+`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`test:voice:live` は有料実音声に分ける。
 `bun run check` に静的解析・型・無課金テストを含める。Browser/E2EはCI別job。有料試験は手動または明示承認されたjobだけ。
 Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼び、tyとruffも同じ場所で別scriptから実行する。ルートから直接試す場合は `uv run --directory livekit pytest` とする。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。
@@ -88,13 +88,13 @@ Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼�
 
 ## CIのジョブとキャッシュ
 
-workflow名は`CI`、job名はレイヤー・runner・対象を示す。静的解析、Web/seedのVitest unit、LiveKit Agentのpytest、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/Storybookの部品・a11y、Playwright E2E、実LiveKit WebRTC、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
+workflow名は`CI`、job名はレイヤー・runner・対象を示す。静的解析、Web/seedのVitest unit、LiveKit Agentのpytest、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、実LiveKit WebRTC、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
 
 全体の完了時間は3〜4分を目標とし、E2EとAPIはそれぞれ1job内の4workersで実行する。ブラウザー別/shard別のmatrixは設けず、E2Eの両ブラウザーを同じPlaywright実行で扱う。build・seed・依存準備をjobごとに重複させない。APIはCloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、WebRTCのサービス起動、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
 GitHub Actionsの`actions/cache`で静的解析と2種類のbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、Workersの`dist`・deploy configとStorybookの`storybook-static`を出力として復元する。テストtaskは`cache: false`で毎回実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メール、テスト結果は永続キャッシュへ入れない。
 
-Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は毎回別stepで導入し、cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
+Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
 
 ## E2Eの隔離
 

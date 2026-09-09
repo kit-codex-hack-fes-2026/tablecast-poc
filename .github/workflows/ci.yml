@@ -106,8 +106,9 @@ jobs:
           - uses: ./.github/actions/tablecast-browser
             with:
               browsers: chromium webkit
-          - name: Browser OS dependencies
-            run: bunx --no-install playwright install-deps chromium webkit
+          - uses: ./.github/actions/tablecast-browser-deps
+            with:
+              browsers: chromium webkit
       - run: bun run test:browser
 
   e2e:
@@ -121,8 +122,9 @@ jobs:
           - uses: ./.github/actions/tablecast-browser
             with:
               browsers: chromium webkit
-          - name: Browser OS dependencies
-            run: bunx --no-install playwright install-deps chromium webkit
+          - uses: ./.github/actions/tablecast-browser-deps
+            with:
+              browsers: chromium webkit
           - name: Mailpit image
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
@@ -148,8 +150,9 @@ jobs:
           - uses: ./.github/actions/tablecast-browser
             with:
               browsers: chromium
-          - name: Browser OS dependencies
-            run: bunx --no-install playwright install-deps chromium
+          - uses: ./.github/actions/tablecast-browser-deps
+            with:
+              browsers: chromium
           - name: Local services
             run: bun --no-env-file run dev
       - run: bun --no-env-file scripts/tablecast-livekit-check.ts
