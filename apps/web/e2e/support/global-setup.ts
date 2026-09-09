@@ -1,5 +1,5 @@
-import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import { promisify } from "node:util";
@@ -11,44 +11,7 @@ const execute = promisify(execFile);
 const root = resolve(import.meta.dirname, "../../../..");
 export default async function setup() {
   const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
-  const children: ChildProcess[] = [];
-  let failure: Error | undefined;
-  const container = `tablecast-e2e-mailpit-${runtime.ports.mailpit}`;
-  const start = (command: string, args: string[], env: Partial<NodeJS.ProcessEnv> = {}) => {
-    const child = spawn(command, args, {
-      cwd: command === "node" ? join(root, "apps/web") : root,
-      env: { ...parentEnv, ...env },
-      stdio: "inherit",
-    });
-    child.once("error", (error) => {
-      failure = error;
-    });
-    child.once("exit", (code, signal) => {
-      failure ??= new Error(`${command}が起動中に終了しました: ${code ?? signal}`);
-    });
-    children.push(child);
-    return child;
-  };
   const stop = async () => {
-    await Promise.all(
-      children.toReversed().map(async (child) => {
-        if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
-        await new Promise<void>((done) => {
-          const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
-          child.once("exit", () => {
-            clearTimeout(timer);
-            done();
-          });
-          child.kill("SIGTERM");
-        });
-      }),
-    );
-    // Docker CLIの終了だけではcontainerの終了を保証しない。
-    await execute("docker", ["rm", "--force", container], { timeout: 10000 }).catch(
-      (error: Error) => {
-        if (!error.message.includes(`No such container: ${container}`)) throw error;
-      },
-    );
     const evidence = join(root, "apps/web/test-results/tablecast-runtime");
     await mkdir(evidence, { recursive: true });
     await copyFile(
@@ -165,6 +128,7 @@ export default async function setup() {
     }
     const webEnv = {
       ...parentEnv,
+      WRANGLER_REGISTRY_PATH: join(runtime.directory, "registry"),
       TABLECAST_LOCAL_BUILD: "1",
       TABLECAST_VITE_CACHE_DIR: join(runtime.directory, "vite"),
       TABLECAST_WEB_CONFIG: webConfig,
@@ -179,52 +143,9 @@ export default async function setup() {
       env: webEnv,
       maxBuffer: 5 * 1024 * 1024,
     });
-    start("bun", ["--no-env-file", "apps/emulate/src/index.ts"], {
-      TABLECAST_PUBLIC_ORIGIN: runtime.origin,
-      TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
-    });
-    start("docker", [
-      "run",
-      "--rm",
-      "--name",
-      container,
-      "-p",
-      `127.0.0.1:${runtime.ports.mailpit}:8025`,
-      "axllent/mailpit:v1.29.2",
-    ]);
-    start(
-      "node",
-      [
-        vite,
-        "preview",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        String(runtime.ports.web),
-        "--strictPort",
-        "--logLevel",
-        "warn",
-      ],
-      {
-        ...webEnv,
-      },
-    );
-    const deadline = Date.now() + 120_000;
-    while (Date.now() < deadline) {
-      if (failure) throw failure;
-      try {
-        const results = await Promise.all([
-          fetch(`${runtime.origin}/api/admin/stores`, { signal: AbortSignal.timeout(2000) }),
-          fetch(`${vars.TABLECAST_MAILPIT_URL}/api/v1/info`, { signal: AbortSignal.timeout(2000) }),
-          fetch(`${vars.TABLECAST_GOOGLE_EMULATOR_URL}/.well-known/openid-configuration`, {
-            signal: AbortSignal.timeout(2000),
-          }),
-        ]);
-        if (results[0]?.status === 401 && results[1]?.ok && results[2]?.ok) return stop;
-      } catch {}
-      await new Promise((done) => setTimeout(done, 500));
-    }
-    throw new Error("隔離した受入試験環境を起動できませんでした。");
+    await cp(join(root, "apps/web/dist"), join(runtime.directory, "build"), { recursive: true });
+    await execute("docker", ["pull", "axllent/mailpit:v1.29.2"]);
+    return stop;
   } catch (error) {
     await stop();
     throw error;

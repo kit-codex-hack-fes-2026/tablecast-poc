@@ -1,6 +1,7 @@
-import { expect, request, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect, request } from "@playwright/test";
 import { z } from "zod";
-import { credentials, runtime } from "./support/runtime";
+import { credentials } from "./support/runtime";
 
 test.use({ trace: "off" });
 
@@ -20,6 +21,7 @@ test.afterEach(async () => {
 test("Googleログインから名前変更・店舗作成・招待メールまで利用できる", async ({
   page,
   baseURL,
+  runtime,
 }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
@@ -203,59 +205,56 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
 test("確認済みメールのパスワードとGoogleで同じユーザーへログインする", async ({
   page,
   baseURL,
+  runtime,
 }) => {
   const email = "tablecast-link@example.test";
   const password = "tablecast-email-link-acceptance-password";
-  const existing = await page.request.post("/api/auth/sign-in/email", {
+  const signup = await page.request.post("/api/auth/sign-up/email", {
+    headers: { Origin: baseURL ?? "" },
+    data: { email, password, name: "TableCast 連携試験", callbackURL: "/account" },
+  });
+  expect(signup.ok()).toBeTruthy();
+  const messages = z
+    .object({
+      messages: z.array(
+        z.object({
+          ID: z.string(),
+          To: z.array(z.object({ Address: z.string() })),
+          Subject: z.string(),
+        }),
+      ),
+    })
+    .parse(
+      await (
+        await page.request.get(`http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`)
+      ).json(),
+    );
+  const mail = messages.messages.find(
+    (item) =>
+      item.Subject.includes("Verify your email") && item.To.some((to) => to.Address === email),
+  );
+  expect(mail).toBeDefined();
+  const content = z
+    .object({ HTML: z.string() })
+    .parse(
+      await (
+        await page.request.get(
+          `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/message/${mail?.ID}`,
+        )
+      ).json(),
+    );
+  const url = content.HTML.match(/href="([^"]*\/api\/auth\/verify-email[^"]+)"/u)?.[1]?.replaceAll(
+    "&amp;",
+    "&",
+  );
+  expect(url).toBeTruthy();
+  await page.goto(url ?? "/account");
+  const login = await page.request.post("/api/auth/sign-in/email", {
     headers: { Origin: baseURL ?? "" },
     data: { email, password },
   });
-  if (!existing.ok()) {
-    const signup = await page.request.post("/api/auth/sign-up/email", {
-      headers: { Origin: baseURL ?? "" },
-      data: { email, password, name: "TableCast 連携試験", callbackURL: "/account" },
-    });
-    expect(signup.ok()).toBeTruthy();
-    const messages = z
-      .object({
-        messages: z.array(
-          z.object({
-            ID: z.string(),
-            To: z.array(z.object({ Address: z.string() })),
-            Subject: z.string(),
-          }),
-        ),
-      })
-      .parse(
-        await (
-          await page.request.get(`http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`)
-        ).json(),
-      );
-    const mail = messages.messages.find(
-      (item) =>
-        item.Subject.includes("Verify your email") && item.To.some((to) => to.Address === email),
-    );
-    expect(mail).toBeDefined();
-    const content = z
-      .object({ HTML: z.string() })
-      .parse(
-        await (
-          await page.request.get(
-            `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/message/${mail?.ID}`,
-          )
-        ).json(),
-      );
-    const url = content.HTML.match(
-      /href="([^"]*\/api\/auth\/verify-email[^"]+)"/u,
-    )?.[1]?.replaceAll("&amp;", "&");
-    expect(url).toBeTruthy();
-    await page.goto(url ?? "/account");
-    const login = await page.request.post("/api/auth/sign-in/email", {
-      headers: { Origin: baseURL ?? "" },
-      data: { email, password },
-    });
-    expect(login.ok()).toBeTruthy();
-  }
+  expect(login.ok()).toBeTruthy();
+
   const userSchema = z.object({ user: z.object({ id: z.string() }) });
   const before = userSchema.parse(await (await page.request.get("/api/auth/get-session")).json());
   // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。

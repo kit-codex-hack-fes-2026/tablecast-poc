@@ -1,4 +1,5 @@
-import { expect, test, type WebSocketRoute } from "@playwright/test";
+import { test } from "./support/test";
+import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, eventsSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };

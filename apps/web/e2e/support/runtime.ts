@@ -54,3 +54,18 @@ export const credentials = {
   baseTime: Date.now(),
   profile: "demo" as const,
 };
+
+// templateはglobal setupで閉じた後は読み取り専用。各caseへstorageを複製する。
+export async function createCaseRuntime() {
+  const directory = mkdtempSync(join(runtime.directory, "tablecast-case-"));
+  const web = await freePort(),
+    oauth = await freePort(),
+    mailpit = await freePort(),
+    inspector = await freePort();
+  return {
+    directory,
+    origin: `http://localhost:${web}`,
+    ports: { web, oauth, mailpit, inspector },
+  };
+}
+export type CaseRuntime = Awaited<ReturnType<typeof createCaseRuntime>>;

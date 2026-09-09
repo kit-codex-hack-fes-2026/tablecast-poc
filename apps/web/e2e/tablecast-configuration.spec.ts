@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import { configDraftSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };

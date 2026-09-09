@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import type { CartLine } from "@tablecast/api/schema";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };

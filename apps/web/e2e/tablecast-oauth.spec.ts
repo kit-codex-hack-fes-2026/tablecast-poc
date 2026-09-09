@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./support/test";
+import { expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { credentials } from "./support/runtime";

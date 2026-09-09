@@ -88,7 +88,11 @@ Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼�
 
 ## E2Eの隔離
 
-`bun run test:e2e` は `apps/web/e2e/support` で実行ごとのD1・R2・Googleモック・Mailpit・Web/APIを作る。ビルド済みWeb/API WorkersとService Bindingを `vite preview` で起動する。専用のlocalhostポートと `.local/tablecast-e2e-*` を使い、開発サーバーのDB・Cookie・`.local/demo.json` を参照しない。DockerがMailpitの起動に必要である。テストが作成した店舗や認証器は隔離環境内に閉じ、終了時に実行用ディレクトリとプロセスを削除する。
+`bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。
+
+ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各ケースへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物は読み取り専用で共用し、各ケースが固有名のWeb/API WorkersをWranglerの複数configで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もケース内へ分け、別caseの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証も別環境であり、固定fixtureのIDが同じでも書込み先は共有しない。
+
+`fullyParallel: true`、`workers: 2`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはケース専用の`baseURL`を使う。ケースの成否に関係なく自分のプロセスとcontainerとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント試験は、前ケースの登録状態で分岐せず、毎回新規登録から確認する。
 
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
@@ -129,7 +133,7 @@ bun run test:browser
 bun run test:e2e --project=tablecast-chromium
 ```
 
-E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。migrationログはruntimeを削除する前に`apps/web/test-results/tablecast-runtime/`へ保存する。ケース間の書込fixtureの全面分離は未完了であり、現時点の`workers: 1`を並列安全性の根拠としない。
+E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。migrationログはruntimeを削除する前に`apps/web/test-results/tablecast-runtime/`へ保存する。ケース単位の環境隔離は#40で扱い、UI契約の低い層への移行など#35の残件とは区別する。
 
 ### 型付きDB fixture
 
