@@ -168,122 +168,127 @@ it("APIのレイヤー外importは拒否し、model・共有依存の型・modul
   }
 });
 
-it("WebのUI・query・feature間の逆依存と未知の配置を拒否し、公開APIだけを許可する", async () => {
-  // Given: 実Web設定を使う隔離workspaceと、正規・禁止のimport。
-  const root = resolve(import.meta.dirname, "..");
-  const temporary = await mkdtemp(join(tmpdir(), "tablecast-web-import-rules-"));
-  const cases = [
-    {
-      path: "components/ui/boundary-example.tsx",
-      imports: [
-        'export { Account } from "../../features/account/account";',
-        'export { rpc } from "../../lib/api";',
-        'export { Button } from "./button";',
-      ],
-      rejectedLines: [1, 2],
-    },
-    {
-      path: "features/store/boundary-query.ts",
-      imports: [
-        'export { Account } from "../account/account";',
-        'export { Button } from "../../components/ui/button";',
-        'export { rpc } from "../../lib/api";',
-      ],
-      rejectedLines: [1, 2],
-    },
-    {
-      path: "features/store/boundary-example.tsx",
-      imports: [
-        'export { Account } from "../account/account";',
-        'export { Route } from "../../routes/account";',
-        'export { AdminShell } from "../shell/admin-shell";',
-        'export { Button } from "../../components/ui/button";',
-      ],
-      rejectedLines: [1, 2],
-    },
-    {
-      path: "features/store/boundary-model.ts",
-      imports: [
-        'export { rpc } from "../../lib/api";',
-        'export { Button } from "../../components/ui/button";',
-        'export { createStoreSchema } from "@tablecast/api/schema";',
-      ],
-      rejectedLines: [1, 2],
-    },
-    {
-      path: "components/boundary-example.tsx",
-      imports: [
-        'export { Account } from "../features/account/account";',
-        'export { createAuth } from "../../../api/src/modules/auth/service";',
-        'export { ErrorNotice } from "./error-notice";',
-      ],
-      rejectedLines: [1, 2],
-    },
-    { path: "utils/legacy.ts", imports: ["export const misplaced = true;"], rejectedLines: [1] },
-    {
-      path: "features/store/internal/private.ts",
-      imports: ["export const misplaced = true;"],
-      rejectedLines: [1],
-    },
-  ];
-  try {
-    await mkdir(join(temporary, "apps/web"), { recursive: true });
-    await cp(join(root, "apps/web/src"), join(temporary, "apps/web/src"), { recursive: true });
-    for (const path of [
-      "tsconfig.json",
-      "oxlint.config.ts",
-      "apps/web/tsconfig.json",
-      "apps/web/oxlint.config.ts",
-    ])
-      await cp(join(root, path), join(temporary, path));
-    await symlink(join(root, "node_modules"), join(temporary, "node_modules"));
-    await symlink(join(root, "apps/web/node_modules"), join(temporary, "apps/web/node_modules"));
-    for (const scenario of cases) {
-      const path = join(temporary, "apps/web/src", scenario.path);
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, scenario.imports.join("\n"));
+// 子プロセスの30秒制限に加え、fixtureの準備と後片付けの時間を確保する。
+it(
+  "WebのUI・query・feature間の逆依存と未知の配置を拒否し、公開APIだけを許可する",
+  { timeout: 45_000 },
+  async () => {
+    // Given: 実Web設定を使う隔離workspaceと、正規・禁止のimport。
+    const root = resolve(import.meta.dirname, "..");
+    const temporary = await mkdtemp(join(tmpdir(), "tablecast-web-import-rules-"));
+    const cases = [
+      {
+        path: "components/ui/boundary-example.tsx",
+        imports: [
+          'export { Account } from "../../features/account/account";',
+          'export { rpc } from "../../lib/api";',
+          'export { Button } from "./button";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      {
+        path: "features/store/boundary-query.ts",
+        imports: [
+          'export { Account } from "../account/account";',
+          'export { Button } from "../../components/ui/button";',
+          'export { rpc } from "../../lib/api";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      {
+        path: "features/store/boundary-example.tsx",
+        imports: [
+          'export { Account } from "../account/account";',
+          'export { Route } from "../../routes/account";',
+          'export { AdminShell } from "../shell/admin-shell";',
+          'export { Button } from "../../components/ui/button";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      {
+        path: "features/store/boundary-model.ts",
+        imports: [
+          'export { rpc } from "../../lib/api";',
+          'export { Button } from "../../components/ui/button";',
+          'export { createStoreSchema } from "@tablecast/api/schema";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      {
+        path: "components/boundary-example.tsx",
+        imports: [
+          'export { Account } from "../features/account/account";',
+          'export { createAuth } from "../../../api/src/modules/auth/service";',
+          'export { ErrorNotice } from "./error-notice";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      { path: "utils/legacy.ts", imports: ["export const misplaced = true;"], rejectedLines: [1] },
+      {
+        path: "features/store/internal/private.ts",
+        imports: ["export const misplaced = true;"],
+        rejectedLines: [1],
+      },
+    ];
+    try {
+      await mkdir(join(temporary, "apps/web"), { recursive: true });
+      await cp(join(root, "apps/web/src"), join(temporary, "apps/web/src"), { recursive: true });
+      for (const path of [
+        "tsconfig.json",
+        "oxlint.config.ts",
+        "apps/web/tsconfig.json",
+        "apps/web/oxlint.config.ts",
+      ])
+        await cp(join(root, path), join(temporary, path));
+      await symlink(join(root, "node_modules"), join(temporary, "node_modules"));
+      await symlink(join(root, "apps/web/node_modules"), join(temporary, "apps/web/node_modules"));
+      for (const scenario of cases) {
+        const path = join(temporary, "apps/web/src", scenario.path);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, scenario.imports.join("\n"));
+      }
+      // When: 導入済みOxlintを実行し、resolverを含む設定を検証する。
+      const result = spawnSync(
+        "bunx",
+        [
+          "--no-install",
+          "oxlint",
+          "--format",
+          "json",
+          ...cases.map((scenario) => `apps/web/src/${scenario.path}`),
+        ],
+        { cwd: temporary, encoding: "utf8", timeout: 30_000 },
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      const output = z
+        .object({
+          diagnostics: z.array(
+            z.object({
+              code: z.string(),
+              filename: z.string(),
+              labels: z.array(z.object({ span: z.object({ line: z.number() }) })),
+            }),
+          ),
+        })
+        .parse(JSON.parse(result.stdout));
+      // Then: 禁止した依存だけが失敗し、共通shell・UI・公開schemaは通る。
+      for (const scenario of cases) {
+        const lines = output.diagnostics
+          .filter(
+            (item) =>
+              (item.code.startsWith("boundaries(") ||
+                item.code === "eslint(no-restricted-imports)") &&
+              item.filename.endsWith(`/src/${scenario.path}`),
+          )
+          .flatMap((item) => item.labels.map((label) => label.span.line));
+        expect({ path: scenario.path, lines: [...new Set(lines)].sort((a, b) => a - b) }).toEqual({
+          path: scenario.path,
+          lines: scenario.rejectedLines,
+        });
+      }
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
     }
-    // When: 導入済みOxlintを実行し、resolverを含む設定を検証する。
-    const result = spawnSync(
-      "bunx",
-      [
-        "--no-install",
-        "oxlint",
-        "--format",
-        "json",
-        ...cases.map((scenario) => `apps/web/src/${scenario.path}`),
-      ],
-      { cwd: temporary, encoding: "utf8", timeout: 30_000 },
-    );
-    expect(result.error).toBeUndefined();
-    expect(result.status).toBe(1);
-    const output = z
-      .object({
-        diagnostics: z.array(
-          z.object({
-            code: z.string(),
-            filename: z.string(),
-            labels: z.array(z.object({ span: z.object({ line: z.number() }) })),
-          }),
-        ),
-      })
-      .parse(JSON.parse(result.stdout));
-    // Then: 禁止した依存だけが失敗し、共通shell・UI・公開schemaは通る。
-    for (const scenario of cases) {
-      const lines = output.diagnostics
-        .filter(
-          (item) =>
-            (item.code.startsWith("boundaries(") ||
-              item.code === "eslint(no-restricted-imports)") &&
-            item.filename.endsWith(`/src/${scenario.path}`),
-        )
-        .flatMap((item) => item.labels.map((label) => label.span.line));
-      expect({ path: scenario.path, lines: [...new Set(lines)].sort((a, b) => a - b) }).toEqual({
-        path: scenario.path,
-        lines: scenario.rejectedLines,
-      });
-    }
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
-  }
-});
+  },
+);
