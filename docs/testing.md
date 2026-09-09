@@ -11,15 +11,15 @@
 
 ## 実行層
 
-| 層           | 対象・runtime                                  | 主な検出対象                               |
-| ------------ | ---------------------------------------------- | ------------------------------------------ |
-| 静的         | Oxlint・型・Oxfmt・ty・ruff                    | 型、禁止import、asyncの取り扱い、設定      |
-| 純粋ロジック | Vitest / pytest                                | 価格、数量、プラン、snapshot、読上げ表記   |
-| API統合      | Cloudflare公式Vitest連携、実local D1/DO        | 認証、SQL制約、原子性、失効、MCP、stream   |
-| UI統合       | Storybook Vitest addon、Browser Mode           | 状態、操作、日英、focus、a11y              |
-| 音声接続     | pytest + official pluginのfixture/ローカル接続 | 話者変換、Mastra stream、取消、タグ整形    |
-| 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え    | 音声・GUI・管理の配線、再読込、Cookie      |
-| 有料・実機   | 実LLM/STT/TTS、iPad                            | 読み、演技、騒音、エコー、barge-in、実遅延 |
+| 層           | 対象・runtime                               | 主な検出対象                               |
+| ------------ | ------------------------------------------- | ------------------------------------------ |
+| 静的         | Oxlint・型・Oxfmt・ty・ruff                 | 型、禁止import、asyncの取り扱い、設定      |
+| 純粋ロジック | Vitest / pytest                             | 価格、数量、プラン、snapshot、読上げ表記   |
+| API統合      | Cloudflare公式Vitest連携、実local D1/DO     | 認証、SQL制約、原子性、失効、MCP、stream   |
+| UI統合       | Storybook addon / Vitest Browser + React    | 状態、操作、日英、focus、query・通知、a11y |
+| 音声接続     | pytest + 実AgentSession + 固定provider      | Realtime hook・turn・tool、取消、タグ整形  |
+| 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie      |
+| 有料・実機   | 実LLM/STT/TTS、iPad                         | 読み、演技、騒音、エコー、barge-in、実遅延 |
 
 Cloudflareのテストは採用Wranglerと対応した公式runnerで行う。通常のSQLiteだけを使ってD1の挙動を検証済みにしない。[S12](sources.md#s12)
 Playwrightは実行ツールであって、全ケースをE2Eに分類する理由ではない。
@@ -93,3 +93,40 @@ Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼�
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
 開発用seedは3店舗と36卓、固定の商品・利用場面にFakerのスタッフ36名を加える。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。
+
+## #35に基づく所有先の分離
+
+[全件監査と残件](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/35) の判定に沿い、先に低い層へ契約を置いてから上位の重複を除く。テストのretry・反復実行をflakyの検出や対策に使わない。失敗時はコードと保存した証跡から原因を調べ、修正した契約を確認する。UIの再試行ボタンや製品の再接続そのものを検証するケースとは区別する。
+
+| 契約                                  | 主担当と入口                                                                 | 上位へ残す保証                               |
+| ------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| 価格・プランの期限と数量境界          | APIのVitest `unit`、純粋configuration fixture                                | `bindings`で価格正本・未承認・DB原子性を検証 |
+| 読取中の更新、前版からのmigration     | APIのVitest `bindings`、実D1と明示barrier                                    | 実HTTPの代表経路                             |
+| 文字2倍・縦横画面・音声失敗後のカート | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                               | 代表modifier→注文→提供→会計→閉卓のE2E        |
+| 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                              | 実WebSocketの切断・HTTP回復E2E               |
+| QR decodeと送像停止                   | `device-qr-reader.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | QR URL→卓保持→再読込→明示承認E2E             |
+| 音声turnの認可とspeech/tool関連付け   | `test_realtime_session.py`、実Agent・Sessionと公開provider境界               | APIの実認可、実WebRTC smoke、別枠の有料音声  |
+| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                | 他workspaceのtestから独立したCI job          |
+
+Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
+
+Realtimeの固定provider試験は公開VAD入力→API認可→生成イベント→字幕・tool HTTPを通す。実モデル、TTS音声品質、全割込・エラー経路を保証するものではない。既存のTTS WebSocket・旧経路の試験は担当する契約を残す。
+
+個別の実行例:
+
+```sh
+# API: 純粋unit / 実binding統合
+cd apps/api
+bunx --no-install vitest run --project unit
+bunx --no-install vitest run --project bindings
+```
+
+```sh
+# リポジトリルート
+bunx --no-install vitest run --project scripts-unit
+bunx --no-install vitest run --project scripts-runtime
+bun run test:browser
+bun run test:e2e --project=tablecast-chromium
+```
+
+E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。migrationログはruntimeを削除する前に`apps/web/test-results/tablecast-runtime/`へ保存する。ケース間の書込fixtureの全面分離は未完了であり、現時点の`workers: 1`を並列安全性の根拠としない。

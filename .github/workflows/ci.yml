@@ -31,7 +31,10 @@ jobs:
             command: bun run format:check && bun run lint && bun run typecheck
           - name: 単体・実Binding・音声接続テスト
             python: "true"
-            command: bun run test
+            command: bunx --no-install vitest run --project scripts-unit && bunx --no-install turbo run test
+          - name: 開発環境の実CLI・seed統合
+            python: "false"
+            command: bunx --no-install vitest run --project scripts-runtime
           - name: Workers・Storybookビルド
             python: "false"
             command: bun run build && bun run --cwd apps/web build:storybook
@@ -50,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: ./.github/actions/tablecast-setup
-      - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps chromium
+      - run: bun --no-env-file apps/web/node_modules/.bin/playwright install --with-deps chromium webkit
       - run: bun --no-env-file run test:browser
 
   e2e:
@@ -73,7 +76,6 @@ jobs:
           name: tablecast-e2e-${{ matrix.browser }}
           path: |
             apps/web/test-results/
-            .local/logs/dev.log
           include-hidden-files: true
           retention-days: 7
 
