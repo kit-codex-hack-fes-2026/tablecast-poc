@@ -48,24 +48,44 @@ function patchSpeed(body: unknown, cookie = deviceCookie) {
 it("状態取得中のタブ変更は返却cursorより後のイベントとして回復できる", async () => {
   await setupFixture();
   const readingCatalog = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
   const prepare = env.TABLECAST_DB.prepare.bind(env.TABLECAST_DB);
   vi.spyOn(env.TABLECAST_DB, "prepare").mockImplementation((sql) => {
-    if (sql === "SELECT * FROM stores WHERE id=?") readingCatalog.resolve();
-    return prepare(sql);
+    const statement = prepare(sql);
+    if (sql === "SELECT * FROM stores WHERE id=?") {
+      const bind = statement.bind.bind(statement);
+      vi.spyOn(statement, "bind").mockImplementation((...values) => {
+        const bound = bind(...values);
+        const first = bound.first.bind(bound);
+        vi.spyOn(bound, "first").mockImplementation(async <T>(column?: string) => {
+          readingCatalog.resolve();
+          await release.promise;
+          return column === undefined ? first<T>() : first<T>(column);
+        });
+        return bound;
+      });
+    }
+    return statement;
   });
   const reading = getTableState(env, device);
-  await readingCatalog.promise;
-  await env.TABLECAST_DB.batch([
-    prepare("UPDATE table_sessions SET ui_section='orders' WHERE id=?").bind(device.tableSessionId),
-    prepare(
-      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'table.ui',?,?)",
-    ).bind(
-      device.storeId,
-      device.tableSessionId,
-      JSON.stringify({ section: "orders" }),
-      Date.now(),
-    ),
-  ]);
+  try {
+    await readingCatalog.promise;
+    await env.TABLECAST_DB.batch([
+      prepare("UPDATE table_sessions SET ui_section='orders' WHERE id=?").bind(
+        device.tableSessionId,
+      ),
+      prepare(
+        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'table.ui',?,?)",
+      ).bind(
+        device.storeId,
+        device.tableSessionId,
+        JSON.stringify({ section: "orders" }),
+        Date.now(),
+      ),
+    ]);
+  } finally {
+    release.resolve();
+  }
   const state = await reading;
   const recovery = await getEvents(env, device, state.cursor);
   expect(state.uiSection).toBe("menu");

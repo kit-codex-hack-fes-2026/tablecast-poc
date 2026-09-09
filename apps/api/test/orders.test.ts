@@ -118,7 +118,26 @@ describe("実D1の注文契約", () => {
       (await getEvents(env, device)).events.filter((event) => event.kind === "cart.updated"),
     ).toHaveLength(1);
   });
-  it("古い確認と未承認を拒否し、同じ冪等キーの二重送信や応答喪失から一件に復元する", async () => {
+  it.each([false, undefined])("承認値が%sのHTTP注文は保存せず拒否する", async (approved) => {
+    await setupFixture();
+    const snapshot = await confirmed();
+    const response = await exports.default.fetch(
+      new Request("http://localhost:3000/api/table/orders", {
+        method: "POST",
+        headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshotId: snapshot.id,
+          idempotencyKey: "tablecast-no-approval",
+          approved,
+        }),
+      }),
+    );
+    expect(response.status).toBe(422);
+    const state = await getTableState(env, device);
+    expect(state.orders).toEqual([]);
+    expect(state.cart.lines).toHaveLength(1);
+  });
+  it("古い確認を拒否し、同じ冪等キーの並行送信と再送で注文を一件に保つ", async () => {
     await setupFixture();
     const old = await confirmed();
     await updateCart(env, device, { expectedVersion: 1, lines: tea });

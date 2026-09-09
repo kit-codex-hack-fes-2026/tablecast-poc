@@ -139,10 +139,15 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
   it("同じcall IDの並行要求を一回だけ実行する", async () => {
     await setup();
     const responses = await Promise.all([
-      tool("getCatalog", {}, "tablecast-turn", "tablecast-call"),
-      tool("getCatalog", {}, "tablecast-turn", "tablecast-call"),
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
     ]);
     expect(responses.map((response) => response.status).sort((a, b) => a - b)).toEqual([200, 409]);
+    expect((await getTableState(env, device)).speechSpeed).toBe(1.2);
+    const events = await env.TABLECAST_DB.prepare(
+      "SELECT kind FROM table_events WHERE kind='voice.speed'",
+    ).all();
+    expect(events.results).toHaveLength(1);
   });
   it("遅れて届いた字幕を元のターンだけへ保存する", async () => {
     await setup();

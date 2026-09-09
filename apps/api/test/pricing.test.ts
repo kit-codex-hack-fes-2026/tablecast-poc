@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { configurationErrors, priceCart, type PlanContext } from "../src/modules/pricing";
 import { configurationIssueSchema } from "../src/schema";
-import { configuration, text } from "./fixture";
+import { configuration, text } from "./configuration-fixture";
 
 const now = 1_800_000_000_000;
 const plan: PlanContext = {
@@ -124,26 +124,60 @@ it("商品内でグループをまたぐ選択肢ID重複を該当箇所へ返�
   ]);
 });
 
-it("登録されたプランだけで対象価格・人数上限・間隔・ラストオーダーを検証する", () => {
+it("登録されたプランの対象商品を追加料金なしで計算する", () => {
   expect(priceCart(configuration, tea, 0, plan, now).total).toBe(0);
-  expect(() =>
-    priceCart(configuration, tea, 0, { ...plan, startedAt: now - 80 * 60_000 }, now),
-  ).toThrow("PLAN_LAST_ORDER");
-  expect(() => priceCart(configuration, tea, 0, { ...plan, orderedQuantity: 19 }, now)).toThrow(
-    "PLAN_TOTAL_LIMIT",
-  );
-  expect(() =>
-    priceCart(configuration, tea, 0, { ...plan, lastOrderAt: now - 10000 }, now),
-  ).toThrow("PLAN_INTERVAL");
+});
+const planBoundaries = [
+  { name: "ラストオーダー直前", patch: { startedAt: now - 80 * 60_000 + 1 }, error: null },
+  { name: "ラストオーダー到達", patch: { startedAt: now - 80 * 60_000 }, error: "PLAN_LAST_ORDER" },
+  {
+    name: "ラストオーダー超過",
+    patch: { startedAt: now - 80 * 60_000 - 1 },
+    error: "PLAN_LAST_ORDER",
+  },
+  { name: "人数上限到達", patch: { orderedQuantity: 18 }, error: null },
+  { name: "人数上限超過", patch: { orderedQuantity: 19 }, error: "PLAN_TOTAL_LIMIT" },
+  { name: "間隔の直前", patch: { lastOrderAt: now - 30000 + 1 }, error: "PLAN_INTERVAL" },
+  { name: "間隔の到達", patch: { lastOrderAt: now - 30000 }, error: null },
+  { name: "間隔の超過", patch: { lastOrderAt: now - 30000 - 1 }, error: null },
+];
+it.each(planBoundaries.filter((row) => row.error === null))(
+  "$nameではプラン注文を受け付ける",
+  ({ patch }) => {
+    expect(priceCart(configuration, tea, 0, { ...plan, ...patch }, now).complete).toBe(true);
+  },
+);
+it.each(planBoundaries.filter((row) => row.error !== null))(
+  "$nameではプラン注文を拒否する",
+  ({ patch, error }) => {
+    expect(() => priceCart(configuration, tea, 0, { ...plan, ...patch }, now)).toThrow(
+      error ?? undefined,
+    );
+  },
+);
+it.each([3, 4])("一回の数量%iは上限4以下なので受け付ける", (quantity) => {
+  expect(
+    priceCart(
+      configuration,
+      [{ id: "tea", productId: "tea", selections: [], quantity }],
+      0,
+      plan,
+      now,
+    ).total,
+  ).toBe(0);
+});
+it("一回の数量5は上限4を超えるので拒否する", () => {
   expect(() =>
     priceCart(
       configuration,
-      [{ ...tea[0], id: "tea", productId: "tea", selections: [], quantity: 5 }],
+      [{ id: "tea", productId: "tea", selections: [], quantity: 5 }],
       0,
       plan,
       now,
     ),
   ).toThrow("PLAN_ORDER_LIMIT");
+});
+it("除外されたオプションをプラン注文に含められない", () => {
   expect(() =>
     priceCart(
       configuration,
