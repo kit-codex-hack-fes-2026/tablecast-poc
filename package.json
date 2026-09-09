@@ -58,5 +58,8 @@
     "bun": ">=1.3.13",
     "node": ">=24.7.0"
   },
-  "packageManager": "bun@1.3.13"
+  "packageManager": "bun@1.3.13",
+  "patchedDependencies": {
+    "miniflare@5.20260903.0-alpha": "patches/miniflare@5.20260903.0-alpha.patch"
+  }
 }
