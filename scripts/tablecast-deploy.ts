@@ -25,6 +25,30 @@ const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
 
+export async function waitForRelease(
+  origin: string,
+  headers: Record<string, string>,
+  releaseSha: string,
+) {
+  for (let attempt = 1; attempt <= 12; attempt++) {
+    try {
+      const response = await fetch(`${origin}/api/health`, {
+        headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(5_000),
+      });
+      const health = z.object({ releaseSha: z.string() }).safeParse(await response.json());
+      if (response.ok && health.success && health.data.releaseSha === releaseSha) return;
+      console.info(`配備の反映待ち ${attempt}/12: HTTP ${response.status}`);
+    } catch {
+      // 一時的な接続失敗やHTML応答は再試行し、資格を含み得る応答本文は出さない。
+      console.info(`配備の反映待ち ${attempt}/12: healthを取得できません。`);
+    }
+    if (attempt < 12) await new Promise((complete) => setTimeout(complete, 5_000));
+  }
+  throw new Error("配備先のrelease SHAを期限内に確認できません。");
+}
+
 async function cloudflare(path: string, method = "GET", body?: unknown) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
   if (!token) throw new Error("CLOUDFLARE_API_TOKENをActions secretへ登録してください。");
@@ -430,12 +454,7 @@ async function main() {
           : []),
       ]);
     }
-    const smoke = await fetch(`${target.origin}/api/health`, { headers, redirect: "manual" });
-    if (
-      !smoke.ok ||
-      z.object({ releaseSha: z.string() }).parse(await smoke.json()).releaseSha !== sha
-    )
-      throw new Error("配備先のrelease SHAが一致しません。");
+    await waitForRelease(target.origin, headers, sha);
     console.info(`配備確認済み: ${target.origin} (${sha})`);
     if (process.env.GITHUB_STEP_SUMMARY)
       await writeFile(

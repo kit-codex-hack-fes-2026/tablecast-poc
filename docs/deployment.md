@@ -2,7 +2,7 @@
 
 [仕様索引](README.md) · [開発環境](development.md) · [残る受入](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/34)
 
-GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpreviewへ配備する。常設stagingは追加しない。配備実装は [tablecast-deploy.ts](../scripts/tablecast-deploy.ts)、URLとsecretの契約は [tablecast-deploy-config.ts](../scripts/tablecast-deploy-config.ts) にある。公開先の実配備と有料音声の受入は未実施。
+GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpreviewへ配備する。常設stagingは追加しない。配備実装は [tablecast-deploy.ts](../scripts/tablecast-deploy.ts)、URLとsecretの契約は [tablecast-deploy-config.ts](../scripts/tablecast-deploy-config.ts) にある。配備・受入の最新結果はPRとIssue #34に記録する。
 
 ## URLと実行先
 
@@ -58,7 +58,7 @@ Web applicationの設定を次と完全一致させる。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
 4. `.local/tablecast-deploy/`へ環境別Wrangler configを生成し、Cloudflare Vite pluginでWeb/APIをbuildする。`--env`をbuild後に付けて別環境へ転用しない。
 5. 既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
-6. Web経由の`/api/health`が返すrelease SHAを照合し、成功時だけPRコメントとActions summaryへURL・SHAを記録する。
+6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
 D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
