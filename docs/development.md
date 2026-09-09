@@ -31,7 +31,7 @@ D1 migration・seedのCLIにも同じローカル保存先と同じ生成config�
 
 hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル版や別OSの絶対パスに依存せず、依存がなければコミットを失敗させる。型付きlint前にはParaglideを生成する。既存checkoutの修復は `bun run hooks:install` を使い、`core.hooksPath` の上書きや検査回避は行わない。
 
-`commit-msg` はcommitlintでConventional Commits、件名先頭のGitmoji、本文必須を検査する。メッセージは英語で書き、[コミット規約](../.agents/skills/conventional-commit/SKILL.md)に従う。`wip`で始まる作業途中のメッセージとcommitlint標準のmerge・revert等の除外は維持する。保存済みメッセージは `bunx --no-install commitlint --edit <ファイル>`、直前のコミットは `bunx --no-install commitlint --last --verbose` で確認できる。
+`commit-msg` はcommitlintでConventional Commits、件名先頭のGitmoji、本文・Issue番号必須を検査する。Issue番号は件名末尾の `(#123)`、または本文・footerの `Refs #123` 等で記載する。メッセージは英語で書き、[コミット規約](../.agents/skills/conventional-commit/SKILL.md)に従う。`wip`で始まる作業途中のメッセージとcommitlint標準のmerge・revert等の除外は維持する。保存済みメッセージは `bunx --no-install commitlint --edit <ファイル>`、直前のコミットは `bunx --no-install commitlint --last --verbose` で確認できる。
 
 ## worktree識別子
 

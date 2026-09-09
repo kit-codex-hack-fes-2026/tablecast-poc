@@ -18,6 +18,7 @@ const config: UserConfig = {
     "body-empty": [2, "never"],
     "gitmoji-required": [2, "always"],
     "header-max-length": [2, "always", 100],
+    "references-empty": [2, "never"],
     "subject-case": [0],
   },
 };
