@@ -1,6 +1,5 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
-import type { VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import type { VariantProps } from "tailwind-variants";
 import { buttonVariants } from "./button-variants";
 
 function Button({
@@ -14,7 +13,13 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={(state) =>
+        buttonVariants({
+          variant,
+          size,
+          className: typeof className === "function" ? className(state) : className,
+        })
+      }
       {...props}
     />
   );

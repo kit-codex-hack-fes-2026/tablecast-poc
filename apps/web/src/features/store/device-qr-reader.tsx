@@ -1,3 +1,4 @@
+import { tv } from "tailwind-variants";
 import {
   Camera,
   CircleCheck,
@@ -12,6 +13,13 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { readDeviceQrCode } from "./device-qr-code";
+
+const scanMessage = tv({
+  base: "flex items-start gap-2 rounded-lg p-3 text-base",
+  variants: {
+    error: { true: "bg-destructive/10 text-destructive", false: "bg-secondary text-foreground" },
+  },
+});
 
 export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
   const { t } = useI18n();
@@ -97,10 +105,7 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
         />
       )}
       {(notice || file) && (
-        <div
-          role={hasError ? "alert" : "status"}
-          className={`flex items-start gap-2 rounded-lg p-3 text-base ${hasError ? "bg-destructive/10 text-destructive" : "bg-secondary text-foreground"}`}
-        >
+        <div role={hasError ? "alert" : "status"} className={scanMessage({ error: hasError })}>
           {file ? (
             <LoaderCircle className="mt-0.5 size-5 shrink-0 animate-spin motion-reduce:animate-none" />
           ) : hasError ? (

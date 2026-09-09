@@ -197,14 +197,7 @@ export function DraftPage({ draftId }: { draftId: string }) {
 function DraftStatus({ status }: { status: ConfigDraft["status"] }) {
   const { t } = useI18n();
   return (
-    <Badge
-      variant="outline"
-      className={
-        status === "published" || status === "ready"
-          ? "bg-success-soft text-success"
-          : "bg-secondary text-muted-foreground"
-      }
-    >
+    <Badge variant={status === "published" || status === "ready" ? "success" : "inactive"}>
       {status === "published" || status === "ready" ? (
         <Check className="size-4" />
       ) : (

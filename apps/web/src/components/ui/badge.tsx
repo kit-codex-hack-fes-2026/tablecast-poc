@@ -1,7 +1,6 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import type { VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import type { VariantProps } from "tailwind-variants";
 import { badgeVariants } from "./badge-variants";
 
 function Badge({
@@ -14,7 +13,7 @@ function Badge({
     defaultTagName: "span",
     props: mergeProps<"span">(
       {
-        className: cn(badgeVariants({ variant }), className),
+        className: badgeVariants({ variant, className }),
       },
       props,
     ),

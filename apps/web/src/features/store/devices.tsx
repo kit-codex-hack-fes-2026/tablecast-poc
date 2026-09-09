@@ -1,3 +1,4 @@
+import { tv } from "tailwind-variants";
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -16,6 +17,12 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useStore } from "./store-shell";
 import { DeviceQrReader } from "./device-qr-reader";
+
+const selectionIcon = tv({
+  base: "size-4",
+  variants: { selected: { true: "visible", false: "invisible" } },
+});
+
 const loadDevices = (storeId: string) =>
   parseResponse(rpc.api.admin.stores[":storeId"].devices.$get({ param: { storeId } }));
 type Device = Awaited<ReturnType<typeof loadDevices>>["devices"][number];
@@ -181,14 +188,7 @@ function deviceColumns(
       accessorKey: "revokedAt",
       header: t("common_status"),
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.revokedAt
-              ? "bg-secondary text-muted-foreground"
-              : "bg-success-soft text-success"
-          }
-        >
+        <Badge variant={row.original.revokedAt ? "inactive" : "success"}>
           {row.original.revokedAt ? <ShieldOff className="size-4" /> : <Check className="size-4" />}
           {t(row.original.revokedAt ? "device_revoked" : "device_active")}
         </Badge>
@@ -262,7 +262,7 @@ function registrationColumns(
             })
           }
         >
-          <Check className={`size-4 ${tableId === row.original.id ? "visible" : "invisible"}`} />
+          <Check className={selectionIcon({ selected: tableId === row.original.id })} />
           {t(tableId === row.original.id ? "common_selected" : "common_select")}
         </Button>
       ),

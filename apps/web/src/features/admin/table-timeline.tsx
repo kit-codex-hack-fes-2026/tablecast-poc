@@ -1,3 +1,4 @@
+import { tv } from "tailwind-variants";
 import type { TableState } from "@tablecast/api/schema";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Bell, ChevronRight, CirclePause, Mic, TriangleAlert } from "lucide-react";
@@ -9,6 +10,11 @@ import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { EventLabel } from "./events";
+
+const voiceStatus = tv({
+  base: "flex items-center gap-2 whitespace-nowrap text-sm",
+  variants: { error: { true: "text-destructive", false: "text-muted-foreground" } },
+});
 
 type FloorRow = { id: string; name: string; visit: TableState | null };
 export function TableTimeline({
@@ -116,14 +122,7 @@ function tableTimelineColumns(
       id: "status",
       header: t("common_status"),
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.visit
-              ? "bg-success-soft text-success"
-              : "bg-secondary text-muted-foreground"
-          }
-        >
+        <Badge variant={row.original.visit ? "success" : "inactive"}>
           {t(row.original.visit ? "admin_open" : "admin_vacant")}
         </Badge>
       ),
@@ -134,9 +133,7 @@ function tableTimelineColumns(
       cell: ({ row }) => {
         const status = row.original.visit?.voiceState;
         return status ? (
-          <span
-            className={`flex items-center gap-2 whitespace-nowrap text-sm ${status === "error" ? "text-destructive" : "text-muted-foreground"}`}
-          >
+          <span className={voiceStatus({ error: status === "error" })}>
             {status === "active" ? (
               <Mic className="size-4" />
             ) : status === "error" ? (

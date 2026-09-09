@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { cn } from "cn";
+import { cn } from "tailwind-variants";
 
 export function GoogleIcon({ className, ...props }: ComponentProps<"svg">) {
   return (
