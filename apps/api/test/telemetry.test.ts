@@ -3,9 +3,20 @@ import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { afterEach, expect, it, vi } from "vitest";
-import { measured, telemetryConfig } from "../src/platform/telemetry";
+import { measured, requestLog, telemetryConfig } from "../src/platform/telemetry";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("要求ログは後処理を待たず出力し、許可していない属性を標準出力へ漏らさない", () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  requestLog({ "http.response.status_code": 500, secret: "tablecast-secret" }, true);
+  expect(output).toHaveBeenCalledTimes(1);
+  expect(output.mock.calls[0]?.[0]).not.toContain("tablecast-secret");
+  expect(JSON.parse(String(output.mock.calls[0]?.[0]))).toMatchObject({
+    event: "tablecast.request_completed",
+    attributes: { "http.response.status_code": 500 },
+  });
+});
 
 it("自動計測に秘密属性があるとき送信境界で除去しpreviewのPR番号だけをresourceへ残す", () => {
   // Given: SDKの自動計測にURL・SQL・例外・不正なresourceが含まれる。

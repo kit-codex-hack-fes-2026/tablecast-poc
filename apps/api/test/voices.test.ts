@@ -161,7 +161,16 @@ it.each([
   });
   expect(JSON.stringify(result)).not.toContain(secret);
   expect(JSON.stringify(result)).not.toContain(privateBody);
-  expect(logger).not.toHaveBeenCalled();
+  expect(logger).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(String(logger.mock.calls[0]?.[0]))).toMatchObject({
+    event: "tablecast.request_completed",
+    attributes: {
+      "http.response.status_code": 503,
+      "tablecast.error.code": "VOICE_CATALOG_UNAVAILABLE",
+    },
+  });
+  expect(JSON.stringify(logger.mock.calls)).not.toContain(secret);
+  expect(JSON.stringify(logger.mock.calls)).not.toContain(privateBody);
   expect(provider).toHaveBeenCalledTimes(1);
   const call = provider.mock.calls[0];
   if (!call) throw new Error("providerへの要求がありません");

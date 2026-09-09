@@ -1,5 +1,4 @@
 import {
-  ConsoleTransport,
   getLogger,
   OTLPExporter,
   OTLPTransport,
@@ -69,7 +68,6 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
   const logTransport = endpoint
     ? new OTLPTransport({ url: `${endpoint}/v1/logs`, headers })
     : undefined;
-  const consoleTransport = new ConsoleTransport({ pretty: false });
   const exporter: SpanExporter = {
     export(spans, callback) {
       if (!traceTransport) {
@@ -111,7 +109,6 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
           resource,
           attributes: telemetryAttributes(record.attributes),
         }));
-      consoleTransport.export(safe, () => {});
       if (logTransport) logTransport.export(safe, callback);
       else callback({ code: 0 });
     },
@@ -158,7 +155,18 @@ export async function measured<T>(
 }
 
 export function requestLog(attributes: Attributes, failed: boolean) {
+  const safe = telemetryAttributes(attributes);
+  const span = trace.getActiveSpan()?.spanContext();
+  // 標準出力は要求内で確定する。後処理へ遅延させるのはOTLP送信だけ。
+  const entry = JSON.stringify({
+    event: "tablecast.request_completed",
+    attributes: safe,
+    trace_id: span?.traceId,
+    span_id: span?.spanId,
+  });
+  if (failed) console.error(entry);
+  else console.info(entry);
   const logger = getLogger("tablecast");
-  if (failed) logger.error("tablecast.request_completed", telemetryAttributes(attributes));
-  else logger.info("tablecast.request_completed", telemetryAttributes(attributes));
+  if (failed) logger.error("tablecast.request_completed", safe);
+  else logger.info("tablecast.request_completed", safe);
 }
