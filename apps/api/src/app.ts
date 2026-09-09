@@ -12,8 +12,9 @@ import { table } from "./modules/tables/routes";
 import { voiceRoutes } from "./modules/voice/routes";
 import type { ApiEnv } from "./platform/context";
 import { requestServices } from "./platform/context";
-import { handleError, requestSecurity } from "./platform/http";
+import { handleError, requestSecurity, requestTelemetry } from "./platform/http";
 const app = new Hono<ApiEnv>()
+  .use("*", requestTelemetry)
   .use("*", requestServices)
   .use("*", requestSecurity)
   .use(

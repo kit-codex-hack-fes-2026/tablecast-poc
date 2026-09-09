@@ -113,7 +113,7 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     if (closing) return;
     closing = true;
     for (const child of children) child.kill("SIGTERM");
-    for (const service of tablecastContainer ? [] : ["livekit", "mailpit"]) {
+    for (const service of tablecastContainer ? [] : ["livekit", "mailpit", "lgtm"]) {
       const containerName = `tablecast-${runtime.id}-${service}`;
       try {
         const { stdout } = await execute("docker", [
@@ -153,6 +153,38 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     launch([process.execPath, "--no-env-file", "run", "--cwd", "apps/emulate", "dev"], {
       TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
     });
+    if (!tablecastContainer) {
+      if (!runtime.ports.grafana || !runtime.ports.otlp || !runtime.ports.tempo)
+        throw new Error("LGTMのポートがありません。");
+      launch([
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        `tablecast-${runtime.id}-lgtm`,
+        "--label",
+        `tablecast.root=${tablecastRoot}`,
+        "-p",
+        `127.0.0.1:${runtime.ports.grafana}:3000`,
+        "-p",
+        `127.0.0.1:${runtime.ports.otlp}:4318`,
+        "-p",
+        `127.0.0.1:${runtime.ports.tempo}:3200`,
+        "-v",
+        `tablecast-${runtime.id}-lgtm:/data`,
+        "-v",
+        `${join(tablecastRoot, "infra/grafana/tempo.yaml")}:/otel-lgtm/tempo-config.yaml:ro`,
+        "-e",
+        "ENABLE_LOGS_GRAFANA=true",
+        "-e",
+        "GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer",
+        "-e",
+        `GF_SERVER_ROOT_URL=http://127.0.0.1:${runtime.ports.grafana}`,
+        "-e",
+        "GF_LOG_LEVEL=warn",
+        "grafana/otel-lgtm:0.32.1",
+      ]);
+    }
     if (tablecastContainer)
       launch([
         "mailpit",

@@ -265,6 +265,7 @@ jobs:
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
+      TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
       TABLECAST_DEPLOY_SECRET: ${{ secrets.TABLECAST_DEPLOY_SECRET }}
       TABLECAST_GOOGLE_CLIENT_ID: ${{ secrets.TABLECAST_GOOGLE_CLIENT_ID }}
       TABLECAST_GOOGLE_CLIENT_SECRET: ${{ secrets.TABLECAST_GOOGLE_CLIENT_SECRET }}

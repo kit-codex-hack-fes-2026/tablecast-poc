@@ -126,3 +126,25 @@ describe("本番とPRの配備境界", () => {
     ).toThrow("CF_ACCESS_CLIENT_SECRET");
   });
 });
+
+test("previewのAPIとWebに同じPR番号を渡し送信資格を公開varsへ含めない", () => {
+  const config = deploymentConfigs(
+    deploymentTarget("123"),
+    "a".repeat(40),
+    "11111111-1111-4111-8111-111111111111",
+    "/tablecast",
+    {},
+    {},
+  );
+  expect(config.api.vars.TABLECAST_PR_NUMBER).toBe("123");
+  expect(config.web.vars.TABLECAST_PR_NUMBER).toBe("123");
+  expect(config.web.vars.TABLECAST_ENV).toBe("preview");
+  expect(config.web.vars.TABLECAST_RELEASE_SHA).toBe(config.api.vars.TABLECAST_RELEASE_SHA);
+  expect(config.api.vars).not.toHaveProperty("TABLECAST_OTEL_AUTHORIZATION");
+  expect(config.web.vars).not.toHaveProperty("TABLECAST_OTEL_AUTHORIZATION");
+  const secrets = deploymentSecrets(deploymentTarget("123"), {
+    ...input,
+    TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
+  });
+  expect(secrets.TABLECAST_OTEL_AUTHORIZATION).toBe("tablecast-ingestion-secret");
+});

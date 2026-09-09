@@ -503,6 +503,16 @@ async function main() {
           path,
         });
     }
+    const webSecrets = resolve(directory, "web-secrets.json");
+    await writeFile(
+      webSecrets,
+      JSON.stringify(
+        secrets.TABLECAST_OTEL_AUTHORIZATION
+          ? { TABLECAST_OTEL_AUTHORIZATION: secrets.TABLECAST_OTEL_AUTHORIZATION }
+          : {},
+      ),
+      { mode: 0o600 },
+    );
     for (const name of [target.api, target.web]) {
       const config = outputConfigs.find((value) => value.name === name);
       if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
@@ -529,7 +539,7 @@ async function main() {
               "--containers-rollout",
               "immediate",
             ]
-          : []),
+          : ["--secrets-file", webSecrets]),
       ]);
     }
     await waitForRelease(target.origin, headers, sha);

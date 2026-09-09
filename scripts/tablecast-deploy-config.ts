@@ -100,6 +100,9 @@ export function deploymentSecrets(
       "TABLECAST_INWORLD_VOICES_API_KEY",
     ),
   };
+  if (input.TABLECAST_OTEL_AUTHORIZATION) {
+    secrets.TABLECAST_OTEL_AUTHORIZATION = input.TABLECAST_OTEL_AUTHORIZATION;
+  }
   if (target.pr) {
     secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");
     secrets.CF_ACCESS_CLIENT_SECRET = required(
@@ -133,6 +136,12 @@ export function deploymentConfigs(
   z.uuid()
     .refine((value) => value !== "00000000-0000-0000-0000-000000000000")
     .parse(databaseId);
+  const telemetryVars = {
+    TABLECAST_ENV: target.environment,
+    TABLECAST_RELEASE_SHA: sha,
+    TABLECAST_PR_NUMBER: target.pr ?? "",
+    TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
+  };
   const apiConfig = {
     ...api,
     name: target.api,
@@ -141,9 +150,8 @@ export function deploymentConfigs(
     workers_dev: false,
     preview_urls: false,
     vars: {
-      TABLECAST_ENV: target.environment,
+      ...telemetryVars,
       TABLECAST_PUBLIC_ORIGIN: target.origin,
-      TABLECAST_RELEASE_SHA: sha,
       TABLECAST_CONTAINERS_ENABLED: "true",
       TABLECAST_VOICE_ENABLED: "true",
       TABLECAST_AGENT_NAME: target.agent,
@@ -193,6 +201,7 @@ export function deploymentConfigs(
       workers_dev: true,
       preview_urls: false,
       services: [{ binding: "TABLECAST_API", service: target.api }],
+      vars: telemetryVars,
     },
   };
 }

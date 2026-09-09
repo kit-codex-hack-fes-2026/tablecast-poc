@@ -1,14 +1,39 @@
+import { trace, SpanStatusCode } from "@opentelemetry/api";
+import { matchedRoutes } from "hono/route";
+import { requestLog } from "./telemetry";
 import { APIError } from "better-auth/api";
 import type { ErrorHandler } from "hono";
 import { createMiddleware } from "hono/factory";
 import { DomainError, ensure } from "../platform/errors";
 import type { ApiEnv } from "./context";
-export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
+export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
+  const started = performance.now();
   const traceId = crypto.randomUUID();
   c.set("traceId", traceId);
   c.header("X-Request-Id", traceId);
   c.header("Cache-Control", "no-store");
   c.header("X-Content-Type-Options", "nosniff");
+  try {
+    await next();
+  } finally {
+    const route =
+      matchedRoutes(c).findLast((matched) => matched.method !== "ALL")?.path ?? "unmatched";
+    const span = trace.getActiveSpan();
+    const status = c.error && c.res.status < 400 ? 500 : c.res.status;
+    const attributes = {
+      "http.request.method": c.req.method,
+      "http.route": route,
+      "http.response.status_code": status,
+      "tablecast.request.id": traceId,
+      "tablecast.duration_ms": Math.round((performance.now() - started) * 100) / 100,
+      ...(c.error instanceof DomainError ? { "tablecast.error.code": c.error.code } : {}),
+    };
+    span?.setAttributes(attributes);
+    if (status >= 500) span?.setStatus({ code: SpanStatusCode.ERROR });
+    requestLog(attributes, status >= 500);
+  }
+});
+export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
   if (
     !["GET", "HEAD", "OPTIONS"].includes(c.req.method) &&
     !c.req.path.startsWith("/internal/voice/") &&
@@ -35,15 +60,6 @@ export const handleError: ErrorHandler<ApiEnv> = (error, c) => {
       status: error.statusCode,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
     });
-  console.error(
-    JSON.stringify({
-      event: "tablecast.request_failed",
-      traceId: c.get("traceId"),
-      releaseSha: c.env.TABLECAST_RELEASE_SHA,
-      path: c.req.path,
-      errorType: error.name,
-    }),
-  );
   return c.json(
     { error: { code: "INTERNAL_ERROR", message: "INTERNAL_ERROR" }, traceId: c.get("traceId") },
     500,

@@ -1,3 +1,4 @@
+import { measured } from "../../platform/telemetry";
 import { sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ConfirmationRecord, OrderRecord } from "../../db/records";
@@ -172,108 +173,114 @@ export async function submitOrder(
   actor: Actor,
   input: { snapshotId: string; idempotencyKey: string; approved: true },
 ): Promise<Order> {
-  const db = services.db;
+  return measured("tablecast.order.submit", async () => {
+    const db = services.db;
 
-  ensure(input.approved, "APPROVAL_REQUIRED", 422);
-  await getSession(services, actor);
-  const existing = await db.get<OrderRecord | undefined>(
-    sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND store_id=${actor.storeId} AND idempotency_key=${input.idempotencyKey}`,
-  );
-  if (existing) {
-    ensure(existing.snapshot_id === input.snapshotId, "IDEMPOTENCY_CONFLICT");
-    return orderValue(existing);
-  }
-  const confirmation = await db.get<ConfirmationRecord | undefined>(
-    sql`SELECT * FROM confirmations WHERE id=${input.snapshotId} AND store_id=${actor.storeId} AND table_session_id=${actor.tableSessionId}`,
-  );
-  ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
-  const session = await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId);
-  priceCart(
-    catalog.configuration,
-    cartLineSchema.array().parse(JSON.parse(session.cart_json)),
-    session.cart_version,
-    await planContext(services, session),
-  );
-  if (actor.kind === "voice") {
-    const turn = await db.get<{ started_at: number } | undefined>(
-      sql`SELECT started_at FROM voice_turns WHERE id=${actor.turnId} AND voice_session_id=${actor.voiceSessionId}`,
+    ensure(input.approved, "APPROVAL_REQUIRED", 422);
+    await measured("tablecast.order.session", () => getSession(services, actor));
+    const existing = await db.get<OrderRecord | undefined>(
+      sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND store_id=${actor.storeId} AND idempotency_key=${input.idempotencyKey}`,
     );
-    ensure(
-      turn && confirmation.read_at && turn.started_at > confirmation.read_at,
-      "NEW_APPROVAL_TURN_REQUIRED",
+    if (existing) {
+      ensure(existing.snapshot_id === input.snapshotId, "IDEMPOTENCY_CONFLICT");
+      return orderValue(existing);
+    }
+    const confirmation = await db.get<ConfirmationRecord | undefined>(
+      sql`SELECT * FROM confirmations WHERE id=${input.snapshotId} AND store_id=${actor.storeId} AND table_session_id=${actor.tableSessionId}`,
     );
-  }
-  if (actor.kind === "voice")
-    ensure(
-      confirmation.channel === "voice" &&
-        confirmation.voice_session_id === actor.voiceSessionId &&
-        confirmation.status === "read" &&
-        !!confirmation.read_at &&
-        !!actor.turnId &&
-        actor.turnId !== confirmation.created_turn_id,
-      "READ_APPROVAL_REQUIRED",
+    ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
+    const session = await measured("tablecast.order.session", () => getSession(services, actor));
+    const catalog = await measured("tablecast.order.catalog", () =>
+      getCatalog(services, actor.storeId),
     );
-  else
-    ensure(
-      (actor.kind === "device" || actor.kind === "staff") && confirmation.channel === "gui",
-      "CONFIRMATION_CHANNEL",
-      403,
+    priceCart(
+      catalog.configuration,
+      cartLineSchema.array().parse(JSON.parse(session.cart_json)),
+      session.cart_version,
+      await measured("tablecast.order.plan", () => planContext(services, session)),
     );
-  const now = Date.now();
-  const mutation = crypto.randomUUID();
-  const orderId = crypto.randomUUID();
-  const gate = voiceCondition(actor);
-  const snapshot: Snapshot = {
-    ...snapshotSchema.parse(JSON.parse(confirmation.snapshot_json)),
-    status: "submitted",
-  };
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({
-        cart_json: "[]",
-        cart_version: sql`cart_version+1`,
-        mutation_id: mutation,
-      })
-      .where(
-        sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=s.config_version AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
-      ),
-    db
-      .insert(business.orders)
-      .select(
-        sql`SELECT ${orderId},store_id,id,${confirmation.id},${input.idempotencyKey},'submitted',${JSON.stringify(snapshot)},${snapshot.total},${now},${now} FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation}`,
-      ),
-    db
-      .update(business.confirmations)
-      .set({ status: "submitted" })
-      .where(
-        sql`id=${confirmation.id} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation})`,
-      ),
-    eventStatement(services, actor, mutation, "order.submitted", {
-      orderId,
+    if (actor.kind === "voice") {
+      const turn = await db.get<{ started_at: number } | undefined>(
+        sql`SELECT started_at FROM voice_turns WHERE id=${actor.turnId} AND voice_session_id=${actor.voiceSessionId}`,
+      );
+      ensure(
+        turn && confirmation.read_at && turn.started_at > confirmation.read_at,
+        "NEW_APPROVAL_TURN_REQUIRED",
+      );
+    }
+    if (actor.kind === "voice")
+      ensure(
+        confirmation.channel === "voice" &&
+          confirmation.voice_session_id === actor.voiceSessionId &&
+          confirmation.status === "read" &&
+          !!confirmation.read_at &&
+          !!actor.turnId &&
+          actor.turnId !== confirmation.created_turn_id,
+        "READ_APPROVAL_REQUIRED",
+      );
+    else
+      ensure(
+        (actor.kind === "device" || actor.kind === "staff") && confirmation.channel === "gui",
+        "CONFIRMATION_CHANNEL",
+        403,
+      );
+    const now = Date.now();
+    const mutation = crypto.randomUUID();
+    const orderId = crypto.randomUUID();
+    const gate = voiceCondition(actor);
+    const snapshot: Snapshot = {
+      ...snapshotSchema.parse(JSON.parse(confirmation.snapshot_json)),
+      status: "submitted",
+    };
+    const result = await measured("tablecast.order.commit", () =>
+      db.batch([
+        db
+          .update(business.tableSessions)
+          .set({
+            cart_json: "[]",
+            cart_version: sql`cart_version+1`,
+            mutation_id: mutation,
+          })
+          .where(
+            sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=s.config_version AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
+          ),
+        db
+          .insert(business.orders)
+          .select(
+            sql`SELECT ${orderId},store_id,id,${confirmation.id},${input.idempotencyKey},'submitted',${JSON.stringify(snapshot)},${snapshot.total},${now},${now} FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation}`,
+          ),
+        db
+          .update(business.confirmations)
+          .set({ status: "submitted" })
+          .where(
+            sql`id=${confirmation.id} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation})`,
+          ),
+        eventStatement(services, actor, mutation, "order.submitted", {
+          orderId,
+          total: snapshot.total,
+          source: actor.kind,
+        }),
+      ]),
+    );
+    if (result[0]?.meta.changes !== 1) {
+      const retry = await db.get<OrderRecord | undefined>(
+        sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND idempotency_key=${input.idempotencyKey} AND snapshot_id=${input.snapshotId}`,
+      );
+      if (retry) return orderValue(retry);
+      throw new DomainError("CONFIRMATION_STALE", 409, "CONFIRMATION_STALE");
+    }
+    await measured("tablecast.order.notify", () => notifyStore(services, actor.storeId));
+    return {
+      id: orderId,
+      tableSessionId: session.id,
+      snapshotId: snapshot.id,
+      idempotencyKey: input.idempotencyKey,
+      status: "submitted",
+      snapshot,
       total: snapshot.total,
-      source: actor.kind,
-    }),
-  ]);
-  if (result[0]?.meta.changes !== 1) {
-    const retry = await db.get<OrderRecord | undefined>(
-      sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND idempotency_key=${input.idempotencyKey} AND snapshot_id=${input.snapshotId}`,
-    );
-    if (retry) return orderValue(retry);
-    throw new DomainError("CONFIRMATION_STALE", 409, "CONFIRMATION_STALE");
-  }
-  await notifyStore(services, actor.storeId);
-  return {
-    id: orderId,
-    tableSessionId: session.id,
-    snapshotId: snapshot.id,
-    idempotencyKey: input.idempotencyKey,
-    status: "submitted",
-    snapshot,
-    total: snapshot.total,
-    createdAt: now,
-  };
+      createdAt: now,
+    };
+  });
 }
 
 export async function changeOrderStatus(

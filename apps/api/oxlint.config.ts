@@ -10,6 +10,7 @@ const files = [
   ["schema", "src/schema.ts"],
   ["bootstrap", "src/bootstrap.ts"],
   ["context", "src/platform/context.ts"],
+  ["telemetry", "src/platform/telemetry.ts"],
   ["http", "src/platform/{http,validation}.ts"],
   ["error", "src/platform/errors.ts"],
   ["model", "src/platform/model.ts"],
@@ -31,12 +32,13 @@ const files = [
 // 左がimport元、右が許可する依存先。外部packageとContextのtype-onlyは別に制限する。
 const dependencies = {
   app: ["route", "store-routes", "http", "context"],
-  worker: ["app", "runtime"],
+  worker: ["app", "runtime", "telemetry"],
+  telemetry: [],
   client: ["app"],
   schema: ["model"],
   bootstrap: ["model", "pure", "error", "db", "auth-factory"],
   context: ["auth-factory", "model"],
-  http: ["http", "error"],
+  http: ["http", "error", "telemetry"],
   error: [],
   model: ["model"],
   db: ["db"],
@@ -49,6 +51,7 @@ const dependencies = {
   query: ["query", "db", "model", "pure", "error"],
   mutation: ["db", "model", "query", "error"],
   service: [
+    "telemetry",
     "service",
     "query",
     "mutation",

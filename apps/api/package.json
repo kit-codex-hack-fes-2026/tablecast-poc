@@ -6,7 +6,8 @@
   "exports": {
     "./schema": "./src/schema.ts",
     "./client": "./src/client.ts",
-    "./speech": "./src/modules/voice/prompt.ts"
+    "./speech": "./src/modules/voice/prompt.ts",
+    "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
@@ -23,8 +24,12 @@
     "@cloudflare/containers": "0.3.7",
     "@hono/mcp": "0.3.2",
     "@hono/zod-validator": "0.9.1",
+    "@inference-net/otel-cf-workers": "2.5.0",
     "@mastra/core": "1.64.0",
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/resources": "2.2.0",
+    "@opentelemetry/sdk-trace-base": "2.2.0",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "better-auth": "1.7.2",
