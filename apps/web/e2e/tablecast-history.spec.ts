@@ -135,8 +135,11 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       await row.getByRole("button", { name: labels.admin_details, exact: true }).click();
       const detailPage = page.getByRole("main");
       await expect(page).toHaveURL(new RegExp(`/visits/${target.id}`));
-      await page.reload();
-      await expect(detailPage).toBeVisible();
+      const tableHeading = detailPage.getByRole("heading", { name: target.tableName, exact: true });
+      // URL更新だけで再読込せず、対象の来店が表示されるまで待つ。
+      await expect(tableHeading).toBeVisible();
+      await page.reload({ waitUntil: "commit" });
+      await expect(tableHeading).toBeVisible();
       await expect(
         detailPage.getByRole("button", { name: labels.admin_close_session, exact: true }),
       ).toHaveCount(0);
