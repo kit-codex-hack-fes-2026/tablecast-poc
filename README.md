@@ -62,7 +62,7 @@ bun --no-env-file run hooks:install
 bun --no-env-file run storybook
 ```
 
-Lefthookはstageされたファイルだけを検査し、自動stageは行わない。CIも無課金の静的解析、実D1・DOの試験、UI部品、日英のブラウザー試験を実行する。有料の実音声試験はCIに含めない。
+Lefthookはpre-commitでstageされたファイルを検査し、自動stageは行わない。commit-msgはcommitlintでConventional Commits・Gitmoji・本文・Issue番号必須を検査する。push時の全体検証は行わず、CIでコミットメッセージと無課金の静的解析、実D1・DOの試験、UI部品、日英のブラウザー試験を検査する。有料の実音声試験はCIに含めない。
 
 ## 外部音声の設定
 

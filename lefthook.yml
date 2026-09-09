@@ -9,7 +9,7 @@ pre-commit:
     lint:
       glob: "*.{ts,tsx,js}"
       run: bun run codegen && bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
-pre-push:
+commit-msg:
   commands:
-    check:
-      run: bun run check
+    commitlint:
+      run: bunx --no-install commitlint --edit "{1}"

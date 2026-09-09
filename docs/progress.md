@@ -50,7 +50,7 @@
 | history                       | 独立した実D1で600履歴セッション、総注文2,415件、2万超event。再seed件数不変、T01の操作状態保持、外部キー・店舗境界・残額0を検証                                                                                                            |
 | 背景進行                      | `demo:play`で正規APIから12操作。T01とT12は進行対象から除外                                                                                                                                                                                |
 | 固定patch                     | 公式pluginの隔離環境で13件成功。通常のPython試験とは別扱い                                                                                                                                                                                |
-| Git hooks                     | Lefthookのpre-commitとpre-pushを導入済み。自動stageを行わない                                                                                                                                                                             |
+| Git hooks                     | Lefthookのpre-commitとcommit-msgを導入済み。pre-pushは設定せず、自動stageを行わない                                                                                                                                                       |
 
 3worktreeを同時起動し、24予約port、host、Cookie、D1/R2保存先、LiveKit鍵・Roomを分離できた。別環境のCookieは手動転送しても401、別LiveKit鍵も拒否した。片方のreset/stop後も他方の認証・下書き全内容・Roomを保持し、元環境のhealthも200だった。一時worktree・process・container・16port・共有台帳の2予約を片付けた。詳細は `.local/tablecast-isolation-report.json` に残す。
 
