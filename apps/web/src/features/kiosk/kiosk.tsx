@@ -534,7 +534,7 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
               <ShoppingBag size={20} aria-hidden="true" />
               <span className="min-w-0 text-xs leading-normal text-muted-foreground">
                 {t("kiosk_cart")}
-                <strong className="block break-words text-lg leading-normal tracking-tight text-foreground font-semibold">
+                <strong className="block wrap-break-word text-lg leading-normal tracking-tight text-foreground font-semibold">
                   {money(data.cart.total, locale)}
                 </strong>
               </span>
