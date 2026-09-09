@@ -1,7 +1,7 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { Link, useHydrated, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
@@ -51,6 +51,7 @@ export function AdminSidebar({
   onNavigate,
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
+  const hydrated = useHydrated();
   const session = useQuery(sessionOptions);
   const path = useRouterState({ select: (state) => state.location.pathname });
   const { draftId } = useParams({ strict: false });
@@ -173,8 +174,8 @@ export function AdminSidebar({
                 <Settings2 className="size-5 shrink-0" />
               </Link>
             ) : (
-              <Collapsible.Root key={`${selectedStore}-${inMenu}`} defaultOpen={inMenu}>
-                <Collapsible.Trigger className={`${item} group`}>
+              <Collapsible.Root key={String(inMenu)} defaultOpen={inMenu}>
+                <Collapsible.Trigger disabled={!hydrated} className={`${item} group`}>
                   <Settings2 className="size-5 shrink-0" />
                   {t("admin_config")}
                   <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />
