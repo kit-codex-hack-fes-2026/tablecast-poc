@@ -112,27 +112,31 @@ jobs:
       - run: bun run test:browser
 
   e2e:
-    name: "E2E Test: 注文・ログイン・会計 (Playwright)"
+    name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }})"
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       - uses: ./.github/actions/tablecast-setup
       - parallel:
           - uses: ./.github/actions/tablecast-browser
             with:
-              browsers: chromium webkit
+              browsers: ${{ matrix.browser }}
           - uses: ./.github/actions/tablecast-browser-deps
             with:
-              browsers: chromium webkit
+              browsers: ${{ matrix.browser }}
           - name: Mailpit image
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
-        run: bun run test:e2e
+        run: bun run test:e2e --project=tablecast-${{ matrix.browser }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
-          name: tablecast-e2e
+          name: tablecast-e2e-${{ matrix.browser }}
           path: apps/web/test-results/
           include-hidden-files: true
           retention-days: 7
