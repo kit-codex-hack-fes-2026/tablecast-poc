@@ -10,7 +10,7 @@ const credentials = z
   .object({ email: z.string(), password: z.string() })
   .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
 
-test.use({ trace: "off" });
+test.use({ actionTimeout: 15_000 });
 
 for (const { language, labels } of [
   { language: "日本語", labels: ja },
@@ -86,14 +86,15 @@ for (const { language, labels } of [
       // 実サーバーとの通知だけを切り、管理画面のHTTP event取得による回復を確認する。
       dropped = true;
       await Promise.all(sockets.map((socket) => socket.close({ code: 1001 })));
-      const recovered = page.waitForResponse(async (response) => {
-        if (new URL(response.url()).pathname !== `${base}/events` || !response.ok()) return false;
-        const { events } = eventsSchema.parse(await response.json());
-        return events.some(
-          (event) => event.tableSessionId === sessionId && event.kind === "billing.payment",
-        );
-      });
-      await Promise.all([record("payment", 100), recovered]);
+      const payment = await record("payment", 100);
+      // スナップショットが先行した場合も、HTTP同期のカーソルが入金まで進むことを確認する。
+      await page.waitForResponse(
+        async (response) => {
+          if (new URL(response.url()).pathname !== `${base}/events` || !response.ok()) return false;
+          return eventsSchema.parse(await response.json()).cursor >= payment.cursor;
+        },
+        { timeout: 15_000 },
+      );
       await expect(dialog.getByText(labels.event_payment_recorded, { exact: true })).toHaveCount(1);
 
       const before = connected;
