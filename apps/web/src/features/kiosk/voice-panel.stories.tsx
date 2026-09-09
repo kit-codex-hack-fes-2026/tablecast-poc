@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
-import { VoicePanel } from "./voice-panel";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
+import { VoicePanel } from "./voice-panel";
 
 const meta = {
   title: "客向け/会話",

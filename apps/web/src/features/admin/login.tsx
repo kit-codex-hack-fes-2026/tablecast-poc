@@ -1,15 +1,15 @@
-import { GoogleIcon } from "../../components/google-icon";
-import { authClient, authResult } from "../../lib/auth-client";
 import { useMutation } from "@tanstack/react-query";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+import { GoogleIcon } from "../../components/google-icon";
 import { LanguageSwitch } from "../../components/language-switch";
-import { Button, buttonVariants } from "../../components/ui/button";
+import { Button } from "../../components/ui/button";
+import { buttonVariants } from "../../components/ui/button-variants";
 import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
-import { api, json } from "../../lib/api";
+
+import { authClient, authResult } from "../../lib/auth-client";
 
 function safeReturn() {
   const requested = new URLSearchParams(window.location.search).get("returnTo");
@@ -17,25 +17,24 @@ function safeReturn() {
 }
 
 export function Login() {
+  const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
   const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
   const social = useMutation({
     mutationFn: async (method: "google" | "passkey") => {
-      const query = new URLSearchParams(window.location.search);
+      const query = new URLSearchParams(searchStr);
       const requested = query.get("returnTo");
       const callbackURL =
         requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/organisations";
       if (method === "passkey") {
         authResult(await authClient.signIn.passkey());
-        window.location.assign(
-          query.has("sig") ? `/consent${window.location.search}` : callbackURL,
-        );
+        window.location.assign(query.has("sig") ? `/consent${searchStr}` : callbackURL);
       } else
         authResult(
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: query.has("sig") ? `/consent${window.location.search}` : callbackURL,
+            callbackURL: query.has("sig") ? `/consent${searchStr}` : callbackURL,
           }),
         );
     },
@@ -47,22 +46,9 @@ export function Login() {
     if (saved === "ja" || saved === "en") setLocale(saved);
   }, [setLocale]);
   const login = useMutation({
-    mutationFn: () => {
-      const query = new URLSearchParams(window.location.search);
-      return api(
-        "/api/auth/sign-in/email",
-        json("POST", {
-          email,
-          password,
-          ...(query.has("sig") ? { oauth_query: window.location.search.slice(1) } : {}),
-        }),
-      );
-    },
-    onSuccess: (result) => {
-      const redirected = z
-        .object({ redirect: z.literal(true), url: z.string().min(1) })
-        .safeParse(result);
-      if (redirected.success) window.location.assign(redirected.data.url);
+    mutationFn: async () => authResult(await authClient.signIn.email({ email, password })),
+    onSuccess: () => {
+      if (new URLSearchParams(searchStr).has("sig")) window.location.assign(`/consent${searchStr}`);
       else if (safeReturn()) window.location.assign(safeReturn() ?? "/organisations");
       else
         void navigate({
@@ -76,7 +62,8 @@ export function Login() {
       <section className="p-7 flex flex-col items-stretch w-full max-w-144 [&_h2]:text-2xl [&_h2]:-mt-3 [&_h2]:mx-0 [&_h2]:mb-2.5 [&_[data-slot=button][data-size=text]]:justify-center [&_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6">
         <header className="flex flex-wrap items-center justify-between gap-6">
           <Link
-            className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
+            data-ui="brand"
+            className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
             to="/"
           >
             TableCast<span className="text-accent ml-px text-4xl">·</span>
@@ -158,7 +145,7 @@ export function Login() {
             {t("auth_sign_in")}
             <ArrowRight size={20} aria-hidden="true" />
           </Button>
-          <a className="text-base underline" href={`/register${window.location.search}`}>
+          <a className="text-base underline" href={`/register${searchStr}`}>
             {t("auth_register")}
           </a>
           <a className="text-base underline" href="/reset-password">

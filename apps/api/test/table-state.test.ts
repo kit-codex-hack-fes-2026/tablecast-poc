@@ -39,7 +39,7 @@ it("未依頼の卓は別来店・別店舗・店舗全体の会計依頼やス�
   await setupFixture();
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-org','別店舗',?,?)",
+      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES('tablecast-other-store','tablecast-fixture-other-org','別店舗',?,?)",
     ).bind(JSON.stringify(configuration), Date.now()),
     env.TABLECAST_DB.prepare(
       "INSERT INTO table_sessions(id,store_id,table_id,status,locale,guest_count,opened_at,closed_at) VALUES('tablecast-past-session','tablecast-store','tablecast-table','closed','ja',2,?,?)",

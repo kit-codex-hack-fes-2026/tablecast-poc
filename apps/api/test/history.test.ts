@@ -255,20 +255,11 @@ it("認可した店舗の履歴だけを返し、別店舗IDの差替えと端�
   }
 });
 
-it("同じログインCookieでも店舗team所属または組織所属を取り消すと履歴を再取得できない", async () => {
+it("店舗所属を取り消すと同じCookieでも履歴を再取得できない", async () => {
   const { cookie, staff } = await setupFixture();
   await env.TABLECAST_DB.batch([
     closedSession("tablecast-history"),
     env.TABLECAST_DB.prepare("UPDATE member SET role='member' WHERE user_id=?").bind(staff.userId),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO team(id,name,organization_id,created_at) VALUES('tablecast-team','店舗担当','tablecast-org',?)",
-    ).bind(closedAt),
-    env.TABLECAST_DB.prepare(
-      "UPDATE stores SET team_id='tablecast-team' WHERE id='tablecast-store'",
-    ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO team_member(id,team_id,user_id,created_at) VALUES('tablecast-team-member','tablecast-team',?,?)",
-    ).bind(staff.userId, closedAt),
   ]);
   const paths = [
     `${base}/history`,
@@ -276,15 +267,6 @@ it("同じログインCookieでも店舗team所属または組織所属を取り
     `${base}/tables/tablecast-history/events`,
   ];
   for (const path of paths) expect((await get(path, cookie)).status).toBe(200);
-
-  await env.TABLECAST_DB.prepare("DELETE FROM team_member WHERE user_id=?")
-    .bind(staff.userId)
-    .run();
-  for (const path of paths) expect((await get(path, cookie)).status).toBe(403);
-  await env.TABLECAST_DB.prepare("UPDATE member SET role='owner' WHERE user_id=?")
-    .bind(staff.userId)
-    .run();
-  expect((await get(`${base}/history`, cookie)).status).toBe(200);
   await env.TABLECAST_DB.prepare("DELETE FROM member WHERE user_id=?").bind(staff.userId).run();
   for (const path of paths) expect((await get(path, cookie)).status).toBe(403);
 });

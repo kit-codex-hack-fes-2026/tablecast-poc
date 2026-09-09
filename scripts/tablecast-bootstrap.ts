@@ -186,7 +186,6 @@ if (import.meta.main)
           stage: z.enum(["preflight", "administrator", "organization", "store"]),
           userId: z.string().nullable(),
           organizationId: z.string().nullable(),
-          teamId: z.string().nullable(),
         })
         .safeParse(error.details);
       console.error(JSON.stringify({ code: error.code, ...(details.success ? details.data : {}) }));

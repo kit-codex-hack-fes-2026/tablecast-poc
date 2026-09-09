@@ -1,14 +1,8 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
-import { adminStateSchema, tableStateSchema } from "@tablecast/api/schema";
 import { expect, test, type WebSocketRoute } from "@playwright/test";
-import ja from "../messages/ja.json" with { type: "json" };
+import { adminStateSchema, eventsSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
-import { eventsSchema } from "../src/lib/responses";
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import ja from "../messages/ja.json" with { type: "json" };
+import { credentials } from "./support/runtime";
 
 test.use({ actionTimeout: 15_000 });
 
@@ -68,20 +62,18 @@ for (const { language, labels } of [
       });
       expect(opened.status()).toBe(200);
       sessionId = tableStateSchema.parse(await opened.json()).id;
-      await page.goto("/admin/live");
-      await expect(page.getByRole("table")).toBeVisible();
+      await page.goto(`/admin/stores/${storeId}/floor`);
       await page.getByRole("button", { name: language, exact: true }).click();
-      await page.getByRole("combobox", { name: labels.admin_store }).selectOption(storeId);
       await expect.poll(() => connected).toBeGreaterThan(0);
       const row = page
         .getByRole("row")
-        .filter({ has: page.getByRole("cell", { name: vacant.name, exact: true }) });
+        .filter({ has: page.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }) });
       await expect(row).toHaveCount(1);
-      await row.getByRole("cell", { name: vacant.name, exact: true }).getByRole("button").click();
-      const dialog = page.getByRole("dialog");
-      await dialog.getByRole("tab", { name: labels.admin_logs, exact: true }).click();
+      await row.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
+      const detail = page.getByRole("main");
+      await detail.getByRole("tab", { name: labels.admin_logs, exact: true }).click();
       await record("adjustment", 100);
-      await expect(dialog.getByText(labels.event_bill_adjusted, { exact: true })).toHaveCount(1);
+      await expect(detail.getByText(labels.event_bill_adjusted, { exact: true })).toHaveCount(1);
 
       // 実サーバーとの通知だけを切り、管理画面のHTTP event取得による回復を確認する。
       dropped = true;
@@ -95,7 +87,7 @@ for (const { language, labels } of [
         },
         { timeout: 15_000 },
       );
-      await expect(dialog.getByText(labels.event_payment_recorded, { exact: true })).toHaveCount(1);
+      await expect(detail.getByText(labels.event_payment_recorded, { exact: true })).toHaveCount(1);
 
       const before = connected;
       dropped = false;
@@ -103,9 +95,9 @@ for (const { language, labels } of [
       const beforeNotification = notifications;
       await record("adjustment", 200);
       await expect.poll(() => notifications).toBeGreaterThan(beforeNotification);
-      await expect(dialog.getByText(labels.event_bill_adjusted, { exact: true })).toHaveCount(2);
-      await expect(dialog.getByText(labels.event_payment_recorded, { exact: true })).toHaveCount(1);
-      await dialog.getByRole("button", { name: labels.common_close, exact: true }).click();
+      await expect(detail.getByText(labels.event_bill_adjusted, { exact: true })).toHaveCount(2);
+      await expect(detail.getByText(labels.event_payment_recorded, { exact: true })).toHaveCount(1);
+      await page.goto(`/admin/stores/${storeId}/floor`);
       await expect(row).toContainText(/[¥￥]200/);
       await expect(row).toHaveCount(1);
     } finally {

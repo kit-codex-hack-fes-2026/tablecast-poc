@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useI18n } from "../../i18n/locale";
+
 import { authClient } from "../../lib/auth-client";
 import { AdminShell } from "../admin/admin-shell";
 
@@ -15,7 +16,15 @@ export function SettingsShell({ children }: { children: ReactNode }) {
       );
   }, [session.isPending, session.data]);
   return (
-    <AdminShell tab={path === "/organisations" ? "organisations" : "account"}>
+    <AdminShell
+      tab={
+        path === "/organisations" || path === "/stores/new"
+          ? "organisations"
+          : path === "/account/mcp-sessions" || path.startsWith("/account/integrations/")
+            ? "mcp"
+            : "account"
+      }
+    >
       {session.data ? (
         children
       ) : (

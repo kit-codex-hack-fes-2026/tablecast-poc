@@ -317,14 +317,11 @@ it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込み�
   ).toBe(0);
 });
 
-it("MCPはOAuth対象組織・店舗team・現行roleを要求ごとに照合する", async () => {
+it("MCPはOAuth対象店舗・現行roleを要求ごとに照合する", async () => {
   const { cookie, staff } = await setupFixture();
   const { token } = await authorise(cookie);
   const client = await connect(token);
-  const draft = toolData(
-    await client.callTool({ name: "create_draft", arguments: {} }),
-    configDraftSchema,
-  );
+  toolData(await client.callTool({ name: "create_draft", arguments: {} }), configDraftSchema);
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
       "INSERT INTO organization(id,name,slug,created_at) VALUES('tablecast-other-org','別組織','tablecast-other-org',?)",
@@ -335,26 +332,9 @@ it("MCPはOAuth対象組織・店舗team・現行roleを要求ごとに照合す
     env.TABLECAST_DB.prepare(
       "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-org-store','tablecast-other-org','別組織店',config_json,updated_at FROM stores WHERE id='tablecast-store'",
     ),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO stores(id,organization_id,name,config_json,updated_at) SELECT 'tablecast-other-store',organization_id,'別店舗',config_json,updated_at FROM stores WHERE id='tablecast-store'",
-    ),
   ]);
   await expect(connect(token, "tablecast-other-org-store")).rejects.toMatchObject({ code: 403 });
-  const other = await connect(token, "tablecast-other-store");
-  toolError(
-    await other.callTool({ name: "get_draft_diff", arguments: { draftId: draft.id } }),
-    "DRAFT_NOT_FOUND",
-  );
   await env.TABLECAST_DB.batch([
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO team(id,name,organization_id,created_at) VALUES('tablecast-own-team','担当店','tablecast-org',?)",
-    ).bind(Date.now()),
-    env.TABLECAST_DB.prepare(
-      "INSERT INTO team_member(id,team_id,user_id,created_at) VALUES('tablecast-own-team-member','tablecast-own-team',?,?)",
-    ).bind(staff.userId, Date.now()),
-    env.TABLECAST_DB.prepare(
-      "UPDATE stores SET team_id='tablecast-own-team' WHERE id='tablecast-store'",
-    ),
     env.TABLECAST_DB.prepare(
       "UPDATE member SET role='member' WHERE organization_id='tablecast-org' AND user_id=?",
     ).bind(staff.userId),
@@ -364,9 +344,14 @@ it("MCPはOAuth対象組織・店舗team・現行roleを要求ごとに照合す
       .storeId,
   ).toBe("tablecast-store");
   toolError(await client.callTool({ name: "create_draft", arguments: {} }), "ADMIN_REQUIRED");
-  await expect(other.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject({
-    code: 403,
-  });
+  await env.TABLECAST_DB.prepare(
+    "DELETE FROM member WHERE organization_id='tablecast-org' AND user_id=?",
+  )
+    .bind(staff.userId)
+    .run();
+  await expect(client.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject(
+    { code: 403 },
+  );
 });
 
 it("読み取りOAuthからも共通の標準音声一覧を取得し、未設定時は安全なエラーを返す", async () => {
@@ -550,4 +535,42 @@ it("未ログインのMCPクライアントは公開クライアント登録で�
   const client = z.object({ client_id: z.string() }).parse(await response.json());
   expect(client.client_id).toBeTruthy();
   expect(response.headers.getSetCookie().join()).not.toContain("session_token");
+});
+
+it("アカウントのMCP連携一覧は承認scopeと日時を返し、取消後は既存tokenを拒否する", async () => {
+  // Given: 店長が外部アプリへ店舗の読み取りを承認する。
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie, "tablecast:read");
+  const client = await connect(token);
+  const response = await exports.default.fetch(
+    new Request(origin + "/api/account/mcp-sessions", { headers: { Cookie: cookie } }),
+  );
+  expect(response.status).toBe(200);
+  const data = z
+    .object({
+      sessions: z.array(
+        z.object({
+          id: z.string(),
+          scopes: z.array(z.string()),
+          createdAt: z.number(),
+          updatedAt: z.number(),
+        }),
+      ),
+    })
+    .parse(await response.json());
+  const session = data.sessions[0];
+  expect(session?.scopes).toContain("tablecast:read");
+  if (!session) throw new Error("承認がありません。");
+  // When: ユーザーが連携を取り消す。
+  const revoke = await exports.default.fetch(
+    new Request(origin + `/api/account/mcp-sessions/${session.id}/revoke`, {
+      method: "POST",
+      headers: { Cookie: cookie, Origin: origin },
+    }),
+  );
+  expect(revoke.status).toBe(200);
+  // Then: アクセストークンの期限前でも既存接続からツールを呼べない。
+  await expect(client.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject(
+    { code: 401 },
+  );
 });

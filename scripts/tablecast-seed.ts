@@ -1,3 +1,4 @@
+import process from "node:process";
 import { randomUUID } from "node:crypto";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -38,7 +39,11 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
 }
 
 async function seed() {
-  const args = process.argv.slice(2).filter((arg) => arg !== "--");
+  const args = z
+    .array(z.string())
+    .parse(process.argv)
+    .slice(2)
+    .filter((arg) => arg !== "--");
   if (args.some((arg) => !["--profile", "smoke", "demo", "history"].includes(arg)))
     throw new Error("seedはlocal専用です。指定可能な引数は --profile smoke|demo|history です。");
   const profileOption = args.indexOf("--profile");

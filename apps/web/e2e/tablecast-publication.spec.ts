@@ -1,20 +1,15 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
+import { expect, test } from "@playwright/test";
 import {
   adminStateSchema,
   catalogSchema,
   configDraftSchema,
+  eventsSchema,
   tableStateSchema,
   type Catalog,
   type ConfigDraft,
   type Configuration,
 } from "@tablecast/api/schema";
-import { expect, test } from "@playwright/test";
-import { eventsSchema } from "../src/lib/responses";
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import { credentials } from "./support/runtime";
 
 test.use({ trace: "off" });
 
@@ -24,7 +19,6 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
   baseURL,
 }) => {
   const storeId = "tablecast-akari";
-  const tableId = `${storeId}-table-10`;
   const adminPath = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
   const ownDraftIds: string[] = [];
@@ -80,9 +74,9 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
     });
     const state = await staff.get(adminPath);
     expect(state.status()).toBe(200);
-    expect(
-      adminStateSchema.parse(await state.json()).vacantTables.map((table) => table.id),
-    ).toContain(tableId);
+    const vacant = adminStateSchema.parse(await state.json()).vacantTables[0];
+    if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
+    const tableId = vacant.id;
     const opened = await staff.post(`${adminPath}/tables/open`, {
       headers,
       data: { tableId, guestCount: 2, locale: "ja" },
@@ -98,7 +92,7 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
       data: { userCode, tableId },
     });
     expect(approved.status()).toBe(200);
-    await expect(page.getByRole("banner")).toContainText("T10");
+    await expect(page.getByRole("banner")).toContainText(vacant.name);
     await expect.poll(() => closedSockets).toBeGreaterThan(0);
 
     const catalogue = await page.request.get("/api/table/catalog");

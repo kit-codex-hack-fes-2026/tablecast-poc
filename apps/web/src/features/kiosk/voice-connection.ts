@@ -1,8 +1,7 @@
-import { voiceCredentialsSchema } from "../../lib/responses";
 import type { Locale } from "@tablecast/api/schema";
 import type { LocalAudioTrack, RemoteAudioTrack, Room } from "livekit-client";
 import { z } from "zod";
-import { api, ApiFailure, json } from "../../lib/api";
+import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 
 export type VoiceStatus =
   | "idle"
@@ -82,11 +81,7 @@ export class VoiceConnection {
     this.emit({ status: "connecting" });
     let created: Credentials | undefined;
     try {
-      created = await api(
-        "/api/table/voice/start",
-        json("POST", { locale }),
-        voiceCredentialsSchema,
-      );
+      created = await parseResponse(rpc.api.table.voice.start.$post());
       if (!this.current(attempt)) {
         await this.retire(created.voiceSessionId);
         return;
@@ -121,7 +116,7 @@ export class VoiceConnection {
         const element = track.attach();
         element.autoplay = true;
         this.audio.add(element);
-        document.body.append(element);
+        document.body.appendChild(element);
       });
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         if (this.view.outputTrack === track) this.emit({ outputTrack: undefined });
@@ -299,9 +294,8 @@ export class VoiceConnection {
     return this.desired && this.attempt === attempt;
   }
   private async retire(voiceSessionId?: string) {
-    await api(
-      "/api/table/voice/stop",
-      json("POST", { ...(voiceSessionId ? { voiceSessionId } : {}) }),
+    await parseResponse(
+      rpc.api.table.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
     );
   }
 }

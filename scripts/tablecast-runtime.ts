@@ -1,3 +1,4 @@
+import process from "node:process";
 import { createHash, randomUUID } from "node:crypto";
 import { createSocket } from "node:dgram";
 import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";

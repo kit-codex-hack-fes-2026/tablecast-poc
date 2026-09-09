@@ -1,13 +1,8 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
-import { catalogSchema, configDraftSchema, type Catalog } from "@tablecast/api/schema";
 import { expect, test } from "@playwright/test";
-import ja from "../messages/ja.json" with { type: "json" };
+import { catalogSchema, configDraftSchema, type Catalog } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import ja from "../messages/ja.json" with { type: "json" };
+import { credentials } from "./support/runtime";
 
 test.use({ trace: "off", actionTimeout: 15_000 });
 
@@ -57,16 +52,14 @@ for (const { language, labels, locale } of [
       await page.getByLabel(labels.auth_email).fill(credentials.email);
       await page.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
       await page.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
-      await expect(page).toHaveURL(new RegExp(`/admin/live\\?.*draftId=${draftId}`));
-      await expect(page.locator(".store-selector select")).toHaveValue(storeId);
-      const dialog = page.getByRole("dialog", { name: labels.admin_config, exact: true });
-      await expect(dialog).toBeVisible();
-      await dialog
-        .getByRole("combobox", { name: labels.admin_product, exact: true })
-        .selectOption(product.id);
-      const publish = dialog.getByRole("button", { name: labels.admin_publish, exact: true });
-      const validate = dialog.getByRole("button", { name: labels.admin_validate, exact: true });
-      await expect(publish).toBeEnabled();
+      const reviewPath = `/admin/stores/${storeId}/menu/changes/${draftId}`;
+      const productPath = `${reviewPath}/products/${product.id}`;
+      await expect(page).toHaveURL(new RegExp(reviewPath));
+      await expect(
+        page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
+      ).toBeVisible();
+      await page.goto(productPath);
+      const editor = page.getByRole("main");
       let publicationRequests = 0;
       page.on("request", (request) => {
         if (new URL(request.url()).pathname === `${adminPath}/drafts/${draftId}/publish`)
@@ -77,20 +70,25 @@ for (const { language, labels, locale } of [
       const editedProduct = structuredClone(product);
       editedProduct.price += 100;
       editedProduct.available = false;
-      await dialog
+      await editor
         .getByLabel(labels.admin_unit_price, { exact: true })
         .fill(String(editedProduct.price));
-      await dialog.getByRole("checkbox", { name: labels.admin_available, exact: true }).uncheck();
+      await editor
+        .getByRole("checkbox", { name: labels.admin_available, exact: true })
+        .first()
+        .uncheck();
       const contentFields = [
         { key: "displayName", label: labels.admin_display_name },
         { key: "speechName", label: labels.admin_speech_name },
         { key: "description", label: labels.admin_description },
       ] as const;
       for (const contentLocale of ["ja", "en"] as const) {
-        const group = dialog.getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
-          exact: true,
-        });
+        const group = editor
+          .getByRole("group", {
+            name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+            exact: true,
+          })
+          .first();
         for (const { key, label } of contentFields) {
           editedProduct.text[contentLocale][key] +=
             contentLocale === "ja" ? "（確認用）" : " (review)";
@@ -99,15 +97,16 @@ for (const { language, labels, locale } of [
             .fill(editedProduct.text[contentLocale][key]);
         }
       }
-      await expect(dialog.getByText(labels.admin_unsaved, { exact: true })).toBeVisible();
-      await expect(publish).toBeDisabled();
-      await expect(validate).toBeDisabled();
+      await expect(editor.getByText(labels.admin_unsaved, { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: labels.admin_publish, exact: true }),
+      ).toHaveCount(0);
       const savedResponse = page.waitForResponse(
         (response) =>
           new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}` &&
           response.request().method() === "PUT",
       );
-      await dialog.getByRole("button", { name: labels.common_save, exact: true }).click();
+      await editor.getByRole("button", { name: labels.common_save, exact: true }).click();
       const saved = await savedResponse;
       expect(saved.status()).toBe(200);
       const edited = configDraftSchema.parse(await saved.json());
@@ -115,31 +114,28 @@ for (const { language, labels, locale } of [
       expect(edited.configuration.products.find((item) => item.id === product.id)).toEqual(
         editedProduct,
       );
-      await expect(publish).toBeDisabled();
 
-      // 閉じて同じ下書きを再度開き、キャッシュの旧版へ戻らないことを確認する。
-      await dialog.getByRole("button", { name: labels.common_close, exact: true }).click();
-      await expect(dialog).not.toBeVisible();
-      await page
-        .locator(`[data-draft-id="${draftId}"]`)
-        .getByRole("button", { name: labels.admin_review_draft, exact: true })
-        .click();
-      await dialog
-        .getByRole("combobox", { name: labels.admin_product, exact: true })
-        .selectOption(product.id);
-      await expect(dialog.getByLabel(labels.admin_unit_price, { exact: true })).toHaveValue(
+      // 個別URLを再読み込みしても保存済みの編集内容を復元する。
+      await page.reload();
+      await expect(page).toHaveURL(new RegExp(productPath));
+      await expect(editor.getByLabel(labels.admin_unit_price, { exact: true })).toHaveValue(
         String(editedProduct.price),
       );
       await expect(
-        dialog.getByRole("checkbox", { name: labels.admin_available, exact: true }),
+        editor.getByRole("checkbox", { name: labels.admin_available, exact: true }).first(),
       ).not.toBeChecked();
-      await dialog.screenshot({ path: testInfo.outputPath("tablecast-admin-product-editor.png") });
-      await dialog.getByRole("checkbox", { name: labels.admin_available, exact: true }).check();
+      await editor.screenshot({ path: testInfo.outputPath("tablecast-admin-product-editor.png") });
+      await editor
+        .getByRole("checkbox", { name: labels.admin_available, exact: true })
+        .first()
+        .check();
       for (const contentLocale of ["ja", "en"] as const) {
-        const group = dialog.getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
-          exact: true,
-        });
+        const group = editor
+          .getByRole("group", {
+            name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+            exact: true,
+          })
+          .first();
         for (const { key, label } of contentFields) {
           await expect(group.getByRole("textbox", { name: label, exact: true })).toHaveValue(
             editedProduct.text[contentLocale][key],
@@ -154,7 +150,7 @@ for (const { language, labels, locale } of [
           new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}` &&
           response.request().method() === "PUT",
       );
-      await dialog.getByRole("button", { name: labels.common_save, exact: true }).click();
+      await editor.getByRole("button", { name: labels.common_save, exact: true }).click();
       const savedPrice = await savedPriceResponse;
       expect(savedPrice.status()).toBe(200);
       const priceDraft = configDraftSchema.parse(await savedPrice.json());
@@ -165,7 +161,11 @@ for (const { language, labels, locale } of [
         after: product.price + 100,
         sensitive: true,
       });
-      await expect(dialog.getByText(labels.admin_sensitive, { exact: true })).toBeVisible();
+      await page.goto(reviewPath);
+      const publish = page.getByRole("button", { name: labels.admin_publish, exact: true });
+      const validate = page.getByRole("button", { name: labels.admin_validate, exact: true });
+      await expect(publish).toBeDisabled();
+      await expect(editor.getByText(labels.admin_sensitive, { exact: true })).toBeVisible();
       const prices = await page.evaluate(
         ({ amount, languageLocale }) => {
           const currency = new Intl.NumberFormat(languageLocale, {
@@ -177,7 +177,7 @@ for (const { language, labels, locale } of [
         },
         { amount: product.price, languageLocale: locale },
       );
-      const change = dialog.locator(".config-change");
+      const change = editor.locator("[data-ui='config-change']");
       await expect(change).toHaveCount(1);
       await expect(change.getByText(prices.before, { exact: true })).toBeVisible();
       await expect(change.getByText(prices.after, { exact: true })).toBeVisible();
@@ -194,7 +194,7 @@ for (const { language, labels, locale } of [
       expect(beforeApproval.status()).toBe(200);
       expect(catalogSchema.parse(await beforeApproval.json())).toEqual(original);
       expect(publicationRequests).toBe(0);
-      await dialog.screenshot({
+      await editor.screenshot({
         path: testInfo.outputPath("tablecast-admin-publication-review.png"),
       });
 
@@ -206,7 +206,7 @@ for (const { language, labels, locale } of [
       const published = await publishedResponse;
       expect(published.status()).toBe(200);
       expect(configDraftSchema.parse(await published.json()).status).toBe("published");
-      await expect(dialog).not.toBeVisible();
+      await expect(publish).toHaveCount(0);
       expect(publicationRequests).toBe(1);
       const current = await staff.get(`${adminPath}/catalog`);
       expect(current.status()).toBe(200);

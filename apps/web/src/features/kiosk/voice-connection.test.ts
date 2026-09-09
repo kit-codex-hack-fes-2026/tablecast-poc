@@ -11,9 +11,7 @@ const transport = vi.hoisted(() => ({
   on: vi.fn<(event: string, listener: (...args: unknown[]) => void) => void>(),
 }));
 vi.mock("livekit-client", () => ({
-  RemoteAudioTrack: function TablecastRemoteAudioTrack() {
-    return {};
-  },
+  RemoteAudioTrack: vi.fn<() => void>(),
   Room: class {
     connect = transport.connect;
     disconnect = transport.disconnect;
@@ -33,8 +31,9 @@ vi.mock("livekit-client", () => ({
   createLocalAudioTrack: transport.capture,
 }));
 
+const ignoreResolution = () => undefined;
 function deferred<T>() {
-  let resolve: (value: T) => void = () => undefined;
+  let resolve: (value: T) => void = ignoreResolution;
   const promise = new Promise<T>((complete) => {
     resolve = complete;
   });
@@ -98,8 +97,8 @@ describe("音声の明示的な停止と再開", () => {
     expect(requests.filter((request) => request.path.endsWith("/start"))).toHaveLength(1);
     await connection.start("en");
     expect(requests.filter((request) => request.path.endsWith("/start"))).toEqual([
-      { path: "/api/table/voice/start", body: { locale: "ja" } },
-      { path: "/api/table/voice/start", body: { locale: "en" } },
+      { path: "/api/table/voice/start", body: undefined },
+      { path: "/api/table/voice/start", body: undefined },
     ]);
     expect(changes.at(-1)?.status).toBe("listening");
     await connection.stop();

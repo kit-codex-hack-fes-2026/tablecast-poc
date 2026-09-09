@@ -1,3 +1,5 @@
+import { saveIdentityImage } from "./modules/identity-images";
+import { getMcpSessions } from "./modules/mcp-sessions";
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { bodyLimit } from "hono/body-limit";
@@ -14,6 +16,7 @@ import {
   hashDeviceToken,
   staffActor,
   staffIdentity,
+  requireManager,
   type Actor,
   type ApiEnv,
 } from "./auth";
@@ -154,127 +157,147 @@ app.onError((error, c) => {
     500,
   );
 });
-app.post("/api/account/avatar", async (c) => {
-  await staffIdentity(c);
-  const form = await c.req.formData();
-  const image = form.get("image");
-  ensure(
-    image instanceof File && image.size > 0 && image.size <= 1024 * 1024,
-    "INVALID_IMAGE",
-    422,
-  );
-  const bytes = new Uint8Array(await image.arrayBuffer());
-  const valid =
-    (image.type === "image/png" &&
-      bytes[0] === 137 &&
-      bytes[1] === 80 &&
-      bytes[2] === 78 &&
-      bytes[3] === 71) ||
-    (image.type === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) ||
-    (image.type === "image/webp" &&
-      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
-      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP");
-  ensure(valid, "INVALID_IMAGE", 422);
-  const key = crypto.randomUUID();
-  await c.env.TABLECAST_MEDIA.put(`tablecast/avatars/${key}`, bytes, {
-    httpMetadata: { contentType: image.type },
-  });
-  await createAuth(c.env).api.updateUser({
-    headers: c.req.raw.headers,
-    body: { image: `${c.env.TABLECAST_PUBLIC_ORIGIN}/api/avatars/${key}` },
-  });
-  return c.json({ ok: true });
-});
-app.get("/api/avatars/:key", async (c) => {
-  const key = z.uuid().parse(c.req.param("key"));
-  const image = await c.env.TABLECAST_MEDIA.get(`tablecast/avatars/${key}`);
-  ensure(image, "IMAGE_NOT_FOUND", 404);
-  return new Response(image.body, {
-    headers: {
-      "Content-Type": image.httpMetadata?.contentType ?? "application/octet-stream",
-      "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
-});
-app.get("/api/health", (c) => c.json({ status: "ok", releaseSha: c.env.TABLECAST_RELEASE_SHA }));
-app.on(["GET", "POST"], "/api/auth/*", (c) => {
-  ensure(
-    !c.req.path.startsWith("/api/auth/tablecast/") && !c.req.path.startsWith("/api/auth/device"),
-    "ROUTE_NOT_PUBLIC",
-    404,
-  );
-  return createAuth(c.env).handler(c.req.raw);
-});
-app.get("/.well-known/oauth-authorization-server/api/auth", (c) =>
-  oauthProviderAuthServerMetadata(createAuth(c.env))(c.req.raw),
-);
-app.get("/.well-known/openid-configuration/api/auth", (c) =>
-  oauthProviderOpenIdConfigMetadata(createAuth(c.env))(c.req.raw),
-);
-app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
-  c.json({
-    resource: `${c.env.TABLECAST_PUBLIC_ORIGIN}/mcp`,
-    authorization_servers: [`${c.env.TABLECAST_PUBLIC_ORIGIN}/api/auth`],
-    scopes_supported: ["tablecast:read", "tablecast:write"],
-    bearer_methods_supported: ["header"],
-  }),
-);
-app.route("/mcp", mcpRoutes);
-app.route("/internal/voice", voiceRoutes);
-app.post("/api/devices/request", async (c) =>
-  c.json(
-    await createAuth(c.env).api.deviceCode({
-      body: { client_id: "tablecast-kiosk", scope: "tablecast:table" },
-    }),
-  ),
-);
-app.post(
-  "/api/devices/poll",
-  validate(z.object({ device_code: z.string().min(1).max(191) }).strict()),
-  async (c) => {
-    let result;
-    try {
-      result = await createAuth(c.env).api.tablecastRedeemDevice({
-        body: { deviceCode: c.req.valid("json").device_code },
+const publicRoutes = app
+  .post(
+    "/api/account/avatar",
+    zValidator("form", z.object({ image: z.instanceof(File) })),
+    async (c) => {
+      await staffIdentity(c);
+      const { image } = c.req.valid("form");
+      const url = await saveIdentityImage(c.env, image);
+      await createAuth(c.env).api.updateUser({
+        headers: c.req.raw.headers,
+        body: { image: url },
       });
-    } catch (error) {
-      if (
-        error instanceof APIError &&
-        ["authorization_pending", "slow_down"].includes(String(error.body?.error))
-      )
-        return c.json({ ready: false });
-      throw error;
-    }
-    const mapping = await c.env.TABLECAST_DB.prepare(
-      "SELECT * FROM device_assignments WHERE user_code=? AND approved_by=?",
-    )
-      .bind(result.userCode, result.userId)
-      .first<{ store_id: string; table_id: string; approved_by: string }>();
-    ensure(mapping, "DEVICE_NOT_ASSIGNED", 403);
-    const token = crypto.randomUUID() + crypto.randomUUID();
-    await c.env.TABLECAST_DB.prepare(
-      "INSERT INTO devices(id,token_hash,store_id,table_id,approved_by,created_at) VALUES(?,?,?,?,?,?)",
-    )
-      .bind(
-        crypto.randomUUID(),
-        await hashDeviceToken(token),
-        mapping.store_id,
-        mapping.table_id,
-        mapping.approved_by,
-        Date.now(),
-      )
-      .run();
-    setCookie(c, "tablecast.device", token, {
-      httpOnly: true,
-      secure: c.env.TABLECAST_PUBLIC_ORIGIN.startsWith("https:"),
-      sameSite: "Strict",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      return c.json({ ok: true });
+    },
+  )
+  .get("/api/account/mcp-sessions", async (c) => {
+    const session = await staffIdentity(c);
+    return c.json(
+      await getMcpSessions(
+        c.env.TABLECAST_DB,
+        session.user.id,
+        await createAuth(c.env).api.getOAuthConsents({ headers: c.req.raw.headers }),
+      ),
+    );
+  })
+  .post("/api/account/mcp-sessions/:id/revoke", async (c) => {
+    const session = await staffIdentity(c),
+      db = c.env.TABLECAST_DB;
+    const consent = await db
+      .prepare("SELECT client_id,reference_id FROM oauth_consent WHERE id=? AND user_id=?")
+      .bind(c.req.param("id"), session.user.id)
+      .first<{ client_id: string; reference_id: string | null }>();
+    ensure(consent, "MCP_SESSION_NOT_FOUND", 404);
+    const now = Date.now();
+    await db.batch([
+      db
+        .prepare(
+          "UPDATE oauth_access_token SET revoked=? WHERE user_id=? AND client_id=? AND reference_id IS ?",
+        )
+        .bind(now, session.user.id, consent.client_id, consent.reference_id),
+      db
+        .prepare(
+          "UPDATE oauth_refresh_token SET revoked=? WHERE user_id=? AND client_id=? AND reference_id IS ?",
+        )
+        .bind(now, session.user.id, consent.client_id, consent.reference_id),
+      db
+        .prepare("DELETE FROM oauth_consent WHERE id=? AND user_id=?")
+        .bind(c.req.param("id"), session.user.id),
+    ]);
+    return c.json({ revoked: true });
+  })
+  .get("/api/avatars/:key", async (c) => {
+    const key = z.uuid().parse(c.req.param("key"));
+    const image = await c.env.TABLECAST_MEDIA.get(`tablecast/avatars/${key}`);
+    ensure(image, "IMAGE_NOT_FOUND", 404);
+    return new Response(image.body, {
+      headers: {
+        "Content-Type": image.httpMetadata?.contentType ?? "application/octet-stream",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
-    return c.json({ ready: true });
-  },
-);
+  })
+  .get("/api/health", (c) => c.json({ status: "ok", releaseSha: c.env.TABLECAST_RELEASE_SHA }))
+  .on(["GET", "POST"], "/api/auth/*", (c) => {
+    ensure(
+      !c.req.path.startsWith("/api/auth/tablecast/") && !c.req.path.startsWith("/api/auth/device"),
+      "ROUTE_NOT_PUBLIC",
+      404,
+    );
+    return createAuth(c.env).handler(c.req.raw);
+  })
+  .get("/.well-known/oauth-authorization-server/api/auth", (c) =>
+    oauthProviderAuthServerMetadata(createAuth(c.env))(c.req.raw),
+  )
+  .get("/.well-known/openid-configuration/api/auth", (c) =>
+    oauthProviderOpenIdConfigMetadata(createAuth(c.env))(c.req.raw),
+  )
+  .get("/.well-known/oauth-protected-resource/mcp", (c) =>
+    c.json({
+      resource: `${c.env.TABLECAST_PUBLIC_ORIGIN}/mcp`,
+      authorization_servers: [`${c.env.TABLECAST_PUBLIC_ORIGIN}/api/auth`],
+      scopes_supported: ["tablecast:read", "tablecast:write"],
+      bearer_methods_supported: ["header"],
+    }),
+  )
+  .route("/mcp", mcpRoutes)
+  .route("/internal/voice", voiceRoutes)
+  .post("/api/devices/request", async (c) =>
+    c.json(
+      await createAuth(c.env).api.deviceCode({
+        body: { client_id: "tablecast-kiosk", scope: "tablecast:table" },
+      }),
+    ),
+  )
+  .post(
+    "/api/devices/poll",
+    validate(z.object({ device_code: z.string().min(1).max(191) }).strict()),
+    async (c) => {
+      let result;
+      try {
+        result = await createAuth(c.env).api.tablecastRedeemDevice({
+          body: { deviceCode: c.req.valid("json").device_code },
+        });
+      } catch (error) {
+        if (
+          error instanceof APIError &&
+          ["authorization_pending", "slow_down"].includes(String(error.body?.error))
+        )
+          return c.json({ ready: false });
+        throw error;
+      }
+      const mapping = await c.env.TABLECAST_DB.prepare(
+        "SELECT * FROM device_assignments WHERE user_code=? AND approved_by=?",
+      )
+        .bind(result.userCode, result.userId)
+        .first<{ store_id: string; table_id: string; approved_by: string }>();
+      ensure(mapping, "DEVICE_NOT_ASSIGNED", 403);
+      const token = crypto.randomUUID() + crypto.randomUUID();
+      await c.env.TABLECAST_DB.prepare(
+        "INSERT INTO devices(id,token_hash,store_id,table_id,approved_by,created_at) VALUES(?,?,?,?,?,?)",
+      )
+        .bind(
+          crypto.randomUUID(),
+          await hashDeviceToken(token),
+          mapping.store_id,
+          mapping.table_id,
+          mapping.approved_by,
+          Date.now(),
+        )
+        .run();
+      setCookie(c, "tablecast.device", token, {
+        httpOnly: true,
+        secure: c.env.TABLECAST_PUBLIC_ORIGIN.startsWith("https:"),
+        sameSite: "Strict",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+      return c.json({ ready: true });
+    },
+  );
 const table = new Hono<ApiEnv>()
   .use("*", async (c, next) => {
     c.set("actor", await deviceActor(c));
@@ -345,18 +368,10 @@ const table = new Hono<ApiEnv>()
       return c.json(state);
     },
   )
-  .get("/events", async (c) =>
-    c.json(
-      await getEvents(
-        c.env,
-        c.get("actor"),
-        z.coerce
-          .number()
-          .int()
-          .nonnegative()
-          .parse(c.req.query("after") ?? 0),
-      ),
-    ),
+  .get(
+    "/events",
+    validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),
+    async (c) => c.json(await getEvents(c.env, c.get("actor"), c.req.valid("query").after)),
   )
   .get("/live", async (c) => {
     const actor = c.get("actor");
@@ -364,177 +379,283 @@ const table = new Hono<ApiEnv>()
       c.req.raw,
     );
   });
-const tableRoutes = app.route("/api/table", table);
-app.get("/api/admin/stores", async (c) => {
-  const session = await staffIdentity(c);
-  const rows = await c.env.TABLECAST_DB.prepare(
-    "SELECT s.id,s.name,m.role,s.organization_id AS organizationId FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=? AND (m.role IN ('owner','admin') OR EXISTS(SELECT 1 FROM team_member tm JOIN team t ON t.id=tm.team_id WHERE tm.user_id=m.user_id AND t.id=s.team_id AND t.organization_id=s.organization_id)) ORDER BY s.name",
-  )
-    .bind(session.user.id)
-    .all<{ id: string; name: string; role: string; organizationId: string }>();
-  return c.json({ stores: rows.results, locale: session.user.locale });
-});
-const admin = new Hono<ApiEnv>().use("*", async (c, next) => {
-  const storeId = c.req.param("storeId");
-  ensure(storeId, "STORE_REQUIRED", 400);
-  c.set("actor", await staffActor(c, storeId));
-  await next();
-});
-const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
-admin.get("/", async (c) => c.json(await getAdminState(c.env, c.get("actor"))));
-admin.get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)));
-admin.get("/voices", validateQuery(voiceListQuerySchema), async (c) =>
-  c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query"))),
-);
-admin.get("/history", validateQuery(historyQuerySchema), async (c) =>
-  c.json(await getHistory(c.env, c.get("actor"), c.req.valid("query"))),
-);
-admin.get("/tables/:id", async (c) =>
-  c.json(await getTableState(c.env, scoped(c.get("actor"), c.req.param("id")))),
-);
-admin.get("/tables/:id/events", validateQuery(sessionEventsQuerySchema), async (c) =>
-  c.json(
-    await getSessionEvents(c.env, scoped(c.get("actor"), c.req.param("id")), c.req.valid("query")),
-  ),
-);
-admin.post(
-  "/tables/open",
-  validate(
-    z
-      .object({
-        tableId: z.string(),
-        guestCount: z.number().int().min(1).max(30),
-        locale: localeSchema,
-        planId: z.string().optional(),
-      })
-      .strict(),
-  ),
-  async (c) => c.json(await openTable(c.env, c.get("actor"), c.req.valid("json"))),
-);
-admin.post("/tables/:id/payments", validate(paymentSchema), async (c) =>
-  c.json(
-    await recordPayment(c.env, scoped(c.get("actor"), c.req.param("id")), c.req.valid("json")),
-  ),
-);
-admin.post("/tables/:id/close", async (c) =>
-  c.json(await closeTable(c.env, scoped(c.get("actor"), c.req.param("id")))),
-);
-admin.post("/tables/:id/call/resolve", async (c) =>
-  c.json(await resolveCall(c.env, scoped(c.get("actor"), c.req.param("id")))),
-);
-admin.post(
-  "/orders/:id/status",
-  validate(z.object({ status: z.enum(["accepted", "served", "rejected", "cancelled"]) }).strict()),
-  async (c) =>
-    c.json(
-      await changeOrderStatus(c.env, c.get("actor"), c.req.param("id"), c.req.valid("json").status),
+const tableRoutes = publicRoutes
+  .route("/api/table", table)
+  .get("/api/admin/stores", async (c) => {
+    const session = await staffIdentity(c);
+    const rows = await c.env.TABLECAST_DB.prepare(
+      "SELECT s.id,s.name,o.logo,m.role,s.organization_id AS organizationId FROM stores s JOIN organization o ON o.id=s.organization_id JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=? ORDER BY s.name",
+    )
+      .bind(session.user.id)
+      .all<{
+        id: string;
+        name: string;
+        logo: string | null;
+        role: string;
+        organizationId: string;
+      }>();
+    return c.json({ stores: rows.results, locale: session.user.locale });
+  })
+  .post(
+    "/api/admin/stores",
+    validate(
+      z
+        .object({
+          name: z.string().trim().min(1).max(150),
+          slug: z
+            .string()
+            .min(1)
+            .max(80)
+            .regex(/^[a-z0-9-]+$/),
+          tableCount: z.number().int().min(1).max(100),
+        })
+        .strict(),
     ),
-);
-admin.get("/events", async (c) =>
-  c.json(
-    await getEvents(
-      c.env,
-      c.get("actor"),
-      z.coerce
-        .number()
-        .int()
-        .nonnegative()
-        .parse(c.req.query("after") ?? 0),
-    ),
-  ),
-);
-admin.get("/live", async (c) => {
-  const actor = c.get("actor");
-  return c.env.TABLECAST_EVENTS.get(c.env.TABLECAST_EVENTS.idFromName(actor.storeId)).fetch(
-    c.req.raw,
+    async (c) => {
+      const session = await staffIdentity(c);
+      const input = c.req.valid("json");
+      const id = crypto.randomUUID(),
+        now = Date.now();
+      const configuration = configurationSchema.parse({
+        categories: [],
+        products: [],
+        plans: [],
+        cast: { instructions: { ja: "", en: "" }, voice: { ja: null, en: null }, proactive: false },
+      });
+      const json = JSON.stringify(configuration),
+        db = c.env.TABLECAST_DB;
+      ensure(
+        !(await db.prepare("SELECT id FROM organization WHERE slug=?").bind(input.slug).first()),
+        "STORE_SLUG_TAKEN",
+        409,
+      );
+      await db.batch([
+        db
+          .prepare("INSERT INTO organization(id,name,slug,created_at) VALUES(?,?,?,?)")
+          .bind(id, input.name, input.slug, now),
+        db
+          .prepare(
+            "INSERT INTO member(id,organization_id,user_id,role,created_at) VALUES(?,?,?,'owner',?)",
+          )
+          .bind(crypto.randomUUID(), id, session.user.id, now),
+        db
+          .prepare(
+            "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES(?,?,?,?,?)",
+          )
+          .bind(id, id, input.name, json, now),
+        db
+          .prepare(
+            "INSERT INTO config_releases(store_id,version,config_json,published_by,created_at) VALUES(?,1,?,?,?)",
+          )
+          .bind(id, json, session.user.id, now),
+        ...Array.from({ length: input.tableCount }, (_, index) =>
+          db
+            .prepare("INSERT INTO restaurant_tables(id,store_id,name) VALUES(?,?,?)")
+            .bind(crypto.randomUUID(), id, `T${String(index + 1).padStart(2, "0")}`),
+        ),
+      ]);
+      return c.json({ id, organizationId: id }, 201);
+    },
   );
-});
-admin.post(
-  "/devices/approve",
-  validate(z.object({ userCode: z.string().min(1).max(191), tableId: z.string() }).strict()),
-  async (c) => {
+const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
+const admin = new Hono<ApiEnv>()
+  .use("*", async (c, next) => {
+    const storeId = c.req.param("storeId");
+    ensure(storeId, "STORE_REQUIRED", 400);
+    c.set("actor", await staffActor(c, storeId));
+    await next();
+  })
+  .get("/", async (c) => c.json(await getAdminState(c.env, c.get("actor"))))
+  .post("/icon", zValidator("form", z.object({ image: z.instanceof(File) })), async (c) => {
+    const actor = c.get("actor");
+    requireManager(actor);
+    const store = await c.env.TABLECAST_DB.prepare("SELECT organization_id FROM stores WHERE id=?")
+      .bind(actor.storeId)
+      .first<{ organization_id: string }>();
+    ensure(store, "STORE_NOT_FOUND", 404);
+    const logo = await saveIdentityImage(c.env, c.req.valid("form").image);
+    await createAuth(c.env).api.updateOrganization({
+      headers: c.req.raw.headers,
+      body: { organizationId: store.organization_id, data: { logo } },
+    });
+    return c.json({ logo });
+  })
+  .get("/catalog", async (c) => c.json(await getCatalog(c.env, c.get("actor").storeId)))
+  .get("/voices", validateQuery(voiceListQuerySchema), async (c) =>
+    c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query"))),
+  )
+  .get("/history", validateQuery(historyQuerySchema), async (c) =>
+    c.json(await getHistory(c.env, c.get("actor"), c.req.valid("query"))),
+  )
+  .get("/tables/:id", async (c) =>
+    c.json(await getTableState(c.env, scoped(c.get("actor"), c.req.param("id")))),
+  )
+  .get("/tables/:id/events", validateQuery(sessionEventsQuerySchema), async (c) =>
+    c.json(
+      await getSessionEvents(
+        c.env,
+        scoped(c.get("actor"), c.req.param("id")),
+        c.req.valid("query"),
+      ),
+    ),
+  )
+  .post(
+    "/tables/open",
+    validate(
+      z
+        .object({
+          tableId: z.string(),
+          guestCount: z.number().int().min(1).max(30),
+          locale: localeSchema,
+          planId: z.string().optional(),
+        })
+        .strict(),
+    ),
+    async (c) => c.json(await openTable(c.env, c.get("actor"), c.req.valid("json"))),
+  )
+  .post("/tables/:id/payments", validate(paymentSchema), async (c) =>
+    c.json(
+      await recordPayment(c.env, scoped(c.get("actor"), c.req.param("id")), c.req.valid("json")),
+    ),
+  )
+  .post("/tables/:id/close", async (c) =>
+    c.json(await closeTable(c.env, scoped(c.get("actor"), c.req.param("id")))),
+  )
+  .post("/tables/:id/call/resolve", async (c) =>
+    c.json(await resolveCall(c.env, scoped(c.get("actor"), c.req.param("id")))),
+  )
+  .post(
+    "/orders/:id/status",
+    validate(
+      z.object({ status: z.enum(["accepted", "served", "rejected", "cancelled"]) }).strict(),
+    ),
+    async (c) =>
+      c.json(
+        await changeOrderStatus(
+          c.env,
+          c.get("actor"),
+          c.req.param("id"),
+          c.req.valid("json").status,
+        ),
+      ),
+  )
+  .get(
+    "/events",
+    validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),
+    async (c) => c.json(await getEvents(c.env, c.get("actor"), c.req.valid("query").after)),
+  )
+  .get("/live", async (c) => {
+    const actor = c.get("actor");
+    return c.env.TABLECAST_EVENTS.get(c.env.TABLECAST_EVENTS.idFromName(actor.storeId)).fetch(
+      c.req.raw,
+    );
+  })
+  .post(
+    "/devices/approve",
+    validate(z.object({ userCode: z.string().min(1).max(191), tableId: z.string() }).strict()),
+    async (c) => {
+      const actor = await staffActor(c, c.get("actor").storeId, true);
+      const input = c.req.valid("json");
+      const auth = createAuth(c.env);
+      const target = await c.env.TABLECAST_DB.prepare(
+        "SELECT id FROM restaurant_tables WHERE id=? AND store_id=?",
+      )
+        .bind(input.tableId, actor.storeId)
+        .first();
+      ensure(target, "TABLE_NOT_FOUND", 404);
+      await auth.api.deviceVerify({
+        query: { user_code: input.userCode },
+        headers: c.req.raw.headers,
+      });
+      await c.env.TABLECAST_DB.prepare(
+        "INSERT INTO device_assignments(user_code,store_id,table_id,approved_by,created_at) VALUES(?,?,?,?,?)",
+      )
+        .bind(input.userCode, actor.storeId, input.tableId, actor.userId, Date.now())
+        .run();
+      await auth.api.deviceApprove({
+        body: { userCode: input.userCode },
+        headers: c.req.raw.headers,
+      });
+      return c.json({ approved: true });
+    },
+  )
+  .get("/devices", async (c) => {
     const actor = await staffActor(c, c.get("actor").storeId, true);
-    const input = c.req.valid("json");
-    const auth = createAuth(c.env);
-    const target = await c.env.TABLECAST_DB.prepare(
-      "SELECT id FROM restaurant_tables WHERE id=? AND store_id=?",
+    const devices = await c.env.TABLECAST_DB.prepare(
+      "SELECT d.id,d.table_id AS tableId,t.name AS tableName,d.created_at AS createdAt,d.revoked_at AS revokedAt,u.name AS approvedByName,u.email AS approvedByEmail,u.image AS approvedByImage FROM devices d JOIN restaurant_tables t ON t.id=d.table_id AND t.store_id=d.store_id JOIN user u ON u.id=d.approved_by WHERE d.store_id=? ORDER BY d.created_at DESC",
     )
-      .bind(input.tableId, actor.storeId)
-      .first();
-    ensure(target, "TABLE_NOT_FOUND", 404);
-    await auth.api.deviceVerify({
-      query: { user_code: input.userCode },
-      headers: c.req.raw.headers,
-    });
-    await c.env.TABLECAST_DB.prepare(
-      "INSERT INTO device_assignments(user_code,store_id,table_id,approved_by,created_at) VALUES(?,?,?,?,?)",
+      .bind(actor.storeId)
+      .all<{
+        id: string;
+        tableId: string;
+        tableName: string;
+        createdAt: number;
+        revokedAt: number | null;
+        approvedByName: string;
+        approvedByEmail: string;
+        approvedByImage: string | null;
+      }>();
+    const tables = await c.env.TABLECAST_DB.prepare(
+      "SELECT id,name FROM restaurant_tables WHERE store_id=? ORDER BY name",
     )
-      .bind(input.userCode, actor.storeId, input.tableId, actor.userId, Date.now())
+      .bind(actor.storeId)
+      .all<{ id: string; name: string }>();
+    return c.json({ devices: devices.results, tables: tables.results });
+  })
+  .post("/devices/:id/revoke", async (c) => {
+    const actor = await staffActor(c, c.get("actor").storeId, true);
+    await c.env.TABLECAST_DB.prepare("UPDATE devices SET revoked_at=? WHERE id=? AND store_id=?")
+      .bind(Date.now(), c.req.param("id"), actor.storeId)
       .run();
-    await auth.api.deviceApprove({
-      body: { userCode: input.userCode },
-      headers: c.req.raw.headers,
-    });
-    return c.json({ approved: true });
-  },
-);
-admin.post("/devices/:id/revoke", async (c) => {
-  const actor = await staffActor(c, c.get("actor").storeId, true);
-  await c.env.TABLECAST_DB.prepare("UPDATE devices SET revoked_at=? WHERE id=? AND store_id=?")
-    .bind(Date.now(), c.req.param("id"), actor.storeId)
-    .run();
-  return c.json({ revoked: true });
-});
-admin.get("/drafts", async (c) => c.json(await listDrafts(c.env, c.get("actor"))));
-admin.post("/drafts", async (c) => c.json(await createDraft(c.env, c.get("actor"))));
-admin.get("/drafts/:id", async (c) =>
-  c.json(await getDraft(c.env, c.get("actor"), c.req.param("id"))),
-);
-admin.put(
-  "/drafts/:id",
-  validate(
-    z.object({ expectedVersion: z.number().int(), configuration: configurationSchema }).strict(),
-  ),
-  async (c) =>
-    c.json(await updateDraft(c.env, c.get("actor"), c.req.param("id"), c.req.valid("json"))),
-);
-admin.post("/drafts/:id/validate", validate(versionSchema), async (c) =>
-  c.json(
-    await validateDraft(
-      c.env,
-      c.get("actor"),
-      c.req.param("id"),
-      c.req.valid("json").expectedVersion,
+    return c.json({ revoked: true });
+  })
+  .get("/drafts", async (c) => c.json(await listDrafts(c.env, c.get("actor"))))
+  .post("/drafts", async (c) => c.json(await createDraft(c.env, c.get("actor"))))
+  .get("/drafts/:id", async (c) => c.json(await getDraft(c.env, c.get("actor"), c.req.param("id"))))
+  .put(
+    "/drafts/:id",
+    validate(
+      z.object({ expectedVersion: z.number().int(), configuration: configurationSchema }).strict(),
     ),
-  ),
-);
-admin.post("/drafts/:id/discard", validate(versionSchema), async (c) =>
-  c.json(
-    await discardDraft(
-      c.env,
-      c.get("actor"),
-      c.req.param("id"),
-      c.req.valid("json").expectedVersion,
+    async (c) =>
+      c.json(await updateDraft(c.env, c.get("actor"), c.req.param("id"), c.req.valid("json"))),
+  )
+  .post("/drafts/:id/validate", validate(versionSchema), async (c) =>
+    c.json(
+      await validateDraft(
+        c.env,
+        c.get("actor"),
+        c.req.param("id"),
+        c.req.valid("json").expectedVersion,
+      ),
     ),
-  ),
-);
-admin.post(
-  "/drafts/:id/publish",
-  validate(
-    z
-      .object({
-        expectedVersion: z.number().int(),
-        baseVersion: z.number().int(),
-        idempotencyKey: z.string().min(8).max(100),
-        approved: z.literal(true),
-      })
-      .strict(),
-  ),
-  async (c) =>
-    c.json(await publishDraft(c.env, c.get("actor"), c.req.param("id"), c.req.valid("json"))),
-);
-app.route("/api/admin/stores/:storeId", admin);
-app.get("/media/*", async (c) => {
+  )
+  .post("/drafts/:id/discard", validate(versionSchema), async (c) =>
+    c.json(
+      await discardDraft(
+        c.env,
+        c.get("actor"),
+        c.req.param("id"),
+        c.req.valid("json").expectedVersion,
+      ),
+    ),
+  )
+  .post(
+    "/drafts/:id/publish",
+    validate(
+      z
+        .object({
+          expectedVersion: z.number().int(),
+          baseVersion: z.number().int(),
+          idempotencyKey: z.string().min(8).max(100),
+          approved: z.literal(true),
+        })
+        .strict(),
+    ),
+    async (c) =>
+      c.json(await publishDraft(c.env, c.get("actor"), c.req.param("id"), c.req.valid("json"))),
+  );
+const routes = tableRoutes.route("/api/admin/stores/:storeId", admin).get("/media/*", async (c) => {
   const key = c.req.path.slice("/media/".length);
   ensure(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/.test(key), "MEDIA_NOT_FOUND", 404);
   const asset = await c.env.TABLECAST_MEDIA.get(key);
@@ -547,5 +668,5 @@ app.get("/media/*", async (c) => {
   response.headers.set("ETag", `W/"${asset.etag}-640-webp"`);
   return response;
 });
-export type AppType = typeof tableRoutes;
-export default app;
+export type AppType = typeof routes;
+export default routes;

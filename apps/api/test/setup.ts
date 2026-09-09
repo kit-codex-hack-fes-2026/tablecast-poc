@@ -1,4 +1,5 @@
-import { applyD1Migrations, reset } from "cloudflare:test";
+import { applyD1Migrations } from "cloudflare:test";
+import { resetFixtureStorage } from "./fixture";
 import { env } from "cloudflare:workers";
 import { beforeEach, inject } from "vitest";
 import type { D1Migration } from "@cloudflare/vitest-plugin";
@@ -8,6 +9,6 @@ declare module "vitest" {
   }
 }
 beforeEach(async () => {
-  await reset();
+  await resetFixtureStorage();
   await applyD1Migrations(env.TABLECAST_DB, inject("tablecastMigrations"));
 });

@@ -1,19 +1,23 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
 import { useState } from "react";
+import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { LanguageSwitch } from "../../components/language-switch";
 import { useI18n } from "../../i18n/locale";
+
 import { authClient, authResult } from "../../lib/auth-client";
 
 export function EmailAccess({ register = false }: { register?: boolean }) {
+  const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const query = new URLSearchParams(window.location.search);
+  const query = new URLSearchParams(searchStr);
   const token = query.get("token");
-  const callbackURL = `/login${window.location.search}`;
+  const callbackURL = `/login${searchStr}`;
+  const client = useQueryClient();
   const submit = useMutation({
     mutationFn: async () => {
       if (register)
@@ -24,6 +28,7 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
         await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" }),
       );
     },
+    onSuccess: () => client.invalidateQueries({ queryKey: ["tablecast-account"] }),
   });
   return (
     <main className="mx-auto max-w-md space-y-6 px-6 py-12">

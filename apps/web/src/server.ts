@@ -1,5 +1,5 @@
-import { env } from "cloudflare:workers";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
+import { env } from "cloudflare:workers";
 import { paraglideMiddleware } from "./paraglide/server.js";
 
 export default createServerEntry({

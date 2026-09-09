@@ -1,71 +1,47 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import { useState } from "react";
-import { z } from "zod";
+import { useMemo, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
-import { Button, buttonVariants } from "../../components/ui/button";
-import { DialogFooter } from "../../components/ui/dialog";
-import { NativeSelect } from "../../components/ui/native-select";
+import { Button } from "../../components/ui/button";
+import { buttonVariants } from "../../components/ui/button-variants";
+import { DataTable } from "../../components/data-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { RoleBadge } from "../store/role-badge";
 import { useI18n } from "../../i18n/locale";
-import { api, ApiFailure, json } from "../../lib/api";
-import { storesSchema } from "../../lib/responses";
 
-const redirectSchema = z.object({ redirect: z.literal(true), url: z.string().min(1) });
+import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { authClient, authResult } from "../../lib/auth-client";
 
 export function Consent() {
+  const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
-  const search = new URLSearchParams(window.location.search);
-  const oauthQuery = window.location.search.slice(1);
-  const session = useQuery({
-    queryKey: ["tablecast-oauth-session"],
-    queryFn: () =>
-      api(
-        "/api/auth/get-session",
-        {},
-        z
-          .object({ session: z.object({ activeOrganizationId: z.string().nullable().optional() }) })
-          .nullable(),
-      ),
-  });
+  const search = new URLSearchParams(searchStr);
+  const oauthQuery = searchStr.slice(1);
+  const session = authClient.useSession();
   const postLogin = !session.data?.session.activeOrganizationId;
   const [organization, setOrganization] = useState("");
   const stores = useQuery({
     queryKey: ["tablecast-stores"],
-    queryFn: () => api("/api/admin/stores", {}, storesSchema),
+    queryFn: () => parseResponse(rpc.api.admin.stores.$get()),
   });
-  const organizations = [
-    ...new Set(
-      stores.data?.stores
-        .map((store) => store.organizationId)
-        .filter((id): id is string => typeof id === "string") ?? [],
-    ),
-  ].map((id) => ({
-    id,
-    name:
-      stores.data?.stores
-        .filter((store) => store.organizationId === id)
-        .map((store) => store.name)
-        .join(" / ") ?? "",
-  }));
+  const organizations = stores.data?.stores ?? [];
   const selected =
-    organization || session.data?.session.activeOrganizationId || organizations[0]?.id;
+    organization || session.data?.session.activeOrganizationId || organizations[0]?.organizationId;
+  const columns = useMemo(
+    () => consentStoreColumns(t, selected, setOrganization, postLogin),
+    [t, selected, postLogin],
+  );
   const consent = useMutation({
     mutationFn: async (accept: boolean) => {
       if (postLogin && accept) {
-        await api("/api/auth/organization/set-active", json("POST", { organizationId: selected }));
-        return api(
-          "/api/auth/oauth2/continue",
-          json("POST", { postLogin: true, oauth_query: oauthQuery }),
-          redirectSchema,
+        authResult(await authClient.organization.setActive({ organizationId: selected }));
+        return authResult(
+          await authClient.oauth2.continue({ postLogin: true, oauth_query: oauthQuery }),
         );
       }
-      return api(
-        "/api/auth/oauth2/consent",
-        json("POST", { accept, oauth_query: oauthQuery }),
-        redirectSchema,
-      );
+      return authResult(await authClient.oauth2.consent({ accept, oauth_query: oauthQuery }));
     },
     onSuccess: (result) => window.location.assign(result.url),
   });
@@ -87,14 +63,15 @@ export function Consent() {
     <main className="min-h-dvh">
       <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
         <Link
-          className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
+          data-ui="brand"
+          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
           to="/"
         >
           TableCast
         </Link>
         <LanguageSwitch onChange={setLocale} />
       </header>
-      <section className="mt-12 mx-auto mb-10 max-w-144 p-10 flex items-center flex-col text-center [&_>_[data-slot=button][data-size=text]]:mt-7 [&_>_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6 max-sm:mt-9">
+      <section className="mt-12 mx-auto mb-10 max-w-3xl p-10 flex items-center flex-col text-center [&_>_[data-slot=button][data-size=text]]:mt-7 [&_>_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6 max-sm:mt-9">
         <ShieldCheck size={36} aria-hidden="true" />
         <h1 className="text-3xl mt-3 max-sm:text-2xl">
           {t(postLogin ? "oauth_organisation" : "oauth_title")}
@@ -114,23 +91,20 @@ export function Consent() {
             </dd>
           </div>
         </dl>
-        {postLogin && (
-          <label className="[&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-sm flex flex-col gap-4 pt-6 w-full">
-            {t("oauth_organisation")}
-            <NativeSelect
-              value={selected}
-              onChange={(event) => setOrganization(event.target.value)}
-            >
-              {organizations.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-        )}
+        <div className="mt-6 w-full text-left">
+          <DataTable
+            data={
+              postLogin
+                ? organizations
+                : organizations.filter((store) => store.organizationId === selected)
+            }
+            columns={columns}
+            getRowId={(store) => store.id}
+            pagination={false}
+          />
+        </div>
         <ErrorNotice error={stores.error || consent.error} />
-        <DialogFooter className="mt-8 w-full">
+        <div className="mt-8 flex w-full justify-end gap-3">
           <Button
             variant="outline"
             onClick={() => consent.mutate(false)}
@@ -145,8 +119,41 @@ export function Consent() {
           >
             {t(postLogin ? "oauth_continue" : "oauth_allow")}
           </Button>
-        </DialogFooter>
+        </div>
       </section>
     </main>
   );
+}
+
+const loadStores = () => parseResponse(rpc.api.admin.stores.$get());
+type ConsentStore = Awaited<ReturnType<typeof loadStores>>["stores"][number];
+function consentStoreColumns(
+  t: ReturnType<typeof useI18n>["t"],
+  selected: string | undefined,
+  select: (id: string) => void,
+  selectable: boolean,
+): ColumnDef<ConsentStore>[] {
+  return [
+    { accessorKey: "name", header: t("admin_store") },
+    {
+      accessorKey: "role",
+      header: t("org_role"),
+      cell: ({ row }) => <RoleBadge role={row.original.role} />,
+    },
+    {
+      id: "selection",
+      header: t("common_status"),
+      cell: ({ row }) => (
+        <Button
+          className="min-w-24"
+          variant={selected === row.original.organizationId ? "default" : "outline"}
+          disabled={!selectable}
+          onClick={() => select(row.original.organizationId)}
+          aria-pressed={selected === row.original.organizationId}
+        >
+          {t(selected === row.original.organizationId ? "common_selected" : "common_select")}
+        </Button>
+      ),
+    },
+  ];
 }

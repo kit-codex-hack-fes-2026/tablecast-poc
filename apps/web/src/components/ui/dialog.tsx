@@ -42,7 +42,7 @@ export function DialogContent({
           className={(state) =>
             cn(
               side !== "center"
-                ? "flex h-full w-full max-w-3xl flex-col bg-card px-6 pt-6 shadow-2xl max-sm:px-5"
+                ? "flex max-w-3xl flex-col bg-card px-6 pt-6 shadow-2xl max-sm:px-5 size-full"
                 : "flex max-h-full w-full max-w-xl flex-col rounded-xl bg-card p-6 shadow-2xl max-sm:p-5",
 
               typeof className === "function" ? className(state) : className,
@@ -72,7 +72,7 @@ export function DialogScroll({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-scroll"
-      className={cn("overflow-y-auto flex-1 min-h-0 mt-4 [scrollbar-width:thin]", className)}
+      className={cn("overflow-y-auto flex-1 min-h-0 mt-4 scrollbar-thin", className)}
       {...props}
     />
   );

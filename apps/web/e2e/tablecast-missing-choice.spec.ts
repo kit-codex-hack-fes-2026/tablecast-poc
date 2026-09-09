@@ -1,17 +1,12 @@
-import { readFileSync } from "node:fs";
-import { z } from "zod";
+import { expect, test } from "@playwright/test";
 import {
   adminStateSchema,
   catalogSchema,
   tableStateSchema,
   type CartLine,
 } from "@tablecast/api/schema";
-import { expect, test } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
-
-const credentials = z
-  .object({ email: z.string(), password: z.string() })
-  .parse(JSON.parse(readFileSync(new URL("../../../.local/demo.json", import.meta.url), "utf8")));
+import { credentials } from "./support/runtime";
 
 test.use({ trace: "off", actionTimeout: 15_000 });
 
@@ -48,7 +43,9 @@ test("外部の未完了カートを明示編集し、編集中の内容とカ�
         await staff.post(`${base}/devices/approve`, { headers, data: { userCode, tableId } })
       ).status(),
     ).toBe(200);
-    await expect(page.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
+    await expect(page.getByRole("banner").getByText(vacant.name, { exact: true })).toContainText(
+      vacant.name,
+    );
     const catalogResponse = await page.request.get("/api/table/catalog");
     expect(catalogResponse.status()).toBe(200);
     const catalog = catalogSchema.parse(await catalogResponse.json());
@@ -97,7 +94,7 @@ test("外部の未完了カートを明示編集し、編集中の内容とカ�
       { id: lineId, productId: customised.id, quantity: 3, selections: [] },
     ]);
     expect(incomplete.cart.complete).toBe(false);
-    await expect(page.locator(".menu-tabs .count")).toHaveText("3");
+    await expect(page.locator("[data-ui='menu-tabs'] [data-ui='count']")).toHaveText("3");
     await expect(plainPage).toBeVisible();
     await expect(
       plainPage.getByRole("status", { name: ja.common_quantity, exact: true }),

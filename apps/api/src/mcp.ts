@@ -25,7 +25,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     });
   }
   const rows = await c.env.TABLECAST_DB.prepare(
-    "SELECT s.id,m.role FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE s.organization_id=? AND m.user_id=? AND (m.role IN ('owner','admin') OR EXISTS(SELECT 1 FROM team_member tm JOIN team t ON t.id=tm.team_id WHERE tm.user_id=m.user_id AND t.id=s.team_id AND t.organization_id=s.organization_id)) ORDER BY s.id",
+    "SELECT s.id,m.role FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE s.organization_id=? AND m.user_id=? ORDER BY s.id",
   )
     .bind(principal.organizationId, principal.userId)
     .all<{ id: string; role: string }>();

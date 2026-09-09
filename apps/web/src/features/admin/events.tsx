@@ -1,5 +1,6 @@
 import type { TableEvent } from "@tablecast/api/schema";
-import { time, useI18n } from "../../i18n/locale";
+import { dateTime, time } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 import type { m } from "../../paraglide/messages.js";
 
 const eventKeys: Record<string, keyof typeof m> = {
@@ -48,16 +49,10 @@ export function ActivityLog({
   const { locale, t } = useI18n();
   if (!events.length)
     return <p className="py-12 px-6 text-muted-foreground text-center">{t("common_empty")}</p>;
-  const dateTime = includeDate
-    ? new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-GB", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Asia/Tokyo",
-      })
-    : null;
   return (
     <ol
-      className="activity-log list-none py-1 px-0 [&_>_li::before]:content-[''] [&_>_li::before]:absolute [&_>_li::before]:left-14 [&_>_li::before]:top-8 [&_>_li::before]:-bottom-2.5 [&_>_li::before]:w-px [&_>_li::before]:bg-border [&_>_li:last-child::before]:hidden [&[data-with-date]_time]:w-24 [&[data-with-date]_>_li::before]:left-28"
+      data-ui="activity-log"
+      className="list-none py-1 px-0 [&_>_li::before]:content-[''] [&_>_li::before]:absolute [&_>_li::before]:left-14 [&_>_li::before]:top-8 [&_>_li::before]:-bottom-2.5 [&_>_li::before]:w-px [&_>_li::before]:bg-border [&_>_li:last-child::before]:hidden [&[data-with-date]_time]:w-24 [&[data-with-date]_>_li::before]:left-28"
       data-with-date={includeDate || undefined}
     >
       {events.map((event) => (
@@ -70,11 +65,11 @@ export function ActivityLog({
             className="text-sm w-9 shrink-0 text-muted-foreground mt-0.5"
             dateTime={new Date(event.createdAt).toISOString()}
           >
-            {dateTime?.format(event.createdAt) ?? time(event.createdAt, locale)}
+            {includeDate ? dateTime(event.createdAt, locale) : time(event.createdAt, locale)}
           </time>
           <span
             data-state={event.kind.split(".")[0]}
-            className="w-2 h-2 rounded-full bg-muted shrink-0 mt-1 [&[data-state=order]]:bg-success [&[data-state=staff]]:bg-accent"
+            className="rounded-full bg-muted shrink-0 mt-1 [&[data-state=order]]:bg-success [&[data-state=staff]]:bg-accent size-2"
             aria-hidden="true"
           />
           <div>

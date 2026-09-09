@@ -1,11 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   createMemoryHistory,
   createRootRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fn } from "storybook/test";
 import { AdminSidebar } from "./admin-sidebar";
 
@@ -28,9 +28,7 @@ const meta = {
   ],
   args: {
     tab: "live",
-    onTabChange: fn(),
-    onPair: fn(),
-    pairDisabled: false,
+    storeId: "tablecast-story",
     onSignOut: fn(),
     signingOut: false,
   },

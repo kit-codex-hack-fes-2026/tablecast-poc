@@ -1,106 +1,73 @@
-import { adminStateSchema } from "@tablecast/api/schema";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { NativeSelect } from "../../components/ui/native-select";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation } from "@tanstack/react-router";
+import type { ColumnDef } from "@tanstack/react-table";
+import { ArrowRight } from "lucide-react";
+import { useMemo } from "react";
+import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { api, json } from "../../lib/api";
-import { storesSchema } from "../../lib/responses";
+
+import { parseResponse, rpc } from "../../lib/api";
 import { authClient } from "../../lib/auth-client";
 import { SettingsShell } from "./settings-shell";
-
+const loadStores = () => parseResponse(rpc.api.admin.stores.$get());
+type Store = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function DeviceApproval() {
+  const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t } = useI18n();
   const session = authClient.useSession();
-  const [code, setCode] = useState(
-    () => new URLSearchParams(window.location.search).get("user_code") ?? "",
-  );
-  const [storeId, setStoreId] = useState("");
-  const [tableId, setTableId] = useState("");
+  const userCode = new URLSearchParams(searchStr).get("user_code") ?? "";
   const stores = useQuery({
     queryKey: ["tablecast-stores"],
-    queryFn: () => api("/api/admin/stores", {}, storesSchema),
+    queryFn: loadStores,
     enabled: !!session.data,
   });
-  const selected = storeId || stores.data?.stores[0]?.id;
-  const state = useQuery({
-    queryKey: ["tablecast-admin", selected],
-    queryFn: () => api(`/api/admin/stores/${selected}`, {}, adminStateSchema),
-    enabled: !!selected,
-  });
-  const approve = useMutation({
-    mutationFn: () =>
-      api(
-        `/api/admin/stores/${selected}/devices/approve`,
-        json("POST", { userCode: code, tableId }),
-      ),
-  });
+  const columns = useMemo(() => deviceApprovalColumns(t, userCode), [t, userCode]);
   return (
     <SettingsShell>
-      <section className="space-y-5 rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
-        {approve.isSuccess ? (
-          <output>{t("account_saved")}</output>
-        ) : (
-          <form
-            className="grid max-w-sm gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              approve.mutate();
-            }}
-          >
-            <label>
-              {t("admin_pair_code")}
-              <Input
-                required
-                maxLength={30}
-                autoComplete="off"
-                value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
-              />
-            </label>
-            <label>
-              {t("admin_store")}
-              <NativeSelect
-                value={selected ?? ""}
-                onChange={(event) => {
-                  setStoreId(event.target.value);
-                  setTableId("");
-                }}
-              >
-                {stores.data?.stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-            <label>
-              {t("admin_pair_table")}
-              <NativeSelect
-                required
-                value={tableId}
-                onChange={(event) => setTableId(event.target.value)}
-              >
-                <option value="">—</option>
-                {state.data?.tables
-                  .filter((table) => table.status === "open")
-                  .map((table) => (
-                    <option key={table.id} value={table.tableId}>
-                      {table.tableName}
-                    </option>
-                  ))}
-              </NativeSelect>
-            </label>
-            <Button type="submit" disabled={approve.isPending || !tableId}>
-              {t("admin_approve")}
-            </Button>
-          </form>
-        )}
-        <ErrorNotice error={approve.error || stores.error || state.error} />
-      </section>
+      <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
+      <p>{t("admin_store")}</p>
+      <ErrorNotice error={stores.error} />
+      <DataTable
+        data={
+          stores.data?.stores.filter((store) => store.role === "owner" || store.role === "admin") ??
+          []
+        }
+        columns={columns}
+        getRowId={(row) => row.id}
+        empty={t("auth_no_stores")}
+      />
     </SettingsShell>
   );
+}
+
+function deviceApprovalColumns(
+  t: ReturnType<typeof useI18n>["t"],
+  userCode: string,
+): ColumnDef<Store>[] {
+  return [
+    { accessorKey: "name", header: t("admin_store") },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("admin_pair")}</span>,
+      cell: ({ row }) => (
+        <Button
+          nativeButton={false}
+          role="link"
+          variant="outline"
+          render={
+            <Link
+              to="/admin/stores/$storeId/devices/new"
+              params={{ storeId: row.original.id }}
+              search={{ user_code: userCode }}
+            />
+          }
+        >
+          {t("common_select")}
+          <ArrowRight />
+        </Button>
+      ),
+    },
+  ];
 }

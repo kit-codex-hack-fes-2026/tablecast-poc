@@ -53,7 +53,7 @@ async function failure(operation: Promise<unknown>) {
   throw new Error("登録が拒否されませんでした。");
 }
 
-it("新規登録すると公式認証の所有者と標準teamを持つ店舗・初期公開版・空卓を作成する", async () => {
+it("新規登録すると公式認証の所有者を持つ店舗・初期公開版・空卓を作成する", async () => {
   const existing = await setupFixture();
   const initial = input();
   initial.admin.email = initial.admin.email.toUpperCase();
@@ -64,13 +64,12 @@ it("新規登録すると公式認証の所有者と標準teamを持つ店舗・
     configVersion: 1,
   });
   const scope = await env.TABLECAST_DB.prepare(
-    "SELECT s.organization_id,s.team_id,m.role,tm.user_id,u.locale,u.email FROM stores s JOIN member m ON m.organization_id=s.organization_id JOIN user u ON u.id=m.user_id JOIN team t ON t.id=s.team_id AND t.organization_id=s.organization_id JOIN team_member tm ON tm.team_id=t.id AND tm.user_id=u.id WHERE s.id=?",
+    "SELECT s.organization_id,m.role,m.user_id,u.locale,u.email FROM stores s JOIN member m ON m.organization_id=s.organization_id JOIN user u ON u.id=m.user_id WHERE s.id=?",
   )
     .bind(result.storeId)
     .first();
   expect(scope).toEqual({
     organization_id: result.organizationId,
-    team_id: result.teamId,
     role: "owner",
     user_id: result.userId,
     locale: "en",
@@ -122,7 +121,7 @@ it("成功後に入力を変えて再実行しても既存設定・所有者・�
   expect(await failure(bootstrapDatabase(bootstrapEnv, changed))).toMatchObject({
     code: "BOOTSTRAP_CONFLICT",
     status: 409,
-    details: { stage: "preflight", userId: null, organizationId: null, teamId: null },
+    details: { stage: "preflight", userId: null, organizationId: null },
   });
   expect(await counts()).toEqual(before);
   const stored = await env.TABLECAST_DB.prepare("SELECT config_json FROM stores WHERE id=?")
@@ -244,8 +243,8 @@ it("同じ入力の同時実行は一方だけが成功し所有者と店舗を�
     users: 1,
     organizations: 1,
     members: 1,
-    teams: 1,
-    teamMembers: 1,
+    teams: 0,
+    teamMembers: 0,
     stores: 1,
     releases: 1,
     tables: 2,
@@ -285,7 +284,7 @@ it("異なる新規管理者が同じ店舗IDを取り合っても成功側のte
 
 it("組織作成途中の失敗は固定診断だけを返し残存資源を再採用しない", async () => {
   await env.TABLECAST_DB.prepare(
-    "CREATE TRIGGER tablecast_bootstrap_team_failure BEFORE INSERT ON team BEGIN SELECT RAISE(ABORT,'tablecast-private-database-cause'); END",
+    "CREATE TRIGGER tablecast_bootstrap_team_failure BEFORE INSERT ON organization BEGIN SELECT RAISE(ABORT,'tablecast-private-database-cause'); END",
   ).run();
   const errorLog = vi.spyOn(console, "error");
   const warnLog = vi.spyOn(console, "warn");
@@ -297,7 +296,6 @@ it("組織作成途中の失敗は固定診断だけを返し残存資源を再�
       details: {
         stage: "organization",
         organizationId: null,
-        teamId: null,
       },
     });
     const details = z.object({ userId: z.string().min(1) }).parse(error.details);
@@ -335,17 +333,16 @@ it("卓の途中登録が失敗すると店舗・初期公開版・先行卓が�
     details: { stage: "store" },
   });
   const details = z
-    .object({ userId: z.string(), organizationId: z.string(), teamId: z.string() })
+    .object({ userId: z.string(), organizationId: z.string(), role: z.string().optional() })
     .parse(error.details);
   const owner = await env.TABLECAST_DB.prepare(
-    "SELECT tm.user_id,t.organization_id,t.id team_id FROM team t JOIN team_member tm ON tm.team_id=t.id WHERE t.id=?",
+    "SELECT user_id,organization_id FROM member WHERE organization_id=?",
   )
-    .bind(details.teamId)
+    .bind(details.organizationId)
     .first();
   expect(owner).toEqual({
     user_id: details.userId,
     organization_id: details.organizationId,
-    team_id: details.teamId,
   });
   expect(JSON.stringify(error)).not.toMatch(
     /private-table-cause|private-password|AUTH_SECRET|@example/,
@@ -355,8 +352,8 @@ it("卓の途中登録が失敗すると店舗・初期公開版・先行卓が�
     users: 1,
     organizations: 1,
     members: 1,
-    teams: 1,
-    teamMembers: 1,
+    teams: 0,
+    teamMembers: 0,
     stores: 0,
     releases: 0,
     tables: 0,

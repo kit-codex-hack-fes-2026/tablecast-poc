@@ -1,5 +1,13 @@
 # Codex プラグイン
 
+## 管理画面からの導入
+
+`/account/integrations/plugins` にMarketplace、ChatGPT開発者モード、ローカルリポジトリの導入手順を置く。`/account/integrations/manual` は任意のMCPクライアント向けのStreamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdのダウンロードを提供する。スキルを配置するだけでは接続や権限を付与しない。`/account/mcp-sessions` はOAuth接続の日時・scope・有効期限と解除を扱う。
+
+ChatGPT開発者モードの入口はSettings → Security and login。PluginsでMCPを登録し、接続の`plugin_asdk_app` IDをplugin-creatorへ渡してスキル付きパッケージへ組み込む。クラウドからの接続には公開HTTPSまたはSecure MCP Tunnelが必要。ローカル配布元を追加した後はアプリを再起動し、Plugins DirectoryからTableCastをインストールする。[公式パッケージガイド](https://developers.openai.com/plugins/build/plugins)、[接続ガイド](https://developers.openai.com/plugins/deploy/connect-chatgpt)を参照する。
+
+現時点で公開Plugins Directoryには未掲載で、GitHubパッケージはlocalhost向けである。この状態を導入ページにも表示する。ローカルの生成手順は現在のworktree URLを使い、公開URLと混同しない。
+
 `plugins/tablecast` にMCP接続とメニュー設定用のスキルをまとめ、`.agents/plugins/marketplace.json` から配布する。OAuth Provider は `/api/auth/oauth2/*`、MCP は `/mcp`。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には未認証の動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。
 
 ## ローカル接続

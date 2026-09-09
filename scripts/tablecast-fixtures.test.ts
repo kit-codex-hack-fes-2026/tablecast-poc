@@ -6,7 +6,7 @@ describe("デモの構成データ", () => {
   it("同じプロファイルから店舗境界と日英を持つ同じ180商品を作る", () => {
     const stores = demoStores("demo");
     expect(stores).toEqual(demoStores("demo"));
-    expect(new Set(stores.map((store) => store.organization)).size).toBe(2);
+    expect(new Set(stores.map((store) => store.id)).size).toBe(3);
     expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(180);
     expect(stores.reduce((sum, store) => sum + store.tableCount, 0)).toBe(36);
     for (const store of stores) {

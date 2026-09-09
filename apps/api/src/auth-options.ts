@@ -15,6 +15,8 @@ export function authOptions(
   }) => Promise<void>,
 ) {
   const oauth = {
+    // 連携取消を即時反映するため、標準のDB管理アクセストークンを使用する。
+    disableJwtPlugin: true,
     loginPage: "/login",
     consentPage: "/consent",
     scopes: ["openid", "profile", "tablecast:read", "tablecast:write"],
@@ -59,8 +61,7 @@ export function authOptions(
     },
     plugins: [
       organization({
-        allowUserToCreateOrganization: true,
-        teams: { enabled: true },
+        allowUserToCreateOrganization: false,
         sendInvitationEmail,
         requireEmailVerificationOnInvitation: true,
       }),
