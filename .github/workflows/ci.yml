@@ -251,7 +251,7 @@ jobs:
         id: target
         run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined).origin + "\n")'
       - name: 資源作成・移行・ビルド・配備・SHA確認
-        run: bun --no-env-file scripts/tablecast-deploy.ts
+        run: bun --no-env-file run deploy
       - name: PRへ配備結果を記録
         if: success() && github.event_name == 'pull_request'
         run: |

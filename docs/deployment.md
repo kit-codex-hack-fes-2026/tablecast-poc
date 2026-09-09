@@ -62,6 +62,8 @@ Web applicationの設定を次と完全一致させる。
 
 D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
+配備・cleanupの入口は `bun --no-env-file run deploy`。既存依存のtsxをrootにも明示し、Wranglerの遠隔bindingを使う管理スクリプトをNode.js 24.7.0で実行する。Bun 1.3.13での遠隔接続停止を回避し、build・公式CLIの起動はBunを維持する。
+
 DockerイメージはActionsのUbuntu runnerで、Wrangler deploy時にDockerfileからlinux/amd64へbuildし、Cloudflare Registryへpushする。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。`images` jobでも先にbuildと起動を検査する。実配備ではもう一度buildするため、そのrunner時間も発生する。uv依存・VADモデルは既存Dockerfileのbuild段階で準備し、cold startでpip/uv installしない。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
 ## 初期データと再実行
@@ -135,8 +137,8 @@ cleanup途中で所有markerだけが削除された場合も、自動採用せ�
 通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使い、ホストのPythonとローカルLiveKitを維持する。公開用configは次でsecret・遠隔書込みなしに生成できる。
 
 ```sh
-TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file scripts/tablecast-deploy.ts --plan
-TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file scripts/tablecast-deploy.ts --plan
+TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
+TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
 TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" TABLECAST_WEB_CONFIG="$PWD/.local/tablecast-deploy/web.json" bun --no-env-file run --cwd apps/web build
 ```
 

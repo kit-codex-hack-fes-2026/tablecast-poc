@@ -1,4 +1,7 @@
 import process from "node:process";
+import { execFile, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { promisify } from "node:util";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parse } from "jsonc-parser";
@@ -13,7 +16,8 @@ import {
   tablecastRepository,
 } from "./tablecast-deploy-config";
 
-const root = resolve(import.meta.dir, "..");
+const root = resolve(import.meta.dirname, "..");
+const execFileAsync = promisify(execFile);
 const directory = resolve(root, ".local/tablecast-deploy");
 const target = deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined);
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
@@ -39,19 +43,21 @@ async function cloudflare(path: string, method = "GET", body?: unknown) {
   return data.result;
 }
 
-async function run(args: string[], env: Record<string, string> = {}) {
-  const child = Bun.spawn(args, {
-    cwd: root,
-    env: { ...process.env, ...env },
-    stdout: "inherit",
-    stderr: "inherit",
+async function run(args: [string, ...string[]], env: Record<string, string> = {}) {
+  const code = await new Promise<number | null>((complete, reject) => {
+    const child = spawn(args[0], args.slice(1), {
+      cwd: root,
+      env: { ...process.env, ...env },
+      stdio: "inherit",
+    });
+    child.once("error", reject);
+    child.once("exit", complete);
   });
-  if (await child.exited)
-    throw new Error(`配備コマンドが失敗しました: ${args.slice(0, 4).join(" ")}`);
+  if (code !== 0) throw new Error(`配備コマンドが失敗しました: ${args.slice(0, 4).join(" ")}`);
 }
 const wrangler = (args: string[]) =>
   run([
-    process.execPath,
+    "bun",
     "--no-env-file",
     "x",
     "wrangler",
@@ -61,18 +67,13 @@ const wrangler = (args: string[]) =>
   ]);
 
 async function currentRevision(cleanup = false) {
-  const gh = Bun.spawn(
-    [
-      "gh",
-      "api",
-      target.pr
-        ? `repos/${tablecastRepository}/pulls/${target.pr}`
-        : `repos/${tablecastRepository}/commits/main`,
-    ],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  const value: unknown = JSON.parse(await new Response(gh.stdout).text());
-  if (await gh.exited) throw new Error("GitHubの現在の配備対象を確認できません。");
+  const gh = await execFileAsync("gh", [
+    "api",
+    target.pr
+      ? `repos/${tablecastRepository}/pulls/${target.pr}`
+      : `repos/${tablecastRepository}/commits/main`,
+  ]);
+  const value: unknown = JSON.parse(gh.stdout);
   if (target.pr) {
     const pr = z
       .object({
@@ -217,7 +218,7 @@ async function main() {
 
   if (!cleanup && secrets) {
     await writeFile(resolve(directory, "secrets.json"), JSON.stringify(secrets), { mode: 0o600 });
-    await run([process.execPath, "--no-env-file", "run", "--cwd", "apps/web", "build"], {
+    await run(["bun", "--no-env-file", "run", "--cwd", "apps/web", "build"], {
       TABLECAST_API_CONFIG: apiPath,
       TABLECAST_WEB_CONFIG: webPath,
     });
@@ -406,9 +407,9 @@ async function main() {
     const outputConfigs: { name: string; path: string }[] = [];
     for (const folder of outputs) {
       const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
-      if (await Bun.file(path).exists())
+      if (existsSync(path))
         outputConfigs.push({
-          name: z.object({ name: z.string() }).parse(await Bun.file(path).json()).name,
+          name: z.object({ name: z.string() }).parse(JSON.parse(await readFile(path, "utf8"))).name,
           path,
         });
     }
