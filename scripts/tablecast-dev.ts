@@ -413,7 +413,8 @@ async function main() {
     const runtime = await readRuntime();
     console.info(JSON.stringify({ ...runtime, running: await ownerRunning(runtime) }, null, 2));
   } else if (command === "storybook") {
-    const runtime = await readRuntime();
+    const runtime = (await optionalRuntime()) ?? (await reserveRuntime());
+    console.info(`TableCast Storybook MCP: http://127.0.0.1:${runtime.ports.storybook}/mcp`);
     await run(
       [
         join(tablecastRoot, "apps/web/node_modules/.bin/storybook"),

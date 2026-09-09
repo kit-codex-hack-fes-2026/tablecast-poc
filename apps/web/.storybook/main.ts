@@ -6,7 +6,8 @@ const config: StorybookConfig = {
     name: "@storybook/react-vite",
     options: { builder: { viteConfigPath: ".storybook/vite.config.ts" } },
   },
-  addons: ["@storybook/addon-a11y", "@storybook/addon-vitest"],
+  addons: ["@storybook/addon-a11y", "@storybook/addon-vitest", "@storybook/addon-mcp"],
+  features: { componentsManifest: true },
   viteFinal(viteConfig) {
     return { ...viteConfig, server: { ...viteConfig.server, host: "127.0.0.1" } };
   },
