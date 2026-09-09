@@ -434,8 +434,50 @@ async function seedCurrentTables(db: D1Database, store: Store, owner: Owner, bas
   }
 }
 
-export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCredentials) {
+export type SeedEnv = Pick<
+  TablecastEnv,
+  | "TABLECAST_DB"
+  | "TABLECAST_MEDIA"
+  | "TABLECAST_AUTH_SECRET"
+  | "TABLECAST_PUBLIC_ORIGIN"
+  | "TABLECAST_ENV"
+>;
+
+export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
+  return populateDemoDatabase(env, credentials);
+}
+
+export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
+  if (
+    env.TABLECAST_ENV !== "preview" ||
+    !/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
+      env.TABLECAST_PUBLIC_ORIGIN,
+    )
+  )
+    throw new Error("PR初期投入の対象が不正です。");
+  const owner = await env.TABLECAST_DB.prepare(
+    "SELECT repository,environment,seeded FROM tablecast_deployment_owner",
+  ).first<{ repository: string; environment: string; seeded: number }>();
+  if (
+    owner?.repository !== "kit-codex-hack-fes-2026/tablecast-poc" ||
+    `${owner.environment}.kit-codex.workers.dev` !== new URL(env.TABLECAST_PUBLIC_ORIGIN).hostname
+  )
+    throw new Error("PR初期投入の所有情報が一致しません。");
+  if (owner.seeded === 1) return false;
+  if (
+    await env.TABLECAST_DB.prepare(
+      "SELECT 1 FROM user UNION ALL SELECT 1 FROM stores LIMIT 1",
+    ).first()
+  )
+    throw new Error(
+      "PR初期投入の途中状態または既存データがあります。上書きせず手動確認してください。",
+    );
+  await populateDemoDatabase(env, credentials);
+  return true;
+}
+
+async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   const db = env.TABLECAST_DB;
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined });
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。

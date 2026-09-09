@@ -5,7 +5,11 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import { seedDemoDatabase, tablecastHistoryBaseTime } from "./tablecast-seed-data";
+import {
+  seedDemoDatabase,
+  seedPreviewDatabase,
+  tablecastHistoryBaseTime,
+} from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
 import { configurationSchema } from "../apps/api/src/schema";
 
@@ -77,7 +81,31 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
     });
     try {
       const db = platform.env.TABLECAST_DB;
-      // When: 実際のseedと同じ入口から一度投入する。
+      const preview = {
+        ...platform.env,
+        TABLECAST_ENV: "preview",
+        TABLECAST_PUBLIC_ORIGIN: "https://tablecast-pr-34.kit-codex.workers.dev",
+      };
+      await db
+        .prepare(
+          "CREATE TABLE tablecast_deployment_owner(repository TEXT, environment TEXT, seeded INTEGER)",
+        )
+        .run();
+      await db
+        .prepare(
+          "INSERT INTO tablecast_deployment_owner VALUES('kit-codex-hack-fes-2026/tablecast-poc','tablecast-pr-35',0)",
+        )
+        .run();
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("所有情報");
+      await expect(
+        seedPreviewDatabase({ ...preview, TABLECAST_ENV: "production" }, credentials),
+      ).rejects.toThrow("対象");
+      await db.prepare("UPDATE tablecast_deployment_owner SET environment='tablecast-pr-34'").run();
+      // When: 所有権を確認した空のPR DBへ初期投入する。
+      expect(await seedPreviewDatabase(preview, credentials)).toBe(true);
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("途中状態");
+      await db.prepare("UPDATE tablecast_deployment_owner SET seeded=1").run();
+      expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
       const counts = await seedDemoDatabase(platform.env, credentials);
       // Then: 規模だけでなく組織、プラン、支払、時系列の整合性を持つ。
       expect(counts).toMatchObject({

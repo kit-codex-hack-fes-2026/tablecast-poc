@@ -1,3 +1,4 @@
+import { previewGoogleToken, previewOAuthFetch } from "./preview-oauth";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { drizzle } from "drizzle-orm/d1";
@@ -35,6 +36,7 @@ export type AuthEnv = Pick<
       | "TABLECAST_GOOGLE_EMULATOR_URL"
       | "TABLECAST_GOOGLE_AUTHORIZE_URL"
       | "TABLECAST_ENV"
+      | "TABLECAST_EMULATE"
     >
   > &
   MailEnv;
@@ -61,8 +63,11 @@ export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
   const emulator = env.TABLECAST_GOOGLE_EMULATOR_URL;
   if (emulator)
     ensure(
-      env.TABLECAST_ENV === "development" &&
-        ["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname),
+      (env.TABLECAST_ENV === "development" &&
+        ["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname)) ||
+        (env.TABLECAST_ENV === "preview" &&
+          Boolean(env.TABLECAST_EMULATE) &&
+          emulator === "http://tablecast-emulate"),
       "OAUTH_EMULATOR_LOCAL_ONLY",
       503,
     );
@@ -79,12 +84,21 @@ export function createAuth(env: AuthEnv, logger?: BetterAuthOptions["logger"]) {
                   accountIssuer: tablecastGoogleMockIssuer,
                   authorizationUrl: `${env.TABLECAST_GOOGLE_AUTHORIZE_URL || emulator}/o/oauth2/v2/auth`,
                   tokenUrl: `${emulator}/oauth2/token`,
+                  ...(env.TABLECAST_ENV === "preview"
+                    ? { getToken: previewGoogleToken({ ...env, TABLECAST_ENV: "preview" }) }
+                    : {}),
                   // emulateのsubは再起動で変わるため、確認済みメールを開発用IDとする。
                   accountSubject: ({ profile }) => z.email().parse(profile.email).toLowerCase(),
                   getUserInfo: async (tokens) => {
-                    const response = await fetch(`${emulator}/oauth2/v2/userinfo`, {
-                      headers: { authorization: `Bearer ${tokens.accessToken}` },
-                    });
+                    const init = { headers: { authorization: `Bearer ${tokens.accessToken}` } };
+                    const response =
+                      env.TABLECAST_ENV === "preview"
+                        ? await previewOAuthFetch(
+                            { ...env, TABLECAST_ENV: "preview" },
+                            "/oauth2/v2/userinfo",
+                            init,
+                          )
+                        : await fetch(`${emulator}/oauth2/v2/userinfo`, init);
                     if (!response.ok) return null;
                     const profile = z
                       .object({

@@ -1,50 +1,99 @@
-# 公開環境の準備と更新
+# 本番・PR環境のCI/CD
 
-[仕様索引](README.md) · [ローカル起動](../README.md) · [残る実機検証](feasibility.md)
+[仕様索引](README.md) · [開発環境](development.md) · [残る受入](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/34)
 
-この手順は未実行。現在のWrangler設定はローカル用であり、公開用のアカウント・DB ID・ホスト・資格は登録されていない。以下は資格が揃った後にstagingで実施し、確認した同じreleaseを本番へ進める手順である。`dev:prepare`、`db:seed`、`demo:reset`は公開環境には使わない。
+GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpreviewへ配備する。常設stagingは追加しない。配備実装は [tablecast-deploy.ts](../scripts/tablecast-deploy.ts)、URLとsecretの契約は [tablecast-deploy-config.ts](../scripts/tablecast-deploy-config.ts) にある。公開先の実配備と有料音声の受入は未実施。
 
-## 公開設定を確定する
+## URLと実行先
 
-まず `bun --no-env-file x wrangler whoami` で利用アカウントを確認する。必要なD1とR2をWranglerの `d1 create`、`r2 bucket create` で作り、その出力にある実在ID・名前だけを設定へ転記する。秘密やアカウント権限を開発用 `.env.secrets.local` へ入れない。[D1の公式CLI](https://developers.cloudflare.com/d1/wrangler-commands/)、[R2の公式CLI](https://developers.cloudflare.com/r2/reference/wrangler-commands/)
+| 対象           | 本番                                      | PR #123の例                                      |
+| -------------- | ----------------------------------------- | ------------------------------------------------ |
+| 公開Web        | `https://tablecast.kit-codex.workers.dev` | `https://tablecast-pr-123.kit-codex.workers.dev` |
+| 非公開API      | `tablecast-api`                           | `tablecast-api-pr-123`                           |
+| D1             | `tablecast-db`                            | `tablecast-db-pr-123`                            |
+| R2             | `tablecast-media`                         | `tablecast-media-pr-123`                         |
+| Python agent名 | `tablecast-voice`                         | `tablecast-voice-pr-123`                         |
+| Google認証     | 実Google                                  | 専用Containerのemulate                           |
 
-`apps/api/wrangler.jsonc` と `apps/web/wrangler.jsonc` にそれぞれ `env.staging` を追加する。環境ごとに必要なbinding・varsを明示する。名前は `tablecast-api-staging` と `tablecast-web-staging` を使い、実際のアカウントで重複していないことを確認する。
+Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService BindingがAPIを呼び、APIのworkers.devと両Workerのversion preview URLは無効にする。D1/R2/DO/Containersは環境ごとに分離する。LiveKit Cloudは共有1 projectであり、APIがRoom名とagent名に環境名を付ける。共有APIキーと割当量は独立したセキュリティ境界にはならない。
 
-| 設定                          | stagingで確定する値                                         |
-| ----------------------------- | ----------------------------------------------------------- |
-| Webの公開先                   | 所有するHTTPSホスト。Webだけを公開する                      |
-| Web `TABLECAST_API`           | `tablecast-api-staging` へのService Binding                 |
-| API `workers_dev`             | `false`。APIへ直接の公開routeを付けない                     |
-| API `TABLECAST_ENV`           | `staging`。本番では `production`                            |
-| API `TABLECAST_PUBLIC_ORIGIN` | Webの正確なHTTPS origin。末尾slashなし                      |
-| API `TABLECAST_RELEASE_SHA`   | 今回検証した `git rev-parse HEAD` の実値                    |
-| API `TABLECAST_VOICE_ENABLED` | 初期値は文字列 `false`。音声の準備完了後だけ `true`         |
-| API `TABLECAST_DB`            | この環境専用のD1 ID。`migrations_dir` は既存の `migrations` |
-| API `TABLECAST_EVENTS`        | `StoreEvents` のSQLite DO。既存migration tagを維持する      |
-| API `TABLECAST_MEDIA`         | この環境専用のR2 bucket                                     |
-| API `TABLECAST_IMAGES`        | Cloudflare Images binding。利用可能な契約を確認する         |
+PythonはCloudflare Containersへ置き、LiveKit CloudにはSFU・Room・dispatchを任せる。WebRTCはWorkersを経由しない。MastraはAPI Worker内の既存実装を使い、別のStudioサーバーやhosted o11y exporterは追加しない。LiveKitの`record=False`を維持する。
 
-`compatibility_date` と `nodejs_compat` は検証済み設定を維持する。Workersのサイズと起動CPU制限は公開時の公式値を確認する。ローカルのdry-run成功は遠隔の起動時間検証を代替しない。[Workersの制限](https://developers.cloudflare.com/workers/platform/limits/)
+## 最初に登録するもの
 
-## 秘密情報と初期管理データ
+CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Accessを対象accountで利用可能にする。R2とAccessが未有効の場合、配備は失敗して止まる。API tokenは対象accountだけに限定し、Workers Scripts、D1、Workers R2 Storage、Containers、Access Apps and Policiesの管理権限と、Wranglerが要求するaccountの読取り権限を付ける。実際の権限名はtoken作成画面で照合する。
 
-秘密は `bun --no-env-file x wrangler secret put KEY --config apps/api/wrangler.jsonc --env staging` の対話入力で登録する。`KEY` は次の表の実際の変数名へ置き換える。秘密値をコマンド引数やGitへ保存しない。[Workers secrets](https://developers.cloudflare.com/workers/configuration/secrets/)
+| GitHub保存先                     | 名前                                                           | 内容                                                                               |
+| -------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Repository secret                | `CLOUDFLARE_API_TOKEN`                                         | 上記の配備用token                                                                  |
+| Repository secret                | `TABLECAST_RUNTIME_SECRETS`                                    | 下記の許可キーだけを含むJSON                                                       |
+| Repository secret                | `TABLECAST_DEPLOY_SECRET`                                      | 32文字以上のランダムな固定値                                                       |
+| Environment `production` secrets | `TABLECAST_GOOGLE_CLIENT_ID`, `TABLECAST_GOOGLE_CLIENT_SECRET` | 提供されたWeb applicationの資格                                                    |
+| Repository secrets               | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`               | PRの機械通信用Access service token                                                 |
+| Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
+| Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
 
-| APIの秘密                                                      | 用途                                                                                   |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `TABLECAST_AUTH_SECRET`                                        | staging専用の強い認証secret。通常の再deployで変更しない                                |
-| `TABLECAST_VOICE_API_TOKEN`                                    | APIとPythonだけが共有する内部HTTP token                                                |
-| `TABLECAST_LIVEKIT_URL`                                        | ブラウザーとAgentから到達可能なLiveKitの `wss://` URL                                  |
-| `TABLECAST_LIVEKIT_API_KEY`, `TABLECAST_LIVEKIT_API_SECRET`    | この環境専用のLiveKit資格                                                              |
-| `TABLECAST_MODEL`, `TABLECAST_MODEL_API_KEY`                   | 検証対象モデルとその資格                                                               |
-| `TABLECAST_INWORLD_VOICES_API_KEY`                             | 標準音声metadataの一覧・実在性確認用。Read権限だけを持つ別のInworldキー                |
-| `TABLECAST_GOOGLE_CLIENT_ID`, `TABLECAST_GOOGLE_CLIENT_SECRET` | Googleログインを有効にする場合のみ。callbackはWeb originの `/api/auth/callback/google` |
+`TABLECAST_RUNTIME_SECRETS`には`.env.local`と同じ `OPENAI_API_KEY`、`INWORLD_API_KEY`、`LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、`TABLECAST_MODEL`、`TABLECAST_MODEL_API_KEY`、`TABLECAST_INWORLD_VOICES_API_KEY` を入れる。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。Pythonに必要な値はContainer起動時に注入する。ブラウザーへ返すLiveKit接続URLと限定JWTを除き、資格はサーバー側に留める。
 
-初回の管理者・組織・店舗team・店舗・卓・公開カタログは、migration適用後に管理CLI `db:bootstrap` で作る。Better AuthのサーバーAPIを使い、公開HTTPへ管理用の認証回避経路は追加しない。開発seedは公開環境で使えないままにする。
+認証secretと内部tokenは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証と内部通信に影響するため通常のキー追加時に再生成しない。
 
-WranglerのJSON/JSONC設定に実在する `account_id` を明示し、`env.staging` または `env.production` にWorker名、`TABLECAST_ENV`、HTTPSの `TABLECAST_PUBLIC_ORIGIN`、対象の `TABLECAST_DB` を明示する。rootの開発bindingを暗黙に継承する入力は拒否する。DB名とWorker名は `tablecast` を含める。
+Access applicationはPRホスト名に対してWeb公開前に作成する。上記2 policyを参照し、Pythonと配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
 
-入力は所有者だけが読める通常JSONファイル（例: `.local/tablecast-staging-bootstrap.json`、mode `0600`）として作る。次の項目を持ち、秘密を含むためGit・チャット・コマンド引数へ内容を貼らない。
+## Google Cloud Console
+
+Web applicationの設定を次と完全一致させる。
+
+| 項目                          | 値                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| Authorized JavaScript origins | `https://tablecast.kit-codex.workers.dev`（リダイレクト方式では省略可能） |
+| Authorized redirect URIs      | `https://tablecast.kit-codex.workers.dev/api/auth/callback/google`        |
+| API `TABLECAST_PUBLIC_ORIGIN` | `https://tablecast.kit-codex.workers.dev`                                 |
+
+本番configには`TABLECAST_GOOGLE_EMULATOR_URL`と`TABLECAST_GOOGLE_AUTHORIZE_URL`を生成しない。Google資格も`production` Environmentから本番だけへ渡す。以前に手動で同名secretを登録していた場合は、実Googleへの切替前にemulator関連secretを削除する。PRは環境固有のcallbackへ戻る専用emulateを利用し、ローカルのエミュレーターと`/organisations`等の既存callbackURLを維持する。Google側へのlocalhost・PR URL追加は不要。
+
+## Actionsの処理
+
+1. format/lint/typecheck、単体・実Binding・Python、Workers/Storybook build、UI部品、Chromium/WebKit E2E、合成音声WebRTC、両Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。
+2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
+3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
+4. `.local/tablecast-deploy/`へ環境別Wrangler configを生成し、Cloudflare Vite pluginでWeb/APIをbuildする。`--env`をbuild後に付けて別環境へ転用しない。
+5. 既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
+6. Web経由の`/api/health`が返すrelease SHAを照合し、成功時だけPRコメントとActions summaryへURL・SHAを記録する。
+
+D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
+
+DockerイメージはActionsのUbuntu runnerで、Wrangler deploy時にDockerfileからlinux/amd64へbuildし、Cloudflare Registryへpushする。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。`images` jobでも先にbuildと起動を検査する。実配備ではもう一度buildするため、そのrunner時間も発生する。uv依存・VADモデルは既存Dockerfileのbuild段階で準備し、cold startでpip/uv installしない。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
+
+## 初期データと再実行
+
+PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。投入済みフラグがある再配備ではDB・注文・画像を変更しない。`db:seed`のdevelopment制限は維持し、公開PR専用入口が対象originと所有情報を検査する。初期voiceは未設定で、管理画面で実在voiceを確認して明示公開するまで音声開始できない。
+
+資源作成から所有情報記録、DB seed、画像登録の全体は原子的ではない。記録前の中断、部分seed、所有情報の欠落は失敗として止め、上書き・自動修復しない。管理者が該当PRのD1/R2を照合し、未使用の部分資源だけを除去して再実行する。営業中データへresetを流用しない。
+
+本番はmigrationのみ自動適用し、実在管理者のメールと店舗設定を確定してから既存bootstrapで初期化する。PRの架空ユーザーは本番へ投入しない。実Googleログインと初期組織への所属確認は公開受入に残る。
+
+### 本番bootstrap
+
+自動生成configは平坦なconfigなので、既存bootstrap CLI用に以下の形で`.local/tablecast-bootstrap-config.json`を作る。配備済みの実D1 IDだけを使う。planが出力する検証用UUIDは使えない。
+
+```js
+const api = await Bun.file(".local/tablecast-deploy/api.json").json();
+await Bun.write(
+  ".local/tablecast-bootstrap-config.json",
+  JSON.stringify({
+    account_id: api.account_id,
+    compatibility_date: api.compatibility_date,
+    compatibility_flags: api.compatibility_flags,
+    env: { production: api },
+  }),
+);
+```
+
+初回の管理者・組織・店舗・卓・公開カタログは、migration適用後に管理CLI `db:bootstrap` で作る。Better AuthのサーバーAPIを使い、公開HTTPへ管理用の認証回避経路は追加しない。開発seedは公開環境で使えないままにする。
+
+WranglerのJSON/JSONC設定に実在する `account_id` を明示し、`env.production` にWorker名、`TABLECAST_ENV`、HTTPSの `TABLECAST_PUBLIC_ORIGIN`、対象の `TABLECAST_DB` を明示する。rootの開発bindingを暗黙に継承する入力は拒否する。DB名とWorker名は `tablecast` を含める。
+
+入力は所有者だけが読める通常JSONファイル（例: `.local/tablecast-production-bootstrap.json`、mode `0600`）として作る。次の項目を持ち、秘密を含むためGit・チャット・コマンド引数へ内容を貼らない。
 
 | JSON項目       | 内容                                                                   |
 | -------------- | ---------------------------------------------------------------------- |
@@ -59,72 +108,48 @@ WranglerのJSON/JSONC設定に実在する `account_id` を明示し、`env.stag
 次の一つ目は入力検査と対象表示だけで、DB接続や書込みを行わない。表示したaccount ID・DB ID・origin・店舗IDが配備対象と一致してから、同じ入力へ `--apply` を付ける。遠隔の接続にはWranglerの認証と公式remote D1 bindingを使用する。[Wrangler API](https://developers.cloudflare.com/workers/wrangler/api/)
 
 ```sh
-bun --no-env-file run db:bootstrap --config apps/api/wrangler.jsonc --env staging --input .local/tablecast-staging-bootstrap.json --remote
-bun --no-env-file run db:bootstrap --config apps/api/wrangler.jsonc --env staging --input .local/tablecast-staging-bootstrap.json --remote --apply
+bun --no-env-file run db:bootstrap --config .local/tablecast-bootstrap-config.json --env production --input .local/tablecast-production-bootstrap.json --remote
+bun --no-env-file run db:bootstrap --config .local/tablecast-bootstrap-config.json --env production --input .local/tablecast-production-bootstrap.json --remote --apply
 ```
 
 ローカルでのリハーサルは `--remote` を `--local --persist-to /absolute/path/tablecast-bootstrap-state` へ置き換える。同じ設定・環境を指定した `wrangler d1 migrations apply TABLECAST_DB --local --persist-to ...` を先に実施し、開発デモとは別の保存先を使う。CLIはD1だけの一時configを作り、周辺の `.dev.vars` や `.env.local` を読まない。入力ファイルやD1の内容は実行後も保存される。
 
-既存email・組織slug・店舗ID・卓IDが一つでもあれば、成功済みの再実行を含めて変更せず拒否する。認証ユーザーや組織の作成は複数のBetter Auth APIをまたぐため全体の原子性はない。中途失敗時は作成段階と判明したIDを確認し、対象DBの状態を管理者が調査する。IDの `null` は未取得を意味し、資源が作られなかった証明にはならない。自動削除や既存資源の再採用はしない。店舗・初期 `config_releases`・卓は一つのD1 batchで反映する。成功後は店舗のteamと組織の一致、ログイン、初期公開版、別店舗へのアクセス拒否を確認する。
+既存email・組織slug・店舗ID・卓IDが一つでもあれば、成功済みの再実行を含めて変更せず拒否する。認証ユーザーや組織の作成は複数のBetter Auth APIをまたぐため全体の原子性はない。中途失敗時は作成段階と判明したIDを確認し、対象DBの状態を管理者が調査する。IDの `null` は未取得を意味し、資源が作られなかった証明にはならない。自動削除や既存資源の再採用はしない。店舗・初期 `config_releases`・卓は一つのD1 batchで反映する。成功後は店舗と組織の一致、ログイン、初期公開版、別店舗へのアクセス拒否を確認する。
 
 R2へ商品画像を登録する場合は `tablecast/` 配下のkeyをカタログに設定する。生成画像は `imageKind=illustration` とし、[画像の出所](../assets/demo/README.md)を保持する。DB・Cookie・実来店ログをローカルから移植しない。
 
-## ビルド、移行、公開
+## Containerの停止と復旧
 
-1. `bun --no-env-file run check`、`bun --no-env-file run build`、ローカルのブラウザー試験と `dev:parity` を通す。rootのbuildはWebのCloudflare Vite pluginでWeb/API両方を生成する。APIを別のesbuild設定で再bundleしない。
-2. staging設定を含む状態で `CLOUDFLARE_ENV=staging bun --no-env-file run --cwd apps/web build` を実行する。Cloudflare Vite pluginの環境選択はbuild時に行われる。生成後に `--env` を足して別環境へ転用しない。[Viteの環境選択](https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/)
-3. `rg --files apps/web/dist | rg '/wrangler.json$'` でWebと補助APIの生成configを確認する。現在のローカル出力は `dist/server/wrangler.json` と `dist/tablecast_api/wrangler.json` だが、stagingの補助API名に応じて後者は変わる。生成configのWorker名・D1 ID・R2名・origin・release SHAを照合する。
-4. APIの生成configの実パスを `TABLECAST_API_BUILD_CONFIG`、Web側を `TABLECAST_WEB_BUILD_CONFIG` に設定する。生成configの `no_bundle` とmodule rulesを保持し、`bun --no-env-file x wrangler deploy --dry-run --config "$TABLECAST_API_BUILD_CONFIG"` とWeb側の同じ確認を行う。補助Workerはそれぞれ個別にdeployする。[複数Workerのbuild出力](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)
-5. 既存環境ならWeb/API双方の現行version IDとD1のTime Travel bookmarkを記録する。後述の互換性条件を確認してからD1 migrationを適用する。
+初期値は環境ごとに`standard-1`の音声Container 1個・同時1 session。DOの開始予約を記録し、ContainerのHTTP portとLiveKit `/worker`を確認してから限定JWTを返す。予約が埋まっている場合、音声開始は503となりGUIを維持する。これは未計測の最大性能ではなく入場上限。
 
-以降のコマンドはアカウント・環境・生成configを確認した後に実行する公開操作である。
+公式SDKの5分activity期限でLiveKitのactive jobsを確認する。job数が不明なら稼働を継続し、0件と扱わない。JWTは5分、未開始予約は10分まで保護する。実jobを確認済みの予約は全job終了時に解放する。期限確認は定期的なので、終了直後の正確な5分停止は保証しない。更新時には新規予約を止め、既存予約・jobが残れば更新を拒否する。
 
-```sh
-bun --no-env-file x wrangler d1 migrations list TABLECAST_DB --remote --config apps/api/wrangler.jsonc --env staging
-bun --no-env-file x wrangler d1 time-travel info TABLECAST_DB --config apps/api/wrangler.jsonc --env staging
-bun --no-env-file x wrangler d1 migrations apply TABLECAST_DB --remote --config apps/api/wrangler.jsonc --env staging
-bun --no-env-file x wrangler d1 execute TABLECAST_DB --remote --config apps/api/wrangler.jsonc --env staging --command 'PRAGMA foreign_key_check'
-bun --no-env-file x wrangler deploy --config "$TABLECAST_API_BUILD_CONFIG"
-bun --no-env-file x wrangler deploy --config "$TABLECAST_WEB_BUILD_CONFIG"
-```
+SIGTERM時のPython drain timeoutは600秒。ただし基盤の強制終了猶予を延長する設定ではない。基盤障害・メンテナンス・killやPR closeは通話中でも停止し得る。別Containerへの無切断移送は実装しない。停止後は利用者が明示再開し、APIに保存した会話・GUI・カート・注文状態を使用する。未保存発話とモデル内部状態は復元できない場合がある。
 
-移行は追加型を基本にし、先に旧Web/APIでも動くD1変更、次にAPI、最後にWebの順で進める。適用済みSQLを編集しない。互換性を維持できない変更は営業書込みを停止した計画移行に分ける。[D1 migration](https://developers.cloudflare.com/d1/reference/migrations/)
+PR closeのworkflowは`pull_request_target: closed`から既定ブランチだけをcheckoutし、PRコードを特権実行しない。D1/R2の所有情報を確認後、Web、Container application、DOを退役させたAPI、R2、D1、Access applicationを削除する。対象は終了した同一repo PRだけ。本番・他PR・共有LiveKit projectは削除しない。Registryの過去imageはこのcleanupの対象外なので保存量を別途確認する。最初の導入PRでは、このworkflowがmainへ入ってからcleanupが使える。
 
-公開後はWeb経由でhealth、スタッフログイン、端末承認、別組織・別店舗の拒否、注文確認と冪等再送、受付・提供・会計、DO再接続、画像WebP、設定の下書きと公開を確認する。version ID、migration一覧、release SHA、試験結果を同じrelease記録へ保存する。
+cleanup途中で所有markerだけが削除された場合も、自動採用せず手動確認で再開する。Container/DOの遠隔削除、配備途中の中断、複数PRでの分離は実環境の受入が必要。
 
-## MCPの接続
+## ローカル確認
 
-現実装のDCRは認証付き事前登録で使う。スタッフとしてログインした同一originから `/api/auth/oauth2/register` へ登録し、返ったpublic client IDをInspectorへ設定する。callback URIはInspector側の実設定と完全一致させる。public clientは `token_endpoint_auth_method=none`、`application_type=native`、scopeは `tablecast:read tablecast:write` とする。
-
-その後のPKCE、スタッフログイン、組織選択、scope同意、店舗の再認可を省略しない。ローカルではChromium/WebKitからこの経路を検証している。ChatGPT接続は実際のワークスペースと公開HTTPS環境で別途確認する。未認証登録を有効にする設定変更は実施していない。[Better Auth OAuth Provider](https://better-auth.com/docs/plugins/oauth-provider)
-
-## 音声の有効化
-
-LiveKit Cloudまたは対応するコンテナ環境へPython Agentを配置する。[Dockerfile](../livekit/Dockerfile)は公式uv/Pythonのdigestと `livekit/uv.lock` を使い、既存の `tablecast-voice start` を非rootで起動する。[音声README](../livekit/README.md)のbuild・検査手順と対象環境の変数を使う。コンテナを使わない場合は固定したuv環境で `uv run --directory livekit tablecast-voice start` を起動する。`TABLECAST_API_URL` は公開WebのHTTPS origin、LiveKit URLはAPIの接続先と同じ環境にする。クラウドへの自動deployは未提供。
-
-linux/amd64の実イメージをbuildし、ネットワーク無しのCLI・import・VAD読込みとUID 10001を確認した。外部へ通信できない専用Dockerネットワーク内のLiveKitへ待受登録し、health 200も確認した。AI資格とRoom jobは使わず、検証後は専用コンテナ・ネットワーク・鍵ファイルを片付けた。これは公開Agent dispatchや日英音声往復の受入を代替しない。
-
-Agent登録、health、Room dispatch、OpenAI Realtime 2.1の音声入力・テキスト出力、Inworld TTS、API業務ツール、日英の標準voiceを先に確認する。Pythonへ `OPENAI_API_KEY` を配備し、`gpt-realtime-2.1` へのアクセスを検証する。`INWORLD_API_KEY` はPythonだけへ渡し、LiveKit/API内部tokenをブラウザーへ渡さない。接続前提が揃ったstagingで `TABLECAST_VOICE_ENABLED=true` を明示してAPIを再deployし、店舗の `cast.voice.ja/en` を試聴した実在IDで公開する。再生停止・送音停止・Room退出・進行turnの失効、割込み中の注文拒否をstagingと実iPadで検証する。その受入結果が揃うまではproductionのフラグを有効にしない。
-
-APIの一覧確認用キーは `TABLECAST_INWORLD_VOICES_API_KEY` として別に登録し、GETのmetadata取得だけに使う。このキーだけではAgentや音声受付を有効化しない。標準音声の一覧と単体確認は現行の `/voices/v1/voices` を使い、独自のSTT/TTSクライアントを追加しない。[Inworld一覧とRead権限](https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/list-voices)
-
-停止中でもGUI注文を使えることを確認する。APIの有効フラグは稼働監視を代替しない。プロバイダー障害・Agent停止時は新しい開始を無効化して既存Roomを終了させる。
-
-## 戻し方
-
-コードだけの問題でDB・DOが旧版と互換なら、保存した実際のversion IDを使って `wrangler rollback` を実行する。WebからAPIの順に戻し、health・認証・注文を再確認する。version ID用の変数はrelease記録から設定し、見本のUUIDを使わない。
+通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使い、ホストのPythonとローカルLiveKitを維持する。公開用configは次でsecret・遠隔書込みなしに生成できる。
 
 ```sh
-bun --no-env-file x wrangler rollback "$TABLECAST_PREVIOUS_WEB_VERSION" --config "$TABLECAST_WEB_BUILD_CONFIG"
-bun --no-env-file x wrangler rollback "$TABLECAST_PREVIOUS_API_VERSION" --config "$TABLECAST_API_BUILD_CONFIG"
+TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file scripts/tablecast-deploy.ts --plan
+TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file scripts/tablecast-deploy.ts --plan
+TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" TABLECAST_WEB_CONFIG="$PWD/.local/tablecast-deploy/web.json" bun --no-env-file run --cwd apps/web build
 ```
 
-WorkerのrollbackはD1・R2・DOの内容を戻さない。DO classのmigrationやbinding先の変更をまたぐrollbackには制限があるため、変更前に実際の復旧経路を確認する。認証secretの不用意な切替も避ける。[Worker rollbackの制限](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)
+`apps/web/dist/*/wrangler.json`のWorker名を調べ、対応する生成configへ`bun --no-env-file x wrangler deploy --dry-run --config <生成config>`を実行する。planのDB IDは検証用であり、遠隔配備には使わない。
 
-D1を復元する必要がある場合は、営業書込みと音声を停止し、復元点以降の注文・支払が失われる影響を確認する。対象bookmarkを決めた後だけ次を実行する。復元後はmigration履歴と公開設定版も照合し、互換なWorkerへ揃えてから営業を再開する。[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+Docker Engineを起動した環境では、`wrangler dev`が実Containerをローカルでbuild・起動できる。Container用のDO bindingと`containers`設定を持つ専用configを使い、LiveKitはDockerから到達できるローカル接続先へ向ける。通常のbase configにはイメージ設定を追加せず、日常のローカル起動でContainerを二重起動しない。[Containersのローカル開発](https://developers.cloudflare.com/containers/local-dev/)
 
-```sh
-bun --no-env-file x wrangler d1 time-travel restore TABLECAST_DB --bookmark "$TABLECAST_RESTORE_BOOKMARK" --config apps/api/wrangler.jsonc --env staging
-```
+## 切り戻しと残る受入
 
-stagingで復旧まで確認できてから、同じ手順を実際のproduction設定へ適用する。公開資格、対象環境でのbootstrap実行、Agent配置、実iPadと有料音声の確認が残っている間は公開受入完了としない。
+配備runのWorker version ID・image digestと、移行前D1のTime Travel bookmarkを保存する。Web/APIが互換であればWorkerのrollbackと、旧SHAのDockerイメージ再配備を計画的に実施する。現行SHA検査があるため古いActions runの再実行では旧版へ戻せない。通常はmainへrevert PRを作り、新しいSHAとして同じCIを通す。Containerが旧imageに戻ったことをRegistry digestと起動後healthで確認する。
+
+WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書込みを停止し、失われる注文・支払を確認した復元点だけを使う。強制キャンセルでdrainが残った場合は対象URLへ内部token付き`POST /internal/deploy/resume`を送る。PRではAccess service tokenも必要。[Worker rollback](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)・[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+
+公開先のGoogleログイン、Access拒否、初期組織、端末承認、注文の冪等性、DO再接続、画像、MCP認証を確認する。有料音声では実iPadの日英発話・割込み・停止・明示再開、30分通話、強制終了と履歴復元を確認する。cold/warm start、初回音声、shutdown、復旧、1/2/4 sessionのCPU/RSSと切断率は未計測。1 sessionの初期上限を最適値として扱わない。
+
+月額約30 USD未満は目標であり、上限保証はない。Workers Paid、Containersの起動・待機とOAuth稼働、D1/R2/DO/Images、LiveKitのparticipant-minutes・転送量、OpenAI、Inworld、Actionsを集計する。Mastra hosted o11yやLiveKit managed Agent hostingの追加契約はこの変更では行わない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。

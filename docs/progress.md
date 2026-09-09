@@ -318,3 +318,11 @@ MCP・Skillsをプラグイン導入・手動導入・OAuth接続の個別ペー
 店舗設定ページで角丸の正方形アイコンを保存できる。店舗・組織の一対一対応を維持し、Better Authの組織logoと既存R2配信を使用する。責任者・管理者だけが更新でき、ユーザー画像と形式・サイズ検証を共有する。seedは架空ユーザーと店舗の画像を生成し、未設定分のみ補完する。開発コンテナへseedを反映し、既存の店舗画像とプロフィールを上書きしないことも隔離環境で検証した。
 
 API195件、Web単体21件、seed等14件、型検査・lint・formatが成功した。Chromium/WebKitの20件でメニューの展開、日英の導入ガイドとスキル保存、画像の読込・変更・再表示、OAuthの明示同意・scope・日時・取消後401、200%表示、商品公開、ペイン幅の保存を確認した。開発画面でカテゴリ・店舗画像・導入ガイドを目視した。受入中に旧管理URLのSSRで幅保存フックがlocalStorageへ触れる問題を見つけ、サーバー描画時の保存処理を分離した。ChatGPT/Codexへの新規インストールと公開環境への接続試験は今回実施していない。
+
+## 本番Google OAuthとPR別CI/CD（2026-09-09）
+
+mainを`tablecast.kit-codex.workers.dev`、同一repoのPRを独立したWorkers/D1/R2/DO/Containersへ配備するActionsと、close時の所有資源cleanupを追加した。本番は実Googleの資格をEnvironment secretから渡し、PRはAccessと専用emulateを使う。外部APIキーは既存値をRepository secretへ登録し、内部鍵は環境別に導出する。PR専用の初回seedは対象と所有情報を検査し、再配備で営業中データを上書きしない。
+
+型検査、配備境界と実D1 seedの11件、本番とPR設定のWorkers build・Wrangler dry-run、linux/amd64の両Dockerイメージを確認した。ローカルWranglerで実LiveKitに接続した音声Containerを起動し、重複予約とdrainの拒否で同じContainerが保持されること、予約中のidle期限で停止しないこと、解放後のSIGTERM停止を確認した。通常の受付拒否をDO入力ゲート内でthrowするとDOがリセットされる問題を検出し、ゲート外で拒否を返すよう修正した。OAuthイメージの起動と架空ユーザーの選択画面も確認した。
+
+Cloudflare側のR2・Access有効化、Actions用API tokenとAccess資格・policyが未設定で、遠隔配備・cleanupと本番Googleログインは未検証。実音声job中の継続性、cold startの本番値、強制終了からの復旧、同時sessionの最適数、月300分で30 USD未満の費用受入はIssue #34に残る。ローカルの起動・予約試験はこれらを代替しない。

@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: tablecast-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   WRANGLER_SEND_METRICS: "false"
@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
         with:
           python: "true"
@@ -37,6 +39,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
       - parallel:
           - name: Seed fixtures
@@ -50,6 +54,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
         with:
           python: "true"
@@ -61,6 +67,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
       - run: bun run --cwd apps/api test
 
@@ -70,6 +78,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
       - run: bunx --no-install vitest run --project scripts-runtime
 
@@ -79,6 +89,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
         with:
           turbo: "true"
@@ -90,6 +102,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
         with:
           turbo: "true"
@@ -101,6 +115,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
       - parallel:
           - uses: ./.github/actions/tablecast-browser
@@ -121,6 +137,8 @@ jobs:
         browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
       - parallel:
           - uses: ./.github/actions/tablecast-browser
@@ -147,6 +165,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
         with:
           python: "true"
@@ -163,3 +183,77 @@ jobs:
       - name: Stop local services
         if: always()
         run: bun --no-env-file run dev:stop
+  images:
+    name: 配備用Containerイメージ
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: 音声AgentとPR用OAuthをlinux/amd64で検証
+        run: |
+          docker build --platform linux/amd64 --tag tablecast-voice:check livekit
+          docker run --rm --network none --entrypoint python tablecast-voice:check -c 'from livekit.plugins import silero; silero.VAD.load()'
+          docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag tablecast-emulate:check .
+          docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev tablecast-emulate:check
+          trap 'docker rm --force tablecast-oauth-check' EXIT
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
+
+  deploy:
+    name: 本番・PR配備
+    needs:
+      [
+        static,
+        unit-web,
+        agent,
+        api,
+        dev-runtime,
+        workers-build,
+        storybook-build,
+        components,
+        e2e,
+        webrtc,
+        images,
+      ]
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      url: ${{ steps.target.outputs.url }}
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: tablecast-deploy-${{ github.event.pull_request.number || 'production' }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
+      TABLECAST_DEPLOY_SECRET: ${{ secrets.TABLECAST_DEPLOY_SECRET }}
+      TABLECAST_GOOGLE_CLIENT_ID: ${{ secrets.TABLECAST_GOOGLE_CLIENT_ID }}
+      TABLECAST_GOOGLE_CLIENT_SECRET: ${{ secrets.TABLECAST_GOOGLE_CLIENT_SECRET }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
+      TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ env.TABLECAST_RELEASE_SHA }}
+      - uses: ./.github/actions/tablecast-setup
+      - name: 配備先URL
+        id: target
+        run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined).origin + "\n")'
+      - name: 資源作成・移行・ビルド・配備・SHA確認
+        run: bun --no-env-file scripts/tablecast-deploy.ts
+      - name: PRへ配備結果を記録
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(".local/tablecast-deploy/result.md", "配備確認済み: " + deploymentTarget(process.env.TABLECAST_PR_NUMBER).origin + "\n\n対象SHA: " + process.env.TABLECAST_RELEASE_SHA + "\n")'
+          gh pr comment "$TABLECAST_PR_NUMBER" --body-file .local/tablecast-deploy/result.md

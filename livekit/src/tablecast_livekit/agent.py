@@ -36,7 +36,11 @@ from .speech import CaptionFormatter, caption, captions
 from .voice_text import UserText, VoiceTextPublisher
 
 logger = logging.getLogger("tablecast.voice")
-server = AgentServer(port=int(os.environ.get("TABLECAST_AGENT_HEALTH_PORT", "0")))
+server = AgentServer(
+    port=int(os.environ.get("TABLECAST_AGENT_HEALTH_PORT", "0")),
+    drain_timeout=600,
+    num_idle_processes=1,
+)
 
 
 class TablecastAgent(Agent):
@@ -402,7 +406,7 @@ class TablecastAgent(Agent):
             yield value
 
 
-@server.rtc_session(agent_name="tablecast-voice")
+@server.rtc_session(agent_name=os.environ.get("TABLECAST_AGENT_NAME", "tablecast-voice"))
 async def entrypoint(ctx: JobContext) -> None:
     metadata = json.loads(ctx.job.metadata or "{}")
     voice_session_id = metadata.get("voiceSessionId")
@@ -411,7 +415,17 @@ async def entrypoint(ctx: JobContext) -> None:
     ctx.log_context_fields = {"voiceSessionId": voice_session_id}
     client = httpx.AsyncClient(
         base_url=os.environ["TABLECAST_API_URL"],
-        headers={"Authorization": f"Bearer {os.environ['TABLECAST_VOICE_API_TOKEN']}"},
+        headers={
+            "Authorization": f"Bearer {os.environ['TABLECAST_VOICE_API_TOKEN']}",
+            **(
+                {
+                    "CF-Access-Client-Id": os.environ["CF_ACCESS_CLIENT_ID"],
+                    "CF-Access-Client-Secret": os.environ["CF_ACCESS_CLIENT_SECRET"],
+                }
+                if os.environ.get("CF_ACCESS_CLIENT_ID")
+                else {}
+            ),
+        },
         timeout=httpx.Timeout(90, connect=10),
     )
     api = VoiceAPI(client, voice_session_id)

@@ -66,7 +66,7 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 
 Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。`dev:parity` は実行ごとに自環境を停止し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
 
-公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時には通常buildを実行し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
+公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時は[CI/CD手順](deployment.md)で生成した環境別configをbuildへ渡し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
 
 ## Service BindingとCookie
 
@@ -114,7 +114,7 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 
 ## 実機・公開環境
 
-iPadのマイクは安全なコンテキストで試す。信頼されたローカルHTTPSと到達可能なLiveKit、またはstagingを利用する。
+iPadのマイクは安全なコンテキストで試す。信頼されたローカルHTTPSと到達可能なLiveKit、またはAccessで保護したPR環境を利用する。
 Cloudの強化音声処理は必要な追加比較として分離し、日常開発の成立条件にしない。
 本番はWeb/APIの2 Workers、D1・DO・R2・Images、LiveKit Cloudまたは対応コンテナのPython Agentを対象とする。
 公式設定を確認してデプロイし、設定・migration・secret・release SHA・ロールバック方法を記録する。音声の本番接続先もInworldのままにする。

@@ -1,0 +1,32 @@
+name: TableCast PR cleanup
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  cleanup:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: tablecast-deploy-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      # PRのコードをcheckoutしない。cleanupは既定ブランチの実装だけを使う。
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: ./.github/actions/tablecast-setup
+      - name: 閉じたPRの所有資源だけを削除
+        run: bun --no-env-file scripts/tablecast-deploy.ts --cleanup
