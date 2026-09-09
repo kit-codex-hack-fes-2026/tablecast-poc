@@ -220,7 +220,16 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
       await page.getByRole("combobox", { name: nextLabels.stores_title, exact: true }).click();
       await page.getByRole("option", { name: /あかり|Akari/ }).click();
       await expect(page).toHaveURL(new RegExp(`/admin/stores/${otherStoreId}/floor`));
-      await page.getByRole("link", { name: nextLabels.admin_history, exact: true }).click();
+      const otherHistoryLink = page.getByRole("link", {
+        name: nextLabels.admin_history,
+        exact: true,
+      });
+      await expect(otherHistoryLink).toHaveAttribute(
+        "href",
+        `/admin/stores/${otherStoreId}/visits`,
+      );
+      await otherHistoryLink.click();
+      await expect(page).toHaveURL(new RegExp(`/admin/stores/${otherStoreId}/visits$`));
       const otherHistory = page.getByRole("main");
       await expect(otherHistory.locator("tbody tr")).toHaveCount(other.sessions.length);
       await expect
