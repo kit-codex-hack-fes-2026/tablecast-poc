@@ -55,3 +55,7 @@ apps/web/src/paraglide/
 .codex/config.toml
 
 **/.tanstack/
+
+# Vitest Browser Modeの失敗証跡
+.vitest-attachments/
+__screenshots__/

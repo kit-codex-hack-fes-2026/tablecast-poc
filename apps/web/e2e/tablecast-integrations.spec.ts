@@ -118,6 +118,6 @@ test("店舗アイコンを変更し、再読込後の設定とサイドバー�
       ),
     )
     .toBe(true);
-  await expect(page.locator("aside img").first()).toHaveAttribute("src", imageUrl ?? "");
+  await expect(page.locator(`aside img[src="${imageUrl}"]`)).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("tablecast-store-icon.png") });
 });

@@ -65,12 +65,22 @@ describe("音声の明示的な停止と再開", () => {
                 url: "ws://tablecast.localhost",
                 token: "test-only",
               }
-            : { ok: true },
+            : path.endsWith("/stop")
+              ? { ok: true }
+              : { error: { code: "UNEXPECTED_TEST_REQUEST" } },
+          { status: path.endsWith("/start") || path.endsWith("/stop") ? 200 : 500 },
         );
       }),
     );
   });
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    const unexpected = requests.filter(
+      ({ path }) => !path.endsWith("/start") && !path.endsWith("/stop"),
+    );
+    if (unexpected.length)
+      throw new Error(`未定義の要求: ${unexpected.map(({ path }) => path).join(", ")}`);
+  });
 
   it("マイク許可待ちに停止した場合は遅れて取得したトラックを送信せず終了する", async () => {
     const pending = deferred<{ stop: () => void }>();

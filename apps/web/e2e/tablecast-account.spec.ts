@@ -1,12 +1,20 @@
 import { expect, request, test } from "@playwright/test";
 import { z } from "zod";
-import { runtime } from "./support/runtime";
+import { credentials, runtime } from "./support/runtime";
 
 test.use({ trace: "off" });
 
 const cleanup: (() => Promise<void>)[] = [];
 test.afterEach(async () => {
-  for (const action of cleanup.splice(0).toReversed()) await action();
+  const failures: unknown[] = [];
+  for (const action of cleanup.splice(0).toReversed()) {
+    try {
+      await action();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length) throw new AggregateError(failures, "認証fixtureの後片付けに失敗しました");
 });
 
 test("Googleログインから名前変更・店舗作成・招待メールまで利用できる", async ({
@@ -22,10 +30,15 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     .object({ user: z.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() }) })
     .parse(await (await page.request.get("/api/auth/get-session")).json());
   expect(session.user.emailVerified).toBe(true);
-  const owner = await request.newContext({
-    baseURL,
-    storageState: await page.context().storageState(),
-  });
+  const owner = await request.newContext({ baseURL });
+  expect(
+    (
+      await owner.post("/api/auth/sign-in/email", {
+        headers: { Origin: baseURL ?? "" },
+        data: credentials,
+      })
+    ).ok(),
+  ).toBe(true);
   cleanup.push(async () => {
     await owner.dispose();
   });
@@ -72,7 +85,13 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await expect(page.getByRole("textbox", { name: "メールアドレス", exact: true })).toHaveValue(
     "tablecast-member@example.test",
   );
+  const sending = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/auth/organization/invite-member") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "招待メールを送信" }).click();
+  const invitationId = z.object({ id: z.string() }).parse(await (await sending).json()).id;
   await expect(
     page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
   ).toBeVisible();
@@ -80,9 +99,21 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`,
   );
   const mail = z
-    .object({ messages: z.array(z.object({ ID: z.string(), Subject: z.string() })) })
+    .object({
+      messages: z.array(
+        z.object({
+          ID: z.string(),
+          Subject: z.string(),
+          To: z.array(z.object({ Address: z.string() })),
+        }),
+      ),
+    })
     .parse(await messages.json())
-    .messages.find((item) => item.Subject.includes("Restaurant invitation"));
+    .messages.find(
+      (item) =>
+        item.Subject.includes("Restaurant invitation") &&
+        item.To.some((to) => to.Address === "tablecast-member@example.test"),
+    );
   expect(mail).toBeDefined();
   const content = z
     .object({ HTML: z.string() })
@@ -94,7 +125,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
       ).json(),
     );
   const invitation = content.HTML.match(/href="([^"]*\/invitations\/[^"?]+)"/u)?.[1];
-  expect(invitation).toBeTruthy();
+  expect(invitation).toBe(`${baseURL}/invitations/${invitationId}`);
   await page.context().clearCookies();
   await page.goto(invitation ?? "/organisations");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
@@ -129,20 +160,25 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   await page.goto("/account");
   const keyName = `TableCast Chromium ${Date.now()}`;
-  const owner = await request.newContext({
-    baseURL,
-    storageState: await page.context().storageState(),
-  });
+  const owner = await request.newContext({ baseURL });
+  expect(
+    (
+      await owner.post("/api/auth/sign-in/email", {
+        headers: { Origin: baseURL ?? "" },
+        data: credentials,
+      })
+    ).ok(),
+  ).toBe(true);
   cleanup.push(async () => {
     try {
       const keys = z
         .array(z.object({ id: z.string(), name: z.string().optional() }))
-        .parse(await (await page.request.get("/api/auth/passkey/list-user-passkeys")).json());
+        .parse(await (await owner.get("/api/auth/passkey/list-user-passkeys")).json());
       const created = keys.find((key) => key.name === keyName);
       if (created)
         expect(
           (
-            await page.request.post("/api/auth/passkey/delete-passkey", {
+            await owner.post("/api/auth/passkey/delete-passkey", {
               headers: { Origin: baseURL ?? "" },
               data: { id: created.id },
             })
