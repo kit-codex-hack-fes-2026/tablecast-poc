@@ -1,10 +1,9 @@
+import { getOAuthProviderApi, oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { deviceAuthorization, jwt, organization, redeemDeviceCode } from "better-auth/plugins";
-import { getOAuthProviderApi, oauthProvider } from "@better-auth/oauth-provider";
 import { z } from "zod";
-
 export function authOptions(
   origin: string,
   secret: string,

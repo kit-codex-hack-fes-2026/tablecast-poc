@@ -6,7 +6,7 @@
   "exports": {
     "./schema": "./src/schema.ts",
     "./client": "./src/client.ts",
-    "./speech": "./src/agent/prompt.ts"
+    "./speech": "./src/modules/voice/prompt.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
@@ -40,6 +40,8 @@
     "@cloudflare/workers-types": "5.20260903.1",
     "@types/react": "19",
     "drizzle-kit": "0.31.10",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-boundaries": "7.2.0",
     "eslint-plugin-drizzle": "0.2.3",
     "eslint-plugin-hono": "1.0.6",
     "typescript": "6.0.3",

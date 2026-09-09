@@ -137,3 +137,24 @@ export const voiceTurns = sqliteTable("voice_turns", {
   started_at: integer("started_at").notNull(),
   ended_at: integer("ended_at"),
 });
+
+export const deviceAssignments = sqliteTable("device_assignments", {
+  user_code: text("user_code").primaryKey().notNull(),
+  store_id: text("store_id").notNull(),
+  table_id: text("table_id").notNull(),
+  approved_by: text("approved_by").notNull(),
+  created_at: integer("created_at").notNull(),
+});
+export const configDrafts = sqliteTable("config_drafts", {
+  id: text("id").primaryKey().notNull(),
+  store_id: text("store_id").notNull(),
+  base_version: integer("base_version").notNull(),
+  version: integer("version").notNull().default(1),
+  status: text("status", { enum: ["draft", "ready", "published", "discarded"] }).notNull(),
+  config_json: text("config_json").notNull(),
+  errors_json: text("errors_json").notNull().default("[]"),
+  created_by: text("created_by").notNull(),
+  publish_key: text("publish_key"),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+});

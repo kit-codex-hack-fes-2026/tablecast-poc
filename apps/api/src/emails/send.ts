@@ -1,7 +1,7 @@
-import { createElement } from "react";
 import { render, toPlainText } from "@react-email/render";
+import { createElement } from "react";
+import { ensure } from "../platform/errors";
 import { AccountEmail } from "./account-email";
-import { ensure } from "../errors";
 
 export type MailEnv = Partial<
   Pick<

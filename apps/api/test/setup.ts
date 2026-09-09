@@ -1,8 +1,8 @@
+import type { D1Migration } from "@cloudflare/vitest-plugin";
 import { applyD1Migrations } from "cloudflare:test";
-import { resetFixtureStorage } from "./fixture";
 import { env } from "cloudflare:workers";
 import { beforeEach, inject } from "vitest";
-import type { D1Migration } from "@cloudflare/vitest-plugin";
+import { resetFixtureStorage } from "./fixture";
 declare module "vitest" {
   export interface ProvidedContext {
     tablecastMigrations: D1Migration[];

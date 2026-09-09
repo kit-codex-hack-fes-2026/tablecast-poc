@@ -1,15 +1,8 @@
-import { ensure } from "../errors";
-import type {
-  Cart,
-  CartLine,
-  Configuration,
-  ConfigurationIssue,
-  Locale,
-  Plan,
-  PricedLine,
-  Snapshot,
-} from "../schema";
-
+import { ensure } from "../../platform/errors";
+import type { Locale } from "../../platform/model";
+import type { Configuration, ConfigurationIssue } from "../configuration/model";
+import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
+import type { Plan } from "./model";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
   const errors: ConfigurationIssue[] = [];
   const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {

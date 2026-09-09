@@ -1,5 +1,4 @@
 import { z } from "zod";
-
 type PreviewEnv = Pick<TablecastEnv, "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN"> &
   Partial<Pick<TablecastEnv, "TABLECAST_EMULATE">>;
 

@@ -1,8 +1,8 @@
 import { env, exports } from "cloudflare:workers";
-import { expect, test } from "vitest";
 import { TokenVerifier } from "livekit-server-sdk";
-import { issueVoiceToken } from "../src/voice";
-import { createAuth } from "../src/auth";
+import { expect, test } from "vitest";
+import { createAuth } from "../src/modules/auth/service";
+import { issueVoiceToken } from "../src/modules/voice/runtime";
 
 test("資格なしで配備用drainを要求すると音声Containerへ到達しない", async () => {
   const response = await exports.default.fetch(

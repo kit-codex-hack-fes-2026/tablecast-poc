@@ -1,11 +1,13 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { z } from "zod";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import app from "../src/app";
-import { getTableState, setVoiceSession } from "../src/modules/operations";
+import * as businessTables from "../src/db/business-schema";
+import { getTableState } from "../src/modules/tables/queries";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
+import { insertFixture } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
 
 const voiceId = "tablecast-realtime-fixture";
@@ -39,7 +41,7 @@ async function start(turnId = "tablecast-turn") {
 }
 async function setup() {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
+  await setVoiceSession(createApiServices(env), device, voiceId);
   expect((await start()).status).toBe(200);
 }
 const tool = (
@@ -68,7 +70,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect(JSON.stringify(config)).not.toContain("tablecast-test-model-key");
     expect((await tool("getCatalog")).status).toBe(200);
     expect((await tool("setSpeechSpeed", { speed: 1.5 })).status).toBe(200);
-    expect((await getTableState(env, device)).speechSpeed).toBe(1.5);
+    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1.5);
   });
   it("失敗後の新セッションへ同じ来店の発話と再生済み部分だけを時系列で復元する", async () => {
     await setup();
@@ -109,8 +111,8 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     await start("tablecast-tools");
     await tool("getCatalog", {}, "tablecast-tools");
     await start("tablecast-empty-caption");
-    await setVoiceSession(env, device, null);
-    await setVoiceSession(env, device, "tablecast-resumed");
+    await setVoiceSession(createApiServices(env), device, null);
+    await setVoiceSession(createApiServices(env), device, "tablecast-resumed");
     const response = await request("realtime?voiceSessionId=tablecast-resumed");
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -120,7 +122,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
       ],
     });
     expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
-    expect((await getTableState(env, device)).orders).toHaveLength(0);
+    expect((await getTableState(createApiServices(env), device)).orders).toHaveLength(0);
   });
   it("復元履歴は新しい発話を優先して本文量を制限する", async () => {
     await setup();
@@ -146,7 +148,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect((await tool("setSpeechSpeed", { speed: 1.6 })).status).toBe(422);
     expect((await start("tablecast-next")).status).toBe(200);
     expect((await tool("setSpeechSpeed", { speed: 0.5 })).status).toBe(409);
-    expect((await getTableState(env, device)).speechSpeed).toBe(1);
+    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1);
   });
   it("同じcall IDの並行要求を一回だけ実行する", async () => {
     await setup();
@@ -157,7 +159,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect(responses.map((response) => response.status).toSorted((a, b) => a - b)).toEqual([
       200, 409,
     ]);
-    expect((await getTableState(env, device)).speechSpeed).toBe(1.2);
+    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1.2);
     const events = await env.TABLECAST_DB.prepare(
       "SELECT kind FROM table_events WHERE kind='voice.speed'",
     ).all();
@@ -212,11 +214,11 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect((await tool("submitOrder", approval)).status).toBe(409);
     await start("tablecast-approval");
     expect((await tool("submitOrder", approval, "tablecast-approval")).status).toBe(200);
-    expect((await getTableState(env, device)).orders).toHaveLength(1);
+    expect((await getTableState(createApiServices(env), device)).orders).toHaveLength(1);
   });
   it("自発接客のturnでは業務を変更できない", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     await env.TABLECAST_DB.prepare(
       "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('true')) WHERE id=?",
     )
@@ -239,7 +241,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
   });
   it("音声停止後は設定取得も業務操作も拒否する", async () => {
     await setup();
-    await setVoiceSession(env, device, null);
+    await setVoiceSession(createApiServices(env), device, null);
     expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
     expect((await tool("getCatalog")).status).toBe(409);
   });

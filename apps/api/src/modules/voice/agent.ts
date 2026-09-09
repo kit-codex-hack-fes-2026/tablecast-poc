@@ -3,51 +3,37 @@ import { Agent } from "@mastra/core/agent";
 import { Mastra } from "@mastra/core/mastra";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import type { Actor } from "../auth";
-import { ensure } from "../errors";
-import {
-  callStaff,
-  changeLocale,
-  setSpeechSpeed,
-  getCatalog,
-  getSession,
-  getTableState,
-  prepareConfirmation,
-  submitOrder,
-  setUiSection,
-  showProducts,
-  updateCart,
-} from "../modules/operations";
-import {
-  cartUpdateSchema,
-  localeSchema,
-  speechSpeedInputSchema,
-  submitSchema,
-  uiSectionInputSchema,
-  showProductsSchema,
-  type Locale,
-  type VoiceTrigger,
-} from "../schema";
+import type { ApiServices } from "../../platform/context";
+import { ensure } from "../../platform/errors";
+import { localeSchema, type Locale } from "../../platform/model";
+import type { Actor } from "../auth/model";
+import { getCatalog } from "../catalog/queries";
+import { cartUpdateSchema, submitSchema } from "../orders/model";
+import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
+import { uiSectionInputSchema } from "../tables/model";
+import { getSession, getTableState } from "../tables/queries";
+import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
+import { showProductsSchema, speechSpeedInputSchema, type VoiceTrigger } from "./model";
 import { castInstructions } from "./prompt";
-
+import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
   return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。"}`;
 }
 
 export function createCastAgent(
-  env: TablecastEnv,
+  services: ApiServices,
   actor: Actor,
   locale: Locale,
   signal: AbortSignal,
   trigger: VoiceTrigger = "user",
 ) {
-  const openai = createOpenAI({ apiKey: env.TABLECAST_MODEL_API_KEY });
+  const openai = createOpenAI({ apiKey: services.env.TABLECAST_MODEL_API_KEY });
   const agent = new Agent({
     id: "tablecast-cast",
     name: "TableCast",
     instructions: castSessionInstructions(locale, trigger),
-    model: openai.chat(env.TABLECAST_MODEL),
-    tools: createCastTools(env, actor, signal, trigger),
+    model: openai.chat(services.env.TABLECAST_MODEL),
+    tools: createCastTools(services, actor, signal, trigger),
   });
   // providerの例外が会話本文を含むため、詳細ログは出さずAPIの失敗状態で追跡する。
   return new Mastra({ agents: { cast: agent }, logger: false }).getAgent("cast");
@@ -71,14 +57,14 @@ function castTool<T extends z.ZodType>(options: {
 }
 
 export function createCastTools(
-  env: TablecastEnv,
+  services: ApiServices,
   actor: Actor,
   signal: AbortSignal,
   trigger: VoiceTrigger = "user",
 ) {
   const guard = async () => {
     signal.throwIfAborted();
-    await getSession(env, actor);
+    await getSession(services, actor);
   };
   return {
     getCatalog: castTool({
@@ -88,8 +74,8 @@ export function createCastTools(
       inputSchema: z.object({ query: z.string().max(100).optional() }).strict(),
       execute: async ({ query }) => {
         await guard();
-        const catalog = await getCatalog(env, actor.storeId);
-        const locale = (await getSession(env, actor)).locale;
+        const catalog = await getCatalog(services, actor.storeId);
+        const locale = (await getSession(services, actor)).locale;
         const terms = query?.toLocaleLowerCase().split(/\s+/).filter(Boolean);
         const matched = catalog.configuration.products.filter(
           (product) =>
@@ -148,7 +134,7 @@ export function createCastTools(
       inputSchema: z.object({}).strict(),
       execute: async () => {
         await guard();
-        const { events: _events, ...state } = await getTableState(env, actor);
+        const { events: _events, ...state } = await getTableState(services, actor);
         return state;
       },
     }),
@@ -161,7 +147,7 @@ export function createCastTools(
             inputSchema: z.object({ locale: localeSchema }).strict(),
             execute: async (input) => {
               await guard();
-              const state = await changeLocale(env, actor, input.locale);
+              const state = await changeLocale(services, actor, input.locale);
               return { locale: state.locale, voiceState: state.voiceState };
             },
           }),
@@ -172,7 +158,7 @@ export function createCastTools(
             inputSchema: speechSpeedInputSchema,
             execute: async (input) => {
               await guard();
-              const state = await setSpeechSpeed(env, actor, input);
+              const state = await setSpeechSpeed(services, actor, input);
               return { speechSpeed: state.speechSpeed };
             },
           }),
@@ -183,7 +169,7 @@ export function createCastTools(
             inputSchema: uiSectionInputSchema,
             execute: async (input) => {
               await guard();
-              const state = await setUiSection(env, actor, input);
+              const state = await setUiSection(services, actor, input);
               return { uiSection: state.uiSection, selectedProductId: state.selectedProductId };
             },
           }),
@@ -194,7 +180,7 @@ export function createCastTools(
             inputSchema: showProductsSchema,
             execute: async (input) => {
               await guard();
-              return showProducts(env, actor, input);
+              return showProducts(services, actor, input);
             },
           }),
           updateCart: castTool({
@@ -204,7 +190,7 @@ export function createCastTools(
             inputSchema: cartUpdateSchema,
             execute: async (input) => {
               await guard();
-              return updateCart(env, actor, input);
+              return updateCart(services, actor, input);
             },
           }),
           prepareConfirmation: castTool({
@@ -214,7 +200,7 @@ export function createCastTools(
             inputSchema: z.object({ expectedVersion: z.number().int().nonnegative() }).strict(),
             execute: async (input) => {
               await guard();
-              const snapshot = await prepareConfirmation(env, actor, {
+              const snapshot = await prepareConfirmation(services, actor, {
                 ...input,
                 channel: "voice",
               });
@@ -229,7 +215,7 @@ export function createCastTools(
             execute: async (input) => {
               await guard();
               ensure(input.approved, "APPROVAL_REQUIRED", 422);
-              return submitOrder(env, actor, input);
+              return submitOrder(services, actor, input);
             },
           }),
           callStaff: castTool({
@@ -239,7 +225,7 @@ export function createCastTools(
             inputSchema: z.object({}).strict(),
             execute: async () => {
               await guard();
-              return callStaff(env, actor);
+              return callStaff(services, actor);
             },
           }),
         }

@@ -5,9 +5,13 @@ import * as business from "../apps/api/src/db/business-schema";
 import * as identity from "../apps/api/src/db/auth-schema";
 import { seedIdentityIcon } from "./tablecast-seed-icons";
 import { fakerJA as faker } from "@faker-js/faker";
-import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/auth";
-import { configurationErrors, confirmationText, priceCart } from "../apps/api/src/modules/pricing";
-import type { PlanContext } from "../apps/api/src/modules/pricing";
+import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
+import {
+  configurationErrors,
+  confirmationText,
+  priceCart,
+} from "../apps/api/src/modules/catalog/pricing";
+import type { PlanContext } from "../apps/api/src/modules/catalog/pricing";
 import {
   configurationSchema,
   type CartLine,
@@ -512,7 +516,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   const db = drizzle(env.TABLECAST_DB);
-  const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined });
+  const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
   const mockAccounts = await db
     .select({

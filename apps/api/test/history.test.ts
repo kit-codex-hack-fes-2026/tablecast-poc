@@ -1,17 +1,17 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
-import * as authTables from "../src/db/auth-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
+import * as authTables from "../src/db/auth-schema";
+import * as businessTables from "../src/db/business-schema";
 import {
   changeOrderStatus,
-  closeTable,
-  getTableState,
   prepareConfirmation,
   recordPayment,
   submitOrder,
   updateCart,
-} from "../src/modules/operations";
+} from "../src/modules/orders/service";
+import { getTableState } from "../src/modules/tables/queries";
+import { closeTable } from "../src/modules/tables/service";
+import { createApiServices } from "../src/platform/context";
 import {
   historyPageSchema,
   planSchema,
@@ -19,6 +19,7 @@ import {
   tableStateSchema,
   type HistoryPage,
 } from "../src/schema";
+import { insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture, text } from "./fixture";
 
 const base = "/api/admin/stores/tablecast-store";
@@ -113,42 +114,42 @@ it("閉卓一覧の会計は取消・拒否を除き、確定プラン・調整�
     .bind(JSON.stringify({ id: rules.id, startedAt: Date.now(), rules }), staff.tableSessionId)
     .run();
   for (const [index, status] of ["served", "cancelled", "rejected"].entries()) {
-    const state = await getTableState(env, device);
-    const cart = await updateCart(env, device, {
+    const state = await getTableState(createApiServices(env), device);
+    const cart = await updateCart(createApiServices(env), device, {
       expectedVersion: state.cart.version,
       lines: [{ id: "tea", productId: "tea", quantity: index + 1, selections: [] }],
     });
-    const snapshot = await prepareConfirmation(env, device, {
+    const snapshot = await prepareConfirmation(createApiServices(env), device, {
       expectedVersion: cart.cart.version,
       channel: "gui",
     });
-    const order = await submitOrder(env, device, {
+    const order = await submitOrder(createApiServices(env), device, {
       snapshotId: snapshot.id,
       idempotencyKey: `tablecast-history-order-${index}`,
       approved: true,
     });
     if (status === "served") {
-      await changeOrderStatus(env, staff, order.id, "accepted");
-      await changeOrderStatus(env, staff, order.id, "served");
+      await changeOrderStatus(createApiServices(env), staff, order.id, "accepted");
+      await changeOrderStatus(createApiServices(env), staff, order.id, "served");
     } else if (status === "cancelled" || status === "rejected") {
-      await changeOrderStatus(env, staff, order.id, status);
+      await changeOrderStatus(createApiServices(env), staff, order.id, status);
     }
   }
-  await recordPayment(env, staff, {
+  await recordPayment(createApiServices(env), staff, {
     kind: "adjustment",
     amount: -100,
     reason: "値引き",
     idempotencyKey: "tablecast-history-discount",
   });
   for (const amount of [1000, 2900]) {
-    await recordPayment(env, staff, {
+    await recordPayment(createApiServices(env), staff, {
       kind: "payment",
       amount,
       reason: "模擬支払い",
       idempotencyKey: `tablecast-history-payment-${amount}`,
     });
   }
-  const closed = await closeTable(env, staff);
+  const closed = await closeTable(createApiServices(env), staff);
   const changed = structuredClone(configuration);
   changed.products = changed.products.map((product) => ({ ...product, price: 9999 }));
   await env.TABLECAST_DB.prepare("UPDATE stores SET config_json=? WHERE id=?")
@@ -334,8 +335,8 @@ it("欠けたカーソル・不正時刻・不正上限は空文字や重複quer
 
 it("閉卓後の呼出し解決要求を拒否し、過去の卓状態とイベントを変更しない", async () => {
   const { cookie, staff } = await setupFixture();
-  await closeTable(env, staff);
-  const before = await getTableState(env, staff);
+  await closeTable(createApiServices(env), staff);
+  const before = await getTableState(createApiServices(env), staff);
 
   const response = await exports.default.fetch(
     new Request(`http://localhost:3000${base}/tables/${before.id}/call/resolve`, {
@@ -346,5 +347,5 @@ it("閉卓後の呼出し解決要求を拒否し、過去の卓状態とイベ�
 
   expect(response.status).toBe(409);
   expect(await response.json()).toMatchObject({ error: { code: "SESSION_STALE" } });
-  expect(await getTableState(env, staff)).toEqual(before);
+  expect(await getTableState(createApiServices(env), staff)).toEqual(before);
 });

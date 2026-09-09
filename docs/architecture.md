@@ -23,9 +23,9 @@ flowchart LR
 Web/APIの2 WorkersとPython Agentに限定する。DOのclassはAPI Workerに置く。独立したMastraサーバー、画像Worker、翻訳Workerは初期には追加しない。
 業務の正本はD1。LiveKitは現在の音声と再生状況、OpenAI Realtimeは音声理解と応答生成、Mastraのツール定義はAPI内の業務操作、DOは通知を担当する。
 
-## 目標ディレクトリ
+## ディレクトリ
 
-以下は必要に応じて作る構造で、空の箱を先に全部作る指示ではない。
+APIは業務moduleごとに入力、操作、読取を所有する。処理がない層のファイルは作らない。
 
 ```text
 tablecast/
@@ -52,9 +52,16 @@ tablecast/
 │       │   ├── worker.ts
 │       │   ├── client.ts
 │       │   ├── schema.ts
-│       │   ├── auth.ts
-│       │   ├── agent/
-│       │   ├── mcp/
+│       │   ├── platform/
+│       │   ├── modules/auth/
+│       │   ├── modules/account/
+│       │   ├── modules/stores/
+│       │   ├── modules/configuration/
+│       │   ├── modules/devices/
+│       │   ├── modules/voice/
+│       │   ├── modules/mcp/
+│       │   ├── modules/media/
+│       │   ├── modules/system/
 │       │   ├── modules/catalog/
 │       │   ├── modules/orders/
 │       │   ├── modules/tables/
@@ -87,12 +94,26 @@ tablecast/
 rootのBun workspacesは `apps/*` と `livekit`。Python配下のpackage.jsonはTurboからuvを呼ぶ薄いタスク窓口で、Python依存は記載しない。
 独自名は `@tablecast/web`、`@tablecast/api`、`@tablecast/livekit`。Python distributionは `tablecast-livekit`、moduleは `tablecast_livekit` とする。
 
-## 層ではなく責務を分ける
+## 業務moduleと依存の寿命
 
 Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。小さな処理にcontroller/service/repository/interfaceを一組ずつ生成しない。
 APIではroute・Mastra Tool・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
+
+`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+
+| 所有者                                                                | 責務                                                                       |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `platform/context.ts`、`platform/http.ts`                             | リクエスト依存、trace・Origin検査、共通エラー応答                          |
+| `modules/auth/middleware.ts`                                          | スタッフ認証、店舗membership、端末CookieからActorを確定                    |
+| `modules/*/routes.ts`、`*-routes.ts`                                  | HTTP入力の検証、認可middleware、業務操作呼出し、JSON・Cookie・streamの出力 |
+| `modules/*/service.ts`、音声の`session.ts`・`realtime.ts`・`turns.ts` | Hono Contextに依存しない業務判断、条件付き更新・batch、音声の競合・停止    |
+| `modules/*/queries.ts`、`tables/history.ts`                           | 複数呼出し元で利用する読取、tenant条件、集計・ページング                   |
+| `modules/*/model.ts`                                                  | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
+| `db`、`migrations`                                                    | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
+
+GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声Room操作は`voice/runtime.ts`へ依存する。
 
 HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tablecast/api/client`、共有が必要な公開型・schemaだけは `@tablecast/api/schema` から明示公開する。
 これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・Mastra実行コードをruntime importしないことをbuildで確認する。

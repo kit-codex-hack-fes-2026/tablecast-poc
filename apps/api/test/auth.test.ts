@@ -1,10 +1,10 @@
-import { fixtureDb } from "./database-fixture";
-import * as authTables from "../src/db/auth-schema";
-import { eq } from "drizzle-orm";
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { z } from "zod";
-import { createAuth } from "../src/auth";
+import * as authTables from "../src/db/auth-schema";
+import { createAuth } from "../src/modules/auth/service";
+import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 
 const origin = "http://localhost:3000";

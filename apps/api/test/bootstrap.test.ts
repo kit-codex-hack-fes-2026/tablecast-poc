@@ -1,17 +1,17 @@
-import { fixtureDb } from "./database-fixture";
-import * as authTables from "../src/db/auth-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it, vi } from "vitest";
 import { z } from "zod";
-import { createAuth } from "../src/auth";
 import {
   bootstrapDatabase,
   bootstrapInputSchema,
   type BootstrapEnv,
   type BootstrapInput,
 } from "../src/bootstrap";
-import { DomainError } from "../src/errors";
+import * as authTables from "../src/db/auth-schema";
+import { createAuth } from "../src/modules/auth/service";
+import { DomainError } from "../src/platform/errors";
 import { configurationSchema } from "../src/schema";
+import { fixtureDb } from "./database-fixture";
 import { configuration, setupFixture } from "./fixture";
 
 const request = (storeId: string, sessionCookie: string) =>

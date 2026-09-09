@@ -1,15 +1,9 @@
 import { z } from "zod";
-import type { Actor } from "../auth";
-import { DomainError, ensure } from "../errors";
-import {
-  voiceSummarySchema,
-  type Configuration,
-  type ConfigurationIssue,
-  type Locale,
-  type VoiceListQuery,
-  type VoicePage,
-} from "../schema";
-
+import { DomainError, ensure } from "../../platform/errors";
+import type { Locale } from "../../platform/model";
+import type { Actor } from "../auth/model";
+import { type Configuration, type ConfigurationIssue } from "../configuration/model";
+import { voiceSummarySchema, type VoiceListQuery, type VoicePage } from "./model";
 const voiceMetadataSchema = voiceSummarySchema.extend({ source: z.string().min(1).max(50) });
 const providerPageSchema = z.object({
   voices: z.array(voiceMetadataSchema).max(50).default([]),

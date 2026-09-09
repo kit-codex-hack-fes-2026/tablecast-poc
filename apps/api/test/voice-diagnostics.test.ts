@@ -1,12 +1,13 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
-import { env } from "cloudflare:workers";
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
-import { DomainError } from "../src/errors";
-import { setVoiceSession } from "../src/modules/operations";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
+import { DomainError } from "../src/platform/errors";
 import { device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -113,7 +114,7 @@ async function post(
 }
 async function setup() {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
+  await setVoiceSession(createApiServices(env), device, voiceId);
 }
 
 it("API発行traceIdを認可済み卓・turn・Mastra RequestContextと公開runIdへ対応づける", async () => {

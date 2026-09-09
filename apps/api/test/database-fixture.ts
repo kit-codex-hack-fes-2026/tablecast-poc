@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
-import type { SQLiteTable, SQLiteInsertValue } from "drizzle-orm/sqlite-core";
+import type { SQLiteInsertValue, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 export const fixtureDb = drizzle(env.TABLECAST_DB);
 

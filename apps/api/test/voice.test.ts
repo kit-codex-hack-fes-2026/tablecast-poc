@@ -1,18 +1,17 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { TokenVerifier } from "livekit-server-sdk";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import app from "../src/app";
-import {
-  getEvents,
-  getTableState,
-  getVoiceConfirmation,
-  setVoiceSession,
-  updateCart,
-} from "../src/modules/operations";
-import { finishVoiceTurn, issueVoiceToken, stopVoiceRoom } from "../src/voice";
+import * as businessTables from "../src/db/business-schema";
+import { getVoiceConfirmation, updateCart } from "../src/modules/orders/service";
+import { getEvents } from "../src/modules/stores/queries";
+import { getTableState } from "../src/modules/tables/queries";
+import { issueVoiceToken, stopVoiceRoom } from "../src/modules/voice/runtime";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
+import { createApiServices } from "../src/platform/context";
+import { insertFixture } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -86,7 +85,7 @@ describe("音声HTTPとMastraの接続契約", () => {
   });
   it("モデルのerror chunkを空の正常応答へ変えずturnを失敗にする", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       Response.json(
         {
@@ -126,7 +125,7 @@ describe("音声HTTPとMastraの接続契約", () => {
       ).toBe("failed"),
     );
     expect(
-      (await getEvents(env, device)).events
+      (await getEvents(createApiServices(env), device)).events
         .filter((event) => event.kind === "voice.failed")
         .map((event) => event.data),
     ).toEqual([{ turnId: "tablecast-turn-failed", code: "VOICE_MODEL_FAILED" }]);
@@ -164,7 +163,7 @@ describe("音声HTTPとMastraの接続契約", () => {
   });
   it("未選定のvoiceは接続済みと扱わず設定エラーにする", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     const response = await app.request(
       `/internal/voice/config?voiceSessionId=${voiceId}`,
       { headers: authHeaders },
@@ -174,7 +173,7 @@ describe("音声HTTPとMastraの接続契約", () => {
   });
   it("音声のLunaへ推論なしと業務toolsを送信し実D1とMastraから日本語textだけを返す", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     const provider = modelResponse(
       completion({ role: "assistant", content: "はい、ほうじ茶ですね。" }, "stop"),
     );
@@ -201,16 +200,18 @@ describe("音声HTTPとMastraの接続契約", () => {
     await waitOnExecutionContext(context);
     expect(provider).toHaveBeenCalledTimes(1);
     expect(
-      (await getEvents(env, device)).events.filter((event) => event.kind === "voice.assistant"),
+      (await getEvents(createApiServices(env), device)).events.filter(
+        (event) => event.kind === "voice.assistant",
+      ),
     ).toHaveLength(0);
   });
   it("確認準備toolの後は追加生成せず同じDBに固定読み上げを残す", async () => {
     await setupFixture();
-    await updateCart(env, device, {
+    await updateCart(createApiServices(env), device, {
       expectedVersion: 0,
       lines: [{ id: "tea-line", productId: "tea", quantity: 2, selections: [] }],
     });
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     const provider = modelResponse(
       completion(
         {
@@ -247,7 +248,7 @@ describe("音声HTTPとMastraの接続契約", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("");
     await waitOnExecutionContext(context);
-    const snapshot = await getVoiceConfirmation(env, {
+    const snapshot = await getVoiceConfirmation(createApiServices(env), {
       ...device,
       kind: "voice",
       voiceSessionId: voiceId,
@@ -258,7 +259,7 @@ describe("音声HTTPとMastraの接続契約", () => {
     expect(snapshot?.status).toBe("pending");
     expect(provider).toHaveBeenCalledTimes(1);
     expect(
-      (await getEvents(env, device)).events
+      (await getEvents(createApiServices(env), device)).events
         .filter((event) => event.kind === "voice.tool")
         .map((event) => event.data),
     ).toEqual([
@@ -283,7 +284,7 @@ describe("音声HTTPとMastraの接続契約", () => {
     "実toolでタブと商品カードを反映し$stateだけを引数や結果本文なしで記録する",
     async ({ productId, state }) => {
       await setupFixture();
-      await setVoiceSession(env, device, voiceId);
+      await setVoiceSession(createApiServices(env), device, voiceId);
       const provider = modelResponse(
         completion({ role: "assistant", content: "画面をご覧ください。" }, "stop"),
       );
@@ -345,7 +346,7 @@ describe("音声HTTPとMastraの接続契約", () => {
           .bind(device.tableSessionId)
           .first(),
       ).toEqual({ ui_section: "menu", selected_product_id: "tea" });
-      const events = (await getEvents(env, device)).events;
+      const events = (await getEvents(createApiServices(env), device)).events;
       const tools = events
         .filter((event) => event.kind === "voice.tool")
         .map((event) => event.data);
@@ -380,7 +381,7 @@ describe("音声HTTPとMastraの接続契約", () => {
   );
   it("consumer取消でモデルのAbortSignalとDBの古いturnを停止する", async () => {
     await setupFixture();
-    await setVoiceSession(env, device, voiceId);
+    await setVoiceSession(createApiServices(env), device, voiceId);
     const aborted = Promise.withResolvers<void>();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
       const body = new ReadableStream<Uint8Array>({
@@ -446,7 +447,7 @@ describe("音声HTTPとMastraの接続契約", () => {
     "生成後の%sを遅い再生通知で完了へ戻さず元の言語を残す",
     async (status) => {
       await setupFixture();
-      await setVoiceSession(env, device, voiceId);
+      await setVoiceSession(createApiServices(env), device, voiceId);
       const turnId = "tablecast-turn-playback";
       await insertFixture(businessTables.voiceTurns, {
         id: turnId,
@@ -457,7 +458,7 @@ describe("音声HTTPとMastraの接続契約", () => {
         status: "completed",
         started_at: Date.now(),
       }).run();
-      await finishVoiceTurn(env, voiceId, turnId, status);
+      await finishVoiceTurn(createApiServices(env), voiceId, turnId, status);
       await env.TABLECAST_DB.prepare("UPDATE table_sessions SET locale='en' WHERE id=?")
         .bind(device.tableSessionId)
         .run();
@@ -476,15 +477,16 @@ describe("音声HTTPとMastraの接続契約", () => {
         env,
       );
       expect(response.status).toBe(200);
-      await finishVoiceTurn(env, voiceId, turnId, "completed");
+      await finishVoiceTurn(createApiServices(env), voiceId, turnId, "completed");
       expect(
         await env.TABLECAST_DB.prepare("SELECT status FROM voice_turns WHERE id=?")
           .bind(turnId)
           .first("status"),
       ).toBe(status);
       expect(
-        (await getEvents(env, device)).events.find((event) => event.kind === "voice.assistant")
-          ?.data,
+        (await getEvents(createApiServices(env), device)).events.find(
+          (event) => event.kind === "voice.assistant",
+        )?.data,
       ).toMatchObject({ role: "assistant", locale: "ja", text: "はい。" });
     },
   );
@@ -495,7 +497,7 @@ it.each([
   { tool: "setLanguage", input: { locale: "en" } },
 ])("認識済み客の$toolをMastraからGUIと同じ状態へ反映する", async ({ tool, input }) => {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
+  await setVoiceSession(createApiServices(env), device, voiceId);
   const provider = modelResponse(
     completion(
       {
@@ -538,7 +540,7 @@ it.each([
   );
   expect(result).toBe(tool === "setLanguage" ? "interrupted" : "completed");
   await waitOnExecutionContext(context);
-  const state = await getTableState(env, device);
+  const state = await getTableState(createApiServices(env), device);
   expect(state).toMatchObject(
     tool === "setLanguage"
       ? { locale: "en", voiceState: "stopped" }
@@ -561,8 +563,8 @@ it.each([
   { id: "0", streamId: "", words: [] },
 ])("話者情報の欠損で会話を止めず通常の応答を返す: %j", async (speaker) => {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
-  const before = await getTableState(env, device);
+  await setVoiceSession(createApiServices(env), device, voiceId);
+  const before = await getTableState(createApiServices(env), device);
   const provider = modelResponse(
     completion({ role: "assistant", content: "ご注文を伺います。" }, "stop"),
   );
@@ -587,7 +589,7 @@ it.each([
   expect(await response.text()).toBe("ご注文を伺います。");
   await waitOnExecutionContext(context);
   expect(provider).toHaveBeenCalledTimes(1);
-  const after = await getTableState(env, device);
+  const after = await getTableState(createApiServices(env), device);
   expect(after.voiceState).toBe("active");
   expect(after.cart).toEqual(before.cart);
   expect(after.orders).toEqual(before.orders);
@@ -596,7 +598,7 @@ it.each([
 
 it("ツール前の声かけを結果待ちせず同じHTTP応答へstreamし完了後に続きも返す", async () => {
   await setupFixture();
-  await setVoiceSession(env, device, voiceId);
+  await setVoiceSession(createApiServices(env), device, voiceId);
   const releaseTool = Promise.withResolvers<void>();
   const acknowledgement = "[warm, composed and conversational]確認しますね。";
   let requested = 0;
@@ -672,7 +674,9 @@ it("ツール前の声かけを結果待ちせず同じHTTP応答へstreamし完
     expect(new TextDecoder().decode(first.value)).toBe(acknowledgement);
     expect(requested).toBe(1);
     expect(
-      (await getTableState(env, device)).events.some((event) => event.kind === "voice.tool"),
+      (await getTableState(createApiServices(env), device)).events.some(
+        (event) => event.kind === "voice.tool",
+      ),
     ).toBe(false);
     releaseTool.resolve();
     let rest = "";
@@ -683,7 +687,7 @@ it("ツール前の声かけを結果待ちせず同じHTTP応答へstreamし完
     }
     expect(rest).toBe("おしながきを確認しました。");
     expect(
-      (await getTableState(env, device)).events.some(
+      (await getTableState(createApiServices(env), device)).events.some(
         (event) => event.kind === "voice.tool" && event.data.state === "completed",
       ),
     ).toBe(true);

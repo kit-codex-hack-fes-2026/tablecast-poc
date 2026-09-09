@@ -1,5 +1,4 @@
-import { ensure } from "../errors";
-
+import { ensure } from "../../platform/errors";
 export async function saveIdentityImage(
   env: Pick<TablecastEnv, "TABLECAST_MEDIA" | "TABLECAST_PUBLIC_ORIGIN">,
   image: File,

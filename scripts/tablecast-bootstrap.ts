@@ -6,7 +6,7 @@ import { parseArgs } from "node:util";
 import { parse, type ParseError } from "jsonc-parser";
 import { z } from "zod";
 import { bootstrapDatabase, bootstrapInputSchema } from "../apps/api/src/bootstrap";
-import { DomainError } from "../apps/api/src/errors";
+import { DomainError } from "../apps/api/src/platform/errors";
 
 const environmentSchema = z.enum(["staging", "production"]);
 const originSchema = z

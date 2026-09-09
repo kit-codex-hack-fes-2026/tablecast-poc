@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoStores } from "./tablecast-fixtures";
-import { configurationErrors } from "../apps/api/src/modules/pricing";
+import { configurationErrors } from "../apps/api/src/modules/catalog/pricing";
 
 describe("デモの構成データ", () => {
   it("同じプロファイルから店舗境界と日英を持つ同じ180商品を作る", () => {

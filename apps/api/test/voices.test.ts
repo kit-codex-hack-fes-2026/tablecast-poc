@@ -1,18 +1,19 @@
-import { fixtureDb } from "./database-fixture";
-import * as authTables from "../src/db/auth-schema";
-import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
+import * as authTables from "../src/db/auth-schema";
+import { getCatalog } from "../src/modules/catalog/queries";
 import {
   createDraft,
   getDraft,
   publishDraft,
   updateDraft,
   validateDraft,
-} from "../src/modules/configuration";
-import { getCatalog } from "../src/modules/operations";
+} from "../src/modules/configuration/service";
+import { createApiServices } from "../src/platform/context";
 import { configDraftSchema, voicePageSchema } from "../src/schema";
+import { fixtureDb } from "./database-fixture";
 import { deviceToken, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -32,12 +33,12 @@ function get(path: string, cookie: string, bindings = configured()) {
 }
 async function changedDraft(voiceId = "tablecast-system-ja") {
   const fixture = await setupFixture();
-  const created = await createDraft(env, fixture.staff);
+  const created = await createDraft(createApiServices(env), fixture.staff);
   const configuration = structuredClone(created.configuration);
   configuration.cast.voice.ja = voiceId;
   return {
     ...fixture,
-    draft: await updateDraft(env, fixture.staff, created.id, {
+    draft: await updateDraft(createApiServices(env), fixture.staff, created.id, {
       expectedVersion: created.version,
       configuration,
     }),
@@ -238,7 +239,12 @@ it.each([
         nextPageToken: "",
       }),
     );
-    const result = await validateDraft(configured(), staff, draft.id, draft.version);
+    const result = await validateDraft(
+      createApiServices(configured()),
+      staff,
+      draft.id,
+      draft.version,
+    );
     expect(result.status).toBe("draft");
     expect(result.errors).toEqual([{ code, path: ["cast", "voice", "ja"], params }]);
   },
@@ -247,12 +253,14 @@ it.each([
 it("検証時の一時障害は下書きの状態・版・既存エラーを変更しない", async () => {
   const { staff, draft } = await changedDraft();
   vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(privateBody, { status: 503 }));
-  const before = await getDraft(env, staff, draft.id);
-  await expect(validateDraft(configured(), staff, draft.id, draft.version)).rejects.toMatchObject({
+  const before = await getDraft(createApiServices(env), staff, draft.id);
+  await expect(
+    validateDraft(createApiServices(configured()), staff, draft.id, draft.version),
+  ).rejects.toMatchObject({
     code: "VOICE_CATALOG_UNAVAILABLE",
     status: 503,
   });
-  expect(await getDraft(env, staff, draft.id)).toEqual(before);
+  expect(await getDraft(createApiServices(env), staff, draft.id)).toEqual(before);
 });
 
 it("公開時にも標準音声一覧を再確認し、成功済みの同じ公開要求ではproviderを再照会しない", async () => {
@@ -263,7 +271,7 @@ it("公開時にも標準音声一覧を再確認し、成功済みの同じ公�
     expect(url.searchParams.get("filter")).toBe('source = "SYSTEM"');
     return Response.json({ voices: [metadata("Asuka")], totalSize: 1, nextPageToken: "" });
   });
-  await validateDraft(configured(), staff, draft.id, draft.version);
+  await validateDraft(createApiServices(configured()), staff, draft.id, draft.version);
   const payload = {
     expectedVersion: draft.version,
     baseVersion: draft.baseVersion,
@@ -295,7 +303,9 @@ it("公開時にも標準音声一覧を再確認し、成功済みの同じ公�
       ],
     },
   });
-  expect((await getCatalog(env, staff.storeId)).configuration.cast.voice.ja).toBeNull();
+  expect(
+    (await getCatalog(createApiServices(env), staff.storeId)).configuration.cast.voice.ja,
+  ).toBeNull();
   const published = await publish();
   expect(published.status).toBe(200);
   expect(configDraftSchema.parse(await published.json()).status).toBe("published");
@@ -309,7 +319,7 @@ it("変更した日英の標準音声を同じ一覧走査で照合し、次ペ�
   const { staff, draft: initial } = await changedDraft("Asuka");
   const configuration = structuredClone(initial.configuration);
   configuration.cast.voice.en = "Olivia";
-  const draft = await updateDraft(env, staff, initial.id, {
+  const draft = await updateDraft(createApiServices(env), staff, initial.id, {
     expectedVersion: initial.version,
     configuration,
   });
@@ -340,7 +350,12 @@ it("変更した日英の標準音声を同じ一覧走査で照合し、次ペ�
     });
   });
 
-  const ready = await validateDraft(configured(), staff, draft.id, draft.version);
+  const ready = await validateDraft(
+    createApiServices(configured()),
+    staff,
+    draft.id,
+    draft.version,
+  );
 
   expect(ready.status).toBe("ready");
   expect(ready.errors).toEqual([]);
@@ -356,7 +371,12 @@ it("空ページに次cursorがある間は探索し、終端まで見つから�
     .mockResolvedValueOnce(Response.json({ voices: [], nextPageToken: "tablecast-next-page" }))
     .mockResolvedValueOnce(Response.json({ voices: [metadata("Asuka")], nextPageToken: "" }));
 
-  const result = await validateDraft(configured(), staff, draft.id, draft.version);
+  const result = await validateDraft(
+    createApiServices(configured()),
+    staff,
+    draft.id,
+    draft.version,
+  );
 
   expect(result.errors).toEqual([
     {
@@ -372,7 +392,7 @@ it.each(["cursor循環", "走査上限", "次ページ障害"])(
   "一覧探索中の%sは不在と誤認せず固定503にし、下書きや秘密を変更・出力しない",
   async (scenario) => {
     const { staff, draft } = await changedDraft("tablecast-missing-voice");
-    const before = await getDraft(env, staff, draft.id);
+    const before = await getDraft(createApiServices(env), staff, draft.id);
     const logger = vi.spyOn(console, "error");
     let calls = 0;
     const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
@@ -385,14 +405,17 @@ it.each(["cursor循環", "走査上限", "次ページ障害"])(
       });
     });
 
-    const error: unknown = await validateDraft(configured(), staff, draft.id, draft.version).catch(
-      (reason: unknown) => reason,
-    );
+    const error: unknown = await validateDraft(
+      createApiServices(configured()),
+      staff,
+      draft.id,
+      draft.version,
+    ).catch((reason: unknown) => reason);
 
     expect(error).toMatchObject({ code: "VOICE_CATALOG_UNAVAILABLE", status: 503 });
     expect(JSON.stringify(error)).not.toContain(secret);
     expect(JSON.stringify(error)).not.toContain(privateBody);
-    expect(await getDraft(env, staff, draft.id)).toEqual(before);
+    expect(await getDraft(createApiServices(env), staff, draft.id)).toEqual(before);
     expect(provider).toHaveBeenCalledTimes(scenario === "走査上限" ? 40 : 2);
     expect(logger).not.toHaveBeenCalled();
   },
@@ -412,17 +435,17 @@ it.each(["未設定", "一時障害"])(
       ...configured(),
       TABLECAST_INWORLD_VOICES_API_KEY: scenario === "未設定" ? "" : secret,
     };
-    const created = await createDraft(runtime, staff);
+    const created = await createDraft(createApiServices(runtime), staff);
     const configuration = structuredClone(created.configuration);
     configuration.cast.voice.en = null;
     configuration.cast.instructions.ja = "丁寧に案内する";
-    const draft = await updateDraft(runtime, staff, created.id, {
+    const draft = await updateDraft(createApiServices(runtime), staff, created.id, {
       expectedVersion: created.version,
       configuration,
     });
-    const ready = await validateDraft(runtime, staff, draft.id, draft.version);
+    const ready = await validateDraft(createApiServices(runtime), staff, draft.id, draft.version);
     expect(ready.status).toBe("ready");
-    const result = await publishDraft(runtime, staff, draft.id, {
+    const result = await publishDraft(createApiServices(runtime), staff, draft.id, {
       expectedVersion: draft.version,
       baseVersion: draft.baseVersion,
       idempotencyKey: "tablecast-voice-preserve",

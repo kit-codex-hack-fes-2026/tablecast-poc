@@ -1,0 +1,34 @@
+import { drizzle } from "drizzle-orm/d1";
+import { createMiddleware } from "hono/factory";
+import type { Actor } from "../modules/auth/model";
+import { createAuth } from "../modules/auth/service";
+// Worker bindingと依存の寿命をHTTPリクエストに揃える。業務関数はHonoへ依存しない。
+export function createApiServices(env: TablecastEnv) {
+  const db = drizzle(env.TABLECAST_DB);
+  let auth: ReturnType<typeof createAuth> | undefined;
+  return {
+    env,
+    db,
+    // health・画像・音声ではBetter Authを初期化しない。
+    get auth() {
+      return (auth ??= createAuth(env, undefined, db));
+    },
+  };
+}
+export type ApiServices = ReturnType<typeof createApiServices>;
+export type Database = ApiServices["db"];
+
+export const requestServices = createMiddleware<ApiEnv>(async (c, next) => {
+  c.set("services", createApiServices(c.env));
+  await next();
+});
+
+export type ApiEnv = {
+  Bindings: TablecastEnv;
+  Variables: {
+    actor: Actor;
+    traceId: string;
+    services: ApiServices;
+    session?: ReturnType<ReturnType<typeof createAuth>["api"]["getSession"]>;
+  };
+};

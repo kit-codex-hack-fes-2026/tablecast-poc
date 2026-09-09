@@ -1,18 +1,21 @@
-import { insertFixture } from "./database-fixture";
-import * as businessTables from "../src/db/business-schema";
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
-import { getTableState, openTable, updateCart } from "../src/modules/operations";
+import * as businessTables from "../src/db/business-schema";
+import { updateCart } from "../src/modules/orders/service";
+import { getTableState } from "../src/modules/tables/queries";
+import { openTable } from "../src/modules/tables/service";
+import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
+import { insertFixture } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
 
 it("開卓済みの卓への再要求を409にし、先行セッションとカートを維持する", async () => {
   const { cookie } = await setupFixture();
-  await updateCart(env, device, {
+  await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
     lines: [{ id: "tea", productId: "tea", quantity: 2, selections: [] }],
   });
-  const before = await getTableState(env, device);
+  const before = await getTableState(createApiServices(env), device);
 
   const response = await exports.default.fetch(
     new Request("http://localhost:3000/api/admin/stores/tablecast-store/tables/open", {
@@ -24,7 +27,7 @@ it("開卓済みの卓への再要求を409にし、先行セッションとカ�
 
   expect(response.status).toBe(409);
   expect(await response.json()).toMatchObject({ error: { code: "TABLE_CONFLICT" } });
-  expect(await getTableState(env, device)).toEqual(before);
+  expect(await getTableState(createApiServices(env), device)).toEqual(before);
 });
 
 it("空卓の同時開卓は一方だけ成立し、セッションと開卓イベントを一つだけ作る", async () => {
@@ -79,7 +82,11 @@ it("開卓イベント保存が途中で失敗したら新しいセッション�
   );
 
   await expect(
-    openTable(env, staff, { tableId: "tablecast-vacant-table", guestCount: 3, locale: "ja" }),
+    openTable(createApiServices(env), staff, {
+      tableId: "tablecast-vacant-table",
+      guestCount: 3,
+      locale: "ja",
+    }),
   ).rejects.toThrow("tablecast-test-open-failure");
 
   expect(
@@ -92,5 +99,5 @@ it("開卓イベント保存が途中で失敗したら新しいセッション�
       "SELECT COUNT(*) AS count FROM table_events WHERE kind='table.opened'",
     ).first("count"),
   ).toBe(0);
-  expect((await getTableState(env, device)).id).toBe("tablecast-session");
+  expect((await getTableState(createApiServices(env), device)).id).toBe("tablecast-session");
 });

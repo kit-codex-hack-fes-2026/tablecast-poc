@@ -1,7 +1,7 @@
 import { applyD1Migrations } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { expect, it, inject } from "vitest";
-import { setupFixture, resetFixtureStorage, configuration } from "./fixture";
+import { expect, inject, it } from "vitest";
+import { configuration, resetFixtureStorage, setupFixture } from "./fixture";
 it("店舗作成は所有者・空メニュー・指定卓を同時に作り、同一店舗の組織を重複させない", async () => {
   // Given: ログイン済みの店長。
   const { cookie, staff } = await setupFixture();
