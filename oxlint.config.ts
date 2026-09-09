@@ -22,6 +22,18 @@ export default defineConfig({
   },
   overrides: [
     {
+      files: ["scripts/tablecast-seed*.ts", "scripts/tablecast-deploy*.ts"],
+      rules: {
+        "no-restricted-properties": [
+          "error",
+          {
+            property: "prepare",
+            message: "D1の直接操作は禁止。既存schemaとDrizzleのquery builder・db.batch()を使う。",
+          },
+        ],
+      },
+    },
+    {
       files: ["apps/web/src/i18n/locale.tsx"],
       rules: { "import/namespace": ["error", { allowComputed: true }] },
     },

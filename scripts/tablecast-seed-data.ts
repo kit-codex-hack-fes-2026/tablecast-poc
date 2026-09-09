@@ -1,3 +1,8 @@
+import { and, count, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
+import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
+import type { BatchItem } from "drizzle-orm/batch";
+import * as business from "../apps/api/src/db/business-schema";
+import * as identity from "../apps/api/src/db/auth-schema";
 import { seedIdentityIcon } from "./tablecast-seed-icons";
 import { fakerJA as faker } from "@faker-js/faker";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/auth";
@@ -50,27 +55,32 @@ function event(
     at,
   };
 }
-async function insertSession(db: D1Database, statements: (D1PreparedStatement | SeedEvent)[]) {
-  const queries: D1PreparedStatement[] = [];
+async function insertSession(
+  db: DrizzleD1Database,
+  statements: (BatchItem<"sqlite"> | SeedEvent)[],
+) {
+  const queries: BatchItem<"sqlite">[] = [];
   const events: SeedEvent[] = [];
   for (const statement of statements) {
     if ("kind" in statement) events.push(statement);
     else queries.push(statement);
   }
-  // D1の一statement当たり100個のbind上限を超えず、proxy往復もまとめる。
-  for (let offset = 0; offset < events.length; offset += 20) {
-    const chunk = events.slice(offset, offset + 20);
+  // 全列数を含めてもD1の100 bind制限に収まる行数に区切る。
+  for (let offset = 0; offset < events.length; offset += 16) {
     queries.push(
-      db
-        .prepare(
-          `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES ${chunk.map(() => "(?,?,?,?,?)").join(",")}`,
-        )
-        .bind(
-          ...chunk.flatMap((item) => [item.storeId, item.sessionId, item.kind, item.data, item.at]),
-        ),
+      db.insert(business.tableEvents).values(
+        events.slice(offset, offset + 16).map((item) => ({
+          store_id: item.storeId,
+          table_session_id: item.sessionId,
+          kind: item.kind,
+          data_json: item.data,
+          created_at: item.at,
+        })),
+      ),
     );
   }
-  await db.batch(queries);
+  const [first, ...rest] = queries;
+  if (first) await db.batch([first, ...rest]);
 }
 
 function snapshotFor(
@@ -110,79 +120,73 @@ function snapshotFor(
   };
 }
 
-function confirmation(db: D1Database, storeId: string, snapshot: Snapshot, at: number) {
-  return db
-    .prepare(
-      "INSERT INTO confirmations(id,store_id,table_session_id,cart_version,config_version,channel,status,snapshot_json,expires_at,created_at) VALUES(?,?,?,?,?,'gui',?,?,?,?)",
-    )
-    .bind(
-      snapshot.id,
-      storeId,
-      snapshot.tableSessionId,
-      snapshot.cartVersion,
-      snapshot.configVersion,
-      snapshot.status,
-      JSON.stringify(snapshot),
-      snapshot.expiresAt,
-      at,
-    );
+function confirmation(db: DrizzleD1Database, storeId: string, snapshot: Snapshot, at: number) {
+  return db.insert(business.confirmations).values({
+    id: snapshot.id,
+    store_id: storeId,
+    table_session_id: snapshot.tableSessionId,
+    cart_version: snapshot.cartVersion,
+    config_version: snapshot.configVersion,
+    channel: "gui",
+    status: snapshot.status,
+    snapshot_json: JSON.stringify(snapshot),
+    expires_at: snapshot.expiresAt,
+    created_at: at,
+  });
 }
 
 function order(
-  db: D1Database,
+  db: DrizzleD1Database,
   storeId: string,
   snapshot: Snapshot,
   status: "submitted" | "accepted" | "served",
   at: number,
 ) {
-  return db
-    .prepare(
-      "INSERT INTO orders(id,store_id,table_session_id,snapshot_id,idempotency_key,status,snapshot_json,total,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-    )
-    .bind(
-      `${snapshot.id}-order`,
-      storeId,
-      snapshot.tableSessionId,
-      snapshot.id,
-      `${snapshot.id}-submit`,
-      status,
-      JSON.stringify(snapshot),
-      snapshot.total,
-      at,
-      status === "submitted" ? at : at + (status === "accepted" ? 3000 : 10_000),
-    );
+  return db.insert(business.orders).values({
+    id: `${snapshot.id}-order`,
+    store_id: storeId,
+    table_session_id: snapshot.tableSessionId,
+    snapshot_id: snapshot.id,
+    idempotency_key: `${snapshot.id}-submit`,
+    status,
+    snapshot_json: JSON.stringify(snapshot),
+    total: snapshot.total,
+    created_at: at,
+    updated_at: status === "submitted" ? at : at + (status === "accepted" ? 3000 : 10000),
+  });
 }
-
 function payment(
-  db: D1Database,
+  db: DrizzleD1Database,
   storeId: string,
   sessionId: string,
   userId: string,
   amount: number,
   at: number,
 ) {
-  return db
-    .prepare(
-      "INSERT INTO payments(id,store_id,table_session_id,idempotency_key,kind,amount,reason,actor_id,created_at) VALUES(?,?,?,?,'payment',?,?,?,?)",
-    )
-    .bind(
-      `${sessionId}-payment`,
-      storeId,
-      sessionId,
-      `${sessionId}-payment`,
-      amount,
-      "合成デモの模擬支払",
-      userId,
-      at,
-    );
+  return db.insert(business.payments).values({
+    id: `${sessionId}-payment`,
+    store_id: storeId,
+    table_session_id: sessionId,
+    idempotency_key: `${sessionId}-payment`,
+    kind: "payment",
+    amount,
+    reason: "合成デモの模擬支払",
+    actor_id: userId,
+    created_at: at,
+  });
 }
 
-async function seedHistory(db: D1Database, store: Store, owner: Owner) {
+async function seedHistory(db: DrizzleD1Database, store: Store, owner: Owner) {
   const previous = await db
-    .prepare("SELECT id FROM table_sessions WHERE store_id=? AND id LIKE '%-history-%'")
-    .bind(store.id)
-    .all<{ id: string }>();
-  const existing = new Set(previous.results.map((session) => session.id));
+    .select({ id: business.tableSessions.id })
+    .from(business.tableSessions)
+    .where(
+      and(
+        eq(business.tableSessions.store_id, store.id),
+        like(business.tableSessions.id, "%-history-%"),
+      ),
+    );
+  const existing = new Set(previous.map((session) => session.id));
   for (let index = 0; index < 200; index++) {
     const sessionId = `${store.id}-history-${index.toString().padStart(3, "0")}`;
     if (existing.has(sessionId)) continue;
@@ -194,12 +198,18 @@ async function seedHistory(db: D1Database, store: Store, owner: Owner) {
     const closedAt = openedAt + 75 * 60_000;
     const locale = index % 3 === 0 ? "en" : "ja";
     const guestCount = 2 + (index % 4);
-    const statements = [
-      db
-        .prepare(
-          "INSERT INTO table_sessions(id,store_id,table_id,locale,status,guest_count,cart_version,opened_at,closed_at) VALUES(?,?,?,?,'closed',?,18,?,?)",
-        )
-        .bind(sessionId, store.id, tableId, locale, guestCount, openedAt, closedAt),
+    const statements: (BatchItem<"sqlite"> | SeedEvent)[] = [
+      db.insert(business.tableSessions).values({
+        id: sessionId,
+        store_id: store.id,
+        table_id: tableId,
+        locale,
+        status: "closed",
+        guest_count: guestCount,
+        cart_version: 18,
+        opened_at: openedAt,
+        closed_at: closedAt,
+      }),
       event(store.id, sessionId, "table.opened", { guestCount, locale }, openedAt, true),
     ];
     let total = 0;
@@ -330,7 +340,12 @@ async function seedHistory(db: D1Database, store: Store, owner: Owner) {
   }
 }
 
-async function seedCurrentTables(db: D1Database, store: Store, owner: Owner, baseTime: number) {
+async function seedCurrentTables(
+  db: DrizzleD1Database,
+  store: Store,
+  owner: Owner,
+  baseTime: number,
+) {
   for (let number = 1; number <= store.tableCount; number++) {
     const tableId = `${store.id}-table-${number.toString().padStart(2, "0")}`;
     const sessionId = `${tableId}-session`;
@@ -338,9 +353,18 @@ async function seedCurrentTables(db: D1Database, store: Store, owner: Owner, bas
     if (
       state === 10 ||
       (await db
-        .prepare("SELECT id FROM table_sessions WHERE id=? OR (table_id=? AND status='open')")
-        .bind(sessionId, tableId)
-        .first())
+        .select({ id: business.tableSessions.id })
+        .from(business.tableSessions)
+        .where(
+          or(
+            eq(business.tableSessions.id, sessionId),
+            and(
+              eq(business.tableSessions.table_id, tableId),
+              eq(business.tableSessions.status, "open"),
+            ),
+          ),
+        )
+        .get())
     )
       continue;
     const at = baseTime - number * 3 * 60_000;
@@ -350,26 +374,22 @@ async function seedCurrentTables(db: D1Database, store: Store, owner: Owner, bas
     const plan = rule ? { id: rule.id, startedAt: at, rules: rule } : null;
     const lines = state === 2 || state === 3 ? [sampleLine(store.configuration)] : [];
     const closed = state === 11;
-    const statements = [
-      db
-        .prepare(
-          "INSERT INTO table_sessions(id,store_id,table_id,locale,status,guest_count,cart_version,cart_json,voice_state,staff_called,plan_json,opened_at,closed_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        )
-        .bind(
-          sessionId,
-          store.id,
-          tableId,
-          locale,
-          closed ? "closed" : "open",
-          guestCount,
-          lines.length ? 1 : closed ? 6 : state >= 4 && state <= 7 ? state - 2 : 0,
-          JSON.stringify(lines),
-          state === 9 ? "error" : "stopped",
-          state === 8 ? 1 : 0,
-          plan ? JSON.stringify(plan) : null,
-          at,
-          closed ? at + 60_000 : null,
-        ),
+    const statements: (BatchItem<"sqlite"> | SeedEvent)[] = [
+      db.insert(business.tableSessions).values({
+        id: sessionId,
+        store_id: store.id,
+        table_id: tableId,
+        locale,
+        status: closed ? "closed" : "open",
+        guest_count: guestCount,
+        cart_version: lines.length ? 1 : closed ? 6 : state >= 4 && state <= 7 ? state - 2 : 0,
+        cart_json: JSON.stringify(lines),
+        voice_state: state === 9 ? "error" : "stopped",
+        staff_called: state === 8 ? 1 : 0,
+        plan_json: plan ? JSON.stringify(plan) : null,
+        opened_at: at,
+        closed_at: closed ? at + 60000 : null,
+      }),
       event(store.id, sessionId, "table.opened", { guestCount, locale }, at),
     ];
     if ((state >= 3 && state <= 7) || closed) {
@@ -456,40 +476,52 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     )
   )
     throw new Error("PR初期投入の対象が不正です。");
-  const owner = await env.TABLECAST_DB.prepare(
-    "SELECT repository,environment,seeded FROM tablecast_deployment_owner",
-  ).first<{ repository: string; environment: string; seeded: number }>();
+  const db = drizzle(env.TABLECAST_DB);
+  const owner = await db.select().from(business.deploymentOwner).get();
   if (
     owner?.repository !== "kit-codex-hack-fes-2026/tablecast-poc" ||
     `${owner.environment}.kit-codex.workers.dev` !== new URL(env.TABLECAST_PUBLIC_ORIGIN).hostname
   )
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) return false;
+  // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
+  if (owner.seeded === 2) return true;
+  if (owner.seeded !== 0) throw new Error("PR初期投入の進捗が不正です。");
   if (
-    await env.TABLECAST_DB.prepare(
-      "SELECT 1 FROM user UNION ALL SELECT 1 FROM stores LIMIT 1",
-    ).first()
+    await db
+      .select({ id: identity.user.id })
+      .from(identity.user)
+      .unionAll(db.select({ id: business.stores.id }).from(business.stores))
+      .limit(1)
+      .get()
   )
     throw new Error(
       "PR初期投入の途中状態または既存データがあります。上書きせず手動確認してください。",
     );
   await populateDemoDatabase(env, credentials);
+  await db.update(business.deploymentOwner).set({ seeded: 2 });
   return true;
 }
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
-  const db = env.TABLECAST_DB;
+  const db = drizzle(env.TABLECAST_DB);
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined });
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
   const mockAccounts = await db
-    .prepare(
-      "SELECT account.id, account.issuer, account.user_id, user.email FROM account JOIN user ON user.id=account.user_id WHERE provider_id='google' ORDER BY account.created_at DESC",
-    )
-    .all<{ id: string; issuer: string; user_id: string; email: string }>();
+    .select({
+      id: identity.account.id,
+      issuer: identity.account.issuer,
+      user_id: identity.account.userId,
+      email: identity.user.email,
+    })
+    .from(identity.account)
+    .innerJoin(identity.user, eq(identity.user.id, identity.account.userId))
+    .where(eq(identity.account.providerId, "google"))
+    .orderBy(desc(identity.account.createdAt));
   const mockUsers = new Set<string>();
-  const repairs: D1PreparedStatement[] = [];
-  const canonical: D1PreparedStatement[] = [];
-  for (const account of mockAccounts.results) {
+  const repairs: BatchItem<"sqlite">[] = [];
+  const canonical: BatchItem<"sqlite">[] = [];
+  for (const account of mockAccounts) {
     if (!URL.canParse(account.issuer)) continue;
     const issuer = new URL(account.issuer);
     if (
@@ -501,17 +533,19 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     )
       continue;
     if (mockUsers.has(account.user_id))
-      repairs.push(db.prepare("DELETE FROM account WHERE id=?").bind(account.id));
+      repairs.push(db.delete(identity.account).where(eq(identity.account.id, account.id)));
     else {
       mockUsers.add(account.user_id);
       canonical.push(
         db
-          .prepare("UPDATE account SET issuer=?,account_id=? WHERE id=?")
-          .bind(tablecastGoogleMockIssuer, account.email.toLowerCase(), account.id),
+          .update(identity.account)
+          .set({ issuer: tablecastGoogleMockIssuer, accountId: account.email.toLowerCase() })
+          .where(eq(identity.account.id, account.id)),
       );
     }
   }
-  if (canonical.length) await db.batch([...repairs, ...canonical]);
+  const [firstRepair, ...remainingRepairs] = [...repairs, ...canonical];
+  if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
   const owners: string[] = [];
   for (const [email, password, name] of [
     [credentials.email, credentials.password, "佐藤 晴香"],
@@ -519,14 +553,18 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   ]) {
     if (!email || !password || !name) throw new Error("デモ認証情報が不正です。");
     const existing = await db
-      .prepare("SELECT id FROM user WHERE email=?")
-      .bind(email)
-      .first<{ id: string }>();
+      .select({ id: identity.user.id })
+      .from(identity.user)
+      .where(eq(identity.user.email, email))
+      .get();
     const user = existing ?? (await auth.api.signUpEmail({ body: { email, password, name } })).user;
     await db
-      .prepare("UPDATE user SET email_verified=1,image=COALESCE(image,?) WHERE id=?")
-      .bind(await seedIdentityIcon(env, "user", user.id), user.id)
-      .run();
+      .update(identity.user)
+      .set({
+        emailVerified: true,
+        image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
+      })
+      .where(eq(identity.user.id, user.id));
     owners.push(user.id);
   }
   faker.seed(20260909);
@@ -556,40 +594,65 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       store: "tablecast-koharu",
     },
   ];
+  const staffInserts: BatchItem<"sqlite">[] = [];
   for (const store of demoStores(credentials.profile)) {
     for (let index = 0; index < 12; index++) {
       const email = `tablecast-${store.id}-member-${index + 1}@example.test`;
       const name = faker.person.fullName();
       const userId = `tablecast-seed-user-${store.id}-${index + 1}`;
       const createdAt = credentials.baseTime - (index + 1) * 86400000;
-      await db
-        .prepare(
-          "INSERT INTO user(id,name,email,email_verified,created_at,updated_at,locale) VALUES(?,?,?,1,?,?,'ja') ON CONFLICT(email) DO NOTHING",
-        )
-        .bind(userId, name, email, createdAt, createdAt)
-        .run();
+      staffInserts.push(
+        db
+          .insert(identity.user)
+          .values({
+            id: userId,
+            name,
+            email,
+            emailVerified: true,
+            createdAt: new Date(createdAt),
+            updatedAt: new Date(createdAt),
+            locale: "ja",
+          })
+          .onConflictDoNothing({ target: identity.user.email }),
+      );
       staff.push({ email, name, role: index === 0 ? "admin" : "member", store: store.id });
     }
   }
-  const staffIds = new Map<string, string>();
+  const [firstStaff, ...remainingStaff] = staffInserts;
+  if (firstStaff) await db.batch([firstStaff, ...remainingStaff]);
+  const existingStaff = await db
+    .select({ id: identity.user.id, email: identity.user.email })
+    .from(identity.user)
+    .where(
+      inArray(
+        identity.user.email,
+        staff.map((person) => person.email),
+      ),
+    );
+  const staffIds = new Map(existingStaff.map((person) => [person.email, person.id]));
+  const staffUpdates: BatchItem<"sqlite">[] = [];
   for (const person of staff) {
-    const existing = await db
-      .prepare("SELECT id FROM user WHERE email=?")
-      .bind(person.email)
-      .first<{ id: string }>();
+    const existingId = staffIds.get(person.email);
     const user =
-      existing ??
+      (existingId ? { id: existingId } : undefined) ??
       (
         await auth.api.signUpEmail({
           body: { email: person.email, name: person.name, password: crypto.randomUUID() },
         })
       ).user;
-    await db
-      .prepare("UPDATE user SET email_verified=1,image=COALESCE(image,?) WHERE id=?")
-      .bind(await seedIdentityIcon(env, "user", user.id), user.id)
-      .run();
+    staffUpdates.push(
+      db
+        .update(identity.user)
+        .set({
+          emailVerified: true,
+          image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
+        })
+        .where(eq(identity.user.id, user.id)),
+    );
     staffIds.set(person.email, user.id);
   }
+  const [firstUpdate, ...remainingUpdates] = staffUpdates;
+  if (firstUpdate) await db.batch([firstUpdate, ...remainingUpdates]);
   for (const initialStore of demoStores(credentials.profile)) {
     const store: Store = initialStore;
     const errors = configurationErrors(store.configuration);
@@ -597,11 +660,11 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     const userId = owners[store.id === "tablecast-koharu" ? 1 : 0];
     if (!userId) throw new Error("店舗の管理者がありません。");
     const currentOrg = await db
-      .prepare(
-        "SELECT o.id FROM organization o JOIN stores s ON s.organization_id=o.id WHERE s.id=?",
-      )
-      .bind(store.id)
-      .first<{ id: string }>();
+      .select({ id: identity.organization.id })
+      .from(identity.organization)
+      .innerJoin(business.stores, eq(business.stores.organization_id, identity.organization.id))
+      .where(eq(business.stores.id, store.id))
+      .get();
     const organization =
       currentOrg ??
       (await auth.api.createOrganization({
@@ -609,81 +672,99 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       }));
     if (!organization) throw new Error("デモ店舗を作成できませんでした。");
     await db
-      .prepare("UPDATE organization SET logo=COALESCE(logo,?) WHERE id=?")
-      .bind(await seedIdentityIcon(env, "store", store.id), organization.id)
-      .run();
+      .update(identity.organization)
+      .set({
+        logo: sql`coalesce(${identity.organization.logo},${await seedIdentityIcon(env, "store", store.id)})`,
+      })
+      .where(eq(identity.organization.id, organization.id));
     const owner: Owner = { id: organization.id, userId };
     const existing = await db
-      .prepare("SELECT id,config_json,config_version FROM stores WHERE id=?")
-      .bind(store.id)
-      .first<{ id: string; config_json: string; config_version: number }>();
+      .select()
+      .from(business.stores)
+      .where(eq(business.stores.id, store.id))
+      .get();
     if (existing) {
       store.configuration = configurationSchema.parse(JSON.parse(existing.config_json));
       store.configVersion = existing.config_version;
     }
+    const existingMembers = await db
+      .select({ userId: identity.member.userId })
+      .from(identity.member)
+      .where(eq(identity.member.organizationId, owner.id));
+    const memberIds = new Set(existingMembers.map((member) => member.userId));
+    const memberships: BatchItem<"sqlite">[] = [];
     for (const person of staff.filter((candidate) => candidate.store === store.id)) {
       const staffUserId = staffIds.get(person.email);
       if (!staffUserId) throw new Error("デモスタッフがありません。");
-      await db.batch([
+      memberships.push(
         db
-          .prepare(
-            "UPDATE session SET active_organization_id=? WHERE user_id=? AND active_organization_id IS NULL",
-          )
-          .bind(owner.id, staffUserId),
-        db
-          .prepare(
-            "INSERT INTO member(id,organization_id,user_id,role,created_at) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM member WHERE organization_id=? AND user_id=?)",
-          )
-          .bind(
-            `tablecast-member-${store.id}-${staffUserId}`,
-            owner.id,
-            staffUserId,
-            person.role,
-            credentials.baseTime,
-            owner.id,
-            staffUserId,
+          .update(identity.session)
+          .set({ activeOrganizationId: owner.id })
+          .where(
+            and(
+              eq(identity.session.userId, staffUserId),
+              isNull(identity.session.activeOrganizationId),
+            ),
           ),
-      ]);
+      );
+      if (!memberIds.has(staffUserId))
+        memberships.push(
+          db.insert(identity.member).values({
+            id: `tablecast-member-${store.id}-${staffUserId}`,
+            organizationId: owner.id,
+            userId: staffUserId,
+            role: person.role,
+            createdAt: new Date(credentials.baseTime),
+          }),
+        );
     }
+    const [firstMember, ...remainingMembers] = memberships;
+    if (firstMember) await db.batch([firstMember, ...remainingMembers]);
     if (!existing)
       await db.batch([
-        db
-          .prepare(
-            "INSERT INTO stores(id,organization_id,name,config_json,updated_at) VALUES(?,?,?,?,?)",
-          )
-          .bind(
-            store.id,
-            owner.id,
-            store.name,
-            JSON.stringify(store.configuration),
-            credentials.baseTime,
-          ),
-        db
-          .prepare(
-            "INSERT INTO config_releases(store_id,version,config_json,published_by,created_at) VALUES(?,1,?,?,?)",
-          )
-          .bind(store.id, JSON.stringify(store.configuration), owner.userId, credentials.baseTime),
+        db.insert(business.stores).values({
+          id: store.id,
+          organization_id: owner.id,
+          name: store.name,
+          config_json: JSON.stringify(store.configuration),
+          updated_at: credentials.baseTime,
+        }),
+        db.insert(business.configReleases).values({
+          store_id: store.id,
+          version: 1,
+          config_json: JSON.stringify(store.configuration),
+          published_by: owner.userId,
+          created_at: credentials.baseTime,
+        }),
       ]);
-    const tables: D1PreparedStatement[] = [];
-    for (let number = 1; number <= store.tableCount; number++) {
-      const name = `T${number.toString().padStart(2, "0")}`;
-      tables.push(
-        db
-          .prepare(
-            "INSERT INTO restaurant_tables(id,store_id,name) VALUES(?,?,?) ON CONFLICT(id) DO NOTHING",
-          )
-          .bind(`${store.id}-table-${name.slice(1)}`, store.id, name),
-      );
-    }
-    await db.batch(tables);
+    const tables = Array.from({ length: store.tableCount }, (_, index) => {
+      const name = `T${(index + 1).toString().padStart(2, "0")}`;
+      return { id: `${store.id}-table-${name.slice(1)}`, store_id: store.id, name };
+    });
+    await db
+      .insert(business.restaurantTables)
+      .values(tables)
+      .onConflictDoNothing({ target: business.restaurantTables.id });
     if (credentials.profile === "history") await seedHistory(db, store, owner);
     await seedCurrentTables(db, store, owner, credentials.baseTime);
   }
-  const violations = await db.prepare("PRAGMA foreign_key_check").all();
-  if (violations.results.length) throw new Error("デモデータの外部キーが不整合です。");
-  return db
-    .prepare(
-      "SELECT (SELECT COUNT(*) FROM stores) AS stores,(SELECT COUNT(*) FROM restaurant_tables) AS tables,(SELECT COUNT(*) FROM table_sessions WHERE id LIKE '%-history-%') AS historicalSessions,(SELECT COUNT(*) FROM orders) AS orders,(SELECT COUNT(*) FROM table_events) AS events",
-    )
-    .first();
+  const violations = await db.all(sql`PRAGMA foreign_key_check`);
+  if (violations.length) throw new Error("デモデータの外部キーが不整合です。");
+  const [stores, tables, historicalSessions, orders, events] = await db.batch([
+    db.select({ count: count() }).from(business.stores),
+    db.select({ count: count() }).from(business.restaurantTables),
+    db
+      .select({ count: count() })
+      .from(business.tableSessions)
+      .where(like(business.tableSessions.id, "%-history-%")),
+    db.select({ count: count() }).from(business.orders),
+    db.select({ count: count() }).from(business.tableEvents),
+  ]);
+  return {
+    stores: stores[0]?.count ?? 0,
+    tables: tables[0]?.count ?? 0,
+    historicalSessions: historicalSessions[0]?.count ?? 0,
+    orders: orders[0]?.count ?? 0,
+    events: events[0]?.count ?? 0,
+  };
 }

@@ -1,0 +1,47 @@
+diff --git a/dist/src/workers/shared/remote-proxy-client.worker.js b/dist/src/workers/shared/remote-proxy-client.worker.js
+index 4280ce2d463a696dd7f0664364b97e94a07b06d1..e1113bd478f4b0bd4f1f3ca893b4415517e90b24 100644
+--- a/dist/src/workers/shared/remote-proxy-client.worker.js
++++ b/dist/src/workers/shared/remote-proxy-client.worker.js
+@@ -2418,15 +2418,34 @@ var Client = class extends WorkerEntrypoint {
+   }
+   constructor(ctx, env) {
+     super(ctx, env);
+-    let stub = ctx.props.remoteProxyConnectionString ? makeRemoteProxyStub(
+-      ctx.props.remoteProxyConnectionString,
+-      ctx.props.binding,
+-      void 0,
+-      ctx.props.cfTraceId,
+-      env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
+-    ) : void 0;
++    let stub;
++    function getStub() {
++      if (!ctx.props.remoteProxyConnectionString) throwRemoteRequired(ctx.props.binding);
++      return stub ??= makeRemoteProxyStub(
++        ctx.props.remoteProxyConnectionString,
++        ctx.props.binding,
++        void 0,
++        ctx.props.cfTraceId,
++        env[SharedBindings.MAYBE_SERVICE_LOOPBACK]
++      );
++    }
+     return new Proxy(this, {
+-      get: (target, prop) => Reflect.has(target, prop) ? Reflect.get(target, prop) : (stub || throwRemoteRequired(ctx.props.binding), Reflect.get(stub, prop))
++      get: (target, prop) => {
++        if (Reflect.has(target, prop)) return Reflect.get(target, prop);
++        let rpcProperty;
++        let isRpcPropertyResolved = false;
++        function getRpcProperty() {
++          if (!isRpcPropertyResolved) {
++            rpcProperty = Reflect.get(getStub(), prop);
++            isRpcPropertyResolved = true;
++          }
++          return rpcProperty;
++        }
++        return new Proxy(
++          (...args) => Reflect.apply(getRpcProperty(), void 0, args),
++          { get: (_target, rpcProp) => Reflect.get(getRpcProperty(), rpcProp) }
++        );
++      }
+     });
+   }
+ };
