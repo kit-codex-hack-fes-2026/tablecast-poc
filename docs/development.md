@@ -56,6 +56,25 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 
 ## ポートと起動設定
 
+### Storybook MCP
+
+ルートで `bun install --frozen-lockfile`、`bun run codegen`、`bun run storybook` を順に実行する。Storybookだけを起動し、runtime未作成なら既存のポート予約処理でworktree専用ポートを確保する。DBの準備やWorkers・音声Agentの起動は不要である。
+
+起動ログの `TableCast Storybook MCP` URLを、Git管理外の `.codex/config.toml` に登録する。下記の `<port>` は表示されたポートへ置換する。既存の設定がある場合は保持して次のテーブルを統合し、同名のテーブルがあればURLを更新する。TableCast業務MCP用の `scripts/tablecast-plugin.ts` も使う場合は先に実行し、生成済みファイルの先頭にある `# TableCast generated local MCP` を削除して手動管理へ切り替えてから追記する。これにより後の再生成が手動設定を上書きしない。
+
+```toml
+[mcp_servers.tablecast-storybook]
+url = "http://127.0.0.1:<port>/mcp"
+```
+
+CodexのMCP接続を再起動して設定を読み直す。Storybookを起動したまま `docs-list` でコンポーネント一覧、`docs-show` で対象のpropsとStory、`stories-preview` でプレビューURL、`test-run` で代表Storyのテスト結果を確認する。対象IDや入力形式はサーバーのツール一覧から取得する。ブラウザーで同じ `/mcp` を開くと利用可能なツールも確認できる。
+
+`@storybook/addon-mcp` と `componentsManifest` を使い、既存のVitest・a11y設定で検証する。接続先はStorybook開発サーバー専用で、製品APIの `/mcp` や静的なStorybook buildとは別である。APIはpreview段階のため、更新時には実際のツール一覧と呼び出しを再確認する。
+
+公式資料: [Storybook MCP](https://storybook.js.org/docs/ai/mcp/overview)、[Codex MCP設定](https://developers.openai.com/codex/mcp)。
+
+### 共通の割当て
+
 小さなbootstrapでWeb、Inspector、LiveKit signaling、RTC TCP、UDP mux、Agent health、Storybookをまとめて割り当てる。
 既存のポート割当て機能を先に使い、不足するUDP等だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
 一つのruntime manifestにホスト、port、state、PID、生成configを記録する。ポートを複数package.jsonへ直書きしない。
