@@ -62,7 +62,10 @@ for (const { locale, labels } of [
       await page.reload();
       await expect(input).toHaveValue("777");
       // Then: 個別ページから一覧、変更確認へ移動しても保存内容が維持される。
-      await page.getByRole("link", { name: labels.editor_products, exact: true }).click();
+      await page
+        .getByRole("main")
+        .getByRole("link", { name: labels.editor_products, exact: true })
+        .click();
       await page.getByRole("link", { name: labels.admin_drafts, exact: true }).click();
       await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}`);
       await expect(
