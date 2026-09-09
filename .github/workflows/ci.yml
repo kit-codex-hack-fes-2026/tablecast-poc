@@ -198,7 +198,7 @@ jobs:
           docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag tablecast-emulate:check .
           docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev tablecast-emulate:check
           trap 'docker rm --force tablecast-oauth-check' EXIT
-          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
+          curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
 
   deploy:
     name: 本番・PR配備
