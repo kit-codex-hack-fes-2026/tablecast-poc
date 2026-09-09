@@ -10,6 +10,7 @@ import { z } from "zod";
 export default defineConfig(() => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
   return {
+    build: { minify: true },
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
     plugins: [
