@@ -3,6 +3,7 @@ import type { CartLine, Product } from "@tablecast/api/schema";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
+import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -56,7 +57,11 @@ export function ProductPage({
       </div>
       <div className="p-4">
         {product.imageKey && (
-          <img
+          <ProductImage
+            priority
+            width={640}
+            height={360}
+            sizes="(min-width: 768px) 60vw, 100vw"
             className="mb-3 aspect-video w-full rounded-xl object-cover"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}

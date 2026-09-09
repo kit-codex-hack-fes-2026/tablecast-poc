@@ -1,5 +1,6 @@
 import type { PricedLine, Product } from "@tablecast/api/schema";
 import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
+import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -28,15 +29,19 @@ export function CartLines({
         <h3 className="text-sm font-medium">{t("kiosk_cart_empty")}</h3>
       </div>
     );
+  const productsById = new Map(products.map((product) => [product.id, product]));
   return (
     <ul data-ui="cart-lines" className="list-none py-0 px-4 [&_>_li:last-child]:border-0">
       {lines.map((line) => (
         <li className="py-4 px-0 border-b border-b-border" key={line.id}>
           <div className="flex gap-3 justify-between text-sm">
-            {products.find((product) => product.id === line.productId)?.imageKey && (
-              <img
+            {productsById.get(line.productId)?.imageKey && (
+              <ProductImage
+                width={64}
+                height={64}
+                sizes="64px"
                 className="size-16 shrink-0 rounded-lg object-cover"
-                src={`/media/${products.find((product) => product.id === line.productId)?.imageKey}`}
+                src={`/media/${productsById.get(line.productId)?.imageKey}`}
                 alt=""
               />
             )}

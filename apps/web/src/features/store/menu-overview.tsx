@@ -6,6 +6,7 @@ import { ArrowLeft, Check, FilePenLine, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
+import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -82,7 +83,10 @@ export function MenuOverview({
           {product && (
             <div className="flex flex-wrap items-center gap-5">
               {product.imageKey && (
-                <img
+                <ProductImage
+                  width={160}
+                  height={160}
+                  sizes="160px"
                   className="size-40 rounded-xl object-cover"
                   src={`/media/${product.imageKey}`}
                   alt={product.text[locale].displayName}

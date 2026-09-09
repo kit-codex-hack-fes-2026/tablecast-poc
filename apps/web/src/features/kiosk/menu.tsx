@@ -2,6 +2,7 @@ import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { useState } from "react";
+import { ProductImage } from "../../components/product-image";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -65,14 +66,21 @@ export function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 [&:hover:not(:disabled)_img]:scale-105 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 motion-safe:[&:hover:not(:disabled)_img]:scale-105 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center [&_img]:object-cover [&_img]:transition-transform [&_img]:duration-200 [&_img]:ease-in-out [&_img]:size-full">
+            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
               {product.imageKey ? (
-                <img src={`/media/${product.imageKey}`} alt="" loading="lazy" />
+                <ProductImage
+                  className="size-full object-cover transition-transform motion-reduce:transition-none duration-200 ease-out"
+                  width={384}
+                  height={256}
+                  sizes="(min-width: 1536px) 20vw, (min-width: 768px) 30vw, 50vw"
+                  src={`/media/${product.imageKey}`}
+                  alt=""
+                />
               ) : (
                 <span className="text-muted-foreground flex flex-col items-center gap-1.5">
                   <ImageOff size={26} strokeWidth={1} aria-hidden="true" />

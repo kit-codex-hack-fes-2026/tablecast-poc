@@ -1,4 +1,3 @@
-import { StoreIcon } from "../../components/store-icon";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -6,16 +5,18 @@ import { ArrowUpRight, Plus, Settings2 } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
+import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
 import { RoleBadge } from "../store/role-badge";
+import type { loadStores } from "../store/store-query";
+import { storesOptions } from "../store/store-query";
 import { SettingsShell } from "./settings-shell";
-const loadStores = () => parseResponse(rpc.api.admin.stores.$get());
 type StoreRow = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function Organisations() {
   const { t } = useI18n();
-  const stores = useQuery({ queryKey: ["tablecast-stores"], queryFn: loadStores });
+  const stores = useQuery(storesOptions);
   const columns = useMemo(() => storeColumns(t), [t]);
   return (
     <SettingsShell>
@@ -26,10 +27,10 @@ export function Organisations() {
           {t("stores_create")}
         </Button>
       </div>
-      <ErrorNotice error={stores.error} />
+      <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
       {stores.isPending ? (
-        <p role="status">{t("common_loading")}</p>
-      ) : (
+        <LoadingState />
+      ) : !stores.data ? null : (
         <DataTable
           data={stores.data?.stores ?? []}
           columns={columns}

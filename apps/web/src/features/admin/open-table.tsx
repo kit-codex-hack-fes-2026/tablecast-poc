@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
+import { catalogOptions } from "../store/menu-query";
 
 import { parseResponse, rpc } from "../../lib/api";
 
@@ -21,11 +22,7 @@ export function OpenTable({
   const [guests, setGuests] = useState(2);
   const [guestLocale, setGuestLocale] = useState<"ja" | "en">("ja");
   const [plan, setPlan] = useState("");
-  const catalog = useQuery({
-    queryKey: ["tablecast-admin-catalog", storeId],
-    queryFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].catalog.$get({ param: { storeId: storeId } })),
-  });
+  const catalog = useQuery(catalogOptions(storeId));
   const client = useQueryClient();
   const open = useMutation({
     mutationFn: () =>

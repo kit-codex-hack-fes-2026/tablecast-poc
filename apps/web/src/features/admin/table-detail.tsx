@@ -1,7 +1,7 @@
+import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Order } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { DateTime } from "../../components/date-time";
@@ -14,6 +14,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { CartLines } from "../kiosk/cart-lines";
+import { tableDetailOptions } from "../store/store-query";
 import { ActivityLog } from "./events";
 import { SessionActivity } from "./session-activity";
 
@@ -29,14 +30,7 @@ function useTableDetail({
   const { t, locale } = useI18n();
   const route = rpc.api.admin.stores[":storeId"];
   const param = { storeId, id: tableId };
-  const detail = useQuery({
-    queryKey: ["tablecast-table-detail", storeId, tableId],
-    queryFn: ({ signal }) =>
-      parseResponse(
-        route.tables[":id"].$get({ param: { storeId, id: tableId } }, { init: { signal } }),
-      ),
-    refetchInterval: (query) => (query.state.data?.status === "closed" ? false : 5000),
-  });
+  const detail = useQuery(tableDetailOptions(storeId, tableId));
   const client = useQueryClient();
   useRealtime(
     detail.data?.status === "open" ? { storeId } : undefined,
@@ -119,6 +113,7 @@ export function TableDetail({
   view: "overview" | "logs" | "orders" | "billing" | "diagnostics";
   onViewChange: (view: "overview" | "logs" | "orders" | "billing" | "diagnostics") => void;
 }) {
+  const hydrated = useHydrated();
   const {
     t,
     locale,
@@ -170,11 +165,21 @@ export function TableDetail({
           }}
         >
           <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-sm [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
-            <Tabs.Tab value="overview">{t("admin_overview")}</Tabs.Tab>
-            <Tabs.Tab value="logs">{t("admin_logs")}</Tabs.Tab>
-            <Tabs.Tab value="orders">{t("admin_orders")}</Tabs.Tab>
-            <Tabs.Tab value="billing">{t("admin_payments")}</Tabs.Tab>
-            <Tabs.Tab value="diagnostics">{t("admin_diagnostics")}</Tabs.Tab>
+            <Tabs.Tab disabled={!hydrated} value="overview">
+              {t("admin_overview")}
+            </Tabs.Tab>
+            <Tabs.Tab disabled={!hydrated} value="logs">
+              {t("admin_logs")}
+            </Tabs.Tab>
+            <Tabs.Tab disabled={!hydrated} value="orders">
+              {t("admin_orders")}
+            </Tabs.Tab>
+            <Tabs.Tab disabled={!hydrated} value="billing">
+              {t("admin_payments")}
+            </Tabs.Tab>
+            <Tabs.Tab disabled={!hydrated} value="diagnostics">
+              {t("admin_diagnostics")}
+            </Tabs.Tab>
           </Tabs.List>
           <div className="overflow-y-auto min-h-0 pt-6 px-0 pb-9 [&_[data-ui=order-card]]:my-3.5 [&_[data-ui=order-card]]:mx-0 [&_[data-ui=bill-summary]]:pt-0 [&_[data-ui=bill-summary]]:px-0 [&_[data-ui=bill-summary]]:pb-6">
             <Tabs.Panel value="overview">

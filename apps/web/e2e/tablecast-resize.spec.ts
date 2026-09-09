@@ -24,6 +24,7 @@ test("サイドバーの調整幅を保存し、折りたたみと狭い画面�
   const handle = page.getByRole("separator", { name: ja.admin_resize_sidebar });
   const sidebar = page.locator("#tablecast-admin-sidebar");
   await expect(handle).toBeVisible();
+  await expect(handle).toBeEnabled();
   const initial = await sidebar.boundingBox();
   const grip = await handle.boundingBox();
   if (!initial || !grip) throw new Error("サイドバーの領域を取得できません。");

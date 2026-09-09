@@ -2,9 +2,11 @@ import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { organizationClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
+import { apiFetch } from "./api-fetch";
 
 export const authClient = createAuthClient({
   basePath: "/api/auth",
+  fetchOptions: { customFetchImpl: apiFetch },
   plugins: [organizationClient(), passkeyClient(), oauthProviderClient()],
 });
 export function authResult<T>(result: { data: T | null; error: { message?: string } | null }): T {

@@ -1,7 +1,9 @@
+import { useHydrated } from "@tanstack/react-router";
 import { cn } from "tailwind-variants";
 import type { ComponentProps } from "react";
 
 export function NativeSelect({ className, ...props }: ComponentProps<"select">) {
+  const hydrated = useHydrated();
   return (
     <select
       data-slot="native-select"
@@ -10,6 +12,7 @@ export function NativeSelect({ className, ...props }: ComponentProps<"select">) 
         className,
       )}
       {...props}
+      disabled={!hydrated || props.disabled}
     />
   );
 }

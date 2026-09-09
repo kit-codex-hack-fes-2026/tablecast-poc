@@ -1,3 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Members } from "../features/store/members";
-export const Route = createFileRoute("/admin/stores/$storeId/members")({ component: Members });
+import { membershipOptions } from "../features/store/membership-query";
+import { storesOptions } from "../features/store/store-query";
+export const Route = createFileRoute("/admin/stores/$storeId/members")({
+  loader: async ({ context, params }) => {
+    const stores = await context.queryClient.ensureQueryData(storesOptions);
+    const store = stores.stores.find((item) => item.id === params.storeId);
+    if (store) await context.queryClient.ensureQueryData(membershipOptions(store.organizationId));
+  },
+  component: Members,
+});

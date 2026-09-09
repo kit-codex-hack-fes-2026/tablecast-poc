@@ -6,6 +6,7 @@ import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MenuOverview } from "./menu-overview";
@@ -31,7 +32,6 @@ export function MenuItem({
   draftId?: string;
 }) {
   const store = useStore();
-  const { t } = useI18n();
   const catalog = useQuery(catalogOptions(store.id));
   const draft = useQuery({
     ...draftOptions(store.id, draftId ?? ""),
@@ -54,7 +54,7 @@ export function MenuItem({
           <MenuOverview configuration={configuration} section={section} itemId={itemId} />
         )
       ) : (
-        <p role="status">{t("common_loading")}</p>
+        !(catalog.error || draft.error) && <LoadingState />
       )}
     </>
   );

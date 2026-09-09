@@ -18,11 +18,18 @@ export function useRealtime(
     cursor.current = getSnapshotCursor();
     let disposed = false;
     let fetching = false;
+    let queued = false;
+    let lastSync = 0;
     let socket: WebSocket | undefined;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
     async function synchronise() {
-      if (fetching || disposed) return;
+      if (disposed) return;
+      if (fetching) {
+        queued = true;
+        return;
+      }
+      queued = false;
       fetching = true;
       try {
         const result = await parseResponse(
@@ -37,6 +44,8 @@ export function useRealtime(
               ),
         );
         if (!disposed) {
+          lastSync = Date.now();
+          queued ||= result.events.length === 500;
           cursor.current = Math.max(cursor.current, result.cursor);
           if (result.events.length) notify();
         }
@@ -47,6 +56,7 @@ export function useRealtime(
         }
       } finally {
         fetching = false;
+        if (queued && !disposed) void synchronise();
       }
     }
     function connect() {
@@ -76,11 +86,19 @@ export function useRealtime(
     }
     connect();
     const poll = setInterval(() => {
+      if (document.hidden) return;
+      // 通知が届く間は確認pollを減らし、切断中は5秒間隔へ戻す。
+      if (socket?.readyState === WebSocket.OPEN && Date.now() - lastSync < 30_000) return;
       void synchronise();
     }, 5000);
+    const resume = () => {
+      if (!document.hidden) void synchronise();
+    };
+    document.addEventListener("visibilitychange", resume);
     return () => {
       disposed = true;
       controller.abort();
+      document.removeEventListener("visibilitychange", resume);
       clearInterval(poll);
       clearTimeout(retry);
       socket?.close();

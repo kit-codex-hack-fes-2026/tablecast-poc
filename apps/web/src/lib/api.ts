@@ -1,10 +1,11 @@
 import { createTablecastClient, parseResponse } from "@tablecast/api/client";
+import { apiFetch } from "./api-fetch";
 export { parseResponse };
 export const rpc = createTablecastClient(
   typeof window === "undefined" ? "/" : window.location.origin,
   {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-      const response = await fetch(input, { ...init, credentials: "same-origin" });
+      const response = await apiFetch(input, init);
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
         const error =

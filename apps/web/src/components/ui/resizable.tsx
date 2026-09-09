@@ -1,4 +1,5 @@
 import { cn } from "tailwind-variants";
+import { useHydrated } from "@tanstack/react-router";
 import { GripVertical } from "lucide-react";
 import {
   Group,
@@ -14,9 +15,12 @@ export function ResizablePanelGroup({ className, ...props }: GroupProps) {
 
 export const ResizablePanel = Panel;
 
-export function ResizableHandle({ className, ...props }: SeparatorProps) {
+export function ResizableHandle({ className, disabled, ...props }: SeparatorProps) {
+  const hydrated = useHydrated();
   return (
     <Separator
+      disabled={!hydrated || disabled}
+      aria-disabled={!hydrated || disabled}
       className={cn(
         "group relative z-10 flex w-2 shrink-0 items-center justify-center bg-transparent outline-none transition-colors hover:bg-border focus-visible:bg-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:w-full",
         className,

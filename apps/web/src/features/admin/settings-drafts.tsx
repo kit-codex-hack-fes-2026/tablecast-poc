@@ -16,9 +16,11 @@ import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { draftsOptions } from "../store/store-query";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { draftOptions } from "../store/menu-query";
@@ -30,11 +32,7 @@ export function SettingsDrafts() {
   const { id: storeId, role } = useStore();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const drafts = useQuery({
-    queryKey: ["tablecast-drafts", storeId],
-    queryFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$get({ param: { storeId } })),
-  });
+  const drafts = useQuery(draftsOptions(storeId));
   const client = useQueryClient();
   const create = useMutation({
     mutationFn: () =>
@@ -60,10 +58,10 @@ export function SettingsDrafts() {
         )}
       </div>
 
-      <ErrorNotice error={drafts.error || create.error} />
+      <ErrorNotice error={drafts.error || create.error} onRetry={() => void drafts.refetch()} />
       {drafts.isPending ? (
-        <p role="status">{t("common_loading")}</p>
-      ) : (
+        <LoadingState />
+      ) : !drafts.data ? null : (
         <DataTable
           data={drafts.data?.drafts ?? []}
           columns={columns}
@@ -188,9 +186,9 @@ export function DraftPage({ draftId }: { draftId: string }) {
             </div>
           )}
         </>
-      ) : (
-        <p role="status">{t("common_loading")}</p>
-      )}
+      ) : query.isPending ? (
+        <LoadingState />
+      ) : null}
     </>
   );
 }

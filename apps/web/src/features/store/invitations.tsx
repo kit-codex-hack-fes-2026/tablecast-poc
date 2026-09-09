@@ -50,9 +50,12 @@ export function Invitations() {
           {t("org_invite")}
         </Button>
       </div>
-      <ErrorNotice error={query.error || cancel.error} />
+      <ErrorNotice error={query.error || cancel.error} onRetry={() => void query.refetch()} />
       <DataTable
         data={query.data?.invitations ?? []}
+        pending={query.isPending}
+        error={query.error}
+        onRetry={() => void query.refetch()}
         columns={columns}
         getRowId={(row) => row.id}
         searchLabel={t("auth_email")}

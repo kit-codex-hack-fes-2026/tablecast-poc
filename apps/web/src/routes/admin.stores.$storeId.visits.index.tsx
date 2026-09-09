@@ -1,8 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { VisitHistory } from "../features/admin/visit-history";
+import { historyOptions } from "../features/store/history-query";
 import { useI18n } from "../i18n/locale";
 
-export const Route = createFileRoute("/admin/stores/$storeId/visits/")({ component: Page });
+export const Route = createFileRoute("/admin/stores/$storeId/visits/")({
+  loader: async ({ context, params }) => {
+    await context.queryClient.ensureInfiniteQueryData(historyOptions(params.storeId));
+  },
+  component: Page,
+});
 function Page() {
   const { storeId } = Route.useParams();
   const navigate = useNavigate();

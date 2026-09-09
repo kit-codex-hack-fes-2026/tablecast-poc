@@ -7,28 +7,24 @@ import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { sessionOptions } from "../../lib/session-query";
+import type { loadStores } from "../store/store-query";
+import { storesOptions } from "../store/store-query";
 
-import { parseResponse, rpc } from "../../lib/api";
-import { authClient } from "../../lib/auth-client";
 import { SettingsShell } from "./settings-shell";
-const loadStores = () => parseResponse(rpc.api.admin.stores.$get());
 type Store = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function DeviceApproval() {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t } = useI18n();
-  const session = authClient.useSession();
+  const session = useQuery(sessionOptions);
   const userCode = new URLSearchParams(searchStr).get("user_code") ?? "";
-  const stores = useQuery({
-    queryKey: ["tablecast-stores"],
-    queryFn: loadStores,
-    enabled: !!session.data,
-  });
+  const stores = useQuery({ ...storesOptions, enabled: !!session.data });
   const columns = useMemo(() => deviceApprovalColumns(t, userCode), [t, userCode]);
   return (
     <SettingsShell>
       <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
       <p>{t("admin_store")}</p>
-      <ErrorNotice error={stores.error} />
+      <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
       <DataTable
         data={
           stores.data?.stores.filter((store) => store.role === "owner" || store.role === "admin") ??

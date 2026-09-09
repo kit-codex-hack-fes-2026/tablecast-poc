@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 
@@ -41,7 +42,7 @@ export function SessionActivity({
           void (activity.isFetchNextPageError ? activity.fetchNextPage() : activity.refetch())
         }
       />
-      {activity.isPending && <p>{t("common_loading")}</p>}
+      {activity.isPending && <LoadingState />}
       {activity.hasNextPage && (
         <Button
           variant="outline"

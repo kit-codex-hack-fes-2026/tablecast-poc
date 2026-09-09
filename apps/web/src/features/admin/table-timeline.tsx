@@ -22,14 +22,16 @@ export function TableTimeline({
   vacantTables = [],
   onSelect,
   onOpen,
+  initialNow,
 }: {
   tables: TableState[];
+  initialNow?: number;
   vacantTables?: { id: string; name: string }[];
   onSelect: (id: string) => void;
   onOpen?: (table: { id: string; name: string }) => void;
 }) {
   const { locale, t } = useI18n();
-  const [now, setNow] = useState(Date.now);
+  const [now, setNow] = useState(() => initialNow ?? Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);

@@ -57,11 +57,18 @@ for (const { staffLanguage, labels } of [
       const code = await pairingCode.textContent();
       await staff.goto(`/admin/stores/${storeId}/devices/new`);
       await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
+      await expect(staff.getByLabel(labels.admin_pair_code)).toHaveValue(code ?? "");
       await staff
         .getByRole("row")
         .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
         .getByRole("button")
         .click();
+      await expect(
+        staff
+          .getByRole("row")
+          .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
+          .getByRole("button"),
+      ).toHaveAttribute("aria-pressed", "true");
       await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
       await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
       await guest.getByRole("button", { name: "日本語", exact: true }).click();

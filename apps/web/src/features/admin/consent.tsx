@@ -1,17 +1,20 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
-import { DataTable } from "../../components/data-table";
-import type { ColumnDef } from "@tanstack/react-table";
-import { RoleBadge } from "../store/role-badge";
 import { useI18n } from "../../i18n/locale";
+import { sessionOptions } from "../../lib/session-query";
+import { RoleBadge } from "../store/role-badge";
+import type { loadStores } from "../store/store-query";
+import { storesOptions } from "../store/store-query";
 
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { ApiFailure } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 
 export function Consent() {
@@ -19,13 +22,10 @@ export function Consent() {
   const { t, setLocale } = useI18n();
   const search = new URLSearchParams(searchStr);
   const oauthQuery = searchStr.slice(1);
-  const session = authClient.useSession();
+  const session = useQuery(sessionOptions);
   const postLogin = !session.data?.session.activeOrganizationId;
   const [organization, setOrganization] = useState("");
-  const stores = useQuery({
-    queryKey: ["tablecast-stores"],
-    queryFn: () => parseResponse(rpc.api.admin.stores.$get()),
-  });
+  const stores = useQuery(storesOptions);
   const organizations = stores.data?.stores ?? [];
   const selected =
     organization || session.data?.session.activeOrganizationId || organizations[0]?.organizationId;
@@ -103,7 +103,7 @@ export function Consent() {
             pagination={false}
           />
         </div>
-        <ErrorNotice error={stores.error || consent.error} />
+        <ErrorNotice error={stores.error || consent.error} onRetry={() => void stores.refetch()} />
         <div className="mt-8 flex w-full justify-end gap-3">
           <Button
             variant="outline"
@@ -125,7 +125,6 @@ export function Consent() {
   );
 }
 
-const loadStores = () => parseResponse(rpc.api.admin.stores.$get());
 type ConsentStore = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 function consentStoreColumns(
   t: ReturnType<typeof useI18n>["t"],

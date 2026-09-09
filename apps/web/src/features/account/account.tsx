@@ -1,7 +1,5 @@
-import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "../../components/data-table";
-import { Badge } from "../../components/ui/badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
   ImagePlus,
@@ -17,12 +15,20 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
+import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { GoogleIcon } from "../../components/google-icon";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
+import { sessionOptions } from "../../lib/session-query";
+import {
+  accountKeysOptions,
+  accountLinksOptions,
+  accountSessionsOptions,
+} from "../account/account-query";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
@@ -30,25 +36,13 @@ import { SettingsShell } from "./settings-shell";
 
 function useAccount() {
   const { t } = useI18n();
-  const session = authClient.useSession();
+  const session = useQuery(sessionOptions);
   const client = useQueryClient();
   const [name, setName] = useState<string>();
   const [passkeyName, setPasskeyName] = useState("");
-  const sessions = useQuery({
-    queryKey: ["tablecast-account", "sessions"],
-    queryFn: async () => authResult(await authClient.listSessions()),
-    enabled: !!session.data,
-  });
-  const accounts = useQuery({
-    queryKey: ["tablecast-account", "links"],
-    queryFn: async () => authResult(await authClient.listAccounts()),
-    enabled: !!session.data,
-  });
-  const keys = useQuery({
-    queryKey: ["tablecast-account", "passkeys"],
-    queryFn: async () => authResult(await authClient.passkey.listUserPasskeys()),
-    enabled: !!session.data,
-  });
+  const sessions = useQuery(accountSessionsOptions);
+  const accounts = useQuery(accountLinksOptions);
+  const keys = useQuery(accountKeysOptions);
   const change = useMutation({
     mutationFn: (action: () => Promise<void>) => action(),
     onSuccess: () => {
@@ -195,8 +189,15 @@ function AccountConnections({ controller }: { controller: AccountController }) {
         <Link2 />
         {t("account_connections")}
       </h2>
-      <DataTable data={accounts.data ?? []} columns={columns} getRowId={(row) => row.id} />
-      {!accounts.isPending && !accounts.data?.some((item) => item.providerId === "google") && (
+      <DataTable
+        data={accounts.data ?? []}
+        pending={accounts.isPending}
+        error={accounts.error}
+        onRetry={() => void accounts.refetch()}
+        columns={columns}
+        getRowId={(row) => row.id}
+      />
+      {accounts.data && !accounts.data.some((item) => item.providerId === "google") && (
         <Button
           variant="outline"
           disabled={change.isPending}
@@ -279,6 +280,9 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
       </h2>
       <DataTable
         data={keys.data ?? []}
+        pending={keys.isPending}
+        error={keys.error}
+        onRetry={() => void keys.refetch()}
         columns={columns}
         getRowId={(row) => row.id}
         empty={t("account_no_passkeys")}
@@ -360,7 +364,14 @@ function AccountSessions({ controller }: { controller: AccountController }) {
         <Monitor />
         {t("account_sessions")}
       </h2>
-      <DataTable data={sessions.data ?? []} columns={columns} getRowId={(row) => row.id} />
+      <DataTable
+        data={sessions.data ?? []}
+        pending={sessions.isPending}
+        error={sessions.error}
+        onRetry={() => void sessions.refetch()}
+        columns={columns}
+        getRowId={(row) => row.id}
+      />
       <ConfirmAction
         label={t("account_revoke_others")}
         subject={t("account_keep_current")}
