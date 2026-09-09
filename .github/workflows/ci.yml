@@ -19,7 +19,7 @@ env:
 
 jobs:
   static:
-    name: Static · Oxfmt / Oxlint / TypeScript / Ruff / ty
+    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript, Ruff, ty)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,7 +32,7 @@ jobs:
       - run: bun run format:check && bun run lint && bun run typecheck
 
   unit-web:
-    name: Unit · Vitest · Web / seed fixtures
+    name: "Unit Test: Webロジックとseedデータ (Vitest)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -45,7 +45,7 @@ jobs:
             run: bun run --cwd apps/web test
 
   agent:
-    name: Unit + Integration · pytest · LiveKit Agent
+    name: "Unit and Integration Test: 音声AgentとTTS接続 (pytest)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -56,7 +56,7 @@ jobs:
       - run: bun run --cwd livekit test
 
   api:
-    name: Unit + Integration · Vitest · API / D1 / MCP
+    name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -65,7 +65,7 @@ jobs:
       - run: bun run --cwd apps/api test
 
   dev-runtime:
-    name: Integration · Vitest · Dev CLI / D1 seed
+    name: "Integration Test: 開発環境の起動とDB初期化 (Vitest)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -74,7 +74,7 @@ jobs:
       - run: bunx --no-install vitest run --project scripts-runtime
 
   workers-build:
-    name: Build · Vite / Wrangler · Workers
+    name: "Build: WebとAPIのデプロイ用成果物 (Vite, Wrangler)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -85,7 +85,7 @@ jobs:
       - run: bun run build
 
   storybook-build:
-    name: Build · Storybook · Web
+    name: "Build: Componentカタログ (Storybook)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -96,7 +96,7 @@ jobs:
       - run: bunx --no-install turbo run build:storybook
 
   components:
-    name: Component + a11y · Vitest Browser / Storybook · Web
+    name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -112,7 +112,7 @@ jobs:
       - run: bun run test:browser
 
   e2e:
-    name: E2E · Playwright · Web / API / OAuth
+    name: "E2E Test: 注文・ログイン・会計 (Playwright)"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -138,7 +138,7 @@ jobs:
           retention-days: 7
 
   webrtc:
-    name: Integration · Playwright · LiveKit WebRTC
+    name: "Integration Test: 音声の送受信・停止 (Playwright, LiveKit WebRTC)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

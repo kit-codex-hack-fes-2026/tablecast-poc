@@ -88,7 +88,7 @@ Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼�
 
 ## CIのジョブとキャッシュ
 
-workflow名は`CI`、job名はレイヤー・runner・対象を示す。静的解析、Web/seedのVitest unit、LiveKit Agentのpytest、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、実LiveKit WebRTC、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
+workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、Web/seedのVitest unit、LiveKit Agentのpytest、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、実LiveKit WebRTC、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
 
 全体の完了時間は3〜4分を目標とし、E2EとAPIはそれぞれ1job内の4workersで実行する。ブラウザー別/shard別のmatrixは設けず、E2Eの両ブラウザーを同じPlaywright実行で扱う。build・seed・依存準備をjobごとに重複させない。APIはCloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、WebRTCのサービス起動、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
