@@ -1,6 +1,6 @@
 import { test as base } from "@playwright/test";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { cp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import process from "node:process";
 import { promisify } from "node:util";
@@ -108,25 +108,35 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           `127.0.0.1:${runtime.ports.mailpit}:8025`,
           "axllent/mailpit:v1.29.2",
         ]);
-        start("node", [
-          join(root, "node_modules/wrangler/bin/wrangler.js"),
-          "dev",
-          "--config",
-          join(runtime.directory, "web.json"),
-          "--config",
-          join(runtime.directory, "api.json"),
-          "--local",
-          "--persist-to",
-          state,
-          "--ip",
-          "127.0.0.1",
-          "--port",
-          String(runtime.ports.web),
-          "--inspector-port",
-          String(runtime.ports.inspector),
-          "--log-level",
-          "warn",
-        ]);
+        const deploy = join(runtime.directory, ".wrangler/deploy");
+        await mkdir(deploy, { recursive: true });
+        await writeFile(
+          join(deploy, "config.json"),
+          JSON.stringify({
+            configPath: join(runtime.directory, "web.json"),
+            auxiliaryWorkers: [{ configPath: join(runtime.directory, "api.json") }],
+          }),
+        );
+        start(
+          "node",
+          [
+            join(root, "apps/web/node_modules/.bin/vite"),
+            "preview",
+            "--config",
+            join(import.meta.dirname, "tablecast-preview.config.ts"),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            String(runtime.ports.web),
+            "--strictPort",
+            "--logLevel",
+            "warn",
+          ],
+          {
+            TABLECAST_E2E_CASE_DIRECTORY: runtime.directory,
+            TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
+          },
+        );
         const deadline = Date.now() + 60_000;
         let ready = false;
         while (Date.now() < deadline) {

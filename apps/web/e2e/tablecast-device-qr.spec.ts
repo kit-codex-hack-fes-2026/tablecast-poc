@@ -48,6 +48,11 @@ test("端末のQR画像でコードと選択した卓を保持し、明示承認
   expect(approvals).toBe(0);
   await page.reload();
   await expect(page.getByLabel(ja.admin_pair_code, { exact: true })).toHaveValue(code);
+  await expect(
+    page
+      .getByRole("row", { name: `T10 ${ja.common_selected}`, exact: true })
+      .getByRole("button", { name: ja.common_selected, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: ja.admin_approve, exact: true }).click();
   await expect(page).toHaveURL(/\/devices$/);
   expect(approvals).toBe(1);
