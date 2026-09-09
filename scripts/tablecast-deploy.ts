@@ -1,4 +1,9 @@
 import process from "node:process";
+import { drizzle } from "drizzle-orm/d1";
+import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
+import { sql } from "drizzle-orm";
+import { deploymentOwner } from "../apps/api/src/db/business-schema";
+import { createHash } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
@@ -25,6 +30,50 @@ const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
+
+export async function uploadPreviewImage(
+  bucket: Pick<R2Bucket, "head"> & {
+    put(
+      key: string,
+      bytes: Uint8Array,
+      options: R2PutOptions & { onlyIf: R2Conditional },
+    ): Promise<R2Object | null>;
+  },
+  key: string,
+  bytes: Uint8Array,
+) {
+  const md5 = createHash("md5").update(bytes).digest("hex");
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const stored = await bucket.head(key);
+      if (stored) {
+        if (stored.etag !== md5 || stored.size !== bytes.length)
+          throw new Error("既存画像の内容が一致しません");
+        console.info(`画像確認済み: ${key}`);
+        return;
+      }
+      const uploaded = await bucket.put(key, bytes, {
+        onlyIf: { etagDoesNotMatch: "*" },
+        md5,
+        httpMetadata: { contentType: "image/png" },
+        customMetadata: { source: "synthetic-demo" },
+      });
+      if (!uploaded || uploaded.etag !== md5 || uploaded.size !== bytes.length)
+        throw new Error("画像の保存結果を確認できません");
+      console.info(`画像投入済み: ${key}`);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? /\((\d+)\)$/.exec(error.message)?.[1] : undefined;
+      if (code !== "10001" || attempt === 3)
+        throw new Error(
+          `R2画像投入失敗: ${key} (code=${code ?? "整合性・接続"}, attempt=${attempt})`,
+          { cause: error },
+        );
+      console.warn(`R2一時障害: ${key} (code=${code}, attempt=${attempt}/3)`);
+      await new Promise((complete) => setTimeout(complete, 1_000 * 2 ** (attempt - 1)));
+    }
+  }
+}
 
 export async function waitForRelease(
   origin: string,
@@ -121,6 +170,7 @@ async function resources(create: boolean) {
   const databases = z.array(databaseSchema).parse(await cloudflare("d1/database?per_page=1000"));
   if (databases.length >= 1000)
     throw new Error("D1一覧の上限に達しました。対象を再確認してください。");
+  let databaseCreated = false;
   let database = databases.find((value) => value.name === target.database);
   if (!database && create) {
     database = databaseSchema.parse(
@@ -129,29 +179,36 @@ async function resources(create: boolean) {
         primary_location_hint: "apac",
       }),
     );
-    await cloudflare(`d1/database/${database.uuid}/query`, "POST", {
-      sql: "CREATE TABLE tablecast_deployment_owner(repository TEXT NOT NULL, environment TEXT NOT NULL, seeded INTEGER NOT NULL DEFAULT 0)",
-    });
-    await cloudflare(`d1/database/${database.uuid}/query`, "POST", {
-      sql: "INSERT INTO tablecast_deployment_owner(repository,environment) VALUES(?,?)",
-      params: [tablecastRepository, target.web],
-    });
+    databaseCreated = true;
   }
   if (database) {
-    const ownership = z
-      .array(
-        z.object({
-          results: z.array(z.object({ repository: z.string(), environment: z.string() })),
-        }),
-      )
-      .parse(
-        await cloudflare(`d1/database/${database.uuid}/query`, "POST", {
-          sql: "SELECT repository,environment FROM tablecast_deployment_owner",
-        }),
+    const databaseId = database.uuid;
+    // 管理APIでもDrizzleがSQLと結果の対応を所有する。D1の配列応答を標準proxyへ渡す。
+    const db = drizzleProxy(async (query, params, method) => {
+      const result = z
+        .array(
+          z.object({
+            success: z.literal(true),
+            results: z.object({
+              rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))),
+            }),
+          }),
+        )
+        .parse(await cloudflare(`d1/database/${databaseId}/raw`, "POST", { sql: query, params }));
+      const rows = result[0]?.results.rows ?? [];
+      return { rows: method === "get" ? (rows[0] ?? []) : rows };
+    });
+    if (databaseCreated) {
+      await db.run(
+        sql`CREATE TABLE tablecast_deployment_owner(repository TEXT NOT NULL, environment TEXT NOT NULL, seeded INTEGER NOT NULL DEFAULT 0)`,
       );
-    const owner = ownership[0]?.results;
+      await db
+        .insert(deploymentOwner)
+        .values({ repository: tablecastRepository, environment: target.web });
+    }
+    const owner = await db.select().from(deploymentOwner);
     if (
-      owner?.length !== 1 ||
+      owner.length !== 1 ||
       owner[0]?.repository !== tablecastRepository ||
       owner[0]?.environment !== target.web
     )
@@ -400,21 +457,25 @@ async function main() {
             },
           );
           if (seeded) {
-            for (const file of (await readdir(resolve(root, "assets/demo"))).filter((value) =>
+            const files = (await readdir(resolve(root, "assets/demo"))).filter((value) =>
               /^[a-z0-9-]+\.png$/.test(value),
-            )) {
-              await platform.env.TABLECAST_MEDIA.put(
-                `tablecast/demo/${file}`,
-                await readFile(resolve(root, "assets/demo", file)),
-                {
-                  httpMetadata: { contentType: "image/png" },
-                  customMetadata: { source: "synthetic-demo" },
-                },
+            );
+            for (let offset = 0; offset < files.length; offset += 4) {
+              const results = await Promise.allSettled(
+                files
+                  .slice(offset, offset + 4)
+                  .map(async (file) =>
+                    uploadPreviewImage(
+                      platform.env.TABLECAST_MEDIA,
+                      `tablecast/demo/${file}`,
+                      await readFile(resolve(root, "assets/demo", file)),
+                    ),
+                  ),
               );
+              // 同時処理の完了を待ってからproxyを閉じる。失敗時は次の組へ進まない。
+              for (const result of results) if (result.status === "rejected") throw result.reason;
             }
-            await platform.env.TABLECAST_DB.prepare(
-              "UPDATE tablecast_deployment_owner SET seeded=1",
-            ).run();
+            await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });
           }
         }
       }

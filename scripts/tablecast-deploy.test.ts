@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { waitForRelease } from "./tablecast-deploy";
+import { createHash } from "node:crypto";
+import { uploadPreviewImage, waitForRelease } from "./tablecast-deploy";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -47,5 +48,87 @@ describe("配備先のSHA確認", () => {
       vi.runAllTimersAsync(),
     ]);
     expect(fetch).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe("PR商品画像の投入", () => {
+  const bytes = new TextEncoder().encode("tablecast-image");
+  const stored = {
+    key: "tablecast/demo/tofu.png",
+    version: "test",
+    size: bytes.length,
+    etag: createHash("md5").update(bytes).digest("hex"),
+    httpEtag: '"test"',
+    uploaded: new Date(0),
+    storageClass: "Standard",
+    checksums: { toJSON: () => ({}) },
+    writeHttpMetadata: () => {},
+  } satisfies R2Object;
+  function bucket() {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    return {
+      head: vi.fn<R2Bucket["head"]>().mockResolvedValue(null),
+      put: vi
+        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<R2Object | null>>()
+        .mockResolvedValue(stored),
+    };
+  }
+  test("保存済み画像は内容を確認し再送せず、異なる画像は上書きしない", async () => {
+    const media = bucket();
+    media.head.mockResolvedValueOnce(stored).mockResolvedValueOnce({
+      ...stored,
+      etag: "different",
+    });
+    await uploadPreviewImage(media, stored.key, bytes);
+    await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
+    expect(media.put).not.toHaveBeenCalled();
+  });
+  test("10001の直後は存在を再確認し、未保存なら条件付きで再送する", async () => {
+    vi.useFakeTimers();
+    const media = bucket();
+    media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
+    const result = uploadPreviewImage(media, stored.key, bytes);
+    await vi.runAllTimersAsync();
+    await result;
+    expect(media.head).toHaveBeenCalledTimes(2);
+    expect(media.put).toHaveBeenCalledTimes(2);
+    expect(media.put).toHaveBeenLastCalledWith(
+      stored.key,
+      bytes,
+      expect.objectContaining({ md5: stored.etag, onlyIf: { etagDoesNotMatch: "*" } }),
+    );
+  });
+  test("応答だけ失われたputは保存内容を確認して再送しない", async () => {
+    vi.useFakeTimers();
+    const media = bucket();
+    media.head.mockResolvedValueOnce(null).mockResolvedValueOnce(stored);
+    media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
+    const result = uploadPreviewImage(media, stored.key, bytes);
+    await vi.runAllTimersAsync();
+    await result;
+    expect(media.put).toHaveBeenCalledTimes(1);
+  });
+  test.each([
+    { code: "10001", attempts: 3 },
+    { code: "10003", attempts: 1 },
+  ])("R2 $codeは上限$attempts回で失敗しkeyとcodeを示す", async ({ code, attempts }) => {
+    vi.useFakeTimers();
+    const media = bucket();
+    media.put.mockRejectedValue(new Error(`put: failure (${code})`));
+    await Promise.all([
+      expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow(
+        `R2画像投入失敗: ${stored.key} (code=${code}, attempt=${attempts})`,
+      ),
+      vi.runAllTimersAsync(),
+    ]);
+    expect(media.put).toHaveBeenCalledTimes(attempts);
+  });
+  test("条件競合や保存結果の不一致を成功にしない", async () => {
+    const media = bucket();
+    media.put.mockResolvedValueOnce(null).mockResolvedValueOnce({ ...stored, size: 0 });
+    await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
+    await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
+    expect(media.put).toHaveBeenCalledTimes(2);
   });
 });

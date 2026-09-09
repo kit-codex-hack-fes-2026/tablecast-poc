@@ -1,4 +1,35 @@
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+// 配備CLIが作成する運用テーブル。0=未着手、2=DB完了・画像待ち、1=全体完了。
+export const deploymentOwner = sqliteTable("tablecast_deployment_owner", {
+  repository: text("repository").notNull(),
+  environment: text("environment").notNull(),
+  seeded: integer("seeded").notNull().default(0),
+});
+
+export const payments = sqliteTable("payments", {
+  id: text("id").primaryKey(),
+  store_id: text("store_id").notNull(),
+  table_session_id: text("table_session_id").notNull(),
+  idempotency_key: text("idempotency_key").notNull(),
+  kind: text("kind", { enum: ["payment", "adjustment"] }).notNull(),
+  amount: integer("amount").notNull(),
+  reason: text("reason").notNull(),
+  actor_id: text("actor_id").notNull(),
+  created_at: integer("created_at").notNull(),
+});
+
+export const configReleases = sqliteTable(
+  "config_releases",
+  {
+    store_id: text("store_id").notNull(),
+    version: integer("version").notNull(),
+    config_json: text("config_json").notNull(),
+    published_by: text("published_by").notNull(),
+    created_at: integer("created_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.store_id, table.version] })],
+);
 
 // SQL migrationを正本とする業務テーブルのquery用定義。制約の作成・変更はmigrationで行う。
 export const stores = sqliteTable("stores", {

@@ -45,6 +45,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 - 音声停止は再生停止だけでなく送音・STT・応答生成の停止を含む。明示再開まで勝手に再接続しない。
 - 音声が停止してもGUI・カート・会計状態を維持する。客向けの自由文テキスト入力は作らない。
 - 店舗・卓の境界を必ず認可する。ログに秘密情報を出さず、生音声を既定保存しない。
+- D1の読み書きとfixtureは既存schemaを使ったDrizzleに統一する。`env.TABLECAST_DB.prepare()`などの直接操作を新設しない。複数操作は`db.batch()`を使う。生SQLはmigration・PRAGMA・query builderで表現できないクエリに限定する。
 - Inworld公式プラグインの不足は最小パッチとSHA固定で補う。独自STTクライアント、private monkeypatch、site-packages編集は禁止。
 
 ## 作業と検証
