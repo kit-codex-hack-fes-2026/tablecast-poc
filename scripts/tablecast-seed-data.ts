@@ -486,11 +486,18 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
   if (owner.seeded === 1) return false;
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
   if (owner.seeded === 2) return true;
-  if (owner.seeded !== 0) throw new Error("PR初期投入の進捗が不正です。");
+  if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
+  // 3は運用者が認証fixtureだけの途中状態を確認した再開。店舗作成後には使えない。
+  if (
+    owner.seeded === 3 &&
+    (await db.select({ id: identity.organization.id }).from(identity.organization).limit(1).get())
+  )
+    throw new Error("組織作成後のPR初期投入は手動確認が必要です。");
   if (
     await db
       .select({ id: identity.user.id })
       .from(identity.user)
+      .where(owner.seeded === 3 ? sql`0` : undefined)
       .unionAll(db.select({ id: business.stores.id }).from(business.stores))
       .limit(1)
       .get()

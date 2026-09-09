@@ -317,7 +317,7 @@ export async function getSessionEvents(
   )
     .bind(row.id, actor.storeId, ...cursor.values, query.limit + 1)
     .all<EventRecord>();
-  const events = rows.results.slice(0, query.limit).reverse().map(eventValue);
+  const events = rows.results.slice(0, query.limit).toReversed().map(eventValue);
   return {
     events,
     nextBefore: rows.results.length > query.limit ? (events[0]?.cursor ?? null) : null,

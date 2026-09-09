@@ -57,7 +57,8 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
       ).ok(),
     ).toBe(true);
   });
-  await page.goto("/account");
+  await page.getByRole("link", { name: "アカウント", exact: true }).click();
+  await expect(page).toHaveURL(/\/account$/);
   await page.getByLabel("名前", { exact: true }).fill("TableCast テストオーナー");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("status")).toHaveText("更新しました");
@@ -160,7 +161,8 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
-  await page.goto("/account");
+  await page.getByRole("link", { name: "アカウント", exact: true }).click();
+  await expect(page).toHaveURL(/\/account$/);
   const keyName = `TableCast Chromium ${Date.now()}`;
   const owner = await request.newContext({ baseURL });
   expect(

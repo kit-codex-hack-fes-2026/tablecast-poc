@@ -26,6 +26,15 @@ import { finishVoiceTurn } from "../src/voice";
 import { planSchema, tableStateSchema } from "../src/schema";
 import app from "../src/app";
 
+const stop = (voiceSessionId: string) =>
+  exports.default.fetch(
+    new Request("http://localhost:3000/api/table/voice/stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Cookie: `tablecast.device=${deviceToken}` },
+      body: JSON.stringify({ voiceSessionId }),
+    }),
+  );
+
 const teaLine = { id: "line-1", productId: "tea", quantity: 2, selections: [] };
 const tea = [teaLine];
 it("プランのラストオーダー後も対象外商品は通常価格で確認・注文できる", async () => {
@@ -405,14 +414,7 @@ it("遅延した旧音声停止は新しい会話を維持し、別卓のRoomを
   await setVoiceSession(env, device, "tablecast-old-voice");
   await setVoiceSession(env, device, null);
   await setVoiceSession(env, device, "tablecast-new-voice");
-  const stop = (voiceSessionId: string) =>
-    exports.default.fetch(
-      new Request("http://localhost:3000/api/table/voice/stop", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Cookie: `tablecast.device=${deviceToken}` },
-        body: JSON.stringify({ voiceSessionId }),
-      }),
-    );
+
   const response = await stop("tablecast-old-voice");
   expect(response.status).toBe(200);
   expect(tableStateSchema.parse(await response.json()).voiceState).toBe("active");

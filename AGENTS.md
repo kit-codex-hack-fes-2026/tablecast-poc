@@ -63,6 +63,8 @@ Bunから公式CLIを起動する。Bunを採用してもWorkersの本番runtime
 https://github.com/ReoHakase/enterprise-agentic-saas-starter
 [README](docs/enterprise-agentic-saas-starter.md)
 
+API変更には `tablecast-api`、Web変更には `tablecast-web`、静的設定・skills変更には `tablecast-quality` を追加適用する。このリポジトリのskillsは `.agents/skills` に直接置く。外部skillsは `skills-lock.json` で取得元を管理する。
+
 ## タスク別入口
 
 | 変更                   | 読むもの                                                            |

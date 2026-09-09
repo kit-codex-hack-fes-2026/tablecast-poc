@@ -15,6 +15,10 @@ import {
 import { getCatalog } from "./modules/operations";
 import { listVoices } from "./modules/voices";
 
+const result = (value: unknown) => ({
+  content: [{ type: "text" as const, text: JSON.stringify(value) }],
+});
+
 export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
   let principal;
   try {
@@ -40,9 +44,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     canWrite: principal.canWrite,
   };
   const server = new McpServer({ name: "tablecast-settings", version: "0.1.0" });
-  const result = (value: unknown) => ({
-    content: [{ type: "text" as const, text: JSON.stringify(value) }],
-  });
+
   server.registerTool(
     "get_configuration",
     { description: "店舗の公開設定、日英データ、入力schemaを取得する。", inputSchema: {} },

@@ -45,9 +45,9 @@ it("空卓の同時開卓は一方だけ成立し、セッションと開卓イ�
 
   const responses = await Promise.all([open(), open()]);
 
-  expect(responses.map((response) => response.status).sort((left, right) => left - right)).toEqual([
-    200, 409,
-  ]);
+  expect(
+    responses.map((response) => response.status).toSorted((left, right) => left - right),
+  ).toEqual([200, 409]);
   const succeeded = responses.find((response) => response.ok);
   if (!succeeded) throw new Error("成立した開卓応答がありません");
   const table = tableStateSchema.parse(await succeeded.json());

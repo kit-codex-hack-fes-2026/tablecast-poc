@@ -141,7 +141,7 @@ it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生
   const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
     if (typeof init?.body !== "string") throw new Error("モデル要求がJSONではありません");
     const request = providerRequestSchema.parse(JSON.parse(init.body));
-    expect(request.tools.map((tool) => tool.function.name).sort()).toEqual([
+    expect(request.tools.map((tool) => tool.function.name).toSorted()).toEqual([
       "getCatalog",
       "getTableState",
     ]);
@@ -154,7 +154,9 @@ it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生
     post("/internal/voice/turns", input("tablecast-proactive-a")),
     post("/internal/voice/turns", input("tablecast-proactive-b")),
   ]);
-  expect(attempts.map(({ response }) => response.status).sort((a, b) => a - b)).toEqual([200, 204]);
+  expect(attempts.map(({ response }) => response.status).toSorted((a, b) => a - b)).toEqual([
+    200, 204,
+  ]);
   for (const { response, context } of attempts) {
     expect(await response.text()).toBe(
       response.status === 200 ? "季節のお茶もご用意しています。" : "",

@@ -154,7 +154,9 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
       tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
       tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
     ]);
-    expect(responses.map((response) => response.status).sort((a, b) => a - b)).toEqual([200, 409]);
+    expect(responses.map((response) => response.status).toSorted((a, b) => a - b)).toEqual([
+      200, 409,
+    ]);
     expect((await getTableState(env, device)).speechSpeed).toBe(1.2);
     const events = await env.TABLECAST_DB.prepare(
       "SELECT kind FROM table_events WHERE kind='voice.speed'",

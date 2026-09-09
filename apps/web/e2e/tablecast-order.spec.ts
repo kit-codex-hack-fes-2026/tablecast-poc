@@ -52,8 +52,9 @@ for (const { staffLanguage, labels } of [
       await staff.goto(`/admin/stores/${storeId}/floor`);
       await guest.goto("/");
       await guest.getByRole("button", { name: "端末を接続する" }).click();
-      const code = await guest.getByLabel("端末に表示されたコード").textContent();
-      expect(code).toBeTruthy();
+      const pairingCode = guest.getByLabel("端末に表示されたコード");
+      await expect(pairingCode).toHaveText(/\S+/);
+      const code = await pairingCode.textContent();
       await staff.goto(`/admin/stores/${storeId}/devices/new`);
       await staff.getByLabel(labels.admin_pair_code).fill(code ?? "");
       await staff

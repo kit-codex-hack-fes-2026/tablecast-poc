@@ -14,6 +14,13 @@ import { DomainError } from "../src/errors";
 import { configurationSchema } from "../src/schema";
 import { configuration, setupFixture } from "./fixture";
 
+const request = (storeId: string, sessionCookie: string) =>
+  exports.default.fetch(
+    new Request(`${env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${storeId}`, {
+      headers: { Cookie: sessionCookie },
+    }),
+  );
+
 const bootstrapEnv: BootstrapEnv = {
   TABLECAST_DB: env.TABLECAST_DB,
   TABLECAST_AUTH_SECRET: env.TABLECAST_AUTH_SECRET,
@@ -101,12 +108,7 @@ it("新規登録すると公式認証の所有者を持つ店舗・初期公開�
     .getSetCookie()
     .map((value) => value.split(";")[0])
     .join("; ");
-  const request = (storeId: string, sessionCookie: string) =>
-    exports.default.fetch(
-      new Request(`${env.TABLECAST_PUBLIC_ORIGIN}/api/admin/stores/${storeId}`, {
-        headers: { Cookie: sessionCookie },
-      }),
-    );
+
   expect((await request(result.storeId, cookie)).status).toBe(200);
   expect((await request("tablecast-store", cookie)).status).toBe(403);
   expect((await request(result.storeId, existing.cookie)).status).toBe(403);

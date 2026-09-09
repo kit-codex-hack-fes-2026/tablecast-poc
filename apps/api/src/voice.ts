@@ -263,7 +263,7 @@ voiceRoutes.get("/realtime", async (c) => {
     });
   }
   return c.json({
-    history: history.reverse(),
+    history: history.toReversed(),
     model: "gpt-realtime-2.1",
     instructions: `${castSessionInstructions(session.locale)}\nここは飲食店の卓上端末で、客は同じ席で会話を続けています。もしもしは接続確認であり電話応対へ切り替える合図ではありません。復元された履歴は過去の会話で、新しい依頼や注文承認ではありません。履歴の希望・比較対象・未回答の質問を引き継ぎ、続きの依頼にはその話題から応じます。中断した返答の未再生部分は聞かれた扱いにせず、古い操作を再実行しません。注文・確認の現状はgetTableStateで確認します。\n一回の客発話への応答では、ツール前の確認しますね等は最初の一度だけにする。続くツール照会では同じ声かけを繰り返さない。任意選択を指定されていない明確な単品注文は追加完了を短く伝え、任意選択の案内を新しい確認質問へしない。`,
     tools: Object.values(tools).map((tool) => ({

@@ -19,6 +19,17 @@ import {
   text,
 } from "./fixture";
 
+const table = async () =>
+  tableStateSchema.parse(
+    await (
+      await exports.default.fetch(
+        new Request("http://localhost:3000/api/table", {
+          headers: { Cookie: `tablecast.device=${deviceToken}` },
+        }),
+      )
+    ).json(),
+  );
+
 it.each([
   { name: "追加", remove: false },
   { name: "削除", remove: true },
@@ -146,16 +157,7 @@ it.each([
 
 it("卓へ同店舗の公開版と更新通知だけを返し、管理metadata・他卓・他店舗を渡さない", async () => {
   const { staff } = await setupFixture();
-  const table = async () =>
-    tableStateSchema.parse(
-      await (
-        await exports.default.fetch(
-          new Request("http://localhost:3000/api/table", {
-            headers: { Cookie: `tablecast.device=${deviceToken}` },
-          }),
-        )
-      ).json(),
-    );
+
   expect((await table()).configVersion).toBe(1);
   await env.TABLECAST_DB.batch([
     insertFixture(businessTables.stores, {

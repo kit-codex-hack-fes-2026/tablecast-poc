@@ -111,8 +111,26 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         seedPreviewDatabase({ ...preview, TABLECAST_ENV: "production" }, credentials),
       ).rejects.toThrow("対象");
       await db.update(deploymentOwner).set({ environment: "tablecast-pr-34" });
-      // When: 所有権を確認した空のPR DBへ初期投入する。
+      // Given: R2障害で認証ユーザーだけが作成された、運用者が確認済みのPR。
+      await db.insert(user).values({
+        id: "tablecast-partial-owner",
+        email: credentials.email,
+        name: "保持する名前",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("途中状態");
+      await db.update(deploymentOwner).set({ seeded: 3 });
+      // When: 既存の認証ユーザーを保持して残りを初期投入する。
       expect(await seedPreviewDatabase(preview, credentials)).toBe(true);
+      expect(
+        await db
+          .select({ id: user.id, name: user.name })
+          .from(user)
+          .where(eq(user.email, credentials.email))
+          .get(),
+      ).toEqual({ id: "tablecast-partial-owner", name: "保持する名前" });
       expect(
         await db.select({ seeded: deploymentOwner.seeded }).from(deploymentOwner).get(),
       ).toEqual({
@@ -132,6 +150,8 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       });
       await db.update(deploymentOwner).set({ seeded: 0 });
       await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("途中状態");
+      await db.update(deploymentOwner).set({ seeded: 3 });
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("組織作成後");
       await db.update(deploymentOwner).set({ seeded: 1 });
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
       const counts = await seedDemoDatabase(platform.env, credentials);

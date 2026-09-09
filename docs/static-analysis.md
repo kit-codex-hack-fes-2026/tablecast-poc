@@ -99,3 +99,9 @@ Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複�
 GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2E、合成音声WebRTCを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
 
 共通actionは固定版のNode/Bunと、必要なジョブだけPythonを導入する。Bunの取得cacheとuvの公式cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は7日間保持する。
+
+## skillsと追加pluginの所有
+
+このリポジトリでは自作・外部skillsを `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra` は `bunx skills` で導入し、`skills-lock.json` に取得元を残す。上流本文は整形対象外とする。
+
+Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。

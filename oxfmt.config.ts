@@ -4,6 +4,9 @@ export default defineConfig({
   printWidth: 100,
   ignorePatterns: [
     "bun.lock",
+    ".agents/skills/animate/**",
+    ".agents/skills/emil-design-eng/**",
+    ".agents/skills/mastra/**",
     "**/uv.lock",
     "**/dist/**",
     "**/storybook-static/**",
