@@ -104,8 +104,17 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           container,
           "-e",
           "MP_DISABLE_VERSION_CHECK=true",
-          "-p",
-          `127.0.0.1:${runtime.ports.mailpit}:8025`,
+          // Linux runnerのveth生成・削除は他caseのChromiumへnetwork changeを通知する。
+          ...(process.env.GITHUB_ACTIONS === "true" && process.platform === "linux"
+            ? [
+                "--network",
+                "host",
+                "-e",
+                `MP_UI_BIND_ADDR=127.0.0.1:${runtime.ports.mailpit}`,
+                "-e",
+                "MP_SMTP_BIND_ADDR=127.0.0.1:0",
+              ]
+            : ["-p", `127.0.0.1:${runtime.ports.mailpit}:8025`]),
           "axllent/mailpit:v1.29.2",
         ]);
         const deploy = join(runtime.directory, ".wrangler/deploy");

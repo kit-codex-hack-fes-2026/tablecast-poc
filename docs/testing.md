@@ -98,7 +98,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ## E2Eの隔離
 
-`bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。
+`bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。GitHub ActionsのLinux runnerではhost networkとケース専用のloopbackポートを使い、vethの生成・削除による他ケースのChromiumの`ERR_NETWORK_CHANGED`を避ける。SMTPは未使用のためOS割当ポートにbindし、メール保存先はケース専用container内に保つ。ローカルのDocker Desktop/OrbStackでは従来のport publishを使用する。
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各ケースへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物は読み取り専用で共用し、各ケースのdeploy configから固有名のWeb/API WorkersをCloudflare Vite previewで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もケース内へ分け、別caseの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証も別環境であり、固定fixtureのIDが同じでも書込み先は共有しない。
 
