@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { deploymentConfigs, deploymentSecrets, deploymentTarget } from "./tablecast-deploy-config";
+import {
+  deploymentArtifact,
+  deploymentConfigs,
+  deploymentSecrets,
+  deploymentTarget,
+} from "./tablecast-deploy-config";
 
 const input = {
   TABLECAST_RUNTIME_SECRETS: JSON.stringify({
@@ -18,6 +23,35 @@ const input = {
 };
 
 describe("本番とPRの配備境界", () => {
+  test("同じPRとSHAの成果物へ実DBと検証済みイメージを設定し別の配備先を拒否する", () => {
+    const target = deploymentTarget("39");
+    const sha = "a".repeat(40);
+    const api = deploymentConfigs(
+      target,
+      sha,
+      "11111111-1111-4111-8111-111111111111",
+      "/tablecast",
+      {},
+      {},
+    ).api;
+    const artifact = { ...api, main: "index.js", no_bundle: true };
+    const databaseId = "22222222-2222-4222-8222-222222222222";
+
+    const deployed = deploymentArtifact(artifact, target, sha, databaseId);
+
+    expect(deployed.main).toBe("index.js");
+    expect(deployed.no_bundle).toBe(true);
+    expect(deployed.d1_databases[0]?.database_id).toBe(databaseId);
+    expect(deployed.containers.map((container) => container.image)).toEqual([
+      `registry.cloudflare.com/dbbd52d7d690afceea41fe920ae19f91/tablecast-voice:${sha}`,
+      `registry.cloudflare.com/dbbd52d7d690afceea41fe920ae19f91/tablecast-emulate:${sha}`,
+    ]);
+    expect(() => deploymentArtifact(artifact, target, "b".repeat(40), databaseId)).toThrow(
+      "TABLECAST_RELEASE_SHA",
+    );
+    expect(() => deploymentArtifact(artifact, deploymentTarget(), sha, databaseId)).toThrow("name");
+  });
+
   test("本番を生成するとGoogleに登録した単一originと非公開APIになる", () => {
     const target = deploymentTarget();
     const config = deploymentConfigs(

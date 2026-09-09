@@ -87,6 +87,9 @@ jobs:
     name: "Build: WebとAPIのデプロイ用成果物 (Vite, Wrangler)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -94,7 +97,14 @@ jobs:
       - uses: ./.github/actions/tablecast-setup
         with:
           turbo: "true"
-      - run: bun run build
+      - run: bun --no-env-file run build:deploy
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/dist/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
 
   storybook-build:
     name: "Build: Componentカタログ (Storybook)"
@@ -187,18 +197,28 @@ jobs:
     name: 配備用Containerイメージ
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: 音声AgentとPR用OAuthをlinux/amd64で検証
         run: |
-          docker build --platform linux/amd64 --tag tablecast-voice:check livekit
-          docker run --rm --network none --entrypoint python tablecast-voice:check -c 'from livekit.plugins import silero; silero.VAD.load()'
-          docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag tablecast-emulate:check .
-          docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev tablecast-emulate:check
+          docker build --platform linux/amd64 --tag "tablecast-voice:$TABLECAST_RELEASE_SHA" livekit
+          docker run --rm --network none --entrypoint python "tablecast-voice:$TABLECAST_RELEASE_SHA" -c 'from livekit.plugins import silero; silero.VAD.load()'
+          docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag "tablecast-emulate:$TABLECAST_RELEASE_SHA" .
+          docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev "tablecast-emulate:$TABLECAST_RELEASE_SHA"
           trap 'docker rm --force tablecast-oauth-check' EXIT
           curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
+          docker save "tablecast-voice:$TABLECAST_RELEASE_SHA" "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
+          path: tablecast-images.tar.gz
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     name: 本番・PR配備
@@ -247,10 +267,20 @@ jobs:
         with:
           ref: ${{ env.TABLECAST_RELEASE_SHA }}
       - uses: ./.github/actions/tablecast-setup
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/dist/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
+          path: .local/tablecast-deploy/
+      - name: 検証済みContainerイメージを読み込む
+        run: docker load --input .local/tablecast-deploy/tablecast-images.tar.gz
       - name: 配備先URL
         id: target
         run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined).origin + "\n")'
-      - name: 資源作成・移行・ビルド・配備・SHA確認
+      - name: 資源作成・移行・検証済み成果物の配備・SHA確認
         run: bun --no-env-file run deploy
       - name: PRへ配備結果を記録
         if: success() && github.event_name == 'pull_request'

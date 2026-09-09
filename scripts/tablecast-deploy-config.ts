@@ -22,6 +22,52 @@ export function deploymentTarget(pr?: string) {
 }
 export type DeploymentTarget = ReturnType<typeof deploymentTarget>;
 
+export function deploymentArtifact(
+  input: unknown,
+  target: DeploymentTarget,
+  sha: string,
+  databaseId: string,
+) {
+  // 同じCIの環境別成果物へ、配備時に確定したbindingだけを設定する。
+  const config = z
+    .looseObject({
+      name: z.literal(target.api),
+      main: z.string(),
+      no_bundle: z.literal(true),
+      vars: z.looseObject({ TABLECAST_RELEASE_SHA: z.literal(sha) }),
+      d1_databases: z
+        .array(
+          z.looseObject({
+            binding: z.literal("TABLECAST_DB"),
+            database_name: z.literal(target.database),
+            database_id: z.literal("11111111-1111-4111-8111-111111111111"),
+          }),
+        )
+        .length(1),
+      containers: z
+        .array(
+          z.looseObject({
+            class_name: z.enum(
+              target.pr ? ["TablecastVoice", "TablecastEmulate"] : ["TablecastVoice"],
+            ),
+          }),
+        )
+        .length(target.pr ? 2 : 1),
+    })
+    .parse(input);
+  return {
+    ...config,
+    d1_databases: config.d1_databases.map((binding) => ({
+      ...binding,
+      database_id: z.uuid().parse(databaseId),
+    })),
+    containers: config.containers.map((container) => ({
+      ...container,
+      image: `registry.cloudflare.com/${tablecastAccountId}/tablecast-${container.class_name === "TablecastVoice" ? "voice" : "emulate"}:${sha}`,
+    })),
+  };
+}
+
 export function deploymentSecrets(
   target: DeploymentTarget,
   input: Record<string, string | undefined>,

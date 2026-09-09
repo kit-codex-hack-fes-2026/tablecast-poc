@@ -10,6 +10,7 @@ import { z } from "zod";
 import { seedPreviewDatabase } from "./tablecast-seed-data";
 import {
   deploymentConfigs,
+  deploymentArtifact,
   deploymentSecrets,
   deploymentTarget,
   tablecastAccountId,
@@ -192,10 +193,11 @@ async function accessApplication(create: boolean) {
 async function main() {
   const cleanup = process.argv.includes("--cleanup");
   const plan = process.argv.includes("--plan");
+  const build = process.argv.includes("--build");
   if (cleanup && !target.pr) throw new Error("本番資源はcleanupできません。");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await writeFile(resolve(directory, "empty.env"), "", { mode: 0o600 });
-  if (plan) {
+  if (plan || build) {
     const configs = deploymentConfigs(
       target,
       sha,
@@ -210,7 +212,12 @@ async function main() {
     );
     await writeFile(resolve(directory, "api.json"), JSON.stringify(configs.api, null, 2));
     await writeFile(resolve(directory, "web.json"), JSON.stringify(configs.web, null, 2));
-    console.info(JSON.stringify({ mode: "plan", ...target }));
+    if (build)
+      await run(["bun", "--no-env-file", "run", "build"], {
+        TABLECAST_API_CONFIG: resolve(directory, "api.json"),
+        TABLECAST_WEB_CONFIG: resolve(directory, "web.json"),
+      });
+    console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
   await currentRevision(cleanup);
@@ -242,10 +249,6 @@ async function main() {
 
   if (!cleanup && secrets) {
     await writeFile(resolve(directory, "secrets.json"), JSON.stringify(secrets), { mode: 0o600 });
-    await run(["bun", "--no-env-file", "run", "--cwd", "apps/web", "build"], {
-      TABLECAST_API_CONFIG: apiPath,
-      TABLECAST_WEB_CONFIG: webPath,
-    });
     await currentRevision();
   }
   const headers = {
@@ -426,6 +429,8 @@ async function main() {
       return;
     }
     if (!secrets) throw new Error("配備secretがありません。");
+    for (const image of ["tablecast-voice", ...(target.pr ? ["tablecast-emulate"] : [])])
+      await wrangler(["containers", "push", `${image}:${sha}`]);
     // Viteが出力した設定を利用し、APIを別bundleしない。
     const outputs = await readdir(resolve(root, "apps/web/dist"));
     const outputConfigs: { name: string; path: string }[] = [];
@@ -440,6 +445,18 @@ async function main() {
     for (const name of [target.api, target.web]) {
       const config = outputConfigs.find((value) => value.name === name);
       if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
+      if (name === target.api)
+        await writeFile(
+          config.path,
+          JSON.stringify(
+            deploymentArtifact(
+              JSON.parse(await readFile(config.path, "utf8")),
+              target,
+              sha,
+              database.uuid,
+            ),
+          ),
+        );
       await wrangler([
         "deploy",
         "--config",

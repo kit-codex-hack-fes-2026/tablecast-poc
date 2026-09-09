@@ -19,6 +19,8 @@ Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService Binding
 
 PythonはCloudflare Containersへ置き、LiveKit CloudにはSFU・Room・dispatchを任せる。WebRTCはWorkersを経由しない。MastraはAPI Worker内の既存実装を使い、別のStudioサーバーやhosted o11y exporterは追加しない。LiveKitの`record=False`を維持する。
 
+Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と全CI成功後の配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
+
 ## 最初に登録するもの
 
 CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Accessを対象accountで利用可能にする。R2とAccessが未有効の場合、配備は失敗して止まる。API tokenは対象accountだけに限定し、Workers Scripts、D1、Workers R2 Storage、Containers、Access Apps and Policiesの管理権限と、Wranglerが要求するaccountの読取り権限を付ける。実際の権限名はtoken作成画面で照合する。
@@ -53,18 +55,18 @@ Web applicationの設定を次と完全一致させる。
 
 ## Actionsの処理
 
-1. format/lint/typecheck、単体・実Binding・Python、Workers/Storybook build、UI部品、Chromium/WebKit E2E、合成音声WebRTC、両Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。
+1. format/lint/typecheck、単体・実Binding・Python、Workers/Storybook build、UI部品、Chromium/WebKit E2E、合成音声WebRTC、両Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. `.local/tablecast-deploy/`へ環境別Wrangler configを生成し、Cloudflare Vite pluginでWeb/APIをbuildする。`--env`をbuild後に付けて別環境へ転用しない。
+4. 配備ジョブは全検証成功後にartifactを取得する。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. 既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
 D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
-配備・cleanupの入口は `bun --no-env-file run deploy`。既存依存のtsxをrootにも明示し、Wranglerの遠隔bindingを使う管理スクリプトをNode.js 24.7.0で実行する。Bun 1.3.13での遠隔接続停止を回避し、build・公式CLIの起動はBunを維持する。
+ビルドの入口は `bun --no-env-file run build:deploy`、配備・cleanupの入口は `bun --no-env-file run deploy`。Wranglerの遠隔bindingを使う配備・cleanupだけを既存tsx経由のNode.js 24.7.0で実行する。同じ遠隔D1接続がBun 1.3.13では45秒以内に完了せず、Nodeでは約4秒で成功した。Bun内部の原因までは未特定。Wranglerの公式サポートruntimeはNodeであり、独自の通信互換処理は追加しない。依存管理、config生成、build、公式CLIの起動はBunを維持する。[Wranglerの実行要件](https://developers.cloudflare.com/workers/wrangler/install-and-update/#install-wrangler)
 
-DockerイメージはActionsのUbuntu runnerで、Wrangler deploy時にDockerfileからlinux/amd64へbuildし、Cloudflare Registryへpushする。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。`images` jobでも先にbuildと起動を検査する。実配備ではもう一度buildするため、そのrunner時間も発生する。uv依存・VADモデルは既存Dockerfileのbuild段階で準備し、cold startでpip/uv installしない。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
+DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`wrangler containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`wrangler deploy`で配備する。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。uv依存・VADモデルは既存Dockerfileのbuild段階で準備し、cold startでpip/uv installしない。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
 ## 初期データと再実行
 

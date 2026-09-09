@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "deploy": "tsx scripts/tablecast-deploy.ts",
+    "build:deploy": "bun --no-env-file scripts/tablecast-deploy.ts --build",
     "dev:prepare": "bun --no-env-file scripts/tablecast-dev.ts prepare",
     "dev": "bun --no-env-file scripts/tablecast-dev.ts start",
     "dev:parity": "bun --no-env-file scripts/tablecast-dev.ts parity",
