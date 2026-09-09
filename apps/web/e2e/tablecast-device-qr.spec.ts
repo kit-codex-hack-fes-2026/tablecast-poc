@@ -64,12 +64,10 @@ test("カメラ拒否と画像の読み取り失敗を説明し、コードを�
   // Given: カメラの利用を許可しない環境。
   await page.goto(registration);
   await page.evaluate(() => {
-    Object.defineProperty(navigator, "mediaDevices", {
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
       configurable: true,
-      value: {
-        getUserMedia: async () => {
-          throw new DOMException("拒否", "NotAllowedError");
-        },
+      value: async () => {
+        throw new DOMException("拒否", "NotAllowedError");
       },
     });
   });
