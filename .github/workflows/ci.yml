@@ -26,10 +26,20 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: ./.github/actions/tablecast-setup
         with:
           python: "true"
           turbo: "true"
+      - name: PRのコミットメッセージ
+        if: github.event_name == 'pull_request'
+        env:
+          TABLECAST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TABLECAST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bunx --no-install commitlint --from "$TABLECAST_BASE_SHA" --to "$TABLECAST_HEAD_SHA" --verbose
+      - name: mainのコミットメッセージ
+        if: github.event_name == 'push'
+        run: bunx --no-install commitlint --last --verbose
       # codegenを共有するlint/typecheckは順に実行する。
       - run: bun run format:check && bun run lint && bun run typecheck
 

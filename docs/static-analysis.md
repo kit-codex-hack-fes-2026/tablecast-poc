@@ -79,6 +79,7 @@ ruffは基本エラー、import、未使用、安全な修正から始める。�
 pre-commitは変更ファイルへのformat/lint、必要な関連テストまで。重い全ブラウザー試験・有料音声試験を毎commitへ入れない。
 部分stageを壊さない。`git add .` や無関係な差分の自動stageは禁止。formatterの自動stageを使う場合は部分stageを保全できる挙動を先に検証する。
 pre-pushは無課金のcheck。最終ゲートはCIで再実行し、hookを飛ばせば安全策も消える構成にはしない。
+commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
 失敗時の `--no-verify`、skip、全ignoreを通常手順にしない。起動した別worktreeのGit設定を変更しない。
 
 ## 依存・CI

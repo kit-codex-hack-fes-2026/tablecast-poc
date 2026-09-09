@@ -31,6 +31,8 @@ D1 migration・seedのCLIにも同じローカル保存先と同じ生成config�
 
 hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル版や別OSの絶対パスに依存せず、依存がなければコミットを失敗させる。型付きlint前にはParaglideを生成する。既存checkoutの修復は `bun run hooks:install` を使い、`core.hooksPath` の上書きや検査回避は行わない。
 
+`commit-msg` はcommitlintでConventional Commits、件名先頭のGitmoji、本文必須を検査する。メッセージは英語で書き、[コミット規約](../.agents/skills/conventional-commit/SKILL.md)に従う。`wip`で始まる作業途中のメッセージとcommitlint標準のmerge・revert等の除外は維持する。保存済みメッセージは `bunx --no-install commitlint --edit <ファイル>`、直前のコミットは `bunx --no-install commitlint --last --verbose` で確認できる。
+
 ## worktree識別子
 
 ブラウザー用のドメインは `<worktree>.<repo>.localhost`。メインcheckoutは `main.tablecast-poc.localhost`、`voice-ui` という追加worktreeは `voice-ui.tablecast-poc.localhost` になる。repo名はGit共通ディレクトリの親フォルダー名から取得し、detached HEADでも変わらない。各ラベルを小文字化し、英数字・ハイフン以外をハイフンに置換する。名前の重複は起動時に拒否する。
