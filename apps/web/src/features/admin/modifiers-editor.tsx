@@ -1,5 +1,6 @@
 import type { Modifier, Product } from "@tablecast/api/schema";
 import { Button } from "../../components/ui/button";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import {
   BilingualFields,
@@ -63,7 +64,7 @@ export function ModifiersEditor({
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="grid gap-2">
               {t("editor_kind")}
-              <select
+              <NativeSelect
                 className="h-12 rounded-lg border border-input px-3 text-sm"
                 value={group.kind}
                 disabled={disabled}
@@ -76,7 +77,7 @@ export function ModifiersEditor({
                 <option value="single">{t("editor_single")}</option>
                 <option value="multiple">{t("editor_multiple")}</option>
                 <option value="quantity">{t("editor_quantity")}</option>
-              </select>
+              </NativeSelect>
             </label>
             <NumericField
               label={t("editor_min")}

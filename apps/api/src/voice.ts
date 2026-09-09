@@ -11,7 +11,7 @@ import {
   TrackSource,
 } from "livekit-server-sdk";
 import { z } from "zod";
-import { createCastAgent } from "./agent/cast";
+import { castSessionInstructions, createCastAgent, createCastTools } from "./agent/cast";
 import type { Actor } from "./auth";
 import type { TableRecord } from "./db/records";
 import { DomainError, ensure } from "./errors";
@@ -21,8 +21,9 @@ import {
   getVoiceConfirmation,
   markConfirmationRead,
   notifyStore,
+  recordVoiceEvent,
 } from "./modules/operations";
-import { voiceTurnSchema, type VoiceTrigger } from "./schema";
+import { voiceTurnSchema, voiceToolNameSchema, type VoiceTrigger } from "./schema";
 
 const id = z.string().min(1).max(100);
 const sessionBody = z.object({ voiceSessionId: id, turnId: id });
@@ -123,8 +124,7 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
       env.TABLECAST_LIVEKIT_API_KEY &&
       env.TABLECAST_LIVEKIT_API_SECRET &&
       env.TABLECAST_VOICE_API_TOKEN &&
-      env.TABLECAST_MODEL_API_KEY &&
-      env.TABLECAST_MODEL,
+      env.TABLECAST_MODEL_API_KEY,
     "VOICE_NOT_CONFIGURED",
     503,
   );
@@ -220,9 +220,104 @@ voiceRoutes.get("/config", async (c) => {
     participantIdentity: voiceParticipantIdentity(voiceSessionId),
     locale: session.locale,
     voice: catalog.configuration.cast.voice[session.locale],
+    speechSpeed: session.speech_speed,
     proactive: catalog.configuration.cast.proactive,
     releaseSha: c.env.TABLECAST_RELEASE_SHA,
   });
+});
+voiceRoutes.get("/realtime", async (c) => {
+  const actor = await voiceActor(c.env, id.parse(c.req.query("voiceSessionId")));
+  const session = await getSession(c.env, actor);
+  const tools = createCastTools(c.env, actor, c.req.raw.signal);
+  return c.json({
+    model: "gpt-realtime-2.1",
+    instructions: `${castSessionInstructions(session.locale)}\n一回の客発話への応答では、ツール前の確認しますね等は最初の一度だけにする。続くツール照会では同じ声かけを繰り返さない。任意選択を指定されていない明確な単品注文は追加完了を短く伝え、任意選択の案内を新しい確認質問へしない。`,
+    tools: Object.values(tools).map((tool) => ({
+      type: "function",
+      name: tool.id,
+      description: tool.description,
+      parameters: tool.parameters,
+    })),
+  });
+});
+voiceRoutes.post("/transcript", async (c) => {
+  const input = sessionBody
+    .extend({ text: z.string().max(10000) })
+    .strict()
+    .parse(await c.req.json());
+  const actor = await voiceActor(c.env, input.voiceSessionId);
+  // 遅れて届く字幕は元のturnだけへ反映し、現在turnや承認の根拠を変更しない。
+  await c.env.TABLECAST_DB.batch([
+    c.env.TABLECAST_DB.prepare(
+      "UPDATE table_events SET data_json=json_set(data_json,'$.text',?) WHERE table_session_id=? AND kind='voice.user' AND json_extract(data_json,'$.turnId')=? AND json_extract(data_json,'$.text')<>? AND EXISTS(SELECT 1 FROM voice_turns WHERE id=? AND voice_session_id=?)",
+    ).bind(
+      input.text,
+      actor.tableSessionId,
+      input.turnId,
+      input.text,
+      input.turnId,
+      input.voiceSessionId,
+    ),
+    // 字幕が再生通知より遅くても、増加するcursorで管理画面を更新する。
+    c.env.TABLECAST_DB.prepare(
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT ?,?,'voice.transcribed',?,? WHERE changes()=1",
+    ).bind(
+      actor.storeId,
+      actor.tableSessionId,
+      JSON.stringify({ turnId: input.turnId }),
+      Date.now(),
+    ),
+  ]);
+  c.executionCtx.waitUntil(notifyStore(c.env, actor.storeId));
+  return c.json({ ok: true });
+});
+voiceRoutes.post("/tools", async (c) => {
+  const input = sessionBody
+    .extend({
+      toolName: voiceToolNameSchema,
+      toolCallId: id,
+      arguments: z.record(z.string(), z.unknown()),
+    })
+    .strict()
+    .parse(await c.req.json());
+  const actor = await voiceActor(c.env, input.voiceSessionId, input.turnId);
+  const session = await getSession(c.env, actor);
+  const proactive = await c.env.TABLECAST_DB.prepare(
+    "SELECT cursor FROM table_events WHERE table_session_id=? AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=?",
+  )
+    .bind(session.id, input.turnId)
+    .first("cursor");
+  const trigger = proactive ? "proactive" : "user";
+  await currentVoiceTurn(c.env, actor, session.locale, trigger);
+  const tools = createCastTools(c.env, actor, c.req.raw.signal, trigger);
+  const tool = tools[input.toolName];
+  ensure(tool?.execute, "VOICE_TOOL_FORBIDDEN", 403);
+  const record = async (state: "running" | "completed" | "error") =>
+    recordVoiceEvent(
+      c.env,
+      actor,
+      {
+        kind: "voice.tool",
+        data: {
+          toolName: input.toolName,
+          toolCallId: input.toolCallId,
+          state,
+          ...(state === "error" ? { errorCode: "VOICE_TOOL_FAILED" } : {}),
+        },
+      },
+      true,
+    );
+  // 一つのINSERTでcall IDを予約し、再送や並行要求を実行前に拒否する。
+  ensure(await record("running"), "VOICE_TOOL_ALREADY_CALLED", 409);
+  try {
+    const result = await tool.invoke(input.arguments);
+    await record("completed");
+    c.executionCtx.waitUntil(notifyStore(c.env, actor.storeId));
+    return c.json({ result });
+  } catch (error) {
+    await record("error");
+    throw error;
+  }
 });
 voiceRoutes.post("/turns", async (c) => {
   const body: unknown = await c.req.json().catch(() => {
@@ -257,7 +352,11 @@ voiceRoutes.post("/turns", async (c) => {
       return c.body(null, 204);
     }
   }
-  ensure(c.env.TABLECAST_MODEL_API_KEY && c.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
+  ensure(
+    c.env.TABLECAST_MODEL_API_KEY && (input.transport === "realtime" || c.env.TABLECAST_MODEL),
+    "VOICE_NOT_CONFIGURED",
+    503,
+  );
   const result = await c.env.TABLECAST_DB.batch([
     c.env.TABLECAST_DB.prepare(
       `UPDATE table_sessions SET active_turn_id=? WHERE id=? AND voice_state='active' AND voice_session_id=? AND status='open' AND locale=? ${proactive ? proactiveReservationCondition : ""}`,
@@ -315,6 +414,10 @@ voiceRoutes.post("/turns", async (c) => {
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
   logVoiceTurn(diagnostics, "accepted");
   const currentActor = { ...actor, turnId: input.turnId };
+  if (input.transport === "realtime") {
+    c.executionCtx.waitUntil(notifyStore(c.env, actor.storeId));
+    return c.json({ ok: true });
+  }
   const cancellation = new AbortController();
   const signal = AbortSignal.any([c.req.raw.signal, cancellation.signal]);
   let generationFailed = false;
@@ -327,12 +430,50 @@ voiceRoutes.post("/turns", async (c) => {
       abortSignal: signal,
       requestContext,
       maxSteps: proactive ? 3 : 8,
+      providerOptions: { openai: { reasoningEffort: "none" } },
+      onChunk: async (chunk) => {
+        if (
+          chunk.type !== "tool-call" &&
+          chunk.type !== "tool-result" &&
+          chunk.type !== "tool-error"
+        )
+          return;
+        signal.throwIfAborted();
+        const toolName = voiceToolNameSchema.parse(chunk.payload.toolName);
+        const toolCallId = id.parse(chunk.payload.toolCallId);
+        // 言語変更は自身の資格を停止し、完了イベントを更新と同時に保存する。
+        if (toolName === "setLanguage" && chunk.type === "tool-result") {
+          const changed = await c.env.TABLECAST_DB.prepare(
+            "SELECT id FROM table_sessions WHERE id=? AND store_id=? AND voice_state='stopped' AND voice_session_id IS NULL",
+          )
+            .bind(currentActor.tableSessionId, currentActor.storeId)
+            .first("id");
+          if (changed) return;
+        }
+        const stored = await recordVoiceEvent(c.env, currentActor, {
+          kind: "voice.tool",
+          data: {
+            toolName,
+            toolCallId,
+            state:
+              chunk.type === "tool-call"
+                ? "running"
+                : chunk.type === "tool-result"
+                  ? "completed"
+                  : "error",
+            ...(chunk.type === "tool-error" ? { errorCode: "VOICE_TOOL_FAILED" } : {}),
+          },
+        });
+        ensure(stored, "VOICE_SESSION_STALE", 409);
+      },
       onError: () => {
         generationFailed = true;
       },
       stopWhen: ({ steps }: { steps: readonly { toolCalls: readonly { toolName: string }[] }[] }) =>
         steps.some((step) =>
-          step.toolCalls.some((call) => call.toolName === "prepareConfirmation"),
+          step.toolCalls.some((call) =>
+            ["prepareConfirmation", "setLanguage"].includes(call.toolName),
+          ),
         ),
     })
     .catch(async (error: unknown) => {
@@ -341,6 +482,7 @@ voiceRoutes.post("/turns", async (c) => {
         input.voiceSessionId,
         input.turnId,
         signal.aborted ? "interrupted" : "failed",
+        "VOICE_MODEL_FAILED",
       );
       if (signal.aborted) throw new DomainError("VOICE_CANCELLED", 409, "VOICE_CANCELLED");
       throw error;
@@ -379,7 +521,13 @@ voiceRoutes.post("/turns", async (c) => {
         cancellation.abort();
         controller.error(error);
         await reader.cancel().catch(() => {});
-        await finishVoiceTurn(c.env, input.voiceSessionId, input.turnId, status);
+        await finishVoiceTurn(
+          c.env,
+          input.voiceSessionId,
+          input.turnId,
+          status,
+          "VOICE_MODEL_FAILED",
+        );
       }
     },
     async cancel(reason) {
@@ -421,11 +569,21 @@ export async function finishVoiceTurn(
   voiceSessionId: string,
   turnId: string,
   status: "completed" | "interrupted" | "failed",
+  failureCode: "VOICE_MODEL_FAILED" | "VOICE_INTERNAL_ERROR" = "VOICE_INTERNAL_ERROR",
 ) {
-  await env.TABLECAST_DB.batch([
+  const result = await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
       "UPDATE voice_turns SET status=?,ended_at=? WHERE id=? AND voice_session_id=? AND (status='started' OR (status='completed' AND ?<>'completed'))",
     ).bind(status, Date.now(), turnId, voiceSessionId, status),
+    env.TABLECAST_DB.prepare(
+      "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,'voice.failed',?,? FROM table_sessions WHERE voice_session_id=? AND active_turn_id=? AND voice_state='active' AND status='open' AND ?='failed' AND changes()=1",
+    ).bind(
+      JSON.stringify({ turnId, code: failureCode }),
+      Date.now(),
+      voiceSessionId,
+      turnId,
+      status,
+    ),
     env.TABLECAST_DB.prepare(
       "UPDATE confirmations SET status='invalid' WHERE voice_session_id=? AND created_turn_id=? AND status='pending' AND ?<>'completed'",
     ).bind(voiceSessionId, turnId, status),
@@ -433,6 +591,14 @@ export async function finishVoiceTurn(
       "UPDATE table_sessions SET active_turn_id=NULL WHERE voice_session_id=? AND active_turn_id=? AND ?<>'completed'",
     ).bind(voiceSessionId, turnId, status),
   ]);
+  if (result[1]?.meta.changes === 1) {
+    const storeId = await env.TABLECAST_DB.prepare(
+      "SELECT store_id FROM voice_turns WHERE id=? AND voice_session_id=?",
+    )
+      .bind(turnId, voiceSessionId)
+      .first<string>("store_id");
+    if (storeId) await notifyStore(env, storeId);
+  }
 }
 voiceRoutes.post("/turns/:turnId/end", async (c) => {
   const input = z

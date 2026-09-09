@@ -1,0 +1,35 @@
+{
+  "skill_name": "github-project-ops",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "GitHub Projectを初期設定して。",
+      "expected_output": "Computer Use / Codex Browserの標準画面とテンプレートを優先し、長い設定スクリプトを作らない。"
+    },
+    {
+      "id": 2,
+      "prompt": "工数と予定日がまだ未定だが、既存IssueをProjectに追加して。",
+      "expected_output": "追加を進め、未定値は空欄にする。詳細な容量計算を要求しない。"
+    },
+    {
+      "id": 3,
+      "prompt": "Projectを整理して。",
+      "expected_output": "項目の整理とProjectの削除を区別し、IssueやPRを削除しない。"
+    },
+    {
+      "id": 4,
+      "prompt": "新しいProjectにIssueとepicを追加して。工数と予定日は未定。",
+      "expected_output": "全対象にPriorityを設定し、工数・予定日は空欄で進める。未判断のPriorityを最低優先度とみなさずトリアージする。"
+    },
+    {
+      "id": 5,
+      "prompt": "通常作業と重大なデータ破壊バグを優先順位付けして。既存の尺度はp0-optionalからp3-critical。",
+      "expected_output": "通常作業はp1-normal、重大障害はp3-criticalを根拠付きで選び、重大障害を先に表示する。"
+    },
+    {
+      "id": 6,
+      "prompt": "epicの子Issueの一つがblocked、別の子は作業中。PRはCI待ち。状態を更新して。",
+      "expected_output": "epicはin-progressを維持する。通常のCI待ちはblockedにせず、レビュー可能なPRならin-reviewとする。"
+    }
+  ]
+}

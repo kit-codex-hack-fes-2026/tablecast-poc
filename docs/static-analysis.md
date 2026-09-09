@@ -88,3 +88,9 @@ CIはbun.lockとuv.lockの存在を検査し、frozen指定で導入する。未
 通常はroot scriptからローカル導入済みCLIを起動する。workspace同士はworkspace依存を使い、同じ依存の不要な二重pinを増やさない。
 Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複数の同種静的ツールを一括必須化しない。
 生成型・migrationの差分を確認する。デプロイ、seed、reset、外部モデルの実行はTurbo cacheの再利用対象にしない。
+
+## CIの実行単位
+
+GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2E、合成音声WebRTCを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
+
+共通actionは固定版のNode/Bunと、必要なジョブだけPythonを導入する。Bunの取得cacheとuvの公式cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は7日間保持する。

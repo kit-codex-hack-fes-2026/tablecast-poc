@@ -1,0 +1,65 @@
+{
+  "skill_name": "fullstack-web-testing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Hono、Workers、Next.jsでtenant別Issue編集を追加する。認可、監査transaction、UI retry、最終動作をテスト設計して。",
+      "expected_output": "レイヤー（ランナー）を明記し、純粋な権限判断、HTTP入口、実DBのtenantと原子性、connected UI、少数のE2Eを分担する"
+    },
+    {
+      "id": 2,
+      "prompt": "Playwrightで実Next.jsを起動し、APIは全てmockしている。これはE2Eとして十分？",
+      "expected_output": "Webアプリ統合（Playwright）と分類し、実API・DB・認証との最終接続は未検証とする"
+    },
+    {
+      "id": 3,
+      "prompt": "propsだけのLoading storyとQueryClient/MSWが失敗してからRetryするstoryのplayを書いて。",
+      "expected_output": "静的Loadingにrender-only playを増やさず、Retryは実状態遷移を検査する"
+    },
+    {
+      "id": 4,
+      "prompt": "viewerが他tenantへ書き込むケースだけでroleとtenantの拒否を保証したい。",
+      "expected_output": "同時に二つのguardが成立する偽陽性を指摘し、各guardを独立に通す前提と副作用なしの確認を設計する"
+    },
+    {
+      "id": 5,
+      "prompt": "create、update、deleteをmodeで切り替える巨大each helperにまとめて。",
+      "expected_output": "独立した規則を分け、共有setupだけ小さく再利用する"
+    },
+    {
+      "id": 6,
+      "prompt": "CIにDB設定がないのでtest.skipにしたい。flakyもretryを増やして通したい。",
+      "expected_output": "必須環境はsetup失敗として扱い、flakyの同期・隔離を調査する。一時隔離は理由・担当・解除条件・代替保証を残す"
+    },
+    {
+      "id": 7,
+      "prompt": "監査保存で失敗した時のrollbackテストが長い。assertionを1つずつ別のunit testにして。",
+      "expected_output": "原子的結果は同じ実DB統合テストで保ち、長さだけで安全性の観測を壊さない"
+    },
+    {
+      "id": 8,
+      "prompt": "MCP toolの認可を実LLMとPlaywrightで全role検査したい。",
+      "expected_output": "tool単体（Vitest）で各guardと副作用なし、SDK in-memoryで本番登録と接続、実HTTPで認証を分担し、LLMを不要とする"
+    },
+    {
+      "id": 9,
+      "prompt": "Mastra workflowとAI SDKのtool loopをtemperature=0で決定的なCIにして。",
+      "expected_output": "temperature=0を決定性と認めず、対象版の公式mock providerでtool callと応答を台本化し、本番workflow・toolと停止条件を検証する。実モデルの選択品質は別評価とする"
+    },
+    {
+      "id": 10,
+      "prompt": "LiveKitのtoolをmockし、公式AgentSessionテストが通った。音声E2Eも保証済み？",
+      "expected_output": "実LLM依存が残る可能性とRoom未接続を確認し、固定イベントの制御統合、実音声品質、Room疎通を区別する"
+    },
+    {
+      "id": 11,
+      "prompt": "workflow再開とtool重複実行防止をmemory mockだけでテストして。",
+      "expected_output": "実storageで保存・新しい実行環境からの再開・同時実行を検証し、モデルだけ固定する。書込み後応答前の失敗でも重複しない結果を観測する"
+    },
+    {
+      "id": 12,
+      "prompt": "Agentの回答snapshotが時々落ちるので成功するまでretryしたい。",
+      "expected_output": "構造・副作用などの決定的保証を下位層へ移し、意味の品質は固定datasetの別評価で試行数と失敗例を記録する。成功までretryや無言skipを拒む"
+    }
+  ]
+}

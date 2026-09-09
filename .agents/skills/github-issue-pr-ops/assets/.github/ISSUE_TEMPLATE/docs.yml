@@ -1,0 +1,35 @@
+name: "文書の変更"
+description: "文書の対象読者と修正内容を書く。"
+labels: [docs]
+body:
+  - type: markdown
+    attributes:
+      value: "画像・動画やログは関連する説明中に埋め込み、直下に操作と確認結果の短いキャプションを添える。撮ったままでよく、装飾編集は不要。秘密情報を除き、必要なら圧縮する。"
+  - type: textarea
+    id: purpose
+    attributes:
+      label: "目的と対象"
+      description: "対象文書、読者、変更が必要な理由を書く。"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "受け入れ条件と確認方法"
+      description: "読者が何を理解・再現できればよいか、どう確認するかを書く。"
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: "意思決定と最小実装の方針"
+      description: "採用方針と理由、比較した有力な代替案を書く。minimum-implに照らし、再利用する既存実装・標準機能と、独自実装が必要な理由を説明する。未決定なら判断に必要な証拠を示す。文書・調査・epicはその成果の粒度で書き、適用外の項目には理由を添える。"
+    validations:
+      required: true
+  - type: textarea
+    id: test_strategy
+    attributes:
+      label: "テスト戦略との整合"
+      description: "fullstack-web-testingに照らし、受入条件・リスクを担保するレイヤー（具体的なランナー）と選択理由を書く。下位層で十分な規則と統合・E2Eで確認する境界を区別する。起票時は計画と未確定事項を示し、実行結果はPRへ書く。自動テストが適用外なら理由と代わりの確認を書く。"
+    validations:
+      required: true

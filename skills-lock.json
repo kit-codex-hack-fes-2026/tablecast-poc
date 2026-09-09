@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "conventional-commit": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "conventional-commit/SKILL.md",
+      "computedHash": "3d5f561355d53d32c8702df40ca14daac58cd91bf9a78f326e07e4a96a4d7142"
+    },
+    "fullstack-web-testing": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "fullstack-web-testing/SKILL.md",
+      "computedHash": "b291f55f697aebed86c6f8c287bdfe2f8d25d9cc4172d23c7a7522354982a56c"
+    },
+    "github-issue-pr-ops": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "github-issue-pr-ops/SKILL.md",
+      "computedHash": "bfa114e9601f8b7b7027dee9b2da1eb6ed79d4b38371a6595678e50f26d4aa40"
+    },
+    "github-project-ops": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "github-project-ops/SKILL.md",
+      "computedHash": "a919e2a6dd91aee1face140115e93b04534c4d89f87a6e6953ff4369f3340b06"
+    },
+    "minimum-impl": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "minimum-impl/SKILL.md",
+      "computedHash": "c27fe9faed57827c5fd5513b287b9fdb915f8576e3917a22937a9a93c5806599"
+    },
+    "openscreen-demo-video": {
+      "source": "ReoHakase/skills",
+      "sourceType": "github",
+      "skillPath": "openscreen-demo-video/SKILL.md",
+      "computedHash": "d2b326aceedee82af0470218c9367586b066cd6943e7d942151a6b3bfd8ddd4e"
+    }
+  }
+}

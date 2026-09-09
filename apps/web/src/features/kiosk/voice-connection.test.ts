@@ -8,9 +8,12 @@ const transport = vi.hoisted(() => ({
   capture: vi.fn<() => Promise<{ stop: () => void }>>(),
   stop: vi.fn<() => void>(),
   startAudio: vi.fn<() => Promise<void>>(),
-  on: vi.fn<() => void>(),
+  on: vi.fn<(event: string, listener: (...args: unknown[]) => void) => void>(),
 }));
 vi.mock("livekit-client", () => ({
+  RemoteAudioTrack: function TablecastRemoteAudioTrack() {
+    return {};
+  },
   Room: class {
     connect = transport.connect;
     disconnect = transport.disconnect;
@@ -23,6 +26,7 @@ vi.mock("livekit-client", () => ({
     TrackUnsubscribed: "untrack",
     ParticipantAttributesChanged: "state",
     TranscriptionReceived: "transcription",
+    DataReceived: "data",
     Disconnected: "disconnected",
   },
   Track: { Kind: { Audio: "audio" } },
@@ -143,5 +147,86 @@ describe("音声の明示的な停止と再開", () => {
     await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("paused"));
     expect(transport.stop).toHaveBeenCalledOnce();
     expect(requests.filter((request) => request.path.endsWith("/stop"))).toHaveLength(0);
+  });
+  it("Agentの逐次本文は状態変更でも保持し停止後の遅延パケットを無視する", async () => {
+    const callbacks = new Map<string, (...args: unknown[]) => void>();
+    transport.on.mockImplementation((event, listener) => {
+      callbacks.set(event, listener);
+    });
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    const packet = new TextEncoder().encode(
+      JSON.stringify({
+        type: "assistant",
+        turnId: "tablecast-turn",
+        text: "こちらを",
+        rawText: "[warm]こちらを",
+        final: false,
+      }),
+    );
+    callbacks.get("data")?.(packet, { isAgent: false }, undefined, "tablecast.voice");
+    expect(changes.at(-1)?.messages).toBeUndefined();
+    callbacks.get("data")?.(packet, { isAgent: true }, undefined, "tablecast.voice");
+    callbacks.get("state")?.({ "lk.agent.state": "speaking" }, { isAgent: true });
+    expect(changes.at(-1)?.messages?.[0]).toMatchObject({
+      text: "こちらを",
+      rawText: "[warm]こちらを",
+      final: false,
+    });
+    expect(changes.at(-1)?.status).toBe("speaking");
+    await connection.stop();
+    callbacks.get("data")?.(packet, { isAgent: true }, undefined, "tablecast.voice");
+    expect(changes.at(-1)?.status).toBe("paused");
+    expect(changes.at(-1)?.messages?.[0]).toMatchObject({ final: true, interrupted: true });
+  });
+  it("字幕の容量超過は音声の中断と区別し確定済みの客発話を変えない", async () => {
+    const callbacks = new Map<string, (...args: unknown[]) => void>();
+    transport.on.mockImplementation((event, listener) => {
+      callbacks.set(event, listener);
+    });
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("en");
+    const deliver = (data: unknown) =>
+      callbacks.get("data")?.(
+        new TextEncoder().encode(JSON.stringify(data)),
+        { isAgent: true },
+        undefined,
+        "tablecast.voice",
+      );
+    deliver({
+      type: "user",
+      id: "tablecast-user",
+      turnId: "tablecast-turn",
+      text: "Sake please",
+      final: true,
+    });
+    deliver({
+      type: "assistant",
+      turnId: "tablecast-turn",
+      text: "Here are",
+      rawText: "Here are",
+      final: false,
+    });
+    deliver({ type: "error", turnId: "tablecast-turn", code: "VOICE_TEXT_TOO_LARGE" });
+    expect(changes.at(-1)?.messages?.[0]).toMatchObject({
+      role: "user",
+      final: true,
+      locale: "en",
+    });
+    expect(changes.at(-1)?.messages?.[0]?.interrupted).toBeUndefined();
+    expect(changes.at(-1)?.messages?.[1]).toMatchObject({
+      interrupted: false,
+      displayIncomplete: true,
+      final: true,
+    });
+    deliver({ type: "interrupted", turnId: "tablecast-turn" });
+    expect(changes.at(-1)?.messages?.[0]?.interrupted).toBeUndefined();
+    expect(changes.at(-1)?.messages?.[1]).toMatchObject({
+      interrupted: true,
+      displayIncomplete: false,
+    });
+    await connection.stop();
   });
 });

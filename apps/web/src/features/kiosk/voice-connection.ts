@@ -1,6 +1,7 @@
 import { voiceCredentialsSchema } from "../../lib/responses";
 import type { Locale } from "@tablecast/api/schema";
-import type { LocalAudioTrack, Room } from "livekit-client";
+import type { LocalAudioTrack, RemoteAudioTrack, Room } from "livekit-client";
+import { z } from "zod";
 import { api, ApiFailure, json } from "../../lib/api";
 
 export type VoiceStatus =
@@ -12,15 +13,56 @@ export type VoiceStatus =
   | "stopping"
   | "paused"
   | "error";
+export type LiveMessage = {
+  id: string;
+  role: "user" | "assistant";
+  turnId?: string;
+  text: string;
+  rawText?: string;
+  final: boolean;
+  interrupted?: boolean;
+  createdAt: number;
+  speaker?: string;
+  streamId?: string;
+  locale?: Locale;
+  displayIncomplete?: boolean;
+};
 export type VoiceView = {
   status: VoiceStatus;
   error?: "permission" | "unconfigured" | "connection" | "active";
   interim?: string;
+  messages?: LiveMessage[];
+  inputTrack?: LocalAudioTrack;
+  outputTrack?: RemoteAudioTrack;
 };
+const voicePacket = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("user"),
+    id: z.string().max(200),
+    turnId: z.string().optional(),
+    text: z.string().max(10000),
+    final: z.boolean(),
+    speaker: z.object({ id: z.string().nullable(), streamId: z.string() }).optional(),
+  }),
+  z.object({
+    type: z.literal("assistant"),
+    turnId: z.string().max(200),
+    text: z.string().max(10000),
+    rawText: z.string().max(16000),
+    final: z.boolean(),
+  }),
+  z.object({ type: z.literal("interrupted"), turnId: z.string().max(200) }),
+  z.object({
+    type: z.literal("error"),
+    turnId: z.string().max(200),
+    code: z.enum(["VOICE_TEXT_TOO_LARGE", "VOICE_RESPONSE_FAILED"]),
+  }),
+]);
 type Credentials = { voiceSessionId: string; token: string; url: string };
 
 export class VoiceConnection {
   private attempt = 0;
+  private view: VoiceView = { status: "idle" };
   private room?: Room;
   private microphone?: LocalAudioTrack;
   private sessionId?: string;
@@ -37,7 +79,7 @@ export class VoiceConnection {
     if (this.desired || this.stopping) return;
     this.desired = true;
     const attempt = ++this.attempt;
-    this.onChange({ status: "connecting" });
+    this.emit({ status: "connecting" });
     let created: Credentials | undefined;
     try {
       created = await api(
@@ -52,6 +94,7 @@ export class VoiceConnection {
       this.sessionId = created.voiceSessionId;
       const {
         Room: LiveKitRoom,
+        RemoteAudioTrack,
         RoomEvent,
         Track,
         createLocalAudioTrack,
@@ -66,40 +109,89 @@ export class VoiceConnection {
         },
       });
       this.room = room;
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (!this.current(attempt) || track.kind !== Track.Kind.Audio) return;
+      room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+        if (
+          !this.current(attempt) ||
+          track.kind !== Track.Kind.Audio ||
+          !(track instanceof RemoteAudioTrack) ||
+          !participant.isAgent
+        )
+          return;
+        this.emit({ outputTrack: track });
         const element = track.attach();
         element.autoplay = true;
         this.audio.add(element);
         document.body.append(element);
       });
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        if (this.view.outputTrack === track) this.emit({ outputTrack: undefined });
         for (const element of track.detach()) {
           element.pause();
           element.remove();
           this.audio.delete(element);
         }
       });
-      room.on(RoomEvent.ParticipantAttributesChanged, (attributes) => {
-        if (!this.current(attempt)) return;
+      room.on(RoomEvent.ParticipantAttributesChanged, (attributes, participant) => {
+        if (!this.current(attempt) || !participant.isAgent) return;
         const state = attributes["lk.agent.state"];
         if (state === "listening" || state === "thinking" || state === "speaking")
-          this.onChange({ status: state });
+          this.emit({ status: state });
       });
-      room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
-        if (!this.current(attempt)) return;
-        if (participant?.isLocal) {
-          const interim = segments
-            .filter((segment) => !segment.final)
-            .map((segment) => segment.text)
-            .join(" ");
-          this.onChange({ status: "listening", interim });
+      room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+        if (
+          !this.current(attempt) ||
+          !participant?.isAgent ||
+          topic !== "tablecast.voice" ||
+          payload.byteLength > 64000
+        )
+          return;
+        try {
+          const packet = voicePacket.safeParse(JSON.parse(new TextDecoder().decode(payload)));
+          if (!packet.success) return;
+          const data = packet.data;
+          const messages = this.view.messages ?? [];
+          if (data.type === "interrupted" || data.type === "error") {
+            const displayIncomplete = data.type === "error" && data.code === "VOICE_TEXT_TOO_LARGE";
+            this.emit({
+              messages: messages.map((message) =>
+                message.role === "assistant" && message.turnId === data.turnId
+                  ? { ...message, interrupted: !displayIncomplete, displayIncomplete, final: true }
+                  : message,
+              ),
+            });
+            this.onSync();
+            return;
+          }
+          const id = data.type === "user" ? data.id : data.turnId;
+          const previous = messages.find(
+            (message) => message.id === id && message.role === data.type,
+          );
+          const next: LiveMessage = {
+            id,
+            role: data.type,
+            locale,
+            text: data.text,
+            final: data.final,
+            turnId: data.turnId,
+            createdAt: previous?.createdAt ?? Date.now(),
+            ...(data.type === "assistant"
+              ? { rawText: data.rawText }
+              : { speaker: data.speaker?.id ?? undefined, streamId: data.speaker?.streamId }),
+          };
+          this.emit({
+            messages: [
+              ...messages.filter((message) => !(message.id === id && message.role === data.type)),
+              next,
+            ].slice(-100),
+          });
+          if (data.final) this.onSync();
+        } catch {
+          /* 不正なデータパケットは会話へ表示しない。 */
         }
-        if (segments.some((segment) => segment.final)) this.onSync();
       });
       room.on(RoomEvent.Disconnected, () => {
         if (!this.current(attempt)) return;
-        void this.stop().then(() => this.onChange({ status: "error", error: "connection" }));
+        void this.stop().then(() => this.emit({ status: "error", error: "connection" }));
       });
       await room.connect(created.url, created.token);
       if (!this.current(attempt)) {
@@ -117,6 +209,7 @@ export class VoiceConnection {
         return;
       }
       this.microphone = microphone;
+      this.emit({ inputTrack: microphone });
       await room.localParticipant.publishTrack(microphone);
       if (!this.current(attempt)) {
         microphone.stop();
@@ -124,13 +217,13 @@ export class VoiceConnection {
         return;
       }
       await room.startAudio();
-      if (this.current(attempt)) this.onChange({ status: "listening" });
+      if (this.current(attempt)) this.emit({ status: "listening" });
     } catch (error) {
       if (!this.current(attempt)) return;
       if (error instanceof ApiFailure && error.code === "VOICE_ALREADY_ACTIVE") {
         this.desired = false;
         ++this.attempt;
-        this.onChange({ status: "error", error: "active" });
+        this.emit({ status: "error", error: "active" });
         this.onSync();
         return;
       }
@@ -141,7 +234,7 @@ export class VoiceConnection {
             ? "unconfigured"
             : "connection";
       await this.stop();
-      this.onChange({ status: "error", error: reason });
+      this.emit({ status: "error", error: reason });
     }
   }
 
@@ -159,7 +252,7 @@ export class VoiceConnection {
       return Promise.resolve();
     this.desired = false;
     ++this.attempt;
-    this.onChange({ status: "stopping" });
+    this.emit({ status: "stopping" });
     this.microphone?.stop();
     this.microphone = undefined;
     for (const element of this.audio) {
@@ -177,7 +270,7 @@ export class VoiceConnection {
       ...(serverStopped ? [] : [this.retire(sessionId)]),
     ])
       .then((results) => {
-        this.onChange(
+        this.emit(
           results.some((result) => result.status === "rejected")
             ? { status: "error", error: "connection" }
             : { status: "paused" },
@@ -190,6 +283,18 @@ export class VoiceConnection {
     return this.stopping;
   }
 
+  private emit(change: Partial<VoiceView>) {
+    this.view = { ...this.view, ...change };
+    if (change.status === "connecting") this.view.error = undefined;
+    if (["stopping", "paused", "error"].includes(change.status ?? "")) {
+      this.view.inputTrack = undefined;
+      this.view.outputTrack = undefined;
+      this.view.messages = this.view.messages?.map((message) =>
+        message.final ? message : { ...message, final: true, interrupted: true },
+      );
+    }
+    this.onChange(this.view);
+  }
   private current(attempt: number) {
     return this.desired && this.attempt === attempt;
   }

@@ -7,6 +7,7 @@ import { expect, it } from "vitest";
 import { getPlatformProxy } from "wrangler";
 import { seedDemoDatabase, tablecastHistoryBaseTime } from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
+import { configurationSchema } from "../apps/api/src/schema";
 
 const execute = promisify(execFile);
 
@@ -85,6 +86,43 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         orders: 2415,
       });
       expect(Number(counts?.events)).toBeGreaterThanOrEqual(20_000);
+      const catalogs = await db
+        .prepare("SELECT config_json FROM stores")
+        .all<{ config_json: string }>();
+      const products = catalogs.results.flatMap(
+        (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
+      );
+      expect(products).toHaveLength(180);
+      for (const product of products) {
+        expect(product.imageKey).toMatch(/^tablecast\/demo\/[a-z-]+\.png$/);
+        expect(product.imageKind).toBe("illustration");
+        expect(product.allergens.note.ja).toContain("混入は未確認");
+        expect(product.allergens.note.en).toContain("cross-contact");
+        expect(product.allergens.note.en).toContain("unverified");
+      }
+      for (const product of products.filter((item) => item.categoryId !== "sake")) {
+        expect(product.allergens.note.ja).toContain(product.text.ja.description);
+        expect(product.allergens.note.en).toContain(product.text.en.description);
+      }
+      expect(
+        products.find((product) => product.id === "tablecast-komorebi-karaage")?.allergens,
+      ).toMatchObject({
+        contains: ["wheat", "soya"],
+        evidence: "verified",
+        crossContact: "unknown",
+        vegan: "unknown",
+      });
+      expect(
+        products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens,
+      ).toMatchObject({
+        contains: [],
+        evidence: "unknown",
+        crossContact: "unknown",
+        vegan: "unknown",
+      });
+      expect(
+        products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens.note.ja,
+      ).toContain("詳しい原材料は未登録");
       expect(
         await db
           .prepare(

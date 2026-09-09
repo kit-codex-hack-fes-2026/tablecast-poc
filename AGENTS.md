@@ -27,9 +27,15 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 - Bun workspaces + Turborepo。JS依存はルート `bun.lock`、Pythonは `livekit/pyproject.toml` と `livekit/uv.lock`。
 - `apps/web`: TanStack Start、Base UI、日英UI。Storybookは `apps/web/.storybook`、Storyは部品に隣接。
 - `apps/api`: Hono、Mastra、Better Auth、Drizzle、D1、DO、R2、Images、MCP。DBと業務判断の所有者。
-- `livekit`: Python LiveKit Agent、Inworld STT/TTS。uv、ty、ruff、pytestを使用。
+- `livekit`: Python LiveKit Agent、OpenAI Realtime 2.1音声入力・テキスト出力 + Inworld TTSのhalf-cascade。uv、ty、ruff、pytestを使用。
 - 初期実装では `packages/domain`、`packages/contracts`、`packages/ui`、`apps/storybook` を作らない。
 - ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。
+
+## UIのスタイルと責務
+
+- 原則Tailwindの標準utilityをコンポーネントTSX内に記述する。`styles.css`はトークンと最小限の全体既定値に限定する。
+- 固定値を任意値へ写すだけの移行や、値ごとのトークン化をしない。標準の余白・文字サイズ・角丸・ブレークポイント、意味のある共通色を先に使う。
+- `components/ui`は業務を知らないプリミティブ、`components`はアプリ共通表示、`features`は業務状態・操作を所有する。実際に共有する見た目は部品や既存CVAのvariantへまとめる。
 
 ## 破ってはいけない条件
 

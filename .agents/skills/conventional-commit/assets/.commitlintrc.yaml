@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://github.com/KeisukeYamashita/commitlint-rs/releases/latest/download/schema.json
+#
+# commitlint-rs YAML cannot express Node commitlint-style `ignores`, custom rule
+# messages, or `helpUrl`. Keep the hook wrapper responsible for bypassing
+# messages that match /^wip\b/i and for printing the skill hint:
+# conventional-commit/SKILL.md
+rules:
+  type-empty:
+    level: error
+  type:
+    level: error
+    options:
+      - feat
+      - fix
+      - perf
+      - refactor
+      - docs
+      - style
+      - test
+      - build
+      - ci
+      - chore
+      - revert
+  description-empty:
+    level: error
+  description-format:
+    level: error
+    # Require a Gitmoji-like non-ASCII prefix immediately after `type(scope):`.
+    format: '^[^\x00-\x7F]+ [a-z0-9].*[^.]$'
+  description-max-length:
+    level: error
+    length: 72
+  subject-empty:
+    level: error
+  body-empty:
+    level: error

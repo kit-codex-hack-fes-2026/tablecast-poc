@@ -2,6 +2,7 @@ import { voicePageSchema, type Locale } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { api, ApiFailure } from "../../lib/api";
 
@@ -51,7 +52,7 @@ export function StandardVoiceSelect({
     <div className="space-y-3">
       <label>
         {t("editor_voice")}
-        <select
+        <NativeSelect
           className="h-12 rounded-lg border border-input px-3 text-sm"
           value={value ?? ""}
           disabled={disabled}
@@ -63,12 +64,12 @@ export function StandardVoiceSelect({
               {displayName}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       {voices.isPending && <output className="block">{t("common_loading")}</output>}
       {catalogError ? (
         <div
-          className="notice items-center justify-between"
+          className="flex gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0 items-center justify-between"
           role={code === "VOICE_CATALOG_NOT_CONFIGURED" ? "status" : "alert"}
         >
           <span>

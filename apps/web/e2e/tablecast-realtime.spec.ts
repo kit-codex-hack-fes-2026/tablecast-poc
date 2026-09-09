@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { catalogSchema, tableStateSchema } from "@tablecast/api/schema";
+import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import { expect, test, type WebSocketRoute } from "@playwright/test";
 
 const credentials = z
@@ -13,10 +13,14 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
   baseURL,
 }) => {
   const storeId = "tablecast-komorebi";
-  const tableId = `${storeId}-table-12`;
   const headers = { Origin: baseURL ?? "" };
   const login = await staff.post("/api/auth/sign-in/email", { data: credentials, headers });
   expect(login.status()).toBe(200);
+  const stateResponse = await staff.get(`/api/admin/stores/${storeId}`);
+  expect(stateResponse.status()).toBe(200);
+  const vacant = adminStateSchema.parse(await stateResponse.json()).vacantTables[0];
+  if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
+  const tableId = vacant.id;
   let sessionId = "";
   let dropped = false;
   let connected = 0;
@@ -54,7 +58,7 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
       data: { userCode, tableId },
     });
     expect(approved.status()).toBe(200);
-    await expect(page.locator(".restaurant-name")).toContainText("T12");
+    await expect(page.getByRole("banner")).toContainText(vacant.name);
     await expect.poll(() => connected).toBeGreaterThan(0);
 
     const catalog = catalogSchema.parse(
@@ -80,7 +84,10 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
     }
     await changeQuantity(1);
     await page.getByRole("button", { name: "注文内容を確認", exact: true }).click();
-    const confirmation = page.getByRole("dialog");
+    const confirmation = page.getByRole("region", {
+      name: "こちらの内容でよろしいですか？",
+      exact: true,
+    });
     await expect(confirmation).toContainText(product.text.ja.displayName);
     await expect(confirmation.getByText(/数量 1/)).toBeVisible();
 

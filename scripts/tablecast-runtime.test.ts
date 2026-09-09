@@ -1,10 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { assertLocalRuntime, localReleaseSha, worktreeId } from "./tablecast-runtime";
+
+beforeEach(async () => {
+  // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
+  const { stdout } = await promisify(execFile)("git", ["rev-parse", "--local-env-vars"]);
+  for (const name of stdout.trim().split("\n")) vi.stubEnv(name, undefined);
+});
+
+afterEach(() => vi.unstubAllEnvs());
 
 it("起動版は実GitのHEADを使い未commitの変更を区別し無視対象を含めない", async () => {
   const root = await mkdtemp(join(tmpdir(), "tablecast-release-"));

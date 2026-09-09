@@ -98,7 +98,7 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
       data: { userCode, tableId },
     });
     expect(approved.status()).toBe(200);
-    await expect(page.locator(".restaurant-name")).toContainText("T10");
+    await expect(page.getByRole("banner")).toContainText("T10");
     await expect.poll(() => closedSockets).toBeGreaterThan(0);
 
     const catalogue = await page.request.get("/api/table/catalog");
@@ -117,8 +117,8 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
       .filter({ has: page.getByText(product.text.ja.displayName, { exact: true }) });
     await expect(card).toContainText(prices.original);
     await card.click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog.locator(".product-base-price")).toContainText(prices.original);
+    const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
+    await expect(detail.getByText(prices.original, { exact: true })).toContainText(prices.original);
 
     const changed = structuredClone(original.configuration);
     const changedProduct = changed.products.find((item) => item.id === product.id);
@@ -149,11 +149,11 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
       .events.find((event) => event.kind === "configuration.published");
     expect(publication).toMatchObject({ storeId, tableSessionId: null, data: {} });
     expect(publication?.data).toEqual({});
-    await expect(dialog).not.toBeVisible();
+    await expect(detail).not.toBeVisible();
     await expect(card).toContainText(prices.changed);
     await card.click();
-    await expect(dialog.locator(".product-base-price")).toContainText(prices.changed);
-    await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+    await expect(detail.getByText(prices.changed, { exact: true })).toContainText(prices.changed);
+    await detail.getByRole("button", { name: "おしながき", exact: true }).click();
   } finally {
     try {
       try {

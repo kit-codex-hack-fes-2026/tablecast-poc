@@ -21,7 +21,6 @@ for (const { language, labels } of [
     baseURL,
   }) => {
     const storeId = "tablecast-komorebi";
-    const tableId = `${storeId}-table-12`;
     const base = `/api/admin/stores/${storeId}`;
     const headers = { Origin: baseURL ?? "" };
     let sessionId = "";
@@ -60,7 +59,9 @@ for (const { language, labels } of [
     expect(login.status()).toBe(200);
     try {
       const initial = adminStateSchema.parse(await (await page.request.get(base)).json());
-      expect(initial.vacantTables.some((table) => table.id === tableId)).toBe(true);
+      const vacant = initial.vacantTables[0];
+      if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
+      const tableId = vacant.id;
       const opened = await page.request.post(`${base}/tables/open`, {
         headers,
         data: { tableId, guestCount: 2, locale: "ja" },
@@ -68,14 +69,15 @@ for (const { language, labels } of [
       expect(opened.status()).toBe(200);
       sessionId = tableStateSchema.parse(await opened.json()).id;
       await page.goto("/admin/live");
+      await expect(page.getByRole("table")).toBeVisible();
       await page.getByRole("button", { name: language, exact: true }).click();
       await page.getByRole("combobox", { name: labels.admin_store }).selectOption(storeId);
       await expect.poll(() => connected).toBeGreaterThan(0);
       const row = page
         .getByRole("row")
-        .filter({ has: page.getByRole("cell", { name: "T12", exact: true }) });
+        .filter({ has: page.getByRole("cell", { name: vacant.name, exact: true }) });
       await expect(row).toHaveCount(1);
-      await row.getByRole("button", { name: /^T12/ }).click();
+      await row.getByRole("cell", { name: vacant.name, exact: true }).getByRole("button").click();
       const dialog = page.getByRole("dialog");
       await dialog.getByRole("tab", { name: labels.admin_logs, exact: true }).click();
       await record("adjustment", 100);

@@ -83,6 +83,9 @@ export const catalog: Catalog = {
   },
 };
 export const table: TableState = {
+  uiSection: "menu",
+  selectedProductId: null,
+  speechSpeed: 1.0,
   id: "tablecast-session",
   openedAt: 1788645000000,
   billRequested: false,

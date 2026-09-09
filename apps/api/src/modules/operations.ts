@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import type { Actor } from "../auth";
 import type {
   ConfirmationRecord,
@@ -13,6 +14,10 @@ import {
   snapshotSchema,
   tablePlanSchema,
   eventDataSchema,
+  uiSectionInputSchema,
+  speechSpeedInputSchema,
+  showProductsSchema,
+  voiceToolEventSchema,
   type AdminState,
   type Bill,
   type Cart,
@@ -319,6 +324,12 @@ export async function getSessionEvents(
   };
 }
 export async function getTableState(env: TablecastEnv, actor: Actor): Promise<TableState> {
+  // 状態読取中の更新を既読扱いにしないよう、回復用cursorを先に確定する。
+  const history = await env.TABLECAST_DB.prepare(
+    "SELECT * FROM (SELECT * FROM table_events WHERE table_session_id=? AND store_id=? ORDER BY cursor DESC LIMIT 100) ORDER BY cursor",
+  )
+    .bind(actor.tableSessionId ?? null, actor.storeId)
+    .all<EventRecord>();
   const row = await getSession(env, actor);
   const catalog = await getCatalog(env, row.store_id);
   const table = await env.TABLECAST_DB.prepare(
@@ -336,11 +347,6 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
   )
     .bind(row.id)
     .all<{ kind: string; total: number }>();
-  const history = await env.TABLECAST_DB.prepare(
-    "SELECT * FROM (SELECT * FROM table_events WHERE table_session_id=? AND store_id=? ORDER BY cursor DESC LIMIT 100) ORDER BY cursor",
-  )
-    .bind(row.id, row.store_id)
-    .all<EventRecord>();
   const confirmation = await env.TABLECAST_DB.prepare(
     "SELECT * FROM confirmations WHERE table_session_id=? AND status IN ('pending','read') AND expires_at>? ORDER BY created_at DESC LIMIT 1",
   )
@@ -370,6 +376,13 @@ export async function getTableState(env: TablecastEnv, actor: Actor): Promise<Ta
     status: row.status,
     voiceState: row.voice_state,
     voiceSessionId: row.voice_session_id,
+    uiSection: row.ui_section,
+    selectedProductId:
+      row.ui_section === "menu" &&
+      catalog.configuration.products.some((product) => product.id === row.selected_product_id)
+        ? row.selected_product_id
+        : null,
+    speechSpeed: row.speech_speed,
     guestCount: row.guest_count,
     openedAt: row.opened_at,
     cart,
@@ -429,6 +442,133 @@ export async function getAdminState(env: TablecastEnv, actor: Actor): Promise<Ad
     cursor: cursor?.cursor ?? 0,
   };
 }
+export async function setUiSection(
+  env: TablecastEnv,
+  actor: Actor,
+  input: z.infer<typeof uiSectionInputSchema>,
+): Promise<TableState> {
+  const parsed = uiSectionInputSchema.safeParse(input);
+  ensure(parsed.success, "INVALID_INPUT", 422);
+  const session = await getSession(env, actor);
+  ensure(session.status === "open", "SESSION_CLOSED");
+  const productId = parsed.data.section === "menu" ? (parsed.data.productId ?? null) : null;
+  const catalog = productId ? await getCatalog(env, actor.storeId) : null;
+  ensure(
+    !productId || catalog?.configuration.products.some((product) => product.id === productId),
+    "PRODUCT_NOT_FOUND",
+    422,
+  );
+  const mutation = crypto.randomUUID();
+  const gate = voiceCondition(actor);
+  const result = await env.TABLECAST_DB.batch([
+    env.TABLECAST_DB.prepare(
+      `UPDATE table_sessions SET ui_section=?,selected_product_id=?,mutation_id=? WHERE id=? AND store_id=? AND status='open'${gate.sql} AND (? IS NULL OR EXISTS(SELECT 1 FROM stores WHERE id=? AND config_version=?))`,
+    ).bind(
+      parsed.data.section,
+      productId,
+      mutation,
+      session.id,
+      actor.storeId,
+      ...gate.values,
+      productId,
+      actor.storeId,
+      catalog?.version ?? null,
+    ),
+    eventStatement(env, actor, mutation, "table.ui", { section: parsed.data.section, productId }),
+  ]);
+  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
+  await notifyStore(env, actor.storeId);
+  return getTableState(env, actor);
+}
+
+export async function setSpeechSpeed(
+  env: TablecastEnv,
+  actor: Actor,
+  input: z.infer<typeof speechSpeedInputSchema>,
+): Promise<TableState> {
+  const parsed = speechSpeedInputSchema.safeParse(input);
+  ensure(parsed.success, "INVALID_INPUT", 422);
+  const session = await getSession(env, actor);
+  ensure(session.status === "open", "SESSION_CLOSED");
+  const mutation = crypto.randomUUID();
+  const gate = voiceCondition(actor);
+  const result = await env.TABLECAST_DB.batch([
+    env.TABLECAST_DB.prepare(
+      `UPDATE table_sessions SET speech_speed=?,mutation_id=? WHERE id=? AND store_id=? AND status='open'${gate.sql}`,
+    ).bind(parsed.data.speed, mutation, session.id, actor.storeId, ...gate.values),
+    eventStatement(env, actor, mutation, "voice.speed", parsed.data),
+  ]);
+  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
+  await notifyStore(env, actor.storeId);
+  return getTableState(env, actor);
+}
+
+export async function showProducts(
+  env: TablecastEnv,
+  actor: Actor,
+  input: z.infer<typeof showProductsSchema>,
+) {
+  ensure(actor.kind === "voice" && actor.turnId && actor.voiceSessionId, "VOICE_REQUIRED", 403);
+  const parsed = showProductsSchema.safeParse(input);
+  ensure(parsed.success, "INVALID_INPUT", 422);
+  await getSession(env, actor);
+  const catalog = await getCatalog(env, actor.storeId);
+  const productIds = [...new Set(parsed.data.productIds)];
+  ensure(
+    productIds.every((id) => catalog.configuration.products.some((product) => product.id === id)),
+    "PRODUCT_NOT_FOUND",
+    422,
+  );
+  const gate = voiceCondition(actor);
+  const result = await env.TABLECAST_DB.prepare(
+    `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,'voice.products',?,? FROM table_sessions WHERE id=? AND store_id=? AND status='open'${gate.sql} AND EXISTS(SELECT 1 FROM stores WHERE id=? AND config_version=?)`,
+  )
+    .bind(
+      JSON.stringify({ turnId: actor.turnId, productIds }),
+      Date.now(),
+      actor.tableSessionId,
+      actor.storeId,
+      ...gate.values,
+      actor.storeId,
+      catalog.version,
+    )
+    .run();
+  ensure(result.meta.changes === 1, "TABLE_CONFLICT");
+  await notifyStore(env, actor.storeId);
+  return { productIds };
+}
+
+export async function recordVoiceEvent(
+  env: TablecastEnv,
+  actor: Actor,
+  event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
+  reserve = false,
+) {
+  ensure(actor.kind === "voice" && actor.turnId && actor.voiceSessionId, "VOICE_REQUIRED", 403);
+  const data = voiceToolEventSchema.parse({
+    ...event.data,
+    turnId: actor.turnId,
+  });
+  const gate = voiceCondition(actor);
+  const result = await env.TABLECAST_DB.prepare(
+    `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) SELECT store_id,id,?,?,? FROM table_sessions WHERE id=? AND store_id=? AND status='open'${gate.sql} AND (?<>'running' OR NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=? AND kind='voice.tool' AND json_extract(data_json,'$.toolCallId')=? AND json_extract(data_json,'$.state')='running'))`,
+  )
+    .bind(
+      event.kind,
+      JSON.stringify(data),
+      Date.now(),
+      actor.tableSessionId,
+      actor.storeId,
+      ...gate.values,
+      reserve ? data.state : "",
+      actor.tableSessionId,
+      data.toolCallId,
+    )
+    .run();
+  if (result.meta.changes === 1) await notifyStore(env, actor.storeId);
+  return result.meta.changes === 1;
+}
+
 export async function updateCart(
   env: TablecastEnv,
   actor: Actor,
@@ -728,18 +868,37 @@ export async function callStaff(env: TablecastEnv, actor: Actor) {
 }
 export async function changeLocale(env: TablecastEnv, actor: Actor, locale: Locale) {
   const row = await getSession(env, actor);
+  if (row.locale === locale) return getTableState(env, actor);
   const mutation = crypto.randomUUID();
+  const gate = voiceCondition(actor);
   const result = await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(
-      "UPDATE table_sessions SET locale=?,voice_state='stopped',voice_session_id=NULL,active_turn_id=NULL,voice_version=voice_version+1,mutation_id=? WHERE id=? AND store_id=? AND status='open'",
-    ).bind(locale, mutation, row.id, actor.storeId),
+      `UPDATE table_sessions SET locale=?,voice_state='stopped',voice_session_id=NULL,active_turn_id=NULL,voice_version=voice_version+1,mutation_id=? WHERE id=? AND store_id=? AND status='open'${gate.sql}`,
+    ).bind(locale, mutation, row.id, actor.storeId, ...gate.values),
     invalidationStatement(env, actor, mutation),
     interruptVoiceTurns(env, actor, mutation),
     eventStatement(env, actor, mutation, "locale.changed", { locale }),
+    // このツール自身が音声資格を失効させるため、完了状態も同じ更新へ含める。
+    env.TABLECAST_DB.prepare(
+      `INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at)
+       SELECT store_id,table_session_id,'voice.tool',json_set(data_json,'$.state','completed'),?
+       FROM table_events WHERE store_id=? AND table_session_id=? AND kind='voice.tool'
+       AND json_extract(data_json,'$.turnId')=? AND json_extract(data_json,'$.toolName')='setLanguage'
+       AND json_extract(data_json,'$.state')='running'
+       AND EXISTS(SELECT 1 FROM table_sessions WHERE id=? AND mutation_id=?)`,
+    ).bind(
+      Date.now(),
+      actor.storeId,
+      row.id,
+      actor.kind === "voice" ? (actor.turnId ?? null) : null,
+      row.id,
+      mutation,
+    ),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
   await notifyStore(env, actor.storeId);
-  return getTableState(env, actor);
+  // 言語変更で失効させた音声資格を再利用せず、更新を認可した同じ卓を読み直す。
+  return getTableState(env, { kind: "device", storeId: actor.storeId, tableSessionId: row.id });
 }
 export async function setVoiceSession(
   env: TablecastEnv,

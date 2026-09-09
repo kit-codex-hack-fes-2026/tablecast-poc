@@ -1,0 +1,22 @@
+# マージキューを採用するリポジトリで、既存の必須チェックへ統合する例。
+# このファイルで既存ワークフローを上書きしない。
+name: マージキュー確認例
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 確認例
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: リポジトリ固有の確認コマンドを設定する
+        run: |
+          echo "::error::この処理を既存の必須チェックと同じ確認コマンドへ置き換えてください"
+          exit 1

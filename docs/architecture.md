@@ -16,12 +16,12 @@ flowchart LR
     Customer <-->|WebRTC| Media[LiveKit Server]
     Media <--> Voice[Python LiveKit Agent]
     Voice -->|認証済みHTTP| Web
-    Voice --> Inworld[Inworld STT・TTS]
-    API --> Model[外部LLM]
+    Voice --> Inworld[Inworld TTS]
+    Voice <--> Model[OpenAI Realtime 2.1]
 ```
 
 Web/APIの2 WorkersとPython Agentに限定する。DOのclassはAPI Workerに置く。独立したMastraサーバー、画像Worker、翻訳Workerは初期には追加しない。
-業務の正本はD1。LiveKitは現在の音声と再生状況、Mastraは渡された文脈に対する推論、DOは通知を担当する。
+業務の正本はD1。LiveKitは現在の音声と再生状況、OpenAI Realtimeは音声理解と応答生成、Mastraのツール定義はAPI内の業務操作、DOは通知を担当する。
 
 ## 目標ディレクトリ
 

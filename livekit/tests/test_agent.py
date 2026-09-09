@@ -2,12 +2,16 @@
 
 import asyncio
 import json
+from collections.abc import Awaitable, Callable
+from unittest.mock import AsyncMock, create_autospec
 
 import httpx
-from livekit.agents import AgentSession, UserStateChangedEvent
+import pytest
+from livekit import rtc
+from livekit.agents import AgentSession, JobContext, UserStateChangedEvent
 
-from tablecast_livekit.agent import TablecastAgent
-from tablecast_livekit.api import VoiceAPI, VoiceConfiguration
+from tablecast_livekit.agent import TablecastAgent, entrypoint
+from tablecast_livekit.api import RealtimeConfiguration, VoiceAPI, VoiceConfiguration
 
 
 def configuration() -> VoiceConfiguration:
@@ -20,6 +24,58 @@ def configuration() -> VoiceConfiguration:
         releaseSha="tablecast-test",
         proactive=False,
     )
+
+
+async def test_接続完了を待ってから参加者指定の実Sessionを開始する(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
+    monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
+    monkeypatch.setenv("INWORLD_API_KEY", "tablecast-test-inworld-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "tablecast-test-openai-key")
+    monkeypatch.setattr(
+        VoiceAPI,
+        "realtime_configuration",
+        AsyncMock(
+            return_value=RealtimeConfiguration(
+                model="gpt-realtime-2.1", instructions="テスト", tools=[]
+            )
+        ),
+    )
+    monkeypatch.setattr(VoiceAPI, "configuration", AsyncMock(return_value=configuration()))
+    room = rtc.Room()
+    ctx = create_autospec(JobContext, instance=True)
+    ctx.room = room
+    ctx.job.metadata = json.dumps({"voiceSessionId": "tablecast-voice"})
+    callbacks: list[Callable[[], Awaitable[None]]] = []
+    ctx.add_shutdown_callback.side_effect = callbacks.append
+    connecting = asyncio.Event()
+    connection: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+
+    async def connect() -> None:
+        connecting.set()
+        await connection
+
+    ctx.connect.side_effect = connect
+    job = asyncio.ensure_future(entrypoint(ctx))
+    waiting = asyncio.create_task(connecting.wait())
+    try:
+        done, _ = await asyncio.wait((job, waiting), timeout=5, return_when=asyncio.FIRST_COMPLETED)
+        # 接続を省くと、本物のRoomIOが未接続room.local_participantを参照してここで失敗する。
+        if job in done:
+            await job
+        assert waiting in done
+        assert not job.done()
+        assert not room.isconnected()
+        ctx.connect.assert_called_once_with()
+        connection.set_exception(ConnectionError("接続失敗の検査用fixture"))
+        with pytest.raises(ConnectionError, match="接続失敗の検査用fixture"):
+            await job
+    finally:
+        job.cancel()
+        waiting.cancel()
+        await asyncio.gather(job, waiting, return_exceptions=True)
+        for callback in callbacks:
+            await callback()
+        await room.disconnect()
 
 
 async def test_公開Sessionの無言イベントから客発話を偽造せず一度だけ自発接客を開始する():

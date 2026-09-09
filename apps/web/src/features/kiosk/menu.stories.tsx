@@ -2,14 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { productSchema, type CartLine, type Product } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
-import { CartLines, ProductDialog, ProductMenu } from "./menu";
+import { CartLines } from "./cart-lines";
+import { ProductMenu } from "./menu";
+import { ProductPage } from "./product-dialog";
 
 const meta = {
   title: "客向け/メニューと注文",
   component: ProductMenu,
   decorators: [
     (Story) => (
-      <div className="menu-panel" style={{ maxWidth: 430, paddingTop: 20 }}>
+      <div className="max-w-md pt-5 min-w-0 min-h-0 flex flex-col border-l border-l-border bg-card max-lg:border-l-0 max-lg:border-t max-lg:border-t-border max-lg:min-h-160">
         <Story />
       </div>
     ),
@@ -31,9 +33,11 @@ export const Products: Story = {
 export const EnglishProducts: Story = { name: "長い英語の商品名", globals: { locale: "en" } };
 export const Customisation: Story = {
   name: "必須カスタマイズ",
-  render: () => <ProductDialog product={product} busy={false} onClose={fn()} onSave={fn()} />,
+  render: () => <ProductPage product={product} busy={false} onClose={fn()} onSave={fn()} />,
   play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
+    const body = within(canvasElement);
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+    await expect(body.getByRole("region", { name: product.text.ja.displayName })).toBeVisible();
     await expect(body.queryByRole("radio", { name: "選択しない" })).not.toBeInTheDocument();
     await userEvent.click(body.getByRole("radio", { name: /90 mL/ }));
     await expect(body.getByRole("radio", { name: /90 mL/ })).toBeChecked();
@@ -50,7 +54,7 @@ const saveOptional = fn<(line: CartLine) => void>();
 export const OptionalCustomisation: Story = {
   name: "任意の単一選択をカート編集から解除する",
   render: () => (
-    <ProductDialog
+    <ProductPage
       product={{
         ...product,
         modifiers: product.modifiers.map((group) => ({ ...group, min: 0 })),
@@ -154,7 +158,7 @@ const saveRelated = fn<(line: CartLine) => void>();
 export const RelatedCustomisation: Story = {
   name: "相互排他の選択を外し、別グループの依存条件をタッチで満たす",
   render: () => (
-    <ProductDialog
+    <ProductPage
       product={relatedProduct}
       initial={relatedLine}
       busy={false}
@@ -232,26 +236,28 @@ export const LongDescription: Story = {
   name: "上限の長い商品名と説明でも選択欄と注文ボタンへ到達する",
   globals: { locale: "en" },
   render: () => (
-    <ProductDialog product={longProduct} busy={false} onClose={fn()} onSave={saveLongProduct} />
+    <div className="h-160 min-h-0 overflow-y-auto" data-testid="product-page-scroll">
+      <ProductPage product={longProduct} busy={false} onClose={fn()} onSave={saveLongProduct} />
+    </div>
   ),
   play: async ({ canvasElement, step }) => {
     const document = canvasElement.ownerDocument;
     const body = within(document.body);
     const add = body.getByRole("button", { name: "Add to basket" });
-    const close = body.getByRole("button", { name: "Close" });
+    const back = body.getByRole("button", { name: "Our menu" });
     const firstOption = body.getByRole("radio", { name: "60 mL" });
+    const scroll = body.getByTestId("product-page-scroll");
     saveLongProduct.mockClear();
     await step("前提: 長い本文でも固定操作は画面内にある", async () => {
       const viewportHeight = document.documentElement.clientHeight;
-      await expect(close.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
+      await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+      await expect(back.getBoundingClientRect().top).toBeGreaterThanOrEqual(0);
       await expect(add.getBoundingClientRect().bottom).toBeLessThanOrEqual(viewportHeight);
     });
     await step("操作: キーボードで選択欄へ移動し、スクロールして選択する", async () => {
-      close.focus();
+      back.focus();
       await userEvent.tab();
       await expect(firstOption).toHaveFocus();
-      const scroll = firstOption.closest(".dialog-scroll");
-      if (!scroll) throw new Error("選択欄のスクロール領域がありません。");
       await expect(scroll.clientHeight).toBeGreaterThan(0);
       await expect(firstOption.getBoundingClientRect().top).toBeGreaterThanOrEqual(
         scroll.getBoundingClientRect().top,

@@ -1,8 +1,9 @@
-import { productSchema, type Configuration, type Product, type Plan } from "@tablecast/api/schema";
+import { productSchema, type Configuration, type Plan, type Product } from "@tablecast/api/schema";
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import {
   BilingualFields,
@@ -33,10 +34,10 @@ export function ConfigurationEditor({
   const { t } = useI18n();
   const [section, setSection] = useState("products");
   return (
-    <fieldset className="stacked-form min-w-0 pt-0" disabled={disabled}>
-      <label>
+    <fieldset className="flex flex-col gap-4 min-w-0 pt-0" disabled={disabled}>
+      <label className="flex flex-col gap-2 text-xs">
         {t("editor_section")}
-        <select
+        <NativeSelect
           className={selectClass}
           value={section}
           onChange={(event) => {
@@ -47,7 +48,7 @@ export function ConfigurationEditor({
           <option value="categories">{t("editor_categories")}</option>
           <option value="plans">{t("editor_plans")}</option>
           <option value="cast">{t("editor_cast")}</option>
-        </select>
+        </NativeSelect>
       </label>
       {section === "products" && (
         <ProductsEditor value={value} onChange={onChange} disabled={disabled} />
@@ -91,7 +92,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
     <>
       <label>
         {t("admin_product")}
-        <select
+        <NativeSelect
           className={selectClass}
           value={selectedId}
           onChange={(event) => {
@@ -103,7 +104,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
               {item.text[locale].displayName || t("editor_new_product")}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       <div className="flex flex-wrap gap-3">
         <Button
@@ -182,14 +183,14 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
             <summary className="cursor-pointer font-semibold">
               {t("editor_product_details")}
             </summary>
-            <div className="stacked-form">
-              <label>
+            <div className="flex flex-col gap-4 pt-6">
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_id")}
                 <Input value={product.id} readOnly />
               </label>
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_category")}
-                <select
+                <NativeSelect
                   className={selectClass}
                   value={product.categoryId}
                   onChange={(event) => update({ categoryId: event.target.value })}
@@ -204,7 +205,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                       {item.text[locale].displayName}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </label>
               <StringListField
                 label={t("editor_tags")}
@@ -212,7 +213,7 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 disabled={disabled}
                 onChange={(tags) => update({ tags })}
               />
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_image")}
                 <Input
                   maxLength={300}
@@ -220,9 +221,9 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   onChange={(event) => update({ imageKey: event.target.value || null })}
                 />
               </label>
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_image_kind")}
-                <select
+                <NativeSelect
                   className={selectClass}
                   value={product.imageKind}
                   onChange={(event) =>
@@ -231,22 +232,22 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 >
                   <option value="illustration">{t("kiosk_illustration")}</option>
                   <option value="photograph">{t("editor_photograph")}</option>
-                </select>
+                </NativeSelect>
               </label>
             </div>
           </details>
           <details className="rounded-lg border border-input p-4">
             <summary className="cursor-pointer font-semibold">{t("kiosk_allergens")}</summary>
-            <div className="stacked-form">
+            <div className="flex flex-col gap-4 pt-6">
               <StringListField
                 label={t("editor_contains")}
                 value={product.allergens.contains}
                 disabled={disabled}
                 onChange={(contains) => update({ allergens: { ...product.allergens, contains } })}
               />
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_evidence")}
-                <select
+                <NativeSelect
                   className={selectClass}
                   value={product.allergens.evidence}
                   onChange={(event) =>
@@ -262,11 +263,11 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                 >
                   <option value="unknown">{t("editor_unknown")}</option>
                   <option value="verified">{t("editor_verified")}</option>
-                </select>
+                </NativeSelect>
               </label>
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_cross_contact")}
-                <select
+                <NativeSelect
                   className={selectClass}
                   value={product.allergens.crossContact}
                   onChange={(event) =>
@@ -283,11 +284,11 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   <option value="unknown">{t("editor_unknown")}</option>
                   <option value="possible">{t("editor_possible")}</option>
                   <option value="controlled">{t("editor_controlled")}</option>
-                </select>
+                </NativeSelect>
               </label>
-              <label>
+              <label className="flex flex-col gap-2 text-xs">
                 {t("editor_vegan")}
-                <select
+                <NativeSelect
                   className={selectClass}
                   value={product.allergens.vegan}
                   onChange={(event) =>
@@ -302,10 +303,10 @@ function ProductsEditor({ value, onChange, disabled }: EditorProps) {
                   <option value="unknown">{t("editor_unknown")}</option>
                   <option value="yes">{t("editor_yes")}</option>
                   <option value="no">{t("editor_no")}</option>
-                </select>
+                </NativeSelect>
               </label>
               {(["ja", "en"] as const).map((language) => (
-                <label key={language}>
+                <label className="flex flex-col gap-2 text-xs" key={language}>
                   {t("editor_safety_note")} · {t(language === "ja" ? "common_ja" : "common_en")}
                   <textarea
                     className="min-h-24 rounded-lg border border-input p-2 text-sm"
@@ -348,7 +349,7 @@ function CategoriesEditor({ value, onChange, disabled }: EditorProps) {
     <>
       <label>
         {t("editor_category")}
-        <select
+        <NativeSelect
           className={selectClass}
           value={selectedId}
           onChange={(event) => {
@@ -360,7 +361,7 @@ function CategoriesEditor({ value, onChange, disabled }: EditorProps) {
               {item.text[locale].displayName || t("editor_new_category")}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       <div className="flex flex-wrap gap-3">
         <Button
@@ -429,7 +430,7 @@ function PlansEditor({ value, onChange, disabled }: EditorProps) {
     <>
       <label>
         {t("editor_plan")}
-        <select
+        <NativeSelect
           className={selectClass}
           value={selectedId}
           onChange={(event) => {
@@ -442,7 +443,7 @@ function PlansEditor({ value, onChange, disabled }: EditorProps) {
               {item.text[locale].displayName || t("editor_new_plan")}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       <div className="flex flex-wrap gap-3">
         <Button
@@ -612,11 +613,11 @@ export function CastEditor({
   return (
     <>
       {(["ja", "en"] as const).map((language) => (
-        <fieldset key={language} className="stacked-form pt-0">
+        <fieldset key={language} className="flex flex-col gap-4 pt-0">
           <legend className="mb-3 font-semibold">
             {t(language === "ja" ? "common_ja" : "common_en")}
           </legend>
-          <label>
+          <label className="flex flex-col gap-2 text-xs">
             {t("editor_cast_instructions")}
             <textarea
               className="min-h-40 rounded-lg border border-input p-2 text-sm"

@@ -1,34 +1,22 @@
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
-import { storesSchema } from "../../lib/responses";
-import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
-import { Dialog } from "@base-ui/react/dialog";
-import type { AdminState } from "@tablecast/api/schema";
+import { adminStateSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import {
-  Activity,
-  ArrowUpRight,
-  Bell,
-  CircleDollarSign,
-  History,
-  LayoutDashboard,
-  LogOut,
-  MonitorSmartphone,
-  Radio,
-  Settings2,
-  Users,
-  X,
-} from "lucide-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { api, ApiFailure, json } from "../../lib/api";
+import { storesSchema } from "../../lib/responses";
 import { useRealtime } from "../../lib/use-realtime";
-import { TableDetail } from "./table-detail";
-import { TableTimeline } from "./table-timeline";
+import { AdminSidebar } from "./admin-sidebar";
+import { ApproveDevice } from "./approve-device";
+import { OpenTable } from "./open-table";
 import { SettingsDrafts } from "./settings-drafts";
+import { TableDetail } from "./table-detail";
+import { TableMetrics } from "./table-metrics";
+import { TableTimeline } from "./table-timeline";
 import { VisitHistory } from "./visit-history";
 
 export function Admin() {
@@ -85,73 +73,23 @@ export function Admin() {
       });
   }, [stores.error, navigate, search.storeId, search.draftId]);
   const tables = state.data?.tables ?? [];
-  const billing = tables.filter((table) => table.billRequested && table.bill.due > 0).length;
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <Link className="brand" to="/admin/live">
-          TableCast<span>·</span>
-        </Link>
-        <nav aria-label={t("admin_live")}>
-          <Button
-            variant="ghost"
-            type="button"
-            aria-current={tab === "live" ? "page" : undefined}
-            onClick={() => setTab("live")}
-          >
-            <LayoutDashboard size={19} aria-hidden="true" />
-            {t("admin_live")}
-          </Button>
-          <Button
-            variant="ghost"
-            type="button"
-            aria-current={tab === "history" ? "page" : undefined}
-            onClick={() => setTab("history")}
-          >
-            <History size={19} aria-hidden="true" />
-            {t("admin_history")}
-          </Button>
-          <Button
-            variant="ghost"
-            type="button"
-            aria-current={tab === "settings" ? "page" : undefined}
-            onClick={() => setTab("settings")}
-          >
-            <Settings2 size={19} aria-hidden="true" />
-            {t("admin_config")}
-          </Button>
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={() => setPairOpen(true)}
-            disabled={!currentStore}
-          >
-            <MonitorSmartphone size={19} aria-hidden="true" />
-            {t("admin_pair")}
-          </Button>
-        </nav>
-        <div className="sidebar-bottom">
-          <Link to="/">
-            {t("auth_guest")}
-            <ArrowUpRight size={16} aria-hidden="true" />
-          </Link>
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={() => signOut.mutate()}
-            disabled={signOut.isPending}
-          >
-            <LogOut size={16} aria-hidden="true" />
-            {t("auth_sign_out")}
-          </Button>
-        </div>
-      </aside>
-      <main className="admin-main">
-        <header className="admin-header">
-          <div className="store-selector">
+    <div className="admin-shell min-h-dvh flex max-sm:block">
+      <AdminSidebar
+        tab={tab}
+        onTabChange={setTab}
+        onPair={() => setPairOpen(true)}
+        pairDisabled={!currentStore}
+        onSignOut={() => signOut.mutate()}
+        signingOut={signOut.isPending}
+      />
+      <main className="flex-1 min-w-0 pt-0 px-8 pb-10 max-xl:px-6 max-lg:px-4">
+        <header className="min-h-28 flex items-center justify-between gap-4 border-b border-b-border max-sm:min-h-24">
+          <div className="store-selector [&_.eyebrow]:text-xs">
             <label>
               <span className="sr-only">{t("admin_store")}</span>
-              <select
+              <NativeSelect
+                className="pt-0.5 pr-6 pb-0.5 pl-0 border-0 min-h-9 bg-transparent text-base font-semibold max-sm:max-w-44 max-sm:text-sm"
                 value={currentStore ?? ""}
                 onChange={(event) => {
                   setStoreId(event.target.value);
@@ -163,7 +101,7 @@ export function Admin() {
                     {store.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </label>
           </div>
           <LanguageSwitch
@@ -173,9 +111,9 @@ export function Admin() {
             }}
           />
         </header>
-        <section className="admin-page-heading">
+        <section className="flex justify-between items-end gap-5 pt-8 px-0 pb-6 [&_.eyebrow]:tracking-wide max-lg:items-start max-lg:flex-col max-lg:gap-3 max-sm:pt-6">
           <div>
-            <h1>
+            <h1 className="text-3xl mt-2 max-sm:text-2xl">
               {tab === "live"
                 ? t("admin_live")
                 : tab === "history"
@@ -183,8 +121,11 @@ export function Admin() {
                   : t("admin_config")}
             </h1>
           </div>
-          <span className={`live-status ${connected ? "connected" : ""}`}>
-            <span className="tiny-dot" />
+          <span
+            data-state={connected ? "connected" : ""}
+            className="flex items-center gap-1.5 text-muted-foreground text-xs max-w-40 [&[data-state=connected]]:text-success max-lg:max-w-none"
+          >
+            <span className="inline-block w-1.5 h-1.5 bg-current rounded-full shrink-0" />
             {connected ? t("admin_live_connected") : t("admin_live_reconnecting")}
           </span>
         </section>
@@ -196,42 +137,18 @@ export function Admin() {
           }}
         />
         {stores.data?.stores.length === 0 && (
-          <div className="empty-note">{t("auth_no_stores")}</div>
+          <div className="py-12 px-6 text-muted-foreground text-center">{t("auth_no_stores")}</div>
         )}
         {tab === "live" ? (
           <>
-            <div className="admin-metrics">
-              <div className="metric">
-                <Users size={20} aria-hidden="true" />
-                <span>{t("admin_active")}</span>
-                <strong>
-                  {tables.filter((table) => table.status === "open").length}
-                  <small>/ {tables.length + (state.data?.vacantTables.length ?? 0)}</small>
-                </strong>
-              </div>
-              <div className="metric attention">
-                <Bell size={20} aria-hidden="true" />
-                <span>{t("admin_attention")}</span>
-                <strong>{tables.filter((table) => table.staffCalled).length}</strong>
-              </div>
-              <div className="metric">
-                <CircleDollarSign size={20} aria-hidden="true" />
-                <span>{t("admin_billing")}</span>
-                <strong>{billing}</strong>
-              </div>
-              <div className="metric">
-                <Radio size={20} aria-hidden="true" />
-                <span>{t("admin_voice_errors")}</span>
-                <strong>{tables.filter((table) => table.voiceState === "error").length}</strong>
-              </div>
-            </div>
-            <section className="floor-panel">
-              <div className="floor-panel-heading">
-                <h2>
+            <TableMetrics tables={tables} vacantCount={state.data?.vacantTables.length ?? 0} />
+            <section className="border border-border bg-card rounded-lg overflow-hidden">
+              <div className="flex justify-between items-center py-5 px-5 border-b border-b-border">
+                <h2 className="text-sm flex items-center gap-2">
                   <Activity size={19} aria-hidden="true" />
                   {t("admin_timeline")}
                 </h2>
-                <span>
+                <span className="text-xs text-muted-foreground tracking-widest">
                   {tables.length + (state.data?.vacantTables.length ?? 0)} {t("admin_table_count")}
                 </span>
               </div>
@@ -284,193 +201,5 @@ export function Admin() {
         <ApproveDevice state={state.data} onClose={() => setPairOpen(false)} />
       )}
     </div>
-  );
-}
-
-function OpenTable({
-  storeId,
-  table,
-  onClose,
-  onOpened,
-}: {
-  storeId: string;
-  table: { id: string; name: string };
-  onClose: () => void;
-  onOpened: () => void;
-}) {
-  const { t, locale } = useI18n();
-  const [guests, setGuests] = useState(2);
-  const [guestLocale, setGuestLocale] = useState("ja");
-  const [plan, setPlan] = useState("");
-  const catalog = useQuery({
-    queryKey: ["tablecast-admin-catalog", storeId],
-    queryFn: () => api(`/api/admin/stores/${storeId}/catalog`, {}, catalogSchema),
-  });
-  const open = useMutation({
-    mutationFn: () =>
-      api(
-        `/api/admin/stores/${storeId}/tables/open`,
-        json("POST", {
-          tableId: table.id,
-          guestCount: guests,
-          locale: guestLocale,
-          ...(plan ? { planId: plan } : {}),
-        }),
-      ),
-    onSuccess: onOpened,
-  });
-  return (
-    <Dialog.Root
-      open
-      onOpenChange={(value) => {
-        if (!value) onClose();
-      }}
-    >
-      <Dialog.Portal>
-        <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Viewport className="dialog-viewport">
-          <Dialog.Popup className="dialog">
-            <div className="dialog-heading">
-              <span className="eyebrow">{table.name}</span>
-              <Dialog.Close className="icon-button" aria-label={t("common_close")}>
-                <X size={22} />
-              </Dialog.Close>
-            </div>
-            <Dialog.Title>{t("admin_open_table")}</Dialog.Title>
-            <form
-              className="stacked-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                open.mutate();
-              }}
-            >
-              <label>
-                {t("admin_guest_count")}
-                <Input
-                  type="number"
-                  min={1}
-                  max={30}
-                  required
-                  value={guests}
-                  onChange={(event) => setGuests(Number(event.target.value))}
-                />
-              </label>
-              <label>
-                {t("admin_locale")}
-                <select
-                  value={guestLocale}
-                  onChange={(event) => setGuestLocale(event.target.value)}
-                >
-                  <option value="ja">日本語</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
-              <label>
-                {t("kiosk_plan")}
-                <select value={plan} onChange={(event) => setPlan(event.target.value)}>
-                  <option value="">{t("admin_no_plan")}</option>
-                  {catalog.data?.configuration.plans.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.text[locale].displayName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <ErrorNotice error={open.error || catalog.error} />
-              <Button
-                variant="default"
-                size="lg"
-                type="submit"
-                className="primary-button"
-                disabled={open.isPending}
-              >
-                {t("admin_open_table")}
-              </Button>
-            </form>
-          </Dialog.Popup>
-        </Dialog.Viewport>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}
-
-function ApproveDevice({ state, onClose }: { state: AdminState; onClose: () => void }) {
-  const { t } = useI18n();
-  const [code, setCode] = useState("");
-  const [tableId, setTableId] = useState(state.tables[0]?.tableId ?? "");
-  const approve = useMutation({
-    mutationFn: () =>
-      api(
-        `/api/admin/stores/${state.store.id}/devices/approve`,
-        json("POST", { userCode: code, tableId }),
-      ),
-    onSuccess: onClose,
-  });
-  return (
-    <Dialog.Root
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <Dialog.Portal>
-        <Dialog.Backdrop className="dialog-backdrop" />
-        <Dialog.Viewport className="dialog-viewport">
-          <Dialog.Popup className="dialog">
-            <div className="dialog-heading">
-              <Dialog.Close className="icon-button" aria-label={t("common_close")}>
-                <X size={22} />
-              </Dialog.Close>
-            </div>
-            <Dialog.Title>{t("admin_pair")}</Dialog.Title>
-            <Dialog.Description>{t("pair_note")}</Dialog.Description>
-            <form
-              className="stacked-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                approve.mutate();
-              }}
-            >
-              <label>
-                {t("admin_pair_code")}
-                <Input
-                  autoComplete="off"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.toUpperCase())}
-                  required
-                  maxLength={30}
-                />
-              </label>
-              <label>
-                {t("admin_pair_table")}
-                <select
-                  value={tableId}
-                  onChange={(event) => setTableId(event.target.value)}
-                  required
-                >
-                  {state.tables
-                    .filter((table) => table.status === "open")
-                    .map((table) => (
-                      <option key={table.id} value={table.tableId}>
-                        {table.tableName}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <ErrorNotice error={approve.error} />
-              <Button
-                variant="default"
-                size="lg"
-                type="submit"
-                className="primary-button"
-                disabled={approve.isPending || !tableId}
-              >
-                {t("admin_approve")}
-              </Button>
-            </form>
-          </Dialog.Popup>
-        </Dialog.Viewport>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }

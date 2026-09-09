@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Mic, MicOff, Check, Bell } from "lucide-react";
-import { Button } from "./button";
+import { Bell, Check, Mic, MicOff } from "lucide-react";
 import { Badge } from "./badge";
+import { Button } from "./button";
 import { Input } from "./input";
 
 const meta = {
@@ -13,9 +13,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const 操作と状態: Story = {
   render: () => (
-    <main className="design-preview">
+    <main className="grid gap-8 p-8 bg-background text-foreground">
       <h1>TableCast</h1>
-      <section className="design-row">
+      <section className="flex flex-wrap items-center gap-4">
         <Button size="lg">
           <Mic />
           音声を開始
@@ -34,7 +34,7 @@ export const 操作と状態: Story = {
         </Button>
         <Button disabled>処理中</Button>
       </section>
-      <section className="design-row">
+      <section className="flex flex-wrap items-center gap-4">
         <Badge>受付済み</Badge>
         <Badge variant="secondary">提供済み</Badge>
         <Badge variant="outline">停止中</Badge>
@@ -49,9 +49,9 @@ export const 操作と状態: Story = {
 };
 export const 英語の操作: Story = {
   render: () => (
-    <main className="design-preview">
+    <main className="grid gap-8 p-8 bg-background text-foreground">
       <h1>TableCast</h1>
-      <section className="design-row">
+      <section className="flex flex-wrap items-center gap-4">
         <Button size="lg">
           <Mic />
           Start voice

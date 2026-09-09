@@ -11,7 +11,7 @@ WebSocket、認証、再接続、音声frame、リサンプリング、TTSを自
 ## 調査済み範囲と未確定事項
 
 Inworld STT APIには実験的な話者ダイアライゼーションと単語時刻がある。確認したLiveKitのPython pluginは、それらを要求して話者・時刻として渡す処理を公開していない。[S01](../sources.md#s01) [S02](../sources.md#s02)
-これは参照時点の観測であり、採用版の正確なcommitや互換性試験は未実施。着手時にreleaseと既存PRを再確認する。
+2026-09-07に現行release 1.8.0と既存PRを再確認し、[パッチ記録](../../patches/livekit-inworld/README.md)のforkをアプリへ適用した。以後の更新でもreleaseと既存PRを再確認する。
 
 ## 許容する差分
 
@@ -35,7 +35,7 @@ TableCastの店舗、注文、キャスト設定をpluginへ混ぜない。名�
 uvのgit sourceはpluginのsubdirectoryと完全なcommit SHAに固定し、`livekit/uv.lock` を追跡する。branch名だけに依存しない。[S17](../sources.md#s17)
 差分はforkから上流PRへそのまま出せる機能単位にし、`git format-patch` の差分を保存する。実在しないSHA・PRは記入しない。
 公式releaseへ取り込まれたら回帰試験を行い、通常のrelease依存へ戻す。forkへの依存と同じpatchの二重適用をしない。
-本ZIPはpatch方針のみで、適用済みpatchや作成済みPRを含まない。
+実際の適用SHA・fixtureと実音声の検証・上流PRの有無はパッチ記録へ残す。
 
 ## 必須検証
 

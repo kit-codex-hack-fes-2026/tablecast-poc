@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenScreenデモ動画"
+  short_description: "OpenScreenで録画・字幕・編集・音声・書き出しを自動化"
+  default_prompt: "Use $openscreen-demo-video to record, edit, narrate, and export a polished application demo."

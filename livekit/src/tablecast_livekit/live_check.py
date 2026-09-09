@@ -1,4 +1,4 @@
-"""明示的に実行する有料STT/TTS接続試験。音声はメモリ内だけで扱う。"""
+"""明示的に実行する有料Realtime/TTS疎通試験。音声はメモリ内だけで扱う。"""
 
 import asyncio
 import json
@@ -7,45 +7,58 @@ from pathlib import Path
 
 import aiohttp
 from dotenv import load_dotenv
-from livekit.agents import APIConnectOptions, stt
-from livekit.plugins import inworld
+from livekit.agents import APIConnectOptions
+from livekit.plugins import inworld, openai
 
 
 async def check_language(language: str, voice: str, text: str) -> dict[str, object]:
     async with aiohttp.ClientSession() as http:
-        recognizer = inworld.STT(language=language, enable_voice_profile=False, http_session=http)
+        model = openai.realtime.RealtimeModel(
+            model="gpt-realtime-2.1",
+            modalities=["text"],
+            turn_detection=None,
+            api_key=os.environ["TABLECAST_MODEL_API_KEY"],
+            http_session=http,
+            input_audio_transcription=None,
+        )
+        realtime = model.session()
         synthesizer = inworld.TTS(
             model="inworld-tts-2", voice=voice, language=language, http_session=http
         )
         options = APIConnectOptions(max_retry=0, timeout=20)
-        stream = recognizer.stream(conn_options=options)
-        transcripts: list[str] = []
         duration = 0.0
-
-        async def receive() -> None:
-            async for event in stream:
-                if event.type == stt.SpeechEventType.FINAL_TRANSCRIPT and event.alternatives:
-                    transcripts.append(event.alternatives[0].text)
-                    # 疎通は確定認識で完了し、サーバーのWebSocket切断を待たない。
-                    return
-
-        receive_task = asyncio.create_task(receive())
+        reply = ""
         try:
-            async with asyncio.timeout(45):
+            async with asyncio.timeout(60):
+                await realtime.update_instructions(
+                    "音声で受けた注文の商品と数量を同じ言語で短く復唱してください。"
+                    "注文は送信せず、本文だけを返してください。"
+                )
                 async with synthesizer.synthesize(text, conn_options=options) as speech:
                     async for packet in speech:
-                        duration += packet.frame.duration
-                        stream.push_frame(packet.frame)
-                stream.end_input()
-                await receive_task
-            if duration <= 0 or not any(transcripts):
-                raise RuntimeError("合成音声または確定した認識結果を取得できませんでした")
-            return {"language": language, "audioSeconds": duration, "transcripts": transcripts}
+                        realtime.push_audio(packet.frame)
+                realtime.commit_audio()
+                generation = await realtime.generate_reply()
+                async for message in generation.message_stream:
+                    async for chunk in message.text_stream:
+                        reply += chunk
+                if not reply.strip():
+                    raise RuntimeError("Realtimeから応答を取得できませんでした")
+                async with synthesizer.synthesize(reply, conn_options=options) as speech:
+                    async for packet in speech:
+                        if any(packet.frame.data):
+                            duration += packet.frame.duration
+            if duration <= 0:
+                raise RuntimeError("Inworldから有声の応答を取得できませんでした")
+            return {
+                "model": "gpt-realtime-2.1",
+                "language": language,
+                "reply": reply,
+                "audioSeconds": duration,
+            }
         finally:
-            receive_task.cancel()
-            await asyncio.gather(receive_task, return_exceptions=True)
-            await stream.aclose()
-            await recognizer.aclose()
+            await realtime.aclose()
+            await model.aclose()
             await synthesizer.aclose()
 
 
@@ -64,7 +77,12 @@ def main() -> None:
             "有料試験です。TABLECAST_RUN_PAID_VOICE_TESTS=1 を明示して実行してください。"
         )
     load_dotenv(Path(__file__).resolve().parents[3] / ".env.secrets.local")
-    required = ["INWORLD_API_KEY", "TABLECAST_INWORLD_VOICE_JA", "TABLECAST_INWORLD_VOICE_EN"]
+    required = [
+        "INWORLD_API_KEY",
+        "TABLECAST_MODEL_API_KEY",
+        "TABLECAST_INWORLD_VOICE_JA",
+        "TABLECAST_INWORLD_VOICE_EN",
+    ]
     missing = [name for name in required if not os.environ.get(name)]
     if missing:
         raise SystemExit("未設定の環境変数: " + ", ".join(missing))

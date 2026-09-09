@@ -218,12 +218,12 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
     if (
       external.INWORLD_API_KEY &&
       external.TABLECAST_MODEL_API_KEY &&
-      external.TABLECAST_MODEL &&
       external.TABLECAST_INWORLD_VOICE_JA &&
       external.TABLECAST_INWORLD_VOICE_EN
     ) {
       launch(["uv", "run", "--directory", "livekit", "tablecast-voice", "dev"], {
         INWORLD_API_KEY: external.INWORLD_API_KEY,
+        OPENAI_API_KEY: external.TABLECAST_MODEL_API_KEY,
         TABLECAST_INWORLD_VOICE_JA: external.TABLECAST_INWORLD_VOICE_JA,
         TABLECAST_INWORLD_VOICE_EN: external.TABLECAST_INWORLD_VOICE_EN,
         LIVEKIT_URL: `ws://127.0.0.1:${runtime.ports.signaling}`,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "最小実装"
+  short_description: "公式docsと既存の慣例を踏襲し、独自実装と保守負担を減らす"
+  default_prompt: "$minimum-impl を使い、公式docs・公式examples・慣例フォルダ構造・既存コードを確認して踏襲し、標準機能と既存境界を優先してください。要求・受入条件・安全性・互換性・検証を維持しながら、DRYとYAGNIでテスト対象となる独自実装量とメンテナンスコストを削減してください。"

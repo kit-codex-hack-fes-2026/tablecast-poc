@@ -1,11 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { z } from "zod";
-import { useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { useState } from "react";
+import { z } from "zod";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
+import { Button, buttonVariants } from "../../components/ui/button";
+import { DialogFooter } from "../../components/ui/dialog";
+import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { api, ApiFailure, json } from "../../lib/api";
 import { storesSchema } from "../../lib/responses";
@@ -69,49 +71,66 @@ export function Consent() {
   });
   if (stores.error instanceof ApiFailure && stores.error.status === 401)
     return (
-      <main className="empty-page">
+      <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
         <h1>{t("auth_subtitle")}</h1>
-        <a className="primary-button" href={`/login?${oauthQuery}`}>
+        <a
+          data-slot="button"
+          data-variant="default"
+          className={buttonVariants({ size: "lg" })}
+          href={`/login?${oauthQuery}`}
+        >
           {t("auth_sign_in")}
         </a>
       </main>
     );
   return (
-    <main className="pair-page">
-      <header className="simple-header">
-        <Link className="brand" to="/">
+    <main className="min-h-dvh">
+      <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
+        <Link
+          className="brand inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
+          to="/"
+        >
           TableCast
         </Link>
         <LanguageSwitch onChange={setLocale} />
       </header>
-      <section className="pair-card">
+      <section className="mt-12 mx-auto mb-10 max-w-144 p-10 flex items-center flex-col text-center [&_>_[data-slot=button][data-size=text]]:mt-7 [&_>_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6 max-sm:mt-9">
         <ShieldCheck size={36} aria-hidden="true" />
-        <h1>{t(postLogin ? "oauth_organisation" : "oauth_title")}</h1>
-        <p>{t("oauth_note")}</p>
-        <dl className="diagnostics w-full text-left">
-          <div>
-            <dt>{t("oauth_client")}</dt>
-            <dd>{search.get("client_id")}</dd>
+        <h1 className="text-3xl mt-3 max-sm:text-2xl">
+          {t(postLogin ? "oauth_organisation" : "oauth_title")}
+        </h1>
+        <p className="text-muted-foreground text-sm leading-loose mt-5 mx-0 mb-7">
+          {t("oauth_note")}
+        </p>
+        <dl className="w-full text-left">
+          <div className="border-b border-b-border py-3.5 px-0">
+            <dt className="text-xs text-muted-foreground">{t("oauth_client")}</dt>
+            <dd className="font-mono text-xs wrap-anywhere mt-1">{search.get("client_id")}</dd>
           </div>
-          <div>
-            <dt>{t("oauth_permissions")}</dt>
-            <dd>{search.get("scope")?.split(" ").join(" · ")}</dd>
+          <div className="border-b border-b-border py-3.5 px-0">
+            <dt className="text-xs text-muted-foreground">{t("oauth_permissions")}</dt>
+            <dd className="font-mono text-xs wrap-anywhere mt-1">
+              {search.get("scope")?.split(" ").join(" · ")}
+            </dd>
           </div>
         </dl>
         {postLogin && (
-          <label className="stacked-form w-full">
+          <label className="[&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-xs flex flex-col gap-4 pt-6 w-full">
             {t("oauth_organisation")}
-            <select value={selected} onChange={(event) => setOrganization(event.target.value)}>
+            <NativeSelect
+              value={selected}
+              onChange={(event) => setOrganization(event.target.value)}
+            >
               {organizations.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
         )}
         <ErrorNotice error={stores.error || consent.error} />
-        <div className="dialog-actions mt-8 w-full">
+        <DialogFooter className="mt-8 w-full">
           <Button
             variant="outline"
             onClick={() => consent.mutate(false)}
@@ -126,7 +145,7 @@ export function Consent() {
           >
             {t(postLogin ? "oauth_continue" : "oauth_allow")}
           </Button>
-        </div>
+        </DialogFooter>
       </section>
     </main>
   );

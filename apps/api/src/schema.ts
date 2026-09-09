@@ -3,6 +3,39 @@ import { z } from "zod";
 export const localeSchema = z.enum(["ja", "en"]);
 export type Locale = z.infer<typeof localeSchema>;
 const id = z.string().min(1).max(100);
+export const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
+export type UiSection = z.infer<typeof uiSectionSchema>;
+export const uiSectionInputSchema = z
+  .object({ section: uiSectionSchema, productId: id.nullish() })
+  .strict();
+export type UiSectionInput = z.infer<typeof uiSectionInputSchema>;
+export const speechSpeedSchema = z.number().min(0.5).max(1.5).multipleOf(0.1);
+export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).strict();
+export const showProductsSchema = z.object({ productIds: z.array(id).min(1).max(4) }).strict();
+export const voiceToolNameSchema = z.enum([
+  "getCatalog",
+  "getTableState",
+  "updateCart",
+  "prepareConfirmation",
+  "submitOrder",
+  "callStaff",
+  "setUiSection",
+  "setLanguage",
+  "setSpeechSpeed",
+  "showProducts",
+]);
+export const voiceToolEventSchema = z.object({
+  turnId: id,
+  toolCallId: id,
+  toolName: voiceToolNameSchema,
+  state: z.enum(["running", "completed", "error"]),
+  errorCode: z.enum(["VOICE_TOOL_FAILED", "VOICE_CANCELLED"]).optional(),
+});
+export const voiceProductsEventSchema = showProductsSchema.extend({ turnId: id });
+export const voiceFailedEventSchema = z.object({
+  turnId: id,
+  code: z.enum(["VOICE_MODEL_FAILED", "VOICE_INTERNAL_ERROR"]),
+});
 const money = z.number().int().min(0).max(10_000_000);
 export const contentSchema = z
   .object({
@@ -184,6 +217,9 @@ export type TableState = {
   status: "open" | "closed";
   voiceState: "stopped" | "active" | "error";
   voiceSessionId: string | null;
+  uiSection: UiSection;
+  selectedProductId: string | null;
+  speechSpeed: number;
   guestCount: number;
   openedAt: number;
   cart: Cart;
@@ -338,6 +374,7 @@ export const voiceTriggerSchema = z.enum(["user", "proactive"]);
 export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 export const voiceTurnSchema = z
   .object({
+    transport: z.enum(["cascade", "realtime"]).default("cascade"),
     turnId: id,
     voiceSessionId: id,
     locale: localeSchema,
@@ -473,6 +510,9 @@ export const tableStateSchema: z.ZodType<TableState> = z.object({
   status: z.enum(["open", "closed"]),
   voiceState: z.enum(["stopped", "active", "error"]),
   voiceSessionId: z.string().nullable(),
+  uiSection: uiSectionSchema,
+  selectedProductId: id.nullable(),
+  speechSpeed: speechSpeedSchema,
   guestCount: z.number().int(),
   openedAt: z.number().int(),
   cart: cartSchema,
