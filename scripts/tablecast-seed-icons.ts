@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 // 外部サービスや実在人物の写真を使わない、固定IDのデモ用アイコン。
 export async function seedIdentityIcon(
-  env: TablecastEnv,
+  env: Pick<TablecastEnv, "TABLECAST_MEDIA">,
   kind: "user" | "store",
   identity: string,
 ) {

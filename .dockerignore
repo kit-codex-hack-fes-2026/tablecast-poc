@@ -1,0 +1,15 @@
+**
+!package.json
+!bun.lock
+!apps/
+!apps/api/
+!apps/api/package.json
+!apps/web/
+!apps/web/package.json
+!apps/emulate/
+!apps/emulate/package.json
+!apps/emulate/src/
+!apps/emulate/src/**
+!apps/emulate/Dockerfile
+!livekit/
+!livekit/package.json

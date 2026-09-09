@@ -97,6 +97,9 @@ async function currentVoiceTurn(
 export const voiceParticipantIdentity = (voiceSessionId: string) =>
   `tablecast-device-${voiceSessionId}`;
 
+const voiceRoomName = (env: TablecastEnv, sessionId: string) =>
+  `${env.TABLECAST_AGENT_NAME || "tablecast"}-${sessionId}`;
+
 export async function stopVoiceRoom(env: TablecastEnv, voiceSessionId: string) {
   if (
     !env.TABLECAST_LIVEKIT_URL ||
@@ -111,11 +114,13 @@ export async function stopVoiceRoom(env: TablecastEnv, voiceSessionId: string) {
     { failover: false, requestTimeout: 5 },
   );
   try {
-    await service.deleteRoom(`tablecast-${voiceSessionId}`);
+    await service.deleteRoom(voiceRoomName(env, voiceSessionId));
   } catch (error) {
-    if (error instanceof ServerError && error.code === "not_found") return;
-    ensure(false, "VOICE_ROOM_STOP_FAILED", 503);
+    if (!(error instanceof ServerError && error.code === "not_found"))
+      ensure(false, "VOICE_ROOM_STOP_FAILED", 503);
   }
+  if (env.TABLECAST_CONTAINERS_ENABLED === "true")
+    await env.TABLECAST_VOICE.getByName("tablecast-voice").release(voiceSessionId);
 }
 
 export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string) {
@@ -128,10 +133,10 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
     "VOICE_NOT_CONFIGURED",
     503,
   );
-  const roomName = `tablecast-${voiceSessionId}`;
+  const roomName = voiceRoomName(env, voiceSessionId);
   const token = new AccessToken(env.TABLECAST_LIVEKIT_API_KEY, env.TABLECAST_LIVEKIT_API_SECRET, {
     identity: voiceParticipantIdentity(voiceSessionId),
-    ttl: "10m",
+    ttl: "5m",
   });
   token.addGrant({
     roomJoin: true,
@@ -145,12 +150,20 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
   token.roomConfig = new RoomConfiguration({
     agents: [
       new RoomAgentDispatch({
-        agentName: "tablecast-voice",
+        agentName: env.TABLECAST_AGENT_NAME || "tablecast-voice",
         metadata: JSON.stringify({ voiceSessionId }),
       }),
     ],
   });
-  return { url: env.TABLECAST_LIVEKIT_URL, token: await token.toJwt(), voiceSessionId };
+  const jwt = await token.toJwt();
+  if (env.TABLECAST_CONTAINERS_ENABLED === "true") {
+    try {
+      await env.TABLECAST_VOICE.getByName("tablecast-voice").reserve(voiceSessionId);
+    } catch {
+      ensure(false, "VOICE_RUNTIME_UNAVAILABLE", 503);
+    }
+  }
+  return { url: env.TABLECAST_LIVEKIT_URL, token: jwt, voiceSessionId };
 }
 
 async function voiceActor(

@@ -11,7 +11,11 @@ export default createServerEntry({
       path.startsWith("/mcp/") ||
       path.startsWith("/.well-known/") ||
       path.startsWith("/media/") ||
-      path.startsWith("/internal/voice/")
+      path.startsWith("/internal/voice/") ||
+      path.startsWith("/internal/deploy/") ||
+      path.startsWith("/_tablecast/oauth/") ||
+      path.startsWith("/o/oauth2/v2/auth/") ||
+      path.startsWith("/_emulate/")
     ) {
       return env.TABLECAST_API.fetch(new Request(request, { redirect: "manual" }));
     }

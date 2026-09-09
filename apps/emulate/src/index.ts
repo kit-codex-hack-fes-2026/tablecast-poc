@@ -1,20 +1,31 @@
 import { createEmulator } from "emulate";
 
+const preview = process.env.TABLECAST_ENV === "preview";
 const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
 const port = Number(process.env.TABLECAST_OAUTH_PORT);
-if (!origin || !Number.isInteger(port) || port < 1024 || process.env.NODE_ENV === "production") {
+if (
+  !origin ||
+  !Number.isInteger(port) ||
+  port < 1024 ||
+  (process.env.NODE_ENV === "production" && !preview)
+) {
   throw new Error("TableCastのローカルOAuth設定が必要です。");
 }
 const hostname = new URL(origin).hostname;
 if (
-  !(hostname.endsWith(".localhost") || hostname === "localhost" || hostname.endsWith(".orb.local"))
+  !(
+    hostname.endsWith(".localhost") ||
+    hostname === "localhost" ||
+    hostname.endsWith(".orb.local")
+  ) &&
+  !(preview && /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(origin))
 ) {
   throw new Error("OAuth emulatorはローカル環境専用です。");
 }
 const emulator = await createEmulator({
   service: "google",
   port,
-  baseUrl: `http://127.0.0.1:${port}`,
+  baseUrl: preview ? `${origin}/_tablecast/oauth` : `http://127.0.0.1:${port}`,
   seed: {
     google: {
       users: [

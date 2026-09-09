@@ -7,22 +7,20 @@ import process from "node:process";
 import { defineConfig } from "vite";
 import { z } from "zod";
 
-export default defineConfig(({ command }) => {
+export default defineConfig(() => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
-  const localConfig = command === "serve" || tablecastEnv.TABLECAST_LOCAL_BUILD === "1";
   return {
+    build: { minify: true },
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
     plugins: [
       tailwindcss(),
       cloudflare({
-        configPath: localConfig ? tablecastEnv.TABLECAST_WEB_CONFIG : undefined,
+        configPath: tablecastEnv.TABLECAST_WEB_CONFIG,
         viteEnvironment: { name: "ssr" },
         auxiliaryWorkers: [
           {
-            configPath: localConfig
-              ? (tablecastEnv.TABLECAST_API_CONFIG ?? "../api/wrangler.jsonc")
-              : "../api/wrangler.jsonc",
+            configPath: tablecastEnv.TABLECAST_API_CONFIG ?? "../api/wrangler.jsonc",
             viteEnvironment: { name: "tablecast_api" },
           },
         ],

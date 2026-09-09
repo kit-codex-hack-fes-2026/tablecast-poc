@@ -20,8 +20,20 @@
       "migrations_dir": "migrations",
     },
   ],
-  "durable_objects": { "bindings": [{ "name": "TABLECAST_EVENTS", "class_name": "StoreEvents" }] },
-  "migrations": [{ "tag": "tablecast-v1", "new_sqlite_classes": ["StoreEvents"] }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "TABLECAST_EVENTS", "class_name": "StoreEvents" },
+      { "name": "TABLECAST_VOICE", "class_name": "TablecastVoice" },
+      { "name": "TABLECAST_EMULATE", "class_name": "TablecastEmulate" },
+    ],
+  },
+  "migrations": [
+    { "tag": "tablecast-v1", "new_sqlite_classes": ["StoreEvents"] },
+    {
+      "tag": "tablecast-v2-containers",
+      "new_sqlite_classes": ["TablecastVoice", "TablecastEmulate"],
+    },
+  ],
   "r2_buckets": [{ "binding": "TABLECAST_MEDIA", "bucket_name": "tablecast-media" }],
   "images": { "binding": "TABLECAST_IMAGES" },
   "observability": { "enabled": true, "head_sampling_rate": 1 },

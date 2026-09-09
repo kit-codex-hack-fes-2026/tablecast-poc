@@ -19,6 +19,7 @@
     "@better-auth/drizzle-adapter": "1.7.2",
     "@better-auth/oauth-provider": "1.7.2",
     "@better-auth/passkey": "1.7.2",
+    "@cloudflare/containers": "0.3.7",
     "@hono/mcp": "0.3.2",
     "@hono/zod-validator": "0.9.1",
     "@mastra/core": "1.64.0",
