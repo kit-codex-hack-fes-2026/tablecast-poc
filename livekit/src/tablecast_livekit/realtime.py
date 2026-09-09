@@ -29,10 +29,16 @@ class RealtimeTablecastAgent(TablecastAgent):
     def __init__(
         self, api: VoiceAPI, config: VoiceConfiguration, realtime: RealtimeConfiguration
     ) -> None:
+        chat_ctx = llm.ChatContext()
+        for message in realtime.history:
+            chat_ctx.add_message(
+                role=message.role, content=message.content, interrupted=message.interrupted
+            )
         super().__init__(
             api,
             config,
             instructions=realtime.instructions,
+            chat_ctx=chat_ctx,
             tools=[self.proxy_tool(schema) for schema in realtime.tools],
             model=openai.realtime.RealtimeModel(
                 model=realtime.model,

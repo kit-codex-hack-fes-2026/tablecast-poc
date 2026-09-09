@@ -1,0 +1,43 @@
+name: tablecast
+services:
+  tablecast:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    init: true
+    command: sleep infinity
+    environment:
+      BUN_INSTALL_CACHE_DIR: /workspaces/tablecast/node_modules/.cache/tablecast-bun
+      TABLECAST_CONTAINER: "1"
+      TABLECAST_WORKTREE_NAME: ${TABLECAST_WORKTREE_NAME:-main}
+      TABLECAST_REPO_NAME: ${TABLECAST_REPO_NAME:-tablecast-poc}
+      TABLECAST_CONTAINER_ORIGIN: ${TABLECAST_CONTAINER_ORIGIN:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:7882:7882/udp"
+    labels:
+      dev.orbstack.domains: ${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.orb.local
+      dev.orbstack.http-port: "3000"
+    volumes:
+      - ..:/workspaces/tablecast
+      - tablecast-node:/workspaces/tablecast/node_modules
+      - tablecast-web-node:/workspaces/tablecast/apps/web/node_modules
+      - tablecast-api-node:/workspaces/tablecast/apps/api/node_modules
+      - tablecast-emulate-node:/workspaces/tablecast/apps/emulate/node_modules
+      - tablecast-livekit-node:/workspaces/tablecast/livekit/node_modules
+      - tablecast-python:/workspaces/tablecast/livekit/.venv
+      - tablecast-state:/workspaces/tablecast/.local
+      - tablecast-web-output:/workspaces/tablecast/apps/web/dist
+      - tablecast-web-vite:/workspaces/tablecast/apps/web/.wrangler
+volumes:
+  tablecast-node:
+  tablecast-web-node:
+  tablecast-api-node:
+  tablecast-emulate-node:
+  tablecast-livekit-node:
+  tablecast-python:
+  tablecast-state:
+  tablecast-web-output:
+  tablecast-web-vite:

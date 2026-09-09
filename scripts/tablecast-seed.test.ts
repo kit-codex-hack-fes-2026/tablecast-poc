@@ -176,7 +176,51 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       expect(await db.prepare("PRAGMA foreign_key_check").all()).toMatchObject({ results: [] });
       const reserved = "tablecast-komorebi-table-01-session";
       await db.prepare("UPDATE table_sessions SET cart_version=17 WHERE id=?").bind(reserved).run();
+      const owner = await db
+        .prepare("SELECT id FROM user WHERE email=?")
+        .bind(credentials.email)
+        .first<{ id: string }>();
+      if (!owner) throw new Error("デモ管理者がありません。");
+      await db.batch(
+        ["http://127.0.0.1:38008", "http://127.0.0.1:38016", "https://accounts.google.com"].map(
+          (issuer, index) =>
+            db
+              .prepare(
+                "INSERT INTO account(id,issuer,account_id,provider_id,user_id,created_at,updated_at) VALUES(?,?,?,'google',?,1,1)",
+              )
+              .bind(`tablecast-mock-${index}`, issuer, `subject-${index}`, owner.id),
+        ),
+      );
       const repeated = await seedDemoDatabase(platform.env, credentials);
+      expect(
+        await db
+          .prepare(
+            "SELECT issuer,account_id FROM account WHERE provider_id='google' ORDER BY issuer",
+          )
+          .all(),
+      ).toMatchObject({
+        results: [
+          { issuer: "https://accounts.google.com", account_id: "subject-2" },
+          { issuer: "https://tablecast-google.localhost", account_id: credentials.email },
+        ],
+      });
+      expect(await db.prepare("SELECT name FROM organization ORDER BY slug").all()).toMatchObject({
+        results: [{ name: "こはるフードサービス" }, { name: "こもれびダイニング" }],
+      });
+      expect(
+        await db
+          .prepare(
+            "SELECT COUNT(*) AS count FROM team_member JOIN stores ON stores.team_id=team_member.team_id",
+          )
+          .first(),
+      ).toEqual({
+        count: 4,
+      });
+      expect(
+        await db
+          .prepare("SELECT COUNT(*) AS count FROM team WHERE name LIKE 'tablecast-%'")
+          .first(),
+      ).toEqual({ count: 0 });
       expect(repeated).toEqual(counts);
       expect(
         await db

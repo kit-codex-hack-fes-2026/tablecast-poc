@@ -61,7 +61,7 @@ export const configuration: Configuration = configurationSchema.parse({
   },
 });
 export async function setupFixture() {
-  const response = await createAuth(env).api.signUpEmail({
+  const registration = await createAuth(env).api.signUpEmail({
     body: {
       email: "tablecast-staff@example.test",
       password: "tablecast-local-fixture-password",
@@ -69,11 +69,16 @@ export async function setupFixture() {
     },
     asResponse: true,
   });
-  ensure(response.ok, "FIXTURE_AUTH_FAILED", 503);
+  ensure(registration.ok, "FIXTURE_AUTH_FAILED", 503);
   const user = await env.TABLECAST_DB.prepare("SELECT id FROM user WHERE email=?")
     .bind("tablecast-staff@example.test")
     .first<{ id: string }>();
   ensure(user, "FIXTURE_USER_MISSING", 503);
+  await env.TABLECAST_DB.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
+  const response = await createAuth(env).api.signInEmail({
+    body: { email: "tablecast-staff@example.test", password: "tablecast-local-fixture-password" },
+    asResponse: true,
+  });
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     env.TABLECAST_DB.prepare(

@@ -11,6 +11,7 @@
     "TABLECAST_RELEASE_SHA": "local",
     "TABLECAST_VOICE_ENABLED": "false",
   },
+  "send_email": [{ "name": "TABLECAST_EMAIL" }],
   "d1_databases": [
     {
       "binding": "TABLECAST_DB",

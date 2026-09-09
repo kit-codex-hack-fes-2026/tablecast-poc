@@ -33,13 +33,14 @@ hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル�
 
 ## worktree識別子
 
-正規化したworktree実パスとrepository識別子から短いhashを作る。branch名を正本にせず、detached HEADでも一意にする。
+ブラウザー用のドメインは `<worktree>.<repo>.localhost`。メインcheckoutは `main.tablecast-poc.localhost`、`voice-ui` という追加worktreeは `voice-ui.tablecast-poc.localhost` になる。repo名はGit共通ディレクトリの親フォルダー名から取得し、detached HEADでも変わらない。各ラベルを小文字化し、英数字・ハイフン以外をハイフンに置換する。名前の重複は起動時に拒否する。
+内部リソースの識別子は正規化したworktree実パスとrepository識別子から作る短いhashを維持し、ドメイン変更で保存済みD1・R2を失わない。Git commitが変わってもドメインは変わらない。
 独自リソース名には `tablecast` を含める。
 
 | 対象              | 例・分離内容                                         |
 | ----------------- | ---------------------------------------------------- |
-| Webのホスト       | `tablecast-<id>.localhost`                           |
-| LiveKit signaling | `livekit-tablecast-<id>.localhost`                   |
+| Webのホスト       | `<worktree>.<repo>.localhost`                        |
+| LiveKit signaling | `livekit-<worktree>.<repo>.localhost`                |
 | Worker            | `tablecast-<id>-web`、`tablecast-<id>-api`           |
 | 公開環境値        | `TABLECAST_PUBLIC_ORIGIN` 等                         |
 | 保存先            | `<worktree>/.local/state`、生成設定とログも `.local` |
@@ -48,7 +49,7 @@ hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル�
 | 認証              | worktree固有secret、正確な公開origin                 |
 | LiveKit           | 専用Server、ports、Room、dispatch名、開発鍵          |
 
-Cookieはポートでは分離されないため、単にlocalhostのポートだけを変える構成にしない。host-only Cookieとホスト分離を使う。[S18](sources.md#s18)
+Cookieはポートでは分離されないため、worktreeごとにホスト名を分ける。同一worktreeのコンテナは `<worktree>.<repo>.container.localhost` とし、通常起動とのCookie共有を防ぐ。host-only Cookieを維持する。[S18](sources.md#s18)
 `.localhost` の解決・HTTPS・ブラウザー対応は環境ごとに起動診断する。iPadには到達可能なLANホスト名と信頼された証明書が別途必要。
 
 ## ポートと起動設定

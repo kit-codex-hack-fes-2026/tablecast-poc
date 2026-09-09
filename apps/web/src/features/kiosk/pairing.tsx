@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { MonitorSmartphone } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
@@ -50,6 +51,13 @@ export function Pairing({ onReady }: { onReady: () => void }) {
         </p>
         {request.data ? (
           <>
+            <QRCodeSVG
+              className="mb-5 rounded-xl bg-white p-3"
+              value={`${request.data.verification_uri}?user_code=${encodeURIComponent(request.data.user_code)}`}
+              size={208}
+              level="M"
+              title={t("admin_pair")}
+            />
             <output
               className="text-4xl tracking-widest tabular-nums bg-card border border-border py-4 px-6 rounded-lg"
               aria-label={t("admin_pair_code")}

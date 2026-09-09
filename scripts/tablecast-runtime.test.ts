@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { assertLocalRuntime, localReleaseSha, worktreeId } from "./tablecast-runtime";
+import { assertLocalRuntime, localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -55,6 +55,57 @@ it("起動版は実GitのHEADを使い未commitの変更を区別し無視対象
 });
 
 describe("開発資源の所有境界", () => {
+  it("mainとdetached worktreeでDev Containerにも同じrepo付きドメインを渡す", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "tablecast-container-"));
+    const repository = join(parent, "Tablecast_PoC");
+    const linked = join(parent, "Voice_UI");
+    const execute = promisify(execFile);
+    try {
+      await mkdir(repository);
+      const git = (...args: string[]) => execute("git", ["-C", repository, ...args]);
+      await git("init", "--quiet");
+      await git(
+        "-c",
+        "user.name=TableCast Test",
+        "-c",
+        "user.email=tablecast@example.invalid",
+        "-c",
+        "commit.gpgSign=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "commit",
+        "--allow-empty",
+        "--quiet",
+        "-m",
+        "tablecast fixture",
+      );
+      await git("worktree", "add", "--detach", linked);
+      for (const [root, name] of [
+        [repository, "main"],
+        [linked, "voice-ui"],
+      ] as const) {
+        await mkdir(join(root, ".devcontainer"));
+        await execute("sh", [".devcontainer/tablecast-init.sh", root]);
+        expect(worktreeHost(root, join(repository, ".git"))).toBe(`${name}.tablecast-poc`);
+        expect(await readFile(join(root, ".devcontainer/.env"), "utf8")).toBe(
+          `TABLECAST_WORKTREE_NAME=${name}\nTABLECAST_REPO_NAME=tablecast-poc\nTABLECAST_CONTAINER_ORIGIN=http://${name}.tablecast-poc.container.localhost:3000\n`,
+        );
+      }
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+  it("worktreeとrepoを別のDNSラベルにして不正な名前を拒否する", () => {
+    expect(worktreeHost("/workspace/tablecast-poc")).toBe("main.tablecast-poc");
+    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-poc/.git")).toBe(
+      "voice-ui.tablecast-poc",
+    );
+    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-other/.git")).toBe(
+      "voice-ui.tablecast-other",
+    );
+    expect(() => worktreeHost("/workspace/日本語")).toThrow("worktree名");
+    expect(() => worktreeHost(`/workspace/${"a".repeat(64)}`)).toThrow("worktree名");
+  });
   it("同じブランチでもworktree実パスが違う場合は識別子が分かれる", () => {
     expect(worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git")).not.toBe(
       worktreeId("/tmp/tablecast-two", "/tmp/tablecast/.git"),
@@ -67,7 +118,7 @@ describe("開発資源の所有境界", () => {
     const runtime = {
       id: "0123456789",
       root: "/tmp/tablecast",
-      origin: "http://tablecast-0123456789.localhost:3000",
+      origin: "http://main.tablecast.localhost:3000",
       ports: {
         proxy: 3000,
         web: 3001,
@@ -82,6 +133,18 @@ describe("開発資源の所有境界", () => {
       apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
       webConfig: "/tmp/tablecast/.local/web.wrangler.json",
     };
+    expect(() =>
+      assertLocalRuntime(
+        { ...runtime, origin: "http://main.tablecast.localhost:3000" },
+        runtime.root,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertLocalRuntime(
+        { ...runtime, origin: "http://tablecast-other.localhost:3000" },
+        runtime.root,
+      ),
+    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
     expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow(
       "別worktree・非ローカル・不整合の設定を操作できません。",
     );

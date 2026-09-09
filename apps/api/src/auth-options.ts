@@ -1,10 +1,19 @@
+import { passkey } from "@better-auth/passkey";
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { deviceAuthorization, jwt, organization, redeemDeviceCode } from "better-auth/plugins";
 import { getOAuthProviderApi, oauthProvider } from "@better-auth/oauth-provider";
 import { z } from "zod";
 
-export function authOptions(origin: string, secret: string) {
+export function authOptions(
+  origin: string,
+  secret: string,
+  sendInvitationEmail?: (data: {
+    id: string;
+    email: string;
+    organization: { name: string };
+  }) => Promise<void>,
+) {
   const oauth = {
     loginPage: "/login",
     consentPage: "/consent",
@@ -13,6 +22,8 @@ export function authOptions(origin: string, secret: string) {
       { identifier: `${origin}/mcp`, allowedScopes: ["tablecast:read", "tablecast:write"] },
     ],
     allowDynamicClientRegistration: true,
+    allowUnauthenticatedClientRegistration: true,
+    allowPublicClientPrelogin: true,
     clientRegistrationDefaultResources: [`${origin}/mcp`],
     postLogin: {
       page: "/consent",
@@ -34,7 +45,10 @@ export function authOptions(origin: string, secret: string) {
     basePath: "/api/auth",
     secret,
     trustedOrigins: [origin],
-    emailAndPassword: { enabled: true, minPasswordLength: 12 },
+    emailAndPassword: { enabled: true, minPasswordLength: 12, requireEmailVerification: true },
+    account: {
+      accountLinking: { enabled: true, allowDifferentEmails: false, allowUnlinkingAll: false },
+    },
     user: {
       additionalFields: { locale: { type: ["ja", "en"], required: false, defaultValue: "ja" } },
     },
@@ -44,11 +58,17 @@ export function authOptions(origin: string, secret: string) {
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
     },
     plugins: [
-      organization({ allowUserToCreateOrganization: false, teams: { enabled: true } }),
+      organization({
+        allowUserToCreateOrganization: true,
+        teams: { enabled: true },
+        sendInvitationEmail,
+        requireEmailVerificationOnInvitation: true,
+      }),
+      passkey({ rpID: new URL(origin).hostname, rpName: "TableCast", origin }),
       jwt(),
       oauthProvider(oauth),
       deviceAuthorization({
-        verificationUri: "/device",
+        verificationUri: `${origin}/device`,
         validateClient: async (clientId) => clientId === "tablecast-kiosk",
       }),
       {

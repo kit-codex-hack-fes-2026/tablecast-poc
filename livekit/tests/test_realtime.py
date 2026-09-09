@@ -17,7 +17,7 @@ from livekit.agents import (
 from livekit.agents.voice import SpeechHandle
 from test_agent import configuration
 
-from tablecast_livekit.api import RealtimeConfiguration, VoiceAPI
+from tablecast_livekit.api import RealtimeConfiguration, RealtimeMessage, VoiceAPI
 from tablecast_livekit.realtime import RealtimeTablecastAgent
 
 
@@ -158,3 +158,34 @@ async def test_次の発話開始だけで再生完了したturnを中断へ変�
     assert agent.turn_id is None
     assert isinstance(agent.api.end_turn, AsyncMock)
     agent.api.end_turn.assert_not_awaited()
+
+
+async def test_新しいAgentのモデル文脈に再開前の会話を復元する(
+    agent: RealtimeTablecastAgent,
+):
+    resumed = RealtimeTablecastAgent(
+        agent.api,
+        configuration(),
+        RealtimeConfiguration(
+            model="gpt-realtime-2.1",
+            instructions="同じ席の会話を続ける",
+            tools=[],
+            history=[
+                RealtimeMessage(role="user", content="香りのよい日本酒が好きです"),
+                RealtimeMessage(role="assistant", content="そらしずくと、", interrupted=True),
+            ],
+        ),
+    )
+    try:
+        messages = [item for item in resumed.chat_ctx.items if isinstance(item, llm.ChatMessage)]
+        assert [(item.role, item.text_content, item.interrupted) for item in messages] == [
+            ("user", "香りのよい日本酒が好きです", False),
+            ("assistant", "そらしずくと、", True),
+        ]
+        assert resumed.instructions == "同じ席の会話を続ける"
+        assert resumed.turn_id is None
+        assert not resumed.pending_audio_turns
+        assert isinstance(agent.api.start_turn, AsyncMock)
+        agent.api.start_turn.assert_not_awaited()
+    finally:
+        await resumed.close()

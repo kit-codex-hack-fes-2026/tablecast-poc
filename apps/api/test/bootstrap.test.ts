@@ -90,6 +90,7 @@ it("新規登録すると公式認証の所有者と標準teamを持つ店舗・
       .bind(result.storeId)
       .first("count"),
   ).toBe(0);
+  await env.TABLECAST_DB.prepare("UPDATE user SET email_verified=1").run();
   const login = await createAuth(bootstrapEnv).api.signInEmail({
     body: { email: initial.admin.email.toLowerCase(), password: initial.admin.password },
     asResponse: true,
@@ -130,6 +131,7 @@ it("成功後に入力を変えて再実行しても既存設定・所有者・�
   expect(configurationSchema.parse(JSON.parse(stored ?? "null"))).toEqual(
     initial.store.configuration,
   );
+  await env.TABLECAST_DB.prepare("UPDATE user SET email_verified=1").run();
   const login = await createAuth(bootstrapEnv).api.signInEmail({
     body: { email: initial.admin.email, password: initial.admin.password },
   });

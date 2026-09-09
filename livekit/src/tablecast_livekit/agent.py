@@ -46,11 +46,13 @@ class TablecastAgent(Agent):
         config: VoiceConfiguration,
         *,
         model: llm.RealtimeModel | None = None,
+        chat_ctx: llm.ChatContext | None = None,
         instructions: str = "接客と業務操作は認証済みTableCast APIへ委譲します。",
         tools: list[llm.Tool] | None = None,
     ) -> None:
         super().__init__(
             instructions=instructions,
+            chat_ctx=chat_ctx,
             tools=tools,
             llm=model if model is not None else TablecastLLM(self.response),
         )

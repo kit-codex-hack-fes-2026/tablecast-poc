@@ -255,3 +255,33 @@ it("端末の承認待ちは正常な待機状態を返す", async () => {
   expect(poll.status).toBe(200);
   expect(await poll.json()).toEqual({ ready: false });
 });
+
+it("メール未確認のパスワード登録ではセッションを発行しない", async () => {
+  const email = "tablecast-unverified@example.test";
+  const password = "tablecast-verification-password";
+  const signup = await json("/api/auth/sign-up/email", { email, password, name: "未確認" });
+  expect(signup.status).toBe(200);
+  expect(signup.headers.getSetCookie().join()).not.toContain("session_token");
+  const login = await json("/api/auth/sign-in/email", { email, password });
+  expect(login.status).toBe(403);
+});
+
+it("最後の組織ownerの降格を拒否し、失効したsessionを再利用できない", async () => {
+  const { cookie, staff } = await setupFixture();
+  const demotion = await json(
+    "/api/auth/organization/update-member-role",
+    { organizationId: "tablecast-org", memberId: "tablecast-member", role: "member" },
+    cookie,
+  );
+  expect(demotion.status).toBe(400);
+  const session = await env.TABLECAST_DB.prepare("SELECT token FROM session WHERE user_id=?")
+    .bind(staff.userId)
+    .first<{ token: string }>();
+  expect(session).not.toBeNull();
+  const revoke = await json("/api/auth/revoke-session", { token: session?.token }, cookie);
+  expect(revoke.status).toBe(200);
+  const stores = await exports.default.fetch(
+    new Request(origin + "/api/admin/stores", { headers: { Cookie: cookie } }),
+  );
+  expect(stores.status).toBe(401);
+});

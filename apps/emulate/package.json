@@ -1,0 +1,12 @@
+{
+  "name": "@tablecast/emulate",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --no-env-file src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "emulate": "0.11.1"
+  }
+}

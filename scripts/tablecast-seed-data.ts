@@ -1,4 +1,4 @@
-import { createAuth } from "../apps/api/src/auth";
+import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/auth";
 import { configurationErrors, confirmationText, priceCart } from "../apps/api/src/modules/pricing";
 import type { PlanContext } from "../apps/api/src/modules/pricing";
 import {
@@ -435,11 +435,43 @@ async function seedCurrentTables(db: D1Database, store: Store, owner: Owner, bas
 export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCredentials) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
   const db = env.TABLECAST_DB;
-  const auth = createAuth(env);
+  const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined });
+  // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
+  const mockAccounts = await db
+    .prepare(
+      "SELECT account.id, account.issuer, account.user_id, user.email FROM account JOIN user ON user.id=account.user_id WHERE provider_id='google' ORDER BY account.created_at DESC",
+    )
+    .all<{ id: string; issuer: string; user_id: string; email: string }>();
+  const mockUsers = new Set<string>();
+  const repairs: D1PreparedStatement[] = [];
+  const canonical: D1PreparedStatement[] = [];
+  for (const account of mockAccounts.results) {
+    if (!URL.canParse(account.issuer)) continue;
+    const issuer = new URL(account.issuer);
+    if (
+      account.issuer !== tablecastGoogleMockIssuer &&
+      !(
+        issuer.protocol === "http:" &&
+        ["127.0.0.1", "localhost", "tablecast-emulate"].includes(issuer.hostname)
+      )
+    )
+      continue;
+    if (mockUsers.has(account.user_id))
+      repairs.push(db.prepare("DELETE FROM account WHERE id=?").bind(account.id));
+    else {
+      mockUsers.add(account.user_id);
+      canonical.push(
+        db
+          .prepare("UPDATE account SET issuer=?,account_id=? WHERE id=?")
+          .bind(tablecastGoogleMockIssuer, account.email.toLowerCase(), account.id),
+      );
+    }
+  }
+  if (canonical.length) await db.batch([...repairs, ...canonical]);
   const owners: string[] = [];
   for (const [email, password, name] of [
-    [credentials.email, credentials.password, "TableCast デモ管理者"],
-    [credentials.otherEmail, credentials.otherPassword, "こはる デモ管理者"],
+    [credentials.email, credentials.password, "佐藤 晴香"],
+    [credentials.otherEmail, credentials.otherPassword, "山本 翼"],
   ]) {
     if (!email || !password || !name) throw new Error("デモ認証情報が不正です。");
     const existing = await db
@@ -447,7 +479,50 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
       .bind(email)
       .first<{ id: string }>();
     const user = existing ?? (await auth.api.signUpEmail({ body: { email, password, name } })).user;
+    await db.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
     owners.push(user.id);
+  }
+  const staff = [
+    {
+      email: "tablecast-owner@example.test",
+      name: "佐藤 晴香",
+      role: "admin",
+      store: "tablecast-komorebi",
+    },
+    {
+      email: "tablecast-member@example.test",
+      name: "田中 蓮",
+      role: "member",
+      store: "tablecast-komorebi",
+    },
+    {
+      email: "tablecast-akari@example.test",
+      name: "小林 直子",
+      role: "member",
+      store: "tablecast-akari",
+    },
+    {
+      email: "tablecast-koharu@example.test",
+      name: "山本 翼",
+      role: "admin",
+      store: "tablecast-koharu",
+    },
+  ];
+  const staffIds = new Map<string, string>();
+  for (const person of staff) {
+    const existing = await db
+      .prepare("SELECT id FROM user WHERE email=?")
+      .bind(person.email)
+      .first<{ id: string }>();
+    const user =
+      existing ??
+      (
+        await auth.api.signUpEmail({
+          body: { email: person.email, name: person.name, password: crypto.randomUUID() },
+        })
+      ).user;
+    await db.prepare("UPDATE user SET email_verified=1 WHERE id=?").bind(user.id).run();
+    staffIds.set(person.email, user.id);
   }
   const organizations = new Map<string, Owner>();
   for (const [index, slug] of ["tablecast-komorebi-group", "tablecast-koharu-group"].entries()) {
@@ -458,8 +533,19 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
       .bind(slug)
       .first<{ id: string }>();
     const organization =
-      existing ?? (await auth.api.createOrganization({ body: { name: slug, slug, userId } }));
+      existing ??
+      (await auth.api.createOrganization({
+        body: { name: index === 0 ? "こもれびダイニング" : "こはるフードサービス", slug, userId },
+      }));
     if (!organization) throw new Error("デモ組織を作成できませんでした。");
+    await db
+      .prepare("UPDATE organization SET name=? WHERE id=? AND name=?")
+      .bind(index === 0 ? "こもれびダイニング" : "こはるフードサービス", organization.id, slug)
+      .run();
+    await db
+      .prepare("UPDATE team SET name=? WHERE organization_id=? AND name=?")
+      .bind(index === 0 ? "こもれびダイニング" : "こはるフードサービス", organization.id, slug)
+      .run();
     organizations.set(slug, { id: organization.id, userId });
   }
   for (const initialStore of demoStores(credentials.profile)) {
@@ -469,19 +555,66 @@ export async function seedDemoDatabase(env: TablecastEnv, credentials: DemoCrede
     const owner = organizations.get(store.organization);
     if (!owner) throw new Error("デモ店舗の所属組織がありません。");
     const existing = await db
-      .prepare("SELECT id,config_json,config_version FROM stores WHERE id=?")
+      .prepare("SELECT id,team_id,config_json,config_version FROM stores WHERE id=?")
       .bind(store.id)
-      .first<{ id: string; config_json: string; config_version: number }>();
+      .first<{ id: string; team_id: string | null; config_json: string; config_version: number }>();
     if (existing) {
       store.configuration = configurationSchema.parse(JSON.parse(existing.config_json));
       store.configVersion = existing.config_version;
     }
     const team =
+      (existing?.team_id ? { id: existing.team_id } : null) ??
       (await db
         .prepare("SELECT id FROM team WHERE organization_id=? AND name=?")
         .bind(owner.id, store.id)
         .first<{ id: string }>()) ??
       (await auth.api.createTeam({ body: { organizationId: owner.id, name: store.id } }));
+    await db
+      .prepare("UPDATE team SET name=? WHERE id=? AND name=?")
+      .bind(store.name, team.id, store.id)
+      .run();
+    for (const person of staff.filter((candidate) => candidate.store === store.id)) {
+      const userId = staffIds.get(person.email);
+      if (!userId) throw new Error("デモスタッフがありません。");
+      await db.batch([
+        db
+          .prepare(
+            "UPDATE session SET active_organization_id=? WHERE user_id=? AND active_organization_id IS NULL",
+          )
+          .bind(owner.id, userId),
+        db
+          .prepare(
+            "INSERT INTO member(id,organization_id,user_id,role,created_at) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM member WHERE organization_id=? AND user_id=?)",
+          )
+          .bind(
+            `tablecast-member-${store.id}-${userId}`,
+            owner.id,
+            userId,
+            person.role,
+            credentials.baseTime,
+            owner.id,
+            userId,
+          ),
+        db
+          .prepare(
+            "INSERT INTO team_member(id,team_id,user_id,membership_key,created_at) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM team_member WHERE team_id=? AND user_id=?)",
+          )
+          .bind(
+            `tablecast-team-${store.id}-${userId}`,
+            team.id,
+            userId,
+            `${team.id}:${userId}`,
+            credentials.baseTime,
+            team.id,
+            userId,
+          ),
+        db
+          .prepare(
+            "UPDATE team SET member_count=(SELECT COUNT(*) FROM team_member WHERE team_id=?) WHERE id=?",
+          )
+          .bind(team.id, team.id),
+      ]);
+    }
     if (!existing)
       await db.batch([
         db
