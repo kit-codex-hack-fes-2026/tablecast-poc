@@ -8,7 +8,7 @@ import { credentials } from "./support/runtime";
 import { tabTo } from "./tablecast-accessibility";
 
 // スタッフの認証入力を含むため、通信traceを保存しない。
-test.use({ trace: "off" });
+test.use({ trace: "off", actionTimeout: 15_000 });
 
 for (const { staffLanguage, labels } of [
   { staffLanguage: "日本語", labels: ja },
@@ -25,7 +25,6 @@ for (const { staffLanguage, labels } of [
     });
     const guest = await guestContext.newPage();
     const storeId = "tablecast-komorebi";
-    let sessionId = "";
     try {
       await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
       await staff
@@ -46,10 +45,7 @@ for (const { staffLanguage, labels } of [
         data: { tableId, guestCount: 2, locale: "ja" },
       });
       expect(opened.ok()).toBeTruthy();
-      const table = tableStateSchema.parse(await opened.json());
-      sessionId = table.id;
-      await staff.reload();
-      await staff.goto(`/admin/stores/${storeId}/floor`);
+      tableStateSchema.parse(await opened.json());
       await guest.goto("/");
       await guest.getByRole("button", { name: "端末を接続する" }).click();
       const pairingCode = guest.getByLabel("端末に表示されたコード");
@@ -229,50 +225,8 @@ for (const { staffLanguage, labels } of [
       await staff.getByRole("button", { name: labels.admin_close_session, exact: true }).click();
       await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();
     } finally {
-      try {
-        if (sessionId) {
-          const sessionPath = `/api/admin/stores/${storeId}/tables/${sessionId}`;
-          const latest = await staff.request.get(sessionPath);
-          expect(latest.status()).toBe(200);
-          const table = tableStateSchema.parse(await latest.json());
-          if (table.status === "open") {
-            // この試験で新規作成した来店だけを、失敗時にも空席へ戻す。
-            if (table.cart.lines.length) {
-              const cleared = await guest.request.put("/api/table/cart", {
-                data: { expectedVersion: table.cart.version, lines: [] },
-              });
-              expect(cleared.status()).toBe(200);
-            }
-            for (const order of table.orders.filter((item) =>
-              ["submitted", "accepted"].includes(item.status),
-            )) {
-              const cancelled = await staff.request.post(
-                `/api/admin/stores/${storeId}/orders/${order.id}/status`,
-                { data: { status: "cancelled" } },
-              );
-              expect(cancelled.status()).toBe(200);
-            }
-            const current = tableStateSchema.parse(
-              await (await staff.request.get(sessionPath)).json(),
-            );
-            if (current.bill.due > 0) {
-              const paid = await staff.request.post(`${sessionPath}/payments`, {
-                data: {
-                  amount: current.bill.due,
-                  idempotencyKey: `tablecast-e2e-cleanup-${sessionId}`,
-                  kind: "payment",
-                  reason: "注文E2Eの専用来店を後片付けするテスト支払",
-                },
-              });
-              expect(paid.status()).toBe(200);
-            }
-            const closed = await staff.request.post(`${sessionPath}/close`, { data: {} });
-            expect(closed.status()).toBe(200);
-          }
-        }
-      } finally {
-        await guestContext.close();
-      }
+      // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
+      await guestContext.close();
     }
   });
 }
