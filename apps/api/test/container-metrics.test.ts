@@ -50,6 +50,11 @@ it("実指標を取得したときPR・instance・観測時刻を保ち、未報
         errors: null,
       }),
     )
+    .mockImplementationOnce(async () => {
+      // 全件受理が返る前には成功heartbeatを送らない。
+      expect(fetch).toHaveBeenCalledTimes(3);
+      return Response.json({});
+    })
     .mockResolvedValueOnce(Response.json({}));
   // When: 5分遅延した完了済みの窓を収集する。
   await collectContainerMetrics(bindings, scheduledTime);
@@ -57,6 +62,7 @@ it("実指標を取得したときPR・instance・観測時刻を保ち、未報
   expect(fetch.mock.calls.map(([url]) => url)).toEqual([
     `https://api.cloudflare.com/client/v4/accounts/${bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID}/containers/applications?name=${application.name}`,
     "https://api.cloudflare.com/client/v4/graphql",
+    "https://tablecast-collector.test/otlp/v1/metrics",
     "https://tablecast-collector.test/otlp/v1/metrics",
   ]);
   const query = z
@@ -96,6 +102,16 @@ it("実指標を取得したときPR・instance・観測時刻を保ち、未報
   );
   expect(body).not.toContain("memory_bytes");
   expect(body).not.toContain("secret");
+  expect(body).not.toContain("collector_success");
+  const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[3]?.[1]?.body)));
+  expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: "tablecast_container_collector_success",
+        gauge: { dataPoints: [expect.objectContaining({ asDouble: 1 })] },
+      }),
+    ]),
+  );
 });
 
 it.each([
@@ -150,12 +166,14 @@ it.each([
 });
 
 it.each(["HTTP拒否", "部分拒否", "送信例外"])("OTLPの%sを成功として扱わない", async (condition) => {
-  // Given: Cloudflareでは正しく空集合を取得できる。
+  // Given: Cloudflareでは実指標を取得できるが、送信先が拒否する。
   const fetch = vi
     .spyOn(globalThis, "fetch")
     .mockResolvedValueOnce(Response.json({ success: true, result: [application] }))
     .mockResolvedValueOnce(
-      Response.json({ data: { viewer: { accounts: [{ containersMetricsAdaptiveGroups: [] }] } } }),
+      Response.json({
+        data: { viewer: { accounts: [{ containersMetricsAdaptiveGroups: [row] }] } },
+      }),
     );
   if (condition === "送信例外") fetch.mockRejectedValueOnce(new Error("通信失敗"));
   else
@@ -164,9 +182,18 @@ it.each(["HTTP拒否", "部分拒否", "送信例外"])("OTLPの%sを成功と�
         ? new Response(null, { status: 429 })
         : Response.json({ partialSuccess: { rejectedDataPoints: "1" } }),
     );
+  fetch.mockResolvedValueOnce(Response.json({}));
   // When / Then: 定期処理は失敗し、無制限に再送しない。
   await expect(collectContainerMetrics(bindings, scheduledTime)).rejects.toThrow(
     /Container指標|通信失敗/,
   );
-  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(z.string().parse(fetch.mock.calls[2]?.[1]?.body)).not.toContain("collector_success");
+  const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[3]?.[1]?.body)));
+  expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual([
+    expect.objectContaining({
+      name: "tablecast_container_collector_success",
+      gauge: { dataPoints: [expect.objectContaining({ asDouble: 0 })] },
+    }),
+  ]);
 });

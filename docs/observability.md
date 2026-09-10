@@ -182,6 +182,6 @@ absent_over_time(tablecast_container_collector_success{deployment_environment_na
 time() - last_over_time(tablecast_container_observed_timestamp_seconds{tablecast_pr_number="123"}[1h])
 ```
 
-`collector_success=0`はCloudflare取得失敗、`collector_samples=0`は正常に取得した窓にサンプルがない状態。OTLPのHTTP失敗・部分拒否はCronを失敗させる。Grafana停止時にはsuccess=0自体も送れないため、heartbeat欠測とCloudflareのCron失敗を併用する。データ鮮度も表示し、値が来ないだけでContainer停止と断定しない。欠測検出クエリを提供するが通知先へのアラート登録は行っていない。
+`collector_success=0`はCloudflare取得失敗または実指標のOTLP送信失敗、`collector_samples=0`は正常に取得した窓にサンプルがない状態。実指標を先に送り、全件受理を確認してから別要求で成功heartbeatを送る。OTLPのHTTP失敗・部分拒否は失敗heartbeatを送ってCronを失敗させる。Grafana停止時にはsuccess=0自体も送れないため、heartbeat欠測とCloudflareのCron失敗を併用する。データ鮮度も表示し、値が来ないだけでContainer停止と断定しない。欠測検出クエリを提供するが通知先へのアラート登録は行っていない。
 
 Grafana MCPの`query_prometheus`で同じPromQLを実行できる。Cloudのdatasource UIDは`grafanacloud-prom`、過去の窓を見るときは`queryType=range`と明示的なstart/end・stepを指定する。

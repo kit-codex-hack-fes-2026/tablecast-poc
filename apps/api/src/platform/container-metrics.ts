@@ -201,61 +201,75 @@ export async function collectContainerMetrics(env: MetricsEnv, scheduledTime: nu
       JSON.stringify({ event: "tablecast.container_metrics_failed", stage: "cloudflare" }),
     );
   }
+  const send = async (batch: Metric[]) => {
+    const response = await fetch(`${endpoint}/v1/metrics`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(env.TABLECAST_OTEL_AUTHORIZATION
+          ? { Authorization: env.TABLECAST_OTEL_AUTHORIZATION }
+          : {}),
+      },
+      body: JSON.stringify({
+        resourceMetrics: [
+          {
+            resource: {
+              attributes: attributes({
+                "service.name": "tablecast-container-collector",
+                "service.namespace": "tablecast",
+                "service.version": env.TABLECAST_RELEASE_SHA ?? "local",
+                "deployment.environment.name": env.TABLECAST_ENV ?? "development",
+              }),
+            },
+            scopeMetrics: [{ scope: { name: "tablecast.container.metrics" }, metrics: batch }],
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) throw new Error(`Container指標のOTLP送信: HTTP ${response.status}`);
+    let received = 0;
+    const body = response.body?.pipeThrough(
+      new TransformStream<Uint8Array, Uint8Array>({
+        transform(chunk, controller) {
+          received += chunk.byteLength;
+          if (received > 4 * 1024 * 1024) throw new Error("OTLP応答のサイズ上限を超えました。");
+          controller.enqueue(chunk);
+        },
+      }),
+    );
+    const result = z
+      .object({
+        partialSuccess: z
+          .object({
+            rejectedDataPoints: z.union([z.string(), z.number()]).optional(),
+            errorMessage: z.string().optional(),
+          })
+          .optional(),
+      })
+      .parse(await new Response(body).json());
+    if (
+      Number(result.partialSuccess?.rejectedDataPoints ?? 0) > 0 ||
+      result.partialSuccess?.errorMessage
+    )
+      throw new Error("Container指標のOTLP送信が一部拒否されました。");
+  };
+  let exportError: unknown;
+  if (success && metrics.length) {
+    try {
+      await send(metrics);
+    } catch (error) {
+      success = false;
+      exportError = error;
+    }
+  }
+  // 実指標の全件受理後にだけ成功を送る。部分拒否した要求へ成功値を同梱しない。
+  metrics.length = 0;
   health("success", success ? 1 : 0);
   if (success) {
     health("samples", sampleCount);
     health("window_end_seconds", end / 1000, "s");
   }
-  const response = await fetch(`${endpoint}/v1/metrics`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(env.TABLECAST_OTEL_AUTHORIZATION
-        ? { Authorization: env.TABLECAST_OTEL_AUTHORIZATION }
-        : {}),
-    },
-    body: JSON.stringify({
-      resourceMetrics: [
-        {
-          resource: {
-            attributes: attributes({
-              "service.name": "tablecast-container-collector",
-              "service.namespace": "tablecast",
-              "service.version": env.TABLECAST_RELEASE_SHA ?? "local",
-              "deployment.environment.name": env.TABLECAST_ENV ?? "development",
-            }),
-          },
-          scopeMetrics: [{ scope: { name: "tablecast.container.metrics" }, metrics }],
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`Container指標のOTLP送信: HTTP ${response.status}`);
-  let received = 0;
-  const body = response.body?.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        received += chunk.byteLength;
-        if (received > 4 * 1024 * 1024) throw new Error("OTLP応答のサイズ上限を超えました。");
-        controller.enqueue(chunk);
-      },
-    }),
-  );
-  const result = z
-    .object({
-      partialSuccess: z
-        .object({
-          rejectedDataPoints: z.union([z.string(), z.number()]).optional(),
-          errorMessage: z.string().optional(),
-        })
-        .optional(),
-    })
-    .parse(await new Response(body).json());
-  if (
-    Number(result.partialSuccess?.rejectedDataPoints ?? 0) > 0 ||
-    result.partialSuccess?.errorMessage
-  )
-    throw new Error("Container指標のOTLP送信が一部拒否されました。");
-  if (!success) throw new Error("Container指標を取得できませんでした。");
+  await send(metrics);
+  if (!success) throw exportError ?? new Error("Container指標を取得できませんでした。");
 }
