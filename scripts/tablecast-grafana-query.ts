@@ -10,6 +10,7 @@ const transport = new StdioClientTransport({
   command: process.execPath,
   args: ["--no-env-file", `${import.meta.dir}/tablecast-grafana-mcp.ts`, target],
   stderr: "inherit",
+  env: { TABLECAST_CONTAINER: process.env.TABLECAST_CONTAINER ?? "0" },
 });
 try {
   await client.connect(transport);

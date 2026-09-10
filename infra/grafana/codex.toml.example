@@ -1,11 +1,13 @@
 [mcp_servers.tablecast-grafana-local]
 command = "bun"
+env_vars = ["TABLECAST_CONTAINER"]
 args = ["--no-env-file", "scripts/tablecast-grafana-mcp.ts", "local"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
 
 [mcp_servers.tablecast-grafana-cloud]
 command = "bun"
+env_vars = ["TABLECAST_CONTAINER"]
 args = ["--no-env-file", "scripts/tablecast-grafana-mcp.ts", "cloud"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60

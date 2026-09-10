@@ -1,29 +1,29 @@
 import { resolve } from "node:path";
-import { readRuntime, tablecastLocal } from "./tablecast-runtime";
+import { readRuntime, tablecastContainer, tablecastLocal } from "./tablecast-runtime";
 
 const target = process.argv[2];
 if (target !== "local" && target !== "cloud")
   throw new Error("local または cloud を指定してください。");
 const args = ["run", "--rm", "-i"];
+const environment: Record<string, string> = {};
 if (target === "local") {
-  const runtime = await readRuntime();
-  if (!runtime.ports.grafana) throw new Error("bun run devでLGTMを起動してください。");
-  args.push("-e", `GRAFANA_URL=http://host.docker.internal:${runtime.ports.grafana}`);
+  if (tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
+  else {
+    const runtime = await readRuntime();
+    if (!runtime.ports.grafana) throw new Error("bun run devでLGTMを起動してください。");
+    environment.GRAFANA_URL = `http://host.docker.internal:${runtime.ports.grafana}`;
+  }
 } else {
   const token = resolve(tablecastLocal, "tablecast-grafana-read-token");
   if (!(await Bun.file(token).exists()))
     throw new Error(".local/tablecast-grafana-read-tokenへViewer tokenを保存してください。");
-  args.push(
-    "-e",
-    "GRAFANA_URL=https://beigepuma130.grafana.net",
-    "-v",
-    `${token}:/run/secrets/tablecast-grafana:ro`,
-    "-e",
-    "GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE=/run/secrets/tablecast-grafana",
-  );
+  environment.GRAFANA_URL = "https://beigepuma130.grafana.net";
+  environment.GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE = tablecastContainer
+    ? token
+    : "/run/secrets/tablecast-grafana";
+  if (!tablecastContainer) args.push("-v", `${token}:/run/secrets/tablecast-grafana:ro`);
 }
-args.push(
-  "grafana/mcp-grafana:1.3.0",
+const flags = [
   "-t",
   "stdio",
   "--disable-write",
@@ -31,8 +31,13 @@ args.push(
   "datasource,loki,prometheus,navigation",
   "--max-loki-log-limit",
   "100",
-);
-const child = Bun.spawn(["docker", ...args], {
+];
+for (const [key, value] of Object.entries(environment)) args.push("-e", `${key}=${value}`);
+const command = tablecastContainer
+  ? ["mcp-grafana", ...flags]
+  : ["docker", ...args, "grafana/mcp-grafana:1.3.0", ...flags];
+const child = Bun.spawn(command, {
+  env: { ...process.env, ...environment },
   stdin: "inherit",
   stdout: "inherit",
   stderr: "inherit",

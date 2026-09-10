@@ -577,6 +577,10 @@ if (import.meta.main) {
     );
     process.exitCode = 1;
   } finally {
-    await rm(resolve(directory, "secrets.json"), { force: true });
+    await Promise.all(
+      ["secrets.json", "web-secrets.json"].map((name) =>
+        rm(resolve(directory, name), { force: true }),
+      ),
+    );
   }
 }
