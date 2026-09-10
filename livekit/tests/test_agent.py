@@ -2,9 +2,8 @@
 
 import asyncio
 import json
-import threading
 from collections.abc import Awaitable, Callable
-from unittest.mock import AsyncMock, create_autospec
+from unittest.mock import AsyncMock, Mock, create_autospec
 
 import httpx
 import pytest
@@ -27,19 +26,9 @@ def configuration() -> VoiceConfiguration:
     )
 
 
-@pytest.mark.parametrize("telemetry_hangs", [False, True], ids=["送信正常", "送信停止"])
-async def test_接続を待って開始し計測送信が停止しても終了処理を待たせない(
-    monkeypatch: pytest.MonkeyPatch, telemetry_hangs: bool
-):
-    # Given: 送信先が停止しても音声jobの終了処理は短時間で完了させる。
-    release = threading.Event()
-    entered = threading.Event()
-
-    def flush() -> None:
-        entered.set()
-        if telemetry_hangs:
-            release.wait(timeout=5)
-
+async def test_接続を待って開始し計測送信を待たず終了する(monkeypatch: pytest.MonkeyPatch):
+    # Given: job終了時に強制送信を始めると利用不能になる送信先。
+    flush = Mock(side_effect=AssertionError("job終了時に送信を開始してはいけない"))
     monkeypatch.setattr("tablecast_livekit.agent.flush_telemetry", flush)
     monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
     monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
@@ -87,15 +76,12 @@ async def test_接続を待って開始し計測送信が停止しても終了�
         job.cancel()
         waiting.cancel()
         await asyncio.gather(job, waiting, return_exceptions=True)
-        try:
-            # When: 実際に登録されたjob終了callbackを呼ぶ。
-            for callback in callbacks:
-                await asyncio.wait_for(callback(), timeout=1)
-            # Then: 送信完了の解放前でも終了できる。
-            assert entered.is_set()
-            assert not release.is_set()
-        finally:
-            release.set()
+        # When: 実際に登録されたjob終了callbackを呼ぶ。
+        assert len(callbacks) == 1
+        for callback in callbacks:
+            await asyncio.wait_for(callback(), timeout=1)
+        # Then: 強制送信もexecutor threadも追加しない。
+        flush.assert_not_called()
         await room.disconnect()
 
 

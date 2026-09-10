@@ -317,7 +317,9 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
         TABLECAST_AGENT_HEALTH_PORT: String(runtime.ports.agent),
         TABLECAST_ENV: "development",
         TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
-        TABLECAST_OTEL_ENDPOINT: `http://127.0.0.1:${runtime.ports.otlp}`,
+        TABLECAST_OTEL_ENDPOINT: tablecastContainer
+          ? "http://tablecast-lgtm:4318"
+          : `http://127.0.0.1:${runtime.ports.otlp}`,
         TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
       });
     } else
