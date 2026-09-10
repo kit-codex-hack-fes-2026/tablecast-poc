@@ -475,7 +475,11 @@ async def entrypoint(ctx: JobContext) -> None:
             await session.aclose()
             await agent.close()
             await client.aclose()
-            await asyncio.to_thread(flush_telemetry)
+            # 送信先障害で次の音声受付を止めない。残りはbatch送信・process終了時に委ねる。
+            try:
+                await asyncio.wait_for(asyncio.to_thread(flush_telemetry), timeout=0.1)
+            except TimeoutError:
+                pass
 
         ctx.add_shutdown_callback(shutdown)
         await ctx.connect()

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import threading
 from collections.abc import Awaitable, Callable
 from unittest.mock import AsyncMock, create_autospec
 
@@ -26,7 +27,20 @@ def configuration() -> VoiceConfiguration:
     )
 
 
-async def test_接続完了を待ってから参加者指定の実Sessionを開始する(monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.parametrize("telemetry_hangs", [False, True], ids=["送信正常", "送信停止"])
+async def test_接続を待って開始し計測送信が停止しても終了処理を待たせない(
+    monkeypatch: pytest.MonkeyPatch, telemetry_hangs: bool
+):
+    # Given: 送信先が停止しても音声jobの終了処理は短時間で完了させる。
+    release = threading.Event()
+    entered = threading.Event()
+
+    def flush() -> None:
+        entered.set()
+        if telemetry_hangs:
+            release.wait(timeout=5)
+
+    monkeypatch.setattr("tablecast_livekit.agent.flush_telemetry", flush)
     monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
     monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
     monkeypatch.setenv("INWORLD_API_KEY", "tablecast-test-inworld-key")
@@ -73,8 +87,15 @@ async def test_接続完了を待ってから参加者指定の実Sessionを開�
         job.cancel()
         waiting.cancel()
         await asyncio.gather(job, waiting, return_exceptions=True)
-        for callback in callbacks:
-            await callback()
+        try:
+            # When: 実際に登録されたjob終了callbackを呼ぶ。
+            for callback in callbacks:
+                await asyncio.wait_for(callback(), timeout=1)
+            # Then: 送信完了の解放前でも終了できる。
+            assert entered.is_set()
+            assert not release.is_set()
+        finally:
+            release.set()
         await room.disconnect()
 
 
