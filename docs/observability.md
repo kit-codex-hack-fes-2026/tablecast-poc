@@ -152,7 +152,7 @@ CLIでもhostedを照会できる。credentialはshell historyに書かず環境
 
 ```sh
 bunx mastra@1.28.0 api trace list '{"page":0,"perPage":10}'
-bunx mastra@1.28.0 api trace get --schema
+bunx mastra@1.28.0 api trace get TRACE_ID --verbose
 ```
 
 [公式のObservability単独利用](https://mastra.ai/docs/mastra-platform/observability)と[OtelBridge](https://mastra.ai/reference/observability/tracing/bridges/otel)を参照。
