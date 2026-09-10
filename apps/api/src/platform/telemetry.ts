@@ -170,11 +170,32 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
         .filter(
           (record) => typeof record.body === "string" && /^tablecast\.[a-z_.]+$/.test(record.body),
         )
-        .map((record) => ({
-          ...record,
-          resource,
-          attributes: telemetryAttributes(record.attributes, env),
-        }));
+        .flatMap((record) => {
+          const attributes = telemetryAttributes(record.attributes, env);
+          const content = Object.fromEntries(
+            Object.entries(attributes).filter(([key]) => !allowed.has(key)),
+          );
+          const metadata = Object.fromEntries(
+            Object.entries(attributes).filter(([key]) => allowed.has(key)),
+          );
+          const completed = { ...record, resource, attributes: metadata };
+          if (Object.keys(content).length === 0) return [completed];
+          // Lokiの64 KiB属性上限を避ける。Unicodeを壊さず本文へ分割し、
+          // 256 KiB行上限にも収める。完了ログは一件のまま集計する。
+          const parts = JSON.stringify(content).match(/.{1,16000}/gsu) ?? [];
+          return [
+            completed,
+            ...parts.map((part, index) => ({
+              ...completed,
+              body: JSON.stringify({
+                event: "tablecast.content",
+                part: index + 1,
+                parts: parts.length,
+                content: part,
+              }),
+            })),
+          ];
+        });
       if (logTransport) logTransport.export(safe, callback);
       else callback({ code: 0 });
     },

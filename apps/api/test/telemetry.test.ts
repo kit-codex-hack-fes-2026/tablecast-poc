@@ -215,3 +215,61 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
     "tablecast.operation": "tablecast.cart.update",
   });
 });
+
+it("大きな本文を欠落なく分割し、Lokiの属性上限と行上限を守って完了件数を保つ", () => {
+  // Given: Cloudの属性上限を超える日本語と絵文字を含む業務結果。
+  const content = { customer: "試験顧客😀".repeat(20000), token: "tablecast-secret" };
+  const send = vi
+    .spyOn(OTLPTransport.prototype, "export")
+    .mockImplementation((_logs, callback) => callback({ code: 0 }));
+  const config = telemetryConfig(
+    {
+      TABLECAST_OTEL_CAPTURE_CONTENT: "true",
+      TABLECAST_OTEL_ENDPOINT: "http://tablecast-collector:4318",
+    },
+    "tablecast-api",
+  );
+  // When: 実際のログ送信境界へ一件の完了イベントを渡す。
+  config.logs?.transports?.[0]?.export(
+    [
+      {
+        body: "tablecast.operation_completed",
+        timeUnixNano: [1, 0],
+        observedTimeUnixNano: [1, 0],
+        resource: resourceFromAttributes({}),
+        instrumentationScope: { name: "tablecast" },
+        attributes: {
+          "tablecast.operation": "tablecast.catalog.read",
+          "tablecast.output": JSON.stringify(content),
+        },
+        droppedAttributesCount: 0,
+      },
+    ],
+    () => {},
+  );
+  const records = send.mock.calls[0]?.[0] ?? [];
+  // Then: 完了は一度だけ。分割本文を順番に結合すると秘密を除去した元の内容になる。
+  expect(records.filter((record) => record.body === "tablecast.operation_completed")).toHaveLength(
+    1,
+  );
+  const parts = records.slice(1).map((record) =>
+    z
+      .object({
+        event: z.literal("tablecast.content"),
+        part: z.number(),
+        parts: z.number(),
+        content: z.string(),
+      })
+      .parse(JSON.parse(typeof record.body === "string" ? record.body : "null")),
+  );
+  expect(parts.length).toBeGreaterThan(1);
+  expect(parts.map((part) => part.part)).toEqual(parts.map((_, index) => index + 1));
+  expect(parts.every((part) => part.parts === parts.length)).toBe(true);
+  expect(JSON.parse(parts.map((part) => part.content).join(""))).toEqual({
+    "tablecast.output": JSON.stringify({ ...content, token: "[REDACTED]" }),
+  });
+  for (const record of records) {
+    expect(new TextEncoder().encode(JSON.stringify(record.attributes)).length).toBeLessThan(65536);
+    expect(new TextEncoder().encode(JSON.stringify(record.body)).length).toBeLessThan(256 * 1024);
+  }
+});
