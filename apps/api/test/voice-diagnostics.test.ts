@@ -72,7 +72,15 @@ function capture() {
         "tablecast-private-cookie-marker",
       ])
         expect(output).not.toContain(secret);
-      expect(warn).not.toHaveBeenCalled();
+      for (const [line] of warn.mock.calls) {
+        const entry = z
+          .object({ event: z.string(), attributes: z.record(z.string(), z.unknown()) })
+          .parse(JSON.parse(z.string().parse(line)));
+        expect(entry.event).toMatch(
+          /^tablecast\.(request_completed|voice\.(stream_failed|cancel_failed))$/,
+        );
+        expect(entry.attributes["tablecast.error.sanitized"]).toBe(true);
+      }
       expect(error).not.toHaveBeenCalled();
     },
   };

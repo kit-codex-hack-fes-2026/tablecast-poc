@@ -14,6 +14,7 @@ import {
   telemetryConfig,
   telemetryAttributes,
 } from "../src/platform/telemetry";
+import { errorAttributes } from "../src/platform/diagnostics";
 import { DomainError } from "../src/platform/errors";
 import { handleError, requestTelemetry } from "../src/platform/http";
 import type { ApiEnv } from "../src/platform/context";
@@ -23,6 +24,7 @@ afterEach(() => vi.restoreAllMocks());
 it("sampling対象外でも操作の完了と業務拒否を各一度記録し、HTTP経路と応答を維持する", async () => {
   // Given: traceのhead samplingを0にし、実際のWorker入口とHTTP境界を使う。
   const output = vi.spyOn(console, "info").mockImplementation(() => {});
+  const rejected = vi.spyOn(console, "warn").mockImplementation(() => {});
   const app = new Hono<ApiEnv>().use(requestTelemetry).onError(handleError);
   app.get("/internal/voice/probe", async (c) => {
     await observeOperation("tablecast.catalog.read", () => Promise.resolve(7));
@@ -42,13 +44,13 @@ it("sampling対象外でも操作の完了と業務拒否を各一度記録し�
   // When: 成功した読取に続いて版の競合で拒否する。
   const response = await worker.fetch(
     new Request("https://tablecast.test/internal/voice/probe"),
-    env,
+    { ...env, TABLECAST_MODEL_API_KEY: "tablecast-secret" },
     execution,
   );
   await waitOnExecutionContext(execution);
   // Then: HTTPは409を維持し、両操作の結果と相関だけを出す。
   expect(response.status).toBe(409);
-  const entries = output.mock.calls.map(([value]) =>
+  const entries = [...output.mock.calls, ...rejected.mock.calls].map(([value]) =>
     z
       .object({
         event: z.string(),
@@ -92,6 +94,7 @@ it("要求ログは後処理を待たず出力し、許可していない属性�
 
 it("自動計測に秘密属性があるとき送信境界で除去しpreviewのPR番号だけをresourceへ残す", () => {
   // Given: SDKの自動計測にURL・SQL・例外・不正なresourceが含まれる。
+  const diagnostic = errorAttributes(new Error("connection refused"));
   const span: ReadableSpan = {
     name: "GET /private?token=tablecast-secret",
     kind: SpanKind.SERVER,
@@ -103,6 +106,7 @@ it("自動計測に秘密属性があるとき送信境界で除去しpreviewの
     status: { code: SpanStatusCode.ERROR, message: "tablecast-secret" },
     attributes: {
       "http.request.method": "GET",
+      ...diagnostic,
       "http.route": "/api/table",
       "url.full": "tablecast-secret",
       "db.statement": "tablecast-secret",
@@ -110,6 +114,7 @@ it("自動計測に秘密属性があるとき送信境界で除去しpreviewの
     },
     events: [
       { name: "exception", time: [1, 0], attributes: { "exception.message": "tablecast-secret" } },
+      { name: "exception", time: [1, 0], attributes: diagnostic },
     ],
     links: [],
     resource: resourceFromAttributes({ secret: "tablecast-secret" }),
@@ -136,10 +141,12 @@ it("自動計測に秘密属性があるとき送信境界で除去しpreviewの
   // Then: 値・例外を除去し、クエリと相関に必要な識別情報を維持する。
   const sent = send.mock.calls[0]?.[0];
   expect(JSON.stringify(sent)).not.toContain("tablecast-secret");
+  expect(sent?.[0]?.events).toHaveLength(1);
   expect(sent).toMatchObject([
     {
       name: "HTTP",
-      attributes: { "http.route": "/api/table" },
+      attributes: { "http.route": "/api/table", "exception.message": "connection refused" },
+      events: [{ name: "exception", attributes: { "exception.message": "connection refused" } }],
       resource: {
         attributes: { "tablecast.pr.number": "123", "deployment.environment.name": "preview" },
       },
@@ -164,7 +171,11 @@ it("構造化イベントだけを送信しprodへpreviewのPR番号を混入さ
     observedTimeUnixNano: [1, 0] as [number, number],
     resource: resourceFromAttributes({}),
     instrumentationScope: { name: "tablecast" },
-    attributes: { "http.route": "/api/table", secret: "tablecast-secret" },
+    attributes: {
+      "http.route": "/api/table",
+      ...errorAttributes(new Error("connection refused")),
+      secret: "tablecast-secret",
+    },
     droppedAttributesCount: 0,
   };
   config.logs?.transports?.[0]?.export(
@@ -176,7 +187,9 @@ it("構造化イベントだけを送信しprodへpreviewのPR番号を混入さ
   );
   expect(send).toHaveBeenCalledTimes(1);
   const sent = send.mock.calls[0]?.[0];
-  expect(sent).toHaveLength(1);
+  expect(sent).toHaveLength(2);
+  expect(sent?.filter((entry) => entry.body === "tablecast.request_completed")).toHaveLength(1);
+  expect(JSON.stringify(sent)).toContain("connection refused");
   expect(JSON.stringify(sent)).not.toContain("tablecast-secret");
   expect(sent?.[0]?.resource.attributes).not.toHaveProperty("tablecast.pr.number");
 });
@@ -336,7 +349,7 @@ it("503の業務例外を障害として記録しHTTP応答とエラーコード
 
 it.each([
   { status: 200, outcome: "success", level: "info" as const },
-  { status: 409, outcome: "rejected", level: "info" as const },
+  { status: 409, outcome: "rejected", level: "warn" as const },
   { status: 503, outcome: "error", level: "error" as const },
 ])("Web形式の完了ログでも$statusを$outcomeに分類する", ({ status, outcome, level }) => {
   // Given: Webのemitと同じ、結果分類をまだ含まない属性。

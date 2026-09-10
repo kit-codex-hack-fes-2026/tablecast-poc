@@ -1,4 +1,4 @@
-import { APIError } from "better-auth/api";
+import { isAPIError } from "better-auth/api";
 import { sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -15,7 +15,7 @@ export async function redeemDevice(services: ApiServices, deviceCode: string) {
     });
   } catch (error) {
     if (
-      error instanceof APIError &&
+      isAPIError(error) &&
       ["authorization_pending", "slow_down"].includes(String(error.body?.error))
     )
       return { ready: false } as const;

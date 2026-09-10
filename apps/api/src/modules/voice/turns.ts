@@ -1,3 +1,4 @@
+import { failureLog } from "../../platform/telemetry";
 import { RequestContext } from "@mastra/core/request-context";
 import { sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -153,6 +154,7 @@ export async function startVoiceTurn(
   const cancellation = new AbortController();
   const signal = AbortSignal.any([requestSignal, cancellation.signal]);
   let generationFailed = false;
+  let generationError: unknown;
   const { agent, observability } = createCastAgent(
     services,
     currentActor,
@@ -211,8 +213,9 @@ export async function startVoiceTurn(
         });
         ensure(stored, "VOICE_SESSION_STALE", 409);
       },
-      onError: () => {
+      onError: ({ error }) => {
         generationFailed = true;
+        generationError = error;
       },
       stopWhen: ({ steps }: { steps: readonly { toolCalls: readonly { toolName: string }[] }[] }) =>
         steps.some((step) =>
@@ -231,7 +234,9 @@ export async function startVoiceTurn(
         "VOICE_MODEL_FAILED",
       );
       if (signal.aborted) throw new DomainError("VOICE_CANCELLED", 409, "VOICE_CANCELLED");
-      throw error;
+      throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+        cause: error,
+      });
     });
   diagnostics.runId = output.runId;
   waitUntil(notifyStore(services, actor.storeId));
@@ -249,7 +254,10 @@ export async function startVoiceTurn(
         signal.throwIfAborted();
         const next = await reader.read();
         signal.throwIfAborted();
-        ensure(!generationFailed, "VOICE_MODEL_FAILED", 503);
+        if (generationFailed)
+          throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+            cause: generationError,
+          });
         await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
         if (next.done) {
           logStreamEnd("generated");
@@ -265,9 +273,27 @@ export async function startVoiceTurn(
             ? "interrupted"
             : "failed";
         logStreamEnd(status, signal.aborted ? "VOICE_CANCELLED" : voiceErrorCode(error));
+        if (status === "failed")
+          failureLog(
+            "tablecast.voice.stream_failed",
+            new DomainError("VOICE_INTERNAL_ERROR", 503, voiceErrorCode(error), undefined, {
+              cause: error,
+            }),
+            services.env,
+            { "tablecast.request.id": diagnostics.traceId },
+          );
         cancellation.abort();
         controller.error(error);
-        await reader.cancel().catch(() => {});
+        await reader.cancel().catch((cancelError: unknown) => {
+          failureLog(
+            "tablecast.voice.cancel_failed",
+            new DomainError("VOICE_INTERNAL_ERROR", 503, "VOICE_CANCEL_FAILED", undefined, {
+              cause: cancelError,
+            }),
+            services.env,
+            { "tablecast.request.id": diagnostics.traceId },
+          );
+        });
         try {
           await finishVoiceTurn(
             services,

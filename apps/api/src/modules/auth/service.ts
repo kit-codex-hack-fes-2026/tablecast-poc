@@ -48,6 +48,7 @@ export function createAuth(
     );
   return betterAuth({
     ...options,
+    onAPIError: { throw: true },
     plugins: [
       ...options.plugins,
       ...(emulator

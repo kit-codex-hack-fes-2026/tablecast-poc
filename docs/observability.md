@@ -8,9 +8,11 @@ Hono APIとTanStack StartのWorker入口を`@inference-net/otel-cf-workers`で�
 
 ローカルは公式`grafana/otel-lgtm:0.32.1`のOTLP/HTTP、previewとprodはGrafana CloudのOTLP gatewayへ送る。Cloudflare標準observabilityは既存のCloudflare調査用に維持し、同じログ・traceをCloudflare側のOTLP destinationから再送しない。
 
+Honoは公式の[Middleware execution order](https://hono.dev/docs/guides/middleware#execution-order)に従い、`await next()`後の`c.error`と最終レスポンスを読む。`HTTPException.getResponse()`で4xxの本文・ヘッダーを維持し、5xxの内部本文だけを汎用JSONへ置換する。Better Authは`onAPIError.throw`で共通onErrorへ渡す。4xxはwarn、5xxはerror、通常応答はinfoにする。
+
 Honoは応答確定後に一つの構造化イベント`tablecast.request_completed`を出す。エラーも共通onError後のHTTP statusを記録する。既存の`X-Request-Id`とエラーJSONの`traceId`はリクエスト識別子として維持し、OTelの`trace_id`とは別に`tablecast.request.id`へ格納する。StartはAPI proxyとSSRを区別し、同じtraceにログを付ける。Honoの文字列loggerとconsole自動収集は重ねない。標準出力の構造化ログはリクエスト内で同期出力し、OTLP送信のみを後処理にする。
 
-SDKの自動計測にはURL・SQL・ヘッダーが含まれるので、実際のexporterで許可属性のみ残す。resourceも固定した環境情報へ置換する。Authorization、Cookie、URL queryは送らない。顧客情報・SQL・例外・業務入出力は末尾の環境変数で切り替える。任意の外部fetchへtrace contextを送らず、Web→APIのservice bindingだけへ明示伝播する。検証対象は独自の送信境界と実際の注文経路であり、SDK内部の動作をテストへ複製しない。
+SDKの自動計測にはURL・SQL・ヘッダーが含まれるので、実際のexporterで許可属性のみ残す。resourceも固定した環境情報へ置換する。Authorization、Cookie、URL queryは送らない。顧客情報・SQL・例外・業務入出力は末尾の環境変数で切り替える。例外診断は`platform/diagnostics.ts`で秘密値を除去し、message、ファイル名と行・列、最大5段のcauseを保持する。本文収集が無効ならSQL wrapper・URL・引用値・メールアドレスを伏せ、providerのcauseは型と位置だけを残す。有効ならproviderのmessage・顧客情報も収集するが、資格情報は常に除く。未知の自由文すべてを自動検出する仕組みではない。送信境界は本文収集が無効でも処理済みの診断属性とexception eventを保持する。任意の外部fetchへtrace contextを送らず、Web→APIのservice bindingだけへ明示伝播する。検証対象は独自の送信境界と実際の注文経路であり、SDK内部の動作をテストへ複製しない。
 
 全環境でtraceを100%収集する。ログはリクエスト単位で保持する。送信はSDKの`waitUntil`で処理し、注文結果をexportの成功に依存させない。Collector停止・再起動時の配送はbest effortであり、業務イベントの永続化は従来どおりD1が所有する。
 

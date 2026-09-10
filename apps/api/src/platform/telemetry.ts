@@ -12,6 +12,7 @@ import {
   trace,
   type Attributes,
 } from "@opentelemetry/api";
+import { diagnosticSecrets, errorAttributes } from "./diagnostics";
 import { DomainError } from "./errors";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
@@ -57,6 +58,14 @@ const allowed = new Set([
   "tablecast.request.id",
   "tablecast.duration_ms",
   "tablecast.error.code",
+  "tablecast.error.phase",
+]);
+const diagnosticKeys = new Set([
+  "tablecast.error.sanitized",
+  "exception.type",
+  "exception.message",
+  "exception.stacktrace",
+  "tablecast.error.causes",
 ]);
 const credentialKey = /authorization|cookie|password|secret|api[_-]?key|token$/i;
 
@@ -104,6 +113,7 @@ export function telemetryAttributes(
     if (credentialKey.test(key)) continue;
     if (
       (allowed.has(key) ||
+        (attributes["tablecast.error.sanitized"] === true && diagnosticKeys.has(key)) ||
         /^gen_ai\.(usage\.|response\.model|request\.model|provider\.name|operation\.name)/.test(
           key,
         ) ||
@@ -161,14 +171,18 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
                     : "Worker binding",
           resource,
           attributes: telemetryAttributes(span.attributes, env),
-          events:
-            env.TABLECAST_OTEL_CAPTURE_CONTENT === "true"
-              ? span.events.map((event) => ({
-                  ...event,
-                  name: telemetryContent(event.name, env),
-                  attributes: telemetryAttributes(event.attributes ?? {}, env),
-                }))
-              : [],
+          events: span.events
+            .filter(
+              (event) =>
+                env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" ||
+                (event.name === "exception" &&
+                  event.attributes?.["tablecast.error.sanitized"] === true),
+            )
+            .map((event) => ({
+              ...event,
+              name: telemetryContent(event.name, env),
+              attributes: telemetryAttributes(event.attributes ?? {}, env),
+            })),
           links: [],
           status: {
             code: span.status.code,
@@ -328,21 +342,44 @@ export function requestLog(attributes: Attributes, failed: boolean, env: Telemet
 export function telemetryLog(
   event: `tablecast.${string}`,
   attributes: Attributes,
-  failed = false,
+  failed: boolean | "warn" = false,
   env: TelemetryEnv = {},
 ) {
+  const level =
+    failed === "warn"
+      ? "warn"
+      : failed
+        ? "error"
+        : attributes["tablecast.outcome"] === "rejected"
+          ? "warn"
+          : "info";
   const safe = telemetryAttributes(attributes, env);
   const span = trace.getActiveSpan()?.spanContext();
   // 標準出力は要求内で確定する。後処理へ遅延させるのはOTLP送信だけ。
   const entry = JSON.stringify({
     event,
+    releaseSha: env.TABLECAST_RELEASE_SHA ?? "local",
     attributes: safe,
     trace_id: span?.traceId,
     span_id: span?.spanId,
   });
-  if (failed) console.error(entry);
-  else console.info(entry);
+  console[level](entry);
   const logger = getLogger("tablecast");
-  if (failed) logger.error(event, safe);
-  else logger.info(event, safe);
+  logger[level](event, safe);
+}
+
+// 応答開始後・回復可能な失敗も、要求と同じ送信境界を通す。
+export function failureLog(
+  event: `tablecast.${string}`,
+  error: unknown,
+  env: TelemetryEnv,
+  attributes: Attributes = {},
+) {
+  const diagnostic = errorAttributes(
+    error,
+    diagnosticSecrets(env),
+    env.TABLECAST_OTEL_CAPTURE_CONTENT === "true",
+  );
+  trace.getActiveSpan()?.addEvent("exception", diagnostic);
+  telemetryLog(event, { ...attributes, ...diagnostic }, "warn", env);
 }

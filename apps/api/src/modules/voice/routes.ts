@@ -88,8 +88,8 @@ voiceRoutes.post("/tools", async (c) => {
   );
 });
 voiceRoutes.post("/turns", async (c) => {
-  const body: unknown = await c.req.json().catch(() => {
-    throw new DomainError("INVALID_INPUT", 422, "INVALID_INPUT");
+  const body: unknown = await c.req.json().catch((error: unknown) => {
+    throw new DomainError("INVALID_INPUT", 422, "INVALID_INPUT", undefined, { cause: error });
   });
   const parsed = voiceTurnSchema.safeParse(body);
   ensure(parsed.success, "INVALID_INPUT", 422);

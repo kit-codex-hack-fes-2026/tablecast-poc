@@ -1,54 +1,61 @@
 import { context, trace, SpanStatusCode } from "@opentelemetry/api";
-import { matchedRoutes } from "hono/route";
-import { requestLog, telemetryChannel, telemetryAttributes } from "./telemetry";
-import { APIError } from "better-auth/api";
+import { isAPIError } from "better-auth/api";
 import type { ErrorHandler } from "hono";
 import { createMiddleware } from "hono/factory";
-import { DomainError, ensure } from "../platform/errors";
+import { HTTPException } from "hono/http-exception";
+import { routePath } from "hono/route";
+import { STATUS_CODES } from "node:http";
+import { DomainError, ensure } from "./errors";
+import { diagnosticSecrets, errorAttributes } from "./diagnostics";
+import { requestLog, telemetryChannel } from "./telemetry";
 import type { ApiEnv } from "./context";
+
 export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   const started = performance.now();
-  const traceId = crypto.randomUUID();
-  c.set("traceId", traceId);
-  c.header("X-Request-Id", traceId);
+  const requestId = crypto.randomUUID();
+  c.set("traceId", requestId);
+  c.header("X-Request-Id", requestId);
   c.header("Cache-Control", "no-store");
   c.header("X-Content-Type-Options", "nosniff");
+  // HonoがonErrorを適用した後の例外と最終ステータスを一箇所で記録する。
   const channel = c.req.path.startsWith("/internal/voice/")
     ? "voice"
     : c.req.path === "/mcp" || c.req.path.startsWith("/mcp/")
       ? "mcp"
       : "http";
-  try {
-    await context.with(context.active().setValue(telemetryChannel, channel), next);
-  } finally {
-    const route =
-      matchedRoutes(c).findLast((matched) => matched.method !== "ALL")?.path ?? "unmatched";
-    const span = trace.getActiveSpan();
-    const status = c.error && c.res.status < 400 ? 500 : c.res.status;
-    const attributes = {
-      "http.request.method": c.req.method,
-      "http.route": route,
-      "http.response.status_code": status,
-      "tablecast.channel": channel,
-      "tablecast.outcome": status >= 500 ? "error" : status >= 400 ? "rejected" : "success",
-      "tablecast.request.id": traceId,
-      "tablecast.duration_ms": Math.round((performance.now() - started) * 100) / 100,
-      ...telemetryAttributes(
-        c.error instanceof Error
-          ? {
-              "exception.type": c.error.name,
-              "exception.message": c.error.message,
-              "exception.stacktrace": c.error.stack,
-            }
-          : {},
-        c.env,
-      ),
-      ...(c.error instanceof DomainError ? { "tablecast.error.code": c.error.code } : {}),
-    };
-    span?.setAttributes(attributes);
-    if (status >= 500) span?.setStatus({ code: SpanStatusCode.ERROR });
-    requestLog(attributes, status >= 500, c.env);
+  await context.with(context.active().setValue(telemetryChannel, channel), next);
+  const status = c.res.status;
+  const secrets = diagnosticSecrets(c.env);
+  for (const name of ["authorization", "cookie"]) {
+    const value = c.req.header(name);
+    if (value) secrets.push(value, ...value.split(/[\s;=]+/).filter((part) => part.length >= 8));
   }
+  const diagnostic = c.error
+    ? errorAttributes(c.error, secrets, c.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true")
+    : status >= 400
+      ? {
+          "tablecast.error.sanitized": true,
+          "exception.type": "HTTPResponse",
+          "exception.message": STATUS_CODES[status] ?? "HTTP error response",
+        }
+      : {};
+  const attributes = {
+    "http.request.method": c.req.method,
+    "http.route": routePath(c, -1) || "unmatched",
+    "http.response.status_code": status,
+    "tablecast.request.id": requestId,
+    "tablecast.channel": channel,
+    "tablecast.outcome": status >= 500 ? "error" : status >= 400 ? "rejected" : "success",
+    "tablecast.duration_ms": Math.round((performance.now() - started) * 100) / 100,
+    ...diagnostic,
+    ...(c.error instanceof DomainError ? { "tablecast.error.code": c.error.code } : {}),
+    ...(c.get("errorPhase") ? { "tablecast.error.phase": c.get("errorPhase") } : {}),
+  };
+  const span = trace.getActiveSpan();
+  span?.setAttributes(attributes);
+  if (status >= 500) span?.setStatus({ code: SpanStatusCode.ERROR });
+  if (c.error) span?.addEvent("exception", diagnostic);
+  requestLog(attributes, status >= 500, c.env);
 });
 export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
   if (
@@ -72,13 +79,25 @@ export const handleError: ErrorHandler<ApiEnv> = (error, c) => {
       },
       error.status,
     );
-  if (error instanceof APIError)
-    return new Response(JSON.stringify(error.body), {
+  let response: Response | undefined;
+  if (error instanceof HTTPException) response = error.getResponse();
+  else if (isAPIError(error))
+    response = Response.json(error.body ?? {}, {
       status: error.statusCode,
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      headers: error.headers,
     });
-  return c.json(
-    { error: { code: "INTERNAL_ERROR", message: "INTERNAL_ERROR" }, traceId: c.get("traceId") },
-    500,
+  if (response && response.status < 500) return c.newResponse(response.body, response);
+  const headers = new Headers(response?.headers);
+  headers.delete("Content-Length");
+  headers.delete("Content-Encoding");
+  headers.set("Content-Type", "application/json; charset=UTF-8");
+  headers.set("Cache-Control", "no-store");
+  const internal = Response.json(
+    {
+      error: { code: "INTERNAL_ERROR", message: "INTERNAL_ERROR" },
+      traceId: c.get("traceId"),
+    },
+    { status: response?.status ?? 500, headers },
   );
+  return c.newResponse(internal.body, internal);
 };

@@ -117,7 +117,8 @@ export function previewCart(
           ...priced,
           missing: [...priced.missing, error.code],
         }));
-      } catch {
+      } catch (lineError) {
+        if (!(lineError instanceof DomainError)) throw lineError;
         const product = catalog.configuration.products.find((p) => p.id === line.productId);
         return [
           {

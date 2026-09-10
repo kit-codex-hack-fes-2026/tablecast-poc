@@ -4,8 +4,9 @@ export class DomainError extends Error {
     public status: 400 | 401 | 403 | 404 | 409 | 422 | 503,
     message: string,
     public details?: unknown,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
   }
 }
 export function ensure(

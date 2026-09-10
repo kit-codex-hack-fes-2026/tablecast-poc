@@ -1,3 +1,4 @@
+import { failureLog } from "./platform/telemetry";
 import { Container } from "@cloudflare/containers";
 import { z } from "zod";
 
@@ -60,10 +61,10 @@ export class TablecastVoice extends Container<TablecastEnv> {
       await this.startAndWaitForPorts();
       if ((await this.jobs()) > 0) throw new Error("終了処理中の音声jobがあります。");
       this.renewActivityTimeout();
-    } catch {
+    } catch (error) {
       // tokenを返していないため、この予約から遅れてjobが開始されることはない。
       await this.release(id);
-      throw new Error("音声Containerの起動に失敗しました。");
+      throw new Error("音声Containerの起動に失敗しました。", { cause: error });
     }
   }
 
@@ -81,17 +82,20 @@ export class TablecastVoice extends Container<TablecastEnv> {
       await this.ctx.storage.put("draining", value);
       return false;
     });
-    if (busy) throw new Error("通話の予約または実行中です。終了後に配備を再実行してください。");
+    if (busy) return false;
     if (value) {
       try {
         const state = await this.getState();
-        if ((state.status === "running" || state.status === "healthy") && (await this.jobs()) > 0)
-          throw new Error("音声jobの終了待ちです。");
-      } catch {
+        if ((state.status === "running" || state.status === "healthy") && (await this.jobs()) > 0) {
+          await this.ctx.storage.put("draining", false);
+          return false;
+        }
+      } catch (error) {
         await this.ctx.storage.put("draining", false);
-        throw new Error("通話の終了を確認できません。配備を再実行してください。");
+        throw new Error("通話の終了を確認できません。配備を再実行してください。", { cause: error });
       }
     }
+    return true;
   }
 
   override async onStop() {
@@ -114,9 +118,9 @@ export class TablecastVoice extends Container<TablecastEnv> {
         await this.ctx.storage.put("stopping", true);
         await this.stop();
       });
-    } catch {
+    } catch (error) {
       // 不明な状態をidleと扱わず、次の公式activity期限で再確認する。
-      console.warn("tablecast.voice.idle_check_failed");
+      failureLog("tablecast.voice.idle_check_failed", error, this.env);
     }
   }
 }

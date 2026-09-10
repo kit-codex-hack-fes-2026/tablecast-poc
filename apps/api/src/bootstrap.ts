@@ -139,6 +139,6 @@ export async function bootstrapDatabase(
     };
   } catch (error) {
     if (error instanceof DomainError && error.code === "BOOTSTRAP_CONFLICT") throw error;
-    throw new DomainError("BOOTSTRAP_FAILED", 503, "BOOTSTRAP_FAILED", progress);
+    throw new DomainError("BOOTSTRAP_FAILED", 503, "BOOTSTRAP_FAILED", progress, { cause: error });
   }
 }

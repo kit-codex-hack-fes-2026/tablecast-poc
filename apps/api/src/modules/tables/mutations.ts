@@ -1,3 +1,4 @@
+import { failureLog } from "../../platform/telemetry";
 import { sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -11,15 +12,17 @@ export function voiceCondition(actor: Actor) {
 export async function notifyStore(services: ApiServices, storeId: string) {
   const db = services.db;
 
-  const row = await db.get<{ cursor: number | null } | undefined>(
-    sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId}`,
-  );
   try {
+    const row = await db.get<{ cursor: number | null } | undefined>(
+      sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId}`,
+    );
     await services.env.TABLECAST_EVENTS.get(
       services.env.TABLECAST_EVENTS.idFromName(storeId),
     ).notify(row?.cursor ?? 0);
-  } catch {
-    console.warn(JSON.stringify({ event: "tablecast.notification_failed", storeId }));
+  } catch (error) {
+    failureLog("tablecast.notification_failed", error, services.env, {
+      "tablecast.request.id": services.requestId,
+    });
   }
 }
 
