@@ -153,7 +153,20 @@ export async function startVoiceTurn(
   const cancellation = new AbortController();
   const signal = AbortSignal.any([requestSignal, cancellation.signal]);
   let generationFailed = false;
-  const agent = createCastAgent(services, currentActor, input.locale, signal, input.trigger);
+  const { agent, observability } = createCastAgent(
+    services,
+    currentActor,
+    input.locale,
+    signal,
+    input.trigger,
+  );
+  let flushing: Promise<void> | undefined;
+  const flush = () => {
+    flushing ??= observability.shutdown().catch(() => {
+      console.warn("tablecast.mastra_export_failed");
+    });
+    waitUntil(flushing);
+  };
   const requestContext = new RequestContext<{ actor: Actor; diagnostics: VoiceDiagnostics }>();
   requestContext.set("actor", currentActor);
   requestContext.set("diagnostics", diagnostics);
@@ -209,6 +222,7 @@ export async function startVoiceTurn(
         ),
     })
     .catch(async (error: unknown) => {
+      flush();
       await finishVoiceTurn(
         services,
         input.voiceSessionId,
@@ -241,6 +255,7 @@ export async function startVoiceTurn(
           logStreamEnd("generated");
           controller.close();
           reader.releaseLock();
+          flush();
           return;
         }
         controller.enqueue(encoder.encode(next.value));
@@ -253,13 +268,17 @@ export async function startVoiceTurn(
         cancellation.abort();
         controller.error(error);
         await reader.cancel().catch(() => {});
-        await finishVoiceTurn(
-          services,
-          input.voiceSessionId,
-          input.turnId,
-          status,
-          "VOICE_MODEL_FAILED",
-        );
+        try {
+          await finishVoiceTurn(
+            services,
+            input.voiceSessionId,
+            input.turnId,
+            status,
+            "VOICE_MODEL_FAILED",
+          );
+        } finally {
+          flush();
+        }
       }
     },
     async cancel(reason) {
@@ -268,7 +287,11 @@ export async function startVoiceTurn(
       try {
         await reader.cancel(reason);
       } finally {
-        await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
+        try {
+          await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
+        } finally {
+          flush();
+        }
       }
     },
   });

@@ -20,7 +20,7 @@ const files = [
   ["store-routes", "src/modules/stores/routes.ts"],
   ["auth-middleware", "src/modules/auth/middleware.ts"],
   ["auth-factory", "src/modules/auth/{service,options,preview}.ts"],
-  ["voice-operation", "src/modules/voice/{agent,realtime,turns,session}.ts"],
+  ["voice-operation", "src/modules/voice/{agent,realtime,turns,session,observability}.ts"],
   ["provider", "src/modules/voice/{runtime,catalog}.ts"],
   ["pure", "src/modules/{catalog/pricing,auth/policy,voice/prompt,voice/diagnostics}.ts"],
   ["mutation", "src/modules/tables/mutations.ts"],
@@ -63,6 +63,7 @@ const dependencies = {
     "error",
   ],
   "voice-operation": [
+    "telemetry",
     "voice-operation",
     "service",
     "query",

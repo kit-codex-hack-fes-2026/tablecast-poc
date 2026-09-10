@@ -100,6 +100,13 @@ export function deploymentSecrets(
       "TABLECAST_INWORLD_VOICES_API_KEY",
     ),
   };
+  for (const key of [
+    "TABLECAST_MASTRA_ACCESS_TOKEN",
+    "TABLECAST_MASTRA_PROJECT_ID",
+    "TABLECAST_MASTRA_ENDPOINT",
+  ]) {
+    if (input[key]) secrets[key] = input[key];
+  }
   if (input.TABLECAST_OTEL_AUTHORIZATION) {
     secrets.TABLECAST_OTEL_AUTHORIZATION = input.TABLECAST_OTEL_AUTHORIZATION;
   }

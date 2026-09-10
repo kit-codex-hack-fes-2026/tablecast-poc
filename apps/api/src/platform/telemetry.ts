@@ -30,6 +30,14 @@ const allowed = new Set([
   "tablecast.voice.session.id",
   "tablecast.voice.turn.id",
   "lk.speech_id",
+  "mastra.traceId",
+  "mastra.spanId",
+  "mastra.span.type",
+  "mastra.metadata.tablecast.voice.session.id",
+  "mastra.metadata.tablecast.voice.turn.id",
+  "mastra.metadata.deployment.environment.name",
+  "mastra.metadata.service.version",
+  "mastra.metadata.tablecast.pr.number",
   "tablecast.operation",
   "tablecast.channel",
   "tablecast.outcome",
@@ -54,7 +62,7 @@ const credentialKey = /authorization|cookie|password|secret|api[_-]?key|token$/i
 
 // 顧客情報の収集設定に関係なく、認証資格と現在のbindingの秘密値は除去する。
 export function telemetryContent(value: string, env: TelemetryEnv): string;
-export function telemetryContent(value: unknown, env: TelemetryEnv): unknown;
+export function telemetryContent<T>(value: T, env: TelemetryEnv): T;
 export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
   if (typeof value === "string") {
     try {
@@ -75,7 +83,8 @@ export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
       "$1[REDACTED]",
     );
   }
-  if (Array.isArray(value)) return value.map((item) => telemetryContent(item, env));
+  if (value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map((item: unknown) => telemetryContent(item, env));
   if (value && typeof value === "object")
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
@@ -95,6 +104,9 @@ export function telemetryAttributes(
     if (credentialKey.test(key)) continue;
     if (
       (allowed.has(key) ||
+        /^gen_ai\.(usage\.|response\.model|request\.model|provider\.name|operation\.name)/.test(
+          key,
+        ) ||
         (env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" &&
           /^(exception\.|db\.(statement|query\.text)|tablecast\.(input|output)|gen_ai\.|lk\.|mastra\.)/.test(
             key,
@@ -137,13 +149,16 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
           ...span,
           // spanContextはprototype上のメソッドなので明示的に引き継ぐ。
           spanContext: () => span.spanContext(),
-          name: /^tablecast\.[a-z_.]+$/.test(span.name)
-            ? span.name
-            : span.attributes["http.request.method"] || span.attributes["http.method"]
-              ? "HTTP"
-              : span.attributes["db.system"] || span.attributes["db.system.name"]
-                ? "DB"
-                : "Worker binding",
+          name:
+            typeof span.attributes["mastra.span.type"] === "string"
+              ? telemetryContent(span.name, env)
+              : /^tablecast\.[a-z_.]+$/.test(span.name)
+                ? span.name
+                : span.attributes["http.request.method"] || span.attributes["http.method"]
+                  ? "HTTP"
+                  : span.attributes["db.system"] || span.attributes["db.system.name"]
+                    ? "DB"
+                    : "Worker binding",
           resource,
           attributes: telemetryAttributes(span.attributes, env),
           events:

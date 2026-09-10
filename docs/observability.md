@@ -137,3 +137,22 @@ LiveKitの標準spanでモデル、TTS、再生、中断を追い、`tablecast.v
 ```
 
 PR番号は調査対象へ置き換える。LogQLでは `{service_name="tablecast-voice"} | voiceSessionId="調査対象のセッションID"`、HTTP処理のtraceでは `span.tablecast.voice.session.id` を使う。Agent Insightsは同じroom/jobとsession IDで照合する。
+
+## Mastra Platformとの併用
+
+Mastraを実行するcascade経路は`OtelBridge`で現在のWorker traceに参加し、`MastraPlatformExporter`で同じtrace IDをhostedへ送る。通常のLiveKit Realtime経路には架空のMastra実行を作らない。Agent・モデル・toolの時間、使用量、環境・PR・SHA、voice session・turnを両画面で照合する。
+
+Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.secrets.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
+
+requestごとにObservabilityを所有し、生成終了・失敗・中断の全経路で`waitUntil(observability.shutdown())`を待つ。SDKのbus、exporter、bridgeをflushし、共有するWorker providerをshutdownしない。hosted送信の失敗は業務結果を変えない。導入版の`maxRetries`は初回を含むため1を指定する。無限再試行や重複したshutdownは行わない。
+
+`TABLECAST_OTEL_CAPTURE_CONTENT`を共用する。falseではinput/output、prompt、tool payload、request context、例外本文を送信前processorで除去し、両宛先に反映する。trueではこれらも収集するが、`SensitiveDataFilter`とbindingの秘密値除去は維持する。フレームワークの無加工consoleログは無効にし、業務の完了ログとtraceのエラーをGrafanaで調べる。
+
+CLIでもhostedを照会できる。credentialはshell historyに書かず環境から渡す。SDK用のTableCast変数をCLI標準の`MASTRA_PLATFORM_ACCESS_TOKEN`・`MASTRA_PROJECT_ID`へ対応付ける。
+
+```sh
+bunx mastra@1.28.0 api trace list '{"page":0,"perPage":10}'
+bunx mastra@1.28.0 api trace get --schema
+```
+
+[公式のObservability単独利用](https://mastra.ai/docs/mastra-platform/observability)と[OtelBridge](https://mastra.ai/reference/observability/tracing/bridges/otel)を参照。

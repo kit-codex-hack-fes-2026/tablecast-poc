@@ -410,6 +410,10 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       : `ws://127.0.0.1:${runtime.ports.signaling}`,
   };
   for (const key of [
+    "TABLECAST_MASTRA_ACCESS_TOKEN",
+    "TABLECAST_MASTRA_PROJECT_ID",
+    "TABLECAST_MASTRA_ENDPOINT",
+    "TABLECAST_OTEL_CAPTURE_CONTENT",
     "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
