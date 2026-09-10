@@ -292,7 +292,20 @@ export async function observeOperation<T>(
 }
 
 export function requestLog(attributes: Attributes, failed: boolean, env: TelemetryEnv = {}) {
-  telemetryLog("tablecast.request_completed", attributes, failed, env);
+  const status = attributes["http.response.status_code"];
+  telemetryLog(
+    "tablecast.request_completed",
+    {
+      ...attributes,
+      "tablecast.outcome": failed
+        ? "error"
+        : typeof status === "number" && status >= 400
+          ? "rejected"
+          : "success",
+    },
+    failed,
+    env,
+  );
 }
 
 export function telemetryLog(

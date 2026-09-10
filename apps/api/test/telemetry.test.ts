@@ -331,3 +331,19 @@ it("503の業務例外を障害として記録しHTTP応答とエラーコード
     },
   });
 });
+
+it.each([
+  { status: 200, outcome: "success", level: "info" as const },
+  { status: 409, outcome: "rejected", level: "info" as const },
+  { status: 503, outcome: "error", level: "error" as const },
+])("Web形式の完了ログでも$statusを$outcomeに分類する", ({ status, outcome, level }) => {
+  // Given: Webのemitと同じ、結果分類をまだ含まない属性。
+  const output = vi.spyOn(console, level).mockImplementation(() => {});
+  // When: API/Web共有の要求ログ境界へ渡す。
+  requestLog({ "http.response.status_code": status, "http.route": "ssr" }, status >= 500);
+  // Then: 完了イベントにダッシュボードで集計する結果が必ず入る。
+  expect(JSON.parse(String(output.mock.calls[0]?.[0]))).toMatchObject({
+    event: "tablecast.request_completed",
+    attributes: { "tablecast.outcome": outcome, "http.response.status_code": status },
+  });
+});
