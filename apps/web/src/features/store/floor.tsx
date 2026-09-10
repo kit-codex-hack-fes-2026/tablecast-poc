@@ -1,4 +1,5 @@
 import { tv } from "tailwind-variants";
+import { useCallback } from "react";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ErrorNotice } from "../../components/error-notice";
@@ -24,6 +25,23 @@ export function Floor() {
   const connected = useRealtime({ storeId: store.id }, state.data.cursor, () => {
     void client.invalidateQueries({ queryKey: ["tablecast-admin", store.id] });
   });
+  // 接続状態の更新で列のcell componentを作り直し、押下中のボタンを失わない。
+  const selectVisit = useCallback(
+    (sessionId: string) =>
+      void navigate({
+        to: "/admin/stores/$storeId/visits/$sessionId",
+        params: { storeId: store.id, sessionId },
+      }),
+    [navigate, store.id],
+  );
+  const openTable = useCallback(
+    (table: { id: string }) =>
+      void navigate({
+        to: "/admin/stores/$storeId/tables/$tableId/open",
+        params: { storeId: store.id, tableId: table.id },
+      }),
+    [navigate, store.id],
+  );
   return (
     <>
       <div className="flex items-center justify-between gap-3">
@@ -40,18 +58,8 @@ export function Floor() {
         initialNow={state.dataUpdatedAt}
         tables={state.data.tables}
         vacantTables={state.data.vacantTables}
-        onSelect={(sessionId) =>
-          void navigate({
-            to: "/admin/stores/$storeId/visits/$sessionId",
-            params: { storeId: store.id, sessionId },
-          })
-        }
-        onOpen={(table) =>
-          void navigate({
-            to: "/admin/stores/$storeId/tables/$tableId/open",
-            params: { storeId: store.id, tableId: table.id },
-          })
-        }
+        onSelect={selectVisit}
+        onOpen={openTable}
       />
     </>
   );
