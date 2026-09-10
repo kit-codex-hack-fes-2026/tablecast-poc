@@ -193,6 +193,7 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
   const settings = {
     TABLECAST_OTEL_CAPTURE_CONTENT: "true",
     TABLECAST_OTEL_AUTHORIZATION: "tablecast-credential",
+    TABLECAST_VOICE_API_TOKEN: "tablecast-voice-credential",
   };
   const attributes = {
     "tablecast.input": JSON.stringify({
@@ -201,12 +202,13 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
       token: "tablecast-token",
       authorization: "tablecast-credential",
     }),
-    "exception.message": "試験顧客の入力エラー tablecast-credential",
+    "exception.message": "試験顧客の入力エラー tablecast-credential tablecast-voice-credential",
     "db.statement": "select name from customer",
     "http.request.header.cookie": "tablecast-cookie",
     "tablecast.operation": "tablecast.cart.update",
   };
   const collected = telemetryAttributes(attributes, settings);
+  expect(JSON.stringify(collected)).not.toContain("tablecast-voice-credential");
   expect(JSON.stringify(collected)).toContain("試験顧客");
   expect(JSON.stringify(collected)).toContain("唐揚げ");
   for (const secret of ["tablecast-credential", "tablecast-token", "tablecast-cookie"])

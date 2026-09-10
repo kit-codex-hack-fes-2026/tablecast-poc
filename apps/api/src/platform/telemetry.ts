@@ -47,8 +47,7 @@ const allowed = new Set([
   "tablecast.duration_ms",
   "tablecast.error.code",
 ]);
-const credentialKey =
-  /authorization|cookie|password|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|^token$/i;
+const credentialKey = /authorization|cookie|password|secret|api[_-]?key|token$/i;
 
 // 顧客情報の収集設定に関係なく、認証資格と現在のbindingの秘密値は除去する。
 export function telemetryContent(value: string, env: TelemetryEnv): string;
