@@ -10,9 +10,9 @@ Hono APIとTanStack StartのWorker入口を`@inference-net/otel-cf-workers`で�
 
 Honoは応答確定後に一つの構造化イベント`tablecast.request_completed`を出す。エラーも共通onError後のHTTP statusを記録する。既存の`X-Request-Id`とエラーJSONの`traceId`はリクエスト識別子として維持し、OTelの`trace_id`とは別に`tablecast.request.id`へ格納する。StartはAPI proxyとSSRを区別し、同じtraceにログを付ける。Honoの文字列loggerとconsole自動収集は重ねない。標準出力の構造化ログはリクエスト内で同期出力し、OTLP送信のみを後処理にする。
 
-SDKの自動計測にはURL・SQL・ヘッダーが含まれるので、実際のexporterで許可属性のみ残す。resourceも固定した環境情報へ置換する。SQL本文、bind値、Authorization、Cookie、URL query、生の例外・stack、リクエスト本文、音声・会話・promptを送らない。任意の外部fetchへtrace contextを送らず、Web→APIのservice bindingだけへ明示伝播する。検証対象は独自の送信境界と実際の注文経路であり、SDK内部の動作をテストへ複製しない。
+SDKの自動計測にはURL・SQL・ヘッダーが含まれるので、実際のexporterで許可属性のみ残す。resourceも固定した環境情報へ置換する。Authorization、Cookie、URL queryは送らない。顧客情報・SQL・例外・業務入出力は末尾の環境変数で切り替える。任意の外部fetchへtrace contextを送らず、Web→APIのservice bindingだけへ明示伝播する。検証対象は独自の送信境界と実際の注文経路であり、SDK内部の動作をテストへ複製しない。
 
-preview/localはtraceを100%、prodは親の判断を引き継ぐ10%のhead samplingにする。ログはリクエスト単位で保持するため、prodではtraceのないログもある。送信はSDKの`waitUntil`で処理し、注文結果をexportの成功に依存させない。Collector停止・再起動時の配送はbest effortであり、業務イベントの永続化は従来どおりD1が所有する。
+全環境でtraceを100%収集する。ログはリクエスト単位で保持する。送信はSDKの`waitUntil`で処理し、注文結果をexportの成功に依存させない。Collector停止・再起動時の配送はbest effortであり、業務イベントの永続化は従来どおりD1が所有する。
 
 ## prod・PR番号による検索
 
@@ -90,3 +90,34 @@ GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/
 - [Tempo MCP](https://grafana.com/docs/tempo/latest/api_docs/mcp-server/)
 - [Workers用SDK](https://github.com/context-labs/otel-cf-workers)
 - [Codex MCP設定](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+
+## 全体の性能集計
+
+`infra/grafana/tablecast-operations.json`をGrafanaのImport dashboardで読み込む。Loki datasource、環境、PR番号、サービスを選ぶ。PR番号の`.*`は全件、`123`はそのPRだけを対象にする。APIを既定サービスとし、Web proxyとAPIの件数を重複合算しない。
+
+HTTPは全ルートの完了ログ、業務処理は`tablecast.operation_completed`から件数・失敗率・p50/p95を集計する。カタログ取得、卓状態、カート、注文確認・確定・状態変更、スタッフ呼出、卓の開始・終了、会計要求・入金、設定公開を同じ操作名で追える。処理内訳の子spanは完了イベントを重ねず、共有操作のネストは操作名別に集計する。業務拒否の`rejected`と障害の`error`を区別する。ログ配送はbest effortなので、これを売上帳簿や厳密な監査件数にしない。
+
+`tablecast.channel`はAPI入口で`http`・`voice`・`mcp`を設定する。通常HTTPをGUI利用の証明とはせず、外部HTTP clientも同じ区分に含む。呼出経路・結果・操作名もstructured metadataであり、新しいLoki index labelは作らない。SSR loaderのService Bindingにも現在のW3C contextだけを渡し、任意baggageは転送しない。
+
+例: PR 123のカート更新のp95を5分窓で比較する。
+
+```logql
+quantile_over_time(0.95,
+  {service_namespace="tablecast",service_name="tablecast-api",deployment_environment_name="preview"}
+  | tablecast_pr_number="123" |= "tablecast.operation_completed"
+  | tablecast_operation="tablecast.cart.update"
+  | unwrap tablecast_duration_ms | __error__="" [5m]
+) by (tablecast_channel)
+```
+
+```traceql
+{resource.deployment.environment.name="preview" && resource.tablecast.pr.number="123" && span.tablecast.operation="tablecast.cart.update"}
+```
+
+PR #63の基盤に続く集計は#64、音声とLiveKit hostedは#65、Mastra hostedは#66、Containersインフラ指標は#67で管理する。
+
+## 顧客情報・会話本文の収集切替
+
+`TABLECAST_OTEL_CAPTURE_CONTENT=true`で業務操作の入出力、顧客情報、会話、SQLと例外の詳細を収集する。`false`または未設定では従来の許可した運用属性だけを送る。認証資格・Cookie・APIキー・bindingの秘密値は常に除去する。previewとprodはユーザー指定により有効とし、prodの設定は暫定運用である。
+
+GitHub Environmentの`preview`または`production`に同名のActions variableを設定すれば、次の配備で切り替わる。未指定の配備値は`true`。ビルド済み成果物にも配備時の値を反映する。既に保存されたデータは切替では削除されず、各観測先の保持期間に従う。停止時には新しい音声sessionにも新設定を適用する。

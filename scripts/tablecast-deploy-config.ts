@@ -129,6 +129,7 @@ export function deploymentConfigs(
   root: string,
   api: Record<string, unknown>,
   web: Record<string, unknown>,
+  captureContent = "true",
 ) {
   z.string()
     .regex(/^[a-f0-9]{40}$/)
@@ -140,6 +141,7 @@ export function deploymentConfigs(
     TABLECAST_ENV: target.environment,
     TABLECAST_RELEASE_SHA: sha,
     TABLECAST_PR_NUMBER: target.pr ?? "",
+    TABLECAST_OTEL_CAPTURE_CONTENT: z.enum(["true", "false"]).parse(captureContent),
     TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
   };
   const apiConfig = {

@@ -1,11 +1,83 @@
-import { OTLPExporter, OTLPTransport } from "@inference-net/otel-cf-workers";
+import { instrument, OTLPExporter, OTLPTransport } from "@inference-net/otel-cf-workers";
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import { Hono } from "hono";
+import { z } from "zod";
 import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { afterEach, expect, it, vi } from "vitest";
-import { measured, requestLog, telemetryConfig } from "../src/platform/telemetry";
+import {
+  measured,
+  observeOperation,
+  requestLog,
+  telemetryConfig,
+  telemetryAttributes,
+} from "../src/platform/telemetry";
+import { DomainError } from "../src/platform/errors";
+import { handleError, requestTelemetry } from "../src/platform/http";
+import type { ApiEnv } from "../src/platform/context";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("sampling対象外でも操作の完了と業務拒否を各一度記録し、HTTP経路と応答を維持する", async () => {
+  // Given: traceのhead samplingを0にし、実際のWorker入口とHTTP境界を使う。
+  const output = vi.spyOn(console, "info").mockImplementation(() => {});
+  const app = new Hono<ApiEnv>().use(requestTelemetry).onError(handleError);
+  app.get("/internal/voice/probe", async (c) => {
+    await observeOperation("tablecast.catalog.read", () => Promise.resolve(7));
+    await observeOperation("tablecast.cart.update", () =>
+      Promise.reject(new DomainError("VERSION_CONFLICT", 409, "tablecast-secret")),
+    );
+    return c.json({ ok: true });
+  });
+  const config = telemetryConfig({ TABLECAST_ENV: "production" }, "tablecast-api");
+  if (!config.trace) throw new Error("trace設定がありません。");
+  const worker = instrument(
+    { fetch: (request, bindings, execution) => app.fetch(request, bindings, execution) },
+    { ...config, trace: { ...config.trace, sampling: { headSampler: { ratio: 0 } } } },
+  );
+  const execution = createExecutionContext();
+  if (!worker.fetch) throw new Error("Worker入口がありません。");
+  // When: 成功した読取に続いて版の競合で拒否する。
+  const response = await worker.fetch(
+    new Request("https://tablecast.test/internal/voice/probe"),
+    env,
+    execution,
+  );
+  await waitOnExecutionContext(execution);
+  // Then: HTTPは409を維持し、両操作の結果と相関だけを出す。
+  expect(response.status).toBe(409);
+  const entries = output.mock.calls.map(([value]) =>
+    z
+      .object({
+        event: z.string(),
+        attributes: z.record(z.string(), z.unknown()),
+        trace_id: z.string().optional(),
+      })
+      .parse(JSON.parse(String(value))),
+  );
+  expect(entries.filter((entry) => entry.event === "tablecast.operation_completed")).toMatchObject([
+    {
+      attributes: {
+        "tablecast.operation": "tablecast.catalog.read",
+        "tablecast.channel": "voice",
+        "tablecast.outcome": "success",
+      },
+    },
+    {
+      attributes: {
+        "tablecast.operation": "tablecast.cart.update",
+        "tablecast.channel": "voice",
+        "tablecast.outcome": "rejected",
+        "tablecast.error.code": "VERSION_CONFLICT",
+      },
+    },
+  ]);
+  expect(entries.filter((entry) => entry.event === "tablecast.request_completed")).toHaveLength(1);
+  expect(JSON.stringify(entries)).not.toContain("tablecast-secret");
+  expect(entries[0]?.trace_id).toMatch(/^[a-f0-9]{32}$/);
+});
 
 it("要求ログは後処理を待たず出力し、許可していない属性を標準出力へ漏らさない", () => {
   const output = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -115,4 +187,31 @@ it("Workerリクエスト外の業務操作も元の結果と例外を保つ", a
   await expect(measured("tablecast.test.operation", () => Promise.reject(error))).rejects.toBe(
     error,
   );
+});
+
+it("本文収集を有効にしても資格は除去し、無効なら顧客情報・会話・SQL・例外を送らない", () => {
+  const settings = {
+    TABLECAST_OTEL_CAPTURE_CONTENT: "true",
+    TABLECAST_OTEL_AUTHORIZATION: "tablecast-credential",
+  };
+  const attributes = {
+    "tablecast.input": JSON.stringify({
+      name: "試験顧客",
+      content: "唐揚げを一つ",
+      token: "tablecast-token",
+      authorization: "tablecast-credential",
+    }),
+    "exception.message": "試験顧客の入力エラー tablecast-credential",
+    "db.statement": "select name from customer",
+    "http.request.header.cookie": "tablecast-cookie",
+    "tablecast.operation": "tablecast.cart.update",
+  };
+  const collected = telemetryAttributes(attributes, settings);
+  expect(JSON.stringify(collected)).toContain("試験顧客");
+  expect(JSON.stringify(collected)).toContain("唐揚げ");
+  for (const secret of ["tablecast-credential", "tablecast-token", "tablecast-cookie"])
+    expect(JSON.stringify(collected)).not.toContain(secret);
+  expect(telemetryAttributes(attributes, { TABLECAST_OTEL_CAPTURE_CONTENT: "false" })).toEqual({
+    "tablecast.operation": "tablecast.cart.update",
+  });
 });

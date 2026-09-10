@@ -1,3 +1,4 @@
+import { observeOperation } from "../../platform/telemetry";
 import { sql } from "drizzle-orm";
 import type { z } from "zod";
 import * as business from "../../db/business-schema";
@@ -86,21 +87,27 @@ export async function showProducts(
 }
 
 export async function callStaff(services: ApiServices, actor: Actor) {
-  const db = services.db;
+  return observeOperation(
+    "tablecast.staff.call",
+    async () => {
+      const db = services.db;
 
-  const row = await getSession(services, actor);
-  const mutation = crypto.randomUUID();
-  const gate = voiceCondition(actor);
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({ staff_called: 1, mutation_id: mutation })
-      .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-    eventStatement(services, actor, mutation, "staff.called", { source: actor.kind }),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
-  return getTableState(services, actor);
+      const row = await getSession(services, actor);
+      const mutation = crypto.randomUUID();
+      const gate = voiceCondition(actor);
+      const result = await db.batch([
+        db
+          .update(business.tableSessions)
+          .set({ staff_called: 1, mutation_id: mutation })
+          .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+        eventStatement(services, actor, mutation, "staff.called", { source: actor.kind }),
+      ]);
+      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
+      await notifyStore(services, actor.storeId);
+      return getTableState(services, actor);
+    },
+    { env: services.env, input: { actor } },
+  );
 }
 
 export async function changeLocale(services: ApiServices, actor: Actor, locale: Locale) {
@@ -144,21 +151,27 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
 }
 
 export async function requestBill(services: ApiServices, actor: Actor) {
-  const db = services.db;
+  return observeOperation(
+    "tablecast.bill.request",
+    async () => {
+      const db = services.db;
 
-  const row = await getSession(services, actor);
-  const mutation = crypto.randomUUID();
-  const gate = voiceCondition(actor);
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({ staff_called: 1, mutation_id: mutation })
-      .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-    eventStatement(services, actor, mutation, "bill.requested", {}),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
-  return getTableState(services, actor);
+      const row = await getSession(services, actor);
+      const mutation = crypto.randomUUID();
+      const gate = voiceCondition(actor);
+      const result = await db.batch([
+        db
+          .update(business.tableSessions)
+          .set({ staff_called: 1, mutation_id: mutation })
+          .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
+        eventStatement(services, actor, mutation, "bill.requested", {}),
+      ]);
+      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
+      await notifyStore(services, actor.storeId);
+      return getTableState(services, actor);
+    },
+    { env: services.env, input: { actor } },
+  );
 }
 
 export async function resolveCall(services: ApiServices, actor: Actor) {
@@ -180,40 +193,46 @@ export async function resolveCall(services: ApiServices, actor: Actor) {
 }
 
 export async function closeTable(services: ApiServices, actor: Actor) {
-  const db = services.db;
+  return observeOperation(
+    "tablecast.table.close",
+    async () => {
+      const db = services.db;
 
-  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
-  const table = await getTableState(services, actor);
-  ensure(
-    table.bill.due === 0 &&
-      table.cart.lines.length === 0 &&
-      table.orders.every((o) => ["served", "cancelled", "rejected"].includes(o.status)),
-    "TABLE_NOT_SETTLED",
+      ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+      const table = await getTableState(services, actor);
+      ensure(
+        table.bill.due === 0 &&
+          table.cart.lines.length === 0 &&
+          table.orders.every((o) => ["served", "cancelled", "rejected"].includes(o.status)),
+        "TABLE_NOT_SETTLED",
+      );
+      const mutation = crypto.randomUUID();
+      const result = await db.batch([
+        db
+          .update(business.tableSessions)
+          .set({
+            status: "closed",
+            closed_at: Date.now(),
+            voice_state: "stopped",
+            voice_session_id: null,
+            active_turn_id: null,
+            voice_version: sql`voice_version+1`,
+            cart_version: sql`cart_version+1`,
+            mutation_id: mutation,
+          })
+          .where(
+            sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
+          ),
+        invalidationStatement(services, actor, mutation),
+        interruptVoiceTurns(services, actor, mutation),
+        eventStatement(services, actor, mutation, "table.closed", {}),
+      ]);
+      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
+      await notifyStore(services, actor.storeId);
+      return getTableState(services, actor);
+    },
+    { env: services.env, input: { actor } },
   );
-  const mutation = crypto.randomUUID();
-  const result = await db.batch([
-    db
-      .update(business.tableSessions)
-      .set({
-        status: "closed",
-        closed_at: Date.now(),
-        voice_state: "stopped",
-        voice_session_id: null,
-        active_turn_id: null,
-        voice_version: sql`voice_version+1`,
-        cart_version: sql`cart_version+1`,
-        mutation_id: mutation,
-      })
-      .where(
-        sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
-      ),
-    invalidationStatement(services, actor, mutation),
-    interruptVoiceTurns(services, actor, mutation),
-    eventStatement(services, actor, mutation, "table.closed", {}),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
-  return getTableState(services, actor);
 }
 
 export async function openTable(
@@ -221,33 +240,41 @@ export async function openTable(
   actor: Actor,
   input: { tableId: string; guestCount: number; locale: Locale; planId?: string },
 ) {
-  const db = services.db;
+  return observeOperation(
+    "tablecast.table.open",
+    async () => {
+      const db = services.db;
 
-  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
-  const table = await db.get<Record<string, unknown> | undefined>(
-    sql`SELECT id FROM restaurant_tables WHERE id=${input.tableId} AND store_id=${actor.storeId}`,
+      ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+      const table = await db.get<Record<string, unknown> | undefined>(
+        sql`SELECT id FROM restaurant_tables WHERE id=${input.tableId} AND store_id=${actor.storeId}`,
+      );
+      ensure(table, "TABLE_NOT_FOUND", 404);
+      const catalog = await getCatalog(services, actor.storeId);
+      const plan = input.planId
+        ? catalog.configuration.plans.find((p) => p.id === input.planId)
+        : null;
+      if (input.planId) ensure(plan, "PLAN_NOT_FOUND", 422);
+      const now = Date.now();
+      const sessionId = crypto.randomUUID();
+      const result = await db.batch([
+        db
+          .insert(business.tableSessions)
+          .select(
+            sql`SELECT ${sessionId},${actor.storeId},${input.tableId},${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
+          ),
+        db
+          .insert(business.tableEvents)
+          .select(
+            sql`SELECT NULL,${actor.storeId},${sessionId},${"table.opened"},${JSON.stringify({ guestCount: input.guestCount })},${now} WHERE changes()=1`,
+          ),
+      ]);
+      ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
+      await notifyStore(services, actor.storeId);
+      return getTableState(services, { ...actor, tableSessionId: sessionId });
+    },
+    { env: services.env, input: { actor, input } },
   );
-  ensure(table, "TABLE_NOT_FOUND", 404);
-  const catalog = await getCatalog(services, actor.storeId);
-  const plan = input.planId ? catalog.configuration.plans.find((p) => p.id === input.planId) : null;
-  if (input.planId) ensure(plan, "PLAN_NOT_FOUND", 422);
-  const now = Date.now();
-  const sessionId = crypto.randomUUID();
-  const result = await db.batch([
-    db
-      .insert(business.tableSessions)
-      .select(
-        sql`SELECT ${sessionId},${actor.storeId},${input.tableId},${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
-      ),
-    db
-      .insert(business.tableEvents)
-      .select(
-        sql`SELECT NULL,${actor.storeId},${sessionId},${"table.opened"},${JSON.stringify({ guestCount: input.guestCount })},${now} WHERE changes()=1`,
-      ),
-  ]);
-  ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId);
-  return getTableState(services, { ...actor, tableSessionId: sessionId });
 }
 
 import { showProductsSchema } from "../voice/model";

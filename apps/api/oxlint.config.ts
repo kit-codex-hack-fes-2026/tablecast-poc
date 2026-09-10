@@ -33,7 +33,7 @@ const files = [
 const dependencies = {
   app: ["route", "store-routes", "http", "context"],
   worker: ["app", "runtime", "telemetry"],
-  telemetry: [],
+  telemetry: ["error"],
   client: ["app"],
   schema: ["model"],
   bootstrap: ["model", "pure", "error", "db", "auth-factory"],
@@ -48,7 +48,7 @@ const dependencies = {
   "auth-middleware": ["query", "model", "auth-factory", "error"],
   pure: ["model", "pure", "error"],
   provider: ["model", "pure", "error"],
-  query: ["query", "db", "model", "pure", "error"],
+  query: ["query", "db", "model", "pure", "error", "telemetry"],
   mutation: ["db", "model", "query", "error"],
   service: [
     "telemetry",

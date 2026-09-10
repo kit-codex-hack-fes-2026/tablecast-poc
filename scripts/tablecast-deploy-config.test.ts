@@ -148,3 +148,21 @@ test("previewのAPIとWebに同じPR番号を渡し送信資格を公開varsへ�
   });
   expect(secrets.TABLECAST_OTEL_AUTHORIZATION).toBe("tablecast-ingestion-secret");
 });
+
+test("本文収集はprodとpreviewで既定有効にし、明示falseで両Workerを切り替える", () => {
+  for (const pr of [undefined, "123"]) {
+    const args = [
+      deploymentTarget(pr),
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+      "/tablecast",
+      {},
+      {},
+    ] as const;
+    expect(deploymentConfigs(...args).api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("true");
+    const disabled = deploymentConfigs(...args, "false");
+    expect(disabled.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
+    expect(disabled.web.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
+    expect(() => deploymentConfigs(...args, "typo")).toThrow("Invalid option");
+  }
+});

@@ -266,6 +266,7 @@ async function main() {
       z
         .record(z.string(), z.unknown())
         .parse(parse(await readFile(resolve(root, "apps/web/wrangler.jsonc"), "utf8"))),
+      process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
     );
     await writeFile(resolve(directory, "api.json"), JSON.stringify(configs.api, null, 2));
     await writeFile(resolve(directory, "web.json"), JSON.stringify(configs.web, null, 2));
@@ -298,6 +299,7 @@ async function main() {
     z
       .record(z.string(), z.unknown())
       .parse(parse(await readFile(resolve(root, "apps/web/wrangler.jsonc"), "utf8"))),
+    process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
   );
   const apiPath = resolve(directory, "api.json");
   const webPath = resolve(directory, "web.json");
@@ -516,18 +518,21 @@ async function main() {
     for (const name of [target.api, target.web]) {
       const config = outputConfigs.find((value) => value.name === name);
       if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
-      if (name === target.api)
-        await writeFile(
-          config.path,
-          JSON.stringify(
-            deploymentArtifact(
-              JSON.parse(await readFile(config.path, "utf8")),
-              target,
-              sha,
-              database.uuid,
-            ),
-          ),
-        );
+      const built = z
+        .looseObject({ vars: z.record(z.string(), z.unknown()) })
+        .parse(JSON.parse(await readFile(config.path, "utf8")));
+      const artifact =
+        name === target.api ? deploymentArtifact(built, target, sha, database.uuid) : built;
+      await writeFile(
+        config.path,
+        JSON.stringify({
+          ...artifact,
+          vars: {
+            ...artifact.vars,
+            TABLECAST_OTEL_CAPTURE_CONTENT: configs.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
+          },
+        }),
+      );
       await wrangler([
         "deploy",
         "--config",

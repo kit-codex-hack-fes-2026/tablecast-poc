@@ -1,6 +1,6 @@
-import { trace, SpanStatusCode } from "@opentelemetry/api";
+import { context, trace, SpanStatusCode } from "@opentelemetry/api";
 import { matchedRoutes } from "hono/route";
-import { requestLog } from "./telemetry";
+import { requestLog, telemetryChannel, telemetryAttributes } from "./telemetry";
 import { APIError } from "better-auth/api";
 import type { ErrorHandler } from "hono";
 import { createMiddleware } from "hono/factory";
@@ -13,8 +13,13 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   c.header("X-Request-Id", traceId);
   c.header("Cache-Control", "no-store");
   c.header("X-Content-Type-Options", "nosniff");
+  const channel = c.req.path.startsWith("/internal/voice/")
+    ? "voice"
+    : c.req.path === "/mcp" || c.req.path.startsWith("/mcp/")
+      ? "mcp"
+      : "http";
   try {
-    await next();
+    await context.with(context.active().setValue(telemetryChannel, channel), next);
   } finally {
     const route =
       matchedRoutes(c).findLast((matched) => matched.method !== "ALL")?.path ?? "unmatched";
@@ -24,13 +29,25 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
       "http.request.method": c.req.method,
       "http.route": route,
       "http.response.status_code": status,
+      "tablecast.channel": channel,
+      "tablecast.outcome": status >= 500 ? "error" : status >= 400 ? "rejected" : "success",
       "tablecast.request.id": traceId,
       "tablecast.duration_ms": Math.round((performance.now() - started) * 100) / 100,
+      ...telemetryAttributes(
+        c.error instanceof Error
+          ? {
+              "exception.type": c.error.name,
+              "exception.message": c.error.message,
+              "exception.stacktrace": c.error.stack,
+            }
+          : {},
+        c.env,
+      ),
       ...(c.error instanceof DomainError ? { "tablecast.error.code": c.error.code } : {}),
     };
     span?.setAttributes(attributes);
     if (status >= 500) span?.setStatus({ code: SpanStatusCode.ERROR });
-    requestLog(attributes, status >= 500);
+    requestLog(attributes, status >= 500, c.env);
   }
 });
 export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
