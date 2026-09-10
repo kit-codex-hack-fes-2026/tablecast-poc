@@ -1,3 +1,5 @@
+import { context, propagation } from "@opentelemetry/api";
+
 // Cookieと応答ヘッダーは現在のSSRリクエストだけに結び付ける。
 export async function serverApiFetch(input: RequestInfo | URL, init?: RequestInit) {
   const [{ env }, { getRequest, getResponseHeaders }] = await Promise.all([
@@ -11,6 +13,10 @@ export async function serverApiFetch(input: RequestInfo | URL, init?: RequestIni
   const headers = new Headers(request.headers);
   const cookie = incoming.headers.get("cookie");
   if (cookie) headers.set("cookie", cookie);
+  headers.delete("baggage");
+  propagation.inject(context.active(), headers, {
+    set: (carrier, key, value) => carrier.set(key, value),
+  });
   const response = await env.TABLECAST_API.fetch(
     new Request(request, { headers, redirect: "manual" }),
   );
