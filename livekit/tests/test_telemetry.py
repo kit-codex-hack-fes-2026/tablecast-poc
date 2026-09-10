@@ -54,6 +54,29 @@ def test_収集設定によらず認証情報を除去し録音を追加しな�
 
 
 @pytest.mark.parametrize(
+    "message",
+    [
+        "要求失敗 Cookie: session=private-cookie; other=private-other",
+        {"Cookie": "session=private-cookie", "Authorization": "Custom private-auth"},
+        "要求失敗 Authorization: Custom private-auth",
+        "要求失敗 Set-Cookie: session=private-cookie; Secure",
+        "要求失敗 tablecast-voice-token",
+    ],
+    ids=["Cookie行", "辞書のログ", "独自認証", "Set-Cookie行", "APIトークンの値"],
+)
+def test_本文収集中も文字列や辞書ログから認証ヘッダーを除去する(monkeypatch, message):
+    # Given: SDKの文字列・辞書メッセージとAPIトークンbinding。
+    monkeypatch.setenv("TABLECAST_OTEL_CAPTURE_CONTENT", "true")
+    monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-voice-token")
+    record = logging.makeLogRecord({"msg": message, "args": (), "name": "livekit"})
+    # When: hostedとGrafanaのhandler前にある共通フィルターを通す。
+    assert TelemetryLogFilter().filter(record)
+    # Then: LogRecord.getMessageによる辞書の文字列化も秘密値を残さない。
+    assert "private-" not in record.getMessage()
+    assert "tablecast-voice-token" not in record.getMessage()
+
+
+@pytest.mark.parametrize(
     "capture,status",
     [(False, 200), (True, 200), (True, 503)],
     ids=["本文を除去", "本文を収集", "送信先が停止"],
@@ -99,6 +122,7 @@ async def run():
                 "tablecast-turn", "getCatalog", "tablecast-call", {"query": "商品"})
             assert result == {"ok": True}
 asyncio.run(run())
+logging.getLogger("livekit").warning("Cookie: session=private-cookie; other=private-other")
 # IPCと同じpickle往復後、子で処理済みのログと設定前の起動ログを親へ渡す。
 for event, fields in [
     ("tablecast.voice_http", {"tablecastTelemetryProcess": os.getpid() + 1}),
@@ -135,6 +159,9 @@ print("TABLECAST_COMPLETED")
     assert result.returncode == 0, result.stderr
     assert "TABLECAST_COMPLETED" in result.stdout
     assert received
+    assert all(
+        b"private-cookie" not in body and b"private-other" not in body for _, body in received
+    )
     if status != 200:
         return
     spans = [

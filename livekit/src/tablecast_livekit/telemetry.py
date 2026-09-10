@@ -25,7 +25,7 @@ from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapProp
 from opentelemetry.util.types import AttributeValue
 
 _CREDENTIAL = re.compile(
-    r"authorization|cookie|password|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|^token$",
+    r"authorization|cookie|password|secret|api[_-]?key|token$",
     re.I,
 )
 _LOG_FIELDS = frozenset(logging.makeLogRecord({}).__dict__) | {
@@ -83,7 +83,13 @@ def safe_content(value: Any) -> Any:
             return json.dumps(safe_content(parsed), ensure_ascii=False)
     except (ValueError, TypeError):
         pass
-    value = re.sub(r"\b(Bearer|Basic)\s+\S+", r"\1 [REDACTED]", value, flags=re.I)
+    value = re.sub(r"\b(Bearer|Basic)\s+[^\s\"',;]+", r"\1 [REDACTED]", value, flags=re.I)
+    value = re.sub(
+        r"(\b(?:authorization|(?:set-)?cookie)[\"']?\s*[:=]\s*)[^\r\n]+",
+        r"\1[REDACTED]",
+        value,
+        flags=re.I,
+    )
     for key, secret in os.environ.items():
         if _CREDENTIAL.search(key) and len(secret) >= 8:
             value = value.replace(secret, "[REDACTED]")
