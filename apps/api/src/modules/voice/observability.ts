@@ -33,8 +33,10 @@ export function castObservability(env: MastraTelemetryEnv, actor: Actor) {
       const capture = env.TABLECAST_OTEL_CAPTURE_CONTENT === "true";
       span.input = capture ? telemetryContent<unknown>(span.input, env) : undefined;
       span.output = capture ? telemetryContent<unknown>(span.output, env) : undefined;
-      span.requestContext = undefined;
+      span.requestContext = capture ? telemetryContent(span.requestContext, env) : undefined;
       span.metadata = {
+        // 導入版OtelBridgeはrequestContextを変換しないため、共通metadataにも渡す。
+        ...(span.requestContext ? { requestContext: span.requestContext } : {}),
         "deployment.environment.name": env.TABLECAST_ENV ?? "development",
         "service.version": env.TABLECAST_RELEASE_SHA ?? "local",
         ...(env.TABLECAST_ENV === "preview"

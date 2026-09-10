@@ -3,6 +3,7 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import { Hono } from "hono";
+import { RequestContext } from "@mastra/core/request-context";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { createCastAgent } from "../src/modules/voice/agent";
 import { createApiServices, type ApiEnv } from "../src/platform/context";
@@ -87,7 +88,11 @@ it.each([
         "ja",
         new AbortController().signal,
       );
-      const output = await agent.generate("顧客の会話", { maxSteps: 2 });
+      const requestContext = new RequestContext();
+      requestContext.set("actor", { ...device, displayName: "診断用の顧客" });
+      requestContext.set("diagnostics", { requestId: "tablecast-context-probe" });
+      requestContext.set("authorization", "Bearer tablecast-context-secret");
+      const output = await agent.generate("顧客の会話", { maxSteps: 2, requestContext });
       c.executionCtx.waitUntil(observability.shutdown());
       return c.text(output.text);
     });
@@ -116,7 +121,10 @@ it.each([
     for (const payload of [JSON.stringify(grafana), JSON.stringify(hosted)]) {
       expect(payload).not.toContain("tablecast-model-secret");
       expect(payload).not.toContain("tablecast-hosted-secret");
+      expect(payload).not.toContain("tablecast-context-secret");
       expect(payload.includes("顧客の会話")).toBe(capture);
+      expect(payload.includes("診断用の顧客")).toBe(capture);
+      expect(payload.includes("tablecast-context-probe")).toBe(capture);
       expect(payload).toContain("gpt-5.6-luna");
     }
     expect(new Set(grafana.map((span) => span.spanContext().traceId)).size).toBe(1);
