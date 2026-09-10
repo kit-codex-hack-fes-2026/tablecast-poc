@@ -159,7 +159,7 @@ bunx mastra@1.28.0 api trace get TRACE_ID --verbose
 
 ## Cloudflare Containersのインフラ指標（#67）
 
-API WorkerのCronが5分ごとに、配備先のvoiceとpreviewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localのCronは登録しない。
+API WorkerのCronが5分ごとに、配備先のvoiceとpreviewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localのCronは登録しない。本番・previewでは`TABLECAST_CONTAINER_METRICS_TOKEN`とGrafana送信資格`TABLECAST_OTEL_AUTHORIZATION`を必須とし、欠けた配備はWorkerへ書き込む前に拒否する。
 
 - `TABLECAST_CONTAINER_METRICS_TOKEN`: 当該アカウントのAccount Analytics ReadとWorkers Containers Readだけを持つ専用トークン。GitHub Actions secretからAPIのsecretへ渡す。今回のトークン有効期限は2026年12月10日。更新後に配備して反映する。
 - `TABLECAST_CLOUDFLARE_ACCOUNT_ID`と`TABLECAST_CONTAINER_METRICS_APPLICATIONS`: 配備設定から生成する。後者は当該Workerのapplication名のJSON配列。Containers REST APIの名前検索でIDを解決し、GraphQLの`applicationId_in`で絞る。

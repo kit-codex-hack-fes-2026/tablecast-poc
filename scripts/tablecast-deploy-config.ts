@@ -83,6 +83,14 @@ export function deploymentSecrets(
     return value;
   };
   const secrets: Record<string, string> = {
+    TABLECAST_CONTAINER_METRICS_TOKEN: required(
+      input.TABLECAST_CONTAINER_METRICS_TOKEN,
+      "TABLECAST_CONTAINER_METRICS_TOKEN",
+    ),
+    TABLECAST_OTEL_AUTHORIZATION: required(
+      input.TABLECAST_OTEL_AUTHORIZATION,
+      "TABLECAST_OTEL_AUTHORIZATION",
+    ),
     TABLECAST_AUTH_SECRET: derive("auth"),
     TABLECAST_VOICE_API_TOKEN: derive("voice"),
     TABLECAST_LIVEKIT_URL: required(runtime.LIVEKIT_URL, "LIVEKIT_URL"),
@@ -104,12 +112,8 @@ export function deploymentSecrets(
     "TABLECAST_MASTRA_ACCESS_TOKEN",
     "TABLECAST_MASTRA_PROJECT_ID",
     "TABLECAST_MASTRA_ENDPOINT",
-    "TABLECAST_CONTAINER_METRICS_TOKEN",
   ]) {
     if (input[key]) secrets[key] = input[key];
-  }
-  if (input.TABLECAST_OTEL_AUTHORIZATION) {
-    secrets.TABLECAST_OTEL_AUTHORIZATION = input.TABLECAST_OTEL_AUTHORIZATION;
   }
   if (target.pr) {
     secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");

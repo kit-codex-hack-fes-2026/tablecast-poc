@@ -7,6 +7,8 @@ import {
 } from "./tablecast-deploy-config";
 
 const input = {
+  TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
+  TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
   TABLECAST_RUNTIME_SECRETS: JSON.stringify({
     LIVEKIT_URL: "wss://tablecast.example.test",
     LIVEKIT_API_KEY: "tablecast-livekit-key",
@@ -173,5 +175,18 @@ test("本文収集はprodとpreviewで既定有効にし、明示falseで両Work
     expect(disabled.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
     expect(disabled.web.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
     expect(() => deploymentConfigs(...args, "typo")).toThrow("Invalid option");
+  }
+});
+
+test.each([
+  { pr: undefined, environment: "本番" },
+  { pr: "74", environment: "preview" },
+])("$environmentで監視資格がなければ配備を拒否する", ({ pr }) => {
+  // Given: Cronを登録する配備先と、片方が欠けた監視資格。
+  for (const key of ["TABLECAST_CONTAINER_METRICS_TOKEN", "TABLECAST_OTEL_AUTHORIZATION"]) {
+    // When / Then: Workerへの書込み前に不足した設定名で失敗する。
+    expect(() => deploymentSecrets(deploymentTarget(pr), { ...input, [key]: undefined })).toThrow(
+      key,
+    );
   }
 });
