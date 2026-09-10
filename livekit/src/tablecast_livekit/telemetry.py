@@ -28,7 +28,11 @@ _CREDENTIAL = re.compile(
     r"authorization|cookie|password|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|^token$",
     re.I,
 )
-_LOG_FIELDS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
+_LOG_FIELDS = frozenset(logging.makeLogRecord({}).__dict__) | {
+    "message",
+    "asctime",
+    "tablecastTelemetryProcess",
+}
 _OPERATION_FIELDS = frozenset(
     {
         "event",
@@ -93,6 +97,8 @@ def safe_content(value: Any) -> Any:
 
 class TelemetryLogFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
+        # IPCで親へ転送されても、既に送信を担当した子プロセスを保持する。
+        record.__dict__.setdefault("tablecastTelemetryProcess", os.getpid())
         capture = capture_content()
         message = record.getMessage()
         record.msg = (
@@ -190,6 +196,10 @@ def configure_telemetry() -> tuple[TracerProvider, LoggerProvider] | None:
     )
     handler = LoggingHandler(level=logging.INFO, logger_provider=logs)
     handler.addFilter(lambda record: not record.name.startswith(("opentelemetry", "urllib3")))
+    # 子の設定前に発生したログは親で収集し、設定後の転送ログだけを除外する。
+    handler.addFilter(
+        lambda record: record.__dict__.get("tablecastTelemetryProcess", os.getpid()) == os.getpid()
+    )
     root = logging.getLogger()
     root.addHandler(handler)
     # 後から追加されるCloud handlerも、ここで除去済みの同じLogRecordを受け取る。

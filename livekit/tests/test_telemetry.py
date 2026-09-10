@@ -78,7 +78,7 @@ def test_実SDKから一度だけ送信し宛先の停止で業務処理を失�
     thread = threading.Thread(target=collector.serve_forever, daemon=True)
     thread.start()
     script = """
-import asyncio, logging
+import asyncio, logging, os, pickle
 import httpx
 from livekit.agents.telemetry import tracer
 from tablecast_livekit.api import VoiceAPI
@@ -99,6 +99,15 @@ async def run():
                 "tablecast-turn", "getCatalog", "tablecast-call", {"query": "商品"})
             assert result == {"ok": True}
 asyncio.run(run())
+# IPCと同じpickle往復後、子で処理済みのログと設定前の起動ログを親へ渡す。
+for event, fields in [
+    ("tablecast.voice_http", {"tablecastTelemetryProcess": os.getpid() + 1}),
+    ("tablecast.startup", {}),
+]:
+    record = logging.makeLogRecord({"name": "tablecast.voice", "msg": event,
+                                   "levelno": logging.INFO, "args": (),
+                                   "process": os.getpid() + 1, **fields})
+    logging.getLogger(record.name).handle(pickle.loads(pickle.dumps(record)))
 flush_telemetry()
 print("TABLECAST_COMPLETED")
 """
@@ -150,8 +159,9 @@ print("TABLECAST_COMPLETED")
         for resource in ExportLogsServiceRequest.FromString(body).resource_logs
         for scope in resource.scope_logs
         for log in scope.log_records
-        if log.body.string_value == "tablecast.voice_http"
     ]
-    assert len(logs) == 1
-    assert logs[0].trace_id == child.trace_id
-    assert logs[0].span_id == child.span_id
+    completed = [log for log in logs if log.body.string_value == "tablecast.voice_http"]
+    assert len(completed) == 1
+    assert completed[0].trace_id == child.trace_id
+    assert completed[0].span_id == child.span_id
+    assert sum(log.body.string_value == "tablecast.startup" for log in logs) == 1
