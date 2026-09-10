@@ -122,6 +122,10 @@ export function deploymentSecrets(
       "CF_ACCESS_CLIENT_SECRET",
     );
   } else {
+    secrets.TABLECAST_BETTER_AUTH_API_KEY = required(
+      input.TABLECAST_BETTER_AUTH_API_KEY,
+      "TABLECAST_BETTER_AUTH_API_KEY",
+    );
     secrets.TABLECAST_GOOGLE_CLIENT_ID = required(
       input.TABLECAST_GOOGLE_CLIENT_ID,
       "TABLECAST_GOOGLE_CLIENT_ID",

@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
@@ -15,6 +16,7 @@ export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],
   db: Database = drizzle(env.TABLECAST_DB),
+  backgroundTasks?: NonNullable<BetterAuthOptions["advanced"]>["backgroundTasks"],
 ) {
   ensure(
     env.TABLECAST_AUTH_SECRET && env.TABLECAST_AUTH_SECRET.length >= 32,
@@ -46,11 +48,25 @@ export function createAuth(
       "OAUTH_EMULATOR_LOCAL_ONLY",
       503,
     );
+  const dashboardApiKey =
+    env.TABLECAST_ENV === "production" ? env.TABLECAST_BETTER_AUTH_API_KEY : undefined;
   return betterAuth({
     ...options,
     onAPIError: { throw: true },
+    advanced: {
+      ...options.advanced,
+      backgroundTasks: dashboardApiKey ? backgroundTasks : undefined,
+    },
     plugins: [
       ...options.plugins,
+      ...(dashboardApiKey
+        ? [
+            dash({
+              apiKey: dashboardApiKey,
+              activityTracking: { enabled: true },
+            }),
+          ]
+        : []),
       ...(emulator
         ? [
             genericOAuth({
@@ -150,6 +166,7 @@ export type AuthEnv = Pick<
       | "TABLECAST_GOOGLE_EMULATOR_URL"
       | "TABLECAST_GOOGLE_AUTHORIZE_URL"
       | "TABLECAST_ENV"
+      | "TABLECAST_BETTER_AUTH_API_KEY"
       | "TABLECAST_EMULATE"
     >
   > &

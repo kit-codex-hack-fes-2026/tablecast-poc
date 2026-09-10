@@ -31,6 +31,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Repository secret                | `TABLECAST_RUNTIME_SECRETS`                                    | 下記の許可キーだけを含むJSON                                                       |
 | Repository secret                | `TABLECAST_DEPLOY_SECRET`                                      | 32文字以上のランダムな固定値                                                       |
 | Environment `production` secrets | `TABLECAST_GOOGLE_CLIENT_ID`, `TABLECAST_GOOGLE_CLIENT_SECRET` | 提供されたWeb applicationの資格                                                    |
+| Environment `production` secret  | `TABLECAST_BETTER_AUTH_API_KEY`                                | Better Auth Dashboardで発行した本番プロジェクトのAPI key                           |
 | Repository secrets               | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`               | PRの機械通信用Access service token                                                 |
 | Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
 | Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
@@ -38,6 +39,12 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 `TABLECAST_RUNTIME_SECRETS`には`.env.local`と同じ `OPENAI_API_KEY`、`INWORLD_API_KEY`、`LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、`TABLECAST_MODEL`、`TABLECAST_MODEL_API_KEY`、`TABLECAST_INWORLD_VOICES_API_KEY` を入れる。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。Pythonに必要な値はContainer起動時に注入する。ブラウザーへ返すLiveKit接続URLと限定JWTを除き、資格はサーバー側に留める。
 
 認証secretと内部tokenは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証と内部通信に影響するため通常のキー追加時に再生成しない。
+
+Better Auth Dashboardの鍵は `production` Environmentから本番API Worker secretへだけ渡す。`TABLECAST_RUNTIME_SECRETS`、buildジョブ、公開config、Web、Python、previewへ含めない。本番配備はこの鍵が空なら資源変更前に停止する。鍵の登録・変更後も既存の認証masterは変更しない。
+
+初回の本番配備では `0012_tablecast_auth_activity.sql` を既存migration工程で適用した後にWorkerを配備する。Dashboardの接続先は `https://tablecast.kit-codex.workers.dev`、認証パスは `/api/auth` とし、無料Starterの本番プロジェクトから接続する。接続には公開Web WorkerからAPIへの既存Service Bindingを使用する。配備後はhealthのrelease SHAに加え、Dashboardのユーザー・セッション表示、ログインイベント、最終利用日時を確認する。Dashboardの接続設定とこの本番確認はPRのCI成功だけでは完了としない。
+
+アプリのrollbackではnullableな `last_active_at` 列を残す。旧版でも既存ユーザーとセッションを使用でき、列を削除する破壊的なdown migrationは行わない。
 
 Access applicationはPRホスト名に対してWeb公開前に作成する。上記2 policyを参照し、Pythonと配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
 
