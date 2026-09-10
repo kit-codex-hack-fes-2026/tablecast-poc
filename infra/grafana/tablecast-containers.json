@@ -194,7 +194,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "{__name__=~\"tablecast_container_network_(receive|transmit)_bits_per_second\",deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "expr": "{__name__=~\"tablecast_container_network_(receive|transmit)_bit_per_second\",deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
           "legendFormat": "{{__name__}} {{cloudflare_application}}"
         }
       ],

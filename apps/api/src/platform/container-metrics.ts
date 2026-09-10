@@ -170,8 +170,8 @@ export async function collectContainerMetrics(env: MetricsEnv, scheduledTime: nu
         ["observed_timestamp_seconds", "s", time / 1000],
         ["cpu_utilization", "1", row.avg.cpuUtilization],
         ["memory_bytes", "By", row.avg.memory],
-        ["network_receive_bits_per_second", "bit/s", row.avg.rxBandwidthBps],
-        ["network_transmit_bits_per_second", "bit/s", row.avg.txBandwidthBps],
+        ["network_receive", "bit/s", row.avg.rxBandwidthBps],
+        ["network_transmit", "bit/s", row.avg.txBandwidthBps],
         ["disk_usage_bytes", "By", row.max.diskUsage],
         [
           "uptime_seconds",
