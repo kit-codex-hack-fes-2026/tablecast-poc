@@ -109,6 +109,12 @@ describe("本番とPRの配備境界", () => {
       "https://tablecast-pr-34.kit-codex.workers.dev/_tablecast/oauth",
     );
     expect(config.api.containers).toHaveLength(2);
+    expect(config.api.triggers.crons).toEqual(["*/5 * * * *"]);
+    expect(JSON.parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)).toEqual([
+      "tablecast-api-pr-34-tablecastvoice",
+      "tablecast-api-pr-34-tablecastemulate",
+    ]);
+    expect(config.web).not.toHaveProperty("triggers");
     expect(config.api.containers.every((value) => value.max_instances === 1)).toBe(true);
     expect(JSON.stringify(config)).not.toContain("tablecast-openai-secret");
   });
@@ -145,8 +151,11 @@ test("previewのAPIとWebに同じPR番号を渡し送信資格を公開varsへ�
   const secrets = deploymentSecrets(deploymentTarget("123"), {
     ...input,
     TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
+    TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
   });
   expect(secrets.TABLECAST_OTEL_AUTHORIZATION).toBe("tablecast-ingestion-secret");
+  expect(secrets.TABLECAST_CONTAINER_METRICS_TOKEN).toBe("tablecast-analytics-secret");
+  expect(JSON.stringify(config)).not.toContain("tablecast-analytics-secret");
 });
 
 test("本文収集はprodとpreviewで既定有効にし、明示falseで両Workerを切り替える", () => {

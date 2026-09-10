@@ -11,6 +11,7 @@ const files = [
   ["bootstrap", "src/bootstrap.ts"],
   ["context", "src/platform/context.ts"],
   ["telemetry", "src/platform/telemetry.ts"],
+  ["container-metrics", "src/platform/container-metrics.ts"],
   ["http", "src/platform/{http,validation}.ts"],
   ["error", "src/platform/errors.ts"],
   ["model", "src/platform/model.ts"],
@@ -32,7 +33,8 @@ const files = [
 // 左がimport元、右が許可する依存先。外部packageとContextのtype-onlyは別に制限する。
 const dependencies = {
   app: ["route", "store-routes", "http", "context"],
-  worker: ["app", "runtime", "telemetry"],
+  worker: ["app", "runtime", "telemetry", "container-metrics"],
+  "container-metrics": [],
   telemetry: ["error"],
   client: ["app"],
   schema: ["model"],

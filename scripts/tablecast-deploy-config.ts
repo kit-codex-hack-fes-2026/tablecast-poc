@@ -104,6 +104,7 @@ export function deploymentSecrets(
     "TABLECAST_MASTRA_ACCESS_TOKEN",
     "TABLECAST_MASTRA_PROJECT_ID",
     "TABLECAST_MASTRA_ENDPOINT",
+    "TABLECAST_CONTAINER_METRICS_TOKEN",
   ]) {
     if (input[key]) secrets[key] = input[key];
   }
@@ -158,8 +159,14 @@ export function deploymentConfigs(
     main: resolve(root, "apps/api/src/worker.ts"),
     workers_dev: false,
     preview_urls: false,
+    triggers: { crons: ["*/5 * * * *"] },
     vars: {
       ...telemetryVars,
+      TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
+      TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([
+        `${target.api}-tablecastvoice`,
+        ...(target.pr ? [`${target.api}-tablecastemulate`] : []),
+      ]),
       TABLECAST_PUBLIC_ORIGIN: target.origin,
       TABLECAST_CONTAINERS_ENABLED: "true",
       TABLECAST_VOICE_ENABLED: "true",

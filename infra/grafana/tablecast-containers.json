@@ -1,0 +1,385 @@
+{
+  "uid": "tablecast-containers",
+  "title": "TableCast Containers",
+  "tags": ["tablecast"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "templating": {
+    "list": [
+      {
+        "name": "tablecast_prometheus",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "/.*(prom|Prometheus).*/"
+      },
+      {
+        "name": "environment",
+        "label": "環境",
+        "type": "custom",
+        "query": "preview,production",
+        "current": {
+          "text": "preview",
+          "value": "preview"
+        }
+      },
+      {
+        "name": "pr",
+        "label": "PR番号 / prod（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "application",
+        "label": "Container名（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU使用率（5分平均）",
+      "description": "課金用のsandbox使用量を含まない。空白は0ではない。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tablecast_container_cpu_utilization_ratio{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "メモリ（5分平均）",
+      "description": "Cloudflareが報告したworkloadのメモリ。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tablecast_container_memory_bytes{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "ディスク（5分最大）",
+      "description": "稼働中に報告されたディスク使用量。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tablecast_container_disk_usage_bytes{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "ネットワーク（5分平均）",
+      "description": "受信・送信。Cloudflareのbpsを維持する。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{__name__=~\"tablecast_container_network_(receive|transmit)_bits_per_second\",deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "legendFormat": "{{__name__}} {{cloudflare_application}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "稼働時間（Cloudflare報告の5分最大）",
+      "description": "公式GraphQLのcontainerUptimeをmsからsへ変換する。報告のない稼働時間を推測しない。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tablecast_container_uptime_seconds{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "サンプル窓の経過時間",
+      "description": "5分の集計窓と5分の待機により通常5〜15分程度。1時間以上データがない場合もNo dataのまま扱う。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - last_over_time(tablecast_container_observed_timestamp_seconds{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\",cloudflare_application=~\"$application\"}[1h])",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "収集成功（1）・失敗（0）",
+      "description": "空集合の取得は成功。0はCloudflare取得失敗。10分以上heartbeatがない場合は送信・Cron停止の可能性。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time(tablecast_container_collector_success{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\"}[10m])",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "取得サンプル数",
+      "description": "0はこの窓のサンプルなし。ContainerのCPU等が0という意味ではない。",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$tablecast_prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "tablecast_container_collector_samples{deployment_environment_name=\"$environment\",tablecast_pr_number=~\"$pr\"}",
+          "legendFormat": "{{cloudflare_application}} {{cloudflare_instance_id}} {{tablecast_pr_number}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

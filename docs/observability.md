@@ -156,3 +156,32 @@ bunx mastra@1.28.0 api trace get TRACE_ID --verbose
 ```
 
 [公式のObservability単独利用](https://mastra.ai/docs/mastra-platform/observability)と[OtelBridge](https://mastra.ai/reference/observability/tracing/bridges/otel)を参照。
+
+## Cloudflare Containersのインフラ指標（#67）
+
+API WorkerのCronが5分ごとに、配備先のvoiceとpreviewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localのCronは登録しない。
+
+- `TABLECAST_CONTAINER_METRICS_TOKEN`: 当該アカウントのAccount Analytics ReadとWorkers Containers Readだけを持つ専用トークン。GitHub Actions secretからAPIのsecretへ渡す。今回のトークン有効期限は2026年12月10日。更新後に配備して反映する。
+- `TABLECAST_CLOUDFLARE_ACCOUNT_ID`と`TABLECAST_CONTAINER_METRICS_APPLICATIONS`: 配備設定から生成する。後者は当該Workerのapplication名のJSON配列。Containers REST APIの名前検索でIDを解決し、GraphQLの`applicationId_in`で絞る。
+- Grafanaへの送信は既存`TABLECAST_OTEL_ENDPOINT`と`TABLECAST_OTEL_AUTHORIZATION`を使用する。トークンには`metrics:write`が必要。
+
+公式の[`containersMetricsAdaptiveGroups`](https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-container-metrics/)を使用し、課金用`containersUsageAdaptiveGroups`、DOの呼出し時間、Pythonのアプリspanとは区別する。CPU・メモリ・受信/送信bpsは5分窓の平均、ディスクと稼働時間は最大値。稼働時間はGraphQLスキーマのmsを秒へ変換する。Cloudflareが返す0は保持するが、空集合やnullを0に置き換えない。
+
+例として14:30のCronは14:20以上14:25未満を取得する。5分遅延させた重ならない窓を使い、OTLPの時刻は元の窓の開始時刻を維持する。同じ窓を再実行しても別時刻へ複製しない。取得失敗や遅延到着を後から自動で埋め戻すことはしない。API要求は各10秒で打ち切り、1000行上限やGraphQLの部分失敗も失敗として扱う。
+
+`infra/grafana/tablecast-containers.json`をGrafanaへimportし、Prometheus datasource・環境・PR番号（本番は`prod`）・Container名を指定する。CPU等にはCloudflare application・instance・placement・deployment IDを保持する。OTLPの`service.version`は収集WorkerのSHAであり、過去のContainerイメージのSHAを推測しない。過去の実行はCloudflare deployment IDで照合する。
+
+```promql
+# PRごとのメモリ。サンプルの元時刻で描画し、欠測を0で埋めない。
+tablecast_container_memory_bytes{deployment_environment_name="preview",tablecast_pr_number="123"}
+# 本番
+ tablecast_container_cpu_utilization_ratio{deployment_environment_name="production",tablecast_pr_number="prod"}
+# 収集停止またはGrafanaへの送信断（10分間heartbeatなし）
+absent_over_time(tablecast_container_collector_success{deployment_environment_name="preview",tablecast_pr_number="123"}[10m])
+# 収集自体が成功しても、Containerが停止中・無通信ならデータは来ない。
+time() - last_over_time(tablecast_container_observed_timestamp_seconds{tablecast_pr_number="123"}[1h])
+```
+
+`collector_success=0`はCloudflare取得失敗、`collector_samples=0`は正常に取得した窓にサンプルがない状態。OTLPのHTTP失敗・部分拒否はCronを失敗させる。Grafana停止時にはsuccess=0自体も送れないため、heartbeat欠測とCloudflareのCron失敗を併用する。データ鮮度も表示し、値が来ないだけでContainer停止と断定しない。欠測検出クエリを提供するが通知先へのアラート登録は行っていない。
+
+Grafana MCPの`query_prometheus`で同じPromQLを実行できる。Cloudのdatasource UIDは`grafanacloud-prom`、過去の窓を見るときは`queryType=range`と明示的なstart/end・stepを指定する。
