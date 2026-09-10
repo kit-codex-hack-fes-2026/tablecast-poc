@@ -12,7 +12,7 @@ import {
   trace,
   type Attributes,
 } from "@opentelemetry/api";
-import { diagnosticSecrets, errorAttributes } from "./diagnostics";
+import { diagnosticSecrets, errorAttributes, redactCredentials } from "./diagnostics";
 import { DomainError } from "./errors";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
@@ -81,16 +81,10 @@ export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
     } catch {
       // 通常の文はJSONとして解釈しない。
     }
-    let safe = value
-      .replace(/\b(Bearer|Basic)\s+[^\s"',;]+/gi, "$1 [REDACTED]")
-      .replace(/(\b(?:authorization|(?:set-)?cookie)\s*[=:]\s*)[^\r\n]+/gi, "$1[REDACTED]");
-    for (const [key, secret] of Object.entries(env))
-      if (credentialKey.test(key) && typeof secret === "string" && secret.length >= 8)
-        safe = safe.replaceAll(secret, "[REDACTED]");
-    return safe.replace(
-      /((?:password|api[_-]?key|access[_-]?token|refresh[_-]?token|secret)\s*[=:]\s*)[^\s,;]+/gi,
-      "$1[REDACTED]",
+    const secrets = Object.entries(env).flatMap(([key, secret]) =>
+      credentialKey.test(key) && typeof secret === "string" && secret.length >= 8 ? [secret] : [],
     );
+    return redactCredentials(value, secrets);
   }
   if (value instanceof Date) return value;
   if (Array.isArray(value)) return value.map((item: unknown) => telemetryContent(item, env));

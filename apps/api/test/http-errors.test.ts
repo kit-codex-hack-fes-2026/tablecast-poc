@@ -25,6 +25,12 @@ it.each([false, true])(
   async (capture) => {
     // Given: 実Honoへ会話・顧客情報と認証情報を含むproviderエラーを渡す。
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exporter = new InMemorySpanExporter();
+    const provider = new BasicTracerProvider({
+      spanProcessors: [new SimpleSpanProcessor(exporter)],
+    });
+    const span = provider.getTracer("tablecast-test").startSpan("tablecast.test.provider");
+    vi.spyOn(trace, "getActiveSpan").mockReturnValue(span);
     const bindings = { ...env, TABLECAST_OTEL_CAPTURE_CONTENT: String(capture) };
     const app = new Hono<ApiEnv>()
       .use("*", requestTelemetry)
@@ -32,7 +38,8 @@ it.each([false, true])(
       .get("/provider", () => {
         throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
           cause: new Error(
-            "顧客@example.comの会話「お茶を一つ」\nAuthorization: Bearer private-token\nCookie: session=private-cookie; second=private-second",
+            'Provider failed: {"access_token":"private-json-token with spaces", "status":"failed"}\n' +
+              "顧客@example.comの会話「お茶を一つ」\nAuthorization: Bearer private-token\nCookie: session=private-cookie; second=private-second",
           ),
         });
       });
@@ -64,12 +71,20 @@ it.each([false, true])(
     );
     // Then: 収集設定に従って本文を保持し、公開応答と両ログへ秘密値を出さない。
     expect(sent).toHaveBeenCalledTimes(1);
-    for (const payload of [JSON.stringify(entry), JSON.stringify(sent.mock.calls[0]?.[0])]) {
+    span.end();
+    for (const payload of [
+      JSON.stringify(entry),
+      JSON.stringify(sent.mock.calls[0]?.[0]),
+      JSON.stringify(exporter.getFinishedSpans()[0]?.attributes),
+    ]) {
       expect(payload.includes("お茶を一つ")).toBe(capture);
       expect(payload.includes("顧客@example.com")).toBe(capture);
-      expect(payload).not.toMatch(/private-token|private-cookie|private-second/);
+      expect(payload).not.toMatch(
+        /private-token|private-cookie|private-second|private-json-token|with spaces/,
+      );
     }
     expect(JSON.stringify(await response.json())).not.toContain("お茶");
+    await provider.shutdown();
   },
 );
 

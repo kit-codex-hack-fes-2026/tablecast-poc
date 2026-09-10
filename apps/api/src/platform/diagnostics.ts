@@ -10,16 +10,25 @@ const privateCauses = new Set([
   "VOICE_MODEL_FAILED",
   "VOICE_INTERNAL_ERROR",
 ]);
-function diagnosticMessage(message: string, secrets: readonly string[], capture: boolean) {
+export function redactCredentials(message: string, secrets: readonly string[]) {
   let value = message;
   for (const secret of secrets) if (secret) value = value.replaceAll(secret, "[REDACTED]");
   value = value
     .replace(/\b(Bearer|Basic)\s+[^\s"',;]+/gi, "$1 [REDACTED]")
     .replace(/(\b(?:authorization|(?:set-)?cookie)\s*[=:]\s*)[^\r\n]+/gi, "$1[REDACTED]")
     .replace(
-      /((?:password|api[_-]?key|access[_-]?token|refresh[_-]?token|secret|token|code)\s*[=:]\s*)[^\s,;]+/gi,
-      "$1[REDACTED]",
+      /(\b(?:authorization|(?:set-)?cookie|password|api[_-]?key|access[_-]?token|refresh[_-]?token|secret|token|code)["']?\s*[=:]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}\]]+)/gi,
+      (_match, prefix: string, credential: string) => {
+        // 説明付きJSONも扱い、空白・区切り・エスケープを含む値全体を除く。
+        const quote = credential[0] === '"' || credential[0] === "'" ? credential[0] : "";
+        return `${prefix}${quote}[REDACTED]${quote}`;
+      },
     );
+  return value;
+}
+
+function diagnosticMessage(message: string, secrets: readonly string[], capture: boolean) {
+  const value = redactCredentials(message, secrets);
   if (capture) return value.slice(0, 4096);
   return (value.split("\n", 1)[0] ?? "")
     .replace(/Failed query:[\s\S]*/i, "Failed query: [REDACTED]")

@@ -22,6 +22,36 @@ it("原因に資格情報があるとき、診断メッセージを残し秘密�
   expect(JSON.stringify(attributes)).not.toMatch(/private|user@example|\/Users/);
 });
 
+it.each([
+  {
+    label: "JSONの引用符とエスケープ",
+    message: `Provider failed: ${JSON.stringify({
+      access_token: 'private-access with "quotes" and \\slashes',
+      refresh_token: "private-refresh",
+      api_key: "private-api",
+      password: "private-password with spaces, commas; and newlines\nend",
+      authorization: "private-authorization",
+      cookie: "private-cookie; another=private-second",
+      status: "failed",
+    })}`,
+  },
+  {
+    label: "一重引用符と代入形式",
+    message:
+      "Provider failed: {'token': 'private-token with spaces', 'secret': 'private-secret'} code=private-code status=failed",
+  },
+])("本文収集ONでも$label内の資格をcauseとstackから除く", ({ message }) => {
+  // Given: 環境bindingに含まれないprovider資格が説明付きpayloadに入っている。
+  const error = new Error(message, { cause: new Error(message) });
+  // When: 本文収集を有効にして診断を作る。
+  const attributes = errorAttributes(error, [], true);
+  // Then: 説明と非秘密の状態を残し、例外・stack・causeのすべてから資格を除く。
+  expect(attributes["exception.message"]).toContain("Provider failed:");
+  expect(attributes["exception.message"]).toContain("failed");
+  expect(attributes["tablecast.error.causes"]).toBeDefined();
+  expect(JSON.stringify(attributes)).not.toMatch(/private-|quotes|slashes|spaces|commas|newlines/);
+});
+
 it("provider例外をcauseに持つ場合、会話を含み得るメッセージを送信しない", () => {
   const provider = new TypeError("お客様の会話を含む外部エラー");
   const error = new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
