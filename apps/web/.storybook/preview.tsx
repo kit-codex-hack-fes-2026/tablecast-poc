@@ -1,3 +1,4 @@
+import { MotionProvider } from "../src/components/motion-provider";
 import type { Preview } from "@storybook/react-vite";
 import { LocaleProvider } from "../src/i18n/locale";
 import "../src/styles.css";
@@ -23,7 +24,9 @@ const preview: Preview = {
         key={context.globals.locale === "en" ? "en" : "ja"}
         initialLocale={context.globals.locale === "en" ? "en" : "ja"}
       >
-        <Story />
+        <MotionProvider>
+          <Story />
+        </MotionProvider>
       </LocaleProvider>
     ),
   ],

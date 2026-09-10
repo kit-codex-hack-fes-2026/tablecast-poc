@@ -1,8 +1,10 @@
+import { useHydrated } from "@tanstack/react-router";
 import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cn } from "tailwind-variants";
 import * as React from "react";
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  const hydrated = useHydrated();
   return (
     <InputPrimitive
       type={type}
@@ -12,6 +14,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         className,
       )}
       {...props}
+      readOnly={!hydrated || props.readOnly}
     />
   );
 }

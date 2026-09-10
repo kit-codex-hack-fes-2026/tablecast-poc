@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plug, ShieldOff, CheckCircle2, Clock, Eye, FilePenLine } from "lucide-react";
+import { CheckCircle2, Clock, Eye, FilePenLine, Plug, ShieldOff } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
@@ -9,13 +9,13 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
+import { mcpSessionsOptions, type loadMcpSessions } from "./account-query";
 import { IntegrationsShell } from "./integrations-shell";
-const load = () => parseResponse(rpc.api.account["mcp-sessions"].$get());
-type Session = Awaited<ReturnType<typeof load>>["sessions"][number];
+type Session = Awaited<ReturnType<typeof loadMcpSessions>>["sessions"][number];
 export function McpSessions() {
   const { t } = useI18n(),
     client = useQueryClient();
-  const sessions = useQuery({ queryKey: ["tablecast-mcp-sessions"], queryFn: load });
+  const sessions = useSuspenseQuery(mcpSessionsOptions);
   const revoke = useMutation({
     mutationFn: (id: string) =>
       parseResponse(rpc.api.account["mcp-sessions"][":id"].revoke.$post({ param: { id } })),
@@ -28,18 +28,15 @@ export function McpSessions() {
   return (
     <IntegrationsShell>
       <h2 className="text-xl font-semibold">{t("mcp_oauth_sessions")}</h2>
-      <ErrorNotice error={sessions.error || revoke.error} />
-      {sessions.isPending ? (
-        <p role="status">{t("common_loading")}</p>
-      ) : (
-        <DataTable
-          data={sessions.data?.sessions ?? []}
-          columns={columns}
-          searchLabel={t("mcp_session_search")}
-          empty={t("mcp_session_empty")}
-          getRowId={(row) => row.id}
-        />
-      )}
+      <ErrorNotice error={sessions.error || revoke.error} onRetry={() => void sessions.refetch()} />
+
+      <DataTable
+        data={sessions.data.sessions}
+        columns={columns}
+        searchLabel={t("mcp_session_search")}
+        empty={t("mcp_session_empty")}
+        getRowId={(row) => row.id}
+      />
     </IntegrationsShell>
   );
 }

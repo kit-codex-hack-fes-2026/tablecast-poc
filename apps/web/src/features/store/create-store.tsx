@@ -1,13 +1,13 @@
-import { useForm } from "@tanstack/react-form";
+import { createStoreSchema } from "@tablecast/api/schema";
+import { useAppForm } from "../../components/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus } from "lucide-react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { SettingsShell } from "../account/settings-shell";
+import { SettingsShell } from "../shell/settings-shell";
 export function CreateStore() {
   const { t } = useI18n(),
     navigate = useNavigate(),
@@ -24,10 +24,10 @@ export function CreateStore() {
       });
     },
   });
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: { name: "", slug: "", tableCount: 10 },
-    onSubmit: ({ value }) => {
-      create.mutate(value);
+    onSubmit: async ({ value }) => {
+      await create.mutateAsync(value).catch(() => undefined);
     },
   });
   return (
@@ -43,59 +43,53 @@ export function CreateStore() {
       </Button>
       <h1 className="text-2xl font-semibold">{t("stores_create")}</h1>
       <form
+        noValidate
         className="max-w-xl space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
           void form.handleSubmit();
         }}
       >
-        <form.Field name="name">
+        <form.AppField
+          name="name"
+          validators={{
+            onChange: ({ value }) =>
+              createStoreSchema.shape.name.safeParse(value).success
+                ? undefined
+                : t("form_required"),
+          }}
+        >
+          {(field) => <field.TextField label={t("org_name")} required maxLength={150} />}
+        </form.AppField>
+        <form.AppField
+          name="slug"
+          validators={{
+            onChange: ({ value }) =>
+              createStoreSchema.shape.slug.safeParse(value).success ? undefined : t("form_slug"),
+          }}
+        >
+          {(field) => <field.TextField label={t("org_slug")} required maxLength={80} />}
+        </form.AppField>
+        <form.AppField
+          name="tableCount"
+          validators={{
+            onChange: ({ value }) =>
+              createStoreSchema.shape.tableCount.safeParse(value).success
+                ? undefined
+                : t("form_number"),
+          }}
+        >
           {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("org_name")}
-              <Input
-                required
-                maxLength={150}
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </label>
+            <field.NumberField label={t("stores_table_count")} required min={1} max={100} />
           )}
-        </form.Field>
-        <form.Field name="slug">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("org_slug")}
-              <Input
-                required
-                pattern="[a-z0-9-]+"
-                maxLength={80}
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </label>
-          )}
-        </form.Field>
-        <form.Field name="tableCount">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("stores_table_count")}
-              <Input
-                type="number"
-                min={1}
-                max={100}
-                required
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.valueAsNumber)}
-              />
-            </label>
-          )}
-        </form.Field>
+        </form.AppField>
         <ErrorNotice error={create.error} />
-        <Button type="submit" disabled={create.isPending}>
-          <Plus />
-          {t("stores_create")}
-        </Button>
+        <form.AppForm>
+          <form.SubmitButton>
+            <Plus />
+            {t("stores_create")}
+          </form.SubmitButton>
+        </form.AppForm>
       </form>
     </SettingsShell>
   );

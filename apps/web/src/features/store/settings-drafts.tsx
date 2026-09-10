@@ -1,5 +1,5 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
@@ -19,10 +19,11 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { draftsOptions } from "./store-query";
 
 import { parseResponse, rpc } from "../../lib/api";
-import { draftOptions } from "../store/menu-query";
-import { useStore } from "../store/store-shell";
+import { draftOptions } from "./menu-query";
+import { useStore } from "./store-shell";
 import { ConfigurationChanges } from "./configuration-changes";
 import { ConfigurationErrors } from "./configuration-errors";
 
@@ -30,11 +31,7 @@ export function SettingsDrafts() {
   const { id: storeId, role } = useStore();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const drafts = useQuery({
-    queryKey: ["tablecast-drafts", storeId],
-    queryFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$get({ param: { storeId } })),
-  });
+  const drafts = useSuspenseQuery(draftsOptions(storeId));
   const client = useQueryClient();
   const create = useMutation({
     mutationFn: () =>
@@ -60,17 +57,13 @@ export function SettingsDrafts() {
         )}
       </div>
 
-      <ErrorNotice error={drafts.error || create.error} />
-      {drafts.isPending ? (
-        <p role="status">{t("common_loading")}</p>
-      ) : (
-        <DataTable
-          data={drafts.data?.drafts ?? []}
-          columns={columns}
-          getRowId={(draft) => draft.id}
-          empty={t("admin_no_drafts")}
-        />
-      )}
+      <ErrorNotice error={drafts.error || create.error} onRetry={() => void drafts.refetch()} />
+      <DataTable
+        data={drafts.data.drafts}
+        columns={columns}
+        getRowId={(draft) => draft.id}
+        empty={t("admin_no_drafts")}
+      />
     </>
   );
 }
@@ -79,7 +72,7 @@ export function DraftPage({ draftId }: { draftId: string }) {
   const { t } = useI18n();
   const client = useQueryClient();
   const navigate = useNavigate();
-  const query = useQuery(draftOptions(storeId, draftId));
+  const query = useSuspenseQuery(draftOptions(storeId, draftId));
   const draft = query.data;
   const [publishKey] = useState(() => crypto.randomUUID());
   const route = rpc.api.admin.stores[":storeId"].drafts[":id"];
@@ -91,7 +84,6 @@ export function DraftPage({ draftId }: { draftId: string }) {
   }
   const validate = useMutation({
     mutationFn: () => {
-      if (!draft) throw new Error("DRAFT_REQUIRED");
       return parseResponse(
         route.validate.$post({ param, json: { expectedVersion: draft.version } }),
       );
@@ -100,7 +92,6 @@ export function DraftPage({ draftId }: { draftId: string }) {
   });
   const publish = useMutation({
     mutationFn: () => {
-      if (!draft) throw new Error("DRAFT_REQUIRED");
       return parseResponse(
         route.publish.$post({
           param,
@@ -117,7 +108,6 @@ export function DraftPage({ draftId }: { draftId: string }) {
   });
   const discard = useMutation({
     mutationFn: () => {
-      if (!draft) throw new Error("DRAFT_REQUIRED");
       return parseResponse(
         route.discard.$post({ param, json: { expectedVersion: draft.version } }),
       );
@@ -129,7 +119,6 @@ export function DraftPage({ draftId }: { draftId: string }) {
   });
   const busy = validate.isPending || publish.isPending || discard.isPending;
   const editable =
-    draft &&
     (draft.status === "draft" || draft.status === "ready") &&
     (role === "owner" || role === "admin");
   return (
@@ -146,8 +135,8 @@ export function DraftPage({ draftId }: { draftId: string }) {
       </Button>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">{t("admin_review_draft")}</h1>
-        {draft && <DraftStatus status={draft.status} />}
-        {draft?.changes.some((change) => change.sensitive) && (
+        <DraftStatus status={draft.status} />
+        {draft.changes.some((change) => change.sensitive) && (
           <Badge variant="outline" className="bg-secondary text-foreground">
             <TriangleAlert className="size-4" />
             {t("admin_sensitive")}
@@ -156,40 +145,32 @@ export function DraftPage({ draftId }: { draftId: string }) {
       </div>
 
       <ErrorNotice error={query.error || validate.error || publish.error || discard.error} />
-      {draft ? (
-        <>
-          <p className="text-base text-muted-foreground">{t("menu_change_note")}</p>
-          <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
-          <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
-          {editable && (
-            <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-              <ConfirmAction
-                label={t("editor_discard_draft")}
-                subject={t("menu_discard_note")}
-                disabled={busy}
-                onConfirm={() => discard.mutate()}
-                icon={<Trash2 />}
-              />
-              <Button variant="outline" disabled={busy} onClick={() => validate.mutate()}>
-                <Check />
-                {t("admin_validate")}
-              </Button>
-              <Button
-                disabled={
-                  busy ||
-                  draft.status !== "ready" ||
-                  draft.errors.length > 0 ||
-                  !draft.changes.length
-                }
-                onClick={() => publish.mutate()}
-              >
-                {t("admin_publish")}
-              </Button>
-            </div>
-          )}
-        </>
-      ) : (
-        <p role="status">{t("common_loading")}</p>
+
+      <p className="text-base text-muted-foreground">{t("menu_change_note")}</p>
+      <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
+      <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
+      {editable && (
+        <div className="flex flex-wrap gap-3 border-t border-border pt-5">
+          <ConfirmAction
+            label={t("editor_discard_draft")}
+            subject={t("menu_discard_note")}
+            disabled={busy}
+            onConfirm={() => discard.mutate()}
+            icon={<Trash2 />}
+          />
+          <Button variant="outline" disabled={busy} onClick={() => validate.mutate()}>
+            <Check />
+            {t("admin_validate")}
+          </Button>
+          <Button
+            disabled={
+              busy || draft.status !== "ready" || draft.errors.length > 0 || !draft.changes.length
+            }
+            onClick={() => publish.mutate()}
+          >
+            {t("admin_publish")}
+          </Button>
+        </div>
       )}
     </>
   );

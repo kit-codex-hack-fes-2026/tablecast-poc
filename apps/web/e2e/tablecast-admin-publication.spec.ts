@@ -174,7 +174,10 @@ for (const { language, labels, locale } of [
             currency: "JPY",
             maximumFractionDigits: 0,
           });
-          return { before: currency.format(amount), after: currency.format(amount + 100) };
+          return {
+            before: currency.format(amount).replace("￥", "¥"),
+            after: currency.format(amount + 100).replace("￥", "¥"),
+          };
         },
         { amount: product.price, languageLocale: locale },
       );

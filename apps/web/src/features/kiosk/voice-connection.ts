@@ -1,39 +1,10 @@
+import type { LiveMessage, VoiceView } from "./voice-model";
+export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
 import type { Locale } from "@tablecast/api/schema";
-import type { LocalAudioTrack, RemoteAudioTrack, Room } from "livekit-client";
+import type { LocalAudioTrack, Room } from "livekit-client";
 import { z } from "zod";
 import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 
-export type VoiceStatus =
-  | "idle"
-  | "connecting"
-  | "listening"
-  | "thinking"
-  | "speaking"
-  | "stopping"
-  | "paused"
-  | "error";
-export type LiveMessage = {
-  id: string;
-  role: "user" | "assistant";
-  turnId?: string;
-  text: string;
-  rawText?: string;
-  final: boolean;
-  interrupted?: boolean;
-  createdAt: number;
-  speaker?: string;
-  streamId?: string;
-  locale?: Locale;
-  displayIncomplete?: boolean;
-};
-export type VoiceView = {
-  status: VoiceStatus;
-  error?: "permission" | "unconfigured" | "connection" | "active";
-  interim?: string;
-  messages?: LiveMessage[];
-  inputTrack?: LocalAudioTrack;
-  outputTrack?: RemoteAudioTrack;
-};
 const voicePacket = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("user"),

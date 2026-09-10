@@ -468,5 +468,11 @@
   "mcp_expired": "期限切れ",
   "mcp_status": "接続状態",
   "mcp_access_expires": "アクセストークン期限",
-  "mcp_refresh_expires": "更新トークン期限"
+  "mcp_refresh_expires": "更新トークン期限",
+  "form_required": "入力してください。",
+  "form_email": "有効なメールアドレスを入力してください。",
+  "form_password": "12文字以上のパスワードを入力してください。",
+  "form_slug": "半角英小文字・数字・ハイフンで入力してください。",
+  "form_number": "指定された範囲の整数を入力してください。",
+  "form_submitting": "送信中です。"
 }

@@ -10,6 +10,8 @@ import {
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "../i18n/locale";
+import { ErrorNotice } from "./error-notice";
+import { LoadingState } from "./loading-state";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -22,6 +24,9 @@ export function DataTable<T>({
   searchLabel,
   empty,
   pagination = true,
+  pending = false,
+  error,
+  onRetry,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
@@ -29,6 +34,9 @@ export function DataTable<T>({
   searchLabel?: string;
   empty?: string;
   pagination?: boolean;
+  pending?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
 }) {
   const { locale } = useI18n();
   const [filter, setFilter] = useState("");
@@ -44,8 +52,15 @@ export function DataTable<T>({
     getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
     initialState: { pagination: { pageSize: 20 } },
   });
+  if (pending) return <LoadingState />;
+  if (error && !data.length)
+    return (
+      <div className="min-h-80">
+        <ErrorNotice error={error} onRetry={onRetry} />
+      </div>
+    );
   return (
-    <div className="space-y-3">
+    <div className="min-h-80 space-y-3 motion-safe:animate-tablecast-enter">
       {searchLabel && (
         <label className="relative block max-w-sm">
           <Search

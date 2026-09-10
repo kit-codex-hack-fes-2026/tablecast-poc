@@ -1,4 +1,5 @@
 import { tv } from "tailwind-variants";
+import { useHydrated } from "@tanstack/react-router";
 import {
   Camera,
   CircleCheck,
@@ -23,6 +24,7 @@ const scanMessage = tv({
 
 export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
   const { t } = useI18n();
+  const hydrated = useHydrated();
   const [scanning, setScanning] = useState(false);
   const [notice, setNotice] = useState<"success" | "invalid" | "camera" | "image" | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -82,6 +84,7 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
         <input
           ref={fileInput}
           type="file"
+          disabled={!hydrated}
           accept="image/*"
           className="hidden"
           aria-label={t("device_scan_image")}

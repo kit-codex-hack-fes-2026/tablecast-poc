@@ -44,6 +44,8 @@ describe("音声の明示的な停止と再開", () => {
   let requests: { path: string; body: unknown }[];
   beforeEach(() => {
     vi.clearAllMocks();
+    // Nodeで実行しても、検証対象はブラウザーの音声接続である。
+    vi.stubEnv("SSR", false);
     requests = [];
     transport.connect.mockResolvedValue(undefined);
     transport.disconnect.mockResolvedValue(undefined);
@@ -75,6 +77,7 @@ describe("音声の明示的な停止と再開", () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     const unexpected = requests.filter(
       ({ path }) => !path.endsWith("/start") && !path.endsWith("/stop"),
     );

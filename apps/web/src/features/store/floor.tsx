@@ -1,13 +1,13 @@
 import { tv } from "tailwind-variants";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
+import { floorOptions } from "./store-query";
 
-import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
-import { TableMetrics } from "../admin/table-metrics";
-import { TableTimeline } from "../admin/table-timeline";
+import { TableMetrics } from "./table-metrics";
+import { TableTimeline } from "./table-timeline";
 import { useStore } from "./store-shell";
 
 const connectionDot = tv({
@@ -20,18 +20,8 @@ export function Floor() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const client = useQueryClient();
-  const state = useQuery({
-    queryKey: ["tablecast-admin", store.id],
-    queryFn: ({ signal }) =>
-      parseResponse(
-        rpc.api.admin.stores[":storeId"].$get(
-          { param: { storeId: store.id } },
-          { init: { signal } },
-        ),
-      ),
-    refetchInterval: 30_000,
-  });
-  const connected = useRealtime({ storeId: store.id }, state.data?.cursor ?? 0, () => {
+  const state = useSuspenseQuery(floorOptions(store.id));
+  const connected = useRealtime({ storeId: store.id }, state.data.cursor, () => {
     void client.invalidateQueries({ queryKey: ["tablecast-admin", store.id] });
   });
   return (
@@ -43,30 +33,26 @@ export function Floor() {
           {t(connected ? "admin_live_connected" : "admin_live_reconnecting")}
         </span>
       </div>
-      <ErrorNotice error={state.error} />
-      {state.data ? (
-        <>
-          <TableMetrics tables={state.data.tables} vacantCount={state.data.vacantTables.length} />
-          <TableTimeline
-            tables={state.data.tables}
-            vacantTables={state.data.vacantTables}
-            onSelect={(sessionId) =>
-              void navigate({
-                to: "/admin/stores/$storeId/visits/$sessionId",
-                params: { storeId: store.id, sessionId },
-              })
-            }
-            onOpen={(table) =>
-              void navigate({
-                to: "/admin/stores/$storeId/tables/$tableId/open",
-                params: { storeId: store.id, tableId: table.id },
-              })
-            }
-          />
-        </>
-      ) : (
-        <p role="status">{t("common_loading")}</p>
-      )}
+      <ErrorNotice error={state.error} onRetry={() => void state.refetch()} />
+
+      <TableMetrics tables={state.data.tables} vacantCount={state.data.vacantTables.length} />
+      <TableTimeline
+        initialNow={state.dataUpdatedAt}
+        tables={state.data.tables}
+        vacantTables={state.data.vacantTables}
+        onSelect={(sessionId) =>
+          void navigate({
+            to: "/admin/stores/$storeId/visits/$sessionId",
+            params: { storeId: store.id, sessionId },
+          })
+        }
+        onOpen={(table) =>
+          void navigate({
+            to: "/admin/stores/$storeId/tables/$tableId/open",
+            params: { storeId: store.id, tableId: table.id },
+          })
+        }
+      />
     </>
   );
 }

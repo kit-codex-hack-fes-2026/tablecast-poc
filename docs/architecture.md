@@ -152,3 +152,25 @@ Cloudflareの `nodejs_compat_do_not_populate_process_env` を指定し、Worker�
 ## 本番・PRの配備境界
 
 mainは`tablecast.kit-codex.workers.dev`、同一repoのPRは`tablecast-pr-<番号>.kit-codex.workers.dev`へGitHub Actionsから配備する。Web/APIのService BindingとAPIによる業務判断を維持し、D1/R2/DO/Containersは環境別、LiveKit CloudはRoom/agent名を分離した共有projectにする。Pythonを起動するDOが同時1 sessionの予約と更新受付を管理する。PRのOAuth emulatorも専用Containerで、公開入口はAccessで保護する。本番Google、secrets、初期投入、停止・復旧の契約は[公開手順](deployment.md)を参照する。
+
+## APIと画面のデータ取得
+
+Honoの`app.ts`は共通middlewareと公開入口を組み立て、各`modules/*/routes.ts`で認可と入力検証を行う。業務更新と読取投影は所有moduleの`service.ts`へ置く。リクエストで共有するDrizzleのD1 adapterとSQL templateを使い、条件付き更新・監査イベントの同一batchと店舗境界を維持する。単にDB処理を転送するrepository層は作らない。
+
+フロア取得は、店舗内の利用卓・注文・入金・確認・履歴をまとめて読み、卓ごとに投影する。店舗全体のイベントは100件、各卓の履歴は100件を上限とし、卓数に比例してDB問い合わせを発行しない。下書き一覧ではカタログを一度だけ読み、各下書きの差分へ共有する。
+
+WebはrequestごとにQueryClientを生成し、TanStack RouterのQuery SSR連携でdehydrate/hydrateする。route loaderと部品はfeatureごとのqueryOptionsを共有する。SSRのAPI呼出しはService Bindingへ現在のCookieとAbortSignalを渡す。認証済みHTMLは`private, no-store`とし、QueryClientや認証情報をmodule scopeへ保存しない。
+
+この分担はenterprise-agentic-saas-starterのroute・feature・データ所有者の境界を参考にし、TableCastの既存workspaceを維持している。参考先専用のpackageや階層は移植しない。
+
+## Webの依存と読込境界
+
+`routes`はURL・loader・ページ合成、`features/store`は店舗管理・設定・会計、`features/account`は認証・アカウント、`features/kiosk`は卓の操作を所有する。`features/shell`は実際に共有する認証済みナビゲーションを持つ。画面から別featureの内部画面をimportせず、共有するquery・modelまたはshellを参照する。
+
+`components`はロール表示・注文行・フォームなどのアプリ共通表示、`components/ui`はBase UIとTailwind Variantsの業務非依存プリミティブである。共通部品からfeatureへの逆依存は禁止する。`lib`はHTTP・認証client、SSRとブラウザー機能の境界を持つ。APIは公開`schema`とtransportからの`client`だけを使い、API内部やDBへ依存しない。
+
+初期取得をloaderが所有する一覧は`useSuspenseQuery`、独立した複数取得は`useSuspenseQueries`で読む。初回の失敗はroute境界、取得済みデータの再取得失敗は画面内の再試行表示が所有する。Queryのエラー解除とroute invalidateを使い、無関係なキャッシュを全消去しない。下書きの表示では使わない公開カタログを取得しない。
+
+フォームはTanStack Formの`createFormHook`・`AppField`とBase UI Fieldを接続する。入力状態とvalidationはフォーム、HTTP失敗と成功時のキャッシュ更新はmutationが所有し、submitは非同期処理をawaitする。会計フォームは入力変更時に冪等キーを更新し、通信失敗の再送では同じ入力とキーを保持する。
+
+Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードする。送信・失敗・成功の切替は`ActionFeedback`が短いtransform・opacityと入退場を所有する。画面や入力全体をアニメーションの完了待ちにしない。

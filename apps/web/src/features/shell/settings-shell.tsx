@@ -1,20 +1,21 @@
+import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { useI18n } from "../../i18n/locale";
+import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
+import { sessionOptions } from "../../lib/session-query";
 
-import { authClient } from "../../lib/auth-client";
-import { AdminShell } from "../admin/admin-shell";
+import { AdminShell } from "./admin-shell";
 
 export function SettingsShell({ children }: { children: ReactNode }) {
-  const { t } = useI18n();
-  const session = authClient.useSession();
+  const session = useQuery(sessionOptions);
   const path = useRouterState({ select: (state) => state.location.pathname });
   useEffect(() => {
-    if (!session.isPending && !session.data)
+    if (!session.isPending && !session.error && !session.data)
       window.location.assign(
         `/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`,
       );
-  }, [session.isPending, session.data]);
+  }, [session.isPending, session.data, session.error]);
   return (
     <AdminShell
       tab={
@@ -27,10 +28,10 @@ export function SettingsShell({ children }: { children: ReactNode }) {
     >
       {session.data ? (
         children
+      ) : session.error ? (
+        <ErrorNotice error={session.error} onRetry={() => void session.refetch()} />
       ) : (
-        <div className="min-h-96" aria-busy="true">
-          {t("account_loading")}
-        </div>
+        <LoadingState />
       )}
     </AdminShell>
   );

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { productSchema, type CartLine, type Product } from "@tablecast/api/schema";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
-import { CartLines } from "./cart-lines";
+import { CartLines } from "../../components/cart-lines";
 import { ProductMenu } from "./menu";
 import { ProductPage } from "./product-dialog";
 

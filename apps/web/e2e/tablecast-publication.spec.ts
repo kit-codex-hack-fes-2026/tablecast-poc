@@ -102,10 +102,13 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
     expect(original.storeId).toBe(storeId);
     const product = original.configuration.products.find((item) => item.available);
     if (!product) throw new Error("公開価格を確認できる商品がありません");
-    // 円記号の全角・半角は各ブラウザー自身の標準Intl表記に合わせる。
+    // SSRとブラウザーの円記号は半角の共通表記で検証する。
     const prices = await page.evaluate((amount) => {
       const currency = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" });
-      return { original: currency.format(amount), changed: currency.format(amount + 100) };
+      return {
+        original: currency.format(amount).replace("￥", "¥"),
+        changed: currency.format(amount + 100).replace("￥", "¥"),
+      };
     }, product.price);
     const card = page
       .getByRole("button")

@@ -1,3 +1,4 @@
+import { useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type {
   CartLine,
@@ -12,9 +13,9 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePanelLayout } from "../../lib/use-panel-layout";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
+import { LoadingState } from "../../components/loading-state";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -25,37 +26,26 @@ import {
 import { money, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { ApiFailure, parseResponse, rpc } from "../../lib/api";
-import { useRealtime } from "../../lib/use-realtime";
 import { useMediaQuery } from "../../lib/use-media-query";
-import { CartLines } from "./cart-lines";
+import { usePanelLayout } from "../../lib/use-panel-layout";
+import { useRealtime } from "../../lib/use-realtime";
+import { CartLines } from "../../components/cart-lines";
 import { conversationLines } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { Pairing } from "./pairing";
 import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
+import { tableCatalogOptions, tableKey, tableOptions } from "./table-query";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
 import { VoicePanel } from "./voice-panel";
 
-const tableKey = ["tablecast-table"];
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
 export function Kiosk() {
   const { t } = useI18n();
   const client = useQueryClient();
-  const [wasConnected, setWasConnected] = useState(false);
-  const table = useQuery({
-    queryKey: tableKey,
-    queryFn: async () => {
-      try {
-        const result = await parseResponse(rpc.api.table.$get());
-        setWasConnected(true);
-        return latestTable(client.getQueryData<TableState | null>(tableKey), result);
-      } catch (error) {
-        if (error instanceof ApiFailure && error.status === 401) return null;
-        throw error;
-      }
-    },
-    refetchInterval: (query) => (query.state.data === null ? 5000 : false),
-  });
+  const table = useQuery(tableOptions(client));
+  const [wasConnected, setWasConnected] = useState(Boolean(table.data));
+  if (table.data && !wasConnected) setWasConnected(true);
   const refresh = useCallback(() => {
     void client.invalidateQueries({ queryKey: tableKey });
   }, [client]);
@@ -82,11 +72,7 @@ export function Kiosk() {
         >
           TableCast
         </a>
-        {table.isPending ? (
-          <p>{t("common_loading")}</p>
-        ) : (
-          <ErrorNotice error={table.error} onRetry={refresh} />
-        )}
+        {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
       </main>
     );
   return <TableSession key={table.data.id} data={table.data} refresh={refresh} />;
@@ -95,11 +81,7 @@ export function Kiosk() {
 function useTableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
-  const catalog = useQuery({
-    queryKey: ["tablecast-catalog", data.storeId, data.configVersion],
-    queryFn: () => parseResponse(rpc.api.table.catalog.$get()),
-    enabled: true,
-  });
+  const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion));
   const [view, setView] = useState<VoiceView>({ status: "idle" });
   const [voice] = useState(() => new VoiceConnection(setView, refresh));
   const [chosen, setChosen] = useState<{
@@ -309,6 +291,7 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
   };
 }
 function TableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
+  const hydrated = useHydrated();
   const horizontal = useMediaQuery("(min-width: 40rem)");
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
     id: "tablecast-kiosk-layout",
@@ -424,15 +407,21 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                 data-ui="menu-tabs"
                 className="flex border-b border-b-border py-0 px-3.5 gap-0 [&_button]:flex-1 [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2 [&_button]:px-1.5 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button[data-active]]:border-b-primary [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold max-lg:[&_button]:min-h-14 max-lg:[&_button]:text-xs"
               >
-                <Tabs.Tab value="menu">{t("kiosk_menu")}</Tabs.Tab>
-                <Tabs.Tab value="cart">
+                <Tabs.Tab disabled={!hydrated} value="menu">
+                  {t("kiosk_menu")}
+                </Tabs.Tab>
+                <Tabs.Tab disabled={!hydrated} value="cart">
                   {t("kiosk_cart")}
                   <span data-ui="count" className="rounded-2xl py-px px-1 text-xs bg-secondary">
                     {data.cart.lines.reduce((sum, line) => sum + line.quantity, 0)}
                   </span>
                 </Tabs.Tab>
-                <Tabs.Tab value="orders">{t("kiosk_orders")}</Tabs.Tab>
-                <Tabs.Tab value="bill">{t("kiosk_bill")}</Tabs.Tab>
+                <Tabs.Tab disabled={!hydrated} value="orders">
+                  {t("kiosk_orders")}
+                </Tabs.Tab>
+                <Tabs.Tab disabled={!hydrated} value="bill">
+                  {t("kiosk_bill")}
+                </Tabs.Tab>
               </Tabs.List>
               <div
                 key={`${section}:${selectedProductId ?? ""}`}
@@ -454,9 +443,13 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
                         })
                       }
                     />
-                  ) : (
-                    catalog.data && <ProductMenu catalog={catalog.data} onChoose={choose} />
-                  )}
+                  ) : catalog.data ? (
+                    <ProductMenu catalog={catalog.data} onChoose={choose} />
+                  ) : catalog.isPending ? (
+                    <div className="p-4">
+                      <LoadingState cards />
+                    </div>
+                  ) : null}
                   <ErrorNotice
                     error={catalog.error}
                     onRetry={() => {

@@ -26,3 +26,32 @@ it("R2の商品画像を公式Images binding経由のWebPとして配信する",
     ).status,
   ).toBe(404);
 });
+
+it("画像幅とETagが一致するときは再変換せず304を返し、過大な幅を拒否する", async () => {
+  // Given: R2に保存した画像とサイズ別のETag。
+  await env.TABLECAST_MEDIA.put("tablecast/demo/tablecast-cached.png", "cached-image");
+  const asset = await env.TABLECAST_MEDIA.head("tablecast/demo/tablecast-cached.png");
+  if (!asset) throw new Error("画像fixtureがありません");
+  const etag = `W/"${asset.etag}-128-webp"`;
+  // When: 同じサイズの条件付きリクエストを送る。
+  const response = await exports.default.fetch(
+    new Request("http://localhost:3000/media/tablecast/demo/tablecast-cached.png?width=128", {
+      headers: { "If-None-Match": etag },
+    }),
+  );
+  // Then: 画像デコードなしで304を返し、上限外の幅は400になる。
+  expect(response.status).toBe(304);
+  expect(response.headers.get("ETag")).toBe(etag);
+  expect(await response.text()).toBe("");
+  for (const width of ["0", "1601", "NaN", "1.5"]) {
+    expect(
+      (
+        await exports.default.fetch(
+          new Request(
+            `http://localhost:3000/media/tablecast/demo/tablecast-cached.png?width=${width}`,
+          ),
+        )
+      ).status,
+    ).toBe(400);
+  }
+});

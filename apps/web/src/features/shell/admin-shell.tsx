@@ -1,4 +1,3 @@
-import { usePanelLayout } from "../../lib/use-panel-layout";
 import { PanelLeft, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { usePanelRef } from "react-resizable-panels";
@@ -12,6 +11,7 @@ import {
 } from "../../components/ui/resizable";
 import { useI18n } from "../../i18n/locale";
 import { useMediaQuery } from "../../lib/use-media-query";
+import { usePanelLayout } from "../../lib/use-panel-layout";
 
 import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
 
@@ -60,6 +60,7 @@ export function AdminShell({
           <ResizableHandle className="max-md:hidden" aria-label={t("admin_resize_sidebar")} />
         )}
         <ResizablePanel
+          className="max-md:flex-1! max-md:min-w-0!"
           id="tablecast-admin-content"
           key="tablecast-admin-content"
           minSize={desktop ? "20rem" : 0}

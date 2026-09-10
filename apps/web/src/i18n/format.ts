@@ -35,6 +35,8 @@ const dateFormat = {
     timeZone: "Asia/Tokyo",
   }),
 };
-export const money = (value: number, locale: Locale) => moneyFormat[locale].format(value);
+// ICUの違いで全角円記号と半角円記号が入れ替わり、SSRの文字列が不一致になるのを防ぐ。
+export const money = (value: number, locale: Locale) =>
+  moneyFormat[locale].format(value).replace("￥", "¥");
 export const time = (value: number, locale: Locale) => timeFormat[locale].format(value);
 export const dateTime = (value: Date | number, locale: Locale) => dateFormat[locale].format(value);

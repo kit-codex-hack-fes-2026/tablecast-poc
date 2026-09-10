@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { storesOptions } from "./store-query";
 
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
-import { AdminShell } from "../admin/admin-shell";
+import { ApiFailure } from "../../lib/api";
+import { AdminShell } from "../shell/admin-shell";
 
 const StoreContext = createContext<{
   id: string;
@@ -23,10 +25,7 @@ export function useStore() {
 export function StoreShell({ storeId }: { storeId: string }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const stores = useQuery({
-    queryKey: ["tablecast-stores"],
-    queryFn: () => parseResponse(rpc.api.admin.stores.$get()),
-  });
+  const stores = useQuery(storesOptions);
   const store = stores.data?.stores.find((item) => item.id === storeId);
   useEffect(() => {
     if (stores.error instanceof ApiFailure && stores.error.status === 401)
@@ -39,7 +38,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
     <AdminShell tab="live" storeId={storeId} header={store?.name ?? t("admin_store")}>
       <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
       {stores.isPending ? (
-        <p role="status">{t("common_loading")}</p>
+        <LoadingState />
       ) : store ? (
         <StoreContext.Provider value={store}>
           <Outlet />

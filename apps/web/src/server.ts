@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { paraglideMiddleware } from "./paraglide/server.js";
 
 export default createServerEntry({
-  fetch(request) {
+  async fetch(request) {
     const path = new URL(request.url).pathname;
     if (
       path.startsWith("/api/") ||
@@ -19,6 +19,8 @@ export default createServerEntry({
     ) {
       return env.TABLECAST_API.fetch(new Request(request, { redirect: "manual" }));
     }
-    return paraglideMiddleware(request, () => handler.fetch(request));
+    const response = await paraglideMiddleware(request, () => handler.fetch(request));
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   },
 });

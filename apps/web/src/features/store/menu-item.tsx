@@ -6,17 +6,13 @@ import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MenuOverview } from "./menu-overview";
 
 import { parseResponse, rpc } from "../../lib/api";
-import {
-  CastEditor,
-  CategoriesEditor,
-  PlansEditor,
-  ProductsEditor,
-} from "../admin/configuration-editor";
+import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
 import { addMenuItem, menuLabels, type MenuSection } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
@@ -31,8 +27,7 @@ export function MenuItem({
   draftId?: string;
 }) {
   const store = useStore();
-  const { t } = useI18n();
-  const catalog = useQuery(catalogOptions(store.id));
+  const catalog = useQuery({ ...catalogOptions(store.id), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(store.id, draftId ?? ""),
     queryFn: draftId ? draftOptions(store.id, draftId).queryFn : skipToken,
@@ -54,7 +49,7 @@ export function MenuItem({
           <MenuOverview configuration={configuration} section={section} itemId={itemId} />
         )
       ) : (
-        <p role="status">{t("common_loading")}</p>
+        !(catalog.error || draft.error) && <LoadingState />
       )}
     </>
   );
@@ -89,8 +84,8 @@ function ItemForm({
   );
   const form = useForm({
     defaultValues: { configuration: initial },
-    onSubmit: ({ value }) => {
-      save.mutate(value.configuration);
+    onSubmit: async ({ value }) => {
+      await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
   useBlocker({

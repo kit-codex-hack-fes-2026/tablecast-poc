@@ -6,6 +6,8 @@ import { ArrowUpRight, FilePenLine, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
+import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -29,7 +31,7 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
   const storeId = store.id;
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const catalog = useQuery(catalogOptions(storeId));
+  const catalog = useQuery({ ...catalogOptions(storeId), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(storeId, draftId ?? ""),
     queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,
@@ -54,13 +56,17 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
     [t, locale, section, draftId, storeId],
   );
   function rows(value: Configuration): ItemRow[] {
+    const categories = new Map(
+      value.categories.map((category) => [category.id, category.text[locale].displayName]),
+    );
+    const productCounts = new Map<string, number>();
+    for (const product of value.products)
+      productCounts.set(product.categoryId, (productCounts.get(product.categoryId) ?? 0) + 1);
     if (section === "products")
       return value.products.map((item) => ({
         id: item.id,
         name: item.text[locale].displayName,
-        secondary:
-          value.categories.find((category) => category.id === item.categoryId)?.text[locale]
-            .displayName ?? "",
+        secondary: categories.get(item.categoryId) ?? "",
         imageKey: item.imageKey,
         price: item.price,
         available: item.available,
@@ -77,7 +83,7 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
         id: item.id,
         name: item.text[locale].displayName,
         secondary: item.text[locale === "ja" ? "en" : "ja"].displayName,
-        count: value.products.filter((product) => product.categoryId === item.id).length,
+        count: productCounts.get(item.id) ?? 0,
       }));
     return [{ id: "settings", name: t("editor_cast"), secondary: value.cast.instructions[locale] }];
   }
@@ -118,7 +124,10 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
           ))}
       </div>
 
-      <ErrorNotice error={catalog.error || draft.error || create.error} />
+      <ErrorNotice
+        error={catalog.error || draft.error || create.error}
+        onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
+      />
       {configuration ? (
         <DataTable
           data={rows(configuration)}
@@ -127,7 +136,7 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
           searchLabel={t("menu_search")}
         />
       ) : (
-        <p role="status">{t("common_loading")}</p>
+        !(catalog.error || draft.error) && <LoadingState />
       )}
     </>
   );
@@ -153,7 +162,10 @@ function menuCollectionColumns(
       cell: ({ row }) => (
         <div className="flex min-w-56 items-center gap-3">
           {row.original.imageKey && (
-            <img
+            <ProductImage
+              width={48}
+              height={48}
+              sizes="48px"
               src={`/media/${row.original.imageKey}`}
               alt=""
               className="size-12 rounded-md object-cover"

@@ -10,6 +10,11 @@ export default defineConfig({
     projects: [
       { test: { name: "unit", include: ["src/**/*.test.ts"], environment: "node" } },
       {
+        resolve: { dedupe: ["react", "react-dom"] },
+        optimizeDeps: {
+          exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
+          include: ["react", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
+        },
         plugins: [react(), tailwindcss()],
         test: {
           name: "browser",
@@ -30,6 +35,11 @@ export default defineConfig({
         },
       },
       {
+        resolve: { dedupe: ["react", "react-dom"] },
+        optimizeDeps: {
+          exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
+          include: ["react", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
+        },
         plugins: [storybookTest({ configDir: "./.storybook" })],
         test: {
           name: "storybook",

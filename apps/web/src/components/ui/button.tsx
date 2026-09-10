@@ -1,3 +1,4 @@
+import { useHydrated } from "@tanstack/react-router";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { VariantProps } from "tailwind-variants";
 import { buttonVariants } from "./button-variants";
@@ -8,6 +9,7 @@ function Button({
   size = "default",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  const hydrated = useHydrated();
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -21,6 +23,7 @@ function Button({
         })
       }
       {...props}
+      disabled={!hydrated || props.disabled}
     />
   );
 }

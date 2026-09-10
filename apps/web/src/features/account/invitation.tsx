@@ -2,11 +2,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
-import { SettingsShell } from "./settings-shell";
+import { sessionOptions } from "../../lib/session-query";
+import { SettingsShell } from "../shell/settings-shell";
 
 export function Invitation({ id }: { id: string }) {
   const { t } = useI18n();
-  const session = authClient.useSession();
+  const session = useQuery(sessionOptions);
   const invitation = useQuery({
     queryKey: ["tablecast-invitation", id],
     queryFn: async () => authResult(await authClient.organization.getInvitation({ query: { id } })),

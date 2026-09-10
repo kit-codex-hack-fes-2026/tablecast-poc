@@ -1,4 +1,4 @@
-import { type ClosedSessionSummary, type HistoryPage } from "@tablecast/api/schema";
+import { type ClosedSessionSummary } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpRight } from "lucide-react";
@@ -6,10 +6,11 @@ import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { historyOptions } from "./history-query";
 
 export function VisitHistory({
   storeId,
@@ -19,27 +20,7 @@ export function VisitHistory({
   onSelect: (sessionId: string) => void;
 }) {
   const { t } = useI18n();
-  const history = useInfiniteQuery({
-    queryKey: ["tablecast-visit-history", storeId],
-    queryFn: ({ pageParam, signal }) => {
-      return parseResponse(
-        rpc.api.admin.stores[":storeId"].history.$get(
-          {
-            param: { storeId },
-            query: {
-              limit: "30",
-              ...(pageParam
-                ? { beforeClosedAt: String(pageParam.closedAt), beforeId: pageParam.id }
-                : {}),
-            },
-          },
-          { init: { signal } },
-        ),
-      );
-    },
-    initialPageParam: null as HistoryPage["nextCursor"],
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-  });
+  const history = useInfiniteQuery(historyOptions(storeId));
   return (
     <section>
       <ErrorNotice
@@ -49,8 +30,8 @@ export function VisitHistory({
         }}
       />
       {history.isPending ? (
-        <p>{t("common_loading")}</p>
-      ) : (
+        <LoadingState />
+      ) : !history.data ? null : (
         <VisitHistoryTable
           sessions={history.data?.pages.flatMap((page) => page.sessions) ?? []}
           onSelect={onSelect}

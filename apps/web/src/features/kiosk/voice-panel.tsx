@@ -550,16 +550,32 @@ export function VoicePanel({
         </output>
       )}
       <footer className="shrink-0 border-t border-white/80 bg-white/65 px-1 pb-2 pt-1 backdrop-blur-xl">
-        <Suspense fallback={null}>
-          <AudioWaveform
-            state={visualState}
-            toolLabel={usingTools && view.status === "speaking" ? toolPhase : undefined}
-            track={
-              active ? (view.status === "speaking" ? view.outputTrack : view.inputTrack) : undefined
+        {active ? (
+          <Suspense
+            fallback={
+              <VoiceIdle
+                label={phase}
+                state={visualState}
+                toolLabel={usingTools && view.status === "speaking" ? toolPhase : undefined}
+              />
             }
-            label={phase}
-          />
-        </Suspense>
+          >
+            <AudioWaveform
+              state={visualState}
+              toolLabel={usingTools && view.status === "speaking" ? toolPhase : undefined}
+              track={
+                active
+                  ? view.status === "speaking"
+                    ? view.outputTrack
+                    : view.inputTrack
+                  : undefined
+              }
+              label={phase}
+            />
+          </Suspense>
+        ) : (
+          <VoiceIdle label={phase} state={visualState} />
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
             <Button
@@ -610,5 +626,39 @@ export function VoicePanel({
         {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
       </footer>
     </section>
+  );
+}
+
+function VoiceIdle({
+  label,
+  state,
+  toolLabel,
+}: {
+  label: string;
+  state: string;
+  toolLabel?: string;
+}) {
+  return (
+    <figure
+      className="flex items-center gap-3 py-1 text-foreground"
+      data-voice-state={state}
+      data-motion="still"
+    >
+      <div
+        aria-hidden="true"
+        className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5"
+      >
+        <MicOff className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <figcaption className="flex items-center gap-2 text-xs font-semibold">
+          {label}
+          {toolLabel && <span className="font-normal">{toolLabel}</span>}
+        </figcaption>
+        <div className="flex h-7 items-center">
+          <span className="h-px w-full bg-border" />
+        </div>
+      </div>
+    </figure>
   );
 }

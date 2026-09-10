@@ -36,12 +36,12 @@ export const Japanese: Story = {
     const rows = canvasElement.querySelectorAll("[data-ui='config-change']");
     await expect(rows).toHaveLength(6);
     await expect(rows[0]).toHaveTextContent("単価（税込・円）");
-    await expect(rows[0]).toHaveTextContent("￥750");
+    await expect(rows[0]).toHaveTextContent("¥750");
     await expect(rows[1]).toHaveTextContent("未確認");
     await expect(rows[1]).not.toHaveTextContent("unknown");
     await expect(rows[2]).toHaveTextContent("小盛");
     await expect(rows[2]).toHaveTextContent("Small");
-    await expect(rows[2]).toHaveTextContent("￥100");
+    await expect(rows[2]).toHaveTextContent("¥100");
     await expect(rows[3]).toHaveTextContent("こもれび 月凪 純米吟醸");
     await expect(rows[4]).toHaveTextContent("unknown");
     await expect(rows[5]).toHaveTextContent("無効");

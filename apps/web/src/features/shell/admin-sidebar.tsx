@@ -1,25 +1,24 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { MenuNavigation } from "../store/menu-navigation";
-import { StoreIcon } from "../../components/store-icon";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useRouterState, useParams } from "@tanstack/react-router";
+import { Link, useHydrated, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
-  ChevronsUpDown,
   ChevronRight,
-  Store,
+  ChevronsUpDown,
   History,
   LayoutDashboard,
   LogOut,
   MonitorSmartphone,
   Plug,
   Settings2,
+  Store,
   UserRound,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
+import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import {
   Select,
@@ -30,8 +29,10 @@ import {
 } from "../../components/ui/select";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
+import { sessionOptions } from "../../lib/session-query";
+import { MenuNavigation } from "./menu-navigation";
+import { storesOptions } from "../store/store-query";
 
-import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
@@ -50,18 +51,15 @@ export function AdminSidebar({
   onNavigate,
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
-  const session = authClient.useSession();
+  const hydrated = useHydrated();
+  const session = useQuery(sessionOptions);
   const path = useRouterState({ select: (state) => state.location.pathname });
   const { draftId } = useParams({ strict: false });
   const inMenu = path.includes("/menu/");
   const navigate = useNavigate();
   const client = useQueryClient();
   const active = authClient.useActiveOrganization();
-  const stores = useQuery({
-    queryKey: ["tablecast-stores"],
-    queryFn: () => parseResponse(rpc.api.admin.stores.$get()),
-    enabled: !!session.data,
-  });
+  const stores = useQuery({ ...storesOptions, enabled: !!session.data });
   const selectedStore =
     storeId ??
     stores.data?.stores.find((store) => store.organizationId === active.data?.id)?.id ??
@@ -176,8 +174,8 @@ export function AdminSidebar({
                 <Settings2 className="size-5 shrink-0" />
               </Link>
             ) : (
-              <Collapsible.Root key={`${selectedStore}-${inMenu}`} defaultOpen={inMenu}>
-                <Collapsible.Trigger className={`${item} group`}>
+              <Collapsible.Root key={String(inMenu)} defaultOpen={inMenu}>
+                <Collapsible.Trigger disabled={!hydrated} className={`${item} group`}>
                   <Settings2 className="size-5 shrink-0" />
                   {t("admin_config")}
                   <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />

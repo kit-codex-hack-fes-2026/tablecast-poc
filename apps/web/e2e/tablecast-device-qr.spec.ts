@@ -35,7 +35,11 @@ test("端末のQR画像でコードと選択した卓を保持し、明示承認
     if (new URL(request.url()).pathname.endsWith("/devices/approve")) approvals++;
   });
   // When: 画像を読み取る。
-  await page.getByLabel(ja.device_scan_image, { exact: true }).setInputFiles({
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    page.getByRole("button", { name: ja.device_scan_image, exact: true }).click(),
+  ]);
+  await fileChooser.setFiles({
     name: "tablecast-device.png",
     mimeType: "image/png",
     buffer,

@@ -468,5 +468,11 @@
   "mcp_expired": "Expired",
   "mcp_status": "Connection status",
   "mcp_access_expires": "Access token expiry",
-  "mcp_refresh_expires": "Refresh token expiry"
+  "mcp_refresh_expires": "Refresh token expiry",
+  "form_required": "Enter a value.",
+  "form_email": "Enter a valid email address.",
+  "form_password": "Enter a password of at least 12 characters.",
+  "form_slug": "Use lowercase letters, numbers and hyphens.",
+  "form_number": "Enter a whole number within the allowed range.",
+  "form_submitting": "Submitting."
 }

@@ -18,13 +18,33 @@ export const mediaRoutes = new Hono<ApiEnv>()
   .get("/media/*", async (c) => {
     const key = c.req.path.slice("/media/".length);
     ensure(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/.test(key), "MEDIA_NOT_FOUND", 404);
+    const requestedWidth = Number(c.req.query("width") ?? 640);
+    ensure(
+      Number.isInteger(requestedWidth) && requestedWidth >= 1 && requestedWidth <= 1600,
+      "INVALID_INPUT",
+      400,
+    );
+    const width = requestedWidth;
     const asset = await c.env.TABLECAST_MEDIA.get(key);
     ensure(asset, "MEDIA_NOT_FOUND", 404);
+    const etag = `W/"${asset.etag}-${width}-webp"`;
+    if (
+      c.req
+        .header("If-None-Match")
+        ?.split(/\s*,\s*/)
+        .some((value) => value === etag || value === "*")
+    ) {
+      await asset.body.cancel();
+      return new Response(null, {
+        status: 304,
+        headers: { ETag: etag, "Cache-Control": "public,max-age=86400" },
+      });
+    }
     const output = await c.env.TABLECAST_IMAGES.input(asset.body)
-      .transform({ width: 640, fit: "scale-down" })
+      .transform({ width, fit: "scale-down" })
       .output({ format: "image/webp" });
     const response = output.response();
     response.headers.set("Cache-Control", "public,max-age=86400");
-    response.headers.set("ETag", `W/"${asset.etag}-640-webp"`);
+    response.headers.set("ETag", etag);
     return response;
   });

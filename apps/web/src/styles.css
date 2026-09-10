@@ -129,3 +129,15 @@
     }
   }
 }
+
+@theme {
+  --animate-tablecast-enter: tablecast-enter 180ms ease-out;
+  @keyframes tablecast-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

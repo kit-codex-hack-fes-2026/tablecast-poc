@@ -26,6 +26,7 @@ test("メニューの子ページをサイドバーから開き、再読込と�
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
   // When: メニューを展開し、カテゴリページへ移動する。
   await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
   const menu = page.getByRole("navigation", { name: ja.admin_config, exact: true });
   const categories = menu.getByRole("link", { name: ja.editor_categories, exact: true });
   await categories.click();

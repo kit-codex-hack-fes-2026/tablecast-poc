@@ -1,7 +1,7 @@
 import { tv } from "tailwind-variants";
 import { Crown, ShieldCheck, UserRound } from "lucide-react";
-import { Badge } from "../../components/ui/badge";
-import { useI18n } from "../../i18n/locale";
+import { Badge } from "./ui/badge";
+import { useI18n } from "../i18n/locale";
 
 const roleBadge = tv({
   base: "bg-secondary text-foreground",
