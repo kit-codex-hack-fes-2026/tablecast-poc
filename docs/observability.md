@@ -104,7 +104,7 @@ HTTPは全ルートの完了ログ、業務処理は`tablecast.operation_complet
 ```logql
 quantile_over_time(0.95,
   {service_namespace="tablecast",service_name="tablecast-api",deployment_environment_name="preview"}
-  | tablecast_pr_number="123" |= "tablecast.operation_completed"
+  | tablecast_pr_number="123" |~ "^tablecast[.]operation_completed$"
   | tablecast_operation="tablecast.cart.update"
   | unwrap tablecast_duration_ms | __error__="" [5m]
 ) by (tablecast_channel)

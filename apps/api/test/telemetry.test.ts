@@ -273,3 +273,61 @@ it("大きな本文を欠落なく分割し、Lokiの属性上限と行上限を
     expect(new TextEncoder().encode(JSON.stringify(record.body)).length).toBeLessThan(256 * 1024);
   }
 });
+
+it("本文収集時にもbindingにないBasic認証と複数Cookieを除去する", () => {
+  // Given: 例外・SQL・業務payloadに未知の認証値が含まれる。
+  const input = {
+    "exception.message":
+      "Authorization: Basic dGFibGVjYXN0OnNlY3JldA==\nCookie: session=tablecast-session; csrf=tablecast-csrf",
+    "db.statement": "select 'Basic dGFibGVjYXN0OnNlY3JldA=='",
+    "tablecast.input": JSON.stringify({
+      description: "Set-Cookie: session=tablecast-session; HttpOnly",
+    }),
+  };
+  // When: 本番と同じ属性の送信境界を通す。
+  const output = JSON.stringify(
+    telemetryAttributes(input, { TABLECAST_OTEL_CAPTURE_CONTENT: "true" }),
+  );
+  // Then: 顧客本文の設定に関係なく認証値を送らない。
+  for (const secret of ["dGFibGVjYXN0OnNlY3JldA==", "tablecast-session", "tablecast-csrf"])
+    expect(output).not.toContain(secret);
+  expect(output).toContain("[REDACTED]");
+});
+
+it("503の業務例外を障害として記録しHTTP応答とエラーコードを保つ", async () => {
+  // Given: 設定公開中に音声カタログが利用不能になる。
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  const app = new Hono<ApiEnv>().use(requestTelemetry).onError(handleError);
+  app.get("/api/probe", async (c) => {
+    await observeOperation("tablecast.settings.publish", () =>
+      Promise.reject(new DomainError("VOICE_CATALOG_UNAVAILABLE", 503, "catalog unavailable")),
+    );
+    return c.json({ ok: true });
+  });
+  const worker = instrument(
+    { fetch: (request, bindings, execution) => app.fetch(request, bindings, execution) },
+    telemetryConfig({}, "tablecast-api"),
+  );
+  const execution = createExecutionContext();
+  if (!worker.fetch) throw new Error("Worker入口がありません。");
+  // When: 共通HTTP入口から操作を実行する。
+  const response = await worker.fetch(
+    new Request("https://tablecast.test/api/probe"),
+    env,
+    execution,
+  );
+  await waitOnExecutionContext(execution);
+  // Then: 業務拒否に分類せず障害率の集計へ含める。
+  expect(response.status).toBe(503);
+  const entries = output.mock.calls.map(([value]) =>
+    z
+      .object({ event: z.string(), attributes: z.record(z.string(), z.unknown()) })
+      .parse(JSON.parse(String(value))),
+  );
+  expect(entries.find((entry) => entry.event === "tablecast.operation_completed")).toMatchObject({
+    attributes: {
+      "tablecast.outcome": "error",
+      "tablecast.error.code": "VOICE_CATALOG_UNAVAILABLE",
+    },
+  });
+});

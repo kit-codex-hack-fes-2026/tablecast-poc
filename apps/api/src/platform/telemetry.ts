@@ -62,7 +62,9 @@ export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
     } catch {
       // 通常の文はJSONとして解釈しない。
     }
-    let safe = value.replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]");
+    let safe = value
+      .replace(/\b(Bearer|Basic)\s+[^\s"',;]+/gi, "$1 [REDACTED]")
+      .replace(/(\b(?:authorization|(?:set-)?cookie)\s*[=:]\s*)[^\r\n]+/gi, "$1[REDACTED]");
     for (const [key, secret] of Object.entries(env))
       if (credentialKey.test(key) && typeof secret === "string" && secret.length >= 8)
         safe = safe.replaceAll(secret, "[REDACTED]");
@@ -264,7 +266,7 @@ export async function observeOperation<T>(
         content["tablecast.output"] = JSON.stringify(telemetryContent(result, options.env));
       return result;
     } catch (error) {
-      outcome = error instanceof DomainError ? "rejected" : "error";
+      outcome = error instanceof DomainError && error.status < 500 ? "rejected" : "error";
       code = error instanceof DomainError ? error.code : "INTERNAL_ERROR";
       if (capture && error instanceof Error) {
         content["exception.type"] = error.name;

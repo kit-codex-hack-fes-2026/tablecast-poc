@@ -70,7 +70,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" [$__interval]))",
+          "expr": "sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval]))",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -109,7 +109,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * ((sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" [$__interval])) * 0)) / sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" [$__interval])))",
+          "expr": "100 * ((sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval])) * 0)) / sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval])))",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -148,7 +148,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
+          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -187,7 +187,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.request_completed\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
+          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -226,7 +226,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (tablecast_operation, tablecast_channel) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" [$__interval]))",
+          "expr": "sum by (tablecast_operation, tablecast_channel) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval]))",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -265,7 +265,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * ((sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" [$__interval])) * 0)) / sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" [$__interval])))",
+          "expr": "100 * ((sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval])) * 0)) / sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval])))",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -304,7 +304,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
+          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
@@ -343,7 +343,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |= \"tablecast.operation_completed\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
+          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
           "queryType": "range",
           "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
         }
