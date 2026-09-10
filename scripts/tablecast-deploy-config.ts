@@ -83,6 +83,14 @@ export function deploymentSecrets(
     return value;
   };
   const secrets: Record<string, string> = {
+    TABLECAST_CONTAINER_METRICS_TOKEN: required(
+      input.TABLECAST_CONTAINER_METRICS_TOKEN,
+      "TABLECAST_CONTAINER_METRICS_TOKEN",
+    ),
+    TABLECAST_OTEL_AUTHORIZATION: required(
+      input.TABLECAST_OTEL_AUTHORIZATION,
+      "TABLECAST_OTEL_AUTHORIZATION",
+    ),
     TABLECAST_AUTH_SECRET: derive("auth"),
     TABLECAST_VOICE_API_TOKEN: derive("voice"),
     TABLECAST_LIVEKIT_URL: required(runtime.LIVEKIT_URL, "LIVEKIT_URL"),
@@ -100,6 +108,13 @@ export function deploymentSecrets(
       "TABLECAST_INWORLD_VOICES_API_KEY",
     ),
   };
+  for (const key of [
+    "TABLECAST_MASTRA_ACCESS_TOKEN",
+    "TABLECAST_MASTRA_PROJECT_ID",
+    "TABLECAST_MASTRA_ENDPOINT",
+  ]) {
+    if (input[key]) secrets[key] = input[key];
+  }
   if (target.pr) {
     secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");
     secrets.CF_ACCESS_CLIENT_SECRET = required(
@@ -126,6 +141,7 @@ export function deploymentConfigs(
   root: string,
   api: Record<string, unknown>,
   web: Record<string, unknown>,
+  captureContent = "true",
 ) {
   z.string()
     .regex(/^[a-f0-9]{40}$/)
@@ -133,6 +149,13 @@ export function deploymentConfigs(
   z.uuid()
     .refine((value) => value !== "00000000-0000-0000-0000-000000000000")
     .parse(databaseId);
+  const telemetryVars = {
+    TABLECAST_ENV: target.environment,
+    TABLECAST_RELEASE_SHA: sha,
+    TABLECAST_PR_NUMBER: target.pr ?? "",
+    TABLECAST_OTEL_CAPTURE_CONTENT: z.enum(["true", "false"]).parse(captureContent),
+    TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
+  };
   const apiConfig = {
     ...api,
     name: target.api,
@@ -140,10 +163,15 @@ export function deploymentConfigs(
     main: resolve(root, "apps/api/src/worker.ts"),
     workers_dev: false,
     preview_urls: false,
+    triggers: { crons: ["*/5 * * * *"] },
     vars: {
-      TABLECAST_ENV: target.environment,
+      ...telemetryVars,
+      TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
+      TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([
+        `${target.api}-tablecastvoice`,
+        ...(target.pr ? [`${target.api}-tablecastemulate`] : []),
+      ]),
       TABLECAST_PUBLIC_ORIGIN: target.origin,
-      TABLECAST_RELEASE_SHA: sha,
       TABLECAST_CONTAINERS_ENABLED: "true",
       TABLECAST_VOICE_ENABLED: "true",
       TABLECAST_AGENT_NAME: target.agent,
@@ -193,6 +221,7 @@ export function deploymentConfigs(
       workers_dev: true,
       preview_urls: false,
       services: [{ binding: "TABLECAST_API", service: target.api }],
+      vars: telemetryVars,
     },
   };
 }

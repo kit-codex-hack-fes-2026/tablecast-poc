@@ -32,6 +32,9 @@ const portsSchema = z.object({
   oauth: portSchema.optional(),
   mailpit: portSchema.optional(),
   smtp: portSchema.optional(),
+  grafana: portSchema.optional(),
+  otlp: portSchema.optional(),
+  tempo: portSchema.optional(),
 });
 const runtimeSchema = z.object({
   id: z.string().regex(/^[a-f0-9]{10}$/),
@@ -64,7 +67,13 @@ function domainLabel(value: string) {
 
 export function worktreeHost(root: string, common = join(root, ".git")) {
   const repository = dirname(common);
-  return `${domainLabel(root === repository ? "main" : basename(root))}.${domainLabel(basename(repository))}`;
+  const worktree =
+    root === repository
+      ? "main"
+      : basename(root) === basename(repository)
+        ? basename(dirname(root))
+        : basename(root);
+  return `${domainLabel(worktree)}.${domainLabel(basename(repository))}`;
 }
 
 function localHost(root: string, common: string) {
@@ -162,6 +171,9 @@ export async function reserveRuntime() {
         oauth: 3008,
         mailpit: 8025,
         smtp: 1025,
+        grafana: 3030,
+        otlp: 4318,
+        tempo: 3200,
       },
       origin: process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000",
       state: join(tablecastLocal, "state"),
@@ -204,7 +216,13 @@ export async function reserveRuntime() {
     let ports: z.infer<typeof portsSchema> | undefined;
     for (let attempt = 0; attempt < 200; attempt++) {
       const candidate =
-        attempt === 0 && existing?.oauth && existing.mailpit && existing.smtp
+        attempt === 0 &&
+        existing?.oauth &&
+        existing.mailpit &&
+        existing.smtp &&
+        existing.grafana &&
+        existing.otlp &&
+        existing.tempo
           ? existing
           : portsSchema.parse(
               Object.fromEntries(
@@ -220,6 +238,9 @@ export async function reserveRuntime() {
                   "oauth",
                   "mailpit",
                   "smtp",
+                  "grafana",
+                  "otlp",
+                  "tempo",
                 ].map((key, index) => [
                   key,
                   20000 + ((base - 20000 + attempt * 8 + index) % 30000),
@@ -303,6 +324,13 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   const api = await readConfig(join(tablecastRoot, "apps/api/wrangler.jsonc"));
   const web = await readConfig(join(tablecastRoot, "apps/web/wrangler.jsonc"));
   const apiName = `tablecast-${runtime.id}-api`;
+  const telemetryVars = {
+    TABLECAST_ENV: "development",
+    TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
+    TABLECAST_OTEL_ENDPOINT: tablecastContainer
+      ? "http://tablecast-lgtm:4318"
+      : `http://127.0.0.1:${runtime.ports.otlp}`,
+  };
   await writeFile(
     runtime.apiConfig,
     JSON.stringify(
@@ -311,9 +339,8 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         name: apiName,
         main: join(tablecastRoot, "apps/api/src/worker.ts"),
         vars: {
-          TABLECAST_ENV: "development",
+          ...telemetryVars,
           TABLECAST_PUBLIC_ORIGIN: runtime.origin,
-          TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
           TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
           ...(tablecastContainer
             ? { TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth` }
@@ -343,6 +370,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         name: `tablecast-${runtime.id}-web`,
         main: join(tablecastRoot, "apps/web/src/server.ts"),
         services: [{ binding: "TABLECAST_API", service: apiName }],
+        vars: telemetryVars,
       },
       null,
       2,
@@ -362,6 +390,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
   const values: Record<string, string> = {
+    TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
     TABLECAST_VOICE_ENABLED: [
       "INWORLD_API_KEY",
       "TABLECAST_INWORLD_VOICE_JA",
@@ -381,6 +410,10 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       : `ws://127.0.0.1:${runtime.ports.signaling}`,
   };
   for (const key of [
+    "TABLECAST_MASTRA_ACCESS_TOKEN",
+    "TABLECAST_MASTRA_PROJECT_ID",
+    "TABLECAST_MASTRA_ENDPOINT",
+    "TABLECAST_OTEL_CAPTURE_CONTENT",
     "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",

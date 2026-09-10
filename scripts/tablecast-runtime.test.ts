@@ -162,3 +162,9 @@ describe("開発資源の所有境界", () => {
     ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
   });
 });
+
+it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメインを分離する", () => {
+  const common = "/workspace/tablecast-poc/.git";
+  expect(worktreeHost("/codex/worktrees/29f4/tablecast-poc", common)).toBe("29f4.tablecast-poc");
+  expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
+});

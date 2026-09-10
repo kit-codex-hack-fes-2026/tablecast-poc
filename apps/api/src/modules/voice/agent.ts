@@ -15,6 +15,7 @@ import { getSession, getTableState } from "../tables/queries";
 import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
 import { showProductsSchema, speechSpeedInputSchema, type VoiceTrigger } from "./model";
 import { castInstructions } from "./prompt";
+import { castObservability } from "./observability";
 import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
   return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。"}`;
@@ -35,8 +36,9 @@ export function createCastAgent(
     model: openai.chat(services.env.TABLECAST_MODEL),
     tools: createCastTools(services, actor, signal, trigger),
   });
-  // providerの例外が会話本文を含むため、詳細ログは出さずAPIの失敗状態で追跡する。
-  return new Mastra({ agents: { cast: agent }, logger: false }).getAgent("cast");
+  const observability = castObservability(services.env, actor);
+  const mastra = new Mastra({ agents: { cast: agent }, logger: false, observability });
+  return { agent: mastra.getAgent("cast"), observability };
 }
 
 function castTool<T extends z.ZodType>(options: {

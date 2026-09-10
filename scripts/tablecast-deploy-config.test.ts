@@ -7,6 +7,8 @@ import {
 } from "./tablecast-deploy-config";
 
 const input = {
+  TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
+  TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
   TABLECAST_RUNTIME_SECRETS: JSON.stringify({
     LIVEKIT_URL: "wss://tablecast.example.test",
     LIVEKIT_API_KEY: "tablecast-livekit-key",
@@ -109,6 +111,12 @@ describe("本番とPRの配備境界", () => {
       "https://tablecast-pr-34.kit-codex.workers.dev/_tablecast/oauth",
     );
     expect(config.api.containers).toHaveLength(2);
+    expect(config.api.triggers.crons).toEqual(["*/5 * * * *"]);
+    expect(JSON.parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)).toEqual([
+      "tablecast-api-pr-34-tablecastvoice",
+      "tablecast-api-pr-34-tablecastemulate",
+    ]);
+    expect(config.web).not.toHaveProperty("triggers");
     expect(config.api.containers.every((value) => value.max_instances === 1)).toBe(true);
     expect(JSON.stringify(config)).not.toContain("tablecast-openai-secret");
   });
@@ -125,4 +133,60 @@ describe("本番とPRの配備境界", () => {
       deploymentSecrets(deploymentTarget("34"), { ...input, CF_ACCESS_CLIENT_SECRET: undefined }),
     ).toThrow("CF_ACCESS_CLIENT_SECRET");
   });
+});
+
+test("previewのAPIとWebに同じPR番号を渡し送信資格を公開varsへ含めない", () => {
+  const config = deploymentConfigs(
+    deploymentTarget("123"),
+    "a".repeat(40),
+    "11111111-1111-4111-8111-111111111111",
+    "/tablecast",
+    {},
+    {},
+  );
+  expect(config.api.vars.TABLECAST_PR_NUMBER).toBe("123");
+  expect(config.web.vars.TABLECAST_PR_NUMBER).toBe("123");
+  expect(config.web.vars.TABLECAST_ENV).toBe("preview");
+  expect(config.web.vars.TABLECAST_RELEASE_SHA).toBe(config.api.vars.TABLECAST_RELEASE_SHA);
+  expect(config.api.vars).not.toHaveProperty("TABLECAST_OTEL_AUTHORIZATION");
+  expect(config.web.vars).not.toHaveProperty("TABLECAST_OTEL_AUTHORIZATION");
+  const secrets = deploymentSecrets(deploymentTarget("123"), {
+    ...input,
+    TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
+    TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
+  });
+  expect(secrets.TABLECAST_OTEL_AUTHORIZATION).toBe("tablecast-ingestion-secret");
+  expect(secrets.TABLECAST_CONTAINER_METRICS_TOKEN).toBe("tablecast-analytics-secret");
+  expect(JSON.stringify(config)).not.toContain("tablecast-analytics-secret");
+});
+
+test("本文収集はprodとpreviewで既定有効にし、明示falseで両Workerを切り替える", () => {
+  for (const pr of [undefined, "123"]) {
+    const args = [
+      deploymentTarget(pr),
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+      "/tablecast",
+      {},
+      {},
+    ] as const;
+    expect(deploymentConfigs(...args).api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("true");
+    const disabled = deploymentConfigs(...args, "false");
+    expect(disabled.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
+    expect(disabled.web.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("false");
+    expect(() => deploymentConfigs(...args, "typo")).toThrow("Invalid option");
+  }
+});
+
+test.each([
+  { pr: undefined, environment: "本番" },
+  { pr: "74", environment: "preview" },
+])("$environmentで監視資格がなければ配備を拒否する", ({ pr }) => {
+  // Given: Cronを登録する配備先と、片方が欠けた監視資格。
+  for (const key of ["TABLECAST_CONTAINER_METRICS_TOKEN", "TABLECAST_OTEL_AUTHORIZATION"]) {
+    // When / Then: Workerへの書込み前に不足した設定名で失敗する。
+    expect(() => deploymentSecrets(deploymentTarget(pr), { ...input, [key]: undefined })).toThrow(
+      key,
+    );
+  }
 });

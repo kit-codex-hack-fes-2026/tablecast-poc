@@ -1,0 +1,369 @@
+{
+  "uid": "tablecast-operations",
+  "title": "TableCast 運用・性能",
+  "tags": ["tablecast"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "templating": {
+    "list": [
+      {
+        "name": "tablecast_loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "refresh": 1,
+        "regex": "/^(?!.*alert-state-history).*$/"
+      },
+      {
+        "name": "environment",
+        "label": "環境",
+        "type": "custom",
+        "query": "development,preview,production",
+        "current": {
+          "text": "preview",
+          "value": "preview"
+        }
+      },
+      {
+        "name": "pr",
+        "label": "PR番号（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "service",
+        "label": "サービス",
+        "type": "custom",
+        "query": "tablecast-api,tablecast-web,tablecast-voice",
+        "current": {
+          "text": "tablecast-api",
+          "value": "tablecast-api"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP要求数",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval]))",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "HTTP失敗率（5xx）",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * ((sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval])) * 0)) / sum by (http_route) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" [$__interval])))",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "HTTP p50",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "HTTP p95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]request_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (http_route)",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "業務操作数",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tablecast_operation, tablecast_channel) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval]))",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "業務操作失敗率",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * ((sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | tablecast_outcome=\"error\" [$__interval])) or (sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval])) * 0)) / sum by (tablecast_operation) (count_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" [$__interval])))",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "業務操作 p50",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "quantile_over_time(0.5, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "業務操作 p95",
+      "type": "timeseries",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "quantile_over_time(0.95, {service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"$service\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]operation_completed$\" | unwrap tablecast_duration_ms | __error__=\"\" [$__interval]) by (tablecast_operation)",
+          "queryType": "range",
+          "legendFormat": "{{http_route}}{{tablecast_operation}} {{tablecast_channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ]
+}

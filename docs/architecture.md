@@ -174,3 +174,11 @@ WebはrequestごとにQueryClientを生成し、TanStack RouterのQuery SSR連�
 フォームはTanStack Formの`createFormHook`・`AppField`とBase UI Fieldを接続する。入力状態とvalidationはフォーム、HTTP失敗と成功時のキャッシュ更新はmutationが所有し、submitは非同期処理をawaitする。会計フォームは入力変更時に冪等キーを更新し、通信失敗の再送では同じ入力とキーを保持する。
 
 Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードする。送信・失敗・成功の切替は`ActionFeedback`が短いtransform・opacityと入退場を所有する。画面や入力全体をアニメーションの完了待ちにしない。
+
+## Workerのobservability
+
+`platform/container-metrics.ts`はAPI WorkerのCronからCloudflare公式インフラ指標を取得し、OTLP metricsへ送る。業務moduleやContainerの起動処理には依存しない。
+
+`platform/telemetry.ts`はOTLP設定・安全な送信境界を所有し、Worker入口・HTTP middleware・業務serviceから利用する。Webは公開`@tablecast/api/telemetry`をサーバー入口で利用する。計測のために業務serviceへHono Contextを渡さない。設定と調査手順は[Observability](observability.md)を参照する。
+
+例外診断の整形は`apps/api/src/platform/diagnostics.ts`、標準出力とOTLPの送信は`platform/telemetry.ts`が所有する。通知・音声ストリーム・Containerの回復可能な失敗も同じ送信境界を使う。HTTP statusと公開エラー本文の契約は`platform/http.ts`に集約する。

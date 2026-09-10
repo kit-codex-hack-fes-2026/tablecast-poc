@@ -168,6 +168,8 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/admin/stores/tablecast-komorebi/floor");
+  // 通常のdocument遷移ではなく、hydration後のクライアント遷移を検証する。
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   let release: (() => void) | undefined;
   const gate = new Promise<void>((done) => {
     release = done;
@@ -180,12 +182,15 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
       body: JSON.stringify({ error: { code: "UNAVAILABLE" } }),
     });
   });
-  await page.getByRole("link", { name: "端末", exact: true }).click();
-  await expect(page.locator('[aria-busy="true"]')).toBeVisible();
-  await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-  await mkdir(screenshots, { recursive: true });
-  await page.screenshot({ path: resolve(screenshots, "pending.png"), fullPage: true });
-  release?.();
+  try {
+    await page.getByRole("link", { name: "端末", exact: true }).click();
+    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
+    await mkdir(screenshots, { recursive: true });
+    await page.screenshot({ path: resolve(screenshots, "pending.png"), fullPage: true });
+  } finally {
+    release?.();
+  }
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);

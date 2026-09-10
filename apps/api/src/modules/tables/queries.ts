@@ -1,3 +1,4 @@
+import { observeOperation } from "../../platform/telemetry";
 import { and, desc, eq, sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ConfirmationRecord, EventRecord, OrderRecord, TableRecord } from "../../db/records";
@@ -116,7 +117,8 @@ export function previewCart(
           ...priced,
           missing: [...priced.missing, error.code],
         }));
-      } catch {
+      } catch (lineError) {
+        if (!(lineError instanceof DomainError)) throw lineError;
         const product = catalog.configuration.products.find((p) => p.id === line.productId);
         return [
           {
@@ -161,76 +163,82 @@ export function billValue(
 }
 
 export async function getTableState(services: ApiServices, actor: Actor): Promise<TableState> {
-  const db = services.db;
-  // 状態読取中の更新を既読扱いにしないよう、回復用cursorを先に確定する。
-  const history = await db
-    .select()
-    .from(business.tableEvents)
-    .where(
-      and(
-        eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
-        eq(business.tableEvents.store_id, actor.storeId),
-      ),
-    )
-    .orderBy(desc(business.tableEvents.cursor))
-    .limit(100);
-  const row = await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId);
-  const [tables, orderRows, paymentRows, confirmations] = await db.batch([
-    db
-      .select({
-        id: business.restaurantTables.id,
-        name: business.restaurantTables.name,
-        bill_requested: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='bill.requested')`,
-      })
-      .from(business.restaurantTables)
-      .where(
-        and(
-          eq(business.restaurantTables.id, row.table_id),
-          eq(business.restaurantTables.store_id, actor.storeId),
-        ),
-      ),
-    db
-      .select()
-      .from(business.orders)
-      .where(
-        and(
-          eq(business.orders.table_session_id, row.id),
-          eq(business.orders.store_id, actor.storeId),
-        ),
-      )
-      .orderBy(business.orders.created_at),
-    db
-      .select({
-        table_session_id: business.payments.table_session_id,
-        kind: business.payments.kind,
-        total: sql<number>`coalesce(sum(${business.payments.amount}),0)`,
-      })
-      .from(business.payments)
-      .where(
-        and(
-          eq(business.payments.table_session_id, row.id),
-          eq(business.payments.store_id, actor.storeId),
-        ),
-      )
-      .groupBy(business.payments.table_session_id, business.payments.kind),
-    db
-      .select()
-      .from(business.confirmations)
-      .where(
-        sql`table_session_id=${row.id} AND store_id=${actor.storeId} AND status IN ('pending','read') AND expires_at>${Date.now()}`,
-      )
-      .orderBy(desc(business.confirmations.created_at))
-      .limit(1),
-  ]);
-  return tableStateValue(
-    row,
-    catalog,
-    tables[0],
-    orderRows,
-    paymentRows,
-    confirmations[0],
-    history.toReversed(),
+  return observeOperation(
+    "tablecast.table.read",
+    async () => {
+      const db = services.db;
+      // 状態読取中の更新を既読扱いにしないよう、回復用cursorを先に確定する。
+      const history = await db
+        .select()
+        .from(business.tableEvents)
+        .where(
+          and(
+            eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
+            eq(business.tableEvents.store_id, actor.storeId),
+          ),
+        )
+        .orderBy(desc(business.tableEvents.cursor))
+        .limit(100);
+      const row = await getSession(services, actor);
+      const catalog = await getCatalog(services, actor.storeId);
+      const [tables, orderRows, paymentRows, confirmations] = await db.batch([
+        db
+          .select({
+            id: business.restaurantTables.id,
+            name: business.restaurantTables.name,
+            bill_requested: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='bill.requested')`,
+          })
+          .from(business.restaurantTables)
+          .where(
+            and(
+              eq(business.restaurantTables.id, row.table_id),
+              eq(business.restaurantTables.store_id, actor.storeId),
+            ),
+          ),
+        db
+          .select()
+          .from(business.orders)
+          .where(
+            and(
+              eq(business.orders.table_session_id, row.id),
+              eq(business.orders.store_id, actor.storeId),
+            ),
+          )
+          .orderBy(business.orders.created_at),
+        db
+          .select({
+            table_session_id: business.payments.table_session_id,
+            kind: business.payments.kind,
+            total: sql<number>`coalesce(sum(${business.payments.amount}),0)`,
+          })
+          .from(business.payments)
+          .where(
+            and(
+              eq(business.payments.table_session_id, row.id),
+              eq(business.payments.store_id, actor.storeId),
+            ),
+          )
+          .groupBy(business.payments.table_session_id, business.payments.kind),
+        db
+          .select()
+          .from(business.confirmations)
+          .where(
+            sql`table_session_id=${row.id} AND store_id=${actor.storeId} AND status IN ('pending','read') AND expires_at>${Date.now()}`,
+          )
+          .orderBy(desc(business.confirmations.created_at))
+          .limit(1),
+      ]);
+      return tableStateValue(
+        row,
+        catalog,
+        tables[0],
+        orderRows,
+        paymentRows,
+        confirmations[0],
+        history.toReversed(),
+      );
+    },
+    { env: services.env, input: { actor } },
   );
 }
 

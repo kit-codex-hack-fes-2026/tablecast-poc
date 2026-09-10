@@ -1183,6 +1183,8 @@ dependencies = [
     { name = "httpx" },
     { name = "livekit-agents", extra = ["inworld", "openai", "silero"] },
     { name = "livekit-plugins-inworld" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "python-dotenv" },
 ]
 
@@ -1199,6 +1201,8 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "livekit-agents", extras = ["inworld", "openai", "silero"], specifier = "==1.8.0" },
     { name = "livekit-plugins-inworld", git = "https://github.com/ReoHakase/tablecast-livekit-agents?subdirectory=livekit-plugins%2Flivekit-plugins-inworld&rev=2f36303643f00c9c521d9dc27a785a6f273bbfb1" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.39,<2" },
+    { name = "opentelemetry-sdk", specifier = ">=1.39,<2" },
     { name = "python-dotenv", specifier = ">=1.2,<2" },
 ]
 

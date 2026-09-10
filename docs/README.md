@@ -56,3 +56,5 @@ Web/APIを2 Workersに保ち、Python音声Agentだけ別runtimeへ置く。Bun 
 仕様、Web/API/Python実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modules・仮想環境はGit管理しない。Inworld公式pluginの話者対応patchを公開forkの完全SHAへ固定して使用し、復元可能なbundleと差分も保存する。
 
 旧ZIPの梱包記録は当時の記録として残す。実行結果は現行の進捗記録と受入条件の証拠を使い、ローカル実音声接続の成功を実iPad・実店舗・公開環境の受入成功とは扱わない。
+
+ログ・traceの調査は[Observability](observability.md)を参照する。

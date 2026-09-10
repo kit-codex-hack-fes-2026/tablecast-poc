@@ -22,6 +22,8 @@
     "@base-ui/react": "1.8.0",
     "@better-auth/oauth-provider": "1.7.2",
     "@better-auth/passkey": "1.7.2",
+    "@inference-net/otel-cf-workers": "2.5.0",
+    "@opentelemetry/api": "1.9.0",
     "@paper-design/shaders-react": "0.0.80",
     "@tablecast/api": "workspace:*",
     "@tanstack/react-form": "1.33.2",

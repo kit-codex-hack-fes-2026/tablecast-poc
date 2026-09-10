@@ -1,3 +1,4 @@
+import { failureLog } from "../../platform/telemetry";
 import { RequestContext } from "@mastra/core/request-context";
 import { sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -153,7 +154,21 @@ export async function startVoiceTurn(
   const cancellation = new AbortController();
   const signal = AbortSignal.any([requestSignal, cancellation.signal]);
   let generationFailed = false;
-  const agent = createCastAgent(services, currentActor, input.locale, signal, input.trigger);
+  let generationError: unknown;
+  const { agent, observability } = createCastAgent(
+    services,
+    currentActor,
+    input.locale,
+    signal,
+    input.trigger,
+  );
+  let flushing: Promise<void> | undefined;
+  const flush = () => {
+    flushing ??= observability.shutdown().catch(() => {
+      console.warn("tablecast.mastra_export_failed");
+    });
+    waitUntil(flushing);
+  };
   const requestContext = new RequestContext<{ actor: Actor; diagnostics: VoiceDiagnostics }>();
   requestContext.set("actor", currentActor);
   requestContext.set("diagnostics", diagnostics);
@@ -198,8 +213,9 @@ export async function startVoiceTurn(
         });
         ensure(stored, "VOICE_SESSION_STALE", 409);
       },
-      onError: () => {
+      onError: ({ error }) => {
         generationFailed = true;
+        generationError = error;
       },
       stopWhen: ({ steps }: { steps: readonly { toolCalls: readonly { toolName: string }[] }[] }) =>
         steps.some((step) =>
@@ -209,6 +225,7 @@ export async function startVoiceTurn(
         ),
     })
     .catch(async (error: unknown) => {
+      flush();
       await finishVoiceTurn(
         services,
         input.voiceSessionId,
@@ -217,7 +234,9 @@ export async function startVoiceTurn(
         "VOICE_MODEL_FAILED",
       );
       if (signal.aborted) throw new DomainError("VOICE_CANCELLED", 409, "VOICE_CANCELLED");
-      throw error;
+      throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+        cause: error,
+      });
     });
   diagnostics.runId = output.runId;
   waitUntil(notifyStore(services, actor.storeId));
@@ -235,12 +254,16 @@ export async function startVoiceTurn(
         signal.throwIfAborted();
         const next = await reader.read();
         signal.throwIfAborted();
-        ensure(!generationFailed, "VOICE_MODEL_FAILED", 503);
+        if (generationFailed)
+          throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+            cause: generationError,
+          });
         await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
         if (next.done) {
           logStreamEnd("generated");
           controller.close();
           reader.releaseLock();
+          flush();
           return;
         }
         controller.enqueue(encoder.encode(next.value));
@@ -250,16 +273,38 @@ export async function startVoiceTurn(
             ? "interrupted"
             : "failed";
         logStreamEnd(status, signal.aborted ? "VOICE_CANCELLED" : voiceErrorCode(error));
+        if (status === "failed")
+          failureLog(
+            "tablecast.voice.stream_failed",
+            new DomainError("VOICE_INTERNAL_ERROR", 503, voiceErrorCode(error), undefined, {
+              cause: error,
+            }),
+            services.env,
+            { "tablecast.request.id": diagnostics.traceId },
+          );
         cancellation.abort();
         controller.error(error);
-        await reader.cancel().catch(() => {});
-        await finishVoiceTurn(
-          services,
-          input.voiceSessionId,
-          input.turnId,
-          status,
-          "VOICE_MODEL_FAILED",
-        );
+        await reader.cancel().catch((cancelError: unknown) => {
+          failureLog(
+            "tablecast.voice.cancel_failed",
+            new DomainError("VOICE_INTERNAL_ERROR", 503, "VOICE_CANCEL_FAILED", undefined, {
+              cause: cancelError,
+            }),
+            services.env,
+            { "tablecast.request.id": diagnostics.traceId },
+          );
+        });
+        try {
+          await finishVoiceTurn(
+            services,
+            input.voiceSessionId,
+            input.turnId,
+            status,
+            "VOICE_MODEL_FAILED",
+          );
+        } finally {
+          flush();
+        }
       }
     },
     async cancel(reason) {
@@ -268,7 +313,11 @@ export async function startVoiceTurn(
       try {
         await reader.cancel(reason);
       } finally {
-        await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
+        try {
+          await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "interrupted");
+        } finally {
+          flush();
+        }
       }
     },
   });

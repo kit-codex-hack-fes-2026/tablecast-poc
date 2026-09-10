@@ -1,5 +1,16 @@
 name: tablecast
 services:
+  tablecast-lgtm:
+    image: grafana/otel-lgtm:0.32.1
+    environment:
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SERVER_ROOT_URL: http://localhost:3030
+    ports:
+      - "127.0.0.1:3030:3000"
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - tablecast-lgtm:/data
+      - ../infra/grafana/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
   tablecast:
     build:
       context: ..
@@ -32,6 +43,7 @@ services:
       - tablecast-web-output:/workspaces/tablecast/apps/web/dist
       - tablecast-web-vite:/workspaces/tablecast/apps/web/.wrangler
 volumes:
+  tablecast-lgtm:
   tablecast-node:
   tablecast-web-node:
   tablecast-api-node:

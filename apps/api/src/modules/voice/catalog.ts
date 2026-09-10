@@ -48,9 +48,15 @@ async function requestPage(
       }),
     );
     return providerPageSchema.parse(await new Response(limited).json());
-  } catch {
-    // providerの本文・headers・例外をHTTP/MCP応答や一般ログへ渡さない。
-    throw new DomainError("VOICE_CATALOG_UNAVAILABLE", 503, "VOICE_CATALOG_UNAVAILABLE");
+  } catch (error) {
+    // causeは診断境界で型と位置に制限し、provider本文を応答へ返さない。
+    throw new DomainError(
+      "VOICE_CATALOG_UNAVAILABLE",
+      503,
+      "VOICE_CATALOG_UNAVAILABLE",
+      undefined,
+      { cause: error },
+    );
   }
 }
 function matchesLanguage(langCode: string, locale: Locale) {

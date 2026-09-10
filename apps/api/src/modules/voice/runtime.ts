@@ -1,3 +1,4 @@
+import { context, propagation } from "@opentelemetry/api";
 import {
   AccessToken,
   RoomAgentDispatch,
@@ -6,7 +7,7 @@ import {
   ServerError,
   TrackSource,
 } from "livekit-server-sdk";
-import { ensure } from "../../platform/errors";
+import { DomainError, ensure } from "../../platform/errors";
 export const voiceParticipantIdentity = (voiceSessionId: string) =>
   `tablecast-device-${voiceSessionId}`;
 
@@ -30,7 +31,9 @@ export async function stopVoiceRoom(env: TablecastEnv, voiceSessionId: string) {
     await service.deleteRoom(voiceRoomName(env, voiceSessionId));
   } catch (error) {
     if (!(error instanceof ServerError && error.code === "not_found"))
-      ensure(false, "VOICE_ROOM_STOP_FAILED", 503);
+      throw new DomainError("VOICE_ROOM_STOP_FAILED", 503, "VOICE_ROOM_STOP_FAILED", undefined, {
+        cause: error,
+      });
   }
   if (env.TABLECAST_CONTAINERS_ENABLED === "true")
     await env.TABLECAST_VOICE.getByName("tablecast-voice").release(voiceSessionId);
@@ -60,11 +63,13 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
     canPublishData: false,
     canUpdateOwnMetadata: false,
   });
+  const traceContext: Record<string, string> = {};
+  propagation.inject(context.active(), traceContext);
   token.roomConfig = new RoomConfiguration({
     agents: [
       new RoomAgentDispatch({
         agentName: env.TABLECAST_AGENT_NAME || "tablecast-voice",
-        metadata: JSON.stringify({ voiceSessionId }),
+        metadata: JSON.stringify({ voiceSessionId, traceContext }),
       }),
     ],
   });
@@ -72,8 +77,14 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
   if (env.TABLECAST_CONTAINERS_ENABLED === "true") {
     try {
       await env.TABLECAST_VOICE.getByName("tablecast-voice").reserve(voiceSessionId);
-    } catch {
-      ensure(false, "VOICE_RUNTIME_UNAVAILABLE", 503);
+    } catch (error) {
+      throw new DomainError(
+        "VOICE_RUNTIME_UNAVAILABLE",
+        503,
+        "VOICE_RUNTIME_UNAVAILABLE",
+        undefined,
+        { cause: error },
+      );
     }
   }
   return { url: env.TABLECAST_LIVEKIT_URL, token: jwt, voiceSessionId };

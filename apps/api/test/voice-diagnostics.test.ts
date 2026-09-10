@@ -53,7 +53,12 @@ function capture() {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   return {
     values: () =>
-      info.mock.calls.map(([line]) => logSchema.parse(JSON.parse(z.string().parse(line)))),
+      info.mock.calls
+        .map(([line]) =>
+          z.record(z.string(), z.unknown()).parse(JSON.parse(z.string().parse(line))),
+        )
+        .filter((entry) => entry.event !== "tablecast.request_completed")
+        .map((entry) => logSchema.parse(entry)),
     verifyPrivate: () => {
       const output = JSON.stringify([info.mock.calls, warn.mock.calls, error.mock.calls]);
       for (const secret of [
@@ -67,7 +72,15 @@ function capture() {
         "tablecast-private-cookie-marker",
       ])
         expect(output).not.toContain(secret);
-      expect(warn).not.toHaveBeenCalled();
+      for (const [line] of warn.mock.calls) {
+        const entry = z
+          .object({ event: z.string(), attributes: z.record(z.string(), z.unknown()) })
+          .parse(JSON.parse(z.string().parse(line)));
+        expect(entry.event).toMatch(
+          /^tablecast\.(request_completed|voice\.(stream_failed|cancel_failed))$/,
+        );
+        expect(entry.attributes["tablecast.error.sanitized"]).toBe(true);
+      }
       expect(error).not.toHaveBeenCalled();
     },
   };

@@ -3,7 +3,7 @@
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
-from unittest.mock import AsyncMock, create_autospec
+from unittest.mock import AsyncMock, Mock, create_autospec
 
 import httpx
 import pytest
@@ -26,7 +26,10 @@ def configuration() -> VoiceConfiguration:
     )
 
 
-async def test_接続完了を待ってから参加者指定の実Sessionを開始する(monkeypatch: pytest.MonkeyPatch):
+async def test_接続を待って開始し計測送信を待たず終了する(monkeypatch: pytest.MonkeyPatch):
+    # Given: job終了時に強制送信を始めると利用不能になる送信先。
+    flush = Mock(side_effect=AssertionError("job終了時に送信を開始してはいけない"))
+    monkeypatch.setattr("tablecast_livekit.agent.flush_telemetry", flush)
     monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
     monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
     monkeypatch.setenv("INWORLD_API_KEY", "tablecast-test-inworld-key")
@@ -73,8 +76,12 @@ async def test_接続完了を待ってから参加者指定の実Sessionを開�
         job.cancel()
         waiting.cancel()
         await asyncio.gather(job, waiting, return_exceptions=True)
+        # When: 実際に登録されたjob終了callbackを呼ぶ。
+        assert len(callbacks) == 1
         for callback in callbacks:
-            await callback()
+            await asyncio.wait_for(callback(), timeout=1)
+        # Then: 強制送信もexecutor threadも追加しない。
+        flush.assert_not_called()
         await room.disconnect()
 
 
