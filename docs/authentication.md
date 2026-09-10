@@ -24,6 +24,20 @@ TanStack Routerには参照スターターのflat query処理を採用する。O
 
 ## 公開環境
 
+### Better Auth Dashboard
+
+本番だけで `@better-auth/infra` の `dash` とActivity Trackingを有効にする。API Workerの `TABLECAST_BETTER_AUTH_API_KEY` を `dash({ apiKey })` へ渡し、Webは公式 `dashClient` を既存認証クライアントへ追加する。鍵が未設定の場合はプラグインを読み込まず、本番のCI/CDは鍵の欠落を配備前に拒否する。preview・ローカルへ本番の鍵を渡さない。
+
+Activity Trackingは `user.lastActiveAt` を記録する。Drizzleの `last_active_at` はnullableな `timestamp_ms` で、既存ユーザーの値は列追加後の `NULL` から始まる。セッション作成と公式プラグインが対象にする認証操作で更新し、既定の更新間隔は5分とする。ページを開いたままの時間や業務APIの全リクエストを測る機能ではない。認証イベント送信と日時更新はBetter Authの `advanced.backgroundTasks.handler` からリクエストの `executionCtx.waitUntil` へ登録する。
+
+無料Starterを使い、Directory Sync、Sentinel、Better Authの有料メール・SMSは有効化しない。2026-09-11時点の無料枠はDashboard管理者1席、監査ログ月10,000件・保持1日。最終利用日時はTableCastのD1へ保存するため、この監査ログ保持期間とは別である。料金・利用量はDashboardで確認する。[公式料金](https://better-auth.com/pricing)・[Dashboard仕様](https://better-auth.com/docs/infrastructure/plugins/dashboard)
+
+### 新規登録の制限
+
+店舗招待は所属を追加する機能であり、招待がない人のアカウント作成自体は制限しない。無料Dashboardで招待コードによる登録制限を設定する機能は公式資料で確認できていない。招待制にする場合は、Better Authの `databaseHooks.user.create.before` で有効な招待先メールまたは許可メールを照合し、メール登録とGoogle初回登録の両方へ適用する。メール所有の確認、既存ユーザーのログイン、最初の管理者の登録手順も合わせて設計する。現時点ではこの制限を実装していない。[公式Database Hooks](https://better-auth.com/docs/concepts/database#database-hooks)
+
+### Googleとメール
+
 Google Cloud の OAuth Web クライアントのリダイレクトURIを `TABLECAST_PUBLIC_ORIGIN/api/auth/callback/google` に登録し、`TABLECAST_GOOGLE_CLIENT_ID` と `TABLECAST_GOOGLE_CLIENT_SECRET` を Wrangler の secret として設定する。`TABLECAST_GOOGLE_EMULATOR_URL` と `TABLECAST_MAILPIT_URL` は公開環境で設定しない。開発環境以外での利用はAPIが拒否する。
 
 Cloudflare Email Service で送信ドメインを検証し、送信可能なメールアドレスを `TABLECAST_EMAIL_FROM` に設定する。`apps/api/wrangler.jsonc` の `TABLECAST_EMAIL` binding で React Email の HTML とテキストを送信する。招待、メール確認、パスワード再設定は同じテンプレートを使用する。

@@ -20,11 +20,41 @@ const input = {
   TABLECAST_DEPLOY_SECRET: "tablecast-deployment-test-master-secret",
   TABLECAST_GOOGLE_CLIENT_ID: "tablecast-google-id",
   TABLECAST_GOOGLE_CLIENT_SECRET: "tablecast-google-secret",
+  TABLECAST_BETTER_AUTH_API_KEY: "tablecast-dashboard-test-key",
   CF_ACCESS_CLIENT_ID: "tablecast-access-id",
   CF_ACCESS_CLIENT_SECRET: "tablecast-access-secret",
 };
 
 describe("本番とPRの配備境界", () => {
+  test("Dashboardの鍵がある場合、本番だけへ渡してPRのsecretと公開configへ含めない", () => {
+    expect(deploymentSecrets(deploymentTarget(), input).TABLECAST_BETTER_AUTH_API_KEY).toBe(
+      input.TABLECAST_BETTER_AUTH_API_KEY,
+    );
+    expect(deploymentSecrets(deploymentTarget("75"), input)).not.toHaveProperty(
+      "TABLECAST_BETTER_AUTH_API_KEY",
+    );
+    expect(
+      JSON.stringify(
+        deploymentConfigs(
+          deploymentTarget(),
+          "a".repeat(40),
+          "11111111-1111-4111-8111-111111111111",
+          "/tablecast",
+          {},
+          {},
+        ),
+      ),
+    ).not.toContain(input.TABLECAST_BETTER_AUTH_API_KEY);
+  });
+
+  test("Dashboardの鍵がない場合、本番配備を拒否しPR配備は生成できる", () => {
+    const missing = { ...input, TABLECAST_BETTER_AUTH_API_KEY: undefined };
+    expect(() => deploymentSecrets(deploymentTarget(), missing)).toThrow(
+      "TABLECAST_BETTER_AUTH_API_KEY",
+    );
+    expect(() => deploymentSecrets(deploymentTarget("75"), missing)).not.toThrow();
+  });
+
   test("同じPRとSHAの成果物へ実DBと検証済みイメージを設定し別の配備先を拒否する", () => {
     const target = deploymentTarget("39");
     const sha = "a".repeat(40);
