@@ -111,7 +111,7 @@ async def test_HTTPの失敗段階によらず受信した要求IDと卓を記�
                 await read()
 
     configuration_log, turn_log = records(caplog, "tablecast.voice_http")
-    assert configuration_log["traceId"] == "tablecast-config"
+    assert configuration_log["requestId"] == "tablecast-config"
     assert configuration_log["tableSessionId"] == config.tableSessionId
     assert (
         turn_log.items()
@@ -119,7 +119,7 @@ async def test_HTTPの失敗段階によらず受信した要求IDと卓を記�
             "operation": "turn",
             "phase": phase,
             "httpStatus": status,
-            "traceId": "tablecast-turn" if status is not None else None,
+            "requestId": "tablecast-turn" if status is not None else None,
             "tableSessionId": config.tableSessionId,
             "voiceSessionId": config.voiceSessionId,
             "releaseSha": config.releaseSha,
@@ -173,7 +173,7 @@ async def test_HTTP取消は受信済み要求IDを保持し接続を閉じる(
             await task
     assert stream.closed
     [entry] = records(caplog, "tablecast.voice_http")
-    assert entry["traceId"] == "tablecast-cancel"
+    assert entry["requestId"] == "tablecast-cancel"
     assert entry["turnId"] == "tablecast-cancel-turn"
     assert entry["phase"] == "interrupted"
     assert_private(caplog)
@@ -281,7 +281,7 @@ async def test_実Sessionで通常発話と確認読上げと旧turn後処理の
         [entry] = [
             entry
             for entry in records(caplog, "tablecast.voice_http")
-            if entry["traceId"] == f"tablecast-http-{index}"
+            if entry["requestId"] == f"tablecast-http-{index}"
         ]
         if request.url.path.endswith("/turns"):
             assert entry["turnId"] == json.loads(request.content)["turnId"]
@@ -342,6 +342,6 @@ async def test_実Sessionで失敗metricsがなくてもturnを追跡でき秘�
     [http_log] = [
         entry for entry in records(caplog, "tablecast.voice_http") if entry["operation"] == "turn"
     ]
-    assert http_log["traceId"] == "tablecast-failed"
+    assert http_log["requestId"] == "tablecast-failed"
     assert http_log["turnId"] == started["turnId"]
     assert_private(caplog)

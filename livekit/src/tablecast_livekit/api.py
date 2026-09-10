@@ -1,15 +1,22 @@
 """認証済みの音声HTTP境界。再試行で業務操作を重複させない。"""
 
 import asyncio
+import json as json_module
 import logging
+import sys
+import time
+import traceback
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Literal
 
 import httpx
+from opentelemetry import trace
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from pydantic import BaseModel, ConfigDict, Field
 
 from .speaker import SpeakerReference
+from .telemetry import capture_content, safe_content
 
 logger = logging.getLogger("tablecast.voice")
 
@@ -69,44 +76,90 @@ class VoiceAPI:
         params: dict[str, str] | None = None,
         json: dict[str, object] | None = None,
     ) -> AsyncIterator[httpx.Response]:
-        trace_id: str | None = None
-        http_status: int | None = None
-        phase = "failed"
-        try:
-            async with self.client.stream(method, path, params=params, json=json) as response:
-                # 拒否や本文の途中失敗でも、受信済みの診断IDを失わない。
-                trace_id = response.headers.get("X-Request-Id")
-                http_status = response.status_code
-                if response.is_error:
-                    await response.aread()
-                response.raise_for_status()
-                yield response
-                phase = "completed"
-        except TurnSkipped:
-            phase = "skipped"
-            raise
-        except (asyncio.CancelledError, GeneratorExit):
-            phase = "interrupted"
-            raise
-        except httpx.HTTPStatusError as error:
-            phase = "rejected" if error.response.status_code < 500 else "failed"
-            raise
-        finally:
-            logger.info(
-                "tablecast.voice_http",
-                extra={
-                    "event": "tablecast.voice_http",
-                    "operation": operation,
-                    "phase": phase,
-                    "httpStatus": http_status,
-                    "traceId": trace_id,
-                    "voiceSessionId": self.voice_session_id,
-                    "tableSessionId": self.config.tableSessionId if self.config else None,
-                    "releaseSha": self.config.releaseSha if self.config else None,
-                    "turnId": turn_id,
-                    "speechId": speech_id,
-                },
-            )
+        attributes: dict[str, str] = {
+            "tablecast.voice.session.id": self.voice_session_id,
+            "tablecast.operation": operation,
+            "http.request.method": method,
+        }
+        if turn_id:
+            attributes["tablecast.voice.turn.id"] = turn_id
+        if speech_id:
+            attributes["lk.speech_id"] = speech_id
+        with trace.get_tracer("tablecast").start_as_current_span(
+            "tablecast.voice.api",
+            attributes=attributes,
+            record_exception=False,
+            set_status_on_exception=False,
+        ) as span:
+            request_id: str | None = None
+            http_status: int | None = None
+            phase = "failed"
+            started = time.perf_counter()
+            headers: dict[str, str] = {}
+            TraceContextTextMapPropagator().inject(headers)
+            if capture_content() and json is not None:
+                span.set_attribute("lk.pii.input", json_module.dumps(safe_content(json)))
+            try:
+                async with self.client.stream(
+                    method, path, params=params, json=json, headers=headers
+                ) as response:
+                    # 拒否や本文の途中失敗でも、受信済みの診断IDを失わない。
+                    request_id = response.headers.get("X-Request-Id")
+                    http_status = response.status_code
+                    if response.is_error:
+                        await response.aread()
+                    response.raise_for_status()
+                    yield response
+                    phase = "completed"
+            except TurnSkipped:
+                phase = "skipped"
+                raise
+            except (asyncio.CancelledError, GeneratorExit):
+                phase = "interrupted"
+                raise
+            except httpx.HTTPStatusError as error:
+                phase = "rejected" if error.response.status_code < 500 else "failed"
+                raise
+            finally:
+                error = sys.exception()
+                if capture_content() and error is not None:
+                    span.add_event(
+                        "exception",
+                        {
+                            "exception.type": type(error).__name__,
+                            "exception.message": safe_content(str(error)),
+                            "exception.stacktrace": safe_content(
+                                "".join(traceback.format_exception(error))
+                            ),
+                        },
+                    )
+                span.set_attributes(
+                    {
+                        "tablecast.outcome": phase,
+                        "tablecast.duration_ms": (time.perf_counter() - started) * 1000,
+                    }
+                )
+                if request_id:
+                    span.set_attribute("tablecast.request.id", request_id)
+                if http_status is not None:
+                    span.set_attribute("http.response.status_code", http_status)
+                if phase == "failed":
+                    span.set_status(trace.StatusCode.ERROR)
+                logger.info(
+                    "tablecast.voice_http",
+                    extra={
+                        "event": "tablecast.voice_http",
+                        "operation": operation,
+                        "phase": phase,
+                        "httpStatus": http_status,
+                        "requestId": request_id,
+                        "voiceSessionId": self.voice_session_id,
+                        "tableSessionId": self.config.tableSessionId if self.config else None,
+                        "releaseSha": self.config.releaseSha if self.config else None,
+                        "turnId": turn_id,
+                        "speechId": speech_id,
+                    },
+                )
 
     async def configuration(self) -> VoiceConfiguration:
         async with self._request(

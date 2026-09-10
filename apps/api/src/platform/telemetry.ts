@@ -27,6 +27,9 @@ export interface TelemetryEnv {
 
 // 自動計測はURL・SQL・ヘッダーを含むため、送信境界で許可した属性だけを残す。
 const allowed = new Set([
+  "tablecast.voice.session.id",
+  "tablecast.voice.turn.id",
+  "lk.speech_id",
   "tablecast.operation",
   "tablecast.channel",
   "tablecast.outcome",

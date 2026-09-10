@@ -123,3 +123,17 @@ PR #63の基盤に続く集計は#64、音声とLiveKit hostedは#65、Mastra ho
 GitHub Environmentの`preview`または`production`に同名のActions variableを設定すれば、次の配備で切り替わる。未指定の配備値は`true`。ビルド済み成果物にも配備時の値を反映する。既に保存されたデータは切替では削除されず、各観測先の保持期間に従う。停止時には新しい音声sessionにも新設定を適用する。
 
 大きな入出力はLokiの64 KiB structured metadata上限を超えるため、`tablecast.content`のJSONログ本文へ分割する。元の完了ログは一件のまま維持する。同じtrace ID・span IDの`part`順に`content`を連結するとJSON属性へ復元できる。各行を256 KiB未満にし、本文を切り捨てない。Grafanaのtrace表示が長い属性を省略する場合は、相関する本文ログを使う。
+
+## 音声とLiveKit Agent Insights
+
+Pythonも `TABLECAST_OTEL_ENDPOINT` と `TABLECAST_OTEL_AUTHORIZATION` でOTLP/HTTPのtraceとlogを送る。localはworktree専用LGTM、preview/productionのContainerはAPIと同じGrafana Cloudへ接続する。Providerとバッチ送信器はプロセスごとに一度作り、job終了時にflushする。送信エラー自身のログをGrafanaへ再送して循環させない。
+
+LiveKit Cloud接続時はAgent Insightsのtrace/logを有効にする。`TABLECAST_OTEL_CAPTURE_CONTENT=true` では会話本文と字幕も収集し、falseではSDKの `allow_pii=False`、sessionの `redaction=True`、`transcript=False` とログフィルターで除去する。録音は両設定とも `audio=False`。プロジェクト全体でPII除去が強制されている場合は、この環境変数で解除できない。localのself-hosted media serverではAgent Insightsへ送られない。
+
+LiveKitの標準spanでモデル、TTS、再生、中断を追い、`tablecast.voice.api` でAPIツールの待ち時間を分ける。Realtimeのtext出力にaudio TTFTを流用しない。APIリクエストにはW3C traceparentを伝播する。APIからjobを開始する非同期境界はspan linkと `tablecast.voice.session.id` で結び、`tablecast.voice.turn.id`、`lk.speech_id`、`tablecast.request.id` で区間を照合する。UUIDの要求IDをOTel trace IDとして扱わない。
+
+```traceql
+{ resource.service.name = "tablecast-voice" && resource.tablecast.pr.number = "対象PR番号" }
+```
+
+PR番号は調査対象へ置き換える。LogQLでは `{service_name="tablecast-voice"} | voiceSessionId="調査対象のセッションID"`、HTTP処理のtraceでは `span.tablecast.voice.session.id` を使う。Agent Insightsは同じroom/jobとsession IDで照合する。

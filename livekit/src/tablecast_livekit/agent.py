@@ -33,6 +33,7 @@ from .api import TurnSkipped, VoiceAPI, VoiceConfiguration
 from .llm import TablecastLLM
 from .speaker import SpeakerReference, speaker_reference
 from .speech import CaptionFormatter, caption, captions
+from .telemetry import configure_telemetry, flush_telemetry, prewarm_telemetry, recording_options
 from .voice_text import UserText, VoiceTextPublisher
 
 logger = logging.getLogger("tablecast.voice")
@@ -40,6 +41,7 @@ server = AgentServer(
     port=int(os.environ.get("TABLECAST_AGENT_HEALTH_PORT", "0")),
     drain_timeout=600,
     num_idle_processes=1,
+    setup_fnc=prewarm_telemetry,
 )
 
 
@@ -473,6 +475,7 @@ async def entrypoint(ctx: JobContext) -> None:
             await session.aclose()
             await agent.close()
             await client.aclose()
+            await asyncio.to_thread(flush_telemetry)
 
         ctx.add_shutdown_callback(shutdown)
         await ctx.connect()
@@ -481,7 +484,7 @@ async def entrypoint(ctx: JobContext) -> None:
         )
         await session.start(
             agent=agent,
-            record=False,
+            record=recording_options(),
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 participant_identity=config.participantIdentity,
@@ -497,4 +500,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 def main() -> None:
-    cli.run_app(server)
+    configure_telemetry()
+    try:
+        cli.run_app(server)
+    finally:
+        flush_telemetry()

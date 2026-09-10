@@ -1,3 +1,4 @@
+import { context, propagation } from "@opentelemetry/api";
 import {
   AccessToken,
   RoomAgentDispatch,
@@ -60,11 +61,13 @@ export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string)
     canPublishData: false,
     canUpdateOwnMetadata: false,
   });
+  const traceContext: Record<string, string> = {};
+  propagation.inject(context.active(), traceContext);
   token.roomConfig = new RoomConfiguration({
     agents: [
       new RoomAgentDispatch({
         agentName: env.TABLECAST_AGENT_NAME || "tablecast-voice",
-        metadata: JSON.stringify({ voiceSessionId }),
+        metadata: JSON.stringify({ voiceSessionId, traceContext }),
       }),
     ],
   });

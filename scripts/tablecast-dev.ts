@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
 import {
   localEnvironment,
+  localReleaseSha,
   readRuntime,
   reserveRuntime,
   saveRuntime,
@@ -314,6 +315,10 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
         TABLECAST_API_URL: `http://127.0.0.1:${runtime.ports.web}`,
         TABLECAST_VOICE_API_TOKEN: secrets.TABLECAST_VOICE_API_TOKEN ?? "",
         TABLECAST_AGENT_HEALTH_PORT: String(runtime.ports.agent),
+        TABLECAST_ENV: "development",
+        TABLECAST_RELEASE_SHA: await localReleaseSha(tablecastRoot),
+        TABLECAST_OTEL_ENDPOINT: `http://127.0.0.1:${runtime.ports.otlp}`,
+        TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
       });
     } else
       console.info("外部音声設定が未登録のため、音声Agentは停止中です。GUI注文は利用できます。");

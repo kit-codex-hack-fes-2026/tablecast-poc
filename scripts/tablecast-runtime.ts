@@ -390,6 +390,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
   const values: Record<string, string> = {
+    TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
     TABLECAST_VOICE_ENABLED: [
       "INWORLD_API_KEY",
       "TABLECAST_INWORLD_VOICE_JA",
