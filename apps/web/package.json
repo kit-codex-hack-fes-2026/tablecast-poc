@@ -62,7 +62,7 @@
     "@storybook/addon-a11y": "10.6.0",
     "@storybook/addon-mcp": "10.6.0",
     "@storybook/addon-vitest": "10.6.0",
-    "@storybook/react-vite": "10.6.0",
+    "@storybook/tanstack-react": "10.6.0",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/eslint-plugin-query": "5.102.8",
     "@tanstack/eslint-plugin-router": "1.162.0",

@@ -147,6 +147,7 @@ Pythonの外部設定は `.env.local` に置く。uvは明示したファイル�
 | `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否      |
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
+Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 
 Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpit・LiveKitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
 

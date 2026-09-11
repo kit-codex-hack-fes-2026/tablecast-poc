@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { useDefaultLayout } from "react-resizable-panels";
 import { usePanelCookies } from "./panel-layout";
 
@@ -39,12 +40,11 @@ export function usePanelLayout(options: Parameters<typeof useDefaultLayout>[0]) 
   return useDefaultLayout({ ...options, storage, onlySaveAfterUserInteractions: true });
 }
 
-export async function readPanelCookies() {
-  const cookies = import.meta.env.SSR
-    ? await (await import("./api-fetch.server")).readPanelCookies()
-    : document.cookie;
-  return cookies
-    .split(";")
-    .filter((cookie) => cookie.trim().startsWith("tablecast-layout-"))
-    .join(";");
-}
+export const readPanelCookies = createIsomorphicFn()
+  .server(async () => (await import("./api-fetch.server")).readPanelCookies())
+  .client(() =>
+    document.cookie
+      .split(";")
+      .filter((cookie) => cookie.trim().startsWith("tablecast-layout-"))
+      .join(";"),
+  );

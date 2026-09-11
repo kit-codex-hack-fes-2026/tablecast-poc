@@ -1,10 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { useState } from "react";
@@ -29,12 +23,7 @@ const meta = {
       <QueryClientProvider
         client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
       >
-        <RouterProvider
-          router={createRouter({
-            routeTree: createRootRoute({ component: Story }),
-            history: createMemoryHistory({ initialEntries: ["/"] }),
-          })}
-        />
+        <Story />
       </QueryClientProvider>
     ),
   ],

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
 import { z } from "zod";

@@ -48,6 +48,12 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
     javaScriptEnabled: false,
     storageState: await page.context().storageState(),
   });
+  const layoutCookie = {
+    name: "tablecast-layout-tablecast-admin-layout",
+    value: encodeURIComponent(JSON.stringify({ "tablecast-admin-content": 100 })),
+    url: baseURL ?? "",
+  };
+  await staffSsr.addCookies([layoutCookie]);
   const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
   try {
     const codes = z
@@ -91,6 +97,8 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         staffPage.getByRole("button", { name: new RegExp(`^${table.name}\\b`) }),
       ).toBeVisible();
       expect(response?.headers()["cache-control"]).toBe("private, no-store");
+      expect(await response?.text()).toContain(`${layoutCookie.name}=${layoutCookie.value}`);
+      expect(await anonPage.content()).not.toContain(layoutCookie.name);
       await expect(anonPage).toHaveURL(/\/login\?/);
       await expect(anonPage.getByText(floor.store.name, { exact: true })).toHaveCount(0);
       const product = catalog.configuration.products.find(

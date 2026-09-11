@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, useEffect, useState } from "react";
 import { expect, fn, spyOn, userEvent, waitFor, within } from "storybook/test";
