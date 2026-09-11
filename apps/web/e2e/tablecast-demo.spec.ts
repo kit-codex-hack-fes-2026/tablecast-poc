@@ -25,7 +25,6 @@ for (const labels of [ja, en]) {
     await page.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
     await page.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/stores/${storeId}/floor$`));
-    const before = adminStateSchema.parse(await (await page.request.get(adminPath)).json());
     const draft = configDraftSchema.parse(
       await (await page.request.post(`${adminPath}/drafts`)).json(),
     );
@@ -51,6 +50,7 @@ for (const labels of [ja, en]) {
       data: { expectedVersion: draft.version, configuration },
     });
     expect(saved.ok()).toBe(true);
+    const savedDraft = configDraftSchema.parse(await saved.json());
     const invalid = configDraftSchema.parse(
       await (await page.request.post(`${adminPath}/drafts`)).json(),
     );
@@ -85,7 +85,41 @@ for (const labels of [ja, en]) {
     const demoId = new URL(demoPage.url()).searchParams.get("demoId");
     if (!demoId) throw new Error("デモIDがありません");
     const demoPath = `${adminPath}/demo/${demoId}`;
-    await expect(demoPage.getByRole("heading", { name: labels.demo_title })).toBeVisible();
+    await expect(demoPage.getByRole("heading", { name: labels.demo_title })).toBeAttached();
+    await expect(demoPage.getByRole("combobox", { name: labels.demo_display })).toContainText(
+      "iPad",
+    );
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeDisabled();
+    // 公開版の更新も通知だけを行い、明示操作まで固定する。
+    const publication = configDraftSchema.parse(
+      await (await page.request.post(`${adminPath}/drafts`)).json(),
+    );
+    const validated = await page.request.post(`${adminPath}/drafts/${publication.id}/validate`, {
+      data: { expectedVersion: publication.version },
+    });
+    expect(validated.ok()).toBe(true);
+    const published = await page.request.post(`${adminPath}/drafts/${publication.id}/publish`, {
+      data: {
+        expectedVersion: publication.version,
+        baseVersion: publication.baseVersion,
+        idempotencyKey: `tablecast-demo-publication-${publication.id}`,
+        approved: true,
+      },
+    });
+    expect(published.ok()).toBe(true);
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeEnabled();
+    expect(
+      demoSchema.parse(await (await demoPage.request.get(demoPath)).json()).sourceVersion,
+    ).toBe(publication.baseVersion);
+    await demoPage.getByRole("button", { name: labels.demo_reload }).click();
+    await expect
+      .poll(
+        async () =>
+          demoSchema.parse(await (await demoPage.request.get(demoPath)).json()).sourceVersion,
+      )
+      .toBe(publication.baseVersion + 1);
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeDisabled();
+    const before = adminStateSchema.parse(await (await page.request.get(adminPath)).json());
     await demoPage.getByRole("combobox", { name: labels.demo_configuration }).click();
     await demoPage.getByRole("option", { name: new RegExp(invalid.id.slice(0, 8)) }).click();
     await expect(demoPage.getByRole("list", { name: labels.config_error_list })).toContainText(
@@ -100,6 +134,9 @@ for (const labels of [ja, en]) {
     await frame
       .getByRole("button", { name: labels === ja ? "日本語" : "English", exact: true })
       .click();
+    await expect(
+      frame.getByRole("button", { name: labels === ja ? "日本語" : "English", exact: true }),
+    ).toBeEnabled();
     await expect(frame.getByRole("tab", { name: labels.kiosk_menu, exact: true })).toBeVisible();
     await frame
       .getByRole("button")
@@ -122,16 +159,59 @@ for (const labels of [ja, en]) {
     await child.evaluate(() => {
       document.body.dataset.tablecastDemoMarker = "retained";
     });
+    // 下書きが別タブで変更されても取り込み済みの注文は保ち、再読込を知らせる。
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeDisabled();
+    const changed = await page.request.put(`${adminPath}/drafts/${draft.id}`, {
+      data: {
+        expectedVersion: savedDraft.version,
+        configuration: {
+          ...configuration,
+          products: configuration.products.map((product) => ({ ...product, price: 1500 })),
+        },
+      },
+    });
+    expect(changed.ok()).toBe(true);
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeEnabled({
+      timeout: 15000,
+    });
+    await expect(demoPage.getByRole("status")).toContainText(labels.demo_update_available);
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toHaveAttribute(
+      "data-variant",
+      "default",
+    );
+    expect(
+      demoSchema.parse(await (await demoPage.request.get(demoPath)).json()).sourceVersion,
+    ).toBe(savedDraft.version);
+    await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-update.png") });
+    await demoPage.getByRole("button", { name: labels.demo_reload }).click();
+    await expect(demoPage.getByRole("button", { name: labels.demo_reload })).toBeDisabled();
+    await expect
+      .poll(
+        async () =>
+          demoSchema.parse(await (await demoPage.request.get(demoPath)).json()).sourceVersion,
+      )
+      .toBe(savedDraft.version + 1);
+    expect(
+      tableStateSchema.parse(await (await demoPage.request.get(`${demoPath}/table`)).json()).orders,
+    ).toEqual(state.orders);
+    await demoPage.getByRole("combobox", { name: labels.demo_display }).click();
+    await demoPage.getByRole("option", { name: labels.demo_browser, exact: true }).click();
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-browser.png") });
     await demoPage.getByRole("combobox", { name: labels.demo_display }).click();
     await demoPage.getByRole("option", { name: "iPad Air 11″", exact: true }).click();
     await expect.poll(() => child.evaluate(() => [innerWidth, innerHeight])).toEqual([1180, 820]);
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-landscape.png") });
-    await demoPage.getByRole("combobox", { name: labels.demo_orientation }).click();
-    await demoPage.getByRole("option", { name: labels.demo_portrait, exact: true }).click();
+    await demoPage.getByRole("button", { name: labels.demo_orientation }).click();
     await expect.poll(() => child.evaluate(() => [innerWidth, innerHeight])).toEqual([820, 1180]);
     expect(await child.evaluate(() => document.body.dataset.tablecastDemoMarker)).toBe("retained");
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-portrait.png") });
+    await demoPage.getByRole("combobox", { name: labels.demo_display }).click();
+    await demoPage.getByRole("option", { name: "iPad Air 13″", exact: true }).click();
+    await expect.poll(() => child.evaluate(() => [innerWidth, innerHeight])).toEqual([1024, 1366]);
+    expect(await child.evaluate(() => document.body.dataset.tablecastDemoMarker)).toBe("retained");
+    await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-air-13.png") });
+    const toolbar = demoPage.getByTestId("demo-toolbar");
+    expect(await toolbar.evaluate((element) => element.scrollHeight)).toBeLessThanOrEqual(70);
     await demoPage.getByRole("combobox", { name: labels.demo_guests }).focus();
     await demoPage.keyboard.press("ArrowDown");
     await expect(demoPage.getByRole("option", { name: "1", exact: true })).toBeFocused();
@@ -152,8 +232,9 @@ for (const labels of [ja, en]) {
     ).toEqual(state.orders);
     await demoPage.reload();
     await expect(demoPage.getByRole("combobox", { name: labels.demo_guests })).toContainText("3");
-    await expect(demoPage.getByRole("combobox", { name: labels.demo_orientation })).toContainText(
-      labels.demo_portrait,
+    await expect(demoPage.getByRole("button", { name: labels.demo_orientation })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
     await demoPage.getByRole("button", { name: labels.demo_reset, exact: true }).click();
     await demoPage

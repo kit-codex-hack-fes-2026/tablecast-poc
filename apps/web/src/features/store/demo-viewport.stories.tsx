@@ -10,10 +10,13 @@ const meta = {
       </div>
     ),
   ],
-  args: { src: "about:blank", tablet: true, portrait: false },
+  args: { src: "about:blank", device: "ipad", portrait: false },
 } satisfies Meta<typeof DemoViewport>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Landscape: Story = { name: "iPad横向き" };
 export const Portrait: Story = { name: "iPad縦向き", args: { portrait: true } };
-export const Browser: Story = { name: "ブラウザ全体", args: { tablet: false } };
+export const Browser: Story = { name: "ブラウザ全体", args: { device: "browser" } };
+
+export const Air11: Story = { name: "iPad Air 11インチ", args: { device: "ipad-air-11" } };
+export const Air13: Story = { name: "iPad Air 13インチ", args: { device: "ipad-air-13" } };

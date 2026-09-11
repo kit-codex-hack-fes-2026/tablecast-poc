@@ -6,7 +6,7 @@ import { storesOptions } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId_/demo")({
   validateSearch: z.object({
     demoId: z.uuid().optional().catch(undefined),
-    tablet: z.union([z.boolean(), z.stringbool()]).optional().catch(undefined),
+    device: z.enum(["browser", "ipad", "ipad-air-11", "ipad-air-13"]).optional().catch(undefined),
     portrait: z.union([z.boolean(), z.stringbool()]).optional().catch(undefined),
   }),
   loaderDeps: ({ search }) => ({ demoId: search.demoId }),

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { type DemoDevice, demoDevices } from "./demo-device-model";
+import { DemoDeviceFrame } from "./demo-device-frame";
 import { useI18n } from "../../i18n/locale";
 
 export function DemoViewport({
   src,
-  tablet,
+  device,
   portrait,
 }: {
   src: string;
-  tablet: boolean;
+  device: DemoDevice;
   portrait: boolean;
 }) {
   const { t } = useI18n();
@@ -22,12 +24,16 @@ export function DemoViewport({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const width = portrait ? 820 : 1180;
-  const height = portrait ? 1180 : 820;
+  const frame = device === "browser" ? null : demoDevices[device];
+  const width = frame ? (portrait ? frame.width : frame.height) : size.width;
+  const height = frame ? (portrait ? frame.height : frame.width) : size.height;
+  const bezel = frame ? frame.bezel + 6 : 0;
+  const frameWidth = width + bezel * 2;
+  const frameHeight = height + bezel * 2;
   // iframeの論理viewportを固定し、枠を含む表示だけを利用可能な領域へ縮小する。
   const scale = Math.max(
     0,
-    Math.min(1, (size.width - 32) / (width + 32), (size.height - 32) / (height + 32)),
+    Math.min(1, (size.width - 32) / frameWidth, (size.height - 32) / frameHeight),
   );
   return (
     <div
@@ -36,21 +42,18 @@ export function DemoViewport({
       data-testid="demo-viewport"
     >
       <div
-        className={
-          tablet
-            ? "absolute left-1/2 top-1/2 origin-center rounded-3xl border-16 border-slate-900 bg-slate-900 shadow-xl"
-            : "absolute inset-0"
-        }
+        className={frame ? "absolute left-1/2 top-1/2 origin-center" : "absolute inset-0"}
         style={
-          tablet
+          frame
             ? {
-                width: width + 32,
-                height: height + 32,
+                width: frameWidth,
+                height: frameHeight,
                 transform: `translate(-50%, -50%) scale(${scale})`,
               }
             : undefined
         }
       >
+        {device !== "browser" && <DemoDeviceFrame device={device} portrait={portrait} />}
         {/* 自アプリの認証とマイクを使うため同一originのscript実行が必要。外部URLは受け取らない。 */}
         {/* oxlint-disable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
         <iframe
@@ -58,11 +61,8 @@ export function DemoViewport({
           src={src}
           allow="microphone; autoplay"
           sandbox="allow-scripts allow-same-origin"
-          className={
-            tablet
-              ? "block size-full rounded-xl border-0 bg-background"
-              : "block size-full border-0 bg-background"
-          }
+          className="absolute block size-full border-0 bg-background"
+          style={frame ? { left: bezel, top: bezel, width, height, borderRadius: 18 } : undefined}
         />
         {/* oxlint-enable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
       </div>

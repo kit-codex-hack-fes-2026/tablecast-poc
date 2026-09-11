@@ -1,14 +1,25 @@
 import type { Demo, DemoUpdate } from "@tablecast/api/schema";
 import { configurationIssueSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { RefreshCw, RotateCcw } from "lucide-react";
+import {
+  FlaskConical,
+  LayoutDashboard,
+  Monitor,
+  Tablet,
+  RotateCw,
+  RefreshCw,
+  RotateCcw,
+  FileStack,
+  Ticket,
+  Users,
+  MessagesSquare,
+} from "lucide-react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,14 +32,16 @@ import { ApiFailure, parseResponse, rpc } from "../../lib/api";
 import { ConfigurationErrors } from "./configuration-errors";
 import { demoOptions } from "./demo-query";
 import { DemoViewport } from "./demo-viewport";
+import { type DemoDevice, demoDevices } from "./demo-device-model";
+import { catalogOptions } from "./menu-query";
 import { draftsOptions, storesOptions } from "./store-query";
 
-type DemoDisplay = { tablet?: boolean; portrait?: boolean };
+type DemoDisplay = { device?: DemoDevice; portrait?: boolean };
 
 export function DemoPage({
   storeId,
   demoId,
-  tablet,
+  device,
   portrait,
 }: { storeId: string; demoId?: string } & DemoDisplay) {
   const { t } = useI18n();
@@ -43,7 +56,7 @@ export function DemoPage({
       await navigate({
         to: "/admin/stores/$storeId/demo",
         params: { storeId },
-        search: { demoId: demo.id, tablet, portrait },
+        search: { demoId: demo.id, device, portrait },
         replace: true,
       });
     },
@@ -56,7 +69,7 @@ export function DemoPage({
     }
   }, [demoId, mutate]);
   if (demoId)
-    return <DemoSession storeId={storeId} demoId={demoId} tablet={tablet} portrait={portrait} />;
+    return <DemoSession storeId={storeId} demoId={demoId} device={device} portrait={portrait} />;
   return (
     <main className="p-6">
       <h1>{t("demo_title")}</h1>
@@ -72,21 +85,26 @@ export function DemoPage({
 function DemoSession({
   storeId,
   demoId,
-  tablet = false,
+  device = "ipad",
   portrait = false,
 }: { storeId: string; demoId: string } & DemoDisplay) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const navigate = useNavigate();
   const query = useQuery(demoOptions(storeId, demoId));
-  const drafts = useQuery(draftsOptions(storeId));
+  const drafts = useQuery({ ...draftsOptions(storeId), refetchInterval: 5000 });
+  const published = useQuery({
+    ...catalogOptions(storeId),
+    enabled: query.data?.sourceDraftId === null,
+    refetchInterval: 5000,
+  });
   const stores = useQuery(storesOptions);
   const [planRemoved, setPlanRemoved] = useState(false);
-  const setDisplay = (nextTablet: boolean, nextPortrait: boolean) => {
+  const setDisplay = (nextDevice: DemoDevice, nextPortrait: boolean) => {
     void navigate({
       to: "/admin/stores/$storeId/demo",
       params: { storeId },
-      search: { demoId, tablet: nextTablet, portrait: nextPortrait },
+      search: { demoId, device: nextDevice, portrait: nextPortrait },
       replace: true,
     });
   };
@@ -102,6 +120,7 @@ function DemoSession({
     client.setQueryData(demoOptions(storeId, demoId).queryKey, demo);
   };
   const update = useMutation({
+    onMutate: () => client.cancelQueries({ queryKey: demoOptions(storeId, demoId).queryKey }),
     mutationFn: (input: Omit<DemoUpdate, "expectedVersion">) => {
       if (!query.data) throw new Error("DEMO_REQUIRED");
       return parseResponse(
@@ -112,11 +131,10 @@ function DemoSession({
       );
     },
     onSuccess: receive,
-    onSettled: () => {
-      void query.refetch();
-    },
+    onSettled: () => query.refetch(),
   });
   const reset = useMutation({
+    onMutate: () => client.cancelQueries({ queryKey: demoOptions(storeId, demoId).queryKey }),
     mutationFn: () => {
       if (!query.data) throw new Error("DEMO_REQUIRED");
       return parseResponse(
@@ -127,9 +145,7 @@ function DemoSession({
       );
     },
     onSuccess: receive,
-    onSettled: () => {
-      void query.refetch();
-    },
+    onSettled: () => query.refetch(),
   });
   const data = query.data;
   if (!data)
@@ -143,6 +159,12 @@ function DemoSession({
       </main>
     );
   const pending = update.isPending || reset.isPending;
+  const sourceVersion = data.sourceDraftId
+    ? drafts.data?.drafts.find((draft) => draft.id === data.sourceDraftId)?.version
+    : published.data?.version;
+  const sourceError = data.sourceDraftId ? drafts.error : published.error;
+  const hasUpdate =
+    !sourceError && sourceVersion !== undefined && sourceVersion > data.sourceVersion;
   const draftItems =
     drafts.data?.drafts.filter((draft) => draft.status === "draft" || draft.status === "ready") ??
     [];
@@ -154,43 +176,50 @@ function DemoSession({
     data.configuration;
   return (
     <main className="flex h-dvh flex-col bg-background">
-      <header className="z-10 max-h-96 shrink-0 overflow-auto border-b border-border bg-background p-3">
-        <div className="mb-2 flex items-center gap-3">
-          <h1 className="font-semibold">{t("demo_title")}</h1>
-          <span className="text-sm text-muted-foreground">
-            {stores.data?.stores.find((store) => store.id === storeId)?.name}
-          </span>
-          <span className="text-sm text-muted-foreground">{t("demo_isolated")}</span>
-          <Link
-            className="ml-auto text-sm underline"
-            to="/admin/stores/$storeId/floor"
-            params={{ storeId }}
+      <header className="z-10 max-h-96 shrink-0 overflow-y-auto border-b border-border bg-card">
+        <div className="flex items-center gap-2 overflow-x-auto p-2" data-testid="demo-toolbar">
+          <div
+            className="flex shrink-0 items-center gap-2 px-2 text-primary"
+            title={t("demo_isolated")}
           >
-            {t("admin_live")}
-          </Link>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
+            <FlaskConical className="size-5" aria-hidden="true" />
+            <h1 className="sr-only xl:not-sr-only xl:text-sm xl:font-semibold">
+              {t("demo_title")}
+            </h1>
+            <span className="sr-only">{t("demo_isolated")}</span>
+          </div>
           <DemoSelect
+            icon={device === "browser" ? <Monitor /> : <Tablet />}
             label={t("demo_display")}
-            value={tablet ? "tablet" : "browser"}
+            value={device}
             items={[
               { value: "browser", label: t("demo_browser") },
-              { value: "tablet", label: "iPad Air 11″" },
+              ...Object.entries(demoDevices).map(([value, item]) => ({ value, label: item.label })),
             ]}
-            onChange={(value) => setDisplay(value === "tablet", portrait)}
+            onChange={(value) => {
+              if (
+                value === "browser" ||
+                value === "ipad" ||
+                value === "ipad-air-11" ||
+                value === "ipad-air-13"
+              )
+                setDisplay(value, portrait);
+            }}
           />
-          {tablet && (
-            <DemoSelect
-              label={t("demo_orientation")}
-              value={portrait ? "portrait" : "landscape"}
-              items={[
-                { value: "landscape", label: t("demo_landscape") },
-                { value: "portrait", label: t("demo_portrait") },
-              ]}
-              onChange={(value) => setDisplay(tablet, value === "portrait")}
-            />
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("demo_orientation")}
+            aria-pressed={portrait}
+            title={portrait ? t("demo_landscape") : t("demo_portrait")}
+            disabled={device === "browser"}
+            onClick={() => setDisplay(device, !portrait)}
+          >
+            <RotateCw />
+          </Button>
+          <span className="h-6 shrink-0 border-l border-border" />
           <DemoSelect
+            icon={<FileStack />}
             label={t("demo_configuration")}
             value={data.sourceDraftId ?? "published"}
             disabled={pending || drafts.isPending}
@@ -213,18 +242,23 @@ function DemoSession({
               update.mutate({ sourceDraftId: value === "published" ? null : value })
             }
           />
-          <Button
-            variant="outline"
-            disabled={pending}
-            onClick={() => {
-              void drafts.refetch();
-              update.mutate({ reload: true });
-            }}
-          >
-            <RefreshCw />
-            {t("demo_reload")}
-          </Button>
+          <span title={hasUpdate ? t("demo_update_available") : t("demo_up_to_date")}>
+            <Button
+              variant={hasUpdate ? "default" : "ghost"}
+              size="icon"
+              aria-label={t("demo_reload")}
+              disabled={pending || !hasUpdate}
+              onClick={() => update.mutate({ reload: true })}
+            >
+              <RefreshCw />
+            </Button>
+            <span role="status" className="sr-only">
+              {hasUpdate ? t("demo_update_available") : ""}
+            </span>
+          </span>
+          <span className="h-6 shrink-0 border-l border-border" />
           <DemoSelect
+            icon={<Ticket />}
             label={t("demo_plan")}
             value={data.planId ?? "none"}
             disabled={pending}
@@ -238,6 +272,7 @@ function DemoSession({
             onChange={(value) => update.mutate({ planId: value === "none" ? null : value })}
           />
           <DemoSelect
+            icon={<Users />}
             label={t("demo_guests")}
             value={String(data.guestCount)}
             disabled={pending}
@@ -247,40 +282,55 @@ function DemoSession({
             }))}
             onChange={(value) => update.mutate({ guestCount: Number(value) })}
           />
-          <label className="flex min-h-10 items-center gap-2 text-sm">
-            <Checkbox
-              checked={data.configuration.cast.proactive}
-              disabled={pending}
-              onCheckedChange={(proactive) => update.mutate({ proactive })}
-            />
-            {t("demo_proactive")}
-          </label>
+          <Button
+            variant={data.configuration.cast.proactive ? "secondary" : "ghost"}
+            size="icon"
+            title={t("demo_proactive")}
+            aria-label={t("demo_proactive")}
+            aria-pressed={data.configuration.cast.proactive}
+            disabled={pending}
+            onClick={() => update.mutate({ proactive: !data.configuration.cast.proactive })}
+          >
+            <MessagesSquare />
+          </Button>
+          <span className="ml-auto h-6 shrink-0 border-l border-border" />
           <ConfirmAction
+            iconOnly
             label={t("demo_reset")}
             subject={t("demo_reset_confirm")}
             disabled={pending}
             onConfirm={() => reset.mutate()}
             icon={<RotateCcw />}
           />
+          <Link
+            className="flex size-12 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={t("admin_live")}
+            title={`${stores.data?.stores.find((store) => store.id === storeId)?.name ?? ""} · ${t("admin_live")}`}
+            to="/admin/stores/$storeId/floor"
+            params={{ storeId }}
+          >
+            <LayoutDashboard className="size-4" />
+          </Link>
         </div>
         {pending && (
-          <p role="status" className="mt-2 text-sm">
+          <p role="status" className="px-4 pb-2 text-sm">
             {t("demo_updating")}
           </p>
         )}
         {planRemoved && (
-          <p role="status" className="mt-2 text-sm">
+          <p role="status" className="px-4 pb-2 text-sm">
             {t("demo_plan_removed")}
           </p>
         )}
         <ErrorNotice error={query.error ?? update.error ?? reset.error} />
+        <ErrorNotice error={published.error} onRetry={() => void published.refetch()} />
         <ErrorNotice error={drafts.error} onRetry={() => void drafts.refetch()} />
         {errors.success && (
           <ConfigurationErrors errors={errors.data} configuration={selectedConfiguration} />
         )}
       </header>
       <DemoViewport
-        tablet={tablet}
+        device={device}
         portrait={portrait}
         src={`/admin/stores/${encodeURIComponent(storeId)}/demo/${encodeURIComponent(demoId)}`}
       />
@@ -289,12 +339,14 @@ function DemoSession({
 }
 
 export function DemoSelect({
+  icon,
   label,
   value,
   items,
   disabled,
   onChange,
 }: {
+  icon: ReactNode;
   label: string;
   value: string;
   items: { value: string; label: string }[];
@@ -302,8 +354,7 @@ export function DemoSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="flex min-w-24 flex-col gap-1 text-xs text-muted-foreground">
-      {label}
+    <div className="min-w-20 max-w-44 shrink-0" title={label}>
       <Select
         value={value}
         items={items}
@@ -312,8 +363,11 @@ export function DemoSelect({
           if (next) onChange(next);
         }}
       >
-        <SelectTrigger aria-label={label} className="max-w-64 text-foreground">
-          <SelectValue />
+        <SelectTrigger aria-label={label} className="text-sm">
+          <span aria-hidden="true" className="shrink-0 text-muted-foreground [&_svg]:size-4">
+            {icon}
+          </span>
+          <SelectValue className="truncate" />
         </SelectTrigger>
         <SelectContent>
           {items.map((item) => (
@@ -323,6 +377,6 @@ export function DemoSelect({
           ))}
         </SelectContent>
       </Select>
-    </label>
+    </div>
   );
 }

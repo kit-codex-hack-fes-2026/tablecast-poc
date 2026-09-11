@@ -10,19 +10,26 @@ export function ConfirmAction({
   disabled,
   onConfirm,
   icon,
+  iconOnly = false,
 }: {
   label: string;
   subject: string;
   disabled?: boolean;
   onConfirm: () => void;
   icon: ReactNode;
+  iconOnly?: boolean;
 }) {
   const { t } = useI18n();
   return (
     <AlertDialog.Root>
-      <AlertDialog.Trigger render={<Button variant="destructive" />} disabled={disabled}>
+      <AlertDialog.Trigger
+        render={<Button variant="destructive" size={iconOnly ? "icon" : "default"} />}
+        disabled={disabled}
+        aria-label={label}
+        title={iconOnly ? label : undefined}
+      >
         {icon}
-        {label}
+        {!iconOnly && label}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
         <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
