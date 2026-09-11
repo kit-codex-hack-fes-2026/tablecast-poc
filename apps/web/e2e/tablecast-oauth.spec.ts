@@ -4,7 +4,8 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { credentials } from "./support/runtime";
 
-test.use({ trace: "off" });
+// callbackを差し替えるHTTP境界をSWに迂回させない。
+test.use({ trace: "off", serviceWorkers: "block" });
 
 test("MCP接続はメールログイン・店舗選択・明示同意を経て認可コードを返し、利用者が連携を失効できる", async ({
   page,

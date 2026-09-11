@@ -6,7 +6,8 @@ import { z } from "zod";
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 
-test.use({ trace: "off" });
+// 再試行を検証するHTTP境界をSWに迂回させない。
+test.use({ trace: "off", serviceWorkers: "block" });
 declare global {
   interface Window {
     tablecastLayoutShift: number;
