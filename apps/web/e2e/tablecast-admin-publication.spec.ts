@@ -59,7 +59,11 @@ for (const { language, labels, locale } of [
       await expect(
         page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
       ).toBeVisible();
-      // ログイン直後のdocument遷移と競合させず、利用者と同じリンクで編集へ進む。
+      // SSRの見出しだけで進まず、既存のhydration制御で操作可能になったことを確認する。
+      await expect(
+        page.getByRole("button", { name: labels.admin_validate, exact: true }),
+      ).toBeEnabled();
+      // 利用者と同じリンクで編集へ進む。
       await page.getByRole("link", { name: labels.editor_products, exact: true }).click();
       await page
         .getByRole("row")
