@@ -101,7 +101,7 @@ APIではroute・Mastra Tool・MCPが同じ注文操作関数を呼び、必要�
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
-`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。生成時に`db/auth-schema.ts`の関連定義を渡し、Better Authのsession/userの関連queryを有効にする。この初期化のためだけにcontextから認証schemaへの依存を許可する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
 
 | 所有者                                                                | 責務                                                                       |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |

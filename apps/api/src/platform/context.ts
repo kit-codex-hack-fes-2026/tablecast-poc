@@ -1,6 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { drizzle } from "drizzle-orm/d1";
 import { createMiddleware } from "hono/factory";
+import * as schema from "../db/auth-schema";
 import type { Actor } from "../modules/auth/model";
 import { createAuth } from "../modules/auth/service";
 // Worker bindingと依存の寿命をHTTPリクエストに揃える。業務関数はHonoへ依存しない。
@@ -9,7 +10,7 @@ export function createApiServices(
   requestId?: string,
   backgroundTasks?: NonNullable<BetterAuthOptions["advanced"]>["backgroundTasks"],
 ) {
-  const db = drizzle(env.TABLECAST_DB);
+  const db = drizzle(env.TABLECAST_DB, { schema });
   let auth: ReturnType<typeof createAuth> | undefined;
   return {
     env,

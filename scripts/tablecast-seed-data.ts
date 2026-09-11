@@ -61,7 +61,7 @@ function event(
   };
 }
 async function insertSession(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   statements: (BatchItem<"sqlite"> | SeedEvent)[],
 ) {
   const queries: BatchItem<"sqlite">[] = [];
@@ -125,7 +125,12 @@ function snapshotFor(
   };
 }
 
-function confirmation(db: DrizzleD1Database, storeId: string, snapshot: Snapshot, at: number) {
+function confirmation(
+  db: DrizzleD1Database<typeof identity>,
+  storeId: string,
+  snapshot: Snapshot,
+  at: number,
+) {
   return db.insert(business.confirmations).values({
     id: snapshot.id,
     store_id: storeId,
@@ -141,7 +146,7 @@ function confirmation(db: DrizzleD1Database, storeId: string, snapshot: Snapshot
 }
 
 function order(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   storeId: string,
   snapshot: Snapshot,
   status: "submitted" | "accepted" | "served",
@@ -161,7 +166,7 @@ function order(
   });
 }
 function payment(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   storeId: string,
   sessionId: string,
   userId: string,
@@ -181,7 +186,7 @@ function payment(
   });
 }
 
-async function seedHistory(db: DrizzleD1Database, store: Store, owner: Owner) {
+async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store, owner: Owner) {
   const previous = await db
     .select({ id: business.tableSessions.id })
     .from(business.tableSessions)
@@ -346,7 +351,7 @@ async function seedHistory(db: DrizzleD1Database, store: Store, owner: Owner) {
 }
 
 async function seedCurrentTables(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   store: Store,
   owner: Owner,
   baseTime: number,
@@ -520,7 +525,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   await seedMenuImages(env.TABLECAST_MEDIA);
-  const db = drizzle(env.TABLECAST_DB);
+  const db = drizzle(env.TABLECAST_DB, { schema: identity });
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
   const mockAccounts = await db

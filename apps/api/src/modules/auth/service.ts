@@ -15,7 +15,7 @@ export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
 export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],
-  db: Database = drizzle(env.TABLECAST_DB),
+  db: Database = drizzle(env.TABLECAST_DB, { schema }),
   backgroundTasks?: NonNullable<BetterAuthOptions["advanced"]>["backgroundTasks"],
 ) {
   ensure(

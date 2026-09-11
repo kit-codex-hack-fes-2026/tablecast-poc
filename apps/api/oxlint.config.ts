@@ -136,6 +136,11 @@ export default defineConfig({
             from: { file: { categories: from } },
             allow: { to: { file: { categories: to } } },
           })),
+          // リクエストのDrizzle生成時に認証の関連queryを有効にする。
+          {
+            from: { file: { categories: "context" } },
+            allow: { to: { file: { path: "src/db/auth-schema.ts" } } },
+          },
           { allow: { to: { module: { origin: ["external", "core"] } } } },
           {
             from: {

@@ -5,6 +5,7 @@
   "compatibility_date": "2026-09-03",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_do_not_populate_process_env"],
   "workers_dev": false,
+  "placement": { "mode": "smart" },
   "vars": {
     "TABLECAST_PUBLIC_ORIGIN": "http://localhost:3000",
     "TABLECAST_ENV": "development",
