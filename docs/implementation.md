@@ -33,7 +33,7 @@ PythonのLiveKit coreとInworld plugin、uv/ty/ruff/pytestを合わせ、lockfil
 
 通常の日本語・英語STT/TTS、Inworld演技とbreak、字幕からのタグ除去、PythonからHono/Mastra streamを確認する。
 STTに話者・時刻がない場合だけ公式pluginへpatchし、上流と同じ試験を行う。
-LLM生成の中断、HTTP取消、音声停止、再開、注文確認の固定読上げ受渡しを最小構成で確認する。
+LLM生成の中断、HTTP取消、音声停止、再開、GPT-Liveの業務委任と自然な注文確認を最小構成で確認する。
 未検証の接続を型キャストやmock成功で隠して大量のUI実装へ進まない。必要な機能を維持できない点は証拠と選択肢を記録する。
 
 ## 段階2: GUIから実業務までの縦断

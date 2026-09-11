@@ -23,7 +23,7 @@ bun --no-env-file run dev
 | ------------- | -------------------------------------------------------------------------- |
 | `apps/web`    | TanStack Start、shadcn、Base UI、Tailwind、Lucide、Simple Flags、Paraglide |
 | `apps/api`    | Hono、Mastra、Better Auth、Drizzle、D1、Durable Objects、R2、Images、MCP   |
-| `livekit`     | Python LiveKit Agent、OpenAI Realtime 2.1、Inworld TTS                     |
+| `livekit`     | Python LiveKit Agent、OpenAI GPT-Live 1、Mastraへのclient delegation       |
 | `assets/demo` | 生成した商品画像12点、プロンプト、出所、SHA-256                            |
 | `scripts`     | worktree内の開発環境と決定的な合成データ                                   |
 

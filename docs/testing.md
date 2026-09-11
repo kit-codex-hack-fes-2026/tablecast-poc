@@ -17,7 +17,7 @@
 | 純粋ロジック | Vitest / pytest                             | 価格、数量、プラン、snapshot、読上げ表記   |
 | API統合      | Cloudflare公式Vitest連携、実local D1/DO     | 認証、SQL制約、原子性、失効、MCP、stream   |
 | UI統合       | Storybook addon / Vitest Browser + React    | 状態、操作、日英、focus、query・通知、a11y |
-| 音声接続     | pytest + 実AgentSession + 固定provider      | Realtime hook・turn・tool、取消、タグ整形  |
+| 音声接続     | pytest + 実AgentSession + 固定provider      | GPT-Live委任・字幕保存、取消、業務turn     |
 | 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie      |
 | 有料・実機   | 実LLM/STT/TTS、iPad                         | 読み、演技、騒音、エコー、barge-in、実遅延 |
 
@@ -127,7 +127,7 @@ macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guid
 
 Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
 
-Realtimeの固定provider試験は公開VAD入力→API認可→生成イベント→字幕・tool HTTPを通す。実モデル、TTS音声品質、全割込・エラー経路を保証するものではない。既存のTTS WebSocket・旧経路の試験は担当する契約を残す。
+GPT-Liveは公開委任イベント・SDK字幕とHTTPの境界を無課金で検証する。APIでは実Mastra/D1を使い、確認準備後の本文生成と次の発話の注文確定を通す。モデルの意味判断、実際の音声品質、全割込・エラー経路は有料・実機試験として区別する。
 
 個別の実行例:
 

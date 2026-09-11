@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { DemoViewport } from "./demo-viewport";
 const meta = {
   title: "店舗/デモ端末枠",

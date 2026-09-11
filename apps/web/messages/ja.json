@@ -497,5 +497,6 @@
   "demo_updating": "設定を反映しています。音声は停止し、再開後に新しい設定を使用します。",
   "demo_plan_removed": "選択したプランが新しい設定にないため、プランなしへ変更しました。",
   "demo_update_available": "設定に更新があります。再読み込みで反映します。",
-  "demo_up_to_date": "設定は最新です"
+  "demo_up_to_date": "設定は最新です",
+  "voice_default_marin": "Marin（既定）"
 }

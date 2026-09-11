@@ -60,7 +60,7 @@ export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 
 export const voiceTurnSchema = z
   .object({
-    transport: z.enum(["cascade", "realtime"]).default("cascade"),
+    transport: z.enum(["cascade", "realtime", "live"]).default("cascade"),
     turnId: id,
     voiceSessionId: id,
     locale: localeSchema,
@@ -111,4 +111,14 @@ export const toolSchema = sessionBody
 
 export const playbackSchema = sessionBody
   .extend({ text: z.string().max(10000), interrupted: z.boolean() })
+  .strict();
+
+export const conversationItemSchema = z
+  .object({
+    voiceSessionId: id,
+    itemId: id,
+    role: z.enum(["user", "assistant"]),
+    text: z.string().min(1).max(10000),
+    interrupted: z.boolean().default(false),
+  })
   .strict();

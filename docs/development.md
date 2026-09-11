@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono/Mastra、D1、DO、R2、Imagesの対応範囲、LiveKit Server、Python Agent、MCP、Storybook。
-通常音声の外部通信はOpenAI Realtime 2.1とInworld TTSを使う。Pythonのenvはuv自身が `.env.local` と生成済みの `.local/.env.voice` から読む。Bunによる資格の転送は行わない。`TABLECAST_MODEL` はMastraのテキスト応答・自発接客用で、通常音声モデルは `gpt-realtime-2.1` に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声の外部通信はOpenAI GPT-Live 1と委任先Mastraを使う。Pythonのenvはuv自身が `.env.local` と生成済みの `.local/.env.voice` から読む。Bunによる資格の転送は行わない。`TABLECAST_MODEL` はMastraの業務委任・自発接客用で、通常音声モデルは `gpt-live-1` に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験
@@ -99,7 +99,7 @@ LiveKitのUDPはこのWeb入口とは独立する。signalingを既存proxyで�
 ## 秘密情報と `.worktreeinclude`
 
 ルートの `.env.local` だけをコピー対象にする。開発専用の資格と設定項目は `.env.example` に揃える。Bunの読込順と旧ファイルからの移行は [セットアップ](setup.md#4-envとpython音声) に従う。
-`INWORLD_API_KEY` のような外部SDKが要求する変数名は変更しない。独自変数にだけTABLECAST prefixを使う。
+`OPENAI_API_KEY` のような外部SDKが要求する変数名は変更しない。独自変数にだけTABLECAST prefixを使う。
 PORT、PUBLIC_ORIGIN、state path、認証secret、LiveKit開発鍵、Cloudflare本番資格、TLS秘密鍵は共有ファイルに入れない。
 これらはworktree初期化で生成し `.local` に置く。envをshellとしてevalせず、標準env読込みで必要な値だけ各runtimeへ渡す。
 
@@ -129,7 +129,7 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 
 ローカルの `TABLECAST_RELEASE_SHA` は設定生成時のGit HEADを使う。追跡対象の変更や未追跡ファイルがある場合は `-dirty` を付け、commitと完全一致する実行と区別する。無視対象の `.local` や秘密設定は対象外とする。編集中の全状態を復元できる識別子ではなく、変更後は再起動して診断情報を更新する。
 
-標準音声の一覧・検証だけを使う場合は、開発用Read権限キーを `.env.local` の `TABLECAST_INWORLD_VOICES_API_KEY` に設定して再起動する。APIの `.local/.dev.vars` へ渡し、ブラウザーへ公開しない。Python AgentではこのRead専用キーを使用しない。このキー単独では音声受付・Agentを起動しない。実在候補の取得には外部接続が必要で、無資格の試験はprovider境界のfixtureと区別する。
+標準音声Marin・CedarはAPIの固定候補から選ぶ。外部の音声一覧用キーは不要。GPT-Liveの利用資格と実音声試験は無課金の境界試験と区別する。
 破壊的操作はlocal targetとworktree所有を検査し、remote/productionを拒否する。アプリが書込み中のDBファイルを無造作に削除しない。
 同じ番号のmigrationとlockfileを並列生成しないよう統合担当を決める。Git hooksは各checkoutの現行設定を使い、共通Git設定を勝手に変更しない。
 

@@ -101,7 +101,7 @@ export async function startVoiceTurn(
       .update(business.tableSessions)
       .set({ active_turn_id: input.turnId })
       .where(
-        sql`id=${session.id} AND voice_state='active' AND voice_session_id=${input.voiceSessionId} AND status='open' AND locale=${input.locale} ${proactive ? sql`${proactiveReservationCondition(startedAt, startedAt - 180_000)}` : sql``}`,
+        sql`id=${session.id} AND voice_state='active' AND voice_session_id=${input.voiceSessionId} AND status='open' AND locale=${input.locale} AND NOT EXISTS(SELECT 1 FROM voice_turns WHERE id=${input.turnId}) ${proactive ? sql`${proactiveReservationCondition(startedAt, startedAt - 180_000)}` : sql``}`,
       ),
     db
       .insert(business.voiceTurns)
@@ -119,24 +119,14 @@ export async function startVoiceTurn(
               text: input.messages.at(-1)?.content,
               speaker: input.speaker ?? null,
             },
-      )},${startedAt} FROM table_sessions WHERE id=${session.id} AND active_turn_id=${input.turnId} AND changes()=1`,
+      )},${startedAt} FROM table_sessions WHERE id=${session.id} AND active_turn_id=${input.turnId} AND changes()=1 AND ${input.transport !== "live" || proactive}`,
     ),
     db
       .update(business.voiceTurns)
       .set({ status: "interrupted", ended_at: startedAt })
       .where(
-        sql`table_session_id=${session.id} AND id<>${input.turnId} AND status='started' AND changes()=1`,
+        sql`table_session_id=${session.id} AND id<>${input.turnId} AND status='started' AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${session.id} AND active_turn_id=${input.turnId})`,
       ),
-    ...(!proactive
-      ? [
-          db
-            .update(business.confirmations)
-            .set({ status: "invalid" })
-            .where(
-              sql`table_session_id=${session.id} AND channel='voice' AND status='pending' AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${session.id} AND active_turn_id=${input.turnId})`,
-            ),
-        ]
-      : []),
   ]);
   if (proactive && result[0]?.meta.changes !== 1) {
     logVoiceTurn(diagnostics, "skipped");
@@ -218,7 +208,10 @@ export async function startVoiceTurn(
       stopWhen: ({ steps }: { steps: readonly { toolCalls: readonly { toolName: string }[] }[] }) =>
         steps.some((step) =>
           step.toolCalls.some((call) =>
-            ["prepareConfirmation", "setLanguage"].includes(call.toolName),
+            (input.transport === "live"
+              ? ["setLanguage"]
+              : ["prepareConfirmation", "setLanguage"]
+            ).includes(call.toolName),
           ),
         ),
     })

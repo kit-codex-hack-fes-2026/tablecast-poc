@@ -161,7 +161,7 @@ describe("音声HTTPとMastraの接続契約", () => {
     expect(claims.video?.canPublishSources).toEqual(["microphone"]);
     expect(claims.roomConfig?.agents[0]?.agentName).toBe("tablecast-voice");
   });
-  it("未選定のvoiceは接続済みと扱わず設定エラーにする", async () => {
+  it("未選定のvoiceは標準Marinを返す", async () => {
     await setupFixture();
     await setVoiceSession(createApiServices(env), device, voiceId);
     const response = await app.request(
@@ -169,7 +169,8 @@ describe("音声HTTPとMastraの接続契約", () => {
       { headers: authHeaders },
       env,
     );
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ voice: "marin" });
   });
   it("音声のLunaへ推論なしと業務toolsを送信し実D1とMastraから日本語textだけを返す", async () => {
     await setupFixture();
@@ -696,4 +697,117 @@ it("ツール前の声かけを結果待ちせず同じHTTP応答へstreamし完
     await reader.cancel();
     await waitOnExecutionContext(context);
   }
+});
+
+describe("GPT-LiveからのMastra委任", () => {
+  it("Given カート When 確認を委任して次の発話で承認する Then 自然な確認を返して一度だけ注文する", async () => {
+    await setupFixture();
+    await updateCart(createApiServices(env), device, {
+      expectedVersion: 0,
+      lines: [{ id: "tea-line", productId: "tea", quantity: 2, selections: [] }],
+    });
+    await setVoiceSession(createApiServices(env), device, voiceId);
+    const provider = modelResponse(
+      completion(
+        { role: "assistant", content: "ほうじ茶二杯、合計八百円です。注文してよろしいですか。" },
+        "stop",
+      ),
+    );
+    const toolResponse = (name: string, args: object, callId: string) =>
+      new Response(
+        completion(
+          {
+            role: "assistant",
+            tool_calls: [
+              {
+                index: 0,
+                id: callId,
+                type: "function",
+                function: { name, arguments: JSON.stringify(args) },
+              },
+            ],
+          },
+          "tool_calls",
+        ),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    provider.mockResolvedValueOnce(
+      toolResponse("prepareConfirmation", { expectedVersion: 1 }, "tablecast-live-prepare"),
+    );
+    const delegate = async (turnId: string, text: string) => {
+      const context = createExecutionContext();
+      const response = await app.request(
+        "/internal/voice/turns",
+        {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            transport: "live",
+            voiceSessionId: voiceId,
+            turnId,
+            locale: "ja",
+            messages: [{ role: "user", content: text }],
+          }),
+        },
+        modelEnv(),
+        context,
+      );
+      expect(response.status).toBe(200);
+      const result = await response.text();
+      await waitOnExecutionContext(context);
+      return result;
+    };
+    expect(await delegate("tablecast-live-confirm", "注文内容を確認して")).toContain(
+      "注文してよろしいですか",
+    );
+    expect(provider).toHaveBeenCalledTimes(2);
+    const snapshot = await getVoiceConfirmation(createApiServices(env), {
+      ...device,
+      kind: "voice",
+      voiceSessionId: voiceId,
+      turnId: "tablecast-live-confirm",
+    });
+    if (!snapshot) throw new Error("確認が作成されていません");
+    expect(snapshot.status).toBe("pending");
+    provider.mockResolvedValueOnce(
+      toolResponse(
+        "submitOrder",
+        { snapshotId: snapshot.id, approved: true, idempotencyKey: "tablecast-live-order" },
+        "tablecast-live-submit",
+      ),
+    );
+    provider.mockResolvedValueOnce(
+      new Response(completion({ role: "assistant", content: "注文を受け付けました。" }, "stop"), {
+        headers: { "content-type": "text/event-stream" },
+      }),
+    );
+    expect(await delegate("tablecast-live-approve", "はい、注文してください")).toBe(
+      "注文を受け付けました。",
+    );
+    expect((await getTableState(createApiServices(env), device)).orders).toHaveLength(1);
+    const context = createExecutionContext();
+    const repeated = await app.request(
+      "/internal/voice/turns",
+      {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          transport: "live",
+          voiceSessionId: voiceId,
+          turnId: "tablecast-live-approve",
+          locale: "ja",
+          messages: [{ role: "user", content: "はい" }],
+        }),
+      },
+      modelEnv(),
+      context,
+    );
+    expect(repeated.status).toBe(409);
+    await waitOnExecutionContext(context);
+    const events = (await getEvents(createApiServices(env), device)).events;
+    expect(
+      events.filter((event) => event.kind === "voice.user" || event.kind === "voice.assistant"),
+    ).toHaveLength(0);
+    expect(events.filter((event) => event.kind === "voice.tool")).toHaveLength(4);
+  });
 });

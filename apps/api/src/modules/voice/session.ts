@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
-import { getCatalog } from "../catalog/queries";
 import { getSession, getTableState } from "../tables/queries";
 import { issueVoiceToken, stopVoiceRoom } from "../voice/runtime";
 import { setVoiceSession } from "../voice/service";
@@ -10,8 +9,6 @@ export async function startVoiceSession(services: ApiServices, actor: Actor) {
   const row = await getSession(services, actor);
   ensure(row.voice_state !== "active", "VOICE_ALREADY_ACTIVE", 409);
   ensure(services.env.TABLECAST_VOICE_ENABLED === "true", "VOICE_NOT_CONFIGURED", 503);
-  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-  ensure(catalog.configuration.cast.voice[row.locale], "VOICE_NOT_CONFIGURED", 503);
   const id = crypto.randomUUID();
   const token = await issueVoiceToken(services.env, id);
   await setVoiceSession(services, actor, id, undefined, row.voice_version);

@@ -41,7 +41,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 - Bun workspaces + Turborepo。JS依存はルート `bun.lock`、Pythonは `livekit/pyproject.toml` と `livekit/uv.lock`。
 - `apps/web`: TanStack Start、Base UI、日英UI。Storybookは `apps/web/.storybook`、Storyは部品に隣接。
 - `apps/api`: Hono、Mastra、Better Auth、Drizzle、D1、DO、R2、Images、MCP。DBと業務判断の所有者。
-- `livekit`: Python LiveKit Agent、OpenAI Realtime 2.1音声入力・テキスト出力 + Inworld TTSのhalf-cascade。uv、ty、ruff、pytestを使用。
+- `livekit`: Python LiveKit Agent、OpenAI GPT-Live 1音声入出力 + 既存Mastraへのclient delegation。uv、ty、ruff、pytestを使用。
 - 初期実装では `packages/domain`、`packages/contracts`、`packages/ui`、`apps/storybook` を作らない。
 - ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。
 
@@ -60,7 +60,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 - 音声が停止してもGUI・カート・会計状態を維持する。客向けの自由文テキスト入力は作らない。
 - 店舗・卓の境界を必ず認可する。ログに秘密情報を出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaを使ったDrizzleに統一する。`env.TABLECAST_DB.prepare()`などの直接操作を新設しない。複数操作は`db.batch()`を使う。生SQLはmigration・PRAGMA・query builderで表現できないクエリに限定する。
-- Inworld公式プラグインの不足は最小パッチとSHA固定で補う。独自STTクライアント、private monkeypatch、site-packages編集は禁止。
+- 公式LiveKit GPT-Liveプラグインを使う。独自STTクライアント、private monkeypatch、site-packages編集は禁止。
 
 ## 作業と検証
 
