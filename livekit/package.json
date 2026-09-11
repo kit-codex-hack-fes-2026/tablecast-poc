@@ -3,14 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "uv run tablecast-voice dev",
-    "start": "uv run tablecast-voice start",
-    "download-files": "uv run tablecast-voice download-files",
     "lint": "uv run ruff check .",
     "format": "uv run ruff format .",
     "format:check": "uv run ruff format --check .",
     "typecheck": "uv run ty check src tests",
-    "test": "uv run pytest",
-    "test:voice:live": "uv run tablecast-voice-check"
+    "test": "uv run pytest"
   }
 }

@@ -2,7 +2,7 @@
 
 版: **0.4** / 更新日: **2026-09-07** / 状態: **ローカル実音声接続を検証済み、実iPad・公開環境の受入は未実施**
 
-起動方法は [ルートREADME](../README.md)、実施した検証と残件は [進捗記録](progress.md) を参照する。Codexの作業方針は [AGENTS.md](../AGENTS.md) に置く。
+clone・worktree・起動方法は [セットアップ](setup.md)、実施した検証と残件は [進捗記録](progress.md) を参照する。Codexの作業方針は [AGENTS.md](../AGENTS.md) に置く。
 
 ## 最新の決定
 
@@ -16,6 +16,7 @@ Web/APIを2 Workersに保ち、Python音声Agentだけ別runtimeへ置く。Bun 
 
 | 文書                                   | 所有する仕様                                         |
 | -------------------------------------- | ---------------------------------------------------- |
+| [セットアップ](setup.md)               | clone、worktree、Dev Container・mise、env、初回確認  |
 | [製品と業務](product.md)               | 対象、認証、注文、カスタマイズ、プラン、会計、安全性 |
 | [認証・アカウント](authentication.md)  | Google、パスキー、招待、プロフィール、メール         |
 | [Codexプラグイン](codex-plugin.md)     | OAuth接続、ローカル検証、GitHub配布                  |

@@ -15,12 +15,9 @@ logs
 _.log
 report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+# envの秘密値は共有せず、exampleだけを追跡する
+.env*
+!.env*.example
 
 # caches
 .eslintcache
@@ -37,7 +34,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .local/
 .wrangler/
 .turbo/
-.env.secrets.local
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

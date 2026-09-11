@@ -1,6 +1,6 @@
 # ローカル開発とworktree
 
-[索引](README.md)
+[索引](README.md) · [cloneからのセットアップ](setup.md)
 
 ## 基本構成
 
@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono/Mastra、D1、DO、R2、Imagesの対応範囲、LiveKit Server、Python Agent、MCP、Storybook。
-通常音声の外部通信はOpenAI Realtime 2.1とInworld TTSを使う。開発ランチャーは `.env.secrets.local` の `TABLECAST_MODEL_API_KEY` をPythonの `OPENAI_API_KEY` として渡す。`TABLECAST_MODEL` は既存のテキスト比較試験用で、通常音声モデルは `gpt-realtime-2.1` に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声の外部通信はOpenAI Realtime 2.1とInworld TTSを使う。Pythonのenvはuv自身が `.env.local` と生成済みの `.local/.env.voice` から読む。Bunによる資格の転送は行わない。`TABLECAST_MODEL` はMastraのテキスト応答・自発接客用で、通常音声モデルは `gpt-realtime-2.1` に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験
@@ -60,7 +60,7 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 
 ルートで `bun install --frozen-lockfile`、`bun run codegen`、`bun run storybook` を順に実行する。Storybookだけを起動し、runtime未作成なら既存のポート予約処理でworktree専用ポートを確保する。DBの準備やWorkers・音声Agentの起動は不要である。
 
-起動ログの `TableCast Storybook MCP` URLを、Git管理外の `.codex/config.toml` に登録する。下記の `<port>` は表示されたポートへ置換する。既存の設定がある場合は保持して次のテーブルを統合し、同名のテーブルがあればURLを更新する。TableCast業務MCP用の `scripts/tablecast-plugin.ts` も使う場合は先に実行し、生成済みファイルの先頭にある `# TableCast generated local MCP` を削除して手動管理へ切り替えてから追記する。これにより後の再生成が手動設定を上書きしない。
+Storybookの起動ログのURLへ `/mcp` を付け、Git管理外の `.codex/config.toml` に登録する。標準ポートは6006で、他worktreeが使う場合は `bun run storybook --port 6007` などで指定する。既存のCodex設定は保持して次のテーブルを統合する。
 
 ```toml
 [mcp_servers.tablecast-storybook]
@@ -77,7 +77,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 小さなbootstrapでWeb、Inspector、LiveKit signaling、RTC TCP、UDP mux、Agent health、Storybookをまとめて割り当てる。
 既存のポート割当て機能を先に使い、不足するUDP等だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
-一つのruntime manifestにホスト、port、state、PID、生成configを記録する。ポートを複数package.jsonへ直書きしない。
+一つのruntime manifestにホスト、port、state、生成configを記録する。ポートを複数package.jsonへ直書きしない。
 同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。
 空き確認後にも競合し得るため、bind失敗時は別の予約で起動し直す。既存プロセスをkillしてポートを奪わない。
 フレームワークの自動port繰上げを無効にし、古いOAuth callbackや間違ったworktreeへ接続しないようにする。
@@ -85,7 +85,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
 共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
 
-Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。`dev:parity` は実行ごとに自環境を停止し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
+Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。通常開発をCtrl+Cで停止してから `dev:parity` を実行し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
 
 公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時は[CI/CD手順](deployment.md)で生成した環境別configをbuildへ渡し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
 
@@ -98,7 +98,7 @@ LiveKitのUDPはこのWeb入口とは独立する。signalingを既存proxyで�
 
 ## 秘密情報と `.worktreeinclude`
 
-ルートの `.env.secrets.local` だけをコピー対象にする。開発専用で権限と利用予算を制限したLLM/Inworld資格のみを入れる。
+ルートの `.env.local` だけをコピー対象にする。開発専用の資格と設定項目は `.env.example` に揃える。Bunの読込順と旧ファイルからの移行は [セットアップ](setup.md#4-envとpython音声) に従う。
 `INWORLD_API_KEY` のような外部SDKが要求する変数名は変更しない。独自変数にだけTABLECAST prefixを使う。
 PORT、PUBLIC_ORIGIN、state path、認証secret、LiveKit開発鍵、Cloudflare本番資格、TLS秘密鍵は共有ファイルに入れない。
 これらはworktree初期化で生成し `.local` に置く。envをshellとしてevalせず、標準env読込みで必要な値だけ各runtimeへ渡す。
@@ -112,24 +112,24 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 
 以下のコマンドを実装済み。初回はDockerを起動して依存を導入する。外部音声設定が未登録でもGUI注文とローカルLiveKitは起動する。
 
-| コマンド                                   | 役割                                                  |
-| ------------------------------------------ | ----------------------------------------------------- |
-| `bun install`                              | 固定方針に従ってJS依存を導入                          |
-| `uv sync --project livekit`                | Python依存を導入                                      |
-| `bun run dev:prepare`                      | worktree ID・ports・config・local migration・初期seed |
-| `bun run dev`                              | Web/API、ローカルLiveKit、Python Agentを起動          |
-| `bun run dev:parity`                       | build済みWorkersのローカル疎通                        |
-| `bun run dev:status`                       | URL・port・process・stateの対応を表示。秘密情報は除外 |
-| `bun run storybook`                        | Web内のStorybookだけを起動                            |
-| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                |
-| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                              |
-| `bun run dev:stop`                         | 自worktreeで開始したものだけ停止                      |
+| コマンド                                   | 役割                                                      |
+| ------------------------------------------ | --------------------------------------------------------- |
+| `bun install`                              | 固定方針に従ってJS依存を導入                              |
+| `uv sync --project livekit`                | Python依存を導入                                          |
+| `bun run dev:prepare`                      | worktree ID・ports・config・local migration・初期seed     |
+| `bun run dev`                              | TurboでWeb/API・OAuth・proxy、Composeで周辺サービスを起動 |
+| `bun run dev:parity`                       | build済みWorkersのローカル疎通                            |
+| `bun run services:status`                  | Composeサービスの状態と公開port                           |
+| `bun run storybook`                        | Web内のStorybookだけを起動                                |
+| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                    |
+| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                  |
+| Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する               |
 
-実装は `scripts/tablecast-dev.ts` と `scripts/tablecast-runtime.ts`。起動時はWeb/APIとLiveKitの疎通を確認し、状態とログの場所を表示する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
+起動順は `turbo.json`、実行するCLIは各 `package.json` に定義する。 ホストの外部サービスはルート `compose.yaml`、Dev Container固有の構成は `.devcontainer/compose.yaml` に置く。worktree固有設定だけを `scripts/tablecast-runtime.ts` で生成する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
 
 ローカルの `TABLECAST_RELEASE_SHA` は設定生成時のGit HEADを使う。追跡対象の変更や未追跡ファイルがある場合は `-dirty` を付け、commitと完全一致する実行と区別する。無視対象の `.local` や秘密設定は対象外とする。編集中の全状態を復元できる識別子ではなく、変更後は再起動して診断情報を更新する。
 
-標準音声の一覧・検証だけを使う場合は、開発用Read権限キーを `.env.secrets.local` の `TABLECAST_INWORLD_VOICES_API_KEY` に設定して再起動する。APIの `.local/.dev.vars` へだけ渡し、ブラウザーとPythonへは渡さない。このキー単独では音声受付・Agentを起動しない。実在候補の取得には外部接続が必要で、無資格の試験はprovider境界のfixtureと区別する。
+標準音声の一覧・検証だけを使う場合は、開発用Read権限キーを `.env.local` の `TABLECAST_INWORLD_VOICES_API_KEY` に設定して再起動する。APIの `.local/.dev.vars` へ渡し、ブラウザーへ公開しない。Python AgentではこのRead専用キーを使用しない。このキー単独では音声受付・Agentを起動しない。実在候補の取得には外部接続が必要で、無資格の試験はprovider境界のfixtureと区別する。
 破壊的操作はlocal targetとworktree所有を検査し、remote/productionを拒否する。アプリが書込み中のDBファイルを無造作に削除しない。
 同じ番号のmigrationとlockfileを並列生成しないよう統合担当を決める。Git hooksは各checkoutの現行設定を使い、共通Git設定を勝手に変更しない。
 
@@ -139,3 +139,9 @@ iPadのマイクは安全なコンテキストで試す。信頼されたロー�
 Cloudの強化音声処理は必要な追加比較として分離し、日常開発の成立条件にしない。
 本番はWeb/APIの2 Workers、D1・DO・R2・Images、LiveKit Cloudまたは対応コンテナのPython Agentを対象とする。
 公式設定を確認してデプロイし、設定・migration・secret・release SHA・ロールバック方法を記録する。音声の本番接続先もInworldのままにする。
+
+## タスクの所有者
+
+`package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthとproxyを併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
+
+独自のdev daemonは持たない。WebはCtrl+C、PythonはuvのターミナルでCtrl+C、ホストのDockerサービスは `bun run services:down` で終了する。Python用のenvをJS側で解決しない。具体的なコマンドは [setup.md](setup.md) にまとめる。

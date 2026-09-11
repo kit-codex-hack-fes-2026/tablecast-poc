@@ -2,19 +2,14 @@
   "name": "TableCast",
   "dockerComposeFile": "compose.yaml",
   "service": "tablecast",
-  "workspaceFolder": "/workspaces/tablecast",
+  "workspaceFolder": "${localWorkspaceFolder}",
   "shutdownAction": "stopCompose",
   "initializeCommand": [
     "sh",
     "${localWorkspaceFolder}/.devcontainer/tablecast-init.sh",
     "${localWorkspaceFolder}"
   ],
-  "postCreateCommand": "bun --no-env-file install --frozen-lockfile && uv sync --project livekit --frozen",
-  "postStartCommand": "bun run dev",
-  "forwardPorts": [3000, 8025],
-  "portsAttributes": {
-    "3000": { "label": "TableCast", "onAutoForward": "openBrowser" },
-    "8025": { "label": "TableCast Mailpit", "onAutoForward": "silent" }
-  },
+  "postCreateCommand": "bun run setup",
+  "forwardPorts": [],
   "remoteUser": "root"
 }

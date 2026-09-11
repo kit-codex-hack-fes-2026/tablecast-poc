@@ -8,7 +8,6 @@ dependencies = [
   "livekit-agents[inworld,openai,silero]==1.8.0",
   "livekit-plugins-inworld==1.8.0",
   "httpx>=0.28.1,<0.29",
-  "python-dotenv>=1.2,<2",
   "opentelemetry-sdk>=1.39,<2",
   "opentelemetry-exporter-otlp-proto-http>=1.39,<2",
 ]

@@ -54,21 +54,21 @@ prodは環境を`production`へ変えてPR条件を外す。ローカルは`deve
 
 ## ローカル起動とMCP
 
-`bun run dev`でworktree専用のLGTMも起動する。ポートは`.local/runtime.json`の`grafana`・`otlp`・`tempo`に記録する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、`dev:stop`はこのworktreeのcontainerだけを停止する。Dev ContainerはComposeの`tablecast-lgtm`を使う。
+`bun run dev`でworktree専用のLGTMも起動する。ポートは`.local/runtime.json`の`grafana`・`otlp`・`tempo`に記録する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、WebはTurboのターミナルでCtrl+C、Dockerサービスは `bun run services:down` で停止する。この操作は自worktreeのcontainerとnetworkを片付け、volumeを保持する。Dev ContainerはComposeの`tablecast-lgtm`を使う。
+
+LGTMのサービス定義はルート `compose.yaml` を正本とし、Dev Containerからも参照する。`infra/grafana/tempo.yaml` はTempoの実行設定、`infra/grafana/dashboards/` はGrafanaへimportするJSONである。
 
 LGTMは開発用で、host公開はloopbackに限定する。Grafanaは匿名Viewer、設定変更用の初期ログインは`admin` / `admin`。Tempoの読み取りMCPは同梱設定で有効にする。
 
-`infra/grafana/codex.toml.example`のMCP項目をローカル`.codex/config.toml`へ追加する。既存設定は維持する。Codexは信頼済みプロジェクトの設定を読むため、設定追加後はMCPを再接続する。公式`grafana/mcp-grafana:1.3.0`をstdio・`--disable-write`で動かす。Dev Containerでは同じイメージのbinaryを直接実行し、localはCompose内の`tablecast-lgtm:3000`へ接続する。ホストではDockerから起動する。Dockerfile変更後はDev Containerをrebuildする。
+`.codex/config.toml.example`のMCP項目をローカル`.codex/config.toml`へ追加する。既存設定は維持する。Codexは信頼済みプロジェクトの設定を読むため、設定追加後はMCPを再接続する。公式`grafana/mcp-grafana:1.3.0`をstdio・`--disable-write`で動かす。Dev Containerでは同じイメージのbinaryを直接実行し、localはCompose内の`tablecast-lgtm:3000`へ接続する。ホストではDockerから起動する。Dockerfile変更後はDev Containerをrebuildする。
 
 CloudはGrafanaで作成したViewer service account tokenを`.local/tablecast-grafana-read-token`へ改行なしで保存し、`chmod 600`を設定する。送信用Cloud access policy tokenと読み取り用service account tokenを共用しない。Cloudの送信AuthorizationはGitHub Actions secret `TABLECAST_OTEL_AUTHORIZATION`からAPIとWebへ渡す。Viteの公開varsやGitには含めない。今回の送信tokenは90日で失効するため、期限前にGrafanaで更新して同じsecretを入れ替える。
 
-Codexと同じMCPをCLIで確認できる:
+専用のクエリscriptを置かず、[公式MCP Inspector CLI](https://github.com/modelcontextprotocol/inspector/blob/main/clients/cli/README.md)で同じMCPを確認する。`local` を `cloud` に変えるとCloudを対象にする。
 
 ```sh
-bun --no-env-file scripts/tablecast-grafana-query.ts local
-bun --no-env-file scripts/tablecast-grafana-query.ts cloud
-bun --no-env-file scripts/tablecast-grafana-query.ts local query_loki_logs '{"datasourceUid":"loki","logql":"{service_namespace=\"tablecast\"} | http_route=\"/api/table/orders\"","limit":5}'
-bun --no-env-file scripts/tablecast-grafana-query.ts local tempo_traceql-search '{"datasourceUid":"tempo","query":"{name=\"tablecast.order.submit\"}"}'
+bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/tablecast-grafana-mcp.ts local -- --method tools/list
+bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/tablecast-grafana-mcp.ts local -- --method tools/call --tool-name query_loki_logs --tool-arg datasourceUid=loki --tool-arg 'logql={service_namespace="tablecast"}' --tool-arg limit=5
 ```
 
 Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。MCPはTempo内蔵MCPを自動検出し、`tempo_traceql-search`と`tempo_get-trace`を公開する。LokiはLogQLであり、LogsQL/SQLとは別の言語である。
@@ -95,7 +95,7 @@ GUIで商品をカートへ入れ、確認画面を経て明示承認する。`/
 
 ## 全体の性能集計
 
-`infra/grafana/tablecast-operations.json`をGrafanaのImport dashboardで読み込む。Loki datasource、環境、PR番号、サービスを選ぶ。PR番号の`.*`は全件、`123`はそのPRだけを対象にする。APIを既定サービスとし、Web proxyとAPIの件数を重複合算しない。
+`infra/grafana/dashboards/tablecast-operations.json`をGrafanaのImport dashboardで読み込む。Loki datasource、環境、PR番号、サービスを選ぶ。PR番号の`.*`は全件、`123`はそのPRだけを対象にする。APIを既定サービスとし、Web proxyとAPIの件数を重複合算しない。
 
 HTTPは全ルートの完了ログ、業務処理は`tablecast.operation_completed`から件数・失敗率・p50/p95を集計する。カタログ取得、卓状態、カート、注文確認・確定・状態変更、スタッフ呼出、卓の開始・終了、会計要求・入金、設定公開を同じ操作名で追える。処理内訳の子spanは完了イベントを重ねず、共有操作のネストは操作名別に集計する。業務拒否の`rejected`と障害の`error`を区別する。ログ配送はbest effortなので、これを売上帳簿や厳密な監査件数にしない。
 
@@ -144,7 +144,7 @@ PR番号は調査対象へ置き換える。LogQLでは `{service_name="tablecas
 
 Mastraを実行するcascade経路は`OtelBridge`で現在のWorker traceに参加し、`MastraPlatformExporter`で同じtrace IDをhostedへ送る。通常のLiveKit Realtime経路には架空のMastra実行を作らない。Agent・モデル・toolの時間、使用量、環境・PR・SHA、voice session・turnを両画面で照合する。
 
-Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.secrets.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
+Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
 
 requestごとにObservabilityを所有し、生成終了・失敗・中断の全経路で`waitUntil(observability.shutdown())`を待つ。SDKのbus、exporter、bridgeをflushし、共有するWorker providerをshutdownしない。hosted送信の失敗は業務結果を変えない。導入版の`maxRetries`は初回を含むため1を指定する。無限再試行や重複したshutdownは行わない。
 
@@ -171,7 +171,7 @@ API WorkerのCronが5分ごとに、配備先のvoiceとpreviewのemulateだけ�
 
 例として14:30のCronは14:20以上14:25未満を取得する。5分遅延させた重ならない窓を使い、OTLPの時刻は元の窓の開始時刻を維持する。同じ窓を再実行しても別時刻へ複製しない。取得失敗や遅延到着を後から自動で埋め戻すことはしない。API要求は各10秒で打ち切り、1000行上限やGraphQLの部分失敗も失敗として扱う。
 
-`infra/grafana/tablecast-containers.json`をGrafanaへimportし、Prometheus datasource・環境・PR番号（本番は`prod`）・Container名を指定する。CPU等にはCloudflare application・instance・placement・deployment IDを保持する。OTLPの`service.version`は収集WorkerのSHAであり、過去のContainerイメージのSHAを推測しない。過去の実行はCloudflare deployment IDで照合する。
+`infra/grafana/dashboards/tablecast-containers.json`をGrafanaへimportし、Prometheus datasource・環境・PR番号（本番は`prod`）・Container名を指定する。CPU等にはCloudflare application・instance・placement・deployment IDを保持する。OTLPの`service.version`は収集WorkerのSHAであり、過去のContainerイメージのSHAを推測しない。過去の実行はCloudflare deployment IDで照合する。
 
 ```promql
 # PRごとのメモリ。サンプルの元時刻で描画し、欠測を0で埋めない。

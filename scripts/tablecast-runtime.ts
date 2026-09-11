@@ -44,9 +44,6 @@ const runtimeSchema = z.object({
   state: z.string(),
   apiConfig: z.string(),
   webConfig: z.string(),
-  pid: z.number().int().positive().optional(),
-  nonce: z.string().optional(),
-  mode: z.enum(["development", "parity"]).optional(),
 });
 export type TablecastRuntime = z.infer<typeof runtimeSchema>;
 const ledgerSchema = z.record(z.string(), z.object({ root: z.string(), ports: portsSchema }));
@@ -107,7 +104,8 @@ export function assertLocalRuntime(
       runtime.origin === `http://${localHost(root, common)}.localhost:${runtime.ports.proxy}` ||
       (tablecastContainer &&
         (runtime.origin === "http://localhost:3000" ||
-          runtime.origin === `http://${localHost(root, common)}.container.localhost:3000` ||
+          runtime.origin ===
+            `http://${localHost(root, common)}.container.localhost:${new URL(runtime.origin).port}` ||
           runtime.origin === `https://${localHost(root, common)}.orb.local`))
     ) ||
     new Set(Object.values(runtime.ports)).size !== Object.values(runtime.ports).length
@@ -164,8 +162,8 @@ export async function reserveRuntime() {
         web: 3001,
         inspector: 3002,
         signaling: 7880,
-        rtcTcp: 7881,
-        rtcUdp: 7882,
+        rtcTcp: portSchema.parse(Number(process.env.TABLECAST_RTC_TCP_PORT ?? 7881)),
+        rtcUdp: portSchema.parse(Number(process.env.TABLECAST_RTC_UDP_PORT ?? 7882)),
         agent: 8081,
         storybook: 6006,
         oauth: 3008,
@@ -307,8 +305,36 @@ export function localEnvironment(runtime: TablecastRuntime) {
     WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   };
-  if (process.env.UV_CACHE_DIR) env.UV_CACHE_DIR = process.env.UV_CACHE_DIR;
+  for (const key of [
+    "UV_CACHE_DIR",
+    "UV_PYTHON_INSTALL_DIR",
+    "DOCKER_HOST",
+    "DOCKER_CONTEXT",
+    "DOCKER_CONFIG",
+    "TABLECAST_RTC_TCP_PORT",
+    "TABLECAST_RTC_UDP_PORT",
+  ]) {
+    if (process.env[key]) env[key] = process.env[key];
+  }
   return env;
+}
+
+// Bunが読み込んだ開発設定のうち、起動所有者へ必要な値だけを渡す。
+export function developmentSecrets() {
+  return Object.fromEntries(
+    [
+      "INWORLD_API_KEY",
+      "TABLECAST_MODEL_API_KEY",
+      "TABLECAST_INWORLD_VOICE_JA",
+      "TABLECAST_INWORLD_VOICE_EN",
+      "TABLECAST_INWORLD_VOICES_API_KEY",
+      "TABLECAST_MODEL",
+      "TABLECAST_OTEL_CAPTURE_CONTENT",
+      "TABLECAST_MASTRA_ACCESS_TOKEN",
+      "TABLECAST_MASTRA_PROJECT_ID",
+      "TABLECAST_MASTRA_ENDPOINT",
+    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])),
+  );
 }
 
 export async function writeLocalConfigs(runtime: TablecastRuntime) {
@@ -383,12 +409,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
-  let external: ReturnType<typeof parseEnv> = {};
-  try {
-    external = parseEnv(await readFile(join(tablecastRoot, ".env.secrets.local"), "utf8"));
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
+  const external = developmentSecrets();
   const values: Record<string, string> = {
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
     TABLECAST_VOICE_ENABLED: [
@@ -417,16 +438,75 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
-    "TABLECAST_GOOGLE_CLIENT_ID",
-    "TABLECAST_GOOGLE_CLIENT_SECRET",
   ]) {
     if (external[key]) values[key] = external[key];
   }
+  const writeEnv = (path: string, entries: Record<string, string>) =>
+    writeFile(
+      path,
+      Object.entries(entries)
+        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .join("\n") + "\n",
+      { mode: 0o600 },
+    );
+  await writeEnv(secretPath, values);
+  await writeEnv(join(tablecastLocal, ".env"), {
+    ...Object.fromEntries(
+      Object.entries(localEnvironment(runtime)).filter(
+        ([key]) =>
+          ![
+            "PATH",
+            "HOME",
+            "TMPDIR",
+            "CI",
+            "DOCKER_HOST",
+            "DOCKER_CONTEXT",
+            "DOCKER_CONFIG",
+            "UV_CACHE_DIR",
+            "UV_PYTHON_INSTALL_DIR",
+          ].includes(key),
+      ),
+    ),
+    COMPOSE_PROJECT_NAME: `tablecast-${runtime.id}`,
+    TABLECAST_HOST: worktreeHost(tablecastRoot, tablecastCommon),
+    TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
+    TABLECAST_SIGNALING_PORT: String(runtime.ports.signaling),
+    TABLECAST_RTC_TCP_PORT: String(runtime.ports.rtcTcp),
+    TABLECAST_RTC_UDP_PORT: String(runtime.ports.rtcUdp),
+    TABLECAST_MAILPIT_PORT: String(runtime.ports.mailpit),
+    TABLECAST_SMTP_PORT: String(runtime.ports.smtp),
+    TABLECAST_GRAFANA_PORT: String(runtime.ports.grafana),
+    TABLECAST_OTLP_PORT: String(runtime.ports.otlp),
+    TABLECAST_TEMPO_PORT: String(runtime.ports.tempo),
+  });
+  // 外部資格はここへコピーせず、uv自身が.env.localを読んで展開する。
+  await writeEnv(join(tablecastLocal, ".env.voice"), {
+    LIVEKIT_URL: `ws://127.0.0.1:${runtime.ports.signaling}`,
+    LIVEKIT_API_KEY: values.TABLECAST_LIVEKIT_API_KEY ?? "",
+    LIVEKIT_API_SECRET: values.TABLECAST_LIVEKIT_API_SECRET ?? "",
+    TABLECAST_API_URL: `http://127.0.0.1:${runtime.ports.web}`,
+    TABLECAST_VOICE_API_TOKEN: values.TABLECAST_VOICE_API_TOKEN ?? "",
+    TABLECAST_AGENT_HEALTH_PORT: String(runtime.ports.agent),
+    ...telemetryVars,
+  });
   await writeFile(
-    secretPath,
-    Object.entries(values)
-      .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-      .join("\n") + "\n",
+    join(tablecastLocal, "livekit.yaml"),
+    `port: ${runtime.ports.signaling}\nbind_addresses: ["0.0.0.0"]\nrtc:\n  tcp_port: ${runtime.ports.rtcTcp}\n  udp_port: ${runtime.ports.rtcUdp}\n  node_ip: 127.0.0.1\n  use_external_ip: false\nkeys:\n  ${values.TABLECAST_LIVEKIT_API_KEY}: ${JSON.stringify(values.TABLECAST_LIVEKIT_API_SECRET)}\nlogging:\n  level: warn\n`,
     { mode: 0o600 },
   );
+}
+
+if (import.meta.main) {
+  process.umask(0o077);
+  let previous: TablecastRuntime | undefined;
+  try {
+    previous = await readRuntime();
+    if (!(await portAvailable(previous.ports.web)) || !(await portAvailable(previous.ports.agent)))
+      throw new Error("このworktreeの開発プロセスをCtrl+Cで停止してから初期化してください。");
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  const runtime = !tablecastContainer && previous ? previous : await reserveRuntime();
+  await writeLocalConfigs(runtime);
+  console.info(`TableCast: ${runtime.origin}`);
 }

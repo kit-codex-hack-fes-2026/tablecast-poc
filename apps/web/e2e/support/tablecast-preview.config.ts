@@ -7,7 +7,6 @@ import { z } from "zod";
 const env = z
   .object({
     TABLECAST_E2E_CASE_DIRECTORY: z.string(),
-    TABLECAST_INSPECTOR_PORT: z.coerce.number(),
   })
   .parse(process.env);
 
@@ -17,7 +16,7 @@ export default defineConfig({
   plugins: [
     cloudflare({
       persistState: { path: join(env.TABLECAST_E2E_CASE_DIRECTORY, "state") },
-      inspectorPort: env.TABLECAST_INSPECTOR_PORT,
+      inspectorPort: false,
       remoteBindings: false,
     }),
   ],

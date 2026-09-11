@@ -3,10 +3,8 @@
 import asyncio
 import json
 import os
-from pathlib import Path
 
 import aiohttp
-from dotenv import load_dotenv
 from livekit.agents import APIConnectOptions
 from livekit.plugins import inworld, openai
 
@@ -76,7 +74,6 @@ def main() -> None:
         raise SystemExit(
             "有料試験です。TABLECAST_RUN_PAID_VOICE_TESTS=1 を明示して実行してください。"
         )
-    load_dotenv(Path(__file__).resolve().parents[3] / ".env.secrets.local")
     required = [
         "INWORLD_API_KEY",
         "TABLECAST_MODEL_API_KEY",

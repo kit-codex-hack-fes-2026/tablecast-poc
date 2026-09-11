@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
+import { parseEnv, promisify } from "node:util";
 import { assertLocalRuntime, localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
@@ -59,6 +59,7 @@ describe("開発資源の所有境界", () => {
     const parent = await mkdtemp(join(tmpdir(), "tablecast-container-"));
     const repository = join(parent, "Tablecast_PoC");
     const linked = join(parent, "Voice_UI");
+    const codex = join(parent, "073d", "Tablecast_PoC");
     const execute = promisify(execFile);
     try {
       await mkdir(repository);
@@ -80,21 +81,37 @@ describe("開発資源の所有境界", () => {
         "tablecast fixture",
       );
       await git("worktree", "add", "--detach", linked);
+      await git("worktree", "add", "--detach", codex);
+      const projects = new Set<string>();
       for (const [root, name] of [
         [repository, "main"],
         [linked, "voice-ui"],
+        [codex, "073d"],
       ] as const) {
         await mkdir(join(root, ".devcontainer"));
         await execute("sh", [".devcontainer/tablecast-init.sh", root]);
         expect(worktreeHost(root, join(repository, ".git"))).toBe(`${name}.tablecast-poc`);
-        expect(await readFile(join(root, ".devcontainer/.env"), "utf8")).toBe(
-          `TABLECAST_WORKTREE_NAME=${name}\nTABLECAST_REPO_NAME=tablecast-poc\nTABLECAST_CONTAINER_ORIGIN=http://${name}.tablecast-poc.container.localhost:3000\n`,
+        const settings = parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"));
+        expect(settings.TABLECAST_WORKTREE_NAME).toBe(name);
+        expect(settings.TABLECAST_REPO_NAME).toBe("tablecast-poc");
+        expect(settings.TABLECAST_WORKSPACE_FOLDER).toBe(await realpath(root));
+        expect(settings.TABLECAST_GIT_COMMON_DIR).toBe(await realpath(join(repository, ".git")));
+        expect(settings.TABLECAST_CONTAINER_ORIGIN).toBe(
+          `http://${name}.tablecast-poc.container.localhost:${settings.TABLECAST_WEB_PORT}`,
+        );
+        expect(settings.COMPOSE_PROJECT_NAME).toMatch(/^tablecast-\d+$/);
+        projects.add(settings.COMPOSE_PROJECT_NAME ?? "");
+        // 再生成しても同じ資源を使い続ける。
+        await execute("sh", [".devcontainer/tablecast-init.sh", root]);
+        expect(parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"))).toEqual(
+          settings,
         );
       }
+      expect(projects.size).toBe(3);
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
   it("worktreeとrepoを別のDNSラベルにして不正な名前を拒否する", () => {
     expect(worktreeHost("/workspace/tablecast-poc")).toBe("main.tablecast-poc");
     expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-poc/.git")).toBe(
@@ -167,4 +184,74 @@ it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメイ�
   const common = "/workspace/tablecast-poc/.git";
   expect(worktreeHost("/codex/worktrees/29f4/tablecast-poc", common)).toBe("29f4.tablecast-poc");
   expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
+});
+
+it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tablecast-bun-env-"));
+  const execute = promisify(execFile);
+  try {
+    // Given: 標準のenvファイルと、共有を許可しない資格を用意する。
+    await writeFile(join(root, ".env"), "TABLECAST_MODEL=tablecast-base\n");
+    await writeFile(join(root, ".env.development"), "TABLECAST_MODEL=tablecast-development\n");
+    await writeFile(
+      join(root, ".env.local"),
+      'TABLECAST_MODEL=tablecast-local\nTABLECAST_MODEL_API_KEY="${TABLECAST_MODEL}-key"\nCLOUDFLARE_API_TOKEN=tablecast-production-key\nTABLECAST_AUTH_SECRET=tablecast-shared-auth\n',
+    );
+    const module = join(process.cwd(), "scripts/tablecast-runtime.ts");
+    // When: 実際のBunでenvを読み込み、本番と同じ受け渡し関数を使う。
+    const { stdout } = await execute(
+      "bun",
+      [
+        "--eval",
+        `import { developmentSecrets } from ${JSON.stringify(module)}; console.log(JSON.stringify(developmentSecrets()));`,
+      ],
+      {
+        cwd: root,
+        env: { PATH: process.env.PATH, HOME: root, NODE_ENV: "development" },
+      },
+    );
+    // Then: 展開済みの開発資格だけを選び、Cloudflare資格と共有認証鍵を除く。
+    expect(JSON.parse(stdout)).toEqual({
+      TABLECAST_MODEL: "tablecast-local",
+      TABLECAST_MODEL_API_KEY: "tablecast-local-key",
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("Pythonの外部資格と別名はBunを介さずuvがenvファイルから解決する", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tablecast-uv-env-"));
+  const execute = promisify(execFile);
+  try {
+    // Given: Python自身が読む開発資格と同一ファイル内の別名、別ファイルの接続設定。
+    await writeFile(
+      join(root, ".env.local"),
+      'TABLECAST_MODEL_API_KEY=tablecast-uv-key\nOPENAI_API_KEY="${TABLECAST_MODEL_API_KEY}"\n',
+    );
+    await writeFile(join(root, ".env.voice"), "LIVEKIT_URL=ws://127.0.0.1:7880\n");
+    // When: Bunのenvを継承せず、uvの標準読み込みでPythonを起動する。
+    const { stdout } = await execute(
+      "uv",
+      [
+        "run",
+        "--no-project",
+        "--offline",
+        "--python",
+        join(process.cwd(), "livekit/.venv/bin/python"),
+        "--env-file",
+        ".env.local",
+        "--env-file",
+        ".env.voice",
+        "python",
+        "-c",
+        "import os; print(os.environ['OPENAI_API_KEY'])",
+      ],
+      { cwd: root, env: { PATH: process.env.PATH, HOME: process.env.HOME } },
+    );
+    // Then: uvが展開した資格をPythonから参照できる。
+    expect(stdout.trim()).toBe("tablecast-uv-key");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

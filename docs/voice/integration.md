@@ -62,4 +62,4 @@ GUI承認は表示済みの現行スナップショットに対する独立し�
 
 ## 開発用の実音声試験
 
-`TABLECAST_RUN_PAID_VOICE_TESTS=1 bun run test:voice:live` は、合成した日英の入力音声をRealtime 2.1へ渡し、返答をInworldで合成する明示的な有料試験。実際の業務ツール・注文確認は、空いている検証専用卓で別途試験する。本人識別、実店舗の騒音、実iPadでの受入はこの疎通試験に含めない。
+`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は、合成した日英の入力音声をRealtime 2.1へ渡し、返答をInworldで合成する明示的な有料試験。実際の業務ツール・注文確認は、空いている検証専用卓で別途試験する。本人識別、実店舗の騒音、実iPadでの受入はこの疎通試験に含めない。

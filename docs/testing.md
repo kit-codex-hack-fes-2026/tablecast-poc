@@ -80,7 +80,7 @@ pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混�
 
 ## 公開scriptとCI
 
-`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`test:voice:live` は有料実音声に分ける。
+`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は有料実音声に分ける。
 `bun run check` に静的解析・型・無課金テストを含める。Browser/E2EはCI別job。有料試験は手動または明示承認されたjobだけ。
 Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼び、tyとruffも同じ場所で別scriptから実行する。ルートから直接試す場合は `uv run --directory livekit pytest` とする。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。
@@ -154,3 +154,5 @@ APIの通常データ投入は`test/database-fixture.ts`の`insertFixture(table,
 認証は既存の`auth-schema.ts`、業務データは`business-schema.ts`のquery用定義を共用する。既存の行型は`$inferSelect`から導出する。DDL・CHECK・FK・indexの正本は既存のSQL migrationのままであり、query用定義を追加したことを理由にmigrationを再生成しない。
 
 旧schemaからの移行データ、制約違反を直接起こす操作、SQLの読取地点を止める競合試験など、SQL自体が検証条件になる箇所にはraw SQLを残す。ドメイン操作を検証するWhen/Thenをfixture helperに置き換えない。D1/DOの初期化にはCloudflare公式resetと実migrationを使用する。
+
+E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを起動しない。自動試験に不要な待受とポート割当を省き、並列caseのMailpit等との競合を避ける。通常のdevではInspectorを利用できる。

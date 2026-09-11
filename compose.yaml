@@ -1,0 +1,33 @@
+name: ${COMPOSE_PROJECT_NAME:?Run bun run dev:prepare first}
+# Dev ContainerもLGTMをextendsする。ホスト専用ポートの既定値は参照先全体の展開用で、通常は.local/.envの割当を使う。
+services:
+  tablecast-lgtm:
+    image: grafana/otel-lgtm:0.32.1
+    environment:
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SERVER_ROOT_URL: http://127.0.0.1:${TABLECAST_GRAFANA_PORT}
+      GF_LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:${TABLECAST_OTLP_PORT:-4318}:4318"
+      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
+      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
+    volumes:
+      - tablecast-lgtm:/data
+      - ./infra/grafana/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
+  tablecast-mailpit:
+    image: axllent/mailpit:v1.29.2
+    ports:
+      - "127.0.0.1:${TABLECAST_MAILPIT_PORT}:8025"
+      - "127.0.0.1:${TABLECAST_SMTP_PORT:-1025}:1025"
+  tablecast-livekit:
+    image: livekit/livekit-server:v1.13.6@sha256:e37d68f172556d02aa77968b9fc55ef481468c0315fa38e4fa6c56ce72e3a815
+    command: ["--config", "/etc/tablecast-livekit.yaml"]
+    ports:
+      - "127.0.0.1:${TABLECAST_SIGNALING_PORT:-7880}:${TABLECAST_SIGNALING_PORT:-7880}"
+      - "127.0.0.1:${TABLECAST_RTC_TCP_PORT}:${TABLECAST_RTC_TCP_PORT}"
+      - "127.0.0.1:${TABLECAST_RTC_UDP_PORT}:${TABLECAST_RTC_UDP_PORT}/udp"
+    volumes:
+      - ./.local/livekit.yaml:/etc/tablecast-livekit.yaml:ro
+volumes:
+  tablecast-lgtm:
+    name: ${COMPOSE_PROJECT_NAME}-lgtm
