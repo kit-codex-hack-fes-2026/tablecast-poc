@@ -55,11 +55,22 @@ for (const { language, labels, locale } of [
       await page.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
       const reviewPath = `/admin/stores/${storeId}/menu/changes/${draftId}`;
       const productPath = `${reviewPath}/products/${product.id}`;
-      await expect(page).toHaveURL(new RegExp(reviewPath));
+      await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
       await expect(
         page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
       ).toBeVisible();
-      await page.goto(productPath);
+      // ログイン直後のdocument遷移と競合させず、利用者と同じリンクで編集へ進む。
+      await page.getByRole("link", { name: labels.editor_products, exact: true }).click();
+      await page
+        .getByRole("row")
+        .filter({
+          has: page.getByText(product.text[language === "英語" ? "en" : "ja"].displayName, {
+            exact: true,
+          }),
+        })
+        .getByRole("link", { name: labels.admin_details, exact: true })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`${productPath}$`));
       const editor = page.getByRole("main");
       let publicationRequests = 0;
       page.on("request", (request) => {
