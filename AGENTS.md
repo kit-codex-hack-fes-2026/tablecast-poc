@@ -36,7 +36,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 - 音声停止は再生・送音・STT・応答生成を止め、明示再開まで再接続しない。GUI・カート・会計状態は維持し、客向けの自由文テキスト入力は作らない。
 - 店舗・卓の境界を認可する。秘密情報をログへ出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaとDrizzleを使う。[API skill](.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)でSQL断片の根拠と呼出し経路全体のDB往復を確認する。直接の`prepare()`を新設せず、複数操作は`db.batch()`、生SQLはmigration・PRAGMA・query builderで不足する部分に限る。
-- 上流pluginの不足は最小パッチとSHA固定で補う。独自STTクライアント、private monkeypatch、site-packages編集をしない。
+- 公式LiveKit GPT-Liveプラグインを使う。独自STTクライアント、private monkeypatch、site-packages編集をしない。
 - ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
 
 ## 配置と表現

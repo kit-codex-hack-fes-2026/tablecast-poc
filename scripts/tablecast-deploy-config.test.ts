@@ -14,7 +14,6 @@ const input = {
     LIVEKIT_API_KEY: "tablecast-livekit-key",
     LIVEKIT_API_SECRET: "tablecast-livekit-secret",
     OPENAI_API_KEY: "tablecast-openai-secret",
-    INWORLD_API_KEY: "tablecast-inworld-secret",
     TABLECAST_MODEL: "tablecast-test-model",
   }),
   TABLECAST_DEPLOY_SECRET: "tablecast-deployment-test-master-secret",

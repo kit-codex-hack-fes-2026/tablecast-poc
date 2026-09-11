@@ -501,5 +501,6 @@
   "common_not_found": "対象が見つかりません。最新の一覧から選び直してください。",
   "common_invalid_input": "入力内容を確認して、修正してください。",
   "common_too_large": "送信するデータが大きすぎます。ファイルのサイズを小さくしてください。",
-  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。"
+  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。",
+  "voice_default_marin": "Marin（既定）"
 }

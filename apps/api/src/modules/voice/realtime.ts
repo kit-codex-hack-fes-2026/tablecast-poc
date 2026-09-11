@@ -8,7 +8,9 @@ import { getCatalog } from "../catalog/queries";
 import { notifyStore } from "../tables/mutations";
 import { getSession } from "../tables/queries";
 import { castSessionInstructions, createCastTools } from "./agent";
-import type { playbackSchema, toolSchema, transcriptSchema } from "./model";
+import { liveInstructions } from "./prompt";
+import { liveVoice } from "./catalog";
+import type { conversationItemSchema, playbackSchema, toolSchema, transcriptSchema } from "./model";
 import { currentVoiceTurn, proactiveCondition, voiceActor } from "./queries";
 import { voiceParticipantIdentity } from "./runtime";
 import { recordVoiceEvent } from "./service";
@@ -16,31 +18,25 @@ export async function getVoiceConfiguration(services: ApiServices, voiceSessionI
   const actor = await voiceActor(services, voiceSessionId);
   const session = await getSession(services, actor);
   const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-  ensure(catalog.configuration.cast.voice[session.locale], "VOICE_NOT_CONFIGURED", 503);
   return {
     voiceSessionId,
     tableSessionId: session.id,
     participantIdentity: voiceParticipantIdentity(voiceSessionId),
     locale: session.locale,
-    voice: catalog.configuration.cast.voice[session.locale],
+    voice: liveVoice(catalog.configuration.cast.voice[session.locale]),
     speechSpeed: session.speech_speed,
     proactive: catalog.configuration.cast.proactive,
     releaseSha: services.env.TABLECAST_RELEASE_SHA,
   };
 }
-export async function getRealtimeConfiguration(
+async function conversationHistory(
   services: ApiServices,
-  voiceSessionId: string,
-  signal: AbortSignal,
+  actor: { storeId: string; tableSessionId?: string },
+  maxCharacters = 16000,
 ) {
-  const db = services.db;
-
-  const actor = await voiceActor(services, voiceSessionId);
-  const session = await getSession(services, actor);
-  const tools = createCastTools(services, actor, signal);
-  // voice sessionが変わっても、同じ来店の確定字幕と再生済み本文を復元する。
-  const rows = await db.all<EventRecord>(
-    sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${session.id} AND kind IN ('voice.user','voice.assistant') AND length(trim(json_extract(data_json,'$.text')))>0 ORDER BY cursor DESC LIMIT 40`,
+  // 同じ来店のSDK字幕を再利用する。実際に聞こえた範囲との厳密な一致は求めない。
+  const rows = await services.db.all<EventRecord>(
+    sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${actor.tableSessionId} AND kind IN ('voice.user','voice.assistant') AND length(trim(json_extract(data_json,'$.text')))>0 ORDER BY cursor DESC LIMIT 40`,
   );
   const history: { role: "user" | "assistant"; content: string; interrupted: boolean }[] = [];
   let characters = 0;
@@ -48,7 +44,7 @@ export async function getRealtimeConfiguration(
     const data = z
       .object({ text: z.string(), interrupted: z.boolean().optional() })
       .parse(JSON.parse(row.data_json));
-    if (characters + data.text.length > 16000) break;
+    if (characters + data.text.length > maxCharacters) break;
     characters += data.text.length;
     history.push({
       role: row.kind === "voice.user" ? "user" : "assistant",
@@ -56,8 +52,19 @@ export async function getRealtimeConfiguration(
       interrupted: data.interrupted ?? false,
     });
   }
+  return history.toReversed();
+}
+export async function getRealtimeConfiguration(
+  services: ApiServices,
+  voiceSessionId: string,
+  signal: AbortSignal,
+) {
+  const actor = await voiceActor(services, voiceSessionId);
+  const session = await getSession(services, actor);
+  const tools = createCastTools(services, actor, signal);
+  const history = await conversationHistory(services, actor);
   return {
-    history: history.toReversed(),
+    history,
     model: "gpt-realtime-2.1",
     instructions: `${castSessionInstructions(session.locale)}\nここは飲食店の卓上端末で、客は同じ席で会話を続けています。もしもしは接続確認であり電話応対へ切り替える合図ではありません。復元された履歴は過去の会話で、新しい依頼や注文承認ではありません。履歴の希望・比較対象・未回答の質問を引き継ぎ、続きの依頼にはその話題から応じます。中断した返答の未再生部分は聞かれた扱いにせず、古い操作を再実行しません。注文・確認の現状はgetTableStateで確認します。\n一回の客発話への応答では、ツール前の確認しますね等は最初の一度だけにする。続くツール照会では同じ声かけを繰り返さない。任意選択を指定されていない明確な単品注文は追加完了を短く伝え、任意選択の案内を新しい確認質問へしない。`,
     tools: Object.values(tools).map((tool) => ({
@@ -178,5 +185,37 @@ export async function recordPlayback(services: ApiServices, input: z.infer<typeo
   ]);
   if (proactive) ensure(result[0]?.meta.changes === 1, "PROACTIVE_TURN_STALE", 409);
   await notifyStore(services, turn.store_id, turn.table_session_id);
+  return { ok: true };
+}
+
+export async function getLiveConfiguration(services: ApiServices, voiceSessionId: string) {
+  const actor = await voiceActor(services, voiceSessionId);
+  const session = await getSession(services, actor);
+  return {
+    model: "gpt-live-1" as const,
+    instructions: `${liveInstructions}\n会話言語: ${session.locale === "ja" ? "日本語" : "British English"}。話速の希望: ${session.speech_speed}倍相当。`,
+    // 初期履歴の8192 tokens上限に対し、UTF-8でも8000 bytes以内に抑える。
+    history: await conversationHistory(services, actor, 2000),
+  };
+}
+
+export async function recordConversationItem(
+  services: ApiServices,
+  input: z.infer<typeof conversationItemSchema>,
+) {
+  const actor = await voiceActor(services, input.voiceSessionId);
+  const data = JSON.stringify({
+    turnId: input.itemId,
+    role: input.role,
+    text: input.text,
+    interrupted: input.interrupted,
+  });
+  // 雑談も委任なしで保存する。SDKのitem IDで同じ通知の重複だけを防ぐ。
+  await services.db
+    .insert(business.tableEvents)
+    .select(
+      sql`SELECT NULL,store_id,id,${input.role === "user" ? "voice.user" : "voice.assistant"},${data},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND voice_state='active' AND voice_session_id=${input.voiceSessionId} AND status='open' AND NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${actor.tableSessionId} AND kind IN ('voice.user','voice.assistant') AND json_extract(data_json,'$.turnId')=${input.itemId})`,
+    );
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return { ok: true };
 }

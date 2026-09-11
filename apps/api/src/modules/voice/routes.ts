@@ -9,6 +9,7 @@ import type { VoiceDiagnostics } from "./diagnostics";
 import { logVoiceTurn, voiceErrorCode } from "./diagnostics";
 import {
   id,
+  conversationItemSchema,
   playbackSchema,
   sessionBody,
   toolSchema,
@@ -18,6 +19,8 @@ import {
 import { voiceActor } from "./queries";
 import {
   getRealtimeConfiguration,
+  getLiveConfiguration,
+  recordConversationItem,
   getVoiceConfiguration,
   invokeVoiceTool,
   recordPlayback,
@@ -147,3 +150,15 @@ voiceRoutes.post("/playback", async (c) => {
   const input = playbackSchema.parse(await c.req.json());
   return c.json(await recordPlayback(c.get("services"), input));
 });
+
+voiceRoutes.get("/live", async (c) =>
+  c.json(await getLiveConfiguration(c.get("services"), id.parse(c.req.query("voiceSessionId")))),
+);
+voiceRoutes.post("/conversation", async (c) =>
+  c.json(
+    await recordConversationItem(
+      c.get("services"),
+      conversationItemSchema.parse(await c.req.json()),
+    ),
+  ),
+);

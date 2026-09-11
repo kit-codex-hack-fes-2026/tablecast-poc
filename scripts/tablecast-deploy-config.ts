@@ -97,16 +97,11 @@ export function deploymentSecrets(
     TABLECAST_LIVEKIT_API_KEY: required(runtime.LIVEKIT_API_KEY, "LIVEKIT_API_KEY"),
     TABLECAST_LIVEKIT_API_SECRET: required(runtime.LIVEKIT_API_SECRET, "LIVEKIT_API_SECRET"),
     OPENAI_API_KEY: required(runtime.OPENAI_API_KEY, "OPENAI_API_KEY"),
-    INWORLD_API_KEY: required(runtime.INWORLD_API_KEY, "INWORLD_API_KEY"),
     TABLECAST_MODEL_API_KEY: required(
       runtime.TABLECAST_MODEL_API_KEY ?? runtime.OPENAI_API_KEY,
       "TABLECAST_MODEL_API_KEY",
     ),
     TABLECAST_MODEL: required(runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
-    TABLECAST_INWORLD_VOICES_API_KEY: required(
-      runtime.TABLECAST_INWORLD_VOICES_API_KEY ?? runtime.INWORLD_API_KEY,
-      "TABLECAST_INWORLD_VOICES_API_KEY",
-    ),
   };
   for (const key of [
     "TABLECAST_MASTRA_ACCESS_TOKEN",

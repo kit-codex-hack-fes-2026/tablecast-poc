@@ -9,7 +9,6 @@ import {
   validateDraft,
 } from "../src/modules/configuration/service";
 import {
-  markConfirmationRead,
   prepareConfirmation,
   recordPayment,
   submitOrder,
@@ -522,7 +521,7 @@ it.each([
     ).total,
   ).toBe(800);
 });
-it("音声確認の読了後に開始した新しいturnだけが承認できる", async () => {
+it("音声確認を作成した後の新しいturnだけが読了通知なしで承認できる", async () => {
   await setupFixture();
   await setVoiceSession(createApiServices(env), device, "tablecast-voice-session");
   await insertFixture(businessTables.voiceTurns, {
@@ -555,9 +554,8 @@ it("音声確認の読了後に開始した新しいturnだけが承認できる
   await expect(submitOrder(createApiServices(env), first, input)).rejects.toMatchObject({
     code: "NEW_APPROVAL_TURN_REQUIRED",
   });
-  await markConfirmationRead(createApiServices(env), first, snapshot.id);
   await env.TABLECAST_DB.prepare(
-    "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) SELECT 'tablecast-approval','tablecast-voice-session','tablecast-session','tablecast-store','started',read_at+1 FROM confirmations WHERE id=?",
+    "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) SELECT 'tablecast-approval','tablecast-voice-session','tablecast-session','tablecast-store','started',created_at+1 FROM confirmations WHERE id=?",
   )
     .bind(snapshot.id)
     .run();

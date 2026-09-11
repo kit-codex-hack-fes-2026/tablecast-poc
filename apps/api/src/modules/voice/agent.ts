@@ -18,7 +18,7 @@ import { castInstructions } from "./prompt";
 import { castObservability } from "./observability";
 import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
-  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationを呼んだ後は本文を生成しない。確認文は別経路で固定再生される。"}`;
+  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
 }
 
 export function createCastAgent(
@@ -198,7 +198,7 @@ export function createCastTools(
           prepareConfirmation: castTool({
             id: "prepareConfirmation",
             description:
-              "確定内容のスナップショットと専用読み上げactionを作る。この後の説明や確認本文を生成しない。注文はまだ送信されない。",
+              "版付きの注文確認を作る。結果の内容を自然な言葉で案内し、次の客発話で承認を求める。注文はまだ送信されない。",
             inputSchema: z.object({ expectedVersion: z.number().int().nonnegative() }).strict(),
             execute: async (input) => {
               await guard();
@@ -206,13 +206,18 @@ export function createCastTools(
                 ...input,
                 channel: "voice",
               });
-              return { snapshotId: snapshot.id, queuedForReadout: true };
+              return {
+                snapshotId: snapshot.id,
+                text: snapshot.text,
+                total: snapshot.total,
+                lines: snapshot.lines,
+              };
             },
           }),
           submitOrder: castTool({
             id: "submitOrder",
             description:
-              "固定確認の読み上げが完了した後の新しい客発話で、明示的な承認があったときだけ呼ぶ。訂正・質問・曖昧な相づち・背景会話は承認ではない。",
+              "注文内容を案内した後の新しい客発話で、その内容への明示的な承認があったときだけ呼ぶ。訂正・質問・曖昧な相づち・背景会話は承認ではない。",
             inputSchema: submitSchema,
             execute: async (input) => {
               await guard();

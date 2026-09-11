@@ -501,5 +501,6 @@
   "common_not_found": "This item could not be found. Select it again from the latest list.",
   "common_invalid_input": "Check and correct the information you entered.",
   "common_too_large": "The data is too large to send. Reduce the file size.",
-  "common_rate_limited": "Too many requests. Wait a moment, then try again."
+  "common_rate_limited": "Too many requests. Wait a moment, then try again.",
+  "voice_default_marin": "Marin (default)"
 }

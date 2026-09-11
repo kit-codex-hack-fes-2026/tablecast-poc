@@ -1,17 +1,16 @@
-"""公開SessionとHTTP境界で自発接客を検証する。実STT/TTSは使用しない。"""
+"""公開GPT-LiveイベントとHTTP境界で委任・保存・停止を検証する。"""
 
 import asyncio
 import json
-from collections.abc import Awaitable, Callable
-from unittest.mock import AsyncMock, Mock, create_autospec
+from unittest.mock import create_autospec
 
 import httpx
 import pytest
-from livekit import rtc
-from livekit.agents import AgentSession, JobContext, UserStateChangedEvent
+from livekit.agents import ConversationItemAddedEvent, UserStateChangedEvent, llm
+from livekit.plugins.openai.realtime import GPTLiveDelegation, GPTLiveSession
 
-from tablecast_livekit.agent import TablecastAgent, entrypoint
-from tablecast_livekit.api import RealtimeConfiguration, VoiceAPI, VoiceConfiguration
+from tablecast_livekit.agent import TablecastAgent
+from tablecast_livekit.api import LiveConfiguration, VoiceAPI, VoiceConfiguration
 
 
 def configuration() -> VoiceConfiguration:
@@ -20,328 +19,224 @@ def configuration() -> VoiceConfiguration:
         tableSessionId="tablecast-table",
         participantIdentity="tablecast-device",
         locale="ja",
-        voice="tablecast-test-voice",
+        voice="marin",
         releaseSha="tablecast-test",
         proactive=False,
     )
 
 
-async def test_接続を待って開始し計測送信を待たず終了する(monkeypatch: pytest.MonkeyPatch):
-    # Given: job終了時に強制送信を始めると利用不能になる送信先。
-    flush = Mock(side_effect=AssertionError("job終了時に送信を開始してはいけない"))
-    monkeypatch.setattr("tablecast_livekit.agent.flush_telemetry", flush)
-    monkeypatch.setenv("TABLECAST_API_URL", "https://tablecast.test")
-    monkeypatch.setenv("TABLECAST_VOICE_API_TOKEN", "tablecast-test-token")
-    monkeypatch.setenv("INWORLD_API_KEY", "tablecast-test-inworld-key")
-    monkeypatch.setenv("OPENAI_API_KEY", "tablecast-test-openai-key")
-    monkeypatch.setattr(
-        VoiceAPI,
-        "realtime_configuration",
-        AsyncMock(
-            return_value=RealtimeConfiguration(
-                model="gpt-realtime-2.1", instructions="テスト", tools=[]
-            )
-        ),
-    )
-    monkeypatch.setattr(VoiceAPI, "configuration", AsyncMock(return_value=configuration()))
-    room = rtc.Room()
-    ctx = create_autospec(JobContext, instance=True)
-    ctx.room = room
-    ctx.job.metadata = json.dumps({"voiceSessionId": "tablecast-voice"})
-    callbacks: list[Callable[[], Awaitable[None]]] = []
-    ctx.add_shutdown_callback.side_effect = callbacks.append
-    connecting = asyncio.Event()
-    connection: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+@pytest.fixture
+async def agent(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "tablecast-test-key")
+    calls = []
 
-    async def connect() -> None:
-        connecting.set()
-        await connection
-
-    ctx.connect.side_effect = connect
-    job = asyncio.ensure_future(entrypoint(ctx))
-    waiting = asyncio.create_task(connecting.wait())
-    try:
-        done, _ = await asyncio.wait((job, waiting), timeout=5, return_when=asyncio.FIRST_COMPLETED)
-        # 接続を省くと、本物のRoomIOが未接続room.local_participantを参照してここで失敗する。
-        if job in done:
-            await job
-        assert waiting in done
-        assert not job.done()
-        assert not room.isconnected()
-        ctx.connect.assert_called_once_with()
-        connection.set_exception(ConnectionError("接続失敗の検査用fixture"))
-        with pytest.raises(ConnectionError, match="接続失敗の検査用fixture"):
-            await job
-    finally:
-        job.cancel()
-        waiting.cancel()
-        await asyncio.gather(job, waiting, return_exceptions=True)
-        # When: 実際に登録されたjob終了callbackを呼ぶ。
-        assert len(callbacks) == 1
-        for callback in callbacks:
-            await asyncio.wait_for(callback(), timeout=1)
-        # Then: 強制送信もexecutor threadも追加しない。
-        flush.assert_not_called()
-        await room.disconnect()
-
-
-async def test_公開Sessionの無言イベントから客発話を偽造せず一度だけ自発接客を開始する():
-    requests: list[httpx.Request] = []
-
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/turns"):
+    async def handle(request):
+        body = json.loads(request.content) if request.content else {}
+        calls.append((request.url.path, body))
+        if request.url.path == "/internal/voice/turns":
             return httpx.Response(
-                200, headers={"content-type": "text/plain"}, text="季節の料理もございます。"
+                200, headers={"content-type": "text/plain"}, text="二杯で八百円です。注文しますか？"
             )
         return httpx.Response(200, json={"ok": True})
 
+    duplex = create_autospec(GPTLiveSession, instance=True)
+    monkeypatch.setattr(TablecastAgent, "duplex_session", property(lambda self: duplex))
     async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
+        base_url="https://tablecast.test", transport=httpx.MockTransport(handle)
     ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        session.on("user_state_changed", agent.user_state_changed)
-        await session.start(agent, record=False)
-        try:
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
-            )
-            speech = agent.proactive_speech
-            assert speech is not None
-            await asyncio.wait_for(speech, timeout=5)
-            assert speech.exception() is None
-            await asyncio.gather(*agent.tasks)
-            turns = [
-                json.loads(request.content)
-                for request in requests
-                if request.url.path.endswith("/turns")
-            ]
-            assert len(turns) == 1
-            assert turns[0]["trigger"] == "proactive"
-            assert turns[0]["messages"] == []
-            assert "speaker" not in turns[0]
-            assert not any("/confirmation" in request.url.path for request in requests)
-            assert any(request.url.path.endswith("/playback") for request in requests)
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
-            )
-            assert agent.proactive_speech is speech
-        finally:
-            await session.aclose()
-            await agent.close()
-
-
-async def test_APIが自発接客を見送ったら発話履歴も完了通知も作らない():
-    requests: list[httpx.Request] = []
-
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        return httpx.Response(204)
-
-    async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
-    ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        session.on("user_state_changed", agent.user_state_changed)
-        await session.start(agent, record=False)
-        try:
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
-            )
-            speech = agent.proactive_speech
-            assert speech is not None
-            await asyncio.wait_for(speech, timeout=5)
-            assert speech.exception() is None
-            assert not speech.chat_items
-            await asyncio.gather(*agent.tasks)
-            assert len(requests) == 1
-            assert requests[0].url.path == "/internal/voice/turns"
-            await agent.close()
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
-            )
-            assert len(requests) == 1
-            assert agent.proactive_speech is speech
-        finally:
-            await session.aclose()
-            await agent.close()
-
-
-async def test_通常の客発話も実SessionからAPIへ渡り確認と再生記録へ進む():
-    requests: list[httpx.Request] = []
-
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/turns"):
-            return httpx.Response(
-                200, headers={"content-type": "text/plain"}, text="はい、お伺いします。"
-            )
-        if request.url.path.endswith("/confirmation"):
-            return httpx.Response(200, json=None, content=b"null")
-        return httpx.Response(200, json={"ok": True})
-
-    async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
-    ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        await session.start(agent, record=False)
-        try:
-            speech = session.generate_reply(user_input="おすすめは何ですか。")
-            await asyncio.wait_for(speech, timeout=5)
-            assert speech.exception() is None
-            await asyncio.gather(*agent.tasks)
-            turn = next(
-                json.loads(request.content)
-                for request in requests
-                if request.url.path.endswith("/turns")
-            )
-            assert turn["trigger"] == "user"
-            assert turn["messages"] == [{"role": "user", "content": "おすすめは何ですか。"}]
-            assert any(request.url.path.endswith("/confirmation") for request in requests)
-            playback = next(
-                json.loads(request.content)
-                for request in requests
-                if request.url.path.endswith("/playback")
-            )
-            assert playback["text"] == "はい、お伺いします。"
-            assert playback["interrupted"] is False
-        finally:
-            await session.aclose()
-            await agent.close()
-
-
-class WaitingStream(httpx.AsyncByteStream):
-    def __init__(self) -> None:
-        self.reading = asyncio.Event()
-        self.closed = asyncio.Event()
-
-    async def __aiter__(self):
-        self.reading.set()
-        await asyncio.Event().wait()
-        yield b""
-
-    async def aclose(self) -> None:
-        self.closed.set()
-
-
-async def test_客が話し始めると自発生成のHTTPを閉じ通常の応答は中断しない():
-    stream = WaitingStream()
-    requests: list[httpx.Request] = []
-
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/turns"):
-            data = json.loads(request.content)
-            if data["trigger"] == "proactive":
-                return httpx.Response(200, headers={"content-type": "text/plain"}, stream=stream)
-            return httpx.Response(
-                200, headers={"content-type": "text/plain"}, text="かしこまりました。"
-            )
-        if request.url.path.endswith("/confirmation"):
-            return httpx.Response(200, content=b"null")
-        return httpx.Response(200, json={"ok": True})
-
-    async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
-    ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        session.on("user_state_changed", agent.user_state_changed)
-        await session.start(agent, record=False)
-        try:
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
-            )
-            speech = agent.proactive_speech
-            assert speech is not None
-            await asyncio.wait_for(stream.reading.wait(), timeout=5)
-            session.emit(
-                "user_state_changed", UserStateChangedEvent(old_state="away", new_state="speaking")
-            )
-            await asyncio.wait_for(speech, timeout=5)
-            await asyncio.wait_for(stream.closed.wait(), timeout=5)
-            assert speech.interrupted
-            normal = session.generate_reply(user_input="店員さんをお願いします。")
-            await asyncio.wait_for(normal, timeout=5)
-            assert normal.exception() is None
-            assert not normal.interrupted
-            await asyncio.gather(*agent.tasks)
-            turns = [
-                json.loads(request.content)
-                for request in requests
-                if request.url.path.endswith("/turns")
-            ]
-            assert [turn["trigger"] for turn in turns] == ["proactive", "user"]
-            assert not any("role" not in item for item in turns[1]["messages"])
-        finally:
-            await session.aclose()
-            await agent.close()
-
-
-async def test_通常応答の生成中は自発接客を開始せず終了時にHTTPを閉じる():
-    stream = WaitingStream()
-    requests: list[httpx.Request] = []
-
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/turns"):
-            return httpx.Response(200, headers={"content-type": "text/plain"}, stream=stream)
-        return httpx.Response(200, json={"ok": True})
-
-    async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
-    ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        session.on("user_state_changed", agent.user_state_changed)
-        await session.start(agent, record=False)
-        speech = session.generate_reply(user_input="料理を説明してください。")
-        await asyncio.wait_for(stream.reading.wait(), timeout=5)
-        session.emit(
-            "user_state_changed", UserStateChangedEvent(old_state="listening", new_state="away")
+        value = TablecastAgent(
+            VoiceAPI(client, "tablecast-voice"),
+            configuration(),
+            LiveConfiguration(
+                model="gpt-live-1",
+                instructions="接客",
+                history=[{"role": "user", "content": "ほうじ茶の話です"}],
+            ),
         )
-        assert agent.proactive_speech is None
-        agent.stopped = True
-        await session.aclose()
-        await agent.close()
-        await asyncio.wait_for(stream.closed.wait(), timeout=5)
-        assert speech.interrupted
-        assert not agent.tasks
-        turns = [request for request in requests if request.url.path.endswith("/turns")]
-        assert len(turns) == 1
+        yield value, duplex, calls
+        await value.close()
 
 
-async def test_生成APIが失敗しても自動再試行で同じ業務turnを再実行しない():
-    requests: list[httpx.Request] = []
+async def test_途中字幕と履歴をMastraへ委任して同じ委任IDへ結果を返す(agent):
+    # Given: 前の会話と、まだ確定していない現在の発話。
+    value, duplex, calls = agent
+    await value.on_enter()
+    duplex.on.assert_called_once_with("delegation_created", value.delegation_created)
+    delegation = GPTLiveDelegation(id="tablecast-delegation", pending_transcript="二杯ください")
+    # When: 同じ発話が二度委任される。
+    value.delegation_created(delegation)
+    value.delegation_created(delegation)
+    await asyncio.gather(*value.tasks)
+    # Then: HTTPは一回だけで、本文は会話履歴として保存しない。
+    turns = [body for path, body in calls if path == "/internal/voice/turns"]
+    assert len(turns) == 1
+    assert turns[0]["transport"] == "live"
+    assert turns[0]["messages"] == [
+        {"role": "user", "content": "ほうじ茶の話です"},
+        {"role": "user", "content": "二杯ください"},
+    ]
+    duplex.append_commentary.assert_called_once_with(
+        "二杯で八百円です。注文しますか？", delegation_id="tablecast-delegation"
+    )
+    assert not any(path.endswith("conversation") for path, _ in calls)
 
-    async def response(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/turns"):
-            return httpx.Response(503, json={"error": {"code": "VOICE_MODEL_FAILED"}})
+
+async def test_次の客発話の委任だけが新しい業務turnになる(agent):
+    value, _, calls = agent
+    value.delegation_created(GPTLiveDelegation(id="first", pending_transcript="二杯ください"))
+    await asyncio.gather(*value.tasks)
+    value.user_state_changed(UserStateChangedEvent(old_state="listening", new_state="speaking"))
+    value.delegation_created(GPTLiveDelegation(id="next", pending_transcript="はいお願いします"))
+    await asyncio.gather(*value.tasks)
+    turns = [body for path, body in calls if path == "/internal/voice/turns"]
+    assert len(turns) == 2
+    assert turns[0]["turnId"] != turns[1]["turnId"]
+
+
+@pytest.mark.parametrize("role", ["user", "assistant"])
+async def test_委任のない雑談もSDKの会話itemから保存する(agent, role):
+    value, duplex, calls = agent
+    item = llm.ChatMessage(id="tablecast-item", role=role, content=["ありがとう"])
+    value.conversation_item_added(ConversationItemAddedEvent(item=item))
+    await asyncio.gather(*value.tasks)
+    assert calls == [
+        (
+            "/internal/voice/conversation",
+            {
+                "voiceSessionId": "tablecast-voice",
+                "itemId": "tablecast-item",
+                "role": role,
+                "text": "ありがとう",
+                "interrupted": False,
+            },
+        )
+    ]
+    duplex.append_commentary.assert_not_called()
+
+
+async def test_停止後は新しい委任と字幕保存を受け付けない(agent):
+    value, duplex, calls = agent
+    value.stop()
+    value.delegation_created(GPTLiveDelegation(id="late", pending_transcript="注文して"))
+    value.conversation_item_added(
+        ConversationItemAddedEvent(item=llm.ChatMessage(role="user", content=["はい"]))
+    )
+    await asyncio.sleep(0)
+    assert calls == []
+    duplex.append_commentary.assert_not_called()
+
+
+async def test_処理中の停止はHTTPを閉じ途中結果を発話しない(agent, monkeypatch):
+    value, duplex, calls = agent
+    waiting = asyncio.Event()
+    closed = asyncio.Event()
+
+    async def stream(*args, **kwargs):
+        try:
+            yield "まだ処理中"
+            waiting.set()
+            await asyncio.Event().wait()
+        finally:
+            closed.set()
+
+    monkeypatch.setattr(value.api, "stream_turn", stream)
+    value.delegation_created(GPTLiveDelegation(id="waiting", pending_transcript="注文して"))
+    await waiting.wait()
+    value.stop()
+    await asyncio.gather(*value.tasks, return_exceptions=True)
+    assert closed.is_set()
+    duplex.append_commentary.assert_not_called()
+    assert calls[-1][1]["status"] == "interrupted"
+
+
+async def test_長い委任結果を上限以内で欠落なく渡す(agent, monkeypatch):
+    value, duplex, _ = agent
+    result = "ほうじ茶は二杯です。" * 80
+
+    async def stream(*args, **kwargs):
+        yield result
+
+    monkeypatch.setattr(value.api, "stream_turn", stream)
+    await value.delegate(
+        GPTLiveDelegation(id="long", pending_transcript="詳しく教えて"), value.utterance_id
+    )
+    parts = [call.args[0] for call in duplex.append_commentary.call_args_list]
+    assert "".join(parts) == result
+    assert all(len(part.encode()) <= 400 for part in parts)
+
+
+async def test_実AgentSessionが委任と発話開始をアプリへ伝える(monkeypatch):
+    # Given: ネットワーク境界だけを固定し、実SDKのsessionとadapterを起動する。
+    from livekit import rtc
+    from livekit.agents import AgentSession
+    from livekit.agents.utils import aio
+    from livekit.plugins.openai.realtime import GPTLiveModel
+
+    monkeypatch.setenv("OPENAI_API_KEY", "tablecast-test-key")
+    emitter = rtc.EventEmitter()
+    audio = aio.Chan()
+    duplex = create_autospec(GPTLiveSession, instance=True)
+    duplex.on.side_effect = emitter.on
+    duplex.off.side_effect = emitter.off
+    duplex.audio_stream = audio
+    duplex.tools = llm.ToolContext([])
+
+    def open_session(model):
+        duplex.capabilities = model.capabilities
+        duplex.duplex_model = model
+        return duplex
+
+    monkeypatch.setattr(GPTLiveModel, "session", open_session)
+    requests = []
+
+    async def handle(request):
+        if request.url.path == "/internal/voice/turns":
+            requests.append(json.loads(request.content))
+            return httpx.Response(200, text="確認しました")
         return httpx.Response(200, json={"ok": True})
 
     async with httpx.AsyncClient(
-        base_url="https://tablecast.test", transport=httpx.MockTransport(response)
+        base_url="https://tablecast.test", transport=httpx.MockTransport(handle)
     ) as client:
-        agent = TablecastAgent(VoiceAPI(client, "tablecast-voice"), configuration())
-        session = AgentSession(user_away_timeout=None)
-        await session.start(agent, record=False)
+        value = TablecastAgent(
+            VoiceAPI(client, "tablecast-voice"),
+            configuration(),
+            LiveConfiguration(model="gpt-live-1", instructions="接客"),
+        )
+        session = AgentSession()
+        session.on("user_state_changed", value.user_state_changed)
         try:
-            speech = session.generate_reply(user_input="注文をお願いします。")
-            await asyncio.wait_for(speech, timeout=5)
-            assert speech.exception() is not None
-            await asyncio.gather(*agent.tasks)
-            assert (
-                len([request for request in requests if request.url.path.endswith("/turns")]) == 1
-            )
-            assert any(
-                json.loads(request.content).get("status") == "failed"
-                for request in requests
-                if request.url.path.endswith("/end")
-            )
+            await session.start(agent=value)
+            # When: providerから二つの発話開始と委任を受ける。
+            for index in range(2):
+                emitter.emit("input_speech_started", llm.InputSpeechStartedEvent())
+                emitter.emit(
+                    "delegation_created",
+                    GPTLiveDelegation(id=str(index), pending_transcript="ほうじ茶"),
+                )
+                await asyncio.gather(*value.tasks)
+                emitter.emit(
+                    "input_speech_stopped",
+                    llm.InputSpeechStoppedEvent(user_transcription_enabled=False),
+                )
+            # Then: 独立した業務turnになり、同じ公開duplex sessionへ返答する。
+            assert len(requests) == 2
+            assert requests[0]["turnId"] != requests[1]["turnId"]
+            assert duplex.append_commentary.call_count == 2
         finally:
+            audio.close()
+            await value.close()
             await session.aclose()
-            await agent.close()
+        duplex.aclose.assert_awaited()
+
+
+async def test_委任前の待機発話があっても最後の客発話を渡す(agent):
+    value, duplex, calls = agent
+    history = value.chat_ctx.copy()
+    history.add_message(role="assistant", content="確認しますね")
+    await value.update_chat_ctx(history)
+    await value.delegate(
+        GPTLiveDelegation(id="after-user", pending_transcript=""), value.utterance_id
+    )
+    assert calls[0][1]["messages"][-1] == {"role": "user", "content": "ほうじ茶の話です"}
+    duplex.append_commentary.assert_called_once()
