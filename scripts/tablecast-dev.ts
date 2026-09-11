@@ -468,7 +468,7 @@ async function main() {
         "--port",
         String(runtime.ports.storybook),
         "--host",
-        "127.0.0.1",
+        tablecastContainer ? "0.0.0.0" : "127.0.0.1",
         "--exact-port",
         "--no-open",
       ],

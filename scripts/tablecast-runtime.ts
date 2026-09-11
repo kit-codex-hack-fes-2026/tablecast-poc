@@ -107,7 +107,8 @@ export function assertLocalRuntime(
       runtime.origin === `http://${localHost(root, common)}.localhost:${runtime.ports.proxy}` ||
       (tablecastContainer &&
         (runtime.origin === "http://localhost:3000" ||
-          runtime.origin === `http://${localHost(root, common)}.container.localhost:3000` ||
+          runtime.origin ===
+            `http://${localHost(root, common)}.container.localhost:${new URL(runtime.origin).port}` ||
           runtime.origin === `https://${localHost(root, common)}.orb.local`))
     ) ||
     new Set(Object.values(runtime.ports)).size !== Object.values(runtime.ports).length
@@ -164,8 +165,8 @@ export async function reserveRuntime() {
         web: 3001,
         inspector: 3002,
         signaling: 7880,
-        rtcTcp: 7881,
-        rtcUdp: 7882,
+        rtcTcp: portSchema.parse(Number(process.env.TABLECAST_RTC_TCP_PORT ?? 7881)),
+        rtcUdp: portSchema.parse(Number(process.env.TABLECAST_RTC_UDP_PORT ?? 7882)),
         agent: 8081,
         storybook: 6006,
         oauth: 3008,
@@ -313,6 +314,8 @@ export function localEnvironment(runtime: TablecastRuntime) {
     "DOCKER_HOST",
     "DOCKER_CONTEXT",
     "DOCKER_CONFIG",
+    "TABLECAST_RTC_TCP_PORT",
+    "TABLECAST_RTC_UDP_PORT",
   ]) {
     if (process.env[key]) env[key] = process.env[key];
   }

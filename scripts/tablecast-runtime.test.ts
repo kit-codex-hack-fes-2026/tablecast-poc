@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
+import { parseEnv, promisify } from "node:util";
 import { assertLocalRuntime, localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
@@ -59,6 +59,7 @@ describe("開発資源の所有境界", () => {
     const parent = await mkdtemp(join(tmpdir(), "tablecast-container-"));
     const repository = join(parent, "Tablecast_PoC");
     const linked = join(parent, "Voice_UI");
+    const codex = join(parent, "073d", "Tablecast_PoC");
     const execute = promisify(execFile);
     try {
       await mkdir(repository);
@@ -80,21 +81,37 @@ describe("開発資源の所有境界", () => {
         "tablecast fixture",
       );
       await git("worktree", "add", "--detach", linked);
+      await git("worktree", "add", "--detach", codex);
+      const projects = new Set<string>();
       for (const [root, name] of [
         [repository, "main"],
         [linked, "voice-ui"],
+        [codex, "073d"],
       ] as const) {
         await mkdir(join(root, ".devcontainer"));
         await execute("sh", [".devcontainer/tablecast-init.sh", root]);
         expect(worktreeHost(root, join(repository, ".git"))).toBe(`${name}.tablecast-poc`);
-        expect(await readFile(join(root, ".devcontainer/.env"), "utf8")).toBe(
-          `TABLECAST_WORKTREE_NAME=${name}\nTABLECAST_REPO_NAME=tablecast-poc\nTABLECAST_CONTAINER_ORIGIN=http://${name}.tablecast-poc.container.localhost:3000\n`,
+        const settings = parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"));
+        expect(settings.TABLECAST_WORKTREE_NAME).toBe(name);
+        expect(settings.TABLECAST_REPO_NAME).toBe("tablecast-poc");
+        expect(settings.TABLECAST_WORKSPACE_FOLDER).toBe(await realpath(root));
+        expect(settings.TABLECAST_GIT_COMMON_DIR).toBe(await realpath(join(repository, ".git")));
+        expect(settings.TABLECAST_CONTAINER_ORIGIN).toBe(
+          `http://${name}.tablecast-poc.container.localhost:${settings.TABLECAST_WEB_PORT}`,
+        );
+        expect(settings.COMPOSE_PROJECT_NAME).toMatch(/^tablecast-\d+$/);
+        projects.add(settings.COMPOSE_PROJECT_NAME ?? "");
+        // 再生成しても同じ資源を使い続ける。
+        await execute("sh", [".devcontainer/tablecast-init.sh", root]);
+        expect(parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"))).toEqual(
+          settings,
         );
       }
+      expect(projects.size).toBe(3);
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
   it("worktreeとrepoを別のDNSラベルにして不正な名前を拒否する", () => {
     expect(worktreeHost("/workspace/tablecast-poc")).toBe("main.tablecast-poc");
     expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-poc/.git")).toBe(

@@ -1,13 +1,12 @@
-name: tablecast
 services:
   tablecast-lgtm:
     image: grafana/otel-lgtm:0.32.1
     environment:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_SERVER_ROOT_URL: http://localhost:3030
+      GF_SERVER_ROOT_URL: http://localhost:${TABLECAST_GRAFANA_PORT}
     ports:
-      - "127.0.0.1:3030:3000"
-      - "127.0.0.1:3200:3200"
+      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
+      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
     volumes:
       - tablecast-lgtm:/data
       - ../infra/grafana/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
@@ -16,32 +15,43 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     init: true
-    command: sleep infinity
+    working_dir: ${TABLECAST_WORKSPACE_FOLDER:?Run tablecast-init.sh first}
+    command: [sh, -c, 'git config --global --add safe.directory "$$PWD" && sleep infinity']
+    depends_on:
+      - tablecast-lgtm
     environment:
-      BUN_INSTALL_CACHE_DIR: /workspaces/tablecast/node_modules/.cache/tablecast-bun
+      BUN_INSTALL_CACHE_DIR: ${TABLECAST_WORKSPACE_FOLDER}/node_modules/.cache/tablecast-bun
       TABLECAST_CONTAINER: "1"
+      TABLECAST_RTC_TCP_PORT: ${TABLECAST_RTC_TCP_PORT}
+      TABLECAST_RTC_UDP_PORT: ${TABLECAST_RTC_UDP_PORT}
       TABLECAST_WORKTREE_NAME: ${TABLECAST_WORKTREE_NAME:-main}
       TABLECAST_REPO_NAME: ${TABLECAST_REPO_NAME:-tablecast-poc}
       TABLECAST_CONTAINER_ORIGIN: ${TABLECAST_CONTAINER_ORIGIN:-http://localhost:3000}
     ports:
-      - "127.0.0.1:3000:3000"
-      - "127.0.0.1:8025:8025"
-      - "127.0.0.1:7881:7881"
-      - "127.0.0.1:7882:7882/udp"
+      - "127.0.0.1:${TABLECAST_WEB_PORT}:3000"
+      - "127.0.0.1:${TABLECAST_MAILPIT_PORT}:8025"
+      - "127.0.0.1:${TABLECAST_RTC_TCP_PORT}:${TABLECAST_RTC_TCP_PORT}"
+      - "127.0.0.1:${TABLECAST_RTC_UDP_PORT}:${TABLECAST_RTC_UDP_PORT}/udp"
+      - "127.0.0.1:${TABLECAST_STORYBOOK_PORT}:6006"
     labels:
       dev.orbstack.domains: ${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.orb.local
       dev.orbstack.http-port: "3000"
     volumes:
-      - ..:/workspaces/tablecast
-      - tablecast-node:/workspaces/tablecast/node_modules
-      - tablecast-web-node:/workspaces/tablecast/apps/web/node_modules
-      - tablecast-api-node:/workspaces/tablecast/apps/api/node_modules
-      - tablecast-emulate-node:/workspaces/tablecast/apps/emulate/node_modules
-      - tablecast-livekit-node:/workspaces/tablecast/livekit/node_modules
-      - tablecast-python:/workspaces/tablecast/livekit/.venv
-      - tablecast-state:/workspaces/tablecast/.local
-      - tablecast-web-output:/workspaces/tablecast/apps/web/dist
-      - tablecast-web-vite:/workspaces/tablecast/apps/web/.wrangler
+      - type: bind
+        source: ${TABLECAST_WORKSPACE_FOLDER}
+        target: ${TABLECAST_WORKSPACE_FOLDER}
+      - type: bind
+        source: ${TABLECAST_GIT_COMMON_DIR}
+        target: ${TABLECAST_GIT_COMMON_DIR}
+      - tablecast-node:${TABLECAST_WORKSPACE_FOLDER}/node_modules
+      - tablecast-web-node:${TABLECAST_WORKSPACE_FOLDER}/apps/web/node_modules
+      - tablecast-api-node:${TABLECAST_WORKSPACE_FOLDER}/apps/api/node_modules
+      - tablecast-emulate-node:${TABLECAST_WORKSPACE_FOLDER}/apps/emulate/node_modules
+      - tablecast-livekit-node:${TABLECAST_WORKSPACE_FOLDER}/livekit/node_modules
+      - tablecast-python:${TABLECAST_WORKSPACE_FOLDER}/livekit/.venv
+      - tablecast-state:${TABLECAST_WORKSPACE_FOLDER}/.local
+      - tablecast-web-output:${TABLECAST_WORKSPACE_FOLDER}/apps/web/dist
+      - tablecast-web-vite:${TABLECAST_WORKSPACE_FOLDER}/apps/web/.wrangler
 volumes:
   tablecast-lgtm:
   tablecast-node:
