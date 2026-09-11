@@ -57,7 +57,7 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
   }, [file]);
   const hasError = notice !== null && notice !== "success";
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-pwa-blocked={scanning || file !== null}>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"

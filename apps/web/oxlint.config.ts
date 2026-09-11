@@ -9,6 +9,7 @@ const boundaryFiles = [
   ["route", "src/routes/*.tsx"],
   ["router", "src/router.tsx"],
   ["server", "src/{server,lib/api-fetch.server}.ts"],
+  ["lib", "src/sw.ts"],
   ["transport", "src/lib/{api,api-fetch,auth-client}.ts"],
   ["lib", "src/lib/*.{ts,tsx}"],
   ["ui", "src/components/ui/*.{ts,tsx}"],

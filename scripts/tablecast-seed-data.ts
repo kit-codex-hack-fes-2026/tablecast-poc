@@ -1,3 +1,4 @@
+import { seedMenuImages } from "./tablecast-seed-media";
 import { and, count, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -489,7 +490,10 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) return false;
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
-  if (owner.seeded === 2) return true;
+  if (owner.seeded === 2) {
+    await seedMenuImages(env.TABLECAST_MEDIA, true);
+    return true;
+  }
   if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
   // 3は運用者が認証fixtureだけの途中状態を確認した再開。店舗作成後には使えない。
   if (
@@ -515,6 +519,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 }
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
+  await seedMenuImages(env.TABLECAST_MEDIA);
   const db = drizzle(env.TABLECAST_DB);
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。

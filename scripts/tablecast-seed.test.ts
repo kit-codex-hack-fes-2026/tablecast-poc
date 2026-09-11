@@ -16,7 +16,7 @@ import {
 } from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
 import { configurationSchema } from "../apps/api/src/schema";
-import { uploadPreviewImage } from "./tablecast-deploy";
+import { uploadPreviewImage } from "./tablecast-seed-media";
 
 const execute = promisify(execFile);
 
@@ -171,7 +171,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       );
       expect(products).toHaveLength(180);
       for (const product of products) {
-        expect(product.imageKey).toMatch(/^tablecast\/demo\/[a-z-]+\.png$/);
+        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
         expect(product.imageKind).toBe("illustration");
         expect(product.allergens.note.ja).toContain("混入は未確認");
         expect(product.allergens.note.en).toContain("cross-contact");

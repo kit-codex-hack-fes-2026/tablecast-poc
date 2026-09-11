@@ -141,3 +141,14 @@
     }
   }
 }
+
+/* standalone表示でもホームインジケータと操作を重ねない。 */
+@media (display-mode: standalone) {
+  [data-pwa-install] {
+    display: none;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+}

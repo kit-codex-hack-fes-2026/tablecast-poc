@@ -1,6 +1,6 @@
 import process from "node:process";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
@@ -112,19 +112,6 @@ async function seed() {
     if (env.TABLECAST_ENV !== "development" || env.TABLECAST_PUBLIC_ORIGIN !== runtime.origin)
       throw new Error("seed対象がこのworktreeの開発環境ではありません。");
     const counts = await seedDemoDatabase(env, credentials);
-    const directory = join(tablecastRoot, "assets", "demo");
-    for (const file of (await readdir(directory))
-      .filter((name) => /^[a-z0-9-]+\.png$/.test(name))
-      .sort()) {
-      await env.TABLECAST_MEDIA.put(
-        `tablecast/demo/${file}`,
-        await readFile(join(directory, file)),
-        {
-          httpMetadata: { contentType: "image/png", cacheControl: "public,max-age=86400" },
-          customMetadata: { source: "synthetic-demo" },
-        },
-      );
-    }
     console.info(
       JSON.stringify(
         {

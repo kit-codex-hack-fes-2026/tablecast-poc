@@ -1,3 +1,4 @@
+import { Pwa, PwaInstallHelp } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
 import { PanelLayoutProvider } from "../lib/panel-layout";
@@ -30,13 +31,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     }
     return { panelCookies };
   },
-  head: () => ({
+  head: ({ matches }) => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#f7f7f2" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
       { title: "TableCast" },
     ],
-    links: [{ rel: "stylesheet", href: stylesheet }],
+    links: [
+      { rel: "stylesheet", href: stylesheet },
+      {
+        rel: "manifest",
+        href:
+          matches.at(-1)?.pathname === "/"
+            ? "/tablecast-kiosk.webmanifest"
+            : "/tablecast-staff.webmanifest",
+      },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png" },
+    ],
   }),
   shellComponent: Root,
   component: RootContent,
@@ -68,7 +81,9 @@ function RootContent() {
   const { panelCookies } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>
+      <Pwa />
       <Outlet />
+      <PwaInstallHelp />
     </PanelLayoutProvider>
   );
 }

@@ -1,3 +1,5 @@
+import { appendFile } from "node:fs/promises";
+import { join } from "node:path";
 import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import {
@@ -18,6 +20,7 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
   page,
   request: staff,
   baseURL,
+  runtime,
 }) => {
   const storeId = "tablecast-akari";
   const adminPath = `/api/admin/stores/${storeId}`;
@@ -27,6 +30,7 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
   let original: Catalog | undefined;
   let changeDraft: ConfigDraft | undefined;
   let closedSockets = 0;
+  let initialPage = 0;
 
   async function prepare(configuration: Configuration, baseVersion: number) {
     const created = await staff.post(`${adminPath}/drafts`, { headers, data: {} });
@@ -118,13 +122,35 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
     const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
     await expect(detail.getByText(prices.original, { exact: true })).toContainText(prices.original);
 
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    initialPage = await page.evaluate(() => performance.timeOrigin);
+    await runtime.setOnline(false);
+    await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-live-table-update\n");
+    await runtime.setOnline(true);
+    await expect
+      .poll(async () =>
+        page.evaluate(async () => {
+          const registration = await navigator.serviceWorker.getRegistration();
+          await registration?.update();
+          return Boolean(registration?.waiting);
+        }),
+      )
+      .toBe(true);
+
     const changed = structuredClone(original.configuration);
     const changedProduct = changed.products.find((item) => item.id === product.id);
     if (!changedProduct) throw new Error("価格変更対象の商品がありません");
     changedProduct.price += 100;
+    const replacement = changed.products.find(
+      (item) => item.imageKey && item.imageKey !== product.imageKey,
+    )?.imageKey;
+    if (!replacement) throw new Error("差し替え用画像がありません");
+    changedProduct.imageKey = replacement;
     changeDraft = await prepare(changed, original.version);
-    expect(changeDraft.changes).toHaveLength(1);
-    expect(changeDraft.changes[0]).toMatchObject({
+    expect(changeDraft.changes).toHaveLength(2);
+    expect(changeDraft.changes.find((change) => change.path.endsWith(".price"))).toMatchObject({
       before: product.price,
       after: product.price + 100,
       sensitive: true,
@@ -149,6 +175,13 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
     expect(publication?.data).toEqual({});
     await expect(detail).not.toBeVisible();
     await expect(card).toContainText(prices.changed);
+    await expect(card.locator("img")).toHaveAttribute("src", new RegExp(replacement));
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(initialPage);
+    expect(
+      await page.evaluate(async () =>
+        Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+      ),
+    ).toBe(true);
     await card.click();
     await expect(detail.getByText(prices.changed, { exact: true })).toContainText(prices.changed);
     await detail.getByRole("button", { name: "おしながき", exact: true }).click();
@@ -205,6 +238,10 @@ test("通知切断中でも設定公開を取得し、古い商品画面を閉�
             data: {},
           });
           expect(closed.status()).toBe(200);
+          if (initialPage)
+            await expect(async () => {
+              expect(await page.evaluate(() => performance.timeOrigin)).not.toBe(initialPage);
+            }).toPass({ timeout: 20_000 });
         }
       } finally {
         const logout = await staff.post("/api/auth/sign-out", { headers, data: {} });

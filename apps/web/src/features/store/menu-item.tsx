@@ -221,7 +221,11 @@ function ItemForm({
               <form.Subscribe selector={(state) => state.isDirty}>
                 {(dirty) => (
                   <div className="flex items-center gap-3">
-                    <Button type="submit" disabled={save.isPending || (!dirty && itemId !== "new")}>
+                    <Button
+                      type="submit"
+                      data-pwa-blocked={dirty || save.isPending}
+                      disabled={save.isPending || (!dirty && itemId !== "new")}
+                    >
                       <Save />
                       {t("common_save")}
                     </Button>

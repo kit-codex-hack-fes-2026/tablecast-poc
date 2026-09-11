@@ -17,12 +17,15 @@ const builtConfig = z
   })
   .catchall(z.json());
 
-export const test = base.extend<{ runtime: CaseRuntime }>({
+export const test = base.extend<{
+  runtime: CaseRuntime & { setOnline: (online: boolean) => Promise<void> };
+}>({
   runtime: [
     async ({ browserName }, use) => {
       const runtime = await createCaseRuntime();
       const name = `${basename(runtime.directory).toLowerCase()}-${browserName}`;
       const children: ChildProcess[] = [];
+      const expectedStops = new Set<ChildProcess>();
       const container = `${name}-mailpit`;
       let failure: Error | undefined;
       const start = (command: string, args: string[], env: NodeJS.ProcessEnv = {}) => {
@@ -41,9 +44,11 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           failure = error;
         });
         child.once("exit", (code, signal) => {
-          failure ??= new Error(`${command}が起動中に終了しました: ${code ?? signal}`);
+          if (!expectedStops.has(child))
+            failure ??= new Error(`${command}が起動中に終了しました: ${code ?? signal}`);
         });
         children.push(child);
+        return child;
       };
       try {
         const state = join(runtime.directory, "state");
@@ -68,6 +73,10 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           const config = builtConfig.parse(
             JSON.parse(await readFile(join(build, "wrangler.json"), "utf8")),
           );
+          if (config.assets)
+            await cp(resolve(build, config.assets.directory), join(runtime.directory, "client"), {
+              recursive: true,
+            });
           await writeFile(
             join(runtime.directory, `${worker}.json`),
             JSON.stringify({
@@ -75,7 +84,7 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
               name: `${name}-${worker}`,
               main: resolve(build, config.main),
               ...(config.assets
-                ? { assets: { directory: resolve(build, config.assets.directory) } }
+                ? { assets: { ...config.assets, directory: join(runtime.directory, "client") } }
                 : {}),
               ...(worker === "web"
                 ? { services: [{ binding: "TABLECAST_API", service: `${name}-api` }] }
@@ -125,25 +134,27 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
             auxiliaryWorkers: [{ configPath: join(runtime.directory, "api.json") }],
           }),
         );
-        start(
-          "node",
-          [
-            join(root, "apps/web/node_modules/.bin/vite"),
-            "preview",
-            "--config",
-            join(import.meta.dirname, "tablecast-preview.config.ts"),
-            "--host",
-            "127.0.0.1",
-            "--port",
-            String(runtime.ports.web),
-            "--strictPort",
-            "--logLevel",
-            "warn",
-          ],
-          {
-            TABLECAST_E2E_CASE_DIRECTORY: runtime.directory,
-          },
-        );
+        const startWeb = () =>
+          start(
+            "node",
+            [
+              join(root, "apps/web/node_modules/.bin/vite"),
+              "preview",
+              "--config",
+              join(import.meta.dirname, "tablecast-preview.config.ts"),
+              "--host",
+              "127.0.0.1",
+              "--port",
+              String(runtime.ports.web),
+              "--strictPort",
+              "--logLevel",
+              "warn",
+            ],
+            {
+              TABLECAST_E2E_CASE_DIRECTORY: runtime.directory,
+            },
+          );
+        let web = startWeb();
         const deadline = Date.now() + 60_000;
         let ready = false;
         while (Date.now() < deadline) {
@@ -166,7 +177,42 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           await new Promise((done) => setTimeout(done, 100));
         }
         if (!ready) throw new Error("case専用の受入環境を起動できませんでした。");
-        await use(runtime);
+        await use({
+          ...runtime,
+          setOnline: async (online) => {
+            if (!online) {
+              expectedStops.add(web);
+              await new Promise<void>((done) => {
+                const timer = setTimeout(() => web.kill("SIGKILL"), 5000);
+                web.once("exit", () => {
+                  clearTimeout(timer);
+                  done();
+                });
+                web.kill("SIGTERM");
+              });
+              return;
+            }
+            web = startWeb();
+            const end = Date.now() + 60_000;
+            while (Date.now() < end) {
+              if (failure) throw failure;
+              try {
+                if (
+                  (
+                    await fetch(`${runtime.origin}/api/admin/stores`, {
+                      signal: AbortSignal.timeout(2000),
+                    })
+                  ).status === 401
+                )
+                  return;
+              } catch {
+                /* Worker起動中は接続を再試行する。 */
+              }
+              await new Promise((done) => setTimeout(done, 100));
+            }
+            throw new Error("Workerの再起動を確認できませんでした。");
+          },
+        });
         if (failure) throw failure;
       } finally {
         await Promise.all(

@@ -30,7 +30,7 @@ export function Pairing({ onReady }: { onReady: () => void }) {
     if (poll.data?.ready) onReady();
   }, [poll.data?.ready, onReady]);
   return (
-    <main className="min-h-dvh">
+    <main className="min-h-dvh" data-pwa-blocked={Boolean(request.data) || request.isPending}>
       <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
         <a
           data-ui="brand"

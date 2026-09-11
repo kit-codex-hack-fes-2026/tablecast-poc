@@ -88,11 +88,12 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
   const { t, session, change, section } = controller;
   const form = useAppForm({
     defaultValues: { name: session.data?.user.name ?? "" },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       await change
         .mutateAsync(async () => {
           authResult(await authClient.updateUser(value));
         })
+        .then(() => formApi.reset(value))
         .catch(() => undefined);
     },
   });
@@ -273,11 +274,12 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
   );
   const form = useAppForm({
     defaultValues: { name: "" },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       await change
         .mutateAsync(async () => {
           authResult(await authClient.passkey.addPasskey({ name: value.name || "TableCast" }));
         })
+        .then(() => formApi.reset(value))
         .catch(() => undefined);
     },
   });

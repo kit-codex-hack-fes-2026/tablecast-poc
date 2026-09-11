@@ -77,7 +77,9 @@ export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }
       </main>
     );
   return (
-    <TableSession key={table.data.id} endpoint={endpoint} data={table.data} refresh={refresh} />
+    <div className="contents" data-pwa-blocked="true">
+      <TableSession key={table.data.id} endpoint={endpoint} data={table.data} refresh={refresh} />
+    </div>
   );
 }
 
