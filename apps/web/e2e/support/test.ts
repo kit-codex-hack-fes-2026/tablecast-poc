@@ -142,7 +142,6 @@ export const test = base.extend<{ runtime: CaseRuntime }>({
           ],
           {
             TABLECAST_E2E_CASE_DIRECTORY: runtime.directory,
-            TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
           },
         );
         const deadline = Date.now() + 60_000;

@@ -134,7 +134,6 @@ export default async function setup() {
       TABLECAST_WEB_CONFIG: webConfig,
       TABLECAST_API_CONFIG: apiConfig,
       TABLECAST_STATE_PATH: state,
-      TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
       TABLECAST_PUBLIC_ORIGIN: runtime.origin,
     };
     const vite = join(root, "apps/web/node_modules/.bin/vite");
