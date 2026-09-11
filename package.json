@@ -10,13 +10,13 @@
   "scripts": {
     "deploy": "tsx scripts/tablecast-deploy.ts",
     "build:deploy": "bun --no-env-file scripts/tablecast-deploy.ts --build",
-    "dev:prepare": "bun --no-env-file scripts/tablecast-dev.ts prepare",
-    "dev": "bun --no-env-file scripts/tablecast-dev.ts start",
-    "dev:parity": "bun --no-env-file scripts/tablecast-dev.ts parity",
+    "dev:prepare": "NODE_ENV=development bun scripts/tablecast-dev.ts prepare",
+    "dev": "NODE_ENV=development bun scripts/tablecast-dev.ts start",
+    "dev:parity": "NODE_ENV=development bun scripts/tablecast-dev.ts parity",
     "dev:status": "bun --no-env-file scripts/tablecast-dev.ts status",
     "dev:stop": "bun --no-env-file scripts/tablecast-dev.ts stop",
     "db:seed": "bun --no-env-file scripts/tablecast-seed.ts",
-    "demo:reset": "bun --no-env-file scripts/tablecast-dev.ts reset",
+    "demo:reset": "NODE_ENV=development bun scripts/tablecast-dev.ts reset",
     "demo:play": "bun --no-env-file scripts/tablecast-demo.ts",
     "storybook": "bun --no-env-file scripts/tablecast-dev.ts storybook",
     "build": "turbo run build",
@@ -27,12 +27,13 @@
     "test": "vitest run --config vitest.config.ts && turbo run test",
     "test:browser": "turbo run test:browser",
     "test:e2e": "bun run --cwd apps/web test:e2e",
-    "test:voice:live": "bun run --cwd livekit test:voice:live",
+    "test:voice:live": "NODE_ENV=development bun run --cwd livekit test:voice:live",
     "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "hooks:install": "lefthook install",
     "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts",
     "codegen": "bun run --cwd apps/web i18n:compile",
-    "prepare": "bun run hooks:install"
+    "prepare": "bun run hooks:install",
+    "setup": "bun --no-env-file install --frozen-lockfile && uv sync --project livekit --locked && bun run codegen"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",

@@ -4,6 +4,7 @@ import { mkdir, open, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
 import {
+  developmentSecrets,
   localEnvironment,
   localReleaseSha,
   readRuntime,
@@ -292,12 +293,7 @@ async function serve(runtime: TablecastRuntime, nonce: string, parity: boolean) 
         "--config",
         "/etc/tablecast-livekit.yaml",
       ]);
-    let external: ReturnType<typeof parseEnv> = {};
-    try {
-      external = parseEnv(await readFile(join(tablecastRoot, ".env.secrets.local"), "utf8"));
-    } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-    }
+    const external = developmentSecrets();
     if (
       external.INWORLD_API_KEY &&
       external.TABLECAST_MODEL_API_KEY &&
@@ -345,6 +341,11 @@ async function start(parity: boolean) {
     }
     await stop(previous);
   }
+  if (!tablecastContainer) {
+    await execute("docker", ["info", "--format", "{{.ServerVersion}}"]).catch(() => {
+      throw new Error("Dockerに接続できません。OrbStackまたはDocker Desktopを起動してください。");
+    });
+  }
   const runtime = await prepare();
   runtime.mode = mode;
   if (parity) {
@@ -370,7 +371,7 @@ async function start(parity: boolean) {
     ],
     {
       cwd: tablecastRoot,
-      env: localEnvironment(runtime),
+      env: { ...localEnvironment(runtime), ...developmentSecrets() },
       stdin: "ignore",
       detached: true,
       stdout: log.fd,
@@ -449,8 +450,12 @@ async function main() {
     if (runtime) await stop(runtime);
     console.info("このworktreeのTableCastを停止しました。");
   } else if (command === "status") {
-    const runtime = await readRuntime();
-    console.info(JSON.stringify({ ...runtime, running: await ownerRunning(runtime) }, null, 2));
+    const runtime = await optionalRuntime();
+    console.info(
+      runtime
+        ? JSON.stringify({ ...runtime, running: await ownerRunning(runtime) }, null, 2)
+        : "未起動です。bun run dev または bun run storybook で開始してください。",
+    );
   } else if (command === "storybook") {
     const runtime = (await optionalRuntime()) ?? (await reserveRuntime());
     console.info(`TableCast Storybook MCP: http://127.0.0.1:${runtime.ports.storybook}/mcp`);

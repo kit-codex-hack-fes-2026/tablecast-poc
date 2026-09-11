@@ -307,8 +307,34 @@ export function localEnvironment(runtime: TablecastRuntime) {
     WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   };
-  if (process.env.UV_CACHE_DIR) env.UV_CACHE_DIR = process.env.UV_CACHE_DIR;
+  for (const key of [
+    "UV_CACHE_DIR",
+    "UV_PYTHON_INSTALL_DIR",
+    "DOCKER_HOST",
+    "DOCKER_CONTEXT",
+    "DOCKER_CONFIG",
+  ]) {
+    if (process.env[key]) env[key] = process.env[key];
+  }
   return env;
+}
+
+// Bunが読み込んだ開発設定のうち、起動所有者へ必要な値だけを渡す。
+export function developmentSecrets() {
+  return Object.fromEntries(
+    [
+      "INWORLD_API_KEY",
+      "TABLECAST_MODEL_API_KEY",
+      "TABLECAST_INWORLD_VOICE_JA",
+      "TABLECAST_INWORLD_VOICE_EN",
+      "TABLECAST_INWORLD_VOICES_API_KEY",
+      "TABLECAST_MODEL",
+      "TABLECAST_OTEL_CAPTURE_CONTENT",
+      "TABLECAST_MASTRA_ACCESS_TOKEN",
+      "TABLECAST_MASTRA_PROJECT_ID",
+      "TABLECAST_MASTRA_ENDPOINT",
+    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])),
+  );
 }
 
 export async function writeLocalConfigs(runtime: TablecastRuntime) {
@@ -383,12 +409,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
-  let external: ReturnType<typeof parseEnv> = {};
-  try {
-    external = parseEnv(await readFile(join(tablecastRoot, ".env.secrets.local"), "utf8"));
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
+  const external = developmentSecrets();
   const values: Record<string, string> = {
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
     TABLECAST_VOICE_ENABLED: [
@@ -417,8 +438,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
-    "TABLECAST_GOOGLE_CLIENT_ID",
-    "TABLECAST_GOOGLE_CLIENT_SECRET",
   ]) {
     if (external[key]) values[key] = external[key];
   }

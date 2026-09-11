@@ -168,3 +168,37 @@ it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメイ�
   expect(worktreeHost("/codex/worktrees/29f4/tablecast-poc", common)).toBe("29f4.tablecast-poc");
   expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
 });
+
+it("Bunの開発envを読み込んだ起動所有者は許可した資格だけを子へ渡す", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tablecast-bun-env-"));
+  const execute = promisify(execFile);
+  try {
+    // Given: 標準のenvファイルと、共有を許可しない資格を用意する。
+    await writeFile(join(root, ".env"), "TABLECAST_MODEL=tablecast-base\n");
+    await writeFile(join(root, ".env.development"), "TABLECAST_MODEL=tablecast-development\n");
+    await writeFile(
+      join(root, ".env.local"),
+      'TABLECAST_MODEL=tablecast-local\nTABLECAST_MODEL_API_KEY="${TABLECAST_MODEL}-key"\nCLOUDFLARE_API_TOKEN=tablecast-production-key\nTABLECAST_AUTH_SECRET=tablecast-shared-auth\n',
+    );
+    const module = join(process.cwd(), "scripts/tablecast-runtime.ts");
+    // When: 実際のBunでenvを読み込み、本番と同じ受け渡し関数を使う。
+    const { stdout } = await execute(
+      "bun",
+      [
+        "--eval",
+        `import { developmentSecrets } from ${JSON.stringify(module)}; console.log(JSON.stringify(developmentSecrets()));`,
+      ],
+      {
+        cwd: root,
+        env: { PATH: process.env.PATH, HOME: root, NODE_ENV: "development" },
+      },
+    );
+    // Then: 展開済みの開発資格だけを渡し、Cloudflare資格と共有認証鍵を除く。
+    expect(JSON.parse(stdout)).toEqual({
+      TABLECAST_MODEL: "tablecast-local",
+      TABLECAST_MODEL_API_KEY: "tablecast-local-key",
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
