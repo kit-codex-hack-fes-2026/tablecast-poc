@@ -158,7 +158,10 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
   await page.getByLabel(ja.auth_email, { exact: true }).fill("unsaved@example.test");
   const other = await context.newPage();
   await other.goto(`${runtime.origin}/`);
-  const original = await page.evaluate(() => performance.timeOrigin);
+  let reloads = 0;
+  page.on("domcontentloaded", () => {
+    reloads += 1;
+  });
   // When: 配信済みService Workerの内容を更新する。
   await runtime.setOnline(false);
   await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
@@ -178,12 +181,12 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
     }),
   );
   await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("unsaved@example.test");
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(original);
+  expect(reloads).toBe(0);
   // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
   const updated = page.waitForEvent("domcontentloaded", { timeout: 20_000 });
   await page.getByLabel(ja.auth_email, { exact: true }).fill("");
   await updated;
-  expect(await page.evaluate(() => performance.timeOrigin)).not.toBe(original);
+  expect(reloads).toBe(1);
   await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
   await expect(async () => {
     expect(
