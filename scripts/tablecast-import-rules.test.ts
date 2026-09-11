@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
-it("APIのレイヤー外importは拒否し、model・共有依存の型・module入口だけを許可する", async () => {
+it("APIのレイヤー外importは拒否し、model・共有依存の型・route合成を許可する", async () => {
   // Given: 実設定を複製した隔離workspaceと、レイヤーを越えるimport。
   const root = resolve(import.meta.dirname, "..");
   const temporary = await mkdtemp(join(tmpdir(), "tablecast-import-rules-"));
@@ -22,7 +22,7 @@ it("APIのレイヤー外importは拒否し、model・共有依存の型・modul
         'export type { ApiServices } from "../../platform/context";',
         'export { submitOrder } from "../orders/service";',
       ],
-      rejectedLines: [1, 2, 3, 4, 5],
+      rejectedLines: [1, 2, 3, 4],
     },
     {
       path: "modules/example/service.ts",

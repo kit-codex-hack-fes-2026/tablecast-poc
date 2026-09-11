@@ -15,7 +15,7 @@ import { recordVoiceEvent } from "./service";
 export async function getVoiceConfiguration(services: ApiServices, voiceSessionId: string) {
   const actor = await voiceActor(services, voiceSessionId);
   const session = await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId);
+  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
   ensure(catalog.configuration.cast.voice[session.locale], "VOICE_NOT_CONFIGURED", 503);
   return {
     voiceSessionId,
@@ -90,7 +90,7 @@ export async function recordTranscript(
         sql`SELECT NULL,${actor.storeId},${actor.tableSessionId},'voice.transcribed',${JSON.stringify({ turnId: input.turnId })},${Date.now()} WHERE changes()=1`,
       ),
   ]);
-  waitUntil(notifyStore(services, actor.storeId));
+  waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
   return { ok: true };
 }
 export async function invokeVoiceTool(
@@ -132,7 +132,7 @@ export async function invokeVoiceTool(
   try {
     const result = await tool.invoke(input.arguments);
     await record("completed");
-    waitUntil(notifyStore(services, actor.storeId));
+    waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
     return { result };
   } catch (error) {
     await record("error");
@@ -147,6 +147,12 @@ export async function recordPlayback(services: ApiServices, input: z.infer<typeo
     sql`SELECT store_id,table_session_id,locale,EXISTS(SELECT 1 FROM table_events WHERE store_id=voice_turns.store_id AND table_session_id=voice_turns.table_session_id AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=voice_turns.id) AS proactive FROM voice_turns WHERE id=${input.turnId} AND voice_session_id=${input.voiceSessionId}`,
   );
   ensure(turn, "VOICE_TURN_NOT_FOUND", 404);
+  const demo = await db
+    .select({ id: business.demoSessions.session_id })
+    .from(business.demoSessions)
+    .where(sql`session_id=${turn.table_session_id}`)
+    .get();
+  if (demo) await voiceActor(services, input.voiceSessionId, input.turnId);
   const proactive = turn.proactive === 1;
   const result = await db.batch([
     db
@@ -171,6 +177,6 @@ export async function recordPlayback(services: ApiServices, input: z.infer<typeo
     ),
   ]);
   if (proactive) ensure(result[0]?.meta.changes === 1, "PROACTIVE_TURN_STALE", 409);
-  await notifyStore(services, turn.store_id);
+  await notifyStore(services, turn.store_id, turn.table_session_id);
   return { ok: true };
 }

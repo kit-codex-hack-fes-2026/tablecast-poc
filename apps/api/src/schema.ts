@@ -86,3 +86,5 @@ export { localeSchema } from "./platform/model";
 export type { ApiError, Locale } from "./platform/model";
 
 export { showProductsSchema } from "./modules/voice/model";
+
+export { demoSchema, demoUpdateSchema, type Demo, type DemoUpdate } from "./modules/demo/model";

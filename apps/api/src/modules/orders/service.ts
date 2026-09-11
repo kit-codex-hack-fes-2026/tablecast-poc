@@ -6,7 +6,7 @@ import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { confirmationText, priceCart } from "../catalog/pricing";
-import { getCatalog } from "../catalog/queries";
+import { getCatalog, sessionConfigVersion } from "../catalog/queries";
 import type { TableState } from "../tables/model";
 import {
   eventStatement,
@@ -34,7 +34,7 @@ export async function updateCart(
 
       const session = await getSession(services, actor);
       ensure(session.status === "open", "SESSION_CLOSED");
-      const catalog = await getCatalog(services, actor.storeId);
+      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
       priceCart(
         catalog.configuration,
         input.lines,
@@ -52,7 +52,7 @@ export async function updateCart(
             mutation_id: mutation,
           })
           .where(
-            sql`id=${session.id} AND store_id=${actor.storeId} AND status='open' AND cart_version=${input.expectedVersion} AND EXISTS (SELECT 1 FROM stores WHERE id=${actor.storeId} AND config_version=${catalog.version})${gate}`,
+            sql`id=${session.id} AND store_id=${actor.storeId} AND status='open' AND cart_version=${input.expectedVersion} AND ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog.version}${gate}`,
           ),
         invalidationStatement(services, actor, mutation),
         eventStatement(services, actor, mutation, "cart.updated", {
@@ -61,7 +61,7 @@ export async function updateCart(
         }),
       ]);
       ensure(result[0]?.meta.changes === 1, "CART_CONFLICT");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor, input } },
@@ -87,7 +87,7 @@ export async function prepareConfirmation(
         "CONFIRMATION_CHANNEL",
         403,
       );
-      const catalog = await getCatalog(services, actor.storeId);
+      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
       const plan = await planContext(services, session);
       const cart = priceCart(
         catalog.configuration,
@@ -132,7 +132,7 @@ export async function prepareConfirmation(
           .update(business.tableSessions)
           .set({ mutation_id: mutation })
           .where(
-            sql`id=${session.id} AND store_id=${actor.storeId} AND status='open' AND cart_version=${input.expectedVersion} AND EXISTS(SELECT 1 FROM stores WHERE id=${actor.storeId} AND config_version=${catalog.version})${gate}`,
+            sql`id=${session.id} AND store_id=${actor.storeId} AND status='open' AND cart_version=${input.expectedVersion} AND ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog.version}${gate}`,
           ),
         invalidationStatement(services, actor, mutation),
         db
@@ -146,7 +146,7 @@ export async function prepareConfirmation(
         }),
       ]);
       ensure(result[0]?.meta.changes === 1, "CART_CONFLICT");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return snapshot;
     },
     { env: services.env, input: { actor, input } },
@@ -175,7 +175,7 @@ export async function markConfirmationRead(services: ApiServices, actor: Actor, 
     .update(business.confirmations)
     .set({ status: "read", read_at: Date.now() })
     .where(
-      sql`id=${id} AND table_session_id=${actor.tableSessionId} AND voice_session_id=${actor.voiceSessionId} AND status='pending' AND expires_at>${Date.now()} AND created_turn_id=${actor.turnId} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=confirmations.store_id AND status='open' AND voice_state='active' AND voice_session_id=${actor.voiceSessionId} AND active_turn_id=${actor.turnId} AND cart_version=confirmations.cart_version) AND config_version=(SELECT config_version FROM stores WHERE id=confirmations.store_id)`,
+      sql`id=${id} AND table_session_id=${actor.tableSessionId} AND voice_session_id=${actor.voiceSessionId} AND status='pending' AND expires_at>${Date.now()} AND created_turn_id=${actor.turnId} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=confirmations.store_id AND status='open' AND voice_state='active' AND voice_session_id=${actor.voiceSessionId} AND active_turn_id=${actor.turnId} AND cart_version=confirmations.cart_version) AND config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)}`,
     );
   ensure(result.meta.changes === 1, "CONFIRMATION_STALE");
 }
@@ -205,7 +205,7 @@ export async function submitOrder(
       ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
       const session = await measured("tablecast.order.session", () => getSession(services, actor));
       const catalog = await measured("tablecast.order.catalog", () =>
-        getCatalog(services, actor.storeId),
+        getCatalog(services, actor.storeId, actor.demoId),
       );
       priceCart(
         catalog.configuration,
@@ -256,7 +256,7 @@ export async function submitOrder(
               mutation_id: mutation,
             })
             .where(
-              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=s.config_version AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
+              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)} AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
             ),
           db
             .insert(business.orders)
@@ -283,7 +283,9 @@ export async function submitOrder(
         if (retry) return orderValue(retry);
         throw new DomainError("CONFIRMATION_STALE", 409, "CONFIRMATION_STALE");
       }
-      await measured("tablecast.order.notify", () => notifyStore(services, actor.storeId));
+      await measured("tablecast.order.notify", () =>
+        notifyStore(services, actor.storeId, actor.tableSessionId),
+      );
       return {
         id: orderId,
         tableSessionId: session.id,
@@ -315,6 +317,7 @@ export async function changeOrderStatus(
         sql`SELECT * FROM orders WHERE id=${orderId} AND store_id=${actor.storeId}`,
       );
       ensure(row, "ORDER_NOT_FOUND", 404);
+      await getSession(services, { ...actor, tableSessionId: row.table_session_id });
       if (row.status === status) return orderValue(row);
       const transitions: Record<Order["status"], Order["status"][]> = {
         submitted: ["accepted", "rejected", "cancelled"],
@@ -347,7 +350,7 @@ export async function changeOrderStatus(
         eventStatement(services, scoped, mutation, "order.status", { orderId, status }),
       ]);
       ensure(result[0]?.meta.changes === 1, "ORDER_CONFLICT");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return { ...orderValue(row), status };
     },
     { env: services.env, input: { actor, orderId, status } },
@@ -419,7 +422,7 @@ export async function recordPayment(
           "BILLING_CONFLICT",
         );
       }
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor, input } },

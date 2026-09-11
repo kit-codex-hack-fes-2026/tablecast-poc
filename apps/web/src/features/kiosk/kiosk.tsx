@@ -12,7 +12,7 @@ import type {
 } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
@@ -25,7 +25,7 @@ import {
 } from "../../components/ui/resizable";
 import { money, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { ApiFailure, parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
@@ -35,20 +35,21 @@ import { ProductMenu } from "./menu";
 import { Pairing } from "./pairing";
 import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
-import { tableCatalogOptions, tableKey, tableOptions } from "./table-query";
+import { tableCatalogOptions, tableQueryKey, tableOptions } from "./table-query";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
 import { VoicePanel } from "./voice-panel";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
-export function Kiosk() {
+export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }) {
+  const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { t } = useI18n();
   const client = useQueryClient();
-  const table = useQuery(tableOptions(client));
+  const table = useQuery(tableOptions(client, endpoint));
   const [wasConnected, setWasConnected] = useState(Boolean(table.data));
   if (table.data && !wasConnected) setWasConnected(true);
   const refresh = useCallback(() => {
     void client.invalidateQueries({ queryKey: tableKey });
-  }, [client]);
+  }, [client, tableKey]);
   if ((table.data === null && wasConnected) || table.data?.status === "closed")
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
@@ -75,15 +76,26 @@ export function Kiosk() {
         {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
       </main>
     );
-  return <TableSession key={table.data.id} data={table.data} refresh={refresh} />;
+  return (
+    <TableSession key={table.data.id} endpoint={endpoint} data={table.data} refresh={refresh} />
+  );
 }
 
-function useTableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
+function useTableSession({
+  data,
+  refresh,
+  endpoint,
+}: {
+  data: TableState;
+  refresh: () => void;
+  endpoint: TableEndpoint;
+}) {
+  const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
-  const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion));
+  const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion, endpoint));
   const [view, setView] = useState<VoiceView>({ status: "idle" });
-  const [voice] = useState(() => new VoiceConnection(setView, refresh));
+  const [voice] = useState(() => new VoiceConnection(setView, refresh, endpoint.client));
   const [chosen, setChosen] = useState<{
     product: Product;
     line?: CartLine;
@@ -97,7 +109,8 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
     client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
   const screen = useMutation({
     scope: { id: `tablecast-ui-${data.id}` },
-    mutationFn: (input: UiSectionInput) => parseResponse(rpc.api.table.ui.$patch({ json: input })),
+    mutationFn: (input: UiSectionInput) =>
+      parseResponse(endpoint.client.ui.$patch({ json: input })),
     onSuccess: receive,
     onError: refresh,
   });
@@ -138,12 +151,12 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
   const speed = useMutation({
     scope: { id: `tablecast-speed-${data.id}` },
     mutationFn: (value: number) =>
-      parseResponse(rpc.api.table.voice.speed.$patch({ json: { speed: value } })),
+      parseResponse(endpoint.client.voice.speed.$patch({ json: { speed: value } })),
     onSuccess: receive,
     onError: refresh,
   });
   const [submitKey, setSubmitKey] = useState("");
-  useRealtime("table", data.cursor, refresh);
+  useRealtime("table", data.cursor, refresh, endpoint.client);
   const snapshot =
     prepared &&
     prepared.cartVersion === data.cart.version &&
@@ -178,7 +191,7 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
   }, [data.voiceSessionId, data.voiceState, voice]);
   const updateCart = useMutation({
     mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
-      parseResponse(rpc.api.table.cart.$put({ json: { expectedVersion, lines } })),
+      parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
     onSuccess: (updated) => {
       receive(updated);
       setChosen(undefined);
@@ -190,7 +203,7 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
   const prepare = useMutation({
     mutationFn: () =>
       parseResponse(
-        rpc.api.table.confirm.$post({
+        endpoint.client.confirm.$post({
           json: { expectedVersion: data.cart.version, channel: "gui" },
         }),
       ),
@@ -208,7 +221,7 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
     mutationFn: () => {
       if (!snapshot) throw new ApiFailure(409, "SNAPSHOT_REQUIRED");
       return parseResponse(
-        rpc.api.table.orders.$post({
+        endpoint.client.orders.$post({
           json: { snapshotId: snapshot.id, idempotencyKey: submitKey, approved: true },
         }),
       );
@@ -223,13 +236,13 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
   });
   const call = useMutation({
     mutationFn: (bill: boolean) =>
-      parseResponse(bill ? rpc.api.table.bill.request.$post() : rpc.api.table.call.$post()),
+      parseResponse(bill ? endpoint.client.bill.request.$post() : endpoint.client.call.$post()),
     onSuccess: receive,
   });
   const language = useMutation({
     mutationFn: async (next: Locale) => {
       await voice.stop({ existingSession: view.error === "active" });
-      return parseResponse(rpc.api.table.locale.$patch({ json: { locale: next } }));
+      return parseResponse(endpoint.client.locale.$patch({ json: { locale: next } }));
     },
     onSuccess: (updated) => {
       receive(updated);
@@ -290,7 +303,15 @@ function useTableSession({ data, refresh }: { data: TableState; refresh: () => v
     voiceActive,
   };
 }
-function TableSession({ data, refresh }: { data: TableState; refresh: () => void }) {
+function TableSession({
+  data,
+  refresh,
+  endpoint,
+}: {
+  data: TableState;
+  refresh: () => void;
+  endpoint: TableEndpoint;
+}) {
   const hydrated = useHydrated();
   const horizontal = useMediaQuery("(min-width: 40rem)");
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
@@ -323,27 +344,10 @@ function TableSession({ data, refresh }: { data: TableState; refresh: () => void
     currentLines,
     edit,
     voiceActive,
-  } = useTableSession({ data, refresh });
+  } = useTableSession({ data, refresh, endpoint });
   return (
     <div data-ui="kiosk-shell" className="h-dvh flex flex-col overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-white/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2">
-        <a className="text-xl font-bold tracking-tight" href="/">
-          TableCast<span className="text-accent">·</span>
-        </a>
-        <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
-          <span className="max-w-48 truncate">{data.storeName}</span>
-          <strong>{data.tableName}</strong>
-        </div>
-        <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
-        <Button
-          variant="outline"
-          onClick={() => call.mutate(false)}
-          disabled={call.isPending || data.staffCalled}
-        >
-          <Bell />
-          {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
-        </Button>
-      </header>
+      <KioskHeader data={data} language={language} call={call} />
       <ResizablePanelGroup
         orientation={horizontal ? "horizontal" : "vertical"}
         className="flex-1 max-sm:flex-col!"
@@ -673,5 +677,37 @@ function KioskBilling({
         </Button>
       </div>
     </Tabs.Panel>
+  );
+}
+
+function KioskHeader({
+  data,
+  language,
+  call,
+}: {
+  data: TableState;
+  language: ReturnType<typeof useTableSession>["language"];
+  call: ReturnType<typeof useTableSession>["call"];
+}) {
+  const { t } = useI18n();
+  return (
+    <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-white/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2">
+      <a className="text-xl font-bold tracking-tight" href={data.kind === "demo" ? "#" : "/"}>
+        TableCast<span className="text-accent">·</span>
+      </a>
+      <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
+        <span className="max-w-48 truncate">{data.storeName}</span>
+        <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
+      </div>
+      <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
+      <Button
+        variant="outline"
+        onClick={() => call.mutate(false)}
+        disabled={call.isPending || data.staffCalled}
+      >
+        <Bell />
+        {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
+      </Button>
+    </header>
   );
 }

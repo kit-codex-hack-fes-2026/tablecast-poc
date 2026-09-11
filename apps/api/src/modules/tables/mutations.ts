@@ -1,5 +1,5 @@
 import { failureLog } from "../../platform/telemetry";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
@@ -9,15 +9,28 @@ export function voiceCondition(actor: Actor) {
     : sql``;
 }
 
-export async function notifyStore(services: ApiServices, storeId: string) {
+export async function notifyStore(services: ApiServices, storeId: string, sessionId?: string) {
   const db = services.db;
 
   try {
+    const demo = sessionId
+      ? await db
+          .select({ id: business.tableSessions.id })
+          .from(business.tableSessions)
+          .where(
+            and(
+              eq(business.tableSessions.id, sessionId),
+              eq(business.tableSessions.store_id, storeId),
+              eq(business.tableSessions.kind, "demo"),
+            ),
+          )
+          .get()
+      : undefined;
     const row = await db.get<{ cursor: number | null } | undefined>(
-      sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId}`,
+      sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId} AND ${demo ? sql`table_session_id=${demo.id}` : sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`}`,
     );
     await services.env.TABLECAST_EVENTS.get(
-      services.env.TABLECAST_EVENTS.idFromName(storeId),
+      services.env.TABLECAST_EVENTS.idFromName(demo ? `tablecast-demo-${demo.id}` : storeId),
     ).notify(row?.cursor ?? 0);
   } catch (error) {
     failureLog("tablecast.notification_failed", error, services.env, {

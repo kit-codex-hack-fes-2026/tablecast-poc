@@ -50,12 +50,10 @@ export async function finishVoiceTurn(
       ),
   ]);
   if (result[1]?.meta.changes === 1) {
-    const storeId = (
-      await db.get<{ store_id: string } | undefined>(
-        sql`SELECT store_id FROM voice_turns WHERE id=${turnId} AND voice_session_id=${voiceSessionId}`,
-      )
-    )?.store_id;
-    if (storeId) await notifyStore(services, storeId);
+    const source = await db.get<{ store_id: string; table_session_id: string } | undefined>(
+      sql`SELECT store_id,table_session_id FROM voice_turns WHERE id=${turnId} AND voice_session_id=${voiceSessionId}`,
+    );
+    if (source) await notifyStore(services, source.store_id, source.table_session_id);
   }
 }
 
@@ -148,7 +146,7 @@ export async function startVoiceTurn(
   logVoiceTurn(diagnostics, "accepted");
   const currentActor = { ...actor, turnId: input.turnId };
   if (input.transport === "realtime") {
-    waitUntil(notifyStore(services, actor.storeId));
+    waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
     return { kind: "realtime" } as const;
   }
   const cancellation = new AbortController();
@@ -239,7 +237,7 @@ export async function startVoiceTurn(
       });
     });
   diagnostics.runId = output.runId;
-  waitUntil(notifyStore(services, actor.storeId));
+  waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
   const reader = output.textStream.getReader();
   const encoder = new TextEncoder();
   let streamFinished = false;

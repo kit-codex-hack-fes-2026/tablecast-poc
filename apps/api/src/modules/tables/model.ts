@@ -27,7 +27,8 @@ export type TableEvent = {
 
 export type TableState = {
   id: string;
-  tableId: string;
+  tableId: string | null;
+  kind: "table" | "demo";
   tableName: string;
   storeId: string;
   storeName: string;
@@ -122,7 +123,8 @@ export type SessionEventsPage = z.infer<typeof sessionEventsPageSchema>;
 
 export const tableStateSchema: z.ZodType<TableState> = z.object({
   id: z.string(),
-  tableId: z.string(),
+  tableId: z.string().nullable(),
+  kind: z.enum(["table", "demo"]),
   tableName: z.string(),
   storeId: z.string(),
   storeName: z.string(),

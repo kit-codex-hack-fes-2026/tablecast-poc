@@ -182,3 +182,9 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 `platform/telemetry.ts`はOTLP設定・安全な送信境界を所有し、Worker入口・HTTP middleware・業務serviceから利用する。Webは公開`@tablecast/api/telemetry`をサーバー入口で利用する。計測のために業務serviceへHono Contextを渡さない。設定と調査手順は[Observability](observability.md)を参照する。
 
 例外診断の整形は`apps/api/src/platform/diagnostics.ts`、標準出力とOTLPの送信は`platform/telemetry.ts`が所有する。通知・音声ストリーム・Containerの回復可能な失敗も同じ送信境界を使う。HTTP statusと公開エラー本文の契約は`platform/http.ts`に集約する。
+
+## 卓なしデモの境界
+
+`modules/demo`は管理者本人のデモセッションと設定を所有する。`modules/tables/operations-routes.ts`のHono操作を、通常のdevice認可とデモのstaff認可から共有する。API client公開入口は同じ操作型の接続先を生成し、WebのKiosk・VoiceConnection・通知取得で使用する。デモの認可を受けていない通常の来店・注文routeへデモIDを渡しても取得・変更できない。
+
+カタログと注文確定の設定版はセッションの設定元を参照する。デモの通知は`tablecast-demo-<sessionId>`のDOへ送る。営業のevent取得はデモイベントを除外し、デモは公開版更新イベントを購読しない。`TableState.kind`が通常／デモを示し、`tableId`はデモでのみnullになる。

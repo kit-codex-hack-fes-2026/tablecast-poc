@@ -83,6 +83,7 @@ export const catalog: Catalog = {
   },
 };
 export const table: TableState = {
+  kind: "table",
   uiSection: "menu",
   selectedProductId: null,
   speechSpeed: 1.0,

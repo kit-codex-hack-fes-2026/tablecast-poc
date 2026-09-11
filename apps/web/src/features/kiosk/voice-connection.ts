@@ -3,7 +3,7 @@ export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
 import type { Locale } from "@tablecast/api/schema";
 import type { LocalAudioTrack, Room } from "livekit-client";
 import { z } from "zod";
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { ApiFailure, parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
 
 const voicePacket = z.discriminatedUnion("type", [
   z.object({
@@ -43,6 +43,7 @@ export class VoiceConnection {
   constructor(
     private onChange: (view: VoiceView) => void,
     private onSync: () => void,
+    private client: TableClient = tableEndpoint.client,
   ) {}
 
   async start(locale: Locale) {
@@ -52,7 +53,7 @@ export class VoiceConnection {
     this.emit({ status: "connecting" });
     let created: Credentials | undefined;
     try {
-      created = await parseResponse(rpc.api.table.voice.start.$post());
+      created = await parseResponse(this.client.voice.start.$post());
       if (!this.current(attempt)) {
         await this.retire(created.voiceSessionId);
         return;
@@ -266,7 +267,7 @@ export class VoiceConnection {
   }
   private async retire(voiceSessionId?: string) {
     await parseResponse(
-      rpc.api.table.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
+      this.client.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
     );
   }
 }
