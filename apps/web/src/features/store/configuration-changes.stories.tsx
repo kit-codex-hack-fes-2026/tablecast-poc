@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect } from "storybook/test";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import { ConfigurationChanges } from "./configuration-changes";

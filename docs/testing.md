@@ -34,6 +34,7 @@ UIは状態をprops/既存query fixtureで再現し、Storybookから実LiveKit�
 外部I/Oと表示を分ける必要があるComponentだけ薄い境界を作り、単純なComponentを必ずcontroller/viewの二枚にしない。
 VoicePanel、言語切替、音声停止再開、会話履歴、商品選択、確認、卓タイムライン、会計のStoryをWebに併置する。
 StorybookとCloudflareのVite設定は丸ごと共有せず、React・CSS・i18n等の必要部分だけ共用する。Storybook起動だけでWorkersを起動させない。[S14](sources.md#s14)
+共有モジュールのserver/client分岐はTanStack Startの`createIsomorphicFn`を使う。Storybookは公式の`@storybook/tanstack-react`でStartとRouterを扱う。Vitest Browserには公式Vite pluginを適用し、`installDevServerMiddleware: false`でアプリのサーバー起動を抑える。`api-fetch.test.ts`は実ソースのdev変換でserver importの除去を検証する。Cookie・Service Binding・認証の挙動は既存のSSR・OAuth E2Eで検証し、Nodeの音声状態テストは`apiFetch`をHTTP境界として差し替える。
 
 Pythonは上流pluginのレスポンス変換と自作の接続部分を重点検査する。標準WebSocketクライアント自体はmockして再実装した挙動を試さない。
 外部AIの決定的な差替えはテスト起動時だけに限定し、本番にモデル選択frameworkやfallbackを持ち込まない。

@@ -1,9 +1,9 @@
-import type { StorybookConfig } from "@storybook/react-vite";
+import type { StorybookConfig } from "@storybook/tanstack-react";
 
 const config: StorybookConfig = {
   stories: ["../src/**/*.stories.tsx"],
   framework: {
-    name: "@storybook/react-vite",
+    name: "@storybook/tanstack-react",
     options: { builder: { viteConfigPath: ".storybook/vite.config.ts" } },
   },
   addons: ["@storybook/addon-a11y", "@storybook/addon-vitest", "@storybook/addon-mcp"],

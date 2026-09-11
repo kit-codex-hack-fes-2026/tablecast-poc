@@ -3,6 +3,7 @@ import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig({
   test: {
@@ -31,7 +32,11 @@ export default defineConfig({
             "better-auth/react",
           ],
         },
-        plugins: [react(), tailwindcss()],
+        plugins: [
+          tanstackStart({ vite: { installDevServerMiddleware: false } }),
+          react(),
+          tailwindcss(),
+        ],
         test: {
           name: "browser",
           include: ["src/**/*.browser.test.tsx"],

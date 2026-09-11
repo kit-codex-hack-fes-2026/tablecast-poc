@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { Bell, Check, Mic, MicOff } from "lucide-react";
 import { Badge } from "./badge";
 import { Button } from "./button";

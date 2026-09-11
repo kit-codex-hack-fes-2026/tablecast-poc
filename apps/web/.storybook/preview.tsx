@@ -1,5 +1,5 @@
 import { MotionProvider } from "../src/components/motion-provider";
-import type { Preview } from "@storybook/react-vite";
+import type { Preview } from "@storybook/tanstack-react";
 import { LocaleProvider } from "../src/i18n/locale";
 import "../src/styles.css";
 

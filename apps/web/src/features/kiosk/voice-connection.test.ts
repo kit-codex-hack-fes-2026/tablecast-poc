@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
+import { apiFetch } from "../../lib/api-fetch";
+
+vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 
 const transport = vi.hoisted(() => ({
   connect: vi.fn<(url: string, token: string) => Promise<void>>(),
@@ -44,8 +47,7 @@ describe("音声の明示的な停止と再開", () => {
   let requests: { path: string; body: unknown }[];
   beforeEach(() => {
     vi.clearAllMocks();
-    // Nodeで実行しても、検証対象はブラウザーの音声接続である。
-    vi.stubEnv("SSR", false);
+    // 音声状態だけを検証し、SSR/ブラウザーのHTTP接続は実経路の試験へ分離する。
     requests = [];
     transport.connect.mockResolvedValue(undefined);
     transport.disconnect.mockResolvedValue(undefined);
@@ -53,31 +55,27 @@ describe("音声の明示的な停止と再開", () => {
     transport.startAudio.mockResolvedValue(undefined);
     transport.capture.mockResolvedValue({ stop: transport.stop });
     let issued = 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (path: string, options: RequestInit) => {
-        requests.push({
-          path,
-          body: typeof options.body === "string" ? JSON.parse(options.body) : undefined,
-        });
-        return Response.json(
-          path.endsWith("/start")
-            ? {
-                voiceSessionId: `tablecast-voice-${++issued}`,
-                url: "ws://tablecast.localhost",
-                token: "test-only",
-              }
-            : path.endsWith("/stop")
-              ? { ok: true }
-              : { error: { code: "UNEXPECTED_TEST_REQUEST" } },
-          { status: path.endsWith("/start") || path.endsWith("/stop") ? 200 : 500 },
-        );
-      }),
-    );
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      const path = input instanceof Request ? input.url : String(input);
+      requests.push({
+        path,
+        body: typeof options?.body === "string" ? JSON.parse(options.body) : undefined,
+      });
+      return Response.json(
+        path.endsWith("/start")
+          ? {
+              voiceSessionId: `tablecast-voice-${++issued}`,
+              url: "ws://tablecast.localhost",
+              token: "test-only",
+            }
+          : path.endsWith("/stop")
+            ? { ok: true }
+            : { error: { code: "UNEXPECTED_TEST_REQUEST" } },
+        { status: path.endsWith("/start") || path.endsWith("/stop") ? 200 : 500 },
+      );
+    });
   });
   afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
     const unexpected = requests.filter(
       ({ path }) => !path.endsWith("/start") && !path.endsWith("/stop"),
     );
@@ -126,7 +124,7 @@ describe("音声の明示的な停止と再開", () => {
   });
 
   it("設定不足は成功扱いにせずGUIを維持できる音声エラーとして通知する", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
+    vi.mocked(apiFetch).mockResolvedValueOnce(
       Response.json({ error: { code: "VOICE_NOT_CONFIGURED" } }, { status: 503 }),
     );
     const changes: VoiceView[] = [];
@@ -136,7 +134,7 @@ describe("音声の明示的な停止と再開", () => {
     expect(changes.at(-1)).toEqual({ status: "error", error: "unconfigured" });
   });
   it("別の音声接続が有効な場合は勝手に停止せず明示停止後にだけ再開できる", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
+    vi.mocked(apiFetch).mockResolvedValueOnce(
       Response.json({ error: { code: "VOICE_ALREADY_ACTIVE" } }, { status: 409 }),
     );
     const changes: VoiceView[] = [];
