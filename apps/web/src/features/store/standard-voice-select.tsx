@@ -65,7 +65,7 @@ export function StandardVoiceSelect({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value || null)}
         >
-          <option value="">{t("editor_not_configured")}</option>
+          <option value="">{t("voice_default_marin")}</option>
           {[...choices].map(([voiceId, displayName]) => (
             <option key={voiceId} value={voiceId}>
               {displayName}

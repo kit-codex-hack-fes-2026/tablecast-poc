@@ -6,8 +6,6 @@ ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy
 
 FROM base AS build
-# SHA固定の公式plugin forkを取得する。実行用imageへGitは含めない。
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --locked --no-dev --no-install-project

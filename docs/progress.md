@@ -1,5 +1,15 @@
 # TableCast 実装・検証記録
 
+## 2026-09-12: GPT-Live client delegationへの移行
+
+Issue #100。通常音声をLiveKit公式GPTLiveModel 1.8.1へ置き換え、既存Mastra・Honoの共通業務処理へclient delegationを接続した。Inworld fork/TTS依存とPythonの旧cascade・Realtime接続を除去した。標準音声はMarin/Cedar、旧Voice IDと未設定は起動時にMarinへ対応付ける。話速はモデルへの希望として渡す。
+
+音声の注文確認はAPIスナップショットを自然に説明し、次の発話の明示承認で送信する。固定TTSと読了通知への依存を外し、同じ発話・古い版・停止済みsession・重複要求の拒否を維持する。SDK字幕を業務委任と独立して保存し、雑談も履歴に含める。再開時の参考履歴は2,000文字以内で、聞こえた範囲との強い一致は要求しない。
+
+無課金のPython試験98件が成功し、公開providerイベントを実AgentSessionからHTTPへ伝える試験を含む。実Mastra/D1による自然な確認から次発話の注文、雑談保存、同一item再送、旧session拒否を検証した。Chromiumの日英GUI注文・提供・会計2件が成功した。全体検査で未導入のStorybook型importを見つけ、導入済みの@storybook/tanstack-reactへ修正した。
+
+実GPT-Liveの利用資格・日英音声・意味的な承認判断・Room転送・iPadマイク停止・声色/話速の品質・公開配備は未検証。有料試験は明示フラグ付きの起動・挨拶字幕試験へ更新し、実マイクや注文を通した証明とは扱わない。最終の検査結果と画像は対応Draft PRに記録する。
+
 更新: 2026-09-08
 
 ユーザーの指定によりローカル実装を先行する。外部資格を使用する実音声、OAuth、ChatGPTからのMCP接続、公開環境、iPad実機試験は後続の受入とし、未実施を成功扱いにしない。

@@ -1,10 +1,10 @@
-"""LiveKitの公開nodeと公式Inworldプラグインをつなぐ。"""
+"""GPT-Liveの会話とMastraへの委任をLiveKitの公開APIで接続する。"""
 
 import asyncio
 import json
 import logging
 import os
-from collections.abc import AsyncGenerator, AsyncIterable, AsyncIterator, Coroutine
+from collections.abc import Coroutine
 from contextlib import aclosing
 from typing import Any
 from uuid import uuid4
@@ -15,26 +15,20 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    ConversationItemAddedEvent,
     JobContext,
-    ModelSettings,
-    TurnHandlingOptions,
     UserStateChangedEvent,
     cli,
     llm,
     room_io,
-    stt,
 )
-from livekit.agents.types import TimedString
-from livekit.agents.voice import SpeechHandle
-from livekit.plugins import inworld, silero
+from livekit.plugins import silero
+from livekit.plugins.openai.realtime import GPTLiveDelegation, GPTLiveModel
 from pydantic import ValidationError
 
-from .api import TurnSkipped, VoiceAPI, VoiceConfiguration
-from .llm import TablecastLLM
-from .speaker import SpeakerReference, speaker_reference
-from .speech import CaptionFormatter, caption, captions
+from .api import LiveConfiguration, TurnSkipped, VoiceAPI, VoiceConfiguration
 from .telemetry import configure_telemetry, flush_telemetry, prewarm_telemetry, recording_options
-from .voice_text import UserText, VoiceTextPublisher
+from .voice_text import VoiceTextPublisher
 
 logger = logging.getLogger("tablecast.voice")
 server = AgentServer(
@@ -46,21 +40,14 @@ server = AgentServer(
 
 
 class TablecastAgent(Agent):
-    def __init__(
-        self,
-        api: VoiceAPI,
-        config: VoiceConfiguration,
-        *,
-        model: llm.RealtimeModel | None = None,
-        chat_ctx: llm.ChatContext | None = None,
-        instructions: str = "接客と業務操作は認証済みTableCast APIへ委譲します。",
-        tools: list[llm.Tool] | None = None,
-    ) -> None:
+    def __init__(self, api: VoiceAPI, config: VoiceConfiguration, live: LiveConfiguration) -> None:
+        history = llm.ChatContext.empty()
+        for item in live.history:
+            history.add_message(role=item.role, content=item.content)
         super().__init__(
-            instructions=instructions,
-            chat_ctx=chat_ctx,
-            tools=tools,
-            llm=model if model is not None else TablecastLLM(self.response),
+            instructions=live.instructions,
+            chat_ctx=history,
+            llm=GPTLiveModel(model=live.model, voice=config.voice, delegation="client"),
         )
         self.api = api
         self.config = config
@@ -68,93 +55,162 @@ class TablecastAgent(Agent):
         self.log = logging.LoggerAdapter(
             logger,
             {
-                "event": "tablecast.voice_turn",
-                "tableSessionId": config.tableSessionId,
                 "voiceSessionId": config.voiceSessionId,
+                "tableSessionId": config.tableSessionId,
                 "releaseSha": config.releaseSha,
             },
             merge_extra=True,
         )
-        self.turn_id: str | None = None
         self.tasks: set[asyncio.Task[None]] = set()
+        self.work: asyncio.Task[None] | None = None
+        self.utterance_id = str(uuid4())
+        self.delegated_utterance: str | None = None
         self.stopped = False
-        self.speaker: SpeakerReference | None = None
-        self.proactive_speech: SpeechHandle | None = None
         self.proactive_attempted = False
         self.text_publisher: VoiceTextPublisher | None = None
-        self.user_text_id: str | None = None
-        self.last_user_text: UserText | None = None
 
-    def user_state_changed(self, event: UserStateChangedEvent) -> None:
-        if self.stopped:
-            return
-        if event.new_state == "speaking":
-            self.proactive_attempted = False
-            if self.proactive_speech is not None:
-                self.proactive_speech.interrupt()
-        elif (
-            event.new_state == "away"
-            and not self.proactive_attempted
-            and self.session.agent_state == "listening"
-            and (self.session.current_speech is None or self.session.current_speech.done())
-        ):
-            # 最新設定と業務状態はAPIが判断する。客の発話を会話履歴へ作らない。
-            self.proactive_attempted = True
-            self.proactive_speech = self.session.generate_reply(allow_interruptions=True)
+    async def on_enter(self) -> None:
+        self.duplex_session.on("delegation_created", self.delegation_created)
 
-    def background(
-        self,
-        operation: Coroutine[Any, Any, None],
-        log: logging.LoggerAdapter,
-        name: str,
-    ) -> None:
+    def background(self, operation: Coroutine[Any, Any, None], name: str) -> asyncio.Task[None]:
         task = asyncio.create_task(operation)
         self.tasks.add(task)
 
         def completed(done: asyncio.Task[None]) -> None:
             self.tasks.discard(done)
-            if done.cancelled():
-                log.info(
-                    "tablecast.voice_background",
-                    extra={
-                        "event": "tablecast.voice_background",
-                        "operation": name,
-                        "phase": "interrupted",
-                    },
-                )
-            elif done.exception() is not None:
-                # 例外本文にプロバイダー応答や秘密情報が含まれる可能性がある。
-                log.error(
-                    "tablecast.voice_background",
-                    extra={
-                        "event": "tablecast.voice_background",
-                        "operation": name,
-                        "phase": "failed",
-                    },
+            if not done.cancelled() and done.exception() is not None:
+                self.log.error(
+                    "tablecast.voice_background", extra={"operation": name, "phase": "failed"}
                 )
 
         task.add_done_callback(completed)
+        return task
+
+    def user_state_changed(self, event: UserStateChangedEvent) -> None:
+        if self.stopped:
+            return
+        if event.new_state == "speaking":
+            self.utterance_id = str(uuid4())
+            self.proactive_attempted = False
+            if self.work is not None and not self.work.done():
+                self.work.cancel()
+        elif event.new_state == "away" and not self.proactive_attempted and self.config.proactive:
+            self.proactive_attempted = True
+            if self.work is None or self.work.done():
+                self.work = self.background(self.delegate(None, str(uuid4())), "proactive")
+
+    def delegation_created(self, delegation: GPTLiveDelegation) -> None:
+        if self.stopped or self.delegated_utterance == self.utterance_id:
+            return
+        # 同じ発話の再委任を新しい承認にしない。次の発話で新しい業務turnを作る。
+        self.delegated_utterance = self.utterance_id
+        self.work = self.background(self.delegate(delegation, self.utterance_id), "delegation")
+
+    async def delegate(self, delegation: GPTLiveDelegation | None, turn_id: str) -> None:
+        messages = [
+            {"role": item.role, "content": item.text_content[-2000:]}
+            for item in self.chat_ctx.items
+            if isinstance(item, llm.ChatMessage)
+            and item.role in ("user", "assistant")
+            and item.text_content
+        ][-8:]
+        if delegation is not None and delegation.pending_transcript:
+            messages.append({"role": "user", "content": delegation.pending_transcript[-2000:]})
+        if delegation is not None:
+            # 確定字幕の後に待機の声かけがあっても、最後の客発話を委任する。
+            while messages and messages[-1]["role"] != "user":
+                messages.pop()
+            if not messages:
+                return
+        status = "failed"
+        try:
+            result = ""
+            async with aclosing(
+                self.api.stream_turn(
+                    turn_id,
+                    self.config.locale,
+                    messages,
+                    trigger="proactive" if delegation is None else "user",
+                    transport="live",
+                )
+            ) as stream:
+                async for chunk in stream:
+                    result += chunk
+            if self.stopped or (delegation is not None and self.utterance_id != turn_id):
+                status = "interrupted"
+                return
+            # バックエンドの結果を会話本文として保存しない。実際の発話イベントを別途保存する。
+            # appendの500 tokens上限に収まるよう、UTF-8で最大400 bytesの100文字ごとに送る。
+            for start in range(0, len(result), 100):
+                self.duplex_session.append_commentary(
+                    result[start : start + 100], delegation_id=delegation.id if delegation else None
+                )
+            status = "completed"
+        except TurnSkipped:
+            return
+        except asyncio.CancelledError:
+            status = "interrupted"
+            raise
+        except (httpx.HTTPError, ValueError):
+            self.log.warning("tablecast.voice_delegation_failed", extra={"turnId": turn_id})
+            if not self.stopped:
+                self.duplex_session.append_commentary(
+                    "処理を完了できませんでした。画面で現在の状態を確認してください。"
+                    if self.config.locale == "ja"
+                    else "I could not complete that. Please check the current state on screen.",
+                    delegation_id=delegation.id if delegation else None,
+                )
+        finally:
+            await self.api.end_turn(turn_id, status)
+
+    def conversation_item_added(self, event: ConversationItemAddedEvent) -> None:
+        item = event.item
+        if (
+            self.stopped
+            or not isinstance(item, llm.ChatMessage)
+            or item.role not in ("user", "assistant")
+            or not item.text_content
+        ):
+            return
+        text = item.text_content[:10000]
+        if self.text_publisher is not None:
+            if item.role == "user":
+                self.text_publisher.send(
+                    {"type": "user", "id": item.id, "turnId": item.id, "text": text, "final": True}
+                )
+            else:
+                self.text_publisher.begin_turn(item.id)
+                self.text_publisher.send(
+                    {
+                        "type": "assistant",
+                        "turnId": item.id,
+                        "text": text,
+                        "rawText": text,
+                        "final": True,
+                    }
+                )
+        self.background(
+            self.api.conversation_item(item.id, item.role, text, item.interrupted), "conversation"
+        )
 
     def stop(self) -> None:
         self.stopped = True
+        if self.work is not None:
+            self.work.cancel()
         if self.text_publisher is not None:
             self.text_publisher.stop()
 
     async def close(self) -> None:
         self.stop()
-        if self.proactive_speech is not None:
-            self.proactive_speech.interrupt()
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
         if self.text_publisher is not None:
             await self.text_publisher.aclose()
 
-    async def sync_configuration(self, synthesizer: inworld.TTS) -> None:
+    async def sync_configuration(self) -> None:
         while not self.stopped:
             await asyncio.sleep(2)
-            if self.stopped:
-                return
             try:
                 async with asyncio.timeout(5):
                     config = await self.api.configuration()
@@ -163,15 +219,16 @@ class TablecastAgent(Agent):
                 if (
                     config.voiceSessionId != self.config.voiceSessionId
                     or config.tableSessionId != self.config.tableSessionId
-                    or config.participantIdentity != self.config.participantIdentity
+                    or config.locale != self.config.locale
                 ):
                     self.stop()
                     self.session.shutdown(drain=False)
                     return
                 if config.speechSpeed != self.config.speechSpeed:
-                    # 公開update_optionsは次のstreamへ反映し、現在の発話を切らない。
-                    synthesizer.update_options(speaking_rate=config.speechSpeed)
-                    self.config.speechSpeed = config.speechSpeed
+                    self.duplex_session.append_instructions(
+                        f"話速の希望が{config.speechSpeed}倍相当に変わりました。自然な範囲で調整してください。"
+                    )
+                self.config = config
             except httpx.HTTPStatusError as error:
                 if error.response.status_code in (401, 403, 409):
                     self.stop()
@@ -180,232 +237,6 @@ class TablecastAgent(Agent):
                 self.log.warning("tablecast.voice_configuration_unavailable")
             except (httpx.RequestError, TimeoutError, ValidationError):
                 self.log.warning("tablecast.voice_configuration_unavailable")
-
-    async def stt_node(
-        self, audio: AsyncIterable[rtc.AudioFrame], model_settings: ModelSettings
-    ) -> AsyncIterator[stt.SpeechEvent]:
-        async for event in Agent.default.stt_node(self, audio, model_settings):
-            if self.stopped:
-                return
-            if event.type == stt.SpeechEventType.START_OF_SPEECH:
-                self.speaker = None
-                self.user_text_id = str(uuid4())
-            if event.type == stt.SpeechEventType.FINAL_TRANSCRIPT:
-                self.speaker = speaker_reference(event)
-            if (
-                event.type
-                in (
-                    stt.SpeechEventType.INTERIM_TRANSCRIPT,
-                    stt.SpeechEventType.FINAL_TRANSCRIPT,
-                )
-                and event.alternatives
-            ):
-                speech = event.alternatives[0]
-                final = event.type == stt.SpeechEventType.FINAL_TRANSCRIPT
-                self.user_text_id = self.user_text_id or str(uuid4())
-                message: UserText = {
-                    "type": "user",
-                    "id": self.user_text_id,
-                    "text": speech.text,
-                    "final": final,
-                }
-                speaker_id = self.speaker["id"] if final and self.speaker else speech.speaker_id
-                if speaker_id is not None and event.request_id:
-                    message["speaker"] = {"id": speaker_id, "streamId": event.request_id}
-                if self.text_publisher is not None:
-                    self.text_publisher.send(message)
-                if final:
-                    self.last_user_text = message
-                    self.user_text_id = None
-            elif event.type == stt.SpeechEventType.END_OF_SPEECH and self.user_text_id is not None:
-                # 空finalを伴う雑音では、暫定文を確定発話として残さない。
-                if self.text_publisher is not None:
-                    self.text_publisher.send(
-                        {"type": "user", "id": self.user_text_id, "text": "", "final": True}
-                    )
-                self.user_text_id = None
-            yield event
-
-    async def response(self, chat_ctx: llm.ChatContext, sdk_request_id: str) -> AsyncGenerator[str]:
-        if self.stopped:
-            return
-        turn_id = str(uuid4())
-        self.turn_id = turn_id
-        if self.text_publisher is not None:
-            self.text_publisher.begin_turn(turn_id)
-        speech = self.session.current_speech
-        # このturnの値を保持する。旧turnの後処理に現在のself.turn_idを使わない。
-        log = logging.LoggerAdapter(
-            self.log,
-            {
-                "turnId": turn_id,
-                "sdkRequestId": sdk_request_id,
-                "speechId": speech.id if speech is not None else None,
-                "operation": "turn",
-            },
-            merge_extra=True,
-        )
-        log.info("tablecast.voice_turn", extra={"phase": "started"})
-        proactive = speech is not None and speech is self.proactive_speech
-        if not proactive and self.last_user_text is not None and self.text_publisher is not None:
-            self.text_publisher.send({**self.last_user_text, "turnId": turn_id})
-            self.last_user_text = None
-        messages = [
-            {
-                "role": item.role,
-                "content": caption(item.text_content or "", interrupted=item.interrupted)
-                if item.role == "assistant"
-                else item.text_content or "",
-            }
-            for item in chat_ctx.items
-            if isinstance(item, llm.ChatMessage)
-            and item.role in ("user", "assistant")
-            and item.text_content
-        ][-100:]
-        status: str | None = "failed"
-        formatter = CaptionFormatter(preserve_markup=True)
-        display_formatter = CaptionFormatter()
-        raw_text = ""
-        display_text = ""
-        try:
-            async with aclosing(
-                self.api.stream_turn(
-                    turn_id,
-                    self.config.locale,
-                    messages,
-                    None if proactive else self.speaker,
-                    trigger="proactive" if proactive else "user",
-                )
-            ) as stream:
-                async for text in stream:
-                    if self.stopped or self.turn_id != turn_id:
-                        status = "interrupted"
-                        return
-                    valid = formatter.push(text)
-                    raw_text += text
-                    display_text += display_formatter.push(text)
-                    if self.text_publisher is not None:
-                        self.text_publisher.send(
-                            {
-                                "type": "assistant",
-                                "turnId": turn_id,
-                                "text": display_text,
-                                "rawText": raw_text,
-                                "final": False,
-                            }
-                        )
-                    if valid:
-                        yield valid
-            formatter.finish()
-            display_formatter.finish()
-            status = "completed"
-            if self.text_publisher is not None:
-                self.text_publisher.send(
-                    {
-                        "type": "assistant",
-                        "turnId": turn_id,
-                        "text": display_text,
-                        "rawText": raw_text,
-                        "final": True,
-                    }
-                )
-            if not proactive:
-                self.background(
-                    self.read_confirmation(turn_id),
-                    logging.LoggerAdapter(self.log, {"turnId": turn_id}, merge_extra=True),
-                    "confirmation",
-                )
-        except TurnSkipped:
-            status = None
-        except (asyncio.CancelledError, GeneratorExit):
-            status = "interrupted"
-            raise
-        finally:
-            if self.text_publisher is not None:
-                if status == "interrupted":
-                    self.text_publisher.interrupt(turn_id)
-                elif status == "failed":
-                    self.text_publisher.send(
-                        {
-                            "type": "error",
-                            "turnId": turn_id,
-                            "code": "VOICE_RESPONSE_FAILED",
-                        }
-                    )
-            log.info("tablecast.voice_turn", extra={"phase": status or "skipped"})
-            # 取消通知は新turnの状態を上書きしないAPIへ送る。
-            if status is not None:
-                self.background(self.api.end_turn(turn_id, status), log, "end_turn")
-                if speech is not None:
-                    self.background(self.record_playback(turn_id, speech), log, "playback")
-
-    async def record_playback(
-        self, turn_id: str, speech: SpeechHandle, *, confirmation: bool = False
-    ) -> None:
-        log = logging.LoggerAdapter(
-            self.log,
-            {
-                "event": "tablecast.voice_speech",
-                "turnId": turn_id,
-                "speechId": speech.id,
-                "operation": "confirmation_playback" if confirmation else "playback",
-            },
-            merge_extra=True,
-        )
-        phase = "failed"
-        log.info("tablecast.voice_speech", extra={"phase": "started"})
-        try:
-            await speech.wait_for_playout()
-            if speech.exception() is not None:
-                await self.api.end_turn(turn_id, "failed")
-            elif speech.interrupted:
-                if self.text_publisher is not None:
-                    self.text_publisher.interrupt(turn_id)
-                await self.api.end_turn(turn_id, "interrupted")
-            for item in speech.chat_items:
-                if (
-                    isinstance(item, llm.ChatMessage)
-                    and item.role == "assistant"
-                    and item.text_content
-                ):
-                    await self.api.record_played(
-                        turn_id,
-                        caption(item.text_content, interrupted=item.interrupted),
-                        item.interrupted,
-                        speech_id=speech.id,
-                    )
-            phase = (
-                "failed"
-                if speech.exception() is not None
-                else "interrupted"
-                if speech.interrupted
-                else "completed"
-            )
-        except asyncio.CancelledError:
-            phase = "interrupted"
-            raise
-        finally:
-            log.info("tablecast.voice_speech", extra={"phase": phase})
-
-    async def read_confirmation(self, turn_id: str) -> None:
-        action = await self.api.confirmation(turn_id)
-        if not action or self.stopped or self.turn_id != turn_id:
-            return
-        speech = self.session.say("[reset]" + action.text, allow_interruptions=True)
-        await self.record_playback(turn_id, speech, confirmation=True)
-        if (
-            speech.exception() is None
-            and not speech.interrupted
-            and not self.stopped
-            and self.turn_id == turn_id
-        ):
-            await self.api.confirmation_read(turn_id, action.id, speech_id=speech.id)
-
-    async def transcription_node(
-        self, text: AsyncIterable[str | TimedString], model_settings: ModelSettings
-    ) -> AsyncIterator[str | TimedString]:
-        async for value in captions(text):
-            yield value
 
 
 @server.rtc_session(agent_name=os.environ.get("TABLECAST_AGENT_NAME", "tablecast-voice"))
@@ -433,36 +264,15 @@ async def entrypoint(ctx: JobContext) -> None:
     api = VoiceAPI(client, voice_session_id)
     try:
         config = await api.configuration()
-        from .realtime import RealtimeTablecastAgent
-
-        agent = RealtimeTablecastAgent(api, config, await api.realtime_configuration())
+        agent = TablecastAgent(api, config, await api.live_configuration())
         ctx.log_context_fields = {
             "tableSessionId": config.tableSessionId,
             "voiceSessionId": config.voiceSessionId,
             "releaseSha": config.releaseSha,
         }
-        language = "ja-JP" if config.locale == "ja" else "en-GB"
-        synthesizer = inworld.TTS(
-            model="inworld-tts-2",
-            voice=config.voice,
-            language=language,
-            timestamp_type="WORD",
-            delivery_mode="STABLE",
-            max_buffer_delay_ms=300,
-            speaking_rate=config.speechSpeed,
-        )
-        session: AgentSession = AgentSession(
-            tts=synthesizer,
-            vad=silero.VAD.load(),
-            turn_handling=TurnHandlingOptions(
-                turn_detection="vad",
-                preemptive_generation={"enabled": False},
-                interruption={"mode": "vad", "resume_false_interruption": False},
-            ),
-            use_tts_aligned_transcript=True,
-            user_away_timeout=30,
-        )
+        session: AgentSession = AgentSession(vad=silero.VAD.load(), user_away_timeout=30)
         session.on("user_state_changed", agent.user_state_changed)
+        session.on("conversation_item_added", agent.conversation_item_added)
 
         @ctx.room.on("participant_disconnected")
         def on_participant_disconnected(participant: rtc.RemoteParticipant) -> None:
@@ -493,7 +303,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 close_on_disconnect=True,
             ),
         )
-        agent.background(agent.sync_configuration(synthesizer), agent.log, "configuration")
+        agent.background(agent.sync_configuration(), "configuration")
     except BaseException:
         await client.aclose()
         raise

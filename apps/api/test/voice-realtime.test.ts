@@ -183,7 +183,7 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     expect(JSON.parse(row ?? "{}")).toMatchObject({ text: "ほうじ茶を一つ", speaker: null });
     expect((await tool("getTableState", {}, "tablecast-next")).status).toBe(200);
   });
-  it("固定確認の読み上げ前と同じ発話での送信を拒否し、新発話の承認で送信する", async () => {
+  it("同じ発話での送信を拒否し、読了通知なしで新発話の承認を送信する", async () => {
     await setup();
     expect(
       (
@@ -201,16 +201,6 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
       approved: true,
       idempotencyKey: "tablecast-submit",
     };
-    expect((await tool("submitOrder", approval)).status).toBe(409);
-    expect(
-      (
-        await request("confirmations/read", {
-          voiceSessionId: voiceId,
-          turnId: "tablecast-turn",
-          snapshotId: approval.snapshotId,
-        })
-      ).status,
-    ).toBe(200);
     expect((await tool("submitOrder", approval)).status).toBe(409);
     await start("tablecast-approval");
     expect((await tool("submitOrder", approval, "tablecast-approval")).status).toBe(200);
@@ -244,5 +234,47 @@ describe("Realtimeの音声認可と業務ツール境界", () => {
     await setVoiceSession(createApiServices(env), device, null);
     expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
     expect((await tool("getCatalog")).status).toBe(409);
+  });
+});
+
+describe("GPT-Liveの会話履歴", () => {
+  it("Given 委任のない雑談 When SDK項目を再送する Then 一度だけ保存し同じ来店で復元する", async () => {
+    await setupFixture();
+    await setVoiceSession(createApiServices(env), device, voiceId);
+    const item = {
+      voiceSessionId: voiceId,
+      itemId: "tablecast-live-greeting",
+      role: "user",
+      text: "こんにちは",
+      interrupted: false,
+    };
+    expect((await request("conversation", item)).status).toBe(200);
+    expect((await request("conversation", item)).status).toBe(200);
+    expect(
+      (
+        await request("conversation", {
+          ...item,
+          itemId: "tablecast-live-reply",
+          role: "assistant",
+          text: "いらっしゃいませ",
+        })
+      ).status,
+    ).toBe(200);
+    const turns = await createApiServices(env).db.select().from(businessTables.voiceTurns).all();
+    expect(turns).toHaveLength(0);
+    await setVoiceSession(createApiServices(env), device, null);
+    await setVoiceSession(createApiServices(env), device, "tablecast-live-resumed");
+    const response = await request("live?voiceSessionId=tablecast-live-resumed");
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      model: "gpt-live-1",
+      history: [
+        { role: "user", content: "こんにちは" },
+        { role: "assistant", content: "いらっしゃいませ" },
+      ],
+    });
+    expect((await request("conversation", item)).status).toBe(409);
+    expect((await request(`live?voiceSessionId=${voiceId}`)).status).toBe(409);
+    expect((await request("live?voiceSessionId=tablecast-unknown-session")).status).toBe(409);
   });
 });

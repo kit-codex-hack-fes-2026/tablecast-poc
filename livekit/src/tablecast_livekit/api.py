@@ -48,6 +48,13 @@ class RealtimeConfiguration(BaseModel):
     history: list[RealtimeMessage] = Field(default_factory=list)
 
 
+class LiveConfiguration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model: Literal["gpt-live-1"]
+    instructions: str
+    history: list[RealtimeMessage] = Field(default_factory=list)
+
+
 class TurnSkipped(Exception):
     """APIが現在の卓に自発接客を開始しないと判断した。"""
 
@@ -238,6 +245,7 @@ class VoiceAPI:
         speaker: SpeakerReference | None = None,
         *,
         trigger: Literal["user", "proactive"] = "user",
+        transport: Literal["cascade", "live"] = "cascade",
     ) -> AsyncGenerator[str]:
         # httpxのデコーダーでUTF-8のHTTP境界を吸収し、取消時には接続を閉じる。
         async with self._request(
@@ -251,6 +259,7 @@ class VoiceAPI:
                 "locale": locale,
                 "messages": messages,
                 "trigger": trigger,
+                "transport": transport,
                 **({"speaker": speaker} if speaker is not None else {}),
             },
         ) as response:
@@ -312,6 +321,33 @@ class VoiceAPI:
             json={
                 "voiceSessionId": self.voice_session_id,
                 "turnId": turn_id,
+                "text": text,
+                "interrupted": interrupted,
+            },
+        ) as response:
+            await response.aread()
+
+    async def live_configuration(self) -> LiveConfiguration:
+        async with self._request(
+            "configuration",
+            "GET",
+            "/internal/voice/live",
+            params={"voiceSessionId": self.voice_session_id},
+        ) as response:
+            await response.aread()
+            return LiveConfiguration.model_validate(response.json())
+
+    async def conversation_item(
+        self, item_id: str, role: Literal["user", "assistant"], text: str, interrupted: bool
+    ) -> None:
+        async with self._request(
+            "conversation",
+            "POST",
+            "/internal/voice/conversation",
+            json={
+                "voiceSessionId": self.voice_session_id,
+                "itemId": item_id,
+                "role": role,
                 "text": text,
                 "interrupted": interrupted,
             },

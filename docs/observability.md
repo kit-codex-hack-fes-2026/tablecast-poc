@@ -1,5 +1,7 @@
 # ログ・トレースとCodexからの調査
 
+GPT-Live移行後もAPI・Mastraの業務traceとPythonのHTTP診断を使う。SDKの会話字幕は業務委任と独立して保存し、雑談も記録する。字幕item IDと業務turn IDの厳密な対応、生成文と聞こえた範囲の一致は求めない。Mastraの内部回答を発話済み本文として保存しない。以下の旧再生診断に関する記録はGPT-Liveの再生証明ではない。生音声の既定保存は無効のままとする。
+
 [索引](README.md) / [開発環境](development.md)
 
 ## 送信経路

@@ -390,7 +390,7 @@ describe("卓を使わない会話注文デモ", () => {
     const voice = await voiceActor(services(), "tablecast-demo-voice");
     expect(voice.demoId).toBe(demo.id);
     expect(await getVoiceConfiguration(services(), "tablecast-demo-voice")).toMatchObject({
-      voice: "tablecast-demo-voice-id",
+      voice: "marin",
       proactive: true,
     });
     const tools = createCastTools(services(), voice, new AbortController().signal);

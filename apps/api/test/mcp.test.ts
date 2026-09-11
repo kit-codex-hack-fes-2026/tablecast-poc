@@ -368,67 +368,31 @@ it("MCPはOAuth対象店舗・現行roleを要求ごとに照合する", async (
   );
 });
 
-it("読み取りOAuthからも共通の標準音声一覧を取得し、未設定時は安全なエラーを返す", async () => {
+it("読み取りOAuthから共通のGPT-Live標準音声一覧を資格なしで取得する", async () => {
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie, "tablecast:read");
-  const configured = { ...env, TABLECAST_INWORLD_VOICES_API_KEY: "tablecast-mcp-metadata-key" };
-  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const url = new URL(input instanceof Request ? input.url : input.toString());
-    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
-    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM" AND lang_code = "en"');
-    expect(url.searchParams.get("pageToken")).toBe("tablecast-mcp-next+/=");
-    expect(new Headers(init?.headers).get("Authorization")).toBe(
-      "Basic tablecast-mcp-metadata-key",
-    );
-    return Response.json({
-      voices: [
-        {
-          voiceId: "tablecast-system-en",
-          displayName: "Standard voice",
-          langCode: "EN_US",
-          source: "SYSTEM",
-        },
-        {
-          voiceId: "tablecast-private-clone",
-          displayName: "Private clone",
-          langCode: "EN_US",
-          source: "IVC",
-        },
-      ],
-      nextPageToken: "",
-    });
-  });
-  const client = await connect(token, "tablecast-store", configured);
+  const client = await connect(token, "tablecast-store", env);
   const page = toolData(
-    await client.callTool({
-      name: "list_voices",
-      arguments: { locale: "en", pageToken: "tablecast-mcp-next+/=" },
-    }),
+    await client.callTool({ name: "list_voices", arguments: { locale: "en" } }),
     voicePageSchema,
   );
   expect(page).toEqual({
-    voices: [{ voiceId: "tablecast-system-en", displayName: "Standard voice", langCode: "EN_US" }],
+    voices: [
+      { voiceId: "marin", displayName: "Marin", langCode: "en" },
+      { voiceId: "cedar", displayName: "Cedar", langCode: "en" },
+    ],
     nextPageToken: null,
   });
   expect(
     (await client.listTools()).tools.find((tool) => tool.name === "list_voices")?.annotations
       ?.readOnlyHint,
   ).toBe(true);
-  const unconfigured = await connect(token, "tablecast-store", {
-    ...env,
-    TABLECAST_INWORLD_VOICES_API_KEY: "",
-  });
-  toolError(
-    await unconfigured.callTool({ name: "list_voices", arguments: { locale: "en" } }),
-    "VOICE_CATALOG_NOT_CONFIGURED",
-  );
-  expect(provider).toHaveBeenCalledTimes(1);
 });
 
 it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開直前にも標準音声を照合する", async () => {
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie);
-  const configured = { ...env, TABLECAST_INWORLD_VOICES_API_KEY: "tablecast-mcp-metadata-key" };
+  const configured = env;
   const client = await connect(token, "tablecast-store", configured);
   let draft = toolData(
     await client.callTool({ name: "create_draft", arguments: {} }),
@@ -446,18 +410,6 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
     }),
     configDraftSchema,
   );
-  const voice = {
-    voiceId: "tablecast-new-ja",
-    displayName: "標準音声",
-    langCode: "JA_JP",
-    source: "IVC",
-  };
-  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-    const url = new URL(input instanceof Request ? input.url : input.toString());
-    expect(url.origin + url.pathname).toBe("https://api.inworld.ai/voices/v1/voices");
-    expect(url.searchParams.get("filter")).toBe('source = "SYSTEM"');
-    return Response.json({ voices: [voice], nextPageToken: "" });
-  });
 
   const mcp = toolData(
     await client.callTool({
@@ -484,13 +436,13 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
       params: { categoryId: "tablecast-missing-category" },
     },
     {
-      code: "VOICE_NOT_STANDARD",
+      code: "VOICE_NOT_FOUND",
       path: ["cast", "voice", "ja"],
       params: { voiceId: "tablecast-new-ja" },
     },
   ]);
   product.categoryId = "drinks";
-  voice.source = "SYSTEM";
+  configuration.cast.voice.ja = "marin";
   draft = toolData(
     await client.callTool({
       name: "update_draft",
@@ -506,7 +458,6 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
     configDraftSchema,
   );
   expect(ready.status).toBe("ready");
-  voice.source = "IVC";
   const publication = await app.request(
     `/api/admin/stores/tablecast-store/drafts/${draft.id}/publish`,
     {
@@ -521,11 +472,7 @@ it("MCPとGUIの下書き検証が同じ音声・商品規則を使い、公開�
     },
     configured,
   );
-  expect(publication.status).toBe(422);
-  expect(await publication.json()).toMatchObject({
-    error: { code: "DRAFT_INVALID", details: [{ code: "VOICE_NOT_STANDARD" }] },
-  });
-  expect(provider).toHaveBeenCalledTimes(4);
+  expect(publication.status).toBe(200);
   expect((await client.listTools()).tools.map((tool) => tool.name)).not.toContain("publish_draft");
 });
 

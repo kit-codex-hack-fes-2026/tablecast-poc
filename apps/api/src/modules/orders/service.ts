@@ -217,20 +217,16 @@ export async function submitOrder(
         const turn = await db.get<{ started_at: number } | undefined>(
           sql`SELECT started_at FROM voice_turns WHERE id=${actor.turnId} AND voice_session_id=${actor.voiceSessionId}`,
         );
-        ensure(
-          turn && confirmation.read_at && turn.started_at > confirmation.read_at,
-          "NEW_APPROVAL_TURN_REQUIRED",
-        );
+        ensure(turn && turn.started_at > confirmation.created_at, "NEW_APPROVAL_TURN_REQUIRED");
       }
       if (actor.kind === "voice")
         ensure(
           confirmation.channel === "voice" &&
             confirmation.voice_session_id === actor.voiceSessionId &&
-            confirmation.status === "read" &&
-            !!confirmation.read_at &&
+            confirmation.status === "pending" &&
             !!actor.turnId &&
             actor.turnId !== confirmation.created_turn_id,
-          "READ_APPROVAL_REQUIRED",
+          "APPROVAL_REQUIRED",
         );
       else
         ensure(
@@ -256,7 +252,7 @@ export async function submitOrder(
               mutation_id: mutation,
             })
             .where(
-              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)} AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
+              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)} AND c.expires_at>${now} AND c.status='pending')${gate}`,
             ),
           db
             .insert(business.orders)

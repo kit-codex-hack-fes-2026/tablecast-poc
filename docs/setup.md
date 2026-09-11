@@ -106,14 +106,14 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 > [!NOTE]
 > 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。
 
-PythonはBunを経由せず、[uvの標準env読み込み](https://docs.astral.sh/uv/reference/cli/#uv-run)を使う。`.env.local` の4項目を設定し、Web/LiveKit Serverの起動後、別ターミナルで実行する。
+PythonはBunを経由せず、[uvの標準env読み込み](https://docs.astral.sh/uv/reference/cli/#uv-run)を使う。`.env.local` のOpenAI資格とMastraモデルを設定し、Web/LiveKit Serverの起動後、別ターミナルで実行する。
 
 ```sh
 uv run --project livekit tablecast-voice download-files
 uv run --project livekit --env-file .env.local --env-file .local/.env.voice tablecast-voice dev
 ```
 
-4項目は `TABLECAST_MODEL_API_KEY`、`INWORLD_API_KEY`、日英の `TABLECAST_INWORLD_VOICE_JA/EN`。雛形の `OPENAI_API_KEY=${TABLECAST_MODEL_API_KEY}` は同じファイル内でuvが展開するSDK標準名である。Bunで資格をPythonへコピーしない。店舗のキャスト設定でも日英Voice IDを登録・公開する。
+`TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` はMastra用、`OPENAI_API_KEY` はGPT-Live用。GPT-Liveの利用権限も必要。雛形の `OPENAI_API_KEY=${TABLECAST_MODEL_API_KEY}` は同じファイル内でuvが展開するSDK標準名である。Bunで資格をPythonへコピーしない。標準音声はMarinが既定で、管理画面から日英それぞれMarin・Cedarを選べる。旧Voice IDも起動時はMarinになる。
 
 | ファイル                      | 用途                                                     |
 | ----------------------------- | -------------------------------------------------------- |
@@ -124,7 +124,7 @@ uv run --project livekit --env-file .env.local --env-file .local/.env.voice tabl
 | `apps/api/.dev.vars.example`  | Wranglerのbinding型生成用。起動設定としてコピーしない    |
 | `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                      |
 
-Pythonの外部設定は `.env.local` に置く。uvは明示したファイルを読み、Bunの環境別ファイルの自動選択には依存しない。音声一覧だけの取得には `TABLECAST_INWORLD_VOICES_API_KEY` を使う。`TABLECAST_MODEL` はMastraのテキスト応答・自発接客で使うため維持する。
+Pythonの外部設定は `.env.local` に置く。uvは明示したファイルを読み、Bunの環境別ファイルの自動選択には依存しない。音声一覧はAPIの標準候補を使い、Inworldキーを必要としない。LiveKit Agents/OpenAI pluginはGPTLiveModel対応の1.8.1へ固定する。`TABLECAST_MODEL` は委任先MastraのモデルでありGPT-Liveとは別に呼び出す。
 
 旧 `.env.secrets.local` は雛形に残る項目を `.env.local` へ移して削除する。ローカルGoogle認証は模擬サービスなので旧Google資格は不要。本番資格は [配備手順](deployment.md)で管理する。envの変更後は各ターミナルをCtrl+Cで止めて再起動する。
 

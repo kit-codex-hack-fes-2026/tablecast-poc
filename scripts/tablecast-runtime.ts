@@ -323,11 +323,7 @@ export function localEnvironment(runtime: TablecastRuntime) {
 export function developmentSecrets() {
   return Object.fromEntries(
     [
-      "INWORLD_API_KEY",
       "TABLECAST_MODEL_API_KEY",
-      "TABLECAST_INWORLD_VOICE_JA",
-      "TABLECAST_INWORLD_VOICE_EN",
-      "TABLECAST_INWORLD_VOICES_API_KEY",
       "TABLECAST_MODEL",
       "TABLECAST_OTEL_CAPTURE_CONTENT",
       "TABLECAST_MASTRA_ACCESS_TOKEN",
@@ -412,12 +408,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   const external = developmentSecrets();
   const values: Record<string, string> = {
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
-    TABLECAST_VOICE_ENABLED: [
-      "INWORLD_API_KEY",
-      "TABLECAST_INWORLD_VOICE_JA",
-      "TABLECAST_INWORLD_VOICE_EN",
-      "TABLECAST_MODEL_API_KEY",
-    ]
+    TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
       .every((key) => Boolean(external[key]))
       .toString(),
     TABLECAST_AUTH_SECRET: previous.TABLECAST_AUTH_SECRET ?? randomUUID().replaceAll("-", ""),
@@ -435,7 +426,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     "TABLECAST_MASTRA_PROJECT_ID",
     "TABLECAST_MASTRA_ENDPOINT",
     "TABLECAST_OTEL_CAPTURE_CONTENT",
-    "TABLECAST_INWORLD_VOICES_API_KEY",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
   ]) {
