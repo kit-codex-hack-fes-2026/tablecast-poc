@@ -36,7 +36,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
 | Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
 
-`TABLECAST_RUNTIME_SECRETS`には`.env.local`と同じ `OPENAI_API_KEY`、`INWORLD_API_KEY`、`LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、`TABLECAST_MODEL`、`TABLECAST_MODEL_API_KEY`、`TABLECAST_INWORLD_VOICES_API_KEY` を入れる。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。Pythonに必要な値はContainer起動時に注入する。ブラウザーへ返すLiveKit接続URLと限定JWTを除き、資格はサーバー側に留める。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `OPENAI_API_KEY`、`INWORLD_API_KEY`、`LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、`TABLECAST_MODEL`、`TABLECAST_MODEL_API_KEY`、`TABLECAST_INWORLD_VOICES_API_KEY` を入れる。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。Pythonに必要な値はContainer起動時に注入する。ブラウザーへ返すLiveKit接続URLと限定JWTを除き、資格はサーバー側に留める。
 
 認証secretと内部tokenは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証と内部通信に影響するため通常のキー追加時に再生成しない。
 

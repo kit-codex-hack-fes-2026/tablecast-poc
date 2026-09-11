@@ -1,12 +1,26 @@
 # TableCast PoC
 
-> アイディア名 TableCast — 声で注文と接客を支える卓上AIキャスト テーマ ビジネス向けソリューション 公式サイトの現行表記では、企業向けAIエージェントに該当します。OpenAI 大学生向け 夏の Codex 開発祭 2026 現時点のプロジェクト案 TableCastは、飲食店の卓上iPadに導入し、注文、商品説明、接客を会話形式で支援するAIエージェントです。 一般的なモバイル・タブレット注文は画面操作を前提としており、デジタル機器に不慣れな人、酔って操作が難しい人、外国人観光客にとって使いにくい場合があります。また、食べ飲み放題の複雑なルール、アレルギーやヴィーガンへの対応、料理の成分や文化的背景の説明は、店舗スタッフにとっても大きな負担です。 本プロダクトは、騒音や複数人の会話がある店内でも発話者を区別し、利用客が声だけで注文できる体験を目指します。AIが希望や条件を聞き取り、商品を提案・説明し、注文確定前には必ず内容を読み上げて確認します。音声操作が難しい場合には、従来のタッチ式メニューも利用できます。 希望する店舗では、会話が途切れた際の商品紹介や話題提供を行う接客モードも有効化でき、来店客同士の交流と追加注文を促します。店舗向けWebダッシュボードでは、卓ごとの注文状況をリアルタイムに確認できるほか、匿名化した質問・注文ログから、人気商品、よくある質問、メニューや接客上の課題を把握できます。 主な想定ユーザーは、居酒屋、食べ飲み放題店、訪日客の多い飲食店や和菓子店などです。将来は、店舗情報と商品情報を登録するだけで導入できる仕組みを整え、話者ごとの注文管理や個別会計、ドライブスルー、電話注文などにも展開します。
+TableCastは飲食店の卓上iPad向け音声接客・注文システム。目的と対象は [製品仕様](docs/product.md)、現在の構成は [構成仕様](docs/architecture.md) を正本とする。
 
 ## 最初に読む
 
-[仕様索引](docs/README.md) → [着手順](docs/implementation.md) → 変更対象の仕様だけを読む。
+[セットアップ](docs/setup.md)で作業環境を確認し、[仕様索引](docs/README.md) → [着手順](docs/implementation.md) → 変更対象の仕様を読む。実施済みの検証と残件は [進捗](docs/progress.md)、完了判定は [受入条件](docs/acceptance.md) を参照する。
 実装・修正・レビューでは [.agents/skills/minimum-impl/SKILL.md](.agents/skills/minimum-impl/SKILL.md) を適用する。
 本仕様は実装前の契約であり、ファイルの存在、検証成功、デプロイ完了を意味しない。既存コードがある場合は実物と差分を先に確認する。
+
+## GitHubの作業契約
+
+全ての作業はIssue起点にする。機能追加・修正・調査・文書・設定変更だけでなく、新規バグ発見、障害対応、暫定復旧、再発防止も含む。着手前に既存Issueを確認し、なければ起票する。作業中に別の問題を見つけた場合もIssueへ記録し、現在の受け入れ条件に含まれるかを判断してから対応する。
+
+[Issue・PR運用skill](.agents/skills/github-issue-pr-ops/SKILL.md) を適用し、次を省略しない。
+
+- 一つの利用可能な成果と確認方法でレビューできる粒度へ分割する。大きい成果はepicとsub-issueにし、実依存にはGitHubのblocked by／blockingを設定する。本文のリンクだけで関係を代用しない。
+- 原則 `1 実装Issue = 1 branch = 1 PR`。依存する変更は [stacked PR](.agents/skills/github-issue-pr-ops/references/stacked-prs.md) とし、下段のheadを上段のbaseにする。独立した変更は通常PRにする。sub-issueは成果の階層、blocked byは作業を妨げる実依存、Stackはレビューと統合の順序として使い分ける。
+- 着手・再開時にAssigneeと既存branch・PRを取得する。未割当なら自分を割り当てて再確認し、他の担当がいる場合は明示された引き継ぎに従う。依存変更・障害・中断・再開・引き継ぎの判断は [ライフサイクル](.agents/skills/github-issue-pr-ops/references/lifecycle-comments.md) に沿ってIssueへ残す。
+- IssueとPRの両方に主目的の既存ラベルを付ける。Issue本文に背景・成果・受け入れ条件・確認方法、PR本文に具体的な問題・変更後の動作・採用理由・検証結果・未実施範囲を書く。日本語は常体、CLIでは `--body-file` を使う。[Issue本文](.agents/skills/github-issue-pr-ops/references/issue-authoring.md) と [PR本文](.agents/skills/github-issue-pr-ops/references/pr-and-merge.md) に従う。
+- 画像・動画・ログ等は [添付手順](.agents/skills/github-issue-pr-ops/references/attachments.md) に従ってGitHubへアップロードする。UI・利用者の操作が変わる場合は実動作の画像か動画を関連説明に埋め込み、短いキャプションを付ける。秘密情報を除き、投稿後の表示・再生まで確認する。
+- リポジトリに紐付く既存ProjectsへIssue・epicを追加し、全件のPriorityと実態に合うStatusを設定・更新する。関連PRはIssueから参照し、同じ作業の項目を重複作成しない。[Projects skill](.agents/skills/github-project-ops/SKILL.md) に従い、既存フィールドの意味・選択肢を確認する。
+- 新規PRはDraft。対応する実装Issueだけを `Closes #123` 等で関連付け、epicや参照Issueを一括で閉じない。書き込み後に本文・ラベル・担当・sub/依存・Projects・Stackのbase/headを再取得して確認する。Draft解除とマージは許可された範囲で行う。
 
 ## 目的と実装規模
 
@@ -54,6 +68,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 ロックファイルとDBマイグレーションは統合担当が調整し、他worktreeの生成状態やプロセスを操作しない。
 Bunから公式CLIを起動する。Bunを採用してもWorkersの本番runtimeはworkerd、音声はPythonである。
 実装後は対象のformat/lint/typecheck/testを実行し、必要な統合・ブラウザー試験へ広げる。
+開発ツールの版、依存導入、envとexample、dev scripts、devcontainerを変更したら [setup.md](docs/setup.md) を同じ差分で更新する。READMEからの導線と関連文書も確認し、手順の重複を増やさない。
 テスト失敗をskip、型キャスト、広いignore、恒久mockで隠さない。実モデル試験は明示的な有料テストとして分離する。
 受入条件、未実施の検証、残るリスクを短く報告する。架空のPR番号、commit SHA、計測値を作らない。
 
@@ -67,11 +82,13 @@ API変更には `tablecast-api`、Web変更には `tablecast-web`、静的設定
 
 ## タスク別入口
 
-| 変更                   | 読むもの                                                            |
-| ---------------------- | ------------------------------------------------------------------- |
-| UI・言語・音声停止     | [UI仕様](docs/ui.md)                                                |
-| API・DB・認証          | [製品仕様](docs/product.md)、[構成](docs/architecture.md)           |
-| 音声・Mastra接続・演技 | [接続](docs/voice/integration.md)、[発話仕様](docs/voice/speech.md) |
-| fork・上流PR           | [パッチ方針](docs/voice/upstream-patch.md)                          |
-| ローカル・worktree     | [開発環境](docs/development.md)                                     |
-| 品質設定・テスト       | [静的解析](docs/static-analysis.md)、[テスト戦略](docs/testing.md)  |
+| 変更                   | 読むもの                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| UI・言語・音声停止     | [UI仕様](docs/ui.md)                                                                                  |
+| API・DB・認証          | [製品仕様](docs/product.md)、[構成](docs/architecture.md)                                             |
+| 音声・Mastra接続・演技 | [接続](docs/voice/integration.md)、[発話仕様](docs/voice/speech.md)                                   |
+| fork・上流PR           | [パッチ方針](docs/voice/upstream-patch.md)                                                            |
+| ローカル・worktree     | [セットアップ](docs/setup.md)、[開発環境](docs/development.md)、[Dev Container](docs/devcontainer.md) |
+| 品質設定・テスト       | [静的解析](docs/static-analysis.md)、[テスト戦略](docs/testing.md)                                    |
+
+認証は [authentication.md](docs/authentication.md)、デモは [demo.md](docs/demo.md)、MCPは [mcp.md](docs/mcp.md)、Codex接続は [codex-plugin.md](docs/codex-plugin.md)、ログ・traceは [observability.md](docs/observability.md)、公開環境は [deployment.md](docs/deployment.md) を読む。

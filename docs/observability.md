@@ -144,7 +144,7 @@ PR番号は調査対象へ置き換える。LogQLでは `{service_name="tablecas
 
 Mastraを実行するcascade経路は`OtelBridge`で現在のWorker traceに参加し、`MastraPlatformExporter`で同じtrace IDをhostedへ送る。通常のLiveKit Realtime経路には架空のMastra実行を作らない。Agent・モデル・toolの時間、使用量、環境・PR・SHA、voice session・turnを両画面で照合する。
 
-Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.secrets.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
+Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
 
 requestごとにObservabilityを所有し、生成終了・失敗・中断の全経路で`waitUntil(observability.shutdown())`を待つ。SDKのbus、exporter、bridgeをflushし、共有するWorker providerをshutdownしない。hosted送信の失敗は業務結果を変えない。導入版の`maxRetries`は初回を含むため1を指定する。無限再試行や重複したshutdownは行わない。
 

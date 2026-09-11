@@ -1,40 +1,31 @@
-# Dev Container
+# Dev Containerの構成
 
-Node 24.7、Bun 1.3.13、uv 0.10.9、Python 3.13.12 と LiveKit・Mailpit・Caddy を固定した開発イメージを使用する。ホストのDocker socketは渡さない。コンテナ内の音声Agentも同じPython lockを利用する。
+cloneから起動までの手順は [セットアップ](setup.md#2a-dev-containerを使う) が正本である。
 
-ホスト側にはDockerとGitが必要。Dev Containers対応エディタでこのフォルダーを開くと、依存の導入後に `bun run dev` が起動する。Docker CLIからも同じ構成を起動できる。
+## runtimeと分離
+
+Node 24.7.0、Bun 1.3.13、uv 0.11.26、Python 3.13.12を使用する。LiveKit・Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTMはComposeの別サービスとして起動する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。
+
+`tablecast-init.sh` はホストのGit共通ディレクトリとworktree実パスからCompose設定を生成する。メインcheckoutは `main`、追加worktreeはフォルダー名、Codexの同名repoフォルダーでは親のIDを使う。branch名やcommitには依存しない。Compose project・volumeと公開ポートを実パスごとに分離する。
+
+workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、仮想環境、`.local`、Webのbuild出力とWrangler状態はLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
+
+コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthとLiveKit signalingをCaddy経由の同一originへ集約する。LiveKitのRTC TCP/UDPには公開側と同じポートを渡す。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
+
+起動時にWeb/API・LiveKit・OAuth・Mailpitのreadyを確認する。Grafanaの初期化は別に時間がかかることがある。ホストのブラウザーから開発URLへアクセスする。`*.localhost` は同じホスト内の開発用で、実iPad向けのネットワーク構成ではない。
+
+## OrbStackのHTTPS
+
+OrbStackの標準proxyと [自動ドメイン](https://docs.orbstack.dev/docker/domains) を使える。まずinitし、`.devcontainer/.env` の `TABLECAST_CONTAINER_ORIGIN` を `https://<worktree>.<repo>.orb.local` に変更する。具体的なドメインはComposeの `dev.orbstack.domains` ラベルと合わせる。
 
 ```sh
 sh .devcontainer/tablecast-init.sh
+# .devcontainer/.env の TABLECAST_CONTAINER_ORIGIN を編集する
 docker compose -f .devcontainer/compose.yaml up -d --build
-docker compose -f .devcontainer/compose.yaml exec tablecast sh -c 'bun --no-env-file install --frozen-lockfile && uv sync --project livekit --frozen && bun run dev'
+docker compose -f .devcontainer/compose.yaml exec tablecast bun run setup
+docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev
 ```
 
-Docker Desktopでは `http://<worktree>.<repo>.container.localhost:3000`（このcheckoutでは `http://main.tablecast-poc.container.localhost:3000`）、メール一覧は `http://localhost:8025`。パスキーやマイクに必要なsecure contextはlocalhostとそのサブドメインの例外を使用する。通常起動とは `.container.` でホスト名を分け、Cookieの共有を防ぐ。ホストでの `.local`、`node_modules`、Python仮想環境とコンテナのものは別ボリュームに保存する。
+エディタのinitializeCommandは生成ファイルを再生成する。エディタでもHTTPSを使う場合は `TABLECAST_CONTAINER_ORIGIN` をホストの起動環境に設定する。Composeでは環境変数が生成ファイルより優先される。originを切り替える前に `bun run dev:stop` を実行し、コンテナを再作成する。
 
-## OrbStack
-
-```sh
-sh .devcontainer/tablecast-init.sh
-. .devcontainer/.env
-TABLECAST_CONTAINER_ORIGIN="https://${TABLECAST_WORKTREE_NAME}.${TABLECAST_REPO_NAME}.orb.local" docker compose -f .devcontainer/compose.yaml up -d --build
-```
-
-エディタの `initializeCommand`、または上記の初期化コマンドがホストのworktree名とrepo名を `.devcontainer/.env` へ保存する。メインcheckoutのworktree名は `main`、追加worktreeはフォルダー名を使う。Gitのbranch名やcommit hashには依存しない。
-
-コンテナの `dev.orbstack.domains` と `dev.orbstack.http-port` ラベルにより `https://<worktree>.<repo>.orb.local`（このcheckoutでは `https://main.tablecast-poc.orb.local`） で開く。OrbStackのHTTPSプロキシを使用する。起動コマンドは上と同じ。originを変更したら `bun run dev:stop` の後で再起動する。Googleの模擬OAuthとLiveKitのシグナリングはCaddyを経由し、同一originのHTTPS/WSSで提供する。
-
-複数checkoutの同時起動ではComposeのproject名、公開ポート、OrbStackドメインを別のoverrideファイルで割り当てる。ホスト側の通常起動では従来通りworktree別のポート予約を使用する。
-
-## 停止とデータ
-
-```sh
-docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:stop
-docker compose -f .devcontainer/compose.yaml down
-```
-
-`down` はデータボリュームを保持する。リセットしたい場合だけコンテナ内の `bun run demo:reset` を使用する。ホスト側のデモ状態には影響しない。
-
-外部音声サービスを使用するには既存の `.env.secrets.local` を用意する。未設定ならGUIと認証・メールの開発は利用でき、音声Agentは停止する。公開環境のGoogle・Cloudflare送信ドメインとは別設定になる。
-
-OrbStackのHTTPSをNode製クライアントから検証する場合、macOSの証明書ストアを参照する `NODE_OPTIONS=--use-system-ca` を設定する。TLS検証自体は無効化しない。
+Node製クライアントがmacOSの証明書ストアを使うには `NODE_OPTIONS=--use-system-ca` を指定する。TLS検証を無効化しない。Linuxコンテナはホストの証明書ストアを共有しないため、コンテナ内の試験は既定のlocalhost経路を使う。

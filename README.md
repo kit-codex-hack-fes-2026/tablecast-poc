@@ -4,31 +4,18 @@
 
 価格、販売可否、注文確定、店舗・卓の認可はHono APIが所有する。Mastraの業務ツールとGUI・MCPは同じ処理を使い、Python LiveKit Agentは音声接続を担当する。実決済やPOSへの接続は行わない。
 
-## ローカル起動
+## 開発を始める
 
-Bun 1.3.13、Node.js 24.7以上、uv 0.11.26、Python 3.13、稼働中のDocker互換エンジンが必要。
+[セットアップ手順](docs/setup.md)に、cloneからworktree作成、Dev Containerまたはmiseによる開発開始、env設定、動作確認、終了までをまとめている。
+
+準備済みのworktreeでは次を実行する。
 
 ```sh
-bun --no-env-file install --frozen-lockfile --ignore-scripts
-uv sync --project livekit --locked
-bun --no-env-file run dev:prepare
+bun --no-env-file run setup
 bun --no-env-file run dev
 ```
 
-初回準備で、このworktree専用のポート・秘密情報・D1・R2・デモを作る。表示されたURLが客向け画面で、店舗側は同じURLの `/admin/live`。ログイン情報は生成された `.local/demo.json` にある。管理者でログインし、客向け画面の端末コードを対象の卓へ割り当てる。
-
-外部資格なしでGUI注文、受付・提供、模擬会計、閉卓後の来店履歴、設定の下書き・公開を試せる。音声は未設定として扱い、勝手に外部サービスへ接続しない。既存の `.env.local` は開発ランタイムへ引き継がない。
-
-```sh
-bun --no-env-file run dev:status
-bun --no-env-file run demo:play
-bun --no-env-file run demo:reset
-bun --no-env-file run dev:stop
-```
-
-`demo:play` は背景卓を一段階だけ進める。T01は人の操作、T12はブラウザー試験に残す。`demo:reset` はこのworktreeのプロセスを止め、同じプロファイルの営業初期状態へ戻す。デモ管理者のパスワードは維持する。
-
-`demo:reset --profile smoke|demo|history` でプロファイルを切り替えられる。
+外部APIキーなしでGUI注文とローカル認証を利用できる。音声の設定はルートの `.env.example` を参照する。
 
 ## 構成
 
@@ -40,34 +27,8 @@ bun --no-env-file run dev:stop
 | `assets/demo` | 生成した商品画像12点、プロンプト、出所、SHA-256                            |
 | `scripts`     | worktree内の開発環境と決定的な合成データ                                   |
 
-## 検証
+## 検証と仕様
 
-```sh
-bun --no-env-file run check
-bun --no-env-file run build
-bun --no-env-file apps/web/node_modules/.bin/playwright install chromium webkit
-bun --no-env-file run test:browser
-bun --no-env-file run test:e2e
-bun --no-env-file run dev:parity
-bun --no-env-file run test:e2e
-bun --no-env-file scripts/tablecast-livekit-check.ts
-```
+`bun run check` は静的解析と無課金テスト、`bun run test:browser` はUI部品、`bun run test:e2e` はケース専用環境の業務フローを検証する。必要な依存と実行条件は [セットアップ](docs/setup.md#5-日常の操作と検証)、保証の分担は [テスト戦略](docs/testing.md) を参照する。
 
-`test:e2e` は起動済みのローカル環境を使い、T12を実際の業務APIから操作する。`dev:parity` はこのworktreeの設定で毎回ビルドし、Cloudflare公式Vite previewでWebとAPIをService Binding接続する。通常モードへ戻すには `bun --no-env-file run dev`。
-
-`tablecast-livekit-check.ts` は実マイクを使わず、一時Roomの2ブラウザー間で合成音声の受信・復号と切断を確認する。外部AIの品質やiPadの音響試験とは別の検証である。
-
-```sh
-bun --no-env-file run hooks:install
-bun --no-env-file run storybook
-```
-
-Lefthookはpre-commitでstageされたファイルを検査し、自動stageは行わない。commit-msgはcommitlintでConventional Commits・Gitmoji・本文・Issue番号必須を検査する。push時の全体検証は行わず、CIでコミットメッセージと無課金の静的解析、実D1・DOの試験、UI部品、日英のブラウザー試験を検査する。有料の実音声試験はCIに含めない。
-
-## 外部音声の設定
-
-後続の実音声受入では `.env.secrets.local.example` を参照し、ルートの `.env.secrets.local` へ開発専用のInworld・モデル資格を配置する。秘密値はGitやチャットへ記録しない。カタログのキャスト設定に日英のVoice IDを登録・公開してから、開発環境を再起動する。
-
-実モデル試験には明示的な有料実行フラグが必要。[音声の起動と試験](livekit/README.md)に従う。Inworld公式版の話者情報には不足があり、[固定SHAのパッチ](patches/livekit-inworld/README.md)はまだ公開fork依存として採用していない。
-
-[仕様索引](docs/README.md) · [実装・検証記録](docs/progress.md) · [構成の実現可能性と技術課題](docs/feasibility.md) · [公開環境の初期設定・配備](docs/deployment.md) · [デモのデータと画像](docs/demo.md)
+[仕様索引](docs/README.md) · [開発環境の仕組み](docs/development.md) · [実装・検証記録](docs/progress.md) · [公開環境への配備](docs/deployment.md) · [デモ](docs/demo.md)
