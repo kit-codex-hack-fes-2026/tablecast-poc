@@ -186,7 +186,7 @@ it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメイ�
   expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
 });
 
-it("Bunの開発envを読み込んだ起動所有者は許可した資格だけを子へ渡す", async () => {
+it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async () => {
   const root = await mkdtemp(join(tmpdir(), "tablecast-bun-env-"));
   const execute = promisify(execFile);
   try {
@@ -210,11 +210,47 @@ it("Bunの開発envを読み込んだ起動所有者は許可した資格だけ�
         env: { PATH: process.env.PATH, HOME: root, NODE_ENV: "development" },
       },
     );
-    // Then: 展開済みの開発資格だけを渡し、Cloudflare資格と共有認証鍵を除く。
+    // Then: 展開済みの開発資格だけを選び、Cloudflare資格と共有認証鍵を除く。
     expect(JSON.parse(stdout)).toEqual({
       TABLECAST_MODEL: "tablecast-local",
       TABLECAST_MODEL_API_KEY: "tablecast-local-key",
     });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("Pythonの外部資格と別名はBunを介さずuvがenvファイルから解決する", async () => {
+  const root = await mkdtemp(join(tmpdir(), "tablecast-uv-env-"));
+  const execute = promisify(execFile);
+  try {
+    // Given: Python自身が読む開発資格と同一ファイル内の別名、別ファイルの接続設定。
+    await writeFile(
+      join(root, ".env.local"),
+      'TABLECAST_MODEL_API_KEY=tablecast-uv-key\nOPENAI_API_KEY="${TABLECAST_MODEL_API_KEY}"\n',
+    );
+    await writeFile(join(root, ".env.voice"), "LIVEKIT_URL=ws://127.0.0.1:7880\n");
+    // When: Bunのenvを継承せず、uvの標準読み込みでPythonを起動する。
+    const { stdout } = await execute(
+      "uv",
+      [
+        "run",
+        "--no-project",
+        "--offline",
+        "--python",
+        join(process.cwd(), "livekit/.venv/bin/python"),
+        "--env-file",
+        ".env.local",
+        "--env-file",
+        ".env.voice",
+        "python",
+        "-c",
+        "import os; print(os.environ['OPENAI_API_KEY'])",
+      ],
+      { cwd: root, env: { PATH: process.env.PATH, HOME: process.env.HOME } },
+    );
+    // Then: uvが展開した資格をPythonから参照できる。
+    expect(stdout.trim()).toBe("tablecast-uv-key");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

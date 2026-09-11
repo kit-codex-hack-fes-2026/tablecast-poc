@@ -55,6 +55,72 @@
     "@tablecast/api#typecheck": {
       "dependsOn": ["^typecheck"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/**"]
+    },
+    "//#dev:prepare": {
+      "cache": false,
+      "passThroughEnv": ["TABLECAST_*", "INWORLD_API_KEY"]
+    },
+    "//#services:up": {
+      "dependsOn": ["//#dev:prepare"],
+      "cache": false,
+      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"]
+    },
+    "//#dev:proxy": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "//#dev:caddy": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "//#dev:mailpit": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "//#dev:livekit": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "@tablecast/emulate#dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "@tablecast/web#dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#services:up"],
+      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+    },
+    "@tablecast/web#dev:container": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"],
+      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit", "//#dev:livekit"]
+    },
+    "@tablecast/web#build:local": {
+      "dependsOn": ["//#dev:prepare"],
+      "cache": false
+    },
+    "@tablecast/web#preview": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["build:local", "//#services:up"],
+      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+    },
+    "@tablecast/web#i18n:compile": {
+      "inputs": ["project.inlang/**", "messages/**", "package.json"],
+      "outputs": ["src/paraglide/**"]
+    },
+    "@tablecast/web#typecheck": {
+      "dependsOn": ["^typecheck", "i18n:compile"]
+    },
+    "@tablecast/web#lint": {
+      "dependsOn": ["i18n:compile"]
     }
   }
 }

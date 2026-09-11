@@ -10,7 +10,6 @@
     "${localWorkspaceFolder}"
   ],
   "postCreateCommand": "bun run setup",
-  "postStartCommand": "bun run dev",
   "forwardPorts": [],
   "remoteUser": "root"
 }

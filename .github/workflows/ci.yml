@@ -91,6 +91,8 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
+        with:
+          python: "true"
       - run: bunx --no-install vitest run --project scripts-runtime
 
   workers-build:
@@ -197,12 +199,15 @@ jobs:
           - uses: ./.github/actions/tablecast-browser-deps
             with:
               browsers: chromium
-          - name: Local services
-            run: bun --no-env-file run dev
-      - run: bun --no-env-file scripts/tablecast-livekit-check.ts
-      - name: Stop local services
-        if: always()
-        run: bun --no-env-file run dev:stop
+      - name: Local WebRTC
+        run: |
+          bun --no-env-file run dev > /tmp/tablecast-dev.log 2>&1 &
+          TABLECAST_DEV_PID=$!
+          trap 'kill -TERM "$TABLECAST_DEV_PID"; wait "$TABLECAST_DEV_PID" || true; bun run services:down' EXIT
+          bun --no-env-file scripts/tablecast-livekit-check.ts
+      - name: 開発ログ
+        if: failure()
+        run: cat /tmp/tablecast-dev.log
   images:
     name: 配備用Containerイメージ
     runs-on: ubuntu-latest

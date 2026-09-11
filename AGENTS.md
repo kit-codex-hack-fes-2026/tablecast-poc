@@ -66,7 +66,7 @@ PoCでも、このリポジトリを継続して本実装に使う。安全性�
 
 変更前に対象workspaceのmanifest、公開入口、呼出し元、関連テスト、現在のGit差分を確認する。
 ロックファイルとDBマイグレーションは統合担当が調整し、他worktreeの生成状態やプロセスを操作しない。
-Bunから公式CLIを起動する。Bunを採用してもWorkersの本番runtimeはworkerd、音声はPythonである。
+標準CLIと実行内容をpackage.jsonへ直接記述する。タスクの順序・並列・常駐・cacheはTurborepo、コンテナ資源はDev Container/Composeで管理する。標準機能を包むだけの.sh・.ts、独自daemon・汎用runnerを増やさない。Pythonはuvから直接起動し、envもuv --env-fileで読む。Bunのenv解決や資格の転送に依存させない。Workersの本番runtimeはworkerd、音声はPythonである。
 実装後は対象のformat/lint/typecheck/testを実行し、必要な統合・ブラウザー試験へ広げる。
 開発ツールの版、依存導入、envとexample、dev scripts、devcontainerを変更したら [setup.md](docs/setup.md) を同じ差分で更新する。READMEからの導線と関連文書も確認し、手順の重複を増やさない。
 テスト失敗をskip、型キャスト、広いignore、恒久mockで隠さない。実モデル試験は明示的な有料テストとして分離する。

@@ -1,15 +1,8 @@
 services:
   tablecast-lgtm:
-    image: grafana/otel-lgtm:0.32.1
-    environment:
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-      GF_SERVER_ROOT_URL: http://localhost:${TABLECAST_GRAFANA_PORT}
-    ports:
-      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
-      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
-    volumes:
-      - tablecast-lgtm:/data
-      - ../infra/grafana/tempo.yaml:/otel-lgtm/tempo-config.yaml:ro
+    extends:
+      file: ../infra/grafana/compose.yaml
+      service: tablecast-lgtm
   tablecast:
     build:
       context: ..

@@ -54,7 +54,7 @@ prodは環境を`production`へ変えてPR条件を外す。ローカルは`deve
 
 ## ローカル起動とMCP
 
-`bun run dev`でworktree専用のLGTMも起動する。ポートは`.local/runtime.json`の`grafana`・`otlp`・`tempo`に記録する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、`dev:stop`はこのworktreeのcontainerだけを停止する。Dev ContainerはComposeの`tablecast-lgtm`を使う。
+`bun run dev`でworktree専用のLGTMも起動する。ポートは`.local/runtime.json`の`grafana`・`otlp`・`tempo`に記録する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、WebはTurboのターミナルでCtrl+C、Dockerサービスは `bun run services:down` で停止する。この操作は自worktreeのcontainerとnetworkを片付け、volumeを保持する。Dev ContainerはComposeの`tablecast-lgtm`を使う。
 
 LGTMは開発用で、host公開はloopbackに限定する。Grafanaは匿名Viewer、設定変更用の初期ログインは`admin` / `admin`。Tempoの読み取りMCPは同梱設定で有効にする。
 
@@ -62,13 +62,11 @@ LGTMは開発用で、host公開はloopbackに限定する。Grafanaは匿名Vie
 
 CloudはGrafanaで作成したViewer service account tokenを`.local/tablecast-grafana-read-token`へ改行なしで保存し、`chmod 600`を設定する。送信用Cloud access policy tokenと読み取り用service account tokenを共用しない。Cloudの送信AuthorizationはGitHub Actions secret `TABLECAST_OTEL_AUTHORIZATION`からAPIとWebへ渡す。Viteの公開varsやGitには含めない。今回の送信tokenは90日で失効するため、期限前にGrafanaで更新して同じsecretを入れ替える。
 
-Codexと同じMCPをCLIで確認できる:
+専用のクエリscriptを置かず、[公式MCP Inspector CLI](https://github.com/modelcontextprotocol/inspector/blob/main/clients/cli/README.md)で同じMCPを確認する。`local` を `cloud` に変えるとCloudを対象にする。
 
 ```sh
-bun --no-env-file scripts/tablecast-grafana-query.ts local
-bun --no-env-file scripts/tablecast-grafana-query.ts cloud
-bun --no-env-file scripts/tablecast-grafana-query.ts local query_loki_logs '{"datasourceUid":"loki","logql":"{service_namespace=\"tablecast\"} | http_route=\"/api/table/orders\"","limit":5}'
-bun --no-env-file scripts/tablecast-grafana-query.ts local tempo_traceql-search '{"datasourceUid":"tempo","query":"{name=\"tablecast.order.submit\"}"}'
+bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/tablecast-grafana-mcp.ts local -- --method tools/list
+bunx @modelcontextprotocol/inspector@2.6.0 --cli bun --no-env-file scripts/tablecast-grafana-mcp.ts local -- --method tools/call --tool-name query_loki_logs --tool-arg datasourceUid=loki --tool-arg 'logql={service_namespace="tablecast"}' --tool-arg limit=5
 ```
 
 Cloud datasource UIDは`grafanacloud-logs`・`grafanacloud-traces`。MCPはTempo内蔵MCPを自動検出し、`tempo_traceql-search`と`tempo_get-trace`を公開する。LokiはLogQLであり、LogsQL/SQLとは別の言語である。

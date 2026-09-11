@@ -4,7 +4,7 @@
 通常のチェックは外部AIを呼ばない。実マイク、iPadのエコー・停止、日英の自然さは未検証。
 STT話者対応は [公開forkの最小パッチ](../patches/livekit-inworld/README.md) を完全SHAへ固定して適用済み。話者・単語時刻を有効にし、欠損した話者は未識別として扱う。
 
-ルートの `bun run dev` がworktree専用のLiveKitとAPIを起動する。開発設定はBunがルートの `.env.local` から読み込む。
+ルートの `bun run dev` がworktree専用のLiveKitとAPIを起動する。Python Agentは別ターミナルでuvから起動し、uv自身がルートの `.env.local` と生成済み `.local/.env.voice` を読む。
 外部設定を追加する場合はルート `.env.local` の `INWORLD_API_KEY` と試聴した標準voice IDを設定し、店舗設定の `cast.voice.ja/en` も公開する。
 API側のモデル設定も必要。voice未選定や外部設定不足のときは接続を成功扱いにせず、GUI注文を継続する。
 
@@ -36,10 +36,10 @@ Roomへの `ctx.connect()` 完了後に参加者を指定して `AgentSession.st
 注文確認は同じAPIスナップショットを `session.say` で一度読み、`SpeechHandle.wait_for_playout` の完了後だけ読み上げ完了を送る。
 音声停止はRoom退出とAgentSessionの即時終了へ伝わり、DB側でもvoice sessionとturnを失効させる。カートや確定注文のロールバックは行わない。
 
-`test:voice:live` は明示操作で実行する有料のSTT/TTS疎通試験。生成音声をメモリ内で再認識し、日英の確定認識と音声長を出力する。音声ファイルは保存しない。
+`tablecast-voice-check` は明示操作で実行する有料のSTT/TTS疎通試験。生成音声をメモリ内で再認識し、日英の確定認識と音声長を出力する。音声ファイルは保存しない。
 
 ```sh
-TABLECAST_RUN_PAID_VOICE_TESTS=1 bun --no-env-file run test:voice:live
+TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check
 ```
 
 この試験は人手の自然さ評価、実マイク、LiveKit転送、iPadのAEC、騒音、複数話者の評価を代替しない。
@@ -68,3 +68,14 @@ docker run --rm --network none --entrypoint python tablecast-voice:local -c 'imp
 起動とhealthは、既存の開発環境と分離したローカルLiveKitへ接続して確認する。専用の環境ファイルを権限 `0600` で用意し、このLiveKitの `LIVEKIT_URL`・`LIVEKIT_API_KEY`・`LIVEKIT_API_SECRET` だけを `docker run --env-file` で渡す。Room jobをdispatchしなければ、待受登録とhealthの検査は外部AIを呼ばない。既定health portは `8081` で、コンテナ内の `http://127.0.0.1:8081/` を確認する。外部へhealth portを公開する必要はない。
 
 公開時は同じイメージへ上表の対象環境の資格を実行時に渡し、`TABLECAST_API_URL` を公開WebのHTTPS originへ設定する。イメージ内に資格を焼き込まない。実際の配備・Room dispatch・STT/TTS・実iPadでの受入と、ここにある資格不要のイメージ検査は別に記録する。
+
+## ローカルAgentの起動
+
+repoルートでWeb/LiveKit Serverを起動後、別ターミナルから直接uvを実行する。
+
+```sh
+uv run --project livekit tablecast-voice download-files
+uv run --project livekit --env-file .env.local --env-file .local/.env.voice tablecast-voice dev
+```
+
+envの読み込みはuvが行う。`.local/.env.voice` は接続先とworktree専用鍵だけを持つ。`.env.example` の `OPENAI_API_KEY=${TABLECAST_MODEL_API_KEY}` は同じファイル内でuvが展開するため、Bunで資格をコピーしない。停止はCtrl+C。型検査・lint・testも `uv run --project livekit ty check livekit/src livekit/tests`、`uv run --project livekit ruff check livekit`、`uv run --project livekit pytest livekit/tests` で直接実行できる。

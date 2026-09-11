@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --no-env-file src/index.ts",
+    "dev": "bun --env-file=../../.local/.env src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

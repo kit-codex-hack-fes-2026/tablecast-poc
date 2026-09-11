@@ -12,7 +12,7 @@ workspaceとGit共通ディレクトリをホストと同じ絶対パスへmount
 
 コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthとLiveKit signalingをCaddy経由の同一originへ集約する。LiveKitのRTC TCP/UDPには公開側と同じポートを渡す。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
 
-起動時にWeb/API・LiveKit・OAuth・Mailpitのreadyを確認する。Grafanaの初期化は別に時間がかかることがある。ホストのブラウザーから開発URLへアクセスする。`*.localhost` は同じホスト内の開発用で、実iPad向けのネットワーク構成ではない。
+TurboのログでWeb/API・LiveKit・OAuth・Mailpitの起動を確認する。Grafanaの初期化は別に時間がかかることがある。ホストのブラウザーから開発URLへアクセスする。`*.localhost` は同じホスト内の開発用で、実iPad向けのネットワーク構成ではない。
 
 ## OrbStackのHTTPS
 
@@ -23,9 +23,9 @@ sh .devcontainer/tablecast-init.sh
 # .devcontainer/.env の TABLECAST_CONTAINER_ORIGIN を編集する
 docker compose -f .devcontainer/compose.yaml up -d --build
 docker compose -f .devcontainer/compose.yaml exec tablecast bun run setup
-docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev
+docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:container
 ```
 
-エディタのinitializeCommandは生成ファイルを再生成する。エディタでもHTTPSを使う場合は `TABLECAST_CONTAINER_ORIGIN` をホストの起動環境に設定する。Composeでは環境変数が生成ファイルより優先される。originを切り替える前に `bun run dev:stop` を実行し、コンテナを再作成する。
+エディタのinitializeCommandは生成ファイルを再生成する。エディタでもHTTPSを使う場合は `TABLECAST_CONTAINER_ORIGIN` をホストの起動環境に設定する。Composeでは環境変数が生成ファイルより優先される。originを切り替える前に Web・音声AgentをCtrl+Cで停止し、コンテナを再作成する。
 
 Node製クライアントがmacOSの証明書ストアを使うには `NODE_OPTIONS=--use-system-ca` を指定する。TLS検証を無効化しない。Linuxコンテナはホストの証明書ストアを共有しないため、コンテナ内の試験は既定のlocalhost経路を使う。

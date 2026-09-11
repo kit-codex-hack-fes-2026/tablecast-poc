@@ -1,12 +1,12 @@
 import process from "node:process";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedDemoDatabase } from "./tablecast-seed-data";
 export { sampleLine } from "./tablecast-seed-data";
-import { readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
+import { portAvailable, readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
 
 const demoSchema = z.object({
   email: z.string().email(),
@@ -44,8 +44,10 @@ async function seed() {
     .parse(process.argv)
     .slice(2)
     .filter((arg) => arg !== "--");
-  if (args.some((arg) => !["--profile", "smoke", "demo", "history"].includes(arg)))
-    throw new Error("seedはlocal専用です。指定可能な引数は --profile smoke|demo|history です。");
+  if (args.some((arg) => !["--reset", "--profile", "smoke", "demo", "history"].includes(arg)))
+    throw new Error(
+      "seedはlocal専用です。指定可能な引数は --reset と --profile smoke|demo|history です。",
+    );
   const profileOption = args.indexOf("--profile");
   const requestedProfile =
     profileOption < 0
@@ -54,6 +56,24 @@ async function seed() {
   const runtime = await readRuntime();
   const credentials = await demoCredentials(requestedProfile);
   const profile = requestedProfile ?? credentials.profile;
+  if (args.includes("--reset")) {
+    if (!(await portAvailable(runtime.ports.web)) || !(await portAvailable(runtime.ports.agent)))
+      throw new Error("開発サーバーと音声AgentをCtrl+Cで停止してからリセットしてください。");
+    await rm(runtime.state, { recursive: true, force: true });
+    credentials.profile = profile;
+    credentials.baseTime = Date.now();
+    await writeFile(
+      join(tablecastLocal, "demo.json"),
+      JSON.stringify(credentials, null, 2) + "\n",
+      { mode: 0o600 },
+    );
+    const migration = Bun.spawn(["bun", "--no-env-file", "run", "db:migrate"], {
+      cwd: tablecastRoot,
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    if ((await migration.exited) !== 0) throw new Error("リセット後のmigrationに失敗しました。");
+  }
   if (credentials.profile !== profile)
     throw new Error("プロファイルを変更する前に bun run demo:reset を実行してください。");
   const generated = z

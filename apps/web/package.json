@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "bun --env-file=../../.local/.env run vite dev",
     "build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "bun run i18n:compile && tsc --noEmit",
+    "preview": "bun --env-file=../../.local/.env run vite preview",
+    "typecheck": "tsc --noEmit",
     "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "lint": "oxlint src e2e .storybook vite.config.ts vitest.config.ts playwright.config.ts --deny-warnings",
     "format": "oxfmt --write .",
@@ -16,7 +16,9 @@
     "test:e2e": "playwright test",
     "storybook": "storybook dev --no-open --port 6006",
     "build:storybook": "storybook build",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "dev:container": "bun --env-file=../../.local/.env run vite dev",
+    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run vite build"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

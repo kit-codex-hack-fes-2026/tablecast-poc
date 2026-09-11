@@ -90,7 +90,29 @@ room.on(RoomEvent.Disconnected, () => {
 </script></body></html>`;
 
 async function main() {
+  await expect
+    .poll(() => Bun.file(join(tablecastLocal, "runtime.json")).exists(), { timeout: 120_000 })
+    .toBe(true);
   const runtime = await readRuntime();
+  // CIも開発時と同じforegroundコマンドを使い、試験側で接続可能になるのを待つ。
+  for (const endpoint of [
+    `${runtime.origin}/api/health`,
+    `http://127.0.0.1:${runtime.ports.signaling}/`,
+  ]) {
+    await expect
+      .poll(
+        async () => {
+          try {
+            return (await fetch(endpoint, { signal: AbortSignal.timeout(5000) })).ok;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 120_000 },
+      )
+      .toBe(true);
+  }
+
   const url = `ws://127.0.0.1:${runtime.ports.signaling}`;
   const health = await fetch(`http://127.0.0.1:${runtime.ports.signaling}/`, {
     signal: AbortSignal.timeout(2000),

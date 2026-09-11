@@ -80,7 +80,7 @@ pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混�
 
 ## 公開scriptとCI
 
-`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`test:voice:live` は有料実音声に分ける。
+`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は有料実音声に分ける。
 `bun run check` に静的解析・型・無課金テストを含める。Browser/E2EはCI別job。有料試験は手動または明示承認されたjobだけ。
 Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼び、tyとruffも同じ場所で別scriptから実行する。ルートから直接試す場合は `uv run --directory livekit pytest` とする。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。

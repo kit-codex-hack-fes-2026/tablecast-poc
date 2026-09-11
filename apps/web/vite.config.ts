@@ -40,8 +40,14 @@ export default defineConfig(() => {
       tanstackStart(),
       react(),
     ],
+    preview: {
+      host: tablecastEnv.HOST ?? "127.0.0.1",
+      port: Number(tablecastEnv.PORT ?? 4173),
+      strictPort: true,
+    },
     server: {
-      host: "127.0.0.1",
+      host: tablecastEnv.HOST ?? "127.0.0.1",
+      port: Number(tablecastEnv.PORT ?? 5173),
       allowedHosts: [
         ".localhost",
         ...(tablecastEnv.TABLECAST_PUBLIC_ORIGIN
