@@ -1,10 +1,11 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { ApiFailure, parseResponse, rpc } from "./api";
+import { ApiFailure, parseResponse, rpc, tableEndpoint } from "./api";
 
 export function useRealtime(
   scope: "table" | { storeId: string } | undefined,
   snapshotCursor: number,
   onChange: () => void,
+  tableClient = tableEndpoint.client,
 ) {
   const storeId = typeof scope === "object" ? scope.storeId : undefined;
   const enabled = scope !== undefined;
@@ -38,7 +39,7 @@ export function useRealtime(
                 { param: { storeId }, query: { after: String(cursor.current) } },
                 { init: { signal: controller.signal } },
               )
-            : rpc.api.table.events.$get(
+            : tableClient.events.$get(
                 { query: { after: String(cursor.current) } },
                 { init: { signal: controller.signal } },
               ),
@@ -64,7 +65,7 @@ export function useRealtime(
       const url = new URL(
         storeId
           ? rpc.api.admin.stores[":storeId"].live.$url({ param: { storeId } })
-          : rpc.api.table.live.$url(),
+          : tableClient.live.$url(),
         window.location.href,
       );
       url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -103,6 +104,6 @@ export function useRealtime(
       clearTimeout(retry);
       socket?.close();
     };
-  }, [storeId, enabled]);
+  }, [storeId, enabled, tableClient]);
   return connected;
 }

@@ -39,7 +39,7 @@ export async function getHistory(
   }>(sql`WITH page AS (
       SELECT s.id,s.store_id,s.table_id,t.name AS table_name,s.locale,s.guest_count,s.opened_at,s.closed_at,s.plan_json
       FROM table_sessions s JOIN restaurant_tables t ON t.id=s.table_id AND t.store_id=s.store_id
-      WHERE s.store_id=${actor.storeId} AND s.status='closed' AND s.closed_at IS NOT NULL${cursor}
+      WHERE s.store_id=${actor.storeId} AND s.kind='table' AND s.status='closed' AND s.closed_at IS NOT NULL${cursor}
       ORDER BY s.closed_at DESC,s.id DESC LIMIT ${query.limit + 1}
     )
     SELECT page.*,

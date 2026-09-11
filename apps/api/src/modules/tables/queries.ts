@@ -6,6 +6,7 @@ import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { priceCart, type PlanContext } from "../catalog/pricing";
+import { getDemoRecord } from "../demo/queries";
 import { getCatalog } from "../catalog/queries";
 import type { Catalog } from "../configuration/model";
 import {
@@ -32,6 +33,9 @@ export async function getSession(services: ApiServices, actor: Actor): Promise<T
     )
     .get();
   ensure(row, "TABLE_NOT_FOUND", 404);
+  if (row.kind === "demo") {
+    await getDemoRecord(services, actor);
+  } else ensure(!actor.demoId, "DEMO_NOT_FOUND", 404);
   if (actor.kind === "device") ensure(row.status === "open", "SESSION_CLOSED", 403);
   if (actor.kind === "voice")
     ensure(
@@ -180,19 +184,23 @@ export async function getTableState(services: ApiServices, actor: Actor): Promis
         .orderBy(desc(business.tableEvents.cursor))
         .limit(100);
       const row = await getSession(services, actor);
-      const catalog = await getCatalog(services, actor.storeId);
+      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
       const [tables, orderRows, paymentRows, confirmations] = await db.batch([
         db
           .select({
-            id: business.restaurantTables.id,
-            name: business.restaurantTables.name,
+            id: business.tableSessions.id,
+            name: sql<string>`coalesce(${business.restaurantTables.name}, '')`,
             bill_requested: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='bill.requested')`,
           })
-          .from(business.restaurantTables)
+          .from(business.tableSessions)
+          .leftJoin(
+            business.restaurantTables,
+            eq(business.restaurantTables.id, business.tableSessions.table_id),
+          )
           .where(
             and(
-              eq(business.restaurantTables.id, row.table_id),
-              eq(business.restaurantTables.store_id, actor.storeId),
+              eq(business.tableSessions.id, row.id),
+              eq(business.tableSessions.store_id, actor.storeId),
             ),
           ),
         db
@@ -267,6 +275,7 @@ export function tableStateValue(
   return {
     id: row.id,
     tableId: row.table_id,
+    kind: row.kind,
     tableName: table?.name ?? "",
     storeId: row.store_id,
     storeName: catalog.storeName,

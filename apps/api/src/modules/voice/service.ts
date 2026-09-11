@@ -34,7 +34,7 @@ export async function setSpeechSpeed(
     eventStatement(services, actor, mutation, "voice.speed", parsed.data),
   ]);
   ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return getTableState(services, actor);
 }
 
@@ -57,7 +57,7 @@ export async function recordVoiceEvent(
     .select(
       sql`SELECT NULL,store_id,id,${event.kind},${JSON.stringify(data)},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND (${reserve ? data.state : ""}<>'running' OR NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${actor.tableSessionId} AND kind='voice.tool' AND json_extract(data_json,'$.toolCallId')=${data.toolCallId} AND json_extract(data_json,'$.state')='running'))`,
     );
-  if (result.meta.changes === 1) await notifyStore(services, actor.storeId);
+  if (result.meta.changes === 1) await notifyStore(services, actor.storeId, actor.tableSessionId);
   return result.meta.changes === 1;
 }
 
@@ -98,6 +98,6 @@ export async function setVoiceSession(
     }),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return getTableState(services, actor);
 }

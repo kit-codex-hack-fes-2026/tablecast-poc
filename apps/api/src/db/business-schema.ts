@@ -45,7 +45,10 @@ export const stores = sqliteTable("stores", {
 export const tableSessions = sqliteTable("table_sessions", {
   id: text("id").primaryKey().notNull(),
   store_id: text("store_id").notNull(),
-  table_id: text("table_id").notNull(),
+  table_id: text("table_id"),
+  kind: text("kind", { enum: ["table", "demo"] })
+    .notNull()
+    .default("table"),
   locale: text("locale", { enum: ["ja", "en"] }).notNull(),
   status: text("status", { enum: ["open", "closed"] })
     .notNull()
@@ -157,4 +160,13 @@ export const configDrafts = sqliteTable("config_drafts", {
   publish_key: text("publish_key"),
   created_at: integer("created_at").notNull(),
   updated_at: integer("updated_at").notNull(),
+});
+
+export const demoSessions = sqliteTable("demo_sessions", {
+  session_id: text("session_id").primaryKey().notNull(),
+  created_by: text("created_by").notNull(),
+  source_draft_id: text("source_draft_id"),
+  source_version: integer("source_version").notNull(),
+  config_version: integer("config_version").notNull().default(1),
+  config_json: text("config_json").notNull(),
 });

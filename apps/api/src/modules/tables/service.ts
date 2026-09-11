@@ -6,7 +6,7 @@ import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import type { Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
-import { getCatalog } from "../catalog/queries";
+import { getCatalog, sessionConfigVersion } from "../catalog/queries";
 import { uiSectionInputSchema, type TableState } from "./model";
 import {
   eventStatement,
@@ -28,7 +28,7 @@ export async function setUiSection(
   const session = await getSession(services, actor);
   ensure(session.status === "open", "SESSION_CLOSED");
   const productId = parsed.data.section === "menu" ? (parsed.data.productId ?? null) : null;
-  const catalog = productId ? await getCatalog(services, actor.storeId) : null;
+  const catalog = productId ? await getCatalog(services, actor.storeId, actor.demoId) : null;
   ensure(
     !productId || catalog?.configuration.products.some((product) => product.id === productId),
     "PRODUCT_NOT_FOUND",
@@ -45,7 +45,7 @@ export async function setUiSection(
         mutation_id: mutation,
       })
       .where(
-        sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${productId} IS NULL OR EXISTS(SELECT 1 FROM stores WHERE id=${actor.storeId} AND config_version=${catalog?.version ?? null}))`,
+        sql`id=${session.id} AND store_id=${actor.storeId} AND status='open'${gate} AND (${productId} IS NULL OR ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog?.version ?? null})`,
       ),
     eventStatement(services, actor, mutation, "table.ui", {
       section: parsed.data.section,
@@ -53,7 +53,7 @@ export async function setUiSection(
     }),
   ]);
   ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return getTableState(services, actor);
 }
 
@@ -68,7 +68,7 @@ export async function showProducts(
   const parsed = showProductsSchema.safeParse(input);
   ensure(parsed.success, "INVALID_INPUT", 422);
   await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId);
+  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
   const productIds = [...new Set(parsed.data.productIds)];
   ensure(
     productIds.every((id) => catalog.configuration.products.some((product) => product.id === id)),
@@ -79,10 +79,10 @@ export async function showProducts(
   const result = await db
     .insert(business.tableEvents)
     .select(
-      sql`SELECT NULL,store_id,id,'voice.products',${JSON.stringify({ turnId: actor.turnId, productIds })},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND EXISTS(SELECT 1 FROM stores WHERE id=${actor.storeId} AND config_version=${catalog.version})`,
+      sql`SELECT NULL,store_id,id,'voice.products',${JSON.stringify({ turnId: actor.turnId, productIds })},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog.version}`,
     );
   ensure(result.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return { productIds };
 }
 
@@ -103,7 +103,7 @@ export async function callStaff(services: ApiServices, actor: Actor) {
         eventStatement(services, actor, mutation, "staff.called", { source: actor.kind }),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },
@@ -141,10 +141,14 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
        AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.id} AND mutation_id=${mutation})`),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   // 言語変更で失効させた音声資格を再利用せず、更新を認可した同じ卓を読み直す。
   return getTableState(services, {
-    kind: "device",
+    ...actor,
+    kind: actor.demoId ? "staff" : "device",
+    userId: actor.userId,
+    voiceSessionId: undefined,
+    turnId: undefined,
     storeId: actor.storeId,
     tableSessionId: row.id,
   });
@@ -167,7 +171,7 @@ export async function requestBill(services: ApiServices, actor: Actor) {
         eventStatement(services, actor, mutation, "bill.requested", {}),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },
@@ -188,7 +192,7 @@ export async function resolveCall(services: ApiServices, actor: Actor) {
     eventStatement(services, actor, mutation, "staff.resolved", {}),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId);
   return getTableState(services, actor);
 }
 
@@ -228,7 +232,7 @@ export async function closeTable(services: ApiServices, actor: Actor) {
         eventStatement(services, actor, mutation, "table.closed", {}),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },
@@ -250,7 +254,7 @@ export async function openTable(
         sql`SELECT id FROM restaurant_tables WHERE id=${input.tableId} AND store_id=${actor.storeId}`,
       );
       ensure(table, "TABLE_NOT_FOUND", 404);
-      const catalog = await getCatalog(services, actor.storeId);
+      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
       const plan = input.planId
         ? catalog.configuration.plans.find((p) => p.id === input.planId)
         : null;
@@ -261,7 +265,7 @@ export async function openTable(
         db
           .insert(business.tableSessions)
           .select(
-            sql`SELECT ${sessionId},${actor.storeId},${input.tableId},${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
+            sql`SELECT ${sessionId},${actor.storeId},${input.tableId},'table',${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
           ),
         db
           .insert(business.tableEvents)
@@ -270,7 +274,7 @@ export async function openTable(
           ),
       ]);
       ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-      await notifyStore(services, actor.storeId);
+      await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, { ...actor, tableSessionId: sessionId });
     },
     { env: services.env, input: { actor, input } },

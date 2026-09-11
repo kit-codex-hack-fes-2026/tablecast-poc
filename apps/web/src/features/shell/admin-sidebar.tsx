@@ -13,6 +13,7 @@ import {
   MonitorSmartphone,
   Plug,
   Settings2,
+  Tablet,
   Store,
   UserRound,
   Users,
@@ -267,6 +268,17 @@ export function AdminSidebar({
         </Link>
       </nav>
       <div className="space-y-2 border-t border-border py-3">
+        {selectedStore &&
+          ["owner", "admin"].includes(
+            stores.data?.stores.find((store) => store.id === selectedStore)?.role ?? "",
+          ) && (
+            <DemoLink
+              storeId={selectedStore}
+              collapsed={collapsed}
+              className={item}
+              onNavigate={onNavigate}
+            />
+          )}
         <Link
           className={item}
           to="/"
@@ -325,5 +337,36 @@ export function AdminSidebar({
         </Menu.Root>
       </div>
     </>
+  );
+}
+
+function DemoLink({
+  storeId,
+  collapsed,
+  className,
+  onNavigate,
+}: {
+  storeId: string;
+  collapsed: boolean;
+  className: string;
+  onNavigate?: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <Link
+      className={className}
+      to="/admin/stores/$storeId/demo"
+      params={{ storeId }}
+      search={{ demoId: undefined }}
+      target="_blank"
+      rel="noopener"
+      title={t("demo_open")}
+      aria-label={t("demo_open")}
+      onClick={onNavigate}
+    >
+      <Tablet className="size-5 shrink-0" />
+      {!collapsed && t("demo_title")}
+      {!collapsed && <ArrowUpRight className="ml-auto size-4" />}
+    </Link>
   );
 }

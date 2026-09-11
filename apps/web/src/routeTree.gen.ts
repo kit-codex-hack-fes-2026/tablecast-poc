@@ -27,6 +27,7 @@ import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$s
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
 import { Route as AdminStoresStoreIdProfileRouteImport } from './routes/admin.stores.$storeId.profile'
+import { Route as AdminStoresStoreIdDemoRouteImport } from './routes/admin.stores.$storeId_.demo'
 import { Route as AdminStoresStoreIdDevicesIndexRouteImport } from './routes/admin.stores.$storeId.devices.index'
 import { Route as AdminStoresStoreIdDevicesNewRouteImport } from './routes/admin.stores.$storeId.devices.new'
 import { Route as AdminStoresStoreIdInvitationsIndexRouteImport } from './routes/admin.stores.$storeId.invitations.index'
@@ -34,6 +35,7 @@ import { Route as AdminStoresStoreIdInvitationsNewRouteImport } from './routes/a
 import { Route as AdminStoresStoreIdMenuSectionRouteImport } from './routes/admin.stores.$storeId.menu.$section'
 import { Route as AdminStoresStoreIdVisitsIndexRouteImport } from './routes/admin.stores.$storeId.visits.index'
 import { Route as AdminStoresStoreIdVisitsSessionIdRouteImport } from './routes/admin.stores.$storeId.visits.$sessionId'
+import { Route as AdminStoresStoreIdDemoDemoIdRouteImport } from './routes/admin.stores.$storeId_.demo_.$demoId'
 import { Route as AdminStoresStoreIdMenuSectionItemIdRouteImport } from './routes/admin.stores.$storeId.menu.$section_.$itemId'
 import { Route as AdminStoresStoreIdMenuChangesIndexRouteImport } from './routes/admin.stores.$storeId.menu.changes.index'
 import { Route as AdminStoresStoreIdMenuChangesDraftIdRouteImport } from './routes/admin.stores.$storeId.menu.changes.$draftId'
@@ -135,6 +137,11 @@ const AdminStoresStoreIdProfileRoute =
     path: '/profile',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
+const AdminStoresStoreIdDemoRoute = AdminStoresStoreIdDemoRouteImport.update({
+  id: '/admin/stores/$storeId_/demo',
+  path: '/admin/stores/$storeId/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminStoresStoreIdDevicesIndexRoute =
   AdminStoresStoreIdDevicesIndexRouteImport.update({
     id: '/devices/',
@@ -176,6 +183,12 @@ const AdminStoresStoreIdVisitsSessionIdRoute =
     id: '/visits/$sessionId',
     path: '/visits/$sessionId',
     getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdDemoDemoIdRoute =
+  AdminStoresStoreIdDemoDemoIdRouteImport.update({
+    id: '/admin/stores/$storeId_/demo_/$demoId',
+    path: '/admin/stores/$storeId/demo/$demoId',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AdminStoresStoreIdMenuSectionItemIdRoute =
   AdminStoresStoreIdMenuSectionItemIdRouteImport.update({
@@ -233,10 +246,12 @@ export interface FileRoutesByFullPath {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
   '/admin/stores/$storeId/invitations/': typeof AdminStoresStoreIdInvitationsIndexRoute
   '/admin/stores/$storeId/visits/': typeof AdminStoresStoreIdVisitsIndexRoute
@@ -266,10 +281,12 @@ export interface FileRoutesByTo {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices': typeof AdminStoresStoreIdDevicesIndexRoute
   '/admin/stores/$storeId/invitations': typeof AdminStoresStoreIdInvitationsIndexRoute
   '/admin/stores/$storeId/visits': typeof AdminStoresStoreIdVisitsIndexRoute
@@ -300,10 +317,12 @@ export interface FileRoutesById {
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
+  '/admin/stores/$storeId_/demo': typeof AdminStoresStoreIdDemoRoute
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
+  '/admin/stores/$storeId_/demo_/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
   '/admin/stores/$storeId/invitations/': typeof AdminStoresStoreIdInvitationsIndexRoute
   '/admin/stores/$storeId/visits/': typeof AdminStoresStoreIdVisitsIndexRoute
@@ -335,10 +354,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId/demo'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
     | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices/'
     | '/admin/stores/$storeId/invitations/'
     | '/admin/stores/$storeId/visits/'
@@ -368,10 +389,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId/demo'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
     | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices'
     | '/admin/stores/$storeId/invitations'
     | '/admin/stores/$storeId/visits'
@@ -401,10 +424,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/members'
     | '/admin/stores/$storeId/profile'
+    | '/admin/stores/$storeId_/demo'
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
     | '/admin/stores/$storeId/visits/$sessionId'
+    | '/admin/stores/$storeId_/demo_/$demoId'
     | '/admin/stores/$storeId/devices/'
     | '/admin/stores/$storeId/invitations/'
     | '/admin/stores/$storeId/visits/'
@@ -432,6 +457,8 @@ export interface RootRouteChildren {
   AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
   AccountIntegrationsPluginsRoute: typeof AccountIntegrationsPluginsRoute
   AdminStoresStoreIdRoute: typeof AdminStoresStoreIdRouteWithChildren
+  AdminStoresStoreIdDemoRoute: typeof AdminStoresStoreIdDemoRoute
+  AdminStoresStoreIdDemoDemoIdRoute: typeof AdminStoresStoreIdDemoDemoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -562,6 +589,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdProfileRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId_/demo': {
+      id: '/admin/stores/$storeId_/demo'
+      path: '/admin/stores/$storeId/demo'
+      fullPath: '/admin/stores/$storeId/demo'
+      preLoaderRoute: typeof AdminStoresStoreIdDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/stores/$storeId/devices/': {
       id: '/admin/stores/$storeId/devices/'
       path: '/devices'
@@ -610,6 +644,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/stores/$storeId/visits/$sessionId'
       preLoaderRoute: typeof AdminStoresStoreIdVisitsSessionIdRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId_/demo_/$demoId': {
+      id: '/admin/stores/$storeId_/demo_/$demoId'
+      path: '/admin/stores/$storeId/demo/$demoId'
+      fullPath: '/admin/stores/$storeId/demo/$demoId'
+      preLoaderRoute: typeof AdminStoresStoreIdDemoDemoIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/stores/$storeId/menu/$section_/$itemId': {
       id: '/admin/stores/$storeId/menu/$section_/$itemId'
@@ -721,6 +762,8 @@ const rootRouteChildren: RootRouteChildren = {
   AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,
   AccountIntegrationsPluginsRoute: AccountIntegrationsPluginsRoute,
   AdminStoresStoreIdRoute: AdminStoresStoreIdRouteWithChildren,
+  AdminStoresStoreIdDemoRoute: AdminStoresStoreIdDemoRoute,
+  AdminStoresStoreIdDemoDemoIdRoute: AdminStoresStoreIdDemoDemoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

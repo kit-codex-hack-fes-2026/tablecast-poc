@@ -275,7 +275,9 @@ export async function publishDraft(
         db
           .update(business.confirmations)
           .set({ status: "invalid" })
-          .where(sql`store_id=${actor.storeId} AND status IN ('pending','read') AND ${guard}`),
+          .where(
+            sql`store_id=${actor.storeId} AND table_session_id IN (SELECT id FROM table_sessions WHERE kind='table') AND status IN ('pending','read') AND ${guard}`,
+          ),
       ]);
       if (result[0]?.meta.changes !== 1) {
         const retry = await db.get<

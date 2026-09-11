@@ -10,17 +10,23 @@ export function ConfirmAction({
   disabled,
   onConfirm,
   icon,
+  triggerClassName,
 }: {
   label: string;
   subject: string;
   disabled?: boolean;
   onConfirm: () => void;
   icon: ReactNode;
+  triggerClassName?: string;
 }) {
   const { t } = useI18n();
   return (
     <AlertDialog.Root>
-      <AlertDialog.Trigger render={<Button variant="destructive" />} disabled={disabled}>
+      <AlertDialog.Trigger
+        render={<Button variant="destructive" className={triggerClassName} />}
+        disabled={disabled}
+        aria-label={label}
+      >
         {icon}
         {label}
       </AlertDialog.Trigger>

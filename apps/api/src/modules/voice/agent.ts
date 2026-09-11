@@ -76,7 +76,7 @@ export function createCastTools(
       inputSchema: z.object({ query: z.string().max(100).optional() }).strict(),
       execute: async ({ query }) => {
         await guard();
-        const catalog = await getCatalog(services, actor.storeId);
+        const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = (await getSession(services, actor)).locale;
         const terms = query?.toLocaleLowerCase().split(/\s+/).filter(Boolean);
         const matched = catalog.configuration.products.filter(

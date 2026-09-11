@@ -13,7 +13,12 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
   const cursor = await db
     .select({ cursor: sql<number>`coalesce(max(${business.tableEvents.cursor}),0)` })
     .from(business.tableEvents)
-    .where(eq(business.tableEvents.store_id, actor.storeId))
+    .where(
+      and(
+        eq(business.tableEvents.store_id, actor.storeId),
+        sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`,
+      ),
+    )
     .get();
   const store = await getCatalog(services, actor.storeId);
   const active = db
@@ -23,6 +28,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       and(
         eq(business.tableSessions.store_id, actor.storeId),
         eq(business.tableSessions.status, "open"),
+        eq(business.tableSessions.kind, "table"),
       ),
     );
   const [sessions, restaurantTables, orderRows, paymentRows, confirmations, history, events] =
@@ -34,6 +40,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
           and(
             eq(business.tableSessions.store_id, actor.storeId),
             eq(business.tableSessions.status, "open"),
+            eq(business.tableSessions.kind, "table"),
           ),
         )
         .orderBy(business.tableSessions.table_id),
@@ -91,7 +98,12 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       db
         .select()
         .from(business.tableEvents)
-        .where(eq(business.tableEvents.store_id, actor.storeId))
+        .where(
+          and(
+            eq(business.tableEvents.store_id, actor.storeId),
+            sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`,
+          ),
+        )
         .orderBy(desc(business.tableEvents.cursor))
         .limit(100),
     ]);
@@ -110,7 +122,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       tableStateValue(
         session,
         store,
-        tablesById.get(session.table_id),
+        tablesById.get(session.table_id ?? ""),
         ordersBySession.get(session.id) ?? [],
         paymentsBySession.get(session.id) ?? [],
         confirmationsBySession.get(session.id)?.[0],
@@ -134,10 +146,10 @@ export async function getEvents(
 
   const rows = actor.tableSessionId
     ? await db.all<EventRecord>(
-        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND (table_session_id=${actor.tableSessionId} OR (table_session_id IS NULL AND kind='configuration.published')) AND cursor>${after} ORDER BY cursor LIMIT 500`,
+        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND (table_session_id=${actor.tableSessionId} OR (${actor.demoId ? 0 : 1}=1 AND table_session_id IS NULL AND kind='configuration.published')) AND cursor>${after} ORDER BY cursor LIMIT 500`,
       )
     : await db.all<EventRecord>(
-        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND cursor>${after} ORDER BY cursor LIMIT 500`,
+        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND (table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table')) AND cursor>${after} ORDER BY cursor LIMIT 500`,
       );
   return {
     events: rows.map((row) => {

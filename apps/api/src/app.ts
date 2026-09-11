@@ -8,6 +8,7 @@ import { mediaRoutes } from "./modules/media/routes";
 import { storesRoutes } from "./modules/stores/collection-routes";
 import { admin } from "./modules/stores/routes";
 import { systemRoutes } from "./modules/system/routes";
+import { demoRoutes } from "./modules/demo/routes";
 import { table } from "./modules/tables/routes";
 import { voiceRoutes } from "./modules/voice/routes";
 import type { ApiEnv } from "./platform/context";
@@ -30,6 +31,7 @@ const app = new Hono<ApiEnv>()
   .route("/", accountRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
+  .route("/api/admin/stores/:storeId/demo", demoRoutes)
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table)
   .route("/internal/voice", voiceRoutes)
