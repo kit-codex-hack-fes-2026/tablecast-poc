@@ -326,3 +326,11 @@ mainを`tablecast.kit-codex.workers.dev`、同一repoのPRを独立したWorkers
 型検査、配備境界と実D1 seedの11件、本番とPR設定のWorkers build・Wrangler dry-run、linux/amd64の両Dockerイメージを確認した。ローカルWranglerで実LiveKitに接続した音声Containerを起動し、重複予約とdrainの拒否で同じContainerが保持されること、予約中のidle期限で停止しないこと、解放後のSIGTERM停止を確認した。通常の受付拒否をDO入力ゲート内でthrowするとDOがリセットされる問題を検出し、ゲート外で拒否を返すよう修正した。OAuthイメージの起動と架空ユーザーの選択画面も確認した。
 
 Cloudflare側のR2・Access有効化、Actions用API tokenとAccess資格・policyが未設定で、遠隔配備・cleanupと本番Googleログインは未検証。実音声job中の継続性、cold startの本番値、強制終了からの復旧、同時sessionの最適数、月300分で30 USD未満の費用受入はIssue #34に残る。ローカルの起動・予約試験はこれらを代替しない。
+
+## iPad向けPWAと自動キャッシュ更新（2026-09-12、Issue #98）
+
+Serwist 9.5.12で卓上・店側の個別manifest、アイコン、日英の追加案内とオフライン復帰画面を追加した。TanStack StartとCloudflareの全環境ビルド完了後に公式Vite APIでクライアント資産を注入する。メニュー画像は投入前にSHA-256をキーへ含め、アップロード完了後に既存のimageKeyとして公開する。固定キーの互換性は維持し、長期保存はハッシュ付き画像だけに限定する。
+
+更新は起動・前景復帰・通信復帰・前景中60秒間隔で検出し、同じSWを共有する全画面が安全と応答するまで待機する。接客・端末登録・未保存フォーム・QR読取・送信中を避け、適用直前だけ入力を止めて一度再読込する。キャッシュは画像256件・最終利用から30日で整理する。
+
+全体チェック、Webブラウザー統合68件、PWAと公開のChromium/WebKit6件、日英の注文フロー4件が成功した。容量不足はChromiumの保存境界で一度だけ発生させて復帰を確認した。途中のE2Eでは再読込の待機開始が遅い試験を修正し、コンテナ削除の一時失敗は対象を再実行して成功した。実iPadと遠隔配備の未実施範囲は[受入条件](acceptance.md#ipad向けpwaの追加受入2026-09-12issue-98)に残す。

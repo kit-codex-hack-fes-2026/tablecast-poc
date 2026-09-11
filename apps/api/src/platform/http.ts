@@ -39,7 +39,11 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
           "exception.message": STATUS_CODES[status] ?? "HTTP error response",
         }
       : {};
+  const placement = c.req.header("cf-placement");
   const attributes = {
+    ...(placement && /^(local|remote)-[A-Z]{3}$/.test(placement)
+      ? { "cloudflare.placement": placement }
+      : {}),
     "http.request.method": c.req.method,
     "http.route": routePath(c, -1) || "unmatched",
     "http.response.status_code": status,

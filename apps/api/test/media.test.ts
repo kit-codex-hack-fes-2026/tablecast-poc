@@ -55,3 +55,23 @@ it("画像幅とETagが一致するときは再変換せず304を返し、過大
     ).toBe(400);
   }
 });
+
+it("ハッシュ付き画像だけ長期保存を許可し、固定キーは毎回再検証する", async () => {
+  // Given: 新形式と既存形式の画像。
+  for (const key of [`tablecast/images/${"a".repeat(64)}.png`, "tablecast/demo/legacy.png"]) {
+    await env.TABLECAST_MEDIA.put(key, "image");
+    const asset = await env.TABLECAST_MEDIA.head(key);
+    if (!asset) throw new Error("画像がありません");
+    // When: 同じ画像の条件付きリクエストを送る。
+    const response = await exports.default.fetch(
+      new Request(`http://localhost:3000/media/${key}?width=128`, {
+        headers: { "If-None-Match": `W/"${asset.etag}-128-webp"` },
+      }),
+    );
+    // Then: immutableは新形式だけに適用する。
+    expect(response.status).toBe(304);
+    expect(response.headers.get("Cache-Control")).toBe(
+      key.includes("/images/") ? "public, max-age=31536000, immutable" : "public, no-cache",
+    );
+  }
+});

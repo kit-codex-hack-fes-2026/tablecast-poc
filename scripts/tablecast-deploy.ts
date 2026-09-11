@@ -3,7 +3,6 @@ import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { sql } from "drizzle-orm";
 import { deploymentOwner } from "../apps/api/src/db/business-schema";
-import { createHash } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
@@ -30,50 +29,6 @@ const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
-
-export async function uploadPreviewImage(
-  bucket: Pick<R2Bucket, "head"> & {
-    put(
-      key: string,
-      bytes: Uint8Array,
-      options: R2PutOptions & { onlyIf: R2Conditional },
-    ): Promise<R2Object | null>;
-  },
-  key: string,
-  bytes: Uint8Array,
-) {
-  const md5 = createHash("md5").update(bytes).digest("hex");
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const stored = await bucket.head(key);
-      if (stored) {
-        if (stored.etag !== md5 || stored.size !== bytes.length)
-          throw new Error("既存画像の内容が一致しません");
-        console.info(`画像確認済み: ${key}`);
-        return;
-      }
-      const uploaded = await bucket.put(key, bytes, {
-        onlyIf: { etagDoesNotMatch: "*" },
-        md5,
-        httpMetadata: { contentType: "image/png" },
-        customMetadata: { source: "synthetic-demo" },
-      });
-      if (!uploaded || uploaded.etag !== md5 || uploaded.size !== bytes.length)
-        throw new Error("画像の保存結果を確認できません");
-      console.info(`画像投入済み: ${key}`);
-      return;
-    } catch (error) {
-      const code = error instanceof Error ? /\((\d+)\)$/.exec(error.message)?.[1] : undefined;
-      if (code !== "10001" || attempt === 3)
-        throw new Error(
-          `R2画像投入失敗: ${key} (code=${code ?? "整合性・接続"}, attempt=${attempt})`,
-          { cause: error },
-        );
-      console.warn(`R2一時障害: ${key} (code=${code}, attempt=${attempt}/3)`);
-      await new Promise((complete) => setTimeout(complete, 1_000 * 2 ** (attempt - 1)));
-    }
-  }
-}
 
 export async function waitForRelease(
   origin: string,
@@ -459,24 +414,6 @@ async function main() {
             },
           );
           if (seeded) {
-            const files = (await readdir(resolve(root, "assets/demo"))).filter((value) =>
-              /^[a-z0-9-]+\.png$/.test(value),
-            );
-            for (let offset = 0; offset < files.length; offset += 4) {
-              const results = await Promise.allSettled(
-                files
-                  .slice(offset, offset + 4)
-                  .map(async (file) =>
-                    uploadPreviewImage(
-                      platform.env.TABLECAST_MEDIA,
-                      `tablecast/demo/${file}`,
-                      await readFile(resolve(root, "assets/demo", file)),
-                    ),
-                  ),
-              );
-              // 同時処理の完了を待ってからproxyを閉じる。失敗時は次の組へ進まない。
-              for (const result of results) if (result.status === "rejected") throw result.reason;
-            }
             await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });
           }
         }

@@ -43,7 +43,9 @@ it("sampling対象外でも操作の完了と業務拒否を各一度記録し�
   if (!worker.fetch) throw new Error("Worker入口がありません。");
   // When: 成功した読取に続いて版の競合で拒否する。
   const response = await worker.fetch(
-    new Request("https://tablecast.test/internal/voice/probe"),
+    new Request("https://tablecast.test/internal/voice/probe", {
+      headers: { "cf-placement": "remote-SIN" },
+    }),
     { ...env, TABLECAST_MODEL_API_KEY: "tablecast-secret" },
     execution,
   );
@@ -77,6 +79,11 @@ it("sampling対象外でも操作の完了と業務拒否を各一度記録し�
     },
   ]);
   expect(entries.filter((entry) => entry.event === "tablecast.request_completed")).toHaveLength(1);
+  expect(
+    entries.find((entry) => entry.event === "tablecast.request_completed")?.attributes,
+  ).toMatchObject({
+    "cloudflare.placement": "remote-SIN",
+  });
   expect(JSON.stringify(entries)).not.toContain("tablecast-secret");
   expect(entries[0]?.trace_id).toMatch(/^[a-f0-9]{32}$/);
 });
@@ -220,6 +227,8 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
     "db.statement": "select name from customer",
     "http.request.header.cookie": "tablecast-cookie",
     "tablecast.operation": "tablecast.cart.update",
+    "cloudflare.colo": "NRT",
+    "cloudflare.placement": "remote-SIN",
   };
   const collected = telemetryAttributes(attributes, settings);
   expect(JSON.stringify(collected)).not.toContain("tablecast-voice-credential");
@@ -231,6 +240,8 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
     expect(JSON.stringify(collected)).not.toContain(secret);
   expect(telemetryAttributes(attributes, { TABLECAST_OTEL_CAPTURE_CONTENT: "false" })).toEqual({
     "tablecast.operation": "tablecast.cart.update",
+    "cloudflare.colo": "NRT",
+    "cloudflare.placement": "remote-SIN",
   });
 });
 

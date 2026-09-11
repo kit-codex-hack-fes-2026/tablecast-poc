@@ -1,3 +1,4 @@
+import { demoImageKey } from "./tablecast-seed-media";
 import { configurationSchema } from "../apps/api/src/schema";
 import type { Configuration, Modifier, Product } from "../apps/api/src/schema";
 
@@ -948,7 +949,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           price,
           available: index !== 25,
           tags: ["sake", "alcohol", ...(index < 2 ? ["popular"] : [])],
-          imageKey: `tablecast/demo/${kind === "nigori" ? "nigori" : "sake"}.png`,
+          imageKey: demoImageKey(`${kind === "nigori" ? "nigori" : "sake"}.png`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
           allergens: allergenRecord(
@@ -986,7 +987,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           ...(["sashimi", "karaage", "yakitori"].includes(item.id) ? ["popular"] : []),
           ...(drinks.slice(0, 5).some((drink) => drink.id === item.id) ? ["alcohol"] : []),
         ],
-        imageKey: `tablecast/demo/${item.image}.png`,
+        imageKey: demoImageKey(`${item.image}.png`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
         allergens: allergenRecord(item.contains, item.ingredients),

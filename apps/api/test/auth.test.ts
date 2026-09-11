@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import * as authTables from "../src/db/auth-schema";
@@ -8,6 +9,31 @@ import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 
 const origin = "http://localhost:3000";
+it("有効なCookieのセッションとユーザーを一度に読み、取消後は拒否する", async () => {
+  // Given: 実D1に店員と有効なセッションがあり、実行SQLだけを記録する。
+  const { cookie } = await setupFixture();
+  const queries: string[] = [];
+  const db = drizzle(env.TABLECAST_DB, {
+    schema: authTables,
+    logger: { logQuery: (query) => queries.push(query) },
+  });
+  const auth = createAuth(env, undefined, db);
+  const headers = new Headers({ Cookie: cookie });
+
+  // When: SSRと同じ公開セッションAPIで確認する。
+  const response = await auth.api.getSession({ headers, asResponse: true });
+  const result = z.object({ user: z.object({ id: z.string() }) }).parse(await response.json());
+
+  // Then: userの取得はsessionとの一つのqueryに含まれ、JWT用のqueryはない。
+  expect(response.status).toBe(200);
+  expect(response.headers.has("set-auth-jwt")).toBe(false);
+  expect(queries.filter((query) => query.includes('from "session"'))).toHaveLength(1);
+  expect(queries.find((query) => query.includes('from "session"'))).toContain('from "user"');
+  expect(queries.some((query) => query.includes('from "jwks"'))).toBe(false);
+  await db.delete(authTables.session).where(eq(authTables.session.userId, result.user.id));
+  expect(await auth.api.getSession({ headers })).toBeNull();
+});
+
 async function json(path: string, body: unknown, cookie = "") {
   return exports.default.fetch(
     new Request(origin + path, {

@@ -5,6 +5,9 @@ import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import { test } from "./support/test";
 
+// HTTP境界を差し替える試験ではSWによる通信の迂回を止める。
+test.use({ serviceWorkers: "block" });
+
 for (const [locale, messages] of [
   ["ja", ja],
   ["en", en],

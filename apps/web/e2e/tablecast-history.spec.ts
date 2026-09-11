@@ -10,7 +10,8 @@ import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
 
-test.use({ trace: "off", actionTimeout: 15_000 });
+// ページサイズを書き換えるHTTP境界をSWに迂回させない。
+test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
 
 for (const { language, locale, labels, nextLabels, nextLanguage } of [
   { language: "日本語", locale: "ja", labels: ja, nextLabels: en, nextLanguage: "English" },

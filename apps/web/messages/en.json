@@ -497,5 +497,9 @@
   "demo_updating": "Applying settings. Voice will stop and use the new settings when you resume.",
   "demo_plan_removed": "The selected plan is unavailable in this configuration. No plan is now selected.",
   "demo_update_available": "Settings have changed. Reload to apply the update.",
-  "demo_up_to_date": "Settings are up to date"
+  "demo_up_to_date": "Settings are up to date",
+  "pwa_install_title": "Add to your iPad Home Screen",
+  "pwa_install_steps": "Open the screen you want in Safari, tap Share, then Add to Home Screen. Open the installed app and register the device or sign in.",
+  "pwa_kiosk": "Open the table app",
+  "pwa_staff": "Open the staff app"
 }

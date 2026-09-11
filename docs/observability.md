@@ -187,3 +187,13 @@ time() - last_over_time(tablecast_container_observed_timestamp_seconds{tablecast
 `collector_success=0`はCloudflare取得失敗または実指標のOTLP送信失敗、`collector_samples=0`は正常に取得した窓にサンプルがない状態。実指標を先に送り、全件受理を確認してから別要求で成功heartbeatを送る。OTLPのHTTP失敗・部分拒否は失敗heartbeatを送ってCronを失敗させる。Grafana停止時にはsuccess=0自体も送れないため、heartbeat欠測とCloudflareのCron失敗を併用する。データ鮮度も表示し、値が来ないだけでContainer停止と断定しない。欠測検出クエリを提供するが通知先へのアラート登録は行っていない。
 
 Grafana MCPの`query_prometheus`で同じPromQLを実行できる。Cloudのdatasource UIDは`grafanacloud-prom`、過去の窓を見るときは`queryType=range`と明示的なstart/end・stepを指定する。
+
+## D1往復とSSR待ち時間の調査
+
+D1 spanの総時間と `cloudflare.d1.response.sql_duration_ms` を比較する。前者にはSQL実行以外の通信・待ち時間が含まれ、差分だけからネットワーク遅延と断定しない。`raw` などmetaを返さない操作ではSQL時間が欠ける。SDK 2.5.0はD1の `served_by_region` / `served_by_colo` を記録しないため、WorkerのcoloからD1 primaryの場所を推定しない。
+
+PR #99のrelease `d485d67f0140b5ea9a62b2f3b23443839668bdf2`、2026-09-12 05:45〜05:46 JSTにはwarm SSR 753〜924msを観測した。trace `118309a40ef1b0584be5d528193158a6` では認証480msと店舗一覧389msが直列になり、D1 11回は各72〜94ms、店舗一覧SQLは0.1886msだった。cold startとpreview OAuthの別経路をこの比較に混ぜない。続くCloudflare APIの読み取り専用queryでは、同DBの `served_by_colo: SIN`、`served_by_region: APAC`、`served_by_primary: true` を確認した。API Workerのplacement設定は空だった。
+
+認証はBetter Authの `advanced.database.joins` と既存のDrizzle relationsでsession/userを一度に取得する。未使用の `set-auth-jwt` ヘッダーは標準の `disableSettingJwtHeader` で無効にし、セッション確認時のJWKS取得を避ける。認証結果をキャッシュせず、取消・所属変更は次の要求でDBから再確認する。
+
+改善後は同じ画面・認証状態でD1回数、要求時間、cold start、`cloudflare.colo`、`cloudflare.placement` を比較する。placementは `local-XXX` / `remote-XXX` の形式だけを記録し、その他の要求ヘッダーは収集しない。Smart Placementの設定・判定手順は[配備](deployment.md#d1とworkerの配置)を参照する。SSRの `http.route: ssr` は個別ページを識別せず、サーバーtraceにはクリックからスケルトン描画までの時間がないため、描画改善はブラウザーで別途確認する。

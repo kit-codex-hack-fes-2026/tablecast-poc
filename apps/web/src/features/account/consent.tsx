@@ -60,7 +60,7 @@ export function Consent() {
       </main>
     );
   return (
-    <main className="min-h-dvh">
+    <main className="min-h-dvh" data-pwa-blocked={Boolean(organization)}>
       <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
         <Link
           data-ui="brand"

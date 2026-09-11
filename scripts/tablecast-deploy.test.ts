@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { uploadPreviewImage, waitForRelease } from "./tablecast-deploy";
+import { waitForRelease } from "./tablecast-deploy";
+import { uploadPreviewImage } from "./tablecast-seed-media";
 
 afterEach(() => {
   vi.useRealTimers();

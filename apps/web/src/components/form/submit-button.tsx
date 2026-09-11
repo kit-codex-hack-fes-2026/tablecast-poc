@@ -9,11 +9,14 @@ export function SubmitButton({
   const form = useFormContext();
   const { t } = useI18n();
   return (
-    <form.Subscribe selector={(state) => state.isSubmitting}>
-      {(pending) => (
+    <form.Subscribe
+      selector={(state) => ({ pending: state.isSubmitting, dirty: !state.isDefaultValue })}
+    >
+      {({ pending, dirty }) => (
         <Button
           {...props}
           type="submit"
+          data-pwa-blocked={pending || dirty}
           disabled={pending || props.disabled}
           aria-busy={pending}
           aria-description={pending ? t("form_submitting") : undefined}

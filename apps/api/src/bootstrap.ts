@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
+import * as schema from "./db/auth-schema";
 import * as business from "./db/business-schema";
 import { createAuth, type AuthEnv } from "./modules/auth/service";
 import { configurationErrors } from "./modules/catalog/pricing";
@@ -81,7 +82,7 @@ export async function bootstrapDatabase(
   const parsed = bootstrapInputSchema.safeParse(rawInput);
   ensure(parsed.success, "BOOTSTRAP_INVALID", 422);
   const input = parsed.data;
-  const db = drizzle(env.TABLECAST_DB);
+  const db = drizzle(env.TABLECAST_DB, { schema });
   const progress: {
     stage: "preflight" | "administrator" | "organization" | "store";
     userId: string | null;

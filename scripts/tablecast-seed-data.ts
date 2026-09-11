@@ -1,3 +1,4 @@
+import { seedMenuImages } from "./tablecast-seed-media";
 import { and, count, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -60,7 +61,7 @@ function event(
   };
 }
 async function insertSession(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   statements: (BatchItem<"sqlite"> | SeedEvent)[],
 ) {
   const queries: BatchItem<"sqlite">[] = [];
@@ -124,7 +125,12 @@ function snapshotFor(
   };
 }
 
-function confirmation(db: DrizzleD1Database, storeId: string, snapshot: Snapshot, at: number) {
+function confirmation(
+  db: DrizzleD1Database<typeof identity>,
+  storeId: string,
+  snapshot: Snapshot,
+  at: number,
+) {
   return db.insert(business.confirmations).values({
     id: snapshot.id,
     store_id: storeId,
@@ -140,7 +146,7 @@ function confirmation(db: DrizzleD1Database, storeId: string, snapshot: Snapshot
 }
 
 function order(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   storeId: string,
   snapshot: Snapshot,
   status: "submitted" | "accepted" | "served",
@@ -160,7 +166,7 @@ function order(
   });
 }
 function payment(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   storeId: string,
   sessionId: string,
   userId: string,
@@ -180,7 +186,7 @@ function payment(
   });
 }
 
-async function seedHistory(db: DrizzleD1Database, store: Store, owner: Owner) {
+async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store, owner: Owner) {
   const previous = await db
     .select({ id: business.tableSessions.id })
     .from(business.tableSessions)
@@ -345,7 +351,7 @@ async function seedHistory(db: DrizzleD1Database, store: Store, owner: Owner) {
 }
 
 async function seedCurrentTables(
-  db: DrizzleD1Database,
+  db: DrizzleD1Database<typeof identity>,
   store: Store,
   owner: Owner,
   baseTime: number,
@@ -489,7 +495,10 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) return false;
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
-  if (owner.seeded === 2) return true;
+  if (owner.seeded === 2) {
+    await seedMenuImages(env.TABLECAST_MEDIA, true);
+    return true;
+  }
   if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
   // 3は運用者が認証fixtureだけの途中状態を確認した再開。店舗作成後には使えない。
   if (
@@ -515,7 +524,8 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 }
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
-  const db = drizzle(env.TABLECAST_DB);
+  await seedMenuImages(env.TABLECAST_MEDIA);
+  const db = drizzle(env.TABLECAST_DB, { schema: identity });
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
   const mockAccounts = await db

@@ -170,3 +170,19 @@ WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書�
 公開先のGoogleログイン、Access拒否、初期組織、端末承認、注文の冪等性、DO再接続、画像、MCP認証を確認する。有料音声では実iPadの日英発話・割込み・停止・明示再開、30分通話、強制終了と履歴復元を確認する。cold/warm start、初回音声、shutdown、復旧、1/2/4 sessionのCPU/RSSと切断率は未計測。1 sessionの初期上限を最適値として扱わない。
 
 月額約30 USD未満は目標であり、上限保証はない。Workers Paid、Containersの起動・待機とOAuth稼働、D1/R2/DO/Images、LiveKitのparticipant-minutes・転送量、OpenAI、Inworld、Actionsを集計する。Mastra hosted o11yやLiveKit managed Agent hostingの追加契約はこの変更では行わない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。
+
+## PWAの配備と更新
+
+既存のWeb配備成果物に`sw.js`、二つのmanifest、アイコン、`_headers`、オフラインHTMLを含める。`sw.js`とmanifestは`no-cache`、ハッシュ付きJS/CSSは`immutable`で配信する。`sw.js`を長期固定キャッシュするCDNルールを追加しない。配備後は`/sw.js`がJavaScriptとして返ることとCache-Controlを確認する。
+
+更新は前景で最大60秒間隔と復帰時に検知し、全画面が安全な時点で適用する。旧版で接客している間は旧precacheを維持し、新版を有効化してから旧precacheを整理する。画像キャッシュはWeb配備ごとに消さず、内容の変わった画像だけ新キーで公開する。休止・オフライン中の端末への即時反映や、OSのHTTPキャッシュの遠隔削除は保証しない。
+
+デモ画像は投入完了後にハッシュ付きキーを初期構成へ保存する。既存PRのseeded=2から再開する場合は、旧DBに残る固定キーも補完する。既存店舗の画像キーを配備だけで書き換えず、画像変更は新しいキーを下書きへ設定して明示公開する。R2の同じキーへの上書き運用は新画像に使わない。
+
+## D1とWorkerの配置
+
+D1作成時は `primary_location_hint: apac` を指定する。これはアジア太平洋への希望で、Tokyo固定や配置保証ではない。既存DBの再配備では作成場所を変更しない。previewも専用の通常D1を使用し、previewという環境名自体を遅延原因としない。[D1のデータ配置](https://developers.cloudflare.com/d1/configuration/data-location/)
+
+DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定する。Web Workerは受信側でSSRと静的配信を行い、APIへのService Bindingの `fetch` は維持する。Smart Placementは過去に実行された拠点と要求時間から判断するため、低トラフィックのpreviewや単一拠点からの利用では `INSUFFICIENT_INVOCATIONS` になることがある。分析には最大15分を要し、設定だけでD1との同居や高速化を保証しない。Tokyoへの明示配置はD1の実配置・通信時間を確認してから検討する。[Workers Placement](https://developers.cloudflare.com/workers/configuration/placement/)
+
+配備後はCloudflareのWorker設定でplacement状態を確認し、Grafanaで同一経路のwarm要求を比較する。APIの `cloudflare.placement` はCloudflareの `cf-placement` ヘッダー（例: `remote-SIN`）、SDKの `cloudflare.colo` は要求の `request.cf.colo` を表す。後者だけを移動先の証拠にしない。配置設定は生成・ビルド済みconfigを通じて配備し、効果がない場合はこの設定を戻せる。既存DB・Cookie・認証secretは維持する。

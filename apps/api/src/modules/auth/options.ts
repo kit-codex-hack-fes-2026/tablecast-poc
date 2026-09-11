@@ -54,6 +54,7 @@ export function authOptions(
       additionalFields: { locale: { type: ["ja", "en"], required: false, defaultValue: "ja" } },
     },
     advanced: {
+      database: { joins: true },
       cookiePrefix: "tablecast",
       useSecureCookies: origin.startsWith("https://"),
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax" },
@@ -65,7 +66,8 @@ export function authOptions(
         requireEmailVerificationOnInvitation: true,
       }),
       passkey({ rpID: new URL(origin).hostname, rpName: "TableCast", origin }),
-      jwt(),
+      // Cookie認証で使わないJWTの生成とJWKS取得をセッション確認から外す。
+      jwt({ disableSettingJwtHeader: true }),
       oauthProvider(oauth),
       deviceAuthorization({
         verificationUri: `${origin}/device`,

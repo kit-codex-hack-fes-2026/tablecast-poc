@@ -101,7 +101,7 @@ APIではroute・Mastra Tool・MCPが同じ注文操作関数を呼び、必要�
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
-`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。生成時に`db/auth-schema.ts`の関連定義を渡し、Better Authのsession/userの関連queryを有効にする。この初期化のためだけにcontextから認証schemaへの依存を許可する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
 
 | 所有者                                                                | 責務                                                                       |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -188,3 +188,11 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 `modules/demo`は管理者本人のデモセッションと設定を所有する。`modules/tables/operations-routes.ts`のHono操作を、通常のdevice認可とデモのstaff認可から共有する。API client公開入口は同じ操作型の接続先を生成し、WebのKiosk・VoiceConnection・通知取得で使用する。デモの認可を受けていない通常の来店・注文routeへデモIDを渡しても取得・変更できない。
 
 カタログと注文確定の設定版はセッションの設定元を参照する。デモの通知は`tablecast-demo-<sessionId>`のDOへ送る。営業のevent取得はデモイベントを除外し、デモは公開版更新イベントを購読しない。`TableState.kind`が通常／デモを示し、`tableId`はデモでのみnullになる。
+
+## PWAと画像キャッシュ
+
+`apps/web/src/sw.ts`がSerwistのprecache・画像キャッシュ・更新調整を所有する。Viteの複数環境ビルドが完了した後、`@serwist/vite`の公開生成APIを呼び、`dist/client`のJS・CSS・フォント・アイコン・国旗・オフラインHTMLだけをprecacheする。通常のdevではService Workerを登録しない。SSR HTMLと認証・業務APIは`no-store`を維持する。
+
+`/media/tablecast/images/<SHA-256>.png?width=<幅>`は不変の画像として、HTTPで1年間、Service Workerで最大256件・最終利用から30日保持する。画像のエラー応答は保存しない。固定キーの旧画像はHTTPの`no-cache`とETagで再検証する。幅はキーの一部であり、異なる変換を共有しない。キャッシュはOSから削除され得るため、容量不足・保存不可でもネットワーク取得を継続する。
+
+画像投入の所有者は`scripts/tablecast-seed-media.ts`。内容のSHA-256からキーを決め、既存の条件付きPUT・MD5照合・一時障害の再試行を共用する。画像投入完了後に既存の`Product.imageKey`を公開する。公開通知でcatalogを再取得し、変更のない画像のURLを維持する。新しいアップロードUIやDB migrationは追加しない。

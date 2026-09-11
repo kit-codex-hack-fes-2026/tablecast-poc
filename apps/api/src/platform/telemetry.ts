@@ -49,6 +49,8 @@ const allowed = new Set([
   "http.route",
   "db.system",
   "db.system.name",
+  "cloudflare.colo",
+  "cloudflare.placement",
   "cloudflare.d1.response.rows_read",
   "cloudflare.d1.response.rows_written",
   "cloudflare.d1.response.sql_duration_ms",

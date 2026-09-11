@@ -144,6 +144,7 @@ export function RegisterDevice({
         }}
       />
       <form
+        data-pwa-blocked={tableId !== initialTableId}
         noValidate
         className="space-y-5"
         onSubmit={(event) => {

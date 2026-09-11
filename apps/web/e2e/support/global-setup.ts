@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { copyFile, cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import { promisify } from "node:util";
@@ -115,14 +115,6 @@ export default async function setup() {
     });
     try {
       await seedDemoDatabase(platform.env, credentials);
-      for (const file of await readdir(join(root, "assets/demo"))) {
-        if (!file.endsWith(".png")) continue;
-        await platform.env.TABLECAST_MEDIA.put(
-          `tablecast/demo/${file}`,
-          await readFile(join(root, "assets/demo", file)),
-          { httpMetadata: { contentType: "image/png" } },
-        );
-      }
     } finally {
       await platform.dispose();
     }

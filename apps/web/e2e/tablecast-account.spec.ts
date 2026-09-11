@@ -3,7 +3,8 @@ import { expect, request } from "@playwright/test";
 import { z } from "zod";
 import { credentials } from "./support/runtime";
 
-test.use({ trace: "off" });
+// Authの失敗応答を差し替えるHTTP境界をSWに迂回させない。
+test.use({ trace: "off", serviceWorkers: "block" });
 
 const cleanup: (() => Promise<void>)[] = [];
 test.afterEach(async () => {
