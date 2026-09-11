@@ -481,7 +481,7 @@
   "demo_isolated": "Demo only · No orders sent to staff",
   "demo_display": "Display",
   "demo_browser": "Browser window",
-  "demo_orientation": "Orientation",
+  "demo_rotate": "Rotate",
   "demo_landscape": "Landscape",
   "demo_portrait": "Portrait",
   "demo_configuration": "Configuration",

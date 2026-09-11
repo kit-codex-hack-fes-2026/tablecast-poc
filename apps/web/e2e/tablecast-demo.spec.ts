@@ -201,7 +201,7 @@ for (const labels of [ja, en]) {
     await demoPage.getByRole("option", { name: "iPad Air 11″", exact: true }).click();
     await expect.poll(() => child.evaluate(() => [innerWidth, innerHeight])).toEqual([1180, 820]);
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-landscape.png") });
-    await demoPage.getByRole("button", { name: labels.demo_orientation }).click();
+    await demoPage.getByRole("button", { name: labels.demo_rotate }).click();
     await expect.poll(() => child.evaluate(() => [innerWidth, innerHeight])).toEqual([820, 1180]);
     expect(await child.evaluate(() => document.body.dataset.tablecastDemoMarker)).toBe("retained");
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-portrait.png") });
@@ -211,6 +211,22 @@ for (const labels of [ja, en]) {
     expect(await child.evaluate(() => document.body.dataset.tablecastDemoMarker)).toBe("retained");
     await demoPage.screenshot({ path: testInfo.outputPath("tablecast-demo-air-13.png") });
     const toolbar = demoPage.getByTestId("demo-toolbar");
+    for (const label of [
+      labels.demo_rotate,
+      labels.demo_reload,
+      labels.demo_proactive,
+      labels.demo_reset,
+    ]) {
+      await expect(toolbar.getByRole("button", { name: label, exact: true })).toContainText(label);
+    }
+    for (const label of [
+      labels.demo_display,
+      labels.demo_configuration,
+      labels.demo_plan,
+      labels.demo_guests,
+    ]) {
+      await expect(toolbar.getByRole("combobox", { name: label })).toContainText(label);
+    }
     expect(await toolbar.evaluate((element) => element.scrollHeight)).toBeLessThanOrEqual(70);
     await demoPage.getByRole("combobox", { name: labels.demo_guests }).focus();
     await demoPage.keyboard.press("ArrowDown");
@@ -232,7 +248,7 @@ for (const labels of [ja, en]) {
     ).toEqual(state.orders);
     await demoPage.reload();
     await expect(demoPage.getByRole("combobox", { name: labels.demo_guests })).toContainText("3");
-    await expect(demoPage.getByRole("button", { name: labels.demo_orientation })).toHaveAttribute(
+    await expect(demoPage.getByRole("button", { name: labels.demo_rotate })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

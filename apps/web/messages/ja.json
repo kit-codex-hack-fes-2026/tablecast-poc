@@ -481,7 +481,7 @@
   "demo_isolated": "デモ専用・実際の注文は送信されません",
   "demo_display": "表示",
   "demo_browser": "ブラウザ全体",
-  "demo_orientation": "向き",
+  "demo_rotate": "回転",
   "demo_landscape": "横向き",
   "demo_portrait": "縦向き",
   "demo_configuration": "使用する設定",

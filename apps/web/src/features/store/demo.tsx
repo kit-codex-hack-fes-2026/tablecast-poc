@@ -10,7 +10,7 @@ import {
   Tablet,
   RotateCw,
   RefreshCw,
-  RotateCcw,
+  Eraser,
   FileStack,
   Ticket,
   Users,
@@ -208,14 +208,15 @@ function DemoSession({
           />
           <Button
             variant="ghost"
-            size="icon"
-            aria-label={t("demo_orientation")}
+            className="flex-col gap-1 px-2 text-xs"
+            aria-label={t("demo_rotate")}
             aria-pressed={portrait}
             title={portrait ? t("demo_landscape") : t("demo_portrait")}
             disabled={device === "browser"}
             onClick={() => setDisplay(device, !portrait)}
           >
             <RotateCw />
+            {t("demo_rotate")}
           </Button>
           <span className="h-6 shrink-0 border-l border-border" />
           <DemoSelect
@@ -245,12 +246,13 @@ function DemoSession({
           <span title={hasUpdate ? t("demo_update_available") : t("demo_up_to_date")}>
             <Button
               variant={hasUpdate ? "default" : "ghost"}
-              size="icon"
+              className="flex-col gap-1 px-2 text-xs"
               aria-label={t("demo_reload")}
               disabled={pending || !hasUpdate}
               onClick={() => update.mutate({ reload: true })}
             >
               <RefreshCw />
+              {t("demo_reload")}
             </Button>
             <span role="status" className="sr-only">
               {hasUpdate ? t("demo_update_available") : ""}
@@ -284,7 +286,7 @@ function DemoSession({
           />
           <Button
             variant={data.configuration.cast.proactive ? "secondary" : "ghost"}
-            size="icon"
+            className="flex-col gap-1 px-2 text-xs"
             title={t("demo_proactive")}
             aria-label={t("demo_proactive")}
             aria-pressed={data.configuration.cast.proactive}
@@ -292,24 +294,26 @@ function DemoSession({
             onClick={() => update.mutate({ proactive: !data.configuration.cast.proactive })}
           >
             <MessagesSquare />
+            {t("demo_proactive")}
           </Button>
           <span className="ml-auto h-6 shrink-0 border-l border-border" />
           <ConfirmAction
-            iconOnly
+            triggerClassName="flex-col gap-1 px-2 text-xs"
             label={t("demo_reset")}
             subject={t("demo_reset_confirm")}
             disabled={pending}
             onConfirm={() => reset.mutate()}
-            icon={<RotateCcw />}
+            icon={<Eraser />}
           />
           <Link
-            className="flex size-12 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-12 shrink-0 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs text-muted-foreground hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={t("admin_live")}
             title={`${stores.data?.stores.find((store) => store.id === storeId)?.name ?? ""} · ${t("admin_live")}`}
             to="/admin/stores/$storeId/floor"
             params={{ storeId }}
           >
             <LayoutDashboard className="size-4" />
+            {t("admin_live")}
           </Link>
         </div>
         {pending && (
@@ -363,11 +367,14 @@ export function DemoSelect({
           if (next) onChange(next);
         }}
       >
-        <SelectTrigger aria-label={label} className="text-sm">
+        <SelectTrigger aria-label={label} className="py-1 text-sm">
           <span aria-hidden="true" className="shrink-0 text-muted-foreground [&_svg]:size-4">
             {icon}
           </span>
-          <SelectValue className="truncate" />
+          <span className="flex min-w-0 flex-col items-start text-left">
+            <span className="text-xs text-muted-foreground">{label}</span>
+            <SelectValue className="max-w-full truncate" />
+          </span>
         </SelectTrigger>
         <SelectContent>
           {items.map((item) => (
