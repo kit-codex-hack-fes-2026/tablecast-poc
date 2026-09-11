@@ -19,18 +19,23 @@ const LocaleContext = createContext<{ locale: Locale; setLocale: (locale: Locale
 export function LocaleProvider({
   children,
   initialLocale,
+  persist = true,
 }: {
   children: ReactNode;
   initialLocale?: Locale;
+  persist?: boolean;
 }) {
   const [locale, updateLocale] = useState<Locale>(initialLocale ?? getLocale());
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
-  const setLocale = useCallback((next: Locale) => {
-    updateLocale(next);
-    void setRuntimeLocale(next, { reload: false });
-  }, []);
+  const setLocale = useCallback(
+    (next: Locale) => {
+      updateLocale(next);
+      if (persist) void setRuntimeLocale(next, { reload: false });
+    },
+    [persist],
+  );
   const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

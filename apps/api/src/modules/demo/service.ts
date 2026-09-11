@@ -72,6 +72,7 @@ export async function updateDemo(services: ApiServices, actor: Actor, input: Dem
     : null;
   const planId = input.planId === undefined ? previousPlan?.id : input.planId;
   const plan = configuration.plans.find((item) => item.id === planId);
+  if (input.planId !== undefined && input.planId !== null) ensure(plan, "PLAN_NOT_FOUND", 422);
   const planJson = plan
     ? JSON.stringify({
         id: plan.id,

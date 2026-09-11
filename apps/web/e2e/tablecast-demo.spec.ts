@@ -85,6 +85,31 @@ for (const labels of [ja, en]) {
     const demoId = new URL(demoPage.url()).searchParams.get("demoId");
     if (!demoId) throw new Error("デモIDがありません");
     const demoPath = `${adminPath}/demo/${demoId}`;
+    const frame = demoPage.frameLocator("iframe");
+    // デモの初期言語同期と客の言語変更は、店側の言語Cookieを変更しない。
+    await expect(frame.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("link", { name: labels.demo_open, exact: true })).toBeVisible();
+    const guestLabels = labels === ja ? en : ja;
+    const guestLanguage = frame.getByRole("button", {
+      name: labels === ja ? "English" : "日本語",
+      exact: true,
+    });
+    await guestLanguage.click();
+    await expect(guestLanguage).toBeEnabled();
+    await expect(
+      frame.getByRole("tab", { name: guestLabels.kiosk_menu, exact: true }),
+    ).toBeVisible();
+    await demoPage.reload();
+    await expect(
+      frame.getByRole("tab", { name: guestLabels.kiosk_menu, exact: true }),
+    ).toBeVisible();
+    await expect(demoPage.getByRole("combobox", { name: labels.demo_display })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("link", { name: labels.demo_open, exact: true })).toBeVisible();
+    await demoPage.screenshot({
+      path: testInfo.outputPath("tablecast-demo-locale-isolation.png"),
+    });
     await expect(demoPage.getByRole("heading", { name: labels.demo_title })).toBeAttached();
     await expect(demoPage.getByRole("combobox", { name: labels.demo_display })).toContainText(
       "iPad",
@@ -130,7 +155,6 @@ for (const labels of [ja, en]) {
     );
     await demoPage.getByRole("combobox", { name: labels.demo_configuration }).click();
     await demoPage.getByRole("option", { name: new RegExp(draft.id.slice(0, 8)) }).click();
-    const frame = demoPage.frameLocator("iframe");
     await frame
       .getByRole("button", { name: labels === ja ? "日本語" : "English", exact: true })
       .click();

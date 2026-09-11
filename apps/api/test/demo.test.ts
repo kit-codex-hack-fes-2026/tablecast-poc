@@ -210,7 +210,7 @@ describe("卓を使わない会話注文デモ", () => {
 
   it("人数変更はプラン開始時刻を保ち、別プランへの変更で料金と開始時刻を更新する", async () => {
     // Given: 二つのプランを持つ下書きと、以前に開始したデモのプラン。
-    const { actor, staff } = await setup();
+    const { actor, staff, cookie } = await setup();
     const draft = await createDraft(services(), staff);
     const configuration = structuredClone(draft.configuration);
     configuration.plans = [1000, 2000].map((pricePerPerson, index) => ({
@@ -255,6 +255,23 @@ describe("卓を使わない会話注文デモ", () => {
     expect(switched.plan?.startedAt).toBeGreaterThan(startedAt);
     expect(switched.bill.planTotal).toBe(6000);
 
+    // When: 明示的に存在しないプランIDを送る。
+    const previousDemo = await getDemo(services(), actor);
+    const response = await app.request(
+      `http://localhost:3000/api/admin/stores/${actor.storeId}/demo/${actor.demoId}`,
+      {
+        method: "PATCH",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedVersion: 4, planId: "tablecast-missing-plan" }),
+      },
+      env,
+    );
+    // Then: 422で拒否し、設定版・選択プラン・料金・カート・音声状態を維持する。
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({ error: { code: "PLAN_NOT_FOUND" } });
+    expect(await getDemo(services(), actor)).toEqual(previousDemo);
+    expect(await getTableState(services(), actor)).toEqual(switched);
+
     // When: 公開版には選択プランが存在しない。
     const removed = await updateDemo(services(), actor, {
       expectedVersion: 4,
@@ -262,6 +279,19 @@ describe("卓を使わない会話注文デモ", () => {
     });
     // Then: プランなしへ戻り、プラン料を取り除く。
     expect(removed.planId).toBeNull();
+    expect((await getTableState(services(), actor)).bill.planTotal).toBe(0);
+
+    // 明示的なnullでも選択中のプランを解除できる。
+    const selected = await updateDemo(services(), actor, {
+      expectedVersion: removed.version,
+      sourceDraftId: draft.id,
+      planId: "tablecast-plan-0",
+    });
+    const cleared = await updateDemo(services(), actor, {
+      expectedVersion: selected.version,
+      planId: null,
+    });
+    expect(cleared.planId).toBeNull();
     expect((await getTableState(services(), actor)).bill.planTotal).toBe(0);
   });
 
