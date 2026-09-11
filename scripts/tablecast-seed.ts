@@ -67,7 +67,7 @@ async function seed() {
       JSON.stringify(credentials, null, 2) + "\n",
       { mode: 0o600 },
     );
-    const migration = Bun.spawn(["bun", "--no-env-file", "run", "db:migrate"], {
+    const migration = Bun.spawn(["bun", "run", "db:migrate"], {
       cwd: tablecastRoot,
       stdout: "inherit",
       stderr: "inherit",

@@ -2,7 +2,7 @@
 
 [仕様索引](README.md) · [開発環境の仕組み](development.md) · [テスト戦略](testing.md)
 
-macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもLiveKit・Mailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。
+macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもLiveKit・Mailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
 
 > [!TIP]
 > `package.json` に実行するCLI、`turbo.json` に順序と常駐タスクを記載する。WebはTurborepo、コンテナ資源はCompose、Pythonはuvで管理する。独自のdaemonや起動ラッパーは使わない。
@@ -103,6 +103,9 @@ chmod 600 .env.local
 
 JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。CLIラッパーや暗号化envの復号は使わない。
 
+> [!NOTE]
+> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。
+
 PythonはBunを経由せず、[uvの標準env読み込み](https://docs.astral.sh/uv/reference/cli/#uv-run)を使う。`.env.local` の4項目を設定し、Web/LiveKit Serverの起動後、別ターミナルで実行する。
 
 ```sh
@@ -144,6 +147,10 @@ Pythonの外部設定は `.env.local` に置く。uvは明示したファイル�
 | `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否      |
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
+
+Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpit・LiveKitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
+
+GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
 
 ホストのブラウザー試験:
 

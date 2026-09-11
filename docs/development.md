@@ -125,7 +125,7 @@ Bun/uvのlockfile、migration、fixtureソース、必要な上流patchはGitへ
 | `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                  |
 | Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する               |
 
-起動順は `turbo.json`、実行するCLIは各 `package.json` に定義する。worktree固有設定だけを `scripts/tablecast-runtime.ts` で生成する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
+起動順は `turbo.json`、実行するCLIは各 `package.json` に定義する。 ホストの外部サービスはルート `compose.yaml`、Dev Container固有の構成は `.devcontainer/compose.yaml` に置く。worktree固有設定だけを `scripts/tablecast-runtime.ts` で生成する。`bun --no-env-file scripts/tablecast-livekit-check.ts` は2つのブラウザーで合成音声の実RTP受信とRoom削除による切断を検査し、結果を `.local/livekit-check.json` に保存する。外部AIや実マイクは使用しない。
 
 ローカルの `TABLECAST_RELEASE_SHA` は設定生成時のGit HEADを使う。追跡対象の変更や未追跡ファイルがある場合は `-dirty` を付け、commitと完全一致する実行と区別する。無視対象の `.local` や秘密設定は対象外とする。編集中の全状態を復元できる識別子ではなく、変更後は再起動して診断情報を更新する。
 

@@ -468,8 +468,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       ),
     ),
     COMPOSE_PROJECT_NAME: `tablecast-${runtime.id}`,
-    TABLECAST_ROOT: tablecastRoot,
-    TABLECAST_ID: runtime.id,
     TABLECAST_HOST: worktreeHost(tablecastRoot, tablecastCommon),
     TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
     TABLECAST_SIGNALING_PORT: String(runtime.ports.signaling),

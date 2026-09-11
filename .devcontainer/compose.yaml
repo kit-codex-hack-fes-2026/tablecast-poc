@@ -1,8 +1,12 @@
 services:
   tablecast-lgtm:
     extends:
-      file: ../infra/grafana/compose.yaml
+      file: ../compose.yaml
       service: tablecast-lgtm
+    # OTLPはCompose内から使い、ホストへはGrafanaとTempoだけを公開する。
+    ports: !override
+      - "127.0.0.1:${TABLECAST_GRAFANA_PORT}:3000"
+      - "127.0.0.1:${TABLECAST_TEMPO_PORT}:3200"
   tablecast:
     build:
       context: ..
