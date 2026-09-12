@@ -4,7 +4,7 @@ labels: [feat]
 body:
   - type: markdown
     attributes:
-      value: "画像・動画やログは関連する説明中に埋め込み、直下に操作と確認結果の短いキャプションを添える。撮ったままでよく、装飾編集は不要。秘密情報を除き、必要なら圧縮する。"
+      value: "画像・動画を添える場合は関連説明中に置き、短いキャプションを添える。ログはコードブロックで示す。秘密情報を除き、必要なら圧縮する。"
   - type: textarea
     id: purpose
     attributes:
@@ -23,7 +23,7 @@ body:
     id: verification
     attributes:
       label: "確認方法"
-      description: "テストや操作手順を書く。UI・エンドユーザーの振る舞い変更は、変更後の画像か動画をPRの関連説明中へキャプション付きで必ず埋め込む。撮ったままでよい。"
+      description: "テストや操作手順を書く。UI・Webアプリの見た目や操作を変える場合だけ、変更後の画像か動画をPRの関連説明中へ添える。CLI・API・設定・文書の結果はテキストやコードブロックで示す。"
     validations:
       required: true
   - type: textarea
