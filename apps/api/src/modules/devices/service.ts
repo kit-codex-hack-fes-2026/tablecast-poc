@@ -1,5 +1,6 @@
 import { isAPIError } from "better-auth/api";
-import { sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { user } from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -21,11 +22,16 @@ export async function redeemDevice(services: ApiServices, deviceCode: string) {
       return { ready: false } as const;
     throw error;
   }
-  const mapping = await db.get<
-    { store_id: string; table_id: string; approved_by: string } | undefined
-  >(
-    sql`SELECT * FROM device_assignments WHERE user_code=${result.userCode} AND approved_by=${result.userId}`,
-  );
+  const mapping = await db
+    .select()
+    .from(business.deviceAssignments)
+    .where(
+      and(
+        eq(business.deviceAssignments.user_code, result.userCode),
+        eq(business.deviceAssignments.approved_by, result.userId),
+      ),
+    )
+    .get();
   ensure(mapping, "DEVICE_NOT_ASSIGNED", 403);
   const token = crypto.randomUUID() + crypto.randomUUID();
   await db.insert(business.devices).values({
@@ -49,9 +55,16 @@ export async function approveDevice(
   ensure(actor.userId, "LOGIN_REQUIRED", 401);
   const { db } = services;
   const auth = services.auth;
-  const target = await db.get<Record<string, unknown> | undefined>(
-    sql`SELECT id FROM restaurant_tables WHERE id=${input.tableId} AND store_id=${actor.storeId}`,
-  );
+  const target = await db
+    .select({ id: business.restaurantTables.id })
+    .from(business.restaurantTables)
+    .where(
+      and(
+        eq(business.restaurantTables.id, input.tableId),
+        eq(business.restaurantTables.store_id, actor.storeId),
+      ),
+    )
+    .get();
   ensure(target, "TABLE_NOT_FOUND", 404);
   await auth.api.deviceVerify({
     query: { user_code: input.userCode },
@@ -75,27 +88,41 @@ export async function revokeDevice(services: ApiServices, actor: Actor, id: stri
   await services.db
     .update(business.devices)
     .set({ revoked_at: Date.now() })
-    .where(sql`id=${id} AND store_id=${actor.storeId}`);
+    .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId)));
   return { revoked: true };
 }
 
 export async function listDevices(services: ApiServices, actor: Actor) {
   requireManager(actor);
   const { db } = services;
-  const devices = await db.all<{
-    id: string;
-    tableId: string;
-    tableName: string;
-    createdAt: number;
-    revokedAt: number | null;
-    approvedByName: string;
-    approvedByEmail: string;
-    approvedByImage: string | null;
-  }>(
-    sql`SELECT d.id,d.table_id AS tableId,t.name AS tableName,d.created_at AS createdAt,d.revoked_at AS revokedAt,u.name AS approvedByName,u.email AS approvedByEmail,u.image AS approvedByImage FROM devices d JOIN restaurant_tables t ON t.id=d.table_id AND t.store_id=d.store_id JOIN user u ON u.id=d.approved_by WHERE d.store_id=${actor.storeId} ORDER BY d.created_at DESC`,
-  );
-  const tables = await db.all<{ id: string; name: string }>(
-    sql`SELECT id,name FROM restaurant_tables WHERE store_id=${actor.storeId} ORDER BY name`,
-  );
+  const [devices, tables] = await db.batch([
+    db
+      .select({
+        id: business.devices.id,
+        tableId: business.devices.table_id,
+        tableName: business.restaurantTables.name,
+        createdAt: business.devices.created_at,
+        revokedAt: business.devices.revoked_at,
+        approvedByName: user.name,
+        approvedByEmail: user.email,
+        approvedByImage: user.image,
+      })
+      .from(business.devices)
+      .innerJoin(
+        business.restaurantTables,
+        and(
+          eq(business.restaurantTables.id, business.devices.table_id),
+          eq(business.restaurantTables.store_id, business.devices.store_id),
+        ),
+      )
+      .innerJoin(user, eq(user.id, business.devices.approved_by))
+      .where(eq(business.devices.store_id, actor.storeId))
+      .orderBy(desc(business.devices.created_at)),
+    db
+      .select({ id: business.restaurantTables.id, name: business.restaurantTables.name })
+      .from(business.restaurantTables)
+      .where(eq(business.restaurantTables.store_id, actor.storeId))
+      .orderBy(business.restaurantTables.name),
+  ]);
   return { devices, tables };
 }

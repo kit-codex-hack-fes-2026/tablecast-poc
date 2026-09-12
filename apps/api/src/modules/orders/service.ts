@@ -1,12 +1,11 @@
 import { measured, observeOperation } from "../../platform/telemetry";
-import { sql } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
-import type { ConfirmationRecord, OrderRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { confirmationText, priceCart } from "../catalog/pricing";
-import { getCatalog, sessionConfigVersion } from "../catalog/queries";
+import { sessionConfigVersion } from "../catalog/queries";
 import type { TableState } from "../tables/model";
 import {
   eventStatement,
@@ -14,7 +13,7 @@ import {
   notifyStore,
   voiceCondition,
 } from "../tables/mutations";
-import { getSession, getTableState, orderValue, planContext } from "../tables/queries";
+import { getSession, getTableState, orderValue, getPricingContext } from "../tables/queries";
 import {
   cartLineSchema,
   snapshotSchema,
@@ -34,13 +33,8 @@ export async function updateCart(
 
       const session = await getSession(services, actor);
       ensure(session.status === "open", "SESSION_CLOSED");
-      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-      priceCart(
-        catalog.configuration,
-        input.lines,
-        input.expectedVersion,
-        await planContext(services, session),
-      );
+      const { catalog, plan } = await getPricingContext(services, session);
+      priceCart(catalog.configuration, input.lines, input.expectedVersion, plan);
       const mutation = crypto.randomUUID();
       const gate = voiceCondition(actor);
       const result = await db.batch([
@@ -87,8 +81,7 @@ export async function prepareConfirmation(
         "CONFIRMATION_CHANNEL",
         403,
       );
-      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-      const plan = await planContext(services, session);
+      const { catalog, plan } = await getPricingContext(services, session);
       const cart = priceCart(
         catalog.configuration,
         cartLineSchema.array().parse(JSON.parse(session.cart_json)),
@@ -160,9 +153,21 @@ export async function getVoiceConfirmation(
   const db = services.db;
 
   await getSession(services, actor);
-  const row = await db.get<ConfirmationRecord | undefined>(
-    sql`SELECT * FROM confirmations WHERE table_session_id=${actor.tableSessionId} AND voice_session_id=${actor.voiceSessionId} AND status='pending' AND expires_at>${Date.now()} AND created_turn_id=${actor.turnId} ORDER BY created_at DESC LIMIT 1`,
-  );
+  const row = await db
+    .select()
+    .from(business.confirmations)
+    .where(
+      and(
+        eq(business.confirmations.table_session_id, actor.tableSessionId ?? sql`null`),
+        eq(business.confirmations.voice_session_id, actor.voiceSessionId ?? sql`null`),
+        eq(business.confirmations.status, "pending"),
+        gt(business.confirmations.expires_at, Date.now()),
+        eq(business.confirmations.created_turn_id, actor.turnId ?? sql`null`),
+      ),
+    )
+    .orderBy(desc(business.confirmations.created_at))
+    .limit(1)
+    .get();
   return row ? snapshotSchema.parse(JSON.parse(row.snapshot_json)) : null;
 }
 
@@ -191,32 +196,56 @@ export async function submitOrder(
       const db = services.db;
 
       ensure(input.approved, "APPROVAL_REQUIRED", 422);
-      await measured("tablecast.order.session", () => getSession(services, actor));
-      const existing = await db.get<OrderRecord | undefined>(
-        sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND store_id=${actor.storeId} AND idempotency_key=${input.idempotencyKey}`,
-      );
+      const session = await measured("tablecast.order.session", () => getSession(services, actor));
+      const [existingOrders, confirmations] = await db.batch([
+        db
+          .select()
+          .from(business.orders)
+          .where(
+            and(
+              eq(business.orders.table_session_id, session.id),
+              eq(business.orders.store_id, actor.storeId),
+              eq(business.orders.idempotency_key, input.idempotencyKey),
+            ),
+          ),
+        db
+          .select()
+          .from(business.confirmations)
+          .where(
+            and(
+              eq(business.confirmations.id, input.snapshotId),
+              eq(business.confirmations.store_id, actor.storeId),
+              eq(business.confirmations.table_session_id, session.id),
+            ),
+          ),
+      ]);
+      const existing = existingOrders[0];
       if (existing) {
         ensure(existing.snapshot_id === input.snapshotId, "IDEMPOTENCY_CONFLICT");
         return orderValue(existing);
       }
-      const confirmation = await db.get<ConfirmationRecord | undefined>(
-        sql`SELECT * FROM confirmations WHERE id=${input.snapshotId} AND store_id=${actor.storeId} AND table_session_id=${actor.tableSessionId}`,
-      );
+      const confirmation = confirmations[0];
       ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
-      const session = await measured("tablecast.order.session", () => getSession(services, actor));
-      const catalog = await measured("tablecast.order.catalog", () =>
-        getCatalog(services, actor.storeId, actor.demoId),
+      const { catalog, plan } = await measured("tablecast.order.pricing", () =>
+        getPricingContext(services, session),
       );
       priceCart(
         catalog.configuration,
         cartLineSchema.array().parse(JSON.parse(session.cart_json)),
         session.cart_version,
-        await measured("tablecast.order.plan", () => planContext(services, session)),
+        plan,
       );
       if (actor.kind === "voice") {
-        const turn = await db.get<{ started_at: number } | undefined>(
-          sql`SELECT started_at FROM voice_turns WHERE id=${actor.turnId} AND voice_session_id=${actor.voiceSessionId}`,
-        );
+        const turn = await db
+          .select({ started_at: business.voiceTurns.started_at })
+          .from(business.voiceTurns)
+          .where(
+            and(
+              eq(business.voiceTurns.id, actor.turnId ?? sql`null`),
+              eq(business.voiceTurns.voice_session_id, actor.voiceSessionId ?? sql`null`),
+            ),
+          )
+          .get();
         ensure(
           turn && confirmation.read_at && turn.started_at > confirmation.read_at,
           "NEW_APPROVAL_TURN_REQUIRED",
@@ -256,7 +285,7 @@ export async function submitOrder(
               mutation_id: mutation,
             })
             .where(
-              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)} AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
+              sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${session.cart_version} AND cart_version=${confirmation.cart_version} AND EXISTS(SELECT 1 FROM confirmations c JOIN stores s ON s.id=c.store_id WHERE c.id=${confirmation.id} AND c.table_session_id=table_sessions.id AND c.cart_version=table_sessions.cart_version AND c.config_version=${sessionConfigVersion(actor.storeId, actor.tableSessionId)} AND c.expires_at>${now} AND c.status=${actor.kind === "voice" ? "read" : "pending"})${gate}`,
             ),
           db
             .insert(business.orders)
@@ -277,9 +306,17 @@ export async function submitOrder(
         ]),
       );
       if (result[0]?.meta.changes !== 1) {
-        const retry = await db.get<OrderRecord | undefined>(
-          sql`SELECT * FROM orders WHERE table_session_id=${actor.tableSessionId} AND idempotency_key=${input.idempotencyKey} AND snapshot_id=${input.snapshotId}`,
-        );
+        const retry = await db
+          .select()
+          .from(business.orders)
+          .where(
+            and(
+              eq(business.orders.table_session_id, session.id),
+              eq(business.orders.idempotency_key, input.idempotencyKey),
+              eq(business.orders.snapshot_id, input.snapshotId),
+            ),
+          )
+          .get();
         if (retry) return orderValue(retry);
         throw new DomainError("CONFIRMATION_STALE", 409, "CONFIRMATION_STALE");
       }
@@ -313,9 +350,11 @@ export async function changeOrderStatus(
       const db = services.db;
 
       ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
-      const row = await db.get<OrderRecord | undefined>(
-        sql`SELECT * FROM orders WHERE id=${orderId} AND store_id=${actor.storeId}`,
-      );
+      const row = await db
+        .select()
+        .from(business.orders)
+        .where(and(eq(business.orders.id, orderId), eq(business.orders.store_id, actor.storeId)))
+        .get();
       ensure(row, "ORDER_NOT_FOUND", 404);
       await getSession(services, { ...actor, tableSessionId: row.table_session_id });
       if (row.status === status) return orderValue(row);
@@ -368,9 +407,20 @@ export async function recordPayment(
       const db = services.db;
 
       ensure(actor.kind === "staff" && actor.userId, "STAFF_REQUIRED", 403);
-      const existing = await db.get<{ amount: number; kind: string; reason: string } | undefined>(
-        sql`SELECT amount,kind,reason FROM payments WHERE table_session_id=${actor.tableSessionId} AND idempotency_key=${input.idempotencyKey}`,
-      );
+      const existing = await db
+        .select({
+          amount: business.payments.amount,
+          kind: business.payments.kind,
+          reason: business.payments.reason,
+        })
+        .from(business.payments)
+        .where(
+          and(
+            eq(business.payments.table_session_id, actor.tableSessionId ?? sql`null`),
+            eq(business.payments.idempotency_key, input.idempotencyKey),
+          ),
+        )
+        .get();
       if (existing) {
         ensure(
           existing.amount === input.amount &&
@@ -411,9 +461,20 @@ export async function recordPayment(
         }),
       ]);
       if (result[0]?.meta.changes !== 1) {
-        const retry = await db.get<{ amount: number; kind: string; reason: string } | undefined>(
-          sql`SELECT amount,kind,reason FROM payments WHERE table_session_id=${actor.tableSessionId} AND idempotency_key=${input.idempotencyKey}`,
-        );
+        const retry = await db
+          .select({
+            amount: business.payments.amount,
+            kind: business.payments.kind,
+            reason: business.payments.reason,
+          })
+          .from(business.payments)
+          .where(
+            and(
+              eq(business.payments.table_session_id, actor.tableSessionId ?? sql`null`),
+              eq(business.payments.idempotency_key, input.idempotencyKey),
+            ),
+          )
+          .get();
         ensure(
           retry &&
             retry.amount === input.amount &&

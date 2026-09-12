@@ -104,7 +104,7 @@ GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト�
 
 このリポジトリでは自作・外部skillsを `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra` は `bunx skills` で導入し、`skills-lock.json` に取得元を残す。上流本文は整形対象外とする。
 
-Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。
+Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。Drizzle pluginはSQLリテラルの必要性や不要な直列読取を判定しない。これらは[API skill](../.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)に従い、新規実装時と差分レビューで呼出し経路・読取の依存関係・標準APIの採用を確認する。
 
 APIは`eslint-plugin-boundaries`の`boundaries/files`で、`modules/<業務>`のroute・service・query・modelとplatform・DB・公開入口を分類する。`boundaries/dependencies`は既定で依存を拒否し、`apps/api/oxlint.config.ts`の対応表だけを許可する。`no-unknown-files`と`no-unknown-dependencies`により、未分類のファイル配置や内部パスへの依存も失敗させる。TypeScript resolverとworkspaceの絶対rootを指定し、ルート・workspace・エディターから同じ解決結果を使う。
 

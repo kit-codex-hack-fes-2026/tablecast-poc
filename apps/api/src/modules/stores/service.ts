@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import * as authTables from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -20,9 +20,11 @@ export async function createStore(services: ApiServices, userId: string, input: 
   const json = JSON.stringify(configuration),
     db = services.db;
   ensure(
-    !(await db.get<Record<string, unknown> | undefined>(
-      sql`SELECT id FROM organization WHERE slug=${input.slug}`,
-    )),
+    !(await db
+      .select({ id: authTables.organization.id })
+      .from(authTables.organization)
+      .where(eq(authTables.organization.slug, input.slug))
+      .get()),
     "STORE_SLUG_TAKEN",
     409,
   );
@@ -71,9 +73,11 @@ export async function updateStoreIcon(
   image: File,
 ) {
   requireManager(actor);
-  const store = await services.db.get<{ organization_id: string } | undefined>(
-    sql`SELECT organization_id FROM stores WHERE id=${actor.storeId}`,
-  );
+  const store = await services.db
+    .select({ organization_id: business.stores.organization_id })
+    .from(business.stores)
+    .where(eq(business.stores.id, actor.storeId))
+    .get();
   ensure(store, "STORE_NOT_FOUND", 404);
   const logo = await saveIdentityImage(services.env, image);
   await services.auth.api.updateOrganization({

@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import * as businessTables from "../src/db/business-schema";
 import { getAdminState } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
@@ -8,6 +8,8 @@ import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { configuration, device, setupFixture } from "./fixture";
+
+afterEach(() => vi.restoreAllMocks());
 
 it("開卓・会計依頼が最新100件の表示ログから外れても開始時刻と依頼済み状態を維持する", async () => {
   const { staff } = await setupFixture();

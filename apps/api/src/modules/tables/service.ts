@@ -1,5 +1,5 @@
 import { observeOperation } from "../../platform/telemetry";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -250,9 +250,16 @@ export async function openTable(
       const db = services.db;
 
       ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
-      const table = await db.get<Record<string, unknown> | undefined>(
-        sql`SELECT id FROM restaurant_tables WHERE id=${input.tableId} AND store_id=${actor.storeId}`,
-      );
+      const table = await db
+        .select({ id: business.restaurantTables.id })
+        .from(business.restaurantTables)
+        .where(
+          and(
+            eq(business.restaurantTables.id, input.tableId),
+            eq(business.restaurantTables.store_id, actor.storeId),
+          ),
+        )
+        .get();
       ensure(table, "TABLE_NOT_FOUND", 404);
       const catalog = await getCatalog(services, actor.storeId, actor.demoId);
       const plan = input.planId

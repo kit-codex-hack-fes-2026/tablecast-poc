@@ -1,30 +1,72 @@
-import { sql } from "drizzle-orm";
+import { and, desc, eq, isNull, max, or, sql } from "drizzle-orm";
+import {
+  oauthAccessToken,
+  oauthClient,
+  oauthConsent,
+  oauthRefreshToken,
+} from "../../db/auth-schema";
+import { stores } from "../../db/business-schema";
 import type { Database } from "../../platform/context";
 export async function getMcpSessions(
   db: Database,
   userId: string,
   consents: { id: string; scopes: string[] }[],
 ) {
-  const rows = await db.all<{
-    id: string;
-    clientName: string | null;
-    clientId: string;
-    storeName: string | null;
-    createdAt: number;
-    updatedAt: number;
-    expiresAt: number | null;
-    refreshExpiresAt: number | null;
-  }>(
-    sql`SELECT consent.id,client.name AS clientName,consent.client_id AS clientId,store.name AS storeName,consent.created_at AS createdAt,consent.updated_at AS updatedAt,(SELECT MAX(expires_at) FROM oauth_access_token token WHERE token.user_id=consent.user_id AND token.client_id=consent.client_id AND token.reference_id IS consent.reference_id AND token.revoked IS NULL) AS expiresAt,(SELECT MAX(expires_at) FROM oauth_refresh_token token WHERE token.user_id=consent.user_id AND token.client_id=consent.client_id AND token.reference_id IS consent.reference_id AND token.revoked IS NULL) AS refreshExpiresAt FROM oauth_consent consent JOIN oauth_client client ON client.client_id=consent.client_id LEFT JOIN stores store ON store.organization_id=consent.reference_id WHERE consent.user_id=${userId} ORDER BY consent.updated_at DESC`,
-  );
+  const accessExpiry = db
+    .select({ value: max(oauthAccessToken.expiresAt).mapWith(Number) })
+    .from(oauthAccessToken)
+    .where(
+      and(
+        eq(oauthAccessToken.userId, oauthConsent.userId),
+        eq(oauthAccessToken.clientId, oauthConsent.clientId),
+        or(
+          eq(oauthAccessToken.referenceId, oauthConsent.referenceId),
+          and(isNull(oauthAccessToken.referenceId), isNull(oauthConsent.referenceId)),
+        ),
+        isNull(oauthAccessToken.revoked),
+      ),
+    );
+  const refreshExpiry = db
+    .select({ value: max(oauthRefreshToken.expiresAt).mapWith(Number) })
+    .from(oauthRefreshToken)
+    .where(
+      and(
+        eq(oauthRefreshToken.userId, oauthConsent.userId),
+        eq(oauthRefreshToken.clientId, oauthConsent.clientId),
+        or(
+          eq(oauthRefreshToken.referenceId, oauthConsent.referenceId),
+          and(isNull(oauthRefreshToken.referenceId), isNull(oauthConsent.referenceId)),
+        ),
+        isNull(oauthRefreshToken.revoked),
+      ),
+    );
+  const rows = await db
+    .select({
+      id: oauthConsent.id,
+      clientName: oauthClient.name,
+      clientId: oauthConsent.clientId,
+      storeName: stores.name,
+      createdAt: oauthConsent.createdAt,
+      updatedAt: oauthConsent.updatedAt,
+      expiresAt: sql<number | null>`(${accessExpiry})`.mapWith(Number),
+      refreshExpiresAt: sql<number | null>`(${refreshExpiry})`.mapWith(Number),
+    })
+    .from(oauthConsent)
+    .innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))
+    .leftJoin(stores, eq(stores.organization_id, oauthConsent.referenceId))
+    .where(eq(oauthConsent.userId, userId))
+    .orderBy(desc(oauthConsent.updatedAt));
+  const scopesById = new Map(consents.map((consent) => [consent.id, consent.scopes]));
   return {
     sessions: rows.flatMap((row) => {
-      const consent = consents.find((item) => item.id === row.id);
-      return consent
+      const scopes = scopesById.get(row.id);
+      return scopes
         ? [
             {
               ...row,
-              scopes: consent.scopes,
+              createdAt: row.createdAt.getTime(),
+              updatedAt: row.updatedAt.getTime(),
+              scopes,
               status:
                 Math.max(row.expiresAt ?? 0, row.refreshExpiresAt ?? 0) > Date.now()
                   ? ("active" as const)
