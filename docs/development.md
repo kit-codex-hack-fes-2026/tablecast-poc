@@ -58,14 +58,16 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 
 ### Storybook MCP
 
-ルートで `bun install --frozen-lockfile`、`bun run codegen`、`bun run storybook` を順に実行する。Storybookだけを起動し、runtime未作成なら既存のポート予約処理でworktree専用ポートを確保する。DBの準備やWorkers・音声Agentの起動は不要である。
+ルートで `bun run setup`、`bun run storybook` を順に実行する。Storybook公式CLIを直接使い、DB・runtimeの準備やWorkers・音声Agentの起動は不要である。
 
 Storybookの起動ログのURLへ `/mcp` を付け、Git管理外の `.codex/config.toml` に登録する。標準ポートは6006で、他worktreeが使う場合は `bun run storybook --port 6007` などで指定する。既存のCodex設定は保持して次のテーブルを統合する。
 
 ```toml
 [mcp_servers.tablecast-storybook]
-url = "http://127.0.0.1:<port>/mcp"
+url = "http://127.0.0.1:6006/mcp"
 ```
+
+実際のportが6006以外ならURLを合わせる。Dev Container内のStorybookへホストのCodexから接続する場合は、[setupの公開ポート確認](setup.md#2a-dev-containerを使う)で得たホスト側のportを使う。設定の配置と他MCPとの併用は[agent開発環境](setup.md#2c-agent開発環境)を参照する。
 
 CodexのMCP接続を再起動して設定を読み直す。Storybookを起動したまま `docs-list` でコンポーネント一覧、`docs-show` で対象のpropsとStory、`stories-preview` でプレビューURL、`test-run` で代表Storyのテスト結果を確認する。対象IDや入力形式はサーバーのツール一覧から取得する。ブラウザーで同じ `/mcp` を開くと利用可能なツールも確認できる。
 
@@ -75,7 +77,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 ### 共通の割当て
 
-小さなbootstrapでWeb、Inspector、LiveKit signaling、RTC TCP、UDP mux、Agent health、Storybookをまとめて割り当てる。
+小さなbootstrapでWeb、Inspector、LiveKit signaling、RTC TCP、UDP mux、Agent healthをまとめて割り当てる。Storybookは上記の公式CLIでportを指定する。
 既存のポート割当て機能を先に使い、不足するUDP等だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
 一つのruntime manifestにホスト、port、state、生成configを記録する。ポートを複数package.jsonへ直書きしない。
 同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。

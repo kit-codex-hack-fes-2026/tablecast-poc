@@ -108,10 +108,6 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
               }
             />
             <p>{t("mcp_local_install")}</p>
-            <CopyValue
-              label={t("mcp_authorise")}
-              value="codex mcp login tablecast --scopes tablecast:read,tablecast:write --oauth-client-registration dcr"
-            />
           </Guide>
         </>
       ) : (

@@ -1,3 +1,7 @@
+# 利用するサーバーのテーブルだけを .codex/config.toml へ追加する。
+# 既存設定を上書きせず、plugin同梱のMCPは重複登録しない。
+# 手順と認証: docs/setup.md のagent開発環境、docs/observability.md。
+
 [mcp_servers.tablecast-grafana-local]
 command = "bun"
 env_vars = ["TABLECAST_CONTAINER"]
@@ -11,3 +15,12 @@ env_vars = ["TABLECAST_CONTAINER"]
 args = ["--no-env-file", "scripts/tablecast-grafana-mcp.ts", "cloud"]
 startup_timeout_sec = 60
 tool_timeout_sec = 60
+
+[mcp_servers.tablecast-storybook]
+# 起動ログのportに合わせる。Dev Container外からはホスト公開portを使う。
+url = "http://127.0.0.1:6006/mcp"
+
+# Cloudflare公式pluginを使わず、MCPだけを手動登録する場合に有効化する。
+# 登録後に codex mcp login tablecast-cloudflare でOAuth認可する。
+# [mcp_servers.tablecast-cloudflare]
+# url = "https://mcp.cloudflare.com/mcp"
