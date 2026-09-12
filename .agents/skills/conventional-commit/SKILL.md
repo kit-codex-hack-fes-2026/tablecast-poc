@@ -1,6 +1,6 @@
 ---
 name: conventional-commit
-description: コミット、変更のコミット分割、メッセージ作成、commitlintエラー修正で使う。Conventional CommitsとGitmoji一つ、英語の件名・本文を必須とし、Agent Skillsの変更種別も判断する。
+description: TableCastのコミット分割・メッセージ作成・commitlintエラー修正に使う。
 ---
 
 # Conventional Commits + Gitmoji

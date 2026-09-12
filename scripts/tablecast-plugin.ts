@@ -20,19 +20,6 @@ if (!published) {
     "utf8",
   );
   await writeFile(join(destination, ".agents/plugins/marketplace.json"), marketplace);
-  await mkdir(join(tablecastRoot, ".codex"), { recursive: true });
-  const config = join(tablecastRoot, ".codex/config.toml");
-  const previous = await readFile(config, "utf8").catch((error: unknown) => {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "";
-    throw error;
-  });
-  if (previous && !previous.startsWith("# TableCast generated local MCP"))
-    throw new Error("既存のCodex設定を上書きできません。MCP設定を手動で統合してください。");
-  await writeFile(
-    config,
-    `# TableCast generated local MCP\n[mcp_servers.tablecast]\nurl = ${JSON.stringify(`${origin}/mcp`)}\n`,
-    { mode: 0o600 },
-  );
 }
 await writeFile(
   join(destination, "plugins/tablecast/.mcp.json"),

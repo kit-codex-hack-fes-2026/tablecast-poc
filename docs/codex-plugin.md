@@ -1,5 +1,7 @@
 # Codex プラグイン
 
+この文書は店舗メニュー・接客設定を操作する製品プラグインを扱う。TableCastを開発するagentのskills・Cloudflare・Grafana等の導入は[setup](setup.md#2c-agent開発環境)を参照する。
+
 ## 管理画面からの導入
 
 `/account/integrations/plugins` にMarketplace、ChatGPT開発者モード、ローカルリポジトリの導入手順を置く。`/account/integrations/manual` は任意のMCPクライアント向けのStreamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdのダウンロードを提供する。スキルを配置するだけでは接続や権限を付与しない。`/account/mcp-sessions` はOAuth接続の日時・scope・有効期限と解除を扱う。
@@ -18,14 +20,30 @@ ChatGPT開発者モードの入口はSettings → Security and login。Plugins�
 bun --no-env-file scripts/tablecast-plugin.ts
 codex plugin marketplace add "$PWD/.local/tablecast-plugin-marketplace"
 codex plugin add tablecast@tablecast
+```
+
+生成先は `.local/tablecast-plugin-marketplace` だけで、そのcheckoutの現在のURLを持つ。`.codex/config.toml` は作成・更新しないため、GrafanaやStorybook等の接続設定を維持したまま再生成できる。pluginに同梱したMCPを使い、同じ接続を設定ファイルへ重複登録しない。
+
+Marketplaceの `ON_INSTALL` に従ってCodexのOAuth接続画面で組織とscopeを確認して同意する。認証情報の保管はCodexに任せる。新しいCodexタスクでプラグインを読み込み、`get_configuration` が対象店舗のIDと名前を返すことを確認する。認証や接続が済んでいない状態をインストール成功だけで判定しない。
+
+ローカルのポートが変わった場合は生成とプラグインの再インストール、必要に応じてOAuthログインを再実行する。
+
+### MCPを手動登録する場合
+
+pluginを使わずCodex CLIからMCPだけを確認する場合は、Git管理外の `.codex/config.toml` へ次のテーブルだけを追加する。`<origin>` をこのworktreeの起動URLへ置き換え、他のMCP設定は保持する。
+
+```toml
+[mcp_servers.tablecast]
+url = "<origin>/mcp"
+```
+
+```sh
 codex mcp login tablecast --scopes tablecast:read --oauth-client-registration dcr
 ```
 
-生成した `.codex/config.toml` はGit管理外で、そのcheckoutの現在のURLを持つ。既存の手書き設定は上書きしない。秘密値は含まない。認証情報の保管はCodexに任せる。新しいCodexタスクでプラグインが読み込まれる。
+書込みが必要な場合は `--scopes tablecast:read,tablecast:write` で再認可する。plugin経由でも手動接続でも、設定の公開には管理画面での明示承認が必要である。複数店舗では接続URLの `?storeId=...` で対象を指定する。省略時は許可された組織内の最初の店舗となる。
 
-書込みが必要な利用者は `tablecast:read,tablecast:write` を指定して再認可する。設定の公開はMCPだけでは完了せず、管理画面での明示承認を要求する。複数店舗では接続URLの `?storeId=...` で対象を指定する。省略時は許可された組織内の最初の店舗となり、`get_configuration` が店舗IDと名前を返す。
-
-ローカルのポートが変わった場合は生成とプラグインの再インストール、必要に応じてOAuthログインを再実行する。
+旧生成物に `# TableCast generated local MCP` が残る場合も自動削除しない。pluginへ切り替える利用者は重複する `[mcp_servers.tablecast]` だけを取り除き、他サーバーの設定を保持する。[CodexのMCP設定とOAuth](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)を参照する。
 
 ## デプロイ後のGitHub配布
 

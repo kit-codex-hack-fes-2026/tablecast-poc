@@ -1,18 +1,28 @@
 ---
 name: tablecast-api
-description: TableCastのHono、Drizzle D1、業務操作、認可、MCP・音声共有操作を変更するときに使う。
+description: TableCastのAPI・認可・DB処理と、GUI・音声・MCPが共有する業務操作を実装・変更する。
 ---
 
-# tablecast-api
+# TableCast API
 
-[構成](../../../docs/architecture.md)、[製品仕様](../../../docs/product.md)、[テスト戦略](../../../docs/testing.md)を読む。
+配置・依存を変えるときは[構成](../../../docs/architecture.md)、業務判断を変えるときは[製品仕様](../../../docs/product.md)の該当箇所を確認する。認証は[認証仕様](../../../docs/authentication.md)、MCPは[MCP仕様](../../../docs/mcp.md)を使う。
 
-1. 公開RPC入口と全呼出し元を確認する。`app.ts`は共通middlewareとmoduleの組立てに限定し、業務を`modules/<業務>`へ置く。
-2. routeは入力検証、認可middleware、service呼出し、HTTP出力を所有する。DB生成・SQL・業務判断をrouteへ戻さない。
-3. `platform/context.ts`の`requestServices`が作る`c.var.services`を渡す。同じHTTPリクエストのDrizzleと遅延生成するBetter Authを共有し、スタッフ認証は`auth/middleware.ts`で再利用する。Worker全体へbinding・認証結果をキャッシュしない。
-4. service・queriesは`ApiServices`と確定済みActor・検証済み入力を受け、Hono Contextやrouteへ依存しない。GUI・音声・MCPで業務操作を共有する。処理を中継するだけの層やDI containerは追加しない。
-5. 業務schemaは所有moduleの`model.ts`へ置く。`schema.ts`はWebなどに必要な公開契約だけを明示exportする。API内部は定義の所有moduleを参照する。
-6. `db`のDrizzle schemaを使い、通常queryは型付きbuilder、複雑な条件はパラメーター化した`sql`を使う。店舗・卓の条件、batchの原子性、mutation_idによる更新成立確認を維持する。D1非対応のtransactionを追加しない。
-7. `bun run --cwd apps/api lint`、`typecheck`、`test`を実行する。実Bindingの認可・競合テストをmockへ置換しない。公開RPC変更はWebの型検査と代表E2Eまで確認する。
+## 所有する境界
 
-Oxlintのboundaries設定がレイヤーと配置を強制する。route→DB、service→HTTP、query→更新、model→実行コードの依存を作らない。未分類ファイルや別moduleの未公開内部パスを追加するときは、責務を検討し、必要な配置・依存だけを設定と構成文書へ明示する。広い許可やignoreで迂回しない。
+- 公開RPC入口から呼出し元まで確認する。`app.ts`はmiddlewareとmoduleの組立て、routeは入力検証・認可・service呼出し・HTTP出力を所有する。DB生成・SQL・業務判断はrouteへ戻さない。
+- `platform/context.ts`の`requestServices`が作る`c.var.services`を渡し、同じリクエストのDrizzleと遅延生成するBetter Authを共有する。スタッフ認証は`auth/middleware.ts`で再利用し、Worker全体へbinding・認証結果をキャッシュしない。
+- service・queriesは`ApiServices`、確定済みActor、検証済み入力を受け、Hono Contextへ依存しない。GUI・音声・MCPで業務操作を共有し、中継だけのservice・repositoryやDI containerを増やさない。
+- 業務schemaは所有moduleの`model.ts`、consumer向けの公開契約は`schema.ts`の明示exportを正本にする。HTTP responseはHonoの推論型と既存clientで共有し、Webや音声へ業務判断・response型を複製しない。
+
+## DB変更の設計と検証
+
+- 新規実装もroute・認可・service・queryを通した取得経路を見る。必要なID、データの寿命、前の結果への依存を整理し、取得済みの行を渡せる箇所や重複取得を確認する。独立した読取は`db.batch()`、親子取得はjoin・subqueryを使う。D1の`Promise.all`は往復数の削減にはならない。
+- 既存Drizzle schemaと型付きquery builderを使う。select・join・exists・集約・CTE・insert-select等の標準APIで表現できる処理を生SQLで書かない。条件の長さや複雑さは理由にせず、表現できない部分だけパラメーター化した`sql`断片にする。クエリ全体をSQLに残す場合はbuilderで表現できない理由を明確にする。
+- 取得の統合・再読込の削除でも店舗・卓の認可条件を保つ。書込の版条件、batchの原子性、`mutation_id`による更新成立確認を維持し、D1非対応のtransactionを追加しない。snapshotとcursorの取得順も契約として扱う。
+- batchやjoinへの変更では同名列のalias、LEFT JOINの不成立、NULL、Dateと公開timestampの単位を確認する。集約をJSへ移して取得行数を増やさず、既存index・ページングを維持する。問合せ数の固定テストを追加するだけで設計確認を代替しない。
+
+## 変更範囲に応じた確認
+
+API実装ではworkspaceの`lint`・`typecheck`と関連する既存テストを実行する。DB・認可・競合は[テスト戦略](../../../docs/testing.md)の実Bindingを使い、mockで保証した扱いにしない。公開RPCを変えたらWebの型検査、SSR・認証・注文の接続を変えたら代表経路まで確認する。
+
+配置・依存の変更はOxlintのboundaries設定と照合する。route→DB、service→HTTP、query→更新、model→実行コードを許可するignoreを足さず、必要な新規境界は構成文書と設定へ明示する。
