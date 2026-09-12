@@ -27,6 +27,10 @@ Web/APIの2 WorkersとPython Agentに限定する。DOのclassはAPI Workerに�
 
 APIは業務moduleごとに入力、操作、読取を所有する。処理がない層のファイルは作らない。
 
+業務RPCは`app.ts`の`rpcRoutes`で構成し、`handleRpcError`が例外を公開JSON契約へ揃える。認証・MCP・メディア等は既存のprotocol応答を維持する。`client.ts`は公開`schema.ts`のエラー型を参照し、Honoの`ApplyGlobalResponse`で通常と卓sessionのclientへ共通応答を追加する。Webのfetchは通信だけを担い、解析は標準`parseResponse`、例外本文の検証は公開`apiErrorSchema`を使う。既存の`traceId`はrequest IDであり、OTelのtrace IDとは区別する。
+
+入力検証の`INVALID_INPUT`には`path`・`code`・日英の`messages`を返す。Zod 4標準のlocalesをparse単位で使用し、入力値・正規表現・元のZod例外を公開しない。Webは同じ公開schemaでローカル検証し、APIの項目エラーをTanStack Formの`onServer`へ接続する。項目のラベルと具体的な制約を併記し、形式に業務固有の説明が必要な場合だけ既存のUI翻訳を使う。項目へ対応付けられない失敗は共通通知へ残す。
+
 ```text
 tablecast/
 ├── AGENTS.md
@@ -141,7 +145,7 @@ MCPやVoiceのサービスtokenはブラウザーCookieと分け、内部パス�
 
 ## Web/APIの型境界と店舗
 
-Honoのroute chainから `AppType` を推論し、`@tablecast/api/client` の公開入口で `hc<AppType>` を提供する。Webの業務APIはこのクライアントとHonoの `parseResponse` を使い、レスポンス用Zodを二重定義しない。外部入力のZod検証と認可はAPI側に残す。エラー応答だけはWebの共通fetch境界で正規化する。
+Honoのroute chainから `AppType` を推論し、`@tablecast/api/client` の公開入口で `hc<AppType>` を提供する。Webの業務APIはこのクライアントとHonoの `parseResponse` を使い、レスポンス用Zodを二重定義しない。外部入力のZod検証と認可はAPI側に残す。業務エラーはAPIの共通例外処理で正規化し、WebはHonoの標準`DetailedError`を読む。
 
 `components/ui` は業務を知らないshadcn/Base UI部品、`components` はDataTable・日時・ユーザー表示、`features/store` は店舗のメニュー・メンバー・招待・端末、`features/account` は本人の認証設定を所有する。ai-elementsは `components/ai-elements` に置く。
 

@@ -38,7 +38,7 @@ const dependencies = {
   "container-metrics": [],
   telemetry: ["error", "diagnostics"],
   diagnostics: ["error"],
-  client: ["app", "route"],
+  client: ["app", "route", "schema"],
   schema: ["model"],
   bootstrap: ["model", "pure", "error", "db", "auth-factory"],
   context: ["auth-factory", "model"],

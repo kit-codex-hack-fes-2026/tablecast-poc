@@ -15,9 +15,10 @@ export const devicesAdminRoutes = new Hono<ApiEnv>()
           c.req.raw.headers,
           c.req.valid("json"),
         ),
+        200,
       ),
   )
-  .get("/devices", async (c) => c.json(await listDevices(c.get("services"), c.get("actor"))))
+  .get("/devices", async (c) => c.json(await listDevices(c.get("services"), c.get("actor")), 200))
   .post("/devices/:id/revoke", async (c) =>
-    c.json(await revokeDevice(c.get("services"), c.get("actor"), c.req.param("id"))),
+    c.json(await revokeDevice(c.get("services"), c.get("actor"), c.req.param("id")), 200),
   );

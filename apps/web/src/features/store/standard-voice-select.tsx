@@ -5,7 +5,8 @@ import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { parseResponse, rpc } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 
 export function StandardVoiceSelect({
   storeId,
@@ -48,7 +49,7 @@ export function StandardVoiceSelect({
   for (const page of voices.data?.pages ?? []) {
     for (const voice of page.voices) choices.set(voice.voiceId, voice.displayName);
   }
-  const code = voices.error instanceof ApiFailure ? voices.error.code : null;
+  const code = apiError(voices.error)?.code;
   const catalogError =
     code === "VOICE_CATALOG_NOT_CONFIGURED" || code === "VOICE_CATALOG_UNAVAILABLE";
   function retry() {

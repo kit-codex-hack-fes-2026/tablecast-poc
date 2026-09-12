@@ -1,12 +1,17 @@
+import { Field } from "@base-ui/react/field";
+import { zodFieldValidator } from "../../lib/form-validation";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { ErrorNotice } from "../../components/error-notice";
+import { FieldErrors } from "../../components/ui/field-errors";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { catalogOptions } from "./menu-query";
 
 import { parseResponse, rpc } from "../../lib/api";
+
+const openFieldNames = { guestCount: "guests", locale: "guestLocale", planId: "plan" };
 
 export function OpenTable({
   storeId,
@@ -68,11 +73,7 @@ export function OpenTable({
         <form.AppField
           name="guests"
           validators={{
-            onChange: z
-              .number({ error: t("form_number") })
-              .int(t("form_number"))
-              .min(1, t("form_number"))
-              .max(30, t("form_number")),
+            onChange: zodFieldValidator(z.number().int().min(1).max(30), locale),
           }}
         >
           {(field) => (
@@ -81,39 +82,52 @@ export function OpenTable({
         </form.AppField>
         <form.Field name="guestLocale">
           {(field) => (
-            <label className="flex flex-col gap-2 text-base">
-              {t("admin_locale")}
-              <NativeSelect
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value === "en" ? "en" : "ja")}
-              >
-                <option value="ja">日本語</option>
-                <option value="en">English</option>
-              </NativeSelect>
-            </label>
+            <Field.Root name={field.name} invalid={!field.state.meta.isValid}>
+              <label className="flex flex-col gap-2 text-base">
+                {t("admin_locale")}
+                <NativeSelect
+                  aria-invalid={field.state.meta.errors.length > 0 || undefined}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) =>
+                    field.handleChange(event.target.value === "en" ? "en" : "ja")
+                  }
+                >
+                  <option value="ja">日本語</option>
+                  <option value="en">English</option>
+                </NativeSelect>
+                <FieldErrors errors={field.state.meta.errors} />
+              </label>
+            </Field.Root>
           )}
         </form.Field>
         <form.Field name="plan">
           {(field) => (
-            <label className="flex flex-col gap-2 text-base">
-              {t("kiosk_plan")}
-              <NativeSelect
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
-              >
-                <option value="">{t("admin_no_plan")}</option>
-                {catalog.data.configuration.plans.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.text[locale].displayName}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
+            <Field.Root name={field.name} invalid={!field.state.meta.isValid}>
+              <label className="flex flex-col gap-2 text-base">
+                {t("kiosk_plan")}
+                <NativeSelect
+                  aria-invalid={field.state.meta.errors.length > 0 || undefined}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                >
+                  <option value="">{t("admin_no_plan")}</option>
+                  {catalog.data.configuration.plans.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.text[locale].displayName}
+                    </option>
+                  ))}
+                </NativeSelect>
+                <FieldErrors errors={field.state.meta.errors} />
+              </label>
+            </Field.Root>
           )}
         </form.Field>
-        <ErrorNotice error={open.error || catalog.error} />
+        <form.AppForm>
+          <form.FormErrors error={open.error} fieldNames={openFieldNames} />
+        </form.AppForm>
+        <ErrorNotice error={catalog.error} />
         <form.AppForm>
           <form.SubmitButton size="lg">{t("admin_open_table")}</form.SubmitButton>
         </form.AppForm>

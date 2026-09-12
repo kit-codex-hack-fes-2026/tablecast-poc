@@ -1,14 +1,14 @@
+import { zodFieldValidator } from "../../lib/form-validation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
-import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
 import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 
 export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const client = useQueryClient();
   const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
   const payment = useMutation({
@@ -82,21 +82,30 @@ export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId
           validators={{
             onChangeListenTo: ["kind"],
             onChange: ({ value, fieldApi }) =>
-              !Number.isSafeInteger(value) ||
-              (fieldApi.form.getFieldValue("kind") === "payment" && value < 1)
-                ? t("form_number")
-                : undefined,
+              zodFieldValidator(
+                fieldApi.form.getFieldValue("kind") === "payment"
+                  ? z.number().int().min(1)
+                  : z.number().int(),
+                locale,
+              )({ value }),
           }}
         >
           {(field) => <field.NumberField label={t("admin_amount")} step={1} required />}
         </form.AppField>
         <form.AppField
           name="reason"
-          validators={{ onChange: z.string().trim().min(1, t("form_required")).max(500) }}
+          validators={{
+            onChange: zodFieldValidator(
+              z.string().trim().min(1, t("form_required")).max(500),
+              locale,
+            ),
+          }}
         >
           {(field) => <field.TextField label={t("admin_reason")} required maxLength={500} />}
         </form.AppField>
-        <ErrorNotice error={payment.error} />
+        <form.AppForm>
+          <form.FormErrors error={payment.error} />
+        </form.AppForm>
         <form.AppForm>
           <form.Subscribe selector={(state) => state.values.kind}>
             {(kind) => (

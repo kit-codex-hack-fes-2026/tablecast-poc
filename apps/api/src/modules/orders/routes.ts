@@ -26,6 +26,7 @@ export const ordersAdminRoutes = new Hono<ApiEnv>()
         scoped(c.get("actor"), c.req.param("id")),
         c.req.valid("json"),
       ),
+      200,
     ),
   )
   .post(
@@ -41,5 +42,6 @@ export const ordersAdminRoutes = new Hono<ApiEnv>()
           c.req.param("id"),
           c.req.valid("json").status,
         ),
+        200,
       ),
   );

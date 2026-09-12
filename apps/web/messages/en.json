@@ -14,8 +14,8 @@
   "common_remove": "Remove",
   "common_update": "Update",
   "common_error": "We could not complete that action. Please try again.",
-  "common_connection_error": "Please check your connection. Your order details have been saved.",
-  "common_session_error": "We could not verify this session. Please pair this device again.",
+  "common_connection_error": "Check your connection and try again. Check the latest screen to confirm the outcome.",
+  "common_session_error": "Your session has expired or could not be verified. Sign in or reconnect the device.",
   "common_forbidden": "You do not have permission to do this.",
   "common_conflict": "The details have changed. Please review the latest version.",
   "common_unavailable": "This feature is currently unavailable.",
@@ -501,5 +501,9 @@
   "pwa_install_title": "Add to your iPad Home Screen",
   "pwa_install_steps": "Open the screen you want in Safari, tap Share, then Add to Home Screen. Open the installed app and register the device or sign in.",
   "pwa_kiosk": "Open the table app",
-  "pwa_staff": "Open the staff app"
+  "pwa_staff": "Open the staff app",
+  "common_not_found": "This item could not be found. Select it again from the latest list.",
+  "common_invalid_input": "Check and correct the information you entered.",
+  "common_too_large": "The data is too large to send. Reduce the file size.",
+  "common_rate_limited": "Too many requests. Wait a moment, then try again."
 }

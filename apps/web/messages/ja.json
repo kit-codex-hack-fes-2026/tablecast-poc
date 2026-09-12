@@ -14,8 +14,8 @@
   "common_remove": "削除",
   "common_update": "更新する",
   "common_error": "操作を完了できませんでした。もう一度お試しください。",
-  "common_connection_error": "接続を確認してください。ご注文内容は保存されています。",
-  "common_session_error": "セッションを確認できません。端末を再接続してください。",
+  "common_connection_error": "接続を確認して、もう一度お試しください。操作の結果は最新の画面でご確認ください。",
+  "common_session_error": "接続の有効期限が切れたか、認証を確認できません。ログインまたは端末の再接続を行ってください。",
   "common_forbidden": "この操作の権限がありません。",
   "common_conflict": "内容が更新されました。最新の内容をご確認ください。",
   "common_unavailable": "現在この機能をご利用いただけません。",
@@ -501,5 +501,9 @@
   "pwa_install_title": "iPadのホーム画面に追加",
   "pwa_install_steps": "追加したい画面をSafariで開き、共有からホーム画面に追加を選択します。追加したアプリを開いて端末登録またはログインしてください。",
   "pwa_kiosk": "卓上アプリを開く",
-  "pwa_staff": "店側アプリを開く"
+  "pwa_staff": "店側アプリを開く",
+  "common_not_found": "対象が見つかりません。最新の一覧から選び直してください。",
+  "common_invalid_input": "入力内容を確認して、修正してください。",
+  "common_too_large": "送信するデータが大きすぎます。ファイルのサイズを小さくしてください。",
+  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。"
 }

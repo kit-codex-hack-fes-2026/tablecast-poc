@@ -10,6 +10,7 @@ export const devicesRoutes = new Hono<ApiEnv>()
       await c.get("services").auth.api.deviceCode({
         body: { client_id: "tablecast-kiosk", scope: "tablecast:table" },
       }),
+      200,
     ),
   )
   .post(
@@ -17,7 +18,7 @@ export const devicesRoutes = new Hono<ApiEnv>()
     validate(z.object({ device_code: z.string().min(1).max(191) }).strict()),
     async (c) => {
       const result = await redeemDevice(c.get("services"), c.req.valid("json").device_code);
-      if (!result.ready) return c.json({ ready: false });
+      if (!result.ready) return c.json({ ready: false }, 200);
       setCookie(c, "tablecast.device", result.token, {
         httpOnly: true,
         secure: c.env.TABLECAST_PUBLIC_ORIGIN.startsWith("https:"),
@@ -25,6 +26,6 @@ export const devicesRoutes = new Hono<ApiEnv>()
         path: "/",
         maxAge: 60 * 60 * 24 * 30,
       });
-      return c.json({ ready: true });
+      return c.json({ ready: true }, 200);
     },
   );
