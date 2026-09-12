@@ -28,7 +28,8 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { useI18n } from "../../i18n/locale";
-import { ApiFailure, parseResponse, rpc } from "../../lib/api";
+import { parseResponse, rpc } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 import { ConfigurationErrors } from "./configuration-errors";
 import { demoOptions } from "./demo-query";
 import { DemoViewport } from "./demo-viewport";
@@ -168,9 +169,7 @@ function DemoSession({
   const draftItems =
     drafts.data?.drafts.filter((draft) => draft.status === "draft" || draft.status === "ready") ??
     [];
-  const errors = configurationIssueSchema
-    .array()
-    .safeParse(update.error instanceof ApiFailure ? update.error.details : undefined);
+  const errors = configurationIssueSchema.array().safeParse(apiError(update.error)?.details);
   const selectedConfiguration =
     draftItems.find((draft) => draft.id === update.variables?.sourceDraftId)?.configuration ??
     data.configuration;

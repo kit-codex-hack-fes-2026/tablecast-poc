@@ -258,3 +258,28 @@ it.each([
   expect(logged).toHaveBeenCalledTimes(1);
   expect(String(logged.mock.calls[0]?.[0])).toContain("mcp.authentication");
 });
+
+it("業務RPCでprotocol例外が発生すると、安全なJSONと復帰用headerを返す", async () => {
+  // Given: 業務RPCの例外には公開できない本文が含まれる。
+  const { handleRpcError } = await import("../src/platform/http");
+  const app = new Hono<ApiEnv>()
+    .use("*", requestTelemetry)
+    .onError(handleRpcError)
+    .get("/rpc", () => {
+      throw new HTTPException(429, {
+        res: new Response("private provider message", {
+          status: 429,
+          headers: { "Retry-After": "10" },
+        }),
+      });
+    });
+  // When: 頻度制限を受ける。
+  const response = await app.request("/rpc", {}, env);
+  // Then: 原文を出さず、statusと再試行時刻を維持する。
+  expect(response.status).toBe(429);
+  expect(response.headers.get("Retry-After")).toBe("10");
+  expect(await response.json()).toEqual({
+    error: { code: "REQUEST_REJECTED", message: "REQUEST_REJECTED" },
+    traceId: response.headers.get("X-Request-Id"),
+  });
+});

@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { storesOptions } from "./store-query";
 
-import { ApiFailure } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 import { AdminShell } from "../shell/admin-shell";
 
 const StoreContext = createContext<{
@@ -28,7 +28,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
   const stores = useQuery(storesOptions);
   const store = stores.data?.stores.find((item) => item.id === storeId);
   useEffect(() => {
-    if (stores.error instanceof ApiFailure && stores.error.status === 401)
+    if (apiError(stores.error)?.status === 401)
       void navigate({
         to: "/login",
         search: { returnTo: window.location.pathname + window.location.search },

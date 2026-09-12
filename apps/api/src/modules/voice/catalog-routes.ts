@@ -6,5 +6,5 @@ import { voiceListQuerySchema } from "./model";
 export const voiceAdminRoutes = new Hono<ApiEnv>().get(
   "/voices",
   validateQuery(voiceListQuerySchema),
-  async (c) => c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query"))),
+  async (c) => c.json(await listVoices(c.env, c.get("actor"), c.req.valid("query")), 200),
 );

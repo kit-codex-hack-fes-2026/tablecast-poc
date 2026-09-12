@@ -17,9 +17,9 @@ const demoSessionRoutes = new Hono<ApiEnv>()
     await getSession(c.get("services"), c.get("actor"));
     await next();
   })
-  .get("/", async (c) => c.json(await getDemo(c.get("services"), c.get("actor"))))
+  .get("/", async (c) => c.json(await getDemo(c.get("services"), c.get("actor")), 200))
   .patch("/", validate(demoUpdateSchema), async (c) =>
-    c.json(await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .post(
     "/reset",
@@ -31,6 +31,7 @@ const demoSessionRoutes = new Hono<ApiEnv>()
     async (c) =>
       c.json(
         await resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+        200,
       ),
   )
   .route("/table", tableOperations);
@@ -40,5 +41,5 @@ export const demoRoutes = new Hono<ApiEnv>()
     requireManager(c.get("actor"));
     await next();
   })
-  .post("/", async (c) => c.json(await createDemo(c.get("services"), c.get("actor"))))
+  .post("/", async (c) => c.json(await createDemo(c.get("services"), c.get("actor")), 200))
   .route("/:demoId", demoSessionRoutes);

@@ -82,7 +82,7 @@ export {
   voiceTurnSchema,
 } from "./modules/voice/model";
 export type { VoiceListQuery, VoicePage, VoiceSummary, VoiceTrigger } from "./modules/voice/model";
-export { localeSchema } from "./platform/model";
+export { apiErrorSchema, localeSchema, validationIssuesSchema } from "./platform/model";
 export type { ApiError, Locale } from "./platform/model";
 
 export { showProductsSchema } from "./modules/voice/model";

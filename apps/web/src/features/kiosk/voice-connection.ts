@@ -3,7 +3,8 @@ export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
 import type { Locale } from "@tablecast/api/schema";
 import type { LocalAudioTrack, Room } from "livekit-client";
 import { z } from "zod";
-import { ApiFailure, parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
+import { parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 
 const voicePacket = z.discriminatedUnion("type", [
   z.object({
@@ -187,7 +188,7 @@ export class VoiceConnection {
       if (this.current(attempt)) this.emit({ status: "listening" });
     } catch (error) {
       if (!this.current(attempt)) return;
-      if (error instanceof ApiFailure && error.code === "VOICE_ALREADY_ACTIVE") {
+      if (apiError(error)?.code === "VOICE_ALREADY_ACTIVE") {
         this.desired = false;
         ++this.attempt;
         this.emit({ status: "error", error: "active" });
@@ -197,7 +198,7 @@ export class VoiceConnection {
       const reason =
         error instanceof DOMException && error.name === "NotAllowedError"
           ? "permission"
-          : error instanceof ApiFailure && error.status === 503
+          : apiError(error)?.status === 503
             ? "unconfigured"
             : "connection";
       await this.stop();

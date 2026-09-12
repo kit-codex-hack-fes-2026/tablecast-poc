@@ -14,40 +14,45 @@ import { uiSectionInputSchema } from "./model";
 import { getTableState } from "./queries";
 import { callStaff, changeLocale, requestBill, setUiSection } from "./service";
 export const tableOperations = new Hono<ApiEnv>()
-  .get("/", async (c) => c.json(await getTableState(c.get("services"), c.get("actor"))))
+  .get("/", async (c) => c.json(await getTableState(c.get("services"), c.get("actor")), 200))
   .get("/catalog", async (c) =>
-    c.json(await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId)),
+    c.json(await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId), 200),
   )
   .patch("/ui", validate(uiSectionInputSchema), async (c) =>
-    c.json(await setUiSection(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await setUiSection(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .patch("/voice/speed", validate(speechSpeedInputSchema), async (c) =>
-    c.json(await setSpeechSpeed(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await setSpeechSpeed(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .put("/cart", validate(cartUpdateSchema), async (c) =>
-    c.json(await updateCart(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await updateCart(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .post("/confirm", validate(prepareSchema), async (c) =>
-    c.json(await prepareConfirmation(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await prepareConfirmation(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .post("/orders", validate(submitSchema), async (c) =>
-    c.json(await submitOrder(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    c.json(await submitOrder(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .get("/orders/status", async (c) => {
     const state = await getTableState(c.get("services"), c.get("actor"));
-    return c.json({
-      order:
-        state.orders.find((order) => order.idempotencyKey === c.req.query("idempotencyKey")) ??
-        null,
-    });
+    return c.json(
+      {
+        order:
+          state.orders.find((order) => order.idempotencyKey === c.req.query("idempotencyKey")) ??
+          null,
+      },
+      200,
+    );
   })
-  .post("/call", async (c) => c.json(await callStaff(c.get("services"), c.get("actor"))))
-  .post("/bill/request", async (c) => c.json(await requestBill(c.get("services"), c.get("actor"))))
+  .post("/call", async (c) => c.json(await callStaff(c.get("services"), c.get("actor")), 200))
+  .post("/bill/request", async (c) =>
+    c.json(await requestBill(c.get("services"), c.get("actor")), 200),
+  )
   .patch("/locale", validate(z.object({ locale: localeSchema }).strict()), async (c) =>
-    c.json(await changeLocale(c.get("services"), c.get("actor"), c.req.valid("json").locale)),
+    c.json(await changeLocale(c.get("services"), c.get("actor"), c.req.valid("json").locale), 200),
   )
   .post("/voice/start", async (c) =>
-    c.json(await startVoiceSession(c.get("services"), c.get("actor"))),
+    c.json(await startVoiceSession(c.get("services"), c.get("actor")), 200),
   )
   .post(
     "/voice/stop",
@@ -59,13 +64,14 @@ export const tableOperations = new Hono<ApiEnv>()
           c.get("actor"),
           c.req.valid("json").voiceSessionId,
         ),
+        200,
       ),
   )
   .get(
     "/events",
     validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),
     async (c) =>
-      c.json(await getEvents(c.get("services"), c.get("actor"), c.req.valid("query").after)),
+      c.json(await getEvents(c.get("services"), c.get("actor"), c.req.valid("query").after), 200),
   )
   .get("/live", async (c) => {
     const actor = c.get("actor");

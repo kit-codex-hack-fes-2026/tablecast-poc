@@ -1,3 +1,4 @@
+import { zodFieldValidator } from "../../lib/form-validation";
 import { Field } from "@base-ui/react/field";
 import { useStore as useFormStore } from "@tanstack/react-form";
 import { z } from "zod";
@@ -80,7 +81,7 @@ export function RegisterDevice({
   const hydrated = useHydrated();
   const [tableId, setTableId] = useState(initialTableId);
   const { id: storeId } = useStore();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const client = useQueryClient();
   const devices = useSuspenseQuery(devicesOptions(storeId));
@@ -155,7 +156,12 @@ export function RegisterDevice({
         <fieldset disabled={!hydrated} className="space-y-5">
           <form.Field
             name="userCode"
-            validators={{ onChange: z.string().trim().min(1, t("form_required")).max(30) }}
+            validators={{
+              onChange: zodFieldValidator(
+                z.string().trim().min(1, t("form_required")).max(30),
+                locale,
+              ),
+            }}
           >
             {(field) => (
               <Field.Root
@@ -191,11 +197,9 @@ export function RegisterDevice({
             getRowId={(row) => row.id}
             searchLabel={t("device_search_table")}
           />
-          <ErrorNotice
-            error={devices.error || approve.error}
-            onRetry={() => void devices.refetch()}
-          />
+          <ErrorNotice error={devices.error} onRetry={() => void devices.refetch()} />
           <form.AppForm>
+            <form.FormErrors error={approve.error} />
             <form.SubmitButton disabled={!tableId}>
               <Check />
               {t("admin_approve")}

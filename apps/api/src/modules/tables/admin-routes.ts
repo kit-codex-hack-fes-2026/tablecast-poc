@@ -11,10 +11,10 @@ import { closeTable, openTable, resolveCall } from "./service";
 const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
 export const tablesAdminRoutes = new Hono<ApiEnv>()
   .get("/history", validateQuery(historyQuerySchema), async (c) =>
-    c.json(await getHistory(c.get("services"), c.get("actor"), c.req.valid("query"))),
+    c.json(await getHistory(c.get("services"), c.get("actor"), c.req.valid("query")), 200),
   )
   .get("/tables/:id", async (c) =>
-    c.json(await getTableState(c.get("services"), scoped(c.get("actor"), c.req.param("id")))),
+    c.json(await getTableState(c.get("services"), scoped(c.get("actor"), c.req.param("id"))), 200),
   )
   .get("/tables/:id/events", validateQuery(sessionEventsQuerySchema), async (c) =>
     c.json(
@@ -23,6 +23,7 @@ export const tablesAdminRoutes = new Hono<ApiEnv>()
         scoped(c.get("actor"), c.req.param("id")),
         c.req.valid("query"),
       ),
+      200,
     ),
   )
   .post(
@@ -37,11 +38,12 @@ export const tablesAdminRoutes = new Hono<ApiEnv>()
         })
         .strict(),
     ),
-    async (c) => c.json(await openTable(c.get("services"), c.get("actor"), c.req.valid("json"))),
+    async (c) =>
+      c.json(await openTable(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
   .post("/tables/:id/close", async (c) =>
-    c.json(await closeTable(c.get("services"), scoped(c.get("actor"), c.req.param("id")))),
+    c.json(await closeTable(c.get("services"), scoped(c.get("actor"), c.req.param("id"))), 200),
   )
   .post("/tables/:id/call/resolve", async (c) =>
-    c.json(await resolveCall(c.get("services"), scoped(c.get("actor"), c.req.param("id")))),
+    c.json(await resolveCall(c.get("services"), scoped(c.get("actor"), c.req.param("id"))), 200),
   );

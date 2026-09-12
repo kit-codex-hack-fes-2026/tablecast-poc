@@ -15,10 +15,10 @@ import {
 const versionSchema = z.object({ expectedVersion: z.number().int().nonnegative() }).strict();
 
 export const configurationAdminRoutes = new Hono<ApiEnv>()
-  .get("/drafts", async (c) => c.json(await listDrafts(c.get("services"), c.get("actor"))))
-  .post("/drafts", async (c) => c.json(await createDraft(c.get("services"), c.get("actor"))))
+  .get("/drafts", async (c) => c.json(await listDrafts(c.get("services"), c.get("actor")), 200))
+  .post("/drafts", async (c) => c.json(await createDraft(c.get("services"), c.get("actor")), 200))
   .get("/drafts/:id", async (c) =>
-    c.json(await getDraft(c.get("services"), c.get("actor"), c.req.param("id"))),
+    c.json(await getDraft(c.get("services"), c.get("actor"), c.req.param("id")), 200),
   )
   .put(
     "/drafts/:id",
@@ -33,6 +33,7 @@ export const configurationAdminRoutes = new Hono<ApiEnv>()
           c.req.param("id"),
           c.req.valid("json"),
         ),
+        200,
       ),
   )
   .post("/drafts/:id/validate", validate(versionSchema), async (c) =>
@@ -43,6 +44,7 @@ export const configurationAdminRoutes = new Hono<ApiEnv>()
         c.req.param("id"),
         c.req.valid("json").expectedVersion,
       ),
+      200,
     ),
   )
   .post("/drafts/:id/discard", validate(versionSchema), async (c) =>
@@ -53,6 +55,7 @@ export const configurationAdminRoutes = new Hono<ApiEnv>()
         c.req.param("id"),
         c.req.valid("json").expectedVersion,
       ),
+      200,
     ),
   )
   .post(
@@ -75,5 +78,6 @@ export const configurationAdminRoutes = new Hono<ApiEnv>()
           c.req.param("id"),
           c.req.valid("json"),
         ),
+        200,
       ),
   );

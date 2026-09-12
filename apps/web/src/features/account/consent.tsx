@@ -14,7 +14,7 @@ import { RoleBadge } from "../../components/role-badge";
 import type { loadStores } from "../store/store-query";
 import { storesOptions } from "../store/store-query";
 
-import { ApiFailure } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 import { authClient, authResult } from "../../lib/auth-client";
 
 export function Consent() {
@@ -45,7 +45,7 @@ export function Consent() {
     },
     onSuccess: (result) => window.location.assign(result.url),
   });
-  if (stores.error instanceof ApiFailure && stores.error.status === 401)
+  if (apiError(stores.error)?.status === 401)
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
         <h1>{t("auth_subtitle")}</h1>

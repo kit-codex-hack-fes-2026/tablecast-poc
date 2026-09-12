@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { ApiFailure, parseResponse, rpc, tableEndpoint } from "./api";
+import { parseResponse, rpc, tableEndpoint } from "./api";
+import { apiError } from "./api-error";
 
 export function useRealtime(
   scope: "table" | { storeId: string } | undefined,
@@ -53,7 +54,7 @@ export function useRealtime(
       } catch (error) {
         if (!disposed) {
           setConnected(false);
-          if (error instanceof ApiFailure && error.status === 401) notify();
+          if (apiError(error)?.status === 401) notify();
         }
       } finally {
         fetching = false;

@@ -1,15 +1,15 @@
+import { zodFieldValidator } from "../../lib/form-validation";
 import { createStoreSchema } from "@tablecast/api/schema";
 import { useAppForm } from "../../components/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus } from "lucide-react";
-import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { SettingsShell } from "../shell/settings-shell";
 export function CreateStore() {
-  const { t } = useI18n(),
+  const { t, locale } = useI18n(),
     navigate = useNavigate(),
     client = useQueryClient();
   const create = useMutation({
@@ -53,10 +53,7 @@ export function CreateStore() {
         <form.AppField
           name="name"
           validators={{
-            onChange: ({ value }) =>
-              createStoreSchema.shape.name.safeParse(value).success
-                ? undefined
-                : t("form_required"),
+            onChange: zodFieldValidator(createStoreSchema.shape.name, locale),
           }}
         >
           {(field) => <field.TextField label={t("org_name")} required maxLength={150} />}
@@ -64,26 +61,31 @@ export function CreateStore() {
         <form.AppField
           name="slug"
           validators={{
-            onChange: ({ value }) =>
-              createStoreSchema.shape.slug.safeParse(value).success ? undefined : t("form_slug"),
+            onChange: zodFieldValidator(createStoreSchema.shape.slug, locale, t("form_slug")),
           }}
         >
-          {(field) => <field.TextField label={t("org_slug")} required maxLength={80} />}
+          {(field) => (
+            <field.TextField
+              label={t("org_slug")}
+              description={t("form_slug")}
+              required
+              maxLength={80}
+            />
+          )}
         </form.AppField>
         <form.AppField
           name="tableCount"
           validators={{
-            onChange: ({ value }) =>
-              createStoreSchema.shape.tableCount.safeParse(value).success
-                ? undefined
-                : t("form_number"),
+            onChange: zodFieldValidator(createStoreSchema.shape.tableCount, locale),
           }}
         >
           {(field) => (
             <field.NumberField label={t("stores_table_count")} required min={1} max={100} />
           )}
         </form.AppField>
-        <ErrorNotice error={create.error} />
+        <form.AppForm>
+          <form.FormErrors error={create.error} />
+        </form.AppForm>
         <form.AppForm>
           <form.SubmitButton>
             <Plus />

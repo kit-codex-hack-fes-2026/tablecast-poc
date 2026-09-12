@@ -25,7 +25,7 @@ import {
 } from "../../components/ui/resizable";
 import { money, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { ApiFailure, parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
+import { parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
@@ -220,11 +220,10 @@ function useTableSession({
     onError: refresh,
   });
   const submit = useMutation({
-    mutationFn: () => {
-      if (!snapshot) throw new ApiFailure(409, "SNAPSHOT_REQUIRED");
+    mutationFn: (confirmation: Snapshot) => {
       return parseResponse(
         endpoint.client.orders.$post({
-          json: { snapshotId: snapshot.id, idempotencyKey: submitKey, approved: true },
+          json: { snapshotId: confirmation.id, idempotencyKey: submitKey, approved: true },
         }),
       );
     },
@@ -509,7 +508,7 @@ function TableSession({
                         <Button
                           className="col-span-2 min-w-0 h-auto min-h-12 whitespace-normal py-2"
                           disabled={submit.isPending}
-                          onClick={() => submit.mutate()}
+                          onClick={() => submit.mutate(snapshot)}
                         >
                           {t("kiosk_confirm")}
                           <Check />

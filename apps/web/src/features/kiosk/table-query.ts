@@ -1,6 +1,7 @@
 import type { TableState } from "@tablecast/api/schema";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
-import { ApiFailure, parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
+import { parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 import { latestTable } from "./table-cache";
 export const tableKey = ["tablecast-table"];
 export const tableQueryKey = (endpoint: TableEndpoint) =>
@@ -13,8 +14,7 @@ export const tableOptions = (client: QueryClient, endpoint = tableEndpoint) =>
         const result = await parseResponse(endpoint.client.index.$get({}, { init: { signal } }));
         return latestTable(client.getQueryData<TableState | null>(tableQueryKey(endpoint)), result);
       } catch (error) {
-        if (error instanceof ApiFailure && error.status === 401 && endpoint.key === "table")
-          return null;
+        if (apiError(error)?.status === 401 && endpoint.key === "table") return null;
         throw error;
       }
     },

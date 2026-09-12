@@ -105,3 +105,25 @@ export const handleError: ErrorHandler<ApiEnv> = (error, c) => {
   );
   return c.newResponse(internal.body, internal);
 };
+
+// 業務RPCだけを共通JSON契約へ揃え、認証・MCP等のprotocol応答は変更しない。
+export const handleRpcError: ErrorHandler<ApiEnv> = (error, c) => {
+  const response =
+    error instanceof HTTPException
+      ? error.getResponse()
+      : isAPIError(error)
+        ? new Response(null, { status: error.statusCode, headers: error.headers })
+        : undefined;
+  const status = response?.status;
+  if (!status || status < 400 || status >= 500) return handleError(error, c);
+  const headers = new Headers(response?.headers);
+  headers.delete("Content-Length");
+  headers.delete("Content-Encoding");
+  headers.set("Content-Type", "application/json; charset=UTF-8");
+  const code = status === 400 ? "INVALID_INPUT" : "REQUEST_REJECTED";
+  const result = Response.json(
+    { error: { code, message: code }, traceId: c.get("traceId") },
+    { status, headers },
+  );
+  return c.newResponse(result.body, result);
+};

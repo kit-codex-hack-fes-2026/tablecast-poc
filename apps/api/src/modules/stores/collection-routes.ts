@@ -8,10 +8,13 @@ import { createStore } from "./service";
 export const storesRoutes = new Hono<ApiEnv>()
   .get("/api/admin/stores", async (c) => {
     const session = await staffIdentity(c);
-    return c.json({
-      stores: await listMemberStores(c.get("services"), session.user.id),
-      locale: session.user.locale,
-    });
+    return c.json(
+      {
+        stores: await listMemberStores(c.get("services"), session.user.id),
+        locale: session.user.locale,
+      },
+      200,
+    );
   })
   .post("/api/admin/stores", validate(createStoreSchema), async (c) => {
     const session = await staffIdentity(c);
