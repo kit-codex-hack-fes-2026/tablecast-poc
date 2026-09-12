@@ -1,26 +1,32 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, isNull, max, or, sql, sum } from "drizzle-orm";
 import * as business from "../../db/business-schema";
-import type { EventRecord } from "../../db/records";
+import { member, organization } from "../../db/auth-schema";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
-import { getCatalog } from "../catalog/queries";
+import { catalogQuery, catalogValue } from "../catalog/queries";
 import type { TableEvent } from "../tables/model";
 import { eventValue, tableStateValue } from "../tables/queries";
 import type { AdminState } from "./model";
 export async function getAdminState(services: ApiServices, actor: Actor): Promise<AdminState> {
   const db = services.db;
-  // 読取batchより先のcursorを使い、取得中の更新をリアルタイム経路で回復する。
-  const cursor = await db
-    .select({ cursor: sql<number>`coalesce(max(${business.tableEvents.cursor}),0)` })
-    .from(business.tableEvents)
-    .where(
-      and(
-        eq(business.tableEvents.store_id, actor.storeId),
-        sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`,
+  const storeEvents = and(
+    eq(business.tableEvents.store_id, actor.storeId),
+    or(
+      isNull(business.tableEvents.table_session_id),
+      inArray(
+        business.tableEvents.table_session_id,
+        db
+          .select({ id: business.tableSessions.id })
+          .from(business.tableSessions)
+          .where(
+            and(
+              eq(business.tableSessions.store_id, actor.storeId),
+              eq(business.tableSessions.kind, "table"),
+            ),
+          ),
       ),
-    )
-    .get();
-  const store = await getCatalog(services, actor.storeId);
+    ),
+  );
   const active = db
     .select({ id: business.tableSessions.id })
     .from(business.tableSessions)
@@ -31,82 +37,113 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
         eq(business.tableSessions.kind, "table"),
       ),
     );
-  const [sessions, restaurantTables, orderRows, paymentRows, confirmations, history, events] =
-    await db.batch([
-      db
-        .select()
-        .from(business.tableSessions)
-        .where(
-          and(
-            eq(business.tableSessions.store_id, actor.storeId),
-            eq(business.tableSessions.status, "open"),
-            eq(business.tableSessions.kind, "table"),
-          ),
-        )
-        .orderBy(business.tableSessions.table_id),
-      db
-        .select({
-          id: business.restaurantTables.id,
-          name: business.restaurantTables.name,
-          bill_requested: sql<number>`EXISTS(SELECT 1 FROM table_events e JOIN table_sessions s ON s.id=e.table_session_id AND s.store_id=e.store_id WHERE e.store_id=${actor.storeId} AND s.table_id=restaurant_tables.id AND s.status='open' AND e.kind='bill.requested')`,
-        })
-        .from(business.restaurantTables)
-        .where(eq(business.restaurantTables.store_id, actor.storeId))
-        .orderBy(business.restaurantTables.name),
-      db
-        .select()
-        .from(business.orders)
-        .where(
-          and(
-            eq(business.orders.store_id, actor.storeId),
-            inArray(business.orders.table_session_id, active),
-          ),
-        )
-        .orderBy(business.orders.created_at),
-      db
-        .select({
-          table_session_id: business.payments.table_session_id,
-          kind: business.payments.kind,
-          total: sql<number>`coalesce(sum(${business.payments.amount}),0)`,
-        })
-        .from(business.payments)
-        .where(
-          and(
-            eq(business.payments.store_id, actor.storeId),
-            inArray(business.payments.table_session_id, active),
-          ),
-        )
-        .groupBy(business.payments.table_session_id, business.payments.kind),
-      db
-        .select()
-        .from(business.confirmations)
-        .where(
-          and(
-            eq(business.confirmations.store_id, actor.storeId),
-            inArray(business.confirmations.table_session_id, active),
-            sql`status IN ('pending','read') AND expires_at>${Date.now()}`,
-          ),
-        )
-        .orderBy(desc(business.confirmations.created_at)),
-      db
-        .select()
-        .from(business.tableEvents)
-        .where(
-          sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND table_session_id IN (${active})) WHERE position<=100)`,
-        )
-        .orderBy(business.tableEvents.cursor),
-      db
-        .select()
-        .from(business.tableEvents)
-        .where(
-          and(
-            eq(business.tableEvents.store_id, actor.storeId),
-            sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`,
-          ),
-        )
-        .orderBy(desc(business.tableEvents.cursor))
-        .limit(100),
-    ]);
+  const [
+    cursors,
+    catalogs,
+    sessions,
+    restaurantTables,
+    orderRows,
+    paymentRows,
+    confirmations,
+    history,
+    events,
+  ] = await db.batch([
+    // 状態より先のcursorで取得中の更新を回復する。batch内の順序を維持する。
+    db
+      .select({ cursor: max(business.tableEvents.cursor) })
+      .from(business.tableEvents)
+      .where(storeEvents),
+    catalogQuery(db, actor.storeId),
+    db
+      .select()
+      .from(business.tableSessions)
+      .where(
+        and(
+          eq(business.tableSessions.store_id, actor.storeId),
+          eq(business.tableSessions.status, "open"),
+          eq(business.tableSessions.kind, "table"),
+        ),
+      )
+      .orderBy(business.tableSessions.table_id),
+    db
+      .select({
+        id: business.restaurantTables.id,
+        name: business.restaurantTables.name,
+        bill_requested: exists(
+          db
+            .select({ cursor: business.tableEvents.cursor })
+            .from(business.tableEvents)
+            .innerJoin(
+              business.tableSessions,
+              and(
+                eq(business.tableSessions.id, business.tableEvents.table_session_id),
+                eq(business.tableSessions.store_id, business.tableEvents.store_id),
+              ),
+            )
+            .where(
+              and(
+                eq(business.tableEvents.store_id, actor.storeId),
+                eq(business.tableSessions.table_id, business.restaurantTables.id),
+                eq(business.tableSessions.status, "open"),
+                eq(business.tableEvents.kind, "bill.requested"),
+              ),
+            ),
+        ).mapWith(Number),
+      })
+      .from(business.restaurantTables)
+      .where(eq(business.restaurantTables.store_id, actor.storeId))
+      .orderBy(business.restaurantTables.name),
+    db
+      .select()
+      .from(business.orders)
+      .where(
+        and(
+          eq(business.orders.store_id, actor.storeId),
+          inArray(business.orders.table_session_id, active),
+        ),
+      )
+      .orderBy(business.orders.created_at),
+    db
+      .select({
+        table_session_id: business.payments.table_session_id,
+        kind: business.payments.kind,
+        total: sum(business.payments.amount).mapWith(Number),
+      })
+      .from(business.payments)
+      .where(
+        and(
+          eq(business.payments.store_id, actor.storeId),
+          inArray(business.payments.table_session_id, active),
+        ),
+      )
+      .groupBy(business.payments.table_session_id, business.payments.kind),
+    db
+      .select()
+      .from(business.confirmations)
+      .where(
+        and(
+          eq(business.confirmations.store_id, actor.storeId),
+          inArray(business.confirmations.table_session_id, active),
+          inArray(business.confirmations.status, ["pending", "read"]),
+          gt(business.confirmations.expires_at, Date.now()),
+        ),
+      )
+      .orderBy(desc(business.confirmations.created_at)),
+    db
+      .select()
+      .from(business.tableEvents)
+      .where(
+        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND table_session_id IN (${active})) WHERE position<=100)`,
+      )
+      .orderBy(business.tableEvents.cursor),
+    db
+      .select()
+      .from(business.tableEvents)
+      .where(storeEvents)
+      .orderBy(desc(business.tableEvents.cursor))
+      .limit(100),
+  ]);
+  const store = catalogValue(catalogs[0]);
   const tablesById = new Map(restaurantTables.map((table) => [table.id, table]));
   const occupied = new Set(sessions.map((session) => session.table_id));
   const ordersBySession = Map.groupBy(orderRows, (order) => order.table_session_id);
@@ -133,7 +170,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       .filter((table) => !occupied.has(table.id))
       .map(({ id, name }) => ({ id, name })),
     events: events.toReversed().map(eventValue),
-    cursor: cursor?.cursor ?? 0,
+    cursor: cursors[0]?.cursor ?? 0,
   };
 }
 
@@ -144,13 +181,43 @@ export async function getEvents(
 ): Promise<{ events: TableEvent[]; cursor: number }> {
   const db = services.db;
 
-  const rows = actor.tableSessionId
-    ? await db.all<EventRecord>(
-        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND (table_session_id=${actor.tableSessionId} OR (${actor.demoId ? 0 : 1}=1 AND table_session_id IS NULL AND kind='configuration.published')) AND cursor>${after} ORDER BY cursor LIMIT 500`,
+  const scope = actor.tableSessionId
+    ? or(
+        eq(business.tableEvents.table_session_id, actor.tableSessionId),
+        actor.demoId
+          ? undefined
+          : and(
+              isNull(business.tableEvents.table_session_id),
+              eq(business.tableEvents.kind, "configuration.published"),
+            ),
       )
-    : await db.all<EventRecord>(
-        sql`SELECT * FROM table_events WHERE store_id=${actor.storeId} AND (table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table')) AND cursor>${after} ORDER BY cursor LIMIT 500`,
+    : or(
+        isNull(business.tableEvents.table_session_id),
+        inArray(
+          business.tableEvents.table_session_id,
+          db
+            .select({ id: business.tableSessions.id })
+            .from(business.tableSessions)
+            .where(
+              and(
+                eq(business.tableSessions.store_id, actor.storeId),
+                eq(business.tableSessions.kind, "table"),
+              ),
+            ),
+        ),
       );
+  const rows = await db
+    .select()
+    .from(business.tableEvents)
+    .where(
+      and(
+        eq(business.tableEvents.store_id, actor.storeId),
+        scope,
+        gt(business.tableEvents.cursor, after),
+      ),
+    )
+    .orderBy(business.tableEvents.cursor)
+    .limit(500);
   return {
     events: rows.map((row) => {
       const event = eventValue(row);
@@ -164,15 +231,17 @@ export async function getEvents(
 
 export async function listMemberStores(services: ApiServices, userId: string) {
   const { db } = services;
-  const rows = await db.all<{
-    id: string;
-    name: string;
-    logo: string | null;
-    role: string;
-    organizationId: string;
-  }>(
-    sql`SELECT s.id,s.name,o.logo,m.role,s.organization_id AS organizationId FROM stores s JOIN organization o ON o.id=s.organization_id JOIN member m ON m.organization_id=s.organization_id WHERE m.user_id=${userId} ORDER BY s.name`,
-  );
-
-  return rows;
+  return db
+    .select({
+      id: business.stores.id,
+      name: business.stores.name,
+      logo: organization.logo,
+      role: member.role,
+      organizationId: business.stores.organization_id,
+    })
+    .from(business.stores)
+    .innerJoin(organization, eq(organization.id, business.stores.organization_id))
+    .innerJoin(member, eq(member.organizationId, business.stores.organization_id))
+    .where(eq(member.userId, userId))
+    .orderBy(business.stores.name);
 }

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import * as businessTables from "../src/db/business-schema";
@@ -14,7 +15,7 @@ import {
 import { recordVoiceEvent, setSpeechSpeed, setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
-import { insertFixture } from "./database-fixture";
+import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
 const deviceCookie = `tablecast.device=${deviceToken}`;
@@ -46,46 +47,40 @@ function patchSpeed(body: unknown, cookie = deviceCookie) {
 }
 
 it("状態取得中のタブ変更は返却cursorより後のイベントとして回復できる", async () => {
+  // Given: 読取batchが完了した後、HTTPへ返す前で待つ。
   await setupFixture();
-  const readingCatalog = Promise.withResolvers<void>();
+  const readCompleted = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
-  const prepare = env.TABLECAST_DB.prepare.bind(env.TABLECAST_DB);
-  vi.spyOn(env.TABLECAST_DB, "prepare").mockImplementation((sql) => {
-    const statement = prepare(sql);
-    if (sql.includes('from "stores"')) {
-      const bind = statement.bind.bind(statement);
-      vi.spyOn(statement, "bind").mockImplementation((...values) => {
-        const bound = bind(...values);
-        const raw = bound.raw.bind(bound);
-        vi.spyOn(bound, "raw").mockImplementation(async <T>() => {
-          readingCatalog.resolve();
-          await release.promise;
-          return raw<T>();
-        });
-        return bound;
-      });
-    }
-    return statement;
-  });
+  const batch = env.TABLECAST_DB.batch.bind(env.TABLECAST_DB);
+  vi.spyOn(env.TABLECAST_DB, "batch").mockImplementationOnce(
+    async <T>(statements: D1PreparedStatement[]) => {
+      const result = await batch<T>(statements);
+      readCompleted.resolve();
+      await release.promise;
+      return result;
+    },
+  );
   const reading = getTableState(createApiServices(env), device);
   try {
-    await readingCatalog.promise;
-    await env.TABLECAST_DB.batch([
-      prepare("UPDATE table_sessions SET ui_section='orders' WHERE id=?").bind(
-        device.tableSessionId,
-      ),
-      prepare(
-        "INSERT INTO table_events(store_id,table_session_id,kind,data_json,created_at) VALUES(?,?,'table.ui',?,?)",
-      ).bind(
-        device.storeId,
-        device.tableSessionId,
-        JSON.stringify({ section: "orders" }),
-        Date.now(),
-      ),
+    await readCompleted.promise;
+    // When: 保存済み状態の取得後にタブ変更と通知を同じtransactionへ書く。
+    await fixtureDb.batch([
+      fixtureDb
+        .update(businessTables.tableSessions)
+        .set({ ui_section: "orders" })
+        .where(eq(businessTables.tableSessions.id, device.tableSessionId)),
+      fixtureDb.insert(businessTables.tableEvents).values({
+        store_id: device.storeId,
+        table_session_id: device.tableSessionId,
+        kind: "table.ui",
+        data_json: JSON.stringify({ section: "orders" }),
+        created_at: Date.now(),
+      }),
     ]);
   } finally {
     release.resolve();
   }
+  // Then: 返した旧状態より後の変更をcursorで回収できる。
   const state = await reading;
   const recovery = await getEvents(createApiServices(env), device, state.cursor);
   expect(state.uiSection).toBe("menu");

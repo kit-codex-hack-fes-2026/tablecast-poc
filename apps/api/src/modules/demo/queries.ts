@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
+import { member } from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
-import { findStoreMembership } from "../auth/queries";
 import { configurationSchema } from "../configuration/model";
 import { tablePlanSchema } from "../tables/model";
 import type { Demo } from "./model";
@@ -11,11 +11,19 @@ import type { Demo } from "./model";
 export async function getDemoRecord(services: ApiServices, actor: Actor) {
   ensure(actor.demoId && actor.demoId === actor.tableSessionId, "DEMO_NOT_FOUND", 404);
   const result = await services.db
-    .select({ demo: business.demoSessions, session: business.tableSessions })
+    .select({ demo: business.demoSessions, session: business.tableSessions, role: member.role })
     .from(business.demoSessions)
     .innerJoin(
       business.tableSessions,
       eq(business.tableSessions.id, business.demoSessions.session_id),
+    )
+    .innerJoin(business.stores, eq(business.stores.id, business.tableSessions.store_id))
+    .leftJoin(
+      member,
+      and(
+        eq(member.organizationId, business.stores.organization_id),
+        eq(member.userId, business.demoSessions.created_by),
+      ),
     )
     .where(
       and(
@@ -27,8 +35,7 @@ export async function getDemoRecord(services: ApiServices, actor: Actor) {
     .get();
   ensure(result, "DEMO_NOT_FOUND", 404);
   ensure(actor.kind === "voice" || actor.userId === result.demo.created_by, "DEMO_NOT_FOUND", 404);
-  const member = await findStoreMembership(services, result.demo.created_by, actor.storeId);
-  ensure(member && ["owner", "admin"].includes(member.role), "ADMIN_REQUIRED", 403);
+  ensure(result.role && ["owner", "admin"].includes(result.role), "ADMIN_REQUIRED", 403);
   return result;
 }
 export async function getDemo(services: ApiServices, actor: Actor): Promise<Demo> {

@@ -1,5 +1,5 @@
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -7,7 +7,7 @@ import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { requireManager } from "../auth/policy";
 import { configurationErrors } from "../catalog/pricing";
-import { getCatalog } from "../catalog/queries";
+import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import { notifyStore } from "../tables/mutations";
 import { voiceConfigurationErrors } from "../voice/catalog";
 import {
@@ -55,13 +55,18 @@ export async function getDraft(
 ): Promise<ConfigDraft> {
   const db = services.db;
 
-  const row = await db
-    .select()
-    .from(business.configDrafts)
-    .where(and(eq(business.configDrafts.id, id), eq(business.configDrafts.store_id, actor.storeId)))
-    .get();
+  const [drafts, catalogs] = await db.batch([
+    db
+      .select()
+      .from(business.configDrafts)
+      .where(
+        and(eq(business.configDrafts.id, id), eq(business.configDrafts.store_id, actor.storeId)),
+      ),
+    catalogQuery(db, actor.storeId),
+  ]);
+  const row = drafts[0];
   ensure(row, "DRAFT_NOT_FOUND", 404);
-  const catalog = await getCatalog(services, actor.storeId);
+  const catalog = catalogValue(catalogs[0]);
   return draftValue(row, catalog);
 }
 function draftValue(row: typeof business.configDrafts.$inferSelect, catalog: Catalog): ConfigDraft {
@@ -88,7 +93,7 @@ function draftValue(row: typeof business.configDrafts.$inferSelect, catalog: Cat
 }
 export async function listDrafts(services: ApiServices, actor: Actor) {
   const db = services.db;
-  const [rows, catalog] = await Promise.all([
+  const [rows, catalogs] = await db.batch([
     db
       .select()
       .from(business.configDrafts)
@@ -100,8 +105,9 @@ export async function listDrafts(services: ApiServices, actor: Actor) {
       )
       .orderBy(desc(business.configDrafts.updated_at))
       .limit(30),
-    getCatalog(services, actor.storeId),
+    catalogQuery(db, actor.storeId),
   ]);
+  const catalog = catalogValue(catalogs[0]);
   return { drafts: rows.map((row) => draftValue(row, catalog)) };
 }
 export async function createDraft(services: ApiServices, actor: Actor) {
@@ -144,7 +150,12 @@ export async function updateDraft(
       updated_at: Date.now(),
     })
     .where(
-      sql`id=${id} AND store_id=${actor.storeId} AND version=${input.expectedVersion} AND status IN ('draft','ready')`,
+      and(
+        eq(business.configDrafts.id, id),
+        eq(business.configDrafts.store_id, actor.storeId),
+        eq(business.configDrafts.version, input.expectedVersion),
+        inArray(business.configDrafts.status, ["draft", "ready"]),
+      ),
     );
   ensure(result.meta.changes === 1, "DRAFT_CONFLICT");
   return getDraft(services, actor, id);
@@ -173,7 +184,12 @@ export async function validateDraft(
       updated_at: Date.now(),
     })
     .where(
-      sql`id=${id} AND store_id=${actor.storeId} AND version=${expectedVersion} AND status IN ('draft','ready')`,
+      and(
+        eq(business.configDrafts.id, id),
+        eq(business.configDrafts.store_id, actor.storeId),
+        eq(business.configDrafts.version, expectedVersion),
+        inArray(business.configDrafts.status, ["draft", "ready"]),
+      ),
     );
   ensure(result.meta.changes === 1, "DRAFT_CONFLICT");
   return getDraft(services, actor, id);
@@ -191,7 +207,12 @@ export async function discardDraft(
     .update(business.configDrafts)
     .set({ status: "discarded", updated_at: Date.now() })
     .where(
-      sql`id=${id} AND store_id=${actor.storeId} AND version=${expectedVersion} AND status IN ('draft','ready')`,
+      and(
+        eq(business.configDrafts.id, id),
+        eq(business.configDrafts.store_id, actor.storeId),
+        eq(business.configDrafts.version, expectedVersion),
+        inArray(business.configDrafts.status, ["draft", "ready"]),
+      ),
     );
   ensure(result.meta.changes === 1, "DRAFT_CONFLICT");
   return getDraft(services, actor, id);
@@ -212,11 +233,20 @@ export async function publishDraft(
       ensure(input.approved, "APPROVAL_REQUIRED", 422);
       const draft = await getDraft(services, actor, id);
       const now = Date.now();
-      const previous = await db.get<
-        { id: string; version: number; base_version: number } | undefined
-      >(
-        sql`SELECT id,version,base_version FROM config_drafts WHERE store_id=${actor.storeId} AND publish_key=${input.idempotencyKey}`,
-      );
+      const previous = await db
+        .select({
+          id: business.configDrafts.id,
+          version: business.configDrafts.version,
+          base_version: business.configDrafts.base_version,
+        })
+        .from(business.configDrafts)
+        .where(
+          and(
+            eq(business.configDrafts.store_id, actor.storeId),
+            eq(business.configDrafts.publish_key, input.idempotencyKey),
+          ),
+        )
+        .get();
       if (previous) {
         ensure(
           previous.id === id &&
@@ -280,11 +310,20 @@ export async function publishDraft(
           ),
       ]);
       if (result[0]?.meta.changes !== 1) {
-        const retry = await db.get<
-          { id: string; version: number; base_version: number } | undefined
-        >(
-          sql`SELECT id,version,base_version FROM config_drafts WHERE store_id=${actor.storeId} AND publish_key=${input.idempotencyKey}`,
-        );
+        const retry = await db
+          .select({
+            id: business.configDrafts.id,
+            version: business.configDrafts.version,
+            base_version: business.configDrafts.base_version,
+          })
+          .from(business.configDrafts)
+          .where(
+            and(
+              eq(business.configDrafts.store_id, actor.storeId),
+              eq(business.configDrafts.publish_key, input.idempotencyKey),
+            ),
+          )
+          .get();
         ensure(retry, "DRAFT_CONFLICT");
         ensure(
           retry.id === id &&

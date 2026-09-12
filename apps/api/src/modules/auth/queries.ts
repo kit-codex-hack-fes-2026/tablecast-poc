@@ -1,14 +1,27 @@
-import { sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { member } from "../../db/auth-schema";
+import { devices, stores, tableSessions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 export async function findDeviceSession(services: ApiServices, tokenHash: string) {
-  const db = services.db;
-  return db.get<{ store_id: string; id: string } | undefined>(
-    sql`SELECT d.store_id,s.id FROM devices d JOIN table_sessions s ON s.table_id=d.table_id AND s.store_id=d.store_id AND s.status='open' WHERE d.token_hash=${tokenHash} AND d.revoked_at IS NULL`,
-  );
+  return services.db
+    .select({ store_id: devices.store_id, id: tableSessions.id })
+    .from(devices)
+    .innerJoin(
+      tableSessions,
+      and(
+        eq(tableSessions.table_id, devices.table_id),
+        eq(tableSessions.store_id, devices.store_id),
+        eq(tableSessions.status, "open"),
+      ),
+    )
+    .where(and(eq(devices.token_hash, tokenHash), isNull(devices.revoked_at)))
+    .get();
 }
 export async function findStoreMembership(services: ApiServices, userId: string, storeId: string) {
-  const db = services.db;
-  return db.get<{ role: string } | undefined>(
-    sql`SELECT m.role FROM member m JOIN stores s ON s.organization_id=m.organization_id WHERE m.user_id=${userId} AND s.id=${storeId}`,
-  );
+  return services.db
+    .select({ role: member.role })
+    .from(member)
+    .innerJoin(stores, eq(stores.organization_id, member.organizationId))
+    .where(and(eq(member.userId, userId), eq(stores.id, storeId)))
+    .get();
 }

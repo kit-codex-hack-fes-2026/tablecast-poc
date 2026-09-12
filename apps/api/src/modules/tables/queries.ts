@@ -1,5 +1,5 @@
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, sum as sumAmount } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ConfirmationRecord, EventRecord, OrderRecord, TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
@@ -7,7 +7,7 @@ import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { priceCart, type PlanContext } from "../catalog/pricing";
 import { getDemoRecord } from "../demo/queries";
-import { getCatalog } from "../catalog/queries";
+import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import type { Catalog } from "../configuration/model";
 import {
   cartLineSchema,
@@ -32,6 +32,14 @@ export async function getSession(services: ApiServices, actor: Actor): Promise<T
       ),
     )
     .get();
+  return validateSession(services, actor, row);
+}
+
+export async function validateSession(
+  services: ApiServices,
+  actor: Actor,
+  row: TableRecord | undefined,
+): Promise<TableRecord> {
   ensure(row, "TABLE_NOT_FOUND", 404);
   if (row.kind === "demo") {
     await getDemoRecord(services, actor);
@@ -73,19 +81,27 @@ export function eventValue(row: EventRecord): TableEvent {
   };
 }
 
-export async function planContext(
+export async function getPricingContext(
   services: ApiServices,
   row: TableRecord,
-): Promise<PlanContext | null> {
-  if (!row.plan_json) return null;
+): Promise<{ catalog: Catalog; plan: PlanContext | null }> {
+  const demoId = row.kind === "demo" ? row.id : undefined;
+  if (!row.plan_json)
+    return { catalog: await getCatalog(services, row.store_id, demoId), plan: null };
   const db = services.db;
-  const orders = await db
-    .select()
-    .from(business.orders)
-    .where(
-      and(eq(business.orders.table_session_id, row.id), eq(business.orders.store_id, row.store_id)),
-    );
-  return planFromOrders(row, orders);
+  const [catalogs, orders] = await db.batch([
+    catalogQuery(db, row.store_id, demoId),
+    db
+      .select()
+      .from(business.orders)
+      .where(
+        and(
+          eq(business.orders.table_session_id, row.id),
+          eq(business.orders.store_id, row.store_id),
+        ),
+      ),
+  ]);
+  return { catalog: catalogValue(catalogs[0], demoId), plan: planFromOrders(row, orders) };
 }
 
 export function planFromOrders(row: TableRecord, orders: OrderRecord[]): PlanContext | null {
@@ -171,71 +187,100 @@ export async function getTableState(services: ApiServices, actor: Actor): Promis
     "tablecast.table.read",
     async () => {
       const db = services.db;
-      // 状態読取中の更新を既読扱いにしないよう、回復用cursorを先に確定する。
-      const history = await db
-        .select()
-        .from(business.tableEvents)
-        .where(
-          and(
-            eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
-            eq(business.tableEvents.store_id, actor.storeId),
-          ),
-        )
-        .orderBy(desc(business.tableEvents.cursor))
-        .limit(100);
-      const row = await getSession(services, actor);
-      const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-      const [tables, orderRows, paymentRows, confirmations] = await db.batch([
-        db
-          .select({
-            id: business.tableSessions.id,
-            name: sql<string>`coalesce(${business.restaurantTables.name}, '')`,
-            bill_requested: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE store_id=${actor.storeId} AND table_session_id=${row.id} AND kind='bill.requested')`,
-          })
-          .from(business.tableSessions)
-          .leftJoin(
-            business.restaurantTables,
-            eq(business.restaurantTables.id, business.tableSessions.table_id),
-          )
-          .where(
-            and(
-              eq(business.tableSessions.id, row.id),
-              eq(business.tableSessions.store_id, actor.storeId),
+      ensure(actor.tableSessionId, "TABLE_REQUIRED", 403);
+      const sessionId = actor.tableSessionId;
+      // cursorを先に読む。同じbatchの後続状態より先の更新を既読扱いにしない。
+      const [history, sessions, catalogs, tables, orderRows, paymentRows, confirmations] =
+        await db.batch([
+          db
+            .select()
+            .from(business.tableEvents)
+            .where(
+              and(
+                eq(business.tableEvents.table_session_id, sessionId),
+                eq(business.tableEvents.store_id, actor.storeId),
+              ),
+            )
+            .orderBy(desc(business.tableEvents.cursor))
+            .limit(100),
+          db
+            .select()
+            .from(business.tableSessions)
+            .where(
+              and(
+                eq(business.tableSessions.id, sessionId),
+                eq(business.tableSessions.store_id, actor.storeId),
+              ),
             ),
-          ),
-        db
-          .select()
-          .from(business.orders)
-          .where(
-            and(
-              eq(business.orders.table_session_id, row.id),
-              eq(business.orders.store_id, actor.storeId),
+          catalogQuery(db, actor.storeId, actor.demoId),
+          db
+            .select({
+              id: business.tableSessions.id,
+              name: business.restaurantTables.name,
+              bill_requested: exists(
+                db
+                  .select({ cursor: business.tableEvents.cursor })
+                  .from(business.tableEvents)
+                  .where(
+                    and(
+                      eq(business.tableEvents.store_id, actor.storeId),
+                      eq(business.tableEvents.table_session_id, sessionId),
+                      eq(business.tableEvents.kind, "bill.requested"),
+                    ),
+                  ),
+              ).mapWith(Number),
+            })
+            .from(business.tableSessions)
+            .leftJoin(
+              business.restaurantTables,
+              eq(business.restaurantTables.id, business.tableSessions.table_id),
+            )
+            .where(
+              and(
+                eq(business.tableSessions.id, sessionId),
+                eq(business.tableSessions.store_id, actor.storeId),
+              ),
             ),
-          )
-          .orderBy(business.orders.created_at),
-        db
-          .select({
-            table_session_id: business.payments.table_session_id,
-            kind: business.payments.kind,
-            total: sql<number>`coalesce(sum(${business.payments.amount}),0)`,
-          })
-          .from(business.payments)
-          .where(
-            and(
-              eq(business.payments.table_session_id, row.id),
-              eq(business.payments.store_id, actor.storeId),
-            ),
-          )
-          .groupBy(business.payments.table_session_id, business.payments.kind),
-        db
-          .select()
-          .from(business.confirmations)
-          .where(
-            sql`table_session_id=${row.id} AND store_id=${actor.storeId} AND status IN ('pending','read') AND expires_at>${Date.now()}`,
-          )
-          .orderBy(desc(business.confirmations.created_at))
-          .limit(1),
-      ]);
+          db
+            .select()
+            .from(business.orders)
+            .where(
+              and(
+                eq(business.orders.table_session_id, sessionId),
+                eq(business.orders.store_id, actor.storeId),
+              ),
+            )
+            .orderBy(business.orders.created_at),
+          db
+            .select({
+              table_session_id: business.payments.table_session_id,
+              kind: business.payments.kind,
+              total: sumAmount(business.payments.amount).mapWith(Number),
+            })
+            .from(business.payments)
+            .where(
+              and(
+                eq(business.payments.table_session_id, sessionId),
+                eq(business.payments.store_id, actor.storeId),
+              ),
+            )
+            .groupBy(business.payments.table_session_id, business.payments.kind),
+          db
+            .select()
+            .from(business.confirmations)
+            .where(
+              and(
+                eq(business.confirmations.table_session_id, sessionId),
+                eq(business.confirmations.store_id, actor.storeId),
+                inArray(business.confirmations.status, ["pending", "read"]),
+                gt(business.confirmations.expires_at, Date.now()),
+              ),
+            )
+            .orderBy(desc(business.confirmations.created_at))
+            .limit(1),
+        ]);
+      const row = await validateSession(services, actor, sessions[0]);
+      const catalog = catalogValue(catalogs[0], actor.demoId);
       return tableStateValue(
         row,
         catalog,
@@ -318,4 +363,4 @@ export function tableStateValue(
 }
 
 type PaymentTotal = { table_session_id: string; kind: string; total: number };
-type TableSummary = { id: string; name: string; bill_requested: number };
+type TableSummary = { id: string; name: string | null; bill_requested: number };

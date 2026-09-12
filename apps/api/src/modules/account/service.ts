@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import * as authTables from "../../db/auth-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -14,25 +14,44 @@ export async function listMcpSessions(services: ApiServices, userId: string, hea
 }
 export async function revokeMcpSession(services: ApiServices, userId: string, id: string) {
   const { db } = services;
-  const consent = await db.get<{ client_id: string; reference_id: string | null } | undefined>(
-    sql`SELECT client_id,reference_id FROM oauth_consent WHERE id=${id} AND user_id=${userId}`,
-  );
+  const consent = await db
+    .select({
+      clientId: authTables.oauthConsent.clientId,
+      referenceId: authTables.oauthConsent.referenceId,
+    })
+    .from(authTables.oauthConsent)
+    .where(and(eq(authTables.oauthConsent.id, id), eq(authTables.oauthConsent.userId, userId)))
+    .get();
   ensure(consent, "MCP_SESSION_NOT_FOUND", 404);
-  const now = Date.now();
+  const now = new Date();
   await db.batch([
     db
       .update(authTables.oauthAccessToken)
-      .set({ revoked: sql`${now}` })
+      .set({ revoked: now })
       .where(
-        sql`user_id=${userId} AND client_id=${consent.client_id} AND reference_id IS ${consent.reference_id}`,
+        and(
+          eq(authTables.oauthAccessToken.userId, userId),
+          eq(authTables.oauthAccessToken.clientId, consent.clientId),
+          consent.referenceId === null
+            ? isNull(authTables.oauthAccessToken.referenceId)
+            : eq(authTables.oauthAccessToken.referenceId, consent.referenceId),
+        ),
       ),
     db
       .update(authTables.oauthRefreshToken)
-      .set({ revoked: sql`${now}` })
+      .set({ revoked: now })
       .where(
-        sql`user_id=${userId} AND client_id=${consent.client_id} AND reference_id IS ${consent.reference_id}`,
+        and(
+          eq(authTables.oauthRefreshToken.userId, userId),
+          eq(authTables.oauthRefreshToken.clientId, consent.clientId),
+          consent.referenceId === null
+            ? isNull(authTables.oauthRefreshToken.referenceId)
+            : eq(authTables.oauthRefreshToken.referenceId, consent.referenceId),
+        ),
       ),
-    db.delete(authTables.oauthConsent).where(sql`id=${id} AND user_id=${userId}`),
+    db
+      .delete(authTables.oauthConsent)
+      .where(and(eq(authTables.oauthConsent.id, id), eq(authTables.oauthConsent.userId, userId))),
   ]);
   return { revoked: true };
 }

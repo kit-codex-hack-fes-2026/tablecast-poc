@@ -117,6 +117,8 @@ DB queryが十分短ければ操作関数内に置いてよい。複雑なquery�
 | `modules/*/model.ts`                                                  | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
 | `db`、`migrations`                                                    | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
 
+卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
+
 GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声Room操作は`voice/runtime.ts`へ依存する。
 
 HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tablecast/api/client`、共有が必要な公開型・schemaだけは `@tablecast/api/schema` から明示公開する。
