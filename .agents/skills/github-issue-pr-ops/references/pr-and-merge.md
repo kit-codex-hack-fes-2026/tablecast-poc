@@ -30,6 +30,6 @@
 
 通常PRでは `gh pr checks` / `gh pr view` / `gh pr merge` を使い、必要に応じて `--match-head-commit` で確認済みheadへ限定する。Stackは [stacked PR](stacked-prs.md) に従う。
 
-マージ後にPRと対応Issueの状態を確認し、[Issueの完了判定](lifecycle-comments.md#完了判定) を行う。pushやrebaseでheadが変わった場合は、そのSHAに対する確認結果を取得し直す。
+マージ後にPRと対応Issueの状態を確認し、[AGENTS.mdの完了の確認](../../../../AGENTS.md#完了の確認)に従って対応worktreeの開発用プロセス・コンテナの停止と残存確認を行ってから、[Issueの完了判定](lifecycle-comments.md#完了判定)を行う。pushやrebaseでheadが変わった場合は、そのSHAに対する確認結果を取得し直す。
 
 マージキュー対応のCIを整備する場合だけ、[CI例](../assets/.github/workflows/merge-queue-checks.example.yml) の `merge_group` を既存ワークフローへ統合する。
