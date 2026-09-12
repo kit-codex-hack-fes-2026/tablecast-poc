@@ -1,6 +1,6 @@
 ---
 name: github-project-ops
-description: GitHub Projectsの導入・設定・運用・監査・解除を扱う。フィールド、必須のPriority、トリアージ、Status遷移、ビュー、工数と予定の更新に使う。Projectsの利用や導入が明示されたときに使い、Issue分割・本文・担当・PR運用はgithub-issue-pr-opsと併用する。
+description: GitHub Projectsの項目・Priority・Status・ビューを設定、更新、監査するときに使う。
 ---
 
 # GitHub Projects

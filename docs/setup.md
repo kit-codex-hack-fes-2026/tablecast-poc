@@ -9,7 +9,7 @@ macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う
 
 ## 1. cloneとworktree
 
-Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew install gh` を実行する。着手するIssueと担当は [AGENTS.md](../AGENTS.md#githubの作業契約) に従って確認する。
+Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew install gh` を実行する。着手するIssueと担当は [AGENTS.md](../AGENTS.md#作業契約) に従って確認する。
 
 ```sh
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
@@ -81,6 +81,37 @@ bun run dev
 `dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthとproxyも起動する。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
 起動ログの `http://<worktree>.<repo>.localhost:<port>` を開く。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+
+## 2C. agent開発環境
+
+Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそのルートから `codex` を起動する。以下は開発者が必要な接続だけを選ぶ手順である。`bun run setup` はアプリ依存・生成物・Git hooksを準備し、agent pluginの導入や外部サービスへのログインは行わない。
+
+| 構成                     | 役割と正本                                                                                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`・repo skills | 作業契約と用途別の手順。cloneした [.agents/skills](../.agents/skills) を使う。外部skillの取得元は [skills-lock.json](../skills-lock.json) に記録する             |
+| Agent plugins            | Cloudflare等が配布するskills・MCPのまとまり。CodexのPlugins画面または `codex plugin` で必要なものを導入する                                                      |
+| MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                             |
+| Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
+
+repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
+
+### MCP設定の配置と確認
+
+worktree固有の接続はGit管理外の `.codex/config.toml` に置く。個人共通の設定は `~/.codex/config.toml` に置き、既存ファイルを雛形で上書きしない。[設定例](../.codex/config.toml.example)から必要なサーバーのテーブルだけを統合する。Codexは信頼済みprojectの設定を読む。CLIの `codex mcp list` またはDesktopのMCP設定で登録状態を確認し、変更後は接続を再起動する。[公式のMCP設定](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)を参照する。
+
+MCPはCodexが動くホストから接続する。Dev Container内でCLIを動かす場合はコンテナ内のコマンドとURL、ホストのDesktopを使う場合はホストから到達できるURLを選ぶ。設定の登録、OAuth認可、toolの読取成功を区別し、値を含むconfigや認証情報をチャットへ貼らない。
+
+| 接続          | 導入・認証と確認                                                                                                                                                  |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare    | 公式Cloudflare pluginを導入し、同梱MCPのOAuthで対象アカウントと必要な権限を選ぶ。API仕様検索や許可した設定の読取で確認する                                        |
+| Grafana local | LGTM起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                      |
+| Grafana Cloud | `tablecast-grafana-cloud` を追加する。Viewer service account tokenを `.local/tablecast-grafana-read-token` に保存し、権限を `600` にする。送信用tokenは流用しない |
+| Storybook     | `bun run storybook` を起動し、[開発環境のMCP手順](development.md#storybook-mcp)に従って実際のportを登録する。`docs-list`・`docs-show`で確認する                   |
+| TableCast     | 店舗メニュー操作を試すときに [製品pluginの手順](codex-plugin.md#ローカル接続)を使う。開発用skillsとは別のOAuth接続である                                          |
+
+Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。Wranglerのログインとは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
+
+Grafanaは公式 `grafana/mcp-grafana:1.3.0` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
 
 ## 3. 最初の画面確認
 

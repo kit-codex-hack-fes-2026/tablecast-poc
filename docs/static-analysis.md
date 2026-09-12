@@ -21,8 +21,7 @@
 | apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration                            |
 | livekit/pyproject.toml / uv.lock                 | Python依存、ruff、ty、pytest                             |
 
-このZIPは設定の意図を規定する。依存バージョン未確定の実行用設定を先に大量生成しない。
-固定された互換組合せで公式exampleを通してから設定をcommitする。config共有packageは初期不要。
+採用版と実行内容は各manifestと設定ファイルを正本とする。標準ルールを追加・変更するときは導入版の対応と実効性を確認し、config共有packageは実際に必要になるまで作らない。
 
 ## Oxlintの必須方針
 
@@ -76,7 +75,7 @@ ruffは基本エラー、import、未使用、安全な修正から始める。�
 
 ## Lefthook
 
-pre-commitは変更ファイルへのformat/lint、必要な関連テストまで。重い全ブラウザー試験・有料音声試験を毎commitへ入れない。
+pre-commitは変更ファイルへのformat/lint、commit-msgはコミット規約を検査する。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
 部分stageを壊さない。`git add .` や無関係な差分の自動stageは禁止。formatterの自動stageを使う場合は部分stageを保全できる挙動を先に検証する。
 pre-pushは設定せず、push時に全体検証を繰り返さない。無課金の全体検証はCIで実行し、ローカルで必要な場合は `bun run check` を使う。
 commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文・Issue参照必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
@@ -102,9 +101,21 @@ GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト�
 
 ## skillsと追加pluginの所有
 
-このリポジトリでは自作・外部skillsを `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra` は `bunx skills` で導入し、`skills-lock.json` に取得元を残す。上流本文は整形対象外とする。
+| 正本            | 所有する情報                                             |
+| --------------- | -------------------------------------------------------- |
+| AGENTS.md       | 共通の不変条件と作業別入口                               |
+| 自作skill       | 標準機能・責務・検証範囲を選ぶ判断、該当作業で読む参照先 |
+| docs            | 現行の製品仕様・構成・運用手順                           |
+| lint・hooks・CI | 導入済みの標準ルールと実行依存・cache・検証              |
+| Issue・PR       | 要求と判断の根拠、実装差分と対象commitの検証結果         |
+
+過去の修正履歴はIssueへ残し、同じ原因・類似構造に効く判断だけをskillへ反映する。descriptionは用途が判別できる短い文にし、全作業への発動や全文書読込を要求しない。実際に使うPR本文は[PRテンプレート](../.github/pull_request_template.md)を正本とし、skill内へコピーを持たない。[Astra向けの公式指針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)をこの分担へ適用する。
+
+自作・外部skillsは `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra` の取得元は `skills-lock.json` で管理し、上流本文は整形対象外とする。導入は[セットアップ](setup.md#2c-agent開発環境)、更新は[tablecast-quality](../.agents/skills/tablecast-quality/SKILL.md)を参照する。個人設定やplugin同梱の同名skillをリポジトリから自動削除しない。
 
 Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。
+
+SQLリテラルの必要性や読取の依存関係はDrizzle pluginでは判定できない。API skillで標準query builder・join・batchの採用を判断し、意味を推測するregexや独自の監査runnerを追加しない。
 
 APIは`eslint-plugin-boundaries`の`boundaries/files`で、`modules/<業務>`のroute・service・query・modelとplatform・DB・公開入口を分類する。`boundaries/dependencies`は既定で依存を拒否し、`apps/api/oxlint.config.ts`の対応表だけを許可する。`no-unknown-files`と`no-unknown-dependencies`により、未分類のファイル配置や内部パスへの依存も失敗させる。TypeScript resolverとworkspaceの絶対rootを指定し、ルート・workspace・エディターから同じ解決結果を使う。
 

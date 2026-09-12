@@ -2,6 +2,7 @@ import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
+import connection from "../../../plugins/tablecast/.mcp.json" with { type: "json" };
 import { credentials } from "./support/runtime";
 
 // 認証情報をtraceへ保存しない。
@@ -53,9 +54,8 @@ test("メニューの子ページをサイドバーから開き、再読込と�
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("導入手順の個別URL・現在の接続URL・スキル配布とOAuth一覧を日英で利用できる", async ({
+test("導入手順の個別URL・公開接続URL・スキル配布とOAuth一覧を日英で利用できる", async ({
   page,
-  baseURL,
 }, testInfo) => {
   // Given: プラグイン導入ページ。
   await page.goto("/account/integrations/plugins");
@@ -66,7 +66,7 @@ test("導入手順の個別URL・現在の接続URL・スキル配布とOAuth一
     await page.getByRole("button", { name: language, exact: true }).click();
     await expect(page.getByText(labels.mcp_unpublished, { exact: true })).toBeVisible();
     await expect(page.getByRole("textbox", { name: labels.mcp_endpoint, exact: true })).toHaveValue(
-      `${baseURL}/mcp`,
+      connection.mcpServers.tablecast.url,
     );
     // When: 手動導入へ移動し、スキルを保存する。
     await page.getByRole("link", { name: labels.mcp_manual_install, exact: true }).click();
@@ -75,9 +75,9 @@ test("導入手順の個別URL・現在の接続URL・スキル配布とOAuth一
     await page.getByRole("link", { name: labels.mcp_skill_download, exact: true }).click();
     expect((await downloaded).suggestedFilename()).toBe("SKILL.md");
     // Then: 対象環境と権限が表示され、OAuth一覧にも進める。
-    await expect(page.getByRole("textbox", { name: "Codex CLI", exact: true })).toHaveValue(
-      new RegExp(`${new URL(baseURL ?? "").port}/mcp`),
-    );
+    expect(
+      await page.getByRole("textbox", { name: "Codex CLI", exact: true }).inputValue(),
+    ).toContain(connection.mcpServers.tablecast.url);
     await page.getByRole("link", { name: labels.mcp_oauth_sessions, exact: true }).click();
     await expect(page.getByRole("searchbox", { name: labels.mcp_session_search })).toBeVisible();
     await page.getByRole("link", { name: labels.mcp_plugin_install, exact: true }).click();

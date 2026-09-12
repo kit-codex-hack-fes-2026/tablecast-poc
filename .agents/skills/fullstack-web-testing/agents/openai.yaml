@@ -1,4 +1,4 @@
 interface:
   display_name: "フルスタックWebテスト戦略"
-  short_description: "Web・AgentのBDDテストを最低十分な層へ分担し、決定性を高める"
-  default_prompt: "$fullstack-web-testing を使い、要求をGiven/When/Thenへ整理し、最低十分なレイヤーと具体的なランナーへ割り当て、読みやすく安全なテストを設計・実装してください。"
+  short_description: "Web・API・Agentの必要な保証を最も低い十分なテスト層へ分担する"
+  default_prompt: "$fullstack-web-testing を使い、変更する振る舞いをGiven/When/Thenへ整理し、既存の保証と不足する観測を確認して最も低い十分な層で検証してください。"
