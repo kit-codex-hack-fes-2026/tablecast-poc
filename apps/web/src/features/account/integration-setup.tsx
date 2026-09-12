@@ -8,6 +8,7 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import connection from "../../../../../plugins/tablecast/.mcp.json";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
 import { CopyValue } from "../../components/copy-value";
 import { Badge } from "../../components/ui/badge";
@@ -16,8 +17,8 @@ import { useI18n } from "../../i18n/locale";
 import { IntegrationsShell } from "./integrations-shell";
 
 const repository = "https://github.com/kit-codex-hack-fes-2026/tablecast-poc";
-const packageDocs = "https://developers.openai.com/plugins/build/plugins";
-const connectionDocs = "https://developers.openai.com/plugins/deploy/connect-chatgpt";
+const packageDocs = "https://learn.chatgpt.com/docs/plugins";
+const connectionDocs = "https://learn.chatgpt.com/docs/extend/mcp";
 
 function Guide({
   title,
@@ -55,13 +56,13 @@ function Guide({
 
 export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
   const { t } = useI18n();
-  const endpoint = `${typeof window === "undefined" ? "" : window.location.origin}/mcp`;
+  const endpoint = connection.mcpServers.tablecast.url;
   return (
     <IntegrationsShell>
       {mode === "plugins" ? (
         <>
           <Guide
-            title="Marketplace · ChatGPT / Codex"
+            title="Marketplace · Codex"
             icon={<Blocks className="size-5" />}
             source={packageDocs}
           >
@@ -83,40 +84,21 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
             </a>
           </Guide>
           <Guide
-            title={t("mcp_developer_mode")}
+            title={t("mcp_remote_connection")}
             icon={<Globe className="size-5" />}
             source={connectionDocs}
           >
             <ol className="list-decimal space-y-2 pl-5">
-              <li>{t("mcp_developer_enable")}</li>
-              <li>{t("mcp_developer_connect")}</li>
-              <li>{t("mcp_developer_package")}</li>
+              <li>{t("mcp_remote_add")}</li>
+              <li>{t("mcp_remote_sign_in")}</li>
+              <li>{t("mcp_remote_approve")}</li>
             </ol>
             <CopyValue label={t("mcp_endpoint")} value={endpoint} />
-            <p className="text-sm text-muted-foreground">{t("mcp_remote_requirement")}</p>
-          </Guide>
-          <Guide
-            title={t("mcp_local_repository")}
-            icon={<FolderGit2 className="size-5" />}
-            source={packageDocs}
-          >
-            <p>{t("mcp_local_steps")}</p>
-            <CopyValue
-              label={t("mcp_local_commands")}
-              value={
-                'bun --no-env-file scripts/tablecast-plugin.ts\ncodex plugin marketplace add "$PWD/.local/tablecast-plugin-marketplace"'
-              }
-            />
-            <p>{t("mcp_local_install")}</p>
           </Guide>
         </>
       ) : (
         <>
-          <Guide
-            title="MCP"
-            icon={<Terminal className="size-5" />}
-            source="https://developers.openai.com/codex/mcp"
-          >
+          <Guide title="MCP" icon={<Terminal className="size-5" />} source={connectionDocs}>
             <p>{t("mcp_manual_steps")}</p>
             <CopyValue label={t("mcp_endpoint")} value={endpoint} />
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -131,7 +113,6 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
               label="Codex CLI"
               value={`codex mcp add tablecast --url ${JSON.stringify(endpoint)}\ncodex mcp login tablecast --scopes tablecast:read,tablecast:write --oauth-client-registration dcr`}
             />
-            <p className="text-sm text-muted-foreground">{t("mcp_remote_requirement")}</p>
           </Guide>
           <Guide title="Agent Skills" icon={<Download className="size-5" />}>
             <p>{t("mcp_skill_steps")}</p>
@@ -149,10 +130,6 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
               <Download />
               {t("mcp_skill_download")}
             </Button>
-            <CopyValue
-              label="Codex · .agents/skills/tablecast/SKILL.md"
-              value="mkdir -p .agents/skills/tablecast\ncp plugins/tablecast/skills/tablecast/SKILL.md .agents/skills/tablecast/SKILL.md"
-            />
             <p className="text-sm text-muted-foreground">{t("mcp_skill_requirement")}</p>
           </Guide>
         </>

@@ -134,7 +134,7 @@ AgentのsetLanguageはGUIと同じ言語変更処理を使い、音声と古い�
 
 店舗アイコンは `/admin/stores/:storeId/profile` で管理者が設定する。組織の`logo`を正本とし、店舗一覧・切替・設定ページでは角丸の正方形、ユーザー画像は丸形にする。PNG・JPEG・WebPの1MB以内を受け付け、ユーザー画像と同じ検証・R2保存経路を使う。
 
-MCP・Skillsの管理はプラグイン導入、手動導入、OAuth接続に分け、各ページをURLで再現する。公式ガイド、現在環境の接続URL、CLI設定のコピー、同梱SKILL.mdのダウンロードを用意する。OAuth接続一覧はアプリ・店舗・scope・状態・承認日時・更新日時・アクセストークン期限・更新トークン期限・解除操作をTanStack Tableで表示する。
+MCP・Skillsの管理はプラグイン導入、手動導入、OAuth接続に分け、各ページをURLで再現する。店舗の利用者へ公開HTTPS MCPとOAuthの接続を案内し、cloneやローカル開発環境を要求しない。公式ガイド、公開pluginと同じ本番接続URL、CLI設定のコピー、同梱SKILL.mdの任意ダウンロードを用意する。接続URLは`plugins/tablecast/.mcp.json`を参照し、表示用に複製しない。OAuth接続一覧はアプリ・店舗・scope・状態・承認日時・更新日時・アクセストークン期限・更新トークン期限・解除操作をTanStack Tableで表示する。
 
 ## 初期表示と非同期状態
 
