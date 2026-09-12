@@ -38,7 +38,35 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 
 ## ローカル接続
 
-ここからは開発者向けの検証手順であり、製品のWeb画面には掲載しない。開発サーバーを[setup](setup.md)に従って起動してから実行する。
+ここからは開発者向けの検証手順であり、製品のWeb画面には掲載しない。日常のMCP動作確認では、対象worktreeの`.codex/config.toml`へ`tablecast-local`として直接登録する。本番pluginの導入や再生成は不要である。
+
+1. [setup](setup.md)に従って対象worktreeの開発サーバーを起動する（ホストは`bun run dev`、Dev Containerは`bun run dev:container`）。別ターミナルを同じworktreeで開き、起動ログのURL、または次の読取でMCP URLを確認する。
+
+   ```sh
+   bun --no-env-file -e 'import { readRuntime } from "./scripts/tablecast-runtime"; console.log(`${(await readRuntime()).origin}/mcp`)'
+   ```
+
+2. Git管理外の`.codex/config.toml`へ次のテーブルだけを追加し、`<local-origin>`を確認したURLのoriginへ置き換える。既存のGrafana・Storybook・本番MCP設定は保持する。Dev Container利用時は[接続元ホストの選択](setup.md#mcp設定の配置と確認)も確認する。
+
+   ```toml
+   [mcp_servers.tablecast-local]
+   url = "<local-origin>/mcp"
+   ```
+
+3. そのworktreeのルートで登録先を確認してOAuthログインする。ブラウザーの接続先もローカルoriginであることを確かめ、その環境の`.local/demo.json`にある開発用アカウントで対象店舗と読取権限に同意する。
+
+   ```sh
+   codex mcp get tablecast-local
+   codex mcp login tablecast-local --scopes tablecast:read --oauth-client-registration dcr
+   ```
+
+4. Codex Desktopではこのworktreeを開いてMCP接続を再起動し、CLIでは同じルートから新しい`codex`セッションを開始する。tool一覧を確認し、`tablecast-local`の`get_configuration`を呼び、店舗ID・名前がローカル管理画面のfixtureと一致することを確認する。登録成功やHTTP応答だけで完了としない。書込みの検証が必要なときだけ`tablecast:read,tablecast:write`で再認可する。
+
+ローカル画面の利用者向け導入案内は本番URLのため、この開発手順で接続先を選ぶ。ポートが変わったら`tablecast-local`のURLとOAuth接続を更新する。検証後は[終了手順](setup.md#6-終了再開復旧)に従って起動したプロセスを停止する。
+
+### ローカルpluginの配布を検証する場合
+
+pluginの同梱MCP・skill・インストール時のOAuthを確認するときだけ、開発サーバー起動後に生成する。
 
 ```sh
 bun --no-env-file scripts/tablecast-plugin.ts
@@ -46,20 +74,11 @@ codex plugin marketplace add "$PWD/.local/tablecast-plugin-marketplace"
 codex plugin add tablecast@tablecast
 ```
 
-生成先は`.local/tablecast-plugin-marketplace`だけで、そのcheckoutの現在のURLを持つ。リポジトリの公開pluginと`.codex/config.toml`は更新せず、GrafanaやStorybook等の既存設定を維持したまま再生成できる。pluginに同梱したMCPを使い、同じ接続を設定ファイルへ重複登録しない。OAuth認証と最小読取は上記の接続確認に従う。
+生成先は`.local/tablecast-plugin-marketplace`だけで、そのcheckoutの現在のURLを持つ。リポジトリの公開pluginと`.codex/config.toml`は更新せず、既存設定を維持したまま再生成できる。公開・ローカルともplugin名は`tablecast@tablecast`のため、導入前に`codex plugin marketplace list`で登録元を、導入後にMCP接続設定で実URLを確認する。別worktreeや本番向けの登録がある場合は、上記の直接接続を使う。配布自体の検証は、既存の登録元を切り替えてよい開発環境で行う。
 
-ローカルのポートが変わった場合は生成とプラグインの再インストール、必要に応じてOAuthログインを再実行する。管理画面の案内は本番URLのため、ローカル検証には生成したpluginのURLを使う。
+同じローカル接続をpluginと`tablecast-local`の両方で同時に有効にしない。OAuth認証と最小読取は上記と同じローカルorigin・fixtureで確認する。ポートが変わった場合は生成とプラグインの再インストール、必要に応じてOAuthログインを再実行する。
 
-### 開発用MCPを手動登録する場合
-
-pluginを使わずMCPだけを検証する場合は、Git管理外の`.codex/config.toml`へ次のテーブルだけを追加する。`<origin>`をこのworktreeの起動URLへ置き換え、他のMCP設定は保持する。OAuthログインの手順はリモート接続と共通である。
-
-```toml
-[mcp_servers.tablecast]
-url = "<origin>/mcp"
-```
-
-旧生成物に`# TableCast generated local MCP`が残る場合も自動削除しない。pluginへ切り替える開発者は重複する`[mcp_servers.tablecast]`だけを取り除き、他サーバーの設定を保持する。
+旧生成物に`# TableCast generated local MCP`が残る場合も自動削除しない。接続を切り替える開発者は旧`[mcp_servers.tablecast]`の接続先を確認して重複分だけを取り除き、他サーバーの設定を保持する。
 
 ## 公開接続先の更新
 

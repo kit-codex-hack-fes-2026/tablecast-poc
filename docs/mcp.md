@@ -51,6 +51,6 @@ voiceはInworldの標準voiceを選ぶ。Custom Voiceやreference uploadの項�
 
 公開はWebと同一オリジンの `/mcp` とし、Hono側の公式MCP/OAuth機能を使う。実装版が要求するOAuth discoveryとtransportを確認する。
 組織・店舗・権限を認証コンテキストから確定し、tool引数の店舗IDだけに頼らない。
-ローカルはMCP Inspectorを使う。ChatGPTからの到達には対応するトンネルまたはHTTPS公開が必要で、localhostだけでは接続できない。[S15](sources.md#s15)
+ローカルは[CodexのMCP接続手順](codex-plugin.md#ローカル接続)でOAuthとtoolの実行を確認する。プロトコルの診断にはMCP Inspectorも使える。ChatGPTのクラウドからの到達には対応するトンネルまたはHTTPS公開が必要で、localhostだけでは接続できない。[S15](sources.md#s15)
 実際の店舗ChatGPTプラン・ワークスペースで書き込みMCPが使えることをデモ前に確認する。過去のプラン別制限を固定仕様として書き写さない。
 テストだけの認証無効化や本番Secretの埋込みで接続を成立させない。

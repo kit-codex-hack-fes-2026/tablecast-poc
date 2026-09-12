@@ -2,6 +2,11 @@
 # 既存設定を上書きせず、plugin同梱のMCPは重複登録しない。
 # 手順と認証: docs/setup.md のagent開発環境、docs/observability.md。
 
+# TableCastのローカルMCPを検証する場合は起動ログのoriginを指定する。
+# 手順: docs/codex-plugin.md のローカル接続。本番pluginと区別する。
+# [mcp_servers.tablecast-local]
+# url = "<local-origin>/mcp"
+
 [mcp_servers.tablecast-grafana-local]
 command = "bun"
 env_vars = ["TABLECAST_CONTAINER"]
