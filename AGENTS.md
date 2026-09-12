@@ -43,6 +43,8 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 Bun workspacesとTurborepoを使う。`apps/api`がDBと業務判断、`apps/web`がTanStack StartとUI、`livekit`がPython音声を所有する。依存の正本はrootの`bun.lock`と`livekit/pyproject.toml`・`uv.lock`。実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonの実行とenvはuvへ任せる。
 
+Webは店舗の利用者向けとし、リポジトリのclone・開発サーバー起動・plugin生成を導入条件にしない。外部連携は公開サービスへのOAuth接続を案内し、開発・配布手順は開発者向け文書へ置く。
+
 Webは標準Tailwind utilityをTSXへ置き、`styles.css`はトークンと最小限の全体既定値に限定する。`components/ui`は業務非依存、`components`は共通表示、`features`は業務状態・操作を所有し、共通の見た目は既存部品・Tailwind Variantsを使う。StorybookはWeb内、Storyは部品へ隣接させる。
 
 自作skillは`.agents/skills`に直接置き、外部skillの取得元は`skills-lock.json`で管理する。外部の本文を翻訳・整形するだけの変更をしない。参考構成の採否は[参照リポジトリ](docs/enterprise-agentic-saas-starter.md)に記載する。
