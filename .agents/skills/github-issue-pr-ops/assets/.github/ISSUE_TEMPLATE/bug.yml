@@ -4,7 +4,7 @@ labels: [fix]
 body:
   - type: markdown
     attributes:
-      value: "画像・動画やログは関連する説明中に埋め込み、直下に操作と確認結果の短いキャプションを添える。撮ったままでよく、装飾編集は不要。秘密情報を除き、必要なら圧縮する。"
+      value: "画像・動画を添える場合は関連説明中に置き、短いキャプションを添える。ログはコードブロックで示す。秘密情報を除き、必要なら圧縮する。"
   - type: textarea
     id: behavior
     attributes:
@@ -16,14 +16,14 @@ body:
     id: reproduction
     attributes:
       label: "再現手順"
-      description: "操作、環境、影響範囲を分かる範囲で書く。画像・動画やログは関連する説明中に埋め込み、直下に操作と確認結果の短いキャプションを添える。撮ったままでよく、装飾編集は不要。秘密情報を除き、必要なら圧縮する。"
+      description: "操作、環境、影響範囲を分かる範囲で書く。画像・動画を添える場合は関連説明中に置き、短いキャプションを添える。ログはコードブロックで示す。秘密情報を除き、必要なら圧縮する。"
     validations:
       required: true
   - type: textarea
     id: verification
     attributes:
       label: "修正の確認方法"
-      description: "期待動作に戻ったと判断する条件を書く。UI・エンドユーザーの振る舞い変更は、変更後の画像か動画をPRの関連説明中へキャプション付きで必ず埋め込む。撮ったままでよい。"
+      description: "期待動作に戻ったと判断する条件を書く。UI・Webアプリの見た目や操作を変える場合だけ、変更後の画像か動画をPRの関連説明中へ添える。CLI・API・設定・文書の結果はテキストやコードブロックで示す。"
     validations:
       required: true
   - type: textarea
