@@ -32,7 +32,8 @@ WindowsでBun 1.3.13、Node.js 24.7以降、Git LFS、Chrome、FFmpeg/FFprobeを
 git lfs install --local
 # 保存素材からの動画生成に必要なものだけ取得する（原録画・完成動画は含めない）。
 git lfs pull --include="apps/presentation/assets/audio/**,apps/presentation/assets/demo/**,apps/presentation/assets/fonts/**,apps/presentation/assets/images/**" --exclude=
-git lfs fsck
+# fsckはpullの--exclude=を引き継がない。取得しなかった原録画・完成動画だけを除外する。
+git -c lfs.fetchexclude="apps/presentation/assets/openscreen/**,apps/presentation/assets/films/**" lfs fsck
 bun --no-env-file install --frozen-lockfile --ignore-scripts
 bun run --cwd apps/presentation test
 cd apps/presentation
@@ -46,7 +47,11 @@ bun run video --project projects/tablecast-main-rerecord.json --film technical -
 
 LFSの実体がない場合はMP4やWAVを利用できない。動画制作時は上記のように`--include`で範囲を選び、`--exclude=`で既定の除外も解除する。`--include`だけでは取得できない。完成品を見る場合は`git lfs pull --include="apps/presentation/assets/films/**" --exclude=`、採用原録画を含む全素材が必要なら`git lfs pull --include="apps/presentation/assets/**" --exclude=`を使う。取得範囲の指定は[Git LFSの標準機能](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs-pull.adoc)を使う。
 
-`.gitattributes`はpresentation内で有効であり、ルートに重複定義する必要はない。新素材は通常の`git add`後に`git lfs ls-files`と`git lfs fsck`で確認する。共有素材の実体は約342MB（326MiB）。転送量は重複するLFS objectと取得範囲により異なる。リモート転送前にリポジトリ所有者のLFS利用量を確認する。
+`fsck`にも`lfs.fetchexclude`が適用される。上の検査は取得済みのaudio・demo・fonts・imagesを対象とし、未取得のopenscreen・filmsだけを除外する。単に`git lfs fsck`を実行すると、既定の除外によりpresentation素材を検査せず成功するので使わない。
+
+`.gitattributes`はpresentation内で有効であり、ルートに重複定義する必要はない。共有前は全素材を取得し、通常の`git add`後に`git lfs ls-files`と`git -c lfs.fetchexclude= lfs fsck`で除外なしの整合性検査を行う。共有素材の実体は約342MB（326MiB）。転送量は重複するLFS objectと取得範囲により異なる。リモート転送前にリポジトリ所有者のLFS利用量を確認する。
+
+現行の採用素材と完成例4本は、同じ版の確認・再生成に使うためGit LFSに保持する。制作途中のrunやPRごとの新しい書き出しは追加しない。PR単位の動画配布は[Issue #139](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/139)のActions Artifactsで扱う予定で、保存期限のある検証用成果物と採用版の保管を分ける。
 
 `.openscreen`は小さいJSONとして通常Git管理し、改行変換を止めて差分を表示する。`bun run test`はGit管理対象のprojectと収録ログを読み、メディアの絶対参照と個人ディレクトリの再混入を検出する。LFS未取得のCIでも同じ検査を実行する。共有ポリシーの検証結果は[公開ポリシーの検証記録](records/tablecast-sharing-policy-validation.json)を参照する。
 

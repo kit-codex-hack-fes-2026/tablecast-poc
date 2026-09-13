@@ -10,9 +10,9 @@ v13追記：OpenScreen CLIのカーソル設定の制約に対し、[実操作�
 
 - 動画workspaceの描画依存はHyperFrames 0.8.33とGSAP 3.14.2。manifest・ルートlock・インストール済みpackageの版は一致している。生成HTMLはローカルへコピーしたGSAPと `styles.css` を読む。React、Motion、Tailwind、Remotionを動画へ重ねて読み込んでいない。ルートlock内のMotion・TailwindはWebアプリの依存であり、動画用の競合依存ではない。
 - 現環境はNode.js 25.0.0、Bun 1.3.13。HyperFramesのNode.js要件は22以上。この組合せでv6の2本を描画済み。全環境・全機能の互換性を保証するものではない。
-- リポジトリの `skills-lock.json` にある6件のうち、動画に直接関係するのは `openscreen-demo-video`、実装監査に使うのは `minimum-impl`。デザイン系スキルが多数このlockへ追加された状態ではない。
+- 9月12日の棚卸しでは、動画に直接関係するrepo skillは `openscreen-demo-video` だった。9月14日に下記のHyperFrames 3スキルを追加し、制作判断の参照元もGitで共有する。
 - `frontend-design@claude-plugins-official` はユーザー設定で `enabled = false`。ローカルキャッシュにSKILL.mdが残っている。v5文書の「適用した」は過去に参照した記録であり、現在の有効化やプロジェクト依存への固定を意味しない。
-- HyperFrames 0.8.33の配布物で確認できたSKILL.mdは `hyperframes` と `hyperframes-cli`。そこからCreative/Core/Animate等への参照がある。以前の制作記録にあるCreative/Animationの参照元・版はプロジェクトに十分記録されておらず、同じ内容を再取得できる状態とは扱わない。
+- HyperFrames 0.8.33のnpm配布物には `hyperframes` と `hyperframes-cli` が含まれる。参照先のCore・Animation・Creativeは同梱されないため、同じ公開元コミットからrepo skillとして追加した。以前の制作記録の参照版は特定できておらず、今回の固定版を今後の制作基準とする。
 - スキル本文は制作時の判断材料であり、生成HTMLが実行するライブラリではない。今回再現した固定幅・固定行高の障害はCSSと生成処理の問題だった。スキル同士のバイナリ互換性が原因という証拠はない。一方、異なる制作方針を選別せず参照する運用上の問題はある。
 
 ## 採用範囲
@@ -33,6 +33,26 @@ v13追記：OpenScreen CLIのカーソル設定の制約に対し、[実操作�
 | HyperFrames Creativeなどの演出ガイド                        | 現行方針を決める複数の正本にしない。必要な資料は参照元と版を記録して、具体的な採否を `frame.md` に残す                           |
 | imagegen / ComfyUI / 生成動画                               | 必須工程にしない。現行の動画用導入は実画面、技術図はHTML/SVG。必要時の人物なしの補助イラストは選択肢。実装根拠の代用にしない     |
 | PowerPoint・Slides用スキル、Sites、Remotion、追加のUIキット | 現行の動画基盤では採用しない。インストールや移行を行わない                                                                       |
+
+## 制作スキルの固定と復元
+
+HyperFrames 0.8.33のnpm metadataの`gitHead`と、公開元の`v0.8.33`タグはともに`6e3308be4f2ab886597fcee7c5896a5f842ec4b6`。以下はそのコミットから本文・参照ファイルをコピーし、通常のGitで管理する。cloneで取得できるため、動画を再生成するたびにskillをインストールする必要はない。
+
+| スキル                                                                       | 参照する作業                                 |
+| ---------------------------------------------------------------------------- | -------------------------------------------- |
+| [hyperframes-core](../../.agents/skills/hyperframes-core/SKILL.md)           | HTML composition・時間・メディアの契約       |
+| [hyperframes-animation](../../.agents/skills/hyperframes-animation/SKILL.md) | GSAPでの指定時刻描画・アニメーション設計     |
+| [hyperframes-creative](../../.agents/skills/hyperframes-creative/SKILL.md)   | 新しい場面の構成・文字・余白・情報階層の検討 |
+
+取得元・固定ref・内容ハッシュは[skills-lock.json](../../skills-lock.json)、上流のApache-2.0ライセンスは[hyperframes-LICENSE](../../.agents/skills/hyperframes-LICENSE)に保持する。同梱フォントのOFLも元の配置で保持する。本文を整形・翻訳せず、formatter・lintの対象からこの3ディレクトリだけを外す。再取得が必要な場合はリポジトリルートで実行する。
+
+```sh
+bunx skills@1.5.26 add https://github.com/heygen-com/hyperframes/tree/6e3308be4f2ab886597fcee7c5896a5f842ec4b6/skills --skill hyperframes-core hyperframes-animation hyperframes-creative --agent codex --copy -y
+```
+
+npm同梱の入口とCLI手順は`bun install --frozen-lockfile`で復元する。参照先は`apps/presentation/node_modules/hyperframes/dist/skills/{hyperframes,hyperframes-cli}/SKILL.md`。上流ガイドが挙げる別のmedia・registry・Three.js・Motion等のスキルは現行工程の必須依存ではなく、今回の共有対象には含めない。ガイドの自動更新・初期化・追加インストールを既存基盤へそのまま適用せず、GENERATION.mdと既存のHyperFrames＋GSAP構成に必要な箇所だけを使う。
+
+Git hookもこの3ディレクトリをファイル一覧から除外する。上流ファイルだけの変更やWindowsの引数分割で、対象外ファイルだけがformatterへ渡ることを防ぐ。制作コード・台本・自作手順書は従来どおり検査する。同梱の補助スクリプトは通常の生成・検査から呼ばず、既存の`bun run video`を使う。
 
 ## 文書と判断の整理
 

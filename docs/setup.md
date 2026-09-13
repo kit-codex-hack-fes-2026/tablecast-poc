@@ -97,6 +97,8 @@ Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそ�
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
+動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。描画依存の0.8.33と同じ公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、最新版への一括更新は行わない。
+
 ### MCP設定の配置と確認
 
 worktree固有の接続はGit管理外の `.codex/config.toml` に置く。個人共通の設定は `~/.codex/config.toml` に置き、既存ファイルを雛形で上書きしない。[設定例](../.codex/config.toml.example)から必要なサーバーのテーブルだけを統合する。Codexは信頼済みprojectの設定を読む。CLIの `codex mcp list` またはDesktopのMCP設定で登録状態を確認し、変更後は接続を再起動する。[公式のMCP設定](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)を参照する。
