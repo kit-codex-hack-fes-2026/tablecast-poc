@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import OpenAI, { ConflictError, NotFoundError } from "openai";
 import type { Turn } from "openai/resources/beta/agents/sessions/turns";
 import { z } from "zod";
@@ -65,7 +65,9 @@ export async function cancelAgentSession(services: ApiServices, agentSessionId: 
               event.session_id === agentSessionId &&
               event.turn.subagent_id === null
             ) {
-              await cancel(event.turn);
+              if (await cancel(event.turn)) {
+                if ((await snapshot(subscriptionSignal)).finished) return true;
+              }
             } else if (
               ((event.type === "agent.session.idle" ||
                 event.type === "agent.session.failed" ||
@@ -80,10 +82,12 @@ export async function cancelAgentSession(services: ApiServices, agentSessionId: 
               // turnの終端通知だけでは、セッション全体の停止を成功扱いしない。
               const latest = await snapshot(subscriptionSignal);
               if (latest.finished) return true;
-              await cancel(latest.turn);
+              if (await cancel(latest.turn)) {
+                if ((await snapshot(subscriptionSignal)).finished) return true;
+              }
             }
           }
-          return false;
+          return !subscriptionSignal.aborted && (await snapshot(subscriptionSignal)).finished;
         } finally {
           events.controller.abort();
         }
@@ -173,14 +177,13 @@ export async function closeLiveSession(services: ApiServices, voiceSessionId: st
 }
 
 export async function stopVoiceRoom(services: ApiServices, voiceSessionId: string) {
-  if (!services.env.TABLECAST_MODEL_API_KEY) return;
+  if (!services.env.TABLECAST_MODEL_API_KEY) return true;
   const pending = await services.db
     .select({ id: business.voiceTurns.agent_session_id })
     .from(business.voiceTurns)
     .where(
       and(
         eq(business.voiceTurns.voice_session_id, voiceSessionId),
-        isNotNull(business.voiceTurns.agent_session_id),
         isNull(business.voiceTurns.agent_finished_at),
       ),
     );
@@ -199,4 +202,6 @@ export async function stopVoiceRoom(services: ApiServices, voiceSessionId: strin
       undefined,
       { cause: failed.reason },
     );
+  // 作成応答待ちのsessionは元の委任処理がID取得後に取り消す。受付と完了を区別する。
+  return pending.every(({ id }) => id !== null);
 }

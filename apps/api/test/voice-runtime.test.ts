@@ -144,6 +144,49 @@ it.each(["idle", "failed"])(
   },
 );
 
+it("hosted sessionの作成応答待ちでは停止を受け付け、生成完了と区別して202を返す", async () => {
+  await setupFixture();
+  const api = services();
+  const voiceSessionId = "tablecast-creating-stop-live";
+  await setVoiceSession(api, device, voiceSessionId);
+  await api.db.insert(business.voiceTurns).values({
+    id: "tablecast-creating-stop-turn",
+    voice_session_id: voiceSessionId,
+    table_session_id: device.tableSessionId,
+    store_id: device.storeId,
+    status: "started",
+    started_at: 1,
+  });
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    expect(url.pathname).toBe(`/v1/live/sessions/${voiceSessionId}/attach`);
+    return new Response(null, { status: 404 });
+  });
+  const context = createExecutionContext();
+  const response = await app.fetch(
+    new Request("http://localhost:3000/api/table/voice/stop", {
+      method: "POST",
+      headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ voiceSessionId }),
+    }),
+    { ...env, TABLECAST_MODEL_API_KEY: "tablecast-private-model-key" },
+    context,
+  );
+  await waitOnExecutionContext(context);
+  expect(response.status).toBe(202);
+  expect(await response.json()).toMatchObject({ voiceState: "stopped", voiceSessionId: null });
+  expect(
+    await api.db
+      .select({
+        status: business.voiceTurns.status,
+        finished: business.voiceTurns.agent_finished_at,
+      })
+      .from(business.voiceTurns)
+      .where(eq(business.voiceTurns.id, "tablecast-creating-stop-turn"))
+      .get(),
+  ).toEqual({ status: "interrupted", finished: null });
+});
+
 it.each(["終端なし", "root終端のみ", "idleにも未処理actionあり"])(
   "%sでEOFになれば停止HTTPを503にし、生成完了をDBへ記録しない",
   async (ending) => {
@@ -256,18 +299,7 @@ it.each(["未作成", "queued"])(
       if (init?.method === "POST") {
         cancellations.push(phase);
         phase = "cancelled";
-        const stream = await connected.promise;
-        stream.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({
-              type: "agent.session.turn.cancelled",
-              session_id: agentSessionId,
-              turn_id: "tablecast-root-turn",
-              turn: { id: "tablecast-root-turn", subagent_id: null, status: "cancelled" },
-            })}\n\n`,
-          ),
-        );
-        stream.close();
+        // 終端通知が来なくても、POST後の正本で取消完了を確認できる。
         return new Response(null, { status: 204 });
       }
       return new Response(

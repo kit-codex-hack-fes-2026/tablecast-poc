@@ -158,10 +158,10 @@ export async function stopVoiceSession(services: ApiServices, actor: Actor, requ
       )
       .get();
     ensure(owned, "VOICE_SESSION_NOT_FOUND", 404);
-    await stopVoiceRoom(services, requested);
-    return getTableState(services, actor);
+    const completed = await stopVoiceRoom(services, requested);
+    return { state: await getTableState(services, actor), completed };
   }
   const state = await setVoiceSession(services, actor, null, requested, row.voice_version);
-  if (voiceSessionId) await stopVoiceRoom(services, voiceSessionId);
-  return state;
+  const completed = voiceSessionId ? await stopVoiceRoom(services, voiceSessionId) : true;
+  return { state, completed };
 }

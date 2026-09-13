@@ -25,15 +25,14 @@ export const voiceRoutes = new Hono<ApiEnv>()
   .post(
     "/stop",
     validate(z.object({ voiceSessionId: z.string().max(100).optional() }).strict()),
-    async (c) =>
-      c.json(
-        await stopVoiceSession(
-          c.get("services"),
-          c.get("actor"),
-          c.req.valid("json").voiceSessionId,
-        ),
-        200,
-      ),
+    async (c) => {
+      const result = await stopVoiceSession(
+        c.get("services"),
+        c.get("actor"),
+        c.req.valid("json").voiceSessionId,
+      );
+      return c.json(result.state, result.completed ? 200 : 202);
+    },
   )
   .post("/conversation", validate(voiceConversationSchema), async (c) =>
     c.json(

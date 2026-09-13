@@ -35,6 +35,8 @@ Agents APIはHTTP切断後も処理が続き得るため、停止時には `agen
 
 初期inputの開始前にもsessionはidleになり得るため、idleだけでは停止済みと判断しない。イベント購読と正本のturn取得で初期root turnの開始を確認し、取消を一度送る。SSEの最初の通知までHTTP応答が来ない場合にも、既に開始したturnの取消送信を待たせない。root turnが終了済み、sessionがidle/failed、required_actionsが空の全条件で停止を確認し、購読を閉じる。通常の応答も対象root turnの完了後にsessionのidleを確認して完了通知を返し、EOFだけでは成功扱いにしない。
 
+hosted sessionの作成応答より先に停止した場合、マイク・Live・業務資格は停止し、元の委任処理が遅れて届くsession IDを取得して取り消す。停止APIはこの間をHTTP202 Accepted、提供元の停止確認済みをHTTP200で区別する。両方とも既存の卓状態を返す。202の時点ではAgent生成の終了を証明していないため、実音声試験では保存されたprovider turnの終端も別途確認する。
+
 ## 会話履歴とログ
 
 `session.input_transcript.delta` と `session.output_transcript.delta` を受信した時点でUIへ追記する。前後の空白を勝手に削らない。利用客・キャストを別に表示し、重なって話した場合にも本文を混ぜない。
