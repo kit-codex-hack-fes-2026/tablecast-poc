@@ -559,7 +559,11 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     `${owner.environment}.kit-codex.workers.dev` !== new URL(env.TABLECAST_PUBLIC_ORIGIN).hostname
   )
     throw new Error("PR初期投入の所有情報が一致しません。");
-  if (owner.seeded === 1) return false;
+  if (owner.seeded === 1) {
+    // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
+    await seedMenuImages(env.TABLECAST_MEDIA);
+    return false;
+  }
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
   if (owner.seeded === 2) {
     await seedMenuImages(env.TABLECAST_MEDIA, true);

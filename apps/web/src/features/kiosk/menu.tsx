@@ -75,17 +75,17 @@ export function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 motion-safe:[&:hover:not(:disabled)_img]:scale-105 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
+            <span className="w-full aspect-square overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
               {product.imageKey ? (
                 <ProductImage
-                  className="size-full object-cover transition-transform motion-reduce:transition-none duration-200 ease-out"
+                  className="size-full object-contain"
                   width={384}
-                  height={256}
+                  height={384}
                   sizes="(min-width: 1536px) 20vw, (min-width: 768px) 30vw, 50vw"
                   src={`/media/${product.imageKey}`}
                   alt=""

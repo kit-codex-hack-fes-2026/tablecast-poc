@@ -58,7 +58,11 @@ it("画像幅とETagが一致するときは再変換せず304を返し、過大
 
 it("ハッシュ付き画像だけ長期保存を許可し、固定キーは毎回再検証する", async () => {
   // Given: 新形式と既存形式の画像。
-  for (const key of [`tablecast/images/${"a".repeat(64)}.png`, "tablecast/demo/legacy.png"]) {
+  for (const key of [
+    `tablecast/images/${"a".repeat(64)}.png`,
+    `tablecast/images/${"b".repeat(64)}.webp`,
+    "tablecast/demo/legacy.png",
+  ]) {
     await env.TABLECAST_MEDIA.put(key, "image");
     const asset = await env.TABLECAST_MEDIA.head(key);
     if (!asset) throw new Error("画像がありません");

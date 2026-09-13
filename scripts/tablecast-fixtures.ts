@@ -1,4 +1,5 @@
 import { demoImageKey } from "./tablecast-seed-media";
+import { koreanDemoStore } from "./tablecast-korean-demo";
 import { configurationSchema } from "../apps/api/src/schema";
 import type { Configuration, Modifier, Product } from "../apps/api/src/schema";
 
@@ -22,10 +23,10 @@ const stores = [
     english: "Komorebi",
   },
   {
-    id: "tablecast-akari",
-    name: "あかり · Akari",
-    label: "あかり",
-    english: "Akari",
+    id: "tablecast-hanul",
+    name: "韓国食堂ハヌル三条店",
+    label: "ハヌル",
+    english: "Hanul",
   },
   {
     id: "tablecast-koharu",
@@ -914,6 +915,7 @@ function allergenRecord(
 
 export function demoStores(profile: "smoke" | "demo" | "history") {
   return stores.map((store) => {
+    if (store.id === "tablecast-hanul") return koreanDemoStore(profile);
     if (store.id === "tablecast-koharu") {
       return {
         id: store.id,
@@ -960,7 +962,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           price,
           available: index !== 25,
           tags: ["sake", "alcohol", ...(index < 2 ? ["popular"] : [])],
-          imageKey: demoImageKey(`${kind === "nigori" ? "nigori" : "sake"}.png`),
+          imageKey: demoImageKey(`komorebi-sake-${id}.webp`),
           imageKind: "illustration",
           modifiers: modifiers(kind === "sparkling" ? ["serving"] : ["temperature", "serving"]),
           allergens: allergenRecord(
@@ -999,7 +1001,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
           ...(["sashimi", "karaage", "yakitori"].includes(item.id) ? ["popular"] : []),
           ...(drinks.slice(0, 5).some((drink) => drink.id === item.id) ? ["alcohol"] : []),
         ],
-        imageKey: demoImageKey(`${item.image}.png`),
+        imageKey: demoImageKey(`komorebi-${item.id}.webp`),
         imageKind: "illustration",
         modifiers: modifiers(item.groups),
         allergens: allergenRecord(item.contains, item.ingredients),
@@ -1387,7 +1389,7 @@ function westwardConfiguration(storeId: string, profile: "smoke" | "demo" | "his
         price: item.price,
         available: item.available ?? true,
         tags: item.category === "craft-beer" ? ["alcohol"] : [],
-        imageKey: item.image ? demoImageKey(item.image) : null,
+        imageKey: demoImageKey(`westward-${item.key}.webp`),
         imageKind: "illustration",
         modifiers: item.modifiers ?? [],
         allergens: allergenRecord(item.contains, item.ingredients),

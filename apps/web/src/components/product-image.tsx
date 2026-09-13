@@ -30,7 +30,7 @@ export function ProductImage({
       height={height}
       sizes={sizes}
       layout="constrained"
-      objectFit="cover"
+      objectFit="contain"
       unstyled
       priority={priority}
       className={className}

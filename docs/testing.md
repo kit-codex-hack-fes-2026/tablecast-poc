@@ -125,7 +125,7 @@ DBはケースの終了とともに破棄するため、後処理でプロフィ
 
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
-開発用seedは3店舗と36卓、和食2店各60商品とバーガー店12商品の計132商品を持つ。各組織はowner/admin/member各1名の3所属で、2店舗を兼任するownerを含め8人9所属を用意する。名簿は`apps/emulate/src/tablecast-demo-identities.ts`をGoogle OAuth emulatorと共有する。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。
+開発用seedは3店舗と36卓、京料理店60商品・バーガー店12商品・韓国料理店30商品の計102商品を持つ。各組織はowner/admin/member各1名の3所属で、2店舗を兼任するownerを含め8人9所属を用意する。名簿は`apps/emulate/src/tablecast-demo-identities.ts`をGoogle OAuth emulatorと共有する。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。
 
 ## #35に基づく所有先の分離
 

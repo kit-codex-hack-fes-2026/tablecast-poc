@@ -45,7 +45,7 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     await (await api.get("/api/admin/stores/tablecast-komorebi/catalog")).json(),
   );
   const key = catalog.configuration.products[0]?.imageKey;
-  expect(key).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
+  expect(key).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
   const imageUrl = `/media/${key}?width=128`;
   // When: 同じURLを二度取得する。
   let fetches = 0;

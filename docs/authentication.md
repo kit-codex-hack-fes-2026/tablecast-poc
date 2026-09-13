@@ -46,7 +46,9 @@ Cloudflare Email Service で送信ドメインを検証し、送信可能なメ�
 
 ## デモの所属とローカルID
 
-GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)を使う。各店舗の組織にowner・admin・memberを1名ずつ登録し、京料理こもれび四条店・あかりのownerである佐藤 晴香を共有するため、人物は8人・所属は9件となる。Westward Burgers Kyotoのownerは山本 翼、京料理こもれび四条店の伊藤 葵はmemberである。具体的な[氏名・role・メール一覧](demo/stores.md#店舗と組織)を参照する。`tablecast-link@example.test`は未所属の連携確認専用で、店舗メンバーに数えない。
+GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)を使う。各店舗の組織にowner・admin・memberを1名ずつ登録し、京料理こもれび四条店・韓国食堂ハヌル三条店のownerである佐藤 晴香を共有するため、人物は8人・所属は9件となる。Westward Burgers Kyotoのownerは山本 翼、京料理こもれび四条店の伊藤 葵はmemberである。具体的な[氏名・role・メール一覧](demo/stores.md#店舗と組織)を参照する。`tablecast-link@example.test`は未所属の連携確認専用で、店舗メンバーに数えない。
+
+デモ店舗IDは`tablecast-komorebi`・`tablecast-koharu`・`tablecast-hanul`である。ハヌルのadminは`tablecast-hanul@example.test`、memberは`tablecast-hanul-staff@example.test`を使う。
 
 各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・資格情報を上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
 

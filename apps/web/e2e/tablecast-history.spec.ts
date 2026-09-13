@@ -216,7 +216,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
     await expect(
       page.getByRole("heading", { name: nextLabels.admin_history, exact: true }),
     ).toBeVisible();
-    const otherStoreId = "tablecast-akari";
+    const otherStoreId = "tablecast-hanul";
     const otherResponse = await page.request.get(
       `/api/admin/stores/${otherStoreId}/history?limit=2`,
     );
@@ -224,7 +224,7 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
     const other = historyPageSchema.parse(await otherResponse.json());
     expect(other.sessions.length).toBeGreaterThan(0);
     await page.getByRole("combobox", { name: nextLabels.stores_title, exact: true }).click();
-    await page.getByRole("option", { name: /あかり|Akari/ }).click();
+    await page.getByRole("option", { name: /ハヌル|Hanul/ }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/stores/${otherStoreId}/floor`));
     const otherHistoryLink = page.getByRole("link", {
       name: nextLabels.admin_history,

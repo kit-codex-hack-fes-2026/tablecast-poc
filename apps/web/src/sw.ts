@@ -20,7 +20,7 @@ const serwist = new Serwist({
       matcher: ({ url, request }) =>
         request.method === "GET" &&
         url.origin === self.location.origin &&
-        /^\/media\/tablecast\/images\/[a-f0-9]{64}\.png$/.test(url.pathname),
+        /^\/media\/tablecast\/images\/[a-f0-9]{64}\.(png|webp)$/.test(url.pathname),
       handler: new CacheFirst({
         cacheName: "tablecast-menu-images-v1",
         plugins: [

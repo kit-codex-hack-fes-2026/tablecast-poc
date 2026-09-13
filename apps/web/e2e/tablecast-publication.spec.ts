@@ -21,7 +21,7 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   baseURL,
   runtime,
 }) => {
-  const storeId = "tablecast-akari";
+  const storeId = "tablecast-hanul";
   const adminPath = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
   let closedSockets = 0;

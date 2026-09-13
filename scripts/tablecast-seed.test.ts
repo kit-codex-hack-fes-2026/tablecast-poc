@@ -24,6 +24,7 @@ import { configurationSchema } from "../apps/api/src/schema";
 import { voiceTurnSchema } from "../apps/api/src/modules/voice/model";
 import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
+import { demoStores } from "./tablecast-fixtures";
 
 const execute = promisify(execFile);
 
@@ -160,7 +161,13 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       await db.update(deploymentOwner).set({ seeded: 3 });
       await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("組織作成後");
       await db.update(deploymentOwner).set({ seeded: 1 });
+      const refreshedImage = demoStores("smoke")[0]?.configuration.products[0]?.imageKey;
+      if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
+      await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      expect(
+        (await platform.env.TABLECAST_MEDIA.head(refreshedImage))?.httpMetadata?.contentType,
+      ).toBe("image/webp");
       const counts = await seedDemoDatabase(platform.env, credentials);
       // Then: 規模だけでなく組織、プラン、支払、時系列の整合性を持つ。
       expect(counts).toMatchObject({
@@ -176,12 +183,12 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       const products = catalogs.results.flatMap(
         (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
       );
-      expect(products).toHaveLength(132);
+      expect(products).toHaveLength(102);
       for (const product of products.filter((item) => item.imageKey))
-        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
+        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
       for (const product of products) {
         expect(product.imageKind).toBe("illustration");
-        expect(product.allergens.note.ja).toContain("混入は未確認");
+        expect(product.allergens.note.ja).toMatch(/(?:混入|交差接触)は未確認/);
         expect(product.allergens.note.en).toContain("cross-contact");
         expect(product.allergens.note.en).toContain("unverified");
       }
@@ -353,7 +360,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         .from(member)
         .innerJoin(stores, eq(stores.organization_id, member.organizationId));
       expect(memberships).toHaveLength(9);
-      for (const storeId of ["tablecast-komorebi", "tablecast-akari", "tablecast-koharu"])
+      for (const storeId of ["tablecast-komorebi", "tablecast-hanul", "tablecast-koharu"])
         expect(
           memberships
             .filter((membership) => membership.storeId === storeId)

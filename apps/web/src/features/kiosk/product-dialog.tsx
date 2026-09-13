@@ -61,9 +61,9 @@ export function ProductPage({
           <ProductImage
             priority
             width={640}
-            height={360}
+            height={640}
             sizes="(min-width: 768px) 60vw, 100vw"
-            className="mb-3 aspect-video w-full rounded-xl object-cover"
+            className="mb-3 aspect-square w-full rounded-xl object-contain"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />

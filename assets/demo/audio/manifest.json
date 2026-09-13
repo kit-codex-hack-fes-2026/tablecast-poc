@@ -557,6 +557,139 @@
         "sourceFiles": ["ja-burger-group/burger-04.mp3", "ja-burger-group/burger-05.mp3"],
         "offsetMs": 250
       }
+    },
+    "ja-korean-sharing/korean-01.mp3": {
+      "requestSha256": "dd850c659607dd99dd26dc26cee630cd60ecc0a87ecc7dd6f90c1703213c5aeb",
+      "audioSha256": "4518b09d15897bd4724bc4cce4d096e8f64f16a7ace13cf5bed7b356275ed61a",
+      "generatedAt": "2026-09-13T09:21:35.568Z",
+      "durationSeconds": 8.688,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 56,
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties, bright and matter-of-fact. Speak natural standard Japanese with crisp, friendly conversational delivery. Make quantities and ingredient names clear."
+    },
+    "ja-korean-sharing/korean-02.mp3": {
+      "requestSha256": "19203b1d52331280c123154287414fa431201ee7c815fdec8f41bf1892d66f58",
+      "audioSha256": "c3526fa874ea8663780a88d11620f06bed8ccc420945c980932599ee77f31cd3",
+      "generatedAt": "2026-09-13T09:21:38.433Z",
+      "durationSeconds": 8.016,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 41,
+      "voiceId": "Satoshi",
+      "language": "ja-JP",
+      "instruction": "A Japanese man in his late twenties with a modest, relaxed manner. Speak natural standard Japanese at an ordinary conversational pace. Use a lower, quieter register, without shouting or theatrical emphasis."
+    },
+    "ja-korean-sharing/korean-03.mp3": {
+      "requestSha256": "d54e19d4338b1ff013ab76a9bbaf76aaf4bba1f51de25a1a716377688d31abec",
+      "audioSha256": "dcde3fa932f1de72a5b8dfa808d7503e0c7db8a2aa0d0f3083180db6ffc7490a",
+      "generatedAt": "2026-09-13T09:21:40.975Z",
+      "durationSeconds": 11.376,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 60,
+      "voiceId": "Hina",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties with a calm, thoughtful manner. Speak natural standard Japanese in an even, slightly lower-pitched conversational voice. Keep words clear without sounding formal."
+    },
+    "ja-korean-sharing/korean-04.mp3": {
+      "requestSha256": "3a7284d45b11a9d17d60161308752919408bf77d367e036db534e3f3f8559875",
+      "audioSha256": "3746f5272ccc5db1b7371be8a56711f27fd5d4eb2871878c6d4b3c987ad4736f",
+      "generatedAt": "2026-09-13T09:21:43.836Z",
+      "durationSeconds": 8.016,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 53,
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties, bright and matter-of-fact. Speak natural standard Japanese with crisp, friendly conversational delivery. Make quantities and ingredient names clear."
+    },
+    "ja-korean-sharing/korean-05.mp3": {
+      "requestSha256": "511119c228f1ad5b063a43f130c6f80c5432782be50897e4674f9cd829a7e599",
+      "audioSha256": "dcdcf46282ed99b1a4b44b70e314c9c682f3c7d814b206d0f90d8ffdaf82092a",
+      "generatedAt": "2026-09-13T09:21:45.182Z",
+      "durationSeconds": 4.44,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 24,
+      "voiceId": "Satoshi",
+      "language": "ja-JP",
+      "instruction": "A Japanese man in his late twenties with a modest, relaxed manner. Speak natural standard Japanese at an ordinary conversational pace. Use a lower, quieter register, without shouting or theatrical emphasis."
+    },
+    "ja-korean-sharing/korean-06.mp3": {
+      "requestSha256": "2856ff1b5d98e44c705f515b2bea28a9ff442c43c8613267d7ce1c3e6ce8b648",
+      "audioSha256": "1654b90187efeef748b2370835d29e94ad9b2e691265b7fbf4f9d5d0b9343746",
+      "generatedAt": "2026-09-13T09:21:47.329Z",
+      "durationSeconds": 5.976,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 29,
+      "voiceId": "Hina",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties with a calm, thoughtful manner. Speak natural standard Japanese in an even, slightly lower-pitched conversational voice. Keep words clear without sounding formal."
+    },
+    "ja-korean-sharing/korean-07.mp3": {
+      "requestSha256": "42abcdb465402a5e601c41dd8af17554eab10b453ac2a85a91d001ef1ec77314",
+      "audioSha256": "a31604c375eb4860a8d90f1333d4fff794feb336251d7b568824f9c9988fb098",
+      "generatedAt": "2026-09-13T09:21:49.729Z",
+      "durationSeconds": 10.128,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 64,
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties, bright and matter-of-fact. Speak natural standard Japanese with crisp, friendly conversational delivery. Make quantities and ingredient names clear."
+    },
+    "ja-korean-sharing/korean-08.mp3": {
+      "requestSha256": "706f99d001240cf2a4607e651d72e5211a0c717547fac6e0fd2e91af9f065170",
+      "audioSha256": "069df8d6e60b68acd053463882aa28fd949625e0a643896255a4c60c8ca4ff62",
+      "generatedAt": "2026-09-13T09:21:51.311Z",
+      "durationSeconds": 6.936,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 37,
+      "voiceId": "Satoshi",
+      "language": "ja-JP",
+      "instruction": "A Japanese man in his late twenties with a modest, relaxed manner. Speak natural standard Japanese at an ordinary conversational pace. Use a lower, quieter register, without shouting or theatrical emphasis."
+    },
+    "ja-korean-sharing/korean-09.mp3": {
+      "requestSha256": "f16fb1f17057badb4306b2598e517c513eadce9905a77cd7b4ebe9335ee8f332",
+      "audioSha256": "f40b0ed358422d181660af3a3c0a65b1af1b227d6dfe8717803a4d81f8720b12",
+      "generatedAt": "2026-09-13T09:21:53.899Z",
+      "durationSeconds": 9.672,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 51,
+      "voiceId": "Hina",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties with a calm, thoughtful manner. Speak natural standard Japanese in an even, slightly lower-pitched conversational voice. Keep words clear without sounding formal."
+    },
+    "ja-korean-sharing/korean-10.mp3": {
+      "requestSha256": "27f9e18de1e9d0a290e046fb2dab7fd68eb0c7d2e78a64d024eb5d930df0e9d4",
+      "audioSha256": "7d1a9b831a3c663797533b7f93acf9bfb9e4648de11e846db2b201fbf60b28cc",
+      "generatedAt": "2026-09-13T09:21:55.386Z",
+      "durationSeconds": 6.096,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": 31,
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "instruction": "A Japanese woman in her late twenties, bright and matter-of-fact. Speak natural standard Japanese with crisp, friendly conversational delivery. Make quantities and ingredient names clear."
+    },
+    "overlap/ja-korean-sharing-korean-06.wav": {
+      "requestSha256": "8e63bbfc83ccd2c585ab830c501059e20e6b309b9d4cd235fad205778606e131",
+      "audioSha256": "5f0232cf2b246fd3ed24f385e11eec71e7706d0dc58cbd7373d8261100f7713b",
+      "generatedAt": "2026-09-13T09:21:55.489Z",
+      "durationSeconds": 6.276,
+      "sampleRateHertz": 48000,
+      "channels": 1,
+      "processedCharacters": null,
+      "overlap": {
+        "sourceFiles": ["ja-korean-sharing/korean-05.mp3", "ja-korean-sharing/korean-06.mp3"],
+        "offsetMs": 300
+      }
     }
   }
 }
