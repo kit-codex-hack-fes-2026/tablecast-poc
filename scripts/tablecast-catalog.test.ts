@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalogReleaseSchema, catalogTarget } from "./tablecast-catalog-config";
 import { ownedCatalogApplication } from "./tablecast-catalog-deploy";
-import { catalogReport, catalogCommentMarker } from "./tablecast-preview-report";
-import { tablecastRepository } from "./tablecast-deploy-config";
 
 describe("カタログの対象境界", () => {
   it.each(["", "0", "../1", "1/production", "1000000000"])("不正PR %s を資源名にしない", (pr) => {
@@ -48,18 +46,4 @@ describe("カタログの対象境界", () => {
       ),
     ).toThrow(Error);
   });
-});
-
-it("失敗時も対象SHAと最後の確認SHAを区別し、未確認版を推測しない", () => {
-  const body = catalogReport(
-    "129",
-    "a".repeat(40),
-    "build: failure",
-    { storybook: "b".repeat(40) },
-    `https://github.com/${tablecastRepository}/actions/runs/1`,
-  );
-  expect(body.startsWith(catalogCommentMarker)).toBe(true);
-  expect(body).toContain("a".repeat(40));
-  expect(body).toContain("b".repeat(40));
-  expect(body).toContain("未確認（現在版不明）");
 });

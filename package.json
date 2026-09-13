@@ -42,8 +42,7 @@
     "services:down": "docker compose --env-file .local/.env down --timeout 5",
     "services:status": "docker compose --env-file .local/.env ps",
     "build:email": "turbo run build:email",
-    "deploy:catalog": "bun --no-env-file scripts/tablecast-catalog-deploy.ts",
-    "preview:report": "bun --no-env-file scripts/tablecast-preview-report.ts"
+    "deploy:catalog": "bun --no-env-file scripts/tablecast-catalog-deploy.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",

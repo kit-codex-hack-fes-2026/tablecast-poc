@@ -197,7 +197,7 @@ CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する�
 
 両カタログは`html_handling: none`でHTMLパスをそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
 
-`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。カタログ専用の固定コメントを1件だけ更新し、失敗時も対象SHA・各jobの結果・最後に確認できた配備SHAを表示する。現在版を確認できなければ旧版が残ったと推測しない。forkはsecretなしbuildだけを実施し、配備・コメントは対象外とsummaryへ記録する。
+`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品・カタログの配備jobが終了した後、GHAの通知jobが公式`actions/github-script`で固定コメント1件を更新する。製品・Storybook・メールを同じ表にまとめ、失敗・skip時も対象SHA・配備jobの結果・通知時に取得できた配備SHAを表示する。通知jobはcheckoutやBunの導入を行わない。共有の配備排他と投稿直前のPR/head照合で古い実行からの更新を防ぐ。現在版を確認できなければ旧版が残ったと推測しない。forkはsecretなしbuildだけを実施し、配備・コメントは対象外とsummaryへ記録する。
 
 再配備は最新headに対するCI runを再実行する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。削除後の再実行は安全に終了し、reopenは通常のCIで再作成する。手動復旧では対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
 
