@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "tablecast": {
-      "url": "http://localhost:3000/mcp"
+      "url": "https://tablecast.kit-codex.workers.dev/mcp"
     }
   }
 }
