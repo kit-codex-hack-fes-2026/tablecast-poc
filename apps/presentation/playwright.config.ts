@@ -11,7 +11,12 @@ export default defineConfig({
   testDir: "./scripts",
   testMatch: selected
     ? ["tablecast-layout.spec.ts"]
-    : ["tablecast-layout.spec.ts", "tablecast-shot.spec.ts", "tablecast-workflow.spec.ts"],
+    : [
+        "tablecast-layout.spec.ts",
+        "tablecast-shot.spec.ts",
+        "tablecast-workflow.spec.ts",
+        "tablecast-render-contract.spec.ts",
+      ],
   fullyParallel: false,
   workers: 1,
   timeout: 30_000,

@@ -9,22 +9,22 @@ import { zoomRegions } from "./tablecast-zoom";
 import { verifyShotEdit } from "./tablecast-shot";
 import { z } from "zod";
 import { composeCursor } from "./tablecast-cursor";
+import { recordingEdits } from "./tablecast-edit-plan";
 
 const run = promisify(execFile);
-const sample = await readProject();
+const source = await readProject();
 const openscreen = resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
 const options = { windowsHide: true, timeout: 300000, maxBuffer: 8000000 };
-for (const scene of sample.scenes.filter(
-  (item) => item.role === "staff" || item.role === "admin",
-)) {
-  if (!scene.media?.project || !scene.device) throw new Error("編集元がありません");
-  const edited = resolve(root, scene.media.project);
+for (const { media, device, scenes, sourceTrim, end } of recordingEdits(source, [
+  "staff",
+  "admin",
+])) {
+  const edited = resolve(root, media.project);
   const folder = resolve(edited, "..");
   const project = screenProject.parse(JSON.parse(await readFile(edited, "utf8")));
-  const viewport = devices[scene.device];
+  const viewport = devices[device];
   const x = (1920 - viewport.width) / 2,
     y = (1080 - viewport.height) / 2;
-  const sourceTrim = scene.capture ? 0 : 1;
   const recorded = z
     .object({ captureStartedAtMs: z.number(), pointer: z.array(pointerEvent) })
     .parse(JSON.parse(await readFile(resolve(folder, "tablecast-events.json"), "utf8")));
@@ -35,18 +35,20 @@ for (const scene of sample.scenes.filter(
     viewport,
     { x, y, ...viewport },
   );
-  if (scene.capture) {
-    if (!scene.media.shot) throw new Error(`撮影証跡がありません: ${scene.id}`);
-    const events = z
-      .object({ captureStartedAtMs: z.number() })
-      .parse(JSON.parse(await readFile(resolve(folder, "tablecast-events.json"), "utf8")));
+  for (const scene of scenes.filter((item) => item.capture)) {
+    if (!scene.media?.shot) throw new Error(`撮影証跡がありません: ${scene.id}`);
+    const take = z
+      .object({ status: z.literal("accepted"), scenes: z.array(z.string()) })
+      .parse(JSON.parse(await readFile(resolve(folder, "tablecast-take.json"), "utf8")));
+    if (!take.scenes.includes(scene.id))
+      throw new Error(`採用可能な撮影ではありません: ${scene.id}`);
     verifyShotEdit(
       scene,
       JSON.parse(await readFile(resolve(root, scene.media.shot), "utf8")),
-      events.captureStartedAtMs,
+      recorded.captureStartedAtMs,
     );
   }
-  project.editor.zoomRegions = zoomRegions([scene], { x, y, ...viewport }, sourceTrim);
+  project.editor.zoomRegions = zoomRegions(scenes, { x, y, ...viewport }, sourceTrim);
   await writeFile(edited, JSON.stringify(project, null, 2));
   const exported = resolve(folder, "tablecast-openscreen.mp4");
   const result = await run(openscreen, ["export", edited, "--out", exported, "--json"], options);
@@ -65,7 +67,7 @@ for (const scene of sample.scenes.filter(
       "-vf",
       `crop=${viewport.width}:${viewport.height}:${x}:${y},fps=30,setsar=1`,
       "-t",
-      String(scene.media.offset + scene.media.duration),
+      String(end),
       "-an",
       "-c:v",
       "libx264",
@@ -81,9 +83,9 @@ for (const scene of sample.scenes.filter(
       "fast",
       "-movflags",
       "+faststart",
-      resolve(root, scene.media.file),
+      resolve(root, media.file),
     ],
     options,
   );
-  console.info(`${scene.id}: 台本のズームで再書き出し完了`);
+  console.info(`${media.file}: ${scenes.length}場面のズームで再書き出し完了`);
 }

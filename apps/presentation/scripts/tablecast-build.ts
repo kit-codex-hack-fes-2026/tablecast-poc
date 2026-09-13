@@ -184,6 +184,7 @@ try {
   const sceneHtml = timing.scenes
     .map((scene, sceneIndex) => {
       const prefix = `scene-${scene.id}`;
+      const heading = (scene.titleLines ?? [scene.title]).map((line) => h(line)).join("<br>");
       const points = scene.points.map(
         (point, pointIndex) =>
           `<li id="${prefix}-point-${pointIndex}">${scene.kind === "demo" ? `<span class="step-number">${String(pointIndex + 1).padStart(2, "0")}</span>` : scene.images ? "" : `<span class="point-number">${String(pointIndex + 1).padStart(2, "0")}</span>`}<span>${h(point)}</span></li>`,
@@ -198,7 +199,7 @@ try {
         if (!size) throw new Error(`録画の寸法がありません: ${scene.media.file}`);
         const box = screenLayout(size, scene.device);
         const label = `${scene.role ? roleNames[scene.role] : "実アプリ"} / ${scene.device ? devices[scene.device].label : "ブラウザー"}`;
-        content = `<div class="demo-body" style="left:${box.aside}px"><aside class="demo-aside"><p class="role-label">${h(label)}</p><h1>${h(scene.title)}</h1><p class="demo-context">${h(scene.kicker)}</p><div class="demo-steps"><p class="steps-heading">操作の流れ</p><div class="steps-track"><div id="${prefix}-active-step" class="active-step"></div><ol class="demo-points">${points.join("")}</ol></div></div></aside></div>`;
+        content = `<div class="demo-body" style="left:${box.aside}px"><aside class="demo-aside"><p class="role-label">${h(label)}</p><h1>${heading}</h1><p class="demo-context">${h(scene.kicker)}</p><div class="demo-steps"><p class="steps-heading">操作の流れ</p><div class="steps-track"><div id="${prefix}-active-step" class="active-step"></div><ol class="demo-points">${points.join("")}</ol></div></div></aside></div>`;
         // 動画と時刻付きsectionを入れ子にしない。動画の再生時刻はruntimeだけが所有する。
         mediaHtml.push(
           `<div id="${prefix}-screen" class="recorded-screen framed-${scene.device ?? "window"}" style="width:${box.width}px;height:${box.height}px;left:${box.left}px;top:${box.top}px">${frameMarkup(scene.device)}<div class="video-stage"><div id="${prefix}-camera" class="video-camera" data-layout-allow-overflow><video ${clip(`${prefix}-video`, scene.start, scene.duration, 2, "demo-video")} src="${h(scene.media.file)}" data-media-start="${scene.media.offset}" ${scene.media.audio ? 'data-has-audio="true"' : 'muted data-volume="0"'} playsinline preload="auto" aria-label="${h(scene.title)}の実操作録画"></video></div></div></div>`,
@@ -255,7 +256,7 @@ try {
           `tl.fromTo("#${prefix}-rail", { scaleX: 0 }, { scaleX: 1, duration: ${Math.max(1, scene.duration - 2)}, ease: "none" }, ${scene.start + 0.8});`,
         );
       } else if (scene.images && scene.kind === "result") {
-        content = `<div class="recap-body"><div id="${prefix}-recap" class="recap-layout"><div class="recap-copy"><p class="role-label">${h(scene.kicker)}</p><ol class="recap-points">${scene.points.map((point, index) => `<li id="${prefix}-label-${index}">${h(point)}</li>`).join("")}</ol></div><div class="recap-gallery">${scene.images.map((file, index) => `<figure id="${prefix}-shot-${index}" class="recap-shot"><img src="${h(file)}" alt="${h(scene.points[index] ?? "実録画面")}"></figure>`).join("")}</div></div><div id="${prefix}-signature" class="end-signature"><p class="end-wordmark">${h(brand.name)}</p><p class="end-line">${h(scene.title)}</p></div></div>`;
+        content = `<div class="recap-body"><div id="${prefix}-recap" class="recap-layout"><div class="recap-copy"><p class="role-label">${h(scene.kicker)}</p><ol class="recap-points">${scene.points.map((point, index) => `<li id="${prefix}-label-${index}">${h(point)}</li>`).join("")}</ol></div><div class="recap-gallery">${scene.images.map((file, index) => `<figure id="${prefix}-shot-${index}" class="recap-shot"><img src="${h(file)}" alt="${h(scene.points[index] ?? "実録画面")}"></figure>`).join("")}</div></div><div id="${prefix}-signature" class="end-signature"><p class="end-wordmark">${h(brand.name)}</p><p class="end-line">${heading}</p></div></div>`;
         // 音声に沿って根拠を順に見せ、最後の名乗りでロゴへ渡す。
         const focus =
           scene.pointFocus ?? scene.images.map((_, point) => ({ at: point * 0.9, point }));
@@ -301,7 +302,7 @@ try {
           );
         }
       } else {
-        content = `<div class="editorial-body ${scene.kind}-body"><p class="eyebrow">${h(scene.kicker)}</p><h2 class="hero-title">${h(scene.title)}</h2><ol class="${scene.kind}-points">${points.join("")}</ol></div>`;
+        content = `<div class="editorial-body ${scene.kind}-body"><p class="eyebrow">${h(scene.kicker)}</p><h2 class="hero-title">${heading}</h2><ol class="${scene.kind}-points">${points.join("")}</ol></div>`;
         if (sceneIndex === timing.scenes.length - 1) {
           animations.push(
             `tl.fromTo("#${prefix} .hero-title", { clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0% 0)", duration: 0.5, ease: "power2.out" }, ${scene.start});`,
@@ -363,7 +364,7 @@ try {
         `tl.fromTo("#progress-${scene.id}", { scaleX: 0 }, { scaleX: 1, duration: ${scene.duration}, ease: "none" }, ${scene.start});`,
       );
       return `<section ${clip(prefix, scene.start, scene.duration, 10 + sceneIndex, `scene scene-${scene.kind}${scene.technical ? " scene-technical" : ""}`)} aria-label="${h(scene.chapter)}">
-<header><p class="chapter">${h(scene.chapter)}<span class="wordmark">${h(brand.name)}</span></p>${scene.kind === "flow" || scene.sourceTree || scene.technical ? `<h1>${h(scene.title)}</h1>` : ""}</header>
+<header><p class="chapter">${h(scene.chapter)}<span class="wordmark">${h(brand.name)}</span></p>${scene.kind === "flow" || scene.sourceTree || scene.technical ? `<h1>${heading}</h1>` : ""}</header>
 <div id="${prefix}-content">${content}</div>${sceneIndex === timing.scenes.length - 1 && project.soundtrack?.credit ? `<p class="music-credit">${h(project.soundtrack.credit)}</p>` : ""}<footer>${h(scene.note)}</footer>
 </section>`;
     })

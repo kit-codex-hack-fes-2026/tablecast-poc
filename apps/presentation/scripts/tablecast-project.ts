@@ -49,6 +49,7 @@ const scene = z.object({
   points: z.array(z.string().min(1)).max(4),
   pointFocus: z
     .array(z.object({ at: z.number().nonnegative(), point: z.number().int().nonnegative() }))
+    .min(1)
     .optional(),
   sourceTree: z
     .array(
@@ -58,6 +59,7 @@ const scene = z.object({
         depth: z.number().int().min(0).max(2),
       }),
     )
+    .min(1)
     .max(14)
     .optional(),
   technical: technicalSchema.optional(),
@@ -224,7 +226,37 @@ export const projectSchema = z
       )
         ctx.addIssue({ code: "custom", message: "動画は重複のない実在する場面を参照してください" });
     }
-    for (const item of project.scenes) {
+    for (const [sceneIndex, item] of project.scenes.entries()) {
+      const issue = (field: string, message: string) =>
+        ctx.addIssue({ code: "custom", path: ["scenes", sceneIndex, field], message });
+      if (
+        [item.technical, item.diagram, item.sourceTree, item.images, item.media].filter(Boolean)
+          .length > 1
+      )
+        issue("kind", "技術図・構成図・ファイル一覧・静止画・動画は同じ場面に重ねて指定できません");
+      if (item.kind === "title" && item.images && item.images.length !== 1)
+        issue("images", "導入の静止画は1枚だけ指定してください");
+      if ((item.technical || item.diagram) && item.points.length)
+        issue("points", "図の説明は図内の要素・注目先に指定してください");
+      if (item.kind === "demo" && !item.points.length)
+        issue("points", "実録には操作の説明を1件以上指定してください");
+      if (item.pointFocus && item.kind !== "demo" && !(item.kind === "result" && item.images))
+        issue("pointFocus", "説明の強調は実録または静止画付きのまとめに指定してください");
+      if (
+        item.kind === "result" &&
+        item.images &&
+        item.pointFocus &&
+        item.images.some((_, point) => !item.pointFocus?.some((focus) => focus.point === point))
+      )
+        issue("pointFocus", "まとめの静止画をすべて表示する強調時刻を指定してください");
+      if (
+        item.kind !== "demo" &&
+        (item.camera.length !== 1 ||
+          item.camera[0]?.x !== 0.5 ||
+          item.camera[0]?.y !== 0.5 ||
+          item.camera[0]?.zoom !== 1)
+      )
+        issue("camera", "カメラ移動は実録場面だけに指定してください");
       if (item.duration && item.media)
         ctx.addIssue({ code: "custom", message: "実録の尺はmedia.durationだけで指定してください" });
       if (Boolean(item.device) !== Boolean(item.role) || (item.device && item.kind !== "demo"))
@@ -518,6 +550,11 @@ export function timeline(
       )
     )
       throw new Error(`説明の強調は実在する項目と場面内の昇順時刻が必要です: ${item.id}`);
+    if (item.kind === "result" && item.images) {
+      const focus = item.pointFocus ?? item.images.map((_, point) => ({ at: point * 0.9, point }));
+      if (focus.some((entry) => entry.at + 0.2 > duration - 2.35))
+        throw new Error(`まとめの静止画を表示してから結論へ切り替える尺が必要です: ${item.id}`);
+    }
     spoken.forEach((part, index) => {
       const cueStart = start + part.at;
       const cueEnd = start + (item.cues[index + 1]?.at ?? duration);

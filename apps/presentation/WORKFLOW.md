@@ -35,6 +35,7 @@ reportには入力台本・参照素材・生成コードのハッシュ、ア�
 ### 題材ごとに変えるもの
 
 - `brand.name/title`でヘッダー・画面枠・末尾・HTMLタイトルを変える。任意の`brand.roles`（customer/staff/admin）と`brand.speakers`（narrator/customer/cast/instruction）で表示名を変える。これらのキーはレイアウト用の枠として維持する。1920×1080・30fps・日本語と既存スタイルは標準プリセット。
+- 場面の本文は`technical`・`diagram`・`sourceTree`・`images`・`media`から一つだけ指定する。タイトル画像は1枚、まとめは画像と説明を一対一で最大3枚とする。まとめの`pointFocus`は全画像を表示し、最後の結論への切り替え前に表示を終える時刻にする。`titleLines`は各形式の見出しの改行指定、`camera`の移動は動画素材だけに適用する。
 - 画像・録画・音声は引き続きpresentationルートの`assets/`へ置く。台本の場所を変えても素材パスの基準は変わらない。別アプリの実装根拠はリポジトリ内の相対パスで管理する。外部リポジトリならこのworkspaceをその開発環境へ配置し直し、素材・出典の参照を合わせる。
 - `TABLECAST_PRESENTATION_PROJECT`を指定すると、TTS・既存編集・収録もその台本を使う。TableCastの既定台本はpresentationルートの`capture-plan.json`、別題材は台本と同じフォルダの`capture-plan.json`を読む。`TABLECAST_PRESENTATION_CAPTURE_PLAN`を指定すると、どちらの場合もそのファイルを優先する。指定パスはpresentationルートからの相対パスまたは絶対パス。
 - TableCastの収録スクリプトには注文・音声・管理画面の操作がある。接続先は`TABLECAST_CAPTURE_ORIGIN`、店舗IDは`TABLECAST_CAPTURE_STORE`で指定する。業務状態の待機は`tablecast-app-capture.ts`が所有する。別アプリではそのアプリ用のPlaywright操作と状態待ちを作り、`tablecast-shot.ts`の実測、既存の録画・編集方法を利用する。JSONの変更だけで任意のアプリを自動操作する仕様ではない。
@@ -125,10 +126,14 @@ if ($LASTEXITCODE -ne 0) { throw 'TTS生成失敗' }
 
 ```powershell
 bun --no-env-file scripts/tablecast-edit-guest.ts
+if ($LASTEXITCODE -ne 0) { throw '客側の再編集失敗' }
 bun --no-env-file scripts/tablecast-edit-role.ts
+if ($LASTEXITCODE -ne 0) { throw '店舗側の再編集失敗' }
 ```
 
-必要な方だけを実行する。店舗側スクリプトは台本内のstaff・admin両方を処理する。限定して試す場合は `TABLECAST_PRESENTATION_PROJECT` で編集用台本を指定する。
+必要な方だけを実行する。客側スクリプトは日本語・英語を含むすべてのcustomer録画、店舗側スクリプトはstaff・admin両方を処理する。同じ素材の複数カットはまとめて1回書き出し、全カットのズームと最長の終端を保持する。客側の音声同期・前処理も毎回再計算する。限定して試す場合は `TABLECAST_PRESENTATION_PROJECT` で編集用台本を指定し、同じ素材のカットを漏らさず含める。
+
+同じ素材の編集元・端末・先頭カットの不一致や、複数素材による編集フォルダの共有は拒否する。客側の再編集は実測済みのipad録画、店舗側は無音の録画に対応する。それ以外は題材側の編集手順を用意する。途中失敗時は生成済みの素材が残るため、台本の更新と全対象の成功を確認してから採用する。
 
 元録画・実DOMイベント→FFmpegでcrop・scale・padとカーソル合成→標準OpenScreen v2 projectでズーム・export→表示用余白の除去、の順序。OpenScreenのカーソルsidecarは空にして二重描画を防ぐ。出力は30fps・1秒間隔のキーフレームにする。編集終了後にbuildへ進む。
 
