@@ -208,6 +208,12 @@ export const projectSchema = z
       .optional(),
   })
   .superRefine((project, ctx) => {
+    if (project.soundtrack && project.soundtrack.speechVolume > project.soundtrack.musicVolume)
+      ctx.addIssue({
+        code: "custom",
+        path: ["soundtrack", "speechVolume"],
+        message: "発話中のBGM音量は通常時のBGM音量以下にしてください",
+      });
     const ids = project.scenes.flatMap((item) => [item.id, ...item.cues.map((part) => part.id)]);
     if (new Set(ids).size !== ids.length)
       ctx.addIssue({ code: "custom", message: "場面・発話IDは重複できません" });

@@ -99,6 +99,26 @@ test("全構成を残し、実在する要素を発話に合わせて指し示�
   expect(projectSchema.safeParse({ ...chosen, films: undefined }).success).toBe(false);
 });
 
+test.each([
+  { musicVolume: 0.05, speechVolume: 0.1, accepted: false },
+  { musicVolume: 0, speechVolume: 0.05, accepted: false },
+  { musicVolume: 0.1, speechVolume: 0.05, accepted: true },
+  { musicVolume: 0.05, speechVolume: 0.05, accepted: true },
+  { musicVolume: 0, speechVolume: 0, accepted: true },
+])(
+  "BGM設定は通常時$musicVolume・発話中$speechVolumeで受理=$accepted",
+  ({ musicVolume, speechVolume, accepted }) => {
+    const result = projectSchema.safeParse({
+      ...sample,
+      soundtrack: { ...sample.soundtrack, musicVolume, speechVolume },
+    });
+    expect(result.success).toBe(accepted);
+    expect(result.error?.issues.map((issue) => issue.path) ?? []).toEqual(
+      accepted ? [] : [["soundtrack", "speechVolume"]],
+    );
+  },
+);
+
 test("BGMは発話中に下がり、各clip相対の範囲内で全編の冒頭と末尾を無音にする", () => {
   const chosen = selectScenes(project, "tech-intro");
   const timed = timeline(chosen, { "tech-intro-voice": 9 }, {});

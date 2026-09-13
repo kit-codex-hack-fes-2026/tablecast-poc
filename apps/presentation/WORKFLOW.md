@@ -50,7 +50,7 @@ reportには入力台本・参照素材・生成コードのハッシュ、ア�
 
 以下はTableCastの既存素材を扱う詳細手順。手動のbuild／renderは原因調査や工程単独の再実行に使い、通常は上記の共通入口を優先する。
 
-生成ルートの正本は [GENERATION.md](GENERATION.md)、現在の成果物・環境・残件は [HANDOFF.md](HANDOFF.md)。この手順は商品紹介v13／技術紹介v16を起点とする。
+生成ルートの正本は [GENERATION.md](GENERATION.md)、現在の成果物・環境・残件は [HANDOFF.md](HANDOFF.md)。この手順は商品紹介v14（117.3秒）／技術紹介v17（63.1秒）を起点とする。採用素材と完成MP4は[共有と復元](SHARING.md)を参照する。
 
 ## 必要な工程を選ぶ
 
@@ -81,12 +81,12 @@ bun x hyperframes check dist/technical --at-transitions
 if ($LASTEXITCODE -ne 0) { throw '遷移検査失敗' }
 ```
 
-警告も内容を確認する。v16は配置・接続警告なし。過去v15の警告を、新しい図の不具合を無視する理由にしない。
+警告も対象runごとに内容を確認する。過去版の検証結果を、新しい図の不具合を無視する理由にしない。
 
-検査通過後、次版は新しいファイル名で保存する。v16は生成済み。以下のv17は次版の命名例で、現在の完成品ではない。
+検査通過後、次版は新しいファイル名で保存する。現行の技術紹介v17は生成済み。以下のv18は次版の命名例であり、使用済みなら未使用の版番号へ変更する。
 
 ```powershell
-bun x hyperframes render dist/technical --output output/tablecast-technical-evaluation-v17.mp4 --experimental-fast-capture=false
+bun x hyperframes render dist/technical --output output/tablecast-technical-evaluation-v18.mp4 --experimental-fast-capture=false
 if ($LASTEXITCODE -ne 0) { throw 'render失敗' }
 ```
 
