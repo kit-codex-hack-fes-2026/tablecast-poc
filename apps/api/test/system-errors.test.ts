@@ -1,8 +1,22 @@
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("計測済みWorker経由のresumeはContainerへfalseだけを渡す", async () => {
+  const stub = env.TABLECAST_VOICE.getByName("tablecast-voice");
+  // workerdのテスト環境はContainerを起動できないため、受信するRPC引数を検証する。
+  const resume = vi.spyOn(stub, "setDraining").mockResolvedValueOnce(true);
+  vi.spyOn(env.TABLECAST_VOICE, "getByName").mockReturnValue(stub);
+  const response = await exports.default.fetch("https://tablecast.test/internal/deploy/resume", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.TABLECAST_VOICE_API_TOKEN}` },
+  });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ready: true });
+  expect(resume).toHaveBeenCalledExactlyOnceWith(false);
+});
 
 it("通話予約中というRPC結果を受けた配備APIは409を返す", async () => {
   // Given: 実Containerの起動を伴わないRPC境界で、予約中の結果を注入する。
