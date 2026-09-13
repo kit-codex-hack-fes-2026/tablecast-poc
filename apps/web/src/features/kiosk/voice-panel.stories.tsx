@@ -358,13 +358,11 @@ export const MicrophoneSelection: Story = {
     const select = within(dialog).getByRole("combobox", { name: "入力マイク" });
     select.focus();
     await userEvent.keyboard("[ArrowDown]");
-    await body.findByRole("listbox");
-    await userEvent.keyboard("[End]");
     await waitFor(() =>
-      expect(body.getByRole("option", { name: "外部USBマイク" })).toHaveAttribute(
-        "data-highlighted",
-      ),
+      expect(body.getByRole("option", { name: "端末の既定のマイク" })).toHaveFocus(),
     );
+    await userEvent.keyboard("[End]");
+    await waitFor(() => expect(body.getByRole("option", { name: "外部USBマイク" })).toHaveFocus());
     await userEvent.keyboard("[Enter]");
     await waitFor(() => expect(select).toHaveTextContent("外部USBマイク"));
     await waitFor(() => expect(args.onMicrophoneChange).toHaveBeenCalledWith("external"));
