@@ -4,6 +4,8 @@
 
 clone・worktree・起動方法は [セットアップ](setup.md)、実施した検証と残件は [進捗記録](progress.md) を参照する。Codexの作業方針は [AGENTS.md](../AGENTS.md) に置く。
 
+共通の見た目は [DESIGN.md](../DESIGN.md)、画像・ロゴは [デザインリファレンス](design/README.md) を参照する。参考画像は画面レイアウトの仕様ではない。
+
 ## 最新の決定
 
 デモは日本酒28種を含む和食居酒屋3店舗。UIはshadcn、Base UI、Tailwind、Lucide、Simple Flagsで統一する。商品画像35点は内蔵imagegenで生成したイメージ画像として扱う。
