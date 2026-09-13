@@ -7,6 +7,10 @@ import { z } from "zod";
 import { parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
 
+const sentenceSegmenters = {
+  ja: new Intl.Segmenter("ja", { granularity: "sentence" }),
+  en: new Intl.Segmenter("en", { granularity: "sentence" }),
+};
 const transcriptEvent = z.object({
   type: z.enum(["session.input_transcript.delta", "session.output_transcript.delta"]),
   event_id: z.string(),
@@ -410,18 +414,37 @@ export class VoiceConnection {
         .pipeThrough(new EventSourceParserStream({ onError: "terminate", maxBufferSize: 65536 }))
         .getReader();
       reader = currentReader;
+      const sentences = sentenceSegmenters[this.locale];
+      let pending = "";
       let completed = false;
       while (true) {
         const { value, done } = await currentReader.read();
         if (done) break;
         if (!this.current(attempt) || controller.signal.aborted) break;
+        let readyLength = 0;
         if (value.event === "completed") {
           completed = true;
-          break;
+          readyLength = pending.length;
+        } else {
+          if (value.event !== "delta") throw new Error("音声委任が正常終了しなかった");
+          const { delta } = z
+            .object({ delta: z.string().max(16000) })
+            .parse(JSON.parse(value.data));
+          if (pending.length + delta.length > 16000)
+            throw new Error("音声委任の未完結文が上限を超えた");
+          pending += delta;
+          for (const { segment, index } of sentences.segment(pending)) {
+            // 最後のsegmentは未完結でも返るため、文末が届くまで発声させない。
+            if (
+              /\p{Sentence_Terminal}[\p{Close_Punctuation}\p{Final_Punctuation}\s"']*$/u.test(
+                segment,
+              )
+            )
+              readyLength = index + segment.length;
+          }
         }
-        if (value.event !== "delta") throw new Error("音声委任が正常終了しなかった");
-        const { delta } = z.object({ delta: z.string().max(16000) }).parse(JSON.parse(value.data));
-        const characters = Array.from(delta);
+        const characters = Array.from(pending.slice(0, readyLength));
+        pending = pending.slice(readyLength);
         for (let offset = 0; offset < characters.length; offset += 100)
           this.channel?.send(
             JSON.stringify({
@@ -431,6 +454,7 @@ export class VoiceConnection {
               content: characters.slice(offset, offset + 100).join(""),
             }),
           );
+        if (completed) break;
       }
       if (!completed) throw new Error("音声委任の完了を確認できない");
     } catch {

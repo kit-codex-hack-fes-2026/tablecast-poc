@@ -377,7 +377,7 @@ describe("逐次字幕とAgents APIへの委任", () => {
       { voiceSessionId: "live_tablecast_2", items: [{ text: "Hello" }] },
     ]);
   });
-  it("委任結果を全文完了より前に返し字幕や同じ委任通知で作業を重複させない", async () => {
+  it("完結した文を逐次返し字幕や同じ委任通知で作業を重複させない", async () => {
     let output: ReadableStreamDefaultController<Uint8Array> | undefined;
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -396,37 +396,64 @@ describe("逐次字幕とAgents APIへの委任", () => {
       return new Response(stream);
     });
     const { value, changes } = connection();
-    await value.start("ja");
-    caption("user", "烏龍茶を一つ", 100, 700);
-    caption("assistant", "確認します。", 750, 1200);
+    await value.start("en");
+    caption("user", "What teas are available?", 100, 700);
+    caption("assistant", "Let me check.", 750, 1200);
     delegate();
     await vi.waitFor(() =>
       expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1),
     );
     expect(requests.find(({ path }) => path.endsWith("/delegations"))?.body).toMatchObject({
-      messages: [{ role: "user", content: "烏龍茶を一つ" }],
+      messages: [{ role: "user", content: "What teas are available?" }],
     });
-    output?.enqueue(
-      new TextEncoder().encode('event: delta\ndata: {"delta":"追加できました。"}\n\n'),
-    );
-    await vi.waitFor(() =>
-      expect(peer().channel.send).toHaveBeenCalledWith(
-        expect.stringContaining('"content":"追加できました。"'),
-      ),
-    );
+    for (const delta of [
+      "We",
+      " have two teas available, both 340 yen:",
+      " Oolong tea, or Japanese green tea.",
+    ])
+      output?.enqueue(
+        new TextEncoder().encode(`event: delta\ndata: ${JSON.stringify({ delta })}\n\n`),
+      );
+    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledOnce());
+    expect(JSON.parse(peer().channel.send.mock.calls[0]?.[0] ?? "null")).toMatchObject({
+      type: "session.commentary.append",
+      delegation_id: "item_tablecast_delegation",
+      content: "We have two teas available, both 340 yen: Oolong tea, or Japanese green tea.",
+    });
+    for (const delta of [" Both can be served at your", " chosen temperature. Thank you"])
+      output?.enqueue(
+        new TextEncoder().encode(`event: delta\ndata: ${JSON.stringify({ delta })}\n\n`),
+      );
+    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(peer().channel.send.mock.calls[1]?.[0] ?? "null")).toMatchObject({
+      delegation_id: "item_tablecast_delegation",
+      content: " Both can be served at your chosen temperature. ",
+    });
     delegate();
-    caption("user", "ありがとう", 5000, 5500);
+    caption("user", "Thanks", 5000, 5500);
     expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
     expect(requests.find(({ path }) => path.endsWith("/delegations"))?.signal?.aborted).toBe(false);
-    expect(changes.at(-1)?.messages?.some((message) => message.text === "追加できました。")).toBe(
+    expect(changes.at(-1)?.messages?.some((message) => message.text.startsWith("We have"))).toBe(
       false,
     );
+    output?.enqueue(new TextEncoder().encode("event: completed\ndata: {}\n\n"));
+    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(3));
+    expect(JSON.parse(peer().channel.send.mock.calls[2]?.[0] ?? "null")).toMatchObject({
+      delegation_id: "item_tablecast_delegation",
+      content: "Thank you",
+    });
+    await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
     await value.stop();
-    expect(requests.find(({ path }) => path.endsWith("/delegations"))?.signal?.aborted).toBe(true);
   });
   it.each([
     ["明示された失敗", 'event: failed\ndata: {"code":"VOICE_MODEL_FAILED"}\n\n'],
     ["完了前の切断", ""],
+    [
+      "未完結文の上限超過",
+      ["あ".repeat(8000), "い".repeat(8000)]
+        .map((delta) => `event: delta\ndata: ${JSON.stringify({ delta })}\n\n`)
+        .join(""),
+    ],
   ])("業務の%sで音声を停止し、自動再接続しない", async (_name, terminal) => {
     const original = vi.mocked(apiFetch).getMockImplementation();
     if (!original) throw new Error("HTTP fixtureがない");
@@ -434,7 +461,9 @@ describe("逐次字幕とAgents APIへの委任", () => {
       const result = await original(input, options);
       if (!(input instanceof Request ? input.url : String(input)).endsWith("/delegations"))
         return result;
-      return new Response(terminal, { headers: { "content-type": "text/event-stream" } });
+      return new Response('event: delta\ndata: {"delta":"注文を確定"}\n\n' + terminal, {
+        headers: { "content-type": "text/event-stream" },
+      });
     });
     const { value, changes } = connection();
     await value.start("ja");
@@ -468,7 +497,7 @@ describe("逐次字幕とAgents APIへの委任", () => {
     caption("user", "ありがとう", 8000, 8500);
     expect(changes.at(-1)?.messages?.at(-1)?.text).toBe("ありがとう");
   });
-  it("新しい委任通知では古い要求を取り消し同じIDへ結果を戻さない", async () => {
+  it.each(["停止", "新しい委任"])("%sでは未完結の結果を破棄する", async (interruption) => {
     const original = vi.mocked(apiFetch).getMockImplementation();
     if (!original) throw new Error("HTTP fixtureがない");
     vi.mocked(apiFetch).mockImplementation(async (input, options) => {
@@ -478,6 +507,11 @@ describe("逐次字幕とAgents APIへの委任", () => {
       return new Response(
         new ReadableStream<Uint8Array>({
           start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                'event: delta\ndata: {"delta":"お茶があります。注文を確定"}\n\n',
+              ),
+            );
             options?.signal?.addEventListener("abort", () =>
               controller.error(new DOMException("停止", "AbortError")),
             );
@@ -489,16 +523,24 @@ describe("逐次字幕とAgents APIへの委任", () => {
     await value.start("ja");
     caption("user", "お茶", 100, 300);
     delegate("item_first");
-    await vi.waitFor(() =>
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1),
-    );
-    delegate("item_second");
-    await vi.waitFor(() =>
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(2),
-    );
+    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledOnce());
+    if (interruption === "停止") await value.stop();
+    else delegate("item_second");
+    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(2));
     expect(requests.filter(({ path }) => path.endsWith("/delegations"))[0]?.signal?.aborted).toBe(
       true,
     );
-    expect(peer().channel.send).not.toHaveBeenCalled();
+    const commentary = peer()
+      .channel.send.mock.calls.map(([data]) => data)
+      .filter((data) => data.includes('"type":"session.commentary.append"'));
+    const expectedDelegations =
+      interruption === "停止" ? ["item_first"] : ["item_first", "item_second"];
+    expect(commentary).toHaveLength(expectedDelegations.length);
+    for (const [index, delegation_id] of expectedDelegations.entries())
+      expect(JSON.parse(commentary[index] ?? "null")).toMatchObject({
+        type: "session.commentary.append",
+        delegation_id,
+        content: "お茶があります。",
+      });
   });
 });
