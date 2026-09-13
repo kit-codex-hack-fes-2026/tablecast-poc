@@ -15,7 +15,11 @@ import {
 import { diagnosticSecrets, errorAttributes, redactCredentials } from "./diagnostics";
 import { DomainError } from "./errors";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
+import {
+  BatchSpanProcessor,
+  type ReadableSpan,
+  type SpanExporter,
+} from "@opentelemetry/sdk-trace-base";
 
 export interface TelemetryEnv {
   TABLECAST_ENV?: string;
@@ -226,13 +230,16 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
       version: env.TABLECAST_RELEASE_SHA ?? "local",
     },
     trace: {
-      exporter,
+      // 完了済みtraceを保持する既定processorを避け、標準の上限付きqueueを使う。
+      // Worker入口のwaitUntilからforceFlushされ、未完了spanを強制終了しない。
+      spanProcessors: [
+        new BatchSpanProcessor(exporter, { maxQueueSize: 512, maxExportBatchSize: 64 }),
+      ],
       sampling: {
         headSampler: { ratio: 1, acceptRemote: false },
       },
       fetch: { includeTraceContext: false },
       instrumentation: { instrumentGlobalFetch: false, instrumentGlobalCache: false },
-      batching: { strategy: "trace" },
     },
     logs: {
       transports: [logs],

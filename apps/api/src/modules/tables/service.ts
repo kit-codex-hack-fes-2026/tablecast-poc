@@ -131,7 +131,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
       })
       .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
     invalidationStatement(services, actor, mutation),
-    interruptVoiceTurns(services, actor, mutation),
+    ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, "locale.changed", { locale }),
     // このツール自身が音声資格を失効させるため、完了状態も同じ更新へ含める。
     db.insert(business.tableEvents)
@@ -230,7 +230,7 @@ export async function closeTable(services: ApiServices, actor: Actor) {
             sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
           ),
         invalidationStatement(services, actor, mutation),
-        interruptVoiceTurns(services, actor, mutation),
+        ...interruptVoiceTurns(services, actor, mutation),
         eventStatement(services, actor, mutation, "table.closed", {}),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");

@@ -1,12 +1,17 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
+import * as business from "../src/db/business-schema";
+import { updateCart } from "../src/modules/orders/service";
+import { changeLocale } from "../src/modules/tables/service";
 import { getTableState } from "../src/modules/tables/queries";
 import { getEvents } from "../src/modules/stores/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { startVoiceSession } from "../src/modules/voice/session";
+import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
 import { device, deviceToken, setupFixture } from "./fixture";
 
@@ -23,6 +28,148 @@ const startRequest = () =>
     headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ sdp: "tablecast-sdp-offer" }),
   });
+
+it.each(["停止", "言語変更", "新しい音声session"])(
+  "応答Workerが消えても%sで旧turnの終端を一度だけ残し、カートを維持する",
+  async (operation) => {
+    await setupFixture();
+    const services = createApiServices(env);
+    const voiceSessionId = "tablecast-lost-worker-live";
+    await setVoiceSession(services, device, voiceSessionId);
+    const before = await updateCart(services, device, {
+      expectedVersion: 0,
+      lines: [{ id: "tablecast-tea", productId: "tea", quantity: 1, selections: [] }],
+    });
+    await services.db.insert(business.voiceTurns).values(
+      (["started", "interrupted", "completed"] as const).map((status) => ({
+        id: `tablecast-lost-${status}`,
+        voice_session_id: voiceSessionId,
+        table_session_id: device.tableSessionId,
+        store_id: device.storeId,
+        status,
+        started_at: 1,
+        ended_at: status === "started" ? null : 2,
+      })),
+    );
+    if (operation === "言語変更") await changeLocale(services, device, "en");
+    else
+      await setVoiceSession(
+        services,
+        device,
+        operation === "停止" ? null : "tablecast-replacement-live",
+      );
+    const after = await getTableState(services, device);
+    expect(after.cart).toEqual(before.cart);
+    const terminal = after.events.filter((event) => event.kind === "voice.turn");
+    expect(terminal).toHaveLength(2);
+    expect(terminal.map((event) => event.data)).toEqual(
+      expect.arrayContaining([
+        { turnId: "tablecast-lost-started", status: "interrupted" },
+        { turnId: "tablecast-lost-interrupted", status: "interrupted" },
+      ]),
+    );
+    const rows = await services.db.select().from(business.voiceTurns);
+    expect(rows.find((row) => row.id === "tablecast-lost-started")).toMatchObject({
+      status: "interrupted",
+    });
+    expect(typeof rows.find((row) => row.id === "tablecast-lost-started")?.ended_at).toBe("number");
+    expect(rows.find((row) => row.id === "tablecast-lost-interrupted")).toMatchObject({
+      status: "interrupted",
+      ended_at: 2,
+    });
+    expect(rows.find((row) => row.id === "tablecast-lost-completed")).toMatchObject({
+      status: "completed",
+      ended_at: 2,
+    });
+    // 元の応答処理が遅れて終了しても、同じ終端イベントは増やさない。
+    await finishVoiceTurn(services, voiceSessionId, "tablecast-lost-started", "interrupted");
+    await setVoiceSession(services, device, after.voiceSessionId);
+    expect(
+      (await getTableState(services, device)).events.filter((event) => event.kind === "voice.turn"),
+    ).toHaveLength(2);
+  },
+);
+
+it("同じ音声session・他卓・切替後の新turnを古い停止要求で中断しない", async () => {
+  await setupFixture();
+  const services = createApiServices(env);
+  const voiceSessionId = "tablecast-current-live";
+  const nextSessionId = "tablecast-next-live";
+  await setVoiceSession(services, device, voiceSessionId);
+  await services.db.batch([
+    services.db.insert(business.restaurantTables).values({
+      id: "tablecast-other-table",
+      store_id: device.storeId,
+      name: "02",
+    }),
+    services.db.insert(business.tableSessions).values({
+      id: "tablecast-other-session",
+      store_id: device.storeId,
+      table_id: "tablecast-other-table",
+      locale: "ja",
+      guest_count: 1,
+      opened_at: 1,
+      voice_session_id: "tablecast-other-live",
+      voice_state: "active",
+    }),
+  ]);
+  await services.db.insert(business.voiceTurns).values([
+    {
+      id: "tablecast-current-turn",
+      voice_session_id: voiceSessionId,
+      table_session_id: device.tableSessionId,
+      store_id: device.storeId,
+      status: "started",
+      started_at: 1,
+    },
+    {
+      id: "tablecast-other-table-turn",
+      voice_session_id: "tablecast-other-live",
+      table_session_id: "tablecast-other-session",
+      store_id: device.storeId,
+      status: "started",
+      started_at: 1,
+    },
+  ]);
+  await setVoiceSession(services, device, voiceSessionId);
+  expect(
+    (await getTableState(services, device)).events.some((event) => event.kind === "voice.turn"),
+  ).toBe(false);
+  expect(
+    (await services.db.select().from(business.voiceTurns)).every((row) => row.status === "started"),
+  ).toBe(true);
+  await setVoiceSession(services, device, nextSessionId);
+  await services.db.insert(business.voiceTurns).values({
+    id: "tablecast-next-turn",
+    voice_session_id: nextSessionId,
+    table_session_id: device.tableSessionId,
+    store_id: device.storeId,
+    status: "started",
+    started_at: 2,
+  });
+  await expect(setVoiceSession(services, device, null, voiceSessionId)).rejects.toMatchObject({
+    code: "SESSION_STALE",
+  });
+  const state = await getTableState(services, device);
+  expect(state.voiceSessionId).toBe(nextSessionId);
+  expect(
+    state.events.filter((event) => event.kind === "voice.turn").map((event) => event.data),
+  ).toEqual([{ turnId: "tablecast-current-turn", status: "interrupted" }]);
+  expect(
+    await services.db
+      .select({ status: business.voiceTurns.status })
+      .from(business.voiceTurns)
+      .where(eq(business.voiceTurns.id, "tablecast-next-turn"))
+      .get(),
+  ).toEqual({ status: "started" });
+  expect(
+    await services.db
+      .select({ status: business.voiceTurns.status })
+      .from(business.voiceTurns)
+      .where(eq(business.voiceTurns.id, "tablecast-other-table-turn"))
+      .get(),
+  ).toEqual({ status: "started" });
+});
 
 it("認証した卓だけにLiveのSDPを返し、サーバー資格を渡さない", async () => {
   await setupFixture();

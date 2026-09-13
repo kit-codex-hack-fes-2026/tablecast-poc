@@ -99,7 +99,7 @@ it("要求ログは後処理を待たず出力し、許可していない属性�
   });
 });
 
-it("自動計測に秘密属性があるとき送信境界で除去しpreviewのPR番号だけをresourceへ残す", () => {
+it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewのPR番号を維持する", async () => {
   // Given: SDKの自動計測にURL・SQL・例外・不正なresourceが含まれる。
   const diagnostic = errorAttributes(new Error("connection refused"));
   const span: ReadableSpan = {
@@ -141,12 +141,17 @@ it("自動計測に秘密属性があるとき送信境界で除去しpreviewの
     },
     "tablecast-api",
   );
-  // When: 本番と同じexporter境界を通す。
-  const exporter = config.trace && "exporter" in config.trace ? config.trace.exporter : undefined;
-  if (!exporter || !("export" in exporter)) throw new Error("trace exporterがありません。");
-  exporter.export([span], () => {});
+  // When: 本番と同じprocessorを通し、Worker後処理と同じflushを実行する。
+  const processors =
+    config.trace && "spanProcessors" in config.trace ? config.trace.spanProcessors : undefined;
+  const processor = Array.isArray(processors) ? processors[0] : processors;
+  if (!processor) throw new Error("trace processorがありません。");
+  processor.onEnd(span);
+  await processor.forceFlush();
+  await processor.forceFlush();
   // Then: 値・例外を除去し、クエリと相関に必要な識別情報を維持する。
   const sent = send.mock.calls[0]?.[0];
+  expect(send).toHaveBeenCalledTimes(1);
   expect(JSON.stringify(sent)).not.toContain("tablecast-secret");
   expect(sent?.[0]?.events).toHaveLength(1);
   expect(sent).toMatchObject([

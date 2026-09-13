@@ -1,5 +1,5 @@
 import { SpanStatusCode } from "@opentelemetry/api";
-import { and, eq, exists, isNull, ne, notExists, sql, type SQL } from "drizzle-orm";
+import { and, eq, exists, isNull, ne, notExists, sql } from "drizzle-orm";
 import OpenAI from "openai";
 import type { Stream } from "openai/core/streaming";
 import type { AgentSessionEvent } from "openai/resources/beta/agents/agents";
@@ -8,7 +8,7 @@ import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
 import { failureLog, telemetryContent } from "../../platform/telemetry";
-import { notifyStore } from "../tables/mutations";
+import { notifyStore, voiceTurnEvent } from "../tables/mutations";
 import { getSession } from "../tables/queries";
 import { castSessionInstructions, createCastTools } from "./agent";
 import type { VoiceDiagnostics } from "./diagnostics";
@@ -19,42 +19,6 @@ import { voiceGenerationSpan } from "./observability";
 import { currentVoiceTurn, proactiveReservationCondition, voiceActor } from "./queries";
 import { conversationHistory, invokeVoiceTool } from "./realtime";
 import { cancelAgentSession } from "./runtime";
-
-function lifecycleEvent(services: ApiServices, condition: SQL | undefined) {
-  const db = services.db;
-  return db.insert(business.tableEvents).select(
-    db
-      .select({
-        cursor: sql<number>`NULL`.as("cursor"),
-        store_id: business.voiceTurns.store_id,
-        table_session_id: business.voiceTurns.table_session_id,
-        kind: sql<string>`'voice.turn'`.as("kind"),
-        data_json:
-          sql<string>`json_object('turnId',${business.voiceTurns.id},'status',${business.voiceTurns.status})`.as(
-            "data_json",
-          ),
-        created_at: sql<number>`${Date.now()}`.as("created_at"),
-      })
-      .from(business.voiceTurns)
-      .where(
-        and(
-          condition,
-          notExists(
-            db
-              .select({ cursor: business.tableEvents.cursor })
-              .from(business.tableEvents)
-              .where(
-                and(
-                  eq(business.tableEvents.table_session_id, business.voiceTurns.table_session_id),
-                  eq(business.tableEvents.kind, "voice.turn"),
-                  sql`json_extract(${business.tableEvents.data_json},'$.turnId')=${business.voiceTurns.id} AND json_extract(${business.tableEvents.data_json},'$.status')=${business.voiceTurns.status}`,
-                ),
-              ),
-          ),
-        ),
-      ),
-  );
-}
 
 export async function finishVoiceTurn(
   services: ApiServices,
@@ -118,7 +82,7 @@ export async function finishVoiceTurn(
           sql`${status}<>'completed'`,
         ),
       ),
-    lifecycleEvent(
+    voiceTurnEvent(
       services,
       and(
         eq(business.voiceTurns.id, turnId),
@@ -262,7 +226,7 @@ export async function startVoiceTurn(
           ),
         ),
       ),
-    lifecycleEvent(
+    voiceTurnEvent(
       services,
       and(
         eq(business.voiceTurns.id, input.turnId),
@@ -270,7 +234,7 @@ export async function startVoiceTurn(
         eq(business.voiceTurns.status, "started"),
       ),
     ),
-    lifecycleEvent(
+    voiceTurnEvent(
       services,
       and(
         eq(business.voiceTurns.table_session_id, session.id),

@@ -109,7 +109,7 @@ export async function updateDemo(services: ApiServices, actor: Actor, input: Dem
         sql`session_id=${session.id} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${session.id} AND mutation_id=${mutation})`,
       ),
     invalidationStatement(services, actor, mutation),
-    interruptVoiceTurns(services, actor, mutation),
+    ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, "demo.updated", {}),
   ]);
   ensure(result[0]?.meta.changes === 1, "DEMO_CONFLICT");

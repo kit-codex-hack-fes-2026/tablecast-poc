@@ -92,7 +92,7 @@ export async function setVoiceSession(
       .where(
         sql`table_session_id=${row.id} AND channel='voice' AND status IN ('pending','read') AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.id} AND mutation_id=${mutation})`,
       ),
-    interruptVoiceTurns(services, actor, mutation),
+    ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, voiceSessionId ? "voice.started" : "voice.stopped", {
       voiceSessionId: voiceSessionId ?? row.voice_session_id,
     }),

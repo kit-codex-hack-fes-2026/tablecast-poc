@@ -8,6 +8,8 @@
 
 Hono APIとTanStack StartのWorker入口を`@inference-net/otel-cf-workers`で計測する。StartのAPI proxyにもW3C trace contextを付け、APIのDrizzle D1・DO bindingと同じtraceへつなぐ。公開`@tablecast/api/telemetry`はWorker向けの設定・送信境界であり、ブラウザーからimportしない。
 
+span送信はOpenTelemetry標準の`BatchSpanProcessor`を使い、待機queueを512件、送信batchを64件に制限する。Worker入口の`waitUntil`で送信を完了し、完了済みtraceを保持し続けず、別要求のflushで実行中の音声spanを強制終了しない。秘匿化は既存exporter境界を通す。
+
 ローカルは公式`grafana/otel-lgtm:0.32.1`のOTLP/HTTP、previewとprodはGrafana CloudのOTLP gatewayへ送る。Cloudflare標準observabilityは既存のCloudflare調査用に維持し、同じログ・traceをCloudflare側のOTLP destinationから再送しない。
 
 Honoは公式の[Middleware execution order](https://hono.dev/docs/guides/middleware#execution-order)に従い、`await next()`後の`c.error`と最終レスポンスを読む。`HTTPException.getResponse()`で4xxの本文・ヘッダーを維持し、5xxの内部本文だけを汎用JSONへ置換する。Better Authは`onAPIError.throw`で共通onErrorへ渡す。4xxはwarn、5xxはerror、通常応答はinfoにする。
