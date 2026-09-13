@@ -334,21 +334,25 @@ export async function startVoiceTurn(
   };
   signal.addEventListener("abort", onAbort, { once: true });
   waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
-  const encoder = new TextEncoder();
   let running: Promise<void> | undefined;
-  const stream = new ReadableStream<Uint8Array>({
+  const stream = new ReadableStream<{
+    event: "delta" | "completed" | "failed";
+    data: string;
+  }>({
     start(controller) {
       running = (async () => {
         let events: Stream<AgentSessionEvent> | undefined;
         let creationTimer: ReturnType<typeof setTimeout> | undefined;
         let output = "";
         const parts = new Map<string, string>();
+        const finalMessages = new Set<string>();
         const calls = new Set<string>();
         const enqueue = (text: string) => {
           signal.throwIfAborted();
           ensure(output.length + text.length <= 16000, "VOICE_MODEL_FAILED", 503);
           output += text;
-          if (text && !streamClosed) controller.enqueue(encoder.encode(text));
+          if (text && !streamClosed)
+            controller.enqueue({ event: "delta", data: JSON.stringify({ delta: text }) });
         };
         try {
           const previous = await db
@@ -428,11 +432,32 @@ export async function startVoiceTurn(
               await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
             }
             signal.throwIfAborted();
-            if (event.type === "agent.session.turn.output_text.delta") {
+            if (
+              (event.type === "agent.session.turn.item.added" ||
+                event.type === "agent.session.turn.item.done") &&
+              event.item.type === "message" &&
+              event.item.role === "assistant" &&
+              event.item.id !== null &&
+              event.item.phase === "final_answer"
+            ) {
+              finalMessages.add(event.item.id);
+              if (event.type === "agent.session.turn.item.done")
+                for (const [index, content] of event.item.content.entries()) {
+                  if (content.type !== "output_text") continue;
+                  const key = `${event.item.id}:${index}`;
+                  const previousText = parts.get(key) ?? "";
+                  if (content.text.startsWith(previousText))
+                    enqueue(content.text.slice(previousText.length));
+                  parts.set(key, content.text);
+                }
+            } else if (event.type === "agent.session.turn.output_text.delta") {
+              // 進捗のcommentaryやphase不明の本文を、確認済みの業務結果としてLiveへ渡さない。
+              if (!finalMessages.has(event.item_id)) continue;
               const key = `${event.item_id}:${event.content_index}`;
               parts.set(key, (parts.get(key) ?? "") + event.delta);
               enqueue(event.delta);
             } else if (event.type === "agent.session.turn.output_text.done") {
+              if (!finalMessages.has(event.item_id)) continue;
               const key = `${event.item_id}:${event.content_index}`;
               const previousText = parts.get(key) ?? "";
               if (event.text.startsWith(previousText))
@@ -519,11 +544,13 @@ export async function startVoiceTurn(
                 503,
               );
               await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
+              ensure(output.length > 0, "VOICE_MODEL_FAILED", 503);
               await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "completed");
               logVoiceTurn(diagnostics, "generated");
               if (services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true")
                 span.setAttribute("tablecast.output", telemetryContent(output, services.env));
               if (!streamClosed) {
+                controller.enqueue({ event: "completed", data: "{}" });
                 streamClosed = true;
                 controller.close();
               }
@@ -556,8 +583,12 @@ export async function startVoiceTurn(
               "tablecast.request.id": diagnostics.traceId,
             });
           if (!streamClosed) {
+            controller.enqueue({
+              event: "failed",
+              data: JSON.stringify({ code: safeError.code }),
+            });
             streamClosed = true;
-            controller.error(safeError);
+            controller.close();
           }
           try {
             await finishVoiceTurn(

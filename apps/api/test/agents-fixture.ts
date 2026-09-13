@@ -6,6 +6,7 @@ import { voiceTurnSchema } from "../src/modules/voice/model";
 import { startVoiceTurn } from "../src/modules/voice/turns";
 import type { VoiceDiagnostics } from "../src/modules/voice/diagnostics";
 import { createApiServices } from "../src/platform/context";
+import { DomainError } from "../src/platform/errors";
 
 export const agentBindings = () => ({
   ...env,
@@ -13,7 +14,7 @@ export const agentBindings = () => ({
   TABLECAST_MODEL: "gpt-5.6-luna",
 });
 export type AgentStep =
-  | { text: string }
+  | { text: string; phase?: "commentary" | "final_answer" | null }
   | { tool: string; arguments: object; callId?: string }
   | { wait: Promise<void> }
   | { failure: true }
@@ -127,6 +128,17 @@ export function mockAgentSessions(
                 return;
               }
               if ("text" in step) {
+                const message = {
+                  id: `tablecast-message-${index}`,
+                  type: "message",
+                  role: "assistant",
+                  turn_id: turnId,
+                  phase: step.phase === undefined ? "final_answer" : step.phase,
+                };
+                session.emit({
+                  type: "agent.session.turn.item.added",
+                  item: { ...message, status: "in_progress", content: [] },
+                });
                 session.emit({
                   type: "agent.session.turn.output_text.delta",
                   item_id: `tablecast-message-${index}`,
@@ -138,6 +150,14 @@ export function mockAgentSessions(
                   item_id: `tablecast-message-${index}`,
                   content_index: 0,
                   text: step.text,
+                });
+                session.emit({
+                  type: "agent.session.turn.item.done",
+                  item: {
+                    ...message,
+                    status: "completed",
+                    content: [{ type: "output_text", text: step.text, annotations: [] }],
+                  },
                 });
               } else {
                 const ready = Promise.withResolvers<void>();
@@ -236,4 +256,30 @@ export async function runVoiceTurn(
     (promise) => context.waitUntil(promise),
   );
   return { result, diagnostics, finish: () => waitOnExecutionContext(context) };
+}
+
+export async function voiceTurnText(result: Awaited<ReturnType<typeof runVoiceTurn>>["result"]) {
+  if (result.kind !== "stream") throw new Error("応答streamがない");
+  const reader = result.stream.getReader();
+  let text = "";
+  let completed = false;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const data: unknown = JSON.parse(value.data);
+      if (value.event === "delta") text += z.object({ delta: z.string() }).parse(data).delta;
+      else if (value.event === "completed") completed = true;
+      else if (value.event === "failed") {
+        const { code } = z
+          .object({ code: z.enum(["VOICE_MODEL_FAILED", "VOICE_CANCELLED"]) })
+          .parse(data);
+        throw new DomainError(code, 503, code);
+      } else throw new Error("未対応の音声委任イベント");
+    }
+    if (!completed) throw new Error("音声委任の完了通知がない");
+    return text;
+  } finally {
+    reader.releaseLock();
+  }
 }

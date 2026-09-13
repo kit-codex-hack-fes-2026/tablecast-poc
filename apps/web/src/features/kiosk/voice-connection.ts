@@ -1,6 +1,8 @@
 import type { LiveMessage, VoiceView } from "./voice-model";
 export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
 import type { Locale } from "@tablecast/api/schema";
+import { EventSourceParserStream } from "eventsource-parser/stream";
+import type { EventSourceMessage } from "eventsource-parser";
 import { z } from "zod";
 import { parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
@@ -386,7 +388,7 @@ export class VoiceConnection {
     const messages = (trigger === "user" ? context.slice(0, latestUser + 1) : context).map(
       ({ message }) => ({ role: message.role, content: message.text.slice(-2000) }),
     );
-    let reader: ReadableStreamDefaultReader<string> | undefined;
+    let reader: ReadableStreamDefaultReader<EventSourceMessage> | undefined;
     try {
       const response = await this.client.voice.delegations.$post(
         {
@@ -403,13 +405,23 @@ export class VoiceConnection {
       if (!response.ok) await parseResponse(response);
       if (response.status === 204) return;
       if (!response.body) throw new Error("音声委任の応答本文がない");
-      const currentReader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+      const currentReader = response.body
+        .pipeThrough(new TextDecoderStream())
+        .pipeThrough(new EventSourceParserStream({ onError: "terminate", maxBufferSize: 65536 }))
+        .getReader();
       reader = currentReader;
+      let completed = false;
       while (true) {
         const { value, done } = await currentReader.read();
         if (done) break;
         if (!this.current(attempt) || controller.signal.aborted) break;
-        const characters = Array.from(value);
+        if (value.event === "completed") {
+          completed = true;
+          break;
+        }
+        if (value.event !== "delta") throw new Error("音声委任が正常終了しなかった");
+        const { delta } = z.object({ delta: z.string().max(16000) }).parse(JSON.parse(value.data));
+        const characters = Array.from(delta);
         for (let offset = 0; offset < characters.length; offset += 100)
           this.channel?.send(
             JSON.stringify({
@@ -420,6 +432,7 @@ export class VoiceConnection {
             }),
           );
       }
+      if (!completed) throw new Error("音声委任の完了を確認できない");
     } catch {
       if (this.current(attempt) && !controller.signal.aborted) await this.fail(attempt);
     } finally {

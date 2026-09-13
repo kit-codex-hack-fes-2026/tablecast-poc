@@ -170,6 +170,8 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 
 OpenAI projectにはGPT-Liveの利用権限に加え、Agents APIの `api.agents.read`、`api.agents.write`、`api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
 
+業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
+
 | ファイル                      | 用途                                                  |
 | ----------------------------- | ----------------------------------------------------- |
 | `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない         |

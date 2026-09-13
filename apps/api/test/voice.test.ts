@@ -1,13 +1,20 @@
 import { env } from "cloudflare:workers";
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as business from "../src/db/business-schema";
+import app from "../src/app";
 import { getVoiceConfirmation, updateCart } from "../src/modules/orders/service";
 import { getTableState } from "../src/modules/tables/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { mockAgentSessions, runVoiceTurn } from "./agents-fixture";
-import { device, setupFixture } from "./fixture";
+import {
+  agentBindings,
+  mockAgentSessions,
+  runVoiceTurn,
+  voiceTurnText as body,
+} from "./agents-fixture";
+import { device, deviceToken, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const voiceId = "tablecast-voice-test";
@@ -28,12 +35,82 @@ const turn = (id = "tablecast-turn") =>
     .from(business.voiceTurns)
     .where(eq(business.voiceTurns.id, id))
     .get();
-async function body(result: Awaited<ReturnType<typeof runVoiceTurn>>["result"]) {
-  if (result.kind !== "stream") throw new Error("応答streamがない");
-  return new Response(result.stream).text();
-}
 
 describe("音声委任とhosted Agents API", () => {
+  it.each([false, true])("認証済みHTTP委任の失敗%sをSSEの明示terminalで返す", async (failure) => {
+    await setup();
+    mockAgentSessions([
+      failure
+        ? [{ text: "確認中です。", phase: "commentary" }, { providerToolFailure: true }]
+        : [{ text: "ほうじ茶は400円です。" }],
+    ]);
+    const context = createExecutionContext();
+    const response = await app.request(
+      new Request("http://localhost:3000/api/table/voice/delegations", {
+        method: "POST",
+        headers: {
+          Cookie: `tablecast.device=${deviceToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          voiceSessionId: voiceId,
+          delegationId: "tablecast-delegation",
+          locale: "ja",
+          messages: [{ role: "user", content: "お茶をください" }],
+          trigger: "user",
+        }),
+      }),
+      undefined,
+      agentBindings(),
+      context,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe(
+      failure
+        ? 'event: failed\ndata: {"code":"VOICE_MODEL_FAILED"}\n\n'
+        : 'event: delta\ndata: {"delta":"ほうじ茶は400円です。"}\n\nevent: completed\ndata: {}\n\n',
+    );
+    await waitOnExecutionContext(context);
+  });
+  it.each(["commentary", null] as const)(
+    "phase=%sの進捗を転送せず、final_answerだけを成功通知より先に配信する",
+    async (phase) => {
+      await setup();
+      mockAgentSessions([
+        [{ text: "確認してご案内します。", phase }, { text: "ほうじ茶は400円です。" }],
+      ]);
+      const running = await runVoiceTurn(input());
+      expect(await body(running.result)).toBe("ほうじ茶は400円です。");
+      await running.finish();
+      expect((await turn())?.status).toBe("completed");
+    },
+  );
+  it("進捗後のprovider失敗を本文や正常EOFにせずfailedイベントとして配信する", async () => {
+    await setup();
+    mockAgentSessions([
+      [{ text: "お茶を確認します。", phase: "commentary" }, { providerToolFailure: true }],
+    ]);
+    const running = await runVoiceTurn(input());
+    if (running.result.kind !== "stream") throw new Error("応答streamがない");
+    const reader = running.result.stream.getReader();
+    expect((await reader.read()).value).toEqual({
+      event: "failed",
+      data: JSON.stringify({ code: "VOICE_MODEL_FAILED" }),
+    });
+    expect((await reader.read()).done).toBe(true);
+    await running.finish();
+    expect((await turn())?.status).toBe("failed");
+  });
+  it("最終回答がない完了を業務結果として正常終了にしない", async () => {
+    await setup();
+    mockAgentSessions([[{ text: "確認してご案内します。", phase: "commentary" }]]);
+    const running = await runVoiceTurn(input());
+    await expect(body(running.result)).rejects.toMatchObject({ code: "VOICE_MODEL_FAILED" });
+    await running.finish();
+    expect((await turn())?.status).toBe("failed");
+  });
   it("実toolへ委任して生成途中から本文を返し、完了イベントでturnを終了する", async () => {
     await setup();
     const release = Promise.withResolvers<void>();
@@ -54,18 +131,24 @@ describe("音声委任とhosted Agents API", () => {
     const running = await runVoiceTurn(input());
     if (running.result.kind !== "stream") throw new Error("応答streamがない");
     const reader = running.result.stream.getReader();
-    expect(new TextDecoder().decode((await reader.read()).value)).toBe("確認します。");
+    expect((await reader.read()).value).toEqual({
+      event: "delta",
+      data: JSON.stringify({ delta: "確認します。" }),
+    });
     expect((await state()).cart.lines).toHaveLength(0);
     expect((await turn())?.status).toBe("started");
     release.resolve();
-    let rest = "";
+    const rest = [];
     for (;;) {
       const chunk = await reader.read();
       if (chunk.done) break;
-      rest += new TextDecoder().decode(chunk.value);
+      rest.push(chunk.value);
     }
     await running.finish();
-    expect(rest).toBe("追加しました。");
+    expect(rest).toEqual([
+      { event: "delta", data: JSON.stringify({ delta: "追加しました。" }) },
+      { event: "completed", data: "{}" },
+    ]);
     expect((await state()).cart.lines).toHaveLength(1);
     expect(await turn()).toMatchObject({
       status: "completed",
@@ -142,11 +225,13 @@ describe("音声委任とhosted Agents API", () => {
         outcome = "VOICE_CANCELLED";
       } else {
         cancellation.abort();
-        outcome = await reader
-          .read()
-          .catch((error: unknown) => (error instanceof Error ? error.message : "unknown"));
+        outcome = (await reader.read()).value;
       }
-      expect(outcome).toBe("VOICE_CANCELLED");
+      expect(outcome).toEqual(
+        mode === "応答取消"
+          ? "VOICE_CANCELLED"
+          : { event: "failed", data: JSON.stringify({ code: "VOICE_CANCELLED" }) },
+      );
       pending.resolve();
       await running.finish();
       expect(provider.cancellations).toEqual(["tablecast-agent-1"]);
@@ -214,12 +299,13 @@ describe("音声委任とhosted Agents API", () => {
     if (first.result.kind !== "stream") throw new Error("応答streamがない");
     const reader = first.result.stream.getReader();
     await reader.read();
-    const firstResult = reader
-      .read()
-      .catch((error: unknown) => (error instanceof Error ? error.message : "unknown"));
+    const firstResult = reader.read();
     const next = await runVoiceTurn(input("tablecast-next-turn"));
     expect(await body(next.result)).toBe("新しいご依頼です。");
-    expect(await firstResult).toBe("VOICE_CANCELLED");
+    expect((await firstResult).value).toEqual({
+      event: "failed",
+      data: JSON.stringify({ code: "VOICE_CANCELLED" }),
+    });
     release.resolve();
     await Promise.all([first.finish(), next.finish()]);
     expect(provider.cancellations).toEqual(["tablecast-agent-1"]);

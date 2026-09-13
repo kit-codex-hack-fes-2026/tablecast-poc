@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import * as business from "../src/db/business-schema";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { agentBindings, mockAgentSessions, runVoiceTurn } from "./agents-fixture";
+import { agentBindings, mockAgentSessions, runVoiceTurn, voiceTurnText } from "./agents-fixture";
 import { device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -36,7 +36,7 @@ it.each(["完了", "失敗"])(
       TABLECAST_MODEL_API_KEY: privateKey,
     });
     if (running.result.kind !== "stream") throw new Error("応答streamがない");
-    const response = new Response(running.result.stream).text();
+    const response = voiceTurnText(running.result);
     const outcome = await response.catch((failure: unknown) =>
       failure instanceof Error ? failure.message : "unknown",
     );

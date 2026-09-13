@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate } from "../../platform/validation";
@@ -53,9 +54,14 @@ export const voiceRoutes = new Hono<ApiEnv>()
       c.executionCtx.waitUntil.bind(c.executionCtx),
     );
     if (result.kind === "skipped") return c.body(null, 204);
-    return c.newResponse(result.stream, 200, {
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
+    c.header("X-Content-Type-Options", "nosniff");
+    const response = streamSSE(c, async (stream) => {
+      const cancelled = new AbortController();
+      stream.onAbort(() => cancelled.abort());
+      await result.stream.pipeTo(new WritableStream({ write: (event) => stream.writeSSE(event) }), {
+        signal: cancelled.signal,
+      });
     });
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   });

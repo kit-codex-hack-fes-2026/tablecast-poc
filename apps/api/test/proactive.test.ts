@@ -5,7 +5,7 @@ import * as business from "../src/db/business-schema";
 import { getTableState } from "../src/modules/tables/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { agentBindings, mockAgentSessions, runVoiceTurn } from "./agents-fixture";
+import { agentBindings, mockAgentSessions, runVoiceTurn, voiceTurnText } from "./agents-fixture";
 import { configuration, device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -98,8 +98,7 @@ it("同時要求を一度だけ受け入れ、読取専用toolと180秒の間隔
   expect(attempts.map((attempt) => attempt.result.kind).toSorted()).toEqual(["skipped", "stream"]);
   const outputs = await Promise.all(
     attempts.map(async (attempt) => {
-      const output =
-        attempt.result.kind === "stream" ? await new Response(attempt.result.stream).text() : null;
+      const output = attempt.result.kind === "stream" ? await voiceTurnText(attempt.result) : null;
       await attempt.finish();
       return output;
     }),
