@@ -1,0 +1,78 @@
+{
+  "version": 2,
+  "media": {
+    "screenVideoPath": "tablecast-source-cursor.mp4",
+    "cursorCaptureMode": "editable-overlay"
+  },
+  "editor": {
+    "cursorTheme": "default",
+    "wallpaper": "/wallpapers/wallpaper1.jpg",
+    "shadowIntensity": 0,
+    "showBlur": false,
+    "motionBlurAmount": 0.1,
+    "borderRadius": 0,
+    "padding": 0,
+    "cropRegion": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "zoomRegions": [
+      {
+        "id": "tablecast-consult-answer",
+        "startMs": 26506,
+        "endMs": 37183,
+        "depth": 3,
+        "focus": {
+          "cx": 0.3333333333333333,
+          "cy": 0.35000000000000003
+        },
+        "focusMode": "manual",
+        "source": "manual"
+      },
+      {
+        "id": "tablecast-pause",
+        "startMs": 93056,
+        "endMs": 95633,
+        "depth": 3,
+        "focus": {
+          "cx": 0.6666666666666666,
+          "cy": 0.2777777777777778
+        },
+        "focusMode": "manual",
+        "source": "manual"
+      },
+      {
+        "id": "tablecast-readback",
+        "startMs": 122006,
+        "endMs": 151683,
+        "depth": 3,
+        "focus": {
+          "cx": 0.3333333333333333,
+          "cy": 0.62
+        },
+        "focusMode": "manual",
+        "source": "manual"
+      }
+    ],
+    "cameraFullscreenRegions": [],
+    "autoZoomEnabled": false,
+    "autoFocusAll": false,
+    "trimRegions": [],
+    "speedRegions": [],
+    "annotationRegions": [],
+    "aspectRatio": "16:9",
+    "webcamLayoutPreset": "picture-in-picture",
+    "webcamMaskShape": "rectangle",
+    "webcamMirrored": false,
+    "webcamReactiveZoom": true,
+    "webcamSizePreset": 25,
+    "webcamPosition": null,
+    "exportQuality": "good",
+    "exportFormat": "mp4",
+    "gifFrameRate": 15,
+    "gifLoop": true,
+    "gifSizePreset": "medium"
+  }
+}

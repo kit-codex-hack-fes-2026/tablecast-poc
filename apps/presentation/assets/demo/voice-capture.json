@@ -1,0 +1,51 @@
+{
+  "capturedOn": "2026-09-11",
+  "application": "TableCast / Docker / 実Web・API・D1・LiveKit Agent",
+  "browser": "Chrome / Playwright 1.63.0 / 1600x900",
+  "store": "こもれび（合成店舗）",
+  "table": "T11",
+  "input": "Inworldの合成音声を仮想マイクへ入力。物理マイク試験ではない。",
+  "response": "OpenAI Realtime 2.1による理解・実業務ツール呼出し・Inworldの実音声応答",
+  "capture": "ブラウザー録画と実音声トラックを同期。複数の実操作を等速で抜粋。",
+  "openscreen": "実録画は未達。今回の採用映像はPlaywright。",
+  "sources": [
+    {
+      "file": "tablecast-voice-consult.mp4",
+      "verified": "日本語の商品相談と登録情報に基づく味わいの応答。先頭の音声欠落を入力波形との照合で補正。"
+    },
+    {
+      "file": "tablecast-voice-order.mp4",
+      "verified": "新規来店で冷酒・90ml・1点・780円を音声でカートへ追加。停止後もGUIのカートが残る。"
+    },
+    {
+      "file": "tablecast-voice-approve.mp4",
+      "verified": "読み上げ済みスナップショットを確認し、別発話の承認で注文送信。完了の実音声応答も取得。"
+    },
+    {
+      "file": "tablecast-voice-english.mp4",
+      "verified": "実際の英語質問に同じ商品の英語音声で返答。動画は味わい部分の抜粋。"
+    },
+    {
+      "file": "tablecast-voice-staff.mp4",
+      "verified": "同じ注文ID・780円を実管理画面で受付済みに更新。"
+    }
+  ],
+  "successfulOrder": {
+    "tableSessionId": "79abeb17-63c6-492a-a48a-1074e3125633",
+    "orderId": "a7b413cb-6f7e-4012-bdae-9affd26a6450",
+    "product": "こもれび 月凪 純米吟醸",
+    "temperature": "冷酒",
+    "millilitres": 90,
+    "quantity": 1,
+    "totalYen": 780,
+    "cartTotalAfterSubmission": 0,
+    "voiceFailureEventsThroughSubmission": 0,
+    "staffStatus": "accepted"
+  },
+  "limitations": [
+    "以前の試行にOpenAIのtokens rate limitによる返答中断がある。",
+    "GUI温度変更を音声再開時に古い会話へ戻す挙動を1回確認。",
+    "音声認識の誤変換と、未提供をservedと表現した別試行がある。",
+    "実店舗・物理マイク・雑音・複数話者・負荷・人の耳による最終評価は未検証。"
+  ]
+}

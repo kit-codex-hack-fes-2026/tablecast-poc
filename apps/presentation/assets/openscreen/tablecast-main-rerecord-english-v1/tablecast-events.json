@@ -1,0 +1,3502 @@
+{
+  "source": "Actual Playwright-dispatched browser events and real app responses",
+  "viewport": {
+    "width": 1024,
+    "height": 768
+  },
+  "audioStartedAt": 1789290183451,
+  "initial": {
+    "tableName": "T01",
+    "tableId": "tablecast-komorebi-table-01",
+    "sessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+    "orders": 1,
+    "cart": 0
+  },
+  "result": {
+    "sessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+    "tableId": "tablecast-komorebi-table-01",
+    "tableName": "T01",
+    "orders": [
+      {
+        "id": "b8828221-563f-46df-8754-dc0c48b65679",
+        "status": "accepted",
+        "snapshot": {
+          "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+          "id": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+          "cartVersion": 1,
+          "configVersion": 4,
+          "lines": [
+            {
+              "id": "new-line-1",
+              "productId": "tablecast-komorebi-sake-tsukinagi",
+              "quantity": 1,
+              "selections": [
+                {
+                  "optionId": "tablecast-komorebi-temperature-chilled",
+                  "quantity": 1
+                },
+                {
+                  "optionId": "tablecast-komorebi-serving-glass",
+                  "quantity": 1
+                }
+              ],
+              "name": {
+                "ja": "こもれび 月凪 純米吟醸",
+                "en": "Komorebi Tsukinagi Junmai ginjo"
+              },
+              "speechName": {
+                "ja": "こもれび つきなぎ 純米吟醸",
+                "en": "Komorebi Tsukinagi, Junmai ginjo"
+              },
+              "options": [
+                {
+                  "id": "tablecast-komorebi-temperature-chilled",
+                  "name": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "speechName": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 0
+                },
+                {
+                  "id": "tablecast-komorebi-serving-glass",
+                  "name": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "speechName": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 160
+                }
+              ],
+              "unitPrice": 780,
+              "total": 780,
+              "missing": [],
+              "planCovered": false
+            }
+          ],
+          "total": 780,
+          "locale": "ja",
+          "text": "こもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。",
+          "expiresAt": 1789290018858,
+          "channel": "voice",
+          "status": "submitted",
+          "createdTurnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+          "plan": null
+        },
+        "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+        "snapshotId": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+        "idempotencyKey": "submit-20260913-01",
+        "total": 780,
+        "createdAt": 1789289930231
+      }
+    ],
+    "cart": {
+      "lines": [],
+      "version": 3,
+      "total": 0,
+      "complete": false
+    }
+  },
+  "marks": [
+    {
+      "id": "overview",
+      "at": 1789290185185
+    },
+    {
+      "id": "voice-start",
+      "at": 1789290192106
+    },
+    {
+      "id": "english",
+      "at": 1789290193573
+    },
+    {
+      "id": "english-end",
+      "at": 1789290219719
+    },
+    {
+      "id": "final-stop",
+      "at": 1789290219887
+    }
+  ],
+  "shots": [],
+  "appEvents": [
+    {
+      "cursor": 574,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.opened",
+      "data": {
+        "guestCount": 2
+      },
+      "createdAt": 1789289780962
+    },
+    {
+      "cursor": 575,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "cart",
+        "productId": null
+      },
+      "createdAt": 1789289825953
+    },
+    {
+      "cursor": 576,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.started",
+      "data": {
+        "voiceSessionId": "42cd8a5f-9249-49d4-aef0-cc4730c3ed32"
+      },
+      "createdAt": 1789289826382
+    },
+    {
+      "cursor": 577,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "user",
+        "locale": "ja",
+        "text": "このお店の日本酒、月凪はどんな味ですか?",
+        "speaker": null
+      },
+      "createdAt": 1789289831615
+    },
+    {
+      "cursor": 578,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8"
+      },
+      "createdAt": 1789289832507
+    },
+    {
+      "cursor": 579,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vPN72yIUcAE2boMn",
+        "toolName": "getCatalog",
+        "state": "running"
+      },
+      "createdAt": 1789289832956
+    },
+    {
+      "cursor": 580,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vPN72yIUcAE2boMn",
+        "toolName": "getCatalog",
+        "state": "completed"
+      },
+      "createdAt": 1789289833034
+    },
+    {
+      "cursor": 581,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vY6ohVclNURippbh",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289833363
+    },
+    {
+      "cursor": 582,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vY6ohVclNURippbh",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289833417
+    },
+    {
+      "cursor": 583,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " おしながきを見てみますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289852215
+    },
+    {
+      "cursor": 584,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289852392
+    },
+    {
+      "cursor": 585,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "user",
+        "locale": "ja",
+        "text": "では、月凪を冷酒で90mlのグラスを一つお願いします。",
+        "speaker": null
+      },
+      "createdAt": 1789289859204
+    },
+    {
+      "cursor": 586,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c"
+      },
+      "createdAt": 1789289860338
+    },
+    {
+      "cursor": 587,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_Y4FuxlMQ78xDIKTE",
+        "toolName": "getCatalog",
+        "state": "running"
+      },
+      "createdAt": 1789289860379
+    },
+    {
+      "cursor": 588,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_Y4FuxlMQ78xDIKTE",
+        "toolName": "getCatalog",
+        "state": "completed"
+      },
+      "createdAt": 1789289860472
+    },
+    {
+      "cursor": 589,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_DD6wEtdxVccLVydG",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289860880
+    },
+    {
+      "cursor": 590,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_DD6wEtdxVccLVydG",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289860949
+    },
+    {
+      "cursor": 591,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_CBcFyXrjFiHZn4nv",
+        "toolName": "updateCart",
+        "state": "running"
+      },
+      "createdAt": 1789289863652
+    },
+    {
+      "cursor": 592,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "cart.updated",
+      "data": {
+        "version": 1,
+        "source": "voice"
+      },
+      "createdAt": 1789289863710
+    },
+    {
+      "cursor": 593,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_CBcFyXrjFiHZn4nv",
+        "toolName": "updateCart",
+        "state": "completed"
+      },
+      "createdAt": 1789289863815
+    },
+    {
+      "cursor": 594,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289876690
+    },
+    {
+      "cursor": 595,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " こもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289876870
+    },
+    {
+      "cursor": 596,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.stopped",
+      "data": {
+        "voiceSessionId": "42cd8a5f-9249-49d4-aef0-cc4730c3ed32"
+      },
+      "createdAt": 1789289878061
+    },
+    {
+      "cursor": 597,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.started",
+      "data": {
+        "voiceSessionId": "38297eac-0970-4941-9ce4-1c377d9097a1"
+      },
+      "createdAt": 1789289887175
+    },
+    {
+      "cursor": 598,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "user",
+        "locale": "ja",
+        "text": "この内容で注文をお願いします。",
+        "speaker": null
+      },
+      "createdAt": 1789289890965
+    },
+    {
+      "cursor": 599,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088"
+      },
+      "createdAt": 1789289891489
+    },
+    {
+      "cursor": 600,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_taaau4fDYn12wlkk",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289892936
+    },
+    {
+      "cursor": 601,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_taaau4fDYn12wlkk",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289892989
+    },
+    {
+      "cursor": 602,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_zhWlWCBY7K1CqsK3",
+        "toolName": "prepareConfirmation",
+        "state": "running"
+      },
+      "createdAt": 1789289898805
+    },
+    {
+      "cursor": 603,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "confirmation.prepared",
+      "data": {
+        "snapshotId": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+        "channel": "voice"
+      },
+      "createdAt": 1789289898859
+    },
+    {
+      "cursor": 604,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_zhWlWCBY7K1CqsK3",
+        "toolName": "prepareConfirmation",
+        "state": "completed"
+      },
+      "createdAt": 1789289898890
+    },
+    {
+      "cursor": 605,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " 確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289899354
+    },
+    {
+      "cursor": 606,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "こもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289915520
+    },
+    {
+      "cursor": 607,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "ccebd4b2-413c-49f4-90db-3806f9aec2d5",
+        "role": "user",
+        "locale": "ja",
+        "text": "はい。",
+        "speaker": null
+      },
+      "createdAt": 1789289922549
+    },
+    {
+      "cursor": 608,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "ccebd4b2-413c-49f4-90db-3806f9aec2d5"
+      },
+      "createdAt": 1789289923228
+    },
+    {
+      "cursor": 609,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "user",
+        "locale": "ja",
+        "text": "その内容で注文してください。",
+        "speaker": null
+      },
+      "createdAt": 1789289924903
+    },
+    {
+      "cursor": 610,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f"
+      },
+      "createdAt": 1789289925438
+    },
+    {
+      "cursor": 611,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_KOl9OWbVt2UIxHeI",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289926171
+    },
+    {
+      "cursor": 612,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_KOl9OWbVt2UIxHeI",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289926224
+    },
+    {
+      "cursor": 613,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_MV0ObjykRbIJZuF3",
+        "toolName": "submitOrder",
+        "state": "running"
+      },
+      "createdAt": 1789289930161
+    },
+    {
+      "cursor": 614,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "order.submitted",
+      "data": {
+        "orderId": "b8828221-563f-46df-8754-dc0c48b65679",
+        "total": 780,
+        "source": "voice"
+      },
+      "createdAt": 1789289930232
+    },
+    {
+      "cursor": 615,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_MV0ObjykRbIJZuF3",
+        "toolName": "submitOrder",
+        "state": "completed"
+      },
+      "createdAt": 1789289930260
+    },
+    {
+      "cursor": 616,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "orders",
+        "productId": null
+      },
+      "createdAt": 1789289930770
+    },
+    {
+      "cursor": 617,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289936010
+    },
+    {
+      "cursor": 618,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " ご注文を送信しました。ありがとうございます。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289936184
+    },
+    {
+      "cursor": 619,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "83521421-a75b-473d-bf98-2258062ccf2a",
+        "role": "user",
+        "locale": "ja",
+        "text": "Could you explain the 正解 chosen in English, please?",
+        "speaker": null
+      },
+      "createdAt": 1789289939458
+    },
+    {
+      "cursor": 620,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "83521421-a75b-473d-bf98-2258062ccf2a"
+      },
+      "createdAt": 1789289940123
+    },
+    {
+      "cursor": 621,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.stopped",
+      "data": {
+        "voiceSessionId": "38297eac-0970-4941-9ce4-1c377d9097a1"
+      },
+      "createdAt": 1789289940595
+    },
+    {
+      "cursor": 622,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "order.status",
+      "data": {
+        "orderId": "b8828221-563f-46df-8754-dc0c48b65679",
+        "status": "accepted"
+      },
+      "createdAt": 1789290092770
+    },
+    {
+      "cursor": 623,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "menu",
+        "productId": null
+      },
+      "createdAt": 1789290183169
+    },
+    {
+      "cursor": 624,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "cart",
+        "productId": null
+      },
+      "createdAt": 1789290192145
+    },
+    {
+      "cursor": 625,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.started",
+      "data": {
+        "voiceSessionId": "cb46525a-19a8-4b6c-8107-e9e491abc2a7"
+      },
+      "createdAt": 1789290192571
+    },
+    {
+      "cursor": 626,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "ddc4b405-dab9-4d71-9a4b-05a36029daa3",
+        "role": "user",
+        "locale": "ja",
+        "text": "Could you explain the sake I chose in English please?",
+        "speaker": null
+      },
+      "createdAt": 1789290197167
+    },
+    {
+      "cursor": 627,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "ddc4b405-dab9-4d71-9a4b-05a36029daa3"
+      },
+      "createdAt": 1789290197986
+    },
+    {
+      "cursor": 628,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "ddc4b405-dab9-4d71-9a4b-05a36029daa3",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " You chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving.The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789290218141
+    },
+    {
+      "cursor": 629,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.stopped",
+      "data": {
+        "voiceSessionId": "cb46525a-19a8-4b6c-8107-e9e491abc2a7"
+      },
+      "createdAt": 1789290220280
+    }
+  ],
+  "pointer": [
+    {
+      "at": 1789290185184,
+      "x": 120,
+      "y": 660,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185281,
+      "x": 837,
+      "y": 0,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185284,
+      "x": 849,
+      "y": 4,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185290,
+      "x": 867,
+      "y": 12,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185297,
+      "x": 884,
+      "y": 19,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185303,
+      "x": 902,
+      "y": 27,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185309,
+      "x": 920,
+      "y": 33,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185315,
+      "x": 939,
+      "y": 40,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185321,
+      "x": 959,
+      "y": 45,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185327,
+      "x": 978,
+      "y": 49,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290185333,
+      "x": 998,
+      "y": 54,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185339,
+      "x": 1017,
+      "y": 58,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290185340,
+      "x": 1020,
+      "y": 60,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190138,
+      "x": 1023,
+      "y": 315,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190147,
+      "x": 996,
+      "y": 327,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190151,
+      "x": 984,
+      "y": 331,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190158,
+      "x": 964,
+      "y": 339,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190163,
+      "x": 946,
+      "y": 345,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190170,
+      "x": 928,
+      "y": 351,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190176,
+      "x": 912,
+      "y": 357,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190182,
+      "x": 892,
+      "y": 364,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190187,
+      "x": 876,
+      "y": 370,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190193,
+      "x": 859,
+      "y": 376,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190200,
+      "x": 843,
+      "y": 382,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190206,
+      "x": 826,
+      "y": 390,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190212,
+      "x": 808,
+      "y": 396,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190218,
+      "x": 792,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190224,
+      "x": 775,
+      "y": 411,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190230,
+      "x": 759,
+      "y": 417,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190236,
+      "x": 742,
+      "y": 424,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190242,
+      "x": 726,
+      "y": 430,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190249,
+      "x": 709,
+      "y": 438,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190254,
+      "x": 693,
+      "y": 444,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190260,
+      "x": 676,
+      "y": 450,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190266,
+      "x": 663,
+      "y": 456,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190273,
+      "x": 646,
+      "y": 460,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190278,
+      "x": 625,
+      "y": 466,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190285,
+      "x": 609,
+      "y": 472,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190291,
+      "x": 594,
+      "y": 477,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190297,
+      "x": 579,
+      "y": 480,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190303,
+      "x": 564,
+      "y": 484,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190309,
+      "x": 550,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190315,
+      "x": 537,
+      "y": 490,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290190321,
+      "x": 523,
+      "y": 492,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190328,
+      "x": 510,
+      "y": 495,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190333,
+      "x": 498,
+      "y": 496,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190339,
+      "x": 486,
+      "y": 499,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190345,
+      "x": 475,
+      "y": 501,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190351,
+      "x": 460,
+      "y": 502,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190357,
+      "x": 448,
+      "y": 504,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190363,
+      "x": 436,
+      "y": 505,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190369,
+      "x": 426,
+      "y": 507,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190375,
+      "x": 414,
+      "y": 508,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190381,
+      "x": 405,
+      "y": 510,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190387,
+      "x": 393,
+      "y": 511,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190393,
+      "x": 385,
+      "y": 511,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190400,
+      "x": 378,
+      "y": 513,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190406,
+      "x": 369,
+      "y": 513,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190412,
+      "x": 363,
+      "y": 514,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190418,
+      "x": 358,
+      "y": 514,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190424,
+      "x": 354,
+      "y": 516,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190430,
+      "x": 346,
+      "y": 516,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190436,
+      "x": 342,
+      "y": 517,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190448,
+      "x": 336,
+      "y": 517,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190454,
+      "x": 333,
+      "y": 519,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190460,
+      "x": 330,
+      "y": 519,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190466,
+      "x": 328,
+      "y": 519,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190472,
+      "x": 325,
+      "y": 519,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190478,
+      "x": 324,
+      "y": 519,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290190573,
+      "x": 322,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191067,
+      "x": 321,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191079,
+      "x": 319,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191103,
+      "x": 318,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191116,
+      "x": 316,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191127,
+      "x": 315,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191151,
+      "x": 313,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191158,
+      "x": 312,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191188,
+      "x": 310,
+      "y": 520,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191339,
+      "x": 310,
+      "y": 518,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191351,
+      "x": 310,
+      "y": 517,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191354,
+      "x": 310,
+      "y": 515,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191358,
+      "x": 311,
+      "y": 514,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191363,
+      "x": 311,
+      "y": 511,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191369,
+      "x": 311,
+      "y": 509,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191376,
+      "x": 312,
+      "y": 508,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191382,
+      "x": 312,
+      "y": 506,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191387,
+      "x": 312,
+      "y": 505,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191395,
+      "x": 312,
+      "y": 503,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191400,
+      "x": 312,
+      "y": 502,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191406,
+      "x": 312,
+      "y": 500,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191412,
+      "x": 310,
+      "y": 499,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191418,
+      "x": 310,
+      "y": 497,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191424,
+      "x": 309,
+      "y": 497,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191432,
+      "x": 309,
+      "y": 496,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191436,
+      "x": 307,
+      "y": 494,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191443,
+      "x": 307,
+      "y": 493,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191450,
+      "x": 307,
+      "y": 491,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191466,
+      "x": 307,
+      "y": 488,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191474,
+      "x": 307,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191478,
+      "x": 307,
+      "y": 485,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191484,
+      "x": 308,
+      "y": 482,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191491,
+      "x": 308,
+      "y": 481,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191497,
+      "x": 309,
+      "y": 481,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191503,
+      "x": 311,
+      "y": 478,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191509,
+      "x": 312,
+      "y": 476,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191515,
+      "x": 314,
+      "y": 475,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191521,
+      "x": 317,
+      "y": 472,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191527,
+      "x": 318,
+      "y": 470,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191533,
+      "x": 320,
+      "y": 470,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191539,
+      "x": 323,
+      "y": 467,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191545,
+      "x": 326,
+      "y": 466,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191551,
+      "x": 330,
+      "y": 464,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191557,
+      "x": 335,
+      "y": 461,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191563,
+      "x": 338,
+      "y": 460,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191569,
+      "x": 345,
+      "y": 457,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191575,
+      "x": 351,
+      "y": 454,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191581,
+      "x": 357,
+      "y": 452,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191587,
+      "x": 362,
+      "y": 449,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191594,
+      "x": 371,
+      "y": 446,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191599,
+      "x": 374,
+      "y": 443,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191606,
+      "x": 381,
+      "y": 440,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191612,
+      "x": 386,
+      "y": 439,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191618,
+      "x": 393,
+      "y": 436,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191624,
+      "x": 396,
+      "y": 434,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191630,
+      "x": 404,
+      "y": 431,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191636,
+      "x": 411,
+      "y": 430,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191642,
+      "x": 417,
+      "y": 427,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191648,
+      "x": 423,
+      "y": 425,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191654,
+      "x": 434,
+      "y": 422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191661,
+      "x": 443,
+      "y": 419,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191666,
+      "x": 450,
+      "y": 418,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191672,
+      "x": 459,
+      "y": 416,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191678,
+      "x": 468,
+      "y": 415,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191684,
+      "x": 479,
+      "y": 413,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191690,
+      "x": 485,
+      "y": 413,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191697,
+      "x": 494,
+      "y": 412,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191703,
+      "x": 501,
+      "y": 410,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191712,
+      "x": 510,
+      "y": 410,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191723,
+      "x": 521,
+      "y": 410,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191727,
+      "x": 524,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191733,
+      "x": 528,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191739,
+      "x": 533,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191745,
+      "x": 537,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191751,
+      "x": 540,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191760,
+      "x": 546,
+      "y": 407,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191763,
+      "x": 139.3229217529297,
+      "y": 641.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191764,
+      "x": 548,
+      "y": 407,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191769,
+      "x": 158.6458282470703,
+      "y": 622.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191770,
+      "x": 551,
+      "y": 407,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191776,
+      "x": 177.96875,
+      "y": 603.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191777,
+      "x": 554,
+      "y": 407,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191780,
+      "x": 555,
+      "y": 406,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191781,
+      "x": 197.2916717529297,
+      "y": 585.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191782,
+      "x": 561,
+      "y": 406,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191788,
+      "x": 216.6145782470703,
+      "y": 566.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191788,
+      "x": 566,
+      "y": 406,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191794,
+      "x": 235.9375,
+      "y": 547.7999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191794,
+      "x": 567,
+      "y": 404,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191800,
+      "x": 255.2604217529297,
+      "y": 529.0999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191801,
+      "x": 573,
+      "y": 404,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191802,
+      "x": 578,
+      "y": 404,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191806,
+      "x": 274.5833435058594,
+      "y": 510.3999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191807,
+      "x": 579,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191808,
+      "x": 581,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191812,
+      "x": 293.90625,
+      "y": 491.70001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191813,
+      "x": 587,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191814,
+      "x": 588,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191818,
+      "x": 313.2291564941406,
+      "y": 473,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191819,
+      "x": 593,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191824,
+      "x": 332.5520935058594,
+      "y": 454.29998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191824,
+      "x": 599,
+      "y": 401,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191830,
+      "x": 351.875,
+      "y": 435.6000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191831,
+      "x": 602,
+      "y": 401,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191832,
+      "x": 605,
+      "y": 401,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191836,
+      "x": 371.1979064941406,
+      "y": 416.8999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191838,
+      "x": 608,
+      "y": 401,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191842,
+      "x": 390.5208435058594,
+      "y": 398.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191843,
+      "x": 611,
+      "y": 401,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191844,
+      "x": 614,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191848,
+      "x": 409.84375,
+      "y": 379.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191849,
+      "x": 617,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191854,
+      "x": 429.1666564941406,
+      "y": 360.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191855,
+      "x": 618,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191856,
+      "x": 620,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191860,
+      "x": 448.4895935058594,
+      "y": 342.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191861,
+      "x": 621,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191862,
+      "x": 623,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191866,
+      "x": 467.8125,
+      "y": 323.3999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191867,
+      "x": 626,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191872,
+      "x": 487.1354064941406,
+      "y": 304.70001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191873,
+      "x": 629,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191878,
+      "x": 506.4583435058594,
+      "y": 286,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191887,
+      "x": 630,
+      "y": 398,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191894,
+      "x": 525.78125,
+      "y": 267.29998779296875,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191894,
+      "x": 632,
+      "y": 398,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191896,
+      "x": 545.1041870117188,
+      "y": 248.60000610351562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191896,
+      "x": 564.4270629882812,
+      "y": 229.89999389648438,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191902,
+      "x": 583.75,
+      "y": 211.1999969482422,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191903,
+      "x": 633,
+      "y": 398,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191909,
+      "x": 603.0729370117188,
+      "y": 192.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191915,
+      "x": 622.3958129882812,
+      "y": 173.8000030517578,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191916,
+      "x": 635,
+      "y": 398,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191921,
+      "x": 641.71875,
+      "y": 155.10000610351562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191927,
+      "x": 661.0416870117188,
+      "y": 136.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290191933,
+      "x": 680.3645629882812,
+      "y": 117.69999694824219,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191939,
+      "x": 699.6875,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191939,
+      "x": 636,
+      "y": 398,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191957,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290191959,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192061,
+      "x": 634,
+      "y": 400,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192066,
+      "x": 633,
+      "y": 402,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192072,
+      "x": 628,
+      "y": 406,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192078,
+      "x": 625,
+      "y": 409,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192082,
+      "x": 622,
+      "y": 412,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192082,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192085,
+      "x": 621,
+      "y": 414,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192107,
+      "x": 601,
+      "y": 427,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192110,
+      "x": 595,
+      "y": 430,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192115,
+      "x": 588,
+      "y": 433,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192122,
+      "x": 583,
+      "y": 436,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192122,
+      "x": 679.25732421875,
+      "y": 120.23332977294922,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192123,
+      "x": 579,
+      "y": 438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192123,
+      "x": 577,
+      "y": 439,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192127,
+      "x": 658.8346557617188,
+      "y": 141.46665954589844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192127,
+      "x": 574,
+      "y": 441,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192133,
+      "x": 638.4119873046875,
+      "y": 162.6999969482422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192133,
+      "x": 568,
+      "y": 442,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192134,
+      "x": 567,
+      "y": 444,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192139,
+      "x": 617.9893188476562,
+      "y": 183.93333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192139,
+      "x": 559,
+      "y": 447,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192140,
+      "x": 558,
+      "y": 447,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192145,
+      "x": 597.566650390625,
+      "y": 205.1666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192145,
+      "x": 553,
+      "y": 450,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192146,
+      "x": 550,
+      "y": 451,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192151,
+      "x": 577.1439819335938,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192151,
+      "x": 544,
+      "y": 454,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192152,
+      "x": 541,
+      "y": 454,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192157,
+      "x": 556.7213134765625,
+      "y": 247.63333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192157,
+      "x": 537,
+      "y": 456,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192163,
+      "x": 536.2986450195312,
+      "y": 268.8666687011719,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192163,
+      "x": 528,
+      "y": 460,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192164,
+      "x": 526,
+      "y": 462,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192169,
+      "x": 515.8759765625,
+      "y": 290.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192169,
+      "x": 520,
+      "y": 465,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192170,
+      "x": 517,
+      "y": 465,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192175,
+      "x": 495.4533386230469,
+      "y": 311.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192176,
+      "x": 513,
+      "y": 466,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192177,
+      "x": 511,
+      "y": 468,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192182,
+      "x": 475.0306701660156,
+      "y": 332.5666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192182,
+      "x": 502,
+      "y": 472,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192187,
+      "x": 454.6080017089844,
+      "y": 353.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192191,
+      "x": 495,
+      "y": 475,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192191,
+      "x": 493,
+      "y": 475,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192193,
+      "x": 434.1853332519531,
+      "y": 375.0333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192194,
+      "x": 487,
+      "y": 478,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192211,
+      "x": 413.7626647949219,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192211,
+      "x": 466,
+      "y": 484,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192218,
+      "x": 393.3399963378906,
+      "y": 417.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192218,
+      "x": 462,
+      "y": 486,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192219,
+      "x": 460,
+      "y": 486,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192224,
+      "x": 372.9173278808594,
+      "y": 438.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192224,
+      "x": 457,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192230,
+      "x": 352.4946594238281,
+      "y": 459.9666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192230,
+      "x": 454,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192236,
+      "x": 332.0719909667969,
+      "y": 481.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192236,
+      "x": 453,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192237,
+      "x": 450,
+      "y": 489,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192243,
+      "x": 311.6493225097656,
+      "y": 502.4333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192248,
+      "x": 291.2266540527344,
+      "y": 523.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192254,
+      "x": 270.8039855957031,
+      "y": 544.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192255,
+      "x": 448,
+      "y": 489,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192260,
+      "x": 250.38133239746094,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192261,
+      "x": 447,
+      "y": 489,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192266,
+      "x": 229.9586639404297,
+      "y": 587.3666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192273,
+      "x": 209.53599548339844,
+      "y": 608.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192278,
+      "x": 189.1133270263672,
+      "y": 629.8333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192285,
+      "x": 168.690673828125,
+      "y": 651.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192290,
+      "x": 148.26800537109375,
+      "y": 672.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192297,
+      "x": 127.8453369140625,
+      "y": 693.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192303,
+      "x": 107.42266845703125,
+      "y": 714.7666625976562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192308,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192327,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192328,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192450,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290192893,
+      "x": 452,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192895,
+      "x": 453,
+      "y": 487,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192899,
+      "x": 455,
+      "y": 485,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192918,
+      "x": 459,
+      "y": 482,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192921,
+      "x": 462,
+      "y": 481,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192927,
+      "x": 464,
+      "y": 481,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192934,
+      "x": 465,
+      "y": 481,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192939,
+      "x": 467,
+      "y": 479,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192945,
+      "x": 470,
+      "y": 479,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192951,
+      "x": 471,
+      "y": 479,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192957,
+      "x": 473,
+      "y": 478,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192963,
+      "x": 476,
+      "y": 478,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192969,
+      "x": 479,
+      "y": 476,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192975,
+      "x": 482,
+      "y": 476,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192981,
+      "x": 485,
+      "y": 475,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192988,
+      "x": 491,
+      "y": 473,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290192994,
+      "x": 495,
+      "y": 472,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193000,
+      "x": 501,
+      "y": 470,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193006,
+      "x": 507,
+      "y": 469,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193012,
+      "x": 513,
+      "y": 467,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193018,
+      "x": 521,
+      "y": 466,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193024,
+      "x": 528,
+      "y": 464,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193030,
+      "x": 537,
+      "y": 461,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193036,
+      "x": 546,
+      "y": 460,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193042,
+      "x": 557,
+      "y": 458,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193048,
+      "x": 567,
+      "y": 457,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193054,
+      "x": 578,
+      "y": 455,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193060,
+      "x": 590,
+      "y": 454,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193066,
+      "x": 603,
+      "y": 454,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193072,
+      "x": 615,
+      "y": 452,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193078,
+      "x": 630,
+      "y": 451,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193084,
+      "x": 647,
+      "y": 448,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193090,
+      "x": 663,
+      "y": 446,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193097,
+      "x": 680,
+      "y": 445,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193103,
+      "x": 698,
+      "y": 443,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193109,
+      "x": 716,
+      "y": 442,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193115,
+      "x": 735,
+      "y": 439,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193121,
+      "x": 755,
+      "y": 437,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193127,
+      "x": 774,
+      "y": 436,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193133,
+      "x": 792,
+      "y": 434,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193139,
+      "x": 810,
+      "y": 431,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193145,
+      "x": 828,
+      "y": 430,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193151,
+      "x": 846,
+      "y": 428,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193157,
+      "x": 863,
+      "y": 425,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193163,
+      "x": 879,
+      "y": 422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193169,
+      "x": 897,
+      "y": 419,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193175,
+      "x": 912,
+      "y": 418,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193182,
+      "x": 926,
+      "y": 415,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193188,
+      "x": 939,
+      "y": 410,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193194,
+      "x": 953,
+      "y": 407,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193200,
+      "x": 966,
+      "y": 403,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193206,
+      "x": 980,
+      "y": 397,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193212,
+      "x": 995,
+      "y": 391,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193218,
+      "x": 1008,
+      "y": 383,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290193223,
+      "x": 1022,
+      "y": 376,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290219898,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219903,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219909,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219915,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219921,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219927,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219933,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219939,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219945,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219951,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219957,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219964,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219970,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219976,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219982,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219988,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290219994,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220000,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220006,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220012,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220018,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220024,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220030,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220036,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220042,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220048,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220054,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220061,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220067,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220073,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220091,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220092,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290220214,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    }
+  ],
+  "screen": [
+    {
+      "at": 1789290183699,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n¥620\nイメージイラスト\nお造り三種盛り\n¥1,280\nイメージイラスト\n鶏の唐揚げ\n¥720\nイメージイラスト\n枝豆\n¥390\nイメージイラスト\nこもれび 雪灯 純米酒\n¥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n¥850\nイメージイラスト\nこもれび 波穂 本醸造\n¥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n¥680\nイメージイラスト\nこもれび 風乃音 純米酒\n¥580\nイメージイラスト\nこもれび 春澪 にごり酒\n¥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n¥720\nイメージイラスト\nこもれび 秋景 熟成酒\n¥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n¥650\nイメージイラスト\nこもれび 米蛍 純米酒\n¥590\nイメージイラスト\nこもれび 笹波月 本醸造\n¥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n¥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n¥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n¥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n¥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n¥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n¥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n¥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n¥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n¥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n¥980\nイメージイラスト\nこもれび 里乃響 純米酒\n¥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n¥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n¥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n¥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n¥940\nイメージイラスト\nこもれび 名残星 純米酒\n¥630\nイメージイラスト\nさけのお造り\n¥890\nイメージイラスト\nまぐろのお造り\n¥980\nイメージイラスト\n鶏もも串 三本\n¥840\nイメージイラスト\nつくね串 二本\n¥620\nイメージイラスト\n出汁巻き卵\n¥650\nイメージイラスト\n冷ややっこ\n¥440\nイメージイラスト\n季節のお漬物\n¥450\nイメージイラスト\n居酒屋のポテトサラダ\n¥520\nイメージイラスト\nたたききゅうり\n¥420\nイメージイラスト\nさばの塩焼き\n¥820\n売り切れ\nイメージイラスト\nほっけの開き\n¥980\nイメージイラスト\nなすの田楽\n¥580\nイメージイラスト\nしいたけの炭火焼き\n¥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n¥1,180\nイメージイラスト\n海老の天ぷら\n¥920\nイメージイラスト\n揚げ出し豆腐\n¥610\nイメージイラスト\n肉じゃが\n¥690\nイメージイラスト\n豚の角煮\n¥880\nイメージイラスト\n焼きおにぎり 二個\n¥460\nイメージイラスト\nさけの出汁茶漬け\n¥680\nイメージイラスト\n〆のかけうどん\n¥590\nイメージイラスト\n生ビール\n¥590\nイメージイラスト\nハイボール\n¥520\nイメージイラスト\nレモンサワー\n¥490\nイメージイラスト\n梅酒のロック\n¥560\nイメージイラスト\n芋焼酎の水割り\n¥540\nイメージイラスト\n烏龍茶\n¥340\nイメージイラスト\n緑茶\n¥340\nイメージイラスト\nゆずソーダ\n¥410\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290192212,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290192712,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声につないでいます\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nキャスト\n音声につないでいます\n音声につないでいます\n自動追従中\n音声につないでいます\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290192949,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290197700,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n聞き取り中\n\nCould you explain the sake I chose in English please\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290197949,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n聞き取り中\n\nCould you explain the sake I chose in English please?\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290198198,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290199198,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nキャスト\n18:03\n\nYou chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving. The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290199698,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nキャスト\nキャストがお話ししています\n\nYou chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving. The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290218198,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nキャスト\n18:03\n\nYou chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving. The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290218458,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nキャスト\n18:03\n\nYou chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving.The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789290220448,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\n18:03\n\nCould you explain the sake I chose in English please?\n\nキャスト\n18:03\n\nYou chose “Komorebi Tsukinagi” Junmai Ginjo sake, served chilled as a 90 ml glass, one serving.The flavor is described as having an aroma reminiscent of green apple, with a light, clean finish. The total for that item was 780 yen.\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    }
+  ],
+  "speech": [
+    {
+      "id": "english",
+      "at": 10.147,
+      "duration": 3.3
+    }
+  ],
+  "captureStartedAtMs": 1789290185156
+}

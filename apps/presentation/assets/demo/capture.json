@@ -1,0 +1,23 @@
+{
+  "recorder": "Playwright 1.63.0",
+  "capturedAt": "2026-09-10T02:07:46.401Z",
+  "origin": "http://main.tablecast-poc.container.localhost:3000",
+  "raw": "tablecast-order-source.webm",
+  "elapsed": 32.001,
+  "result": {
+    "orderCount": 1,
+    "cartLines": 0,
+    "order": [
+      {
+        "name": {
+          "ja": "枝豆",
+          "en": "Edamame beans"
+        },
+        "quantity": 1
+      }
+    ],
+    "total": 390
+  },
+  "trimStartSeconds": 1.2,
+  "sourceRevision": "17dc3328960e653006854b6edc8d829e4063f80e"
+}

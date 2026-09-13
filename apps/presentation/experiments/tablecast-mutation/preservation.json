@@ -1,0 +1,195 @@
+{
+  "fixedCoreFiles": [
+    {
+      "file": "scripts/tablecast-app-capture.ts",
+      "before": "1fd86f1c799a792637e49f3b9cc1dce2efa4760d54e0d81272aa60b632198879",
+      "after": "1fd86f1c799a792637e49f3b9cc1dce2efa4760d54e0d81272aa60b632198879"
+    },
+    {
+      "file": "scripts/tablecast-browser-audio.ts",
+      "before": "e9716522fcb744aefd0819fcfd7f808e03162e1b2260100f538342b0e297986b",
+      "after": "e9716522fcb744aefd0819fcfd7f808e03162e1b2260100f538342b0e297986b"
+    },
+    {
+      "file": "scripts/tablecast-build.ts",
+      "before": "9aaa04bfa1bec1222d840a2ce4881985a140c01e8f343e5766b1fb7a5081eed5",
+      "after": "9aaa04bfa1bec1222d840a2ce4881985a140c01e8f343e5766b1fb7a5081eed5"
+    },
+    {
+      "file": "scripts/tablecast-capture-check.ts",
+      "before": "77da2f09d00f9b58664ebc4c80c32472b5c304c1a0b6c236ee1d91b745733933",
+      "after": "77da2f09d00f9b58664ebc4c80c32472b5c304c1a0b6c236ee1d91b745733933"
+    },
+    {
+      "file": "scripts/tablecast-capture-types.ts",
+      "before": "0c5b881d62ae8d652b5dc68e3e70c102579ee19e254e92abae4f711fd90c29d8",
+      "after": "0c5b881d62ae8d652b5dc68e3e70c102579ee19e254e92abae4f711fd90c29d8"
+    },
+    {
+      "file": "scripts/tablecast-composition.test.ts",
+      "before": "27d7fb238202798dab2d145a963ea840e1710be53f4e6ab9cc499d148392f6cb",
+      "after": "27d7fb238202798dab2d145a963ea840e1710be53f4e6ab9cc499d148392f6cb"
+    },
+    {
+      "file": "scripts/tablecast-composition.ts",
+      "before": "a8a59ef3a33a57e0d2001f1747cadd47aa745dbc329d319a3f5e5dd90235431f",
+      "after": "a8a59ef3a33a57e0d2001f1747cadd47aa745dbc329d319a3f5e5dd90235431f"
+    },
+    {
+      "file": "scripts/tablecast-cursor.test.ts",
+      "before": "1e564def560943073c758faab113f18cd71d1ff92e362b92b0a237c0ed4cf84e",
+      "after": "1e564def560943073c758faab113f18cd71d1ff92e362b92b0a237c0ed4cf84e"
+    },
+    {
+      "file": "scripts/tablecast-cursor.ts",
+      "before": "b961b3e1d6d9f39ff86c2eea7d5ce3a201dc105fa9d6396b9492acc10708fd0b",
+      "after": "b961b3e1d6d9f39ff86c2eea7d5ce3a201dc105fa9d6396b9492acc10708fd0b"
+    },
+    {
+      "file": "scripts/tablecast-doctor.test.ts",
+      "before": "e284e75602c402b3bf980b332bbd70586b5cbf22cab2676c9642fc50e080fb73",
+      "after": "e284e75602c402b3bf980b332bbd70586b5cbf22cab2676c9642fc50e080fb73"
+    },
+    {
+      "file": "scripts/tablecast-doctor.ts",
+      "before": "f830d13f3f465c37c4eff4ac37685228191bc18f06b597763ef057f98b43e48e",
+      "after": "f830d13f3f465c37c4eff4ac37685228191bc18f06b597763ef057f98b43e48e"
+    },
+    {
+      "file": "scripts/tablecast-edit-guest.ts",
+      "before": "5735f2e0ca179e34214a2c5a60f4b0d3842c3d75be1ebc3dea902b71c5ebd6c8",
+      "after": "5735f2e0ca179e34214a2c5a60f4b0d3842c3d75be1ebc3dea902b71c5ebd6c8"
+    },
+    {
+      "file": "scripts/tablecast-edit-role.ts",
+      "before": "ac14d2f7a97da132217bfa3f3a0881491b1dfd4e56fd1c09d092b4fee124830c",
+      "after": "ac14d2f7a97da132217bfa3f3a0881491b1dfd4e56fd1c09d092b4fee124830c"
+    },
+    {
+      "file": "scripts/tablecast-layout.spec.ts",
+      "before": "b38e9a63093e3d96700e2ab7705d5a6bf1af35e683a6b3f1c0e31150c434583a",
+      "after": "b38e9a63093e3d96700e2ab7705d5a6bf1af35e683a6b3f1c0e31150c434583a"
+    },
+    {
+      "file": "scripts/tablecast-layout.ts",
+      "before": "ec22ea084cf6dda4d9d77589bcd49ab4c688a592348c1898b9622764013f7c44",
+      "after": "ec22ea084cf6dda4d9d77589bcd49ab4c688a592348c1898b9622764013f7c44"
+    },
+    {
+      "file": "scripts/tablecast-project.test.ts",
+      "before": "538f4690afd081fb54e3fb3e350ccaca195777be3aa46f2f651e918fe844f915",
+      "after": "538f4690afd081fb54e3fb3e350ccaca195777be3aa46f2f651e918fe844f915"
+    },
+    {
+      "file": "scripts/tablecast-project.ts",
+      "before": "d265c769d5568bcd1d04c61e94d7f1f8d110de64c592f3383d6b957603ba9757",
+      "after": "d265c769d5568bcd1d04c61e94d7f1f8d110de64c592f3383d6b957603ba9757"
+    },
+    {
+      "file": "scripts/tablecast-record-guest.ts",
+      "before": "18e653f9a950b795806df3f3aede8a1e84343fb3eaebd6eb0b76250f827616e3",
+      "after": "18e653f9a950b795806df3f3aede8a1e84343fb3eaebd6eb0b76250f827616e3"
+    },
+    {
+      "file": "scripts/tablecast-record-role.ts",
+      "before": "cc878f98bbeccabefb00be256354839b6c49c4cc9be4920de1f20d3c057df82c",
+      "after": "cc878f98bbeccabefb00be256354839b6c49c4cc9be4920de1f20d3c057df82c"
+    },
+    {
+      "file": "scripts/tablecast-shot.spec.ts",
+      "before": "ef3e039f86ec873411ebaf62ccbf7df43a436b35a692c726bf08005775e846c2",
+      "after": "ef3e039f86ec873411ebaf62ccbf7df43a436b35a692c726bf08005775e846c2"
+    },
+    {
+      "file": "scripts/tablecast-shot.test.ts",
+      "before": "fcef0dcff362a5a894458eb82f9299bed05f012b07b5b17a2551eeb4f0d13829",
+      "after": "fcef0dcff362a5a894458eb82f9299bed05f012b07b5b17a2551eeb4f0d13829"
+    },
+    {
+      "file": "scripts/tablecast-shot.ts",
+      "before": "76d0e8c065e57d7f12ca0bdb1fd533c95e799deeba9907e527e17734f5382329",
+      "after": "76d0e8c065e57d7f12ca0bdb1fd533c95e799deeba9907e527e17734f5382329"
+    },
+    {
+      "file": "scripts/tablecast-technical-schema.ts",
+      "before": "f3a936794e3cdf055dfe6bc2f139ebca78978ffdea417aa0ac4b9de6bd829f04",
+      "after": "f3a936794e3cdf055dfe6bc2f139ebca78978ffdea417aa0ac4b9de6bd829f04"
+    },
+    {
+      "file": "scripts/tablecast-technical.ts",
+      "before": "06169c47f907d4f7282f9003b602e6c8a0c0a6ac85a439d7e03f304e8a4ab4ad",
+      "after": "06169c47f907d4f7282f9003b602e6c8a0c0a6ac85a439d7e03f304e8a4ab4ad"
+    },
+    {
+      "file": "scripts/tablecast-tts.test.ts",
+      "before": "602da7a2007dfab6a769cbd4fffd8309ed4bdcadac96745e0ddadb3fd4524648",
+      "after": "602da7a2007dfab6a769cbd4fffd8309ed4bdcadac96745e0ddadb3fd4524648"
+    },
+    {
+      "file": "scripts/tablecast-tts.ts",
+      "before": "c125bf8b56ab66bc84b4d440dd48dd0e6fcd197f6a7fa06a1145f0a8ca139a2e",
+      "after": "c125bf8b56ab66bc84b4d440dd48dd0e6fcd197f6a7fa06a1145f0a8ca139a2e"
+    },
+    {
+      "file": "scripts/tablecast-video.ts",
+      "before": "3f957bff8e3cc53e37ee138567307a575d5e421b58f973934d1a48fbbcd70ac5",
+      "after": "3f957bff8e3cc53e37ee138567307a575d5e421b58f973934d1a48fbbcd70ac5"
+    },
+    {
+      "file": "scripts/tablecast-workflow.spec.ts",
+      "before": "ec78f2d430a17c2a9e7f9f8e919e1f116ae62b7994757ce34f66dfcb645a047e",
+      "after": "ec78f2d430a17c2a9e7f9f8e919e1f116ae62b7994757ce34f66dfcb645a047e"
+    },
+    {
+      "file": "scripts/tablecast-workflow.test.ts",
+      "before": "f50236b3ca6bf35ff3f2ffe54765f79d9e7a5b53e6ce4ff2140c7a388a4595eb",
+      "after": "f50236b3ca6bf35ff3f2ffe54765f79d9e7a5b53e6ce4ff2140c7a388a4595eb"
+    },
+    {
+      "file": "scripts/tablecast-zoom.test.ts",
+      "before": "10372e1e59d17b49472686739830a822397f04a67360e945e723f9c88dde1b81",
+      "after": "10372e1e59d17b49472686739830a822397f04a67360e945e723f9c88dde1b81"
+    },
+    {
+      "file": "scripts/tablecast-zoom.ts",
+      "before": "8444bd8f7a5b7ad6d8f13ffb7b501b1038151920e3e37cb9fc67b4d943babaa0",
+      "after": "8444bd8f7a5b7ad6d8f13ffb7b501b1038151920e3e37cb9fc67b4d943babaa0"
+    },
+    {
+      "file": "styles.css",
+      "before": "a37b3b1a41ca3f0f2e50560358832b99f8446e07dcbbdd2c4721cb104b2faf2f",
+      "after": "a37b3b1a41ca3f0f2e50560358832b99f8446e07dcbbdd2c4721cb104b2faf2f"
+    },
+    {
+      "file": "package.json",
+      "before": "f70dab8217fc1895b1a279fa20eeea784120ba95b2aee63debdd2b0ec9a8a09f",
+      "after": "f70dab8217fc1895b1a279fa20eeea784120ba95b2aee63debdd2b0ec9a8a09f"
+    },
+    {
+      "file": "playwright.config.ts",
+      "before": "ae4ff8da6b3cd9905fc3934c48473140075785edc0cb3ea624723d969c818219",
+      "after": "ae4ff8da6b3cd9905fc3934c48473140075785edc0cb3ea624723d969c818219"
+    },
+    {
+      "file": "tsconfig.json",
+      "before": "da963fbcc281365bda205bdb251ac602a434b4929a6d300d6869709164688f09",
+      "after": "da963fbcc281365bda205bdb251ac602a434b4929a6d300d6869709164688f09"
+    }
+  ],
+  "preservedVideos": [
+    {
+      "run": "tablecast-product-demo-v14",
+      "before": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f",
+      "after": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f",
+      "unchanged": true
+    },
+    {
+      "run": "tablecast-technical-evaluation-v17",
+      "before": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7",
+      "after": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7",
+      "unchanged": true
+    }
+  ],
+  "previousProductInputsUnchanged": true,
+  "previousProductInputCount": 72
+}

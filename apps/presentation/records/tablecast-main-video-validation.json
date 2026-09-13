@@ -1,0 +1,161 @@
+{
+  "date": "2026-09-13",
+  "revision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "product": {
+    "report": "output/tablecast-main-7d6adc7-product-v1/report.json",
+    "status": "rendered-and-checked",
+    "applicationRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+    "videoHash": "1ae1b3a36ae0a26274ca38511241bd23fbdf60212d92310feae7e500bcaed4be",
+    "layout": {
+      "expected": 6,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "metadata": {
+      "format": {
+        "duration": 111.1
+      },
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "r_frame_rate": "30/1"
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "r_frame_rate": "0/0"
+        }
+      ]
+    },
+    "playback": {
+      "ended": true,
+      "error": null,
+      "duration": 111.1,
+      "muted": false,
+      "rate": 1,
+      "played": [[0, 111.1]]
+    },
+    "frames": 42,
+    "captureCoverage": [
+      {
+        "scene": "roles",
+        "evidence": false
+      },
+      {
+        "scene": "consult",
+        "evidence": false
+      },
+      {
+        "scene": "consult-answer",
+        "evidence": false
+      },
+      {
+        "scene": "voice-order",
+        "evidence": false
+      },
+      {
+        "scene": "order-added",
+        "evidence": false
+      },
+      {
+        "scene": "pause",
+        "evidence": false
+      },
+      {
+        "scene": "readback",
+        "evidence": false
+      },
+      {
+        "scene": "approval",
+        "evidence": false
+      },
+      {
+        "scene": "approval-result",
+        "evidence": false
+      },
+      {
+        "scene": "english",
+        "evidence": false
+      },
+      {
+        "scene": "staff",
+        "evidence": false
+      },
+      {
+        "scene": "admin",
+        "evidence": true
+      }
+    ]
+  },
+  "technical": {
+    "report": "output/tablecast-main-7d6adc7-technical-v1/report.json",
+    "status": "rendered-and-checked",
+    "applicationRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+    "videoHash": "8a661dc9c705fb2c4aecb5431114281b92282f91077be285c368765780c2db6b",
+    "layout": {
+      "expected": 6,
+      "unexpected": 0,
+      "skipped": 0,
+      "flaky": 0
+    },
+    "metadata": {
+      "format": {
+        "duration": 63.1
+      },
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "r_frame_rate": "30/1"
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "r_frame_rate": "0/0"
+        }
+      ]
+    },
+    "playback": {
+      "ended": true,
+      "error": null,
+      "duration": 63.1,
+      "muted": false,
+      "rate": 1,
+      "played": [[0, 63.1]]
+    },
+    "frames": 37,
+    "captureCoverage": []
+  },
+  "formattedInputs": {
+    "report": "output/tablecast-main-7d6adc7-product-formatted-v1/report.json",
+    "status": "composition-checked",
+    "changedFiles": ["tablecast-events.json", "tablecast-shot-admin.json", "tablecast-take.json"],
+    "jsonValuesUnchanged": true,
+    "compositionHtmlTimingStylesCaptionsByteIdentical": true
+  },
+  "preservation": {
+    "originalProductProjectUnchanged": true,
+    "canonicalVideoHashes": {
+      "output/tablecast-product-demo.mp4": "af1f3077b0b0099457d255e54be9934b8ba4dff12bac45ae87e0ffe4376c32bb",
+      "output/tablecast-technical-evaluation.mp4": "8691dd9175b68897d0d12ac7de453a8fd46b0558ab3f464f794b6af0f5e1a9dc"
+    },
+    "testProjectChangedScenes": ["admin"]
+  },
+  "review": {
+    "reviewedFrames": [
+      "product: frames/37.png",
+      "technical: frames/1.png",
+      "technical: frames/25.png"
+    ],
+    "userEditorialApproval": "pending",
+    "freshRecordedScenes": ["admin"],
+    "otherRecordedScenes": "existing assets; not re-recorded on current main"
+  },
+  "devProcesses": "stopped; pre-existing container retained idle"
+}

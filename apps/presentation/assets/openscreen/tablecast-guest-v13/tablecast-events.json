@@ -1,0 +1,1546 @@
+{
+  "source": "Actual Playwright-dispatched browser events and real app responses",
+  "viewport": {
+    "width": 1024,
+    "height": 768
+  },
+  "audioStartedAt": 1789195428532,
+  "initial": {
+    "tableName": "T12",
+    "tableId": "tablecast-komorebi-table-12",
+    "sessionId": "d79c8f56-d5c1-4cf6-9562-ff9023ab3042",
+    "orders": 0,
+    "cart": 0
+  },
+  "result": {
+    "sessionId": "d79c8f56-d5c1-4cf6-9562-ff9023ab3042",
+    "tableId": "tablecast-komorebi-table-12",
+    "tableName": "T12",
+    "orders": [
+      {
+        "id": "fff573af-f4ea-475f-aaa4-34f49c01d558",
+        "status": "submitted",
+        "snapshot": {
+          "id": "57a429ec-0a61-4d48-9c25-edae767b90d7",
+          "tableSessionId": "d79c8f56-d5c1-4cf6-9562-ff9023ab3042",
+          "cartVersion": 1,
+          "configVersion": 4,
+          "lines": [
+            {
+              "id": "new-1",
+              "productId": "tablecast-komorebi-sake-tsukinagi",
+              "quantity": 1,
+              "selections": [
+                {
+                  "optionId": "tablecast-komorebi-temperature-chilled",
+                  "quantity": 1
+                },
+                {
+                  "optionId": "tablecast-komorebi-serving-glass",
+                  "quantity": 1
+                }
+              ],
+              "name": {
+                "ja": "こもれび 月凪 純米吟醸",
+                "en": "Komorebi Tsukinagi Junmai ginjo"
+              },
+              "speechName": {
+                "ja": "こもれび つきなぎ 純米吟醸",
+                "en": "Komorebi Tsukinagi, Junmai ginjo"
+              },
+              "options": [
+                {
+                  "id": "tablecast-komorebi-temperature-chilled",
+                  "name": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "speechName": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 0
+                },
+                {
+                  "id": "tablecast-komorebi-serving-glass",
+                  "name": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "speechName": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 160
+                }
+              ],
+              "unitPrice": 780,
+              "total": 780,
+              "missing": [],
+              "planCovered": false
+            }
+          ],
+          "total": 780,
+          "locale": "ja",
+          "text": "こもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。",
+          "expiresAt": 1789195682387,
+          "channel": "voice",
+          "status": "submitted",
+          "createdTurnId": "9b5e3883-921e-45d2-92b0-20a115181f71",
+          "plan": null
+        }
+      }
+    ],
+    "cart": {
+      "version": 2,
+      "lines": [],
+      "total": 0,
+      "complete": false
+    }
+  },
+  "marks": [
+    {
+      "id": "voice-start",
+      "at": 1789195444709
+    },
+    {
+      "id": "consult",
+      "at": 1789195457109
+    },
+    {
+      "id": "order",
+      "at": 1789195494483
+    },
+    {
+      "id": "pause",
+      "at": 1789195533476
+    },
+    {
+      "id": "resume",
+      "at": 1789195542726
+    },
+    {
+      "id": "confirm",
+      "at": 1789195555157
+    },
+    {
+      "id": "approve",
+      "at": 1789195591042
+    },
+    {
+      "id": "english",
+      "at": 1789195620752
+    },
+    {
+      "id": "final-stop",
+      "at": 1789195657359
+    }
+  ],
+  "pointer": [
+    {
+      "at": 1789195442709,
+      "x": 120,
+      "y": 660,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444737,
+      "x": 118.9000015258789,
+      "y": 662.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444742,
+      "x": 117.80000305175781,
+      "y": 665.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444747,
+      "x": 116.69999694824219,
+      "y": 667.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444753,
+      "x": 115.5999984741211,
+      "y": 670.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444759,
+      "x": 114.5,
+      "y": 672.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444765,
+      "x": 113.4000015258789,
+      "y": 675.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444771,
+      "x": 112.30000305175781,
+      "y": 677.7333374023438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444777,
+      "x": 111.19999694824219,
+      "y": 680.2666625976562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444784,
+      "x": 110.0999984741211,
+      "y": 682.7999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444789,
+      "x": 109,
+      "y": 685.3333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444795,
+      "x": 107.9000015258789,
+      "y": 687.8666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444802,
+      "x": 106.80000305175781,
+      "y": 690.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444807,
+      "x": 105.69999694824219,
+      "y": 692.933349609375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444814,
+      "x": 104.5999984741211,
+      "y": 695.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444820,
+      "x": 103.5,
+      "y": 698,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444826,
+      "x": 102.4000015258789,
+      "y": 700.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444832,
+      "x": 101.30000305175781,
+      "y": 703.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444838,
+      "x": 100.19999694824219,
+      "y": 705.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444844,
+      "x": 99.0999984741211,
+      "y": 708.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444850,
+      "x": 98,
+      "y": 710.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195444856,
+      "x": 96.9000015258789,
+      "y": 713.2000122070312,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444862,
+      "x": 95.80000305175781,
+      "y": 715.7333374023438,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444868,
+      "x": 94.69999694824219,
+      "y": 718.2666625976562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444874,
+      "x": 93.5999984741211,
+      "y": 720.7999877929688,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444880,
+      "x": 92.5,
+      "y": 723.3333129882812,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444886,
+      "x": 91.4000015258789,
+      "y": 725.8666381835938,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444893,
+      "x": 90.30000305175781,
+      "y": 728.4000244140625,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444898,
+      "x": 89.19999694824219,
+      "y": 730.933349609375,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444904,
+      "x": 88.0999984741211,
+      "y": 733.4666748046875,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444911,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444935,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195444937,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195445059,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533488,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533494,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533500,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533506,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533512,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533518,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533525,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533531,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533537,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533543,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533549,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533555,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533561,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533567,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533575,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533579,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533585,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533591,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533597,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533603,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533609,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533615,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533621,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533628,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533634,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533640,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533646,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533652,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533658,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533664,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533688,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533690,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533811,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195533870,
+      "x": 107.42292022705078,
+      "y": 714.7666625976562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533876,
+      "x": 127.84583282470703,
+      "y": 693.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533882,
+      "x": 148.2687530517578,
+      "y": 672.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533888,
+      "x": 168.69166564941406,
+      "y": 651.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533894,
+      "x": 189.1145782470703,
+      "y": 629.8333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533901,
+      "x": 209.53750610351562,
+      "y": 608.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533906,
+      "x": 229.96041870117188,
+      "y": 587.3666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533913,
+      "x": 250.38333129882812,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533919,
+      "x": 270.8062438964844,
+      "y": 544.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533925,
+      "x": 291.2291564941406,
+      "y": 523.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533931,
+      "x": 311.6520690917969,
+      "y": 502.4333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533937,
+      "x": 332.07501220703125,
+      "y": 481.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533943,
+      "x": 352.4979248046875,
+      "y": 459.9666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533951,
+      "x": 372.92083740234375,
+      "y": 438.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533981,
+      "x": 393.34375,
+      "y": 417.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533984,
+      "x": 413.76666259765625,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533986,
+      "x": 434.1895751953125,
+      "y": 375.0333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533991,
+      "x": 454.61248779296875,
+      "y": 353.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195533997,
+      "x": 475.0354309082031,
+      "y": 332.5666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195534004,
+      "x": 495.4583435058594,
+      "y": 311.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195534010,
+      "x": 515.8812255859375,
+      "y": 290.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195534016,
+      "x": 536.3041381835938,
+      "y": 268.8666687011719,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534022,
+      "x": 556.7271118164062,
+      "y": 247.63333129882812,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534028,
+      "x": 577.1500244140625,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534034,
+      "x": 597.5729370117188,
+      "y": 205.1666717529297,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534041,
+      "x": 617.995849609375,
+      "y": 183.93333435058594,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534046,
+      "x": 638.4187622070312,
+      "y": 162.6999969482422,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534052,
+      "x": 658.8416748046875,
+      "y": 141.46665954589844,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534058,
+      "x": 679.2645874023438,
+      "y": 120.23332977294922,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534064,
+      "x": 699.6875,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534082,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534083,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195534206,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195542732,
+      "x": 679.25732421875,
+      "y": 120.23332977294922,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195542737,
+      "x": 658.8346557617188,
+      "y": 141.46665954589844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542743,
+      "x": 638.4119873046875,
+      "y": 162.6999969482422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542749,
+      "x": 617.9893188476562,
+      "y": 183.93333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542755,
+      "x": 597.566650390625,
+      "y": 205.1666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542761,
+      "x": 577.1439819335938,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542767,
+      "x": 556.7213134765625,
+      "y": 247.63333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542773,
+      "x": 536.2986450195312,
+      "y": 268.8666687011719,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542779,
+      "x": 515.8759765625,
+      "y": 290.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542785,
+      "x": 495.4533386230469,
+      "y": 311.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542791,
+      "x": 475.0306701660156,
+      "y": 332.5666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542797,
+      "x": 454.6080017089844,
+      "y": 353.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542803,
+      "x": 434.1853332519531,
+      "y": 375.0333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542811,
+      "x": 413.7626647949219,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542816,
+      "x": 393.3399963378906,
+      "y": 417.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542822,
+      "x": 372.9173278808594,
+      "y": 438.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542829,
+      "x": 352.4946594238281,
+      "y": 459.9666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542834,
+      "x": 332.0719909667969,
+      "y": 481.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542840,
+      "x": 311.6493225097656,
+      "y": 502.4333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542846,
+      "x": 291.2266540527344,
+      "y": 523.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542852,
+      "x": 270.8039855957031,
+      "y": 544.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542858,
+      "x": 250.38133239746094,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542864,
+      "x": 229.9586639404297,
+      "y": 587.3666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542870,
+      "x": 209.53599548339844,
+      "y": 608.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542876,
+      "x": 189.1133270263672,
+      "y": 629.8333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542882,
+      "x": 168.690673828125,
+      "y": 651.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542888,
+      "x": 148.26800537109375,
+      "y": 672.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542894,
+      "x": 127.8453369140625,
+      "y": 693.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789195542901,
+      "x": 107.42266845703125,
+      "y": 714.7666625976562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195542906,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195542925,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195542926,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195543048,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657394,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657400,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657406,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657412,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657418,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657424,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657431,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657444,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657448,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657454,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657461,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657466,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657472,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657478,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657484,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657490,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657496,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657502,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657509,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657515,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657521,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657527,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657533,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657539,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657545,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657551,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657557,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657563,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657569,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657575,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657593,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657596,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789195657717,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    }
+  ],
+  "screen": [
+    {
+      "at": 1789195428777,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nいらっしゃいませ。\n今日は、何にしましょう？\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195445285,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声につないでいます\nキャスト\n音声につないでいます\n音声につないでいます\n自動追従中\n音声につないでいます\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195445527,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195462535,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n聞き取り中\n\nこのお店の日本酒、月凪はどんな味ですか?\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195462777,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195463284,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nキャスト\n15:44\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195463777,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195464285,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195466278,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195467532,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195467781,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195481527,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195482027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195501284,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n聞き取り中\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nキャスト\n返答を生成中\n\n確認しますね\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195501535,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nキャスト\n返答を生成中\n\n確認しますね\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195501808,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195502277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195503535,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\nキャスト\n15:45\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195505277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195506289,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。 こもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195518277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。 こもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195518526,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195534027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n￥620\nイメージイラスト\nお造り三種盛り\n￥1,280\nイメージイラスト\n鶏の唐揚げ\n￥720\nイメージイラスト\n枝豆\n￥390\nイメージイラスト\nこもれび 雪灯 純米酒\n￥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n￥850\nイメージイラスト\nこもれび 波穂 本醸造\n￥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n￥680\nイメージイラスト\nこもれび 風乃音 純米酒\n￥580\nイメージイラスト\nこもれび 春澪 にごり酒\n￥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n￥720\nイメージイラスト\nこもれび 秋景 熟成酒\n￥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n￥650\nイメージイラスト\nこもれび 米蛍 純米酒\n￥590\nイメージイラスト\nこもれび 笹波月 本醸造\n￥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n￥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n￥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n￥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n￥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n￥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n￥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n￥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n￥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n￥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n￥980\nイメージイラスト\nこもれび 里乃響 純米酒\n￥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n￥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n￥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n￥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n￥940\nイメージイラスト\nこもれび 名残星 純米酒\n￥630\nイメージイラスト\nさけのお造り\n￥890\nイメージイラスト\nまぐろのお造り\n￥980\nイメージイラスト\n鶏もも串 三本\n￥840\nイメージイラスト\nつくね串 二本\n￥620\nイメージイラスト\n出汁巻き卵\n￥650\nイメージイラスト\n冷ややっこ\n￥440\nイメージイラスト\n季節のお漬物\n￥450\nイメージイラスト\n居酒屋のポテトサラダ\n￥520\nイメージイラスト\nたたききゅうり\n￥420\nイメージイラスト\nさばの塩焼き\n￥820\n売り切れ\nイメージイラスト\nほっけの開き\n￥980\nイメージイラスト\nなすの田楽\n￥580\nイメージイラスト\nしいたけの炭火焼き\n￥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n￥1,180\nイメージイラスト\n海老の天ぷら\n￥920\nイメージイラスト\n揚げ出し豆腐\n￥610\nイメージイラスト\n肉じゃが\n￥690\nイメージイラスト\n豚の角煮\n￥880\nイメージイラスト\n焼きおにぎり 二個\n￥460\nイメージイラスト\nさけの出汁茶漬け\n￥680\nイメージイラスト\n〆のかけうどん\n￥590\nイメージイラスト\n生ビール\n￥590\nイメージイラスト\nハイボール\n￥520\nイメージイラスト\nレモンサワー\n￥490\nイメージイラスト\n梅酒のロック\n￥560\nイメージイラスト\n芋焼酎の水割り\n￥540\nイメージイラスト\n烏龍茶\n￥340\nイメージイラスト\n緑茶\n￥340\nイメージイラスト\nゆずソーダ\n￥410\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195534276,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195543284,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声につないでいます\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nキャスト\n音声につないでいます\n音声につないでいます\n自動追従中\n音声につないでいます\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195543527,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195558798,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\nキャスト\n返答を生成中\n\n確認しますね\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195559027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\nキャスト\n15:45\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195559526,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\n15:45\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195560027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195561541,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\n15:45\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195562776,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:45\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195563027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195563276,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195577027,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195577277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195595526,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n聞き取り中\n\nはい、その内容で注文してください。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195595776,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\nキャスト\n15:46\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195596026,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195596276,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195597777,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n￥780\n冷酒\nグラス 九十ミリリットル (￥160)\n数量 1 · ￥780\n1\n内容を変更\n削除\n注文かご\n￥780\n注文内容を確認"
+    },
+    {
+      "at": 1789195599277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195600277,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。 ご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195607526,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。 ご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195608026,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195625276,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n聞き取り中\n\nCould you explain the seikai-chō in English, please?\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195625526,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195625776,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\n15:47\n\nCertainly. Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195626026,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\nキャストがお話ししています\n\nCertainly. Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195644789,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\n15:47\n\nCertainly. Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195645276,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\n15:47\n\nCertainly.Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195657784,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n停止しています\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\n15:47\n\nCertainly.Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\n自動追従中\n停止しています\n停止しています\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    },
+    {
+      "at": 1789195658026,
+      "text": "TableCast·\nこもれび · Komorebi\nT12\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n15:44\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n15:44\n\n確認しますね。\n\nおしながきを確認\n完了\nキャスト\n15:44\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽やかなタイプです。すっきり飲みやすい印象で、最初の一杯にも合わせやすいと思います。\n\nお客さま\n15:45\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\n確認しますね。\n\n注文・画面を確認\n完了\nおしながきを確認\n完了\n注文かごを更新\n完了\nキャスト\n15:45\n\nこもれび つきなぎ 純米吟醸、冷酒のグラス九十ミリリットルを一つカートに入れました。単価は七百八十円です。\n\nお客さま\n15:45\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n15:46\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n15:46\n\nはい、その内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n15:46\n\nご注文を送信しました。お飲み物が届くまで、どうぞゆったりお待ちください。\n\nお客さま\n15:47\n\nCould you explain the seikai-chō in English, please?\n\nキャスト\n15:47\n\nCertainly.Tsukinagi is a Junmai Ginjo with a clean, easy-drinking character. It tends to have a light, fruity aroma—often compared to green apple—and a smooth, refreshing finish. It’s a nice choice if you want something elegant and not too heavy, especially as a first glass.\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n￥0\n注文内容を確認"
+    }
+  ],
+  "speech": [
+    {
+      "id": "consult",
+      "at": 28.624,
+      "duration": 4.22
+    },
+    {
+      "id": "order",
+      "at": 65.994,
+      "duration": 5.76
+    },
+    {
+      "id": "confirm",
+      "at": 126.646,
+      "duration": 2.76
+    },
+    {
+      "id": "approve",
+      "at": 162.536,
+      "duration": 3.42
+    },
+    {
+      "id": "english",
+      "at": 192.252,
+      "duration": 3.3
+    }
+  ]
+}

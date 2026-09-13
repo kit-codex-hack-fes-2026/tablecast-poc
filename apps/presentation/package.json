@@ -1,0 +1,35 @@
+{
+  "name": "@tablecast-poc/presentation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "doctor": "bun --no-env-file scripts/tablecast-doctor.ts",
+    "capture:check": "node scripts/tablecast-capture-check.ts",
+    "build": "bun --no-env-file scripts/tablecast-build.ts --film product && bun --no-env-file scripts/tablecast-build.ts --film technical",
+    "build:film": "bun --no-env-file scripts/tablecast-build.ts",
+    "video": "node scripts/tablecast-video.ts",
+    "tts:live": "bun --no-env-file scripts/tablecast-tts.ts",
+    "dev": "hyperframes preview dist/product",
+    "render": "bun run render:product && bun run render:technical",
+    "render:product": "bun run test:layout --project=product && hyperframes render dist/product --output output/tablecast-product-demo.mp4",
+    "render:technical": "bun run test:layout --project=technical && hyperframes render dist/technical --output output/tablecast-technical-evaluation.mp4",
+    "check:video": "bun run test:layout && hyperframes lint dist/product && hyperframes check dist/product --at-transitions && hyperframes lint dist/technical && hyperframes check dist/technical --at-transitions",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint scripts experiments --type-aware --deny-warnings",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p experiments/tablecast-mutation/tsconfig.json",
+    "test": "vitest run",
+    "test:layout": "playwright test --config playwright.config.ts"
+  },
+  "dependencies": {
+    "gsap": "3.14.2",
+    "hyperframes": "0.8.33"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.1",
+    "@types/node": "24.13.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "zod": "4.5.4"
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "tts": {
+    "voiceId": "Asuka",
+    "modelId": "inworld-tts-2",
+    "language": "ja-JP",
+    "deliveryMode": "STABLE",
+    "audioConfig": {
+      "audioEncoding": "LINEAR16",
+      "sampleRateHertz": 48000
+    }
+  },
+  "films": {
+    "demo": {
+      "scenes": ["booking-intro", "booking-flow"]
+    }
+  },
+  "scenes": [
+    {
+      "id": "booking-intro",
+      "kind": "title",
+      "duration": 6,
+      "chapter": "01 / 予約管理",
+      "title": "BookFlow",
+      "kicker": "空き枠を選んで、予約を確定",
+      "note": "基盤監査用の架空アプリ。実動作の証拠ではありません。",
+      "points": ["空き枠の検索", "予約の確定"],
+      "camera": [
+        {
+          "at": 0,
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        }
+      ],
+      "cues": [
+        {
+          "id": "booking-intro-cue",
+          "at": 0,
+          "text": "予約を一つの画面で管理します。",
+          "voice": false
+        }
+      ]
+    },
+    {
+      "id": "booking-flow",
+      "kind": "flow",
+      "duration": 6,
+      "chapter": "02 / 処理の流れ",
+      "title": "入力から保存まで",
+      "kicker": "予約処理",
+      "note": "監査用の模式図。実装・性能の主張は含みません。",
+      "points": [],
+      "camera": [
+        {
+          "at": 0,
+          "x": 0.5,
+          "y": 0.5,
+          "zoom": 1
+        }
+      ],
+      "cues": [
+        {
+          "id": "booking-flow-cue",
+          "at": 0,
+          "text": "入力内容を検証して予約を保存します。",
+          "voice": false
+        }
+      ],
+      "technical": {
+        "view": "architecture",
+        "legend": "監査用の模式図",
+        "sources": ["apps/presentation/examples/tablecast-booking/project.json"],
+        "panels": [
+          {
+            "id": "booking-ui",
+            "style": "system",
+            "x": 180,
+            "y": 160,
+            "width": 520,
+            "height": 210,
+            "label": "予約画面",
+            "detail": "日時・人数を入力",
+            "tone": "ink"
+          },
+          {
+            "id": "booking-api",
+            "style": "system",
+            "x": 1080,
+            "y": 160,
+            "width": 520,
+            "height": 210,
+            "label": "予約API",
+            "detail": "空き枠を検証して保存",
+            "tone": "teal"
+          }
+        ],
+        "connections": [
+          {
+            "id": "booking-request",
+            "from": "booking-ui",
+            "to": "booking-api",
+            "points": [
+              [700, 265],
+              [1080, 265]
+            ],
+            "label": "予約内容",
+            "labelAt": [890, 225]
+          }
+        ],
+        "focus": [
+          {
+            "cue": "booking-flow-cue",
+            "offset": 0,
+            "targets": ["booking-ui", "booking-api", "booking-request"],
+            "summary": "入力 → 検証 → 保存"
+          }
+        ]
+      }
+    }
+  ],
+  "brand": {
+    "name": "BookFlow",
+    "title": "BookFlow — 予約管理のワークフロー検証"
+  }
+}

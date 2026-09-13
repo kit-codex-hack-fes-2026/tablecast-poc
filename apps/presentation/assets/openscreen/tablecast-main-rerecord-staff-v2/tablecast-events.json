@@ -1,0 +1,498 @@
+{
+  "source": "Actual Playwright-dispatched DOM pointer events",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "route": "/admin/stores/tablecast-komorebi/visits/abb459fe-f8cc-43cc-a452-12f40dde089c",
+  "captureStartedAtMs": 1789290087578,
+  "pointer": [
+    {
+      "at": 1789290087635,
+      "x": 195,
+      "y": 675.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089858,
+      "x": 194.63999938964844,
+      "y": 658.9520263671875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089865,
+      "x": 194.27999877929688,
+      "y": 642.7039794921875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089871,
+      "x": 193.9199981689453,
+      "y": 626.4559936523438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089877,
+      "x": 193.55999755859375,
+      "y": 610.2080078125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089883,
+      "x": 193.1999969482422,
+      "y": 593.9600219726562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089889,
+      "x": 192.83999633789062,
+      "y": 577.7119750976562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089895,
+      "x": 192.47999572753906,
+      "y": 561.4639892578125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089901,
+      "x": 192.1199951171875,
+      "y": 545.2160034179688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089907,
+      "x": 191.75999450683594,
+      "y": 528.968017578125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089914,
+      "x": 191.39999389648438,
+      "y": 512.719970703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089919,
+      "x": 191.0399932861328,
+      "y": 496.47198486328125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089925,
+      "x": 190.67999267578125,
+      "y": 480.2239990234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089931,
+      "x": 190.32000732421875,
+      "y": 463.97601318359375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089937,
+      "x": 189.9600067138672,
+      "y": 447.7279968261719,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089943,
+      "x": 189.60000610351562,
+      "y": 431.4800109863281,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089949,
+      "x": 189.24000549316406,
+      "y": 415.23199462890625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089955,
+      "x": 188.8800048828125,
+      "y": 398.9840087890625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089961,
+      "x": 188.52000427246094,
+      "y": 382.7359924316406,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089968,
+      "x": 188.16000366210938,
+      "y": 366.4880065917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089974,
+      "x": 187.8000030517578,
+      "y": 350.239990234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089980,
+      "x": 187.44000244140625,
+      "y": 333.99200439453125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089986,
+      "x": 187.0800018310547,
+      "y": 317.7439880371094,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089992,
+      "x": 186.72000122070312,
+      "y": 301.4960021972656,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290089998,
+      "x": 186.36000061035156,
+      "y": 285.24798583984375,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290090004,
+      "x": 186,
+      "y": 269,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290090022,
+      "x": 186,
+      "y": 269,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290090024,
+      "x": 186,
+      "y": 269,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290090148,
+      "x": 186,
+      "y": 269,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092392,
+      "x": 182.8800048828125,
+      "y": 288.7300109863281,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092398,
+      "x": 179.75999450683594,
+      "y": 308.4599914550781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092404,
+      "x": 176.63999938964844,
+      "y": 328.19000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092410,
+      "x": 173.52000427246094,
+      "y": 347.9200134277344,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092416,
+      "x": 170.39999389648438,
+      "y": 367.6499938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092422,
+      "x": 167.27999877929688,
+      "y": 387.3800048828125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092428,
+      "x": 164.16000366210938,
+      "y": 407.1099853515625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092434,
+      "x": 161.0399932861328,
+      "y": 426.8399963378906,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092440,
+      "x": 157.9199981689453,
+      "y": 446.57000732421875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092446,
+      "x": 154.8000030517578,
+      "y": 466.29998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092453,
+      "x": 151.67999267578125,
+      "y": 486.0299987792969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092459,
+      "x": 148.55999755859375,
+      "y": 505.760009765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092465,
+      "x": 145.44000244140625,
+      "y": 525.489990234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092471,
+      "x": 142.32000732421875,
+      "y": 545.219970703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092477,
+      "x": 139.1999969482422,
+      "y": 564.9500122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092483,
+      "x": 136.0800018310547,
+      "y": 584.6799926757812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092489,
+      "x": 132.9600067138672,
+      "y": 604.4099731445312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092495,
+      "x": 129.83999633789062,
+      "y": 624.1400146484375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092501,
+      "x": 126.72000122070312,
+      "y": 643.8699951171875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092507,
+      "x": 123.5999984741211,
+      "y": 663.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092513,
+      "x": 120.4800033569336,
+      "y": 683.3300170898438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092519,
+      "x": 117.36000061035156,
+      "y": 703.0599975585938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092525,
+      "x": 114.23999786376953,
+      "y": 722.7899780273438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290092532,
+      "x": 111.12000274658203,
+      "y": 742.52001953125,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092537,
+      "x": 108,
+      "y": 762.25,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092555,
+      "x": 108,
+      "y": 762.25,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092557,
+      "x": 108,
+      "y": 762.25,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290092677,
+      "x": 108,
+      "y": 762.25,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290094108,
+      "x": 98,
+      "y": 686.8250122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094113,
+      "x": 88,
+      "y": 611.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094120,
+      "x": 78,
+      "y": 535.9749755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094126,
+      "x": 68,
+      "y": 460.54998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094131,
+      "x": 58,
+      "y": 385.125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094138,
+      "x": 48,
+      "y": 309.70001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094144,
+      "x": 38,
+      "y": 234.27499389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094150,
+      "x": 28,
+      "y": 158.85000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789290094157,
+      "x": 18,
+      "y": 83.42500305175781,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789290094174,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    }
+  ],
+  "shots": [
+    {
+      "sceneId": "staff",
+      "definition": "3fa4a83139a11bc1ba08efeadae4e601c4f8ba083812f23c2f163423bc8a5d71",
+      "readyAt": 1789290094104,
+      "endAt": 1789290098183,
+      "target": {
+        "label": "客が送信した同じ商品の注文と受付",
+        "x": 0.08461538461538462,
+        "y": 0.753850710900474,
+        "width": 0.7538461538461538,
+        "height": 0.11611374407582942
+      },
+      "text": "こもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780",
+      "image": "tablecast-shot-staff.png"
+    }
+  ],
+  "orderId": "b8828221-563f-46df-8754-dc0c48b65679"
+}

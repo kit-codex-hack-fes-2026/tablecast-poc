@@ -1,0 +1,11 @@
+{
+  "status": "accepted",
+  "scenes": [
+    "consult-answer",
+    "order-added",
+    "pause",
+    "readback",
+    "approval",
+    "approval-result"
+  ]
+}

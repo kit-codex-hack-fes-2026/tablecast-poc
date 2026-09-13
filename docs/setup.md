@@ -26,6 +26,8 @@ cd ../tablecast-my-change
 
 ## 2A. Dev Containerを使う
 
+動画素材は`.lfsconfig`により通常のclone・pullでは取得しない。動画を扱う場合だけGit LFSを導入し、[動画の共有と復元](../apps/presentation/SHARING.md)に従って取得範囲と`--exclude=`を指定した`git lfs pull`を実行する。通常の動画生成にはアプリ起動・APIキーは不要。現在の再収録・OpenScreen編集手順はWindows環境を対象とする。共有projectの再編集は、projectのあるフォルダーでOpenScreenの`pack`を実行して作業用bundleを作る。UI変更試験のComposeを起動する場合は、[試験手順](../apps/presentation/experiments/tablecast-mutation/BRIEF.md)に従い、`TABLECAST_MUTATION_CHECKOUT`へ独立cloneの実在パスを指定する。
+
 ホストにNode・Bun・uv・Pythonは不要。Dev Containers対応エディタでworktreeを開き、Reopen in Containerを実行する。初期化が `.devcontainer/.env` を生成し、`postCreateCommand` が `bun run setup` を実行する。
 
 コンテナのターミナルで起動する。

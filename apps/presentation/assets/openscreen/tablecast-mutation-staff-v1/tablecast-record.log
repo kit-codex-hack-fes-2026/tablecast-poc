@@ -1,0 +1,20 @@
+
+{"event":"started","command":"record"}
+{"event":"log","message":"Recording source: TableCast iphone-staff 1789293171943 - Google Chrome"}
+{"event":"log","message":"Recording started"}
+{"event":"log","message":"Duration reached (30000ms)"}
+{"event":"done","success":true,"screenVideoPath":"[OPENSCREEN_RECORDINGS]\\recording-1789293173431.mp4","cursorDataPath":"[OPENSCREEN_RECORDINGS]\\recording-1789293173431.mp4.cursor.json","durationMs":30105,"projectData":{"version":2,"media":{"screenVideoPath":"[OPENSCREEN_RECORDINGS]\\recording-1789293173431.mp4","cursorCaptureMode":"editable-overlay"},"editor":{"cursorTheme":"default","wallpaper":"/wallpapers/wallpaper1.jpg","shadowIntensity":0.2,"showBlur":false,"motionBlurAmount":0.2,"borderRadius":40,"padding":50,"cropRegion":{"x":0,"y":0,"width":1,"height":1},"zoomRegions":[],"cameraFullscreenRegions":[],"autoZoomEnabled":true,"autoFocusAll":false,"trimRegions":[],"speedRegions":[],"annotationRegions":[],"aspectRatio":"16:9","webcamLayoutPreset":"picture-in-picture","webcamMaskShape":"rectangle","webcamMirrored":false,"webcamReactiveZoom":true,"webcamSizePreset":25,"webcamPosition":null,"exportQuality":"good","exportFormat":"mp4","gifFrameRate":15,"gifLoop":true,"gifSizePreset":"medium"}},"projectPath":"[REPOSITORY]\\apps\\presentation\\assets\\openscreen\\tablecast-mutation-staff-v1\\tablecast-raw.openscreen"}
+[38480:0913/185253.195:ERROR:third_party\webrtc\modules\desktop_capture\win\wgc_capturer_win.cc:441] Failed to start capture: -2147024809
+[native-wgc] starting Windows capture {"helperPath":"[LOCALAPPDATA]\\Programs\\Openscreen\\resources\\electron\\native\\bin\\win32-x64\\wgc-capture.exe","source":{"type":"window","sourceId":"window:1248916:0","displayId":0,"windowHandle":"1248916"},"audio":{"system":{"enabled":false},"microphone":{"enabled":false,"gain":1.4}},"webcam":{"enabled":false,"width":0,"height":0,"fps":30},"encoder":{"preferSoftwareEncoder":false},"cursor":{"mode":"editable-overlay"},"bounds":{"dip":{"x":0,"y":0,"width":1920,"height":1080},"helper":{"x":0,"y":0,"width":1920,"height":1080}},"sourceId":"window:1248916:0","usedDisplayMatch":false,"outputPath":"[OPENSCREEN_RECORDINGS]\\recording-1789293173431.mp4"}
+[cursor-native][win32] {"event":"spawn","pid":29812,"sampleIntervalMs":33,"sourceId":"window:1248916:0","windowHandle":"1248916"}
+[cursor-native][win32] {"event":"ready","timestampMs":1789293173458}
+[native-wgc] cursor sampler ready {"cursorStartTimeMs":1789293173433,"warmupMs":25}
+[native-wgc] helper spawned {"pid":12788}
+[cursor-native][win32] {"event":"asset","id":"0x1001F","width":32,"height":32,"hotspotX":0,"hotspotY":0,"scaleFactor":1}
+[cursor-native][win32] {"event":"sample","rawX":133,"rawY":470,"normalizedX":0.1996124031007752,"normalizedY":0.4721030042918455,"visible":true,"withinBounds":true,"bounds":{"x":30,"y":30,"width":516,"height":932},"handle":"0x1001F"}
+[native-wgc] capture started {"captureStartedAtMs":1789293173968,"cursorOffsetMs":535,"webcamFormat":null,"encoderSelection":{"event":"encoder-selection","schemaVersion":2,"video":"default","videoInput":"cpu-rgb32","container":"fragmented-mp4","preferSoftwareEncoder":false,"videoEncoderRuntime":"hardware"}}
+[cursor-native][win32] {"event":"asset","id":"0x10003","width":32,"height":32,"hotspotX":0,"hotspotY":0,"scaleFactor":1}
+[cursor-native][win32] {"event":"sample","rawX":641,"rawY":455,"normalizedX":1.184108527131783,"normalizedY":0.4560085836909871,"visible":true,"withinBounds":false,"bounds":{"x":30,"y":30,"width":516,"height":932},"handle":"0x10003"}
+[cursor-native][win32] {"event":"asset","id":"0x10005","width":32,"height":32,"hotspotX":4,"hotspotY":15,"scaleFactor":1}
+[cursor-native][win32] {"event":"stop","sampleCount":912,"assetCount":3,"outOfBoundsSampleCount":526}
+[cursor-native][win32] {"event":"exit","code":null,"signal":"SIGTERM","sampleCount":912,"assetCount":3,"outOfBoundsSampleCount":526}
