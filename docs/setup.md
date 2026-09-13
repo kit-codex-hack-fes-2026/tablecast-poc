@@ -238,4 +238,4 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-rootのBun workspaceに`apps/email-preview`を含む。通常のfrozen installで公式React Email UI/CLIとOpenNext、2つのBun patchを導入する。新たなnpm installやサービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。初回buildはGoogle Fonts・固定サンプルHTMLの診断サービスへの接続を要する。
+メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。

@@ -66,7 +66,6 @@ export default defineConfig({
     ".agents/skills/emil-design-eng/**",
     ".agents/skills/mastra/**",
     "**/dist/**",
-    "**/.react-email/**",
     "**/storybook-static/**",
     "**/worker-configuration.d.ts",
     "**/src/cloudflare-env.d.ts",

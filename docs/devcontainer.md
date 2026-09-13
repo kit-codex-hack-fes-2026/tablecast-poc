@@ -8,7 +8,7 @@ Node 24.7.0、Bun 1.3.13、uv 0.11.26、Python 3.13.12を使用する。LiveKit�
 
 `tablecast-init.sh` はホストのGit共通ディレクトリとworktree実パスからCompose設定を生成する。メインcheckoutは `main`、追加worktreeはフォルダー名、Codexの同名repoフォルダーでは親のIDを使う。branch名やcommitには依存しない。Compose project・volumeと公開ポートを実パスごとに分離する。
 
-workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、仮想環境、`.local`、Web・メールカタログのbuild出力とWrangler状態はLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
+workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、仮想環境、`.local`、Webのbuild出力とWrangler状態はLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
 
 コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthとLiveKit signalingをCaddy経由の同一originへ集約する。LiveKitのRTC TCP/UDPには公開側と同じポートを渡す。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
 
@@ -29,5 +29,3 @@ docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:containe
 エディタのinitializeCommandは生成ファイルを再生成する。エディタでもHTTPSを使う場合は `TABLECAST_CONTAINER_ORIGIN` をホストの起動環境に設定する。Composeでは環境変数が生成ファイルより優先される。originを切り替える前に Web・音声AgentをCtrl+Cで停止し、コンテナを再作成する。
 
 Node製クライアントがmacOSの証明書ストアを使うには `NODE_OPTIONS=--use-system-ca` を指定する。TLS検証を無効化しない。Linuxコンテナはホストの証明書ストアを共有しないため、コンテナ内の試験は既定のlocalhost経路を使う。
-
-メールカタログを追加した既存コンテナでは、開発プロセスを通常終了した後にDev ContainerをRebuildし、`apps/email-preview/node_modules`と`.react-email`の専用volumeを反映する。既存のvolumeは削除しない。新workspaceのビルド手順は[メールカタログ](development.md#メールカタログの検証)を参照する。

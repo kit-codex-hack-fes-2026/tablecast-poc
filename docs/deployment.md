@@ -189,16 +189,16 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 ## PRのStorybook・メールカタログ
 
-同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加する。前者はWorkers Static Assets、後者はReact Email公式UIをOpenNextのStatic Assets incremental cacheで動かす。APIの`@tablecast/api/emails`にあるレイアウトと3用途の文言を共有し、架空の店舗名と`example.invalid`だけを渡す。公開UIにはSendを出さず、Workerは既知の事前生成ページと静的アセットへのGET/HEADだけを受ける。CSPでform送信とメール送信先への接続を禁止する。装飾用WASMのjsDelivrへの取得は許可する。
+同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加し、両方をWorkers Static Assetsで配信する。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
 
 CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildが成功した場合に配備する。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policiesの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
-Storybookは`html_handling: none`で`/iframe.html`をそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
+両カタログは`html_handling: none`でHTMLパスをそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
 
 `/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。カタログ専用の固定コメントを1件だけ更新し、失敗時も対象SHA・各jobの結果・最後に確認できた配備SHAを表示する。現在版を確認できなければ旧版が残ったと推測しない。forkはsecretなしbuildだけを実施し、配備・コメントは対象外とsummaryへ記録する。
 
 再配備は最新headに対するCI runを再実行する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。削除後の再実行は安全に終了し、reopenは通常のCIで再作成する。手動復旧では対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
 
-追加資源はPRごとに2 Workersと専用Access applicationで、メール用D1/R2/KV/DO/Containerは作らない。既存Workers Paidの契約を共有するため、Workerごとの追加基本料はない。Storybookの静的配信は無料、メールは`run_worker_first`によりアセットもWorkerリクエストに数える。含有枠とAccessの人数・application数、accountのWorker数、Actions artifact容量を監視する。含有枠内なら追加費用0を想定できるが、超過料金まで0とは保証しない。標準GitHub hosted runnerは公開repositoryでは無料で、artifact等は別枠となる。[Workers料金](https://developers.cloudflare.com/workers/platform/pricing/)・[Static Assets料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)・[Worker上限](https://developers.cloudflare.com/workers/platform/limits/)を契約時点で確認する。
+追加資源はPRごとに2 Workersと専用Access applicationで、メール用D1/R2/KV/DO/Containerは作らない。既存Workers Paidの契約を共有するため、Workerごとの追加基本料はない。両カタログの静的配信は無料で、メール用のWorker実行課金は発生しない。含有枠とAccessの人数・application数、accountのWorker数、Actions artifact容量を監視する。含有枠内なら追加費用0を想定できるが、超過料金まで0とは保証しない。標準GitHub hosted runnerは公開repositoryでは無料で、artifact等は別枠となる。[Workers料金](https://developers.cloudflare.com/workers/platform/pricing/)・[Static Assets料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)・[Worker上限](https://developers.cloudflare.com/workers/platform/limits/)を契約時点で確認する。

@@ -205,4 +205,4 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 
 ### 開発者用メールカタログ
 
-`apps/email-preview`はReact Email公式UIのビルドと閲覧専用Workerを所有する。APIの純粋な`@tablecast/api/emails`公開入口から共通レイアウトとメール内容を読む。送信・認証・DBには依存せず、製品Webの利用条件に含めない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。
+APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts/tablecast-email-build.ts`が架空データを使った静的HTMLと一覧を生成する。カタログ専用workspace・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。

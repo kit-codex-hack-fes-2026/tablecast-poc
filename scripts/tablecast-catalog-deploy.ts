@@ -180,9 +180,9 @@ async function main() {
     const { name, origin } = catalogTarget(pr, kind);
     const artifact =
       kind === "email"
-        ? resolve(root, "apps/email-preview/.react-email")
+        ? resolve(root, "apps/api/email-static")
         : resolve(root, "apps/web/storybook-static");
-    const releasePath = kind === "email" ? "tablecast-release.json" : "_tablecast/release.json";
+    const releasePath = "_tablecast/release.json";
     const release = catalogReleaseSchema.parse(
       JSON.parse(await readFile(resolve(artifact, releasePath), "utf8")),
     );
@@ -196,23 +196,11 @@ async function main() {
       : undefined;
     await protect(name, new URL(origin).hostname, existing?.id);
     await currentRevision(target, sha);
-    const config =
-      kind === "email"
-        ? {
-            main: resolve(artifact, "tablecast-worker.js"),
-            compatibility_flags: ["nodejs_compat"],
-            assets: {
-              directory: resolve(artifact, ".open-next/assets"),
-              binding: "ASSETS",
-              run_worker_first: true,
-            },
-          }
-        : { assets: { directory: artifact, not_found_handling: "none", html_handling: "none" } };
     const configPath = resolve(directory, `${kind}.json`);
     await writeFile(
       configPath,
       JSON.stringify({
-        ...config,
+        assets: { directory: artifact, not_found_handling: "none", html_handling: "none" },
         name,
         account_id: tablecastAccountId,
         compatibility_date: "2026-09-03",

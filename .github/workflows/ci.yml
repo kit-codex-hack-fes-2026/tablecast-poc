@@ -143,7 +143,7 @@ jobs:
           if-no-files-found: error
 
   email-build:
-    name: "Build: メールカタログ (React Email, OpenNext)"
+    name: "Build: メールカタログ (React Email HTML)"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -160,14 +160,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
-          path: |
-            apps/email-preview/.react-email/.open-next/
-            apps/email-preview/.react-email/wrangler.json
-            apps/email-preview/.react-email/tablecast-worker.js
-            apps/email-preview/.react-email/tablecast-email-worker.ts
-            apps/email-preview/.react-email/tablecast-routes.json
-            apps/email-preview/.react-email/tablecast-release.json
-          include-hidden-files: true
+          path: apps/api/email-static/
           retention-days: 1
           if-no-files-found: error
 
@@ -213,7 +206,7 @@ jobs:
         if: github.event.pull_request.head.repo.full_name == github.repository && needs.email-build.result == 'success'
         with:
           name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/email-preview/.react-email/
+          path: apps/api/email-static/
       - name: Access保護・検証済みSHAの配備
         id: publish
         if: github.event.pull_request.head.repo.full_name == github.repository && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')

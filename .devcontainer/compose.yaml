@@ -44,8 +44,6 @@ services:
       - tablecast-web-node:${TABLECAST_WORKSPACE_FOLDER}/apps/web/node_modules
       - tablecast-api-node:${TABLECAST_WORKSPACE_FOLDER}/apps/api/node_modules
       - tablecast-emulate-node:${TABLECAST_WORKSPACE_FOLDER}/apps/emulate/node_modules
-      - tablecast-email-node:${TABLECAST_WORKSPACE_FOLDER}/apps/email-preview/node_modules
-      - tablecast-email-output:${TABLECAST_WORKSPACE_FOLDER}/apps/email-preview/.react-email
       - tablecast-livekit-node:${TABLECAST_WORKSPACE_FOLDER}/livekit/node_modules
       - tablecast-python:${TABLECAST_WORKSPACE_FOLDER}/livekit/.venv
       - tablecast-state:${TABLECAST_WORKSPACE_FOLDER}/.local
@@ -57,8 +55,6 @@ volumes:
   tablecast-web-node:
   tablecast-api-node:
   tablecast-emulate-node:
-  tablecast-email-node:
-  tablecast-email-output:
   tablecast-livekit-node:
   tablecast-python:
   tablecast-state:

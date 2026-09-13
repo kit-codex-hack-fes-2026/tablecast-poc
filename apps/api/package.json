@@ -7,15 +7,15 @@
     "./schema": "./src/schema.ts",
     "./client": "./src/client.ts",
     "./speech": "./src/modules/voice/prompt.ts",
-    "./telemetry": "./src/platform/telemetry.ts",
-    "./emails": "./src/emails/index.ts"
+    "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cf:typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false --include-runtime=false --env-interface TablecastEnv src/cloudflare-env.d.ts",
-    "lint": "oxlint src test oxlint.config.ts --type-aware --deny-warnings"
+    "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
+    "build:email": "bun --no-env-file scripts/tablecast-email-build.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "4.0.60",
