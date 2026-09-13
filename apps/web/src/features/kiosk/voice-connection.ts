@@ -55,6 +55,7 @@ export class VoiceConnection {
 
   private microphoneView = initialMicrophone;
   private deviceRequest = 0;
+  private microphoneErrorSource?: "devices" | "capture";
 
   observeMicrophones() {
     const refresh = () => {
@@ -71,7 +72,7 @@ export class VoiceConnection {
   async refreshMicrophones() {
     const request = ++this.deviceRequest;
     if (!navigator.mediaDevices?.enumerateDevices) {
-      this.updateMicrophone({ error: "unsupported", loading: false });
+      this.updateMicrophone({ error: "unsupported", loading: false }, "devices");
       return;
     }
     this.updateMicrophone({ loading: true });
@@ -84,25 +85,23 @@ export class VoiceConnection {
         named &&
         this.microphoneView.selectedId !== "default" &&
         !devices.some((device) => device.deviceId === this.microphoneView.selectedId);
-      this.updateMicrophone({
-        devices: devices.filter((device) => device.deviceId),
-        loading: false,
-        permissionRequired: !named,
-        limited:
-          !navigator.mediaDevices.getSupportedConstraints().deviceId ||
-          (named && devices.filter((device) => device.deviceId !== "default").length < 2),
-        error: missing
-          ? "disconnected"
-          : devices.length === 0
-            ? "empty"
-            : this.microphoneView.error === "empty"
-              ? undefined
-              : this.microphoneView.error,
-      });
+      const error = missing ? "disconnected" : devices.length === 0 ? "empty" : undefined;
+      this.updateMicrophone(
+        {
+          devices: devices.filter((device) => device.deviceId),
+          loading: false,
+          permissionRequired: !named,
+          limited:
+            !navigator.mediaDevices.getSupportedConstraints().deviceId ||
+            (named && devices.filter((device) => device.deviceId !== "default").length < 2),
+          ...(error || this.microphoneErrorSource === "devices" ? { error } : {}),
+        },
+        "devices",
+      );
       if (missing && this.desired) await this.stop();
     } catch (error) {
       if (request === this.deviceRequest)
-        this.updateMicrophone({ loading: false, error: microphoneError(error) });
+        this.updateMicrophone({ loading: false, error: microphoneError(error) }, "devices");
     }
   }
 
@@ -144,7 +143,11 @@ export class VoiceConnection {
     }
   }
 
-  private updateMicrophone(change: Partial<MicrophoneView>) {
+  private updateMicrophone(
+    change: Partial<MicrophoneView>,
+    errorSource: "devices" | "capture" = "capture",
+  ) {
+    if ("error" in change) this.microphoneErrorSource = change.error ? errorSource : undefined;
     this.microphoneView = { ...this.microphoneView, ...change };
     this.emit({ microphone: this.microphoneView });
   }
