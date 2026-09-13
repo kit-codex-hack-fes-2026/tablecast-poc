@@ -126,7 +126,7 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
     signal: AbortSignal.timeout(10000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("カタログのreleaseを取得できません。");
+  if (!response.ok) throw new Error(`カタログのreleaseを取得できません: HTTP ${response.status}`);
   const release = catalogReleaseSchema.parse(await response.json());
   if (release.pr !== pr || release.kind !== kind)
     throw new Error("カタログの所有情報が一致しません。");
@@ -136,7 +136,7 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
       redirect: "manual",
       signal: AbortSignal.timeout(10000),
     });
-    if (!page.ok) throw new Error("カタログのページを確認できません。");
+    if (!page.ok) throw new Error(`カタログのページを確認できません: ${path} HTTP ${page.status}`);
     await page.body?.cancel();
     const denied = await fetch(`${origin}${path}`, {
       redirect: "manual",
@@ -206,7 +206,7 @@ async function main() {
               run_worker_first: true,
             },
           }
-        : { assets: { directory: artifact, not_found_handling: "none" } };
+        : { assets: { directory: artifact, not_found_handling: "none", html_handling: "none" } };
     const configPath = resolve(directory, `${kind}.json`);
     await writeFile(
       configPath,
@@ -236,8 +236,12 @@ async function main() {
     for (let attempt = 0; attempt < 12; attempt++) {
       try {
         verified = (await inspectCatalog(origin, pr, kind)).sha === sha;
-      } catch {
-        /* 反映中は本文・資格をログへ出さない。 */
+      } catch (error) {
+        console.info(
+          error instanceof Error && !error.message.includes("{")
+            ? error.message
+            : "カタログの応答を検証できません。",
+        );
       }
       if (verified) break;
       await new Promise((complete) => setTimeout(complete, 5000));
