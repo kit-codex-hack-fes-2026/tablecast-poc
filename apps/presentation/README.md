@@ -31,7 +31,7 @@ bun run video --project projects/tablecast-main-rerecord.json --film technical -
 
 ## 入力と生成物
 
-現行作例の台本は`projects/tablecast-main-rerecord.json`。`sample.json`は以前の版の再生成・回帰検査用に維持する。`capture-plan.json`は次の撮影で必要な状態・対象・保持条件。`styles.css`と`scripts/`が検証と描画を担当する。派生HTML・timing・VTTは直接修正しない。
+現行作例の台本は`projects/tablecast-main-rerecord.json`。`sample.json`は素材実体を読まない単体テストのfixture用に維持する。`capture-plan.json`は次の撮影で必要な状態・対象・保持条件。`styles.css`と`scripts/`が検証と描画を担当する。派生HTML・timing・VTTは直接修正しない。
 
 通常のbuild/renderは保存済み素材を使い、有料TTSやアプリの実会話を呼ばない。アプリの変更を映像へ反映するには、根拠・説明・必要な撮影素材の更新が必要。字幕・カット・図の内容と時刻の判断には手作業が残る。
 

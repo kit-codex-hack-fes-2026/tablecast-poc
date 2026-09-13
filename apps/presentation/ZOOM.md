@@ -1,6 +1,6 @@
 # ズームの設計
 
-生成ルートの正本は [GENERATION.md](GENERATION.md)。以下の原則を現行の商品紹介v13にも適用する。場面別時刻の表はv11で定義した時の記録であり、再編集では `sample.json` と採用テイクの計測値を確認する。
+生成ルートの正本は [GENERATION.md](GENERATION.md)。以下の原則を現行の商品紹介にも適用する。場面別時刻の表はv11で定義した時の記録であり、再編集では `projects/tablecast-main-rerecord.json` と採用テイクの計測値を確認する。
 
 ズームは、画面全体から説明対象へ視線を運び、読める大きさで保持して、次の説明へ接続する一つのショットとして設計する。回数を減らすことや固定倍率を目的にしない。デザインの採否はユーザーが判断する。
 
@@ -30,7 +30,7 @@
 
 ## 編集時刻の契約
 
-`sample.json`の`media.zoom`を正本にする。`mode`と`reason`、詳細表示では`target`・発話ID `cue`・発話から寄り始めまでの`offset`を書く。`exitAt`は場面先頭から引き始める時刻。省略時はcutを越えて保持する。`continueFrom`は同じ素材・同じ対象の先行場面を参照する。
+`projects/tablecast-main-rerecord.json`の`media.zoom`を正本にする。`mode`と`reason`、詳細表示では`target`・発話ID `cue`・発話から寄り始めまでの`offset`を書く。`exitAt`は場面先頭から引き始める時刻。省略時はcutを越えて保持する。`continueFrom`は同じ素材・同じ対象の先行場面を参照する。
 
 OpenScreenの標準処理では、regionの`startMs`より約1.023秒前からズームが始まり、約0.5秒後に着地する。v10はregionの開始をそのままcut先頭へ置いたため、導入の移動がcut前へ出ていた。v11では台本の「寄り始め」に助走の差を足してregionを配置する。引きの約1.015秒もcut内に残す。開始・保持・引きの時間が不足する台本は検証で拒否する。
 

@@ -99,7 +99,7 @@ HyperFramesの遷移時点検査では、商品紹介212時点・技術説明98�
 ## 実行と出力
 
 ```sh
-bun run build
+bun run build:videos
 bun run check:video
 bun run render
 ```

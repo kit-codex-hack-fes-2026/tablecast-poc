@@ -5,7 +5,7 @@
   "scripts": {
     "doctor": "bun --no-env-file scripts/tablecast-doctor.ts",
     "capture:check": "node scripts/tablecast-capture-check.ts",
-    "build": "bun --no-env-file scripts/tablecast-build.ts --film product && bun --no-env-file scripts/tablecast-build.ts --film technical",
+    "build:videos": "bun --no-env-file scripts/tablecast-build.ts --film product && bun --no-env-file scripts/tablecast-build.ts --film technical",
     "build:film": "bun --no-env-file scripts/tablecast-build.ts",
     "video": "node scripts/tablecast-video.ts",
     "tts:live": "bun --no-env-file scripts/tablecast-tts.ts",
@@ -16,8 +16,8 @@
     "check:video": "bun run test:layout && hyperframes lint dist/product && hyperframes check dist/product --at-transitions && hyperframes lint dist/technical && hyperframes check dist/technical --at-transitions",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint scripts experiments --type-aware --deny-warnings",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p experiments/tablecast-mutation/tsconfig.json",
+    "lint": "oxlint scripts --type-aware --deny-warnings",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:layout": "playwright test --config playwright.config.ts"
   },

@@ -7,7 +7,7 @@
 制作の入口はこの文書。既存のHyperFrames・OpenScreen・TTSを使い、題材ごとの構成・撮影・編集判断と、共通の生成・検査をつなぐ。最初に[制作メモのひな型](BRIEF-TEMPLATE.md)を埋める。現行の2本は作例として維持する。
 
 1. **実装と変更を確認する。** 対象のアプリ版、利用目的、成功条件、変更されたUI・APIを特定する。既存録画が今も有効か判断し、必要な場面を再撮影対象にする。
-2. **題材の入力を整える。** `project.json`にブランド・構成・字幕・発話・素材・図・時刻、隣の`capture-plan.json`に撮影意図・状態・対象・保持条件を置く。TableCastの既存入力は`sample.json`とルートの`capture-plan.json`。
+2. **題材の入力を整える。** `project.json`にブランド・構成・字幕・発話・素材・図・時刻、隣の`capture-plan.json`に撮影意図・状態・対象・保持条件を置く。TableCastの既存入力は`projects/tablecast-main-rerecord.json`と隣の`projects/capture-plan.json`。
 3. **撮影する。** アプリ固有のPlaywright操作で初期状態を用意し、成功結果を待つ。共通の`captureShot(page, sceneId, shot, out, waitForState)`で実測・保持の証跡を残す。状態名があるのに状態待ち関数を渡さない場合は失敗する。業務状態を共通処理へ追加しない。
 4. **編集・音声・図を合わせる。** 採用した実応答からcutと字幕を決め、実測に合わせてズームを設定する。新しい発話だけTTSを生成し、実音声尺に合わせて図の強調を調整する。詳細は下記の既存工程を使う。
 5. **生成・検査する。** 下記の`video`コマンドで、指定した台本と出力に対してbuild・Playwright配置検査・HyperFrames lint／遷移検査を実行する。`--render`指定時はMP4、形式・全編復号・音量・完成フレーム抽出・等速再生まで進む。
@@ -19,10 +19,10 @@
 
 ```powershell
 # 保存済み素材で構成と検査まで。新しい録画や有料TTSは実行しない。
-bun run video --project sample.json --film technical --name tablecast-technical-check-v1
+bun run video --project projects/tablecast-main-rerecord.json --film technical --name tablecast-technical-check-v1
 
 # 完成MP4の書き出しと検査まで行う。
-bun run video --project sample.json --film technical --name tablecast-technical-release-v1 --render
+bun run video --project projects/tablecast-main-rerecord.json --film technical --name tablecast-technical-release-v1 --render
 
 # 別ブランド・別場面名でも同じ入口。模式台本の動作確認用。
 bun run video --project examples/tablecast-booking/project.json --film demo --name tablecast-booking-v1 --render
@@ -44,7 +44,7 @@ reportには入力台本・参照素材・生成コードのハッシュ、ア�
 
 再撮影したら`capture`と`media.shot`、take・events・OpenScreen projectを新テイクへ対応させる。buildはその定義・実測と編集を照合する。旧素材に証跡がなければreportに未適用と出る。これは旧作品の再生成を残すためであり、新しい実装への追従を証明しない。新規に撮る場面では証跡を残す。実装変更後の素材の鮮度は制作メモで確認し、撮影定義のハッシュだけで判断しない。
 
-録画ツールが書いたJSONは証跡として生バイトを保存し、formatter対象から除外する。台本・撮影定義・ソース・設定は整形する。runは入力の生バイトをhash化するため、実行中に入力を変更しない。main更新から根拠の更新・現行管理画面の再収録・全編生成までの実例は[main追従検証](MAIN-UPDATE-VALIDATION.md)を参照する。
+録画ツールが書いたJSONは証跡として生バイトを保存し、formatter対象から除外する。台本・撮影定義・ソース・設定は整形する。runは入力の生バイトをhash化するため、実行中に入力を変更しない。main更新から根拠の更新・現行管理画面の再収録・全編生成までの実例は[main追従検証](records/tablecast-main-video-validation.json)を参照する。
 
 コード・入力・制作メモ・採用素材・必要な証跡を引き継ぐ。素材は既存`.gitattributes`のLFS対象を確認する。公開前に[共有手順](SHARING.md)に従い原録画とカーソル証跡を同梱し、原本を非公開で保全してからproject・ログの個人パスを整理する。採用runのreportや根拠として参照するテスト結果は、ignore対象のoutputだけに放置せず、採用記録として保存または成果物と一緒に共有する。新しいcheckoutでは依存とLFS素材を取得し、まず保存素材の`video`検査を通し、再撮影時にのみアプリ・認証・OpenScreen・画面寸法を確認する。
 
@@ -107,7 +107,7 @@ bun run test:layout
 
 ## ナレーションを更新
 
-`sample.json` の `cues[].speech`（省略時は表示用text）を更新する。必要な発話だけを生成し、保存済みWAVは保持する。
+`projects/tablecast-main-rerecord.json` の `cues[].speech`（省略時は表示用text）を更新する。必要な発話だけを生成し、保存済みWAVは保持する。
 
 ```powershell
 $env:TABLECAST_PRESENTATION_ENV_FILE = (Resolve-Path ../../.env.secrets.local).Path
@@ -121,7 +121,7 @@ if ($LASTEXITCODE -ne 0) { throw 'TTS生成失敗' }
 
 ## 保存済み実録を再編集
 
-`sample.json` の `media.file/project/zoom` を確認し、新しい版の保存先を用意する。現行素材は [HANDOFF.md](HANDOFF.md) の表を参照。入力の編集projectや媒体へ書き込む処理なので、採用済みの比較用素材を先に保持する。
+`projects/tablecast-main-rerecord.json` の `media.file/project/zoom` を確認し、新しい版の保存先を用意する。現行素材は [HANDOFF.md](SHARING.md) の表を参照。入力の編集projectや媒体へ書き込む処理なので、採用済みの比較用素材を先に保持する。
 
 ```powershell
 bun --no-env-file scripts/tablecast-edit-guest.ts
@@ -155,7 +155,7 @@ node scripts/tablecast-record-role.ts admin tablecast-admin-new-take
 node scripts/tablecast-record-role.ts staff tablecast-staff-new-take
 ```
 
-確定注文が1件あり注文かごが空の同じ合成来店で、英語応答だけを追加撮影する場合は`node scripts/tablecast-record-guest.ts tablecast-english-new-take english`を使える。別テイクの実音声・字幕・カットとして対応付ける。[最新mainの再収録記録](RERECORD-20260913.md)を参照する。
+確定注文が1件あり注文かごが空の同じ合成来店で、英語応答だけを追加撮影する場合は`node scripts/tablecast-record-guest.ts tablecast-english-new-take english`を使える。別テイクの実音声・字幕・カットとして対応付ける。[最新mainの再収録記録](records/tablecast-rerecord-validation.json)を参照する。
 
 必要な役割だけを実行する。客は認可済みの新しい合成来店・空カート／注文0件が必要で、有料の実会話と注文操作を行う。店員は同じ注文を参照する。認証状態は `TABLECAST_CAPTURE_STORAGE_STATE`、店員が参照する客側イベントは `TABLECAST_GUEST_CAPTURE_EVENTS` で指定できる。既定の認証ファイル名だけで、現在も有効とは判断しない。
 

@@ -346,7 +346,10 @@ export function selectScenes(project: Project, ids?: string) {
   };
 }
 export const projectPath = () =>
-  resolve(root, process.env.TABLECAST_PRESENTATION_PROJECT ?? "sample.json");
+  resolve(
+    root,
+    process.env.TABLECAST_PRESENTATION_PROJECT ?? "projects/tablecast-main-rerecord.json",
+  );
 export async function readProject() {
   return projectSchema.parse(JSON.parse(await readFile(projectPath(), "utf8")));
 }

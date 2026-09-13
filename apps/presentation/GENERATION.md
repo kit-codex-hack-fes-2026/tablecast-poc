@@ -1,23 +1,13 @@
 # 動画の生成ルート・確定事項
 
-2026-09-13のPR準備：現行共有版はmain追従の商品紹介v14・技術紹介v17、台本は`projects/tablecast-main-rerecord.json`。新規checkoutと共有素材は[SHARING.md](SHARING.md)、最新の検査・残件はHANDOFF.md冒頭に従う。以下のv13・v16等の記載は制作時点の履歴として保持する。
-
-2026-09-13追記：動画の仕上げを一旦区切り、[WORKFLOW.md](WORKFLOW.md)をアプリ変更に追従する制作入口として整備した。題材別の台本・ブランド・撮影条件、アプリ固有の操作／状態待ち、共通の実測・編集・生成・検査を分ける。`bun run video --project ... --film ... --name ... --render`で指定した入力を新しい保存先へ生成・検査し、実行記録を残す。構成と品質判断は[制作メモ](BRIEF-TEMPLATE.md)で管理する。既存の2本は維持し、以下の制作原則を継続する。
-
-2026-09-13の最新改修：ユーザー評価に従い01〜03を維持し、04以降を一般的な技術資料の図式へ変更した。技術紹介v16（63.1秒）が最新。参考資料と編集判断は [TECHNICAL-DIAGRAMS.md](TECHNICAL-DIAGRAMS.md)、成果物と検査結果はHANDOFF.md冒頭。
-
-2026-09-13の区切りで固定する制作ルート。目的は [Issue #1](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/1) の再生成可能なデモ動画基盤。TableCastの2本は、その基盤を具体化する作例である。
-
-この文書は工程と採用方針の正本。[WORKFLOW.md](WORKFLOW.md) は実行手順、[HANDOFF.md](HANDOFF.md) は今回の到達点・残件・再開方法。過去版の制作メモと食い違う場合は、この文書と最新のユーザー指示を優先する。
-
-2026-09-13の追加指示で、商品紹介は現状維持、技術紹介は一般的な技術デモの調査を踏まえて内容を再定義した。次版の構成・提示内容は [TECHNICAL-BRIEF.md](TECHNICAL-BRIEF.md) を参照する。同日の追加指示で、参照図の3領域を実画面・ロゴ・編集可能な文字と線で構成し、技術紹介v15（6場面・60.8秒）を生成・検査した。最新成果物と検査結果はHANDOFF.md冒頭を参照。
+Issue #1の制作原則。現行作例は商品紹介v14・技術紹介v17、既定の台本は `projects/tablecast-main-rerecord.json`。実行手順は[WORKFLOW.md](WORKFLOW.md)、素材と再生成は[SHARING.md](SHARING.md)、到達点は[HANDOFF.md](HANDOFF.md)。
 
 ## 成果物の契約
 
 - 商品紹介と技術紹介は、独立した全編MP4を各1本生成する。結合版や抜粋だけをレビュー成果物にしない。
 - 商品紹介は約2分、技術紹介は約1分。説明・実音声・読解に必要な尺を使い、120秒／60秒への引き延ばしや早口への圧縮をしない。
 - 出力は1920×1080、30fps、H.264/AAC。字幕、必要なナレーション、BGM・章転換SEを含む。
-- 商品紹介v13は「いったん採用」。技術紹介v16は「生成・技術検査済み、後半の見た目のレビュー待ち」。今回の工程固定を、技術紹介のデザイン承認に読み替えない。
+- 動画の仕上げは一旦区切っている。機械検査の通過を、ユーザーによる技術紹介のデザイン承認に読み替えない。
 - 通常の再生成は、同じ台本・素材・保存音声を再利用する。毎回ランダムに内容を変える仕様ではない。
 
 ## 工程
@@ -29,7 +19,7 @@ flowchart TD
   C --> D[実測カーソルを合成・OpenScreenで編集]
   B --> E[構成図・処理順・状態・コード根拠を作る]
   B --> F[ナレーションを作成・保存済み音声を再利用]
-  D --> G[sample.jsonに採用素材と時刻を対応付ける]
+  D --> G[projects/tablecast-main-rerecord.jsonに採用素材と時刻を対応付ける]
   E --> G
   F --> G
   G --> H[HyperFrames用HTML・時間情報・字幕をbuild]
@@ -43,7 +33,7 @@ flowchart TD
 2. **撮影を設計する。** 必要な状態・対象・操作・表示条件・保持時間を `capture-plan.json` に書く。たまたま撮れた映像に、後から不適切なズームを付けて帳尻を合わせない。
 3. **素材を採用する。** 成功した実UI・実応答と証跡を保存する。失敗テイクを成功扱いにせず、採用済みの素材とは別の保存先を使う。新しい撮影条件を満たしていない旧素材へ証跡を捏造しない。
 4. **編集と説明を対応付ける。** 録画の時刻、発話、対象矩形、カーソル、図の注目先を同じ基準で扱う。図は説明内容に適した形式を選ぶ。
-5. **生成する。** `sample.json` と保存素材から派生物をbuildし、検査後にrenderする。生成済みHTML・VTTを直接修正しない。
+5. **生成する。** `projects/tablecast-main-rerecord.json` と保存素材から派生物をbuildし、検査後にrenderする。生成済みHTML・VTTを直接修正しない。
 6. **完成品を確認する。** ソースHTMLの静止画だけで終えず、完成MP4を確認する。ユーザーは全編の説明・デザインを評価する。
 
 ## 使うものと担当
@@ -55,7 +45,7 @@ flowchart TD
 | FFmpeg / FFprobe    | crop・等比scale・pad、実測カーソルの前処理、音声同期・音量、静止画抽出、全編復号・メディア情報確認                              |
 | HyperFrames 0.8.33  | 場面、実録・図・字幕・音声の合成と最終書き出し                                                                                  |
 | GSAP 3.14.2         | 指定時刻へseekできる強調・移動・遷移。時間はHyperFramesの生成タイムラインに従う                                                 |
-| HTML / CSS / SVG    | 配置・文字・端末枠・編集可能な技術図。スタイルは `styles.css`、技術図の内容は `sample.json`                                     |
+| HTML / CSS / SVG    | 配置・文字・端末枠・編集可能な技術図。スタイルは `styles.css`、技術図の内容は `projects/tablecast-main-rerecord.json`           |
 | Inworld TTS         | ナレーションの必要分だけ生成。現設定はAsuka / inworld-tts-2 / ja-JP / STABLE / LINEAR16 48kHz                                   |
 | フリーBGM・SE       | Carefree（Kevin MacLeod、CC BY 4.0）、Kenney Interface Sounds（CC0）。採用素材・加工・出典は [音源記録](assets/audio/README.md) |
 | Noto Sans JP        | 保存済みフォントを使用。コード表示のOSフォントやHyperFramesのフォントキャッシュへの依存は環境差として残る                       |
@@ -95,7 +85,7 @@ Windowsの最終書き出しは、v14で使用した `--experimental-fast-captur
 
 | 入力・担当ファイル                                                         | 内容                                                                   |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `sample.json`                                                              | 2本の構成、台本・字幕・発話、採用素材、cut、ズーム、図、強調時刻、音源 |
+| `projects/tablecast-main-rerecord.json`                                    | 2本の構成、台本・字幕・発話、採用素材、cut、ズーム、図、強調時刻、音源 |
 | `capture-plan.json`                                                        | 次に撮りたい情報と採用条件。更新しただけでは採用済み素材を交換しない   |
 | `styles.css` / `scripts/tablecast-build.ts`                                | 配置、合成、派生物の生成                                               |
 | `scripts/tablecast-project.ts`                                             | 入力検証、発話・素材参照、音声キャッシュ、タイムライン                 |

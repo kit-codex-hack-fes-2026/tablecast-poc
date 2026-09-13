@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-09-13T13:33:40.656Z",
+  "basis": "d92bc42ae799e3be0d64fc05495a8cb74d8c1954 に対するローカル修正。新しいcommit・push・PR再開は未実施。",
+  "scope": {
+    "assetsBytes": 341825391,
+    "currentProjectAssetReferences": 59,
+    "missingReferences": 0,
+    "brokenPresentationMarkdownLinks": 0,
+    "excludedOriginalMediaRetainedLocally": true,
+    "sharedCompletedFilmsUnchanged": 4,
+    "inventory": "records/tablecast-current-share-inventory.json",
+    "mutation": "完成動画・アプリ差分・当時の入力と検証記録のみ共有。保存素材からの再生成は対象外。"
+  },
+  "passed": {
+    "frozenWorkspaceInstall": true,
+    "deploymentBuild": "bun --no-env-file run build:deploy。preview設定でbuildのみ実行し、配備はしていない。Web build 1 task成功、動画生成は含まれない。",
+    "emulateContainer": "apps/emulate/Dockerfileをlinux/amd64でbuild。追加workspaceのmanifestをコピーし、frozen-lockfileを維持して成功。",
+    "presentationUnitTests": 48,
+    "presentationBrowserTests": 19,
+    "presentationLintAndTypes": true,
+    "repositoryFormatting": true,
+    "gitDiffWhitespace": true,
+    "gitLfsFsck": true
+  },
+  "render": {
+    "project": "projects/tablecast-main-rerecord.json",
+    "film": "technical",
+    "run": "tablecast-issue1-scope-technical-v2",
+    "status": "rendered-and-checked",
+    "videoSha256": "01d546939b421e399164304b90470e781e5789ea388353c064627e2f174fde12",
+    "durationSeconds": 63.1,
+    "format": "1920x1080 / 30fps / H.264 / AAC",
+    "checks": "配置・遷移・復号・音量・完成フレーム抽出・Chrome等速全編再生・入力ハッシュ保持",
+    "editorialReview": "pending",
+    "previousAttempt": "v1は実行中に画面テストの修正が重なり、入力ハッシュ変更を検出して不合格。コードを固定したv2で再実行した。"
+  },
+  "unresolved": {
+    "pwaCi": "https://github.com/kit-codex-hack-fes-2026/tablecast-poc/actions/runs/34758723334/job/103727579655",
+    "failure": "未保存入力を戻した後の両画面の更新待ちが20秒でtimeout。CI traceでは両画面とも更新されていない。原因は未確定。",
+    "localAttempt": "Windowsで該当1件を実行。最初は拡張子なしのVite launcherがなく停止。node_modulesだけに一時launcherを用意した再実行は、テスト用preview serverの再起動時にポートが残り、新Service Worker待ちで失敗。CIと同じ失敗の再現には至らない。補助launcherは撤去した。",
+    "applicationChanges": "原因が未確定のためWeb/PWAコード・E2E・timeout・retryは変更していない。",
+    "nextCheck": "Linux環境で該当PWA E2Eの原因確認と再検証が必要。全CI通過とは扱わない。"
+  },
+  "limits": [
+    "今回の素材縮小後は参照とハッシュを照合してローカル再生成した。別の新規checkoutからの再生成は再実施していない。",
+    "過去のrecordsは当時の証拠として保持し、非共有になった素材や当時の環境への参照を現在の共有一覧と読み替えない。"
+  ]
+}

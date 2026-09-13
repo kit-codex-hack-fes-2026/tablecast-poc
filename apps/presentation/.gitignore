@@ -3,10 +3,10 @@ output/
 .hyperframes/
 assets/audio/.tablecast-tts.lock/
 
-# 未採用・旧版のバイナリはローカルに保持する。再生成する4台本の依存だけを共有する。
+# 未採用・旧版のバイナリはローカルに保持する。現行台本の依存だけを共有する。
 assets/audio/*.wav
-assets/demo/*.mp4
-assets/images/*.png
+assets/demo/*
+assets/images/*
 !assets/audio/tablecast-carefree-kevin-macleod.wav
 !assets/audio/tablecast-input-approve.wav
 !assets/audio/tablecast-input-confirm.wav
@@ -26,48 +26,35 @@ assets/images/*.png
 !assets/audio/voice-pause-67723e96024fee67.wav
 !assets/audio/voice-roles-3b57b6fae0bc04bb.wav
 !assets/audio/voice-staff-check-63c37208296e0d5c.wav
-!assets/demo/tablecast-guest-v13.mp4
-!assets/demo/tablecast-iphone-staff-v13.mp4
-!assets/demo/tablecast-macbook-admin-v13.mp4
 !assets/demo/tablecast-main-7d6adc7-admin-v1.mp4
 !assets/demo/tablecast-main-rerecord-english-v1.mp4
 !assets/demo/tablecast-main-rerecord-guest-v5.mp4
 !assets/demo/tablecast-main-rerecord-staff-v2.mp4
-!assets/demo/tablecast-mutation-admin-v1.mp4
-!assets/demo/tablecast-mutation-guest-v4.mp4
-!assets/demo/tablecast-mutation-staff-v1.mp4
-!assets/images/tablecast-admin-screen-concept-v2.png
-!assets/images/tablecast-guest-screen-v13.png
 !assets/images/tablecast-main-admin.png
 !assets/images/tablecast-main-confirm.png
 !assets/images/tablecast-main-consult.png
 !assets/images/tablecast-main-guest.png
 !assets/images/tablecast-main-staff.png
-!assets/images/tablecast-mutation-admin.png
-!assets/images/tablecast-mutation-confirm.png
-!assets/images/tablecast-mutation-consult.png
-!assets/images/tablecast-mutation-guest.png
-!assets/images/tablecast-mutation-staff.png
-!assets/images/tablecast-recap-confirm-v13.png
-!assets/images/tablecast-recap-consult-v13.png
-!assets/images/tablecast-recap-staff-v13.png
-!assets/images/tablecast-technical-confirm-v14.png
 
 # 採用テイクは原録画・音声・編集project・実測証跡を含める。失敗テイクは削除しない。
 assets/openscreen/*
-!assets/openscreen/tablecast-guest-v13/
-!assets/openscreen/tablecast-iphone-staff-v13/
-!assets/openscreen/tablecast-macbook-admin-v13/
 !assets/openscreen/tablecast-main-7d6adc7-admin-v1/
 !assets/openscreen/tablecast-main-rerecord-english-v1/
 !assets/openscreen/tablecast-main-rerecord-guest-v5/
 !assets/openscreen/tablecast-main-rerecord-staff-v2/
-!assets/openscreen/tablecast-mutation-admin-v1/
-!assets/openscreen/tablecast-mutation-guest-v4/
-!assets/openscreen/tablecast-mutation-staff-v1/
 
 # 作業ログ・画面全文・再生成可能なカーソル描画命令は公開しない。
 assets/openscreen/**/*.log
 !assets/openscreen/**/tablecast-record.log
 assets/openscreen/**/*.txt
 assets/openscreen/**/*.commands
+
+!assets/images/README.md
+!assets/images/tablecast-logo-cloudflare-icon.svg
+!assets/images/tablecast-logo-hono.svg
+!assets/images/tablecast-logo-livekit.svg
+!assets/images/tablecast-logo-mastra.svg
+!assets/images/tablecast-logo-openai.svg
+!assets/images/tablecast-logo-python.svg
+!assets/images/tablecast-logo-tanstack.svg
+!assets/openscreen/tablecast-cursor-LICENSE

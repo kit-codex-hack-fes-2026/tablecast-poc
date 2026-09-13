@@ -1,5 +1,7 @@
 # 技術紹介の再定義：何を作り、どう実現し、どこまで確かめたか
 
+この文書は技術紹介を再設計した時点の調査・判断記録。以下のSHA・検査数・未実施事項は当時の状態であり、現在の採用台本と素材は[SHARING.md](SHARING.md)を参照する。
+
 v16の改修：01〜03を維持し、04〜06の説明と図を [TECHNICAL-DIAGRAMS.md](TECHNICAL-DIAGRAMS.md) で再定義して動画化した。06は店舗設定画面を外し、次の体感応答の測定へ焦点を絞る。全体63.1秒。最新の後半の内容は同文書を優先。
 
 実装追記（2026-09-13）：本書の6場面と、後続のユーザー指定の3領域構成図を技術紹介v15（60.8秒）へ反映した。ナレーション6本を生成し、注文API25件を同日再実行して通過。映像・検証記録はHANDOFF.md冒頭を参照。以下は内容設計時の調査・判断の記録。
@@ -79,9 +81,9 @@ Devpostの創業者によるガイドは、短い課題説明、動く製品、�
 
 ### 全体構成図の掲載範囲
 
-2026-09-13追記：ユーザーの提案により、画像生成で [PoC構成図の見本](assets/images/tablecast-poc-concept-v1.png) を作成した。[生成・確認記録](assets/images/tablecast-poc-concept-v1.md) にプロンプトと修正内容を保存。画像をそのまま使って強調を重ねるか、配置を参考に必要な要素をHTML/SVGへ起こすかは、場面の動きに応じて選ぶ。生成図は説明素材で、実録の代用にはしない。映像への採用・再生成はまだ行っていない。
+2026-09-13追記：ユーザーの提案により、画像生成で PoC構成図の見本（制作時の非共有資料：`assets/images/tablecast-poc-concept-v1.png`） を作成した。生成・確認記録（制作時の非共有資料：`assets/images/tablecast-poc-concept-v1.md`） にプロンプトと修正内容を保存。画像をそのまま使って強調を重ねるか、配置を参考に必要な要素をHTML/SVGへ起こすかは、場面の動きに応じて選ぶ。生成図は説明素材で、実録の代用にはしない。映像への採用・再生成はまだ行っていない。
 
-最新のユーザー指定は [提供された構成図](assets/images/tablecast-poc-user-reference.png) の情報量と3領域の見せ方。[v2見本](assets/images/tablecast-poc-concept-v2.png) と [生成・確認記録](assets/images/tablecast-poc-concept-v2.md) を追加した。左に利用者と端末、中央にフロントエンド・API・Cloudflare、右に音声・AI基盤を置く。技術ロゴ、役割の説明、実画面を残し、音声に合わせて見る場所を案内する。v1の上下2経路の配置に戻さない。
+最新のユーザー指定は 提供された構成図（制作時の非共有資料：`assets/images/tablecast-poc-user-reference.png`） の情報量と3領域の見せ方。v2見本（制作時の非共有資料：`assets/images/tablecast-poc-concept-v2.png`） と 生成・確認記録（制作時の非共有資料：`assets/images/tablecast-poc-concept-v2.md`） を追加した。左に利用者と端末、中央にフロントエンド・API・Cloudflare、右に音声・AI基盤を置く。技術ロゴ、役割の説明、実画面を残し、音声に合わせて見る場所を案内する。v1の上下2経路の配置に戻さない。
 
 WebはTanStack Start／Cloudflare Worker、APIはHono・共有業務ツール／Cloudflare Worker、AgentはPython／LiveKit Agentsと表示する。MastraはAPI内のツール定義・連携として補足し、独立サーバーの箱にしない。参照画像の技術内容をそのまま正本にせず、通常音声はPython Agent・OpenAI Realtime・Inworld TTSの現行接続へ補正する。生成画像内の端末画面には再描画による差異があるため、動画化では元の実画面を配置する。
 
@@ -113,15 +115,15 @@ R2と店舗ChatGPT・MCPも、参照画像のように全体図の補助情報�
 
 確認したローカル実装のHEADは `17dc3328960e653006854b6edc8d829e4063f80e`。本書の技術内容はこのチェックアウトを基準とする。記録された `origin/main` より59コミット遅れているため、最新リモート実装を説明済みとはしない。次の映像制作で対象SHAを固定し直す場合は根拠も更新する。
 
-| 主張・素材          | 参照する実ファイル                                                                                                                                                  | 現在使えるもの／制作時に必要なもの                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 動く注文の結果      | [客側の採用素材](assets/demo/tablecast-guest-v13.mp4)、[台本](sample.json)                                                                                          | 採用済み実録。確認と結果の切り出しは次の台本で選定。商品紹介自体は変更しない                                           |
-| 全体の責務・通信    | [構成仕様](../../docs/architecture.md)、[音声仕様](../../docs/voice/integration.md)、[業務操作](../../apps/api/src/modules/operations.ts)                           | 現行責務を参照可能。次版の図は主要経路として再配置する                                                                 |
-| Realtime＋Inworld   | [realtime.py](../../livekit/src/tablecast_livekit/realtime.py)、[agent.py](../../livekit/src/tablecast_livekit/agent.py)                                            | `modalities=["text"]`、InworldのTTS構成を確認。採用理由の裏付けは仕様と併記する                                        |
-| 読了と承認          | [agent.py](../../livekit/src/tablecast_livekit/agent.py)、[operations.ts](../../apps/api/src/modules/operations.ts)                                                 | `read_confirmation`・再生完了待ち・中断検査・`confirmation_read`、`submitOrder`の条件を参照可能                        |
-| 条件の検査          | [orders.test.ts](../../apps/api/test/orders.test.ts)、[API検査記録](output/tablecast-api-evidence-v14.json)                                                         | 2026-09-13・HEAD `17dc332`・ローカルWorkers/D1で25件通過した保存記録。今回の調査でAPI検査は再実行していない            |
-| 店舗ごとの変更範囲  | [configuration.ts](../../apps/api/src/modules/configuration.ts)、[商品・業務仕様](../../docs/product.md)、[管理者素材](assets/demo/tablecast-macbook-admin-v13.mp4) | 設定・公開の実装と保存済み画面。別店舗への変更実演・第2用途の受入は別の証拠が必要                                      |
-| Codexによる実装改善 | Gitの変更履歴と [進捗記録](../../docs/progress.md)                                                                                                                  | 音声再開時の会話復元修正 `4be734b` は候補。Codexの関与、要求・失敗・修正・再検査の一式は未照合。採用済み事例にはしない |
+| 主張・素材          | 参照する実ファイル                                                                                                                                                                                              | 現在使えるもの／制作時に必要なもの                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 動く注文の結果      | 客側の採用素材（制作時の非共有資料：`assets/demo/tablecast-guest-v13.mp4`）、[台本](sample.json)                                                                                                                | 採用済み実録。確認と結果の切り出しは次の台本で選定。商品紹介自体は変更しない                                           |
+| 全体の責務・通信    | [構成仕様](../../docs/architecture.md)、[音声仕様](../../docs/voice/integration.md)、業務操作（制作時の非共有資料：`../../apps/api/src/modules/operations.ts`）                                                 | 現行責務を参照可能。次版の図は主要経路として再配置する                                                                 |
+| Realtime＋Inworld   | [realtime.py](../../livekit/src/tablecast_livekit/realtime.py)、[agent.py](../../livekit/src/tablecast_livekit/agent.py)                                                                                        | `modalities=["text"]`、InworldのTTS構成を確認。採用理由の裏付けは仕様と併記する                                        |
+| 読了と承認          | [agent.py](../../livekit/src/tablecast_livekit/agent.py)、operations.ts（制作時の非共有資料：`../../apps/api/src/modules/operations.ts`）                                                                       | `read_confirmation`・再生完了待ち・中断検査・`confirmation_read`、`submitOrder`の条件を参照可能                        |
+| 条件の検査          | [orders.test.ts](../../apps/api/test/orders.test.ts)、API検査記録（制作時の非共有資料：`output/tablecast-api-evidence-v14.json`）                                                                               | 2026-09-13・HEAD `17dc332`・ローカルWorkers/D1で25件通過した保存記録。今回の調査でAPI検査は再実行していない            |
+| 店舗ごとの変更範囲  | configuration.ts（制作時の非共有資料：`../../apps/api/src/modules/configuration.ts`）、[商品・業務仕様](../../docs/product.md)、管理者素材（制作時の非共有資料：`assets/demo/tablecast-macbook-admin-v13.mp4`） | 設定・公開の実装と保存済み画面。別店舗への変更実演・第2用途の受入は別の証拠が必要                                      |
+| Codexによる実装改善 | Gitの変更履歴と [進捗記録](../../docs/progress.md)                                                                                                                                                              | 音声再開時の会話復元修正 `4be734b` は候補。Codexの関与、要求・失敗・修正・再検査の一式は未照合。採用済み事例にはしない |
 
 第5場面に載せるテストは、`orders.test.ts` の「音声確認の読了後に開始した新しいturnだけが承認できる」と「古い確認を拒否し、同じ冪等キーの並行送信と再送で注文を一件に保つ」から該当条件を選ぶ。後者の全機能を1行で説明せず、古い確認の拒否に注目する。
 

@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 const selected = process.env.TABLECAST_VIDEO_DIR;
 const tablecast =
   !process.env.TABLECAST_PRESENTATION_PROJECT ||
-  resolve(process.env.TABLECAST_PRESENTATION_PROJECT) === resolve("sample.json");
+  resolve(process.env.TABLECAST_PRESENTATION_PROJECT) ===
+    resolve("projects/tablecast-main-rerecord.json");
 
 export default defineConfig({
   testDir: "./scripts",

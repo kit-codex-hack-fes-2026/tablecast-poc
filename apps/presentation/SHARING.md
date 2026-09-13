@@ -1,14 +1,14 @@
 # 動画基盤の共有と復元
 
-Issue #1のドラフトPR向けに、生成コード・台本・採用素材・原録画・編集project・撮影証跡を共有する。通常の再生成は保存済みの音声と映像を使い、アプリ起動・認証・有料TTSを必要としない。
+Issue #1の動画基盤として、生成コード・台本・採用素材・原録画・編集project・撮影証跡を共有する。通常の再生成は保存済みの音声と映像を使い、アプリ起動・認証・有料TTSを必要としない。
 
 ## 共有するもの
 
 - 現行作例は`projects/tablecast-main-rerecord.json`。mainの`7d6adc7`に追従して再収録した商品紹介v14・技術紹介v17に対応する。
-- `sample.json`は以前の商品紹介v13・技術紹介v16の再生成と回帰検査用に維持する。
+- `sample.json`は単体テストが読む構造fixtureとして維持する。旧版専用の録画・画像は共有せず、この台本からの動画再生成は対象外。
 - `examples/tablecast-booking/project.json`は別ブランド・場面名の模式台本。別アプリの実収録の証拠ではない。
-- `experiments/tablecast-mutation/product.json`はUI変更試験の修正済み入力。技術紹介の参照元は隣の`tablecast-mutation-test`なので、再生成時には[試験の再現手順](experiments/tablecast-mutation/BRIEF.md)に従い独立cloneとアプリ差分を用意する。
-- [共有素材一覧](records/tablecast-share-inventory.json)に入力台本・採用テイク・完成動画のハッシュを記録する。採用テイク10件は原録画も含めて保存する。
+- UI変更試験は完成動画・アプリ差分・当時の台本・検証記録を共有する。原録画と再実行専用スクリプトは共有しないため、保存素材だけで試験動画を再生成することはできない。[試験結果](experiments/tablecast-mutation/BRIEF.md)を参照。
+- 現行の共有範囲は[素材一覧](records/tablecast-current-share-inventory.json)。過去の `tablecast-share-inventory.json` と各検証記録は、縮小前の素材を含む実行時点の証拠として保持する。
 - 失敗テイク・未参照の旧バイナリ・画面全文・作業ログはローカルで保持し、`.gitignore`で公開から除外する。新しい素材を採用するときは参照ファイルとignoreの許可一覧も更新する。
 
 | 動画                 | 共有ファイル                                            | 台本                                                    |
@@ -18,7 +18,9 @@ Issue #1のドラフトPR向けに、生成コード・台本・採用素材・�
 | UI変更試験・商品紹介 | [MP4](assets/films/tablecast-mutation-product-v2.mp4)   | `experiments/tablecast-mutation/product.json` / product |
 | UI変更試験・技術紹介 | [MP4](assets/films/tablecast-mutation-technical-v1.mp4) | 同上 / technical                                        |
 
-完成動画は既存成果物からコピーしたもので、コード整理後の再生成物による置換ではない。見た目の評価状態は[引き継ぎ](HANDOFF.md)に従う。BGM・SEの出典と加工は[音源記録](assets/audio/README.md)、フォントのライセンスは`assets/fonts/LICENSE`に含む。
+完成動画は既存成果物からコピーしたもので、コード整理後の再生成物による置換ではない。見た目の評価状態は[引き継ぎ](HANDOFF.md)に従う。BGM・SEの出典と加工は[音源記録](assets/audio/README.md)、フォントのライセンスは`assets/fonts/LICENSE`、カーソル画像のMITライセンスは[OpenScreenのライセンス](assets/openscreen/tablecast-cursor-LICENSE)に含む。
+
+ルートの `bun run build` はアプリのビルド。動画だけを生成する場合はpresentationで `bun run build:videos`、通常の制作・検査・MP4化には `bun run video` を使う。既定の台本は現行作例。
 
 ## 新しいcheckoutで生成する
 
@@ -44,7 +46,7 @@ bun run video --project projects/tablecast-main-rerecord.json --film technical -
 
 LFSの実体がない場合はMP4やWAVを利用できない。動画制作時は上記のように`--include`で範囲を選び、`--exclude=`で既定の除外も解除する。`--include`だけでは取得できない。完成品を見る場合は`git lfs pull --include="apps/presentation/assets/films/**" --exclude=`、採用原録画を含む全素材が必要なら`git lfs pull --include="apps/presentation/assets/**" --exclude=`を使う。取得範囲の指定は[Git LFSの標準機能](https://github.com/git-lfs/git-lfs/blob/main/docs/man/git-lfs-pull.adoc)を使う。
 
-`.gitattributes`はpresentation内で有効であり、ルートに重複定義する必要はない。新素材は通常の`git add`後に`git lfs ls-files`と`git lfs fsck`で確認する。全素材のローカル配置は約914MB。転送量は重複するLFS objectと取得範囲により異なる。リモート転送前にリポジトリ所有者のLFS利用量を確認する。
+`.gitattributes`はpresentation内で有効であり、ルートに重複定義する必要はない。新素材は通常の`git add`後に`git lfs ls-files`と`git lfs fsck`で確認する。共有素材の実体は約342MB（326MiB）。転送量は重複するLFS objectと取得範囲により異なる。リモート転送前にリポジトリ所有者のLFS利用量を確認する。
 
 `.openscreen`は小さいJSONとして通常Git管理し、改行変換を止めて差分を表示する。`bun run test`はGit管理対象のprojectと収録ログを読み、メディアの絶対参照と個人ディレクトリの再混入を検出する。LFS未取得のCIでも同じ検査を実行する。共有ポリシーの検証結果は[公開ポリシーの検証記録](records/tablecast-sharing-policy-validation.json)を参照する。
 
@@ -52,7 +54,7 @@ LFSの実体がない場合はMP4やWAVを利用できない。動画制作時�
 
 ## 再編集と再収録
 
-共有projectの`media.screenVideoPath`はprojectファイルからの相対パス。同じフォルダーの素材はファイル名だけ、テイク直下のraw projectは`original/recording-….mp4`を参照する。採用10テイクの原録画とカーソル証跡を同梱する。通常のHyperFrames生成は編集済みMP4を使う。客側の編集スクリプトは`original/`を優先し、編集後projectへ現在の参照を書き込む。店員・管理者は同じテイク内の`tablecast-source.mp4`から編集する。
+共有projectの`media.screenVideoPath`はprojectファイルからの相対パス。同じフォルダーの素材はファイル名だけ、テイク直下のraw projectは`original/recording-….mp4`を参照する。現行4テイクの原録画とカーソル証跡を同梱する。通常のHyperFrames生成は編集済みMP4を使う。客側の編集スクリプトは`original/`を優先し、編集後projectへ現在の参照を書き込む。店員・管理者は同じテイク内の`tablecast-source.mp4`から編集する。
 
 OpenScreen 1.11の[公式CLI手順](https://github.com/getopenscreen/openscreen/blob/v1.11.0/docs/cli.md)では、保存されたパスが見つからなければ同じフォルダーの同名素材を探す。任意の相対サブフォルダーをproject基準で解決する仕様とは異なるため、再編集ではprojectのあるフォルダーから標準の`pack`を実行し、現在の絶対パスを持つ作業用bundleを作る。`info`もカレントフォルダー基準なので同じ場所で実行する。
 

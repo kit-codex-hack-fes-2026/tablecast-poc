@@ -1,27 +1,8 @@
----
-background: "#fafafa"
-foreground: "#151619"
-accent: "#365d96"
-font: "Noto Sans JP"
----
+# TableCastの映像設計
 
-# TableCastの映像設計と制作記録
+現行版は[商品紹介v14](assets/films/tablecast-product-v14.mp4)・[技術紹介v17](assets/films/tablecast-technical-v17.mp4)。動画の仕上げはユーザー指示で一旦区切っている。技術紹介01〜03への評価と、04以降への見づらさの指摘を区別し、今後の制作時に後半を再評価する。機械検査の成功だけでデザイン承認とはしない。
 
-2026-09-13の追加試験：独立cloneの客側・店員側のUIと導線を大きく変え、共通基盤35ファイルを固定して[商品紹介122.35秒](output/tablecast-mutation-product-v2/video.mp4)・[技術紹介63.1秒](output/tablecast-mutation-technical-v1/video.mp4)を生成した。以前の動画・入力は保持。[変更と検証の範囲](experiments/tablecast-mutation/BRIEF.md)を参照。映像評価はユーザー待ち。
-
-2026-09-13の再収録版：[商品紹介v14](output/tablecast-product-demo-v14/video.mp4)（117.3秒）と[技術紹介v17](output/tablecast-technical-evaluation-v17/video.mp4)（63.1秒）。構成を維持し、最新mainの実画面・会話に差し替えた。管理者は直前の同じmainでの実録を使用。[再収録記録](RERECORD-20260913.md)を参照。生成・再生検査は完了、映像評価はユーザー待ち。以前の採用済みMP4は保持。
-
-最新の見た目の指定（2026-09-13）：ユーザー提供の [構成図](assets/images/tablecast-poc-user-reference.png) に沿い、利用者・アプリ基盤・音声AI基盤の3領域、技術ロゴ、端末画面、役割説明を含む情報量を基準とする。[v2の生成見本](assets/images/tablecast-poc-concept-v2.png) を保存した。図全体を見せ、発話に合わせて領域と経路を強調する。生成見本の実画面部分は動画化時に元の実録静止画を配置する。商品紹介と既存動画は未変更。
-
-工程と採用方針は [GENERATION.md](GENERATION.md)、次のセッションの入口は [HANDOFF.md](HANDOFF.md)。本書の旧版記録を現行の生成ルートより優先しない。
-
-2026-09-13追記：商品紹介は現状維持。技術紹介はユーザー指示により一般的な技術デモを再調査し、次版の説明内容を [TECHNICAL-BRIEF.md](TECHNICAL-BRIEF.md) で6場面へ再定義した。以下は保存済みv14以前の制作記録であり、次版の見た目・映像はまだ制作していない。
-
-2026-09-13のレビュー：商品紹介v13はいったん採用。技術紹介v13は不採用で、説明形式から再検討する。技術編は以下の定義に沿ってv14（60.73秒、5場面）を制作。ユーザーの見た目のレビューは未実施。新しい調査・定義案は [TECHNICAL-BRIEF.md](TECHNICAL-BRIEF.md) を参照。以下の技術図・尺の記述は既存試作の記録であり、次版の採用方針ではない。商品紹介と技術紹介は別々の全編動画として扱う。
-
-商品紹介v13は前回撮影した管理画面と、成功済みの客・店員側素材で全編を再編集した。[ポインター](POINTER.md)は操作時だけ表示し、先端・指先を実測座標へ合わせる。技術紹介v14は要素の囲みと通信線・ラベルの強調を使う。カード内の説明用カーソルは旧技術編の方式。
-
-Issue #1の基盤を具体化するため、実画面を中心にした構成を実装する。デザインの採否はユーザーが判断する。技術・スキルの担当は [TOOLS.md](TOOLS.md)。
+商品紹介と技術紹介は独立した全編。制作原則は[GENERATION.md](GENERATION.md)、実行手順は[WORKFLOW.md](WORKFLOW.md)、技術説明の設計は[TECHNICAL-BRIEF.md](TECHNICAL-BRIEF.md)と[TECHNICAL-DIAGRAMS.md](TECHNICAL-DIAGRAMS.md)を参照する。
 
 ## 冒頭
 
