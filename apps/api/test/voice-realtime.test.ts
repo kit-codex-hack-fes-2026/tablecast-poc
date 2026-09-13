@@ -9,6 +9,7 @@ import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
 import type { voiceToolNameSchema } from "../src/modules/voice/model";
 import type { z } from "zod";
+import type { Product } from "../src/schema";
 import { configuration, device, setupFixture, text as configurationText } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -128,6 +129,110 @@ describe("Agents functionと共通業務の認可", () => {
     const category = await tool("getCatalog", { query: "drinks" });
     expect(category.result).toMatchObject({ detail: true });
     expect(category.result).toHaveProperty("products.length", 2);
+  });
+  it("日英のカテゴリ名・読み・別名から、そのカテゴリだけの詳細を取得する", async () => {
+    await setup();
+    const sake: Product["text"] = configurationText("日本酒", "Rice wine");
+    sake.ja.speechName = "にほんしゅ";
+    sake.ja.aliases.push("清酒");
+    sake.en.speechName = "Sah keh";
+    sake.en.aliases.push("Japanese alcoholic drink");
+    const sashimi = configurationText("刺身", "Raw fish");
+    sashimi.ja.speechName = "さしみ";
+    const products = configuration.products.map((product) => ({
+      ...product,
+      categoryId: product.id === "tea" ? "sashimi" : "sake",
+    }));
+    await services()
+      .db.update(business.stores)
+      .set({
+        config_json: JSON.stringify({
+          ...configuration,
+          categories: [
+            { id: "sake", text: sake },
+            { id: "sashimi", text: sashimi },
+          ],
+          products,
+        }),
+      })
+      .where(eq(business.stores.id, device.storeId));
+    for (const query of [
+      "日本酒",
+      "にほんしゅ",
+      "清酒",
+      "Rice wine",
+      "Sah keh",
+      "Japanese alcoholic drink",
+    ])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: true,
+        products: [
+          {
+            id: "coffee",
+            categoryId: "sake",
+            allergens: configuration.products[1]?.allergens,
+            modifiers: [{ min: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+          },
+        ],
+      });
+    for (const query of ["刺身", "さしみ", "Raw fish"])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: true,
+        products: [
+          { id: "tea", categoryId: "sashimi", allergens: configuration.products[0]?.allergens },
+        ],
+      });
+  });
+  it("正式銘柄名・ID・読み・別名の一致を共通語より優先し、複数商品の部分検索は維持する", async () => {
+    await setup();
+    const base = configuration.products[0];
+    if (!base) throw new Error("検索対象の商品がありません");
+    const tsukinagi: Product["text"] = configurationText(
+      "こもれび 月凪 純米吟醸",
+      "Komorebi Tsukinagi Junmai ginjo",
+    );
+    tsukinagi.ja.speechName = "こもれび つきなぎ 純米吟醸";
+    tsukinagi.ja.aliases.push("つきなぎ");
+    tsukinagi.en.aliases.push("Tsukinagi");
+    const yukiakari = configurationText("こもれび 雪灯 純米酒", "Komorebi Yukiakari Junmai");
+    const products = [
+      { ...base, id: "sake-tsukinagi", text: tsukinagi, price: 620 },
+      { ...base, id: "sake-yukiakari", text: yukiakari, price: 540 },
+      {
+        ...base,
+        id: "sashimi",
+        text: configurationText("お造り三種盛り", "Three-fish sashimi selection"),
+        price: 1280,
+      },
+    ];
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify({ ...configuration, products }) })
+      .where(eq(business.stores.id, device.storeId));
+    for (const query of [
+      "こもれび 月凪 純米吟醸",
+      "Komorebi Tsukinagi Junmai ginjo",
+      "こもれび つきなぎ 純米吟醸",
+      "つきなぎ",
+      "Tsukinagi",
+      " SAKE-TSUKINAGI ",
+    ])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: true,
+        products: [{ id: "sake-tsukinagi", price: 620, allergens: base.allergens }],
+      });
+    expect((await tool("getCatalog", { query: "こもれび 雪灯 純米酒" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "sake-yukiakari", price: 540 }],
+    });
+    expect((await tool("getCatalog", { query: "月凪 雪灯" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "sake-tsukinagi" }, { id: "sake-yukiakari" }],
+    });
+    const missing = (await tool("getCatalog", { query: "未登録の銘柄" })).result;
+    expect(missing).toMatchObject({ detail: false });
+    expect(missing).toHaveProperty("products.length", 3);
+    expect(missing).not.toHaveProperty("products.0.allergens");
   });
   it("JSON Schema違反と停止後の操作を拒否する", async () => {
     await setup();
