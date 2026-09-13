@@ -1,11 +1,11 @@
+import { cloudflare, currentRevision } from "./tablecast-deploy-api";
 import process from "node:process";
 import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { sql } from "drizzle-orm";
 import { deploymentOwner } from "../apps/api/src/db/business-schema";
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { promisify } from "node:util";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parse } from "jsonc-parser";
@@ -22,11 +22,9 @@ import {
 } from "./tablecast-deploy-config";
 
 const root = resolve(import.meta.dirname, "..");
-const execFileAsync = promisify(execFile);
 const directory = resolve(root, ".local/tablecast-deploy");
 const target = deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined);
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
-const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
 
@@ -54,24 +52,6 @@ export async function waitForRelease(
   throw new Error("配備先のrelease SHAを期限内に確認できません。");
 }
 
-async function cloudflare(path: string, method = "GET", body?: unknown) {
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token) throw new Error("CLOUDFLARE_API_TOKENをActions secretへ登録してください。");
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${tablecastAccountId}/${path}`,
-    {
-      method,
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-  );
-  if (!response.ok)
-    throw new Error(`Cloudflare ${method} ${path.split("?")[0]}: HTTP ${response.status}`);
-  const data = responseSchema.parse(await response.json());
-  if (!data.success) throw new Error(`Cloudflare ${method} ${path.split("?")[0]}に失敗しました。`);
-  return data.result;
-}
-
 async function run(args: [string, ...string[]], env: Record<string, string> = {}) {
   const code = await new Promise<number | null>((complete, reject) => {
     const child = spawn(args[0], args.slice(1), {
@@ -94,32 +74,6 @@ const wrangler = (args: string[]) =>
     "--env-file",
     resolve(directory, "empty.env"),
   ]);
-
-async function currentRevision(cleanup = false) {
-  const gh = await execFileAsync("gh", [
-    "api",
-    target.pr
-      ? `repos/${tablecastRepository}/pulls/${target.pr}`
-      : `repos/${tablecastRepository}/commits/main`,
-  ]);
-  const value: unknown = JSON.parse(gh.stdout);
-  if (target.pr) {
-    const pr = z
-      .object({
-        state: z.string(),
-        head: z.object({ sha: z.string(), repo: z.object({ full_name: z.string() }) }),
-      })
-      .parse(value);
-    if (
-      pr.head.repo.full_name !== tablecastRepository ||
-      pr.state !== (cleanup ? "closed" : "open") ||
-      (!cleanup && pr.head.sha !== sha)
-    )
-      throw new Error("PRが更新・終了したか、同一リポジトリのPRではありません。");
-  } else if (z.object({ sha: z.string() }).parse(value).sha !== sha) {
-    throw new Error("mainが更新されました。新しいCIの配備に任せます。");
-  }
-}
 
 async function resources(create: boolean) {
   const databases = z.array(databaseSchema).parse(await cloudflare("d1/database?per_page=1000"));
@@ -233,7 +187,7 @@ async function main() {
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
-  await currentRevision(cleanup);
+  await currentRevision(target, sha, cleanup);
   const secrets = cleanup ? undefined : deploymentSecrets(target, { ...process.env });
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
@@ -263,7 +217,7 @@ async function main() {
 
   if (!cleanup && secrets) {
     await writeFile(resolve(directory, "secrets.json"), JSON.stringify(secrets), { mode: 0o600 });
-    await currentRevision();
+    await currentRevision(target, sha);
   }
   const headers = {
     authorization: `Bearer ${secrets?.TABLECAST_VOICE_API_TOKEN ?? ""}`,
@@ -386,7 +340,7 @@ async function main() {
             throw new Error("通話中、またはdrainを確認できません。終了後に再配備してください。");
           drained = true;
         }
-        await currentRevision();
+        await currentRevision(target, sha);
         await wrangler([
           "d1",
           "migrations",

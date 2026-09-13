@@ -40,7 +40,9 @@
     "dev:livekit": "livekit-server --config .local/livekit.yaml",
     "services:up": "docker compose --env-file .local/.env up --detach --wait",
     "services:down": "docker compose --env-file .local/.env down --timeout 5",
-    "services:status": "docker compose --env-file .local/.env ps"
+    "services:status": "docker compose --env-file .local/.env ps",
+    "build:email": "turbo run build:email",
+    "deploy:catalog": "bun --no-env-file scripts/tablecast-catalog-deploy.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",

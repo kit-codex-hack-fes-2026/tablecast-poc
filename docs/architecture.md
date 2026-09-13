@@ -202,3 +202,7 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 `/media/tablecast/images/<SHA-256>.png?width=<幅>`は不変の画像として、HTTPで1年間、Service Workerで最大256件・最終利用から30日保持する。画像のエラー応答は保存しない。固定キーの旧画像はHTTPの`no-cache`とETagで再検証する。幅はキーの一部であり、異なる変換を共有しない。キャッシュはOSから削除され得るため、容量不足・保存不可でもネットワーク取得を継続する。
 
 画像投入の所有者は`scripts/tablecast-seed-media.ts`。内容のSHA-256からキーを決め、既存の条件付きPUT・MD5照合・一時障害の再試行を共用する。画像投入完了後に既存の`Product.imageKey`を公開する。公開通知でcatalogを再取得し、変更のない画像のURLを維持する。新しいアップロードUIやDB migrationは追加しない。
+
+### 開発者用メールカタログ
+
+APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts/tablecast-email-build.ts`が架空データを使った静的HTMLと一覧を生成する。カタログ専用workspace・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。
