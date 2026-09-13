@@ -1,4 +1,5 @@
 import { demoImageKey } from "./tablecast-seed-media";
+import { demoOptionImageKey } from "./tablecast-demo-option-images";
 import { koreanDemoStore } from "./tablecast-korean-demo";
 import { configurationSchema } from "../apps/api/src/schema";
 import type { Configuration, Modifier, Product } from "../apps/api/src/schema";
@@ -935,7 +936,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
         text: bilingual(ja, en),
         priceDelta,
         available: !(group.key === "garnish" && key === "shiso"),
-        imageKey: null,
+        imageKey: demoOptionImageKey(`${store.id}-${group.key}-${key}`),
         imageKind: "illustration",
         maxQuantity: group.kind === "quantity" ? 3 : 1,
         requires: [],
@@ -1123,7 +1124,7 @@ function westwardConfiguration(storeId: string, profile: "smoke" | "demo" | "his
     text: bilingual(ja, en),
     priceDelta,
     available: true,
-    imageKey: null,
+    imageKey: demoOptionImageKey(`${storeId}-${key}`),
     imageKind: "illustration" as const,
     maxQuantity: 1,
     requires: [],

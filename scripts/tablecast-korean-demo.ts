@@ -1,6 +1,7 @@
 import { configurationSchema } from "../apps/api/src/schema";
 import type { Modifier, Product } from "../apps/api/src/schema";
 import { demoImageKey } from "./tablecast-seed-media";
+import { demoOptionImageKey } from "./tablecast-demo-option-images";
 
 export const koreanDemoStoreId = "tablecast-hanul";
 export const koreanDemoStoreName = "韓国食堂ハヌル三条店";
@@ -541,6 +542,8 @@ function group(
       text: text(optionJa, optionEn),
       priceDelta,
       available: true,
+      imageKey: demoOptionImageKey(`${koreanDemoStoreId}-${key}-${id}`),
+      imageKind: "illustration",
       maxQuantity: kind === "quantity" ? 2 : 1,
       requires: [],
       excludes: [],

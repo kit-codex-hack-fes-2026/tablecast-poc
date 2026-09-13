@@ -15,41 +15,47 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
   page,
   request: staff,
   baseURL,
-}, testInfo) => {
+}) => {
   // Given: 店長と画像付きの既存商品、未使用卓を用意する。
-  const storeId = "tablecast-komorebi";
+  const storeId = "tablecast-koharu";
+  const owner = { email: credentials.otherEmail, password: credentials.otherPassword };
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
+  expect((await staff.post("/api/auth/sign-in/email", { headers, data: owner })).status()).toBe(
+    200,
+  );
   expect(
-    (await staff.post("/api/auth/sign-in/email", { headers, data: credentials })).status(),
-  ).toBe(200);
-  expect(
-    (await page.request.post("/api/auth/sign-in/email", { headers, data: credentials })).status(),
+    (await page.request.post("/api/auth/sign-in/email", { headers, data: owner })).status(),
   ).toBe(200);
   const original = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
   const product = original.configuration.products.find(
-    (item) =>
-      item.available &&
-      item.imageKey &&
-      item.modifiers.length > 0 &&
-      item.modifiers.every(
-        (group) => group.kind === "single" && group.options.some((option) => option.available),
-      ),
+    (item) => item.id === `${storeId}-westward-classic`,
   );
-  if (!product?.imageKey) throw new Error("画像と単一選択肢を持つ商品が必要です。");
-  const option = product.modifiers[0].options.find((item) => item.available);
-  if (!option) throw new Error("選択可能なオプションが必要です。");
+  if (!product) throw new Error("画像付きのカスタムバーガーが必要です。");
+  const picturedModifier = product.modifiers[0];
+  const option = picturedModifier.options.find((item) => item.available && item.imageKey);
+  if (!option?.imageKey) throw new Error("実画像を持つ選択肢が必要です。");
+  const description = "バンズの形と色をイメージ画像で確認できます。";
   const draft = configDraftSchema.parse(
     await (await staff.post(`${api}/drafts`, { headers, data: {} })).json(),
   );
   const menu = `/admin/stores/${storeId}/menu/changes/${draft.id}`;
   await page.goto(`${menu}/products/${product.id}`);
   await page.getByRole("button", { name: "日本語", exact: true }).click();
-  // When: 商品と同じ R2 参照を選択肢へ設定し、保存後に編集 URL を再読み込みする。
+  // When: 下書きから画像を外して保存し、実際のバンズ写真と説明を再設定する。
   const optionGroup = page.getByRole("group", { name: option.text.ja.displayName, exact: true });
+  const imageField = optionGroup.getByRole("textbox", { name: ja.editor_image, exact: true });
+  await imageField.fill("");
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
+  await page.reload();
+  await expect(imageField).toHaveValue("");
+  await expect(optionGroup.locator("img")).toHaveCount(0);
+  await imageField.fill(option.imageKey);
   await optionGroup
-    .getByRole("textbox", { name: ja.editor_image, exact: true })
-    .fill(product.imageKey);
+    .getByRole("group", { name: ja.common_ja, exact: true })
+    .getByRole("textbox", { name: ja.admin_description, exact: true })
+    .fill(description);
   await optionGroup
     .getByRole("combobox", { name: ja.editor_image_kind, exact: true })
     .selectOption("illustration");
@@ -58,7 +64,7 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
   await page.reload();
   await expect(
     optionGroup.getByRole("textbox", { name: ja.editor_image, exact: true }),
-  ).toHaveValue(product.imageKey);
+  ).toHaveValue(option.imageKey);
   const image = optionGroup.locator("img");
   await expect(image).toBeVisible();
   await expect
@@ -69,8 +75,6 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
       ),
     )
     .toBe(true);
-  await image.evaluate((element) => element.scrollIntoView({ block: "center" }));
-  await page.screenshot({ path: testInfo.outputPath("tablecast-option-image-editor.png") });
   await page.getByRole("link", { name: ja.admin_drafts, exact: true }).click();
   await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
   await expect(page.getByRole("button", { name: ja.admin_publish, exact: true })).toBeEnabled();
@@ -81,8 +85,8 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
   expect(
     published.configuration.products
       .find((item) => item.id === product.id)
-      ?.modifiers[0].options.find((item) => item.id === option.id)?.imageKey,
-  ).toBe(product.imageKey);
+      ?.modifiers[0].options.find((item) => item.id === option.id),
+  ).toMatchObject({ imageKey: option.imageKey, text: { ja: { description } } });
   // Then: 同じ公開版を新しい卓で読み、実画像の表示とカートへ保存した選択を確認する。
   const state = adminStateSchema.parse(await (await staff.get(api)).json());
   const vacant = state.vacantTables[0];
@@ -113,10 +117,10 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
     .click();
   const productPage = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
   const group = productPage.getByRole("radiogroup", {
-    name: product.modifiers[0].text.ja.displayName,
+    name: picturedModifier.text.ja.displayName,
     exact: true,
   });
-  const guestImage = group.locator("img");
+  const guestImage = group.locator("img").first();
   await expect(guestImage).toBeVisible();
   await expect
     .poll(() =>
@@ -126,14 +130,27 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
       ),
     )
     .toBe(true);
-  await expect(group.getByText(ja.kiosk_illustration, { exact: true })).toBeVisible();
+  await expect(group.getByText(ja.kiosk_illustration, { exact: true }).first()).toBeVisible();
+  await expect(group.getByText(description, { exact: true })).toBeVisible();
   for (const modifier of product.modifiers) {
     const choice = modifier.options.find((item) => item.available);
     if (!choice) throw new Error("選択可能なオプションが必要です。");
-    await productPage.getByRole("radio", { name: choice.text.ja.displayName, exact: true }).check();
+    if (modifier.kind === "quantity") {
+      await productPage
+        .getByRole("button", {
+          name: `${choice.text.ja.displayName}: ${ja.common_increase}`,
+          exact: true,
+        })
+        .click();
+    } else {
+      await productPage
+        .getByRole(modifier.kind === "single" ? "radio" : "checkbox", {
+          name: choice.text.ja.displayName,
+          exact: true,
+        })
+        .check();
+    }
   }
-  await group.evaluate((element) => element.scrollIntoView({ block: "center" }));
-  await group.screenshot({ path: testInfo.outputPath("tablecast-option-image-guest.png") });
   await productPage.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
   await expect(productPage).toHaveCount(0);
   const table = tableStateSchema.parse(await (await page.request.get("/api/table")).json());
@@ -148,4 +165,5 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
     }),
   ]);
   expect(table.cart.complete).toBe(true);
+  expect(table.cart.total).toBe(1530);
 });

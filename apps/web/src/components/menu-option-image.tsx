@@ -12,29 +12,26 @@ export function MenuOptionImage({
   const [failedKey, setFailedKey] = useState<string | null>(null);
   if (!imageKey) return null;
   return (
-    <span
-      className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted"
-      aria-hidden="true"
-    >
-      {failedKey === imageKey ? (
-        <ImageOff className="size-6 text-muted-foreground" />
-      ) : (
-        <>
+    <span className="flex w-24 shrink-0 flex-col gap-1" aria-hidden="true">
+      <span className="flex size-24 items-center justify-center overflow-hidden rounded-lg bg-muted">
+        {failedKey === imageKey ? (
+          <ImageOff className="size-6 text-muted-foreground" />
+        ) : (
           <ProductImage
             src={`/media/${imageKey}`}
             alt=""
             width={96}
             height={96}
             sizes="96px"
-            className="size-full object-cover"
+            className="size-full object-contain"
             onError={() => setFailedKey(imageKey)}
           />
-          {imageKind === "illustration" && (
-            <span className="absolute inset-x-1 bottom-1 rounded bg-card/90 px-1 text-center text-xs text-balance text-muted-foreground">
-              {t("kiosk_illustration")}
-            </span>
-          )}
-        </>
+        )}
+      </span>
+      {failedKey !== imageKey && imageKind === "illustration" && (
+        <span className="text-center text-xs text-balance text-muted-foreground">
+          {t("kiosk_illustration")}
+        </span>
       )}
     </span>
   );

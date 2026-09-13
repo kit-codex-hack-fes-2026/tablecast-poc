@@ -183,8 +183,5 @@ it.each([
       const add = screen.getByRole("button", { name: labels.kiosk_add, exact: true });
       await expect.element(add).toBeEnabled();
     }
-    await page.screenshot({
-      path: `test-results/browser/tablecast-option-image-failure-${locale}.png`,
-    });
   },
 );

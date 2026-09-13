@@ -111,7 +111,14 @@ describe("デモの構成データ", () => {
       products.flatMap((product) => product.modifiers.map((group) => [group.id, group] as const)),
     );
     expect(groups.size).toBe(30);
-    expect([...groups.values()].reduce((sum, group) => sum + group.options.length, 0)).toBe(92);
+    const options = [...groups.values()].flatMap((group) => group.options);
+    expect(options).toHaveLength(92);
+    const pictured = options.filter((option) => option.imageKey);
+    expect(pictured).toHaveLength(63);
+    expect(new Set(pictured.map((option) => option.imageKey)).size).toBe(62);
+    expect(pictured.every((option) => option.imageKey?.endsWith(".webp"))).toBe(true);
+    expect(options.filter((option) => option.imageKey === null)).toHaveLength(29);
+    expect(options.every((option) => option.imageKind === "illustration")).toBe(true);
     expect(new Set([...groups.values()].map((group) => group.kind))).toEqual(
       new Set(["single", "multiple", "quantity"]),
     );
