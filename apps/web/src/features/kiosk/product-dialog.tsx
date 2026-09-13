@@ -2,6 +2,8 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useState } from "react";
+import { tv } from "tailwind-variants";
+import { MenuOptionImage } from "../../components/menu-option-image";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
@@ -27,6 +29,38 @@ const allergenLabels: Partial<Record<string, keyof typeof m>> = {
   barley: "kiosk_allergen_barley",
   milk: "kiosk_allergen_milk",
 };
+
+const optionRow = tv({
+  base: "flex min-h-14 min-w-0 items-center gap-3 rounded-lg border border-transparent p-3 text-base",
+  variants: { selected: { true: "border-primary bg-surface-subtle" } },
+});
+
+function OptionContent({
+  option,
+  locale,
+}: {
+  option: Product["modifiers"][number]["options"][number];
+  locale: "ja" | "en";
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-3">
+      <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
+      <span className="min-w-0">
+        <span id={`${option.id}-name`} className="block font-medium wrap-break-word">
+          {option.text[locale].displayName}
+        </span>
+        {option.text[locale].description && (
+          <span
+            id={`${option.id}-description`}
+            className="mt-1 block text-sm leading-relaxed text-muted-foreground wrap-break-word"
+          >
+            {option.text[locale].description}
+          </span>
+        )}
+      </span>
+    </span>
+  );
+}
 
 export function ProductPage({
   product,
@@ -105,24 +139,31 @@ export function ProductPage({
                     );
                 }}
                 aria-label={group.text[locale].displayName}
+                className="grid gap-2"
               >
                 {group.min === 0 && (
-                  <label className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_>_small]:ml-auto [&_>_small]:text-muted-foreground [&_>_small]:text-xs [&_>_small]:whitespace-nowrap [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap">
+                  <label className={optionRow()}>
                     <RadioGroupItem value="" disabled={busy}></RadioGroupItem>
                     <span>{t("kiosk_no_selection")}</span>
                   </label>
                 )}
                 {group.options.map((option) => (
                   <label
-                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap"
+                    className={optionRow({
+                      selected: selections.some((item) => item.optionId === option.id),
+                    })}
                     key={option.id}
                   >
                     <RadioGroupItem
                       value={option.id}
                       disabled={!option.available || busy}
+                      aria-labelledby={`${option.id}-name`}
+                      aria-describedby={
+                        option.text[locale].description ? `${option.id}-description` : undefined
+                      }
                     ></RadioGroupItem>
-                    <span>{option.text[locale].displayName}</span>
-                    <small className="ml-auto text-muted-foreground text-xs whitespace-nowrap">
+                    <OptionContent option={option} locale={locale} />
+                    <small className="ml-auto text-sm whitespace-nowrap text-muted-foreground">
                       {!option.available
                         ? t("kiosk_sold_out")
                         : option.priceDelta !== 0
@@ -138,22 +179,30 @@ export function ProductPage({
                   selections.find((item) => item.optionId === option.id)?.quantity ?? 0;
                 return (
                   <div
-                    className="min-h-14 flex items-center gap-3 py-2 px-0 text-sm [&_[data-ui=quantity-control]_button]:w-9 [&_[data-ui=quantity-control]_button]:min-h-11 max-sm:flex-wrap"
+                    className={optionRow({ selected: amount > 0, className: "mb-2 flex-wrap" })}
                     key={option.id}
                   >
                     {group.kind === "multiple" ? (
-                      <label className="flex items-center gap-3">
+                      <label
+                        htmlFor={`${option.id}-control`}
+                        className="flex min-w-0 flex-1 items-center gap-3"
+                      >
                         <Checkbox
+                          id={`${option.id}-control`}
                           checked={amount > 0}
                           onCheckedChange={(checked) => select(option.id, checked ? 1 : 0)}
                           disabled={!option.available || busy}
+                          aria-labelledby={`${option.id}-name`}
+                          aria-describedby={
+                            option.text[locale].description ? `${option.id}-description` : undefined
+                          }
                         ></Checkbox>
-                        <span>{option.text[locale].displayName}</span>
+                        <OptionContent option={option} locale={locale} />
                       </label>
                     ) : (
-                      <span>{option.text[locale].displayName}</span>
+                      <OptionContent option={option} locale={locale} />
                     )}
-                    <small className="ml-auto text-muted-foreground text-xs whitespace-nowrap">
+                    <small className="ml-auto text-sm whitespace-nowrap text-muted-foreground">
                       {!option.available
                         ? t("kiosk_sold_out")
                         : option.priceDelta !== 0

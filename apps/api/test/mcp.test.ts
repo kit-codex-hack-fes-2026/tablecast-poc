@@ -419,6 +419,13 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
       proactive: true,
     },
   });
+  const option = configuration.products.find((product) => product.id === "coffee")?.modifiers[0]
+    ?.options[0];
+  if (!option) throw new Error("選択肢fixtureがありません");
+  option.imageKey = "tablecast/images/tablecast-milk.webp";
+  option.imageKind = "photograph";
+  option.text.ja.description = "白いミルクをグラスに注いだ参考写真です。";
+  option.text.en.description = "A reference photograph of white milk in a glass.";
   draft = toolData(
     await client.callTool({
       name: "update_draft",
@@ -471,6 +478,14 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     difference.changes.some((change) => change.path.includes("price") && change.sensitive),
   ).toBe(true);
   expect(difference.changes.some((change) => change.path.includes("speechName"))).toBe(true);
+  expect(difference.changes).toContainEqual(
+    expect.objectContaining({
+      path: "products.1.modifiers.0.options.0.imageKey",
+      before: null,
+      after: option.imageKey,
+      sensitive: false,
+    }),
+  );
   const approval = toolData(
     await client.callTool({
       name: "request_publication",

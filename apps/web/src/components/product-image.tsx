@@ -13,6 +13,7 @@ export function ProductImage({
   sizes,
   className,
   priority = false,
+  onError,
 }: {
   src: string;
   alt: string;
@@ -21,6 +22,7 @@ export function ProductImage({
   sizes?: string;
   className?: string;
   priority?: boolean;
+  onError?: () => void;
 }) {
   return (
     <Image
@@ -33,6 +35,7 @@ export function ProductImage({
       objectFit="contain"
       unstyled
       priority={priority}
+      onError={onError}
       className={className}
       transformer={transformImage}
       breakpoints={[96, 128, 256, 384, 640, 960, 1280, 1600]}

@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import * as businessTables from "../src/db/business-schema";
 import { getCatalog } from "../src/modules/catalog/queries";
 import {
@@ -364,4 +365,51 @@ it("設定公開の途中失敗では公開版・下書き・履歴・既存確�
       .bind(confirmation.id)
       .first("status"),
   ).toBe("pending");
+});
+
+it("画像フィールドがない旧公開設定を読み、下書きで選択肢画像を保存しても公開版を変えない", async () => {
+  const { staff, cookie } = await setupFixture();
+  const services = createApiServices(env);
+  const legacy = {
+    ...fixtureConfiguration,
+    products: fixtureConfiguration.products.map((product) => ({
+      ...product,
+      modifiers: product.modifiers.map((group) => ({
+        ...group,
+        options: group.options.map((option) =>
+          Object.fromEntries(
+            Object.entries(option).filter(([key]) => !["imageKey", "imageKind"].includes(key)),
+          ),
+        ),
+      })),
+    })),
+  };
+  await services.db
+    .update(businessTables.stores)
+    .set({ config_json: JSON.stringify(legacy) })
+    .where(eq(businessTables.stores.id, staff.storeId));
+  const draft = await createDraft(services, staff);
+  const option = draft.configuration.products[1]?.modifiers[0]?.options[0];
+  if (!option) throw new Error("選択肢fixtureがありません");
+  expect(option).toMatchObject({ imageKey: null, imageKind: "illustration" });
+  option.imageKey = "tablecast/images/tablecast-milk.webp";
+  option.imageKind = "photograph";
+
+  const response = await exports.default.fetch(
+    new Request(`http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expectedVersion: draft.version, configuration: draft.configuration }),
+    }),
+  );
+  expect(response.status).toBe(200);
+  const saved = await getDraft(services, staff, draft.id);
+  expect(saved.configuration.products[1]?.modifiers[0]?.options[0]).toEqual(option);
+  const published = await getCatalog(services, staff.storeId);
+  expect(published.configuration.products[1]?.modifiers[0]?.options[0]?.imageKey).toBeNull();
+  expect(saved.version).toBe(draft.version + 1);
 });
