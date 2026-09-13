@@ -111,7 +111,7 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
             </dl>
             <CopyValue
               label="Codex CLI"
-              value={`codex mcp add tablecast --url ${JSON.stringify(endpoint)}\ncodex mcp login tablecast --scopes tablecast:read,tablecast:write --oauth-client-registration dcr`}
+              value={`codex mcp add tablecast --url ${JSON.stringify(endpoint)}\ncodex mcp login tablecast --scopes tablecast:read,tablecast:write`}
             />
           </Guide>
           <Guide title="Agent Skills" icon={<Download className="size-5" />}>

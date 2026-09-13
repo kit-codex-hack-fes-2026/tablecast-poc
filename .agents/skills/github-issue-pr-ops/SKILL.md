@@ -1,6 +1,6 @@
 ---
 name: github-issue-pr-ops
-description: TableCastのIssue・PRを作成、更新、引き継ぎ、マージするときに使う。
+description: TableCastのIssue・PRの作成・更新・レビュー対応・引き継ぎ・マージに使う。
 ---
 
 # IssueとPRの運用
@@ -13,6 +13,7 @@ Issueに現在の目的・受入条件、PRに実装差分・検証、メタデ�
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Issueの起票・契約変更                | [Issue本文](references/issue-authoring.md)                                                                                                      |
 | PRの作成・本文更新                   | UI変更の有無によらず[リポジトリのPRテンプレート](../../../.github/pull_request_template.md)と[PR本文・検証・マージ](references/pr-and-merge.md) |
+| レビュー指摘への対応                 | [レビュー対応](references/pr-and-merge.md#レビュー対応)。Codex CloudのP0・P1も必ず対応する                                                      |
 | 担当の引き継ぎ・中断・阻害・完了判定 | [ライフサイクル](references/lifecycle-comments.md)                                                                                              |
 | epic・親子関係・実依存・Milestone    | [関係の設定](references/relations-and-milestones.md)                                                                                            |
 | 依存するPR                           | [Stack](references/stacked-prs.md)                                                                                                              |

@@ -29,8 +29,10 @@ codex plugin add tablecast@tablecast
 
 ```sh
 codex mcp add tablecast --url https://tablecast.kit-codex.workers.dev/mcp
-codex mcp login tablecast --scopes tablecast:read --oauth-client-registration dcr
+codex mcp login tablecast --scopes tablecast:read
 ```
+
+登録方式はCodexの自動選択を使う。TableCastは認証サーバーのmetadataでDCRの登録先を公開するため、ログイン時に方式を固定する追加オプションは不要である。[公式のOAuthクライアント登録](https://learn.chatgpt.com/docs/extend/mcp#oauth-client-registration)を参照する。
 
 書込みが必要な場合は`--scopes tablecast:read,tablecast:write`で再認可する。plugin経由でも手動接続でも、設定の公開には管理画面での明示承認が必要である。複数店舗では接続URLの`?storeId=...`で対象を指定する。省略時は許可された組織内の最初の店舗となる。
 
@@ -57,7 +59,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 
    ```sh
    codex mcp get tablecast-local
-   codex mcp login tablecast-local --scopes tablecast:read --oauth-client-registration dcr
+   codex mcp login tablecast-local --scopes tablecast:read
    ```
 
 4. Codex Desktopではこのworktreeを開いてMCP接続を再起動し、CLIでは同じルートから新しい`codex`セッションを開始する。tool一覧を確認し、`tablecast-local`の`get_configuration`を呼び、店舗ID・名前がローカル管理画面のfixtureと一致することを確認する。登録成功やHTTP応答だけで完了としない。書込みの検証が必要なときだけ`tablecast:read,tablecast:write`で再認可する。

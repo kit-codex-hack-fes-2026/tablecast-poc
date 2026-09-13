@@ -113,6 +113,20 @@ Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTT
 
 Grafanaは公式 `grafana/mcp-grafana:1.3.0` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
 
+### Codex CloudのPRレビュー
+
+PRを作成する各開発者は[Codex Cloudの公式セットアップ](https://learn.chatgpt.com/docs/cloud#set-up-codex-cloud)に従い、自分のChatGPTアカウントへGitHubを接続し、このrepositoryへのアクセスを許可する。
+
+各自が[Code review設定](https://chatgpt.com/codex/settings/code-review)でこのrepositoryのCode reviewが有効か確認し、自分のPRを自動レビューする `Review my pull requests` を有効にする。この個人設定はチームで有効にしたrepositoryに適用される。全PRを自動レビューする `Automatic reviews` はrepository側の設定であり、変更にはGitHubのpushまたはadmin権限が必要となる。[公式PRレビュー手順](https://learn.chatgpt.com/docs/third-party/github)を参照する。
+
+手動でレビューを依頼するときは、対象PRのコメントへ次を投稿する。
+
+```text
+@codex review
+```
+
+Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。
+
 ## 3. 最初の画面確認
 
 1. 起動URLで客向け画面を開く。
