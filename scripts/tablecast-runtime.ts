@@ -24,10 +24,11 @@ const portsSchema = z.object({
   proxy: portSchema,
   web: portSchema,
   inspector: portSchema,
-  signaling: portSchema,
-  rtcTcp: portSchema,
-  rtcUdp: portSchema,
-  agent: portSchema,
+  // 旧worktreeの共有ポート台帳を読み書きしても予約を失わないように保持する。
+  signaling: portSchema.optional(),
+  rtcTcp: portSchema.optional(),
+  rtcUdp: portSchema.optional(),
+  agent: portSchema.optional(),
   storybook: portSchema,
   oauth: portSchema.optional(),
   mailpit: portSchema.optional(),
@@ -161,10 +162,6 @@ export async function reserveRuntime() {
         proxy: 3000,
         web: 3001,
         inspector: 3002,
-        signaling: 7880,
-        rtcTcp: portSchema.parse(Number(process.env.TABLECAST_RTC_TCP_PORT ?? 7881)),
-        rtcUdp: portSchema.parse(Number(process.env.TABLECAST_RTC_UDP_PORT ?? 7882)),
-        agent: 8081,
         storybook: 6006,
         oauth: 3008,
         mailpit: 8025,
@@ -228,10 +225,6 @@ export async function reserveRuntime() {
                   "proxy",
                   "web",
                   "inspector",
-                  "signaling",
-                  "rtcTcp",
-                  "rtcUdp",
-                  "agent",
                   "storybook",
                   "oauth",
                   "mailpit",
@@ -305,15 +298,7 @@ export function localEnvironment(runtime: TablecastRuntime) {
     WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   };
-  for (const key of [
-    "UV_CACHE_DIR",
-    "UV_PYTHON_INSTALL_DIR",
-    "DOCKER_HOST",
-    "DOCKER_CONTEXT",
-    "DOCKER_CONFIG",
-    "TABLECAST_RTC_TCP_PORT",
-    "TABLECAST_RTC_UDP_PORT",
-  ]) {
+  for (const key of ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"]) {
     if (process.env[key]) env[key] = process.env[key];
   }
   return env;
@@ -322,14 +307,9 @@ export function localEnvironment(runtime: TablecastRuntime) {
 // Bunが読み込んだ開発設定のうち、起動所有者へ必要な値だけを渡す。
 export function developmentSecrets() {
   return Object.fromEntries(
-    [
-      "TABLECAST_MODEL_API_KEY",
-      "TABLECAST_MODEL",
-      "TABLECAST_OTEL_CAPTURE_CONTENT",
-      "TABLECAST_MASTRA_ACCESS_TOKEN",
-      "TABLECAST_MASTRA_PROJECT_ID",
-      "TABLECAST_MASTRA_ENDPOINT",
-    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])),
+    ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL", "TABLECAST_OTEL_CAPTURE_CONTENT"].flatMap(
+      (key) => (process.env[key] ? [[key, process.env[key]]] : []),
+    ),
   );
 }
 
@@ -412,19 +392,8 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       .every((key) => Boolean(external[key]))
       .toString(),
     TABLECAST_AUTH_SECRET: previous.TABLECAST_AUTH_SECRET ?? randomUUID().replaceAll("-", ""),
-    TABLECAST_VOICE_API_TOKEN:
-      previous.TABLECAST_VOICE_API_TOKEN ?? randomUUID().replaceAll("-", ""),
-    TABLECAST_LIVEKIT_API_KEY: `tablecast-${runtime.id}`,
-    TABLECAST_LIVEKIT_API_SECRET:
-      previous.TABLECAST_LIVEKIT_API_SECRET ?? randomUUID().replaceAll("-", ""),
-    TABLECAST_LIVEKIT_URL: tablecastContainer
-      ? `${runtime.origin.replace(/^http/, "ws")}/_tablecast/livekit`
-      : `ws://127.0.0.1:${runtime.ports.signaling}`,
   };
   for (const key of [
-    "TABLECAST_MASTRA_ACCESS_TOKEN",
-    "TABLECAST_MASTRA_PROJECT_ID",
-    "TABLECAST_MASTRA_ENDPOINT",
     "TABLECAST_OTEL_CAPTURE_CONTENT",
     "TABLECAST_MODEL",
     "TABLECAST_MODEL_API_KEY",
@@ -452,38 +421,18 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
             "DOCKER_HOST",
             "DOCKER_CONTEXT",
             "DOCKER_CONFIG",
-            "UV_CACHE_DIR",
-            "UV_PYTHON_INSTALL_DIR",
           ].includes(key),
       ),
     ),
     COMPOSE_PROJECT_NAME: `tablecast-${runtime.id}`,
     TABLECAST_HOST: worktreeHost(tablecastRoot, tablecastCommon),
     TABLECAST_OAUTH_PORT: String(runtime.ports.oauth),
-    TABLECAST_SIGNALING_PORT: String(runtime.ports.signaling),
-    TABLECAST_RTC_TCP_PORT: String(runtime.ports.rtcTcp),
-    TABLECAST_RTC_UDP_PORT: String(runtime.ports.rtcUdp),
     TABLECAST_MAILPIT_PORT: String(runtime.ports.mailpit),
     TABLECAST_SMTP_PORT: String(runtime.ports.smtp),
     TABLECAST_GRAFANA_PORT: String(runtime.ports.grafana),
     TABLECAST_OTLP_PORT: String(runtime.ports.otlp),
     TABLECAST_TEMPO_PORT: String(runtime.ports.tempo),
   });
-  // 外部資格はここへコピーせず、uv自身が.env.localを読んで展開する。
-  await writeEnv(join(tablecastLocal, ".env.voice"), {
-    LIVEKIT_URL: `ws://127.0.0.1:${runtime.ports.signaling}`,
-    LIVEKIT_API_KEY: values.TABLECAST_LIVEKIT_API_KEY ?? "",
-    LIVEKIT_API_SECRET: values.TABLECAST_LIVEKIT_API_SECRET ?? "",
-    TABLECAST_API_URL: `http://127.0.0.1:${runtime.ports.web}`,
-    TABLECAST_VOICE_API_TOKEN: values.TABLECAST_VOICE_API_TOKEN ?? "",
-    TABLECAST_AGENT_HEALTH_PORT: String(runtime.ports.agent),
-    ...telemetryVars,
-  });
-  await writeFile(
-    join(tablecastLocal, "livekit.yaml"),
-    `port: ${runtime.ports.signaling}\nbind_addresses: ["0.0.0.0"]\nrtc:\n  tcp_port: ${runtime.ports.rtcTcp}\n  udp_port: ${runtime.ports.rtcUdp}\n  node_ip: 127.0.0.1\n  use_external_ip: false\nkeys:\n  ${values.TABLECAST_LIVEKIT_API_KEY}: ${JSON.stringify(values.TABLECAST_LIVEKIT_API_SECRET)}\nlogging:\n  level: warn\n`,
-    { mode: 0o600 },
-  );
 }
 
 if (import.meta.main) {
@@ -491,7 +440,7 @@ if (import.meta.main) {
   let previous: TablecastRuntime | undefined;
   try {
     previous = await readRuntime();
-    if (!(await portAvailable(previous.ports.web)) || !(await portAvailable(previous.ports.agent)))
+    if (!(await portAvailable(previous.ports.web)))
       throw new Error("このworktreeの開発プロセスをCtrl+Cで停止してから初期化してください。");
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;

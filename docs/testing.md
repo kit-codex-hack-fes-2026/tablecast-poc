@@ -17,7 +17,7 @@
 | 設定・開発CLI         | 対象のlint・型・設定解決、関連する既存試験。生成や起動の振る舞いは隔離環境で実行して確認                 |
 | API・DB               | APIのlint・typecheckと変更に関係するVitest。認可・原子性・cursor等のD1固有挙動は実bindingで確認          |
 | Web                   | Webのlint・typecheckと関連するVitest／Storybook。SSR・認証・注文等の最終配線を変える場合は代表E2E        |
-| 音声                  | Pythonのruff・tyと関連するpytest。Roomや送受信の接続変更は該当する接続試験                               |
+| 音声                  | API・Webのlint・型と関連するVitest。音声送受信は許可された有料試験                                       |
 | 動画基盤              | presentationのlint・型・Vitest。描画変更は両filmの配置検査、配布素材変更は新規checkoutで保存素材から生成 |
 
 共通設定・依存・複数workspaceの契約を変えた場合は、その影響範囲へ検証を広げる。無課金の全体検査はCIが担い、ローカルでも全体確認が必要な場合に`bun run check`を使う。成功後の再実行は追加変更・失敗・未解決の懸念がある場合に行う。有料モデルと実機の確認は通常CIと分ける。
@@ -30,11 +30,11 @@
 
 | 層           | 対象・runtime                               | 主な検出対象                               |
 | ------------ | ------------------------------------------- | ------------------------------------------ |
-| 静的         | Oxlint・型・Oxfmt・ty・ruff                 | 型、禁止import、asyncの取り扱い、設定      |
-| 純粋ロジック | Vitest / pytest                             | 価格、数量、プラン、snapshot、読上げ表記   |
+| 静的         | Oxlint・型・Oxfmt                           | 型、禁止import、asyncの取り扱い、設定      |
+| 純粋ロジック | Vitest                                      | 価格、数量、プラン、snapshot、読上げ表記   |
 | API統合      | Cloudflare公式Vitest連携、実local D1/DO     | 認証、SQL制約、原子性、失効、MCP、stream   |
 | UI統合       | Storybook addon / Vitest Browser + React    | 状態、操作、日英、focus、query・通知、a11y |
-| 音声接続     | pytest + 実AgentSession + 固定provider      | GPT-Live委任・字幕保存、取消、業務turn     |
+| 音声接続     | Vitest + 公式SDKのHTTP境界                  | GPT-Live委任・字幕保存、取消、業務turn     |
 | 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie      |
 | 有料・実機   | 実LLM/STT/TTS、iPad                         | 読み、演技、騒音、エコー、barge-in、実遅延 |
 
@@ -47,13 +47,13 @@ APIの最重要条件は、未承認送信、古いsnapshot、同時変更、二
 D1 batchの途中失敗、条件不成立で更新件数0、古いturnの後続書込み、成功後レスポンス消失、同じidempotency keyを必ず含める。
 カート・注文・会計・table eventが整合し、DO通知失敗後にもDBから再同期できることを検査する。
 
-UIは状態をprops/既存query fixtureで再現し、Storybookから実LiveKitや本番APIへ接続しない。
+UIは状態をprops/既存query fixtureで再現し、Storybookから実OpenAIや本番APIへ接続しない。
 外部I/Oと表示を分ける必要があるComponentだけ薄い境界を作り、単純なComponentを必ずcontroller/viewの二枚にしない。
 VoicePanel、言語切替、音声停止再開、会話履歴、商品選択、確認、卓タイムライン、会計のStoryをWebに併置する。
 StorybookとCloudflareのVite設定は丸ごと共有せず、React・CSS・i18n等の必要部分だけ共用する。Storybook起動だけでWorkersを起動させない。[S14](sources.md#s14)
 共有モジュールのserver/client分岐はTanStack Startの`createIsomorphicFn`を使う。Storybookは公式の`@storybook/tanstack-react`でStartとRouterを扱う。Vitest Browserには公式Vite pluginを適用し、`installDevServerMiddleware: false`でアプリのサーバー起動を抑える。`api-fetch.test.ts`は実ソースのdev変換でserver importの除去を検証する。Cookie・Service Binding・認証の挙動は既存のSSR・OAuth E2Eで検証し、Nodeの音声状態テストは`apiFetch`をHTTP境界として差し替える。
 
-Pythonは上流pluginのレスポンス変換と自作の接続部分を重点検査する。標準WebSocketクライアント自体はmockして再実装した挙動を試さない。
+音声は公式SDKのHTTPイベント境界とWebのmedia境界を重点検査する。標準WebRTCそのものの内部処理を再実装したテストは作らない。
 外部AIの決定的な差替えはテスト起動時だけに限定し、本番にモデル選択frameworkやfallbackを持ち込まない。
 
 ## テスト名と構造
@@ -68,14 +68,8 @@ it("確認後にカートが変わった場合は古い承認で注文を送信�
 });
 ```
 
-```python
-async def test_音声停止後は新しいフレームを認識へ送らない():
-    # 停止後の入力と遅延応答が、新たな処理を開始しないことを確認する。
-    ...
-```
-
 上は命名例であり、空のテストを納品して合格扱いにしない。
-pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日本語とする。
+Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日本語とする。
 
 ## 新要件の必須シナリオ
 
@@ -98,19 +92,18 @@ pytest parametrizeのidsも日本語にする。Webのtest名とUI翻訳を混�
 
 ## 公開scriptとCI
 
-`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は有料実音声に分ける。
+`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、GPT-Live・Agents APIの実通信は許可された有料実音声に分ける。
 `bun run check` に静的解析・型・無課金テストを含める。Browser/E2EはCI別job。有料試験は手動または明示承認されたjobだけ。
-Turboは `livekit` を作業ディレクトリとして `uv run pytest` を呼び、tyとruffも同じ場所で別scriptから実行する。ルートから直接試す場合は `uv run --directory livekit pytest` とする。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。
 テスト結果、未実行範囲、実機条件を記録し、台本付きモデルの成功を実音声精度の証明にしない。
 
 ## CIのジョブとキャッシュ
 
-workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、Web/seedのVitest unit、LiveKit Agentのpytest、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、実LiveKit WebRTC、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
+workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、Web/seedのVitest unit、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
 
 全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixでChromium・WebKitを各2分割の計4jobに分け、Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、全shardの成功を配備の条件とする。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
 
-APIは1job・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、WebRTCのサービス起動、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
+APIは1job・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
 GitHub Actionsの`actions/cache`で静的解析と2種類のbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、Workersの`dist`・deploy configとStorybookの`storybook-static`を出力として復元する。テストtaskは`cache: false`で毎回実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メール、テスト結果は永続キャッシュへ入れない。
 
@@ -145,12 +138,12 @@ macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guid
 | 文字2倍・縦横画面・音声失敗後のカート | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                               | 代表modifier→注文→提供→会計→閉卓のE2E        |
 | 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                              | 実WebSocketの切断・HTTP回復E2E               |
 | QR decodeと送像停止                   | `device-qr-reader.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | QR URL→卓保持→再読込→明示承認E2E             |
-| 音声turnの認可とspeech/tool関連付け   | `test_realtime_session.py`、実Agent・Sessionと公開provider境界               | APIの実認可、実WebRTC smoke、別枠の有料音声  |
+| 音声turnの認可とspeech/tool関連付け   | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                  | APIの実認可と別枠の有料WebRTC音声            |
 | Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                | 他workspaceのtestから独立したCI job          |
 
 Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
 
-GPT-Liveは公開委任イベント・SDK字幕とHTTPの境界を無課金で検証する。APIでは実Mastra/D1を使い、確認準備後の本文生成と次の発話の注文確定を通す。モデルの意味判断、実際の音声品質、全割込・エラー経路は有料・実機試験として区別する。
+GPT-Liveは公開委任イベント・SDK字幕とHTTPの境界を無課金で検証する。APIでは実D1と公式OpenAI SDKを使い、確認準備後の本文生成と次の発話の注文確定を通す。モデルの意味判断、実際の音声品質、全割込・エラー経路は有料・実機試験として区別する。
 
 個別の実行例:
 

@@ -1,5 +1,4 @@
 import type { Locale } from "@tablecast/api/schema";
-import type { LocalAudioTrack, RemoteAudioTrack } from "livekit-client";
 export type VoiceStatus =
   | "idle"
   | "connecting"
@@ -28,6 +27,6 @@ export type VoiceView = {
   error?: "permission" | "unconfigured" | "connection" | "active";
   interim?: string;
   messages?: LiveMessage[];
-  inputTrack?: LocalAudioTrack;
-  outputTrack?: RemoteAudioTrack;
+  inputTrack?: MediaStreamTrack;
+  outputTrack?: MediaStreamTrack;
 };

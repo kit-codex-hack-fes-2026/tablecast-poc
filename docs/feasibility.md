@@ -23,7 +23,7 @@ Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKi
 
 固定版LiveKit 1.8.0の実セッション試験では、LLMを登録せず `llm_node` のみ上書きした以前の実装が応答開始時に失敗した。公式 `LLM` / `LLMStream` 拡張へ同じHTTP接続を登録して解消し、通常応答・自発応答・204・取消・停止・503時の再試行禁止を実SDKで確認した。外部LLMをPythonにも置いたわけではない。
 
-関連実装: [音声HTTP](../apps/api/src/modules/voice/routes.ts)、[Mastra Tools](../apps/api/src/modules/voice/agent.ts)、[Python Agent](../livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
+関連実装: [音声HTTP](../apps/api/src/modules/voice/routes.ts)、[Mastra Tools](../apps/api/src/modules/voice/agent.ts)、[Python Agent](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/ada9be31253a8f8f63a24b3908f42ea20d9d8e07/livekit/src/tablecast_livekit/agent.py)、[Web音声接続](../apps/web/src/features/kiosk/voice-connection.ts)。
 
 ## 実施した試験と未実施の試験
 
@@ -38,9 +38,9 @@ Pythonは注文ツール、金額計算、DBアクセスを持たない。LiveKi
 
 Pythonの途中報告72件から66件への変更は、字幕53文字に対する分割位置53〜58がすべて全文＋空文字になっていた重複6例を除いたため。`range(1, len(TAGGED_SENTENCE))`で実在する52境界はすべて検査する。失敗例の削除やskipではない。patchの13件は別環境の別目的であり、通常Python試験へ足して合計件数を表示しない。この66件に実AgentSessionの6件、その後に診断の10件を追加し、最終82件が成功した。以前の途中件数を最終結果として再利用していない。
 
-再実行方法は [Python README](../livekit/README.md) と [patch記録](../patches/livekit-inworld/README.md)。実AIの疎通は明示的な有料試験として分離した。メモリ内の合成音声を再認識するだけなので、それが成功しても実マイクや店舗品質の証明にはならない。
+再実行方法は [Python README](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/ada9be31253a8f8f63a24b3908f42ea20d9d8e07/livekit/README.md) と [patch記録](../patches/livekit-inworld/README.md)。実AIの疎通は明示的な有料試験として分離した。メモリ内の合成音声を再認識するだけなので、それが成功しても実マイクや店舗品質の証明にはならない。
 
-WebRTCの再実行は、ローカル起動後に`bun --no-env-file scripts/tablecast-livekit-check.ts`を使う。PlaywrightのChromiumが必要であり、未導入なら`bun --no-env-file x playwright install chromium`で導入する。このworktreeの設定に一致するloopbackのLiveKitだけに接続し、検証専用Roomを作成・削除する。製品API、実マイク、外部AIは使わない。2026-09-06の実行では41 packets、10,200 bytes、38,400音声サンプル、RMS 0.070536を受信した。公式`track.attach`による再生開始とWebAudio analyserで復号を確認し、Room削除後は両参加者が切断された。音は端末スピーカーへ出さず、生音声も保存しない。秘密を含まない結果は`.local/livekit-check.json`に保存する。[検証スクリプト](../scripts/tablecast-livekit-check.ts)
+WebRTCの再実行は、ローカル起動後に`bun --no-env-file scripts/tablecast-livekit-check.ts`を使う。PlaywrightのChromiumが必要であり、未導入なら`bun --no-env-file x playwright install chromium`で導入する。このworktreeの設定に一致するloopbackのLiveKitだけに接続し、検証専用Roomを作成・削除する。製品API、実マイク、外部AIは使わない。2026-09-06の実行では41 packets、10,200 bytes、38,400音声サンプル、RMS 0.070536を受信した。公式`track.attach`による再生開始とWebAudio analyserで復号を確認し、Room削除後は両参加者が切断された。音は端末スピーカーへ出さず、生音声も保存しない。秘密を含まない結果は`.local/livekit-check.json`に保存する。[検証スクリプト](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/ada9be31253a8f8f63a24b3908f42ea20d9d8e07/scripts/tablecast-livekit-check.ts)
 
 ## 取消と注文確定の評価
 

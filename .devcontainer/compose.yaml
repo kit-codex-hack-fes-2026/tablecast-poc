@@ -21,16 +21,12 @@ services:
     environment:
       BUN_INSTALL_CACHE_DIR: ${TABLECAST_WORKSPACE_FOLDER}/node_modules/.cache/tablecast-bun
       TABLECAST_CONTAINER: "1"
-      TABLECAST_RTC_TCP_PORT: ${TABLECAST_RTC_TCP_PORT}
-      TABLECAST_RTC_UDP_PORT: ${TABLECAST_RTC_UDP_PORT}
       TABLECAST_WORKTREE_NAME: ${TABLECAST_WORKTREE_NAME:-main}
       TABLECAST_REPO_NAME: ${TABLECAST_REPO_NAME:-tablecast-poc}
       TABLECAST_CONTAINER_ORIGIN: ${TABLECAST_CONTAINER_ORIGIN:-http://localhost:3000}
     ports:
       - "127.0.0.1:${TABLECAST_WEB_PORT}:3000"
       - "127.0.0.1:${TABLECAST_MAILPIT_PORT}:8025"
-      - "127.0.0.1:${TABLECAST_RTC_TCP_PORT}:${TABLECAST_RTC_TCP_PORT}"
-      - "127.0.0.1:${TABLECAST_RTC_UDP_PORT}:${TABLECAST_RTC_UDP_PORT}/udp"
       - "127.0.0.1:${TABLECAST_STORYBOOK_PORT}:6006"
     labels:
       dev.orbstack.domains: ${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.orb.local
@@ -47,8 +43,6 @@ services:
       - tablecast-api-node:${TABLECAST_WORKSPACE_FOLDER}/apps/api/node_modules
       - tablecast-emulate-node:${TABLECAST_WORKSPACE_FOLDER}/apps/emulate/node_modules
       - tablecast-presentation-node:${TABLECAST_WORKSPACE_FOLDER}/apps/presentation/node_modules
-      - tablecast-livekit-node:${TABLECAST_WORKSPACE_FOLDER}/livekit/node_modules
-      - tablecast-python:${TABLECAST_WORKSPACE_FOLDER}/livekit/.venv
       - tablecast-state:${TABLECAST_WORKSPACE_FOLDER}/.local
       - tablecast-web-output:${TABLECAST_WORKSPACE_FOLDER}/apps/web/dist
       - tablecast-web-vite:${TABLECAST_WORKSPACE_FOLDER}/apps/web/.wrangler
@@ -59,8 +53,6 @@ volumes:
   tablecast-api-node:
   tablecast-emulate-node:
   tablecast-presentation-node:
-  tablecast-livekit-node:
-  tablecast-python:
   tablecast-state:
   tablecast-web-output:
   tablecast-web-vite:

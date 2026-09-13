@@ -1,14 +1,12 @@
 # ログ・トレースとCodexからの調査
 
-GPT-Live移行後もAPI・Mastraの業務traceとPythonのHTTP診断を使う。SDKの会話字幕は業務委任と独立して保存し、雑談も記録する。字幕item IDと業務turn IDの厳密な対応、生成文と聞こえた範囲の一致は求めない。Mastraの内部回答を発話済み本文として保存しない。以下の旧再生診断に関する記録はGPT-Liveの再生証明ではない。生音声の既定保存は無効のままとする。
+音声をブラウザー直結のGPT-Liveとhosted Agents APIへ移行しても、APIのOTel/GrafanaとD1の業務イベントを維持する。GPT-Liveの字幕は雑談を含めて保存し、Agents内部回答を発話済み本文として二重保存しない。以下に残る旧音声構成の検証履歴は、新構成の遅延・再生完了の証拠にしない。生音声の既定保存は無効のままとする。
 
 [索引](README.md) / [開発環境](development.md)
 
 ## 送信経路
 
 Hono APIとTanStack StartのWorker入口を`@inference-net/otel-cf-workers`で計測する。StartのAPI proxyにもW3C trace contextを付け、APIのDrizzle D1・DO bindingと同じtraceへつなぐ。公開`@tablecast/api/telemetry`はWorker向けの設定・送信境界であり、ブラウザーからimportしない。
-
-音声ContainerのRPCは、Worker入口で`cloudflare:workers`の標準bindingを渡す。計測SDKが追加するRPC先頭引数をContainerは復元しないため、`reserve`・`release`のIDと`setDraining(false)`をそのまま届ける必要がある。このbindingのRPC自動spanは作らず、API要求・Mastra・Pythonの既存traceとログを使う。
 
 ローカルは公式`grafana/otel-lgtm:0.32.1`のOTLP/HTTP、previewとprodはGrafana CloudのOTLP gatewayへ送る。Cloudflare標準observabilityは既存のCloudflare調査用に維持し、同じログ・traceをCloudflare側のOTLP destinationから再送しない。
 
@@ -130,48 +128,27 @@ GitHub Environmentの`preview`または`production`に同名のActions variable�
 
 大きな入出力はLokiの64 KiB structured metadata上限を超えるため、`tablecast.content`のJSONログ本文へ分割する。元の完了ログは一件のまま維持する。同じtrace ID・span IDの`part`順に`content`を連結するとJSON属性へ復元できる。各行を256 KiB未満にし、本文を切り捨てない。Grafanaのtrace表示が長い属性を省略する場合は、相関する本文ログを使う。
 
-## 音声とLiveKit Agent Insights
+## GPT-LiveとAgents APIの相関
 
-Pythonも `TABLECAST_OTEL_ENDPOINT` と `TABLECAST_OTEL_AUTHORIZATION` でOTLP/HTTPのtraceとlogを送る。localはworktree専用LGTM、preview/productionのContainerはAPIと同じGrafana Cloudへ接続する。Providerとバッチ送信器はプロセスごとに一度作り、job終了時にflushする。送信エラー自身のログをGrafanaへ再送して循環させない。
+ブラウザーの `session.input_transcript.delta`・`session.output_transcript.delta` は会話表示とD1保存に使い、APIの業務要求は通常のHTTP traceで追う。`tablecast.voice.session.id`、`tablecast.voice.turn.id`、hosted Agents session IDを対応付ける。UUIDの要求IDとOTel trace IDを混同しない。
 
-LiveKit Cloud接続時はAgent Insightsのtrace/logを有効にする。`TABLECAST_OTEL_CAPTURE_CONTENT=true` では会話本文と字幕も収集し、falseではSDKの `allow_pii=False`、sessionの `redaction=True`、`transcript=False` とログフィルターで除去する。録音は両設定とも `audio=False`。プロジェクト全体でPII除去が強制されている場合は、この環境変数で解除できない。localのself-hosted media serverではAgent Insightsへ送られない。
-
-LiveKitの標準spanでモデル、TTS、再生、中断を追い、`tablecast.voice.api` でAPIツールの待ち時間を分ける。Realtimeのtext出力にaudio TTFTを流用しない。APIリクエストにはW3C traceparentを伝播する。APIからjobを開始する非同期境界はspan linkと `tablecast.voice.session.id` で結び、`tablecast.voice.turn.id`、`lk.speech_id`、`tablecast.request.id` で区間を照合する。UUIDの要求IDをOTel trace IDとして扱わない。
+字幕の最初の差分、委任の開始、最初の本文、各ツールの開始・完了、音声停止の時刻をそれぞれ確認する。本文の生成時間を音声の再生開始までの時間として報告せず、D1 binding待ちとDB内部SQL実行時間も区別する。
 
 ```traceql
-{ resource.service.name = "tablecast-voice" && resource.tablecast.pr.number = "対象PR番号" }
+{ resource.service.name = "tablecast-api" && resource.tablecast.pr.number = "対象PR番号" }
 ```
 
-PR番号は調査対象へ置き換える。LogQLでは `{service_name="tablecast-voice"} | voiceSessionId="調査対象のセッションID"`、HTTP処理のtraceでは `span.tablecast.voice.session.id` を使う。Agent Insightsは同じroom/jobとsession IDで照合する。
-
-## Mastra Platformとの併用
-
-Mastraを実行するcascade経路は`OtelBridge`で現在のWorker traceに参加し、`MastraPlatformExporter`で同じtrace IDをhostedへ送る。通常のLiveKit Realtime経路には架空のMastra実行を作らない。Agent・モデル・toolの時間、使用量、環境・PR・SHA、voice session・turnを両画面で照合する。
-
-Workersのsecretに`TABLECAST_MASTRA_ACCESS_TOKEN`、設定に`TABLECAST_MASTRA_PROJECT_ID`を指定する。`TABLECAST_MASTRA_ENDPOINT`の既定は`https://observability.mastra.ai`。GitHub Actionsは同名のrepository secretとvariableから配備する。localでは`.env.local`に同名を設定して開発環境を再起動する。StudioサーバーやMastraへのアプリ配備は不要。
-
-requestごとにObservabilityを所有し、生成終了・失敗・中断の全経路で`waitUntil(observability.shutdown())`を待つ。SDKのbus、exporter、bridgeをflushし、共有するWorker providerをshutdownしない。hosted送信の失敗は業務結果を変えない。導入版の`maxRetries`は初回を含むため1を指定する。無限再試行や重複したshutdownは行わない。
-
-`TABLECAST_OTEL_CAPTURE_CONTENT`を共用する。falseではinput/output、prompt、tool payload、request context、例外本文を送信前processorで除去し、両宛先に反映する。trueではこれらも収集するが、`SensitiveDataFilter`とbindingの秘密値除去は維持する。フレームワークの無加工consoleログは無効にし、業務の完了ログとtraceのエラーをGrafanaで調べる。
-
-CLIでもhostedを照会できる。credentialはshell historyに書かず環境から渡す。SDK用のTableCast変数をCLI標準の`MASTRA_PLATFORM_ACCESS_TOKEN`・`MASTRA_PROJECT_ID`へ対応付ける。
-
-```sh
-bunx mastra@1.28.0 api trace list '{"page":0,"perPage":10}'
-bunx mastra@1.28.0 api trace get TRACE_ID --verbose
-```
-
-[公式のObservability単独利用](https://mastra.ai/docs/mastra-platform/observability)と[OtelBridge](https://mastra.ai/reference/observability/tracing/bridges/otel)を参照。
+Mastra Platform、LiveKit Agent InsightsとPythonのOTLP exporterは使用しない。OpenAI側のsessionやtraceはprovider内部の調査、Grafanaはアプリ・DB・業務操作の調査に使う。OpenAI側の保存・保持条件と、`TABLECAST_OTEL_CAPTURE_CONTENT` によるGrafana本文収集は別の設定であり、同じフラグが双方へ適用されると扱わない。
 
 ## Cloudflare Containersのインフラ指標（#67）
 
-API WorkerのCronが5分ごとに、配備先のvoiceとpreviewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localのCronは登録しない。本番・previewでは`TABLECAST_CONTAINER_METRICS_TOKEN`とGrafana送信資格`TABLECAST_OTEL_AUTHORIZATION`を必須とし、欠けた配備はWorkerへ書き込む前に拒否する。
+API WorkerのCronが5分ごとに、previewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localと本番のCronは登録しない。previewでは`TABLECAST_CONTAINER_METRICS_TOKEN`、本番・previewではGrafana送信資格`TABLECAST_OTEL_AUTHORIZATION`を必須とし、欠けた配備はWorkerへ書き込む前に拒否する。
 
 - `TABLECAST_CONTAINER_METRICS_TOKEN`: 当該アカウントのAccount Analytics ReadとWorkers Containers Readだけを持つ専用トークン。GitHub Actions secretからAPIのsecretへ渡す。今回のトークン有効期限は2026年12月10日。更新後に配備して反映する。
 - `TABLECAST_CLOUDFLARE_ACCOUNT_ID`と`TABLECAST_CONTAINER_METRICS_APPLICATIONS`: 配備設定から生成する。後者は当該Workerのapplication名のJSON配列。Containers REST APIの名前検索でIDを解決し、GraphQLの`applicationId_in`で絞る。
 - Grafanaへの送信は既存`TABLECAST_OTEL_ENDPOINT`と`TABLECAST_OTEL_AUTHORIZATION`を使用する。トークンには`metrics:write`が必要。
 
-公式の[`containersMetricsAdaptiveGroups`](https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-container-metrics/)を使用し、課金用`containersUsageAdaptiveGroups`、DOの呼出し時間、Pythonのアプリspanとは区別する。CPU・メモリ・受信/送信bpsは5分窓の平均、ディスクと稼働時間は最大値。稼働時間はGraphQLスキーマのmsを秒へ変換する。Cloudflareが返す0は保持するが、空集合やnullを0に置き換えない。
+公式の[`containersMetricsAdaptiveGroups`](https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-container-metrics/)を使用し、課金用`containersUsageAdaptiveGroups`、DOの呼出し時間、アプリspanとは区別する。CPU・メモリ・受信/送信bpsは5分窓の平均、ディスクと稼働時間は最大値。稼働時間はGraphQLスキーマのmsを秒へ変換する。Cloudflareが返す0は保持するが、空集合やnullを0に置き換えない。
 
 例として14:30のCronは14:20以上14:25未満を取得する。5分遅延させた重ならない窓を使い、OTLPの時刻は元の窓の開始時刻を維持する。同じ窓を再実行しても別時刻へ複製しない。取得失敗や遅延到着を後から自動で埋め戻すことはしない。API要求は各10秒で打ち切り、1000行上限やGraphQLの部分失敗も失敗として扱う。
 

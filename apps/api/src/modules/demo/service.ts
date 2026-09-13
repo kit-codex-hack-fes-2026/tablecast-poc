@@ -114,7 +114,7 @@ export async function updateDemo(services: ApiServices, actor: Actor, input: Dem
   ]);
   ensure(result[0]?.meta.changes === 1, "DEMO_CONFLICT");
   await notifyStore(services, actor.storeId, session.id);
-  if (session.voice_session_id) await stopVoiceRoom(services.env, session.voice_session_id);
+  if (session.voice_session_id) await stopVoiceRoom(services, session.voice_session_id);
   return getDemo(services, actor);
 }
 
@@ -160,6 +160,6 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
   ]);
   ensure(result[0]?.meta.changes === 1, "DEMO_CONFLICT");
   await notifyStore(services, actor.storeId, session.id);
-  if (session.voice_session_id) await stopVoiceRoom(services.env, session.voice_session_id);
+  if (session.voice_session_id) await stopVoiceRoom(services, session.voice_session_id);
   return getDemo(services, actor);
 }

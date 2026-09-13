@@ -14,7 +14,6 @@ import { getTableState } from "../src/modules/tables/queries";
 import { callStaff, requestBill } from "../src/modules/tables/service";
 import { voiceActor } from "../src/modules/voice/queries";
 import { createCastTools } from "../src/modules/voice/agent";
-import { getVoiceConfiguration } from "../src/modules/voice/realtime";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
 import { demoSchema, tableStateSchema } from "../src/schema";
@@ -389,10 +388,9 @@ describe("卓を使わない会話注文デモ", () => {
     await setVoiceSession(services(), actor, "tablecast-demo-voice");
     const voice = await voiceActor(services(), "tablecast-demo-voice");
     expect(voice.demoId).toBe(demo.id);
-    expect(await getVoiceConfiguration(services(), "tablecast-demo-voice")).toMatchObject({
-      voice: "marin",
-      proactive: true,
-    });
+    expect(
+      (await getCatalog(services(), voice.storeId, voice.demoId)).configuration.cast.proactive,
+    ).toBe(true);
     const tools = createCastTools(services(), voice, new AbortController().signal);
     expect(await tools.getCatalog.invoke({ query: "tea" })).toMatchObject({
       cast: "デモ専用の接客",

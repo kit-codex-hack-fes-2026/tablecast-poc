@@ -1,164 +1,61 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
-import { DomainError, ensure } from "../../platform/errors";
-import { getVoiceConfirmation, markConfirmationRead } from "../orders/service";
-import type { VoiceDiagnostics } from "./diagnostics";
-import { logVoiceTurn, voiceErrorCode } from "./diagnostics";
-import {
-  id,
-  conversationItemSchema,
-  playbackSchema,
-  sessionBody,
-  toolSchema,
-  transcriptSchema,
-  voiceTurnSchema,
-} from "./model";
-import { voiceActor } from "./queries";
-import {
-  getRealtimeConfiguration,
-  getLiveConfiguration,
-  recordConversationItem,
-  getVoiceConfiguration,
-  invokeVoiceTool,
-  recordPlayback,
-  recordTranscript,
-} from "./realtime";
-import { finishVoiceTurn, startVoiceTurn } from "./turns";
-export const voiceRoutes = new Hono<{
-  Bindings: TablecastEnv;
-  Variables: ApiEnv["Variables"] & { voiceDiagnostics: VoiceDiagnostics };
-}>();
-voiceRoutes.use("/turns", async (c, next) => {
-  const diagnostics = { traceId: c.get("traceId"), releaseSha: c.env.TABLECAST_RELEASE_SHA };
-  c.set("voiceDiagnostics", diagnostics);
-  await next();
-  if (c.res.status >= 400)
-    logVoiceTurn(
-      diagnostics,
-      c.error instanceof DomainError && c.error.code === "VOICE_CANCELLED"
-        ? "interrupted"
-        : c.res.status >= 500
-          ? "failed"
-          : "rejected",
-      c.res.status === 413 ? "BODY_TOO_LARGE" : voiceErrorCode(c.error),
-    );
-});
-voiceRoutes.use("*", bodyLimit({ maxSize: 256 * 1024 }));
-voiceRoutes.use("*", async (c, next) => {
-  const token = c.env.TABLECAST_VOICE_API_TOKEN;
-  const supplied = c.req.header("authorization") ?? "";
-  const encoder = new TextEncoder();
-  const expected = encoder.encode(`Bearer ${token}`);
-  const actual = encoder.encode(supplied);
-  ensure(
-    token && actual.byteLength === expected.byteLength && timingSafeEqual(actual, expected),
-    "VOICE_UNAUTHORIZED",
-    401,
-  );
-  await next();
-});
-voiceRoutes.get("/config", async (c) => {
-  const voiceSessionId = id.parse(c.req.query("voiceSessionId"));
-  return c.json(await getVoiceConfiguration(c.get("services"), voiceSessionId));
-});
-voiceRoutes.get("/realtime", async (c) => {
-  return c.json(
-    await getRealtimeConfiguration(
+import { validate } from "../../platform/validation";
+import { voiceConversationSchema, voiceDelegationSchema, voiceStartSchema } from "./model";
+import { recordConversationItems } from "./conversation";
+import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
+
+// 卓端末とデモの認証済み経路からだけ組み込む。音声用の共有bearer資格は不要。
+export const voiceRoutes = new Hono<ApiEnv>()
+  .use("*", bodyLimit({ maxSize: 256 * 1024 }))
+  .post("/start", validate(voiceStartSchema), async (c) => {
+    const started = startVoiceSession(
       c.get("services"),
-      id.parse(c.req.query("voiceSessionId")),
+      c.get("actor"),
+      c.req.valid("json").sdp,
       c.req.raw.signal,
+    );
+    // 接続元が中断しても、発行済みLive sessionを失効させるまで待つ。
+    c.executionCtx.waitUntil(started.catch(() => undefined));
+    return c.json(await started, 200);
+  })
+  .post(
+    "/stop",
+    validate(z.object({ voiceSessionId: z.string().max(100).optional() }).strict()),
+    async (c) =>
+      c.json(
+        await stopVoiceSession(
+          c.get("services"),
+          c.get("actor"),
+          c.req.valid("json").voiceSessionId,
+        ),
+        200,
+      ),
+  )
+  .post("/conversation", validate(voiceConversationSchema), async (c) =>
+    c.json(
+      await recordConversationItems(c.get("services"), c.get("actor"), c.req.valid("json")),
+      200,
     ),
-  );
-});
-voiceRoutes.post("/transcript", async (c) => {
-  const input = transcriptSchema.parse(await c.req.json());
-  return c.json(
-    await recordTranscript(c.get("services"), input, c.executionCtx.waitUntil.bind(c.executionCtx)),
-  );
-});
-voiceRoutes.post("/tools", async (c) => {
-  const input = toolSchema.parse(await c.req.json());
-  return c.json(
-    await invokeVoiceTool(
+  )
+  .post("/delegations", validate(voiceDelegationSchema), async (c) => {
+    const result = await startVoiceDelegation(
       c.get("services"),
-      input,
+      c.get("actor"),
+      c.req.valid("json"),
+      {
+        traceId: c.get("traceId"),
+        releaseSha: c.env.TABLECAST_RELEASE_SHA,
+      },
       c.req.raw.signal,
       c.executionCtx.waitUntil.bind(c.executionCtx),
-    ),
-  );
-});
-voiceRoutes.post("/turns", async (c) => {
-  const body: unknown = await c.req.json().catch((error: unknown) => {
-    throw new DomainError("INVALID_INPUT", 422, "INVALID_INPUT", undefined, { cause: error });
+    );
+    if (result.kind === "skipped") return c.body(null, 204);
+    return c.newResponse(result.stream, 200, {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    });
   });
-  const parsed = voiceTurnSchema.safeParse(body);
-  ensure(parsed.success, "INVALID_INPUT", 422);
-  const input = parsed.data;
-  const result = await startVoiceTurn(
-    c.get("services"),
-    input,
-    c.get("voiceDiagnostics"),
-    c.req.raw.signal,
-    c.executionCtx.waitUntil.bind(c.executionCtx),
-  );
-  if (result.kind === "skipped") return c.body(null, 204);
-  if (result.kind === "realtime") return c.json({ ok: true });
-  return c.newResponse(result.stream, 200, {
-    "content-type": "text/plain; charset=utf-8",
-    "cache-control": "no-store",
-    "x-content-type-options": "nosniff",
-  });
-});
-voiceRoutes.get("/confirmation", async (c) => {
-  const input = sessionBody.parse(c.req.query());
-  return c.json(
-    await getVoiceConfirmation(
-      c.get("services"),
-      await voiceActor(c.get("services"), input.voiceSessionId, input.turnId),
-    ),
-  );
-});
-voiceRoutes.post("/confirmations/read", async (c) => {
-  const input = sessionBody
-    .extend({ snapshotId: id })
-    .strict()
-    .parse(await c.req.json());
-  await markConfirmationRead(
-    c.get("services"),
-    await voiceActor(c.get("services"), input.voiceSessionId, input.turnId),
-    input.snapshotId,
-  );
-  return c.json({ ok: true });
-});
-voiceRoutes.post("/turns/:turnId/end", async (c) => {
-  const input = z
-    .object({ voiceSessionId: id, status: z.enum(["completed", "interrupted", "failed"]) })
-    .strict()
-    .parse(await c.req.json());
-  await finishVoiceTurn(
-    c.get("services"),
-    input.voiceSessionId,
-    id.parse(c.req.param("turnId")),
-    input.status,
-  );
-  return c.json({ ok: true });
-});
-voiceRoutes.post("/playback", async (c) => {
-  const input = playbackSchema.parse(await c.req.json());
-  return c.json(await recordPlayback(c.get("services"), input));
-});
-
-voiceRoutes.get("/live", async (c) =>
-  c.json(await getLiveConfiguration(c.get("services"), id.parse(c.req.query("voiceSessionId")))),
-);
-voiceRoutes.post("/conversation", async (c) =>
-  c.json(
-    await recordConversationItem(
-      c.get("services"),
-      conversationItemSchema.parse(await c.req.json()),
-    ),
-  ),
-);

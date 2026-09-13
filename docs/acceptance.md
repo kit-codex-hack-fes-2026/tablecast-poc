@@ -36,14 +36,14 @@
 | MCP-02       | 権限なしの公開、古い版、LLMが作った承認値だけの要求を拒否する                                                                  |
 | LOCAL-01     | AI API以外はローカルで通常開発でき、実D1/DO/R2とImages対応範囲を使う                                                           |
 | LOCAL-02     | Web/APIはService Bindingで同一オリジン。別API redirectや広いCORS許可に頼らない                                                 |
-| WORKTREE-01  | 3つ以上を同時起動してホスト・Cookie・全port・state・LiveKitが混ざらない                                                        |
+| WORKTREE-01  | 3つ以上を同時起動してホスト・Cookie・全port・stateが混ざらない                                                                 |
 | WORKTREE-02  | reset/stopで他worktreeや本番資源を変更せず、`.worktreeinclude` へstateを含めない                                               |
 | SEED-01      | demo規模の合成データが決定的に作成され、金額・状態・境界・日英・画像権利を検証できる                                           |
 | PATCH-01     | 公式pluginからの必要最小差分、互換テスト、完全SHA固定、上流PRへ移す方法が記録される                                            |
-| QUALITY-01   | Bun/Turbo、Oxlint/Oxfmt、Lefthook、Vitest/Storybook、uv/ty/ruff/pytestの採用設定が動く                                         |
+| QUALITY-01   | Bun/Turbo、Oxlint/Oxfmt、Lefthook、Vitest/Storybookの採用設定が動く                                                            |
 | QUALITY-02   | 日本語のコメント・Markdown・テスト名、full tablecast命名、不要packageなしを確認する                                            |
-| DEPLOY-01    | Web/APIとPython Agentを公開環境へ配置し、日英実音声・MCP・ダッシュボードが連動する                                             |
-| OPS-01       | 生音声を既定保存せず、Secretがログ・ブラウザー・Room名へ漏れず、診断用IDで追跡できる                                           |
+| DEPLOY-01    | Web/APIを公開環境へ配置しGPT-Live・Agents APIと接続して、日英実音声・MCP・ダッシュボードが連動する                             |
+| OPS-01       | 生音声を既定保存せず、Secretがログ・ブラウザー・session名へ漏れず、診断用IDで追跡できる                                        |
 
 ## ローカルUI受入の記録
 
@@ -85,7 +85,7 @@ ADMIN-01の卓経過時間と会計待ちは、最新100件の表示ログから
 
 ## 診断と音声候補の追加検証
 
-APIの新規診断7件は実workerd/D1/Mastraで要求ID、認可済みturn、公開runId、拒否・途中失敗・取消・204と非漏洩を検証する。Pythonの新規10件はHTTPと実AgentSessionを使い、要求・生成・通常再生・固定確認・遅い旧turnのIDを対応付ける。APIの応答headerを受信できない時と、SDKが失敗metricsを発行しない時は不明を補わない。[API診断試験](../apps/api/test/voice-diagnostics.test.ts)、[Python診断試験](../livekit/tests/test_diagnostics.py)
+APIの新規診断7件は実workerd/D1/Mastraで要求ID、認可済みturn、公開runId、拒否・途中失敗・取消・204と非漏洩を検証する。Pythonの新規10件はHTTPと実AgentSessionを使い、要求・生成・通常再生・固定確認・遅い旧turnのIDを対応付ける。APIの応答headerを受信できない時と、SDKが失敗metricsを発行しない時は不明を補わない。[API診断試験](../apps/api/test/voice-diagnostics.test.ts)、[Python診断試験](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/ada9be31253a8f8f63a24b3908f42ea20d9d8e07/livekit/tests/test_diagnostics.py)
 
 新しいビルドでは、実HTTPの401応答headerとJSONログのID、Git HEAD由来の実行版の一致、health 200を確認した。音声候補は公開設定・下書き・編集値の範囲で復帰と店舗切替を部品試験し、Storybookは33件成功。日英・両ブラウザーの設定編集4件も再実行して成功した。前節の全32件のE2Eとは実行範囲を区別する。標準provider一覧の取得と実際のTTS再生は未実施である。
 

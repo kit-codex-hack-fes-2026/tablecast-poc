@@ -16,7 +16,6 @@ export function deploymentTarget(pr?: string) {
     api: `tablecast-api${suffix}`,
     database: `tablecast-db${suffix}`,
     bucket: `tablecast-media${suffix}`,
-    agent: `tablecast-voice${suffix}`,
     origin: `https://${web}.kit-codex.workers.dev`,
   };
 }
@@ -47,12 +46,11 @@ export function deploymentArtifact(
       containers: z
         .array(
           z.looseObject({
-            class_name: z.enum(
-              target.pr ? ["TablecastVoice", "TablecastEmulate"] : ["TablecastVoice"],
-            ),
+            class_name: z.literal("TablecastEmulate"),
           }),
         )
-        .length(target.pr ? 2 : 1),
+        .length(target.pr ? 1 : 0)
+        .default([]),
     })
     .parse(input);
   return {
@@ -63,7 +61,7 @@ export function deploymentArtifact(
     })),
     containers: config.containers.map((container) => ({
       ...container,
-      image: `registry.cloudflare.com/${tablecastAccountId}/tablecast-${container.class_name === "TablecastVoice" ? "voice" : "emulate"}:${sha}`,
+      image: `registry.cloudflare.com/${tablecastAccountId}/tablecast-emulate:${sha}`,
     })),
   };
 }
@@ -83,34 +81,19 @@ export function deploymentSecrets(
     return value;
   };
   const secrets: Record<string, string> = {
-    TABLECAST_CONTAINER_METRICS_TOKEN: required(
-      input.TABLECAST_CONTAINER_METRICS_TOKEN,
-      "TABLECAST_CONTAINER_METRICS_TOKEN",
-    ),
     TABLECAST_OTEL_AUTHORIZATION: required(
       input.TABLECAST_OTEL_AUTHORIZATION,
       "TABLECAST_OTEL_AUTHORIZATION",
     ),
     TABLECAST_AUTH_SECRET: derive("auth"),
-    TABLECAST_VOICE_API_TOKEN: derive("voice"),
-    TABLECAST_LIVEKIT_URL: required(runtime.LIVEKIT_URL, "LIVEKIT_URL"),
-    TABLECAST_LIVEKIT_API_KEY: required(runtime.LIVEKIT_API_KEY, "LIVEKIT_API_KEY"),
-    TABLECAST_LIVEKIT_API_SECRET: required(runtime.LIVEKIT_API_SECRET, "LIVEKIT_API_SECRET"),
-    OPENAI_API_KEY: required(runtime.OPENAI_API_KEY, "OPENAI_API_KEY"),
-    TABLECAST_MODEL_API_KEY: required(
-      runtime.TABLECAST_MODEL_API_KEY ?? runtime.OPENAI_API_KEY,
-      "TABLECAST_MODEL_API_KEY",
-    ),
-    TABLECAST_MODEL: required(runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
+    TABLECAST_MODEL_API_KEY: required(runtime.TABLECAST_MODEL_API_KEY, "TABLECAST_MODEL_API_KEY"),
+    TABLECAST_MODEL: required(input.TABLECAST_MODEL || runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
   };
-  for (const key of [
-    "TABLECAST_MASTRA_ACCESS_TOKEN",
-    "TABLECAST_MASTRA_PROJECT_ID",
-    "TABLECAST_MASTRA_ENDPOINT",
-  ]) {
-    if (input[key]) secrets[key] = input[key];
-  }
   if (target.pr) {
+    secrets.TABLECAST_CONTAINER_METRICS_TOKEN = required(
+      input.TABLECAST_CONTAINER_METRICS_TOKEN,
+      "TABLECAST_CONTAINER_METRICS_TOKEN",
+    );
     secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");
     secrets.CF_ACCESS_CLIENT_SECRET = required(
       input.CF_ACCESS_CLIENT_SECRET,
@@ -162,18 +145,15 @@ export function deploymentConfigs(
     main: resolve(root, "apps/api/src/worker.ts"),
     workers_dev: false,
     preview_urls: false,
-    triggers: { crons: ["*/5 * * * *"] },
+    triggers: { crons: target.pr ? ["*/5 * * * *"] : [] },
     vars: {
       ...telemetryVars,
       TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
       TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([
-        `${target.api}-tablecastvoice`,
         ...(target.pr ? [`${target.api}-tablecastemulate`] : []),
       ]),
       TABLECAST_PUBLIC_ORIGIN: target.origin,
-      TABLECAST_CONTAINERS_ENABLED: "true",
       TABLECAST_VOICE_ENABLED: "true",
-      TABLECAST_AGENT_NAME: target.agent,
       ...(target.pr
         ? {
             TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
@@ -191,12 +171,6 @@ export function deploymentConfigs(
     ],
     r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: target.bucket }],
     containers: [
-      {
-        class_name: "TablecastVoice",
-        image: resolve(root, "livekit/Dockerfile"),
-        instance_type: "standard-1",
-        max_instances: 1,
-      },
       ...(target.pr
         ? [
             {

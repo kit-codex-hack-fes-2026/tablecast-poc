@@ -30,15 +30,7 @@ export interface TelemetryEnv {
 const allowed = new Set([
   "tablecast.voice.session.id",
   "tablecast.voice.turn.id",
-  "lk.speech_id",
-  "mastra.traceId",
-  "mastra.spanId",
-  "mastra.span.type",
-  "mastra.metadata.tablecast.voice.session.id",
-  "mastra.metadata.tablecast.voice.turn.id",
-  "mastra.metadata.deployment.environment.name",
-  "mastra.metadata.service.version",
-  "mastra.metadata.tablecast.pr.number",
+  "tablecast.agent.session.id",
   "tablecast.operation",
   "tablecast.channel",
   "tablecast.outcome",
@@ -114,7 +106,7 @@ export function telemetryAttributes(
           key,
         ) ||
         (env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" &&
-          /^(exception\.|db\.(statement|query\.text)|tablecast\.(input|output)|gen_ai\.|lk\.|mastra\.)/.test(
+          /^(exception\.|db\.(statement|query\.text)|tablecast\.(input|output)|gen_ai\.)/.test(
             key,
           ))) &&
       (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
@@ -155,16 +147,13 @@ export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelC
           ...span,
           // spanContextはprototype上のメソッドなので明示的に引き継ぐ。
           spanContext: () => span.spanContext(),
-          name:
-            typeof span.attributes["mastra.span.type"] === "string"
-              ? telemetryContent(span.name, env)
-              : /^tablecast\.[a-z_.]+$/.test(span.name)
-                ? span.name
-                : span.attributes["http.request.method"] || span.attributes["http.method"]
-                  ? "HTTP"
-                  : span.attributes["db.system"] || span.attributes["db.system.name"]
-                    ? "DB"
-                    : "Worker binding",
+          name: /^tablecast\.[a-z_.]+$/.test(span.name)
+            ? span.name
+            : span.attributes["http.request.method"] || span.attributes["http.method"]
+              ? "HTTP"
+              : span.attributes["db.system"] || span.attributes["db.system.name"]
+                ? "DB"
+                : "Worker binding",
           resource,
           attributes: telemetryAttributes(span.attributes, env),
           events: span.events

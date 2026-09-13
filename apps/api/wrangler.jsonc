@@ -24,7 +24,6 @@
   "durable_objects": {
     "bindings": [
       { "name": "TABLECAST_EVENTS", "class_name": "StoreEvents" },
-      { "name": "TABLECAST_VOICE", "class_name": "TablecastVoice" },
       { "name": "TABLECAST_EMULATE", "class_name": "TablecastEmulate" },
     ],
   },
@@ -34,6 +33,7 @@
       "tag": "tablecast-v2-containers",
       "new_sqlite_classes": ["TablecastVoice", "TablecastEmulate"],
     },
+    { "tag": "tablecast-v3-hosted-agents", "deleted_classes": ["TablecastVoice"] },
   ],
   "r2_buckets": [{ "binding": "TABLECAST_MEDIA", "bucket_name": "tablecast-media" }],
   "images": { "binding": "TABLECAST_IMAGES" },

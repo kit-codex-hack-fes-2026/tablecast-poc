@@ -1,7 +1,3 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { Agent } from "@mastra/core/agent";
-import { Mastra } from "@mastra/core/mastra";
-import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -15,30 +11,9 @@ import { getSession, getTableState } from "../tables/queries";
 import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
 import { showProductsSchema, speechSpeedInputSchema, type VoiceTrigger } from "./model";
 import { castInstructions } from "./prompt";
-import { castObservability } from "./observability";
 import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
   return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
-}
-
-export function createCastAgent(
-  services: ApiServices,
-  actor: Actor,
-  locale: Locale,
-  signal: AbortSignal,
-  trigger: VoiceTrigger = "user",
-) {
-  const openai = createOpenAI({ apiKey: services.env.TABLECAST_MODEL_API_KEY });
-  const agent = new Agent({
-    id: "tablecast-cast",
-    name: "TableCast",
-    instructions: castSessionInstructions(locale, trigger),
-    model: openai.chat(services.env.TABLECAST_MODEL),
-    tools: createCastTools(services, actor, signal, trigger),
-  });
-  const observability = castObservability(services.env, actor);
-  const mastra = new Mastra({ agents: { cast: agent }, logger: false, observability });
-  return { agent: mastra.getAgent("cast"), observability };
 }
 
 function castTool<T extends z.ZodType>(options: {
@@ -52,10 +27,12 @@ function castTool<T extends z.ZodType>(options: {
     ensure(parsed.success, "INVALID_INPUT", 422);
     return options.execute(parsed.data);
   };
-  return Object.assign(createTool({ ...options, execute: invoke }), {
+  return {
+    ...options,
+    execute: invoke,
     invoke,
     parameters: z.toJSONSchema(options.inputSchema),
-  });
+  };
 }
 
 export function createCastTools(

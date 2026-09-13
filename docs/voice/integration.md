@@ -1,4 +1,4 @@
-# Mastra・LiveKit・Honoの接続
+# GPT-Live・Agents API・Honoの接続
 
 [索引](../README.md) / [発話仕様](speech.md)
 
@@ -6,56 +6,53 @@
 
 ```mermaid
 flowchart LR
-    K[卓上Web] <-->|WebRTC| L[LiveKit Server]
-    L <--> P[Python LiveKit Agent]
-    P <-->|音声入出力| O[OpenAI gpt-live-1]
-    O -->|client delegation| P
-    P <-->|認証済みHTTP| H[Hono・Mastra]
+    K[卓上Web] <-->|WebRTC| O[OpenAI gpt-live-1]
+    O -->|client delegation| K
+    K <-->|認証済みHTTP stream| H[Hono]
+    H <-->|hosted session / function result| A[OpenAI Agents API]
     H --> D[(D1)]
     H --> R[DOによる状態配信]
     R --> K
 ```
 
-LiveKit公式OpenAI plugin 1.8.1の `GPTLiveModel(model="gpt-live-1", delegation="client")` を使う。GPT-Liveが音声理解・会話・音声生成・割り込みを担当し、業務判断は既存Mastraに委任する。Inworld TTS、独自WebSocket、Agents APIは追加しない。モデルにfunction toolsを直接渡す方式ではない。
+ブラウザー標準のWebRTCでGPT-Liveへ直接接続する。Honoが公式OpenAI SDKの `live.create` へSDP offerを送り、SDP answerと音声session IDだけをブラウザーへ返す。APIキーはサーバーだけが持つ。通常音声は `gpt-live-1`、委任方式は `client` に固定する。
 
-[LiveKit GPT-Live plugin](https://docs.livekit.io/agents/models/realtime/plugins/gpt-live/) / [OpenAI client delegation](https://developers.openai.com/api/docs/guides/live-delegation)
+業務委任はhosted OpenAI Agents APIを `environment: { type: "none" }` で使う。公式JavaScript SDK `openai` 7.15.0の `beta.agents.sessions` を使い、Mastra・LiveKit Server・Python Agent・音声Containerを持たない。Agents SDKのローカルRunnerやResponses APIへの置換は行わない。
+
+[OpenAI WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live) / [client delegation](https://developers.openai.com/api/docs/guides/live-delegation) / [Agents API](https://developers.openai.com/api/docs/guides/agents-api/quickstart)
 
 ## 委任と業務認可
 
-1. Honoが店舗・卓・端末を認可し、限定されたLiveKit参加資格を発行する。
-2. Pythonは `/internal/voice/config` と `/internal/voice/live` から音声・言語・接客指示・最近の会話を取得する。秘密鍵を応答に含めない。
-3. 公開 `delegation_created` イベントの `pending_transcript` と最近の会話を `/internal/voice/turns` の `transport: live` へ渡す。委任時の本文量は直近8項目・各2,000文字と途中字幕2,000文字に制限する。
-4. Mastraが既存の共通業務ツールを実行し、確認済みの結果と必要な質問を本文で返す。価格・在庫・権限・注文の正本はAPIとD1に置く。GUI・MCPと業務操作を共有し、Pythonに業務実装を複製しない。
-5. Pythonが `Agent.duplex_session.append_commentary` で同じdelegation IDへ結果を返す。appendの500 tokens上限を超えないよう100文字ずつ渡す。GPT-Liveが自然な言葉で説明する。
+1. Honoが店舗・卓・端末またはデモ所有者を認可し、GPT-Live sessionを作成する。
+2. Webは `session.delegation.created` を受け、直近の会話と途中字幕を認証済みAPIへ渡す。字幕はモデルへ渡す参考文脈であり、店舗・卓・権限の根拠にしない。
+3. HonoがD1へ業務turnを予約してAgents sessionを作る。`TABLECAST_MODEL` は業務委任用で、音声モデルとは独立する。
+4. Agents APIの `agent.session.requires_action` で要求されたfunctionだけを、既存APIの業務操作で実行する。`turn_id` と `call_id` を対応付け、結果を `agent.session.input.tool_result` で返す。GUI・MCPと価格・在庫・注文の正本を共有する。
+5. Agents APIの本文差分をHTTP streamでWebへ渡し、Webが同じdelegation IDの `session.commentary.append` へ上限内で順次渡す。GPT-Liveが結果を自然に説明する。全文生成・読み終わりを待ってからまとめて渡さない。
 
-LiveKitの発話開始イベントごとに業務turn IDを分け、一発話内の重複委任は受け付けない。新しい発話で進行中の委任を取り消し、古い結果を会話へ戻さない。変更結果が不明な要求を自動再送しない。APIは現在の音声session・turn・卓・設定版・引数を検査する。
+APIは現在の音声session、業務turn、卓、公開設定版と引数を検査する。字幕表示のまとまりを注文承認や新しい業務turnの根拠にしない。結果不明の変更要求を自動再送しない。ツールの完了・失敗・中断は実行結果から記録し、HTTP streamが閉じただけで成功扱いにしない。
 
-既存のRealtime直接tool APIとcascade経路は回帰試験・既存内部クライアント用に残す。通常RoomはGPT-Liveだけを起動し、自動fallbackしない。固定読上げを必要とする旧クライアントの音声承認手順は互換対象にしない。
+Agents APIはHTTP切断後も処理が続き得るため、停止時には `agent.session.input.cancel` を明示送信する。cancelは現在の実行に作用するため、別の業務turnへ同じhosted sessionを使い回して古い取消を届かせない。[function tools](https://developers.openai.com/api/docs/guides/agents-api/tools/functions) / [session操作](https://developers.openai.com/api/docs/guides/agents-api/sessions)
 
 ## 会話履歴とログ
 
-`conversation_item_added` の利用客・Agent字幕を、委任のない雑談も含めて `/internal/voice/conversation` へ保存する。SDK item IDで重複通知を抑える。Mastraの内部回答を発話済み本文として二重保存しない。音声話者番号や本人を推測しない。
+`session.input_transcript.delta` と `session.output_transcript.delta` を受信した時点でUIへ追記する。前後の空白を勝手に削らない。利用客・キャストを別に表示し、重なって話した場合にも本文を混ぜない。
 
-再開時は同じ店舗・来店の直近40項目・本文合計2,000文字以内を公開 `ChatContext` へ渡す。履歴は参考文脈であり、過去の依頼や注文承認を再実行しない。現在の注文・カートはツールで確認する。
+GPT-Liveの字幕に確定発話IDはない。表示用のまとまりをアプリで扱い、字幕をまとめてAPIの会話ログへ保存する。永続化はtoken単位のD1書込みにしない。Agents内部回答を実際に発話した本文として二重保存せず、雑談もGPT-Live字幕から記録する。
 
-SDK字幕には遅延・欠落・中断があり得る。生成した文、モデル文脈、利用客が聞いた部分の厳密な一致は保証しない。独自の再生範囲照合、文脈修復、永続記憶基盤は作らない。生音声は既定保存しない。API・Mastraの既存OTel/Grafanaを再利用する。
+再開時は同じ店舗・来店の最近の字幕を参考文脈として使う。履歴から過去の注文や承認を再実行せず、現在の注文・カートはツールで確認する。表示・生成文脈・実際に聞こえた範囲の厳密な一致は保証しない。生音声は既定保存しない。
 
-## 音声確認とGUI確認
+APIの既存OTel/GrafanaとD1の業務イベントを維持する。hosted session IDとTableCastのvoice session・turn IDを対応付ける。OpenAIに保持されるモデル文脈と、TableCastの注文・監査記録は別の責務である。
 
-APIが商品・選択肢・数量・合計・カート版・設定版・期限を含むスナップショットを作る。Mastraは `prepareConfirmation` の後も本文生成を続け、GPT-Liveが内容を自然に説明し承認を求める。固定TTS、読上げ完了通知、`read_at` は音声承認の条件にしない。
+## 注文確認と停止
 
-音声の注文送信はスナップショット作成より後に始まった別発話の明示承認で行う。同じ発話での準備と確定は拒否する。承認か相づち・質問・訂正かの意味判断はモデルが担う。APIは発話間の順序とsession、版、期限、冪等キーを検査するが、実際に確認を聞き終えたことは証明しない。カート・設定変更、音声停止で古い確認は無効になる。
+注文はAPIが商品・選択肢・数量・合計・カート版・設定版・期限を含むスナップショットを作り、明示承認を検査する。GUIに表示した現行スナップショットの確認を維持する。GPT-Liveの字幕確定や再生完了は承認の証拠にしない。音声承認では同じvoice sessionの現行snapshotと、その作成後に開始した別の業務turnを検査する。自然言語の明示承認はモデルが判断し、別delegationを物理的な別発話の証明とは扱わない。表示用の字幕IDでこの条件を代用しない。カート・設定変更・音声停止で古い確認は無効になる。
 
-GUIは表示した現行スナップショットを独立して承認でき、音声停止中も利用できる。中断前にcommitしたカート変更・注文はロールバックしない。
+UI停止はマイクcaptureと再生を即時終了し、APIが音声sessionを失効させ、Agents APIの実行とGPT-Live sessionを明示停止する。ブラウザーの切断だけに依存せず、API側からの停止にも公式Live制御を使う。明示再開まで勝手に再接続しない。停止前に確定したカート・注文はロールバックせず、GUI・卓・会計を維持する。
 
-## 自発接客と明示停止
+自発接客の可否と間隔、空カート、確認・スタッフ呼出・進行中turnの有無はAPIで検査する。自発turnは参照専用で、客発話として保存しない。
 
-無言時の自発接客は店舗設定、空カート、確認・スタッフ呼出・進行中turnの有無、前回から180秒の間隔をAPIで検査する。自発turnは参照専用とし、客発話として保存しない。客が話し始めたら委任を中断する。
+## 検証の境界
 
-UI停止はマイクcapture停止・Room退出・APIのvoice session失効を行う。参加者退出でAgentSessionを終了し、モデル接続と委任HTTPを閉じる。設定の定期確認でも停止を検知する。通常の会話割り込みではGPT-Liveが発話を制御し、明示停止とは分ける。GUI・卓・カート・注文は維持し、明示再開まで勝手に再接続しない。
+無課金のAPI試験は公式SDKのHTTPイベント境界と実D1を使い、function結果、失敗・取消、認可、重複要求と注文を検証する。Web試験は標準media APIの境界で字幕追記、許可待ちの停止、接続競合、古いイベントを検証する。
 
-## 検証
-
-無課金のpytestは公開イベントとHTTP境界、API試験は実Mastra・D1の委任と注文を検証する。日英GUIの代表注文はPlaywrightで確認する。
-
-`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は有料GPT-Liveの起動・短い日英の発話字幕を確認する。Room転送、実マイク、注文委任、iPadの停止・AEC・騒音・会話品質はこの試験に含まれず、検証専用卓で別途確認する。GPT-Live利用資格と実音声の合格は静的検査だけでは判定しない。
+実GPT-Live・Agents APIは有料試験として通常CIから分離する。日英の合成入力音声、実WebRTC、ツール完了、字幕の途中表示、明示停止とカート保持をlocal・PR previewでそれぞれ確認する。入力をInworld TTSで生成しても製品の音声runtime依存にはしない。iPadのAEC・店内騒音・実マイク・自然な会話品質は別の受入とする。実施結果と対象SHAはIssue #100・PR #104へ記録し、この仕様だけで検証済みとは扱わない。

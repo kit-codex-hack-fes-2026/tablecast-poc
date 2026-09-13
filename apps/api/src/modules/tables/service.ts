@@ -16,6 +16,7 @@ import {
   voiceCondition,
 } from "./mutations";
 import { getSession, getTableState } from "./queries";
+import { stopVoiceRoom } from "../voice/runtime";
 export async function setUiSection(
   services: ApiServices,
   actor: Actor,
@@ -142,6 +143,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
   await notifyStore(services, actor.storeId, actor.tableSessionId);
+  if (row.voice_session_id) await stopVoiceRoom(services, row.voice_session_id);
   // 言語変更で失効させた音声資格を再利用せず、更新を認可した同じ卓を読み直す。
   return getTableState(services, {
     ...actor,
@@ -233,6 +235,7 @@ export async function closeTable(services: ApiServices, actor: Actor) {
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
       await notifyStore(services, actor.storeId, actor.tableSessionId);
+      if (table.voiceSessionId) await stopVoiceRoom(services, table.voiceSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },
