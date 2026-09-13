@@ -11,7 +11,7 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 
 - 共通lintルールはroot、API/Web固有pluginはworkspace設定へ置く。導入版のruleとOxlint互換性を確認し、変更したruleは小さい失敗例で実効性を確認する。広いignoreや存在しないruleで通さない。
 - 既存の標準lint・commitlint・CIへ責務を割り当てる。意味の判断を模倣する独自validatorや重いpre-push全体試験を増やさない。
-- 実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonはuvが所有する。標準機能を包むだけのrunner、envの二重解決、Composeの中継層を作らない。
+- 実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonはuvが所有する。workspace外から読む設定・素材も、実際にその内容へ依存するcached taskのinputsへ含める。標準機能を包むだけのrunner、envの二重解決、Composeの中継層を作らない。
 - 自作skillの正本は`.agents/skills`へ置く。skillは選択・実行判断、docsは仕様・運用手順を所有し、別の編集元や同期用symlinkを増やさない。詳細参照は必要な作業から到達させ、全文読込を既定にしない。
 - 外部skillは`bunx skills add <source> --skill <name> --agent codex -y`と`skills-lock.json`で取得元を管理する。上流本文を整形・翻訳しない。plugin・MCP設定では利用者の既存設定を保ち、生成物と手動設定を分ける。
 
