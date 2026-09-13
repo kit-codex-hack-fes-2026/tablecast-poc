@@ -1,0 +1,636 @@
+{
+  "schemaVersion": 1,
+  "kind": "synthetic-customer-audio-script",
+  "executionStatus": "not_run",
+  "notes": [
+    "speakersの年齢・性別・アクセントは合成音声の設計意図であり、実聴による検証結果ではない。",
+    "scenarios.turnsだけが客入力クリップ。staffExamplesは演出用の参考音声であり、マイク・音声E2Eの客入力へ絶対に混ぜない。",
+    "cueは観測対象となる実発話の開始または完了を基準にする。offsetMsだけで本物の応答開始・確認完了を推定しない。",
+    "台本は有料E2Eの準備資料。実音声経路のE2E実行や成功を表さない。"
+  ],
+  "speakers": {
+    "misaki": {
+      "id": "misaki",
+      "name": "美咲",
+      "age": 32,
+      "gender": "female",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "32歳の成人女性を想定。自然な標準日本語。穏やかで好奇心があり、注文を急がない。年齢・性別は声の演出意図であり実測結果ではない。"
+    },
+    "yuto": {
+      "id": "yuto",
+      "name": "悠斗",
+      "age": 34,
+      "gender": "male",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "34歳の成人男性を想定。自然な標準日本語。落ち着いた会話速度で、訂正時も声を荒らげない。"
+    },
+    "rin": {
+      "id": "rin",
+      "name": "凛",
+      "age": 27,
+      "gender": "female",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "27歳の成人女性を想定。明るく明瞭な標準日本語。具材や数量を聞き取りやすく話す。"
+    },
+    "wataru": {
+      "id": "wataru",
+      "name": "航",
+      "age": 29,
+      "gender": "male",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "29歳の成人男性を想定。標準日本語。控えめで自然な話し方。重なりや割り込みでも叫ばない。"
+    },
+    "aoi": {
+      "id": "aoi",
+      "name": "葵",
+      "age": 28,
+      "gender": "female",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "28歳の成人女性を想定。標準日本語。凛とは音色と話速が少し異なる自然な声。"
+    },
+    "harue": {
+      "id": "harue",
+      "name": "春江",
+      "age": 68,
+      "gender": "female",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "68歳の成人女性を想定。ゆったりと明瞭に話す。弱々しさや認知能力の低下を演技しない。操作への不慣れは台詞で示す。"
+    },
+    "makoto": {
+      "id": "makoto",
+      "name": "誠",
+      "age": 70,
+      "gender": "male",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "70歳の成人男性を想定。落ち着いた標準日本語。聞き取りやすい自然な速度で、老齢の特徴を誇張しない。"
+    },
+    "alex_us": {
+      "id": "alex_us",
+      "name": "Alex",
+      "age": 31,
+      "gender": "male",
+      "language": "en",
+      "accent": "en-US",
+      "direction": "31歳の成人男性を想定。自然で軽い米国英語アクセント。明瞭な通常会話で、国籍の誇張表現を加えない。"
+    },
+    "sam_uk": {
+      "id": "sam_uk",
+      "name": "Sam",
+      "age": 33,
+      "gender": "female",
+      "language": "en",
+      "accent": "en-GB",
+      "direction": "33歳の成人女性を想定。自然な英国英語アクセント。明瞭で穏やかに話し、階級や地域の戯画化をしない。"
+    },
+    "priya_india": {
+      "id": "priya_india",
+      "name": "Priya",
+      "age": 37,
+      "gender": "female",
+      "language": "en",
+      "accent": "en-IN",
+      "direction": "37歳の成人女性を想定。インドで話される英語の軽く自然なアクセント。流暢かつ明瞭に話し、食事上の条件は本人の台詞だけを根拠にする。"
+    },
+    "wei_china": {
+      "id": "wei_china",
+      "name": "Wei",
+      "age": 41,
+      "gender": "male",
+      "language": "en",
+      "accent": "en-CN",
+      "direction": "41歳の成人男性を想定。中国語を背景とする英語の軽く自然なアクセント。流暢かつ明瞭に話し、発音を戯画化しない。"
+    },
+    "staff_ja_example": {
+      "id": "staff_ja_example",
+      "name": "日本語AI店員の演出例",
+      "age": 35,
+      "gender": "female",
+      "language": "ja",
+      "accent": "ja-JP",
+      "direction": "35歳前後の成人女性の声を想定した架空AI店員。穏やかで簡潔な標準日本語。実製品の応答ではなく演出用の参考音声。"
+    },
+    "staff_en_example": {
+      "id": "staff_en_example",
+      "name": "英語AI店員の演出例",
+      "age": 35,
+      "gender": "female",
+      "language": "en",
+      "accent": "en-GB",
+      "direction": "35歳前後の成人女性の声を想定した架空AI店員。穏やかで自然な英国英語。実製品の応答ではなく演出用の参考音声。"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "ja-discovery",
+      "storeId": "tablecast-komorebi",
+      "title": "京料理こもれび四条店で地酒と料理を選ぶ",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "discovery-01",
+          "speaker": "misaki",
+          "text": "月凪と雪灯は、香りと味がどう違いますか。まだ注文はしません。",
+          "cue": {
+            "type": "after_previous",
+            "description": "空カート・日本語・音声開始を確認して最初に再生する。"
+          },
+          "purpose": "登録された香味の比較。説明依頼を追加と取り違えない。"
+        },
+        {
+          "id": "discovery-02",
+          "speaker": "yuto",
+          "text": "月凪の純米吟醸を、冷酒で九十ミリリットル、一つお願いします。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "必須の温度・容量を指定した1商品追加。620円と容量追加160円で780円。"
+        },
+        {
+          "id": "discovery-03",
+          "speaker": "misaki",
+          "text": "お造り三種盛りも一つお願いします。薬味の別添えは要りません。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "任意の薬味を無理に選ばせず、1,280円を追加。カート2,060円。"
+        },
+        {
+          "id": "discovery-04",
+          "speaker": "yuto",
+          "text": "合計は二千六十円で合っていますか。送信する前に、注文内容を読み上げてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "現行のスナップショットを準備し、専用の固定確認を読む。質問だけで送信しない。"
+        },
+        {
+          "id": "discovery-05",
+          "speaker": "misaki",
+          "text": "はい、今読み上げた二千六十円の内容で、注文を送信してください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の現行確認の読み上げ完了と内容2,060円を実際に確かめてから再生する。"
+          },
+          "purpose": "読み終えた現在版への明示承認。注文は1件だけ。"
+        }
+      ]
+    },
+    {
+      "id": "ja-burger-group",
+      "storeId": "tablecast-koharu",
+      "title": "Westward Burgers Kyotoで3人のバーガーを組み立てる",
+      "guestCount": 3,
+      "turns": [
+        {
+          "id": "burger-01",
+          "speaker": "rin",
+          "text": "カスタムバーガーを一つ。ブリオッシュ、ビーフ、チェダー、ハウスソースで、チェダーを一つ追加してください。",
+          "cue": {
+            "type": "after_previous",
+            "description": "空カート・3名・日本語・プランなしで開始する。"
+          },
+          "purpose": "1,380円にチェダー追加150円。1人目の明細1,530円。"
+        },
+        {
+          "id": "burger-02",
+          "speaker": "wataru",
+          "text": "別のカスタムバーガーを一つ。ブリオッシュ、ビーフ、チーズなし、マスタードで、玉ねぎを抜いてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "2人目を別明細にし、チーズなしで100円減額、1,280円。"
+        },
+        {
+          "id": "burger-03",
+          "speaker": "aoi",
+          "text": "もう一つは、全粒粉、植物由来パティ、チェダー、ハウスソースで、アボカドを一つ追加してください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "3人目の必須選択と有料追加。1,380+50+150+200=1,780円。"
+        },
+        {
+          "id": "burger-04",
+          "speaker": "rin",
+          "text": "最初のバーガーのチェダー追加を、一つから二つに変えてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "数量付き追加の訂正を、続く重なり入力と区別する。"
+        },
+        {
+          "id": "burger-05",
+          "speaker": "aoi",
+          "text": "シーソルトフライも二つお願いします。",
+          "cue": {
+            "type": "overlap_previous",
+            "description": "burger-04の客音声開始から250ms後に重ねる。前の客音声の途中であることをクリップ実長で確認する。",
+            "offsetMs": 250
+          },
+          "purpose": "前の客と声が重なる。聞き返しを許容し、未確認の数量を確定しない。"
+        },
+        {
+          "id": "burger-06",
+          "speaker": "rin",
+          "text": "声が重なりました。最初のバーガーのチェダー追加は二つ、フライは二つでお願いします。ほかの二つのバーガーはそのままです。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "重なり後に意図を明確化。追加を重複させず、3バーガー4,740円とフライ2個1,160円。"
+        },
+        {
+          "id": "burger-07",
+          "speaker": "wataru",
+          "text": "すみません、フライは一つに訂正してください。まだ注文を送らないでください。",
+          "cue": {
+            "type": "during_live_response",
+            "description": "burger-06に対する本物の店員TTSが聞こえ始めてから600ms後に再生する。",
+            "offsetMs": 600
+          },
+          "purpose": "本物の店員発話中に割り込み。3バーガーとフライ1個で5,320円へ訂正。"
+        },
+        {
+          "id": "burger-08",
+          "speaker": "aoi",
+          "text": "三つのバーガーとフライ一つ、五千三百二十円の内容を、もう一度読み上げてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "訂正後の現行確認を要求する。新しい確認がなければ承認に進まない。"
+        },
+        {
+          "id": "burger-09",
+          "speaker": "rin",
+          "text": "はい、今確認した五千三百二十円の内容で、注文を送信してください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "現行確認の読み上げが完了し、5,320円・3バーガー・フライ1個と一致してから再生する。"
+          },
+          "purpose": "3人分の共有カートへの明示承認。送信済み注文を重複作成しない。"
+        }
+      ]
+    },
+    {
+      "id": "ja-assisted-course",
+      "storeId": "tablecast-komorebi",
+      "title": "京料理こもれび四条店でゆっくりコースを相談する",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "assisted-01",
+          "speaker": "harue",
+          "text": "この画面は初めてなので、話す速さを零点八倍にしてください。",
+          "cue": {
+            "type": "after_previous",
+            "description": "2名・京の三皿コース・音声開始を画面で確認して開始する。"
+          },
+          "purpose": "利用者が明示した話速0.8倍に変更する。年齢から能力を推測しない。"
+        },
+        {
+          "id": "assisted-02",
+          "speaker": "makoto",
+          "text": "京の三皿コースは、二人で四千四百円ですか。選べる料理を教えてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "2,200円×2名、対象はお造り・唐揚げ・枝豆、各人3品までの登録ルールを説明する。"
+        },
+        {
+          "id": "assisted-03",
+          "speaker": "harue",
+          "text": "まず、枝豆を二つお願いします。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "プラン対象の枝豆2個。料理分の追加請求をせず、人数と対象品の上限を保つ。"
+        },
+        {
+          "id": "assisted-04",
+          "speaker": "makoto",
+          "text": "画面で内容を確認したいです。確認画面を開いてください。まだ注文は送りません。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "GUI確認を開くが注文を確定しない。"
+        },
+        {
+          "id": "assisted-05",
+          "speaker": "harue",
+          "text": "料理を出す順番は、店員さんに相談したいです。呼んでいただけますか。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "自動配膳を装わず、スタッフ呼出しへつなぐ。"
+        }
+      ]
+    },
+    {
+      "id": "en-us-uk-sake",
+      "storeId": "tablecast-komorebi",
+      "title": "米国英語と英国英語の2人が京料理を選ぶ",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "usuk-01",
+          "speaker": "alex_us",
+          "text": "Could you compare Tsukinagi and Yukiakari? We would like to hear about their flavours before ordering.",
+          "cue": {
+            "type": "after_previous",
+            "description": "2名・English・空カート・プランなしで開始する。"
+          },
+          "purpose": "USアクセントで相談。登録された香味のみを比較し、まだ追加しない。"
+        },
+        {
+          "id": "usuk-02",
+          "speaker": "sam_uk",
+          "text": "For Tsukinagi, how much are the sixty and ninety millilitre servings?",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "UKアクセントを同じ卓で受ける。60ml620円、90ml780円を説明する。"
+        },
+        {
+          "id": "usuk-03",
+          "speaker": "alex_us",
+          "text": "One Tsukinagi, ninety millilitres, chilled, please.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "冷酒90ml1個780円を追加する。"
+        },
+        {
+          "id": "usuk-04",
+          "speaker": "sam_uk",
+          "text": "And one three-fish sashimi selection, with no extra garnishes, please.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "薬味を追加せずお造り1個1,280円。合計2,060円。"
+        },
+        {
+          "id": "usuk-05",
+          "speaker": "alex_us",
+          "text": "Please read back the order and the total before sending it.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "英語の現行確認を要求し、まだ送信しない。"
+        },
+        {
+          "id": "usuk-06",
+          "speaker": "sam_uk",
+          "text": "Yes, please send the order you have just read back, for two thousand and sixty yen.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "実際の英語確認が読み終わり、2,060円の現行版であることを確かめてから再生する。"
+          },
+          "purpose": "現在版の読み上げを受けた明示承認。"
+        }
+      ]
+    },
+    {
+      "id": "en-india-china-dietary",
+      "storeId": "tablecast-koharu",
+      "title": "インド英語と中国語背景の英語で食事条件を相談する",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "dietary-01",
+          "speaker": "priya_india",
+          "text": "I avoid beef for religious reasons, and I also avoid eggs. Does the mushroom and plant-based patty burger contain eggs or dairy?",
+          "cue": {
+            "type": "after_previous",
+            "description": "2名・English・空カート・プランなしで開始する。"
+          },
+          "purpose": "本人申告を条件にする。植物由来パティでも卵入りソースとチェダーが登録され、全原材料とヴィーガン適合はunknown。"
+        },
+        {
+          "id": "dietary-02",
+          "speaker": "wei_china",
+          "text": "I do not drink alcohol, including alcohol used in cooking. Are all the ingredients in the house pickles confirmed?",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "ハウスピクルスの漬け液詳細は未登録。アルコール不使用を推測しない。"
+        },
+        {
+          "id": "dietary-03",
+          "speaker": "priya_india",
+          "text": "Please do not add either dish yet. Removing one topping would not confirm all the ingredients, would it?",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "登録された注意点を保ち、具材除去だけで適合を保証しない。"
+        },
+        {
+          "id": "dietary-04",
+          "speaker": "wei_china",
+          "text": "Please do not guess. Could you ask a member of staff to check the ingredients with us?",
+          "cue": {
+            "type": "during_live_response",
+            "description": "dietary-03への本物の英語TTSが開始してから500ms後に再生する。",
+            "offsetMs": 500
+          },
+          "purpose": "本物の返答への割り込み。未確認情報を断定せずスタッフ呼出し。"
+        },
+        {
+          "id": "dietary-05",
+          "speaker": "priya_india",
+          "text": "While we wait, one yuzu citrus soda, please. Keep it in the basket for now.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "飲料1個480円のみ追加。資料にない適合を保証しない。"
+        },
+        {
+          "id": "dietary-06",
+          "speaker": "wei_china",
+          "text": "And one oolong tea, please. We have not decided to send the order yet.",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "烏龍茶1個420円を追加。飲料2個900円、未送信を維持する。"
+        }
+      ]
+    },
+    {
+      "id": "ja-confirmation-reapproval",
+      "storeId": "tablecast-komorebi",
+      "title": "読み上げ中の訂正で古い確認を失効し再承認する",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "confirm-01",
+          "speaker": "yuto",
+          "text": "枝豆を二つお願いします。",
+          "cue": {
+            "type": "after_previous",
+            "description": "2名・日本語・プランなし・空カートで開始する。"
+          },
+          "purpose": "枝豆2個780円をカートへ追加する。"
+        },
+        {
+          "id": "confirm-02",
+          "speaker": "misaki",
+          "text": "注文内容と合計を読み上げて、確認させてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "確認Aを準備し読み上げる。まだ送信しない。"
+        },
+        {
+          "id": "confirm-03",
+          "speaker": "yuto",
+          "text": "待ってください。枝豆は一つに訂正してください。",
+          "cue": {
+            "type": "during_live_response",
+            "description": "confirm-02が作った専用確認TTS開始から400ms後に再生する。短い固定読み上げが終わる前であることを観測する。",
+            "offsetMs": 400
+          },
+          "purpose": "確認Aの読み上げ中に割り込み。古い確認を失効し、カート390円へ訂正。"
+        },
+        {
+          "id": "confirm-04",
+          "speaker": "misaki",
+          "text": "それでいいかな。まだ二人で相談しています。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "曖昧な言い回しと相談中の意思を承認として送信しない。"
+        },
+        {
+          "id": "confirm-05",
+          "speaker": "yuto",
+          "text": "枝豆一つ、三百九十円の内容を、もう一度読み上げてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "訂正後の現在版で確認Bを作り直す。"
+        },
+        {
+          "id": "confirm-06",
+          "speaker": "misaki",
+          "text": "はい、今読み上げた枝豆一つ、三百九十円で、注文を送信してください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "確認Bの読み上げ完了、枝豆1個390円、現在のcart/config版の一致を確かめてから再生する。"
+          },
+          "purpose": "確認Bを読み終えた後だけ明示承認。AではなくBのsnapshotで1件送信。"
+        }
+      ]
+    },
+    {
+      "id": "ja-stop-resume",
+      "storeId": "tablecast-koharu",
+      "title": "音声停止中の入力を遮断しカートと注文を保つ",
+      "guestCount": 2,
+      "turns": [
+        {
+          "id": "stop-01",
+          "speaker": "wataru",
+          "text": "カスタムバーガーを一つ。ブリオッシュ、ビーフ、チェダー、ハウスソースでお願いします。",
+          "cue": {
+            "type": "after_previous",
+            "description": "2名・日本語・プランなし。正規のGUI確認で送信したフライ1個580円を事前に用意し、空カートから開始する。"
+          },
+          "purpose": "通常の1,380円の明細を追加。事前に用意した注文済みフライ580円は保持する。"
+        },
+        {
+          "id": "stop-02",
+          "speaker": "rin",
+          "text": "そのバーガーに、チェダーを一つ追加してください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "1,530円のカート更新がDBへ反映した後でGUIの音声停止を押す。"
+        },
+        {
+          "id": "stop-03",
+          "speaker": "wataru",
+          "text": "カスタムバーガーを二つ追加してください。",
+          "cue": {
+            "type": "after_previous",
+            "description": "stop-02のカートcommitを確認してGUIの音声停止を押す。停止表示、Room切断、capture停止を確認してからこの客音声を入力側で再生する。",
+            "offsetMs": 1000
+          },
+          "purpose": "STOP中の音声入力が送信・認識・追加されないことを確認する。"
+        },
+        {
+          "id": "stop-04",
+          "speaker": "rin",
+          "text": "今のカートは、バーガー一つにチェダーを一つ追加した内容のままですか。まだ送らないでください。",
+          "cue": {
+            "type": "after_previous",
+            "description": "STOP中の無変更を確認し、GUIで明示再開して接続完了後に再生する。固定時間だけで再開完了と判定しない。"
+          },
+          "purpose": "GUIで明示再開した後、カート1,530円と既注文フライ580円の保持を確認する。"
+        },
+        {
+          "id": "stop-05",
+          "speaker": "wataru",
+          "text": "そのバーガーの注文内容を、もう一度確認させてください。",
+          "cue": {
+            "type": "after_live_response",
+            "description": "直前の本物の店員応答が終わり、画面の状態を確認してから再生する。"
+          },
+          "purpose": "再開後の現行確認を作る。既注文を再送せず、カート分1,530円と既注文580円を区別する。"
+        }
+      ]
+    }
+  ],
+  "staffExamples": [
+    {
+      "id": "staff-example-ja-comparison",
+      "speaker": "staff_ja_example",
+      "text": "月凪は青りんごを思わせる香りと軽い後口、雪灯は米のうま味とすっきりした辛口です。どちらがお好みに近いですか。",
+      "usage": "reference_only",
+      "purpose": "日本語の自然な接客を検討する演出例。E2Eへ入力せず、本物の応答の代わりにしない。"
+    },
+    {
+      "id": "staff-example-ja-clarify",
+      "speaker": "staff_ja_example",
+      "text": "お声が重なりました。チェダーの追加は二つ、フライも二つということで合っていますか。",
+      "usage": "reference_only",
+      "purpose": "重なり後の確認の演出例。実際のモデルが同じ文を返すことを要求しない。"
+    },
+    {
+      "id": "staff-example-en-dietary",
+      "speaker": "staff_en_example",
+      "text": "The recorded recipe includes cheddar and an egg-based sauce. The full ingredients and cross-contact have not been confirmed. I can ask a member of staff to check with you.",
+      "usage": "reference_only",
+      "purpose": "食事条件の確認に必要な意味の参考。安全保証や実応答の証拠にしない。"
+    }
+  ]
+}

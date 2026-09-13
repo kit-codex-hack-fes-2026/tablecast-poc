@@ -1,7 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { deploymentOwner, tableSessions, stores } from "../apps/api/src/db/business-schema";
-import { account, user, organization } from "../apps/api/src/db/auth-schema";
+import {
+  deploymentOwner,
+  tableSessions,
+  tableEvents,
+  stores,
+} from "../apps/api/src/db/business-schema";
+import { account, user, organization, member } from "../apps/api/src/db/auth-schema";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,6 +21,8 @@ import {
 } from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
 import { configurationSchema } from "../apps/api/src/schema";
+import { voiceTurnSchema } from "../apps/api/src/modules/voice/model";
+import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
 
 const execute = promisify(execFile);
@@ -169,9 +176,10 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       const products = catalogs.results.flatMap(
         (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
       );
-      expect(products).toHaveLength(180);
-      for (const product of products) {
+      expect(products).toHaveLength(132);
+      for (const product of products.filter((item) => item.imageKey))
         expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
+      for (const product of products) {
         expect(product.imageKind).toBe("illustration");
         expect(product.allergens.note.ja).toContain("混入は未確認");
         expect(product.allergens.note.en).toContain("cross-contact");
@@ -234,6 +242,32 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         ),
       }).toMatchObject({ results: [] });
       expect(await db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
+      const conversation = (
+        await db
+          .select({ data: tableEvents.data_json })
+          .from(tableEvents)
+          .where(eq(tableEvents.table_session_id, "tablecast-komorebi-table-02-session"))
+          .orderBy(tableEvents.cursor)
+      )
+        .map((row) =>
+          z
+            .object({
+              source: z.literal("synthetic-demo"),
+              role: z.string().optional(),
+              text: z.string().optional(),
+              speaker: voiceTurnSchema.shape.speaker,
+            })
+            .parse(JSON.parse(row.data)),
+        )
+        .filter((line) => line.role === "user");
+      expect(new Set(conversation.map((line) => line.speaker?.id))).toEqual(
+        new Set([
+          "tablecast-komorebi-table-02-session-synthetic-stream:0",
+          "tablecast-komorebi-table-02-session-synthetic-stream:1",
+          null,
+        ]),
+      );
+      expect(conversation.some((line) => line.text?.includes("一つに訂正"))).toBe(true);
       const reserved = "tablecast-komorebi-table-01-session";
       await db
         .update(tableSessions)
@@ -263,7 +297,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
         ),
       };
-      expect(seededIcons.results.length).toBeGreaterThan(40);
+      expect(seededIcons.results.length).toBe(11);
       for (const { url } of seededIcons.results) {
         expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
         const image = await platform.env.TABLECAST_MEDIA.get(
@@ -314,11 +348,18 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           sql`SELECT COUNT(*) count FROM stores s JOIN organization o ON o.id=s.organization_id AND o.name=s.name`,
         ),
       ).toEqual({ count: 3 });
-      expect(
-        await db.get(
-          sql`SELECT COUNT(*) count FROM member m JOIN stores s ON s.organization_id=m.organization_id`,
-        ),
-      ).toEqual({ count: 42 });
+      const memberships = await db
+        .select({ storeId: stores.id, role: member.role })
+        .from(member)
+        .innerJoin(stores, eq(stores.organization_id, member.organizationId));
+      expect(memberships).toHaveLength(9);
+      for (const storeId of ["tablecast-komorebi", "tablecast-akari", "tablecast-koharu"])
+        expect(
+          memberships
+            .filter((membership) => membership.storeId === storeId)
+            .map((membership) => membership.role)
+            .sort(),
+        ).toEqual(["admin", "member", "owner"]);
       expect(await db.get(sql`SELECT COUNT(*) count FROM team`)).toEqual({ count: 0 });
       expect(repeated).toEqual(counts);
       expect(

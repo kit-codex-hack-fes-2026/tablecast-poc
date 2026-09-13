@@ -26,9 +26,9 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     const data: DemoCredentials = {
-      email: "owner@tablecast.example",
+      email: "tablecast-owner@example.test",
       password: randomUUID().replaceAll("-", ""),
-      otherEmail: "koharu@tablecast.example",
+      otherEmail: "tablecast-koharu@example.test",
       otherPassword: randomUUID().replaceAll("-", ""),
       baseTime: Date.now(),
       profile,
@@ -60,6 +60,8 @@ async function seed() {
     if (!(await portAvailable(runtime.ports.web)))
       throw new Error("開発サーバーをCtrl+Cで停止してからリセットしてください。");
     await rm(runtime.state, { recursive: true, force: true });
+    credentials.email = "tablecast-owner@example.test";
+    credentials.otherEmail = "tablecast-koharu@example.test";
     credentials.profile = profile;
     credentials.baseTime = Date.now();
     await writeFile(

@@ -17,7 +17,7 @@ export function bilingual(
 const stores = [
   {
     id: "tablecast-komorebi",
-    name: "こもれび · Komorebi",
+    name: "京料理こもれび四条店",
     label: "こもれび",
     english: "Komorebi",
   },
@@ -29,9 +29,9 @@ const stores = [
   },
   {
     id: "tablecast-koharu",
-    name: "こはる · Koharu",
-    label: "こはる",
-    english: "Koharu",
+    name: "Westward Burgers Kyoto",
+    label: "Westward",
+    english: "Westward",
   },
 ];
 const categories = [
@@ -914,6 +914,14 @@ function allergenRecord(
 
 export function demoStores(profile: "smoke" | "demo" | "history") {
   return stores.map((store) => {
+    if (store.id === "tablecast-koharu") {
+      return {
+        id: store.id,
+        name: store.name,
+        configuration: westwardConfiguration(store.id, profile),
+        tableCount: profile === "smoke" ? 2 : 12,
+      };
+    }
     const groups: Modifier[] = groupDefinitions.map((group) => ({
       id: `${store.id}-${group.key}`,
       text: bilingual(group.ja, group.en),
@@ -1069,10 +1077,10 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
         {
           id: `${store.id}-set`,
           text: bilingual(
-            "三品選べる晩酌セット",
-            "Choose-three supper set",
-            "お造り・唐揚げ・枝豆から一人三品まで選べます。同じ料理も一品として数えます。",
-            "Choose up to three plates per person from sashimi, fried chicken and edamame. Repeated dishes each count as one plate.",
+            "京の三皿コース",
+            "Kyoto three-plate course",
+            "お造り・唐揚げ・枝豆から一人三品まで選べる定額コースです。同じ料理も一品として数えます。提供順の自動管理はありません。",
+            "A fixed-price course of up to three plates per person from sashimi, fried chicken and edamame. Repeated dishes each count as one plate. Serving order is arranged by staff.",
           ),
           pricePerPerson: 2200,
           durationMinutes: 90,
@@ -1102,5 +1110,328 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
       configuration,
       tableCount: profile === "smoke" ? 2 : 12,
     };
+  });
+}
+
+function westwardConfiguration(storeId: string, profile: "smoke" | "demo" | "history") {
+  const option = (key: string, ja: string, en: string, priceDelta = 0) => ({
+    id: `${storeId}-${key}`,
+    text: bilingual(ja, en),
+    priceDelta,
+    available: true,
+    maxQuantity: 1,
+    requires: [],
+    excludes: [],
+  });
+  const bun: Modifier = {
+    id: `${storeId}-bun`,
+    text: bilingual("バンズ", "Bun"),
+    kind: "single",
+    min: 1,
+    max: 1,
+    options: [
+      option("bun-brioche", "ブリオッシュ", "Brioche"),
+      option("bun-wholemeal", "全粒粉", "Wholemeal", 50),
+      option("bun-lettuce", "レタス包み", "Lettuce wrap", -100),
+    ],
+  };
+  const patty: Modifier = {
+    id: `${storeId}-patty`,
+    text: bilingual("パティ", "Patty"),
+    kind: "single",
+    min: 1,
+    max: 1,
+    options: [
+      option("patty-beef", "ビーフ", "Beef"),
+      option("patty-plant", "植物由来パティ", "Plant-based patty", 150),
+    ],
+  };
+  const cheese: Modifier = {
+    id: `${storeId}-cheese`,
+    text: bilingual("チーズ", "Cheese"),
+    kind: "single",
+    min: 1,
+    max: 1,
+    options: [
+      option("cheese-cheddar", "チェダー", "Cheddar"),
+      option("cheese-none", "チーズなし", "No cheese", -100),
+      option("cheese-pepper-jack", "ペッパージャック", "Pepper Jack", 80),
+    ],
+  };
+  const omit: Modifier = {
+    id: `${storeId}-omit`,
+    text: bilingual("抜く具材", "Ingredients to leave out"),
+    kind: "multiple",
+    min: 0,
+    max: 3,
+    options: [
+      option("omit-onion", "玉ねぎ抜き", "No onion"),
+      option("omit-tomato", "トマト抜き", "No tomato"),
+      option("omit-pickle", "ピクルス抜き", "No pickles"),
+    ],
+  };
+  const sauce: Modifier = {
+    id: `${storeId}-sauce`,
+    text: bilingual("ソース", "Sauce"),
+    kind: "single",
+    min: 1,
+    max: 1,
+    options: [
+      option("sauce-house", "ハウスソース", "House sauce"),
+      option("sauce-mustard", "マスタード", "Mustard"),
+      option("sauce-bbq", "スモーキーBBQ", "Smoky BBQ", 50),
+    ],
+  };
+  const extras: Modifier = {
+    id: `${storeId}-extras`,
+    text: bilingual("追加トッピング", "Extra toppings"),
+    kind: "quantity",
+    min: 0,
+    max: 4,
+    options: [
+      option("extras-cheddar", "チェダー追加", "Extra cheddar", 150),
+      option("extras-avocado", "アボカド", "Avocado", 200),
+      option("extras-bacon", "ベーコン", "Bacon", 250),
+    ].map((item) => ({ ...item, maxQuantity: 2 })),
+  };
+  const serving: Modifier = {
+    id: `${storeId}-beer-serving`,
+    text: bilingual("ビールの容量", "Beer serving"),
+    kind: "single",
+    min: 1,
+    max: 1,
+    options: [
+      option("beer-serving-small", "二百八十ミリリットル", "Two hundred and eighty millilitres"),
+      option(
+        "beer-serving-pint",
+        "四百七十三ミリリットル",
+        "Four hundred and seventy-three millilitres",
+        300,
+      ),
+    ],
+  };
+  const menu: {
+    key: string;
+    ja: string;
+    en: string;
+    price: number;
+    category: string;
+    ingredients: readonly [string, string];
+    contains: string[] | null;
+    modifiers?: Modifier[];
+    image?: string;
+    available?: boolean;
+  }[] = [
+    {
+      key: "westward-classic",
+      ja: "ウエストワード・カスタムバーガー",
+      en: "Westward custom burger",
+      price: 1380,
+      category: "burgers",
+      ingredients: [
+        "ブリオッシュ、ビーフ、チェダー、レタス、トマト、玉ねぎ、ピクルス、卵入りソース。パティは十分に加熱します",
+        "Brioche, fully cooked beef, cheddar, lettuce, tomato, onion, pickles and an egg-based sauce",
+      ],
+      contains: ["wheat", "egg", "milk", "mustard"],
+      modifiers: [bun, patty, cheese, omit, sauce, extras],
+      image: "westward-burger.png",
+    },
+    {
+      key: "chicken-burger",
+      ja: "グリルチキンバーガー",
+      en: "Grilled chicken burger",
+      price: 1280,
+      category: "burgers",
+      ingredients: [
+        "ブリオッシュ、十分に加熱した鶏肉、チェダー、野菜、卵入りソース",
+        "Brioche, fully cooked chicken, cheddar, vegetables and an egg-based sauce",
+      ],
+      contains: ["wheat", "egg", "milk", "mustard"],
+      modifiers: [bun, cheese, omit, sauce, extras],
+    },
+    {
+      key: "mushroom-burger",
+      ja: "きのこと植物由来パティのバーガー",
+      en: "Mushroom and plant-based patty burger",
+      price: 1480,
+      category: "burgers",
+      ingredients: [
+        "植物由来パティ、きのこ、ブリオッシュ、チェダー、野菜、卵入りソース。ヴィーガン対応や製造原材料の詳細は未確認です",
+        "Plant-based patty, mushrooms, brioche, cheddar, vegetables and an egg-based sauce; vegan suitability and full production ingredients are unverified",
+      ],
+      contains: null,
+      modifiers: [bun, cheese, omit, sauce, extras],
+    },
+    {
+      key: "fries",
+      ja: "シーソルトフライ",
+      en: "Sea-salt fries",
+      price: 580,
+      category: "sides",
+      ingredients: [
+        "じゃがいもと塩。揚げ油は他の商品と共用します",
+        "Potatoes and salt; frying oil is shared with other dishes",
+      ],
+      contains: [],
+      modifiers: [extras],
+    },
+    {
+      key: "onion-rings",
+      ja: "オニオンリング",
+      en: "Onion rings",
+      price: 680,
+      category: "sides",
+      ingredients: ["玉ねぎ、小麦粉と卵の衣", "Onion in a wheat-flour and egg batter"],
+      contains: ["wheat", "egg"],
+    },
+    {
+      key: "slaw",
+      ja: "ハウスコールスロー",
+      en: "House coleslaw",
+      price: 420,
+      category: "sides",
+      ingredients: ["キャベツ、にんじん、卵入りマヨネーズ", "Cabbage, carrot and egg mayonnaise"],
+      contains: ["egg"],
+    },
+    {
+      key: "pickles",
+      ja: "ハウスピクルス",
+      en: "House pickles",
+      price: 380,
+      category: "sides",
+      ingredients: [
+        "野菜の酢漬け。漬け液の詳細は未登録です",
+        "Pickled vegetables; full pickling ingredients are not recorded",
+      ],
+      contains: null,
+    },
+    {
+      key: "westward-ipa",
+      ja: "パシフィック・ウエストコーストIPA",
+      en: "Pacific West Coast IPA",
+      price: 880,
+      category: "craft-beer",
+      ingredients: [
+        "架空銘柄。麦芽とホップ、柑橘を思わせる香りと明瞭な苦味。アルコール6.5%。基本容量280ml",
+        "Fictional beer brewed with malt and hops, citrus-like aromas and a firm bitterness; 6.5% ABV, base serving 280ml",
+      ],
+      contains: ["barley"],
+      modifiers: [serving],
+      image: "westward-ipa.png",
+    },
+    {
+      key: "sunset-pale",
+      ja: "サンセット・ペールエール",
+      en: "Sunset pale ale",
+      price: 820,
+      category: "craft-beer",
+      ingredients: [
+        "架空銘柄。麦芽とホップ、穏やかな苦味。アルコール5.0%。基本容量280ml",
+        "Fictional beer brewed with malt and hops, with a gentle bitterness; 5.0% ABV, base serving 280ml",
+      ],
+      contains: ["barley"],
+      modifiers: [serving],
+    },
+    {
+      key: "nightfall-stout",
+      ja: "ナイトフォール・スタウト",
+      en: "Nightfall stout",
+      price: 920,
+      category: "craft-beer",
+      ingredients: [
+        "架空銘柄。焙煎麦芽の香り。アルコール6.0%。基本容量280ml。本日は売切です",
+        "Fictional beer with roasted-malt aromas; 6.0% ABV, base serving 280ml. Sold out today",
+      ],
+      contains: ["barley"],
+      modifiers: [serving],
+      available: false,
+    },
+    {
+      key: "yuzu-soda",
+      ja: "ゆずソーダ",
+      en: "Yuzu citrus soda",
+      price: 480,
+      category: "soft-drinks",
+      ingredients: ["ゆず果汁と炭酸水", "Yuzu juice and sparkling water"],
+      contains: [],
+      image: "yuzu-soda.png",
+    },
+    {
+      key: "oolong",
+      ja: "烏龍茶",
+      en: "Oolong tea",
+      price: 420,
+      category: "soft-drinks",
+      ingredients: ["冷たい烏龍茶", "Chilled oolong tea"],
+      contains: [],
+      image: "oolong.png",
+    },
+  ];
+  const products: Product[] = menu
+    .filter(
+      (item) =>
+        profile !== "smoke" ||
+        ["westward-classic", "fries", "westward-ipa", "yuzu-soda"].includes(item.key),
+    )
+    .map((item) => {
+      const text = bilingual(item.ja, item.en, item.ingredients[0], item.ingredients[1]);
+      text.ja.aliases = [
+        item.ja,
+        ...(item.key === "westward-classic" ? ["ハンバーガー", "カスタムバーガー"] : []),
+      ];
+      text.en.aliases = [item.en.toLowerCase()];
+      return {
+        id: `${storeId}-${item.key}`,
+        categoryId: item.category,
+        text,
+        price: item.price,
+        available: item.available ?? true,
+        tags: item.category === "craft-beer" ? ["alcohol"] : [],
+        imageKey: item.image ? demoImageKey(item.image) : null,
+        imageKind: "illustration",
+        modifiers: item.modifiers ?? [],
+        allergens: allergenRecord(item.contains, item.ingredients),
+      };
+    });
+  return configurationSchema.parse({
+    categories: (
+      [
+        ["burgers", "バーガー", "Burgers"],
+        ["sides", "サイド", "Sides"],
+        ["craft-beer", "クラフトビール", "Craft beer"],
+        ["soft-drinks", "ソフトドリンク", "Soft drinks"],
+      ] as const
+    ).map(([id, ja, en]) => ({ id, text: bilingual(ja, en) })),
+    products,
+    plans: [
+      {
+        id: `${storeId}-drinks`,
+        text: bilingual(
+          "クラフトビールとソフトドリンク 飲み放題",
+          "Craft beer and soft drinks selection",
+          "90分、基本容量の対象飲料を一人4杯まで。大容量は対象外です。",
+          "Ninety minutes, up to four base-size drinks per person. Larger servings are excluded.",
+        ),
+        pricePerPerson: 2800,
+        durationMinutes: 90,
+        lastOrderMinutesBeforeEnd: 20,
+        productIds: [],
+        categoryIds: ["craft-beer", "soft-drinks"],
+        tags: [],
+        maxPerOrder: 4,
+        maxTotalPerPerson: 4,
+        intervalSeconds: 60,
+        excludedOptionIds: [`${storeId}-beer-serving-pint`],
+        includedOptionSurcharge: false,
+      },
+    ],
+    cast: {
+      instructions: {
+        ja: "西海岸のタップルームのように親しみやすく案内します。バーガーの必須選択を一つずつ確認し、同じ卓の別の注文は別行に保ち、誰の訂正か曖昧なら確認します。ビールの苦味の好みを聞き、飲まない客にはソフトドリンクを案内します。合計と有料追加を明示し、明示承認後に注文します。宗教や食習慣、植物由来パティだけを根拠に適合を断言せず、不明な原材料や交差接触はスタッフへ引き継ぎます。銘柄とレシピは合成デモです。",
+        en: "Offer a friendly West Coast taproom welcome. Ask for required burger choices one at a time. Keep different burgers on separate lines in the shared table order and clarify ambiguous corrections. Ask about preferred bitterness and offer soft drinks to guests who do not drink alcohol. State extras and totals before explicit order approval. Do not infer dietary or religious suitability from identity or a plant-based patty; refer unverified ingredients and cross-contact to staff. Brands and recipes are fictional demo data.",
+      },
+      voice: { ja: null, en: null },
+      proactive: false,
+    },
   });
 }

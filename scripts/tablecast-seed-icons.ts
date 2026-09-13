@@ -5,6 +5,7 @@ export async function seedIdentityIcon(
   env: Pick<TablecastEnv, "TABLECAST_MEDIA">,
   kind: "user" | "store",
   identity: string,
+  portrait?: string,
 ) {
   const hash = createHash("sha256").update(`tablecast-icon-${kind}-${identity}`).digest("hex");
   const key = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-8${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
@@ -19,7 +20,8 @@ export async function seedIdentityIcon(
       : `<g fill="${colour}">${Array.from({ length: 5 }, (_, i) => `<ellipse cx="48" cy="30" rx="11" ry="19" transform="rotate(${i * 72} 48 48)"/>`).join("")}<circle cx="48" cy="48" r="9" fill="${background}"/></g>`;
   await env.TABLECAST_MEDIA.put(
     `tablecast/avatars/${key}`,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="16" fill="${background}"/>${mark}</svg>`,
+    portrait ??
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="16" fill="${background}"/>${mark}</svg>`,
     {
       httpMetadata: { contentType: "image/svg+xml" },
       customMetadata: { source: "synthetic-demo" },

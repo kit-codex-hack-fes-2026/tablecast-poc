@@ -3,26 +3,33 @@ import { demoStores } from "./tablecast-fixtures";
 import { configurationErrors } from "../apps/api/src/modules/catalog/pricing";
 
 describe("デモの構成データ", () => {
-  it("同じプロファイルから店舗境界と日英を持つ同じ180商品を作る", () => {
+  it("同じプロファイルから和食店とバーガー店の日英132商品を作る", () => {
     const stores = demoStores("demo");
     expect(stores).toEqual(demoStores("demo"));
     expect(new Set(stores.map((store) => store.id)).size).toBe(3);
-    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(180);
+    expect(stores.reduce((sum, store) => sum + store.configuration.products.length, 0)).toBe(132);
     expect(stores.reduce((sum, store) => sum + store.tableCount, 0)).toBe(36);
-    for (const store of stores) {
-      expect(configurationErrors(store.configuration)).toEqual([]);
+    const burgerProducts = stores
+      .filter((store) => store.id === "tablecast-koharu")
+      .flatMap((store) => store.configuration.products);
+    expect(burgerProducts).toHaveLength(12);
+    expect(burgerProducts.filter((product) => product.categoryId === "burgers")).toHaveLength(3);
+    expect(burgerProducts.filter((product) => product.categoryId === "craft-beer")).toHaveLength(3);
+    expect(burgerProducts.some((product) => product.imageKey === null)).toBe(true);
+    for (const store of stores.filter((item) => item.id !== "tablecast-koharu")) {
       const { products } = store.configuration;
       expect(products).toHaveLength(60);
       expect(products.filter((product) => product.categoryId === "sake")).toHaveLength(28);
       expect(products.filter((product) => product.categoryId === "drinks")).toHaveLength(8);
-      expect(
-        products.filter((product) => !["sake", "drinks"].includes(product.categoryId)),
-      ).toHaveLength(24);
       expect(products.slice(0, 3).map((product) => product.categoryId)).toEqual([
         "sake",
         "sashimi",
         "fried",
       ]);
+    }
+    for (const store of stores) {
+      expect(configurationErrors(store.configuration)).toEqual([]);
+      const { products } = store.configuration;
       expect(products.some((product) => /small|sharing|coffee|latte/.test(product.id))).toBe(false);
       for (const product of products) {
         for (const locale of ["ja", "en"] as const) {
@@ -51,13 +58,13 @@ describe("デモの構成データ", () => {
     ).toBe(true);
     expect(products.some((product) => product.allergens.evidence === "unknown")).toBe(true);
   });
-  it("温度・容量・薬味など料理に応じた24グループ96選択肢を持つ", () => {
+  it("温度・容量・薬味・バーガーの組立てを料理に応じた選択肢で表す", () => {
     const products = demoStores("demo").flatMap((store) => store.configuration.products);
     const groups = new Map(
       products.flatMap((product) => product.modifiers.map((group) => [group.id, group] as const)),
     );
-    expect(groups.size).toBe(24);
-    expect([...groups.values()].reduce((sum, group) => sum + group.options.length, 0)).toBe(96);
+    expect(groups.size).toBe(23);
+    expect([...groups.values()].reduce((sum, group) => sum + group.options.length, 0)).toBe(83);
     expect(new Set([...groups.values()].map((group) => group.kind))).toEqual(
       new Set(["single", "multiple", "quantity"]),
     );

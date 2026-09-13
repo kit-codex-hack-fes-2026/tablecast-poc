@@ -146,6 +146,8 @@ Codexの受付反応とレビュー結果を確認する。指摘への対応と
 
 1. 起動URLで客向け画面を開く。
 2. `/admin/live` へログインする。開発用の資格情報は、その環境の `.local/demo.json` にある。
+   `emulate@0.11.1`のアイコン表示には[Bunの最小パッチ](../patches/README.md)を使い、通常の依存導入で適用する。ランダムスタッフ生成を廃止し、Fakerへの依存を削除した。
+   新規seedのGoogle選択画面では、店舗・氏名・役割・アイコンから8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBや`.local/demo.json`は通常の再seedで変更しない。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻し、パスワードを保持する。
 3. 客向け画面の端末コードを卓へ割り当てる。
 4. 日英表示、商品追加、確認、注文を試す。メールはMailpitで確認する。
 
@@ -189,18 +191,21 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 ## 5. 日常の操作
 
-| コマンド                                | 用途                                                    |
-| --------------------------------------- | ------------------------------------------------------- |
-| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                     |
-| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                     |
-| `bun run services:status`               | ホスト開発のComposeサービスを確認する                   |
-| `bun run services:down`                 | ホスト開発のcontainer・networkを片付ける。volumeは保持  |
-| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要               |
-| `bun run check`                         | format・lint・typecheck・無課金テスト                   |
-| `bun run build`                         | 配備用Workersのbuild                                    |
-| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行 |
-| `bun run demo:play`                     | 背景卓を一段階進める                                    |
-| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否      |
+| コマンド                                | 用途                                                      |
+| --------------------------------------- | --------------------------------------------------------- |
+| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                       |
+| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                       |
+| `bun run services:status`               | ホスト開発のComposeサービスを確認する                     |
+| `bun run services:down`                 | ホスト開発のcontainer・networkを片付ける。volumeは保持    |
+| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                 |
+| `bun run check`                         | format・lint・typecheck・無課金テスト                     |
+| `bun run build`                         | 配備用Workersのbuild                                      |
+| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行   |
+| `bun run demo:play`                     | 背景卓を一段階進める                                      |
+| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否        |
+| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する |
+
+デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。

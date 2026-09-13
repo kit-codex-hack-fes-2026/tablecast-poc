@@ -1,0 +1,146 @@
+{
+  "provider": "Inworld",
+  "model": "inworld-tts-2",
+  "catalogCheckedAt": "2026-09-13",
+  "catalogSource": "https://docs.inworld.ai/api-reference/voiceAPI/voiceservice/list-voices",
+  "synthesisSource": "https://docs.inworld.ai/api-reference/ttsAPI/texttospeech/synthesize-speech",
+  "accentSource": "https://docs.inworld.ai/tts/capabilities/multilingual",
+  "notes": [
+    "全voiceは認証付き標準Voice APIでsource=SYSTEMと実在を確認した。年齢はペルソナの演出指定であり、標準voiceの実年齢ではない。",
+    "US/UK/Indiaは標準voiceの言語・説明と対応するlocaleを使用。Chinaは中国語の標準voiceへEnglishと中国語背景のアクセント維持を明示する。en-CNをAPIの対応localeと仮定しない。",
+    "春江は成熟した声として説明されるWinifredを日本語へcross-lingual合成する。英語アクセントを残さない指定と実聴確認を分ける。",
+    "音声素材の生成は製品のcast.voice設定を変更しない。"
+  ],
+  "voices": {
+    "misaki": {
+      "voiceId": "Hina",
+      "language": "ja-JP",
+      "speakingRate": 1.0,
+      "instruction": "A Japanese woman in her early thirties, warm and curious. Speak natural standard Japanese in a relaxed, clear conversational voice, with a soft middle register.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "A young adult female with a smooth, clear voice speaking in a formal, narrative tone.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "yuto": {
+      "voiceId": "Satoshi",
+      "language": "ja-JP",
+      "speakingRate": 0.97,
+      "instruction": "A Japanese man in his mid-thirties, composed and considerate. Speak natural standard Japanese in a grounded conversational voice. Keep the delivery calm and understated, without theatrical emphasis.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "Dramatic, expressive male Japanese voice filled with energy",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "rin": {
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "speakingRate": 1.03,
+      "instruction": "A Japanese woman in her late twenties, bright and matter-of-fact. Speak natural standard Japanese with crisp, friendly conversational delivery. Make quantities and ingredient names clear.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "Friendly, young adult Japanese female voice",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "wataru": {
+      "voiceId": "Satoshi",
+      "language": "ja-JP",
+      "speakingRate": 1.01,
+      "instruction": "A Japanese man in his late twenties with a modest, relaxed manner. Speak natural standard Japanese at an ordinary conversational pace. Use a lower, quieter register, without shouting or theatrical emphasis.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "Dramatic, expressive male Japanese voice filled with energy",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "aoi": {
+      "voiceId": "Hina",
+      "language": "ja-JP",
+      "speakingRate": 0.98,
+      "instruction": "A Japanese woman in her late twenties with a calm, thoughtful manner. Speak natural standard Japanese in an even, slightly lower-pitched conversational voice. Keep words clear without sounding formal.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "A young adult female with a smooth, clear voice speaking in a formal, narrative tone.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "harue": {
+      "voiceId": "Winifred",
+      "language": "ja-JP",
+      "speakingRate": 0.92,
+      "instruction": "A mature Japanese woman in her late sixties, warm and self-assured. Speak fluent native standard Japanese without an English accent, in an unhurried conversational voice. Keep the lower-middle register natural and clear, without exaggerating age or frailty.",
+      "providerNativeLanguage": "EN_GB",
+      "providerDescription": "Mature, warm British female voice, ideal for audiobooks, documentary, and narration.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "makoto": {
+      "voiceId": "Haruto",
+      "language": "ja-JP",
+      "speakingRate": 0.98,
+      "instruction": "A Japanese man around seventy, calm and considerate. Speak natural standard Japanese in a mature, grounded conversational voice. Keep the pace comfortable and words distinct, without theatrical ageing or exaggerated frailty.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "A slow, deliberate, and gravelly old male voice speaking in a reminiscent tone.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "alex_us": {
+      "voiceId": "Alex",
+      "language": "en-US",
+      "speakingRate": 1.0,
+      "instruction": "An adult man in his early thirties. Speak fluent English with a natural General American accent, in a relaxed and inquisitive conversational tone. Keep the delivery clear and understated.",
+      "providerNativeLanguage": "EN_US",
+      "providerDescription": "Energetic and expressive mid-range male voice, with a mildly nasal quality",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "sam_uk": {
+      "voiceId": "Olivia",
+      "language": "en-GB",
+      "speakingRate": 1.0,
+      "instruction": "An adult woman in her early thirties. Speak fluent English with a natural contemporary British accent, warm and conversational. Keep the accent subtle and clear, without exaggerated posh delivery.",
+      "providerNativeLanguage": "EN_GB",
+      "providerDescription": "Young, British female with a friendly and helpful tone, conveying confidence and efficiency.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "priya_india": {
+      "voiceId": "Priya",
+      "language": "en-IN",
+      "speakingRate": 0.98,
+      "instruction": "An adult woman in her late thirties. Speak fluent English with a natural, subtle Indian English accent. Use clear, composed conversational delivery and retain the native Indian accent without exaggeration.",
+      "providerNativeLanguage": "EN_IN",
+      "providerDescription": "Even-toned female voice with an Indian accent",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "wei_china": {
+      "voiceId": "Ming",
+      "language": "en",
+      "speakingRate": 0.98,
+      "instruction": "An adult man in his early forties whose first language is Mandarin Chinese. Speak fluent English while retaining a subtle, natural Mandarin-influenced Chinese accent. Use clear, composed conversational delivery. Do not switch to Chinese or exaggerate the accent.",
+      "providerNativeLanguage": "ZH_CN",
+      "providerDescription": "A young adult male with a smooth, clear voice speaking slowly and deliberately in a quiet environment.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "staff_ja_example": {
+      "voiceId": "Asuka",
+      "language": "ja-JP",
+      "speakingRate": 1.0,
+      "instruction": "A fictional AI restaurant attendant with the voice of an adult woman in her mid-thirties. Speak natural standard Japanese, warm, composed and conversational, with clear product names and no exaggerated performance.",
+      "providerNativeLanguage": "JA_JP",
+      "providerDescription": "Friendly, young adult Japanese female voice",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    },
+    "staff_en_example": {
+      "voiceId": "Eleanor",
+      "language": "en-GB",
+      "speakingRate": 1.0,
+      "instruction": "A fictional AI restaurant attendant with the voice of an adult woman in her mid-thirties. Speak natural British English, warm, composed and conversational, with clear product names and no exaggerated performance.",
+      "providerNativeLanguage": "EN_GB",
+      "providerDescription": "Polished, approachable British female voice for support and learning.",
+      "source": "SYSTEM",
+      "listeningReview": "not_recorded"
+    }
+  }
+}

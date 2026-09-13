@@ -6,7 +6,7 @@ Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider
 
 `bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。URL・ポートは `.local/runtime.json`、メール一覧はその `ports.mailpit` の `http://127.0.0.1:<port>`。既存データは保持する。
 
-Google の選択画面では `tablecast-owner@example.test` と `tablecast-member@example.test` を利用できる。これらは実在ユーザーを表さない。デモ管理者の認証情報は `.local/demo.json`。デモ seed だけが開発用管理者のメールを確認済みにする。
+Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedでは既存の資格情報を維持する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
 
 `/account` で名前・画像・ログイン中の端末・Google連携・パスキーを管理する。店舗とBetter Authの組織は1対1で、チーム階層を使わない。`/organisations` は店舗一覧、`/stores/new` は店舗作成、`/admin/stores/:storeId/members` はその店舗のメンバー、`/admin/stores/:storeId/invitations` は招待一覧である。
 
@@ -46,7 +46,9 @@ Cloudflare Email Service で送信ドメインを検証し、送信可能なメ�
 
 ## デモの所属とローカルID
 
-Googleモックでは佐藤 晴香（`tablecast-owner@example.test`、こもれびの管理者）、田中 蓮（`tablecast-member@example.test`、こもれび担当）、小林 直子（`tablecast-akari@example.test`、あかり担当）、山本 翼（`tablecast-koharu@example.test`、こはるの管理者）を選べる。伊藤 葵（`tablecast-link@example.test`）は未所属からの導線確認用。すべて架空の人物である。名前・画像を変更した既存ユーザーのプロフィールはseedで上書きしない。
+GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)を使う。各店舗の組織にowner・admin・memberを1名ずつ登録し、京料理こもれび四条店・あかりのownerである佐藤 晴香を共有するため、人物は8人・所属は9件となる。Westward Burgers Kyotoのownerは山本 翼、京料理こもれび四条店の伊藤 葵はmemberである。具体的な[氏名・role・メール一覧](demo/stores.md#店舗と組織)を参照する。`tablecast-link@example.test`は未所属の連携確認専用で、店舗メンバーに数えない。
+
+各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・資格情報を上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
 
 seedはユーザー画像と店舗アイコンをローカルで生成し、R2へ保存する。未設定の場合だけ補い、保存済みの画像を保持する。店舗アイコンはBetter Authの組織の`logo`を使用し、`/admin/stores/$storeId/profile`で責任者・管理者が変更できる。ユーザー画像と共通の形式・サイズ検証を行う。
 

@@ -1,5 +1,10 @@
 import { renameSync, writeFileSync } from "node:fs";
 import { createEmulator } from "emulate";
+import {
+  tablecastDemoIdentities,
+  tablecastDemoLinkIdentity,
+  tablecastDemoPortrait,
+} from "./tablecast-demo-identities";
 
 const preview = process.env.TABLECAST_ENV === "preview";
 const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
@@ -34,17 +39,12 @@ const emulator = await createEmulator({
       : `http://127.0.0.1:${port}`,
   seed: {
     google: {
-      users: [
-        { email: "tablecast-akari@example.test", name: "小林 直子", email_verified: true },
-        { email: "tablecast-koharu@example.test", name: "山本 翼", email_verified: true },
-        { email: "tablecast-link@example.test", name: "伊藤 葵", email_verified: true },
-        { email: "tablecast-owner@example.test", name: "佐藤 晴香", email_verified: true },
-        {
-          email: "tablecast-member@example.test",
-          name: "田中 蓮",
-          email_verified: true,
-        },
-      ],
+      users: [...tablecastDemoIdentities, tablecastDemoLinkIdentity].map((person) => ({
+        email: person.email,
+        name: `${person.name} · ${person.label}`,
+        picture: `data:image/svg+xml,${encodeURIComponent(tablecastDemoPortrait(person))}`,
+        email_verified: true,
+      })),
       oauth_clients: [
         {
           client_id: "tablecast-local-google",

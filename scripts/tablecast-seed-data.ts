@@ -5,7 +5,10 @@ import type { BatchItem } from "drizzle-orm/batch";
 import * as business from "../apps/api/src/db/business-schema";
 import * as identity from "../apps/api/src/db/auth-schema";
 import { seedIdentityIcon } from "./tablecast-seed-icons";
-import { fakerJA as faker } from "@faker-js/faker";
+import {
+  tablecastDemoIdentities,
+  tablecastDemoPortrait,
+} from "../apps/emulate/src/tablecast-demo-identities";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
 import {
   configurationErrors,
@@ -44,6 +47,11 @@ export function sampleLine(config: Configuration, index = 2): CartLine {
 }
 
 type SeedEvent = { storeId: string; sessionId: string; kind: string; data: string; at: number };
+function syntheticSpeaker(sessionId: string, index: number | null) {
+  const streamId = `${sessionId}-synthetic-stream`;
+  return { id: index === null ? null : `${streamId}:${index}`, streamId, words: [] };
+}
+
 function event(
   storeId: string,
   sessionId: string,
@@ -241,6 +249,7 @@ async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store,
             role: "user",
             locale,
             status: "completed",
+            speaker: syntheticSpeaker(sessionId, number % guestCount),
             text:
               locale === "ja"
                 ? `${productName}について教えてください。`
@@ -298,6 +307,7 @@ async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store,
             role: "user",
             locale,
             status: "completed",
+            speaker: syntheticSpeaker(sessionId, number === 3 ? null : (number + 1) % guestCount),
             text:
               locale === "ja"
                 ? "画面で確認して注文します。"
@@ -379,7 +389,7 @@ async function seedCurrentTables(
       continue;
     const at = baseTime - number * 3 * 60_000;
     const locale = number % 3 === 0 ? "en" : "ja";
-    const guestCount = 2 + (number % 3);
+    const guestCount = state === 2 ? 2 : 2 + (number % 3);
     const rule = state === 6 ? store.configuration.plans[0] : null;
     const plan = rule ? { id: rule.id, startedAt: at, rules: rule } : null;
     const lines = state === 2 || state === 3 ? [sampleLine(store.configuration)] : [];
@@ -402,6 +412,62 @@ async function seedCurrentTables(
       }),
       event(store.id, sessionId, "table.opened", { guestCount, locale }, at),
     ];
+    if (state === 2) {
+      const product = store.configuration.products.find((item) => item.id === lines[0]?.productId);
+      if (!product) throw new Error("背景卓の会話に対応する商品がありません。");
+      const dialogue = [
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 0),
+          text:
+            locale === "ja"
+              ? "ふたりで楽しめるおすすめを教えてください。"
+              : "Could you recommend something for the two of us?",
+        },
+        {
+          role: "assistant",
+          text: `${product.text[locale].displayName}${locale === "ja" ? "。" : ". "}${product.text[locale].description}`,
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 1),
+          text: locale === "ja" ? "それを二つお願いします。" : "Two of those, please.",
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 0),
+          text:
+            locale === "ja"
+              ? "すみません、一つに訂正してください。画面でも確認します。"
+              : "Sorry, please change that to one. We will check it on screen too.",
+        },
+        {
+          role: "assistant",
+          text:
+            locale === "ja"
+              ? `${product.text.ja.displayName}は一つでカートに入っています。注文はまだ送信していません。`
+              : `There is one ${product.text.en.displayName} in your basket. The order has not been sent yet.`,
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, null),
+          text:
+            locale === "ja"
+              ? "少し待ってください。相談してから注文します。"
+              : "Please give us a moment. We will decide together before ordering.",
+        },
+      ];
+      for (const [index, line] of dialogue.entries())
+        statements.push(
+          event(
+            store.id,
+            sessionId,
+            `voice.${line.role}`,
+            { ...line, locale, status: "completed" },
+            at + (index + 1) * 5000,
+          ),
+        );
+    }
     if ((state >= 3 && state <= 7) || closed) {
       const snapshot = snapshotFor(
         store,
@@ -567,80 +633,32 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   }
   const [firstRepair, ...remainingRepairs] = [...repairs, ...canonical];
   if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
+  const staff = tablecastDemoIdentities.map((person) => ({
+    ...person,
+    email:
+      person.role === "owner"
+        ? person.stores.some((storeId) => storeId === "tablecast-koharu")
+          ? credentials.otherEmail
+          : credentials.email
+        : person.email,
+  }));
   const owners: string[] = [];
-  for (const [email, password, name] of [
-    [credentials.email, credentials.password, "佐藤 晴香"],
-    [credentials.otherEmail, credentials.otherPassword, "山本 翼"],
+  for (const [email, password] of [
+    [credentials.email, credentials.password],
+    [credentials.otherEmail, credentials.otherPassword],
   ]) {
-    if (!email || !password || !name) throw new Error("デモ認証情報が不正です。");
+    const person = staff.find((candidate) => candidate.email === email);
+    if (!email || !password || !person) throw new Error("デモ認証情報が不正です。");
     const existing = await db
       .select({ id: identity.user.id })
       .from(identity.user)
       .where(eq(identity.user.email, email))
       .get();
-    const user = existing ?? (await auth.api.signUpEmail({ body: { email, password, name } })).user;
-    await db
-      .update(identity.user)
-      .set({
-        emailVerified: true,
-        image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
-      })
-      .where(eq(identity.user.id, user.id));
+    const user =
+      existing ??
+      (await auth.api.signUpEmail({ body: { email, password, name: person.name } })).user;
     owners.push(user.id);
   }
-  faker.seed(20260909);
-  const staff = [
-    {
-      email: "tablecast-owner@example.test",
-      name: "佐藤 晴香",
-      role: "admin",
-      store: "tablecast-komorebi",
-    },
-    {
-      email: "tablecast-member@example.test",
-      name: "田中 蓮",
-      role: "member",
-      store: "tablecast-komorebi",
-    },
-    {
-      email: "tablecast-akari@example.test",
-      name: "小林 直子",
-      role: "member",
-      store: "tablecast-akari",
-    },
-    {
-      email: "tablecast-koharu@example.test",
-      name: "山本 翼",
-      role: "admin",
-      store: "tablecast-koharu",
-    },
-  ];
-  const staffInserts: BatchItem<"sqlite">[] = [];
-  for (const store of demoStores(credentials.profile)) {
-    for (let index = 0; index < 12; index++) {
-      const email = `tablecast-${store.id}-member-${index + 1}@example.test`;
-      const name = faker.person.fullName();
-      const userId = `tablecast-seed-user-${store.id}-${index + 1}`;
-      const createdAt = credentials.baseTime - (index + 1) * 86400000;
-      staffInserts.push(
-        db
-          .insert(identity.user)
-          .values({
-            id: userId,
-            name,
-            email,
-            emailVerified: true,
-            createdAt: new Date(createdAt),
-            updatedAt: new Date(createdAt),
-            locale: "ja",
-          })
-          .onConflictDoNothing({ target: identity.user.email }),
-      );
-      staff.push({ email, name, role: index === 0 ? "admin" : "member", store: store.id });
-    }
-  }
-  const [firstStaff, ...remainingStaff] = staffInserts;
-  if (firstStaff) await db.batch([firstStaff, ...remainingStaff]);
   const existingStaff = await db
     .select({ id: identity.user.id, email: identity.user.email })
     .from(identity.user)
@@ -666,7 +684,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
         .update(identity.user)
         .set({
           emailVerified: true,
-          image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
+          image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id, tablecastDemoPortrait(person))})`,
         })
         .where(eq(identity.user.id, user.id)),
     );
@@ -714,7 +732,9 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       .where(eq(identity.member.organizationId, owner.id));
     const memberIds = new Set(existingMembers.map((member) => member.userId));
     const memberships: BatchItem<"sqlite">[] = [];
-    for (const person of staff.filter((candidate) => candidate.store === store.id)) {
+    for (const person of staff.filter((candidate) =>
+      candidate.stores.some((storeId) => storeId === store.id),
+    )) {
       const staffUserId = staffIds.get(person.email);
       if (!staffUserId) throw new Error("デモスタッフがありません。");
       memberships.push(
