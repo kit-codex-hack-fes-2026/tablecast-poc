@@ -98,6 +98,7 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
 });
@@ -176,6 +177,8 @@ it.each([
 );
 
 it("音声開始が失敗しても実Queryのカートと画面操作を維持する", async () => {
+  // APIの開始拒否を検証するため、端末のマイク許可だけを公開境界で通す。
+  vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(new MediaStream());
   await render(
     <LocaleProvider initialLocale="ja">
       <QueryClientProvider client={client}>

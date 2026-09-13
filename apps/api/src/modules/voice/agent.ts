@@ -13,7 +13,7 @@ import { showProductsSchema, speechSpeedInputSchema, type VoiceTrigger } from ".
 import { castInstructions } from "./prompt";
 import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
-  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalog、注文・確認・会計・画面の操作にはgetTableStateで最新状態を確認する。両方必要なら同時に取得する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
+  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。今回の委任開始時の現在の卓情報はAPIが取得して入力に含めるため、そのカート版・確認・会計・画面状態を使い、同じ情報をgetTableStateで取り直さない。操作後の状態が結果に足りない場合だけgetTableStateで再確認する。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介やおすすめを求められたらshowProductsで対象のカードを表示する。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
 }
 
 function castTool<T extends z.ZodType>(options: {
@@ -55,7 +55,8 @@ export function createCastTools(
         await guard();
         const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = (await getSession(services, actor)).locale;
-        const terms = query?.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+        const searchText = query?.toLocaleLowerCase();
+        const terms = searchText?.split(/\s+/).filter(Boolean);
         const matched = catalog.configuration.products.filter(
           (product) =>
             !terms?.length ||
@@ -63,6 +64,11 @@ export function createCastTools(
               JSON.stringify([product.id, product.categoryId, product.text])
                 .toLocaleLowerCase()
                 .includes(term),
+            ) ||
+            Object.values(product.text).some((text) =>
+              [text.displayName, text.speechName, ...text.aliases].some(
+                (name) => name.trim().length > 0 && searchText?.includes(name.toLocaleLowerCase()),
+              ),
             ),
         );
         const detail = !!terms?.length && matched.length > 0;

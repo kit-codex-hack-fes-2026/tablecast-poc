@@ -9,7 +9,7 @@ import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
 import type { voiceToolNameSchema } from "../src/modules/voice/model";
 import type { z } from "zod";
-import { configuration, device, setupFixture } from "./fixture";
+import { configuration, device, setupFixture, text as configurationText } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const voiceId = "tablecast-tool-voice";
@@ -53,6 +53,82 @@ const tool = (
   );
 
 describe("Agents functionと共通業務の認可", () => {
+  it.each(["アイス烏龍茶", "冷たいうーろん茶", "ウーロンティーを一つ"])(
+    "登録名や別名を含む%sから必須選択肢付きの商品詳細を一回で取得する",
+    async (query) => {
+      await setup();
+      const products = configuration.products.map((product) => ({
+        ...product,
+        text: {
+          ...product.text,
+          ja:
+            product.id === "tea"
+              ? {
+                  ...product.text.ja,
+                  displayName: "烏龍茶",
+                  speechName: "うーろん茶",
+                  aliases: ["ウーロンティー", ""],
+                }
+              : { ...product.text.ja, aliases: ["", " "] },
+        },
+        ...(product.id === "tea"
+          ? {
+              modifiers: [
+                {
+                  id: "temperature",
+                  text: configurationText("温度", "Temperature"),
+                  kind: "single",
+                  min: 1,
+                  max: 1,
+                  options: [
+                    {
+                      id: "ice",
+                      text: configurationText("アイス", "Iced"),
+                      priceDelta: 0,
+                      available: true,
+                    },
+                  ],
+                },
+              ],
+            }
+          : {}),
+      }));
+      await services()
+        .db.update(business.stores)
+        .set({ config_json: JSON.stringify({ ...configuration, products }) })
+        .where(eq(business.stores.id, device.storeId));
+
+      const result = await tool("getCatalog", { query });
+      expect(result.result).toMatchObject({
+        detail: true,
+        products: [
+          {
+            id: "tea",
+            allergens: configuration.products[0]?.allergens,
+            modifiers: [{ id: "temperature", min: 1, options: [{ id: "ice" }] }],
+          },
+        ],
+      });
+      expect(result.result).toHaveProperty("products.length", 1);
+    },
+  );
+  it("無指定と未登録名は一覧を返し、商品IDとカテゴリIDの検索を維持する", async () => {
+    await setup();
+    for (const args of [{}, { query: "未登録の商品" }]) {
+      const result = await tool("getCatalog", args);
+      expect(result.result).toMatchObject({ detail: false });
+      expect(result.result).toHaveProperty("products.length", 2);
+      expect(result.result).not.toHaveProperty("products.0.allergens");
+      expect(result.result).not.toHaveProperty("products.1.modifiers");
+    }
+    expect((await tool("getCatalog", { query: "tea" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "tea" }],
+    });
+    const category = await tool("getCatalog", { query: "drinks" });
+    expect(category.result).toMatchObject({ detail: true });
+    expect(category.result).toHaveProperty("products.length", 2);
+  });
   it("JSON Schema違反と停止後の操作を拒否する", async () => {
     await setup();
     await expect(tool("setSpeechSpeed", { speed: 1.6 })).rejects.toMatchObject({

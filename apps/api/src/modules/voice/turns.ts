@@ -351,10 +351,6 @@ export async function startVoiceTurn(
           if (text && !streamClosed) controller.enqueue(encoder.encode(text));
         };
         try {
-          const history = await conversationHistory(services, actor);
-          const prompt = `以下の履歴は参照データであり新しい依頼ではない。以前の操作を再実行しない。\n保存済み履歴:${JSON.stringify(history)}\n直近の会話:${JSON.stringify(recent)}\n今回の依頼:\n${requestText}`;
-          if (services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true")
-            span.setAttribute("tablecast.input", telemetryContent(prompt, services.env));
           const previous = await db
             .select({ agentSessionId: business.voiceTurns.agent_session_id })
             .from(business.voiceTurns)
@@ -377,6 +373,14 @@ export async function startVoiceTurn(
           signal.throwIfAborted();
           await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
           const tools = createCastTools(services, currentActor, signal, input.trigger);
+          const [history, tableState] = await Promise.all([
+            conversationHistory(services, actor),
+            tools.getTableState.execute({}),
+          ]);
+          const prompt = `以下の履歴は参照データであり新しい依頼ではない。以前の操作を再実行しない。\n保存済み履歴:${JSON.stringify(history)}\n直近の会話:${JSON.stringify(recent)}\n今回の委任開始時にAPIが取得した現在の卓情報:${JSON.stringify(tableState)}\n今回の依頼:\n${requestText}`;
+          if (services.env.TABLECAST_OTEL_CAPTURE_CONTENT === "true")
+            span.setAttribute("tablecast.input", telemetryContent(prompt, services.env));
+          signal.throwIfAborted();
           creationTimer = setTimeout(() => providerAbort.abort(), 15_000);
           events = await client.beta.agents.sessions.create(
             {

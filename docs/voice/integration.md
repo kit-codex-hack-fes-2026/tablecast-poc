@@ -25,7 +25,7 @@ flowchart LR
 
 1. Honoが店舗・卓・端末またはデモ所有者を認可し、GPT-Live sessionを作成する。
 2. Webは `session.delegation.created` を受け、直近の会話と途中字幕を認証済みAPIへ渡す。字幕はモデルへ渡す参考文脈であり、店舗・卓・権限の根拠にしない。
-3. HonoがD1へ業務turnを予約してAgents sessionを作る。`TABLECAST_MODEL` は業務委任用で、音声モデルとは独立する。
+3. HonoがD1へ業務turnを予約し、既存の業務操作で取得した現在の卓情報と参考履歴を渡してAgents sessionを作る。同じ卓情報をモデルのツール呼出しで取り直す待機を省き、更新操作は引き続き現在の版と認可を検証する。`TABLECAST_MODEL` は業務委任用で、音声モデルとは独立する。
 4. Agents APIの `agent.session.requires_action` で要求されたfunctionだけを、既存APIの業務操作で実行する。`turn_id` と `call_id` を対応付け、結果を `agent.session.input.tool_result` で返す。GUI・MCPと価格・在庫・注文の正本を共有する。
 5. Agents APIの本文差分をHTTP streamでWebへ渡し、Webが同じdelegation IDの `session.commentary.append` へ上限内で順次渡す。GPT-Liveが結果を自然に説明する。全文生成・読み終わりを待ってからまとめて渡さない。
 
