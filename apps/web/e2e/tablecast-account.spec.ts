@@ -1,23 +1,9 @@
 import { test } from "./support/test";
-import { expect, request } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { z } from "zod";
-import { credentials } from "./support/runtime";
 
 // Authの失敗応答を差し替えるHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
-
-const cleanup: (() => Promise<void>)[] = [];
-test.afterEach(async () => {
-  const failures: unknown[] = [];
-  for (const action of cleanup.splice(0).toReversed()) {
-    try {
-      await action();
-    } catch (error) {
-      failures.push(error);
-    }
-  }
-  if (failures.length) throw new AggregateError(failures, "認証fixtureの後片付けに失敗しました");
-});
 
 test("Googleログインから名前変更・店舗作成・招待メールまで利用できる", async ({
   page,
@@ -33,44 +19,22 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     .object({ user: z.object({ id: z.string(), email: z.string(), emailVerified: z.boolean() }) })
     .parse(await (await page.request.get("/api/auth/get-session")).json());
   expect(session.user.emailVerified).toBe(true);
-  const owner = await request.newContext({ baseURL });
-  expect(
-    (
-      await owner.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  cleanup.push(async () => {
-    await owner.dispose();
-  });
-  const profile = z
-    .object({ user: z.object({ name: z.string() }) })
-    .parse(await (await owner.get("/api/auth/get-session")).json());
-  cleanup.push(async () => {
-    expect(
-      (
-        await owner.post("/api/auth/update-user", {
-          headers: { Origin: baseURL ?? "" },
-          data: { name: profile.user.name },
-        })
-      ).ok(),
-    ).toBe(true);
-  });
   // OAuth後のSSRがhydrateされてからクライアント遷移を始める。
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   await page.getByRole("link", { name: "アカウント", exact: true }).click();
   await expect(page).toHaveURL(/\/account$/);
   await page.emulateMedia({ reducedMotion: "reduce" });
   const update = Promise.withResolvers<void>();
+  const requested = Promise.withResolvers<void>();
   await page.route("**/api/auth/update-user", async (route) => {
+    requested.resolve();
     await update.promise;
     await route.continue();
   });
   try {
     await page.getByLabel("名前", { exact: true }).fill("TableCast テストオーナー");
     await page.getByRole("button", { name: "保存", exact: true }).click();
+    await requested.promise;
     await expect(page.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
     const feedback = page.getByRole("status").filter({ hasText: "送信中" });
     await expect(feedback).toBeVisible();
@@ -179,37 +143,10 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   await page.getByRole("link", { name: "アカウント", exact: true }).click();
   await expect(page).toHaveURL(/\/account$/);
   const keyName = `TableCast Chromium ${Date.now()}`;
-  const owner = await request.newContext({ baseURL });
-  expect(
-    (
-      await owner.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  cleanup.push(async () => {
-    try {
-      const keys = z
-        .array(z.object({ id: z.string(), name: z.string().optional() }))
-        .parse(await (await owner.get("/api/auth/passkey/list-user-passkeys")).json());
-      const created = keys.find((key) => key.name === keyName);
-      if (created)
-        expect(
-          (
-            await owner.post("/api/auth/passkey/delete-passkey", {
-              headers: { Origin: baseURL ?? "" },
-              data: { id: created.id },
-            })
-          ).ok(),
-        ).toBe(true);
-    } finally {
-      await owner.dispose();
-    }
-  });
   await page.getByLabel("パスキーの名前").fill(keyName);
   await page.getByRole("button", { name: "パスキーを追加" }).click();
   await expect(page.getByRole("status")).toHaveText("更新しました");

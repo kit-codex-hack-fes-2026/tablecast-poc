@@ -11,11 +11,15 @@ import { z } from "zod";
 
 export default defineConfig(() => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+  const buildDirectory = resolve(
+    import.meta.dirname,
+    tablecastEnv.TABLECAST_BUILD_DIRECTORY ?? "dist",
+  );
   const serviceWorkerContext = createContext(
     {
       swSrc: "src/sw.ts",
-      swDest: resolve(import.meta.dirname, "dist/client/sw.js"),
-      globDirectory: resolve(import.meta.dirname, "dist/client"),
+      swDest: resolve(buildDirectory, "client/sw.js"),
+      globDirectory: resolve(buildDirectory, "client"),
       globPatterns: ["assets/**/*.{js,css,woff2}", "flags/*.svg", "icons/*.png", "offline.html"],
       injectionPoint: "self.tablecastPrecacheManifest",
       rollupFormat: "iife",
@@ -24,7 +28,7 @@ export default defineConfig(() => {
   );
   const serviceWorkerApi = createApi(serviceWorkerContext);
   return {
-    build: { minify: true },
+    build: { minify: true, outDir: buildDirectory },
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
     plugins: [

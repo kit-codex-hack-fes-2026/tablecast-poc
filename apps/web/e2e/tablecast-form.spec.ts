@@ -1,6 +1,4 @@
 import { expect } from "@playwright/test";
-import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 import { test } from "./support/test";
@@ -15,7 +13,7 @@ for (const [locale, messages] of [
   test(`${locale}の登録フォームが項目エラーを示し、API失敗後も入力を保持して再送できる`, async ({
     page,
     browserName,
-  }) => {
+  }, testInfo) => {
     // Given: 実アプリの登録画面と、失敗を制御するAuthのHTTP境界。
     await page.goto("/register");
     await page
@@ -37,10 +35,8 @@ for (const [locale, messages] of [
     await expect(email).toHaveAttribute("aria-invalid", "true");
     await expect(email).toHaveAccessibleDescription(messages.form_email);
     expect(requests).toBe(0);
-    const directory = resolve(import.meta.dirname, "../../../.local/tablecast-quality-evidence");
-    await mkdir(directory, { recursive: true });
     await page.screenshot({
-      path: resolve(directory, `web-form-${locale}-${browserName}.png`),
+      path: testInfo.outputPath(`web-form-${locale}-${browserName}.png`),
       fullPage: true,
     });
     await page
@@ -57,6 +53,8 @@ for (const [locale, messages] of [
     await expect(button).toBeEnabled();
     await button.click();
     await expect.poll(() => requests).toBe(2);
+    await expect(button).toBeEnabled();
+    await expect(page.getByRole("alert")).toHaveText(messages.account_failed);
     await expect(
       page.getByRole("textbox", { name: messages.account_name, exact: true }),
     ).toHaveValue("TableCast Staff");

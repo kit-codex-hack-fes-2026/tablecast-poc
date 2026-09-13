@@ -111,21 +111,30 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     fullPage: true,
   });
   if (testInfo.project.name === "tablecast-chromium") {
-    // 容量不足を保存境界で一度だけ発生させ、実通信の応答と次回の保存を確認する。
+    // 対象画像の保存だけを一度失敗させ、他の背景取得に失敗条件を消費させない。
     const worker = context.serviceWorkers()[0];
     if (!worker) throw new Error("起動済みService Workerが必要です");
-    await worker.evaluate(() => {
+    const uncached = imageUrl.replace("128", "256");
+    await worker.evaluate((target) => {
       const descriptor = Object.getOwnPropertyDescriptor(Cache.prototype, "put");
       if (!descriptor) throw new Error("Cache.putが必要です");
       Object.defineProperty(Cache.prototype, "put", {
         ...descriptor,
-        value: async function tablecastQuotaFailure() {
+        value: async function tablecastQuotaFailure(
+          this: Cache,
+          request: RequestInfo | URL,
+          response: Response,
+        ) {
+          const url =
+            request instanceof Request
+              ? request.url
+              : new URL(String(request), self.location.origin).href;
+          if (url !== target) return Reflect.apply(descriptor.value, this, [request, response]);
           Object.defineProperty(Cache.prototype, "put", descriptor);
           throw new DOMException("試験用の容量不足", "QuotaExceededError");
         },
       });
-    });
-    const uncached = imageUrl.replace("128", "256");
+    }, new URL(uncached, runtime.origin).href);
     expect(await page.evaluate(async (url) => (await fetch(url)).status, uncached)).toBe(200);
     await expect
       .poll(() => worker.evaluate(() => Cache.prototype.put.name))
@@ -155,43 +164,65 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
   await expect
     .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
     .toBe(true);
+  await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toBeEnabled();
   await page.getByLabel(ja.auth_email, { exact: true }).fill("unsaved@example.test");
-  const other = await context.newPage();
-  await other.goto(`${runtime.origin}/`);
-  let reloads = 0;
-  page.on("domcontentloaded", () => {
-    reloads += 1;
-  });
-  // When: 配信済みService Workerの内容を更新する。
-  await runtime.setOnline(false);
-  await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
-  await runtime.setOnline(true);
-  await expect
-    .poll(async () =>
-      page.evaluate(async () => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        await registration?.update();
-        return Boolean(registration?.waiting);
-      }),
-    )
-    .toBe(true);
-  await other.evaluate(async () =>
-    (await navigator.serviceWorker.getRegistration())?.waiting?.postMessage({
-      type: "TABLECAST_REQUEST_UPDATE",
-    }),
+  await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toHaveAttribute(
+    "data-pwa-blocked",
+    "true",
   );
-  await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("unsaved@example.test");
-  expect(reloads).toBe(0);
-  // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
-  const updated = page.waitForEvent("domcontentloaded", { timeout: 20_000 });
-  await page.getByLabel(ja.auth_email, { exact: true }).fill("");
-  await updated;
-  expect(reloads).toBe(1);
-  await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
-  await expect(async () => {
-    expect(
-      await other.evaluate(async () => !(await navigator.serviceWorker.getRegistration())?.waiting),
-    ).toBe(true);
-  }).toPass({ timeout: 15_000 });
-  await other.close();
+  const other = await context.newPage();
+  try {
+    await other.goto(`${runtime.origin}/`);
+    await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
+    let reloads = 0;
+    page.on("domcontentloaded", () => {
+      reloads += 1;
+    });
+    // 自動更新の確認に対するキャンセルを、入力を戻す前に観測する。
+    const decision = await page.evaluateHandle(() => {
+      const state = { cancellations: 0 };
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "TABLECAST_CANCEL_UPDATE") state.cancellations++;
+      });
+      return state;
+    });
+    // When: 配信済みService Workerの内容を更新する。
+    await runtime.setOnline(false);
+    await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
+    await runtime.setOnline(true);
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) throw new Error("登録済みService Workerが必要です");
+      await registration.update();
+    });
+    await expect
+      .poll(async () =>
+        page.evaluate(async () => {
+          const registration = await navigator.serviceWorker.getRegistration();
+          return Boolean(registration?.waiting);
+        }),
+      )
+      .toBe(true);
+    await expect.poll(() => decision.evaluate((state) => state.cancellations)).toBeGreaterThan(0);
+    await decision.dispose();
+    await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue(
+      "unsaved@example.test",
+    );
+    expect(reloads).toBe(0);
+    // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
+    await Promise.all([
+      page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+      other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+      page.getByLabel(ja.auth_email, { exact: true }).fill(""),
+    ]);
+    expect(reloads).toBe(1);
+    await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
+    await expect
+      .poll(() =>
+        other.evaluate(async () => !(await navigator.serviceWorker.getRegistration())?.waiting),
+      )
+      .toBe(true);
+  } finally {
+    await other.close();
+  }
 });

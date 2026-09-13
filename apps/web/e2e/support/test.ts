@@ -1,12 +1,16 @@
 import { test as base } from "@playwright/test";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
-import process from "node:process";
+import { basename, dirname, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
+import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { z } from "zod";
-import { createCaseRuntime, runtime as template, type CaseRuntime } from "./runtime";
+import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
+import { createCaseRuntime, credentials, runtime as template, type CaseRuntime } from "./runtime";
 
+// API client由来のWorker global型ではprocessがanyになる。fixtureの実行環境はNodeである。
+declare const process: NodeJS.Process;
 const execute = promisify(execFile);
 const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
 const root = resolve(import.meta.dirname, "../../../..");
@@ -17,16 +21,44 @@ const builtConfig = z
   })
   .catchall(z.json());
 
+function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
+  if (!child.pid) return false;
+  try {
+    process.kill(-child.pid, signal);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ESRCH") return false;
+    // macOSはreap前のzombieだけのgroupにもEPERMを返す。消滅の確認まで待つ。
+    if (signal === 0 && error instanceof Error && "code" in error && error.code === "EPERM")
+      return true;
+    throw error;
+  }
+}
+
 export const test = base.extend<{
   runtime: CaseRuntime & { setOnline: (online: boolean) => Promise<void> };
 }>({
   runtime: [
-    async ({ browserName }, use) => {
+    async ({ browserName }, use, testInfo) => {
       const runtime = await createCaseRuntime();
       const name = `${basename(runtime.directory).toLowerCase()}-${browserName}`;
       const children: ChildProcess[] = [];
       const expectedStops = new Set<ChildProcess>();
       const container = `${name}-mailpit`;
+      const errors: unknown[] = [];
+      const secrets = [
+        ...diagnosticSecrets(parentEnv),
+        credentials.password,
+        credentials.otherPassword,
+        "tablecast-isolated-e2e-auth-secret-never-used-outside-tests",
+        "tablecast-local-google-secret",
+      ];
+      let log = "";
+      const record = (message: string) => {
+        // 資格を除去してから上限を適用し、値の途中だけが証跡へ残るのを避ける。
+        log = `${log}${redactCredentials(message, secrets)}\n`.slice(-65_536);
+      };
+      record(JSON.stringify({ case: name, origin: runtime.origin, ports: runtime.ports }));
       let failure: Error | undefined;
       const start = (command: string, args: string[], env: NodeJS.ProcessEnv = {}) => {
         const child = spawn(command, args, {
@@ -38,17 +70,38 @@ export const test = base.extend<{
             WRANGLER_REGISTRY_PATH: join(runtime.directory, "registry"),
             ...env,
           },
-          stdio: "inherit",
+          // case専用のprocess groupで、Viteが起動するworkerdも同じ寿命にする。
+          detached: true,
+          stdio: ["ignore", "pipe", "pipe"],
         });
+        record(`${command}: 起動 pid=${child.pid ?? "未取得"}`);
+        for (const stream of [child.stdout, child.stderr])
+          createInterface({ input: stream }).on("line", (line) => record(`${command}: ${line}`));
         child.once("error", (error) => {
           failure = error;
+          record(`${command}: ${error.message}`);
         });
         child.once("exit", (code, signal) => {
+          record(`${command}: 終了 pid=${child.pid} code=${code} signal=${signal}`);
           if (!expectedStops.has(child))
             failure ??= new Error(`${command}が起動中に終了しました: ${code ?? signal}`);
         });
         children.push(child);
         return child;
+      };
+      const stop = async (child: ChildProcess) => {
+        expectedStops.add(child);
+        // 親が先に終了していても、同じgroupに残る子孫を停止する。
+        for (const signal of ["SIGTERM", "SIGKILL"] as const) {
+          if (!signalGroup(child, signal)) return;
+          record(`process group ${child.pid}: ${signal}`);
+          const deadline = Date.now() + 5000;
+          while (Date.now() < deadline) {
+            if (!signalGroup(child, 0)) return;
+            await delay(50);
+          }
+        }
+        throw new Error(`case専用process group ${child.pid}の終了を確認できませんでした。`);
       };
       try {
         const state = join(runtime.directory, "state");
@@ -181,15 +234,7 @@ export const test = base.extend<{
           ...runtime,
           setOnline: async (online) => {
             if (!online) {
-              expectedStops.add(web);
-              await new Promise<void>((done) => {
-                const timer = setTimeout(() => web.kill("SIGKILL"), 5000);
-                web.once("exit", () => {
-                  clearTimeout(timer);
-                  done();
-                });
-                web.kill("SIGTERM");
-              });
+              await stop(web);
               return;
             }
             web = startWeb();
@@ -214,27 +259,38 @@ export const test = base.extend<{
           },
         });
         if (failure) throw failure;
+      } catch (error) {
+        errors.push(error);
       } finally {
-        await Promise.all(
-          children.toReversed().map(async (child) => {
-            if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
-            await new Promise<void>((done) => {
-              const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
-              child.once("exit", () => {
-                clearTimeout(timer);
-                done();
-              });
-              child.kill("SIGTERM");
-            });
-          }),
-        );
-        await execute("docker", ["rm", "--force", container], { timeout: 10000 }).catch(
-          (error: Error) => {
-            if (!error.message.includes(`No such container: ${container}`)) throw error;
-          },
-        );
-        await rm(runtime.directory, { recursive: true, force: true });
+        const cleanup = await Promise.allSettled([
+          ...children.toReversed().map(stop),
+          execute("docker", ["rm", "--force", container], { timeout: 10000 }).catch(
+            (error: Error) => {
+              if (!error.message.includes(`No such container: ${container}`)) throw error;
+            },
+          ),
+        ]);
+        for (const result of cleanup) if (result.status === "rejected") errors.push(result.reason);
+        try {
+          if (errors.length || testInfo.status !== testInfo.expectedStatus) {
+            for (const error of errors)
+              record(error instanceof Error ? error.message : String(error));
+            const path = testInfo.outputPath("tablecast-runtime.log");
+            await mkdir(dirname(path), { recursive: true });
+            await writeFile(path, log, { mode: 0o600 });
+            await testInfo.attach("TableCast実行環境", { path, contentType: "text/plain" });
+          }
+        } catch (error) {
+          errors.push(error);
+        } finally {
+          try {
+            await rm(runtime.directory, { recursive: true, force: true });
+          } catch (error) {
+            errors.push(error);
+          }
+        }
       }
+      if (errors.length) throw new AggregateError(errors, "case専用の受入環境で失敗しました。");
     },
     { timeout: 120_000 },
   ],

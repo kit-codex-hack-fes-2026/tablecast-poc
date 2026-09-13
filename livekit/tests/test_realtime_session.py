@@ -136,8 +136,8 @@ async def test_実Sessionが音声ターンとspeechを結び公開ツールを�
             user_away_timeout=None,
         )
         session.on("speech_created", lambda event: speeches.put_nowait(event.speech_handle))
-        await session.start(agent, record=False)
         try:
+            await session.start(agent, record=False)
             # When: 公開VAD streamから発話開始/終了を流し、APIの認可応答を保留する。
             for kind in [vad.VADEventType.START_OF_SPEECH, vad.VADEventType.END_OF_SPEECH]:
                 activity.put_nowait(
@@ -171,5 +171,7 @@ async def test_実Sessionが音声ターンとspeechを結び公開ツールを�
                 assert not any(path.endswith("/confirmation") for path, _body in requests)
         finally:
             authorised.set()
-            await session.aclose()
-            await agent.close()
+            try:
+                await session.aclose()
+            finally:
+                await agent.close()

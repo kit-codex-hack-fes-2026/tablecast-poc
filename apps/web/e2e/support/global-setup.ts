@@ -1,26 +1,42 @@
 import { execFile } from "node:child_process";
-import { copyFile, cp, mkdir, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 import process from "node:process";
 import { promisify } from "node:util";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedDemoDatabase } from "../../../../scripts/tablecast-seed-data";
+import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { credentials, runtime } from "./runtime";
 const execute = promisify(execFile);
 const root = resolve(import.meta.dirname, "../../../..");
 export default async function setup() {
   const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
   const stop = async () => {
-    const evidence = join(root, "apps/web/test-results/tablecast-runtime");
-    await mkdir(evidence, { recursive: true });
-    await copyFile(
-      join(runtime.directory, "migrations.log"),
-      join(evidence, "migrations.log"),
-    ).catch((error: NodeJS.ErrnoException) => {
-      if (error.code !== "ENOENT") throw error;
-    });
-    await rm(runtime.directory, { recursive: true, force: true });
+    const errors: unknown[] = [];
+    try {
+      const log = await readFile(join(runtime.directory, "migrations.log"), "utf8");
+      const evidence = join(
+        root,
+        "apps/web/test-results/tablecast-runtime",
+        basename(runtime.directory),
+      );
+      await mkdir(evidence, { recursive: true });
+      await writeFile(
+        join(evidence, "migrations.log"),
+        redactCredentials(log, diagnosticSecrets(parentEnv)).slice(-65_536),
+        { mode: 0o600 },
+      );
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+        errors.push(error);
+    }
+    try {
+      await rm(runtime.directory, { recursive: true, force: true });
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length) throw new AggregateError(errors, "E2E templateの後片付けに失敗しました。");
   };
   try {
     const apiConfig = join(runtime.directory, "api.wrangler.json"),
@@ -122,6 +138,7 @@ export default async function setup() {
       ...parentEnv,
       WRANGLER_REGISTRY_PATH: join(runtime.directory, "registry"),
       TABLECAST_LOCAL_BUILD: "1",
+      TABLECAST_BUILD_DIRECTORY: join(runtime.directory, "build"),
       TABLECAST_VITE_CACHE_DIR: join(runtime.directory, "vite"),
       TABLECAST_WEB_CONFIG: webConfig,
       TABLECAST_API_CONFIG: apiConfig,
@@ -134,11 +151,18 @@ export default async function setup() {
       env: webEnv,
       maxBuffer: 5 * 1024 * 1024,
     });
-    await cp(join(root, "apps/web/dist"), join(runtime.directory, "build"), { recursive: true });
     await execute("docker", ["pull", "axllent/mailpit:v1.29.2"]);
     return stop;
   } catch (error) {
-    await stop();
+    try {
+      await stop();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "E2E templateの準備と後片付けに失敗しました。",
+        { cause: cleanupError },
+      );
+    }
     throw error;
   }
 }
