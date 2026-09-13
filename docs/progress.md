@@ -1,5 +1,17 @@
 # TableCast 実装・検証記録
 
+## 2026-09-14: hosted Agents API・Lunaの実音声検証
+
+Issue #100、Draft PR #104。GPT-Live 1のブラウザーWebRTCとhosted OpenAI Agents APIへ移行し、Mastra・LiveKit・Python音声プロセス・音声Containerを撤去した。業務モデルは利用者指定の`gpt-5.6-luna`、reasoning low。以降の過去記録は当時の構成の検証であり、現在の構成の証拠として扱わない。
+
+クレジット不足の解消後、Inworldで生成した日英音声を実マイク入力として検証した。`ae0d3e5`のローカル英語ではメニュー案内・商品カード・氷あり烏龍茶1点340円のカート追加・実返答音声・回答終了前の字幕更新が成功した。内容のある返答まで30.274秒・30.498秒で、低遅延の達成とは扱わない。Agents本文受信からLive転送は1ms・0msで、全文待機はしない。
+
+同じSHAの日本語注文とPR previewでは、アプリのツール実行前にproviderが失敗した。ローカルの保存itemsでHTTP424、`mcp_error`、JSON-RPC -32002、`The managed agent session has no active turn`を確認した。明示failed SSEで音声を停止し、未確認の結果をLiveへ転送せず、カート・注文を変更しないことは確認したが、日英・previewの受入完了ではない。日本語の注文確認・承認には進めていない。
+
+`189fd5c`のpreviewではカート追加後のAPI Workerメモリ上限超過をCloudflare Observabilityで確認した。別途、採用済みトレースprocessorが完了traceを保持し続けることを合成1万件で再現し、標準の上限付きBatchSpanProcessorへ変更した。今回のメモリ超過の唯一の原因とまでは断定しない。音声失効と同じD1 batchで中断の終端イベントを保存し、応答Workerが消えても開始中表示を残さない。
+
+`ae0d3e5`の処理中停止はマイク・WebRTC・DB失効・遅着操作拒否が成立したが、提供元取消の確認はHTTP503になった回があり、停止全体の成功とは記録しない。SSE応答の開始待ちにより取消POSTが未送信のまま15秒で失敗する経路をHTTP境界の試験で再現し、購読と取消を並行開始して取消後の実状態も確認するよう修正した。修正後の取消回帰9件が成功した。CIは同SHAの初回にポート競合とPWA更新待ちで失敗し、再実行で11ジョブが成功した。独立した不安定性はIssue #142・#143へ記録した。最新の取消修正・CI・preview結果と実映像はPR #104を正本とする。実iPad、騒音、自発接客の実モデル試験、本番音声は未検証。
+
 ## 2026-09-12: GPT-Live client delegationへの移行
 
 Issue #100。通常音声をLiveKit公式GPTLiveModel 1.8.1へ置き換え、既存Mastra・Honoの共通業務処理へclient delegationを接続した。Inworld fork/TTS依存とPythonの旧cascade・Realtime接続を除去した。標準音声はMarin/Cedar、旧Voice IDと未設定は起動時にMarinへ対応付ける。話速はモデルへの希望として渡す。

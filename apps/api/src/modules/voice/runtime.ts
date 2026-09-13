@@ -14,7 +14,29 @@ export async function cancelAgentSession(services: ApiServices, agentSessionId: 
     const current = await client.beta.agents.sessions.retrieve(agentSessionId, { signal });
     confirmed = current.status === "idle" || current.status === "failed";
     if (!confirmed) {
-      const events = await client.beta.agents.sessions.events.stream(agentSessionId, { signal });
+      const subscription = new AbortController();
+      // 最初の通知までSSEのheadersが返らなくても、取消POSTを待たせない。
+      const terminal = (async () => {
+        const events = await client.beta.agents.sessions.events.stream(agentSessionId, {
+          signal: AbortSignal.any([signal, subscription.signal]),
+        });
+        try {
+          for await (const event of events) {
+            if (
+              event.type === "agent.session.idle" ||
+              event.type === "agent.session.failed" ||
+              ((event.type === "agent.session.turn.cancelled" ||
+                event.type === "agent.session.turn.completed" ||
+                event.type === "agent.session.turn.failed") &&
+                !event.turn.subagent_id)
+            )
+              return true;
+          }
+          return false;
+        } finally {
+          events.controller.abort();
+        }
+      })().catch(() => false);
       try {
         await client.beta.agents.sessions.events.create(
           agentSessionId,
@@ -23,21 +45,12 @@ export async function cancelAgentSession(services: ApiServices, agentSessionId: 
           },
           { signal },
         );
-        for await (const event of events) {
-          if (
-            event.type === "agent.session.idle" ||
-            event.type === "agent.session.failed" ||
-            ((event.type === "agent.session.turn.cancelled" ||
-              event.type === "agent.session.turn.completed" ||
-              event.type === "agent.session.turn.failed") &&
-              !event.turn.subagent_id)
-          ) {
-            confirmed = true;
-            break;
-          }
-        }
+        // live-onlyの購読が間に合わなかった終端も、提供元の現在状態で確認する。
+        const latest = await client.beta.agents.sessions.retrieve(agentSessionId, { signal });
+        confirmed = latest.status === "idle" || latest.status === "failed" || (await terminal);
       } finally {
-        events.controller.abort();
+        subscription.abort();
+        await terminal;
       }
     }
   } catch (error) {
