@@ -168,7 +168,7 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 
 `.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIがGPT-Liveとhosted Agents APIの両方に公式SDKで接続し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-OpenAI projectにはGPT-Liveの利用権限に加え、Agents APIの `api.agents.read`、`api.agents.write`、`api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-6-astra`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
+OpenAI projectにはGPT-Liveの利用権限に加え、Agents APIの `api.agents.read`、`api.agents.write`、`api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
 
 | ファイル                      | 用途                                                  |
 | ----------------------------- | ----------------------------------------------------- |

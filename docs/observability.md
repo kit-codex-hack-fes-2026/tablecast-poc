@@ -134,6 +134,8 @@ GitHub Environmentの`preview`または`production`に同名のActions variable�
 
 字幕の最初の差分、委任の開始、最初の本文、各ツールの開始・完了、音声停止の時刻をそれぞれ確認する。本文の生成時間を音声の再生開始までの時間として報告せず、D1 binding待ちとDB内部SQL実行時間も区別する。
 
+音声開始などの外部API失敗は `tablecast.error.causes` の `httpStatus` と `providerCode` を確認する。`credit_balance_exhausted`・`insufficient_quota` はAPI残高や利用枠、`rate_limit_exceeded` は要求頻度の制限として区別する。既知の制限codeだけを許可し、本文収集が無効のときはproviderメッセージや未知のcodeを記録しない。
+
 ```traceql
 { resource.service.name = "tablecast-api" && resource.tablecast.pr.number = "対象PR番号" }
 ```

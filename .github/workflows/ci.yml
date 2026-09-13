@@ -291,7 +291,7 @@ jobs:
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
-      TABLECAST_MODEL: gpt-6-astra
+      TABLECAST_MODEL: gpt-5.6-luna
       TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
       TABLECAST_CONTAINER_METRICS_TOKEN: ${{ secrets.TABLECAST_CONTAINER_METRICS_TOKEN }}
       TABLECAST_OTEL_CAPTURE_CONTENT: ${{ vars.TABLECAST_OTEL_CAPTURE_CONTENT || 'true' }}

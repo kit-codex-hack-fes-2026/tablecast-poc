@@ -19,7 +19,7 @@ it.each([false, true])(
     });
     vi.spyOn(trace, "getTracer").mockReturnValue(provider.getTracer("tablecast-test"));
     const bindings = {
-      TABLECAST_MODEL: "gpt-6-astra",
+      TABLECAST_MODEL: "gpt-5.6-luna",
       TABLECAST_MODEL_API_KEY: "tablecast-secret-model-key",
       TABLECAST_OTEL_CAPTURE_CONTENT: String(capture),
     };
@@ -34,7 +34,7 @@ it.each([false, true])(
     expect(saved?.name).toBe("tablecast.voice.agent");
     const attributes = telemetryAttributes(saved?.attributes ?? {}, bindings);
     expect(attributes).toMatchObject({
-      "gen_ai.request.model": "gpt-6-astra",
+      "gen_ai.request.model": "gpt-5.6-luna",
       "tablecast.voice.session.id": "tablecast-voice",
       "tablecast.voice.turn.id": "tablecast-turn",
     });

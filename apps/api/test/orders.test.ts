@@ -386,7 +386,7 @@ it.each(["false", "true"])(
         ...env,
         TABLECAST_VOICE_ENABLED: enabled,
         TABLECAST_MODEL_API_KEY: "tablecast-test-model-key",
-        TABLECAST_MODEL: "gpt-6-astra",
+        TABLECAST_MODEL: "gpt-5.6-luna",
       },
       ctx,
     );

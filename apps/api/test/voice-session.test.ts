@@ -15,7 +15,7 @@ const configured = () => ({
   ...env,
   TABLECAST_VOICE_ENABLED: "true",
   TABLECAST_MODEL_API_KEY: "tablecast-private-model-key",
-  TABLECAST_MODEL: "gpt-6-astra",
+  TABLECAST_MODEL: "gpt-5.6-luna",
 });
 const startRequest = () =>
   new Request("http://localhost:3000/api/table/voice/start", {

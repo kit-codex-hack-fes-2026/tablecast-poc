@@ -35,7 +35,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
 | Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
 
-`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とAgents APIの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-6-astra` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とAgents APIの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-5.6-luna` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
 
 認証secretは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証に影響するため通常のキー追加時に再生成しない。
 

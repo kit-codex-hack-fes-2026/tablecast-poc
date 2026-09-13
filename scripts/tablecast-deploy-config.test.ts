@@ -25,9 +25,9 @@ describe("本番とPRの配備境界", () => {
   test("配備時に指定した業務モデルを優先し既存のAPIキーを維持する", () => {
     const secrets = deploymentSecrets(deploymentTarget("104"), {
       ...input,
-      TABLECAST_MODEL: "gpt-6-astra",
+      TABLECAST_MODEL: "gpt-5.6-luna",
     });
-    expect(secrets.TABLECAST_MODEL).toBe("gpt-6-astra");
+    expect(secrets.TABLECAST_MODEL).toBe("gpt-5.6-luna");
     expect(secrets.TABLECAST_MODEL_API_KEY).toBe("tablecast-openai-secret");
   });
 

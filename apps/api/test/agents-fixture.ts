@@ -10,7 +10,7 @@ import { createApiServices } from "../src/platform/context";
 export const agentBindings = () => ({
   ...env,
   TABLECAST_MODEL_API_KEY: "tablecast-model-fixture",
-  TABLECAST_MODEL: "gpt-6-astra",
+  TABLECAST_MODEL: "gpt-5.6-luna",
 });
 export type AgentStep =
   | { text: string }

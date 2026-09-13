@@ -73,7 +73,7 @@ describe("音声委任とhosted Agents API", () => {
     });
     expect(provider.requests[0]).toMatchObject({
       environment: { type: "none" },
-      agent: { model: "gpt-6-astra", reasoning: { effort: "low" } },
+      agent: { model: "gpt-5.6-luna", reasoning: { effort: "low" } },
     });
     expect(provider.toolResults).toHaveLength(1);
     expect((await turn())?.agent_finished_at).not.toBeNull();
