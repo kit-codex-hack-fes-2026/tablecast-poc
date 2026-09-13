@@ -1,5 +1,23 @@
 import { z } from "zod";
 import type { Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { captureEvents } from "./tablecast-capture-types.ts";
+
+// 店員収録には今回の客側テイクを明示し、過去の合成来店へ接続しない。
+export async function readTablecastGuestCapture() {
+  const file = process.env.TABLECAST_GUEST_CAPTURE_EVENTS;
+  if (!file?.trim())
+    throw new Error(
+      "TABLECAST_GUEST_CAPTURE_EVENTSに今回の客側tablecast-events.jsonを指定してください",
+    );
+  const capture = captureEvents.parse(
+    JSON.parse(await readFile(resolve(import.meta.dirname, "../../..", file), "utf8")),
+  );
+  if (!capture.result?.sessionId || !capture.result.orders[0]?.id)
+    throw new Error("確定注文を含む客側収録の結果が必要です");
+  return capture;
+}
 
 export const tablecastVoiceEvents = z.array(
   z.object({

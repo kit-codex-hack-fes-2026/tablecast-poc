@@ -2,6 +2,7 @@ import {
   waitForTablecastState,
   tablecastCaptureOrigin,
   tablecastHostArguments,
+  readTablecastGuestCapture,
 } from "./tablecast-app-capture.ts";
 import { captureShot, bindShotZoom, type ShotEvidence } from "./tablecast-shot.ts";
 import { zoomRegions } from "./tablecast-zoom.ts";
@@ -16,7 +17,6 @@ import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
   captureBrowserPointer,
-  captureEvents,
   screenProject,
   videoDimensions,
 } from "./tablecast-capture-types.ts";
@@ -29,6 +29,8 @@ const viewport = role === "admin" ? { width: 1440, height: 900 } : { width: 390,
 const plan = await readCaptureProject();
 const scene = plan.scenes.find((item) => item.role === role);
 if (!scene?.capture || !scene.media) throw new Error("役割の撮影定義が必要です");
+const capture = role === "staff" ? await readTablecastGuestCapture() : null;
+const sessionId = capture?.result?.sessionId;
 const out = resolve(
   root,
   "apps/presentation/assets/openscreen",
@@ -55,23 +57,6 @@ try {
       process.env.TABLECAST_CAPTURE_STORAGE_STATE ?? ".local/tablecast-staff-auth.json",
     ),
   });
-  const capture =
-    role === "staff"
-      ? captureEvents.parse(
-          JSON.parse(
-            await readFile(
-              resolve(
-                root,
-                process.env.TABLECAST_GUEST_CAPTURE_EVENTS ??
-                  "apps/presentation/assets/openscreen/tablecast-guest-ready/tablecast-events.json",
-              ),
-              "utf8",
-            ),
-          ),
-        )
-      : null;
-  const sessionId = capture?.result?.sessionId;
-  if (role === "staff" && !sessionId) throw new Error("確定済みの客側収録が必要です");
   const store = encodeURIComponent(process.env.TABLECAST_CAPTURE_STORE ?? "tablecast-komorebi");
   const route =
     role === "admin"

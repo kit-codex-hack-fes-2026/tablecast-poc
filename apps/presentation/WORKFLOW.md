@@ -7,7 +7,7 @@
 制作の入口はこの文書。既存のHyperFrames・OpenScreen・TTSを使い、題材ごとの構成・撮影・編集判断と、共通の生成・検査をつなぐ。最初に[制作メモのひな型](BRIEF-TEMPLATE.md)を埋める。現行の2本は作例として維持する。
 
 1. **実装と変更を確認する。** 対象のアプリ版、利用目的、成功条件、変更されたUI・APIを特定する。既存録画が今も有効か判断し、必要な場面を再撮影対象にする。
-2. **題材の入力を整える。** `project.json`にブランド・構成・字幕・発話・素材・図・時刻、隣の`capture-plan.json`に撮影意図・状態・対象・保持条件を置く。TableCastの既存入力は`projects/tablecast-main-rerecord.json`と隣の`projects/capture-plan.json`。
+2. **題材の入力を整える。** `project.json`にブランド・構成・字幕・発話・素材・図・時刻、隣の`capture-plan.json`に撮影意図・状態・対象・保持条件を置く。TableCastの既定入力は`projects/tablecast-main-rerecord.json`とpresentationルートの`capture-plan.json`。
 3. **撮影する。** アプリ固有のPlaywright操作で初期状態を用意し、成功結果を待つ。共通の`captureShot(page, sceneId, shot, out, waitForState)`で実測・保持の証跡を残す。状態名があるのに状態待ち関数を渡さない場合は失敗する。業務状態を共通処理へ追加しない。
 4. **編集・音声・図を合わせる。** 採用した実応答からcutと字幕を決め、実測に合わせてズームを設定する。新しい発話だけTTSを生成し、実音声尺に合わせて図の強調を調整する。詳細は下記の既存工程を使う。
 5. **生成・検査する。** 下記の`video`コマンドで、指定した台本と出力に対してbuild・Playwright配置検査・HyperFrames lint／遷移検査を実行する。`--render`指定時はMP4、形式・全編復号・音量・完成フレーム抽出・等速再生まで進む。
@@ -36,7 +36,7 @@ reportには入力台本・参照素材・生成コードのハッシュ、ア�
 
 - `brand.name/title`でヘッダー・画面枠・末尾・HTMLタイトルを変える。任意の`brand.roles`（customer/staff/admin）と`brand.speakers`（narrator/customer/cast/instruction）で表示名を変える。これらのキーはレイアウト用の枠として維持する。1920×1080・30fps・日本語と既存スタイルは標準プリセット。
 - 画像・録画・音声は引き続きpresentationルートの`assets/`へ置く。台本の場所を変えても素材パスの基準は変わらない。別アプリの実装根拠はリポジトリ内の相対パスで管理する。外部リポジトリならこのworkspaceをその開発環境へ配置し直し、素材・出典の参照を合わせる。
-- `TABLECAST_PRESENTATION_PROJECT`を指定すると、TTS・既存編集・収録もその台本を使う。撮影定義は台本と同じフォルダの`capture-plan.json`。別の場所を使う場合は`TABLECAST_PRESENTATION_CAPTURE_PLAN`を指定する。
+- `TABLECAST_PRESENTATION_PROJECT`を指定すると、TTS・既存編集・収録もその台本を使う。TableCastの既定台本はpresentationルートの`capture-plan.json`、別題材は台本と同じフォルダの`capture-plan.json`を読む。`TABLECAST_PRESENTATION_CAPTURE_PLAN`を指定すると、どちらの場合もそのファイルを優先する。指定パスはpresentationルートからの相対パスまたは絶対パス。
 - TableCastの収録スクリプトには注文・音声・管理画面の操作がある。接続先は`TABLECAST_CAPTURE_ORIGIN`、店舗IDは`TABLECAST_CAPTURE_STORE`で指定する。業務状態の待機は`tablecast-app-capture.ts`が所有する。別アプリではそのアプリ用のPlaywright操作と状態待ちを作り、`tablecast-shot.ts`の実測、既存の録画・編集方法を利用する。JSONの変更だけで任意のアプリを自動操作する仕様ではない。
 - TableCastの内容に対する回帰テストは維持する。共通の配置・字幕・比率・技術図の検査は出力先と生成されたtimingから検査し、別題材にはTableCast固有の場面名を要求しない。Playwrightの[project／tag](https://playwright.dev/docs/test-annotations)と既存の[HyperFrames CLI](https://hyperframes.heygen.com/packages/cli)を使い、新しい描画基盤は追加していない。
 
@@ -151,13 +151,17 @@ capture:checkは短い録画・ズームの確認で、会話・注文全行程�
 
 ```powershell
 node scripts/tablecast-record-guest.ts tablecast-guest-new-take
+if ($LASTEXITCODE -ne 0) { throw '客側収録失敗' }
 node scripts/tablecast-record-role.ts admin tablecast-admin-new-take
+if ($LASTEXITCODE -ne 0) { throw '管理者収録失敗' }
+$env:TABLECAST_GUEST_CAPTURE_EVENTS = (Resolve-Path assets/openscreen/tablecast-guest-new-take/tablecast-events.json -ErrorAction Stop).Path
 node scripts/tablecast-record-role.ts staff tablecast-staff-new-take
+if ($LASTEXITCODE -ne 0) { throw '店員収録失敗' }
 ```
 
 確定注文が1件あり注文かごが空の同じ合成来店で、英語応答だけを追加撮影する場合は`node scripts/tablecast-record-guest.ts tablecast-english-new-take english`を使える。別テイクの実音声・字幕・カットとして対応付ける。[最新mainの再収録記録](records/tablecast-rerecord-validation.json)を参照する。
 
-必要な役割だけを実行する。客は認可済みの新しい合成来店・空カート／注文0件が必要で、有料の実会話と注文操作を行う。店員は同じ注文を参照する。認証状態は `TABLECAST_CAPTURE_STORAGE_STATE`、店員が参照する客側イベントは `TABLECAST_GUEST_CAPTURE_EVENTS` で指定できる。既定の認証ファイル名だけで、現在も有効とは判断しない。
+必要な役割だけを実行する。客は認可済みの新しい合成来店・空カート／注文0件が必要で、有料の実会話と注文操作を行う。店員は同じ注文を参照する。認証状態は `TABLECAST_CAPTURE_STORAGE_STATE` で指定する。店員収録では `TABLECAST_GUEST_CAPTURE_EVENTS` に今回成功した客側テイクのイベントファイルを必ず指定する（リポジトリルートからの相対パスまたは絶対パス）。上の客側保存名を変えた場合はこのパスも合わせる。管理者収録には不要。既定の認証ファイル名だけで、現在も有効とは判断しない。
 
 成功時のtake・shot・イベント・音声・元録画を保持する。字幕・cut・zoom・必要な静止画を新テイクへ合わせ、旧発話の時刻を流用しない。GUI編集では各素材フォルダのportable projectを優先し、絶対パスを確認する。
 

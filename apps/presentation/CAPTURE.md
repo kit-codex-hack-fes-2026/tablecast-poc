@@ -25,7 +25,7 @@ Issue #1の動画生成基盤として、操作の完了ではなく「見せた
 ## 撮影と編集
 
 1. `capture-plan.json` の意図・対象・表示条件を更新する。
-2. 認証済みの合成来店で `node scripts/tablecast-record-guest.ts 新しい保存名`、店舗側は `node scripts/tablecast-record-role.ts admin 新しい保存名` または `staff` を実行する。認証・有料音声の扱いは [WORKFLOW.md](WORKFLOW.md) に従う。店員収録は `TABLECAST_GUEST_CAPTURE_EVENTS` で確定注文の客側イベントを指定できる。
+2. 認証済みの合成来店で `node scripts/tablecast-record-guest.ts 新しい保存名`、店舗側は `node scripts/tablecast-record-role.ts admin 新しい保存名` または `staff` を実行する。認証・有料音声の扱いは [WORKFLOW.md](WORKFLOW.md) に従う。店員収録では `TABLECAST_GUEST_CAPTURE_EVENTS` に今回成功した客側テイクの `tablecast-events.json` を必ず指定する。パスはリポジトリルート基準または絶対パスとし、WORKFLOWのコマンド例で引き渡す。
 3. 成功した録画だけに `tablecast-take.json` を作る。失敗理由は `tablecast-rejected.json`。保存先は毎回新規作成し、失敗した録画を採用済み台本へ書き込まない。録画時間の上限は客300秒、店舗30秒。Windowsでstdin停止が効かない場合にも上限で保存が終了する。上限までの余白を完成動画へ足すものではない。
 4. 店舗側は実測開始の1.8秒前から全体表示を確保し、対象が安定してから寄り、保持終了後に引く。ズーム対象とタイミングは `bindShotZoom` で実測から設定し、OpenScreenで書き出した後に採用する。
 5. 客側は実際の応答・音声に合わせた切り出しと字幕が必要。収録時に保存する `tablecast-capture-plan.json` を編集用台本の出発点にし、各 `media.file/project/shot` を新しい保存先へ、`offset/duration` と `cues` をそのテイクの実音声へ合わせる。旧テイクの発話や秒数は流用しない。`TABLECAST_PRESENTATION_PROJECT` でこの台本を指定し `node scripts/tablecast-edit-guest.ts` を実行すると、撮影証跡からズームを配置する。必要な保持区間・引きが切り出しに入らない場合は再編集を要求する。音声の意味に沿ったカットと字幕の決定は自動化していない。

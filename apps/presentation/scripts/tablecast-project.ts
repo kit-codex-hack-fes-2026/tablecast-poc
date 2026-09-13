@@ -351,11 +351,9 @@ export function selectScenes(project: Project, ids?: string) {
     }),
   };
 }
+const defaultProjectPath = resolve(root, "projects/tablecast-main-rerecord.json");
 export const projectPath = () =>
-  resolve(
-    root,
-    process.env.TABLECAST_PRESENTATION_PROJECT ?? "projects/tablecast-main-rerecord.json",
-  );
+  resolve(root, process.env.TABLECAST_PRESENTATION_PROJECT ?? defaultProjectPath);
 export async function readProject() {
   return projectSchema.parse(JSON.parse(await readFile(projectPath(), "utf8")));
 }
@@ -369,7 +367,10 @@ export async function readCaptureProject() {
         await readFile(
           process.env.TABLECAST_PRESENTATION_CAPTURE_PLAN
             ? resolve(root, process.env.TABLECAST_PRESENTATION_CAPTURE_PLAN)
-            : resolve(dirname(projectPath()), "capture-plan.json"),
+            : resolve(
+                projectPath() === defaultProjectPath ? root : dirname(projectPath()),
+                "capture-plan.json",
+              ),
           "utf8",
         ),
       ),
