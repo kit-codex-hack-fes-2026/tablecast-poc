@@ -191,9 +191,11 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加する。前者はWorkers Static Assets、後者はReact Email公式UIをOpenNextのStatic Assets incremental cacheで動かす。APIの`@tablecast/api/emails`にあるレイアウトと3用途の文言を共有し、架空の店舗名と`example.invalid`だけを渡す。公開UIにはSendを出さず、Workerは既知の事前生成ページと静的アセットへのGET/HEADだけを受ける。CSPでform送信とメール送信先への接続を禁止する。装飾用WASMのjsDelivrへの取得は許可する。
 
-CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildが成功した場合に配備する。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
+CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildが成功した場合に配備する。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policiesの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
+
+Storybookは`html_handling: none`で`/iframe.html`をそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
 
 `/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。カタログ専用の固定コメントを1件だけ更新し、失敗時も対象SHA・各jobの結果・最後に確認できた配備SHAを表示する。現在版を確認できなければ旧版が残ったと推測しない。forkはsecretなしbuildだけを実施し、配備・コメントは対象外とsummaryへ記録する。
 

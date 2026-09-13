@@ -164,6 +164,7 @@ async function main() {
     await mkdir(resolve(directory, "_tablecast"), { recursive: true });
     await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
     await writeFile(resolve(directory, "_headers"), "/*\n  Cache-Control: no-store\n");
+    await writeFile(resolve(directory, "_redirects"), "/ /index.html 200\n");
     return;
   }
   const sha = z

@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 15
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number }}
+      queue: max
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}

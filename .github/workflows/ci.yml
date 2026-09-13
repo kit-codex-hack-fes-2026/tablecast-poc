@@ -183,6 +183,7 @@ jobs:
       pull-requests: write
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number }}
+      queue: max
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
@@ -355,6 +356,7 @@ jobs:
       pull-requests: write
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number || 'production' }}
+      queue: max
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
