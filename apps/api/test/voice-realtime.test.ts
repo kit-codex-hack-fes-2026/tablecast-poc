@@ -127,10 +127,10 @@ describe("Agents functionと共通業務の認可", () => {
       products: [{ id: "tea" }],
     });
     const category = await tool("getCatalog", { query: "drinks" });
-    expect(category.result).toMatchObject({ detail: true });
+    expect(category.result).toMatchObject({ detail: false });
     expect(category.result).toHaveProperty("products.length", 2);
   });
-  it("日英のカテゴリ名・読み・別名から、そのカテゴリだけの詳細を取得する", async () => {
+  it("日英のカテゴリ名・読み・別名から概要を取得し、選んだ商品IDで必須選択を確認する", async () => {
     await setup();
     const sake: Product["text"] = configurationText("日本酒", "Rice wine");
     sake.ja.speechName = "にほんしゅ";
@@ -165,23 +165,34 @@ describe("Agents functionと共通業務の認可", () => {
       "Japanese alcoholic drink",
     ])
       expect((await tool("getCatalog", { query })).result).toMatchObject({
-        detail: true,
+        detail: false,
         products: [
           {
             id: "coffee",
             categoryId: "sake",
-            allergens: configuration.products[1]?.allergens,
-            modifiers: [{ min: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+            speechName: configuration.products[1]?.text.ja.speechName,
           },
         ],
       });
     for (const query of ["刺身", "さしみ", "Raw fish"])
       expect((await tool("getCatalog", { query })).result).toMatchObject({
-        detail: true,
-        products: [
-          { id: "tea", categoryId: "sashimi", allergens: configuration.products[0]?.allergens },
-        ],
+        detail: false,
+        products: [{ id: "tea", categoryId: "sashimi" }],
       });
+    const combined = (await tool("getCatalog", { query: "刺身 日本酒" })).result;
+    expect(combined).toMatchObject({ detail: false, products: [{ id: "tea" }, { id: "coffee" }] });
+    expect(combined).not.toHaveProperty("products.1.modifiers");
+    expect(combined).not.toHaveProperty("products.1.allergens");
+    expect((await tool("getCatalog", { query: "coffee" })).result).toMatchObject({
+      detail: true,
+      products: [
+        {
+          id: "coffee",
+          allergens: configuration.products[1]?.allergens,
+          modifiers: [{ min: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+        },
+      ],
+    });
   });
   it("正式銘柄名・ID・読み・別名の一致を共通語より優先し、複数商品の部分検索は維持する", async () => {
     await setup();
@@ -226,13 +237,85 @@ describe("Agents functionと共通業務の認可", () => {
       products: [{ id: "sake-yukiakari", price: 540 }],
     });
     expect((await tool("getCatalog", { query: "月凪 雪灯" })).result).toMatchObject({
-      detail: true,
+      detail: false,
       products: [{ id: "sake-tsukinagi" }, { id: "sake-yukiakari" }],
     });
     const missing = (await tool("getCatalog", { query: "未登録の銘柄" })).result;
     expect(missing).toMatchObject({ detail: false });
     expect(missing).toHaveProperty("products.length", 3);
     expect(missing).not.toHaveProperty("products.0.allergens");
+  });
+  it("多数のカテゴリ商品を省略せず概要で返し、個別詳細の取得では最新価格と必須選択を保つ", async () => {
+    await setup();
+    const base = configuration.products[1];
+    if (!base) throw new Error("検索対象の商品がありません");
+    const products = Array.from({ length: 28 }, (_, index) => ({
+      ...base,
+      id: `sake-${index}`,
+      categoryId: "sake",
+      text: {
+        ja: {
+          ...base.text.ja,
+          displayName: `日本酒銘柄${index}`,
+          speechName: `にほんしゅめいがら${index}`,
+          description: "辛口。表示価格は60mlです。",
+          aliases: [`別名${index}`],
+        },
+        en: {
+          ...base.text.en,
+          displayName: `Sake ${index}`,
+          speechName: `Sake ${index}`,
+          description: "Dry. The displayed price is for 60ml.",
+          aliases: [`Alias ${index}`],
+        },
+      },
+      available: index !== 27,
+      tags: ["popular"],
+    }));
+    const menu = {
+      ...configuration,
+      categories: [{ id: "sake", text: configurationText("日本酒", "Sake") }],
+      products,
+    };
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify(menu) })
+      .where(eq(business.stores.id, device.storeId));
+    const overview = (await tool("getCatalog", { query: "日本酒" })).result;
+    expect(overview).toMatchObject({ detail: false });
+    expect(overview).toHaveProperty("products.length", 28);
+    expect(overview).toHaveProperty("products.27.available", false);
+    expect(overview).toHaveProperty("products.0.speechName", "にほんしゅめいがら0");
+    expect(overview).toHaveProperty("products.0.description", "辛口。表示価格は60mlです。");
+    for (const field of ["aliases", "tags", "allergens", "modifiers"])
+      expect(overview).not.toHaveProperty(`products.0.${field}`);
+    const selected = (await tool("getCatalog", { query: "sake-0" })).result;
+    expect(selected).toMatchObject({
+      detail: true,
+      products: [
+        {
+          id: "sake-0",
+          price: base.price,
+          allergens: base.allergens,
+          modifiers: [{ min: 1, max: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+        },
+      ],
+    });
+    await services()
+      .db.update(business.stores)
+      .set({
+        config_json: JSON.stringify({
+          ...menu,
+          products: products.map((product) =>
+            product.id === "sake-0" ? { ...product, price: 650 } : product,
+          ),
+        }),
+      })
+      .where(eq(business.stores.id, device.storeId));
+    expect((await tool("getCatalog", { query: "別名0" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "sake-0", price: 650, allergens: base.allergens }],
+    });
   });
   it("JSON Schema違反と停止後の操作を拒否する", async () => {
     await setup();
