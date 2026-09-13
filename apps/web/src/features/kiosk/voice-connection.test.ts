@@ -4,17 +4,16 @@ import { apiFetch } from "../../lib/api-fetch";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 
-type TestMicrophone = {
+type TestMediaTrack = {
   stop: () => void;
-  on: (event: string, listener: () => void) => void;
-  setDeviceId: (deviceId: string | { exact: string }) => Promise<boolean>;
-  mediaStreamTrack: { label: string; getSettings: () => { deviceId: string } };
+  label: string;
+  getSettings: () => { deviceId: string };
 };
 const transport = vi.hoisted(() => ({
   connect: vi.fn<(url: string, token: string) => Promise<void>>(),
   disconnect: vi.fn<(stopTracks: boolean) => Promise<void>>(),
   publish: vi.fn<(track: unknown) => Promise<void>>(),
-  capture: vi.fn<(options: { deviceId?: { exact: string } }) => Promise<TestMicrophone>>(),
+  capture: vi.fn<(options: { deviceId?: { exact: string } }) => Promise<TestMediaTrack>>(),
   stop: vi.fn<() => void>(),
   trackOn: vi.fn<(event: string, listener: () => void) => void>(),
   setDeviceId: vi.fn<(deviceId: string | { exact: string }) => Promise<boolean>>(),
@@ -39,8 +38,15 @@ vi.mock("livekit-client", () => ({
     Disconnected: "disconnected",
   },
   TrackEvent: { Ended: "ended", Restarted: "restarted" },
-  Track: { Kind: { Audio: "audio" } },
-  createLocalAudioTrack: transport.capture,
+  Track: { Kind: { Audio: "audio" }, Source: { Microphone: "microphone" } },
+  LocalAudioTrack: class {
+    constructor(public mediaStreamTrack: TestMediaTrack) {}
+    on = transport.trackOn;
+    setDeviceId = transport.setDeviceId;
+    stop() {
+      this.mediaStreamTrack.stop();
+    }
+  },
 }));
 
 const ignoreResolution = () => undefined;
@@ -65,13 +71,19 @@ describe("音声の明示的な停止と再開", () => {
     transport.setDeviceId.mockResolvedValue(true);
     transport.capture.mockImplementation(async (options) => ({
       stop: transport.stop,
-      on: transport.trackOn,
-      setDeviceId: transport.setDeviceId,
-      mediaStreamTrack: {
-        label: "Built-in microphone",
-        getSettings: () => ({ deviceId: options.deviceId?.exact ?? "built-in" }),
-      },
+      label: "Built-in microphone",
+      getSettings: () => ({ deviceId: options.deviceId?.exact ?? "built-in" }),
     }));
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: async ({ audio }: { audio: { deviceId?: { exact: string } } }) => {
+          const track = await transport.capture(audio);
+          return { getAudioTracks: () => [track] };
+        },
+        enumerateDevices: async () => [],
+        getSupportedConstraints: () => ({ deviceId: true }),
+      },
+    });
     let issued = 0;
     vi.mocked(apiFetch).mockImplementation(async (input, options) => {
       const path = input instanceof Request ? input.url : String(input);
@@ -103,7 +115,7 @@ describe("音声の明示的な停止と再開", () => {
   });
 
   it("マイク許可待ちに停止した場合は遅れて取得したトラックを送信せず終了する", async () => {
-    const pending = deferred<TestMicrophone>();
+    const pending = deferred<TestMediaTrack>();
     transport.capture.mockReturnValue(pending.promise);
     const changes: VoiceView[] = [];
     const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
@@ -112,12 +124,8 @@ describe("音声の明示的な停止と再開", () => {
     await connection.stop();
     pending.resolve({
       stop: transport.stop,
-      on: transport.trackOn,
-      setDeviceId: transport.setDeviceId,
-      mediaStreamTrack: {
-        label: "Built-in microphone",
-        getSettings: () => ({ deviceId: "built-in" }),
-      },
+      label: "Built-in microphone",
+      getSettings: () => ({ deviceId: "built-in" }),
     });
     await starting;
     expect(transport.publish).not.toHaveBeenCalled();
@@ -188,12 +196,8 @@ describe("音声の明示的な停止と再開", () => {
   it("開始時に指定と異なる入力が返されたら送信せず停止する", async () => {
     transport.capture.mockResolvedValueOnce({
       stop: transport.stop,
-      on: transport.trackOn,
-      setDeviceId: transport.setDeviceId,
-      mediaStreamTrack: {
-        label: "Built-in microphone",
-        getSettings: () => ({ deviceId: "built-in" }),
-      },
+      label: "Built-in microphone",
+      getSettings: () => ({ deviceId: "built-in" }),
     });
     const changes: VoiceView[] = [];
     const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());

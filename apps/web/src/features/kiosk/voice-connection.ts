@@ -168,7 +168,7 @@ export class VoiceConnection {
         RoomEvent,
         Track,
         TrackEvent,
-        createLocalAudioTrack,
+        LocalAudioTrack,
       } = await import("livekit-client");
       if (!this.current(attempt)) return;
       const room = new LiveKitRoom({
@@ -270,12 +270,19 @@ export class VoiceConnection {
         return;
       }
       const selectedId = this.microphoneView.selectedId;
-      const microphone = await createLocalAudioTrack({
+      const constraints: MediaTrackConstraints = {
         ...(selectedId === "default" ? {} : { deviceId: { exact: selectedId } }),
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: constraints,
+        video: false,
       });
+      // SDKの自動再取得を無効にし、captureの再開を明示操作だけに限定する。
+      const microphone = new LocalAudioTrack(stream.getAudioTracks()[0], constraints, true);
+      microphone.source = Track.Source.Microphone;
       if (!this.current(attempt)) {
         microphone.stop();
         await room.disconnect(true);

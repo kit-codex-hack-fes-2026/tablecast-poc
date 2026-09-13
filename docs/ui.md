@@ -69,7 +69,7 @@ Mastraの公開chunkからツールの実行中・完了・エラーを表示し
 
 速度スライダー右に44×44 CSS pxのマイク設定ボタンを置く。ダイアログで端末の既定マイクとブラウザーが公開する入力を選べる。選択はページ内で保持し、再読み込みをまたいで保存しない。停止中の一覧取得と選択はcapture・送音を開始せず、明示再開で反映する。権限取得前は名前や一覧が制限されるため、音声開始による許可と一覧更新を案内する。
 
-会話中はLiveKitの`LocalAudioTrack.setDeviceId`で切り替える。切替中も音声停止を優先し、古い完了結果を再開や選択変更に使わない。切断・切替失敗時は音声を停止して原因と対処を示し、会話ログ・カートは維持する。既定以外の入力指定が反映されなければ成功表示しない。
+初回captureはブラウザー標準の`getUserMedia`で取得し、`LocalAudioTrack`へ`userProvidedTrack=true`で渡す。SDKによる切断後の自動再取得を無効にし、captureの寿命はアプリが管理する。会話中はLiveKitの`LocalAudioTrack.setDeviceId`で切り替える。切替中も音声停止を優先し、古い完了結果を再開や選択変更に使わない。切断・切替失敗時は音声を停止して原因と対処を示し、会話ログ・カートは維持する。既定以外の入力指定が反映されなければ成功表示しない。
 
 導入済み`livekit-client@2.22.2`の公開APIとソースを確認している。[LiveKit API](https://docs.livekit.io/reference/client-sdk-js/classes/LocalAudioTrack.html)と[ブラウザーのデバイス一覧](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/enumerateDevices)を参照。iPad Safariを含め、OS・ブラウザーが公開する入力だけが候補になる。候補が少ない場合は端末側の入力設定を案内し、UA名だけで対応可否を断定しない。複数の実マイクでの切替・切断、実iPad Safariの入力選択は実機検証が必要であり、Storybookや合成音声の成功では代替しない。
 
