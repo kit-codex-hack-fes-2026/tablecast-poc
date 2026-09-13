@@ -102,6 +102,7 @@ export function AudioWaveform({
     });
     return () => animation.stop();
   }, [preset, still]);
+  const mediaStreamTrack = track?.mediaStreamTrack;
   const reactive = !still && (state === "listening" || state === "speaking");
   const volume = reactive ? audio.volume : 0;
   const brightness = reactive ? audio.brightness : 0;
@@ -122,7 +123,7 @@ export function AudioWaveform({
     context.moveTo(0, 24);
     context.lineTo(240, 24);
     context.stroke();
-    if (!track || !reactive) return undefined;
+    if (!track || !mediaStreamTrack || !reactive) return undefined;
     let analysis: ReturnType<typeof createAudioAnalyser>;
     try {
       analysis = createAudioAnalyser(track, { fftSize: 256 });
@@ -167,7 +168,7 @@ export function AudioWaveform({
       cancelAnimationFrame(frame);
       void analysis.cleanup();
     };
-  }, [track, reactive]);
+  }, [track, mediaStreamTrack, reactive]);
   return (
     <figure
       className="flex items-center gap-3 py-1 text-foreground"

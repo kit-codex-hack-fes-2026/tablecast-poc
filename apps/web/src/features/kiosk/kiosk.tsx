@@ -98,6 +98,7 @@ function useTableSession({
   const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion, endpoint));
   const [view, setView] = useState<VoiceView>({ status: "idle" });
   const [voice] = useState(() => new VoiceConnection(setView, refresh, endpoint.client));
+  useEffect(() => voice.observeMicrophones(), [voice]);
   const [chosen, setChosen] = useState<{
     product: Product;
     line?: CartLine;
@@ -377,6 +378,12 @@ function TableSession({
             controlDisabled={view.status === "stopping" || language.isPending}
             speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
             onSpeedChange={(value) => speed.mutate(value)}
+            onMicrophoneChange={(deviceId) => {
+              void voice.selectMicrophone(deviceId);
+            }}
+            onMicrophoneRefresh={() => {
+              void voice.refreshMicrophones();
+            }}
           />
         </ResizablePanel>
         <ResizableHandle aria-label={t("kiosk_resize_panes")} />

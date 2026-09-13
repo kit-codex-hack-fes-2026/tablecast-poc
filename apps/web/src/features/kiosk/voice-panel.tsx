@@ -26,6 +26,7 @@ import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "./menu";
+import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
 import type { VoiceView } from "./voice-connection";
 
 const AudioWaveform = lazy(() =>
@@ -189,6 +190,8 @@ type VoicePanelProps = {
   controlDisabled?: boolean;
   speechSpeed?: number;
   onSpeedChange?: (value: number) => void;
+  onMicrophoneChange?: (deviceId: string) => void;
+  onMicrophoneRefresh?: () => void;
 };
 
 function useVoicePanel({
@@ -377,6 +380,8 @@ export function VoicePanel({
   controlDisabled = false,
   speechSpeed = 1,
   onSpeedChange,
+  onMicrophoneChange,
+  onMicrophoneRefresh,
 }: VoicePanelProps) {
   const {
     locale,
@@ -436,7 +441,7 @@ export function VoicePanel({
         </details>
       )}
       <Conversation>
-        <ConversationContent>
+        <ConversationContent tabIndex={0}>
           {merged.length === 0 && !active && (
             <div className="flex flex-col items-start gap-3 py-5">
               <AudioLines className="size-10 text-muted-foreground" strokeWidth={1.2} />
@@ -594,35 +599,45 @@ export function VoicePanel({
                     : t("kiosk_voice_resume")}
             </Button>
           </span>
-          {onSpeedChange && (
-            <Slider.Root
-              className="flex min-w-32 flex-1 items-center gap-2"
-              key={speechSpeed}
-              defaultValue={speechSpeed}
-              min={0.5}
-              max={1.5}
-              step={0.1}
-              onValueCommitted={(value) => {
-                if (typeof value === "number") onSpeedChange(value);
-              }}
-            >
-              <Turtle className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Control className="flex h-11 flex-1 touch-none items-center">
-                <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
-                  <Slider.Indicator className="rounded-full bg-primary" />
-                  <Slider.Thumb
-                    aria-label={locale === "ja" ? "話す速さ" : "Speech speed"}
-                    className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  />
-                </Slider.Track>
-              </Slider.Control>
-              <Rabbit className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Value className="min-w-10 text-xs tabular-nums">
-                {(value) => `${Number(value).toFixed(1)}×`}
-              </Slider.Value>
-            </Slider.Root>
-          )}
+          <div className="flex min-w-48 flex-1 items-center gap-2">
+            {onSpeedChange && (
+              <Slider.Root
+                className="flex min-w-32 flex-1 items-center gap-2"
+                key={speechSpeed}
+                defaultValue={speechSpeed}
+                min={0.5}
+                max={1.5}
+                step={0.1}
+                onValueCommitted={(value) => {
+                  if (typeof value === "number") onSpeedChange(value);
+                }}
+              >
+                <Turtle className="size-5 shrink-0" aria-hidden="true" />
+                <Slider.Control className="flex h-11 flex-1 touch-none items-center">
+                  <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
+                    <Slider.Indicator className="rounded-full bg-primary" />
+                    <Slider.Thumb
+                      aria-label={locale === "ja" ? "話す速さ" : "Speech speed"}
+                      className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    />
+                  </Slider.Track>
+                </Slider.Control>
+                <Rabbit className="size-5 shrink-0" aria-hidden="true" />
+                <Slider.Value className="min-w-10 text-xs tabular-nums">
+                  {(value) => `${Number(value).toFixed(1)}×`}
+                </Slider.Value>
+              </Slider.Root>
+            )}
+            {onMicrophoneChange && onMicrophoneRefresh && (
+              <MicrophoneSettings
+                view={view}
+                onChange={onMicrophoneChange}
+                onRefresh={onMicrophoneRefresh}
+              />
+            )}
+          </div>
         </div>
+        <MicrophoneNotice error={view.microphone?.error} />
         {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
       </footer>
     </section>

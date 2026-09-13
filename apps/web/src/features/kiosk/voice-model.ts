@@ -23,7 +23,20 @@ export type LiveMessage = {
   locale?: Locale;
   displayIncomplete?: boolean;
 };
+export type MicrophoneError = "permission" | "empty" | "disconnected" | "failed" | "unsupported";
+export type MicrophoneView = {
+  devices: { deviceId: string; label: string }[];
+  selectedId: string;
+  activeLabel?: string;
+  loading?: boolean;
+  switching?: boolean;
+  permissionRequired?: boolean;
+  limited?: boolean;
+  error?: MicrophoneError;
+};
+export const initialMicrophone: MicrophoneView = { devices: [], selectedId: "default" };
 export type VoiceView = {
+  microphone?: MicrophoneView;
   status: VoiceStatus;
   error?: "permission" | "unconfigured" | "connection" | "active";
   interim?: string;

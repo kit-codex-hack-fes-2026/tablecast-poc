@@ -1,4 +1,10 @@
-import type { LiveMessage, VoiceView } from "./voice-model";
+import {
+  initialMicrophone,
+  type MicrophoneError,
+  type MicrophoneView,
+  type LiveMessage,
+  type VoiceView,
+} from "./voice-model";
 export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
 import type { Locale } from "@tablecast/api/schema";
 import type { LocalAudioTrack, Room } from "livekit-client";
@@ -47,6 +53,102 @@ export class VoiceConnection {
     private client: TableClient = tableEndpoint.client,
   ) {}
 
+  private microphoneView = initialMicrophone;
+  private deviceRequest = 0;
+
+  observeMicrophones() {
+    const refresh = () => {
+      void this.refreshMicrophones();
+    };
+    navigator.mediaDevices?.addEventListener("devicechange", refresh);
+    refresh();
+    return () => {
+      ++this.deviceRequest;
+      navigator.mediaDevices?.removeEventListener("devicechange", refresh);
+    };
+  }
+
+  async refreshMicrophones() {
+    const request = ++this.deviceRequest;
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      this.updateMicrophone({ error: "unsupported", loading: false });
+      return;
+    }
+    this.updateMicrophone({ loading: true });
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      if (request !== this.deviceRequest) return;
+      const devices = all.filter((device) => device.kind === "audioinput");
+      const named = devices.some((device) => Boolean(device.label));
+      const missing =
+        named &&
+        this.microphoneView.selectedId !== "default" &&
+        !devices.some((device) => device.deviceId === this.microphoneView.selectedId);
+      this.updateMicrophone({
+        devices: devices.filter((device) => device.deviceId),
+        loading: false,
+        permissionRequired: !named,
+        limited:
+          !navigator.mediaDevices.getSupportedConstraints().deviceId ||
+          (named && devices.filter((device) => device.deviceId !== "default").length < 2),
+        error: missing
+          ? "disconnected"
+          : devices.length === 0
+            ? "empty"
+            : this.microphoneView.error === "empty"
+              ? undefined
+              : this.microphoneView.error,
+      });
+      if (missing && this.desired) await this.stop();
+    } catch (error) {
+      if (request === this.deviceRequest)
+        this.updateMicrophone({ loading: false, error: microphoneError(error) });
+    }
+  }
+
+  async selectMicrophone(deviceId: string) {
+    if (this.view.status === "connecting" || this.microphoneView.switching) return;
+    const microphone = this.microphone;
+    if (!this.desired || !microphone) {
+      this.updateMicrophone({ selectedId: deviceId, error: undefined });
+      return;
+    }
+    const attempt = this.attempt;
+    this.updateMicrophone({ switching: true, error: undefined });
+    try {
+      const switched = await microphone.setDeviceId(
+        deviceId === "default" ? "default" : { exact: deviceId },
+      );
+      if (!this.current(attempt)) {
+        microphone.stop();
+        return;
+      }
+      if (!switched && deviceId !== "default") {
+        await this.stop();
+        this.updateMicrophone({ error: "unsupported" });
+        return;
+      }
+      this.updateMicrophone({
+        selectedId: deviceId,
+        activeLabel: microphone.mediaStreamTrack.label,
+      });
+      this.emit({ inputTrack: microphone });
+      void this.refreshMicrophones();
+    } catch (error) {
+      if (!this.current(attempt)) return;
+      // SDKの切替は元のcaptureを終了するため、失敗時は明示再開を待つ。
+      await this.stop();
+      this.updateMicrophone({ error: microphoneError(error) });
+    } finally {
+      if (this.current(attempt)) this.updateMicrophone({ switching: false });
+    }
+  }
+
+  private updateMicrophone(change: Partial<MicrophoneView>) {
+    this.microphoneView = { ...this.microphoneView, ...change };
+    this.emit({ microphone: this.microphoneView });
+  }
+
   async start(locale: Locale) {
     if (this.desired || this.stopping) return;
     this.desired = true;
@@ -65,6 +167,7 @@ export class VoiceConnection {
         RemoteAudioTrack,
         RoomEvent,
         Track,
+        TrackEvent,
         createLocalAudioTrack,
       } = await import("livekit-client");
       if (!this.current(attempt)) return;
@@ -166,7 +269,9 @@ export class VoiceConnection {
         await room.disconnect(true);
         return;
       }
+      const selectedId = this.microphoneView.selectedId;
       const microphone = await createLocalAudioTrack({
+        ...(selectedId === "default" ? {} : { deviceId: { exact: selectedId } }),
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
@@ -176,7 +281,22 @@ export class VoiceConnection {
         await room.disconnect(true);
         return;
       }
+      if (
+        selectedId !== "default" &&
+        microphone.mediaStreamTrack.getSettings().deviceId !== selectedId
+      ) {
+        microphone.stop();
+        throw new DOMException("Microphone selection was not applied", "NotSupportedError");
+      }
       this.microphone = microphone;
+      microphone.on(TrackEvent.Restarted, () => {
+        if (!this.current(attempt)) microphone.stop();
+      });
+      microphone.on(TrackEvent.Ended, () => {
+        if (!this.current(attempt) || this.microphoneView.switching) return;
+        void this.stop();
+        this.updateMicrophone({ error: "disconnected" });
+      });
       this.emit({ inputTrack: microphone });
       await room.localParticipant.publishTrack(microphone);
       if (!this.current(attempt)) {
@@ -185,7 +305,12 @@ export class VoiceConnection {
         return;
       }
       await room.startAudio();
-      if (this.current(attempt)) this.emit({ status: "listening" });
+      if (this.current(attempt)) {
+        this.updateMicrophone({ activeLabel: microphone.mediaStreamTrack.label, error: undefined });
+        this.emit({ status: "listening" });
+        if (typeof navigator !== "undefined" && navigator.mediaDevices)
+          void this.refreshMicrophones();
+      }
     } catch (error) {
       if (!this.current(attempt)) return;
       if (apiError(error)?.code === "VOICE_ALREADY_ACTIVE") {
@@ -202,6 +327,7 @@ export class VoiceConnection {
             ? "unconfigured"
             : "connection";
       await this.stop();
+      if (error instanceof DOMException) this.updateMicrophone({ error: microphoneError(error) });
       this.emit({ status: "error", error: reason });
     }
   }
@@ -223,6 +349,7 @@ export class VoiceConnection {
     this.emit({ status: "stopping" });
     this.microphone?.stop();
     this.microphone = undefined;
+    if (this.view.microphone) this.updateMicrophone({ activeLabel: undefined, switching: false });
     for (const element of this.audio) {
       element.pause();
       element.srcObject = null;
@@ -271,4 +398,14 @@ export class VoiceConnection {
       this.client.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
     );
   }
+}
+
+function microphoneError(error: unknown): MicrophoneError {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError" || error.name === "SecurityError") return "permission";
+    if (error.name === "NotSupportedError") return "unsupported";
+    if (error.name === "NotFoundError") return "empty";
+    if (error.name === "OverconstrainedError") return "disconnected";
+  }
+  return "failed";
 }

@@ -4,12 +4,20 @@ import { apiFetch } from "../../lib/api-fetch";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 
+type TestMicrophone = {
+  stop: () => void;
+  on: (event: string, listener: () => void) => void;
+  setDeviceId: (deviceId: string | { exact: string }) => Promise<boolean>;
+  mediaStreamTrack: { label: string; getSettings: () => { deviceId: string } };
+};
 const transport = vi.hoisted(() => ({
   connect: vi.fn<(url: string, token: string) => Promise<void>>(),
   disconnect: vi.fn<(stopTracks: boolean) => Promise<void>>(),
   publish: vi.fn<(track: unknown) => Promise<void>>(),
-  capture: vi.fn<() => Promise<{ stop: () => void }>>(),
+  capture: vi.fn<(options: { deviceId?: { exact: string } }) => Promise<TestMicrophone>>(),
   stop: vi.fn<() => void>(),
+  trackOn: vi.fn<(event: string, listener: () => void) => void>(),
+  setDeviceId: vi.fn<(deviceId: string | { exact: string }) => Promise<boolean>>(),
   startAudio: vi.fn<() => Promise<void>>(),
   on: vi.fn<(event: string, listener: (...args: unknown[]) => void) => void>(),
 }));
@@ -30,6 +38,7 @@ vi.mock("livekit-client", () => ({
     DataReceived: "data",
     Disconnected: "disconnected",
   },
+  TrackEvent: { Ended: "ended", Restarted: "restarted" },
   Track: { Kind: { Audio: "audio" } },
   createLocalAudioTrack: transport.capture,
 }));
@@ -53,7 +62,16 @@ describe("音声の明示的な停止と再開", () => {
     transport.disconnect.mockResolvedValue(undefined);
     transport.publish.mockResolvedValue(undefined);
     transport.startAudio.mockResolvedValue(undefined);
-    transport.capture.mockResolvedValue({ stop: transport.stop });
+    transport.setDeviceId.mockResolvedValue(true);
+    transport.capture.mockImplementation(async (options) => ({
+      stop: transport.stop,
+      on: transport.trackOn,
+      setDeviceId: transport.setDeviceId,
+      mediaStreamTrack: {
+        label: "Built-in microphone",
+        getSettings: () => ({ deviceId: options.deviceId?.exact ?? "built-in" }),
+      },
+    }));
     let issued = 0;
     vi.mocked(apiFetch).mockImplementation(async (input, options) => {
       const path = input instanceof Request ? input.url : String(input);
@@ -76,6 +94,7 @@ describe("音声の明示的な停止と再開", () => {
     });
   });
   afterEach(() => {
+    vi.unstubAllGlobals();
     const unexpected = requests.filter(
       ({ path }) => !path.endsWith("/start") && !path.endsWith("/stop"),
     );
@@ -84,14 +103,22 @@ describe("音声の明示的な停止と再開", () => {
   });
 
   it("マイク許可待ちに停止した場合は遅れて取得したトラックを送信せず終了する", async () => {
-    const pending = deferred<{ stop: () => void }>();
+    const pending = deferred<TestMicrophone>();
     transport.capture.mockReturnValue(pending.promise);
     const changes: VoiceView[] = [];
     const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
     const starting = connection.start("ja");
     await vi.waitFor(() => expect(transport.capture).toHaveBeenCalledOnce());
     await connection.stop();
-    pending.resolve({ stop: transport.stop });
+    pending.resolve({
+      stop: transport.stop,
+      on: transport.trackOn,
+      setDeviceId: transport.setDeviceId,
+      mediaStreamTrack: {
+        label: "Built-in microphone",
+        getSettings: () => ({ deviceId: "built-in" }),
+      },
+    });
     await starting;
     expect(transport.publish).not.toHaveBeenCalled();
     expect(transport.stop).toHaveBeenCalledOnce();
@@ -121,6 +148,201 @@ describe("音声の明示的な停止と再開", () => {
     expect(transport.connect).toHaveBeenCalledOnce();
     expect(transport.publish).toHaveBeenCalledOnce();
     await connection.stop();
+  });
+
+  it("停止中の選択はcaptureせず、明示開始と再開に選択を反映する", async () => {
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.selectMicrophone("external");
+    expect(transport.capture).not.toHaveBeenCalled();
+    expect(requests).toHaveLength(0);
+    await connection.start("ja");
+    expect(transport.capture).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deviceId: { exact: "external" } }),
+    );
+    await connection.stop();
+    await connection.selectMicrophone("built-in");
+    expect(changes.at(-1)?.status).toBe("paused");
+    expect(transport.capture).toHaveBeenCalledOnce();
+    await connection.start("ja");
+    expect(transport.capture).toHaveBeenLastCalledWith(
+      expect.objectContaining({ deviceId: { exact: "built-in" } }),
+    );
+    await connection.stop();
+  });
+
+  it("会話中は同じsessionの入力を切り替える", async () => {
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    await connection.selectMicrophone("external");
+    expect(transport.setDeviceId).toHaveBeenCalledWith({ exact: "external" });
+    expect(requests.filter(({ path }) => path.endsWith("/start"))).toHaveLength(1);
+    expect(changes.at(-1)).toMatchObject({
+      status: "listening",
+      microphone: { selectedId: "external", switching: false },
+    });
+    await connection.stop();
+  });
+
+  it("開始時に指定と異なる入力が返されたら送信せず停止する", async () => {
+    transport.capture.mockResolvedValueOnce({
+      stop: transport.stop,
+      on: transport.trackOn,
+      setDeviceId: transport.setDeviceId,
+      mediaStreamTrack: {
+        label: "Built-in microphone",
+        getSettings: () => ({ deviceId: "built-in" }),
+      },
+    });
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.selectMicrophone("external");
+    await connection.start("ja");
+    expect(transport.publish).not.toHaveBeenCalled();
+    expect(transport.stop).toHaveBeenCalledOnce();
+    expect(changes.at(-1)).toMatchObject({
+      status: "error",
+      microphone: { selectedId: "external", error: "unsupported" },
+    });
+  });
+
+  it("切替中に停止したら遅い完了でcaptureや選択状態を復活させない", async () => {
+    const pending = deferred<boolean>();
+    transport.setDeviceId.mockReturnValueOnce(pending.promise);
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    const switching = connection.selectMicrophone("external");
+    await connection.stop();
+    await connection.selectMicrophone("next-start");
+    pending.resolve(true);
+    await switching;
+    expect(transport.stop).toHaveBeenCalledTimes(2);
+    expect(transport.disconnect).toHaveBeenCalledWith(true);
+    expect(transport.publish).toHaveBeenCalledOnce();
+    expect(changes.at(-1)).toMatchObject({
+      status: "paused",
+      microphone: { selectedId: "next-start", switching: false },
+    });
+  });
+
+  it("旧sessionの切替失敗は停止後に再開したsessionを停止しない", async () => {
+    let rejectSwitch: (reason: Error) => void = ignoreResolution;
+    transport.setDeviceId.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectSwitch = reject;
+      }),
+    );
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    const switching = connection.selectMicrophone("external");
+    await connection.stop();
+    await connection.start("ja");
+    rejectSwitch(new Error("device lost"));
+    await switching;
+    expect(changes.at(-1)?.status).toBe("listening");
+    expect(transport.disconnect).toHaveBeenCalledOnce();
+    await connection.stop();
+  });
+
+  it.each([
+    ["NotAllowedError", "permission"],
+    ["NotFoundError", "empty"],
+    ["OverconstrainedError", "disconnected"],
+    ["NotReadableError", "failed"],
+  ])("切替の%sでは音声を停止し原因%sを表示する", async (name, error) => {
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    transport.setDeviceId.mockRejectedValueOnce(new DOMException("test", name));
+    await connection.selectMicrophone("external");
+    expect(changes.at(-1)).toMatchObject({
+      status: "paused",
+      microphone: { error, switching: false },
+    });
+    expect(transport.stop).toHaveBeenCalledOnce();
+  });
+
+  it("ブラウザーが指定マイクへの切替を反映しない場合は成功表示しない", async () => {
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    transport.setDeviceId.mockResolvedValueOnce(false);
+    await connection.selectMicrophone("external");
+    expect(changes.at(-1)).toMatchObject({
+      status: "paused",
+      microphone: { error: "unsupported", selectedId: "default" },
+    });
+  });
+
+  it("入力トラック切断は音声を停止し明示再開まで再接続しない", async () => {
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.start("ja");
+    const ended = transport.trackOn.mock.calls.find(([event]) => event === "ended")?.[1];
+    expect(ended).toBeDefined();
+    ended?.();
+    await connection.stop();
+    expect(changes.at(-1)).toMatchObject({
+      status: "paused",
+      microphone: { error: "disconnected" },
+    });
+    const restarted = transport.trackOn.mock.calls.find(([event]) => event === "restarted")?.[1];
+    expect(restarted).toBeDefined();
+    restarted?.();
+    expect(transport.stop).toHaveBeenCalledTimes(2);
+    expect(changes.at(-1)?.status).toBe("paused");
+    expect(transport.capture).toHaveBeenCalledOnce();
+  });
+
+  it("停止中の一覧取得は許可やcaptureを要求せず切断した選択を知らせる", async () => {
+    const enumerateDevices = vi
+      .fn<() => Promise<unknown[]>>()
+      .mockResolvedValue([{ kind: "audioinput", deviceId: "built-in", label: "Built-in" }]);
+    const getUserMedia = vi.fn<() => Promise<void>>();
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        enumerateDevices,
+        getUserMedia,
+        getSupportedConstraints: () => ({ deviceId: true }),
+      },
+    });
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    await connection.selectMicrophone("external");
+    await connection.refreshMicrophones();
+    expect(changes.at(-1)).toMatchObject({
+      status: "idle",
+      microphone: { error: "disconnected", selectedId: "external" },
+    });
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(transport.capture).not.toHaveBeenCalled();
+    expect(requests).toHaveLength(0);
+  });
+
+  it("古いデバイス一覧で新しい一覧を上書きしない", async () => {
+    const pending = deferred<unknown[]>();
+    const enumerateDevices = vi
+      .fn<() => Promise<unknown[]>>()
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce([
+        { kind: "audioinput", deviceId: "current", label: "Current microphone" },
+      ]);
+    vi.stubGlobal("navigator", {
+      mediaDevices: { enumerateDevices, getSupportedConstraints: () => ({ deviceId: true }) },
+    });
+    const changes: VoiceView[] = [];
+    const connection = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
+    const older = connection.refreshMicrophones();
+    await connection.refreshMicrophones();
+    pending.resolve([]);
+    await older;
+    expect(changes.at(-1)?.microphone?.devices).toEqual([
+      { kind: "audioinput", deviceId: "current", label: "Current microphone" },
+    ]);
+    expect(changes.at(-1)?.microphone?.error).toBeUndefined();
   });
 
   it("設定不足は成功扱いにせずGUIを維持できる音声エラーとして通知する", async () => {

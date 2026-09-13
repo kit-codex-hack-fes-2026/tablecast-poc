@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { VoicePanel } from "./voice-panel";
 
@@ -305,4 +306,144 @@ export const PausedWithStaleTool: Story = {
     await expect(canvas.queryByText("ツール実行中", { exact: true })).not.toBeInTheDocument();
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
+};
+
+export const MicrophoneSelection: Story = {
+  name: "停止中にマイクを選択しキーボードで閉じても音声を開始しない",
+  args: {
+    view: {
+      status: "paused",
+      microphone: {
+        selectedId: "default",
+        devices: [
+          { deviceId: "built-in", label: "内蔵マイク" },
+          { deviceId: "external", label: "外部USBマイク" },
+        ],
+      },
+    },
+    speechSpeed: 1,
+    onSpeedChange: fn(),
+    onMicrophoneChange: fn(),
+    onMicrophoneRefresh: fn(),
+  },
+  render: function MicrophoneStory(args) {
+    const [view, setView] = useState(args.view);
+    return (
+      <VoicePanel
+        {...args}
+        view={view}
+        onMicrophoneChange={(deviceId) => {
+          args.onMicrophoneChange?.(deviceId);
+          setView((current) => ({
+            ...current,
+            microphone: { devices: current.microphone?.devices ?? [], selectedId: deviceId },
+          }));
+        }}
+      />
+    );
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const trigger = canvas.getByRole("button", { name: "マイク設定" });
+    const bounds = trigger.getBoundingClientRect();
+    await expect(bounds.width).toBe(bounds.height);
+    await expect(bounds.width).toBeGreaterThanOrEqual(44);
+    const speed = canvas.getByRole("slider", { name: "話す速さ" }).getBoundingClientRect();
+    await expect(bounds.left).toBeGreaterThan(speed.right);
+    trigger.focus();
+    await userEvent.keyboard("[Enter]");
+    const dialog = await body.findByRole("dialog", { name: "マイク設定" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    const select = within(dialog).getByRole("combobox", { name: "入力マイク" });
+    select.focus();
+    await userEvent.keyboard("[ArrowDown]");
+    await body.findByRole("listbox");
+    await userEvent.keyboard("[End]");
+    await waitFor(() =>
+      expect(body.getByRole("option", { name: "外部USBマイク" })).toHaveAttribute(
+        "data-highlighted",
+      ),
+    );
+    await userEvent.keyboard("[Enter]");
+    await waitFor(() => expect(select).toHaveTextContent("外部USBマイク"));
+    await waitFor(() => expect(args.onMicrophoneChange).toHaveBeenCalledWith("external"));
+    await expect(args.onStart).not.toHaveBeenCalled();
+    await userEvent.keyboard("[Escape]");
+    await waitFor(() => expect(trigger).toHaveFocus());
+  },
+};
+export const MicrophoneEnglish: Story = {
+  ...MicrophoneSelection,
+  name: "英語のマイク設定と停止中の案内",
+  globals: { locale: "en" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Microphone settings" }));
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", {
+      name: "Microphone settings",
+    });
+    await expect(within(dialog).getByRole("combobox", { name: "Input microphone" })).toBeVisible();
+    await expect(within(dialog).getByText("Voice is paused")).toBeVisible();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+  },
+};
+export const MicrophoneDisconnected: Story = {
+  ...MicrophoneSelection,
+  name: "選択マイクが切断しても履歴と設定の変更を維持する",
+  args: {
+    ...MicrophoneSelection.args,
+    lines: Paused.args?.lines,
+    view: {
+      status: "paused",
+      microphone: { devices: [], selectedId: "external", error: "disconnected" },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("alert")).toHaveTextContent(
+      "選択したマイクが使用できなくなりました",
+    );
+    await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "マイク設定" }));
+    const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", {
+      name: "マイク設定",
+    });
+    await expect(within(dialog).getByRole("combobox")).toHaveTextContent(
+      "選択したマイク（未接続）",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "閉じる" }));
+  },
+};
+export const MicrophonePermission: Story = {
+  ...MicrophoneSelection,
+  name: "マイク許可拒否の復旧案内",
+  args: {
+    ...MicrophoneSelection.args,
+    view: {
+      status: "paused",
+      microphone: {
+        devices: [],
+        selectedId: "default",
+        error: "permission",
+        permissionRequired: true,
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("alert")).toHaveTextContent(
+      "ブラウザーのサイト設定で許可",
+    );
+  },
+};
+export const MicrophoneNarrow: Story = {
+  ...MicrophoneSelection,
+  name: "狭い画面で速度スライダー右のマイク設定を操作",
+  decorators: [
+    (Story) => (
+      <div className="w-80">
+        <Story />
+      </div>
+    ),
+  ],
 };
