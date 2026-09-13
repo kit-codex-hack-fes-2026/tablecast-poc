@@ -311,6 +311,8 @@ export async function startVoiceTurn(
         const parts = new Map<string, string>();
         const finalMessages = new Set<string>();
         const calls = new Set<string>();
+        let rootTurnId: string | undefined;
+        let rootCompleted = false;
         const enqueue = (text: string) => {
           signal.throwIfAborted();
           ensure(output.length + text.length <= 16000, "VOICE_MODEL_FAILED", 503);
@@ -396,7 +398,9 @@ export async function startVoiceTurn(
               await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
             }
             signal.throwIfAborted();
-            if (
+            if (event.type === "agent.session.turn.created" && event.turn.subagent_id === null) {
+              rootTurnId ??= event.turn_id;
+            } else if (
               (event.type === "agent.session.turn.item.added" ||
                 event.type === "agent.session.turn.item.done") &&
               event.item.type === "message" &&
@@ -488,8 +492,23 @@ export async function startVoiceTurn(
               (event.type === "agent.session.turn.completed" ||
                 event.type === "agent.session.turn.cancelled" ||
                 event.type === "agent.session.turn.failed") &&
-              event.turn.subagent_id === null
+              event.turn_id === rootTurnId &&
+              rootTurnId !== undefined
             ) {
+              ensure(
+                event.type === "agent.session.turn.completed",
+                event.type === "agent.session.turn.cancelled"
+                  ? "VOICE_CANCELLED"
+                  : "VOICE_MODEL_FAILED",
+                503,
+              );
+              rootCompleted = true;
+            } else if (
+              event.type === "agent.session.idle" &&
+              rootCompleted &&
+              event.session.required_actions.length === 0
+            ) {
+              // 公式SDKと同じく、対象turnの終端とsessionの停止を別々に確認する。
               agentEnded = true;
               await db
                 .update(business.voiceTurns)
@@ -500,13 +519,6 @@ export async function startVoiceTurn(
                     eq(business.voiceTurns.agent_session_id, agentSessionId ?? ""),
                   ),
                 );
-              ensure(
-                event.type === "agent.session.turn.completed",
-                event.type === "agent.session.turn.cancelled"
-                  ? "VOICE_CANCELLED"
-                  : "VOICE_MODEL_FAILED",
-                503,
-              );
               await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
               ensure(output.length > 0, "VOICE_MODEL_FAILED", 503);
               await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "completed");

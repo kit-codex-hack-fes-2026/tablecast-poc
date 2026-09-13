@@ -33,7 +33,7 @@ APIは現在の音声session、業務turn、卓、公開設定版と引数を検
 
 Agents APIはHTTP切断後も処理が続き得るため、停止時には `agent.session.input.cancel` を明示送信する。cancelは現在の実行に作用するため、別の業務turnへ同じhosted sessionを使い回して古い取消を届かせない。[function tools](https://developers.openai.com/api/docs/guides/agents-api/tools/functions) / [session操作](https://developers.openai.com/api/docs/guides/agents-api/sessions)
 
-取消のPOSTとイベント購読は並行して開始する。SSEの最初の通知までHTTP応答が来ない場合にも取消送信を待たせず、取消後のsession取得でidle/failed、またはroot turnの終端イベントを確認する。EOFだけでは停止成功にせず、確認後は購読も終了する。
+初期inputの開始前にもsessionはidleになり得るため、idleだけでは停止済みと判断しない。イベント購読と正本のturn取得で初期root turnの開始を確認し、取消を一度送る。SSEの最初の通知までHTTP応答が来ない場合にも、既に開始したturnの取消送信を待たせない。root turnが終了済み、sessionがidle/failed、required_actionsが空の全条件で停止を確認し、購読を閉じる。通常の応答も対象root turnの完了後にsessionのidleを確認して完了通知を返し、EOFだけでは成功扱いにしない。
 
 ## 会話履歴とログ
 

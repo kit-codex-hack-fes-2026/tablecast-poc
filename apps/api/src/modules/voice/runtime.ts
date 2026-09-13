@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import OpenAI, { ConflictError, NotFoundError } from "openai";
+import type { Turn } from "openai/resources/beta/agents/sessions/turns";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -9,45 +10,94 @@ import { DomainError, ensure } from "../../platform/errors";
 export async function cancelAgentSession(services: ApiServices, agentSessionId: string) {
   const client = new OpenAI({ apiKey: services.env.TABLECAST_MODEL_API_KEY, maxRetries: 0 });
   const signal = AbortSignal.timeout(15_000);
+  const snapshot = async (requestSignal = signal) => {
+    const [session, turns] = await Promise.all([
+      client.beta.agents.sessions.retrieve(agentSessionId, { signal: requestSignal }),
+      client.beta.agents.sessions.turns.list(
+        agentSessionId,
+        { limit: 100 },
+        { signal: requestSignal },
+      ),
+    ]);
+    // 各sessionは初期inputを持つ一つのroot turn専用。作成前のidleは終了ではない。
+    const turn = turns.data.find((candidate) => candidate.subagent_id === null);
+    return {
+      turn,
+      finished:
+        (session.status === "idle" || session.status === "failed") &&
+        session.required_actions.length === 0 &&
+        (turn?.status === "completed" || turn?.status === "cancelled" || turn?.status === "failed"),
+    };
+  };
+  let cancellation: Promise<void> | undefined;
+  const cancel = async (turn: Turn | undefined) => {
+    if (turn?.status !== "in_progress" && turn?.status !== "waiting") return false;
+    // queuedの初期turnを取り逃さないよう、開始が確認できてから一度だけ取り消す。
+    cancellation ??= client.beta.agents.sessions.events.create(
+      agentSessionId,
+      { events: [{ type: "agent.session.input.cancel" }] },
+      { signal },
+    );
+    await cancellation;
+    return true;
+  };
   let confirmed = false;
   try {
-    const current = await client.beta.agents.sessions.retrieve(agentSessionId, { signal });
-    confirmed = current.status === "idle" || current.status === "failed";
+    const current = await snapshot();
+    confirmed = current.finished;
     if (!confirmed) {
       const subscription = new AbortController();
+      const subscriptionSignal = AbortSignal.any([signal, subscription.signal]);
       // 最初の通知までSSEのheadersが返らなくても、取消POSTを待たせない。
       const terminal = (async () => {
         const events = await client.beta.agents.sessions.events.stream(agentSessionId, {
-          signal: AbortSignal.any([signal, subscription.signal]),
+          signal: subscriptionSignal,
         });
         try {
+          // 購読接続までに始まったturnと、取り逃した終端を正本から復元する。
+          const connected = await snapshot(subscriptionSignal);
+          if (connected.finished) return true;
+          await cancel(connected.turn);
           for await (const event of events) {
             if (
-              event.type === "agent.session.idle" ||
-              event.type === "agent.session.failed" ||
+              (event.type === "agent.session.turn.created" ||
+                event.type === "agent.session.turn.in_progress") &&
+              event.session_id === agentSessionId &&
+              event.turn.subagent_id === null
+            ) {
+              await cancel(event.turn);
+            } else if (
+              ((event.type === "agent.session.idle" ||
+                event.type === "agent.session.failed" ||
+                event.type === "agent.session.requires_action") &&
+                event.session.id === agentSessionId) ||
               ((event.type === "agent.session.turn.cancelled" ||
                 event.type === "agent.session.turn.completed" ||
                 event.type === "agent.session.turn.failed") &&
-                !event.turn.subagent_id)
-            )
-              return true;
+                event.session_id === agentSessionId &&
+                event.turn.subagent_id === null)
+            ) {
+              // turnの終端通知だけでは、セッション全体の停止を成功扱いしない。
+              const latest = await snapshot(subscriptionSignal);
+              if (latest.finished) return true;
+              await cancel(latest.turn);
+            }
           }
           return false;
         } finally {
           events.controller.abort();
         }
-      })().catch(() => false);
+      })().then(
+        (finished) => ({ confirmed: finished }),
+        (error: unknown) => ({ error }),
+      );
       try {
-        await client.beta.agents.sessions.events.create(
-          agentSessionId,
-          {
-            events: [{ type: "agent.session.input.cancel" }],
-          },
-          { signal },
-        );
-        // live-onlyの購読が間に合わなかった終端も、提供元の現在状態で確認する。
-        const latest = await client.beta.agents.sessions.retrieve(agentSessionId, { signal });
-        confirmed = latest.status === "idle" || latest.status === "failed" || (await terminal);
+        if (await cancel(current.turn)) confirmed = (await snapshot()).finished;
+        if (!confirmed) {
+          const result = await terminal;
+          if ("error" in result) throw result.error;
+          confirmed = result.confirmed;
+        }
       } finally {
         subscription.abort();
         await terminal;
@@ -55,10 +105,7 @@ export async function cancelAgentSession(services: ApiServices, agentSessionId: 
     }
   } catch (error) {
     confirmed = error instanceof NotFoundError;
-    if (error instanceof ConflictError) {
-      const latest = await client.beta.agents.sessions.retrieve(agentSessionId, { signal });
-      confirmed = latest.status === "idle" || latest.status === "failed";
-    }
+    if (error instanceof ConflictError) confirmed = (await snapshot()).finished;
   }
   if (confirmed)
     await services.db

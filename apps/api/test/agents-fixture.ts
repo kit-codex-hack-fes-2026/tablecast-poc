@@ -33,7 +33,12 @@ const submission = z.object({
 // 外部Agents APIだけを固定し、実SDKのSSE処理と実D1・業務toolを接続する。
 export function mockAgentSessions(
   plans: AgentStep[][],
-  options: { premature?: boolean; createGate?: Promise<void> } = {},
+  options: {
+    premature?: boolean;
+    createGate?: Promise<void>;
+    idleGate?: Promise<void>;
+    omitIdle?: boolean;
+  } = {},
 ) {
   const requests: unknown[] = [];
   const toolResults: z.infer<typeof submission>["events"] = [];
@@ -42,6 +47,8 @@ export function mockAgentSessions(
     string,
     {
       status: string;
+      turnId: string;
+      turnStatus: string;
       emit: (event: object) => void;
       close: () => void;
       release: () => void;
@@ -63,6 +70,8 @@ export function mockAgentSessions(
       let resolver: (() => void) | undefined;
       const session = {
         status: "in_progress",
+        turnId,
+        turnStatus: "in_progress",
         emit(event: object) {
           const data = encoder.encode(
             `data: ${JSON.stringify({ event_id: `tablecast-event-${++sequence}`, session_id: sessionId, ...event })}\n\n`,
@@ -99,6 +108,11 @@ export function mockAgentSessions(
             await options.createGate;
             if (!listeners.has(controller)) return;
             session.emit({ type: "agent.session.created", session: { id: sessionId } });
+            session.emit({
+              type: "agent.session.turn.created",
+              turn_id: turnId,
+              turn: { id: turnId, status: "in_progress", subagent_id: null },
+            });
             for (const [index, step] of steps.entries()) {
               if (session.status === "idle") return;
               if ("wait" in step) {
@@ -163,6 +177,7 @@ export function mockAgentSessions(
                 const ready = Promise.withResolvers<void>();
                 resolver = ready.resolve;
                 session.status = "requires_action";
+                session.turnStatus = "waiting";
                 session.emit({
                   type: "agent.session.requires_action",
                   session: {
@@ -181,20 +196,25 @@ export function mockAgentSessions(
                 await ready.promise;
                 if (session.status === "idle") return;
                 session.status = "in_progress";
+                session.turnStatus = "in_progress";
               }
             }
-            session.status = "idle";
+            session.turnStatus = "completed";
             if (!options.premature) {
               session.emit({
                 type: "agent.session.turn.completed",
-                turn: { subagent_id: null },
+                turn: { id: turnId, status: "completed", subagent_id: null },
                 turn_id: turnId,
               });
-              session.emit({
-                type: "agent.session.idle",
-                session: { id: sessionId, status: "idle" },
-              });
+              await options.idleGate;
+              session.status = "idle";
+              if (!options.omitIdle)
+                session.emit({
+                  type: "agent.session.idle",
+                  session: { id: sessionId, status: "idle", required_actions: [] },
+                });
             }
+            session.status = "idle";
             session.close();
           })();
         },
@@ -204,12 +224,19 @@ export function mockAgentSessions(
       });
       return new Response(body, { headers: { "content-type": "text/event-stream" } });
     }
-    const matched = /^\/v1\/agents\/sessions\/([^/]+)(\/events)?$/.exec(url.pathname);
+    const matched = /^\/v1\/agents\/sessions\/([^/]+)(\/(?:events|turns))?$/.exec(url.pathname);
     if (!matched?.[1]) throw new Error(`予期しない外部API: ${url.pathname}`);
     const session = sessions.get(matched[1]);
     if (!session)
       return Response.json({ error: { message: "session not found" } }, { status: 404 });
-    if (!matched[2]) return Response.json({ id: matched[1], status: session.status });
+    if (!matched[2])
+      return Response.json({ id: matched[1], status: session.status, required_actions: [] });
+    if (matched[2] === "/turns")
+      return Response.json({
+        object: "list",
+        data: [{ id: session.turnId, status: session.turnStatus, subagent_id: null }],
+        has_more: false,
+      });
     if (method === "GET")
       return new Response(
         new ReadableStream({
@@ -224,8 +251,16 @@ export function mockAgentSessions(
       if (event.type === "agent.session.input.cancel") {
         cancellations.push(matched[1]);
         session.status = "idle";
-        session.emit({ type: "agent.session.turn.cancelled", turn: { subagent_id: null } });
-        session.emit({ type: "agent.session.idle", session: { status: "idle" } });
+        session.turnStatus = "cancelled";
+        session.emit({
+          type: "agent.session.turn.cancelled",
+          turn_id: session.turnId,
+          turn: { id: session.turnId, status: "cancelled", subagent_id: null },
+        });
+        session.emit({
+          type: "agent.session.idle",
+          session: { id: matched[1], status: "idle", required_actions: [] },
+        });
         session.release();
         session.close();
       } else {

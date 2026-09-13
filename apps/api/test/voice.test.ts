@@ -171,22 +171,40 @@ describe("音声委任とhosted Agents API", () => {
         .map((event) => event.data.state),
     ).toEqual(["running", "completed"]);
   });
-  it.each(["途中失敗", "完了通知なし"])("%sを正常終了にせず失敗を保存する", async (scenario) => {
+  it("root turnの完了後もsessionがidleになるまで生成完了を記録しない", async () => {
     await setup();
-    mockAgentSessions(
-      [
-        scenario === "途中失敗"
-          ? [{ text: "確認します。" }, { failure: true }]
-          : [{ text: "確認します。" }],
-      ],
-      { premature: scenario === "完了通知なし" },
-    );
+    const idle = Promise.withResolvers<void>();
+    mockAgentSessions([[{ text: "ほうじ茶は400円です。" }]], { idleGate: idle.promise });
     const running = await runVoiceTurn(input());
-    await expect(body(running.result)).rejects.toMatchObject({ code: "VOICE_MODEL_FAILED" });
+    if (running.result.kind !== "stream") throw new Error("応答streamがない");
+    const reader = running.result.stream.getReader();
+    expect((await reader.read()).value?.event).toBe("delta");
+    expect(await turn()).toMatchObject({ status: "started", agent_finished_at: null });
+    idle.resolve();
+    expect((await reader.read()).value?.event).toBe("completed");
     await running.finish();
-    expect((await turn())?.status).toBe("failed");
-    expect((await state()).events.some((event) => event.kind === "voice.failed")).toBe(true);
+    expect(await turn()).toMatchObject({ status: "completed" });
+    expect(typeof (await turn())?.agent_finished_at).toBe("number");
   });
+  it.each(["途中失敗", "完了通知なし", "session停止通知なし"])(
+    "%sを正常終了にせず失敗を保存する",
+    async (scenario) => {
+      await setup();
+      mockAgentSessions(
+        [
+          scenario === "途中失敗"
+            ? [{ text: "確認します。" }, { failure: true }]
+            : [{ text: "確認します。" }],
+        ],
+        { premature: scenario === "完了通知なし", omitIdle: scenario === "session停止通知なし" },
+      );
+      const running = await runVoiceTurn(input());
+      await expect(body(running.result)).rejects.toMatchObject({ code: "VOICE_MODEL_FAILED" });
+      await running.finish();
+      expect((await turn())?.status).toBe("failed");
+      expect((await state()).events.some((event) => event.kind === "voice.failed")).toBe(true);
+    },
+  );
   it("業務toolへ届かないprovider内の呼出し失敗を正常完了にせず、詳細を伏せて終了する", async () => {
     await setup();
     const output = vi.spyOn(console, "error").mockImplementation(() => {});
