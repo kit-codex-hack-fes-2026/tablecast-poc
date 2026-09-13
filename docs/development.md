@@ -147,3 +147,9 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 `package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthとproxyを併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
 
 独自のdev daemonは持たない。WebはCtrl+C、PythonはuvのターミナルでCtrl+C、ホストのDockerサービスは `bun run services:down` で終了する。Python用のenvをJS側で解決しない。具体的なコマンドは [setup.md](setup.md) にまとめる。
+
+## メールカタログの検証
+
+既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`bunx --no-install wrangler dev --assets apps/api/email-static`で確認し、終了時はWranglerと子workerdを停止する。
+
+生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。

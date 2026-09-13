@@ -11,6 +11,8 @@ macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う
 
 Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew install gh` を実行する。着手するIssueと担当は [AGENTS.md](../AGENTS.md#作業契約) に従って確認する。
 
+手動の配備・削除はGitHub CLI `gh` と対象repositoryを読めるGitHub認証も必要になる。Dev Containerには `gh` を同梱しないため、通常の再配備・削除はGHAを使い、手動復旧は `gh auth status` が成功するホスト側のセットアップ済み環境で行う。Cloudflare権限と復旧条件は[配備手順](deployment.md#prのstorybookメールカタログ)を参照する。
+
 ```sh
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc
@@ -235,3 +237,7 @@ docker compose -f .devcontainer/compose.yaml down
 Service Workerはビルド済み環境だけで登録する。ローカルでは通常開発を停止して`bun run dev:parity`を使う。自動試験は`bun run --cwd apps/web test:e2e tablecast-pwa.spec.ts tablecast-publication.spec.ts`で、隔離したWorkersと画像を使う。Service Workerを手動で登録して通常devへ残さない。
 
 iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/live` をそれぞれ共有 → ホーム画面に追加する。追加後のアプリで端末登録・ログインを行う。キャッシュが消えてもオンライン起動で再取得できること、休止からの復帰時に更新確認されることを実機で確認する。
+
+### メールプレビュー依存
+
+メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。

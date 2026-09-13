@@ -125,6 +125,11 @@
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+    },
+    "@tablecast/api#build:email": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/tablecast-catalog-config.ts"],
+      "outputs": ["email-static/**"],
+      "env": ["TABLECAST_RELEASE_SHA", "TABLECAST_PR_NUMBER"]
     }
   }
 }
