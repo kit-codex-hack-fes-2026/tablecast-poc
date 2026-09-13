@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
-import type { z } from "zod";
+import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { telemetryContent } from "../../platform/telemetry";
 import type { Actor } from "../auth/model";
 import type { TableState } from "../tables/model";
 import {
@@ -13,6 +14,13 @@ import {
 } from "../tables/mutations";
 import { getSession, getTableState } from "../tables/queries";
 import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
+
+// 会話画面へ公開する引数はメニュー検索語だけに限る。
+export function voiceToolQuery(toolName: string, argumentsValue: unknown) {
+  if (toolName !== "getCatalog") return undefined;
+  const parsed = z.object({ query: voiceToolEventSchema.shape.query }).safeParse(argumentsValue);
+  return parsed.success ? parsed.data.query : undefined;
+}
 export async function setSpeechSpeed(
   services: ApiServices,
   actor: Actor,
@@ -51,6 +59,12 @@ export async function recordVoiceEvent(
     ...event.data,
     turnId: actor.turnId,
   });
+  if (data.query !== undefined) {
+    const query = voiceToolEventSchema.shape.query.safeParse(
+      telemetryContent(data.query, services.env),
+    );
+    data.query = query.success ? query.data : undefined;
+  }
   const gate = voiceCondition(actor);
   const result = await db
     .insert(business.tableEvents)

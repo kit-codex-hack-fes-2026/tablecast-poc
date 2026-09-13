@@ -183,6 +183,13 @@ describe("Agents functionと共通業務の認可", () => {
     ]);
     await expect(tool("getCatalog")).resolves.toHaveProperty("result.products");
     await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_TOOL_FORBIDDEN" });
+    const state = await getTableState(services(), device);
+    expect(state.staffCalled).toBe(false);
+    expect(
+      state.events
+        .filter((event) => event.kind === "voice.tool" && event.data.toolName === "callStaff")
+        .at(-1)?.data,
+    ).toMatchObject({ state: "error", errorCode: "VOICE_TOOL_FORBIDDEN" });
   });
 });
 

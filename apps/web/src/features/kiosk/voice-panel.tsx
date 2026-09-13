@@ -225,7 +225,7 @@ function useVoicePanel({
   const running = [...tools.values()].filter((event) => {
     const turn = typeof event.data.turnId === "string" ? turns.get(event.data.turnId) : undefined;
     return (
-      event.data.state === "running" &&
+      (event.data.state === "requested" || event.data.state === "running") &&
       !failedTurns.has(event.data.turnId) &&
       (!turn || turn.data.status === "started")
     );
@@ -245,12 +245,22 @@ function useVoicePanel({
     running.length > 0 && (view.status === "thinking" || view.status === "speaking");
   const visualState: VoiceView["status"] | "tool" =
     usingTools && view.status === "thinking" ? "tool" : view.status;
-  const toolPhase = locale === "ja" ? "ツール実行中" : "Using tools";
+  const activeToolLabels = new Set<string>();
+  for (const event of running) {
+    const label =
+      typeof event.data.toolName === "string"
+        ? toolLabels[event.data.toolName]?.[locale === "ja" ? 0 : 1]
+        : undefined;
+    if (label) activeToolLabels.add(label);
+  }
+  const toolPhase =
+    [...activeToolLabels].join(locale === "ja" ? "・" : ", ") ||
+    (locale === "ja" ? "処理中" : "Working");
   const phase = visualState === "tool" ? toolPhase : status;
   function toolCards(turnId?: string) {
     return [...tools.values()].flatMap((event) => {
       if (event.data.turnId !== turnId) return [];
-      const pending = event.data.state === "running";
+      const pending = event.data.state === "requested" || event.data.state === "running";
       const turn = turnId ? turns.get(turnId) : undefined;
       const cancelled = event.data.errorCode === "VOICE_CANCELLED";
       const failed =
@@ -263,7 +273,7 @@ function useVoicePanel({
       return [
         <div
           key={String(event.data.toolCallId)}
-          className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
+          className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
           data-tool-state={stale ? "interrupted" : failed ? "error" : String(event.data.state)}
         >
           {failed ? (
@@ -275,14 +285,26 @@ function useVoicePanel({
           ) : (
             <Check className="size-4 text-success" />
           )}
-          <span className="flex-1">
+          <span className="min-w-0 flex-1">
             {title}
+            {name === "getCatalog" && typeof event.data.query === "string" && (
+              <span className="mt-1 block wrap-break-word text-muted-foreground">
+                {locale === "ja" ? "検索：" : "Search: "}
+                {event.data.query}
+              </span>
+            )}
             {failed && (
               <span className="mt-1 block text-destructive">
                 {locale === "ja"
                   ? "処理を完了できませんでした。画面から再度操作できます。"
                   : "This action could not be completed. You can try it again on screen."}
               </span>
+            )}
+            {debug && (
+              <code className="mt-1 block break-all text-muted-foreground">
+                {name} · {String(event.data.toolCallId)}
+                {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
+              </code>
             )}
           </span>
           <span className="text-muted-foreground">
@@ -294,20 +316,18 @@ function useVoicePanel({
                 ? locale === "ja"
                   ? "中断"
                   : "Interrupted"
-                : pending
+                : event.data.state === "requested"
                   ? locale === "ja"
-                    ? "実行中"
-                    : "Running"
-                  : locale === "ja"
-                    ? "完了"
-                    : "Complete"}
+                    ? "待機中"
+                    : "Waiting"
+                  : pending
+                    ? locale === "ja"
+                      ? "実行中"
+                      : "Running"
+                    : locale === "ja"
+                      ? "完了"
+                      : "Complete"}
           </span>
-          {debug && (
-            <code>
-              {name}
-              {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
-            </code>
-          )}
         </div>,
       ];
     });
@@ -526,8 +546,8 @@ export function VoicePanel({
               >
                 <CircleAlert className="size-4 shrink-0" />
                 {locale === "ja"
-                  ? "音声の返答が途切れました。注文結果は注文かご・履歴で確認できます。"
-                  : "The voice reply was interrupted. Check your basket and order history for the result."}
+                  ? "今回の照会を完了できませんでした。注文結果は注文かご・履歴で確認できます。"
+                  : "This request could not be completed. Check your basket and order history for the result."}
                 {debug && typeof event.data.code === "string" && <code>{event.data.code}</code>}
               </output>
             ))}

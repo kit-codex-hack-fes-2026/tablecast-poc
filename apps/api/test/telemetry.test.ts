@@ -116,6 +116,9 @@ it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewの
       "http.request.method": "GET",
       ...diagnostic,
       "http.route": "/api/table",
+      "tablecast.tool.name": "getCatalog",
+      "tablecast.tool.call.id": "tablecast-provider-call",
+      "tablecast.tool.arguments": "tablecast-secret",
       "url.full": "tablecast-secret",
       "db.statement": "tablecast-secret",
       "http.request.header.authorization": "tablecast-secret",
@@ -158,7 +161,12 @@ it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewの
   expect(sent).toMatchObject([
     {
       name: "HTTP",
-      attributes: { "http.route": "/api/table", "exception.message": "connection refused" },
+      attributes: {
+        "http.route": "/api/table",
+        "exception.message": "connection refused",
+        "tablecast.tool.name": "getCatalog",
+        "tablecast.tool.call.id": "tablecast-provider-call",
+      },
       events: [{ name: "exception", attributes: { "exception.message": "connection refused" } }],
       resource: {
         attributes: { "tablecast.pr.number": "123", "deployment.environment.name": "preview" },

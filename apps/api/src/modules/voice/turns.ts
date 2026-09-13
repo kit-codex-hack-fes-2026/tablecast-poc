@@ -14,11 +14,12 @@ import { castSessionInstructions, createCastTools } from "./agent";
 import type { VoiceDiagnostics } from "./diagnostics";
 import { logVoiceTurn } from "./diagnostics";
 import type { voiceTurnSchema } from "./model";
-import { toolSchema } from "./model";
+import { toolSchema, voiceToolEventSchema } from "./model";
 import { voiceGenerationSpan } from "./observability";
 import { currentVoiceTurn, proactiveReservationCondition, voiceActor } from "./queries";
 import { conversationHistory, invokeVoiceTool } from "./realtime";
 import { cancelAgentSession } from "./runtime";
+import { recordVoiceEvent, voiceToolQuery } from "./service";
 
 export async function finishVoiceTurn(
   services: ApiServices,
@@ -311,10 +312,48 @@ export async function startVoiceTurn(
         const parts = new Map<string, string>();
         const finalMessages = new Set<string>();
         const calls = new Set<string>();
+        const requestedCalls = new Map<
+          string,
+          Pick<z.infer<typeof voiceToolEventSchema>, "toolName" | "toolCallId" | "query">
+        >();
+        const failedCalls = new Set<string>();
+        let providerFailure: DomainError | undefined;
+        const failProviderCall = async (
+          callKey: string,
+          cause?: Error,
+          phase = "agent.function_call",
+        ) => {
+          const call = requestedCalls.get(callKey);
+          if (!call || calls.has(callKey)) return;
+          if (!failedCalls.has(callKey)) {
+            await recordVoiceEvent(services, currentActor, {
+              kind: "voice.tool",
+              data: { ...call, state: "error", errorCode: "VOICE_PROVIDER_TOOL_FAILED" },
+            });
+            failedCalls.add(callKey);
+          }
+          providerFailure = new DomainError(
+            "VOICE_MODEL_FAILED",
+            503,
+            "VOICE_PROVIDER_TOOL_FAILED",
+            undefined,
+            { cause },
+          );
+          span.setAttribute("tablecast.error.code", "VOICE_PROVIDER_TOOL_FAILED");
+          failureLog("tablecast.voice.provider_tool_failed", providerFailure, services.env, {
+            "tablecast.request.id": diagnostics.traceId,
+            "tablecast.tool.name": call.toolName,
+            "tablecast.tool.call.id": call.toolCallId,
+            "tablecast.error.code": "VOICE_PROVIDER_TOOL_FAILED",
+            "tablecast.error.phase": phase,
+          });
+        };
         let rootTurnId: string | undefined;
         let rootCompleted = false;
         const enqueue = (text: string) => {
           signal.throwIfAborted();
+          // 失敗後の終端と原因は読むが、モデルの回答はLiveへ渡さない。
+          if (providerFailure) return;
           ensure(output.length + text.length <= 16000, "VOICE_MODEL_FAILED", 503);
           output += text;
           if (text && !streamClosed)
@@ -406,7 +445,8 @@ export async function startVoiceTurn(
               event.item.type === "message" &&
               event.item.role === "assistant" &&
               event.item.id !== null &&
-              event.item.phase === "final_answer"
+              event.item.phase === "final_answer" &&
+              !providerFailure
             ) {
               finalMessages.add(event.item.id);
               if (event.type === "agent.session.turn.item.done")
@@ -420,27 +460,55 @@ export async function startVoiceTurn(
                 }
             } else if (event.type === "agent.session.turn.output_text.delta") {
               // 進捗のcommentaryやphase不明の本文を、確認済みの業務結果としてLiveへ渡さない。
-              if (!finalMessages.has(event.item_id)) continue;
+              if (providerFailure || !finalMessages.has(event.item_id)) continue;
               const key = `${event.item_id}:${event.content_index}`;
               parts.set(key, (parts.get(key) ?? "") + event.delta);
               enqueue(event.delta);
             } else if (event.type === "agent.session.turn.output_text.done") {
-              if (!finalMessages.has(event.item_id)) continue;
+              if (providerFailure || !finalMessages.has(event.item_id)) continue;
               const key = `${event.item_id}:${event.content_index}`;
               const previousText = parts.get(key) ?? "";
               if (event.text.startsWith(previousText))
                 enqueue(event.text.slice(previousText.length));
               parts.set(key, event.text);
             } else if (
-              event.type === "agent.session.turn.item.done" &&
-              event.item.type === "function_call" &&
-              event.item.status === "failed" &&
-              !calls.has(`${event.item.turn_id}:${event.item.call_id}`)
+              (event.type === "agent.session.turn.item.added" ||
+                event.type === "agent.session.turn.item.done") &&
+              event.item.type === "function_call"
             ) {
-              // アプリへ届かずprovider内で失敗した呼出しを成功として記録しない。
-              span.setAttribute("tablecast.error.code", "VOICE_PROVIDER_TOOL_FAILED");
-              throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED");
+              const callKey = `${event.item.turn_id}:${event.item.call_id}`;
+              if (calls.has(callKey)) continue;
+              const call = voiceToolEventSchema.safeParse({
+                turnId: input.turnId,
+                toolName: event.item.name,
+                toolCallId: event.item.call_id,
+                query: voiceToolQuery(event.item.name, event.item.arguments),
+                state: "requested",
+              });
+              if (!call.success) {
+                ensure(
+                  event.item.status !== "failed" && event.item.status !== "incomplete",
+                  "VOICE_MODEL_FAILED",
+                  503,
+                );
+                continue;
+              }
+              if (
+                !requestedCalls.has(callKey) ||
+                (requestedCalls.get(callKey)?.query === undefined && call.data.query !== undefined)
+              ) {
+                const { toolName, toolCallId, query } = call.data;
+                requestedCalls.set(callKey, { toolName, toolCallId, query });
+                // 観測だけではrunningのcall IDを予約せず、業務を実行しない。
+                await recordVoiceEvent(services, currentActor, {
+                  kind: "voice.tool",
+                  data: { toolName, toolCallId, query, state: "requested" },
+                });
+              }
+              if (event.item.status === "failed" || event.item.status === "incomplete")
+                await failProviderCall(callKey);
             } else if (event.type === "agent.session.requires_action") {
+              if (providerFailure) throw providerFailure;
               ensure(agentSessionId === event.session.id, "VOICE_MODEL_FAILED", 503);
               for (const action of event.session.required_actions) {
                 ensure(action.type === "function_call", "VOICE_MODEL_FAILED", 503);
@@ -451,6 +519,7 @@ export async function startVoiceTurn(
                 let toolResponse:
                   | { success: true; output: string }
                   | { success: false; error: string };
+                let invoked = false;
                 try {
                   const toolInput = toolSchema.parse({
                     voiceSessionId: input.voiceSessionId,
@@ -459,6 +528,7 @@ export async function startVoiceTurn(
                     toolName: action.name,
                     arguments: action.arguments,
                   });
+                  invoked = true;
                   const toolResult = await invokeVoiceTool(services, toolInput, signal);
                   toolResponse = { success: true, output: JSON.stringify(toolResult.result) };
                 } catch (error) {
@@ -467,7 +537,19 @@ export async function startVoiceTurn(
                     (error instanceof DomainError && error.code === "VOICE_SESSION_STALE")
                   )
                     throw error;
-                  toolResponse = { success: false, error: "VOICE_TOOL_FAILED" };
+                  const code = voiceToolEventSchema.shape.errorCode.safeParse(
+                    error instanceof DomainError ? error.code : "VOICE_TOOL_FAILED",
+                  );
+                  toolResponse = {
+                    success: false,
+                    error: code.success && code.data ? code.data : "VOICE_TOOL_FAILED",
+                  };
+                  const call = requestedCalls.get(callKey);
+                  if (!invoked && call)
+                    await recordVoiceEvent(services, currentActor, {
+                      kind: "voice.tool",
+                      data: { ...call, state: "error", errorCode: toolResponse.error },
+                    });
                 }
                 signal.throwIfAborted();
                 await client.beta.agents.sessions.events.create(
@@ -495,6 +577,13 @@ export async function startVoiceTurn(
               event.turn_id === rootTurnId &&
               rootTurnId !== undefined
             ) {
+              if (event.type === "agent.session.turn.failed") {
+                throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+                  cause: event.turn.error
+                    ? new Error(JSON.stringify(event.turn.error))
+                    : providerFailure,
+                });
+              }
               ensure(
                 event.type === "agent.session.turn.completed",
                 event.type === "agent.session.turn.cancelled"
@@ -519,6 +608,10 @@ export async function startVoiceTurn(
                     eq(business.voiceTurns.agent_session_id, agentSessionId ?? ""),
                   ),
                 );
+              for (const callKey of requestedCalls.keys())
+                if (!calls.has(callKey) && !failedCalls.has(callKey))
+                  await failProviderCall(callKey);
+              if (providerFailure) throw providerFailure;
               await currentVoiceTurn(services, currentActor, input.locale, input.trigger);
               ensure(output.length > 0, "VOICE_MODEL_FAILED", 503);
               await finishVoiceTurn(services, input.voiceSessionId, input.turnId, "completed");
@@ -536,10 +629,20 @@ export async function startVoiceTurn(
               event.type === "agent.session.failed" ||
               event.type === "agent.session.environment.failed"
             ) {
-              throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED");
+              const cause =
+                event.type === "error"
+                  ? event.error
+                  : event.type === "agent.session.failed"
+                    ? event.session.error
+                    : event.environment.error;
+              throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED", undefined, {
+                cause: cause
+                  ? new Error(typeof cause === "string" ? cause : JSON.stringify(cause))
+                  : providerFailure,
+              });
             }
           }
-          throw new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED");
+          throw providerFailure ?? new DomainError("VOICE_MODEL_FAILED", 503, "VOICE_MODEL_FAILED");
         } catch (error) {
           const interrupted =
             requestSignal.aborted ||
@@ -551,6 +654,8 @@ export async function startVoiceTurn(
             interrupted ? "VOICE_CANCELLED" : "VOICE_MODEL_FAILED",
             interrupted ? 409 : 503,
             interrupted ? "VOICE_CANCELLED" : "VOICE_MODEL_FAILED",
+            undefined,
+            { cause: error },
           );
           span.setStatus({ code: SpanStatusCode.ERROR });
           logVoiceTurn(diagnostics, status, safeError.code);
@@ -558,15 +663,21 @@ export async function startVoiceTurn(
             failureLog("tablecast.voice.stream_failed", safeError, services.env, {
               "tablecast.request.id": diagnostics.traceId,
             });
-          if (!streamClosed) {
-            controller.enqueue({
-              event: "failed",
-              data: JSON.stringify({ code: safeError.code }),
-            });
-            streamClosed = true;
-            controller.close();
-          }
           try {
+            for (const [callKey, call] of requestedCalls) {
+              if (calls.has(callKey)) continue;
+              if (!interrupted)
+                await failProviderCall(
+                  callKey,
+                  error instanceof Error ? error : undefined,
+                  "agent.stream",
+                );
+              else if (!failedCalls.has(callKey))
+                await recordVoiceEvent(services, currentActor, {
+                  kind: "voice.tool",
+                  data: { ...call, state: "error", errorCode: "VOICE_CANCELLED" },
+                });
+            }
             await finishVoiceTurn(
               services,
               input.voiceSessionId,
@@ -574,6 +685,31 @@ export async function startVoiceTurn(
               status,
               "VOICE_MODEL_FAILED",
             );
+            // 次の委任はfailed受信で開始できるため、先にDBへ旧turnの終端を保存する。
+            if (!streamClosed) {
+              controller.enqueue({
+                event: "failed",
+                data: JSON.stringify({ code: safeError.code }),
+              });
+              streamClosed = true;
+              controller.close();
+            }
+          } catch (finishError) {
+            failureLog(
+              "tablecast.voice.finish_failed",
+              new DomainError("VOICE_INTERNAL_ERROR", 503, "VOICE_INTERNAL_ERROR", undefined, {
+                cause: finishError,
+              }),
+              services.env,
+              { "tablecast.request.id": diagnostics.traceId },
+            );
+            if (!streamClosed) {
+              streamClosed = true;
+              // 保存失敗は復旧可能なfailed通知にせず、機密を含まないtransport failureで閉じる。
+              controller.error(
+                new DomainError("VOICE_INTERNAL_ERROR", 503, "VOICE_INTERNAL_ERROR"),
+              );
+            }
           } finally {
             await stopAgent().catch(() => {
               failureLog(

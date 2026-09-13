@@ -35,6 +35,8 @@ const allowed = new Set([
   "tablecast.voice.session.id",
   "tablecast.voice.turn.id",
   "tablecast.agent.session.id",
+  "tablecast.tool.name",
+  "tablecast.tool.call.id",
   "tablecast.operation",
   "tablecast.channel",
   "tablecast.outcome",

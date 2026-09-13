@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import * as business from "../src/db/business-schema";
 import app from "../src/app";
 import { getVoiceConfirmation, updateCart } from "../src/modules/orders/service";
-import { getTableState } from "../src/modules/tables/queries";
+import { getSession, getTableState } from "../src/modules/tables/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
+import { startVoiceTurn } from "../src/modules/voice/turns";
+import { voiceTurnSchema } from "../src/modules/voice/model";
 import { createApiServices } from "../src/platform/context";
 import {
   agentBindings,
@@ -99,6 +101,8 @@ describe("音声委任とhosted Agents API", () => {
       event: "failed",
       data: JSON.stringify({ code: "VOICE_MODEL_FAILED" }),
     });
+    expect((await turn())?.status).toBe("failed");
+    expect((await getSession(createApiServices(env), device)).active_turn_id).toBeNull();
     expect((await reader.read()).done).toBe(true);
     await running.finish();
     expect((await turn())?.status).toBe("failed");
@@ -120,6 +124,7 @@ describe("音声委任とhosted Agents API", () => {
         { wait: release.promise },
         {
           tool: "updateCart",
+          observed: true,
           arguments: {
             expectedVersion: 0,
             lines: [{ id: "tea-line", productId: "tea", quantity: 1, selections: [] }],
@@ -169,7 +174,7 @@ describe("音声委任とhosted Agents API", () => {
       (await state()).events
         .filter((event) => event.kind === "voice.tool")
         .map((event) => event.data.state),
-    ).toEqual(["running", "completed"]);
+    ).toEqual(["requested", "running", "completed"]);
   });
   it("root turnの完了後もsessionがidleになるまで生成完了を記録しない", async () => {
     await setup();
@@ -205,26 +210,161 @@ describe("音声委任とhosted Agents API", () => {
       expect((await state()).events.some((event) => event.kind === "voice.failed")).toBe(true);
     },
   );
-  it("業務toolへ届かないprovider内の呼出し失敗を正常完了にせず、詳細を伏せて終了する", async () => {
+  it.each([false, true])(
+    "provider失敗の検索語を公開し、後着原因はcapture=%sの規約で保存する",
+    async (capture) => {
+      await setup();
+      const output = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const provider = mockAgentSessions([
+        [
+          {
+            providerToolFailure: true,
+            arguments: {
+              query: "日本酒 tablecast-model-fixture",
+              token: "tablecast-hidden-argument",
+            },
+          },
+          { text: "確認に成功しました。" },
+          { turnFailure: true, error: "HTTP 424: no active turn; key=tablecast-model-fixture" },
+        ],
+      ]);
+      const running = await runVoiceTurn(input(), {
+        ...agentBindings(),
+        TABLECAST_OTEL_CAPTURE_CONTENT: String(capture),
+      });
+      if (running.result.kind !== "stream") throw new Error("応答streamがない");
+      const reader = running.result.stream.getReader();
+      expect((await reader.read()).value).toEqual({
+        event: "failed",
+        data: JSON.stringify({ code: "VOICE_MODEL_FAILED" }),
+      });
+      expect((await turn())?.status).toBe("failed");
+      expect((await reader.read()).done).toBe(true);
+      await running.finish();
+      expect(provider.cancellations).toEqual([]);
+      expect((await turn())?.agent_finished_at).not.toBeNull();
+      expect(provider.toolResults).toHaveLength(0);
+      expect((await turn())?.status).toBe("failed");
+      expect(
+        (await state()).events
+          .filter((event) => event.kind === "voice.turn")
+          .map((event) => event.data.status),
+      ).toEqual(["started", "failed"]);
+      const tools = (await state()).events
+        .filter((event) => event.kind === "voice.tool")
+        .map((event) => event.data);
+      expect(tools).toEqual([
+        {
+          turnId: "tablecast-turn",
+          toolCallId: "tablecast-provider-call",
+          toolName: "getCatalog",
+          state: "requested",
+        },
+        {
+          turnId: "tablecast-turn",
+          toolCallId: "tablecast-provider-call",
+          toolName: "getCatalog",
+          state: "requested",
+          query: "日本酒 [REDACTED]",
+        },
+        {
+          turnId: "tablecast-turn",
+          toolCallId: "tablecast-provider-call",
+          toolName: "getCatalog",
+          state: "error",
+          query: "日本酒 [REDACTED]",
+          errorCode: "VOICE_PROVIDER_TOOL_FAILED",
+        },
+      ]);
+      const logs = JSON.stringify(output.mock.calls);
+      expect(logs).toContain("VOICE_PROVIDER_TOOL_FAILED");
+      expect(logs).toContain("tablecast.tool.name");
+      expect(logs).toContain("tablecast.tool.call.id");
+      expect(logs.includes("no active turn")).toBe(capture);
+      for (const secret of ["tablecast-model-fixture", "tablecast-hidden-argument"])
+        expect(JSON.stringify(tools) + logs).not.toContain(secret);
+    },
+  );
+  it("未知のprovider tool失敗も成功回答にせず、公開カードへ未登録名を出さない", async () => {
     await setup();
-    const output = vi.spyOn(console, "error").mockImplementation(() => {});
-    const pending = Promise.withResolvers<void>();
-    const provider = mockAgentSessions([
-      [{ providerToolFailure: true }, { wait: pending.promise }],
+    mockAgentSessions([
+      [{ providerToolFailure: true, tool: "tablecast-unknown-tool" }, { text: "成功しました。" }],
     ]);
     const running = await runVoiceTurn(input());
     await expect(body(running.result)).rejects.toMatchObject({ code: "VOICE_MODEL_FAILED" });
     await running.finish();
-    pending.resolve();
-    expect(provider.cancellations).toEqual(["tablecast-agent-1"]);
-    expect(provider.toolResults).toHaveLength(0);
+    expect((await state()).events.filter((event) => event.kind === "voice.tool")).toEqual([]);
     expect((await turn())?.status).toBe("failed");
+  });
+  it("実行前のツール要求を取消したら、業務を実行せず表示も中断で終了する", async () => {
+    await setup();
+    const pending = Promise.withResolvers<void>();
+    const provider = mockAgentSessions([
+      [
+        { requestedTool: "callStaff", arguments: { query: "非公開の引数" } },
+        { text: "確認します。" },
+        { wait: pending.promise },
+      ],
+    ]);
+    const cancellation = new AbortController();
+    const running = await runVoiceTurn(input(), undefined, cancellation.signal);
+    if (running.result.kind !== "stream") throw new Error("応答streamがない");
+    const reader = running.result.stream.getReader();
+    expect((await reader.read()).value?.event).toBe("delta");
+    cancellation.abort();
+    expect((await reader.read()).value).toEqual({
+      event: "failed",
+      data: JSON.stringify({ code: "VOICE_CANCELLED" }),
+    });
+    pending.resolve();
+    await running.finish();
+    expect(provider.toolResults).toHaveLength(0);
+    expect((await state()).staffCalled).toBe(false);
     expect(
       (await state()).events
-        .filter((event) => event.kind === "voice.turn")
-        .map((event) => event.data.status),
-    ).toEqual(["started", "failed"]);
-    expect(JSON.stringify(output.mock.calls)).not.toContain("tablecast-private-provider-error");
+        .filter((event) => event.kind === "voice.tool")
+        .map((event) => event.data),
+    ).toEqual([
+      {
+        turnId: "tablecast-turn",
+        toolCallId: "tablecast-provider-call",
+        toolName: "callStaff",
+        state: "requested",
+      },
+      {
+        turnId: "tablecast-turn",
+        toolCallId: "tablecast-provider-call",
+        toolName: "callStaff",
+        state: "error",
+        errorCode: "VOICE_CANCELLED",
+      },
+    ]);
+  });
+  it("失敗のDB終端保存が落ちてもstreamを開き続けず、内部原因を応答へ出さない", async () => {
+    await setup();
+    const pending = Promise.withResolvers<void>();
+    mockAgentSessions([[{ text: "確認します。" }, { wait: pending.promise }, { failure: true }]]);
+    const services = createApiServices(agentBindings());
+    const context = createExecutionContext();
+    const result = await startVoiceTurn(
+      services,
+      voiceTurnSchema.parse(input()),
+      { traceId: "tablecast-db-failure", releaseSha: services.env.TABLECAST_RELEASE_SHA },
+      new AbortController().signal,
+      (promise) => context.waitUntil(promise),
+    );
+    if (result.kind !== "stream") throw new Error("応答streamがない");
+    const reader = result.stream.getReader();
+    expect((await reader.read()).value?.event).toBe("delta");
+    vi.spyOn(services.db, "batch").mockRejectedValueOnce(new Error("tablecast-private-db-failure"));
+    pending.resolve();
+    const failure = await reader.read().catch((error: unknown) => error);
+    expect(failure).toMatchObject({
+      code: "VOICE_INTERNAL_ERROR",
+      message: "VOICE_INTERNAL_ERROR",
+    });
+    expect(failure).not.toHaveProperty("cause");
+    await waitOnExecutionContext(context);
   });
   it.each(["応答取消", "HTTP取消"])(
     "%sでhosted生成も明示取消し、カートを保持する",
@@ -353,12 +493,15 @@ describe("音声委任とhosted Agents API", () => {
     const running = await runVoiceTurn(input());
     expect(await body(running.result)).toBe("商品を確認できません。");
     await running.finish();
-    expect(provider.toolResults[0]).toMatchObject({ success: false });
+    expect(provider.toolResults[0]).toMatchObject({ success: false, error: "PRODUCT_NOT_FOUND" });
     expect(
       (await state()).events
         .filter((event) => event.kind === "voice.tool")
         .map((event) => event.data.state),
     ).toEqual(["running", "error"]);
+    expect(
+      (await state()).events.filter((event) => event.kind === "voice.tool").at(-1)?.data.errorCode,
+    ).toBe("PRODUCT_NOT_FOUND");
   });
   it("ツール呼出し上限で待機を続けずhosted sessionを停止する", async () => {
     await setup();

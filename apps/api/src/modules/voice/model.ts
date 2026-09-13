@@ -18,13 +18,19 @@ export const voiceToolNameSchema = z.enum([
   "showProducts",
 ]);
 
-export const voiceToolEventSchema = z.object({
-  turnId: id,
-  toolCallId: id,
-  toolName: voiceToolNameSchema,
-  state: z.enum(["running", "completed", "error"]),
-  errorCode: z.enum(["VOICE_TOOL_FAILED", "VOICE_CANCELLED"]).optional(),
-});
+export const voiceToolEventSchema = z
+  .object({
+    turnId: id,
+    toolCallId: id,
+    toolName: voiceToolNameSchema,
+    state: z.enum(["requested", "running", "completed", "error"]),
+    query: z.string().max(100).optional(),
+    errorCode: z
+      .string()
+      .regex(/^[A-Z][A-Z0-9_]{0,79}$/)
+      .optional(),
+  })
+  .refine((event) => event.query === undefined || event.toolName === "getCatalog");
 
 export const voiceProductsEventSchema = showProductsSchema.extend({ turnId: id });
 

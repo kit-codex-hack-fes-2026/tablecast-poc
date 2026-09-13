@@ -35,7 +35,7 @@
   "kiosk_voice_paused": "Voice is paused",
   "kiosk_voice_connecting": "Connecting voice",
   "kiosk_voice_listening": "Listening to you",
-  "kiosk_voice_thinking": "Let me check that",
+  "kiosk_voice_thinking": "Preparing a reply",
   "kiosk_voice_speaking": "Your cast is speaking",
   "kiosk_voice_error": "Voice is unavailable",
   "kiosk_voice_permission": "Microphone access is not allowed. Please check your browser settings.",

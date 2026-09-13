@@ -15,16 +15,19 @@ export const agentBindings = () => ({
 });
 export type AgentStep =
   | { text: string; phase?: "commentary" | "final_answer" | null }
-  | { tool: string; arguments: object; callId?: string }
+  | { tool: string; arguments: object; callId?: string; observed?: boolean }
+  | { requestedTool: string; arguments: object }
   | { wait: Promise<void> }
-  | { failure: true }
-  | { providerToolFailure: true };
+  | { failure: true; error?: string }
+  | { providerToolFailure: true; arguments?: object; tool?: string }
+  | { turnFailure: true; error: string };
 const submission = z.object({
   events: z.array(
     z.object({
       type: z.string(),
       call_id: z.string().optional(),
       output: z.string().optional(),
+      error: z.string().optional(),
       success: z.boolean().optional(),
     }),
   ),
@@ -119,25 +122,48 @@ export function mockAgentSessions(
                 await step.wait;
                 continue;
               }
-              if ("providerToolFailure" in step) {
+              if ("providerToolFailure" in step || "requestedTool" in step) {
+                const call = {
+                  id: "tablecast-failed-provider-tool",
+                  type: "function_call",
+                  turn_id: turnId,
+                  call_id: "tablecast-provider-call",
+                  name: "requestedTool" in step ? step.requestedTool : (step.tool ?? "getCatalog"),
+                };
+                session.emit({
+                  type: "agent.session.turn.item.added",
+                  item: { ...call, status: "in_progress", arguments: {} },
+                });
                 session.emit({
                   type: "agent.session.turn.item.done",
                   item: {
-                    id: "tablecast-failed-provider-tool",
-                    type: "function_call",
-                    turn_id: turnId,
-                    call_id: "tablecast-provider-call",
-                    status: "failed",
-                    name: "getCatalog",
-                    arguments: { query: "tablecast-private-provider-error" },
+                    ...call,
+                    status: "providerToolFailure" in step ? "failed" : "in_progress",
+                    arguments: step.arguments ?? { query: "お茶" },
                   },
                 });
                 continue;
               }
+              if ("turnFailure" in step) {
+                session.status = "failed";
+                session.turnStatus = "failed";
+                session.emit({
+                  type: "agent.session.turn.failed",
+                  turn_id: turnId,
+                  turn: {
+                    id: turnId,
+                    status: "failed",
+                    subagent_id: null,
+                    error: { code: "internal_error", message: step.error },
+                  },
+                });
+                session.close();
+                return;
+              }
               if ("failure" in step) {
                 session.emit({
                   type: "error",
-                  error: { message: "tablecast-private-provider-error" },
+                  error: { message: step.error ?? "tablecast-private-provider-error" },
                 });
                 return;
               }
@@ -174,6 +200,20 @@ export function mockAgentSessions(
                   },
                 });
               } else {
+                const call = {
+                  id: `tablecast-observed-${index}`,
+                  type: "function_call",
+                  turn_id: turnId,
+                  call_id: step.callId ?? `tablecast-call-${index}`,
+                  name: step.tool,
+                  arguments: step.arguments,
+                };
+                if (step.observed)
+                  for (const type of [
+                    "agent.session.turn.item.added",
+                    "agent.session.turn.item.done",
+                  ])
+                    session.emit({ type, item: { ...call, status: "in_progress" } });
                 const ready = Promise.withResolvers<void>();
                 resolver = ready.resolve;
                 session.status = "requires_action";
@@ -197,6 +237,11 @@ export function mockAgentSessions(
                 if (session.status === "idle") return;
                 session.status = "in_progress";
                 session.turnStatus = "in_progress";
+                if (step.observed)
+                  session.emit({
+                    type: "agent.session.turn.item.done",
+                    item: { ...call, status: "completed" },
+                  });
               }
             }
             session.turnStatus = "completed";

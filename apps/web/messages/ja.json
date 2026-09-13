@@ -35,7 +35,7 @@
   "kiosk_voice_paused": "音声は停止中です",
   "kiosk_voice_connecting": "音声につないでいます",
   "kiosk_voice_listening": "お話をうかがっています",
-  "kiosk_voice_thinking": "お調べしています",
+  "kiosk_voice_thinking": "回答を準備しています",
   "kiosk_voice_speaking": "キャストがお話ししています",
   "kiosk_voice_error": "音声に接続できません",
   "kiosk_voice_permission": "マイクの利用が許可されていません。ブラウザーの設定をご確認ください。",

@@ -136,6 +136,8 @@ GitHub Environmentの`preview`または`production`に同名のActions variable�
 
 ブラウザーの `session.input_transcript.delta`・`session.output_transcript.delta` は会話表示とD1保存に使い、APIの業務要求は通常のHTTP traceで追う。`tablecast.voice.session.id`、`tablecast.voice.turn.id`、hosted Agents session IDを対応付ける。UUIDの要求IDとOTel trace IDを混同しない。
 
+委任のHTTP 200はSSEの開始を示し、業務の成功を保証しない。`tablecast.voice.agent` spanと `voice_turn` の終端、`tablecast.voice.stream_failed` を確認する。provider内でツールが失敗した場合は `VOICE_PROVIDER_TOOL_FAILED` と `tablecast.voice.provider_tool_failed` を記録し、ツール名・呼出しID・失敗段階を対応付ける。SDKが通知する原因は既存の秘匿化を通して残す。API内のツール失敗は `INVALID_INPUT` などの業務コードを維持し、provider内の失敗と区別する。
+
 字幕の最初の差分、委任の開始、最初の本文、各ツールの開始・完了、音声停止の時刻をそれぞれ確認する。本文の生成時間を音声の再生開始までの時間として報告せず、D1 binding待ちとDB内部SQL実行時間も区別する。
 
 音声開始などの外部API失敗は `tablecast.error.causes` の `httpStatus` と `providerCode` を確認する。`credit_balance_exhausted`・`insufficient_quota` はAPI残高や利用枠、`rate_limit_exceeded` は要求頻度の制限として区別する。既知の制限codeだけを許可し、本文収集が無効のときはproviderメッセージや未知のcodeを記録しない。

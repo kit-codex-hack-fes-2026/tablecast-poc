@@ -29,7 +29,7 @@ flowchart LR
 4. Agents APIの `agent.session.requires_action` で要求されたfunctionだけを、既存APIの業務操作で実行する。`turn_id` と `call_id` を対応付け、結果を `agent.session.input.tool_result` で返す。GUI・MCPと価格・在庫・注文の正本を共有する。
 5. Agents APIの `final_answer` の本文差分をSSEでWebへ渡す。Webはブラウザー標準の文分割で未完の末尾だけを保持し、完結した文から同じdelegation IDの `session.commentary.append` へ順次渡す。送信時はproviderの上限内に収めるため100 code pointずつ分割する。Agentsの進捗用 `commentary` は渡さず、tokenごとの差分を受信した直後には転送しない。GPT-Liveが結果を自然に説明する。最初の文を渡すために全文生成・SSE完了を待たない。
 
-APIは現在の音声session、業務turn、卓、公開設定版と引数を検査する。字幕表示のまとまりを注文承認や新しい業務turnの根拠にしない。結果不明の変更要求を自動再送しない。SSEは本文の `delta` と終端の `completed` / `failed` を分ける。ツールの完了・失敗・中断は実行結果から記録し、HTTP streamが閉じただけで成功扱いにしない。失敗や完了通知のない切断ではWebが音声を停止し、未確認の結果を案内させない。GUIとカートは保持する。
+APIは現在の音声session、業務turn、卓、公開設定版と引数を検査する。字幕表示のまとまりを注文承認や新しい業務turnの根拠にしない。結果不明の変更要求を自動再送しない。SSEは本文の `delta` と終端の `completed` / `failed` を分ける。ツールの完了・失敗・中断は実行結果から記録し、HTTP streamが閉じただけで成功扱いにしない。業務turnを終了させた後の明示的な `failed` では未完の本文を破棄し、照会できなかった旨だけを案内して音声接続を維持する。次の依頼は利用客の新しい発話で始め、自動再試行しない。終端通知のない切断、不正な通知、音声回線の障害ではWebが音声を停止する。どちらの場合もGUIとカートは保持し、未確認の注文結果を断定しない。
 
 文末記号のない末尾は `completed` で送信し、失敗・中断時は破棄する。未送信の本文もAPIと同じ16,000文字上限を持つ。[公式の委任ガイド](https://developers.openai.com/api/docs/guides/live-delegation#reduce-backend-latency)に従い、意味の通る結果を送るために必要な範囲だけ蓄積する。GPT-Liveは受け取った文を言い換えるため、送信済みや通信成功を商品名・金額を含む実発話の正しさと同一視しない。
 

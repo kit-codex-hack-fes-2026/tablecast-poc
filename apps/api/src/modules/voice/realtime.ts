@@ -2,12 +2,12 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
+import { DomainError, ensure } from "../../platform/errors";
 import { getSession } from "../tables/queries";
 import { createCastTools } from "./agent";
-import type { toolSchema } from "./model";
+import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceActor } from "./queries";
-import { recordVoiceEvent } from "./service";
+import { recordVoiceEvent, voiceToolQuery } from "./service";
 export async function conversationHistory(
   services: ApiServices,
   actor: { storeId: string; tableSessionId?: string },
@@ -66,8 +66,7 @@ export async function invokeVoiceTool(
   await currentVoiceTurn(services, actor, session.locale, trigger);
   const tools = createCastTools(services, actor, signal, trigger);
   const tool = tools[input.toolName];
-  ensure(tool?.execute, "VOICE_TOOL_FORBIDDEN", 403);
-  const record = async (state: "running" | "completed" | "error") =>
+  const record = async (state: "running" | "completed" | "error", errorCode?: string) =>
     recordVoiceEvent(
       services,
       actor,
@@ -77,7 +76,8 @@ export async function invokeVoiceTool(
           toolName: input.toolName,
           toolCallId: input.toolCallId,
           state,
-          ...(state === "error" ? { errorCode: "VOICE_TOOL_FAILED" } : {}),
+          query: voiceToolQuery(input.toolName, input.arguments),
+          ...(errorCode ? { errorCode } : {}),
         },
       },
       true,
@@ -85,11 +85,15 @@ export async function invokeVoiceTool(
   // 一つのINSERTでcall IDを予約し、再送や並行要求を実行前に拒否する。
   ensure(await record("running"), "VOICE_TOOL_ALREADY_CALLED", 409);
   try {
+    ensure(tool?.execute, "VOICE_TOOL_FORBIDDEN", 403);
     const result = await tool.invoke(input.arguments);
     await record("completed");
     return { result };
   } catch (error) {
-    await record("error");
+    const code = voiceToolEventSchema.shape.errorCode.safeParse(
+      error instanceof DomainError ? error.code : "VOICE_TOOL_FAILED",
+    );
+    await record("error", code.success ? code.data : "VOICE_TOOL_FAILED");
     throw error;
   }
 }

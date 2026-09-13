@@ -421,6 +421,25 @@ export class VoiceConnection {
         const { value, done } = await currentReader.read();
         if (done) break;
         if (!this.current(attempt) || controller.signal.aborted) break;
+        if (value.event === "failed") {
+          const { code } = z
+            .object({ code: z.enum(["VOICE_MODEL_FAILED", "VOICE_CANCELLED"]) })
+            .parse(JSON.parse(value.data));
+          pending = "";
+          if (code === "VOICE_MODEL_FAILED")
+            this.channel?.send(
+              JSON.stringify({
+                type: "session.commentary.append",
+                event_id: crypto.randomUUID(),
+                delegation_id: delegationId,
+                content:
+                  this.locale === "ja"
+                    ? "申し訳ありません。今回のご案内や操作を完了できませんでした。ご注文の状態は画面でご確認ください。"
+                    : "Sorry, I couldn't complete that request. Please check your order on the screen.",
+              }),
+            );
+          return;
+        }
         let readyLength = 0;
         if (value.event === "completed") {
           completed = true;
