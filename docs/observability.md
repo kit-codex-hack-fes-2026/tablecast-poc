@@ -130,6 +130,8 @@ GitHub Environmentの`preview`または`production`に同名のActions variable�
 
 大きな入出力はLokiの64 KiB structured metadata上限を超えるため、`tablecast.content`のJSONログ本文へ分割する。元の完了ログは一件のまま維持する。同じtrace ID・span IDの`part`順に`content`を連結するとJSON属性へ復元できる。各行を256 KiB未満にし、本文を切り捨てない。Grafanaのtrace表示が長い属性を省略する場合は、相関する本文ログを使う。
 
+秘匿化に使う秘密値は本文全体につき一度だけ環境設定から取得する。計測済みの環境設定を各文字列で列挙すると、D1などのbindingのProxyを大量に生成するためである。JSONオブジェクト・配列の候補だけを解析し、通常文での例外生成も避ける。入れ子のJSON文字列と通常文の資格除去、本文の保持は共通の送信境界で検証する。
+
 ## GPT-LiveとAgents APIの相関
 
 ブラウザーの `session.input_transcript.delta`・`session.output_transcript.delta` は会話表示とD1保存に使い、APIの業務要求は通常のHTTP traceで追う。`tablecast.voice.session.id`、`tablecast.voice.turn.id`、hosted Agents session IDを対応付ける。UUIDの要求IDとOTel trace IDを混同しない。

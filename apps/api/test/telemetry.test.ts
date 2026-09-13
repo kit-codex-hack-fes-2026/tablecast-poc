@@ -11,6 +11,7 @@ import {
   measured,
   observeOperation,
   requestLog,
+  telemetryContent,
   telemetryConfig,
   telemetryAttributes,
 } from "../src/platform/telemetry";
@@ -248,6 +249,60 @@ it("本文収集を有効にしても資格は除去し、無効なら顧客情�
     "cloudflare.colo": "NRT",
     "cloudflare.placement": "remote-SIN",
   });
+});
+
+it("本文中のJSONオブジェクトと配列を秘匿化し、通常の文とJSON候補の本文を維持する", () => {
+  // Given: 空白付きJSON・入れ子のJSON文字列・通常文へ資格情報が混在する。
+  const input = {
+    object: ' \n {"name":"唐揚げ","details":"[{\\"token\\":\\"private-token\\",\\"price\\":340}]"}',
+    array: ' \t [{"name":"お茶","password":"private-password"}]',
+    text: "お茶を一つ Bearer private-bearer",
+    invalidJson: "{注文メモ Bearer private-bearer",
+    primitives: ["340", "true", "null", '"お茶"'],
+  };
+  // When: traceとログが共有する本文の送信境界へ渡す。
+  const result = telemetryContent(input, {});
+  // Then: 構造・価格・本文を維持し、構造化された資格と通常文の資格を除去する。
+  expect(result).toEqual({
+    object: JSON.stringify({
+      name: "唐揚げ",
+      details: JSON.stringify([{ token: "[REDACTED]", price: 340 }]),
+    }),
+    array: JSON.stringify([{ name: "お茶", password: "[REDACTED]" }]),
+    text: "お茶を一つ Bearer [REDACTED]",
+    invalidJson: "{注文メモ Bearer [REDACTED]",
+    primitives: input.primitives,
+  });
+});
+
+it("本文全体でbindingを一度だけ読み取り、全ての入れ子から秘密値を除去する", () => {
+  // Given: getterで計測されるbindingと秘密値、多数の文字列を含むカタログ。
+  const readBinding = vi.fn<() => typeof env.TABLECAST_DB>(() => env.TABLECAST_DB);
+  const readSecret = vi.fn<() => string>(() => "tablecast-synthetic-secret");
+  const settings = {
+    TABLECAST_OTEL_CAPTURE_CONTENT: "true",
+    get TABLECAST_DB() {
+      return readBinding();
+    },
+    get TABLECAST_MODEL_API_KEY() {
+      return readSecret();
+    },
+  };
+  const input = Array.from({ length: 100 }, (_, index) => ({
+    name: `料理${index}`,
+    details: JSON.stringify({ note: "接客メモ tablecast-synthetic-secret", price: 340 }),
+  }));
+  // When: 本文全体を一度秘匿化する。
+  const result = telemetryContent(input, settings);
+  // Then: 文字列数に比例してbindingを再計測せず、各項目の本文と価格を維持する。
+  expect(readBinding).toHaveBeenCalledTimes(1);
+  expect(readSecret).toHaveBeenCalledTimes(1);
+  expect(result).toEqual(
+    input.map((item) => ({
+      name: item.name,
+      details: JSON.stringify({ note: "接客メモ [REDACTED]", price: 340 }),
+    })),
+  );
 });
 
 it("大きな本文を欠落なく分割し、Lokiの属性上限と行上限を守って完了件数を保つ", () => {

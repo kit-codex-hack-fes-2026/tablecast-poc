@@ -71,29 +71,35 @@ const credentialKey = /authorization|cookie|password|secret|api[_-]?key|token$/i
 export function telemetryContent(value: string, env: TelemetryEnv): string;
 export function telemetryContent<T>(value: T, env: TelemetryEnv): T;
 export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
-  if (typeof value === "string") {
-    try {
-      const parsed: unknown = JSON.parse(value);
-      if (parsed && typeof parsed === "object")
-        return JSON.stringify(telemetryContent(parsed, env));
-    } catch {
-      // 通常の文はJSONとして解釈しない。
+  // envの列挙はbindingの計測Proxyも作るため、本文の各値で繰り返さない。
+  const secrets = Object.entries(env).flatMap(([key, secret]) =>
+    credentialKey.test(key) && typeof secret === "string" && secret.length >= 8 ? [secret] : [],
+  );
+  function sanitize(item: unknown): unknown {
+    if (typeof item === "string") {
+      const start = item.trimStart()[0];
+      if (start === "{" || start === "[") {
+        try {
+          const parsed: unknown = JSON.parse(item);
+          if (parsed && typeof parsed === "object") return JSON.stringify(sanitize(parsed));
+        } catch {
+          // JSON候補が通常の文だった場合も資格情報を除去する。
+        }
+      }
+      return redactCredentials(item, secrets);
     }
-    const secrets = Object.entries(env).flatMap(([key, secret]) =>
-      credentialKey.test(key) && typeof secret === "string" && secret.length >= 8 ? [secret] : [],
-    );
-    return redactCredentials(value, secrets);
+    if (item instanceof Date) return item;
+    if (Array.isArray(item)) return item.map(sanitize);
+    if (item && typeof item === "object")
+      return Object.fromEntries(
+        Object.entries(item).map(([key, entry]) => [
+          key,
+          credentialKey.test(key) ? "[REDACTED]" : sanitize(entry),
+        ]),
+      );
+    return item;
   }
-  if (value instanceof Date) return value;
-  if (Array.isArray(value)) return value.map((item: unknown) => telemetryContent(item, env));
-  if (value && typeof value === "object")
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [
-        key,
-        credentialKey.test(key) ? "[REDACTED]" : telemetryContent(item, env),
-      ]),
-    );
-  return value;
+  return sanitize(value);
 }
 
 export function telemetryAttributes(
