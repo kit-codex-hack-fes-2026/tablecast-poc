@@ -52,46 +52,33 @@ for (const { locale, labels } of [
     );
     await page.getByRole("button", { name: labels.menu_start_editing, exact: true }).click();
     const draft = configDraftSchema.parse(await (await response).json());
-    try {
-      await expect(page).toHaveURL(new RegExp(`/changes/${draft.id}/products/`));
-      const input = page.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true });
-      await input.fill("777");
-      await page.getByRole("button", { name: labels.common_save, exact: true }).click();
-      await expect(
-        page.getByRole("status").filter({ hasText: labels.account_saved }),
-      ).toBeVisible();
-      await page.reload();
-      await expect(input).toHaveValue("777");
-      // Then: 個別ページから一覧、変更確認へ移動しても保存内容が維持される。
-      await page
-        .getByRole("main")
-        .getByRole("link", { name: labels.editor_products, exact: true })
-        .click();
-      await page.getByRole("link", { name: labels.admin_drafts, exact: true }).click();
-      await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}`);
-      await expect(
-        page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
-      ).toBeVisible();
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-      await expect(
-        page.getByRole("button", { name: labels.admin_publish, exact: true }),
-      ).toBeDisabled();
-      await page.getByRole("button", { name: labels.editor_discard_draft, exact: true }).click();
-      await page
-        .getByRole("alertdialog")
-        .getByRole("button", { name: labels.editor_discard_draft, exact: true })
-        .click();
-      await expect(page).toHaveURL(`${baseURL}${base}/changes`);
-    } finally {
-      const current = configDraftSchema.parse(
-        await (await page.request.get(`${api}/drafts/${draft.id}`)).json(),
-      );
-      if (current.status === "draft" || current.status === "ready")
-        await page.request.post(`${api}/drafts/${draft.id}/discard`, {
-          headers: { Origin: baseURL ?? "" },
-          data: { expectedVersion: current.version },
-        });
-    }
+    await expect(page).toHaveURL(new RegExp(`/changes/${draft.id}/products/`));
+    const input = page.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true });
+    await input.fill("777");
+    await page.getByRole("button", { name: labels.common_save, exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: labels.account_saved })).toBeVisible();
+    await page.reload();
+    await expect(input).toHaveValue("777");
+    // Then: 個別ページから一覧、変更確認へ移動しても保存内容が維持される。
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: labels.editor_products, exact: true })
+      .click();
+    await page.getByRole("link", { name: labels.admin_drafts, exact: true }).click();
+    await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}`);
+    await expect(
+      page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: labels.admin_publish, exact: true }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: labels.editor_discard_draft, exact: true }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: labels.editor_discard_draft, exact: true })
+      .click();
+    await expect(page).toHaveURL(`${baseURL}${base}/changes`);
   });
 }
 
@@ -109,6 +96,7 @@ test("端末登録はURLで再現でき、卓の選択で列幅が動かない",
   // When: 一覧から卓を選択し、同じURLを再読み込みする。
   await table.getByRole("button", { name: ja.common_select, exact: true }).first().click();
   await expect(page).toHaveURL(/tableId=/);
+  await expect(table.getByRole("button", { name: ja.common_selected, exact: true })).toHaveCount(1);
   const selectedUrl = page.url();
   expect(new URL(selectedUrl).searchParams.get("tableId")).toBeTruthy();
   const after = await table.boundingBox();

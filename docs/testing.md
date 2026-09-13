@@ -117,9 +117,15 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 `bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。GitHub ActionsのLinux runnerではhost networkとケース専用のloopbackポートを使い、vethの生成・削除による他ケースのChromiumの`ERR_NETWORK_CHANGED`を避ける。SMTPは未使用のためOS割当ポートにbindし、メール保存先はケース専用container内に保つ。ローカルのDocker Desktop/OrbStackでは従来のport publishを使用する。
 
-ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各ケースへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物は読み取り専用で共用し、各ケースのdeploy configから固有名のWeb/API WorkersをCloudflare Vite previewで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もケース内へ分け、別caseの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証も別環境であり、固定fixtureのIDが同じでも書込み先は共有しない。
+ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。ViteとSerwistの出力先は`TABLECAST_BUILD_DIRECTORY`で実行ごとの`build/`へ揃え、通常開発の`apps/web/dist`を上書きしない。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各ケースへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物をtemplateとし、各ケースのassets・deploy configから固有名のWeb/API WorkersをCloudflare Vite previewで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もケース内へ分け、別caseの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証も別環境であり、固定fixtureのIDが同じでも書込み先は共有しない。
 
 `fullyParallel: true`、`workers: 4`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはケース専用の`baseURL`を使う。ケースの成否に関係なく自分のプロセスとcontainerとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント試験は、前ケースの登録状態で分岐せず、毎回新規登録から確認する。
+
+DBはケースの終了とともに破棄するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・container・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
+
+同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。Web・OAuth・Mailpitのポートは現在のCLIへ渡すため空き番号の確認後にbindする。確認から起動までの予約を保持するAPIはなく、外部プロセスによる先取りは残る制約である。bind失敗は起動失敗として記録し、別ポートへの自動再試行で隠さない。
+
+通常操作は、保存済み表示・有効化・反映後の値を観測してから次の操作へ進む。HTTP応答の受信だけでフォームのresetやiframeへの反映を完了と扱わない。意図した競合は下位層の明示barrierで確認する。会話注文デモは客の初期言語を明示し、言語・表示の保持と設定・注文の保持を別ケースへ分ける。端末寸法の全組合せは既存の`demo-viewport.browser.test.tsx`が担当する。全specと共通環境の確認結果は[#116](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/116)に置く。
 
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
@@ -160,7 +166,7 @@ bun run test:browser
 bun run test:e2e --project=tablecast-chromium
 ```
 
-E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。migrationログはruntimeを削除する前に`apps/web/test-results/tablecast-runtime/`へ保存する。ケース単位の環境隔離は#40で扱い、UI契約の低い層への移行など#35の残件とは区別する。
+E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。fixtureが起動した専用process groupを終了し、Viteの子孫のworkerdも残さない。失敗時は資格を除去した最大65,536文字のruntimeログを`testInfo.outputPath()`へ保存して添付する。画像・計測値も同じcase別の保存先を使う。migrationログはruntime削除前に`apps/web/test-results/tablecast-runtime/<run>/`へ保存する。テスト結果には認証情報を含むtraceを追加しない。
 
 ### 型付きDB fixture
 

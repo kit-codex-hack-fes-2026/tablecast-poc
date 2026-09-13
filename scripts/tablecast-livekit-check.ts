@@ -154,6 +154,8 @@ async function main() {
   let browser: Browser | undefined;
   let roomCreated = false;
   let roomDeleted = false;
+  let failure: Error | undefined;
+  let cleanupFailures: unknown[] = [];
   let stage = "検証ブラウザー起動";
   let observation: AudioObservation = {
     bytesReceived: 0,
@@ -243,14 +245,27 @@ async function main() {
     console.log(JSON.stringify(result));
   } catch {
     console.error(JSON.stringify({ stage, observation }));
-    throw new Error(`ローカルLiveKit検査が失敗しました: ${stage}`);
+    failure = new Error(`ローカルLiveKit検査が失敗しました: ${stage}`);
   } finally {
-    await browser?.close();
-    await new Promise<void>((resolve, reject) =>
-      server.close((error) => (error ? reject(error) : resolve())),
-    );
-    if (roomCreated && !roomDeleted) await service.deleteRoom(roomName);
+    const cleanup = await Promise.allSettled([
+      browser?.close(),
+      new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
+      roomCreated && !roomDeleted ? service.deleteRoom(roomName) : undefined,
+    ]);
+    cleanupFailures = cleanup.flatMap((result) => {
+      if (result.status === "fulfilled") return [];
+      const cleanupError: unknown = result.reason;
+      return [cleanupError];
+    });
   }
+  if (failure && !cleanupFailures.length) throw failure;
+  if (failure || cleanupFailures.length)
+    throw new AggregateError(
+      [...(failure ? [failure] : []), ...cleanupFailures],
+      failure?.message ?? "ローカルLiveKit検査の後片付けに失敗しました",
+    );
 }
 
 await main();

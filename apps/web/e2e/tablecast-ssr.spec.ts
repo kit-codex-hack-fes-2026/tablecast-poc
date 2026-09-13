@@ -1,6 +1,5 @@
-import { expect } from "@playwright/test";
-import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { expect, type BrowserContext } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { z } from "zod";
 import { test } from "./support/test";
@@ -14,14 +13,12 @@ declare global {
   }
 }
 
-const screenshots = resolve(import.meta.dirname, "../../../.local/tablecast-quality-evidence");
-
 test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿名リクエストへ漏らさない", async ({
   page,
   browser,
   browserName,
   baseURL,
-}) => {
+}, testInfo) => {
   // Given: スタッフと卓端末のCookieを実APIで発行する。
   expect(
     (
@@ -43,20 +40,24 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       })
     ).ok(),
   ).toBe(true);
-  const guest = await browser.newContext({ baseURL });
-  const staffSsr = await browser.newContext({
-    baseURL,
-    javaScriptEnabled: false,
-    storageState: await page.context().storageState(),
-  });
-  const layoutCookie = {
-    name: "tablecast-layout-tablecast-admin-layout",
-    value: encodeURIComponent(JSON.stringify({ "tablecast-admin-content": 100 })),
-    url: baseURL ?? "",
-  };
-  await staffSsr.addCookies([layoutCookie]);
-  const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
+  const contexts: BrowserContext[] = [];
   try {
+    const guest = await browser.newContext({ baseURL });
+    contexts.push(guest);
+    const staffSsr = await browser.newContext({
+      baseURL,
+      javaScriptEnabled: false,
+      storageState: await page.context().storageState(),
+    });
+    contexts.push(staffSsr);
+    const layoutCookie = {
+      name: "tablecast-layout-tablecast-admin-layout",
+      value: encodeURIComponent(JSON.stringify({ "tablecast-admin-content": 100 })),
+      url: baseURL ?? "",
+    };
+    await staffSsr.addCookies([layoutCookie]);
+    const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
+    contexts.push(anonymous);
     const codes = z
       .object({ user_code: z.string(), device_code: z.string() })
       .parse(await (await guest.request.post("/api/devices/request")).json());
@@ -113,9 +114,8 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         "srcset",
         /width=\d+/,
       );
-      await mkdir(screenshots, { recursive: true });
-      await guestPage.screenshot({ path: resolve(screenshots, "kiosk-ssr.png"), fullPage: true });
-      await staffPage.screenshot({ path: resolve(screenshots, "floor-ssr.png"), fullPage: true });
+      await guestPage.screenshot({ path: testInfo.outputPath("kiosk-ssr.png"), fullPage: true });
+      await staffPage.screenshot({ path: testInfo.outputPath("floor-ssr.png"), fullPage: true });
       const interactive = await guest.newPage();
       const errors: string[] = [];
       interactive.on("pageerror", (error) => errors.push(error.message));
@@ -150,22 +150,22 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
       await writeFile(
-        resolve(screenshots, `kiosk-performance-${browserName}.json`),
+        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
         JSON.stringify(metrics, null, 2),
       );
       await interactive.screenshot({
-        path: resolve(screenshots, "kiosk-hydrated.png"),
+        path: testInfo.outputPath("kiosk-hydrated.png"),
         fullPage: true,
       });
     } finally {
       await guestSsr.close();
     }
   } finally {
-    await Promise.all([guest.close(), staffSsr.close(), anonymous.close()]);
+    await Promise.all(contexts.map((context) => context.close()));
   }
 });
 
-test("遷移中・取得失敗・再試行後の0件を区別する", async ({ page, baseURL }) => {
+test("遷移中・取得失敗・再試行後の0件を区別する", async ({ page, baseURL }, testInfo) => {
   expect(
     (
       await page.request.post("/api/auth/sign-in/email", {
@@ -179,12 +179,11 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
   await page.goto("/admin/stores/tablecast-komorebi/floor");
   // 通常のdocument遷移ではなく、hydration後のクライアント遷移を検証する。
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
-  let release: (() => void) | undefined;
-  const gate = new Promise<void>((done) => {
-    release = done;
-  });
+  const gate = Promise.withResolvers<void>();
+  const requested = Promise.withResolvers<void>();
   await page.route("**/api/admin/stores/tablecast-komorebi/devices", async (route) => {
-    await gate;
+    requested.resolve();
+    await gate.promise;
     await route.fulfill({
       status: 503,
       contentType: "application/json",
@@ -193,21 +192,21 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
   });
   try {
     await page.getByRole("link", { name: "端末", exact: true }).click();
+    await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
     await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-    await mkdir(screenshots, { recursive: true });
-    await page.screenshot({ path: resolve(screenshots, "pending.png"), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath("pending.png"), fullPage: true });
   } finally {
-    release?.();
+    gate.resolve();
   }
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: resolve(screenshots, "error.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("error.png"), fullPage: true });
   await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
   await expect(page.getByText("0 件", { exact: true })).toBeVisible();
-  await page.screenshot({ path: resolve(screenshots, "empty.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true });
   expect(pageErrors).toEqual([]);
 });

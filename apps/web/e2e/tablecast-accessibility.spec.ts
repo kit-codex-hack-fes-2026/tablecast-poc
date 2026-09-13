@@ -8,6 +8,7 @@ import { enlargeText, expectReadableControl, tabTo } from "./tablecast-accessibi
 // 認証入力を含むため通信traceは保存しない。
 test.use({ trace: "off" });
 async function signInWithKeyboard(page: Page) {
+  await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toBeEnabled();
   await tabTo(page, page.getByLabel(ja.auth_email));
   await page.keyboard.insertText(credentials.email);
   await page.keyboard.press("Tab");

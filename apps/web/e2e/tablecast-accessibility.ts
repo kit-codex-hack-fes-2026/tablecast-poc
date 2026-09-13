@@ -3,6 +3,7 @@ import process from "node:process";
 
 export async function tabTo(page: Page, target: Locator) {
   await expect(target).toBeVisible();
+  await expect(target).toBeEnabled();
   // macOSのWebKitでは、リンクを含む移動にOption+Tabを使う。
   const key =
     process.platform === "darwin" && page.context().browser()?.browserType().name() === "webkit"

@@ -206,7 +206,7 @@ bun run test:browser
 bun run test:e2e
 ```
 
-E2Eはケースごとに専用環境を作り、通常のdevは不要。テストの選び方は [テスト戦略](testing.md)を正本とする。
+E2Eはケースごとに専用環境を作り、通常のdevは不要。global setupが`TABLECAST_BUILD_DIRECTORY`で実行ごとのbuild出力を指定する。この変数を省略した通常buildは`apps/web/dist`を使う。同じworktree内ではcodegenやdeploy metadataを共有する別buildと重ねない。失敗したケースの診断ログと画像は`apps/web/test-results/`へ残り、fixtureが専用プロセス群・container・storageを片付ける。テストの選び方と隔離の範囲は [テスト戦略](testing.md#e2eの隔離)を正本とする。
 
 ## 6. 終了・再開・復旧
 
@@ -232,6 +232,6 @@ docker compose -f .devcontainer/compose.yaml down
 
 ## PWAの確認
 
-Service Workerはビルド済み環境だけで登録する。ローカルでは通常開発を停止して`bun run dev:parity`を使う。自動試験は`bun run --cwd apps/web test:e2e tablecast-pwa.spec.ts tablecast-publication.spec.ts --workers=1`で、隔離したWorkersと画像を使う。Service Workerを手動で登録して通常devへ残さない。
+Service Workerはビルド済み環境だけで登録する。ローカルでは通常開発を停止して`bun run dev:parity`を使う。自動試験は`bun run --cwd apps/web test:e2e tablecast-pwa.spec.ts tablecast-publication.spec.ts`で、隔離したWorkersと画像を使う。Service Workerを手動で登録して通常devへ残さない。
 
 iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/live` をそれぞれ共有 → ホーム画面に追加する。追加後のアプリで端末登録・ログインを行う。キャッシュが消えてもオンライン起動で再取得できること、休止からの復帰時に更新確認されることを実機で確認する。

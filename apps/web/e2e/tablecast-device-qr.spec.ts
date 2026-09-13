@@ -47,8 +47,11 @@ test("端末のQR画像でコードと選択した卓を保持し、明示承認
   // Then: URLと入力へ反映するだけで、明示操作までは承認しない。
   await expect(page.getByLabel(ja.admin_pair_code, { exact: true })).toHaveValue(code);
   await expect(page.getByRole("status").filter({ hasText: ja.device_scan_success })).toBeVisible();
-  expect(new URL(page.url()).searchParams.get("tableId")).toBe("tablecast-komorebi-table-10");
-  expect(new URL(page.url()).searchParams.get("user_code")).toBe(code);
+  await expect(page).toHaveURL(
+    (url) =>
+      url.searchParams.get("tableId") === "tablecast-komorebi-table-10" &&
+      url.searchParams.get("user_code") === code,
+  );
   expect(approvals).toBe(0);
   await page.reload();
   await expect(page.getByLabel(ja.admin_pair_code, { exact: true })).toHaveValue(code);
