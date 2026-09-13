@@ -10,6 +10,8 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/plugins/tablecast/skills/tablecast/SKILL.md",
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/api/wrangler.jsonc",
         "$TURBO_ROOT$/.local/tablecast-deploy/api.json",
@@ -117,10 +119,12 @@
       "outputs": ["src/paraglide/**"]
     },
     "@tablecast/web#typecheck": {
-      "dependsOn": ["^typecheck", "i18n:compile"]
+      "dependsOn": ["^typecheck", "i18n:compile"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
     },
     "@tablecast/web#lint": {
-      "dependsOn": ["i18n:compile"]
+      "dependsOn": ["i18n:compile"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
     }
   }
 }
