@@ -125,6 +125,8 @@ PRを作成する各開発者は[Codex Cloudの公式セットアップ](https:/
 @codex review
 ```
 
+動作確認では、自分のGitHubアカウントで `@codex review` を投稿し、受付反応とBotのレビュー結果が返ることを確認する。
+
 Codexの受付反応とレビュー結果を確認する。指摘への対応と再レビューは[PR運用のレビュー対応](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#レビュー対応)に従う。
 
 ## 3. 最初の画面確認
