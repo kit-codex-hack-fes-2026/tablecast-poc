@@ -11,6 +11,8 @@ macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う
 
 Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew install gh` を実行する。着手するIssueと担当は [AGENTS.md](../AGENTS.md#作業契約) に従って確認する。
 
+手動の配備・削除はGitHub CLI `gh` と対象repositoryを読めるGitHub認証も必要になる。Dev Containerには `gh` を同梱しないため、通常の再配備・削除はGHAを使い、手動復旧は `gh auth status` が成功するホスト側のセットアップ済み環境で行う。Cloudflare権限と復旧条件は[配備手順](deployment.md#prのstorybookメールカタログ)を参照する。
+
 ```sh
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc

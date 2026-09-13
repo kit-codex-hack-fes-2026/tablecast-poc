@@ -150,6 +150,9 @@ jobs:
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
+      - name: forkの配備対象外を記録
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo 'fork PRはsecretを使わずbuildのみ実施し、カタログ配備・コメント更新の対象外とする。' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -167,7 +170,7 @@ jobs:
   catalog-deploy:
     name: PRカタログの配備
     needs: [static, unit-web, storybook-build, email-build, components]
-    if: always() && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: preview
@@ -182,34 +185,25 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
-      CLOUDFLARE_API_TOKEN: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_API_TOKEN || '' }}
-      CF_ACCESS_CLIENT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CF_ACCESS_CLIENT_ID || '' }}
-      CF_ACCESS_CLIENT_SECRET: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CF_ACCESS_CLIENT_SECRET || '' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
       TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
     steps:
-      - name: forkの配備対象外を記録
-        if: github.event.pull_request.head.repo.full_name != github.repository
-        run: echo 'fork PRはsecretを使わずbuildのみ実施し、カタログ配備・コメント更新の対象外とする。' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        if: github.event.pull_request.head.repo.full_name == github.repository
         with:
           ref: ${{ env.TABLECAST_RELEASE_SHA }}
       - uses: ./.github/actions/tablecast-setup
-        if: github.event.pull_request.head.repo.full_name == github.repository
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        if: github.event.pull_request.head.repo.full_name == github.repository && needs.storybook-build.result == 'success'
         with:
           name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
           path: apps/web/storybook-static/
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        if: github.event.pull_request.head.repo.full_name == github.repository && needs.email-build.result == 'success'
         with:
           name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
           path: apps/api/email-static/
       - name: Access保護・検証済みSHAの配備
-        id: publish
-        if: github.event.pull_request.head.repo.full_name == github.repository && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
         run: bun --no-env-file run deploy:catalog
 
   components:

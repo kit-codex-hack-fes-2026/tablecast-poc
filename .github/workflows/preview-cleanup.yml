@@ -29,7 +29,9 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
       - uses: ./.github/actions/tablecast-setup
+        id: setup
       - name: 閉じたPRのカタログを削除
         run: bun --no-env-file run deploy:catalog --cleanup
       - name: 閉じたPRの所有資源だけを削除
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: bun --no-env-file run deploy --cleanup

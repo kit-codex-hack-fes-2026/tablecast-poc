@@ -12,14 +12,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Languages: Story = {
   name: "日英を直接選択",
-  play: async ({ canvasElement, args }) => {
+  play: async ({ canvasElement, args, globals }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "日本語" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(canvas.getByRole("button", { name: "English" }));
-    await expect(args.onChange).toHaveBeenCalledWith("en");
+    const english = globals.locale === "en";
+    await expect(
+      canvas.getByRole("button", { name: english ? "English" : "日本語" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(canvas.getByRole("button", { name: english ? "日本語" : "English" }));
+    await expect(args.onChange).toHaveBeenCalledWith(english ? "ja" : "en");
   },
+};
+export const English: Story = {
+  ...Languages,
+  name: "英語から日本語を選択",
+  globals: { locale: "en" },
 };
 export const Disabled: Story = { name: "言語を更新中", args: { disabled: true } };
