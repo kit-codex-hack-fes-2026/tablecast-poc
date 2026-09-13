@@ -40,7 +40,10 @@
     "dev:livekit": "livekit-server --config .local/livekit.yaml",
     "services:up": "docker compose --env-file .local/.env up --detach --wait",
     "services:down": "docker compose --env-file .local/.env down --timeout 5",
-    "services:status": "docker compose --env-file .local/.env ps"
+    "services:status": "docker compose --env-file .local/.env ps",
+    "build:email": "turbo run build:email",
+    "deploy:catalog": "bun --no-env-file scripts/tablecast-catalog-deploy.ts",
+    "preview:report": "bun --no-env-file scripts/tablecast-preview-report.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",
@@ -73,6 +76,8 @@
   },
   "packageManager": "bun@1.3.13",
   "patchedDependencies": {
-    "miniflare@5.20260903.0-alpha": "patches/miniflare@5.20260903.0-alpha.patch"
+    "miniflare@5.20260903.0-alpha": "patches/miniflare@5.20260903.0-alpha.patch",
+    "react-email@6.9.5": "patches/react-email@6.9.5.patch",
+    "@react-email/ui@6.9.5": "patches/@react-email%2Fui@6.9.5.patch"
   }
 }

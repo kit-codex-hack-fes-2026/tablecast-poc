@@ -1,0 +1,21 @@
+diff --git a/src/app/preview/[...slug]/preview.tsx b/src/app/preview/[...slug]/preview.tsx
+index 3eb78e4154097a64286800940b46a62fd91fc33e..79a91ec2c0245ef44cad614059a7b3166718c246 100644
+--- a/src/app/preview/[...slug]/preview.tsx
++++ b/src/app/preview/[...slug]/preview.tsx
+@@ -12,6 +12,7 @@ import {
+   makeIframeDocumentBubbleEvents,
+   ResizableWrapper,
+ } from '../../../components/resizable-wrapper';
++import { isBuilding } from '../../env';
+ import { Send } from '../../../components/send';
+ import { useToolbarState } from '../../../components/toolbar';
+ import { Tooltip } from '../../../components/tooltip';
+@@ -149,7 +150,7 @@ const Preview = ({ emailTitle, className, ...props }: PreviewProps) => {
+             open={propsPanelOpen}
+           />
+         ) : null}
+-        {hasRenderingMetadata ? (
++        {hasRenderingMetadata && !isBuilding ? (
+           <div className="flex justify-end">
+             <Send
+               key={emailSlug}

@@ -235,3 +235,7 @@ docker compose -f .devcontainer/compose.yaml down
 Service Workerはビルド済み環境だけで登録する。ローカルでは通常開発を停止して`bun run dev:parity`を使う。自動試験は`bun run --cwd apps/web test:e2e tablecast-pwa.spec.ts tablecast-publication.spec.ts`で、隔離したWorkersと画像を使う。Service Workerを手動で登録して通常devへ残さない。
 
 iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/live` をそれぞれ共有 → ホーム画面に追加する。追加後のアプリで端末登録・ログインを行う。キャッシュが消えてもオンライン起動で再取得できること、休止からの復帰時に更新確認されることを実機で確認する。
+
+### メールプレビュー依存
+
+rootのBun workspaceに`apps/email-preview`を含む。通常のfrozen installで公式React Email UI/CLIとOpenNext、2つのBun patchを導入する。新たなnpm installやサービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。初回buildはGoogle Fonts・固定サンプルHTMLの診断サービスへの接続を要する。

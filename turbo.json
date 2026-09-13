@@ -125,6 +125,23 @@
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+    },
+    "@tablecast/email-preview#build:email": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/api/src/emails/**",
+        "$TURBO_ROOT$/scripts/tablecast-email-build.ts",
+        "$TURBO_ROOT$/scripts/tablecast-catalog-config.ts"
+      ],
+      "outputs": [
+        ".react-email/.open-next/**",
+        ".react-email/wrangler.json",
+        ".react-email/tablecast-worker.js",
+        ".react-email/tablecast-email-worker.ts",
+        ".react-email/tablecast-routes.json",
+        ".react-email/tablecast-release.json"
+      ],
+      "env": ["TABLECAST_RELEASE_SHA", "TABLECAST_PR_NUMBER"]
     }
   }
 }

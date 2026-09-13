@@ -147,3 +147,11 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 `package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthとproxyを併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
 
 独自のdev daemonは持たない。WebはCtrl+C、PythonはuvのターミナルでCtrl+C、ホストのDockerサービスは `bun run services:down` で終了する。Python用のenvをJS側で解決しない。具体的なコマンドは [setup.md](setup.md) にまとめる。
+
+## メールカタログの検証
+
+`apps/email-preview`は開発者用Bun workspaceで、公式React Email UIを使用する。`bun install --frozen-lockfile`後、`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で閲覧専用Workerを生成する。`bunx --no-install wrangler dev --config apps/email-preview/.react-email/wrangler.json`で一覧と招待・メール確認・パスワード再設定を確認する。終了時はこのWranglerと子workerdを停止する。
+
+`.react-email`は生成物であり編集しない。CLIの生成専用`--prepare`と公開UIのSend非表示だけをBun patchで管理する。React Email CLI/UI 6.9.5・Next 16.3.3・OpenNext 1.20.6・Wrangler 4.129.0を固定し、依存更新は公式UIのbuild依存・2パッチ・root bun.lock・ビルドとブラウザー確認を同時に行う。生成先でnpm installせず、別lockfileを作らない。
+
+公式buildはGoogle Fontsを取得し、架空メールHTMLを外部のスパム診断へ渡すためネットワーク接続が必要。メール送信資格・実在宛先・認証トークンをfixtureやbuild環境へ渡さない。公式Next設定の型検査skipを自作コードの保証には使わず、workspaceのtypecheck/lintとAPIの検査を実行する。配備とAccessの手順は[CI/CD](deployment.md#prのstorybookメールカタログ)を参照する。

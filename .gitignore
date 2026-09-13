@@ -55,3 +55,6 @@ apps/web/src/paraglide/
 # Vitest Browser Modeの失敗証跡
 .vitest-attachments/
 __screenshots__/
+
+# React Email公式UIの生成先
+.react-email/

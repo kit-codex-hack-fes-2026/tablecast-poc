@@ -7,7 +7,8 @@
     "./schema": "./src/schema.ts",
     "./client": "./src/client.ts",
     "./speech": "./src/modules/voice/prompt.ts",
-    "./telemetry": "./src/platform/telemetry.ts"
+    "./telemetry": "./src/platform/telemetry.ts",
+    "./emails": "./src/emails/index.ts"
   },
   "scripts": {
     "dev": "wrangler dev",

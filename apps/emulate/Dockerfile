@@ -5,6 +5,7 @@ COPY patches/*.patch patches/
 COPY apps/emulate/package.json apps/emulate/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY apps/email-preview/package.json apps/email-preview/package.json
 COPY livekit/package.json livekit/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY apps/emulate/src apps/emulate/src

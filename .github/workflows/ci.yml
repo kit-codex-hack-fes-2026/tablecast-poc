@@ -130,6 +130,99 @@ jobs:
         with:
           turbo: "true"
       - run: bunx --no-install turbo run build:storybook
+      - run: bun --no-env-file run deploy:catalog --prepare-storybook
+        env:
+          TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+          TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-storybook-${{ github.event.pull_request.head.sha || github.sha }}
+          path: apps/web/storybook-static/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  email-build:
+    name: "Build: メールカタログ (React Email, OpenNext)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          turbo: "true"
+      - run: bun --no-env-file run build:email
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
+          path: |
+            apps/email-preview/.react-email/.open-next/
+            apps/email-preview/.react-email/wrangler.json
+            apps/email-preview/.react-email/tablecast-worker.js
+            apps/email-preview/.react-email/tablecast-email-worker.ts
+            apps/email-preview/.react-email/tablecast-routes.json
+            apps/email-preview/.react-email/tablecast-release.json
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  catalog-deploy:
+    name: PRカタログの配備と結果通知
+    needs: [static, unit-web, storybook-build, email-build, components]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: preview
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: tablecast-deploy-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_API_TOKEN || '' }}
+      CF_ACCESS_CLIENT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CF_ACCESS_CLIENT_ID || '' }}
+      CF_ACCESS_CLIENT_SECRET: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CF_ACCESS_CLIENT_SECRET || '' }}
+      TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
+      TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
+    steps:
+      - name: forkの配備対象外を記録
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: echo 'fork PRはsecretを使わずbuildのみ実施し、カタログ配備・コメント更新の対象外とする。' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          ref: ${{ env.TABLECAST_RELEASE_SHA }}
+      - uses: ./.github/actions/tablecast-setup
+        if: github.event.pull_request.head.repo.full_name == github.repository
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: github.event.pull_request.head.repo.full_name == github.repository && needs.storybook-build.result == 'success'
+        with:
+          name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/storybook-static/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: github.event.pull_request.head.repo.full_name == github.repository && needs.email-build.result == 'success'
+        with:
+          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/email-preview/.react-email/
+      - name: Access保護・検証済みSHAの配備
+        id: publish
+        if: github.event.pull_request.head.repo.full_name == github.repository && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+        run: bun --no-env-file run deploy:catalog
+      - name: カタログコメントを更新
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          TABLECAST_CATALOG_RESULTS: ${{ toJSON(needs) }}
+          TABLECAST_CATALOG_DEPLOY_RESULT: ${{ steps.publish.outcome }}
+        run: bun --no-env-file run preview:report
 
   components:
     name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
