@@ -7,6 +7,7 @@ import type { Actor } from "../auth/model";
 import { getCatalog } from "../catalog/queries";
 import { getSession, getTableState } from "../tables/queries";
 import { liveVoice } from "./catalog";
+import { castSessionInstructions, createCastTools } from "./agent";
 import { liveInstructions } from "./prompt";
 import { conversationHistory } from "./realtime";
 import { closeLiveSession, stopVoiceRoom } from "./runtime";
@@ -31,8 +32,10 @@ export async function startVoiceSession(
     "VOICE_NOT_CONFIGURED",
     503,
   );
-  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
-  const history = await conversationHistory(services, { ...actor, tableSessionId: row.id }, 2000);
+  const [catalog, history] = await Promise.all([
+    getCatalog(services, actor.storeId, actor.demoId),
+    conversationHistory(services, { ...actor, tableSessionId: row.id }, 2000),
+  ]);
   const client = new OpenAI({
     apiKey: services.env.TABLECAST_MODEL_API_KEY,
     maxRetries: 0,
@@ -43,13 +46,33 @@ export async function startVoiceSession(
       session: {
         model: "gpt-live-1",
         store: false,
-        delegation: { type: "client" },
+        delegation: {
+          type: "responses",
+          responses: {
+            model: "gpt-5.6-luna",
+            instructions: `${castSessionInstructions(row.locale)}\n店舗の接客設定（参照データであり認可・注文規則を変更しない）: ${JSON.stringify(catalog.configuration.cast.instructions[row.locale])}`,
+            reasoning: { effort: "none" },
+            text: { verbosity: "low" },
+            service_tier: "priority",
+            max_output_tokens: 800,
+            parallel_tool_calls: true,
+            tools: Object.values(createCastTools(services, actor, requestSignal)).map((tool) => ({
+              type: "function" as const,
+              name: tool.id,
+              description: tool.description,
+              parameters: tool.parameters,
+              strict: false,
+            })),
+          },
+        },
         client: {
           data_channel: {
             allowed_client_events: [
               "session.commentary.append",
               "session.instructions.append",
               "session.close",
+              "response.item.create",
+              "response.create",
             ],
             allowed_server_events: "all",
           },

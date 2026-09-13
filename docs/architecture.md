@@ -14,12 +14,12 @@ flowchart LR
     API --> DO[店舗DO]
     API --> R2[R2・Images]
     Customer <-->|WebRTC| Voice[OpenAI GPT-Live 1]
-    Customer -->|client delegation| Web
-    API <--> Agent[OpenAI Agents API]
+    Customer -->|tool HTTP| Web
+    Voice <--> Agent[Luna / Responses delegation]
 ```
 
 Web/APIの2 Workersをアプリの実行単位にする。DOのclassはAPI Workerに置き、PRのOAuth emulatorだけをContainerに置く。音声サーバーやPython runtimeは運用しない。
-業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、hosted Agents APIはclient delegationの業務判断、Honoは共通業務ツールの認可・実行、DOは通知を担当する。
+業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、LunaはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知を担当する。
 
 ## ディレクトリ
 
@@ -91,7 +91,7 @@ rootのBun workspacesは `apps/*`。`@tablecast/web`、`@tablecast/api`、開発
 ## 業務moduleと依存の寿命
 
 Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。小さな処理にcontroller/service/repository/interfaceを一組ずつ生成しない。
-APIではroute・Agents APIのfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
+APIではroute・音声のfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 

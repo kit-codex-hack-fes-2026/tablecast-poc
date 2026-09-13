@@ -1,64 +1,46 @@
-# GPT-Live・Agents API・Honoの接続
+# GPT-Live・Responses delegation・Honoの接続
 
-[索引](../README.md) / [発話仕様](speech.md)
+## 採用構成
 
-## 採用する経路
+ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-5.6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
 
 ```mermaid
 flowchart LR
-    K[卓上Web] <-->|WebRTC| O[OpenAI gpt-live-1]
-    O -->|client delegation| K
-    K <-->|認証済みHTTP stream| H[Hono]
-    H <-->|hosted session / function result| A[OpenAI Agents API]
-    H --> D[(D1)]
-    H --> R[DOによる状態配信]
-    R --> K
+    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1]
+    L <-->|標準Responses delegation| R[Luna]
+    B <-->|認証済みtool HTTP| H[Hono]
+    H <--> D[D1]
+    H --> N[通知DO]
 ```
 
-ブラウザー標準のWebRTCでGPT-Liveへ直接接続する。Honoが公式OpenAI SDKの `live.create` へSDP offerを送り、SDP answerと音声session IDだけをブラウザーへ返す。APIキーはサーバーだけが持つ。通常音声は `gpt-live-1`、委任方式は `client` に固定する。
+公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはLuna、reasoning none、verbosity low、priority、最大800出力tokenとする。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
 
-業務委任はhosted OpenAI Agents APIを `environment: { type: "none" }` で使う。公式JavaScript SDK `openai` 7.15.0の `beta.agents.sessions` を使い、Mastra・LiveKit Server・Python Agent・音声Containerを持たない。Agents SDKのローカルRunnerやResponses APIへの置換は行わない。
+[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)
 
-[OpenAI WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live) / [client delegation](https://developers.openai.com/api/docs/guides/live-delegation) / [Agents API](https://developers.openai.com/api/docs/guides/agents-api/quickstart)
+## ツールと出力
 
-## 委任と業務認可
+Liveのresponse.event内のresponse.createdでresponse IDを記録し、response.output_item.doneのfunction_callからcall_id・name・argumentsを収集する。response.completedのoutputは空配列になり得るため、その配列からtool有無を判断しない。必要な結果をresponse.item.createで全件返してからresponse.createで一度だけ継続する。
 
-1. Honoが店舗・卓・端末またはデモ所有者を認可し、GPT-Live sessionを作成する。
-2. Webは `session.delegation.created` を受け、直近の会話と途中字幕を認証済みAPIへ渡す。字幕はモデルへ渡す参考文脈であり、店舗・卓・権限の根拠にしない。
-3. HonoがD1へ業務turnを予約し、既存の業務操作で取得した現在の卓情報と参考履歴を渡してAgents sessionを作る。同じ卓情報をモデルのツール呼出しで取り直す待機を省き、更新操作は引き続き現在の版と認可を検証する。`TABLECAST_MODEL` は業務委任用で、音声モデルとは独立する。
-4. Agents APIの `agent.session.requires_action` で要求されたfunctionだけを、既存APIの業務操作で実行する。`turn_id` と `call_id` を対応付け、結果を `agent.session.input.tool_result` で返す。GUI・MCPと価格・在庫・注文の正本を共有する。
-5. Agents APIの `final_answer` の本文差分をSSEでWebへ渡す。Webはブラウザー標準の文分割で未完の末尾だけを保持し、完結した文から同じdelegation IDの `session.commentary.append` へ順次渡す。送信時はproviderの上限内に収めるため100 code pointずつ分割する。Agentsの進捗用 `commentary` は渡さず、tokenごとの差分を受信した直後には転送しない。GPT-Liveが結果を自然に説明する。最初の文を渡すために全文生成・SSE完了を待たない。
+ブラウザーはHonoの認証済みtool経路へ転送する。価格計算、認可、注文・カート操作をブラウザーへ複製しない。業務の失敗はtool結果へ返し、音声接続を維持する。古い委任の遅着結果で次の委任を継続しない。
 
-APIは現在の音声session、業務turn、卓、公開設定版と引数を検査する。字幕表示のまとまりを注文承認や新しい業務turnの根拠にしない。結果不明の変更要求を自動再送しない。SSEは本文の `delta` と終端の `completed` / `failed` を分ける。ツールの完了・失敗・中断は実行結果から記録し、HTTP streamが閉じただけで成功扱いにしない。業務turnを終了させた後の明示的な `failed` では未完の本文を破棄し、照会できなかった旨だけを案内して音声接続を維持する。次の依頼は利用客の新しい発話で始め、自動再試行しない。終端通知のない切断、不正な通知、音声回線の障害ではWebが音声を停止する。どちらの場合もGUIとカートは保持し、未確認の注文結果を断定しない。
+商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。注文する商品を特定したら必要な詳細を取得する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
 
-文末記号のない末尾は `completed` で送信し、失敗・中断時は破棄する。未送信の本文もAPIと同じ16,000文字上限を持つ。[公式の委任ガイド](https://developers.openai.com/api/docs/guides/live-delegation#reduce-backend-latency)に従い、意味の通る結果を送るために必要な範囲だけ蓄積する。GPT-Liveは受け取った文を言い換えるため、送信済みや通信成功を商品名・金額を含む実発話の正しさと同一視しない。
+## 字幕・保存・停止
 
-Agents APIはHTTP切断後も処理が続き得るため、停止時には `agent.session.input.cancel` を明示送信する。cancelは現在の実行に作用するため、別の業務turnへ同じhosted sessionを使い回して古い取消を届かせない。[function tools](https://developers.openai.com/api/docs/guides/agents-api/tools/functions) / [session操作](https://developers.openai.com/api/docs/guides/agents-api/sessions)
+session.input_transcript.delta / session.output_transcript.deltaを受信時に表示する。字幕の表示順は追加後に入れ替えず、保存したD1履歴を再開時に復元する。強い会話履歴の整合性や字幕の到着を注文承認の証明にはしない。生音声は既定で保存しない。
 
-初期inputの開始前にもsessionはidleになり得るため、idleだけでは停止済みと判断しない。イベント購読と正本のturn取得で初期root turnの開始を確認し、取消を一度送る。SSEの最初の通知までHTTP応答が来ない場合にも、既に開始したturnの取消送信を待たせない。root turnが終了済み、sessionがidle/failed、required_actionsが空の全条件で停止を確認し、購読を閉じる。通常の応答も対象root turnの完了後にsessionのidleを確認して完了通知を返し、EOFだけでは成功扱いにしない。
+注文はAPIの版付きsnapshotと、その案内後の明示承認を必要とする。同じ委任で確認準備と承認を行わず、APIも作成turnと異なる現行turnを検査する。委任IDは物理的な発話境界の証明ではない。停止・設定変更・カート変更は古い確認を無効化する。
 
-hosted sessionの作成応答より先に停止した場合、マイク・Live・業務資格は停止し、元の委任処理が遅れて届くsession IDを取得して取り消す。停止APIはこの間をHTTP202 Accepted、提供元の停止確認済みをHTTP200で区別する。両方とも既存の卓状態を返す。202の時点ではAgent生成の終了を証明していないため、実音声試験では保存されたprovider turnの終端も別途確認する。
+停止はcapture・再生を即時終了し、APIで音声sessionを失効させ、Liveへsession.closeを送る。API側でも標準sideband接続でsession.closedを確認する。明示再開まで自動再接続しない。確定したカート・注文は停止で戻さない。
 
-## 会話履歴とログ
+自発接客は180秒の無言と店舗設定、空カート、確認・スタッフ呼出・進行中turnの有無をAPIで検査する。参照専用turnで商品を取得し、一商品の事実をLiveへ渡す。客の発話や承認として保存しない。
 
-`session.input_transcript.delta` と `session.output_transcript.delta` を受信した時点でUIへ追記する。前後の空白を勝手に削らない。利用客・キャストを別に表示し、重なって話した場合にも本文を混ぜない。
+## 観測と検証
 
-GPT-Liveの字幕に確定発話IDはない。表示用のまとまりをアプリで扱い、字幕をまとめてAPIの会話ログへ保存する。永続化はtoken単位のD1書込みにしない。Agents内部回答を実際に発話した本文として二重保存せず、雑談もGPT-Live字幕から記録する。
+HonoのHTTP、tablecast.voice.tool、D1と通知をGrafanaで追う。tool spanにツール名・call ID・voice session/turn・実行時間・結果byte数を記録する。OpenAI内部をアプリの計測で観測できた扱いにしない。
 
-再開時は同じ店舗・来店の最近の字幕を参考文脈として使う。履歴から過去の注文や承認を再実行せず、現在の注文・カートはツールで確認する。表示・生成文脈・実際に聞こえた範囲の厳密な一致は保証しない。生音声は既定保存しない。
+性能目標はツール受付→結果返却、利用者の発話終了→実返答音声開始の双方1秒以下。待機案内や字幕到着を実再生の代わりにしない。成功率・使用token・標本数と超過区間を残す。
 
-APIの既存OTel/GrafanaとD1の業務イベントを維持する。hosted session IDとTableCastのvoice session・turn IDを対応付ける。OpenAIに保持されるモデル文脈と、TableCastの注文・監査記録は別の責務である。
+実D1テストは認可・価格・版・同時実行・停止・別卓拒否を検証する。voice-performance.test.tsは商品数を増やし、実D1のSQL実行と保存されたカード表示を確認しながらbinding往復と出力サイズの予算を検証する。上限超過時は原因を調べ、閾値の緩和で成功扱いにしない。
 
-## 注文確認と停止
-
-注文はAPIが商品・選択肢・数量・合計・カート版・設定版・期限を含むスナップショットを作り、明示承認を検査する。GUIに表示した現行スナップショットの確認を維持する。GPT-Liveの字幕確定や再生完了は承認の証拠にしない。音声承認では同じvoice sessionの現行snapshotと、その作成後に開始した別の業務turnを検査する。自然言語の明示承認はモデルが判断し、別delegationを物理的な別発話の証明とは扱わない。表示用の字幕IDでこの条件を代用しない。カート・設定変更・音声停止で古い確認は無効になる。
-
-UI停止はマイクcaptureと再生を即時終了し、APIが音声sessionを失効させ、Agents APIの実行とGPT-Live sessionを明示停止する。ブラウザーの切断だけに依存せず、API側からの停止にも公式Live制御を使う。明示再開まで勝手に再接続しない。停止前に確定したカート・注文はロールバックせず、GUI・卓・会計を維持する。
-
-自発接客の可否と間隔、空カート、確認・スタッフ呼出・進行中turnの有無はAPIで検査する。自発turnは参照専用で、客発話として保存しない。
-
-## 検証の境界
-
-無課金のAPI試験は公式SDKのHTTPイベント境界と実D1を使い、function結果、失敗・取消、認可、重複要求と注文を検証する。Web試験は標準media APIの境界で字幕追記、許可待ちの停止、接続競合、古いイベントを検証する。
-
-実GPT-Live・Agents APIは有料試験として通常CIから分離する。日英の合成入力音声、実WebRTC、ツール完了、字幕の途中表示、明示停止とカート保持をlocal・PR previewでそれぞれ確認する。入力をInworld TTSで生成しても製品の音声runtime依存にはしない。iPadのAEC・店内騒音・実マイク・自然な会話品質は別の受入とする。実施結果と対象SHAはIssue #100・PR #104へ記録し、この仕様だけで検証済みとは扱わない。
+Webの固定イベント試験は全tool結果の返却・一回の継続・エラー・新委任による取消・字幕・停止を検証する。実GPT-LiveとLunaは有料試験で、Inworld生成音声を使いlocalと同一SHAのPR previewで確認する。通常CIの固定イベントだけで実API・音声・1秒達成を証明した扱いにしない。

@@ -9,10 +9,24 @@ export function voiceCondition(actor: Actor) {
     : sql``;
 }
 
-export async function notifyStore(services: ApiServices, storeId: string, sessionId?: string) {
+export async function notifyStore(
+  services: ApiServices,
+  storeId: string,
+  sessionId?: string,
+  insertedEvent?: { cursor: number; demoId?: string },
+) {
   const db = services.db;
 
   try {
+    // INSERTの確定cursorと認可済みscopeがあれば、通知用に同じ情報を再照会しない。
+    if (insertedEvent) {
+      await services.env.TABLECAST_EVENTS.get(
+        services.env.TABLECAST_EVENTS.idFromName(
+          insertedEvent.demoId ? `tablecast-demo-${insertedEvent.demoId}` : storeId,
+        ),
+      ).notify(insertedEvent.cursor);
+      return;
+    }
     const demo = sessionId
       ? await db
           .select({ id: business.tableSessions.id })

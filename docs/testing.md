@@ -92,7 +92,7 @@ Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日
 
 ## 公開scriptとCI
 
-`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、GPT-Live・Agents APIの実通信は許可された有料実音声に分ける。
+`test` は外部費用なしの単体・軽量統合、`test:browser` はComponent・Web内統合、`test:e2e` は決定的な全構成、GPT-Live・Responses delegationの実通信は許可された有料実音声に分ける。
 `bun run check` に静的解析・型・無課金テストを含める。Browser/E2EはCI別job。有料試験は手動または明示承認されたjobだけ。
 全体の固定カバレッジ比率やcase数を目的にしない。認可・注文・金額・中断等の分岐の抜けをレビューし、必要に応じて対象のcoverageを可視化する。
 テスト結果、未実行範囲、実機条件を記録し、台本付きモデルの成功を実音声精度の証明にしない。
@@ -187,3 +187,9 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 `emulate@0.11.1`の公開APIは動的ポートの実URLを返さないため、`patches/emulate@0.11.1.patch`をBunの`patchedDependencies`で適用する。bind完了後の実ポートからdiscovery・issuer・seedのURLを構築し、初期化失敗ではlistenerを閉じる。明示baseUrlは保持する。固定ポートの既存dev/previewと動的ポートのE2Eを同じ公開APIで扱い、previewでのport 0は許可しない。上流で同じ契約が提供された版へ移行するときにパッチを外す。
 
 `scripts/tablecast-e2e-runtime.test.ts`は実TCPとOAuth子プロセスで、ケース分離、停止中のポート保持、復帰、discoveryのURL一致、bind失敗の拒否を確認する。HTTP・OAuth・メール・DB・PWAの最終配線は既存Chromium/WebKit E2Eが確認する。
+
+## 音声の性能回帰
+
+`apps/api/test/voice-performance.test.ts` は実D1のbinding往復とSQL実行数を計測する。8件・200件の商品で検索とカード表示を実行し、表示が保存され、最大8件の出力とページ情報が返ることを確認する。上限は業務関数の往復5回、HTTP認証・所有卓確認・通知を含む経路の往復7回、出力6000byteとする。外部モデル時間は含まない。実音声の1秒目標とは分けて評価する。
+
+性能変更ではSQL時間、binding待ち、通知、モデル、実再生を区別し、既存性能予算を超えたら原因を修正する。データ量と同時実行を変えてN+1や不要な直列待ちを検出し、単なるquery数一致やsleep・retryでの成功を証拠にしない。

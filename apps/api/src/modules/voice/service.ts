@@ -51,6 +51,7 @@ export async function recordVoiceEvent(
   actor: Actor,
   event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
   reserve = false,
+  waitUntil?: (promise: Promise<unknown>) => void,
 ) {
   const db = services.db;
 
@@ -71,7 +72,14 @@ export async function recordVoiceEvent(
     .select(
       sql`SELECT NULL,store_id,id,${event.kind},${JSON.stringify(data)},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND (${reserve ? data.state : ""}<>'running' OR NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${actor.tableSessionId} AND kind='voice.tool' AND json_extract(data_json,'$.toolCallId')=${data.toolCallId} AND json_extract(data_json,'$.state')='running'))`,
     );
-  if (result.meta.changes === 1) await notifyStore(services, actor.storeId, actor.tableSessionId);
+  if (result.meta.changes === 1) {
+    const notification = notifyStore(services, actor.storeId, actor.tableSessionId, {
+      cursor: result.meta.last_row_id,
+      demoId: actor.demoId,
+    });
+    if (waitUntil) waitUntil(notification);
+    else await notification;
+  }
   return result.meta.changes === 1;
 }
 

@@ -393,7 +393,6 @@ describe("卓を使わない会話注文デモ", () => {
     ).toBe(true);
     const tools = createCastTools(services(), voice, new AbortController().signal);
     expect(await tools.getCatalog.invoke({ query: "tea" })).toMatchObject({
-      cast: "デモ専用の接客",
       products: [expect.objectContaining({ id: "tea", price: 777 })],
     });
     await updateDemo(services(), actor, { expectedVersion: 2, proactive: false });

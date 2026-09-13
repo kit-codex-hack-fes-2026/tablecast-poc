@@ -166,9 +166,9 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 > [!NOTE]
 > 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の限定並列投入、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
-`.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIがGPT-Liveとhosted Agents APIの両方に公式SDKで接続し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
+`.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-OpenAI projectにはGPT-Liveの利用権限に加え、Agents APIの `api.agents.read`、`api.agents.write`、`api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
+OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
@@ -185,7 +185,7 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Agents APIの `api.agents
 旧 `.env.secrets.local` は雛形に残る項目を `.env.local` へ移して削除する。ローカルGoogle認証は模擬サービスなので旧Google資格は不要。本番資格は [配備手順](deployment.md)で管理する。envの変更後は各ターミナルをCtrl+Cで止めて再起動する。
 
 > [!WARNING]
-> 実音声の利用はGPT-LiveとAgents APIの費用が発生する。通常の `check` には含めない。[音声接続の検証境界](voice/integration.md#検証の境界)に従い、許可された専用卓で実行する。
+> 実音声の利用はGPT-LiveとResponses delegationの費用が発生する。通常の `check` には含めない。[音声接続の検証境界](voice/integration.md#観測と検証)に従い、許可された専用卓で実行する。
 
 ## 5. 日常の操作
 

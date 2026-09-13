@@ -5,7 +5,8 @@ import * as business from "../src/db/business-schema";
 import { getTableState } from "../src/modules/tables/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { agentBindings, mockAgentSessions, runVoiceTurn, voiceTurnText } from "./agents-fixture";
+import { voiceBindings, runVoiceTurn } from "./voice-fixture";
+import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { configuration, device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -77,36 +78,44 @@ it.each(["設定無効", "カートあり", "スタッフ対応中", "確認待�
           .set({ active_turn_id: "tablecast-busy-turn" })
           .where(eq(business.tableSessions.id, device.tableSessionId ?? "")),
       ]);
-    const provider = mockAgentSessions([]);
+    const provider = vi.spyOn(globalThis, "fetch");
     const running = await runVoiceTurn(input("tablecast-skipped"), {
-      ...agentBindings(),
+      ...voiceBindings(),
       TABLECAST_MODEL_API_KEY: "",
       TABLECAST_MODEL: "",
     });
     expect(running.result.kind).toBe("skipped");
     await running.finish();
-    expect(provider.requests).toHaveLength(0);
+    expect(provider).not.toHaveBeenCalled();
   },
 );
 it("同時要求を一度だけ受け入れ、読取専用toolと180秒の間隔を維持する", async () => {
   await setup();
-  const provider = mockAgentSessions([[{ text: "季節のお茶もございます。" }]]);
+
   const attempts = await Promise.all([
     runVoiceTurn(input("tablecast-proactive-a")),
     runVoiceTurn(input("tablecast-proactive-b")),
   ]);
-  expect(attempts.map((attempt) => attempt.result.kind).toSorted()).toEqual(["skipped", "stream"]);
-  const outputs = await Promise.all(
-    attempts.map(async (attempt) => {
-      const output = attempt.result.kind === "stream" ? await voiceTurnText(attempt.result) : null;
-      await attempt.finish();
-      return output;
-    }),
-  );
-  expect(outputs.filter((output) => output !== null)).toEqual(["季節のお茶もございます。"]);
-  expect(provider.requests[0]).toMatchObject({
-    agent: { tools: [{ name: "getCatalog" }, { name: "getTableState" }] },
-  });
+  expect(attempts.map((attempt) => attempt.result.kind).toSorted()).toEqual([
+    "accepted",
+    "skipped",
+  ]);
+  await Promise.all(attempts.map((attempt) => attempt.finish()));
+  const accepted = attempts.find((attempt) => attempt.result.kind === "accepted")?.result;
+  if (!accepted || accepted.kind !== "accepted") throw new Error("自発接客が受理されていません");
+  await expect(
+    invokeVoiceTool(
+      services(),
+      {
+        voiceSessionId: voiceId,
+        turnId: accepted.turnId,
+        toolName: "callStaff",
+        toolCallId: "tablecast-forbidden",
+        arguments: {},
+      },
+      new AbortController().signal,
+    ),
+  ).rejects.toMatchObject({ code: "VOICE_TOOL_FORBIDDEN" });
   expect((await runVoiceTurn(input("tablecast-too-soon"))).result.kind).toBe("skipped");
   expect((await getTableState(services(), device)).orders).toHaveLength(0);
   expect(
@@ -115,10 +124,10 @@ it("同時要求を一度だけ受け入れ、読取専用toolと180秒の間隔
 });
 it("自発接客でも古い音声資格・言語を拒否する", async () => {
   await setup();
-  const provider = mockAgentSessions([]);
+  const provider = vi.spyOn(globalThis, "fetch");
   for (const altered of [{ voiceSessionId: "tablecast-old-voice" }, { locale: "en" }])
     await expect(runVoiceTurn({ ...input("tablecast-stale"), ...altered })).rejects.toHaveProperty(
       "code",
     );
-  expect(provider.requests).toHaveLength(0);
+  expect(provider).not.toHaveBeenCalled();
 });

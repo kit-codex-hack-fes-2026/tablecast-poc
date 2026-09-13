@@ -1,16 +1,11 @@
 import type { LiveMessage, VoiceView } from "./voice-model";
 export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
+import { voiceToolNameSchema } from "@tablecast/api/schema";
 import type { Locale } from "@tablecast/api/schema";
-import { EventSourceParserStream } from "eventsource-parser/stream";
-import type { EventSourceMessage } from "eventsource-parser";
 import { z } from "zod";
 import { parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
 
-const sentenceSegmenters = {
-  ja: new Intl.Segmenter("ja", { granularity: "sentence" }),
-  en: new Intl.Segmenter("en", { granularity: "sentence" }),
-};
 const transcriptEvent = z.object({
   type: z.enum(["session.input_transcript.delta", "session.output_transcript.delta"]),
   event_id: z.string(),
@@ -20,8 +15,33 @@ const transcriptEvent = z.object({
 });
 const delegationEvent = z.object({
   type: z.literal("session.delegation.created"),
-  delegation: z.object({ id: z.string().max(200), target: z.literal("client") }),
+  delegation: z.object({ id: z.string().max(200), target: z.literal("responses") }),
 });
+const responseEnvelope = z.object({
+  type: z.literal("response.event"),
+  delegation_id: z.string(),
+  event: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("response.created"), response: z.object({ id: z.string() }) }),
+    z.object({
+      type: z.literal("response.output_item.done"),
+      response_id: z.string().optional(),
+      item: z.object({
+        type: z.string(),
+        call_id: z.string().optional(),
+        name: z.string().optional(),
+        arguments: z.string().optional(),
+      }),
+    }),
+    z.object({
+      type: z.enum(["response.completed", "response.failed", "response.incomplete"]),
+      response: z.object({ id: z.string() }),
+    }),
+  ]),
+});
+type PendingResponse = {
+  calls: { callId: string; name: string; arguments: string }[];
+  handled: boolean;
+};
 type Caption = {
   message: LiveMessage;
   start: number;
@@ -49,7 +69,10 @@ export class VoiceConnection {
   private stopping?: Promise<void>;
   private startingRequest?: AbortController;
   private delegation?: AbortController;
-  private delegations = new Set<string>();
+  private delegations = new Map<string, Promise<string | undefined>>();
+  private responses = new Map<string, PendingResponse>();
+  private responseIds = new Map<string, string>();
+  private activeDelegation?: string;
   private transcriptEvents = new Set<string>();
   private captions: Caption[] = [];
   private pendingCaptions = new Map<string, SavedCaption>();
@@ -78,6 +101,9 @@ export class VoiceConnection {
     this.captions = [];
     this.pendingCaptions.clear();
     this.delegations.clear();
+    this.responses.clear();
+    this.responseIds.clear();
+    this.activeDelegation = undefined;
     this.transcriptEvents.clear();
     const attempt = ++this.attempt;
     this.emit({ status: "connecting", messages: [] });
@@ -121,9 +147,17 @@ export class VoiceConnection {
           if (transcript.success) this.receiveCaption(transcript.data, attempt);
           else {
             const delegation = delegationEvent.safeParse(event);
-            if (delegation.success && !this.delegations.has(delegation.data.delegation.id)) {
-              this.delegations.add(delegation.data.delegation.id);
-              void this.delegate(delegation.data.delegation.id, "user", attempt);
+            if (delegation.success) {
+              const id = delegation.data.delegation.id;
+              if (!this.delegations.has(id)) {
+                this.activeDelegation = id;
+                this.delegation?.abort();
+                this.delegation = undefined;
+                this.delegations.set(id, this.registerDelegation(id, "user", attempt));
+              }
+            } else {
+              const envelope = responseEnvelope.safeParse(event);
+              if (envelope.success) void this.receiveResponse(envelope.data, attempt);
             }
           }
         }
@@ -377,127 +411,237 @@ export class VoiceConnection {
     if (this.pendingCaptions.size) await this.saveCaptions(sessionId);
   }
 
-  private async delegate(
-    delegationId: string | null,
+  private async registerDelegation(
+    id: string | null,
     trigger: "user" | "proactive",
     attempt: number,
-  ) {
-    if (!this.current(attempt) || !this.ready || !this.sessionId) return;
-    this.delegation?.abort();
-    const controller = new AbortController();
-    this.delegation = controller;
-    this.emit({ status: "thinking" });
-    const context = this.captions.slice(-16);
-    const latestUser = context.findLastIndex(({ message }) => message.role === "user");
-    const messages = (trigger === "user" ? context.slice(0, latestUser + 1) : context).map(
-      ({ message }) => ({ role: message.role, content: message.text.slice(-2000) }),
-    );
-    let reader: ReadableStreamDefaultReader<EventSourceMessage> | undefined;
+  ): Promise<string | undefined> {
+    if (!this.current(attempt) || !this.sessionId) return undefined;
     try {
       const response = await this.client.voice.delegations.$post(
         {
           json: {
             voiceSessionId: this.sessionId,
-            delegationId,
+            delegationId: id,
             locale: this.locale,
-            messages,
+            messages: [],
             trigger,
           },
         },
-        { init: { signal: controller.signal } },
+        { init: { signal: AbortSignal.timeout(10000) } },
       );
-      if (!response.ok) await parseResponse(response);
-      if (response.status === 204) return;
-      if (!response.body) throw new Error("音声委任の応答本文がない");
-      const currentReader = response.body
-        .pipeThrough(new TextDecoderStream())
-        .pipeThrough(new EventSourceParserStream({ onError: "terminate", maxBufferSize: 65536 }))
-        .getReader();
-      reader = currentReader;
-      const sentences = sentenceSegmenters[this.locale];
-      let pending = "";
-      let completed = false;
-      while (true) {
-        const { value, done } = await currentReader.read();
-        if (done) break;
-        if (!this.current(attempt) || controller.signal.aborted) break;
-        if (value.event === "failed") {
-          const { code } = z
-            .object({ code: z.enum(["VOICE_MODEL_FAILED", "VOICE_CANCELLED"]) })
-            .parse(JSON.parse(value.data));
-          pending = "";
-          if (code === "VOICE_MODEL_FAILED")
-            this.channel?.send(
-              JSON.stringify({
-                type: "session.commentary.append",
-                event_id: crypto.randomUUID(),
-                delegation_id: delegationId,
-                content:
-                  this.locale === "ja"
-                    ? "申し訳ありません。今回のご案内や操作を完了できませんでした。ご注文の状態は画面でご確認ください。"
-                    : "Sorry, I couldn't complete that request. Please check your order on the screen.",
-              }),
-            );
+      if (response.status === 204) return undefined;
+      return (await parseResponse(response)).turnId;
+    } catch {
+      if (this.current(attempt)) this.onSync();
+      return undefined;
+    }
+  }
+
+  private async receiveResponse(envelope: z.infer<typeof responseEnvelope>, attempt: number) {
+    const event = envelope.event;
+    const id = envelope.delegation_id;
+    if (!this.current(attempt)) return;
+    if (event.type === "response.created") {
+      this.responses.set(event.response.id, { calls: [], handled: false });
+      this.responseIds.set(id, event.response.id);
+      return;
+    }
+    if (event.type === "response.output_item.done") {
+      const item = event.item;
+      const pending = this.responses.get(event.response_id ?? this.responseIds.get(id) ?? "");
+      if (
+        pending &&
+        item.type === "function_call" &&
+        item.call_id &&
+        item.name &&
+        item.arguments &&
+        !pending.calls.some((call) => call.callId === item.call_id)
+      )
+        pending.calls.push({ callId: item.call_id, name: item.name, arguments: item.arguments });
+      return;
+    }
+    const pending = this.responses.get(event.response.id);
+    if (!pending || pending.handled) return;
+    pending.handled = true;
+    const turnId = await this.delegations.get(id);
+    if (!this.current(attempt) || this.activeDelegation !== id || !this.sessionId) return;
+    if (!turnId) {
+      // 登録失敗でもfunction結果を返し、backendを未応答toolの待機に残さない。
+      for (const call of pending.calls)
+        this.channel?.send(
+          JSON.stringify({
+            type: "response.item.create",
+            event_id: crypto.randomUUID(),
+            item: {
+              type: "function_call_output",
+              call_id: call.callId,
+              output: JSON.stringify({ error: "VOICE_TURN_UNAVAILABLE" }),
+            },
+          }),
+        );
+      this.responses.delete(event.response.id);
+      if (pending.calls.length)
+        this.channel?.send(
+          JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
+        );
+      else this.reportFailure();
+      return;
+    }
+    const sessionId = this.sessionId;
+    const controller = new AbortController();
+    this.delegation = controller;
+    try {
+      if (event.type !== "response.completed" || pending.calls.length === 0) {
+        await parseResponse(
+          this.client.voice.finish.$post({
+            json: {
+              voiceSessionId: sessionId,
+              turnId,
+              status: event.type === "response.completed" ? "completed" : "failed",
+            },
+          }),
+        );
+        if (event.type !== "response.completed") this.reportFailure();
+        return;
+      }
+      this.emit({ status: "thinking" });
+      // 同じresponseの独立した読取だけを並列実行し、書込はモデルの順序を保つ。
+      const execute = async (call: PendingResponse["calls"][number]) => {
+        if (!this.current(attempt) || this.activeDelegation !== id || controller.signal.aborted)
           return;
+        let output: unknown;
+        try {
+          const argumentsValue: unknown = JSON.parse(call.arguments);
+          const tool = z
+            .object({ toolName: voiceToolNameSchema, arguments: z.record(z.string(), z.unknown()) })
+            .parse({ toolName: call.name, arguments: argumentsValue });
+          const result = await parseResponse(
+            this.client.voice.tools.$post(
+              {
+                json: {
+                  voiceSessionId: sessionId,
+                  turnId,
+                  toolCallId: call.callId,
+                  ...tool,
+                },
+              },
+              {
+                init: { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) },
+              },
+            ),
+          );
+          output = result.result;
+        } catch (error) {
+          output = { error: apiError(error)?.code ?? "VOICE_TOOL_FAILED" };
         }
-        let readyLength = 0;
-        if (value.event === "completed") {
-          completed = true;
-          readyLength = pending.length;
-        } else {
-          if (value.event !== "delta") throw new Error("音声委任が正常終了しなかった");
-          const { delta } = z
-            .object({ delta: z.string().max(16000) })
-            .parse(JSON.parse(value.data));
-          if (pending.length + delta.length > 16000)
-            throw new Error("音声委任の未完結文が上限を超えた");
-          pending += delta;
-          for (const { segment, index } of sentences.segment(pending)) {
-            // 最後のsegmentは未完結でも返るため、文末が届くまで発声させない。
-            if (
-              /\p{Sentence_Terminal}[\p{Close_Punctuation}\p{Final_Punctuation}\s"']*$/u.test(
-                segment,
-              )
-            )
-              readyLength = index + segment.length;
-          }
-        }
-        const characters = Array.from(pending.slice(0, readyLength));
-        pending = pending.slice(readyLength);
-        for (let offset = 0; offset < characters.length; offset += 100)
+        if (this.current(attempt) && this.activeDelegation === id && !controller.signal.aborted)
           this.channel?.send(
             JSON.stringify({
-              type: "session.commentary.append",
+              type: "response.item.create",
               event_id: crypto.randomUUID(),
-              delegation_id: delegationId,
-              content: characters.slice(offset, offset + 100).join(""),
+              item: {
+                type: "function_call_output",
+                call_id: call.callId,
+                output: JSON.stringify(output),
+              },
             }),
           );
-        if (completed) break;
-      }
-      if (!completed) throw new Error("音声委任の完了を確認できない");
-    } catch {
-      if (this.current(attempt) && !controller.signal.aborted) await this.fail(attempt);
-    } finally {
-      await reader?.cancel().catch(() => undefined);
-      reader?.releaseLock();
-      if (this.delegation === controller) {
-        this.delegation = undefined;
-        if (this.current(attempt)) {
-          this.emit({ status: "listening" });
-          this.scheduleProactive(attempt);
+      };
+      let reads: Promise<void>[] = [];
+      for (const call of pending.calls) {
+        if (call.name === "getCatalog" || call.name === "getTableState") reads.push(execute(call));
+        else {
+          await Promise.all(reads);
+          reads = [];
+          await execute(call);
         }
       }
+      await Promise.all(reads);
+      if (this.current(attempt) && this.activeDelegation === id && !controller.signal.aborted)
+        this.channel?.send(
+          JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }),
+        );
+    } catch {
+      if (this.current(attempt) && !controller.signal.aborted) this.reportFailure();
+    } finally {
+      this.responses.delete(event.response.id);
+      if (this.delegation === controller) this.delegation = undefined;
       this.onSync();
+      this.scheduleProactive(attempt);
     }
+  }
+
+  private reportFailure() {
+    this.channel?.send(
+      JSON.stringify({
+        type: "session.commentary.append",
+        event_id: crypto.randomUUID(),
+        delegation_id: null,
+        content:
+          this.locale === "ja"
+            ? "今回の処理は完了できませんでした。注文の状態は画面で確認できます。"
+            : "That request could not be completed. The order status is available on the screen.",
+      }),
+    );
+    this.emit({ status: "listening" });
   }
 
   private scheduleProactive(attempt: number) {
     clearTimeout(this.proactiveTimer);
     if (!this.proactive || !this.ready || !this.current(attempt)) return;
     this.proactiveTimer = setTimeout(() => {
-      if (this.current(attempt) && !this.delegation) void this.delegate(null, "proactive", attempt);
+      if (!this.delegation) void this.proactiveSuggestion(attempt);
     }, 180000);
+  }
+
+  private async proactiveSuggestion(attempt: number) {
+    const delegationId = this.activeDelegation;
+    const turnId = await this.registerDelegation(null, "proactive", attempt);
+    if (!turnId || !this.sessionId || !this.current(attempt)) return;
+    const sessionId = this.sessionId;
+    try {
+      const result = await parseResponse(
+        this.client.voice.tools.$post({
+          json: {
+            voiceSessionId: sessionId,
+            turnId,
+            toolName: "getCatalog",
+            toolCallId: crypto.randomUUID(),
+            arguments: {},
+          },
+        }),
+      );
+      const catalog = z
+        .object({
+          products: z.array(
+            z.object({
+              displayName: z.string(),
+              description: z.string(),
+              price: z.number(),
+              available: z.boolean(),
+            }),
+          ),
+        })
+        .parse(result.result);
+      const product = catalog.products.find((item) => item.available);
+      if (product && this.current(attempt) && this.activeDelegation === delegationId)
+        this.channel?.send(
+          JSON.stringify({
+            type: "session.commentary.append",
+            event_id: crypto.randomUUID(),
+            delegation_id: null,
+            content: `店舗が許可した自発接客です。次の登録商品の紹介を一文だけ伝えてください。注文操作はしません。${JSON.stringify(product)}`,
+          }),
+        );
+      await parseResponse(
+        this.client.voice.finish.$post({
+          json: { voiceSessionId: sessionId, turnId, status: "completed" },
+        }),
+      );
+    } catch {
+      this.onSync();
+    }
   }
 
   private async closeTransport(peer?: RTCPeerConnection, channel?: RTCDataChannel) {

@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono、D1、DO、R2、Imagesの対応範囲、MCP、Storybook。
-通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はAPIからhosted Agents APIへ接続する。外部キーはAPIだけが持つ。TABLECAST_MODELは業務委任・自発接客用で、音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはgpt-5.6-luna、、音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験
@@ -19,7 +19,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 | 通常     | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding                               |
 | 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動               | Service Binding、build、stream、Cookieの接続確認 |
 | UI部品   | apps/web内のStorybook                                          | 固定状態とブラウザー操作検証                     |
-| 音声     | ブラウザーWebRTCとHonoのAgents API接続                         | 字幕、取消、業務委任                             |
+| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続                          | 字幕、取消、業務委任                             |
 
 Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、同じAPI WorkerをVite補助と独立Wranglerで二重起動しない。[S11](sources.md#s11)
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
@@ -136,7 +136,7 @@ Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保
 iPadのマイクは安全なコンテキストで試す。信頼されたローカルHTTPSとOpenAIへ到達可能なネットワーク、またはAccessで保護したPR環境を利用する。
 Cloudの強化音声処理は必要な追加比較として分離し、日常開発の成立条件にしない。
 本番はWeb/APIの2 Workers、D1・DO・R2・ImagesとOpenAIの外部APIを対象とする。
-公式設定を確認してデプロイし、設定・migration・secret・release SHA・ロールバック方法を記録する。GPT-Live・Agents APIのモデルとprojectの利用権限を確認する。
+公式設定を確認してデプロイし、設定・migration・secret・release SHA・ロールバック方法を記録する。GPT-Live・Lunaのモデルとprojectの利用権限を確認する。
 
 ## タスクの所有者
 

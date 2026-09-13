@@ -53,7 +53,7 @@ const tool = (
     new AbortController().signal,
   );
 
-describe("Agents functionと共通業務の認可", () => {
+describe("Responses functionと共通業務の認可", () => {
   it.each(["アイス烏龍茶", "冷たいうーろん茶", "ウーロンティーを一つ"])(
     "登録名や別名を含む%sから必須選択肢付きの商品詳細を一回で取得する",
     async (query) => {
@@ -113,15 +113,21 @@ describe("Agents functionと共通業務の認可", () => {
       expect(result.result).toHaveProperty("products.length", 1);
     },
   );
-  it("無指定と未登録名は一覧を返し、商品IDとカテゴリIDの検索を維持する", async () => {
+  it("無指定は一覧、未登録名は空の結果を返し、商品IDとカテゴリIDの検索を維持する", async () => {
     await setup();
-    for (const args of [{}, { query: "未登録の商品" }]) {
+    for (const args of [{}]) {
       const result = await tool("getCatalog", args);
       expect(result.result).toMatchObject({ detail: false });
       expect(result.result).toHaveProperty("products.length", 2);
       expect(result.result).not.toHaveProperty("products.0.allergens");
       expect(result.result).not.toHaveProperty("products.1.modifiers");
     }
+    expect((await tool("getCatalog", { query: "未登録の商品", show: true })).result).toMatchObject({
+      total: 0,
+      more: false,
+      products: [],
+      displayedProductIds: [],
+    });
     expect((await tool("getCatalog", { query: "tea" })).result).toMatchObject({
       detail: true,
       products: [{ id: "tea" }],
@@ -242,7 +248,7 @@ describe("Agents functionと共通業務の認可", () => {
     });
     const missing = (await tool("getCatalog", { query: "未登録の銘柄" })).result;
     expect(missing).toMatchObject({ detail: false });
-    expect(missing).toHaveProperty("products.length", 3);
+    expect(missing).toHaveProperty("products.length", 0);
     expect(missing).not.toHaveProperty("products.0.allergens");
   });
   it("多数のカテゴリ商品を省略せず概要で返し、個別詳細の取得では最新価格と必須選択を保つ", async () => {
@@ -283,8 +289,11 @@ describe("Agents functionと共通業務の認可", () => {
       .where(eq(business.stores.id, device.storeId));
     const overview = (await tool("getCatalog", { query: "日本酒" })).result;
     expect(overview).toMatchObject({ detail: false });
-    expect(overview).toHaveProperty("products.length", 28);
-    expect(overview).toHaveProperty("products.27.available", false);
+    expect(overview).toHaveProperty("products.length", 8);
+    expect(overview).toMatchObject({ total: 28, more: true });
+    const lastPage = (await tool("getCatalog", { query: "日本酒", offset: 24 })).result;
+    expect(lastPage).toMatchObject({ total: 28, more: false });
+    expect(lastPage).toHaveProperty("products.3.available", false);
     expect(overview).toHaveProperty("products.0.speechName", "にほんしゅめいがら0");
     expect(overview).toHaveProperty("products.0.description", "辛口。表示価格は60mlです。");
     for (const field of ["aliases", "tags", "allergens", "modifiers"])

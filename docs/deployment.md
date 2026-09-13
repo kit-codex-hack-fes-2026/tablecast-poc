@@ -16,7 +16,7 @@ GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpre
 
 Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService BindingがAPIを呼び、APIのworkers.devと両Workerのversion preview URLは無効にする。D1/R2/DOとPRのOAuth Containerは環境ごとに分離する。音声と業務モデルのOpenAI projectを共有する場合、APIキーと割当量は独立したセキュリティ境界にはならない。
 
-ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerがhosted Agents APIとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
+ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerが標準Responses delegationとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
 
 Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と全CI成功後の配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
 
@@ -35,7 +35,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
 | Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
 
-`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とAgents APIの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-5.6-luna` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-5.6-luna` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
 
 認証secretは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証に影響するため通常のキー追加時に再生成しない。
 
@@ -136,7 +136,7 @@ R2へ商品画像を登録する場合は `tablecast/` 配下のkeyをカタロ�
 
 ## 音声とContainerの停止・復旧
 
-音声の送受信はブラウザーとGPT-Live、業務生成はhosted Agents APIが所有する。停止時にはAPIのvoice session失効に加え、GPT-Live sessionとAgentsの実行を明示終了する。HTTP切断だけでhosted生成の停止を保証しない。再開は利用者の明示操作で新しい接続を作り、D1のGUI・カート・注文状態を継続する。
+音声の送受信はブラウザーとGPT-Live、業務生成は標準Responses delegationが所有する。停止時にはAPIのvoice session失効に加え、GPT-Live sessionと委任処理を明示終了する。HTTP切断だけで生成の停止を保証しない。再開は利用者の明示操作で新しい接続を作り、D1のGUI・カート・注文状態を継続する。
 
 PRのOAuth emulatorだけを `basic`・最大1台のContainerに置き、公式SDKの5分activity期限で停止する。本番は音声ContainerもOAuth Containerも持たない。配備scriptは対象APIの `TablecastVoice` namespaceを照合し、それに結び付いた旧Container applicationだけを先に削除する。Wranglerの設定から除くだけではapplicationの退役を保証しない。移行用DO migrationは旧 `TablecastVoice` だけを削除し、過去のmigrationタグと `StoreEvents`・`TablecastEmulate` を維持する。削除対象には音声runtimeの予約のみがあり、注文・履歴のD1は含まれない。
 
@@ -166,7 +166,7 @@ WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書�
 
 公開先のGoogleログイン、Access拒否、初期組織、端末承認、注文の冪等性、DO再接続、画像、MCP認証を確認する。有料音声では実iPadの日英発話・割込み・停止・明示再開、30分通話、強制終了と履歴復元を確認する。初回接続、最初の字幕・音声、業務ツール待ち、停止・復旧と複数sessionの切断率は別途測定する。
 
-月額約30 USD未満は目標であり、上限保証はない。Workers Paid、PRのOAuth Container、D1/R2/DO/Images、GPT-Live・Agents API、Actionsを集計する。旧LiveKit・音声Containerの費用を新構成の費用として数えない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。
+月額約30 USD未満は目標であり、上限保証はない。Workers Paid、PRのOAuth Container、D1/R2/DO/Images、GPT-Live・Responses delegation、Actionsを集計する。旧LiveKit・音声Containerの費用を新構成の費用として数えない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。
 
 ## PWAの配備と更新
 

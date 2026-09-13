@@ -1,10 +1,18 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate } from "../../platform/validation";
-import { voiceConversationSchema, voiceDelegationSchema, voiceStartSchema } from "./model";
+import {
+  toolSchema,
+  voiceConversationSchema,
+  voiceDelegationSchema,
+  voiceStartSchema,
+} from "./model";
+import { ensure } from "../../platform/errors";
+import { getSession } from "../tables/queries";
+import { invokeVoiceTool } from "./realtime";
+import { finishVoiceTurn } from "./turns";
 import { recordConversationItems } from "./conversation";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
 
@@ -53,14 +61,39 @@ export const voiceRoutes = new Hono<ApiEnv>()
       c.executionCtx.waitUntil.bind(c.executionCtx),
     );
     if (result.kind === "skipped") return c.body(null, 204);
-    c.header("X-Content-Type-Options", "nosniff");
-    const response = streamSSE(c, async (stream) => {
-      const cancelled = new AbortController();
-      stream.onAbort(() => cancelled.abort());
-      await result.stream.pipeTo(new WritableStream({ write: (event) => stream.writeSSE(event) }), {
-        signal: cancelled.signal,
-      });
-    });
-    response.headers.set("Cache-Control", "no-store");
-    return response;
-  });
+    return c.json(result, 200);
+  })
+  .post("/tools", validate(toolSchema), async (c) => {
+    const input = c.req.valid("json");
+    const session = await getSession(c.get("services"), c.get("actor"));
+    ensure(session.voice_session_id === input.voiceSessionId, "VOICE_SESSION_STALE", 409);
+    return c.json(
+      await invokeVoiceTool(
+        c.get("services"),
+        input,
+        c.req.raw.signal,
+        c.executionCtx.waitUntil.bind(c.executionCtx),
+      ),
+      200,
+    );
+  })
+  .post(
+    "/finish",
+    validate(
+      z
+        .object({
+          voiceSessionId: z.string().min(1).max(200),
+          turnId: z.string().min(1).max(200),
+          status: z.enum(["completed", "interrupted", "failed"]),
+        })
+        .strict(),
+    ),
+    async (c) => {
+      const input = c.req.valid("json");
+      const services = c.get("services");
+      const session = await getSession(services, c.get("actor"));
+      ensure(session.voice_session_id === input.voiceSessionId, "VOICE_SESSION_STALE", 409);
+      await finishVoiceTurn(services, input.voiceSessionId, input.turnId, input.status);
+      return c.json({ ok: true }, 200);
+    },
+  );

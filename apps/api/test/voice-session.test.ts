@@ -13,7 +13,7 @@ import { setVoiceSession } from "../src/modules/voice/service";
 import { startVoiceSession } from "../src/modules/voice/session";
 import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
-import { device, deviceToken, setupFixture } from "./fixture";
+import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const configured = () => ({
@@ -179,9 +179,25 @@ it("認証した卓だけにLiveのSDPを返し、サーバー資格を渡さな
     );
     if (typeof init?.body !== "string") throw new Error("Liveの開始本文がない");
     expect(JSON.parse(init.body)).toMatchObject({
-      session: { model: "gpt-live-1", store: false, delegation: { type: "client" } },
+      session: {
+        model: "gpt-live-1",
+        store: false,
+        delegation: {
+          type: "responses",
+          responses: {
+            model: "gpt-5.6-luna",
+            reasoning: { effort: "none" },
+            service_tier: "priority",
+            parallel_tool_calls: true,
+          },
+        },
+      },
       transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
     });
+    expect(JSON.parse(init.body)).toHaveProperty(
+      "session.delegation.responses.instructions",
+      expect.stringContaining(configuration.cast.instructions.ja),
+    );
     return Response.json({
       session: { id: "tablecast-live-created" },
       transport: { type: "webrtc", sdp: "tablecast-sdp-answer" },
@@ -205,7 +221,7 @@ it("認証した卓だけにLiveのSDPを返し、サーバー資格を渡さな
 
 it("認証なしのブラウザーは音声開始と委任を実行できない", async () => {
   const provider = vi.spyOn(globalThis, "fetch");
-  for (const path of ["start", "delegations", "conversation"]) {
+  for (const path of ["start", "delegations", "tools", "finish", "conversation"]) {
     const response = await exports.default.fetch(`http://localhost:3000/api/table/voice/${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

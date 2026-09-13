@@ -35,15 +35,15 @@ export async function currentVoiceTurn(
     );
 }
 
-export async function voiceActor(
-  services: ApiServices,
-  voiceSessionId: string,
-  turnId?: string,
-): Promise<Actor> {
+export async function voiceContext(services: ApiServices, voiceSessionId: string, turnId?: string) {
   const db = services.db;
 
   const result = await db
-    .select({ session: business.tableSessions, createdBy: business.demoSessions.created_by })
+    .select({
+      session: business.tableSessions,
+      createdBy: business.demoSessions.created_by,
+      proactive: sql<number>`EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${business.tableSessions.id} AND kind='voice.proactive' AND json_extract(data_json,'$.turnId')=${turnId ?? null})`,
+    })
     .from(business.tableSessions)
     .leftJoin(
       business.demoSessions,
@@ -73,5 +73,13 @@ export async function voiceActor(
     ...(turnId ? { turnId } : {}),
   };
   await validateSession(services, actor, row);
-  return actor;
+  return { actor, session: row, proactive: Boolean(result.proactive) };
+}
+
+export async function voiceActor(
+  services: ApiServices,
+  voiceSessionId: string,
+  turnId?: string,
+): Promise<Actor> {
+  return (await voiceContext(services, voiceSessionId, turnId)).actor;
 }

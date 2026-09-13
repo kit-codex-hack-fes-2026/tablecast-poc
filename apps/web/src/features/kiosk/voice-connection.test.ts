@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
 import { apiFetch } from "../../lib/api-fetch";
@@ -102,10 +103,18 @@ function caption(
     end_ms: end,
   });
 }
+function sentEvent(data: string) {
+  return z
+    .object({
+      type: z.string(),
+      item: z.object({ call_id: z.string(), output: z.string() }).optional(),
+    })
+    .parse(JSON.parse(data));
+}
 function delegate(id = "item_tablecast_delegation") {
   peer().channel.receive({
     type: "session.delegation.created",
-    delegation: { id, target: "client" },
+    delegation: { id, target: "responses" },
   });
 }
 
@@ -135,10 +144,9 @@ beforeEach(() => {
         proactive: false,
       });
     if (path.endsWith("/delegations"))
-      return new Response(
-        'event: delta\ndata: {"delta":"確認できました。"}\n\nevent: completed\ndata: {}\n\n',
-        { headers: { "content-type": "text/event-stream" } },
-      );
+      return Response.json({ kind: "accepted", turnId: "tablecast-turn" });
+    if (path.endsWith("/tools")) return Response.json({ result: { products: [] } });
+    if (path.endsWith("/finish")) return Response.json({ ok: true });
     if (path.endsWith("/stop") || path.endsWith("/conversation"))
       return Response.json({ ok: true });
     return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
@@ -150,7 +158,9 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   const unexpected = requests.filter(
     ({ path }) =>
-      !["/start", "/stop", "/conversation", "/delegations"].some((ending) => path.endsWith(ending)),
+      !["/start", "/stop", "/conversation", "/delegations", "/tools", "/finish"].some((ending) =>
+        path.endsWith(ending),
+      ),
   );
   if (unexpected.length)
     throw new Error(`未定義の要求: ${unexpected.map(({ path }) => path).join(", ")}`);
@@ -280,7 +290,7 @@ describe("GPT-Live音声の明示的な停止と再開", () => {
   });
 });
 
-describe("逐次字幕とAgents APIへの委任", () => {
+describe("逐次字幕と標準Responsesへの委任", () => {
   it("許可された無言時の接客がAPIでスキップされても会話を終了しない", async () => {
     vi.useFakeTimers();
     const original = vi.mocked(apiFetch).getMockImplementation();
@@ -377,296 +387,131 @@ describe("逐次字幕とAgents APIへの委任", () => {
       { voiceSessionId: "live_tablecast_2", items: [{ text: "Hello" }] },
     ]);
   });
-  it("完結した文を逐次返し字幕や同じ委任通知で作業を重複させない", async () => {
-    let output: ReadableStreamDefaultController<Uint8Array> | undefined;
-    const stream = new ReadableStream<Uint8Array>({
-      start(controller) {
-        output = controller;
-      },
-    });
-    const original = vi.mocked(apiFetch).getMockImplementation();
-    if (!original) throw new Error("HTTP fixtureがない");
-    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-      const result = await original(input, options);
-      if (!(input instanceof Request ? input.url : String(input)).endsWith("/delegations"))
-        return result;
-      options?.signal?.addEventListener("abort", () =>
-        output?.error(new DOMException("停止", "AbortError")),
-      );
-      return new Response(stream);
-    });
-    const { value, changes } = connection();
-    await value.start("en");
-    caption("user", "What teas are available?", 100, 700);
-    caption("assistant", "Let me check.", 750, 1200);
+  it("Responsesの全tool結果を返してから一度だけ継続し、完了snapshotの空配列を無視する", async () => {
+    const { value } = connection();
+    await value.start("ja");
     delegate();
-    await vi.waitFor(() =>
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1),
-    );
-    expect(requests.find(({ path }) => path.endsWith("/delegations"))?.body).toMatchObject({
-      messages: [{ role: "user", content: "What teas are available?" }],
-    });
-    for (const delta of [
-      "We",
-      " have two teas available, both 340 yen:",
-      " Oolong tea, or Japanese green tea.",
-    ])
-      output?.enqueue(
-        new TextEncoder().encode(`event: delta\ndata: ${JSON.stringify({ delta })}\n\n`),
-      );
-    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledOnce());
-    expect(JSON.parse(peer().channel.send.mock.calls[0]?.[0] ?? "null")).toMatchObject({
-      type: "session.commentary.append",
-      delegation_id: "item_tablecast_delegation",
-      content: "We have two teas available, both 340 yen: Oolong tea, or Japanese green tea.",
-    });
-    for (const delta of [" Both can be served at your", " chosen temperature. Thank you"])
-      output?.enqueue(
-        new TextEncoder().encode(`event: delta\ndata: ${JSON.stringify({ delta })}\n\n`),
-      );
-    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(2));
-    expect(JSON.parse(peer().channel.send.mock.calls[1]?.[0] ?? "null")).toMatchObject({
-      delegation_id: "item_tablecast_delegation",
-      content: " Both can be served at your chosen temperature. ",
-    });
-    delegate();
-    caption("user", "Thanks", 5000, 5500);
-    expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
-    expect(requests.find(({ path }) => path.endsWith("/delegations"))?.signal?.aborted).toBe(false);
-    expect(changes.at(-1)?.messages?.some((message) => message.text.startsWith("We have"))).toBe(
-      false,
-    );
-    output?.enqueue(new TextEncoder().encode("event: completed\ndata: {}\n\n"));
-    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(3));
-    expect(JSON.parse(peer().channel.send.mock.calls[2]?.[0] ?? "null")).toMatchObject({
-      delegation_id: "item_tablecast_delegation",
-      content: "Thank you",
-    });
-    await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
-    await value.stop();
-  });
-  it.each(["ja", "en"] as const)(
-    "%sの明示された照会失敗は未完結文を破棄し、同じ音声接続で次の委任を受け付ける",
-    async (locale) => {
-      const original = vi.mocked(apiFetch).getMockImplementation();
-      if (!original) throw new Error("HTTP fixtureがない");
-      let failed = false;
-      vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-        const result = await original(input, options);
-        if (
-          failed ||
-          !(input instanceof Request ? input.url : String(input)).endsWith("/delegations")
-        )
-          return result;
-        failed = true;
-        return new Response(
-          'event: delta\ndata: {"delta":"注文を確定"}\n\nevent: failed\ndata: {"code":"VOICE_MODEL_FAILED"}\n\n',
-          { headers: { "content-type": "text/event-stream" } },
-        );
-      });
-      const { value, changes } = connection();
-      await value.start(locale);
-      caption("user", locale === "ja" ? "お茶を一つ" : "One tea, please", 100, 700);
-      delegate();
-      await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledOnce());
-      expect(JSON.parse(peer().channel.send.mock.calls[0]?.[0] ?? "null")).toMatchObject({
-        type: "session.commentary.append",
+    const receive = (event: unknown) =>
+      peer().channel.receive({
+        type: "response.event",
         delegation_id: "item_tablecast_delegation",
-        content:
-          locale === "ja"
-            ? "申し訳ありません。今回のご案内や操作を完了できませんでした。ご注文の状態は画面でご確認ください。"
-            : "Sorry, I couldn't complete that request. Please check your order on the screen.",
+        event,
       });
-      await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
-      expect(requests.filter(({ path }) => path.endsWith("/stop"))).toEqual([]);
-      expect(track.stop).not.toHaveBeenCalled();
-      expect(peer().connectionState).toBe("connected");
-      caption("user", locale === "ja" ? "メニューを見せて" : "Show me the menu", 8000, 8500);
-      delegate("item_next");
-      await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(2));
-      expect(JSON.parse(peer().channel.send.mock.calls[1]?.[0] ?? "null")).toMatchObject({
-        type: "session.commentary.append",
-        delegation_id: "item_next",
-        content: "確認できました。",
+    receive({ type: "response.created", response: { id: "resp_tools" } });
+    for (const [call_id, name] of [
+      ["call_catalog", "getCatalog"],
+      ["call_state", "getTableState"],
+    ])
+      receive({
+        type: "response.output_item.done",
+        item: { type: "function_call", call_id, name, arguments: "{}" },
       });
-      await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
-      expect(VoicePeer.instances).toHaveLength(1);
-      expect(capture).toHaveBeenCalledOnce();
-      expect(requests.filter(({ path }) => path.endsWith("/start"))).toHaveLength(1);
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(2);
-    },
-  );
-  it("取消済みの委任では途中の本文や失敗説明を発話しない", async () => {
-    const original = vi.mocked(apiFetch).getMockImplementation();
-    if (!original) throw new Error("HTTP fixtureがない");
-    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-      const result = await original(input, options);
-      if (!(input instanceof Request ? input.url : String(input)).endsWith("/delegations"))
-        return result;
-      return new Response(
-        'event: delta\ndata: {"delta":"注文を確定"}\n\nevent: failed\ndata: {"code":"VOICE_CANCELLED"}\n\n',
-      );
-    });
-    const { value, changes } = connection();
-    await value.start("ja");
-    caption("user", "お茶", 100, 700);
-    delegate();
-    await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
-    expect(peer().channel.send).not.toHaveBeenCalled();
-    expect(track.stop).not.toHaveBeenCalled();
-    expect(peer().connectionState).toBe("connected");
-  });
-  it.each(["停止", "新しい委任"])("%sの後に届く古い失敗説明を混ぜない", async (action) => {
-    const original = vi.mocked(apiFetch).getMockImplementation();
-    if (!original) throw new Error("HTTP fixtureがない");
-    const pending = deferred<Response>();
-    let first = true;
-    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-      const result = await original(input, options);
-      if (
-        !first ||
-        !(input instanceof Request ? input.url : String(input)).endsWith("/delegations")
-      )
-        return result;
-      first = false;
-      return pending.promise;
-    });
-    const { value, changes } = connection();
-    await value.start("ja");
-    caption("user", "お茶", 100, 700);
-    delegate("item_old");
+    receive({ type: "response.completed", response: { id: "resp_tools", output: [] } });
+    receive({ type: "response.completed", response: { id: "resp_tools", output: [] } });
     await vi.waitFor(() =>
-      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1),
+      expect(
+        peer().channel.send.mock.calls.filter(
+          ([data]) => sentEvent(data).type === "response.create",
+        ),
+      ).toHaveLength(1),
     );
-    if (action === "停止") await value.stop();
-    else delegate("item_new");
-    const released = vi.fn<() => void>();
-    pending.resolve(
-      new Response(
-        new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode('event: failed\ndata: {"code":"VOICE_MODEL_FAILED"}\n\n'),
-            );
-          },
-          cancel: released,
-        }),
-      ),
+    const sent = peer().channel.send.mock.calls.map(([data]) => sentEvent(data));
+    expect(
+      sent
+        .filter((event) => event.type === "response.item.create")
+        .map((event) => event.item?.call_id)
+        .toSorted((a, b) => (a ?? "").localeCompare(b ?? "")),
+    ).toEqual(["call_catalog", "call_state"]);
+    expect(requests.filter(({ path }) => path.endsWith("/tools"))).toHaveLength(2);
+    expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
+    receive({ type: "response.created", response: { id: "resp_answer" } });
+    receive({ type: "response.completed", response: { id: "resp_answer", output: [] } });
+    await vi.waitFor(() =>
+      expect(requests.filter(({ path }) => path.endsWith("/finish"))).toHaveLength(1),
     );
-    await vi.waitFor(() => expect(released).toHaveBeenCalledOnce());
-    const commentary = peer().channel.send.mock.calls.flatMap(([data]) => {
-      const event: unknown = JSON.parse(data);
-      return event &&
-        typeof event === "object" &&
-        "type" in event &&
-        event.type === "session.commentary.append"
-        ? [event]
-        : [];
-    });
-    expect(commentary).toMatchObject(
-      action === "停止" ? [] : [{ delegation_id: "item_new", content: "確認できました。" }],
-    );
-    expect(changes.at(-1)?.status).toBe(action === "停止" ? "paused" : "listening");
-    expect(VoicePeer.instances).toHaveLength(1);
   });
   it.each([
-    ["不正な失敗通知", 'event: failed\ndata: {"code":"unknown"}\n\n'],
-    ["壊れたSSE本文", "event: failed\ndata: {\n\n"],
-    ["完了前の切断", ""],
-    [
-      "未完結文の上限超過",
-      ["あ".repeat(8000), "い".repeat(8000)]
-        .map((delta) => `event: delta\ndata: ${JSON.stringify({ delta })}\n\n`)
-        .join(""),
-    ],
-  ])("業務の%sで音声を停止し、自動再接続しない", async (_name, terminal) => {
+    ["tools", "CART_CONFLICT"],
+    ["delegations", "VOICE_TURN_UNAVAILABLE"],
+  ])("%s失敗を結果として返し音声接続を維持する", async (path, code) => {
     const original = vi.mocked(apiFetch).getMockImplementation();
-    if (!original) throw new Error("HTTP fixtureがない");
     vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-      const result = await original(input, options);
-      if (!(input instanceof Request ? input.url : String(input)).endsWith("/delegations"))
-        return result;
-      return new Response('event: delta\ndata: {"delta":"注文を確定"}\n\n' + terminal, {
-        headers: { "content-type": "text/event-stream" },
-      });
-    });
-    const { value, changes } = connection();
-    await value.start("ja");
-    caption("user", "烏龍茶を一つ", 100, 700);
-    delegate();
-    await vi.waitFor(() => expect(changes.at(-1)).toMatchObject({ status: "error" }));
-    expect(track.stop).toHaveBeenCalledOnce();
-    expect(peer().connectionState).toBe("closed");
-    expect(
-      peer().channel.send.mock.calls.some(([data]) => data.includes("commentary.append")),
-    ).toBe(false);
-    expect(requests.filter(({ path }) => path.endsWith("/stop"))).toHaveLength(1);
-    peer().channel.receive({ type: "session.started" });
-    delegate("item_late");
-    expect(requests.filter(({ path }) => path.endsWith("/start"))).toHaveLength(1);
-    expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
-  });
-  it("業務の完了通知を受けた後も次の会話を受け付ける", async () => {
-    const { value, changes } = connection();
-    await value.start("ja");
-    caption("user", "お茶はありますか", 100, 700);
-    delegate();
-    await vi.waitFor(() =>
-      expect(peer().channel.send).toHaveBeenCalledWith(
-        expect.stringContaining('"content":"確認できました。"'),
-      ),
-    );
-    await vi.waitFor(() => expect(changes.at(-1)?.status).toBe("listening"));
-    expect(track.stop).not.toHaveBeenCalled();
-    expect(peer().connectionState).toBe("connected");
-    caption("user", "ありがとう", 8000, 8500);
-    expect(changes.at(-1)?.messages?.at(-1)?.text).toBe("ありがとう");
-  });
-  it.each(["停止", "新しい委任"])("%sでは未完結の結果を破棄する", async (interruption) => {
-    const original = vi.mocked(apiFetch).getMockImplementation();
-    if (!original) throw new Error("HTTP fixtureがない");
-    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-      const result = await original(input, options);
-      if (!(input instanceof Request ? input.url : String(input)).endsWith("/delegations"))
-        return result;
-      return new Response(
-        new ReadableStream<Uint8Array>({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                'event: delta\ndata: {"delta":"お茶があります。注文を確定"}\n\n',
-              ),
-            );
-            options?.signal?.addEventListener("abort", () =>
-              controller.error(new DOMException("停止", "AbortError")),
-            );
-          },
-        }),
-      );
+      if ((input instanceof Request ? input.url : String(input)).endsWith(`/${path}`))
+        return Response.json(
+          { error: { code: "CART_CONFLICT", message: "競合" } },
+          { status: 409 },
+        );
+      if (!original) throw new Error("API fixtureがありません");
+      return original(input, options);
     });
     const { value } = connection();
     await value.start("ja");
-    caption("user", "お茶", 100, 300);
-    delegate("item_first");
-    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledOnce());
-    if (interruption === "停止") await value.stop();
-    else delegate("item_second");
-    await vi.waitFor(() => expect(peer().channel.send).toHaveBeenCalledTimes(2));
-    expect(requests.filter(({ path }) => path.endsWith("/delegations"))[0]?.signal?.aborted).toBe(
-      true,
-    );
-    const commentary = peer()
-      .channel.send.mock.calls.map(([data]) => data)
-      .filter((data) => data.includes('"type":"session.commentary.append"'));
-    const expectedDelegations =
-      interruption === "停止" ? ["item_first"] : ["item_first", "item_second"];
-    expect(commentary).toHaveLength(expectedDelegations.length);
-    for (const [index, delegation_id] of expectedDelegations.entries())
-      expect(JSON.parse(commentary[index] ?? "null")).toMatchObject({
-        type: "session.commentary.append",
-        delegation_id,
-        content: "お茶があります。",
+    delegate();
+    const receive = (event: unknown) =>
+      peer().channel.receive({
+        type: "response.event",
+        delegation_id: "item_tablecast_delegation",
+        event,
       });
+    receive({ type: "response.created", response: { id: "resp_error" } });
+    receive({
+      type: "response.output_item.done",
+      response_id: "resp_error",
+      item: { type: "function_call", call_id: "call_error", name: "getCatalog", arguments: "{}" },
+    });
+    receive({ type: "response.completed", response: { id: "resp_error" } });
+    await vi.waitFor(() =>
+      expect(
+        peer().channel.send.mock.calls.some(([data]) => sentEvent(data).type === "response.create"),
+      ).toBe(true),
+    );
+    const output = peer()
+      .channel.send.mock.calls.map(([data]) => sentEvent(data))
+      .find((event) => event.type === "response.item.create");
+    expect(JSON.parse(output?.item?.output ?? "null")).toEqual({ error: code });
+    expect(peer().close).not.toHaveBeenCalled();
+  });
+  it("新しい委任が始まった後に古いtool結果を継続しない", async () => {
+    const pending = Promise.withResolvers<Response>();
+    const original = vi.mocked(apiFetch).getMockImplementation();
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : String(input)).endsWith("/tools"))
+        return pending.promise;
+      if (!original) throw new Error("API fixtureがありません");
+      return original(input, options);
+    });
+    const { value } = connection();
+    await value.start("ja");
+    delegate();
+    const receive = (event: unknown) =>
+      peer().channel.receive({
+        type: "response.event",
+        delegation_id: "item_tablecast_delegation",
+        event,
+      });
+    receive({ type: "response.created", response: { id: "resp_old" } });
+    receive({
+      type: "response.output_item.done",
+      response_id: "resp_old",
+      item: { type: "function_call", call_id: "call_old", name: "getCatalog", arguments: "{}" },
+    });
+    receive({ type: "response.completed", response: { id: "resp_old" } });
+    await vi.waitFor(() =>
+      expect(
+        vi
+          .mocked(apiFetch)
+          .mock.calls.some(([input]) =>
+            (input instanceof Request ? input.url : input.toString()).endsWith("/tools"),
+          ),
+      ).toBe(true),
+    );
+    delegate("item_new");
+    pending.resolve(Response.json({ result: { products: [] } }));
+    await vi.waitFor(() =>
+      expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(2),
+    );
+    expect(
+      peer().channel.send.mock.calls.some(([data]) => sentEvent(data).type === "response.create"),
+    ).toBe(false);
   });
 });

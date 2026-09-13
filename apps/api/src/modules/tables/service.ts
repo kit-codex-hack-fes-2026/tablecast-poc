@@ -4,6 +4,7 @@ import type { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import type { Catalog } from "../configuration/model";
 import type { Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
 import { getCatalog, sessionConfigVersion } from "../catalog/queries";
@@ -62,14 +63,15 @@ export async function showProducts(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof showProductsSchema>,
+  knownCatalog?: Catalog,
 ) {
   const db = services.db;
 
   ensure(actor.kind === "voice" && actor.turnId && actor.voiceSessionId, "VOICE_REQUIRED", 403);
   const parsed = showProductsSchema.safeParse(input);
   ensure(parsed.success, "INVALID_INPUT", 422);
-  await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+  if (!knownCatalog) await getSession(services, actor);
+  const catalog = knownCatalog ?? (await getCatalog(services, actor.storeId, actor.demoId));
   const productIds = [...new Set(parsed.data.productIds)];
   ensure(
     productIds.every((id) => catalog.configuration.products.some((product) => product.id === id)),
@@ -83,7 +85,10 @@ export async function showProducts(
       sql`SELECT NULL,store_id,id,'voice.products',${JSON.stringify({ turnId: actor.turnId, productIds })},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog.version}`,
     );
   ensure(result.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId, {
+    cursor: result.meta.last_row_id,
+    demoId: actor.demoId,
+  });
   return { productIds };
 }
 

@@ -1,6 +1,6 @@
 # ログ・トレースとCodexからの調査
 
-音声をブラウザー直結のGPT-Liveとhosted Agents APIへ移行しても、APIのOTel/GrafanaとD1の業務イベントを維持する。GPT-Liveの字幕は雑談を含めて保存し、Agents内部回答を発話済み本文として二重保存しない。以下に残る旧音声構成の検証履歴は、新構成の遅延・再生完了の証拠にしない。生音声の既定保存は無効のままとする。
+音声をブラウザー直結のGPT-Liveと標準Responses delegationへ移行しても、APIのOTel/GrafanaとD1の業務イベントを維持する。GPT-Liveの字幕は雑談を含めて保存し、backend回答を発話済み本文として二重保存しない。以下に残る旧音声構成の検証履歴は、新構成の遅延・再生完了の証拠にしない。生音声の既定保存は無効のままとする。
 
 [索引](README.md) / [開発環境](development.md)
 
@@ -132,57 +132,10 @@ GitHub Environmentの`preview`または`production`に同名のActions variable�
 
 秘匿化に使う秘密値は本文全体につき一度だけ環境設定から取得する。計測済みの環境設定を各文字列で列挙すると、D1などのbindingのProxyを大量に生成するためである。JSONオブジェクト・配列の候補だけを解析し、通常文での例外生成も避ける。入れ子のJSON文字列と通常文の資格除去、本文の保持は共通の送信境界で検証する。
 
-## GPT-LiveとAgents APIの相関
+## GPT-LiveとResponsesの相関
 
-ブラウザーの `session.input_transcript.delta`・`session.output_transcript.delta` は会話表示とD1保存に使い、APIの業務要求は通常のHTTP traceで追う。`tablecast.voice.session.id`、`tablecast.voice.turn.id`、hosted Agents session IDを対応付ける。UUIDの要求IDとOTel trace IDを混同しない。
+voice session / アプリのturn / tool call IDとHTTP traceを区別して記録する。tablecast.voice.tool spanはHonoでの認可・SQL・実行・結果保存の区間であり、OpenAI内部の推論時間ではない。tool.output_bytesは実際に返したJSONのbyte数で、token数の推測値として使わない。
 
-委任のHTTP 200はSSEの開始を示し、業務の成功を保証しない。`tablecast.voice.agent` spanと `voice_turn` の終端、`tablecast.voice.stream_failed` を確認する。provider内でツールが失敗した場合は `VOICE_PROVIDER_TOOL_FAILED` と `tablecast.voice.provider_tool_failed` を記録し、ツール名・呼出しID・失敗段階を対応付ける。SDKが通知する原因は既存の秘匿化を通して残す。API内のツール失敗は `INVALID_INPUT` などの業務コードを維持し、provider内の失敗と区別する。
+ブラウザーでsession.delegation.createdとresponse.created / response.completed、tool HTTP、入力音声終了、出力音声を同じ時計で測る。モデルusageはresponseイベントのusageから取得し、cached・cache write・outputを分ける。推論完了・字幕到着・実再生は異なる。
 
-字幕の最初の差分、委任の開始、最初の本文、各ツールの開始・完了、音声停止の時刻をそれぞれ確認する。本文の生成時間を音声の再生開始までの時間として報告せず、D1 binding待ちとDB内部SQL実行時間も区別する。
-
-音声開始などの外部API失敗は `tablecast.error.causes` の `httpStatus` と `providerCode` を確認する。`credit_balance_exhausted`・`insufficient_quota` はAPI残高や利用枠、`rate_limit_exceeded` は要求頻度の制限として区別する。既知の制限codeだけを許可し、本文収集が無効のときはproviderメッセージや未知のcodeを記録しない。
-
-```traceql
-{ resource.service.name = "tablecast-api" && resource.tablecast.pr.number = "対象PR番号" }
-```
-
-Mastra Platform、LiveKit Agent InsightsとPythonのOTLP exporterは使用しない。OpenAI側のsessionやtraceはprovider内部の調査、Grafanaはアプリ・DB・業務操作の調査に使う。OpenAI側の保存・保持条件と、`TABLECAST_OTEL_CAPTURE_CONTENT` によるGrafana本文収集は別の設定であり、同じフラグが双方へ適用されると扱わない。
-
-## Cloudflare Containersのインフラ指標（#67）
-
-API WorkerのCronが5分ごとに、previewのemulateだけを収集する。追加の常時起動Containerは作らず、監視からContainerへのHTTP要求も行わない。localと本番のCronは登録しない。previewでは`TABLECAST_CONTAINER_METRICS_TOKEN`、本番・previewではGrafana送信資格`TABLECAST_OTEL_AUTHORIZATION`を必須とし、欠けた配備はWorkerへ書き込む前に拒否する。
-
-- `TABLECAST_CONTAINER_METRICS_TOKEN`: 当該アカウントのAccount Analytics ReadとWorkers Containers Readだけを持つ専用トークン。GitHub Actions secretからAPIのsecretへ渡す。今回のトークン有効期限は2026年12月10日。更新後に配備して反映する。
-- `TABLECAST_CLOUDFLARE_ACCOUNT_ID`と`TABLECAST_CONTAINER_METRICS_APPLICATIONS`: 配備設定から生成する。後者は当該Workerのapplication名のJSON配列。Containers REST APIの名前検索でIDを解決し、GraphQLの`applicationId_in`で絞る。
-- Grafanaへの送信は既存`TABLECAST_OTEL_ENDPOINT`と`TABLECAST_OTEL_AUTHORIZATION`を使用する。トークンには`metrics:write`が必要。
-
-公式の[`containersMetricsAdaptiveGroups`](https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-container-metrics/)を使用し、課金用`containersUsageAdaptiveGroups`、DOの呼出し時間、アプリspanとは区別する。CPU・メモリ・受信/送信bpsは5分窓の平均、ディスクと稼働時間は最大値。稼働時間はGraphQLスキーマのmsを秒へ変換する。Cloudflareが返す0は保持するが、空集合やnullを0に置き換えない。
-
-例として14:30のCronは14:20以上14:25未満を取得する。5分遅延させた重ならない窓を使い、OTLPの時刻は元の窓の開始時刻を維持する。同じ窓を再実行しても別時刻へ複製しない。取得失敗や遅延到着を後から自動で埋め戻すことはしない。API要求は各10秒で打ち切り、1000行上限やGraphQLの部分失敗も失敗として扱う。
-
-`infra/grafana/dashboards/tablecast-containers.json`をGrafanaへimportし、Prometheus datasource・環境・PR番号（本番は`prod`）・Container名を指定する。CPU等にはCloudflare application・instance・placement・deployment IDを保持する。OTLPの`service.version`は収集WorkerのSHAであり、過去のContainerイメージのSHAを推測しない。過去の実行はCloudflare deployment IDで照合する。
-
-```promql
-# PRごとのメモリ。サンプルの元時刻で描画し、欠測を0で埋めない。
-tablecast_container_memory_bytes{deployment_environment_name="preview",tablecast_pr_number="123"}
-# 本番
- tablecast_container_cpu_utilization_ratio{deployment_environment_name="production",tablecast_pr_number="prod"}
-# 収集停止またはGrafanaへの送信断（10分間heartbeatなし）
-absent_over_time(tablecast_container_collector_success{deployment_environment_name="preview",tablecast_pr_number="123"}[10m])
-# 収集自体が成功しても、Containerが停止中・無通信ならデータは来ない。
-time() - last_over_time(tablecast_container_observed_timestamp_seconds{tablecast_pr_number="123"}[1h])
-```
-
-`collector_success=0`はCloudflare取得失敗または実指標のOTLP送信失敗、`collector_samples=0`は正常に取得した窓にサンプルがない状態。実指標を先に送り、全件受理を確認してから別要求で成功heartbeatを送る。OTLPのHTTP失敗・部分拒否は失敗heartbeatを送ってCronを失敗させる。Grafana停止時にはsuccess=0自体も送れないため、heartbeat欠測とCloudflareのCron失敗を併用する。データ鮮度も表示し、値が来ないだけでContainer停止と断定しない。欠測検出クエリを提供するが通知先へのアラート登録は行っていない。
-
-Grafana MCPの`query_prometheus`で同じPromQLを実行できる。Cloudのdatasource UIDは`grafanacloud-prom`、過去の窓を見るときは`queryType=range`と明示的なstart/end・stepを指定する。
-
-## D1往復とSSR待ち時間の調査
-
-D1 spanの総時間と `cloudflare.d1.response.sql_duration_ms` を比較する。前者にはSQL実行以外の通信・待ち時間が含まれ、差分だけからネットワーク遅延と断定しない。`raw` などmetaを返さない操作ではSQL時間が欠ける。SDK 2.5.0はD1の `served_by_region` / `served_by_colo` を記録しないため、WorkerのcoloからD1 primaryの場所を推定しない。
-
-PR #99のrelease `d485d67f0140b5ea9a62b2f3b23443839668bdf2`、2026-09-12 05:45〜05:46 JSTにはwarm SSR 753〜924msを観測した。trace `118309a40ef1b0584be5d528193158a6` では認証480msと店舗一覧389msが直列になり、D1 11回は各72〜94ms、店舗一覧SQLは0.1886msだった。cold startとpreview OAuthの別経路をこの比較に混ぜない。続くCloudflare APIの読み取り専用queryでは、同DBの `served_by_colo: SIN`、`served_by_region: APAC`、`served_by_primary: true` を確認した。API Workerのplacement設定は空だった。
-
-認証はBetter Authの `advanced.database.joins` と既存のDrizzle relationsでsession/userを一度に取得する。未使用の `set-auth-jwt` ヘッダーは標準の `disableSettingJwtHeader` で無効にし、セッション確認時のJWKS取得を避ける。認証結果をキャッシュせず、取消・所属変更は次の要求でDBから再確認する。
-
-改善後は同じ画面・認証状態でD1回数、要求時間、cold start、`cloudflare.colo`、`cloudflare.placement` を比較する。placementは `local-XXX` / `remote-XXX` の形式だけを記録し、その他の要求ヘッダーは収集しない。Smart Placementの設定・判定手順は[配備](deployment.md#d1とworkerの配置)を参照する。SSRの `http.route: ssr` は個別ページを識別せず、サーバーtraceにはクリックからスケルトン描画までの時間がないため、描画改善はブラウザーで別途確認する。
+D1はspanとsql_duration_msを分け、取得できる場合にserved_by_region / served_by_primary / total_attemptsも残す。差分を純粋なネットワークRTTと断定しない。属性の許可だけでは、bindingやadapterが返さないmetadataを取得できた証拠にはならない。
