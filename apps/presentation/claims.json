@@ -1,0 +1,47 @@
+{
+  "scope": "技術紹介v16を基に、最新mainへ実装根拠を更新した検証版の場面04〜06",
+  "repository": "https://github.com/kit-codex-hack-fes-2026/tablecast-poc",
+  "commit": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "claims": [
+    {
+      "id": "voice-approval",
+      "claim": "音声注文は読み上げ完了後に始まる新しい発話で承認する",
+      "kind": "verified",
+      "source": "apps/api/src/modules/orders/service.ts",
+      "locator": "238-263",
+      "slideIds": ["tech-order"]
+    },
+    {
+      "id": "confirmation-invalidated",
+      "claim": "確定前のカート変更はpending/readの確認を失効させる",
+      "kind": "verified",
+      "source": "apps/api/src/modules/tables/mutations.ts",
+      "locator": "58-66",
+      "slideIds": ["tech-order"]
+    },
+    {
+      "id": "test-conditions",
+      "claim": "読了後の新しい発話の成立、読了前の同一発話と古い確認の拒否を検査する",
+      "kind": "verified",
+      "source": "apps/api/test/orders.test.ts",
+      "locator": "155-184,525-573",
+      "slideIds": ["tech-evidence"]
+    },
+    {
+      "id": "api-25-passed",
+      "claim": "2026-09-13にローカルWorkers/D1の注文関連APIテスト25件が通過",
+      "kind": "observed",
+      "source": "records/tablecast-main-7d6adc7.json",
+      "locator": "apiOrderTests",
+      "slideIds": ["tech-evidence"]
+    },
+    {
+      "id": "perceived-response-plan",
+      "claim": "発話終了から端末の最初の返答音までを、端末・騒音・回線条件ごとに測定する計画",
+      "kind": "proposed",
+      "source": "docs/acceptance.md",
+      "locator": "100",
+      "slideIds": ["tech-future"]
+    }
+  ]
+}

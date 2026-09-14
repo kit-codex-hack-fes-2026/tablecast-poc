@@ -1,0 +1,15 @@
+{
+  "sceneId": "approval-result",
+  "definition": "1bacf3f6a897f0b8d0cf6317621e5e6935aed90d1b33630c2c59b176b76e5360",
+  "readyAt": 1789289931469,
+  "endAt": 1789289935559,
+  "target": {
+    "label": "送信された同じ商品の注文履歴",
+    "x": 0.49658203125,
+    "y": 0.1796875,
+    "width": 0.48876953125,
+    "height": 0.24609375
+  },
+  "text": "17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780",
+  "image": "tablecast-shot-approval-result.png"
+}

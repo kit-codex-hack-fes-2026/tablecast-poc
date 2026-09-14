@@ -28,6 +28,8 @@ cd ../tablecast-my-change
 
 ## 2A. Dev Containerを使う
 
+動画素材は`.lfsconfig`により通常のclone・pullでは取得しない。動画を扱う場合だけGit LFSを導入し、[動画の共有と復元](../apps/presentation/SHARING.md)に従って取得範囲と`--exclude=`を指定した`git lfs pull`を実行する。通常の動画生成にはアプリ起動・APIキーは不要。現在の再収録・OpenScreen編集手順はWindows環境を対象とする。共有projectの再編集は、projectのあるフォルダーでOpenScreenの`pack`を実行して作業用bundleを作る。UI変更試験は[当時の検証記録と完成動画](../apps/presentation/experiments/tablecast-mutation/BRIEF.md)を共有する。
+
 ホストにNode・Bun・uv・Pythonは不要。Dev Containers対応エディタでworktreeを開き、Reopen in Containerを実行する。初期化が `.devcontainer/.env` を生成し、`postCreateCommand` が `bun run setup` を実行する。
 
 コンテナのターミナルで起動する。
@@ -59,6 +61,16 @@ docker compose -f .devcontainer/compose.yaml port tablecast 6006
 
 > [!NOTE]
 > Docker socketは渡さない。Dockerを直接使うE2Eは2BのホストかCIで実行する。コンテナ内のブラウザー試験には `bunx --no-install playwright install --with-deps chromium webkit` が必要。実iPadはlocalhostへ接続できないため、[実機試験](development.md#実機公開環境)を参照する。
+
+動画のbuildでもFFprobeを使うため、Dev ContainerイメージはFFmpeg/FFprobeを含む。既存コンテナはイメージを再buildする。動画の配置検査・完成MP4再生はH.264/AAC対応のGoogle Chromeを使うため、Linux amd64のコンテナでは依存導入後に次を追加実行する。通常アプリのChromium/WebKit導入とは別の前提である。
+
+```sh
+bunx --no-install playwright install --with-deps chrome
+ffmpeg -version
+ffprobe -version
+```
+
+Linux arm64へのGoogle Chrome導入はこの手順の対象外。動画制作は[Windowsの生成環境](../apps/presentation/SHARING.md#新しいcheckoutで生成する)を使う。OpenScreenによる実収録・再編集もWindowsホストで行う。
 
 ## 2B. ホストでmise・uv・Bunを使う
 
@@ -96,6 +108,8 @@ Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそ�
 | Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
+
+動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。描画依存の0.8.33と同じ公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、最新版への一括更新は行わない。
 
 ### MCP設定の配置と確認
 

@@ -1,0 +1,2366 @@
+{
+  "version": 2,
+  "provider": "none",
+  "assets": [],
+  "provenance": "Actual Playwright-dispatched DOM pointer events, preserved in tablecast-events.json; not OS cursor telemetry",
+  "samples": [
+    {
+      "timeMs": 119,
+      "cx": 0.212890625,
+      "cy": 0.859375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6686,
+      "cx": 0.22704315558075905,
+      "cy": 0.8350260257720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6689,
+      "cx": 0.2411956749856472,
+      "cy": 0.8106770515441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6695,
+      "cx": 0.25534820556640625,
+      "cy": 0.7863281567891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6701,
+      "cx": 0.2695007361471653,
+      "cy": 0.7619791825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6707,
+      "cx": 0.28365325555205345,
+      "cy": 0.7376302083333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6713,
+      "cx": 0.2978057861328125,
+      "cy": 0.7132812341054281,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6719,
+      "cx": 0.31195831671357155,
+      "cy": 0.6889322598775228,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6725,
+      "cx": 0.3261108472943306,
+      "cy": 0.6645833253860474,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6731,
+      "cx": 0.34026336669921875,
+      "cy": 0.6402343908945719,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6737,
+      "cx": 0.3544158861041069,
+      "cy": 0.6158854166666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6743,
+      "cx": 0.36856842786073685,
+      "cy": 0.5915364424387614,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6749,
+      "cx": 0.382720947265625,
+      "cy": 0.567187507947286,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6755,
+      "cx": 0.39687346667051315,
+      "cy": 0.5428385337193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6761,
+      "cx": 0.4110260084271431,
+      "cy": 0.5184895992279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6767,
+      "cx": 0.42517852783203125,
+      "cy": 0.494140625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6773,
+      "cx": 0.4393310472369194,
+      "cy": 0.4697916507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6780,
+      "cx": 0.45348358899354935,
+      "cy": 0.4454427162806193,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6785,
+      "cx": 0.4676361083984375,
+      "cy": 0.42109374205271405,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6792,
+      "cx": 0.48178862780332565,
+      "cy": 0.3967448075612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6798,
+      "cx": 0.4959411695599556,
+      "cy": 0.3723958333333333,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6810,
+      "cx": 0.5100936889648438,
+      "cy": 0.34804685910542804,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6822,
+      "cx": 0.5242462307214737,
+      "cy": 0.32369792461395264,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6828,
+      "cx": 0.5383987277746201,
+      "cy": 0.29934895038604736,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6835,
+      "cx": 0.55255126953125,
+      "cy": 0.274999996026357,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6840,
+      "cx": 0.5667038112878799,
+      "cy": 0.2506510416666667,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6847,
+      "cx": 0.5808563083410263,
+      "cy": 0.22630208730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6852,
+      "cx": 0.5950088500976562,
+      "cy": 0.20195313294728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6858,
+      "cx": 0.6091613918542862,
+      "cy": 0.1776041587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6864,
+      "cx": 0.6233138889074326,
+      "cy": 0.15325520435969034,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6870,
+      "cx": 0.6374664306640625,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6888,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 6890,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 7014,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 7038,
+      "cx": 0.6225029230117798,
+      "cy": 0.15655381480852762,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7040,
+      "cx": 0.6075449138879776,
+      "cy": 0.18420137961705527,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7046,
+      "cx": 0.5925869047641754,
+      "cy": 0.21184895435969034,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7052,
+      "cx": 0.5776288956403732,
+      "cy": 0.23949652910232544,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7058,
+      "cx": 0.562670886516571,
+      "cy": 0.2671441038449605,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7064,
+      "cx": 0.5477128773927689,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7070,
+      "cx": 0.5327548682689667,
+      "cy": 0.3224392334620158,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7076,
+      "cx": 0.5177968591451645,
+      "cy": 0.3500868082046509,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7082,
+      "cx": 0.5028388500213623,
+      "cy": 0.37773438294728595,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7089,
+      "cx": 0.4878808632493019,
+      "cy": 0.4053819576899211,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7095,
+      "cx": 0.4729228541254997,
+      "cy": 0.43302953243255615,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7101,
+      "cx": 0.45796484500169754,
+      "cy": 0.4606770674387614,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7107,
+      "cx": 0.44300683587789536,
+      "cy": 0.4883246421813965,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7113,
+      "cx": 0.42804882675409317,
+      "cy": 0.5159722169240316,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7119,
+      "cx": 0.413090817630291,
+      "cy": 0.5436197916666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7125,
+      "cx": 0.3981328085064888,
+      "cy": 0.5712673664093018,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7137,
+      "cx": 0.3831747993826866,
+      "cy": 0.5989149411519369,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7138,
+      "cx": 0.36821679025888443,
+      "cy": 0.6265625158945719,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7143,
+      "cx": 0.35325878113508224,
+      "cy": 0.6542100509007772,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7149,
+      "cx": 0.33830077201128006,
+      "cy": 0.6818576653798422,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7155,
+      "cx": 0.3233427628874779,
+      "cy": 0.7095052401224772,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7161,
+      "cx": 0.3083847649395466,
+      "cy": 0.7371528148651123,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7167,
+      "cx": 0.2934267558157444,
+      "cy": 0.7648003101348877,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7173,
+      "cx": 0.2784687466919422,
+      "cy": 0.7924478848775228,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7180,
+      "cx": 0.26351073756814003,
+      "cy": 0.8200954596201578,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7186,
+      "cx": 0.24855273962020874,
+      "cy": 0.847743034362793,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7192,
+      "cx": 0.23359473049640656,
+      "cy": 0.8753906091054281,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7198,
+      "cx": 0.21863672137260437,
+      "cy": 0.9030381838480631,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7204,
+      "cx": 0.20367871224880219,
+      "cy": 0.9306857585906982,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7210,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7228,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 7230,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 7351,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 20604,
+      "cx": 0.1829345691949129,
+      "cy": 0.8635416825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20610,
+      "cx": 0.17714843526482582,
+      "cy": 0.7687500317891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20616,
+      "cx": 0.17136230412870646,
+      "cy": 0.6739583015441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20622,
+      "cx": 0.1655761729925871,
+      "cy": 0.5791666507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20629,
+      "cx": 0.1597900390625,
+      "cy": 0.484375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20635,
+      "cx": 0.1540039051324129,
+      "cy": 0.3895833492279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20640,
+      "cx": 0.14821777399629354,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20646,
+      "cx": 0.14243164006620646,
+      "cy": 0.20000000794728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20653,
+      "cx": 0.13664550753310323,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 20659,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46095,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46101,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46107,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46113,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46119,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46126,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46132,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46138,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46144,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 46150,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58793,
+      "cx": 0.13278808584436774,
+      "cy": 0.042013888557751976,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58799,
+      "cx": 0.13471679668873549,
+      "cy": 0.07361111044883728,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58805,
+      "cx": 0.13664550753310323,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58811,
+      "cx": 0.13857421837747097,
+      "cy": 0.1368055542310079,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58817,
+      "cx": 0.1405029292218387,
+      "cy": 0.16840277115503946,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58823,
+      "cx": 0.14243164006620646,
+      "cy": 0.20000000794728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58829,
+      "cx": 0.1443603509105742,
+      "cy": 0.23159722487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58835,
+      "cx": 0.1462890631519258,
+      "cy": 0.2631944417953491,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58841,
+      "cx": 0.14821777399629354,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58847,
+      "cx": 0.15014648344367743,
+      "cy": 0.3263888955116272,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58853,
+      "cx": 0.15207519568502903,
+      "cy": 0.35798609256744385,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58859,
+      "cx": 0.1540039051324129,
+      "cy": 0.3895833492279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58865,
+      "cx": 0.15593261737376451,
+      "cy": 0.42118056615193683,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58871,
+      "cx": 0.1578613268211484,
+      "cy": 0.45277778307596844,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58877,
+      "cx": 0.1597900390625,
+      "cy": 0.484375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58883,
+      "cx": 0.1617187513038516,
+      "cy": 0.5159722169240316,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58890,
+      "cx": 0.16364746075123549,
+      "cy": 0.5475694338480631,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58896,
+      "cx": 0.1655761729925871,
+      "cy": 0.5791666507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58901,
+      "cx": 0.16750488243997097,
+      "cy": 0.6107639074325562,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58908,
+      "cx": 0.16943359468132257,
+      "cy": 0.6423611243565878,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58914,
+      "cx": 0.17136230412870646,
+      "cy": 0.6739583015441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58920,
+      "cx": 0.17329101637005806,
+      "cy": 0.7055555184682211,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58926,
+      "cx": 0.17521972581744194,
+      "cy": 0.7371528148651123,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58932,
+      "cx": 0.17714843526482582,
+      "cy": 0.7687500317891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58938,
+      "cx": 0.17907715030014515,
+      "cy": 0.8003472487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58944,
+      "cx": 0.18100585974752903,
+      "cy": 0.831944465637207,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58950,
+      "cx": 0.1829345691949129,
+      "cy": 0.8635416825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58956,
+      "cx": 0.1848632786422968,
+      "cy": 0.8951388994852701,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58962,
+      "cx": 0.18679199367761612,
+      "cy": 0.9267361164093018,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58969,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58986,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 58988,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 59109,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 59156,
+      "cx": 0.20367889665067196,
+      "cy": 0.9306857585906982,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59162,
+      "cx": 0.21863708458840847,
+      "cy": 0.9030381838480631,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59168,
+      "cx": 0.23359527811408043,
+      "cy": 0.8753906091054281,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59174,
+      "cx": 0.24855346605181694,
+      "cy": 0.847743034362793,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59180,
+      "cx": 0.26351165398955345,
+      "cy": 0.8200954596201578,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59187,
+      "cx": 0.27846985310316086,
+      "cy": 0.7924478848775228,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59192,
+      "cx": 0.29342804104089737,
+      "cy": 0.7648003101348877,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59199,
+      "cx": 0.3083862289786339,
+      "cy": 0.7371528148651123,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59205,
+      "cx": 0.3233444169163704,
+      "cy": 0.7095052401224772,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59211,
+      "cx": 0.3383026048541069,
+      "cy": 0.6818576653798422,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59217,
+      "cx": 0.3532607927918434,
+      "cy": 0.6542100509007772,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59223,
+      "cx": 0.3682190030813217,
+      "cy": 0.6265625158945719,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59236,
+      "cx": 0.3831771910190582,
+      "cy": 0.5989149411519369,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59241,
+      "cx": 0.39813537895679474,
+      "cy": 0.5712673664093018,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59258,
+      "cx": 0.41309356689453125,
+      "cy": 0.5436197916666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59261,
+      "cx": 0.42805175483226776,
+      "cy": 0.5159722169240316,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59265,
+      "cx": 0.4430099427700043,
+      "cy": 0.4883246421813965,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59271,
+      "cx": 0.4579681307077408,
+      "cy": 0.4606770674387614,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59278,
+      "cx": 0.4729263409972191,
+      "cy": 0.43302953243255615,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59284,
+      "cx": 0.4878845289349556,
+      "cy": 0.4053819576899211,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59290,
+      "cx": 0.5028426945209503,
+      "cy": 0.37773438294728595,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59296,
+      "cx": 0.5178008824586868,
+      "cy": 0.3500868082046509,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59302,
+      "cx": 0.5327591150999069,
+      "cy": 0.3224392334620158,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59308,
+      "cx": 0.5477173030376434,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59314,
+      "cx": 0.5626754909753799,
+      "cy": 0.2671441038449605,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59320,
+      "cx": 0.5776336789131165,
+      "cy": 0.23949652910232544,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59326,
+      "cx": 0.592591866850853,
+      "cy": 0.21184895435969034,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59332,
+      "cx": 0.6075500547885895,
+      "cy": 0.18420137961705527,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59338,
+      "cx": 0.622508242726326,
+      "cy": 0.15655381480852762,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59344,
+      "cx": 0.6374664306640625,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59362,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 59363,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 59484,
+      "cx": 0.637460932135582,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 60331,
+      "cx": 0.5868007987737656,
+      "cy": 0.11705729365348816,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60332,
+      "cx": 0.5361406207084656,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60338,
+      "cx": 0.4854804649949074,
+      "cy": 0.09335937102635701,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60344,
+      "cx": 0.4348203092813492,
+      "cy": 0.08151041467984517,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60350,
+      "cx": 0.384160153567791,
+      "cy": 0.06966145833333333,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60356,
+      "cx": 0.3334999978542328,
+      "cy": 0.057812501986821495,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60362,
+      "cx": 0.2828398421406746,
+      "cy": 0.04596354067325592,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60368,
+      "cx": 0.2321796864271164,
+      "cy": 0.03411458432674408,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60374,
+      "cx": 0.1815195307135582,
+      "cy": 0.022265625496705372,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 60381,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67895,
+      "cx": 0.13278808584436774,
+      "cy": 0.042013888557751976,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67903,
+      "cx": 0.13471679668873549,
+      "cy": 0.07361111044883728,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67909,
+      "cx": 0.13664550753310323,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67914,
+      "cx": 0.13857421837747097,
+      "cy": 0.1368055542310079,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67920,
+      "cx": 0.1405029292218387,
+      "cy": 0.16840277115503946,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67926,
+      "cx": 0.14243164006620646,
+      "cy": 0.20000000794728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67932,
+      "cx": 0.1443603509105742,
+      "cy": 0.23159722487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67938,
+      "cx": 0.1462890631519258,
+      "cy": 0.2631944417953491,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67944,
+      "cx": 0.14821777399629354,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67950,
+      "cx": 0.15014648344367743,
+      "cy": 0.3263888955116272,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67956,
+      "cx": 0.15207519568502903,
+      "cy": 0.35798609256744385,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67962,
+      "cx": 0.1540039051324129,
+      "cy": 0.3895833492279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67968,
+      "cx": 0.15593261737376451,
+      "cy": 0.42118056615193683,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67974,
+      "cx": 0.1578613268211484,
+      "cy": 0.45277778307596844,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67981,
+      "cx": 0.1597900390625,
+      "cy": 0.484375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67986,
+      "cx": 0.1617187513038516,
+      "cy": 0.5159722169240316,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67993,
+      "cx": 0.16364746075123549,
+      "cy": 0.5475694338480631,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 67999,
+      "cx": 0.1655761729925871,
+      "cy": 0.5791666507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68005,
+      "cx": 0.16750488243997097,
+      "cy": 0.6107639074325562,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68011,
+      "cx": 0.16943359468132257,
+      "cy": 0.6423611243565878,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68017,
+      "cx": 0.17136230412870646,
+      "cy": 0.6739583015441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68023,
+      "cx": 0.17329101637005806,
+      "cy": 0.7055555184682211,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68029,
+      "cx": 0.17521972581744194,
+      "cy": 0.7371528148651123,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68035,
+      "cx": 0.17714843526482582,
+      "cy": 0.7687500317891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68041,
+      "cx": 0.17907715030014515,
+      "cy": 0.8003472487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68047,
+      "cx": 0.18100585974752903,
+      "cy": 0.831944465637207,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68053,
+      "cx": 0.1829345691949129,
+      "cy": 0.8635416825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68059,
+      "cx": 0.1848632786422968,
+      "cy": 0.8951388994852701,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68065,
+      "cx": 0.18679199367761612,
+      "cy": 0.9267361164093018,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68072,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68089,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 68091,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 68212,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 81503,
+      "cx": 0.1829345691949129,
+      "cy": 0.8635416825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81509,
+      "cx": 0.17714843526482582,
+      "cy": 0.7687500317891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81515,
+      "cx": 0.17136230412870646,
+      "cy": 0.6739583015441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81521,
+      "cx": 0.1655761729925871,
+      "cy": 0.5791666507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81527,
+      "cx": 0.1597900390625,
+      "cy": 0.484375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81533,
+      "cx": 0.1540039051324129,
+      "cy": 0.3895833492279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81539,
+      "cx": 0.14821777399629354,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81545,
+      "cx": 0.14243164006620646,
+      "cy": 0.20000000794728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81551,
+      "cx": 0.13664550753310323,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 81557,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98375,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98381,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98387,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98393,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98399,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98405,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98411,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98417,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98423,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 98429,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 111621,
+      "cx": 0.7239819318056107,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 111621,
+      "cx": 0.7239819318056107,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 111622,
+      "cx": 0.7239819318056107,
+      "cy": 0.12890625,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    },
+    {
+      "timeMs": 112593,
+      "cx": 0.6646696627140045,
+      "cy": 0.11705729365348816,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112599,
+      "cx": 0.605357438325882,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112605,
+      "cx": 0.5460451692342758,
+      "cy": 0.09335937102635701,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112611,
+      "cx": 0.4867329001426697,
+      "cy": 0.08151041467984517,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112617,
+      "cx": 0.42742065340280533,
+      "cy": 0.06966145833333333,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112624,
+      "cx": 0.368108406662941,
+      "cy": 0.057812501986821495,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112630,
+      "cx": 0.30879613757133484,
+      "cy": 0.04596354067325592,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112636,
+      "cx": 0.2494838908314705,
+      "cy": 0.03411458432674408,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112642,
+      "cx": 0.19017163291573524,
+      "cy": 0.022265625496705372,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 112648,
+      "cx": 0.130859375,
+      "cy": 0.010416666666666666,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121327,
+      "cx": 0.13278808584436774,
+      "cy": 0.042013888557751976,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121333,
+      "cx": 0.13471679668873549,
+      "cy": 0.07361111044883728,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121339,
+      "cx": 0.13664550753310323,
+      "cy": 0.10520833730697632,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121345,
+      "cx": 0.13857421837747097,
+      "cy": 0.1368055542310079,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121351,
+      "cx": 0.1405029292218387,
+      "cy": 0.16840277115503946,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121357,
+      "cx": 0.14243164006620646,
+      "cy": 0.20000000794728598,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121363,
+      "cx": 0.1443603509105742,
+      "cy": 0.23159722487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121369,
+      "cx": 0.1462890631519258,
+      "cy": 0.2631944417953491,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121376,
+      "cx": 0.14821777399629354,
+      "cy": 0.2947916587193807,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121382,
+      "cx": 0.15014648344367743,
+      "cy": 0.3263888955116272,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121388,
+      "cx": 0.15207519568502903,
+      "cy": 0.35798609256744385,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121394,
+      "cx": 0.1540039051324129,
+      "cy": 0.3895833492279053,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121400,
+      "cx": 0.15593261737376451,
+      "cy": 0.42118056615193683,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121406,
+      "cx": 0.1578613268211484,
+      "cy": 0.45277778307596844,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121412,
+      "cx": 0.1597900390625,
+      "cy": 0.484375,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121418,
+      "cx": 0.1617187513038516,
+      "cy": 0.5159722169240316,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121424,
+      "cx": 0.16364746075123549,
+      "cy": 0.5475694338480631,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121430,
+      "cx": 0.1655761729925871,
+      "cy": 0.5791666507720947,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121436,
+      "cx": 0.16750488243997097,
+      "cy": 0.6107639074325562,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121442,
+      "cx": 0.16943359468132257,
+      "cy": 0.6423611243565878,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121448,
+      "cx": 0.17136230412870646,
+      "cy": 0.6739583015441895,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121454,
+      "cx": 0.17329101637005806,
+      "cy": 0.7055555184682211,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121460,
+      "cx": 0.17521972581744194,
+      "cy": 0.7371528148651123,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121466,
+      "cx": 0.17714843526482582,
+      "cy": 0.7687500317891439,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121472,
+      "cx": 0.17907715030014515,
+      "cy": 0.8003472487131754,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121479,
+      "cx": 0.18100585974752903,
+      "cy": 0.831944465637207,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121484,
+      "cx": 0.1829345691949129,
+      "cy": 0.8635416825612386,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121490,
+      "cx": 0.1848632786422968,
+      "cy": 0.8951388994852701,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121497,
+      "cx": 0.18679199367761612,
+      "cy": 0.9267361164093018,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "arrow",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121503,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121521,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "move"
+    },
+    {
+      "timeMs": 121522,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "click"
+    },
+    {
+      "timeMs": 121645,
+      "cx": 0.188720703125,
+      "cy": 0.9583333333333334,
+      "assetId": null,
+      "visible": true,
+      "cursorType": "pointer",
+      "interactionType": "mouseup"
+    }
+  ]
+}

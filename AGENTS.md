@@ -41,6 +41,8 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 ## 配置と表現
 
+動画生成基盤は`apps/presentation`。制作・再収録・生成・検査は[動画ワークフロー](apps/presentation/WORKFLOW.md)、現在の成果と再開箇所は[引き継ぎ](apps/presentation/HANDOFF.md)を参照する。
+
 Bun workspacesとTurborepoを使う。`apps/api`がDBと業務判断、`apps/web`がTanStack StartとUI、`livekit`がPython音声を所有する。依存の正本はrootの`bun.lock`と`livekit/pyproject.toml`・`uv.lock`。実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonの実行とenvはuvへ任せる。
 
 Webは店舗の利用者向けとし、リポジトリのclone・開発サーバー起動・plugin生成を導入条件にしない。外部連携は公開サービスへのOAuth接続を案内し、開発・配布手順は開発者向け文書へ置く。

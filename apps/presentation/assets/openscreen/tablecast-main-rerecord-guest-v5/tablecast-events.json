@@ -1,0 +1,2978 @@
+{
+  "source": "Actual Playwright-dispatched browser events and real app responses",
+  "viewport": {
+    "width": 1024,
+    "height": 768
+  },
+  "audioStartedAt": 1789289809828,
+  "initial": {
+    "tableName": "T01",
+    "tableId": "tablecast-komorebi-table-01",
+    "sessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+    "orders": 0,
+    "cart": 0
+  },
+  "result": {
+    "sessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+    "tableId": "tablecast-komorebi-table-01",
+    "tableName": "T01",
+    "orders": [
+      {
+        "id": "b8828221-563f-46df-8754-dc0c48b65679",
+        "status": "submitted",
+        "snapshot": {
+          "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+          "id": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+          "cartVersion": 1,
+          "configVersion": 4,
+          "lines": [
+            {
+              "id": "new-line-1",
+              "productId": "tablecast-komorebi-sake-tsukinagi",
+              "quantity": 1,
+              "selections": [
+                {
+                  "optionId": "tablecast-komorebi-temperature-chilled",
+                  "quantity": 1
+                },
+                {
+                  "optionId": "tablecast-komorebi-serving-glass",
+                  "quantity": 1
+                }
+              ],
+              "name": {
+                "ja": "こもれび 月凪 純米吟醸",
+                "en": "Komorebi Tsukinagi Junmai ginjo"
+              },
+              "speechName": {
+                "ja": "こもれび つきなぎ 純米吟醸",
+                "en": "Komorebi Tsukinagi, Junmai ginjo"
+              },
+              "options": [
+                {
+                  "id": "tablecast-komorebi-temperature-chilled",
+                  "name": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "speechName": {
+                    "ja": "冷酒",
+                    "en": "Chilled"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 0
+                },
+                {
+                  "id": "tablecast-komorebi-serving-glass",
+                  "name": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "speechName": {
+                    "ja": "グラス 九十ミリリットル",
+                    "en": "Glass, ninety millilitres"
+                  },
+                  "quantity": 1,
+                  "priceDelta": 160
+                }
+              ],
+              "unitPrice": 780,
+              "total": 780,
+              "missing": [],
+              "planCovered": false
+            }
+          ],
+          "total": 780,
+          "locale": "ja",
+          "text": "こもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。",
+          "expiresAt": 1789290018858,
+          "channel": "voice",
+          "status": "submitted",
+          "createdTurnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+          "plan": null
+        },
+        "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+        "snapshotId": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+        "idempotencyKey": "submit-20260913-01",
+        "total": 780,
+        "createdAt": 1789289930231
+      }
+    ],
+    "cart": {
+      "lines": [],
+      "version": 2,
+      "total": 0,
+      "complete": false
+    }
+  },
+  "marks": [
+    {
+      "id": "overview",
+      "at": 1789289819000
+    },
+    {
+      "id": "voice-start",
+      "at": 1789289825913
+    },
+    {
+      "id": "consult",
+      "at": 1789289827260
+    },
+    {
+      "id": "consult-end",
+      "at": 1789289852972
+    },
+    {
+      "id": "order",
+      "at": 1789289853189
+    },
+    {
+      "id": "order-end",
+      "at": 1789289877450
+    },
+    {
+      "id": "pause",
+      "at": 1789289877665
+    },
+    {
+      "id": "resume",
+      "at": 1789289886768
+    },
+    {
+      "id": "confirm",
+      "at": 1789289888078
+    },
+    {
+      "id": "confirm-end",
+      "at": 1789289916281
+    },
+    {
+      "id": "approve",
+      "at": 1789289921378
+    },
+    {
+      "id": "approve-end",
+      "at": 1789289935560
+    },
+    {
+      "id": "english",
+      "at": 1789289935831
+    },
+    {
+      "id": "english-end",
+      "at": 1789289939954
+    },
+    {
+      "id": "final-stop",
+      "at": 1789289940196
+    }
+  ],
+  "shots": [
+    {
+      "sceneId": "consult-answer",
+      "definition": "8f21ec84c2b9c5f7ae895816d43658609ad3172f30ebe601531630220c5f872d",
+      "readyAt": 1789289839481,
+      "endAt": 1789289843566,
+      "target": {
+        "label": "質問への商品の味わいの回答",
+        "x": 0.0263671875,
+        "y": 0.3968098958333333,
+        "width": 0.42822265625,
+        "height": 0.14355468749999994
+      },
+      "text": "キャスト\nキャストがお話ししています\n\nおしながきを見てみますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。",
+      "image": "tablecast-shot-consult-answer.png"
+    },
+    {
+      "sceneId": "order-added",
+      "definition": "c83b51796f0fbbc2c3ad75c7fef998b51df0b07143cb8382e0d3efd727c1af2e",
+      "readyAt": 1789289864973,
+      "endAt": 1789289869050,
+      "target": {
+        "label": "音声で指定した商品・冷酒・90ml・数量1・780円",
+        "x": 0.51220703125,
+        "y": 0.16145833333333334,
+        "width": 0.45751953125,
+        "height": 0.22916666666666666
+      },
+      "text": "こもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除",
+      "image": "tablecast-shot-order-added.png"
+    },
+    {
+      "sceneId": "pause",
+      "definition": "863f86115d23aee251ee91c277a53c8dbc10193cf4976eb4f6b9bdd863080120",
+      "readyAt": 1789289879210,
+      "endAt": 1789289883268,
+      "target": {
+        "label": "音声停止後も同じ注文内容が残る",
+        "x": 0.51220703125,
+        "y": 0.16145833333333334,
+        "width": 0.45751953125,
+        "height": 0.22916666666666666
+      },
+      "text": "こもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除",
+      "image": "tablecast-shot-pause.png"
+    },
+    {
+      "sceneId": "readback",
+      "definition": "803c4b65d845ca81e374835088fada7fd53ddb1f5c75dd02bfa2f0dcf1b7bcaa",
+      "readyAt": 1789289900375,
+      "endAt": 1789289904506,
+      "target": {
+        "label": "読み上げと承認の対象となる確認カード",
+        "x": 0.0263671875,
+        "y": 0.4895833333333333,
+        "width": 0.3925323486328125,
+        "height": 0.2552083333333333
+      },
+      "text": "注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認",
+      "image": "tablecast-shot-readback.png"
+    },
+    {
+      "sceneId": "approval",
+      "definition": "d97d9f8f5f6be8638911082eb4216782f88c5fb91ba717fda9713c9c69535d60",
+      "readyAt": 1789289917248,
+      "endAt": 1789289921375,
+      "target": {
+        "label": "読み上げと承認の対象となる確認カード",
+        "x": 0.0263671875,
+        "y": 0.4899088541666667,
+        "width": 0.3925323486328125,
+        "height": 0.2552083333333333
+      },
+      "text": "注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認",
+      "image": "tablecast-shot-approval.png"
+    },
+    {
+      "sceneId": "approval-result",
+      "definition": "1bacf3f6a897f0b8d0cf6317621e5e6935aed90d1b33630c2c59b176b76e5360",
+      "readyAt": 1789289931469,
+      "endAt": 1789289935559,
+      "target": {
+        "label": "送信された同じ商品の注文履歴",
+        "x": 0.49658203125,
+        "y": 0.1796875,
+        "width": 0.48876953125,
+        "height": 0.24609375
+      },
+      "text": "17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780",
+      "image": "tablecast-shot-approval-result.png"
+    }
+  ],
+  "appEvents": [
+    {
+      "cursor": 574,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.opened",
+      "data": {
+        "guestCount": 2
+      },
+      "createdAt": 1789289780962
+    },
+    {
+      "cursor": 575,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "cart",
+        "productId": null
+      },
+      "createdAt": 1789289825953
+    },
+    {
+      "cursor": 576,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.started",
+      "data": {
+        "voiceSessionId": "42cd8a5f-9249-49d4-aef0-cc4730c3ed32"
+      },
+      "createdAt": 1789289826382
+    },
+    {
+      "cursor": 577,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "user",
+        "locale": "ja",
+        "text": "このお店の日本酒、月凪はどんな味ですか?",
+        "speaker": null
+      },
+      "createdAt": 1789289831615
+    },
+    {
+      "cursor": 578,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8"
+      },
+      "createdAt": 1789289832507
+    },
+    {
+      "cursor": 579,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vPN72yIUcAE2boMn",
+        "toolName": "getCatalog",
+        "state": "running"
+      },
+      "createdAt": 1789289832956
+    },
+    {
+      "cursor": 580,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vPN72yIUcAE2boMn",
+        "toolName": "getCatalog",
+        "state": "completed"
+      },
+      "createdAt": 1789289833034
+    },
+    {
+      "cursor": 581,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vY6ohVclNURippbh",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289833363
+    },
+    {
+      "cursor": 582,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "toolCallId": "call_vY6ohVclNURippbh",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289833417
+    },
+    {
+      "cursor": 583,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " おしながきを見てみますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289852215
+    },
+    {
+      "cursor": 584,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "6466a4a8-78b7-48af-9dca-8511ba9825c8",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289852392
+    },
+    {
+      "cursor": 585,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "user",
+        "locale": "ja",
+        "text": "では、月凪を冷酒で90mlのグラスを一つお願いします。",
+        "speaker": null
+      },
+      "createdAt": 1789289859204
+    },
+    {
+      "cursor": 586,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c"
+      },
+      "createdAt": 1789289860338
+    },
+    {
+      "cursor": 587,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_Y4FuxlMQ78xDIKTE",
+        "toolName": "getCatalog",
+        "state": "running"
+      },
+      "createdAt": 1789289860379
+    },
+    {
+      "cursor": 588,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_Y4FuxlMQ78xDIKTE",
+        "toolName": "getCatalog",
+        "state": "completed"
+      },
+      "createdAt": 1789289860472
+    },
+    {
+      "cursor": 589,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_DD6wEtdxVccLVydG",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289860880
+    },
+    {
+      "cursor": 590,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_DD6wEtdxVccLVydG",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289860949
+    },
+    {
+      "cursor": 591,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_CBcFyXrjFiHZn4nv",
+        "toolName": "updateCart",
+        "state": "running"
+      },
+      "createdAt": 1789289863652
+    },
+    {
+      "cursor": 592,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "cart.updated",
+      "data": {
+        "version": 1,
+        "source": "voice"
+      },
+      "createdAt": 1789289863710
+    },
+    {
+      "cursor": 593,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "toolCallId": "call_CBcFyXrjFiHZn4nv",
+        "toolName": "updateCart",
+        "state": "completed"
+      },
+      "createdAt": 1789289863815
+    },
+    {
+      "cursor": 594,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289876690
+    },
+    {
+      "cursor": 595,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "1369cca4-18c4-4286-9382-5d68283e959c",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " こもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289876870
+    },
+    {
+      "cursor": 596,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.stopped",
+      "data": {
+        "voiceSessionId": "42cd8a5f-9249-49d4-aef0-cc4730c3ed32"
+      },
+      "createdAt": 1789289878061
+    },
+    {
+      "cursor": 597,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.started",
+      "data": {
+        "voiceSessionId": "38297eac-0970-4941-9ce4-1c377d9097a1"
+      },
+      "createdAt": 1789289887175
+    },
+    {
+      "cursor": 598,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "user",
+        "locale": "ja",
+        "text": "この内容で注文をお願いします。",
+        "speaker": null
+      },
+      "createdAt": 1789289890965
+    },
+    {
+      "cursor": 599,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088"
+      },
+      "createdAt": 1789289891489
+    },
+    {
+      "cursor": 600,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_taaau4fDYn12wlkk",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289892936
+    },
+    {
+      "cursor": 601,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_taaau4fDYn12wlkk",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289892989
+    },
+    {
+      "cursor": 602,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_zhWlWCBY7K1CqsK3",
+        "toolName": "prepareConfirmation",
+        "state": "running"
+      },
+      "createdAt": 1789289898805
+    },
+    {
+      "cursor": 603,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "confirmation.prepared",
+      "data": {
+        "snapshotId": "ec2e9804-7a09-4571-a7bf-339bcebaa189",
+        "channel": "voice"
+      },
+      "createdAt": 1789289898859
+    },
+    {
+      "cursor": 604,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "toolCallId": "call_zhWlWCBY7K1CqsK3",
+        "toolName": "prepareConfirmation",
+        "state": "completed"
+      },
+      "createdAt": 1789289898890
+    },
+    {
+      "cursor": 605,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " 確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289899354
+    },
+    {
+      "cursor": 606,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "79075f35-2e7f-451f-b700-b5af990b2088",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "こもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289915520
+    },
+    {
+      "cursor": 607,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "ccebd4b2-413c-49f4-90db-3806f9aec2d5",
+        "role": "user",
+        "locale": "ja",
+        "text": "はい。",
+        "speaker": null
+      },
+      "createdAt": 1789289922549
+    },
+    {
+      "cursor": 608,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "ccebd4b2-413c-49f4-90db-3806f9aec2d5"
+      },
+      "createdAt": 1789289923228
+    },
+    {
+      "cursor": 609,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "user",
+        "locale": "ja",
+        "text": "その内容で注文してください。",
+        "speaker": null
+      },
+      "createdAt": 1789289924903
+    },
+    {
+      "cursor": 610,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f"
+      },
+      "createdAt": 1789289925438
+    },
+    {
+      "cursor": 611,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_KOl9OWbVt2UIxHeI",
+        "toolName": "getTableState",
+        "state": "running"
+      },
+      "createdAt": 1789289926171
+    },
+    {
+      "cursor": 612,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_KOl9OWbVt2UIxHeI",
+        "toolName": "getTableState",
+        "state": "completed"
+      },
+      "createdAt": 1789289926224
+    },
+    {
+      "cursor": 613,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_MV0ObjykRbIJZuF3",
+        "toolName": "submitOrder",
+        "state": "running"
+      },
+      "createdAt": 1789289930161
+    },
+    {
+      "cursor": 614,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "order.submitted",
+      "data": {
+        "orderId": "b8828221-563f-46df-8754-dc0c48b65679",
+        "total": 780,
+        "source": "voice"
+      },
+      "createdAt": 1789289930232
+    },
+    {
+      "cursor": 615,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.tool",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "toolCallId": "call_MV0ObjykRbIJZuF3",
+        "toolName": "submitOrder",
+        "state": "completed"
+      },
+      "createdAt": 1789289930260
+    },
+    {
+      "cursor": 616,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "table.ui",
+      "data": {
+        "section": "orders",
+        "productId": null
+      },
+      "createdAt": 1789289930770
+    },
+    {
+      "cursor": 617,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": "確認しますね。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289936010
+    },
+    {
+      "cursor": 618,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.assistant",
+      "data": {
+        "turnId": "d97e4749-222d-4052-b28d-c92fdc33345f",
+        "role": "assistant",
+        "trigger": "user",
+        "locale": "ja",
+        "text": " ご注文を送信しました。ありがとうございます。",
+        "interrupted": false,
+        "playbackRange": "complete"
+      },
+      "createdAt": 1789289936184
+    },
+    {
+      "cursor": 619,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.user",
+      "data": {
+        "turnId": "83521421-a75b-473d-bf98-2258062ccf2a",
+        "role": "user",
+        "locale": "ja",
+        "text": "Could you explain the 正解 chosen in English, please?",
+        "speaker": null
+      },
+      "createdAt": 1789289939458
+    },
+    {
+      "cursor": 620,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.transcribed",
+      "data": {
+        "turnId": "83521421-a75b-473d-bf98-2258062ccf2a"
+      },
+      "createdAt": 1789289940123
+    },
+    {
+      "cursor": 621,
+      "storeId": "tablecast-komorebi",
+      "tableSessionId": "abb459fe-f8cc-43cc-a452-12f40dde089c",
+      "kind": "voice.stopped",
+      "data": {
+        "voiceSessionId": "38297eac-0970-4941-9ce4-1c377d9097a1"
+      },
+      "createdAt": 1789289940595
+    }
+  ],
+  "pointer": [
+    {
+      "at": 1789289819000,
+      "x": 120,
+      "y": 660,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825567,
+      "x": 139.3229217529297,
+      "y": 641.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825570,
+      "x": 158.6458282470703,
+      "y": 622.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825576,
+      "x": 177.96875,
+      "y": 603.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825582,
+      "x": 197.2916717529297,
+      "y": 585.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825588,
+      "x": 216.6145782470703,
+      "y": 566.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825594,
+      "x": 235.9375,
+      "y": 547.7999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825600,
+      "x": 255.2604217529297,
+      "y": 529.0999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825606,
+      "x": 274.5833435058594,
+      "y": 510.3999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825612,
+      "x": 293.90625,
+      "y": 491.70001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825618,
+      "x": 313.2291564941406,
+      "y": 473,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825624,
+      "x": 332.5520935058594,
+      "y": 454.29998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825630,
+      "x": 351.875,
+      "y": 435.6000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825636,
+      "x": 371.1979064941406,
+      "y": 416.8999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825642,
+      "x": 390.5208435058594,
+      "y": 398.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825648,
+      "x": 409.84375,
+      "y": 379.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825654,
+      "x": 429.1666564941406,
+      "y": 360.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825661,
+      "x": 448.4895935058594,
+      "y": 342.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825666,
+      "x": 467.8125,
+      "y": 323.3999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825673,
+      "x": 487.1354064941406,
+      "y": 304.70001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825679,
+      "x": 506.4583435058594,
+      "y": 286,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825691,
+      "x": 525.78125,
+      "y": 267.29998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825703,
+      "x": 545.1041870117188,
+      "y": 248.60000610351562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825709,
+      "x": 564.4270629882812,
+      "y": 229.89999389648438,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825716,
+      "x": 583.75,
+      "y": 211.1999969482422,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825721,
+      "x": 603.0729370117188,
+      "y": 192.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825728,
+      "x": 622.3958129882812,
+      "y": 173.8000030517578,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825733,
+      "x": 641.71875,
+      "y": 155.10000610351562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825739,
+      "x": 661.0416870117188,
+      "y": 136.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825745,
+      "x": 680.3645629882812,
+      "y": 117.69999694824219,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825751,
+      "x": 699.6875,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825769,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825771,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825895,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825919,
+      "x": 679.25732421875,
+      "y": 120.23332977294922,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289825921,
+      "x": 658.8346557617188,
+      "y": 141.46665954589844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825927,
+      "x": 638.4119873046875,
+      "y": 162.6999969482422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825933,
+      "x": 617.9893188476562,
+      "y": 183.93333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825939,
+      "x": 597.566650390625,
+      "y": 205.1666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825945,
+      "x": 577.1439819335938,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825951,
+      "x": 556.7213134765625,
+      "y": 247.63333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825957,
+      "x": 536.2986450195312,
+      "y": 268.8666687011719,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825963,
+      "x": 515.8759765625,
+      "y": 290.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825970,
+      "x": 495.4533386230469,
+      "y": 311.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825976,
+      "x": 475.0306701660156,
+      "y": 332.5666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825982,
+      "x": 454.6080017089844,
+      "y": 353.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825988,
+      "x": 434.1853332519531,
+      "y": 375.0333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289825994,
+      "x": 413.7626647949219,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826000,
+      "x": 393.3399963378906,
+      "y": 417.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826006,
+      "x": 372.9173278808594,
+      "y": 438.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826018,
+      "x": 352.4946594238281,
+      "y": 459.9666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826019,
+      "x": 332.0719909667969,
+      "y": 481.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826024,
+      "x": 311.6493225097656,
+      "y": 502.4333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826030,
+      "x": 291.2266540527344,
+      "y": 523.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826036,
+      "x": 270.8039855957031,
+      "y": 544.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826042,
+      "x": 250.38133239746094,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826048,
+      "x": 229.9586639404297,
+      "y": 587.3666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826054,
+      "x": 209.53599548339844,
+      "y": 608.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826061,
+      "x": 189.1133270263672,
+      "y": 629.8333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826067,
+      "x": 168.690673828125,
+      "y": 651.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826073,
+      "x": 148.26800537109375,
+      "y": 672.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826079,
+      "x": 127.8453369140625,
+      "y": 693.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289826085,
+      "x": 107.42266845703125,
+      "y": 714.7666625976562,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289826091,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289826109,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289826111,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289826232,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289839485,
+      "x": 79.0999984741211,
+      "y": 663.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839491,
+      "x": 71.19999694824219,
+      "y": 590.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839497,
+      "x": 63.29999923706055,
+      "y": 517.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839503,
+      "x": 55.400001525878906,
+      "y": 444.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839510,
+      "x": 47.5,
+      "y": 372,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839516,
+      "x": 39.599998474121094,
+      "y": 299.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839521,
+      "x": 31.700000762939453,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839527,
+      "x": 23.799999237060547,
+      "y": 153.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839534,
+      "x": 15.899999618530273,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289839540,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289864976,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289864982,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289864988,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289864994,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865000,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865007,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865013,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865019,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865025,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289865031,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877674,
+      "x": 10.633333206176758,
+      "y": 32.266666412353516,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877680,
+      "x": 13.266666412353516,
+      "y": 56.53333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877686,
+      "x": 15.899999618530273,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877692,
+      "x": 18.53333282470703,
+      "y": 105.06666564941406,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877698,
+      "x": 21.16666603088379,
+      "y": 129.3333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877704,
+      "x": 23.799999237060547,
+      "y": 153.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877710,
+      "x": 26.433332443237305,
+      "y": 177.86666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877716,
+      "x": 29.066667556762695,
+      "y": 202.13333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877722,
+      "x": 31.700000762939453,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877728,
+      "x": 34.33333206176758,
+      "y": 250.6666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877734,
+      "x": 36.96666717529297,
+      "y": 274.9333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877740,
+      "x": 39.599998474121094,
+      "y": 299.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877746,
+      "x": 42.233333587646484,
+      "y": 323.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877752,
+      "x": 44.86666488647461,
+      "y": 347.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877758,
+      "x": 47.5,
+      "y": 372,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877764,
+      "x": 50.13333511352539,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877771,
+      "x": 52.766666412353516,
+      "y": 420.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877777,
+      "x": 55.400001525878906,
+      "y": 444.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877782,
+      "x": 58.03333282470703,
+      "y": 469.0666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877789,
+      "x": 60.66666793823242,
+      "y": 493.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877795,
+      "x": 63.29999923706055,
+      "y": 517.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877801,
+      "x": 65.93333435058594,
+      "y": 541.8666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877807,
+      "x": 68.56666564941406,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877813,
+      "x": 71.19999694824219,
+      "y": 590.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877819,
+      "x": 73.83333587646484,
+      "y": 614.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877825,
+      "x": 76.46666717529297,
+      "y": 638.933349609375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877831,
+      "x": 79.0999984741211,
+      "y": 663.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877837,
+      "x": 81.73332977294922,
+      "y": 687.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877843,
+      "x": 84.36666870117188,
+      "y": 711.7333374023438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289877850,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289877867,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289877869,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289877990,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289878037,
+      "x": 107.42292022705078,
+      "y": 714.7666625976562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878043,
+      "x": 127.84583282470703,
+      "y": 693.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878049,
+      "x": 148.2687530517578,
+      "y": 672.2999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878055,
+      "x": 168.69166564941406,
+      "y": 651.066650390625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878061,
+      "x": 189.1145782470703,
+      "y": 629.8333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878068,
+      "x": 209.53750610351562,
+      "y": 608.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878073,
+      "x": 229.96041870117188,
+      "y": 587.3666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878080,
+      "x": 250.38333129882812,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878086,
+      "x": 270.8062438964844,
+      "y": 544.9000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878092,
+      "x": 291.2291564941406,
+      "y": 523.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878098,
+      "x": 311.6520690917969,
+      "y": 502.4333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878104,
+      "x": 332.07501220703125,
+      "y": 481.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878117,
+      "x": 352.4979248046875,
+      "y": 459.9666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878122,
+      "x": 372.92083740234375,
+      "y": 438.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878139,
+      "x": 393.34375,
+      "y": 417.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878142,
+      "x": 413.76666259765625,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878146,
+      "x": 434.1895751953125,
+      "y": 375.0333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878152,
+      "x": 454.61248779296875,
+      "y": 353.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878159,
+      "x": 475.0354309082031,
+      "y": 332.5666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878165,
+      "x": 495.4583435058594,
+      "y": 311.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878171,
+      "x": 515.8812255859375,
+      "y": 290.1000061035156,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878177,
+      "x": 536.3041381835938,
+      "y": 268.8666687011719,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878183,
+      "x": 556.7271118164062,
+      "y": 247.63333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878189,
+      "x": 577.1500244140625,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878195,
+      "x": 597.5729370117188,
+      "y": 205.1666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878201,
+      "x": 617.995849609375,
+      "y": 183.93333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878207,
+      "x": 638.4187622070312,
+      "y": 162.6999969482422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878213,
+      "x": 658.8416748046875,
+      "y": 141.46665954589844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289878219,
+      "x": 679.2645874023438,
+      "y": 120.23332977294922,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289878225,
+      "x": 699.6875,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289878243,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289878244,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289878365,
+      "x": 699.6799926757812,
+      "y": 99,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289879212,
+      "x": 630.5120239257812,
+      "y": 89.9000015258789,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289879213,
+      "x": 561.343994140625,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289879219,
+      "x": 492.1759948730469,
+      "y": 71.69999694824219,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879225,
+      "x": 423.00799560546875,
+      "y": 62.599998474121094,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879231,
+      "x": 353.8399963378906,
+      "y": 53.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879237,
+      "x": 284.6719970703125,
+      "y": 44.400001525878906,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879243,
+      "x": 215.50399780273438,
+      "y": 35.29999923706055,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879249,
+      "x": 146.33599853515625,
+      "y": 26.200000762939453,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879255,
+      "x": 77.16799926757812,
+      "y": 17.100000381469727,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289879262,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886776,
+      "x": 10.633333206176758,
+      "y": 32.266666412353516,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886784,
+      "x": 13.266666412353516,
+      "y": 56.53333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886790,
+      "x": 15.899999618530273,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886795,
+      "x": 18.53333282470703,
+      "y": 105.06666564941406,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886801,
+      "x": 21.16666603088379,
+      "y": 129.3333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886807,
+      "x": 23.799999237060547,
+      "y": 153.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886813,
+      "x": 26.433332443237305,
+      "y": 177.86666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886819,
+      "x": 29.066667556762695,
+      "y": 202.13333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886825,
+      "x": 31.700000762939453,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886831,
+      "x": 34.33333206176758,
+      "y": 250.6666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886837,
+      "x": 36.96666717529297,
+      "y": 274.9333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886843,
+      "x": 39.599998474121094,
+      "y": 299.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886849,
+      "x": 42.233333587646484,
+      "y": 323.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886855,
+      "x": 44.86666488647461,
+      "y": 347.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886862,
+      "x": 47.5,
+      "y": 372,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886867,
+      "x": 50.13333511352539,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886874,
+      "x": 52.766666412353516,
+      "y": 420.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886880,
+      "x": 55.400001525878906,
+      "y": 444.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886886,
+      "x": 58.03333282470703,
+      "y": 469.0666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886892,
+      "x": 60.66666793823242,
+      "y": 493.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886898,
+      "x": 63.29999923706055,
+      "y": 517.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886904,
+      "x": 65.93333435058594,
+      "y": 541.8666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886910,
+      "x": 68.56666564941406,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886916,
+      "x": 71.19999694824219,
+      "y": 590.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886922,
+      "x": 73.83333587646484,
+      "y": 614.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886928,
+      "x": 76.46666717529297,
+      "y": 638.933349609375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886934,
+      "x": 79.0999984741211,
+      "y": 663.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886940,
+      "x": 81.73332977294922,
+      "y": 687.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886946,
+      "x": 84.36666870117188,
+      "y": 711.7333374023438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289886953,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289886970,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289886972,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289887093,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289900384,
+      "x": 79.0999984741211,
+      "y": 663.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900390,
+      "x": 71.19999694824219,
+      "y": 590.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900396,
+      "x": 63.29999923706055,
+      "y": 517.5999755859375,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289900402,
+      "x": 55.400001525878906,
+      "y": 444.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900408,
+      "x": 47.5,
+      "y": 372,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900414,
+      "x": 39.599998474121094,
+      "y": 299.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900420,
+      "x": 31.700000762939453,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900426,
+      "x": 23.799999237060547,
+      "y": 153.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900432,
+      "x": 15.899999618530273,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289900438,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917256,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917262,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917268,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917274,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917280,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917286,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917292,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917298,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917304,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289917310,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289930502,
+      "x": 817.8099975585938,
+      "y": 99,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289930502,
+      "x": 817.8099975585938,
+      "y": 99,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289930503,
+      "x": 817.8099975585938,
+      "y": 99,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289931474,
+      "x": 736.8289794921875,
+      "y": 89.9000015258789,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289931480,
+      "x": 655.8480224609375,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289931486,
+      "x": 574.8670043945312,
+      "y": 71.69999694824219,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931492,
+      "x": 493.885986328125,
+      "y": 62.599998474121094,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931498,
+      "x": 412.9049987792969,
+      "y": 53.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931505,
+      "x": 331.92401123046875,
+      "y": 44.400001525878906,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931511,
+      "x": 250.9429931640625,
+      "y": 35.29999923706055,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931517,
+      "x": 169.96200561523438,
+      "y": 26.200000762939453,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931523,
+      "x": 88.98100280761719,
+      "y": 17.100000381469727,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289931529,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940208,
+      "x": 10.633333206176758,
+      "y": 32.266666412353516,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940214,
+      "x": 13.266666412353516,
+      "y": 56.53333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940220,
+      "x": 15.899999618530273,
+      "y": 80.80000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940226,
+      "x": 18.53333282470703,
+      "y": 105.06666564941406,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940232,
+      "x": 21.16666603088379,
+      "y": 129.3333282470703,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940238,
+      "x": 23.799999237060547,
+      "y": 153.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940244,
+      "x": 26.433332443237305,
+      "y": 177.86666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940250,
+      "x": 29.066667556762695,
+      "y": 202.13333129882812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940257,
+      "x": 31.700000762939453,
+      "y": 226.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940263,
+      "x": 34.33333206176758,
+      "y": 250.6666717529297,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940269,
+      "x": 36.96666717529297,
+      "y": 274.9333190917969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940275,
+      "x": 39.599998474121094,
+      "y": 299.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940281,
+      "x": 42.233333587646484,
+      "y": 323.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940287,
+      "x": 44.86666488647461,
+      "y": 347.73333740234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940293,
+      "x": 47.5,
+      "y": 372,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940299,
+      "x": 50.13333511352539,
+      "y": 396.26666259765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940305,
+      "x": 52.766666412353516,
+      "y": 420.5333251953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940311,
+      "x": 55.400001525878906,
+      "y": 444.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940317,
+      "x": 58.03333282470703,
+      "y": 469.0666809082031,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940323,
+      "x": 60.66666793823242,
+      "y": 493.3333435058594,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940329,
+      "x": 63.29999923706055,
+      "y": 517.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940335,
+      "x": 65.93333435058594,
+      "y": 541.8666381835938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940341,
+      "x": 68.56666564941406,
+      "y": 566.1333618164062,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940347,
+      "x": 71.19999694824219,
+      "y": 590.4000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940353,
+      "x": 73.83333587646484,
+      "y": 614.6666870117188,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940360,
+      "x": 76.46666717529297,
+      "y": 638.933349609375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940365,
+      "x": 79.0999984741211,
+      "y": 663.2000122070312,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940371,
+      "x": 81.73332977294922,
+      "y": 687.4666748046875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940378,
+      "x": 84.36666870117188,
+      "y": 711.7333374023438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789289940384,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289940402,
+      "x": 87,
+      "y": 736,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289940403,
+      "x": 87,
+      "y": 736,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789289940526,
+      "x": 87,
+      "y": 736,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    }
+  ],
+  "screen": [
+    {
+      "at": 1789289810075,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nいらっしゃいませ。\n今日は、何にしましょう？\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\nすべて\n日本酒\n刺身\n揚げもの\n焼きもの\n酒の肴\nご飯と〆\nそのほかのお飲み物\nイメージイラスト\nこもれび 月凪 純米吟醸\n¥620\nイメージイラスト\nお造り三種盛り\n¥1,280\nイメージイラスト\n鶏の唐揚げ\n¥720\nイメージイラスト\n枝豆\n¥390\nイメージイラスト\nこもれび 雪灯 純米酒\n¥540\nイメージイラスト\nこもれび 山霞 純米大吟醸\n¥850\nイメージイラスト\nこもれび 波穂 本醸造\n¥480\nイメージイラスト\nこもれび 宵雫 純米吟醸\n¥680\nイメージイラスト\nこもれび 風乃音 純米酒\n¥580\nイメージイラスト\nこもれび 春澪 にごり酒\n¥640\nイメージイラスト\nこもれび 星舟 発泡清酒\n¥720\nイメージイラスト\nこもれび 秋景 熟成酒\n¥780\nイメージイラスト\nこもれび 朝露路 純米吟醸\n¥650\nイメージイラスト\nこもれび 米蛍 純米酒\n¥590\nイメージイラスト\nこもれび 笹波月 本醸造\n¥510\nイメージイラスト\nこもれび 白花里 純米大吟醸\n¥920\nイメージイラスト\nこもれび 緑沢音 純米酒\n¥600\nイメージイラスト\nこもれび 夕凪穂 純米吟醸\n¥700\nイメージイラスト\nこもれび 冬雲白 にごり酒\n¥690\nイメージイラスト\nこもれび 蒼月路 発泡清酒\n¥760\nイメージイラスト\nこもれび 珠蔵夜 熟成酒\n¥840\nイメージイラスト\nこもれび 稲穂波 純米酒\n¥560\nイメージイラスト\nこもれび 鶴里風 本醸造\n¥500\nイメージイラスト\nこもれび 水鏡穂 純米吟醸\n¥730\nイメージイラスト\nこもれび 絹光夜 純米大吟醸\n¥980\nイメージイラスト\nこもれび 里乃響 純米酒\n¥610\nイメージイラスト\nこもれび 暁路 純米吟醸\n¥670\nイメージイラスト\nこもれび 雪纏穂 にごり酒\n¥660\n売り切れ\nイメージイラスト\nこもれび 紅葉蔵音 熟成酒\n¥890\nイメージイラスト\nこもれび 空雫里 純米大吟醸\n¥940\nイメージイラスト\nこもれび 名残星 純米酒\n¥630\nイメージイラスト\nさけのお造り\n¥890\nイメージイラスト\nまぐろのお造り\n¥980\nイメージイラスト\n鶏もも串 三本\n¥840\nイメージイラスト\nつくね串 二本\n¥620\nイメージイラスト\n出汁巻き卵\n¥650\nイメージイラスト\n冷ややっこ\n¥440\nイメージイラスト\n季節のお漬物\n¥450\nイメージイラスト\n居酒屋のポテトサラダ\n¥520\nイメージイラスト\nたたききゅうり\n¥420\nイメージイラスト\nさばの塩焼き\n¥820\n売り切れ\nイメージイラスト\nほっけの開き\n¥980\nイメージイラスト\nなすの田楽\n¥580\nイメージイラスト\nしいたけの炭火焼き\n¥560\nイメージイラスト\n海老と野菜の天ぷら盛合せ\n¥1,180\nイメージイラスト\n海老の天ぷら\n¥920\nイメージイラスト\n揚げ出し豆腐\n¥610\nイメージイラスト\n肉じゃが\n¥690\nイメージイラスト\n豚の角煮\n¥880\nイメージイラスト\n焼きおにぎり 二個\n¥460\nイメージイラスト\nさけの出汁茶漬け\n¥680\nイメージイラスト\n〆のかけうどん\n¥590\nイメージイラスト\n生ビール\n¥590\nイメージイラスト\nハイボール\n¥520\nイメージイラスト\nレモンサワー\n¥490\nイメージイラスト\n梅酒のロック\n¥560\nイメージイラスト\n芋焼酎の水割り\n¥540\nイメージイラスト\n烏龍茶\n¥340\nイメージイラスト\n緑茶\n¥340\nイメージイラスト\nゆずソーダ\n¥410\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289826074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nいらっしゃいませ。\n今日は、何にしましょう？\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289826352,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声につないでいます\nキャスト\n音声につないでいます\n音声につないでいます\n自動追従中\n音声につないでいます\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289826825,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289832325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n聞き取り中\n\nこのお店の日本酒、月凪はどんな味ですか?\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289832574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289832834,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289833324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289834074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\nおしながきを見てみますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289837324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289838824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\nおしながきを見てみますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289852324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。 こもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289852824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289859824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nキャスト\n返答を生成中\n\n確認しますね\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289860074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nキャスト\n返答を生成中\n\n確認しますね\n\nお客さま\n聞き取り中\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289860324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nキャスト\n17:57\n\n確認しますね。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289860574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289860824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289861824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289862324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n注文かごは空です\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289864324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289865324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。 こもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289865574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。 こもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289876825,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。 こもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289877324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289878075,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n停止しています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\n自動追従中\n停止しています\n停止しています\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289878325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289887335,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声につないでいます\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nキャスト\n音声につないでいます\n音声につないでいます\n自動追従中\n音声につないでいます\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289887574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289891325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n聞き取り中\n\nこの内容で注文をお願いします。\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289891574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289893074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289893325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289896325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289898074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289899324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289902325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289915574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289916074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289923074,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n聞き取り中\n\nはい。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289923324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289925324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n聞き取り中\n\nその内容で注文してください。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289925574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289926075,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\nキャスト\n返答を生成中\n\n確認しますね\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289926324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289926574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289927574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。\n\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289929324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n1\n内容を変更\n削除\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289930574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n注文内容を確認\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\n注文内容を確認\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n1\n注文履歴\nお会計\nまだありません\n注文かご\n¥780\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289930824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289931076,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお調べしています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。 ご注文を送信しました。ありがとうございます。\n\nキャスト\nお調べしています\nお調べしています\n自動追従中\nお調べしています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289931324,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nキャストがお話ししています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\nキャストがお話ししています\n\n確認しますね。 ご注文を送信しました。ありがとうございます。\n\n自動追従中\nキャストがお話ししています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289936075,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。 ご注文を送信しました。ありがとうございます。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289936824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289939826,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n聞き取り中\n\nCould you explain the 正解 chosen in English, please\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289940075,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n聞き取り中\n\nCould you explain the 正解 chosen in English, please?\n\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289940325,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\nお話をうかがっています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\nお客さま\nお話をうかがっています\nお話をうかがっています\n自動追従中\nお話をうかがっています\n音声を停止\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289940574,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n停止しています\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\n自動追従中\n停止しています\n停止しています\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    },
+    {
+      "at": 1789289940824,
+      "text": "TableCast·\nこもれび · Komorebi\nT01\n日本語\nEnglish\n店員を呼ぶ\n会話\n音声は停止中です\nお客さま\n17:57\n\nこのお店の日本酒、月凪はどんな味ですか?\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nおしながきを見てみますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸は、青りんごを思わせる香りがあって、後口は軽めのすっきりした味わいです。表示価格はお試しの六十ミリリットルの価格です。\n\nお客さま\n17:57\n\nでは、月凪を冷酒で90mlのグラスを一つお願いします。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\n確認しますね。\n\nおしながきを確認\n完了\n注文・画面を確認\n完了\n注文かごを更新\n完了\nキャスト\n17:57\n\nこもれび つきなぎ 純米吟醸を、冷酒のグラス九十ミリリットルで一つカートに追加しました。合計は七百八十円です。\n\nお客さま\n17:58\n\nこの内容で注文をお願いします。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文内容を確認\n完了\nキャスト\n17:58\n\nこもれび つきなぎ 純米吟醸、冷酒、グラス 九十ミリリットルを1点、780円。合計780円です。この内容で注文を送信してよろしいですか。\n\nお客さま\n17:58\n\nはい。\n\nお客さま\n17:58\n\nその内容で注文してください。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\n確認しますね。\n\n注文・画面を確認\n完了\n注文を送信\n完了\nキャスト\n17:58\n\nご注文を送信しました。ありがとうございます。\n\nお客さま\n17:58\n\nCould you explain the 正解 chosen in English, please?\n\n自動追従中\n音声は停止中です\n音声を再開\n1.0×\nおしながき\n注文かご\n0\n注文履歴\nお会計\n17:58\n送信済み\nこもれび 月凪 純米吟醸\n¥780\n冷酒\nグラス 九十ミリリットル (¥160)\n数量 1 · ¥780\n注文かご\n¥0\n注文内容を確認\niPadのホーム画面に追加"
+    }
+  ],
+  "speech": [
+    {
+      "id": "consult",
+      "at": 17.472,
+      "duration": 4.22
+    },
+    {
+      "id": "order",
+      "at": 43.414,
+      "duration": 5.76
+    },
+    {
+      "id": "confirm",
+      "at": 78.274,
+      "duration": 2.76
+    },
+    {
+      "id": "approve",
+      "at": 111.577,
+      "duration": 3.42
+    },
+    {
+      "id": "english",
+      "at": 126.032,
+      "duration": 3.3
+    }
+  ],
+  "captureStartedAtMs": 1789289818881
+}

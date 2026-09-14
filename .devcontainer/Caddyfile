@@ -13,6 +13,10 @@
 	handle_path /_tablecast/livekit/* {
 		reverse_proxy 127.0.0.1:7880
 	}
+	# 開発専用。LiveKit管理SDKがprefixを使わず呼ぶ、現在必要なRoomServiceだけを転送する。
+	handle /twirp/livekit.RoomService/* {
+		reverse_proxy 127.0.0.1:7880
+	}
 	handle {
 		reverse_proxy 127.0.0.1:3001
 	}

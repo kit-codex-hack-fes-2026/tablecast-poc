@@ -1,0 +1,107 @@
+{
+  "date": "2026-09-14",
+  "issue": 1,
+  "pullRequest": 135,
+  "publishedHead": "7a01e0d66af67287401673946f7303aa56b4ec4f",
+  "reviewBase": "bcacd7dc90902aa28a095a771cea72aa019faf1b",
+  "scope": "PR全体のセルフレビュー、Claude Codeの独立レビュー、指摘修正後の再確認",
+  "sourceHashes": {
+    "apps/presentation/HANDOFF.md": "f0827af8c378ef7cebd958997137005e23dc291be7677131442f85c22e35778f",
+    "apps/presentation/README.md": "94a1f224f0773cd996068688289cb0ca9542f77731f644b686feb60161bff0b6",
+    "apps/presentation/SHARING.md": "7c0ffb60b116e6a0d594338a4e1c29059457a98170358906e56b76d174d0b6b8",
+    "apps/presentation/WORKFLOW.md": "a53d58067ccca42cf2bcf30b81c24d38c0f582ea626a38b424ff8372d9d70f82",
+    "apps/presentation/scripts/tablecast-app-capture.ts": "2a6a0dea2b6b60ef9b37af7897ef1b05e5152f753e36ab5f1ce3e553e2ce1266",
+    "apps/presentation/scripts/tablecast-build.ts": "078e1304526e28e7b3a27869830ecec3a7b7883d1cf4d5093e047671aa6095b3",
+    "apps/presentation/scripts/tablecast-composition.ts": "be5febb5318d5831bd8962dfff0abee70ebed86617f092868a36ecdaa986c0f6",
+    "apps/presentation/scripts/tablecast-doctor.ts": "14d11d9c2b8405639d97db140e7d131e303b89994f0f7cf146b15dc427bfca12",
+    "apps/presentation/scripts/tablecast-layout.spec.ts": "7087d90ae123de85bfd98b743bdd50773ea4ff80ade423f5e698bf2c7062d623",
+    "apps/presentation/scripts/tablecast-render-contract.spec.ts": "74ad875fc0b6a473c1d6d82bb532485f44463ca765bd4db7b5da200ede488337",
+    "apps/presentation/scripts/tablecast-shot.spec.ts": "c1bcb30a8b4b757d840e25e53c3e5837d100ee65a10af469b6866b9fc94c5476",
+    "apps/presentation/scripts/tablecast-shot.ts": "11d30cd2f2bf919e18fba386ff673399e4e5a222c496f91ebe93793e99022683",
+    "apps/presentation/scripts/tablecast-technical.ts": "0117f25d882a92159d7d63182232498b99a456697c50fbaff22cfb7e06f63596",
+    "apps/presentation/scripts/tablecast-video.ts": "5695962895230260edf41a2455f1facb693eaf3b2a5983140698ed0808235b03",
+    "apps/presentation/scripts/tablecast-workflow.spec.ts": "8219dc5d89d25abfe7bf2276a9927b7b268330e10a0258d3ecb76ef6986b5baf",
+    "apps/presentation/scripts/tablecast-workflow.test.ts": "886bb3035cdda24f8ced3f767b1ce6a780ea5b08607c74db5c460e1c69c99a1e",
+    "apps/presentation/styles.css": "a45dac6b573d1b6a6433131947926c4c22c41207ed5c17e026ef9299b30f750b",
+    "lefthook.yml": "1ffe6b058598d20c20831ed6bb034dd1b00bd0fdd99d880494602ab30d6ffa34"
+  },
+  "independentReview": {
+    "tool": "Claude Code 2.1.267",
+    "model": "claude-opus-5",
+    "access": "読み取り専用。最初はRead/Glob/Grepと制限付きBash、再確認はRead/Glob/Grepのみ",
+    "scope": "初回は全first-partyの生成・収録・編集・音声・共有・文書。再確認は全修正差分と未確認だったルート統合の実差分。最後にNode importと完了後の逆seek検査を再確認",
+    "initialFindings": [
+      "短い強調区間の検査時刻",
+      "構成図の囲み線の逆seek",
+      "任意film名での冒頭端末枠"
+    ],
+    "addressedQuestions": [
+      "修正版と保存済みv17の見た目の差を文書化",
+      "doctorの接続先とChrome名前解決を撮影と共通化",
+      "証跡JSONのみのcommit hook失敗を修正",
+      "既存フォルダーへのOpenScreen packは実機で正常更新を確認"
+    ],
+    "firstReviewSha256": "f93ffa35ab5296a038f93d8db6b2e60d5ded855b716a079e8722e31a93433d0c",
+    "secondReviewSha256": "2d61ae7a165bbb84de37d98b1688988cd1a52ee071b0a5a4e0a53c064644ac8d",
+    "finalReviewSha256": "b8cf9999b5c31057580b3ea2ae8f4ca48b591e3dbf134a3bc4e2d17e3064b722",
+    "finalResult": "修正差分とルート統合の再確認で、追加の要修正指摘なし"
+  },
+  "checks": [
+    {
+      "area": "静的検査",
+      "result": "単体95件、全workspaceのlint5タスク・型検査6タスク、変更ファイルの整形、git diff --checkが成功"
+    },
+    {
+      "area": "ブラウザー",
+      "result": "23件成功。0.1秒間隔の強調・線の中間値・順再生・逆seek・直接seek、構成図の再選択、左右上下の端点、任意film名の端末枠、撮影対象の透明化、doctorの仮想ホストとリダイレクトを検査"
+    },
+    {
+      "area": "通常工程",
+      "result": "0.1秒間隔の技術図を持つ独立台本がvideoのbuild・layout・lint・transitionsを通過"
+    },
+    {
+      "area": "回帰検出の確認",
+      "result": "Nodeで拡張子なしのdoctor importがERR_MODULE_NOT_FOUNDとなることと、.ts付きで読み込めることを確認。隔離worktreeで囲み線のresetを外しimmediateRender:trueへ戻した変異をブラウザー検査が拒否し、元に復元"
+    },
+    {
+      "area": "音量判定",
+      "result": "FFmpegのanullsrc→volumedetectでデジタル無音が-91.0dBと報告されることを実測し、その値を拒否するテストを追加"
+    },
+    {
+      "area": "commit hook",
+      "result": "証跡JSON単体に対するoxfmtのexit2を再現。lefthookの該当除外追加後は実hookが対象なしとして正常終了"
+    },
+    {
+      "area": "OpenScreen",
+      "result": "隔離したprojectを同じ出力フォルダーへ2回packし、両方のsuccessと2回目の編集値がbundleへ反映されることを確認"
+    },
+    {
+      "area": "新規checkout",
+      "result": "独立したdetached worktreeでfrozen installを実施し、ローカルLFS cacheから必要素材を復元。選択素材のfsckと商品・技術の通常生成が成功。依存フォルダーのコピーなし"
+    }
+  ],
+  "technicalRender": {
+    "run": "tablecast-two-stage-technical-final-20260914",
+    "status": "rendered-and-checked",
+    "duration": 63.1,
+    "peakDb": -1.1,
+    "videoSha256": "27c9a4af14b275e03ca37eab46adaaa30e5bd582ed47547441b2e5bae0af762f",
+    "playback": {
+      "ended": true,
+      "error": null,
+      "duration": 63.1,
+      "muted": false,
+      "rate": 1,
+      "played": [[0, 63.1]]
+    },
+    "finalHtmlSha256": "9245fb1d611c4b716b9a325576507c76986d1713220f53ab7b97207d45b832c6",
+    "renderedHtmlSha256": "9245fb1d611c4b716b9a325576507c76986d1713220f53ab7b97207d45b832c6",
+    "result": "H.264/AAC・1920x1080・30fps。全編復号・音量・等速全編再生が成功。抽出した注文図で前の経路が強調されないことを確認。後続の構成図・冒頭枠修正後も生成HTMLが実render時と一致"
+  },
+  "limitations": [
+    "Windowsでの検証。新規リモートcloneでのLFS取得や別OSでの生成は未実施",
+    "今回の監査では新規実収録・有料TTSは未実施。再編集の全工程の実行記録は既存のtablecast-review-inputs-validation.jsonを参照",
+    "技術動画の見た目はユーザー未評価。保存済みv17を置換せず、強調の修正後とは異なる比較用として保持",
+    "独立レビューは静的確認であり、実行検証は作者側で実施。全ての将来の入力で不具合がないことを保証するものではない"
+  ]
+}

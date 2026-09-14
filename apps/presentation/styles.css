@@ -1,0 +1,1329 @@
+@font-face {
+  font-family: "Noto Sans JP";
+  src: url("assets/fonts/NotoSansJP-VF.ttf") format("truetype");
+  font-weight: 100 900;
+}
+/* 技術紹介：図の構造と説明順を独立させ、本文と字幕帯の境界を共有する。 */
+.scene-technical {
+  background: #f7f8f5;
+  color: #172b3a;
+}
+.scene-technical header h1 {
+  font-size: 49px;
+}
+.scene-technical .chapter {
+  color: #526573;
+  font-size: 22px;
+}
+.tech-body {
+  position: absolute;
+  left: 64px;
+  top: 164px;
+  width: 1792px;
+  height: 738px;
+}
+.tech-legend {
+  height: 34px;
+  font-size: 21px;
+  color: #536674;
+  line-height: 1.4;
+}
+.tech-board {
+  position: absolute;
+  top: 38px;
+  left: 0;
+  width: 1792px;
+  height: 660px;
+}
+.tech-svg {
+  position: absolute;
+  inset: 0;
+  width: 1792px;
+  height: 660px;
+  overflow: visible;
+}
+.tech-lifeline {
+  stroke: #bdc9cf;
+  stroke-width: 2;
+  stroke-dasharray: 5 7;
+}
+.tech-connection {
+  color: #536674;
+}
+.tech-connection > path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.tech-connection > text {
+  fill: currentColor;
+  stroke: #f7f8f5;
+  stroke-width: 12;
+  paint-order: stroke fill;
+  font: 500 24px "Noto Sans JP";
+}
+.tech-response > path {
+  stroke-dasharray: 6 5;
+}
+.tech-connection > .tech-trace {
+  visibility: hidden;
+  opacity: 0;
+  stroke: #087d79;
+  stroke-width: 4;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.tech-panel {
+  position: absolute;
+  padding: 20px 24px;
+}
+.tech-panel h3 {
+  font-size: 30px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.tech-panel .tech-detail {
+  font-size: 26px;
+  line-height: 1.55;
+  margin-top: 13px;
+}
+.tech-panel .tech-meta {
+  font-size: 21px;
+  line-height: 1.45;
+  color: #536674;
+  margin-top: 10px;
+}
+.tech-system {
+  background: #fff;
+  border: 1px solid #b9c7cd;
+  border-top: 5px solid #334f65;
+  border-radius: 5px;
+}
+.tech-teal {
+  --tech-accent: #087d79;
+}
+.tech-amber {
+  --tech-accent: #a86115;
+}
+.tech-ink {
+  --tech-accent: #334f65;
+}
+.tech-system,
+.tech-state {
+  border-top-color: var(--tech-accent);
+}
+.tech-state {
+  background: #edf3f2;
+  border-left: 5px solid var(--tech-accent);
+}
+.tech-state.tech-amber {
+  background: #fcf0e1;
+}
+.tech-plain {
+  padding: 16px 8px;
+}
+.tech-plain h3 {
+  font-size: 42px;
+}
+.tech-plain .tech-detail {
+  font-size: 30px;
+  line-height: 1.7;
+}
+.tech-lane {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 3px solid var(--tech-accent);
+}
+.tech-lane h3 {
+  font-size: 28px;
+}
+.tech-lane .tech-meta {
+  font-size: 20px;
+  margin-top: 3px;
+}
+.tech-code {
+  background: #182e3c;
+  color: #f3f7f8;
+  border-radius: 5px;
+  padding: 24px 28px;
+}
+.tech-code h3 {
+  font-size: 26px;
+  color: #afd3d2;
+}
+.tech-code pre {
+  margin-top: 24px;
+  white-space: pre-wrap;
+}
+.tech-code code {
+  font-family: Consolas, monospace;
+  font-size: 24px;
+  line-height: 1.5;
+}
+.tech-code .tech-meta {
+  color: #b5c8d2;
+}
+.tech-image {
+  padding: 0;
+}
+.tech-image h3 {
+  font-size: 23px;
+  height: 43px;
+}
+.tech-image img {
+  display: block;
+  width: 100%;
+  height: calc(100% - 43px);
+  object-fit: contain;
+  object-position: left top;
+}
+.tech-note {
+  padding: 16px 0;
+  border-top: 1px solid #b9c7cd;
+}
+.tech-note h3 {
+  font-size: 25px;
+}
+.tech-note .tech-detail {
+  font-size: 24px;
+  margin-top: 8px;
+}
+.tech-outline {
+  position: absolute;
+  inset: -5px;
+  border: 3px solid var(--tech-accent);
+  border-radius: 7px;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 0 3px #ffffffb3;
+}
+.tech-summary-band {
+  position: absolute;
+  top: 700px;
+  left: 0;
+  width: 1792px;
+  height: 38px;
+  border-top: 1px solid #b9c7cd;
+}
+.tech-summary {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 25px;
+  visibility: hidden;
+  opacity: 0;
+  line-height: 1.3;
+}
+.tech-summary b {
+  color: #087d79;
+  letter-spacing: 0.12em;
+  font-size: 17px;
+}
+.scene-technical .music-credit {
+  top: 840px;
+  bottom: auto;
+  left: 64px;
+  right: 64px;
+  font-size: 13px;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body,
+#root {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #fafafa;
+  color: #151619;
+}
+body {
+  font-family: "Noto Sans JP", sans-serif;
+}
+#root {
+  position: relative;
+}
+.scene {
+  position: absolute;
+  inset: 0;
+  background: #fafafa;
+}
+header {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 32px;
+}
+.chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+.wordmark {
+  flex-shrink: 0;
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+h1 {
+  font-size: 54px;
+  letter-spacing: -0.035em;
+  line-height: 1.3;
+  margin-top: 20px;
+  font-weight: 750;
+}
+header h1 {
+  margin-top: 12px;
+}
+/* 実録画面の形を保ち、端末の外形は付けない。 */
+.recorded-screen,
+.opening-screen {
+  position: absolute;
+  background: #fff;
+  outline: 1px solid #d9dce1;
+  box-shadow: 0 8px 28px #17223812;
+}
+.recorded-screen {
+  z-index: 20;
+  visibility: hidden;
+}
+.video-stage,
+.video-camera,
+.demo-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.video-stage {
+  overflow: hidden;
+}
+.video-camera {
+  transform-origin: 0 0;
+}
+.demo-video {
+  object-fit: contain;
+}
+.opening-screen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* 役割を示す端末外形。画面内へノッチや枠を重ねない。 */
+.device-frame {
+  position: absolute;
+  inset: -14px;
+  background: #22262b;
+  border: 2px solid #59616b;
+  border-radius: 24px;
+  box-shadow: 0 10px 24px #0002;
+}
+.framed-ipad .video-stage,
+.framed-ipad > img {
+  border-radius: 8px;
+}
+.framed-iphone .device-frame {
+  inset: -16px;
+  border-radius: 34px;
+}
+.framed-iphone .video-stage {
+  border-radius: 18px;
+}
+.device-camera {
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #858e9b;
+  z-index: 2;
+}
+.framed-iphone .device-camera {
+  left: calc(50% - 24px);
+  top: -10px;
+  width: 48px;
+  height: 4px;
+  border-radius: 4px;
+}
+.framed-macbook .device-frame {
+  inset: -46px -16px -16px;
+  border-radius: 18px 18px 8px 8px;
+}
+.browser-chrome {
+  position: absolute;
+  top: -30px;
+  height: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  background: #edf0f4;
+  font-size: 16px;
+  color: #4b5361;
+  border-radius: 5px 5px 0 0;
+}
+.browser-chrome i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9aa2ac;
+}
+.browser-chrome span {
+  margin-left: 18px;
+}
+.device-base {
+  position: absolute;
+  left: -40px;
+  right: -40px;
+  bottom: -28px;
+  height: 12px;
+  background: linear-gradient(#cfd4dc, #838b96);
+  border-radius: 1px 1px 16px 16px;
+}
+.opening-screen > img {
+  position: relative;
+}
+.music-credit {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  bottom: 178px;
+  font-size: 20px;
+  line-height: 1.5;
+  text-align: center;
+  color: #51565c;
+  text-wrap: balance;
+}
+.eyebrow {
+  font-size: 27px;
+  color: #343943;
+  font-weight: 650;
+  line-height: 1.55;
+}
+ol {
+  list-style: none;
+  padding: 0;
+}
+.point-number {
+  display: block;
+  font-size: 21px;
+  font-weight: 700;
+  color: #343943;
+  margin-bottom: 10px;
+}
+.recording-label {
+  position: absolute;
+  bottom: 10px;
+  font-size: 21px;
+  color: #45534b;
+  line-height: 1.6;
+  padding-left: 17px;
+  border-left: 4px solid #5374c5;
+}
+.editorial-body {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 232px;
+}
+.hero-title {
+  font-size: 76px;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 1.4;
+  max-width: 1650px;
+  margin-top: 34px;
+}
+.title-points {
+  display: flex;
+  gap: 56px;
+  margin-top: 90px;
+}
+.title-points li {
+  flex: 1;
+  border-top: 3px solid #343943;
+  padding-top: 24px;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+.title-points .point-number {
+  margin-bottom: 16px;
+}
+.result-body {
+  top: 194px;
+}
+.result-body .hero-title {
+  font-size: 64px;
+  margin-top: 24px;
+}
+.result-points {
+  margin-top: 46px;
+}
+.result-points li {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  font-size: 38px;
+  line-height: 1.5;
+  border-top: 2px solid #d9dce1;
+  padding: 24px 0;
+  font-weight: 650;
+}
+.result-points .point-number {
+  width: 48px;
+  flex-shrink: 0;
+  font-size: 25px;
+  margin: 0;
+}
+.flow-body {
+  top: 258px;
+}
+.flow {
+  position: relative;
+  margin-top: 92px;
+}
+.flow-points {
+  display: flex;
+  gap: 56px;
+}
+.flow-points li {
+  flex: 1;
+  position: relative;
+  font-size: 38px;
+  line-height: 1.65;
+  font-weight: 650;
+  padding-top: 4px;
+}
+.flow-points .point-number {
+  width: 70px;
+  height: 70px;
+  background: #343943;
+  color: #fff;
+  text-align: center;
+  line-height: 70px;
+  border-radius: 50%;
+  font-size: 27px;
+  margin-bottom: 46px;
+  box-shadow: 0 0 0 12px #fafafa;
+}
+.flow-rail {
+  position: absolute;
+  top: 37px;
+  left: 24px;
+  right: 100px;
+  height: 3px;
+  background: #d9dce1;
+}
+.flow-rail-fill {
+  height: 100%;
+  background: #5374c5;
+  transform-origin: left center;
+}
+.flow-branch {
+  margin-top: 62px;
+  padding-top: 30px;
+  border-top: 2px solid #d9dce1;
+}
+.flow-branch li {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  font-size: 34px;
+  font-weight: 650;
+}
+.flow-branch .point-number {
+  font-size: 25px;
+  margin-bottom: 0;
+}
+.caption {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 922px;
+  height: 108px;
+  padding: 6px 26px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  background: #151619;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 550;
+  line-height: 1.3;
+  text-align: left;
+  border-radius: 0;
+  z-index: 50;
+  gap: 25px;
+}
+.caption span {
+  text-wrap: balance;
+}
+footer {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 1042px;
+  font-size: 22px;
+  line-height: 1.4;
+  color: #45534b;
+}
+.progress {
+  position: absolute;
+  left: 64px;
+  right: 64px;
+  top: 16px;
+  height: 4px;
+  display: flex;
+  gap: 7px;
+  z-index: 15;
+}
+.progress > div {
+  flex-basis: 0;
+  height: 4px;
+  background: #d4d7cc;
+  overflow: hidden;
+}
+.progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #343943;
+  transform-origin: left center;
+}
+
+.speaker-name {
+  width: 252px;
+  flex-shrink: 0;
+  font-size: 31px;
+  line-height: 1.35;
+  font-weight: 750;
+  padding-right: 20px;
+  border-right: 2px solid #8a8d94;
+}
+.speaker-name small {
+  display: block;
+  font-size: 20px;
+  font-weight: 500;
+  margin-top: 6px;
+}
+.caption-text {
+  flex: 1;
+}
+.speaker-customer {
+  background: #203652;
+  border-left: 8px solid #91baff;
+}
+.speaker-cast {
+  background: #173c34;
+  border-left: 8px solid #88d9bd;
+}
+.speaker-cast .speaker-name {
+  color: #baf6df;
+  border-color: #7eae9c;
+}
+.speaker-customer .speaker-name {
+  color: #c9ddff;
+  border-color: #93a9c6;
+}
+.diagram-body {
+  position: absolute;
+  left: 64px;
+  top: 195px;
+  width: 1792px;
+  height: 700px;
+}
+.diagram-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 56px;
+  height: 598px;
+}
+.diagram-column {
+  min-width: 0;
+}
+.diagram-column > h2 {
+  font-size: 25px;
+  line-height: 1.5;
+  color: #475363;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #ccd4de;
+  padding-bottom: 10px;
+}
+.diagram-node {
+  position: relative;
+  height: 156px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid #aebaca;
+  border-top: 4px solid #365d96;
+  border-radius: 5px;
+}
+.diagram-node h3 {
+  font-size: 27px;
+  line-height: 1.35;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.diagram-node p {
+  font-size: 21px;
+  line-height: 1.4;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #303e50;
+}
+.diagram-node .diagram-meta {
+  font-size: 18px;
+  line-height: 1.4;
+  color: #475363;
+  margin-top: 6px;
+}
+.diagram-node.tone-1 {
+  border-top-color: #337267;
+}
+.diagram-node.tone-2 {
+  border-top-color: #72638b;
+}
+.diagram-node.tone-3 {
+  border-top-color: #657347;
+}
+.diagram-links {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.diagram-links path {
+  fill: none;
+  stroke: #607188;
+  stroke-width: 2.5px;
+}
+.diagram-links marker path {
+  stroke-width: 1.5px;
+}
+.diagram-ring {
+  position: absolute;
+  inset: -9px;
+  width: calc(100% + 18px);
+  height: calc(100% + 18px);
+  visibility: hidden;
+  pointer-events: none;
+}
+.diagram-ring rect {
+  fill: none;
+  stroke: #b65b12;
+  stroke-width: 3px;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.diagram-pointer {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  width: 28px;
+  height: 32px;
+  visibility: hidden;
+  fill: #b65b12;
+  stroke: #ffffff;
+  stroke-width: 1.5px;
+}
+.diagram-guide {
+  position: relative;
+  height: 55px;
+  border-top: 2px solid #c6cfda;
+}
+.diagram-focus {
+  position: absolute;
+  inset: 9px 0 auto;
+  font-size: 27px;
+  line-height: 1.4;
+  visibility: hidden;
+}
+.diagram-focus b {
+  font-size: 22px;
+  color: #935019;
+  margin-right: 24px;
+}
+.diagram-note {
+  font-size: 21px;
+  line-height: 1.55;
+  margin-top: 8px;
+  color: #475363;
+}
+.source-body {
+  position: absolute;
+  left: 64px;
+  top: 210px;
+  width: 1792px;
+  display: grid;
+  grid-template-columns: 900px 820px;
+  gap: 60px;
+}
+.source-tree {
+  border: 2px solid #d9dce1;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.source-heading {
+  font-size: 25px;
+  font-weight: 750;
+  padding: 20px 24px;
+  background: #eef0f4;
+}
+.source-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 24px;
+  border-top: 1px solid #edf0f3;
+}
+.source-row code {
+  font-family: Consolas, monospace;
+  font-size: 25px;
+  font-weight: 650;
+  color: #364866;
+  flex: 1;
+}
+.source-row span {
+  font-size: 23px;
+  color: #515867;
+}
+.source-workflow .result-points {
+  margin-top: 25px;
+}
+.source-workflow .result-points li {
+  font-size: 29px;
+  line-height: 1.55;
+  padding: 23px 15px;
+  min-height: 120px;
+}
+.source-workflow .eyebrow {
+  font-size: 28px;
+}
+
+/* 画面比率に応じてbuildが説明列の位置を計算する。 */
+.demo-body {
+  position: absolute;
+  top: 152px;
+  height: 740px;
+  width: 584px;
+  display: flex;
+  align-items: center;
+}
+.demo-aside {
+  width: 584px;
+  position: relative;
+}
+.role-label {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  color: #365d96;
+  line-height: 1.5;
+  display: inline-block;
+  padding: 8px 16px;
+  background: #eaf0f7;
+  border-radius: 6px;
+}
+.demo-aside h1 {
+  font-size: 44px;
+  line-height: 1.45;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  margin-top: 24px;
+  text-wrap: balance;
+}
+.demo-context {
+  font-size: 26px;
+  color: #5c626c;
+  line-height: 1.65;
+  margin-top: 20px;
+  text-wrap: balance;
+}
+.demo-steps {
+  border-top: 2px solid #dce1e7;
+  padding-top: 24px;
+  margin-top: 32px;
+}
+.steps-heading {
+  font-size: 21px;
+  color: #626975;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+.steps-track {
+  position: relative;
+}
+.demo-points {
+  position: relative;
+}
+.demo-points li {
+  min-height: 88px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 20px;
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.45;
+  color: #5c626c;
+}
+.step-number {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8ebef;
+  color: #515966;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.active-step {
+  position: absolute;
+  inset: 4px 0 auto 0;
+  height: 80px;
+  background: #eaf0f7;
+  border-left: 4px solid #365d96;
+  border-radius: 6px;
+}
+.opening-layout {
+  position: absolute;
+  inset: 0;
+}
+.opening-copy {
+  position: absolute;
+  left: 96px;
+  top: 184px;
+  width: 750px;
+  height: 680px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.opening-title {
+  font-size: 84px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.04em;
+}
+.opening-title span {
+  display: block;
+}
+.opening-description {
+  color: #51565c;
+  font-size: 28px;
+  line-height: 1.7;
+  margin-top: 30px;
+  text-wrap: balance;
+}
+.opening-points {
+  margin-top: 40px;
+  padding-top: 26px;
+  border-top: 2px solid #dce1e7;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+}
+.opening-points li {
+  font-size: 24px;
+  line-height: 1.6;
+  font-weight: 550;
+}
+.recap-body {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  top: 180px;
+  height: 700px;
+}
+.recap-layout {
+  display: grid;
+  grid-template-columns: 624px 1008px;
+  gap: 96px;
+  height: 700px;
+  align-items: center;
+}
+.recap-copy {
+  min-width: 0;
+}
+.recap-points {
+  margin-top: 40px;
+}
+.recap-points li {
+  font-size: 54px;
+  font-weight: 750;
+  line-height: 1.5;
+  padding: 20px 0 20px 28px;
+  color: #626975;
+  border-left: 4px solid transparent;
+  overflow-wrap: anywhere;
+}
+.recap-gallery {
+  position: relative;
+  width: 1008px;
+  height: 660px;
+}
+.recap-shot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  visibility: hidden;
+}
+.recap-shot img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  outline: 1px solid #d9dce1;
+}
+.end-signature {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 36px;
+}
+.end-wordmark {
+  font-size: 144px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.065em;
+}
+.end-line {
+  font-size: 40px;
+  font-weight: 550;
+  line-height: 1.6;
+}
+
+/* 長い文章や連続した英数字も、指定領域を押し広げない。 */
+.demo-points li > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.demo-aside h1,
+.demo-context,
+.opening-title,
+.opening-description,
+.opening-points li,
+.recap-points li,
+.end-line {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* v15：参照図の3領域を、実画面と編集可能な文字・線で構成する。 */
+.tech-panel h3:has(.tech-logo) {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.tech-logo {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.tech-section {
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: #eaf4fc;
+  z-index: 0;
+}
+.tech-section.tech-teal {
+  background: #e8f7ef;
+}
+.tech-section.tech-amber {
+  background: #fff1e5;
+}
+.tech-card {
+  padding: 10px 14px;
+  border: 1px solid #dbe8ef;
+  border-radius: 12px;
+  background: white;
+  z-index: 1;
+}
+.tech-card h3 {
+  font-size: 27px;
+}
+.tech-brand {
+  padding: 12px 18px;
+  background: #fff;
+  border: 1px solid #b9dacc;
+  border-radius: 12px;
+  z-index: 2;
+}
+.tech-brand h3 {
+  font-size: 29px;
+}
+.tech-brand .tech-detail {
+  font-size: 22px;
+  line-height: 1.4;
+  margin-top: 7px;
+}
+.tech-brand .tech-meta {
+  font-size: 17px;
+  margin-top: 5px;
+}
+.tech-view-architecture .tech-panel:not(.tech-section):not(.tech-card) {
+  z-index: 2;
+}
+.tech-view-architecture .tech-svg {
+  z-index: 1;
+}
+.tech-view-architecture .tech-connection > text {
+  font-size: 18px;
+  stroke-width: 6px;
+  stroke: #f7f8f5;
+}
+.tech-view-architecture .tech-connection > path {
+  stroke-width: 3px;
+}
+.tech-view-architecture .tech-image h3 {
+  font-size: 15px;
+  height: 24px;
+  color: #536674;
+}
+.tech-view-architecture .tech-screenshot {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(100% - 24px);
+  border: 4px solid #253141;
+  border-radius: 8px;
+}
+.tech-view-architecture .tech-plain {
+  padding: 0;
+}
+.tech-view-architecture .tech-plain h3 {
+  font-size: 23px;
+  line-height: 1.45;
+}
+.tech-view-architecture .tech-plain .tech-detail {
+  font-size: 22px;
+  line-height: 1.65;
+  margin-top: 7px;
+}
+.tech-view-architecture .tech-plain .tech-meta {
+  font-size: 17px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.tech-view-architecture .tech-lane {
+  padding: 8px;
+  border: 1px solid #c8dce5;
+  border-radius: 9px;
+  background: #f8fcff;
+}
+.tech-view-architecture .tech-lane h3 {
+  font-size: 24px;
+}
+.tech-view-architecture .tech-lane .tech-meta {
+  font-size: 17px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+.tech-view-sequence .tech-state {
+  padding: 12px 24px;
+}
+.tech-view-sequence .tech-state .tech-detail {
+  margin-top: 6px;
+}
+.tech-view-evidence .tech-code {
+  padding: 14px 22px;
+}
+.tech-view-evidence .tech-code h3 {
+  font-size: 24px;
+}
+.tech-view-evidence .tech-code pre {
+  margin-top: 12px;
+}
+.tech-view-evidence .tech-code code {
+  font-size: 23px;
+  line-height: 1.35;
+}
+.tech-view-evidence .tech-code .tech-meta {
+  font-size: 18px;
+  margin-top: 8px;
+}
+.tech-view-evidence .tech-plain .tech-detail {
+  margin-top: 5px;
+  font-size: 27px;
+}
+.tech-view-evidence .tech-plain .tech-meta {
+  margin-top: 5px;
+}
+
+/* v16：後半は状態・検査条件・測定区間をそれぞれの図式で示す。 */
+.tech-view-state-machine .tech-state {
+  border: 2px solid var(--tech-accent);
+  border-radius: 24px;
+  background: #fff;
+  padding: 18px 24px;
+  text-align: center;
+}
+.tech-view-state-machine .tech-state h3 {
+  font-size: 36px;
+}
+.tech-view-state-machine .tech-state .tech-detail {
+  font-size: 26px;
+  margin-top: 10px;
+}
+.tech-view-state-machine .tech-state .tech-meta {
+  font-size: 22px;
+  margin-top: 6px;
+}
+.tech-view-state-machine .tech-state.tech-amber {
+  background: #fff0de;
+}
+.tech-view-state-machine .tech-state.tech-teal {
+  background: #e9f5f1;
+}
+.tech-view-state-machine .tech-outline {
+  border-radius: 28px;
+}
+.tech-view-state-machine .tech-connection > text {
+  font-size: 27px;
+  font-weight: 650;
+}
+.tech-view-state-machine .tech-connection > path {
+  stroke-width: 3px;
+}
+.tech-test-header,
+.tech-test-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 0.6fr;
+  align-items: center;
+  padding: 20px 34px;
+  border-bottom: 2px solid #d4dfdf;
+}
+.tech-test-header {
+  background: #213e4c;
+  color: #fff;
+}
+.tech-test-header h3,
+.tech-test-header .tech-detail,
+.tech-test-header .tech-meta {
+  font-size: 29px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+.tech-test-row {
+  background: #fff;
+}
+.tech-test-row h3 {
+  font-size: 31px;
+  font-weight: 550;
+}
+.tech-test-row .tech-detail {
+  font-size: 34px;
+  font-weight: 700;
+  margin: 0;
+}
+.tech-test-row .tech-meta {
+  font-size: 30px;
+  color: #086d57;
+  font-weight: 700;
+  margin: 0;
+}
+.tech-test-row .tech-outline {
+  inset: 0;
+  border: 3px solid #087d79;
+  border-radius: 0;
+  box-shadow: none;
+}
+.tech-view-test-matrix .tech-plain h3 {
+  font-size: 40px;
+  color: #086d57;
+}
+.tech-view-test-matrix .tech-plain .tech-detail {
+  font-size: 25px;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+.tech-view-test-matrix .tech-plain {
+  padding: 0;
+}
+.tech-view-latency .tech-event {
+  padding: 0;
+  text-align: center;
+}
+.tech-view-latency .tech-event::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 2px);
+  bottom: -14px;
+  width: 4px;
+  height: 30px;
+  background: #334f65;
+}
+.tech-view-latency .tech-event h3 {
+  font-size: 35px;
+}
+.tech-view-latency .tech-event .tech-detail {
+  font-size: 26px;
+  margin-top: 13px;
+}
+.tech-view-latency .tech-event .tech-meta {
+  font-size: 40px;
+  font-weight: 700;
+  margin-top: 24px;
+}
+.tech-view-latency .tech-plain {
+  text-align: center;
+}
+.tech-view-latency .tech-plain h3 {
+  font-size: 49px;
+}
+.tech-view-latency .tech-plain .tech-detail {
+  font-size: 26px;
+  margin-top: 10px;
+}
+.tech-view-latency .tech-note {
+  text-align: center;
+  padding-top: 22px;
+}
+.tech-view-latency .tech-note h3 {
+  font-size: 28px;
+}
+.tech-view-latency .tech-note .tech-detail {
+  font-size: 28px;
+}
+.tech-view-latency .tech-connection > path {
+  stroke-width: 8px;
+}
+.tech-view-latency .tech-connection > text {
+  font-size: 29px;
+  font-weight: 650;
+}

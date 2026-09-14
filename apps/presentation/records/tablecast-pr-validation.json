@@ -1,0 +1,807 @@
+{
+  "date": "2026-09-13",
+  "issue": 1,
+  "branch": "codex/1-presentation-workflow",
+  "baseRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "localValidationSnapshot": "f71257b6fffd94c622a5657f2f0050db1c92f92a",
+  "restore": {
+    "transport": "独立したローカルGit remoteからclone。LFS smudgeなしでポインターを確認後、git lfs pullで復元。",
+    "githubTransfer": "未実施",
+    "platform": "Windows",
+    "lfsFiles": 204,
+    "lfsFsck": "Git LFS fsck OK",
+    "evidenceFilesByteIdentical": 83,
+    "sharedFilmsByteIdentical": 4,
+    "secretPatternScan": "共有するテキストの対象パターン検査で検出なし。網羅的な秘密情報検出の保証ではない。",
+    "install": "bun --no-env-file install --frozen-lockfile --ignore-scripts / passed"
+  },
+  "checks": {
+    "rootFormat": "passed",
+    "rootLint": "passed",
+    "rootTypecheck": "passed",
+    "presentationTests": 46,
+    "presentationTestFiles": 9,
+    "browserRegressionTests": 19,
+    "experimentTypecheck": "passed",
+    "newLiveVoiceRecording": "未実施。分割発話の待機は回帰テストで検証。"
+  },
+  "runs": [
+    {
+      "name": "tablecast-restored-product-v2",
+      "film": "product",
+      "duration": 117.3,
+      "status": "rendered-and-checked",
+      "videoHash": "83aad6d186d4f6335165a856ac1f42a4d3e273a26ddc6e4b90600a61e00befc4",
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "peakDb": -1.1,
+      "frames": 42,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 117.3,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 117.3]]
+      },
+      "inputHashes": {
+        "apps/presentation/assets/audio/tablecast-carefree-kevin-macleod.wav": "0517764173bdaa7bfeb64dc73cf76ab8387d7d0db3d8c571eb1065e29c52fa1f",
+        "apps/presentation/assets/audio/tablecast-kenney-switch.wav": "1f3f2ebb8dc4f65a6404c02a939909e8fe55a14b231b8288ae878ca6ada3dec2",
+        "apps/presentation/assets/audio/voice-admin-210e184f66bfef15.wav": "cca788db1c26b9c6f051dd0b118a9d7580f57a27930f0ea0d61cc0ebb4d05080",
+        "apps/presentation/assets/audio/voice-closing-37488b71dd237f9e.wav": "efd4f292f59b3d4c0437d9f6ecf98aee325237459702e12e0b51f28ce2ac74f2",
+        "apps/presentation/assets/audio/voice-opening-bd0ec2c1aa4203c8.wav": "66c57f8f13582fe191eab04cd3a1d7c045e63901013e07a4ed60f292c1ad019d",
+        "apps/presentation/assets/audio/voice-pause-67723e96024fee67.wav": "df81df252f6dcd5bcdd8a7ca6aa8788cd381ae56ed516e193e8e74649add92ab",
+        "apps/presentation/assets/audio/voice-roles-3b57b6fae0bc04bb.wav": "82a13bb4c4b4b1a9f3e01c726181ab4217b17e67d4a7c21c2ba8a6c2ec5d4228",
+        "apps/presentation/assets/audio/voice-staff-check-63c37208296e0d5c.wav": "58ff874e58bd9777dcee0c75c53321f8e9cbab6a3049b6116557398b45a28e47",
+        "apps/presentation/assets/demo/tablecast-main-7d6adc7-admin-v1.mp4": "9334df5c63fb8f7c1ef4d0407fe62a5019e3b03e90f98da28bbdd5ab262e96d7",
+        "apps/presentation/assets/demo/tablecast-main-rerecord-english-v1.mp4": "94c6339d5a59a0a3bd86f06fbc6dfd7594396216d9f97cfc296bb1cf374d4c41",
+        "apps/presentation/assets/demo/tablecast-main-rerecord-guest-v5.mp4": "0f201022766fe32be000489403b9d59ffd313d44b32755a88b5ea0ea4bfb57e2",
+        "apps/presentation/assets/demo/tablecast-main-rerecord-staff-v2.mp4": "7800828ff33fab1865a2ad80aa2e0cc15e19e2e05cad2a5e4b1aecc7fb949ea7",
+        "apps/presentation/assets/fonts/LICENSE": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982",
+        "apps/presentation/assets/fonts/NotoSansJP-VF.ttf": "f4b373b226668ee33a6e54b02823dcd2d1209f17159f777421ae8c2275160369",
+        "apps/presentation/assets/images/tablecast-main-confirm.png": "ce16926f3576fc6a167c6542eab5de7fcdd9374098c6b2030cfd344c3937d3bb",
+        "apps/presentation/assets/images/tablecast-main-consult.png": "45416e03ee87625934b3a0113e3b7741a8e5bd4c8fddd6e8768019f1baf32531",
+        "apps/presentation/assets/images/tablecast-main-guest.png": "73eaf9493f26e983bf44271264caf10a93acac571bcc337fb65d08654edfcbc2",
+        "apps/presentation/assets/images/tablecast-main-staff.png": "8dcb9492356b6fdd9469297ed39fdc3d0155f1c2fa2778d02d57d77a91e3138f",
+        "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-edit.openscreen": "003a6bbd088a61ea20b0724dc6fb8737d8b1b609c6471832a2c91550841bf018",
+        "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-events.json": "5dc0bea152803d8250783327c2b5933be9a1b708192822680a3b09d62569fec8",
+        "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-shot-admin.json": "2d178edcf83abdda843479a222a6d205c43a493c45e3eb7cf9a5b2ce4aefa73e",
+        "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-take.json": "5338244ef0a7d5dcdb8f777840c735b8eb457e2a5a6416f89ff0aab70f4f22b1",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-edit.openscreen": "5b7e881f2ea0c8bf974e38a66a5cbb48060c8b9f27635944e5363a16c7c18fd1",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-edit.openscreen": "ab207f53f92c835937cbb13ba6b63911004d09a80269d57e2a2a95dfde007360",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-events.json": "71ac7fd77d775f987878f9530135c81bfb63040f70b48d1b998eeecc92e28fc9",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-approval-result.json": "ff1b6aafd7dd0f0d7c72f828a8f139021cb543546d29c2f78d76ba6fac4e8d69",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-approval.json": "8be30bf1381b9536ec428faa633147710264175ed556643cbfc8fec5a782e6b5",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-consult-answer.json": "613c71c4d2398f8ca501703831693864c463a88b9846bb87b99016239b757274",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-order-added.json": "8c1cdbd47abab3e98f1d26ee64adbcf1a07b6c1e856583910acd34b10a5ef81e",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-pause.json": "9ceca0c55de6ddcbb05f7f6a8b02c287c5f479bf9711e4ed0a3f4b11f0f12381",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-shot-readback.json": "65d1e40f7d75bb250968595276b69ef0c6caa9e23d487c83d7ff15979bfe29a3",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-take.json": "aa3969bf5622f863bc7c1ff53cb826767de12c39ddf00568026095a75b866bc1",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-edit.openscreen": "243b1224efc998c92560b05de0fe87dd895d0a59beb5db93c3d3ec02b9e9e3a6",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-events.json": "1548f3362a048b4e03ee78a8bca1fcf0a57d9e8b5fc37bac80a143ecd7549852",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-shot-staff.json": "d0e3c3be27ed15eb31c01f3c87d63c34e70d9c0d9077cf7eaa03de4f7859ab98",
+        "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-take.json": "9987568c53d02d4f9f7d557e874491f28668fdc82c6233e4cb97d1da2c7367e1",
+        "apps/presentation/package.json": "42c55dcdfe8411f15f2a139a1d7c5f7a2968df5edc22e4b6634c19ddcc1845cd",
+        "apps/presentation/playwright.config.ts": "09bcea0292f5360fc196173c7b76335ea64e3ea5a1e2218d8df269b4faffeafb",
+        "apps/presentation/projects/tablecast-main-rerecord.json": "35025f18316c9b098203ede5c6f4f25545b648a2b0abfe222f2dbe16c3fe3484",
+        "apps/presentation/scripts/tablecast-app-capture.test.ts": "f44bcd7a91abfbfc28eb4c3dc9aa20c237208e7944eb80a595aee2d926834e82",
+        "apps/presentation/scripts/tablecast-app-capture.ts": "6e7e6967da6eb5b0327440eddabd360d5c2762d3b4ae11a5a810c874b9f103d9",
+        "apps/presentation/scripts/tablecast-browser-audio.ts": "70445a099eb211a1d16d65187cbb2babd003c507e9e0a5d6a83b946333f0b38d",
+        "apps/presentation/scripts/tablecast-build.ts": "4ae4cb909c1657e50c167ce15fa73bef42554c0a407d4e6f80ae4af50cc3c392",
+        "apps/presentation/scripts/tablecast-capture-check.ts": "f6c6b5bf1ccf3a32cb360ff95951519cb75b320fba565fb173fb0b4889762aed",
+        "apps/presentation/scripts/tablecast-capture-types.ts": "f0406d9d256a679686003e917984eadb11256c288c1ef4db84499f2a62b783f9",
+        "apps/presentation/scripts/tablecast-composition.test.ts": "1a94d26dd57ed1bddb4c4aaccb06f133b0c2771fd903fdff377442705e0dc590",
+        "apps/presentation/scripts/tablecast-composition.ts": "8984be742680aeb3c532aaa8701c0fb940c7e1cd61068834d1bfd941f404ec9a",
+        "apps/presentation/scripts/tablecast-cursor.test.ts": "a3a824a24672d0e9950398bf22e4c1a950776ce8054b4213e0f57b85e8d1fc42",
+        "apps/presentation/scripts/tablecast-cursor.ts": "aae92294aa0d6334ef30f5a7f633d454335b08a2171ae93c7bcfaab71dabe999",
+        "apps/presentation/scripts/tablecast-doctor.test.ts": "504569e2bcc68371eaeab599f347d868249aa1ad61fa260ac63a5512d37fa8bc",
+        "apps/presentation/scripts/tablecast-doctor.ts": "ceb60bad2bca6ee0fd210d6141c27d13e9e0f641c580dd718431caa6ec96f27e",
+        "apps/presentation/scripts/tablecast-edit-guest.ts": "34c4158d238d2d597a13827dc3bce4725232441b43ec5c52538141ab8141b8a8",
+        "apps/presentation/scripts/tablecast-edit-role.ts": "7317c483b85c28f842ccd92001ce372060b94c94cfe0ebfe3c646ad0dd5c221a",
+        "apps/presentation/scripts/tablecast-layout.spec.ts": "77585cbfde18560586f6465985304ccab78bc243172f99931ec37115f219ecd7",
+        "apps/presentation/scripts/tablecast-layout.ts": "8de8737bf24fe3c60b3bc3ca0af0f4e95a1cb902fcac3dd878da904d000533db",
+        "apps/presentation/scripts/tablecast-project.test.ts": "65ae89ed5fd7966034e3e83b71e7117c71cddadb756c8f75b8a76d5a71a213bc",
+        "apps/presentation/scripts/tablecast-project.ts": "3886c2c93d6d8326a132788d03ed04703ea584615d37ec79c513be969477282c",
+        "apps/presentation/scripts/tablecast-record-guest.ts": "d287834ece07c7bbfcadd434a7e94ccafe81b73df2ebc42be6e0f6647ae370cd",
+        "apps/presentation/scripts/tablecast-record-role.ts": "97840211463bc534b92c713ed11fde1469dadecc31662fb3af968e0af881544a",
+        "apps/presentation/scripts/tablecast-shot.spec.ts": "c0459ecadad69ce4850c81481c7776a1214b2d1945ac6fee3c746a39a7ea8ed2",
+        "apps/presentation/scripts/tablecast-shot.test.ts": "042c115bcb474e9b5f3ef85b0399c32981b2de81264e89e308bdceb002a5b9ed",
+        "apps/presentation/scripts/tablecast-shot.ts": "6459b947ecdf2ed5adf40d4d942926ff2a05318fba2e965861c230f3e04d78c8",
+        "apps/presentation/scripts/tablecast-technical-schema.ts": "0a4ffbb8a7fabc349a7152586dd76619b48189d9067eeecb6b87620f6feaf85b",
+        "apps/presentation/scripts/tablecast-technical.ts": "e4951b7919502d8ba1749314e1d40a84b897b55025d3acf130c157ce0f487f11",
+        "apps/presentation/scripts/tablecast-tts.test.ts": "4948b415e3874a46bc7203d09815eb49718258a1ff072b112034ef9e19ce9f7b",
+        "apps/presentation/scripts/tablecast-tts.ts": "ddaea6734ce5ea7985a6156b5daaf72ae8f57fae959bda32056d044db461ca72",
+        "apps/presentation/scripts/tablecast-video.ts": "7b6ec797c08d661674494d1ed40226e020063e1a2ba4e5d4803f27bc9933e914",
+        "apps/presentation/scripts/tablecast-workflow.spec.ts": "a9d611d692023db4158a28042d403dd22a1d68fc897d40fdf9c47a7cf9bae54d",
+        "apps/presentation/scripts/tablecast-workflow.test.ts": "3efd012e47a570d011327929c394e804c64540bfeaad3e1be89c818e958314a0",
+        "apps/presentation/scripts/tablecast-zoom.test.ts": "e3919a673eb8eae007325aa1e4e9bbf0a9e159a8d2f2e1f820f9edb1a0a76228",
+        "apps/presentation/scripts/tablecast-zoom.ts": "a86cdcb4ef80a05301eb1360963dfb7914f436e8196aa5b9e59f2ed085c272a7",
+        "apps/presentation/styles.css": "02da9a69c8ce627c817b965a43f48c08350c0fc85f6aefe00a89b1dabb70e17c",
+        "bun.lock": "c6fd8fa3da7620e7c4cc84e10a65c3d07db3aaae3871eee850d1d4fd4221d050"
+      },
+      "logs": {
+        "build.log": "d9ee8529c8a2e6a56c34d4d2150f8e8656650b1fa17f3f63c5f19773094ef759",
+        "layout.log": "9e545292ccee697d6bfe226e577085158c9372b877c5ee9456bbf7f7fcec0e9f",
+        "lint.log": "bbbc4072041caa7a6ac1be367d5ade5c00c19e2f4f3d63043551726259f960d9",
+        "transitions.log": "df0f0ae77722445f38bf7364eb1454c66468f8d72791fc3f7e2f7b98bbbaa2f7",
+        "render.log": "5b0cb78b879e9f20017712e8f3a3b2238ce76b5870c4b1e230f802f4de3b959d",
+        "metadata.log": "0562c374e3ad7ede34627c47e9b70481765e1b52eba3d1009dc88818dd6ac3e1",
+        "decode.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "volume.log": "1c9dc09739351d1a111fb8655a327c6403a8ab7c2f55655d4e9e3baa44cbb017",
+        "frame-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-6.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-7.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-8.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-9.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-10.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-11.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-12.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-13.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-14.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-15.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-16.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-17.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-18.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-19.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-20.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-21.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-22.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-23.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-24.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-25.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-26.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-27.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-28.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-29.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-30.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-31.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-32.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-33.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-34.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-35.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-36.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-37.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-38.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-39.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-40.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-41.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        },
+        {
+          "name": "frame-37",
+          "status": "passed",
+          "log": "frame-37.log"
+        },
+        {
+          "name": "frame-38",
+          "status": "passed",
+          "log": "frame-38.log"
+        },
+        {
+          "name": "frame-39",
+          "status": "passed",
+          "log": "frame-39.log"
+        },
+        {
+          "name": "frame-40",
+          "status": "passed",
+          "log": "frame-40.log"
+        },
+        {
+          "name": "frame-41",
+          "status": "passed",
+          "log": "frame-41.log"
+        }
+      ],
+      "nonBlockingLint": "◆  Linting tablecast-restored-product-v2/index.html\n\n  ⚠ composition_file_too_large: This HTML composition file has 410 lines. Smaller sub-compositions are easier to read, iterate on, and diff.\n    Fix: Split coherent scenes or layers into separate .html files under compositions/, then mount them from the parent with data-composition-src so each file stays small enough to inspect, revise, and validate independently.\n\n◇  0 error(s), 1 warning(s)\n"
+    },
+    {
+      "name": "tablecast-restored-technical-v2",
+      "film": "technical",
+      "duration": 63.099999999999994,
+      "status": "rendered-and-checked",
+      "videoHash": "8a5205f9c132639e5c77d75d65d614a3371ad6c210f139353fdfa16985cd30f6",
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "peakDb": -1,
+      "frames": 37,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 63.1,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 63.1]]
+      },
+      "inputHashes": {
+        "apps/api/src/modules/orders/service.ts": "8ca42899a2e9cfa971502b1031bcd85b38eca9b3b473fba0ca109dcc1d08bba4",
+        "apps/api/src/modules/tables/mutations.ts": "bdaa386242747c89d4c86b241e4e316451903b31f9368aab71996457812fa6a9",
+        "apps/api/test/orders.test.ts": "68ae844d327e81a0c29af34d4c3d884fdb4e03b2a78abdbbd330489e5de1b835",
+        "apps/presentation/assets/audio/tablecast-carefree-kevin-macleod.wav": "0517764173bdaa7bfeb64dc73cf76ab8387d7d0db3d8c571eb1065e29c52fa1f",
+        "apps/presentation/assets/audio/tablecast-kenney-switch.wav": "1f3f2ebb8dc4f65a6404c02a939909e8fe55a14b231b8288ae878ca6ada3dec2",
+        "apps/presentation/assets/audio/tech-architecture-voice-30536258a210ef9a.wav": "a348fc20b78141d33ec471ce6ed7c0b29ec04bd034a0570ea4914177354150b8",
+        "apps/presentation/assets/audio/tech-evidence-voice-05cc08c4aa653943.wav": "b46039269b78ce55c8eb6eb0c3e6c35d2276615434f8b43963213660287f1b5a",
+        "apps/presentation/assets/audio/tech-future-voice-79a4290005b4387a.wav": "8a0838e20aee8b5cb190599e9aec002a9ae08ae8b0b53f933a077b5abbadad60",
+        "apps/presentation/assets/audio/tech-intro-voice-152a6a8650f91d5a.wav": "676f38d4735cb9c3460a9593a05dbccc91270f76643e53f67a7e535a60c7c1a2",
+        "apps/presentation/assets/audio/tech-order-voice-7fc8c756c07596b0.wav": "b9eb09fd809c6ee8e923308ab046f55d0f3b567af33decab1d80ab5da1150baa",
+        "apps/presentation/assets/audio/tech-voice-voice-3e80c4d23a6a3c69.wav": "f008d770110529f34bbbb879f0c8945ada1ef8cf6d8c9dcbaed10bdcbffbc197",
+        "apps/presentation/assets/fonts/LICENSE": "88f117575237307bdd86a17ef15e21790fc9a662fe4dfb103ca1ca077f0d9982",
+        "apps/presentation/assets/fonts/NotoSansJP-VF.ttf": "f4b373b226668ee33a6e54b02823dcd2d1209f17159f777421ae8c2275160369",
+        "apps/presentation/assets/images/tablecast-logo-cloudflare-icon.svg": "da6003724731ef69dc8f06a25f3a2ad84189e48fde64c38e908a46a470a74689",
+        "apps/presentation/assets/images/tablecast-logo-hono.svg": "f5268e5469aa3d2fd53d2dde4cf4a11ce044a8516d21e3341dca216da45cc97e",
+        "apps/presentation/assets/images/tablecast-logo-livekit.svg": "03092637dbc0be3767e2fa772c270d6b5e9cd2ae536964862453f020e3cae04e",
+        "apps/presentation/assets/images/tablecast-logo-mastra.svg": "37e6a49a057a3c294da22d1d897b04118021c739dd93ea57e3da7bb40c4dc38d",
+        "apps/presentation/assets/images/tablecast-logo-openai.svg": "5361f232b2abf87fc94d16de153c504a68e4d4ecc66d3d9bf624872121bc4ee7",
+        "apps/presentation/assets/images/tablecast-logo-python.svg": "11e3d0ab130fb16a443b353a2873603ab3b5d369a3b583534a23b75bc0fcff65",
+        "apps/presentation/assets/images/tablecast-logo-tanstack.svg": "45c0c5529c45ff5c7a968a0e2b11c37c4832226f2e58970e8b945283291a6f38",
+        "apps/presentation/assets/images/tablecast-main-admin.png": "fc4383b5bc059a5e71423efcf1a8eb1295e366b6354997e4ee4f5d6aafea63f0",
+        "apps/presentation/assets/images/tablecast-main-confirm.png": "ce16926f3576fc6a167c6542eab5de7fcdd9374098c6b2030cfd344c3937d3bb",
+        "apps/presentation/assets/images/tablecast-main-guest.png": "73eaf9493f26e983bf44271264caf10a93acac571bcc337fb65d08654edfcbc2",
+        "apps/presentation/assets/images/tablecast-main-staff.png": "8dcb9492356b6fdd9469297ed39fdc3d0155f1c2fa2778d02d57d77a91e3138f",
+        "apps/presentation/package.json": "42c55dcdfe8411f15f2a139a1d7c5f7a2968df5edc22e4b6634c19ddcc1845cd",
+        "apps/presentation/playwright.config.ts": "09bcea0292f5360fc196173c7b76335ea64e3ea5a1e2218d8df269b4faffeafb",
+        "apps/presentation/projects/tablecast-main-rerecord.json": "35025f18316c9b098203ede5c6f4f25545b648a2b0abfe222f2dbe16c3fe3484",
+        "apps/presentation/scripts/tablecast-app-capture.test.ts": "f44bcd7a91abfbfc28eb4c3dc9aa20c237208e7944eb80a595aee2d926834e82",
+        "apps/presentation/scripts/tablecast-app-capture.ts": "6e7e6967da6eb5b0327440eddabd360d5c2762d3b4ae11a5a810c874b9f103d9",
+        "apps/presentation/scripts/tablecast-browser-audio.ts": "70445a099eb211a1d16d65187cbb2babd003c507e9e0a5d6a83b946333f0b38d",
+        "apps/presentation/scripts/tablecast-build.ts": "4ae4cb909c1657e50c167ce15fa73bef42554c0a407d4e6f80ae4af50cc3c392",
+        "apps/presentation/scripts/tablecast-capture-check.ts": "f6c6b5bf1ccf3a32cb360ff95951519cb75b320fba565fb173fb0b4889762aed",
+        "apps/presentation/scripts/tablecast-capture-types.ts": "f0406d9d256a679686003e917984eadb11256c288c1ef4db84499f2a62b783f9",
+        "apps/presentation/scripts/tablecast-composition.test.ts": "1a94d26dd57ed1bddb4c4aaccb06f133b0c2771fd903fdff377442705e0dc590",
+        "apps/presentation/scripts/tablecast-composition.ts": "8984be742680aeb3c532aaa8701c0fb940c7e1cd61068834d1bfd941f404ec9a",
+        "apps/presentation/scripts/tablecast-cursor.test.ts": "a3a824a24672d0e9950398bf22e4c1a950776ce8054b4213e0f57b85e8d1fc42",
+        "apps/presentation/scripts/tablecast-cursor.ts": "aae92294aa0d6334ef30f5a7f633d454335b08a2171ae93c7bcfaab71dabe999",
+        "apps/presentation/scripts/tablecast-doctor.test.ts": "504569e2bcc68371eaeab599f347d868249aa1ad61fa260ac63a5512d37fa8bc",
+        "apps/presentation/scripts/tablecast-doctor.ts": "ceb60bad2bca6ee0fd210d6141c27d13e9e0f641c580dd718431caa6ec96f27e",
+        "apps/presentation/scripts/tablecast-edit-guest.ts": "34c4158d238d2d597a13827dc3bce4725232441b43ec5c52538141ab8141b8a8",
+        "apps/presentation/scripts/tablecast-edit-role.ts": "7317c483b85c28f842ccd92001ce372060b94c94cfe0ebfe3c646ad0dd5c221a",
+        "apps/presentation/scripts/tablecast-layout.spec.ts": "77585cbfde18560586f6465985304ccab78bc243172f99931ec37115f219ecd7",
+        "apps/presentation/scripts/tablecast-layout.ts": "8de8737bf24fe3c60b3bc3ca0af0f4e95a1cb902fcac3dd878da904d000533db",
+        "apps/presentation/scripts/tablecast-project.test.ts": "65ae89ed5fd7966034e3e83b71e7117c71cddadb756c8f75b8a76d5a71a213bc",
+        "apps/presentation/scripts/tablecast-project.ts": "3886c2c93d6d8326a132788d03ed04703ea584615d37ec79c513be969477282c",
+        "apps/presentation/scripts/tablecast-record-guest.ts": "d287834ece07c7bbfcadd434a7e94ccafe81b73df2ebc42be6e0f6647ae370cd",
+        "apps/presentation/scripts/tablecast-record-role.ts": "97840211463bc534b92c713ed11fde1469dadecc31662fb3af968e0af881544a",
+        "apps/presentation/scripts/tablecast-shot.spec.ts": "c0459ecadad69ce4850c81481c7776a1214b2d1945ac6fee3c746a39a7ea8ed2",
+        "apps/presentation/scripts/tablecast-shot.test.ts": "042c115bcb474e9b5f3ef85b0399c32981b2de81264e89e308bdceb002a5b9ed",
+        "apps/presentation/scripts/tablecast-shot.ts": "6459b947ecdf2ed5adf40d4d942926ff2a05318fba2e965861c230f3e04d78c8",
+        "apps/presentation/scripts/tablecast-technical-schema.ts": "0a4ffbb8a7fabc349a7152586dd76619b48189d9067eeecb6b87620f6feaf85b",
+        "apps/presentation/scripts/tablecast-technical.ts": "e4951b7919502d8ba1749314e1d40a84b897b55025d3acf130c157ce0f487f11",
+        "apps/presentation/scripts/tablecast-tts.test.ts": "4948b415e3874a46bc7203d09815eb49718258a1ff072b112034ef9e19ce9f7b",
+        "apps/presentation/scripts/tablecast-tts.ts": "ddaea6734ce5ea7985a6156b5daaf72ae8f57fae959bda32056d044db461ca72",
+        "apps/presentation/scripts/tablecast-video.ts": "7b6ec797c08d661674494d1ed40226e020063e1a2ba4e5d4803f27bc9933e914",
+        "apps/presentation/scripts/tablecast-workflow.spec.ts": "a9d611d692023db4158a28042d403dd22a1d68fc897d40fdf9c47a7cf9bae54d",
+        "apps/presentation/scripts/tablecast-workflow.test.ts": "3efd012e47a570d011327929c394e804c64540bfeaad3e1be89c818e958314a0",
+        "apps/presentation/scripts/tablecast-zoom.test.ts": "e3919a673eb8eae007325aa1e4e9bbf0a9e159a8d2f2e1f820f9edb1a0a76228",
+        "apps/presentation/scripts/tablecast-zoom.ts": "a86cdcb4ef80a05301eb1360963dfb7914f436e8196aa5b9e59f2ed085c272a7",
+        "apps/presentation/styles.css": "02da9a69c8ce627c817b965a43f48c08350c0fc85f6aefe00a89b1dabb70e17c",
+        "bun.lock": "c6fd8fa3da7620e7c4cc84e10a65c3d07db3aaae3871eee850d1d4fd4221d050",
+        "docs/acceptance.md": "6c284a8d8ff0a69c41693cbb93a1b5b551d20ad0c1de8ea26591bed35e71276c",
+        "docs/architecture.md": "b6c043d1b95a9ef9d75222ac66c1a799937f797b7ace7ebf1cc3ba3abaac8c01",
+        "docs/product.md": "262addec9d5a9c71cad49764554f7efec9db5cf06b03ba2dc03a46e59b05807d",
+        "docs/voice/integration.md": "7f269f30cd3aae969011153bf1d21f23f07f699aa54c33be1e5e239c673e044f",
+        "livekit/src/tablecast_livekit/agent.py": "60caf44a3543b48b503f6a4677361b698c4e6b2ad01731e97b5a3dc29a79da1d",
+        "livekit/src/tablecast_livekit/realtime.py": "f5241881772b94a1304525a9d44280ce546a0d256cc3d60b413e7294443ee849"
+      },
+      "logs": {
+        "build.log": "9462b1c83e2b634b6dcfb8a9ecaa50e5bdf9e719c96bbad0b354f9b0287e8c04",
+        "layout.log": "00781b29fce2c2671812fd1e5ee9f5ea4090442db6abe5fdfa348ea432d4c172",
+        "lint.log": "e7e5fde9fcef9145561b57a35fe7f02222c076ae25c99770c34eaa1d09fcb923",
+        "transitions.log": "0519ad0c360f5b1a921dd7c06f183ea833b52f840d022bd18611d436f50b4615",
+        "render.log": "2c3b5bb04d6a1f7d080b7743ce0f7174ab22f5256f28e01b26503a0a32ff7aec",
+        "metadata.log": "ee4fb3b49b357b82bf348fa2ec37f8ba0fe71b206b72903bb7006e6b39cded98",
+        "decode.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "volume.log": "0324c20c77a24108f66f220d0127635ca3b559632c995539a4dd328b6cb6923b",
+        "frame-0.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-1.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-2.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-3.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-4.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-5.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-6.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-7.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-8.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-9.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-10.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-11.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-12.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-13.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-14.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-15.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-16.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-17.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-18.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-19.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-20.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-21.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-22.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-23.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-24.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-25.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-26.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-27.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-28.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-29.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-30.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-31.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-32.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-33.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-34.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-35.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "frame-36.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        }
+      ],
+      "nonBlockingLint": "◆  Linting tablecast-restored-technical-v2/index.html\n\n◇  0 errors, 0 warnings\n"
+    }
+  ],
+  "limitations": [
+    "別PC・別OSからの再収録は未検証",
+    "GitHub上のCI・LFS転送・PR作成は未実施",
+    "実験補助スクリプトのAPI操作は今回再実行していない",
+    "完成MP4の見た目の再評価はユーザーが行う"
+  ],
+  "mainCheckoutCommitAndPush": "未実施。検証用のローカルリポジトリにのみsnapshot commitを作成。"
+}

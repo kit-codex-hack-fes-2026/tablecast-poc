@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-13",
+  "revision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "scope": "最新mainでの注文APIテスト。新規録画やデザイン承認の記録ではない。",
+  "apiOrderTests": {
+    "command": "bun run --cwd apps/api test test/orders.test.ts",
+    "passed": 25,
+    "failed": 0,
+    "files": 1,
+    "durationSeconds": 49.16,
+    "runtime": "local Cloudflare Workers/D1 test runtime on Windows"
+  },
+  "recordingRevision": "17dc332; existing product recordings retained"
+}

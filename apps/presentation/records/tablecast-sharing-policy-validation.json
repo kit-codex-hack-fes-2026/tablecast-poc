@@ -1,0 +1,59 @@
+{
+  "date": "2026-09-13",
+  "issue": 1,
+  "baseRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "localValidationSnapshot": "a5418fa6e69be1edbe6cb457ea051ffa74b0089b",
+  "decisions": {
+    "defaultLfsDownload": "動画素材を.lfsconfigのfetchexcludeで除外し、制作時だけ--includeと--exclude=で取得",
+    "openScreenProjects": "通常GitのJSONへ変更。-textでバイトを維持し、diffを表示。Vitestで共有メディアの絶対参照と個人ディレクトリを検査",
+    "readinessDocument": "PR-READINESS.mdは非公開の.localへ保管。変更内容・判断・検証範囲はPR本文、証拠はrecordsへ配置",
+    "codeStructure": "描画器・実験adapterの大規模な再編は見送り"
+  },
+  "lfs": {
+    "files": 170,
+    "uniqueObjects": 130,
+    "bytesByPath": 905561698,
+    "uniqueBytes": 814998869,
+    "organizationPlan": "free",
+    "includedMonthlyBandwidthGiB": 10,
+    "billingObservation": "2026年9月のGitHub課金サマリーを取得し、LFS項目なし。利用量の即時反映を保証するものではない。",
+    "source": "https://docs.github.com/en/billing/concepts/product-billing/git-lfs"
+  },
+  "checks": {
+    "fixture": {
+      "gitLfs": "git-lfs/3.6.1 (GitHub; windows amd64; go 1.23.3; git ea47a34b)",
+      "normalCloneExcludesMedia": true,
+      "existingCheckoutPullExcludesNewMedia": true,
+      "projectStoredAsOrdinaryGitJson": true,
+      "explicitIncludeAndEmptyExcludeDownloadsOnlySelectedAudio": true
+    },
+    "checkout": {
+      "snapshot": "a5418fa6e69be1edbe6cb457ea051ffa74b0089b",
+      "normalClonePointerFiles": 170,
+      "lfsFreeUnitTests": 48,
+      "absoluteProjectRejected": true,
+      "privateLogRejected": true,
+      "missingMediaExplainsExplicitLfsPull": true
+    },
+    "unchangedProjectBytes": 37,
+    "sharedFilms": "既存4本を変更せず保持",
+    "maximumNormalBlob": {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/original/recording-1789289818377.mp4.cursor.json",
+      "bytes": 1943927
+    },
+    "presentationLint": "passed",
+    "presentationTypecheck": "passed",
+    "savedMediaBuild": "sample.json / product 111.10秒・technical 63.10秒のbuildが通過",
+    "fullVideoRerender": "未実施。生成・全編再生の先行記録を保持。",
+    "projectsMetadata": "GitHub tokenにread:project scopeがなく未確認",
+    "maximumRepositoryBlob": {
+      "file": "assets/demo/hokke.png",
+      "bytes": 2520684
+    },
+    "maximumBlobCorrection": "以前の約2.5MBは差分外の既存画像assets/demo/hokke.pngを含む値。今回のPR差分の最大は1,943,927 bytes。"
+  },
+  "priorEvidence": [
+    "records/tablecast-pr-validation.json",
+    "records/tablecast-share-path-validation.json"
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "projects": [
+    "sample.json",
+    "projects/tablecast-main-rerecord.json",
+    "experiments/tablecast-mutation/product.json",
+    "examples/tablecast-booking/project.json"
+  ],
+  "takes": [
+    "assets/openscreen/tablecast-guest-v13",
+    "assets/openscreen/tablecast-iphone-staff-v13",
+    "assets/openscreen/tablecast-macbook-admin-v13",
+    "assets/openscreen/tablecast-main-7d6adc7-admin-v1",
+    "assets/openscreen/tablecast-main-rerecord-english-v1",
+    "assets/openscreen/tablecast-main-rerecord-guest-v5",
+    "assets/openscreen/tablecast-main-rerecord-staff-v2",
+    "assets/openscreen/tablecast-mutation-admin-v1",
+    "assets/openscreen/tablecast-mutation-guest-v4",
+    "assets/openscreen/tablecast-mutation-staff-v1"
+  ],
+  "films": [
+    {
+      "file": "assets/films/tablecast-product-v14.mp4",
+      "source": "output/tablecast-product-demo-v14/video.mp4",
+      "bytes": 14739978,
+      "sha256": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f"
+    },
+    {
+      "file": "assets/films/tablecast-technical-v17.mp4",
+      "source": "output/tablecast-technical-evaluation-v17/video.mp4",
+      "bytes": 4202507,
+      "sha256": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7"
+    },
+    {
+      "file": "assets/films/tablecast-mutation-product-v2.mp4",
+      "source": "output/tablecast-mutation-product-v2/video.mp4",
+      "bytes": 15062385,
+      "sha256": "0285b9583d6d078aea1729184a3aa688eb162c13c6768874b78feb3f49d6e260"
+    },
+    {
+      "file": "assets/films/tablecast-mutation-technical-v1.mp4",
+      "source": "output/tablecast-mutation-technical-v1/video.mp4",
+      "bytes": 4210945,
+      "sha256": "731f5296fef319a41ece47c8be765552c5e70af9308977cfba3b430fecd09675"
+    }
+  ],
+  "byFolder": {
+    "audio": {
+      "files": 21,
+      "bytes": 50408524
+    },
+    "demo": {
+      "files": 21,
+      "bytes": 99290001
+    },
+    "films": {
+      "files": 4,
+      "bytes": 38215815
+    },
+    "fonts": {
+      "files": 2,
+      "bytes": 9595033
+    },
+    "images": {
+      "files": 33,
+      "bytes": 3254554
+    },
+    "openscreen": {
+      "files": 236,
+      "bytes": 713621678
+    }
+  },
+  "files": [
+    "assets/audio/tablecast-carefree-kevin-macleod.wav",
+    "assets/audio/tablecast-input-approve.wav",
+    "assets/audio/tablecast-input-confirm.wav",
+    "assets/audio/tablecast-input-consult.wav",
+    "assets/audio/tablecast-input-english.wav",
+    "assets/audio/tablecast-input-order.wav",
+    "assets/audio/tablecast-kenney-switch.wav",
+    "assets/audio/tech-architecture-voice-30536258a210ef9a.wav",
+    "assets/audio/tech-evidence-voice-05cc08c4aa653943.wav",
+    "assets/audio/tech-future-voice-79a4290005b4387a.wav",
+    "assets/audio/tech-intro-voice-152a6a8650f91d5a.wav",
+    "assets/audio/tech-order-voice-7fc8c756c07596b0.wav",
+    "assets/audio/tech-voice-voice-3e80c4d23a6a3c69.wav",
+    "assets/audio/voice-admin-210e184f66bfef15.wav",
+    "assets/audio/voice-closing-37488b71dd237f9e.wav",
+    "assets/audio/voice-opening-bd0ec2c1aa4203c8.wav",
+    "assets/audio/voice-pause-67723e96024fee67.wav",
+    "assets/audio/voice-roles-3b57b6fae0bc04bb.wav",
+    "assets/audio/voice-staff-check-63c37208296e0d5c.wav",
+    "assets/demo/tablecast-guest-v13.mp4",
+    "assets/demo/tablecast-iphone-staff-v13.mp4",
+    "assets/demo/tablecast-macbook-admin-v13.mp4",
+    "assets/demo/tablecast-main-7d6adc7-admin-v1.mp4",
+    "assets/demo/tablecast-main-rerecord-english-v1.mp4",
+    "assets/demo/tablecast-main-rerecord-guest-v5.mp4",
+    "assets/demo/tablecast-main-rerecord-staff-v2.mp4",
+    "assets/demo/tablecast-mutation-admin-v1.mp4",
+    "assets/demo/tablecast-mutation-guest-v4.mp4",
+    "assets/demo/tablecast-mutation-staff-v1.mp4",
+    "assets/fonts/LICENSE",
+    "assets/fonts/NotoSansJP-VF.ttf",
+    "assets/images/tablecast-admin-screen-concept-v2.png",
+    "assets/images/tablecast-guest-screen-v13.png",
+    "assets/images/tablecast-logo-cloudflare-icon.svg",
+    "assets/images/tablecast-logo-hono.svg",
+    "assets/images/tablecast-logo-livekit.svg",
+    "assets/images/tablecast-logo-mastra.svg",
+    "assets/images/tablecast-logo-openai.svg",
+    "assets/images/tablecast-logo-python.svg",
+    "assets/images/tablecast-logo-tanstack.svg",
+    "assets/images/tablecast-main-admin.png",
+    "assets/images/tablecast-main-confirm.png",
+    "assets/images/tablecast-main-consult.png",
+    "assets/images/tablecast-main-guest.png",
+    "assets/images/tablecast-main-staff.png",
+    "assets/images/tablecast-mutation-admin.png",
+    "assets/images/tablecast-mutation-confirm.png",
+    "assets/images/tablecast-mutation-consult.png",
+    "assets/images/tablecast-mutation-guest.png",
+    "assets/images/tablecast-mutation-staff.png",
+    "assets/images/tablecast-recap-confirm-v13.png",
+    "assets/images/tablecast-recap-consult-v13.png",
+    "assets/images/tablecast-recap-staff-v13.png",
+    "assets/images/tablecast-technical-confirm-v14.png"
+  ],
+  "originalRecordings": [
+    {
+      "file": "assets/openscreen/tablecast-guest-v13/original/recording-1789195442146.mp4",
+      "bytes": 95355105,
+      "sha256": "7e0e9cbf5ec7218d1fb882586815e9bd2877e42290453472a2114594ae4023ad",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-guest-v13/original/recording-1789195442146.mp4.cursor.json",
+        "sha256": "5000f543cb8bdb95cab9962c6e8e2571fde5ad0fd52e4cc05f652fc8077414cb"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-iphone-staff-v13/original/recording-1789195699594.mp4",
+      "bytes": 1188823,
+      "sha256": "2f12cd731d06621a1768693d5b948c97aebe843577921eb7d8c0f5f0cf8d5d15",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-iphone-staff-v13/original/recording-1789195699594.mp4.cursor.json",
+        "sha256": "968e2c71688221fea367044bd3e5fe886e9146231b7b4eddc8829344ce7cdb0c"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-macbook-admin-v13/original/recording-1789225133510.mp4",
+      "bytes": 21634136,
+      "sha256": "212730755ca98af52e70b1cef91fb162859c8f15d2ae354dce74f46ec929404a",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-macbook-admin-v13/original/recording-1789225133510.mp4.cursor.json",
+        "sha256": "8696ff1a6d50dfe8c286841733c9516eb2f68adafd9a5385a3a03bbbad7c0a65"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-main-7d6adc7-admin-v1/original/recording-1789288405684.mp4",
+      "bytes": 19189625,
+      "sha256": "1fc6d4bfa5933b2f3e84254ad58f460b52296ae9702a87a70961a0d864dac394",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-main-7d6adc7-admin-v1/original/recording-1789288405684.mp4.cursor.json",
+        "sha256": "e9715be17e9a0bb0e4ec27baaf8f16295f233c4613ed7837f7465ef4915b0dd5"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-main-rerecord-english-v1/original/recording-1789290184620.mp4",
+      "bytes": 21060454,
+      "sha256": "4502e82c44b8581eb0b23360d9431105f87f9910a74a2ea1d43ed18d5d7276fe",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-main-rerecord-english-v1/original/recording-1789290184620.mp4.cursor.json",
+        "sha256": "bc3f91da21b3fd6b5518572f54ba40932c80c91f93fd2de77f9b12edcd6c5782"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-main-rerecord-guest-v5/original/recording-1789289818377.mp4",
+      "bytes": 63206978,
+      "sha256": "62a25164631fd9459a0d40364b9d796f26b8b395e29796efd85284af5af24266",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-main-rerecord-guest-v5/original/recording-1789289818377.mp4.cursor.json",
+        "sha256": "ca793e1eee3e2c2744656b686f6811bd3692694209e3109b6305f4b3425cb575"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-main-rerecord-staff-v2/original/recording-1789290087084.mp4",
+      "bytes": 1638498,
+      "sha256": "1db4c84fd87dd4299d80fc92a6856008facdfac80d8990f4211fca5fe79a4fe1",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-main-rerecord-staff-v2/original/recording-1789290087084.mp4.cursor.json",
+        "sha256": "3cf5c0d52a0e49aaf3bf2636af31579c6599d5ca327afd192beccfc0f98d4cb3"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-mutation-admin-v1/original/recording-1789293239438.mp4",
+      "bytes": 22353183,
+      "sha256": "324e5598979f15d97af004a1cc9e92ab8db0ca804eb27e4a3b175d54f51c3fb3",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-mutation-admin-v1/original/recording-1789293239438.mp4.cursor.json",
+        "sha256": "bee840f9ca3b2a615f4ad0e5c53657232b44cea8a755077a503bcfadbadaf21e"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-mutation-guest-v4/original/recording-1789292848674.mp4",
+      "bytes": 86553083,
+      "sha256": "9a026a250ad9df6db6b4ec8fc45c4b7e49f1804ff1034c908d36756de9f08fdc",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-mutation-guest-v4/original/recording-1789292848674.mp4.cursor.json",
+        "sha256": "ed92f2ce6f252cdae75007eff281b773a8e784f5cbebfa4af06f8a9145eeceaf"
+      }
+    },
+    {
+      "file": "assets/openscreen/tablecast-mutation-staff-v1/original/recording-1789293173431.mp4",
+      "bytes": 1722523,
+      "sha256": "77bdf58c24d12c5ab38144810b0a4871911f206a31270164bb58dc48725083a0",
+      "cursor": {
+        "file": "assets/openscreen/tablecast-mutation-staff-v1/original/recording-1789293173431.mp4.cursor.json",
+        "sha256": "cf19104a71fb72bcbbcea5d0d07d8ddabc023b9741b061dde6c8f235bbc5ccc0"
+      }
+    }
+  ]
+}
