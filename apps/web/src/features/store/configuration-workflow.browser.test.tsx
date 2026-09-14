@@ -273,6 +273,7 @@ it.each([503, 409])(
     await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
     await expect.element(price).toBeDisabled();
     await expect.element(screen.getByText(ja.workflow_saving, { exact: true })).toBeVisible();
+    await expect.element(screen.getByText(ja.form_submitting, { exact: true })).toBeVisible();
     pending.resolve();
     await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
     await screen.getByRole("link", { name: ja.workflow_review, exact: true }).click();
