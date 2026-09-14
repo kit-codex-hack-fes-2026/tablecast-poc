@@ -167,8 +167,25 @@ for (const { locale, labels } of [
     await main.screenshot({
       path: testInfo.outputPath(`tablecast-cast-published-after-${locale}.png`),
     });
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await page.screenshot({
+      path: testInfo.outputPath(`tablecast-cast-ipad-landscape-${locale}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    await page.screenshot({
+      path: testInfo.outputPath(`tablecast-cast-large-text-${locale}.png`),
+      fullPage: true,
+    });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
     await page.goto(`${menu}/changes/${draft.id}/cast`);
-    await expect(main.getByText(labels.draft_published, { exact: true })).toBeVisible();
+    await expect(
+      main.getByRole("heading", { level: 1 }).getByText(labels.draft_published, { exact: true }),
+    ).toBeVisible();
     await expect(main.getByRole("link", { name: englishVoiceLabel, exact: true })).toHaveCount(0);
     await expect(main.getByRole("button", { name: englishVoiceLabel, exact: true })).toHaveCount(0);
   });
