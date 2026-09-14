@@ -26,6 +26,8 @@
 
 ## 実行層
 
+PRの全編動画は通常CIと独立した`TableCast Demo Videos`で生成する。同一リポジトリのPRを対象に、既存Vitestと`video --render`の配置・字幕・形式・復号・音量・等速再生検査を通す。素材取得範囲・失敗時の診断・実測の読み方は[PRのデモ動画](../apps/presentation/CI.md)を参照する。通常CIのLFS取得と動画生成への依存は増やさない。
+
 動画基盤のVitestはCIの`unit-web`ジョブでWeb・seedと並列に実行する。保存音声やLFS素材を取得せずに、台本検証・時間計算・ズーム・収録の完了判定と、通常Git管理のOpenScreen project・収録ログへの個人パス再混入を検査する。動画全編の生成・再生、OpenScreen収録、有料音声の確認はこのジョブには含めず、[共有と復元](../apps/presentation/SHARING.md)に従って実施記録を残す。
 
 | 層           | 対象・runtime                               | 主な検出対象                               |

@@ -886,16 +886,12 @@
       "chapter": "01 / 課題と成果",
       "title": "音声接客を、店舗の注文につなぐ。",
       "kicker": "",
-      "note": "実録・実装根拠：最新main 7d6adc7 ／ 合成店舗・合成入力音声 ／ 端末viewportの再現",
+      "note": "収録版7d6adc7の記録（旧構成） / 実録・実装根拠：main 7d6adc7 ／ 合成店舗・合成入力音声 ／ 端末viewportの再現",
       "points": [],
       "technical": {
         "view": "decision",
         "legend": "実画面から、会話と注文をつなぐ仕組みを見ていく",
-        "sources": [
-          "docs/product.md",
-          "apps/api/src/modules/orders/service.ts",
-          "apps/api/src/modules/tables/mutations.ts"
-        ],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "screen",
@@ -990,18 +986,12 @@
       "chapter": "02 / 全体構成",
       "title": "画面・会話・業務判断を、3つの領域でつなぐ。",
       "kicker": "",
-      "note": "主要経路の説明図 / ロゴは各サービスを識別するもの / 構成根拠：docs/architecture.md",
+      "note": "収録版7d6adc7の記録（旧構成） / 主要経路の説明図 / ロゴは各サービスを識別するもの / 構成根拠：docs/architecture.md",
       "points": [],
       "technical": {
         "view": "architecture",
         "legend": "WebRTCは客ブラウザーの通信 / 音声Agentの業務HTTPはWeb入口経由 / Cloudflare欄はサービスの役割を示す",
-        "sources": [
-          "docs/architecture.md",
-          "docs/voice/integration.md",
-          "livekit/src/tablecast_livekit/realtime.py",
-          "apps/api/src/modules/orders/service.ts",
-          "apps/api/src/modules/tables/mutations.ts"
-        ],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "users",
@@ -1531,18 +1521,12 @@
       "chapter": "03 / 音声方式の選択",
       "title": "音声理解と発声を分け、接客の声を構成する。",
       "kicker": "",
-      "note": "通常経路：OpenAI Realtimeのtext出力 + Inworld TTS / 速度・音質の比較実測ではない",
+      "note": "収録版7d6adc7の記録（旧構成） / 通常経路：OpenAI Realtimeのtext出力 + Inworld TTS / 速度・音質の比較実測ではない",
       "points": [],
       "technical": {
         "view": "architecture",
         "legend": "WebRTCは客ブラウザーの通信 / 音声Agentの業務HTTPはWeb入口経由 / Cloudflare欄はサービスの役割を示す",
-        "sources": [
-          "docs/architecture.md",
-          "docs/voice/integration.md",
-          "livekit/src/tablecast_livekit/realtime.py",
-          "apps/api/src/modules/orders/service.ts",
-          "apps/api/src/modules/tables/mutations.ts"
-        ],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "users",
@@ -2078,16 +2062,12 @@
       "chapter": "04 / 注文が確定する条件",
       "title": "読み上げてから承認。内容が変われば、確認し直す。",
       "kicker": "",
-      "note": "音声注文の主要状態を簡略化 ／ 根拠：orders/service.ts・tables/mutations.ts・agent.py",
+      "note": "収録版7d6adc7の記録（旧構成） / 音声注文の主要状態を簡略化 ／ 根拠：orders/service.ts・tables/mutations.ts・agent.py",
       "points": [],
       "technical": {
         "view": "state-machine",
         "legend": "音声注文の状態遷移　／　角丸は状態、矢印は変化の条件",
-        "sources": [
-          "apps/api/src/modules/orders/service.ts",
-          "apps/api/src/modules/tables/mutations.ts",
-          "livekit/src/tablecast_livekit/agent.py"
-        ],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "prepared",
@@ -2250,12 +2230,12 @@
       "chapter": "05 / 条件ごとの検査結果",
       "title": "正常な承認は成立し、条件外の承認は拒否する。",
       "kicker": "",
-      "note": "根拠：orders.test.ts：155–184、525–573 ／ 3行目はGUI経路の確認失効 ／ HEAD 7d6adc7",
+      "note": "収録版7d6adc7の記録（旧構成） / 根拠：orders.test.ts：155–184、525–573 ／ 3行目はGUI経路の確認失効 ／ HEAD 7d6adc7",
       "points": [],
       "technical": {
         "view": "test-matrix",
         "legend": "ローカルAPIテストの代表3条件　／　右端のPASSは「期待した動作と一致」",
-        "sources": ["apps/api/test/orders.test.ts"],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "headers",
@@ -2377,12 +2357,12 @@
       "chapter": "06 / 次に確かめる体感応答",
       "title": "次は、話し終えてから返答が聞こえるまでを測る。",
       "kicker": "",
-      "note": "測定計画：docs/acceptance.md　／　端末での体感応答時間は未測定　／　数値・性能グラフは測定後に追加",
+      "note": "収録版7d6adc7の記録（旧構成） / 測定計画：docs/acceptance.md　／　端末での体感応答時間は未測定　／　数値・性能グラフは測定後に追加",
       "points": [],
       "technical": {
         "view": "latency",
         "legend": "今後の測定計画　／　横方向は時間の流れ。線の長さは実測値を表さない",
-        "sources": ["docs/acceptance.md"],
+        "sources": ["apps/presentation/records/tablecast-technical-source-evidence.md"],
         "panels": [
           {
             "id": "speech-end",

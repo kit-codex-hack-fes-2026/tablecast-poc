@@ -1,5 +1,7 @@
 # 動画基盤の共有と復元
 
+PRごとの自動生成・Artifactsの取得・再実行・素材不足時の対応は[PRのデモ動画](CI.md)を参照する。
+
 Issue #1の動画基盤として、生成コード・台本・採用素材・原録画・編集project・撮影証跡を共有する。通常の再生成は保存済みの音声と映像を使い、アプリ起動・認証・有料TTSを必要としない。
 
 ## 共有するもの
@@ -56,7 +58,7 @@ LFSの実体がない場合はMP4やWAVを利用できない。動画制作時�
 
 `.gitattributes`はpresentation内で有効であり、ルートに重複定義する必要はない。共有前は全素材を取得し、通常の`git add`後に`git lfs ls-files`と`git -c lfs.fetchexclude= lfs fsck`で除外なしの整合性検査を行う。共有素材の実体は約342MB（326MiB）。転送量は重複するLFS objectと取得範囲により異なる。リモート転送前にリポジトリ所有者のLFS利用量を確認する。
 
-現行の採用素材と完成例4本は、同じ版の確認・再生成に使うためGit LFSに保持する。制作途中のrunやPRごとの新しい書き出しは追加しない。PR単位の動画配布は[Issue #139](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/139)のActions Artifactsで扱う予定で、保存期限のある検証用成果物と採用版の保管を分ける。
+現行の採用素材と完成例4本は、同じ版の確認・再生成に使うためGit LFSに保持する。制作途中のrunやPRごとの新しい書き出しは追加しない。PR単位の動画配布は[動画専用workflow](CI.md)のActions Artifactsで扱い、保存期限のある検証用成果物と採用版の保管を分ける。
 
 `.openscreen`は小さいJSONとして通常Git管理し、改行変換を止めて差分を表示する。`bun run test`はGit管理対象のprojectと収録ログを読み、メディアの絶対参照と個人ディレクトリの再混入を検出する。LFS未取得のCIでも同じ検査を実行する。共有ポリシーの検証結果は[公開ポリシーの検証記録](records/tablecast-sharing-policy-validation.json)を参照する。
 
