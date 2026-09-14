@@ -193,13 +193,21 @@ for (const locale of ["ja", "en"] as const) {
       ["desktop", 1280, 800],
       ["ipad-portrait", 768, 1024],
       ["ipad-landscape", 1024, 768],
+      ["ipad-content", 728, 768],
     ] as const) {
       await page.viewport(width, height);
       await page.screenshot({
         path: `../../test-results/browser/tablecast-menu-filters-${locale}-${label}.png`,
       });
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+      expect(
+        screen
+          .getByRole("link", { name: labels.admin_details, exact: true })
+          .element()
+          .getBoundingClientRect().right,
+      ).toBeLessThanOrEqual(width);
     }
+    await page.viewport(1024, 768);
     const previousSize = document.documentElement.style.fontSize;
     document.documentElement.style.fontSize = "200%";
     try {

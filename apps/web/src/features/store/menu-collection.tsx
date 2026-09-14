@@ -269,7 +269,11 @@ function menuCollectionColumns(
       ? [
           {
             accessorKey: "price",
-            header: t(section === "plans" ? "editor_plan_price" : "admin_unit_price"),
+            header: () => (
+              <span className="block max-w-44 whitespace-normal">
+                {t(section === "plans" ? "editor_plan_price" : "admin_unit_price")}
+              </span>
+            ),
             cell: ({ row }) => (
               <span className="whitespace-nowrap tabular-nums">
                 {money(row.original.price ?? 0, locale)}
