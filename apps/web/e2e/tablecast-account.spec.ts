@@ -1,6 +1,7 @@
 import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import { z } from "zod";
+import { writeFile } from "node:fs/promises";
 
 // Authの失敗応答を差し替えるHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
@@ -9,7 +10,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   page,
   baseURL,
   runtime,
-}) => {
+}, testInfo) => {
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
   await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
@@ -46,20 +47,70 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.goto("/organisations");
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   const slug = `tablecast-acceptance-${Date.now()}`;
-  await page.getByRole("link", { name: "店舗を作成", exact: true }).click();
-  await expect(page).toHaveURL(/\/stores\/new$/);
   const storeName = `TableCast 受入試験 ${slug}`;
-  await page.getByLabel("店舗名", { exact: true }).fill(storeName);
-  await page.getByLabel("識別名").fill(slug);
-  await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
-  await expect(page).toHaveURL(/\/menu\/products$/);
-  await page.getByRole("link", { name: "メンバー", exact: true }).click();
-  await expect(
-    page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
-  ).toHaveCount(0);
+  // #145の調査: 認証情報を含めず、操作対象と遷移・取得の境界を記録する。
+  const navigation: string[] = [];
+  page.on("console", (message) => {
+    if (message.text().startsWith("tablecast-navigation:")) navigation.push(message.text());
+  });
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) navigation.push(`URL ${new URL(frame.url()).pathname}`);
+  });
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (path.startsWith("/api/admin/stores") || path.endsWith("/get-full-organization"))
+      navigation.push(`${response.request().method()} ${path} ${response.status()}`);
+  });
+  await page.evaluate(() => {
+    for (const type of ["pointerdown", "pointerup", "click"]) {
+      document.addEventListener(
+        type,
+        (event) => {
+          const target = event.target;
+          const link = target instanceof Element ? target.closest("a") : null;
+          const record = {
+            type,
+            path: location.pathname,
+            href: link?.getAttribute("href"),
+            heading: document.querySelector("h1")?.textContent,
+          };
+          queueMicrotask(() =>
+            console.info(
+              "tablecast-navigation:",
+              JSON.stringify({
+                ...record,
+                connected: target instanceof Node && target.isConnected,
+                prevented: event.defaultPrevented,
+              }),
+            ),
+          );
+        },
+        { capture: true },
+      );
+    }
+  });
+  try {
+    await page.getByRole("link", { name: "店舗を作成", exact: true }).click();
+    await expect(page).toHaveURL(/\/stores\/new$/);
+    await page.getByLabel("店舗名", { exact: true }).fill(storeName);
+    await page.getByLabel("識別名").fill(slug);
+    await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
+    await expect(page).toHaveURL(/\/menu\/products$/);
+    await page.getByRole("link", { name: "メンバー", exact: true }).click();
+    await expect(
+      page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    const path = testInfo.outputPath("tablecast-navigation.log");
+    await writeFile(path, navigation.join("\n"));
+    await testInfo.attach("tablecast-navigation", {
+      path,
+      contentType: "text/plain",
+    });
+  }
   await page.getByRole("link", { name: "招待", exact: true }).click();
   await page.getByRole("link", { name: "メンバーを招待", exact: true }).click();
   await expect(page).toHaveURL(/\/invitations\/new$/);

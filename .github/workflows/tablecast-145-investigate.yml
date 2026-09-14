@@ -1,0 +1,45 @@
+name: TableCast 145 investigation
+
+# 調査ブランチだけで既存E2Eを動かし、製品の配備jobには接続しない。
+on:
+  push:
+    branches: [codex/145-member-navigation]
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+  DO_NOT_TRACK: "1"
+  ORT_DISABLE_TELEMETRY: "1"
+
+jobs:
+  e2e:
+    name: "E2E Test: メンバー遷移の観測 (Playwright, ${{ matrix.browser }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: ./.github/actions/tablecast-setup
+      - parallel:
+          - uses: ./.github/actions/tablecast-browser
+            with:
+              browsers: ${{ matrix.browser }}
+          - uses: ./.github/actions/tablecast-browser-deps
+            with:
+              browsers: ${{ matrix.browser }}
+          - name: Mailpit image
+            run: docker pull axllent/mailpit:v1.29.2
+      - name: Isolated cases · 4 workers · no retries
+        run: bun run test:e2e --project=tablecast-${{ matrix.browser }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: tablecast-145-${{ matrix.browser }}
+          path: apps/web/test-results/
+          include-hidden-files: true
+          retention-days: 7
