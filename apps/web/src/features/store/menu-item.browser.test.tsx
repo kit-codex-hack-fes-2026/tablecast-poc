@@ -287,10 +287,20 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     await expect.poll(() => uploads).toBe(2);
     const save = form.getByRole("button", { name: en.common_save, exact: true });
     const remove = form.getByRole("button", { name: en.menu_remove_item, exact: true });
+    const removeOption = first.getByRole("button", {
+      name: `${en.editor_remove_option} Group 1: Serving size Option 1: 60 mL`,
+      exact: true,
+    });
+    const removeGroup = form.getByRole("button", {
+      name: `${en.editor_remove_modifier} Group 1: Serving size`,
+      exact: true,
+    });
     const back = form.getByRole("link", { name: en.editor_products, exact: true });
     await expect.element(save).toBeDisabled();
     await expect.element(save).toHaveAttribute("data-pwa-blocked", "true");
     await expect.element(remove).toBeDisabled();
+    await expect.element(removeOption).toBeDisabled();
+    await expect.element(removeGroup).toBeDisabled();
     await expect.element(form.getByText(en.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(1024, 768);
     await page.screenshot({ path: "../../../test-results/browser/tablecast-image-pending-en.png" });
@@ -310,6 +320,8 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     await expect.element(first.getByRole("button", { name: en.common_retry })).toBeVisible();
     await expect.element(save).toBeDisabled();
     await expect.element(remove).toBeDisabled();
+    await expect.element(removeOption).toBeDisabled();
+    await expect.element(removeGroup).toBeDisabled();
     await first.getByRole("button", { name: en.common_retry }).click();
     await expect.poll(() => uploads).toBe(3);
     responses[1].resolve(
@@ -339,6 +351,14 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     const savedBeforeUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(savedBeforeUnload);
     expect(savedBeforeUnload.defaultPrevented).toBe(false);
+    await expect.element(removeOption).toBeEnabled();
+    await expect.element(removeGroup).toBeEnabled();
+    await removeOption.click();
+    await expect.element(first).not.toBeInTheDocument();
+    await removeGroup.click();
+    await expect
+      .element(form.getByRole("group", { name: "Group 1: Serving size", exact: true }))
+      .not.toBeInTheDocument();
     await back.click();
     await expect.element(page.getByRole("heading", { name: "商品一覧へ移動済み" })).toBeVisible();
   } finally {

@@ -33,6 +33,7 @@ import { useI18n } from "../../i18n/locale";
 import { draftsOptions } from "./store-query";
 
 import { parseResponse, rpc } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
 import { m } from "../../paraglide/messages";
 import { ConfigurationStatus, DraftStatus } from "../shell/configuration-status";
 import { menuLabels, menuSectionSchema, type MenuReviewSearch } from "./menu-model";
@@ -126,6 +127,14 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
       saved(next);
       void client.invalidateQueries({ queryKey: ["tablecast-admin-catalog", storeId] });
       void client.invalidateQueries({ queryKey: ["tablecast-stores"] });
+      setConfirmPublish(false);
+    },
+    onError: async (error) => {
+      if (apiError(error)?.status !== 409) return;
+      await Promise.all([
+        client.invalidateQueries({ queryKey: catalogOptions(storeId).queryKey }),
+        client.invalidateQueries({ queryKey: draftOptions(storeId, draftId).queryKey }),
+      ]);
       setConfirmPublish(false);
     },
   });

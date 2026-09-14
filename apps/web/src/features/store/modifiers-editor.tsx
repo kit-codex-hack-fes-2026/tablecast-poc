@@ -1,4 +1,5 @@
 import { type Modifier, type Product } from "@tablecast/api/schema";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Image, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 import { Button } from "../../components/ui/button";
@@ -13,6 +14,7 @@ import {
   NumericField,
   ReferencesField,
 } from "./configuration-fields";
+import { configurationImageUploadKey } from "./menu-query";
 
 function encodeEditorId(value: string) {
   return encodeURIComponent(JSON.stringify(value));
@@ -46,6 +48,8 @@ export function ModifiersEditor({
   disabled: boolean;
 }) {
   const { t, locale } = useI18n();
+  const client = useQueryClient();
+  const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
   const id = useId();
   const root = useRef<HTMLFieldSetElement>(null);
   const pendingFocus = useRef<string | null>(null);
@@ -154,9 +158,12 @@ export function ModifiersEditor({
                 event.currentTarget.open = true;
               }}
             >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+              <summary
+                aria-labelledby={`${groupId} ${groupId}-translation`}
+                className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+              >
                 <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
-                {t("editor_translation")}
+                <span id={`${groupId}-translation`}>{t("editor_translation")}</span>
               </summary>
               <div className="pt-4">
                 <BilingualFields
@@ -179,9 +186,11 @@ export function ModifiersEditor({
                   labelledBy={groupId}
                   references={optionChoices.filter((choice) => choice.id !== option.id)}
                   disabled={disabled}
-                  removable={group.options.length > 1}
+                  removable={group.options.length > 1 && !uploadingImages}
                   onChange={(change) => updateOption(group, option.id, change)}
                   onRemove={() => {
+                    if (client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }))
+                      return;
                     const next = group.options[optionIndex + 1] ?? group.options[optionIndex - 1];
                     pendingFocus.current = next
                       ? `${groupId}-${encodeEditorId(next.id)}`
@@ -214,8 +223,10 @@ export function ModifiersEditor({
               type="button"
               className="justify-self-start"
               aria-labelledby={`${groupId}-remove ${groupId}`}
-              disabled={disabled}
+              disabled={disabled || uploadingImages}
               onClick={() => {
+                if (client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }))
+                  return;
                 const next = product.modifiers[groupIndex + 1] ?? product.modifiers[groupIndex - 1];
                 pendingFocus.current = next ? `${id}-${encodeEditorId(next.id)}` : `${id}-add`;
                 onChange(product.modifiers.filter((item) => item.id !== group.id));

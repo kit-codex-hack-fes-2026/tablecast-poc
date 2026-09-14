@@ -96,8 +96,7 @@ function MenuListCollection({
   const data = configuration
     ? menuCollectionRows(configuration, section, locale).filter(
         (row) =>
-          (!search.q ||
-            row.searchText.includes(search.q.trim().normalize("NFKC").toLocaleLowerCase())) &&
+          (!search.q || row.searchText.includes(search.q.trim().normalize("NFKC").toLowerCase())) &&
           (section !== "products" || !search.category || row.categoryId === search.category) &&
           (section !== "products" ||
             !search.availability ||
@@ -417,4 +416,4 @@ const menuSearchText = (item: Configuration["categories"][number]) =>
   Object.values(item.text)
     .flatMap((value) => [value.displayName, value.speechName, ...value.aliases])
     .join(" ");
-const normalise = (value: string) => value.normalize("NFKC").toLocaleLowerCase();
+const normalise = (value: string) => value.normalize("NFKC").toLowerCase();
