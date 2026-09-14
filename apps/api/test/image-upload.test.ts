@@ -1,5 +1,5 @@
 import { env, exports } from "cloudflare:workers";
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import {
   createDraft,
   updateDraft,
@@ -23,6 +23,80 @@ const metadata = {
   imageSource: { generated: true, description: "店舗が利用を許可した生成商品イメージ" },
 };
 const input = { data, mimeType: "image/png" as const, ...metadata };
+afterEach(() => vi.restoreAllMocks());
+
+it("ChatGPTの画像取得は信頼するHTTPS配信先だけを許可し、転送先も検証する", async () => {
+  const { staff } = await setupFixture();
+  const services = createApiServices(env);
+  const provider = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(
+      new Response(null, { status: 302, headers: { Location: "http://127.0.0.1/private" } }),
+    );
+  for (const download_url of [
+    "http://files.oaiusercontent.com/image",
+    "https://127.0.0.1/image",
+    "https://files.oaiusercontent.com.evil.test/image",
+    "https://files.oaiusercontent.com:444/image",
+    "https://user:secret@files.oaiusercontent.com/image",
+  ]) {
+    await expect(
+      uploadImage(services, staff, { ...metadata, file: { download_url, file_id: "file-test" } }),
+    ).rejects.toMatchObject({ code: "IMAGE_URL_FORBIDDEN" });
+  }
+  expect(provider).not.toHaveBeenCalled();
+  await expect(
+    uploadImage(services, staff, {
+      ...metadata,
+      file: { download_url: "https://files.oaiusercontent.com/image", file_id: "file-test" },
+    }),
+  ).rejects.toMatchObject({ code: "IMAGE_URL_FORBIDDEN" });
+  expect(provider).toHaveBeenCalledTimes(1);
+  expect((await env.TABLECAST_MEDIA.list({ prefix: "tablecast/uploads/" })).objects).toHaveLength(
+    0,
+  );
+});
+
+it("期限切れ・取得失敗・容量超過では署名を返さず、画像や下書きを変更しない", async () => {
+  const { staff } = await setupFixture();
+  const file = {
+    download_url: "https://files.oaiusercontent.com/image?sig=tablecast-private-signature",
+    file_id: "file-test",
+  };
+  const provider = vi.spyOn(globalThis, "fetch");
+  for (const response of [
+    new Response("expired", { status: 403 }),
+    new Response("large", { headers: { "Content-Length": String(maxImageBytes + 1) } }),
+    new Response(new Uint8Array(maxImageBytes + 1), { headers: { "Content-Type": "image/png" } }),
+  ]) {
+    provider.mockResolvedValueOnce(response);
+    await expect(
+      uploadImage(createApiServices(env), staff, { ...metadata, file }),
+    ).rejects.toBeInstanceOf(Error);
+  }
+  provider.mockRejectedValueOnce(new Error(file.download_url));
+  await expect(
+    uploadImage(createApiServices(env), staff, { ...metadata, file }),
+  ).rejects.toMatchObject({ code: "IMAGE_DOWNLOAD_FAILED", message: "IMAGE_DOWNLOAD_FAILED" });
+  expect((await env.TABLECAST_MEDIA.list({ prefix: "tablecast/uploads/" })).objects).toHaveLength(
+    0,
+  );
+});
+
+it("ファイルとBase64の同時指定・入力なしを取得前に拒否する", async () => {
+  const { staff } = await setupFixture();
+  const provider = vi.spyOn(globalThis, "fetch");
+  await expect(uploadImage(createApiServices(env), staff, metadata)).rejects.toMatchObject({
+    code: "IMAGE_INPUT_REQUIRED",
+  });
+  await expect(
+    uploadImage(createApiServices(env), staff, {
+      ...input,
+      file: { download_url: "https://files.oaiusercontent.com/image", file_id: "file-test" },
+    }),
+  ).rejects.toMatchObject({ code: "IMAGE_INPUT_REQUIRED" });
+  expect(provider).not.toHaveBeenCalled();
+});
 
 it("MCPと管理APIの画像取り込みが同じキーと出所へ収束する", async () => {
   const { staff, cookie } = await setupFixture();

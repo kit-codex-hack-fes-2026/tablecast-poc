@@ -66,9 +66,10 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "upload_image",
     {
       description:
-        "店舗が利用を許可した商品画像をBase64で取り込む。PNG/JPEG/WebP、5MiB・1600万画素まで。dataはdata URLではなく画像ファイルのBase64。生成画像はimageSource.generated=true、imageKind=illustrationとし、出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品画像を取り込む。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
+      _meta: { "openai/fileParams": ["file"] },
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -94,7 +95,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "update_draft",
     {
       description:
-        "カテゴリ・商品・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。",
+        "店名（storeName）・カテゴリ・商品画像・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。架空店の試作依頼では提案した店名・メニュー・価格を保存できる。実店舗の未知の安全情報は推測しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

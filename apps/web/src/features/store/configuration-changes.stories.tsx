@@ -24,6 +24,13 @@ const meta = {
       { path: "plans.0.productIds.0", before: null, after: "tablecast-sake", sensitive: true },
       { path: "cast.instructions.en", before: "unknown", after: "Be welcoming.", sensitive: false },
       { path: "cast.proactive", before: true, after: false, sensitive: false },
+      { path: "storeName", before: "TableCast", after: "麺屋 マシの頂", sensitive: false },
+      {
+        path: "products.0.imageSource",
+        before: null,
+        after: { generated: true, description: "架空の二郎系ラーメンを描いた商品イメージ" },
+        sensitive: false,
+      },
     ],
   },
 } satisfies Meta<typeof ConfigurationChanges>;
@@ -34,7 +41,7 @@ export const Japanese: Story = {
   name: "価格・安全情報と新規選択肢の全内容を日本語の差分で確認",
   play: async ({ canvasElement }) => {
     const rows = canvasElement.querySelectorAll("[data-ui='config-change']");
-    await expect(rows).toHaveLength(6);
+    await expect(rows).toHaveLength(8);
     await expect(rows[0]).toHaveTextContent("単価（税込・円）");
     await expect(rows[0]).toHaveTextContent("¥750");
     await expect(rows[1]).toHaveTextContent("未確認");
@@ -45,6 +52,10 @@ export const Japanese: Story = {
     await expect(rows[3]).toHaveTextContent("こもれび 月凪 純米吟醸");
     await expect(rows[4]).toHaveTextContent("unknown");
     await expect(rows[5]).toHaveTextContent("無効");
+    await expect(rows[6]).toHaveTextContent("店舗名");
+    await expect(rows[6]).toHaveTextContent("麺屋 マシの頂");
+    await expect(rows[7]).toHaveTextContent("画像の出所");
+    await expect(rows[7]).toHaveTextContent("生成画像");
   },
 };
 export const English: Story = {
@@ -60,5 +71,8 @@ export const English: Story = {
     await expect(rows[3]).toHaveTextContent("Komorebi Tsukinagi");
     await expect(rows[4]).toHaveTextContent("unknown");
     await expect(rows[5]).toHaveTextContent("Disabled");
+    await expect(rows[6]).toHaveTextContent("Restaurant name");
+    await expect(rows[7]).toHaveTextContent("Image source");
+    await expect(rows[7]).toHaveTextContent("Generated image");
   },
 };

@@ -13,6 +13,20 @@ export async function uploadImage(
 ) {
   requireManager(actor);
   const parsed = uploadImageSchema.parse(input);
+  ensure(
+    parsed.file
+      ? parsed.data === undefined && parsed.mimeType === undefined
+      : parsed.data !== undefined && parsed.mimeType !== undefined,
+    "IMAGE_INPUT_REQUIRED",
+    422,
+  );
+  if (parsed.file) {
+    return saveMenuImage(services, actor, await downloadImage(parsed.file), {
+      imageKind: parsed.imageKind,
+      imageSource: parsed.imageSource,
+    });
+  }
+  ensure(parsed.data && parsed.mimeType, "IMAGE_INPUT_REQUIRED", 422);
   let decoded: Uint8Array<ArrayBuffer>;
   try {
     decoded = Uint8Array.fromBase64(parsed.data, { lastChunkHandling: "strict" });
@@ -29,6 +43,71 @@ export async function uploadImage(
       imageSource: parsed.imageSource,
     },
   );
+}
+
+async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>["file"]>) {
+  const signal = AbortSignal.timeout(15_000);
+  let url = new URL(file.download_url);
+  try {
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      // ChatGPTのファイル配信先に限定し、各転送先でも認証情報・任意port・別hostを拒否する。
+      ensure(
+        url.protocol === "https:" &&
+          !url.username &&
+          !url.password &&
+          !url.port &&
+          (url.hostname === "oaiusercontent.com" ||
+            url.hostname.endsWith(".oaiusercontent.com") ||
+            /^[a-z0-9-]+\.blob\.core\.windows\.net$/.test(url.hostname)),
+        "IMAGE_URL_FORBIDDEN",
+        422,
+      );
+      const response = await fetch(url, { redirect: "manual", signal });
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        await response.body?.cancel();
+        const location = response.headers.get("Location");
+        ensure(location && redirects < 3, "IMAGE_DOWNLOAD_FAILED", 422);
+        url = new URL(location, url);
+        continue;
+      }
+      if (
+        !response.ok ||
+        !response.body ||
+        Number(response.headers.get("Content-Length")) > maxImageBytes
+      ) {
+        await response.body?.cancel();
+        throw new DomainError("IMAGE_DOWNLOAD_FAILED", 422, "IMAGE_DOWNLOAD_FAILED");
+      }
+      const reader = response.body.getReader();
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      let size = 0;
+      try {
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+          ensure(size <= maxImageBytes, "INVALID_IMAGE", 422);
+          chunks.push(chunk.value);
+        }
+      } finally {
+        await reader.cancel();
+        reader.releaseLock();
+      }
+      const bytes = new Uint8Array(await new Blob(chunks).arrayBuffer());
+      const headerType = response.headers.get("Content-Type")?.split(";")[0]?.trim();
+      const mimeType =
+        file.mime_type ??
+        (headerType && headerType !== "application/octet-stream"
+          ? headerType
+          : imageMimeType(bytes));
+      return new File([bytes], "tablecast-image", { type: mimeType });
+    }
+  } catch (error) {
+    if (error instanceof DomainError) throw error;
+    // 期限付きURLや署名を例外・tool応答へ出さない。
+    throw new DomainError("IMAGE_DOWNLOAD_FAILED", 503, "IMAGE_DOWNLOAD_FAILED");
+  }
+  throw new DomainError("IMAGE_DOWNLOAD_FAILED", 422, "IMAGE_DOWNLOAD_FAILED");
 }
 
 export async function saveMenuImage(
@@ -138,16 +217,17 @@ export async function saveIdentityImage(
 async function validatedImageBytes(image: File, maxBytes: number) {
   ensure(image.size > 0 && image.size <= maxBytes, "INVALID_IMAGE", 422);
   const bytes = new Uint8Array(await image.arrayBuffer());
-  const valid =
-    (image.type === "image/png" &&
-      bytes[0] === 137 &&
-      bytes[1] === 80 &&
-      bytes[2] === 78 &&
-      bytes[3] === 71) ||
-    (image.type === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) ||
-    (image.type === "image/webp" &&
-      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
-      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP");
-  ensure(valid, "INVALID_IMAGE", 422);
+  ensure(imageMimeType(bytes) === image.type, "INVALID_IMAGE", 422);
   return bytes;
+}
+
+function imageMimeType(bytes: Uint8Array) {
+  if (bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71) return "image/png";
+  if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
+  if (
+    new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+    new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP"
+  )
+    return "image/webp";
+  return undefined;
 }

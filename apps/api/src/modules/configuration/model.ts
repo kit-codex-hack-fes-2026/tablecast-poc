@@ -3,6 +3,7 @@ import { id, localeSchema } from "../../platform/model";
 import { bilingualSchema, modifierSchema, planSchema, productSchema } from "../catalog/model";
 export const configurationSchema = z
   .object({
+    storeName: z.string().trim().min(1).max(150).optional(),
     categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
     products: z.array(productSchema).max(2000),
     plans: z.array(planSchema).max(30),

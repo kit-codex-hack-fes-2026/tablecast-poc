@@ -238,6 +238,8 @@
   "editor_category": "Category",
   "editor_tags": "Tags",
   "editor_image": "Image reference",
+  "editor_image_source": "Image source",
+  "editor_generated_image": "Generated image",
   "editor_image_kind": "Image type",
   "editor_photograph": "Product photograph",
   "editor_contains": "Contained allergens",

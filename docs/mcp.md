@@ -36,20 +36,30 @@ API側の既存操作をMCPから呼ぶ。MCP専用の価格計算・別DB・認
 
 ## 商品画像の取り込み
 
-`upload_image`へ画像ファイルのBase64を`data`、実形式を`mimeType`として渡す。PNG・JPEG・WebP、元ファイル5MiB以下、1600万画素以下に対応する。data URL、ローカルパス、添付ID、URL文字列ではアップロードできない。クライアントはファイルの実バイトを読み取ってエンコードする必要がある。画像データをtool引数へ渡せないクライアントで、画像生成からの自動登録を保証しない。
+ChatGPTで生成・添付した画像は`upload_image.file`へ渡す。`_meta["openai/fileParams"]: ["file"]`を宣言し、ChatGPTが渡す`{ download_url, file_id, mime_type?, file_name? }`を受け取る。4フィールドをschemaへ宣言し、download_url/file_idだけを必須にする。[OpenAI公式のファイル入力](https://developers.openai.com/plugins/reference#define-file-inputs)に従い、UI widgetや追加SDKは要求しない。
+
+Base64を扱うクライアントはfileの代わりに画像ファイルのBase64を`data`、実形式を`mimeType`へ渡す。fileとの同時指定を拒否する。PNG・JPEG・WebP、元ファイル5MiB以下、1600万画素以下に対応する。Base64入力へdata URL、ローカルパス、添付ID、URL文字列を渡さない。画像生成からの実受渡しは利用クライアントでも確認し、未接続や画像未生成を検証済みと報告しない。
+
+ダウンロード先はHTTPSのoaiusercontent.comおよびそのsubdomain、Azure Blobの`<account>.blob.core.windows.net`に限定する。任意port・URL内の認証情報を拒否し、最大3回のredirectでも毎回配信先を再検証する。TableCastの資格情報を転送しない。15秒の期限と5MiBの本文読取上限を適用し、取得失敗時の署名付きURLをtool応答や保存設定へ漏らさない。署名の期限切れはChatGPTで新しいfile参照を取得して再送する。
 
 `imageKind`は`photograph`または`illustration`、`imageSource`は`{ generated: boolean, description: string }`を必須とする。生成画像は`generated: true`かつ`illustration`にし、実写真と偽らない。descriptionには店舗が提供した写真・資料名、生成した商品イメージなどの出所を500文字以内で記録する。秘密情報、署名付きURL、個人情報を入れない。これは利用者が申告した出所であり、生成モデルの証明や権利確認の代わりにはならない。
 
 取込には現在のowner/admin権限と`tablecast:write` scopeが必要である。既存のCloudflare Images bindingで実形式と寸法を確認し、縦横1600px以内の静止WebPへ変換してR2へ保存する。画像バイトや元ファイルのメタデータをログ・tool応答へ返さない。取込済み画像はURLを知る人へ公開配信されるため、非公開資料そのものを渡さない。
 
 1. `get_configuration`と`create_draft`で対象店舗と現在の設定を確認する。
-2. `upload_image`へ画像と出所を渡す。画像生成・OCR・ファイル読取はクライアント側で行う。
+2. `upload_image`へfile参照または実画像のBase64と出所を渡す。画像生成・OCRはクライアント側で行う。
 3. 応答の`imageKey`・`imageKind`・`imageSource`を対象商品の同名フィールドへ設定し、他の商品・価格・日英データを保持した`configuration`を`update_draft`へ渡す。`url`は確認用であり、商品設定へ追加しない。
 4. `validate_draft`・`get_draft_diff`で価格・安全情報・画像と出所を確認し、`request_publication`の管理画面で人が公開する。画像の取込だけでは公開メニューを変更しない。
 
 同じ店舗・画像・出所を再送すると同じキーを返し、保存済み画像を上書きしない。アップロード応答の消失時は同じ入力を再送する。下書き更新の競合時は`get_draft_diff`で現在版を読み、保存済みキーを使って変更を組み直す。別店舗の取込画像、存在しない画像、出所や生成種別の改ざんは下書き保存と公開直前に拒否する。従来のseed画像キーは引き続き利用できる。下書き破棄は画像削除を行わない。
 
-Web用には`POST /api/admin/stores/:storeId/images`でmultipartの`image`（ファイル）と`metadata`（imageKind/imageSourceのJSON文字列）を受け取り、同じmedia serviceを呼ぶ。画像入力のあるこの経路と`/mcp`だけHTTP本文上限を8MiBとし、他のAPIは2MiBのままとする。新しいWebアップロードUI、任意URLのサーバー取得、組織共通ロゴのMCP変更はこの操作に含めない。
+Web用には`POST /api/admin/stores/:storeId/images`でmultipartの`image`（ファイル）と`metadata`（imageKind/imageSourceのJSON文字列）を受け取り、同じmedia serviceを呼ぶ。画像入力のあるこの経路と`/mcp`だけHTTP本文上限を8MiBとし、他のAPIは2MiBのままとする。新しいWebアップロードUI、任意サイトの画像収集、組織共通ロゴのMCP変更はこの操作に含めない。
+
+## 架空店の試作
+
+試しに二郎系ラーメン店を設定して、名前・メニュー・画像を考えて、マシマシ対応という依頼は、架空の設定値を提案して下書きへ保存する依頼として扱う。実店舗の未確認情報と区別し、店名は`configuration.storeName`、麺量・野菜・ニンニク・アブラ・カラメは既存のsingle modifierとpriceDeltaで表す。商品IDとグループ・選択肢IDは店舗の既存設定と衝突させない。価格・売切状態・日英コンテンツ・接客文を設定し、アレルゲンの根拠がなければunknownを維持する。
+
+`storeName`は省略時に現在名を保持し、指定時は差分に現在名と提案名を表示する。検証済み下書きの公開と同じ条件付きD1 batchで店舗名を変更する。新しい組織の作成、組織共通ロゴの変更、公開の自動承認は行わない。下書きのみの依頼はreadyで止め、実際のdraftId・版と未完了部分を示す。
 
 ## 下書きと承認
 

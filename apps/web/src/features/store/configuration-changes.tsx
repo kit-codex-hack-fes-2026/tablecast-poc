@@ -5,6 +5,9 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
 const labels = {
+  storeName: "org_name",
+  imageSource: "editor_image_source",
+  generated: "editor_generated_image",
   categories: "editor_categories",
   products: "editor_products",
   plans: "editor_plans",
