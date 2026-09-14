@@ -15,6 +15,7 @@ import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { BooleanField } from "./configuration-fields";
+import { configurationImageUploadKey } from "./menu-query";
 
 type ImageValue = Pick<Product, "imageKey" | "imageKind" | "imageSource">;
 
@@ -97,6 +98,7 @@ export function ConfigurationImageField({
     [candidate],
   );
   const upload = useMutation({
+    mutationKey: configurationImageUploadKey(storeId),
     mutationFn: ({ file, metadata: input }: { file: File; metadata: typeof metadata }) =>
       parseResponse(
         rpc.api.admin.stores[":storeId"].images.$post({
