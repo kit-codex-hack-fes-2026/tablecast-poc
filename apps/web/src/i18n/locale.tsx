@@ -40,10 +40,16 @@ export function LocaleProvider({
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
+type SimpleMessageKey = {
+  [Key in keyof typeof m]: Record<string, never> extends Parameters<(typeof m)[Key]>[0]
+    ? Key
+    : never;
+}[keyof typeof m];
+
 export function useI18n() {
   const context = useContext(LocaleContext);
   const t = useCallback(
-    (key: keyof typeof m) => m[key]({}, { locale: context.locale }),
+    (key: SimpleMessageKey) => m[key]({}, { locale: context.locale }),
     [context.locale],
   );
   return { ...context, t };

@@ -24,7 +24,6 @@ import {
 import { Button } from "../../components/ui/button";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
@@ -157,7 +156,7 @@ function ConversationMessage({
   );
 }
 
-const toolLabels: Partial<Record<string, keyof typeof m>> = {
+const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
@@ -262,7 +261,7 @@ function useVoicePanel({
         cancelled || (pending && !failed && (!active || (turn && turn.data.status !== "started")));
       const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
       const title = t(toolLabels[name] ?? "kiosk_tool_action");
-      let toolStatus: keyof typeof m = "kiosk_tool_complete";
+      let toolStatus: Parameters<ReturnType<typeof useI18n>["t"]>[0] = "kiosk_tool_complete";
       if (failed) toolStatus = "kiosk_tool_failed";
       else if (stale) toolStatus = "kiosk_tool_interrupted";
       else if (event.data.state === "requested") toolStatus = "kiosk_tool_waiting";
