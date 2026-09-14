@@ -75,6 +75,23 @@ for (const { locale, labels, language, guestLocale, guestLanguage, guestLabels }
     await changedLanguage.click();
     await expect(changedLanguage).toBeEnabled();
     await expect(changedLanguage).toHaveAttribute("aria-pressed", "true");
+    const installHelp = frame.locator("[data-pwa-install]");
+    await expect(installHelp).toHaveCount(1);
+    await installHelp.locator("summary").click();
+    await expect(installHelp.locator("summary")).toHaveText(guestLabels.pwa_install_title);
+    await expect(
+      installHelp.getByText(guestLabels.pwa_install_steps, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      installHelp.getByRole("link", { name: guestLabels.pwa_kiosk, exact: true }),
+    ).toBeVisible();
+    await expect(
+      installHelp.getByRole("link", { name: guestLabels.pwa_staff, exact: true }),
+    ).toBeVisible();
+    await expect(frame.locator("html")).toHaveAttribute("lang", guestLocale);
+    await expect(demoPage.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await installHelp.screenshot({ path: testInfo.outputPath("tablecast-demo-pwa-locale.png") });
     await expect(
       frame.getByRole("tab", { name: guestLabels.kiosk_menu, exact: true }),
     ).toBeVisible();
@@ -92,6 +109,8 @@ for (const { locale, labels, language, guestLocale, guestLanguage, guestLabels }
     await page.reload();
 
     // Then: 客の言語だけが変わり、店側の言語Cookieは保持される。
+    await expect(installHelp.locator("summary")).toHaveText(guestLabels.pwa_install_title);
+    await expect(frame.locator("html")).toHaveAttribute("lang", guestLocale);
     await expect(page.getByRole("link", { name: labels.demo_open, exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: language, exact: true })).toHaveAttribute(
       "aria-pressed",
