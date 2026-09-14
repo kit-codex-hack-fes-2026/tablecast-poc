@@ -1,9 +1,8 @@
-import { optionSchema, type Modifier, type Product } from "@tablecast/api/schema";
-import { MenuOptionImage } from "../../components/menu-option-image";
+import { type Modifier, type Product } from "@tablecast/api/schema";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
+import { ConfigurationImageField } from "./configuration-image-field";
 import { emptyText } from "./configuration-defaults";
 
 import {
@@ -28,10 +27,12 @@ function newOption(): Modifier["options"][number] {
 }
 
 export function ModifiersEditor({
+  storeId,
   product,
   onChange,
   disabled,
 }: {
+  storeId: string;
   product: Product;
   onChange: (modifiers: Modifier[]) => void;
   disabled: boolean;
@@ -118,35 +119,15 @@ export function ModifiersEditor({
                     onChange={(text) => updateOption(group, option.id, { text })}
                     disabled={disabled}
                   />
-                  <div className="flex flex-wrap items-center gap-4">
-                    <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
-                    <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-                      <label className="grid gap-2 text-sm">
-                        {t("editor_image")}
-                        <Input
-                          maxLength={300}
-                          value={option.imageKey ?? ""}
-                          onChange={(event) =>
-                            updateOption(group, option.id, { imageKey: event.target.value || null })
-                          }
-                        />
-                      </label>
-                      <label className="grid gap-2 text-sm">
-                        {t("editor_image_kind")}
-                        <NativeSelect
-                          value={option.imageKind}
-                          onChange={(event) =>
-                            updateOption(group, option.id, {
-                              imageKind: optionSchema.shape.imageKind.parse(event.target.value),
-                            })
-                          }
-                        >
-                          <option value="illustration">{t("kiosk_illustration")}</option>
-                          <option value="photograph">{t("editor_photograph")}</option>
-                        </NativeSelect>
-                      </label>
-                    </div>
-                  </div>
+                  <ConfigurationImageField
+                    key={`${storeId}:${option.id}`}
+                    storeId={storeId}
+                    value={option}
+                    disabled={disabled}
+                    onChange={({ imageKey, imageKind }) =>
+                      updateOption(group, option.id, { imageKey, imageKind })
+                    }
+                  />
                   <div className="grid gap-4 sm:grid-cols-2">
                     <NumericField
                       label={t("editor_price_delta")}

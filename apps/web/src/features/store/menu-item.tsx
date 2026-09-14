@@ -180,6 +180,7 @@ function ItemForm({
               >
                 {section === "products" && (
                   <ProductsEditor
+                    storeId={store.id}
                     value={configuration}
                     selectedId={selectedId}
                     onChange={(next) => form.setFieldValue("configuration", next)}

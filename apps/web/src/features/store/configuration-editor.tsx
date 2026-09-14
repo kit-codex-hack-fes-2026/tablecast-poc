@@ -10,6 +10,7 @@ import {
   ReferencesField,
   StringListField,
 } from "./configuration-fields";
+import { ConfigurationImageField } from "./configuration-image-field";
 import { ModifiersEditor } from "./modifiers-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
@@ -22,7 +23,13 @@ type EditorProps = {
   selectedId: string;
 };
 
-export function ProductsEditor({ value, onChange, disabled, selectedId }: EditorProps) {
+export function ProductsEditor({
+  storeId,
+  value,
+  onChange,
+  disabled,
+  selectedId,
+}: EditorProps & { storeId: string }) {
   const { t, locale } = useI18n();
   const product = value.products.find((item) => item.id === selectedId);
   function update(change: Partial<Product>) {
@@ -88,27 +95,13 @@ export function ProductsEditor({ value, onChange, disabled, selectedId }: Editor
                 disabled={disabled}
                 onChange={(tags) => update({ tags })}
               />
-              <label className="flex flex-col gap-2 text-sm">
-                {t("editor_image")}
-                <Input
-                  maxLength={300}
-                  value={product.imageKey ?? ""}
-                  onChange={(event) => update({ imageKey: event.target.value || null })}
-                />
-              </label>
-              <label className="flex flex-col gap-2 text-sm">
-                {t("editor_image_kind")}
-                <NativeSelect
-                  className={selectClass}
-                  value={product.imageKind}
-                  onChange={(event) =>
-                    update({ imageKind: productSchema.shape.imageKind.parse(event.target.value) })
-                  }
-                >
-                  <option value="illustration">{t("kiosk_illustration")}</option>
-                  <option value="photograph">{t("editor_photograph")}</option>
-                </NativeSelect>
-              </label>
+              <ConfigurationImageField
+                key={`${storeId}:${product.id}`}
+                storeId={storeId}
+                value={product}
+                onChange={update}
+                disabled={disabled}
+              />
             </div>
           </section>
           <section className="rounded-lg border border-input p-4">
@@ -203,6 +196,7 @@ export function ProductsEditor({ value, onChange, disabled, selectedId }: Editor
             <h2 className="font-semibold">{t("editor_modifiers")}</h2>
             <div className="pt-5">
               <ModifiersEditor
+                storeId={storeId}
                 key={product.id}
                 product={product}
                 disabled={disabled}
