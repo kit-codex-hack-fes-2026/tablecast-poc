@@ -1,65 +1,46 @@
-# Mastra・LiveKit・Honoの接続
+# GPT-Live・Responses delegation・Honoの接続
 
-[索引](../README.md) / [発話仕様](speech.md) / [上流パッチ](upstream-patch.md)
+## 採用構成
 
-## 採用する経路
+ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-5.6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
 
 ```mermaid
 flowchart LR
-    K[卓上Web] <-->|WebRTC| L[LiveKit Server]
-    L <--> P[Python LiveKit Agent]
-    P <-->|音声入力・テキスト出力| O[OpenAI gpt-realtime-2.1]
-    P -->|本文stream| T[Inworld TTS 2]
-    P <-->|認証済みの業務ツール| H[Hono・Mastra tool]
-    H --> D[(D1)]
-    H --> R[DOによる状態配信]
-    R --> K
+    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1]
+    L <-->|標準Responses delegation| R[Luna]
+    B <-->|認証済みtool HTTP| H[Hono]
+    H <--> D[D1]
+    H --> N[通知DO]
 ```
 
-通常音声はhalf-cascadeで動かす。OpenAI Realtime 2.1が音声を直接理解して応答とツール呼出しを生成し、Inworld TTSがテキストを読み上げる。Inworld STTの確定を応答生成の待ち条件にしない。OpenAI側の音声出力は無効にする。
+公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはLuna、reasoning none、verbosity low、priority、最大800出力tokenとする。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
 
-公式LiveKit OpenAI plugin 1.8.0の `RealtimeModel(model="gpt-realtime-2.1", modalities=["text"])` と、SHA固定したInworld TTS pluginを使用する。独自WebSocketクライアントやprivate monkeypatchは使わない。[LiveKitの外部TTS接続](https://docs.livekit.io/agents/models/realtime/plugins/openai/) / [OpenAIモデル仕様](https://developers.openai.com/api/docs/models/gpt-realtime-2.1)
+[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)
 
-## 業務ツールとターンの認可
+## ツールと出力
 
-1. Honoが端末・卓を認可し、LiveKit参加資格を発行する。
-2. Pythonが `/internal/voice/config` と `/internal/voice/realtime` から音声設定、接客プロンプト、JSON Schemaのツール定義を取得する。秘密鍵をこれらの応答に含めない。
-3. LiveKitのローカルVADで発話終了を検出し、公開 `on_user_turn_completed` hookでAPIにターンを予約する。その後SDKが音声をRealtimeへcommitする。字幕を待たない。
-4. Realtimeのfunction callをPythonの汎用proxyが `/internal/voice/tools` へ渡す。Mastraと共有するTypeScript定義・Zod入力検証・GUI共通操作を使い、Pythonには価格や注文処理を持たせない。
-5. APIが毎回、音声セッション・卓・現在turn・引数・業務版を検証する。call IDは実行前に原子的に予約し、再送や同時要求を一回だけ受け付ける。結果不明の変更を自動再実行しない。
-6. テキストを到着順に字幕へ送り、演技タグを維持してInworldへ渡す。ツールだけの空応答ではTTS contextを開かない。ツール状態は既存の `voice.tool` eventで配信する。
+Liveのresponse.event内のresponse.createdでresponse IDを記録し、response.output_item.doneのfunction_callからcall_id・name・argumentsを収集する。response.completedのoutputは空配列になり得るため、その配列からtool有無を判断しない。必要な結果をresponse.item.createで全件返してからresponse.createで一度だけ継続する。
 
-商品名が分かる場合は `getCatalog.query` で詳細を取得する。queryなしは商品一覧で、注文・原材料の回答には詳細取得が必要。対象商品の必須選択肢・追加料金・アレルギー根拠を省略しない。画面用イベント履歴をモデルへ重複送信せず、トークン量を抑える。
+ブラウザーはHonoの認証済みtool経路へ転送する。価格計算、認可、注文・カート操作をブラウザーへ複製しない。業務の失敗はtool結果へ返し、音声接続を維持する。古い委任の遅着結果で次の委任を継続しない。
 
-`/turns` の `transport: realtime` はターン予約だけを行う。既存の `transport: cascade` とMastra streamは接続回帰・プロンプト比較用として残すが、通常のRoom dispatchはRealtimeのみを起動し、自動fallbackはしない。
+商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。注文する商品を特定したら必要な詳細を取得する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
 
-## 字幕・会話文脈・割り込み
+## 字幕・保存・停止
 
-Realtimeの音声文脈を使い、補助の `gpt-4o-transcribe` は字幕だけに使う。音声item IDとAPI turn IDを対応付け、遅れて届いた字幕を元のturnへ保存する。現在の字幕結果には話者IDがないため、客番号を推測して作らない。既存の話者付きログはそのまま表示する。
+session.input_transcript.delta / session.output_transcript.deltaを受信時に表示する。字幕の表示順は追加後に入れ替えず、保存したD1履歴を再開時に復元する。強い会話履歴の整合性や字幕の到着を注文承認の証明にはしない。生音声は既定で保存しない。
 
-Inworldの時刻付き字幕とLiveKitの公開再生情報で、実際に再生された本文を記録する。全生成文を客が聞いたことにはしない。RealtimeとTTSはLiveKitが所有し、割り込みで生成と再生を止める。APIは中断された旧turnの後続操作を拒否する。取消前にcommitしたカートや注文は維持する。
+注文はAPIの版付きsnapshotと、その案内後の明示承認を必要とする。同じ委任で確認準備と承認を行わず、APIも作成turnと異なる現行turnを検査する。委任IDは物理的な発話境界の証明ではない。停止・設定変更・カート変更は古い確認を無効化する。
 
-## 自発接客
+停止はcapture・再生を即時終了し、APIで音声sessionを失効させ、Liveへsession.closeを送る。API側でも標準sideband接続でsession.closedを確認する。明示再開まで自動再接続しない。確定したカート・注文は停止で戻さない。
 
-無言時の自発接客はAPIの最新設定、空カート、確認・スタッフ呼出・進行中turnの有無、前回から180秒の間隔を通過したときだけ開始する。客発話として記録しない。APIは自発turnで参照以外のツールを拒否し、客が話し始めたら中断する。
+自発接客は180秒の無言と店舗設定、空カート、確認・スタッフ呼出・進行中turnの有無をAPIで検査する。参照専用turnで商品を取得し、一商品の事実をLiveへ渡す。客の発話や承認として保存しない。
 
-## 明示停止・再開
+## 観測と検証
 
-UIの音声停止はbarge-inより強い操作である。停止状態は通常のネットワーク断と区別し、勝手に再接続しない。
-初期実装ではLiveKitの音声Roomから退出し、ローカル音声トラックのcaptureを停止する。Agent側は参加者退出・セッション閉鎖でSTT・生成・TTSを終了する。
-音声停止要求を受けたAPIはその音声セッションの新しいturnと古いturnの追加操作を拒否する。すでにcommitした操作は維持して画面へ表示する。
-業務HTTP/DO接続、卓セッション、カート、確定ログは残す。再開は新しいvoice sessionで `/internal/voice/realtime` から同じ店舗・来店の確定字幕と再生済み本文を取得し、公開 `ChatContext` へ時系列で復元する。直近40発話・本文合計16,000文字以内に限定し、空字幕・ツールイベント・別の来店を含めない。中断の印も維持する。履歴は新しい依頼や注文承認ではなく、業務操作を再実行しない。最新の業務状態はツールで照会し、未再生音声を再開しない。
-停止後のブラウザーのマイク使用表示と、外部STTへ新たなframeが送られないことを実機確認する。
+HonoのHTTP、tablecast.voice.tool、D1と通知をGrafanaで追う。tool spanにツール名・call ID・voice session/turn・実行時間・結果byte数を記録する。OpenAI内部をアプリの計測で観測できた扱いにしない。
 
-## 注文確認の独立した読上げ
+性能目標はツール受付→結果返却、利用者の発話終了→実返答音声開始の双方1秒以下。待機案内や字幕到着を実再生の代わりにしない。成功率・使用token・標本数と超過区間を残す。
 
-APIが版付き注文スナップショットと固定読上げ文を生成する。通常のLLM応答に似た確認文があっても、それを確認対象と認めない。
-Mastraの準備ツールは既存の業務状態に確認actionを作る。Pythonはそのactionを既存APIから受け、通常生成と二重再生しないよう一度だけ `session.say` 等の公開機能で読む。
-prepareConfirmationの後は公開 `StopResponse` でモデルの追加応答を止め、SpeechHandleの再生完了後に確認actionを取得する。
-確認文は商品・選択肢の登録読上げ名と決定的な数値表現から生成し、自由な言換えや演技を加えない。
-音声承認は読上げ完了後の新しい客発話が対象。途中訂正・明示停止・カート更新で以前の音声確認を失効させる。
-GUI承認は表示済みの現行スナップショットに対する独立した承認経路とし、音声停止中も利用できる。
+実D1テストは認可・価格・版・同時実行・停止・別卓拒否を検証する。voice-performance.test.tsは商品数を増やし、実D1のSQL実行と保存されたカード表示を確認しながらbinding往復と出力サイズの予算を検証する。上限超過時は原因を調べ、閾値の緩和で成功扱いにしない。
 
-## 開発用の実音声試験
-
-`TABLECAST_RUN_PAID_VOICE_TESTS=1 uv run --project livekit --env-file .env.local tablecast-voice-check` は、合成した日英の入力音声をRealtime 2.1へ渡し、返答をInworldで合成する明示的な有料試験。実際の業務ツール・注文確認は、空いている検証専用卓で別途試験する。本人識別、実店舗の騒音、実iPadでの受入はこの疎通試験に含めない。
+Webの固定イベント試験は全tool結果の返却・一回の継続・エラー・新委任による取消・字幕・停止を検証する。実GPT-LiveとLunaは有料試験で、Inworld生成音声を使いlocalと同一SHAのPR previewで確認する。通常CIの固定イベントだけで実API・音声・1秒達成を証明した扱いにしない。

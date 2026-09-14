@@ -1,28 +1,17 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
-import { z } from "zod";
-import app from "../src/app";
-import * as businessTables from "../src/db/business-schema";
-import { updateCart } from "../src/modules/orders/service";
-import { getEvents } from "../src/modules/stores/queries";
+import * as business from "../src/db/business-schema";
+import { getTableState } from "../src/modules/tables/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
-import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
-import { insertFixture } from "./database-fixture";
-import { device, setupFixture } from "./fixture";
+import { voiceBindings, runVoiceTurn } from "./voice-fixture";
+import { invokeVoiceTool } from "../src/modules/voice/realtime";
+import { configuration, device, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const voiceId = "tablecast-proactive-voice";
-const authHeaders = {
-  authorization: "Bearer tablecast-test-voice-token",
-  "content-type": "application/json",
-};
-const modelEnv = () => ({
-  ...env,
-  TABLECAST_MODEL_API_KEY: "tablecast-model-fixture",
-  TABLECAST_MODEL: "gpt-4.1-mini",
-});
+const services = () => createApiServices(env);
 const input = (turnId: string) => ({
   voiceSessionId: voiceId,
   turnId,
@@ -30,311 +19,115 @@ const input = (turnId: string) => ({
   trigger: "proactive",
   messages: [],
 });
-async function setupProactive() {
+async function setup(enabled = true) {
   await setupFixture();
-  await setVoiceSession(createApiServices(env), device, voiceId);
-  await env.TABLECAST_DB.prepare(
-    "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('true')) WHERE id=?",
-  )
-    .bind(device.storeId)
-    .run();
+  await setVoiceSession(services(), device, voiceId);
+  await services()
+    .db.update(business.stores)
+    .set({
+      config_json: JSON.stringify({
+        ...configuration,
+        cast: { ...configuration.cast, proactive: enabled },
+      }),
+    })
+    .where(eq(business.stores.id, device.storeId));
 }
-async function post(path: string, body: unknown, bindings = modelEnv()) {
-  const context = createExecutionContext();
-  const response = await app.request(
-    path,
-    {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify(body),
-    },
-    bindings,
-    context,
-  );
-  return { response, context };
-}
-function chunk(content: string, done = false) {
-  return `data: ${JSON.stringify({ id: "tablecast-proactive-completion", object: "chat.completion.chunk", created: 1, model: "gpt-4.1-mini", choices: [{ index: 0, delta: { role: "assistant", content }, finish_reason: done ? "stop" : null }] })}\n\n${done ? "data: [DONE]\n\n" : ""}`;
-}
-const providerRequestSchema = z.object({
-  messages: z.array(z.object({ role: z.string() })),
-  tools: z.array(z.object({ function: z.object({ name: z.string() }) })),
-});
-
-it.each(["設定無効", "カート編集中", "スタッフ対応中", "確認待ち", "読了確認待ち", "応答生成中"])(
-  "%sの自発接客はモデル資格が未設定でも204とし、業務状態を変更しない",
-  async (reason) => {
-    await setupProactive();
-    if (reason === "設定無効")
-      await env.TABLECAST_DB.prepare(
-        "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('false')) WHERE id=?",
-      )
-        .bind(device.storeId)
-        .run();
-    if (reason === "カート編集中")
-      await updateCart(createApiServices(env), device, {
-        expectedVersion: 0,
-        lines: [{ id: "tea-line", productId: "tea", quantity: 1, selections: [] }],
-      });
-    if (reason === "スタッフ対応中")
-      await env.TABLECAST_DB.prepare("UPDATE table_sessions SET staff_called=1 WHERE id=?")
-        .bind(device.tableSessionId)
-        .run();
-    if (reason === "確認待ち" || reason === "読了確認待ち")
-      await insertFixture(businessTables.confirmations, {
-        id: "tablecast-proactive-confirmation",
-        store_id: device.storeId,
-        table_session_id: device.tableSessionId,
-        cart_version: 0,
-        config_version: 1,
-        channel: "voice",
-        status: reason === "確認待ち" ? "pending" : "read",
-        snapshot_json: "{}",
-        expires_at: Date.now() + 60_000,
-        created_at: Date.now(),
-      }).run();
-    if (reason === "応答生成中")
-      await env.TABLECAST_DB.batch([
-        insertFixture(businessTables.voiceTurns, {
-          id: "tablecast-active-turn",
-          voice_session_id: voiceId,
-          table_session_id: device.tableSessionId,
+it.each(["設定無効", "カートあり", "スタッフ対応中", "確認待ち", "生成中"])(
+  "%sでは自発接客を開始しない",
+  async (condition) => {
+    await setup(condition !== "設定無効");
+    if (condition === "カートあり")
+      await services()
+        .db.update(business.tableSessions)
+        .set({ cart_json: "[{}]" })
+        .where(eq(business.tableSessions.id, device.tableSessionId ?? ""));
+    if (condition === "スタッフ対応中")
+      await services()
+        .db.update(business.tableSessions)
+        .set({ staff_called: 1 })
+        .where(eq(business.tableSessions.id, device.tableSessionId ?? ""));
+    if (condition === "確認待ち")
+      await services()
+        .db.insert(business.confirmations)
+        .values({
+          id: "tablecast-confirmation",
           store_id: device.storeId,
-          locale: "ja",
-          status: "started",
-          started_at: Date.now(),
-        }),
-        env.TABLECAST_DB.prepare(
-          "UPDATE table_sessions SET active_turn_id='tablecast-active-turn' WHERE id=?",
-        ).bind(device.tableSessionId),
-      ]);
-    const before = await env.TABLECAST_DB.prepare("SELECT * FROM table_sessions WHERE id=?")
-      .bind(device.tableSessionId)
-      .first();
-    const provider = vi.spyOn(globalThis, "fetch");
-    const { response, context } = await post("/internal/voice/turns", input("tablecast-skipped"), {
-      ...env,
-      TABLECAST_MODEL: "",
-      TABLECAST_MODEL_API_KEY: "",
-    });
-    expect(response.status).toBe(204);
-    expect(await response.text()).toBe("");
-    await waitOnExecutionContext(context);
-    expect(provider).not.toHaveBeenCalled();
-    expect(
-      await env.TABLECAST_DB.prepare("SELECT * FROM table_sessions WHERE id=?")
-        .bind(device.tableSessionId)
-        .first(),
-    ).toEqual(before);
-    expect(
-      await env.TABLECAST_DB.prepare(
-        "SELECT id FROM voice_turns WHERE id='tablecast-skipped'",
-      ).first("id"),
-    ).toBeNull();
-    expect(
-      (await getEvents(createApiServices(env), device)).events.filter(
-        (event) => event.kind.startsWith("voice.") && event.kind !== "voice.started",
-      ),
-    ).toEqual([]);
-  },
-);
-
-it("無言の同時要求を一度だけ予約し、読み取りtoolだけで生成して180秒の間隔を守る", async () => {
-  await setupProactive();
-  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
-    if (typeof init?.body !== "string") throw new Error("モデル要求がJSONではありません");
-    const request = providerRequestSchema.parse(JSON.parse(init.body));
-    expect(request.tools.map((tool) => tool.function.name).toSorted()).toEqual([
-      "getCatalog",
-      "getTableState",
-    ]);
-    expect(request.messages.some((message) => message.role === "user")).toBe(false);
-    return new Response(chunk("季節のお茶もご用意しています。", true), {
-      headers: { "content-type": "text/event-stream" },
-    });
-  });
-  const attempts = await Promise.all([
-    post("/internal/voice/turns", input("tablecast-proactive-a")),
-    post("/internal/voice/turns", input("tablecast-proactive-b")),
-  ]);
-  expect(attempts.map(({ response }) => response.status).toSorted((a, b) => a - b)).toEqual([
-    200, 204,
-  ]);
-  for (const { response, context } of attempts) {
-    expect(await response.text()).toBe(
-      response.status === 200 ? "季節のお茶もご用意しています。" : "",
-    );
-    await waitOnExecutionContext(context);
-  }
-  const events = (await getEvents(createApiServices(env), device)).events;
-  const accepted = events.filter((event) => event.kind === "voice.proactive");
-  expect(accepted).toHaveLength(1);
-  expect(events.some((event) => event.kind === "voice.user")).toBe(false);
-  const metadata = z
-    .object({ turnId: z.string(), trigger: z.literal("proactive"), locale: z.literal("ja") })
-    .strict()
-    .parse(accepted[0]?.data);
-  await finishVoiceTurn(createApiServices(env), voiceId, metadata.turnId, "completed");
-  const playback = await post("/internal/voice/playback", {
-    voiceSessionId: voiceId,
-    turnId: metadata.turnId,
-    text: "季節のお茶もご用意しています。",
-    interrupted: false,
-  });
-  expect(playback.response.status).toBe(200);
-  const repeated = await post("/internal/voice/turns", input("tablecast-proactive-too-soon"));
-  expect(repeated.response.status).toBe(204);
-  expect(provider).toHaveBeenCalledTimes(1);
-  await env.TABLECAST_DB.prepare(
-    "UPDATE table_events SET created_at=? WHERE kind='voice.proactive'",
-  )
-    .bind(Date.now() - 180_001)
-    .run();
-  const later = await post("/internal/voice/turns", input("tablecast-proactive-later"));
-  expect(later.response.status).toBe(200);
-  await later.response.text();
-  await waitOnExecutionContext(later.context);
-  expect(provider).toHaveBeenCalledTimes(2);
-  expect(await env.TABLECAST_DB.prepare("SELECT COUNT(*) FROM orders").first("COUNT(*)")).toBe(0);
-  expect(
-    await env.TABLECAST_DB.prepare("SELECT COUNT(*) FROM confirmations").first("COUNT(*)"),
-  ).toBe(0);
-  expect(
-    await env.TABLECAST_DB.prepare("SELECT cart_json FROM table_sessions WHERE id=?")
-      .bind(device.tableSessionId)
-      .first("cart_json"),
-  ).toBe("[]");
-});
-
-it.each(["客の発話", "設定の無効化"])(
-  "%sが先に成立したら古い自発接客のstream・再生通知を拒否する",
-  async (interruption) => {
-    await setupProactive();
-    const pending = Promise.withResolvers<ReadableStreamDefaultController<Uint8Array>>();
-    const provider = vi.spyOn(globalThis, "fetch");
-    provider.mockImplementationOnce(
-      async (_url, init) =>
-        new Response(
-          new ReadableStream<Uint8Array>({
-            start(controller) {
-              controller.enqueue(new TextEncoder().encode(chunk("お茶の紹介です。")));
-              pending.resolve(controller);
-              init?.signal?.addEventListener("abort", () => controller.close(), { once: true });
-            },
+          table_session_id: device.tableSessionId ?? "",
+          cart_version: 0,
+          config_version: 1,
+          channel: "voice",
+          status: "pending",
+          snapshot_json: "{}",
+          expires_at: Date.now() + 60_000,
+          created_at: Date.now(),
+        });
+    if (condition === "生成中")
+      await services().db.batch([
+        services()
+          .db.insert(business.voiceTurns)
+          .values({
+            id: "tablecast-busy-turn",
+            voice_session_id: voiceId,
+            table_session_id: device.tableSessionId ?? "",
+            store_id: device.storeId,
+            status: "started",
+            started_at: Date.now(),
           }),
-          { headers: { "content-type": "text/event-stream" } },
-        ),
-    );
-    provider.mockImplementation(
-      async () =>
-        new Response(chunk("はい。", true), { headers: { "content-type": "text/event-stream" } }),
-    );
-    const { response, context } = await post(
-      "/internal/voice/turns",
-      input("tablecast-old-proactive"),
-    );
-    expect(response.status).toBe(200);
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("自発接客のstreamがありません");
-    expect((await reader.read()).done).toBe(false);
-    const stopped = reader.read().then(
-      (value) => ({ value }),
-      (error: unknown) => ({ error }),
-    );
-    let userResult: { status: number; text: string } | null = null;
-    if (interruption === "客の発話") {
-      const user = await post("/internal/voice/turns", {
-        ...input("tablecast-new-user"),
-        trigger: "user",
-        speaker: { id: "0", streamId: "tablecast-test-stream", words: [] },
-        messages: [{ role: "user", content: "すみません" }],
-      });
-      userResult = { status: user.response.status, text: await user.response.text() };
-      await waitOnExecutionContext(user.context);
-    } else {
-      await env.TABLECAST_DB.prepare(
-        "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('false')) WHERE id=?",
-      )
-        .bind(device.storeId)
-        .run();
-    }
-    expect(userResult).toEqual(
-      interruption === "客の発話" ? { status: 200, text: "はい。" } : null,
-    );
-    (await pending.promise).enqueue(new TextEncoder().encode(chunk("この続きは届きません。")));
-    expect(await stopped).toMatchObject({
-      error: { code: interruption === "客の発話" ? "VOICE_SESSION_STALE" : "PROACTIVE_TURN_STALE" },
+        services()
+          .db.update(business.tableSessions)
+          .set({ active_turn_id: "tablecast-busy-turn" })
+          .where(eq(business.tableSessions.id, device.tableSessionId ?? "")),
+      ]);
+    const provider = vi.spyOn(globalThis, "fetch");
+    const running = await runVoiceTurn(input("tablecast-skipped"), {
+      ...voiceBindings(),
+      TABLECAST_MODEL_API_KEY: "",
+      TABLECAST_MODEL: "",
     });
-    await waitOnExecutionContext(context);
-    const playback = await post("/internal/voice/playback", {
-      voiceSessionId: voiceId,
-      turnId: "tablecast-old-proactive",
-      text: "この続きは届きません。",
-      interrupted: false,
-    });
-    expect(playback.response.status).toBe(409);
-    expect(
-      (await getEvents(createApiServices(env), device)).events.some(
-        (event) =>
-          event.kind === "voice.assistant" && event.data["turnId"] === "tablecast-old-proactive",
-      ),
-    ).toBe(false);
-    await vi.waitFor(async () => {
-      expect(
-        await env.TABLECAST_DB.prepare("SELECT active_turn_id FROM table_sessions WHERE id=?")
-          .bind(device.tableSessionId)
-          .first("active_turn_id"),
-      ).toBe(interruption === "客の発話" ? "tablecast-new-user" : null);
-      expect(
-        await env.TABLECAST_DB.prepare(
-          "SELECT status FROM voice_turns WHERE id='tablecast-old-proactive'",
-        ).first("status"),
-      ).toBe("interrupted");
-    });
+    expect(running.result.kind).toBe("skipped");
+    await running.finish();
+    expect(provider).not.toHaveBeenCalled();
   },
 );
+it("同時要求を一度だけ受け入れ、読取専用toolと180秒の間隔を維持する", async () => {
+  await setup();
 
-it("自発接客でも古い音声sessionと言語をモデルへ渡さない", async () => {
-  await setupProactive();
-  const provider = vi.spyOn(globalThis, "fetch");
-  for (const changed of [{ voiceSessionId: "tablecast-old-voice" }, { locale: "en" }]) {
-    const { response } = await post("/internal/voice/turns", {
-      ...input("tablecast-stale"),
-      ...changed,
-    });
-    expect(response.status).toBe(409);
-  }
-  expect(provider).not.toHaveBeenCalled();
-  expect(await env.TABLECAST_DB.prepare("SELECT COUNT(*) FROM voice_turns").first("COUNT(*)")).toBe(
-    0,
-  );
+  const attempts = await Promise.all([
+    runVoiceTurn(input("tablecast-proactive-a")),
+    runVoiceTurn(input("tablecast-proactive-b")),
+  ]);
+  expect(attempts.map((attempt) => attempt.result.kind).toSorted()).toEqual([
+    "accepted",
+    "skipped",
+  ]);
+  await Promise.all(attempts.map((attempt) => attempt.finish()));
+  const accepted = attempts.find((attempt) => attempt.result.kind === "accepted")?.result;
+  if (!accepted || accepted.kind !== "accepted") throw new Error("自発接客が受理されていません");
+  await expect(
+    invokeVoiceTool(
+      services(),
+      {
+        voiceSessionId: voiceId,
+        turnId: accepted.turnId,
+        toolName: "callStaff",
+        toolCallId: "tablecast-forbidden",
+        arguments: {},
+      },
+      new AbortController().signal,
+    ),
+  ).rejects.toMatchObject({ code: "VOICE_TOOL_FORBIDDEN" });
+  expect((await runVoiceTurn(input("tablecast-too-soon"))).result.kind).toBe("skipped");
+  expect((await getTableState(services(), device)).orders).toHaveLength(0);
+  expect(
+    (await getTableState(services(), device)).events.filter((event) => event.kind === "voice.user"),
+  ).toHaveLength(0);
 });
-
-it("音声設定へ公開済みの自発接客フラグを返し、通常turnの客発話要件を維持する", async () => {
-  await setupProactive();
-  await env.TABLECAST_DB.prepare(
-    "UPDATE stores SET config_json=json_set(config_json,'$.cast.voice.ja','tablecast-fixture-voice') WHERE id=?",
-  )
-    .bind(device.storeId)
-    .run();
-  const config = await app.request(
-    `/internal/voice/config?voiceSessionId=${voiceId}`,
-    { headers: authHeaders },
-    env,
-  );
-  expect(config.status).toBe(200);
-  expect(z.object({ proactive: z.boolean() }).parse(await config.json()).proactive).toBe(true);
+it("自発接客でも古い音声資格・言語を拒否する", async () => {
+  await setup();
   const provider = vi.spyOn(globalThis, "fetch");
-  for (const messages of [[], [{ role: "assistant", content: "ごゆっくりどうぞ。" }]]) {
-    const { response } = await post("/internal/voice/turns", {
-      ...input("tablecast-not-a-user"),
-      trigger: "user",
-      messages,
-    });
-    expect(response.status).toBe(422);
-  }
+  for (const altered of [{ voiceSessionId: "tablecast-old-voice" }, { locale: "en" }])
+    await expect(runVoiceTurn({ ...input("tablecast-stale"), ...altered })).rejects.toHaveProperty(
+      "code",
+    );
   expect(provider).not.toHaveBeenCalled();
-  expect(await env.TABLECAST_DB.prepare("SELECT COUNT(*) FROM voice_turns").first("COUNT(*)")).toBe(
-    0,
-  );
 });

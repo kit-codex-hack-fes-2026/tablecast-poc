@@ -16,7 +16,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 | Issue・PRの作成・更新                    | [github-issue-pr-ops](.agents/skills/github-issue-pr-ops/SKILL.md)。PR本文の正本は[PRテンプレート](.github/pull_request_template.md)                                                 |
 | Projectsの登録・更新                     | [github-project-ops](.agents/skills/github-project-ops/SKILL.md)                                                                                                                     |
 | 環境構築・agent plugins・MCP接続         | [セットアップ](docs/setup.md)。worktree・起動は[開発環境](docs/development.md)、コンテナは[Dev Container](docs/devcontainer.md)、製品pluginは[codex-plugin.md](docs/codex-plugin.md) |
-| 音声接続・Mastra・演技                   | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)。上流変更は[パッチ方針](docs/voice/upstream-patch.md)                                                            |
+| 音声接続・Responses delegation・演技     | [接続](docs/voice/integration.md)と[発話仕様](docs/voice/speech.md)。上流変更は[パッチ方針](docs/voice/upstream-patch.md)                                                            |
 | 性能診断・公開配備                       | [観測手順](docs/observability.md)、配備時は[deployment.md](docs/deployment.md)                                                                                                       |
 | 計画・完了判定                           | [着手順](docs/implementation.md)、[進捗](docs/progress.md)、[受入条件](docs/acceptance.md)。他の仕様は[索引](docs/README.md)から探す                                                 |
 
@@ -31,19 +31,19 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 ## 製品とデータの不変条件
 
 - 価格・売切・プラン・権限・注文確定はAPIで判断する。LLM入力を権限や金額の根拠にしない。
-- GUI・音声・MCPで同じ業務操作を共有する。Pythonへ業務ツールや価格計算を複製しない。
+- GUI・音声・MCPで同じ業務操作を共有する。ブラウザーへ業務ツールや価格計算を複製しない。
 - 注文は版付きスナップショットと明示承認が必要。中断はDBのロールバックではない。
 - 音声停止は再生・送音・STT・応答生成を止め、明示再開まで再接続しない。GUI・カート・会計状態は維持し、客向けの自由文テキスト入力は作らない。
 - 店舗・卓の境界を認可する。秘密情報をログへ出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaとDrizzleを使う。[API skill](.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)でSQL断片の根拠と呼出し経路全体のDB往復を確認する。直接の`prepare()`を新設せず、複数操作は`db.batch()`、生SQLはmigration・PRAGMA・query builderで不足する部分に限る。
-- 上流pluginの不足は最小パッチとSHA固定で補う。独自STTクライアント、private monkeypatch、site-packages編集をしない。
+- GPT-Live 1の標準WebRTCとResponses delegation（gpt-5.6-luna）を使う。Mastra・LiveKit・hosted Agents APIを追加しない。独自STTクライアント、private monkeypatch、依存packageの直接編集をしない。
 - ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
 
 ## 配置と表現
 
 動画生成基盤は`apps/presentation`。制作・再収録・生成・検査は[動画ワークフロー](apps/presentation/WORKFLOW.md)、現在の成果と再開箇所は[引き継ぎ](apps/presentation/HANDOFF.md)を参照する。
 
-Bun workspacesとTurborepoを使う。`apps/api`がDBと業務判断、`apps/web`がTanStack StartとUI、`livekit`がPython音声を所有する。依存の正本はrootの`bun.lock`と`livekit/pyproject.toml`・`uv.lock`。実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonの実行とenvはuvへ任せる。
+Bun workspacesとTurborepoを使う。`apps/api`がDB・業務判断・音声tool認可、`apps/web`がTanStack Start・UI・GPT-LiveへのWebRTC接続を所有する。依存の正本はrootの`bun.lock`。実CLIはpackage scripts、順序・並列・cacheはTurbo、開発資源はComposeへ任せる。
 
 Webは店舗の利用者向けとし、リポジトリのclone・開発サーバー起動・plugin生成を導入条件にしない。外部連携は公開サービスへのOAuth接続を案内し、開発・配布手順は開発者向け文書へ置く。
 
@@ -55,6 +55,13 @@ Webは標準Tailwind utilityをTSXへ置き、`styles.css`はトークンと最�
 - 英語UI・接客文はイギリス英語、コード識別子は一般的な米国英語の綴りでよい。
 - 開発用リソース・ホスト・環境変数・workspace・独自script名は`tablecast`を含め、`tc`へ略さない。通常の`cartId`等は冗長に改名しない。
 - 日本語文書で強調のためにかぎ括弧・二重引用符を使わない。引用・コード・API構文には必要な記号を使う。
+
+## 性能変更の実行契約
+
+- HTTP入口から認可・業務・DB・通知・モデル結果まで実際の経路を追う。SQL時間とbinding往復・直列待ちを分け、同じrequestでの卓・カタログ再取得と件数比例の問合せを除く。
+- 性能予算は実DBと利用者に見える結果を検証するテストへ置く。小規模fixtureだけでなく件数を増やしてN+1・出力増加を確認する。超過時に予算を緩和して修正済みとしない。
+- tool結果は次の判断に必要な情報に限定する。GUI用履歴・二言語の大きなsnapshotを複製せず、長い一覧は明示した上限と続きを返す。重要な価格・必須選択・版を黙って切り捨てない。
+- モデル・業務API・DB・音声の時間を別々に測る。字幕到着や待機案内を実返答の再生開始に置き換えない。実入力、対象SHA、環境、標本数、使用token、未達区間をPRへ残す。
 
 ## 完了の確認
 

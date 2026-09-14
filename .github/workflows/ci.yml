@@ -15,11 +15,10 @@ concurrency:
 env:
   WRANGLER_SEND_METRICS: "false"
   DO_NOT_TRACK: "1"
-  ORT_DISABLE_TELEMETRY: "1"
 
 jobs:
   static:
-    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript, Ruff, ty)"
+    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,7 +28,6 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/tablecast-setup
         with:
-          python: "true"
           turbo: "true"
       - name: PRのコミットメッセージ
         if: github.event_name == 'pull_request'
@@ -60,19 +58,6 @@ jobs:
           - name: Presentation
             run: bun run --cwd apps/presentation test
 
-  agent:
-    name: "Unit and Integration Test: 音声AgentとTTS接続 (pytest)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
-      - run: bun run --cwd livekit test
-
   api:
     name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1)"
     runs-on: ubuntu-latest
@@ -93,8 +78,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
       - run: bunx --no-install vitest run --project scripts-runtime
 
   workers-build:
@@ -259,33 +242,6 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
-  webrtc:
-    name: "Integration Test: 音声の送受信・停止 (Playwright, LiveKit WebRTC)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
-      - parallel:
-          - uses: ./.github/actions/tablecast-browser
-            with:
-              browsers: chromium
-          - uses: ./.github/actions/tablecast-browser-deps
-            with:
-              browsers: chromium
-      - name: Local WebRTC
-        run: |
-          bun --no-env-file run dev > /tmp/tablecast-dev.log 2>&1 &
-          TABLECAST_DEV_PID=$!
-          trap 'kill -TERM "$TABLECAST_DEV_PID" 2>/dev/null || true; wait "$TABLECAST_DEV_PID" || true; bun run services:down' EXIT
-          bun --no-env-file scripts/tablecast-livekit-check.ts
-      - name: 開発ログ
-        if: failure()
-        run: cat /tmp/tablecast-dev.log
   images:
     name: 配備用Containerイメージ
     runs-on: ubuntu-latest
@@ -296,15 +252,13 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: 音声AgentとPR用OAuthをlinux/amd64で検証
+      - name: PR用OAuthをlinux/amd64で検証
         run: |
-          docker build --platform linux/amd64 --tag "tablecast-voice:$TABLECAST_RELEASE_SHA" livekit
-          docker run --rm --network none --entrypoint python "tablecast-voice:$TABLECAST_RELEASE_SHA" -c 'from livekit.plugins import silero; silero.VAD.load()'
           docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag "tablecast-emulate:$TABLECAST_RELEASE_SHA" .
           trap 'docker rm --force tablecast-oauth-check' EXIT
           docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev "tablecast-emulate:$TABLECAST_RELEASE_SHA"
           curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
-          docker save "tablecast-voice:$TABLECAST_RELEASE_SHA" "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
+          docker save "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
@@ -316,19 +270,7 @@ jobs:
   deploy:
     name: 本番・PR配備
     needs:
-      [
-        static,
-        unit-web,
-        agent,
-        api,
-        dev-runtime,
-        workers-build,
-        storybook-build,
-        components,
-        e2e,
-        webrtc,
-        images,
-      ]
+      [static, unit-web, api, dev-runtime, workers-build, storybook-build, components, e2e, images]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -349,11 +291,9 @@ jobs:
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
+      TABLECAST_MODEL: gpt-5.6-luna
       TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
       TABLECAST_CONTAINER_METRICS_TOKEN: ${{ secrets.TABLECAST_CONTAINER_METRICS_TOKEN }}
-      TABLECAST_MASTRA_ACCESS_TOKEN: ${{ secrets.TABLECAST_MASTRA_ACCESS_TOKEN }}
-      TABLECAST_MASTRA_PROJECT_ID: ${{ vars.TABLECAST_MASTRA_PROJECT_ID }}
-      TABLECAST_MASTRA_ENDPOINT: https://observability.mastra.ai
       TABLECAST_OTEL_CAPTURE_CONTENT: ${{ vars.TABLECAST_OTEL_CAPTURE_CONTENT || 'true' }}
       TABLECAST_DEPLOY_SECRET: ${{ secrets.TABLECAST_DEPLOY_SECRET }}
       TABLECAST_GOOGLE_CLIENT_ID: ${{ secrets.TABLECAST_GOOGLE_CLIENT_ID }}

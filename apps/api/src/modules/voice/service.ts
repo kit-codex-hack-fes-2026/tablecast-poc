@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
-import type { z } from "zod";
+import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { telemetryContent } from "../../platform/telemetry";
 import type { Actor } from "../auth/model";
 import type { TableState } from "../tables/model";
 import {
@@ -13,6 +14,13 @@ import {
 } from "../tables/mutations";
 import { getSession, getTableState } from "../tables/queries";
 import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
+
+// 会話画面へ公開する引数はメニュー検索語だけに限る。
+export function voiceToolQuery(toolName: string, argumentsValue: unknown) {
+  if (toolName !== "getCatalog") return undefined;
+  const parsed = z.object({ query: voiceToolEventSchema.shape.query }).safeParse(argumentsValue);
+  return parsed.success ? parsed.data.query : undefined;
+}
 export async function setSpeechSpeed(
   services: ApiServices,
   actor: Actor,
@@ -43,6 +51,7 @@ export async function recordVoiceEvent(
   actor: Actor,
   event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
   reserve = false,
+  waitUntil?: (promise: Promise<unknown>) => void,
 ) {
   const db = services.db;
 
@@ -51,13 +60,26 @@ export async function recordVoiceEvent(
     ...event.data,
     turnId: actor.turnId,
   });
+  if (data.query !== undefined) {
+    const query = voiceToolEventSchema.shape.query.safeParse(
+      telemetryContent(data.query, services.env),
+    );
+    data.query = query.success ? query.data : undefined;
+  }
   const gate = voiceCondition(actor);
   const result = await db
     .insert(business.tableEvents)
     .select(
       sql`SELECT NULL,store_id,id,${event.kind},${JSON.stringify(data)},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND (${reserve ? data.state : ""}<>'running' OR NOT EXISTS(SELECT 1 FROM table_events WHERE table_session_id=${actor.tableSessionId} AND kind='voice.tool' AND json_extract(data_json,'$.toolCallId')=${data.toolCallId} AND json_extract(data_json,'$.state')='running'))`,
     );
-  if (result.meta.changes === 1) await notifyStore(services, actor.storeId, actor.tableSessionId);
+  if (result.meta.changes === 1) {
+    const notification = notifyStore(services, actor.storeId, actor.tableSessionId, {
+      cursor: result.meta.last_row_id,
+      demoId: actor.demoId,
+    });
+    if (waitUntil) waitUntil(notification);
+    else await notification;
+  }
   return result.meta.changes === 1;
 }
 
@@ -92,7 +114,7 @@ export async function setVoiceSession(
       .where(
         sql`table_session_id=${row.id} AND channel='voice' AND status IN ('pending','read') AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.id} AND mutation_id=${mutation})`,
       ),
-    interruptVoiceTurns(services, actor, mutation),
+    ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, voiceSessionId ? "voice.started" : "voice.stopped", {
       voiceSessionId: voiceSessionId ?? row.voice_session_id,
     }),

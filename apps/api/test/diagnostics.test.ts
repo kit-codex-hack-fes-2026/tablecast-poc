@@ -64,6 +64,28 @@ it("provider例外をcauseに持つ場合、会話を含み得るメッセージ
   expect(JSON.stringify(attributes)).not.toContain("お客様");
 });
 
+it.each(["credit_balance_exhausted", "private-provider-code"])(
+  "provider制限code %sは既知のものだけ残し、会話を診断へ出さない",
+  (code) => {
+    const provider = Object.assign(new Error("お客様の会話とprivate-provider-message"), {
+      status: 429,
+      code,
+    });
+    const error = new DomainError(
+      "VOICE_RUNTIME_UNAVAILABLE",
+      503,
+      "VOICE_RUNTIME_UNAVAILABLE",
+      undefined,
+      { cause: provider },
+    );
+    const attributes = errorAttributes(error);
+    const causes = String(attributes["tablecast.error.causes"]);
+    expect(JSON.parse(causes)).toMatchObject([{ httpStatus: 429 }]);
+    expect(causes.includes("credit_balance_exhausted")).toBe(code === "credit_balance_exhausted");
+    expect(JSON.stringify(attributes)).not.toMatch(/private-|お客様/);
+  },
+);
+
 it("循環するcauseやError以外のthrowでも診断を終了する", () => {
   const error = new Error("cyclic failure");
   error.cause = error;

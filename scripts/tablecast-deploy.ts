@@ -156,6 +156,30 @@ async function accessApplication(create: boolean) {
   return app;
 }
 
+async function retireLegacyVoiceContainer() {
+  const namespaces = z
+    .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
+    .parse(await cloudflare("workers/durable_objects/namespaces?per_page=1000"));
+  if (namespaces.length >= 1000) throw new Error("DO一覧の上限に達しました。");
+  const owned = namespaces.filter(
+    (value) => value.script === target.api && value.class === "TablecastVoice",
+  );
+  if (!owned.length) return;
+  const applications = z
+    .array(
+      z.object({
+        id: z.string(),
+        durable_objects: z.object({ namespace_id: z.string() }).optional(),
+      }),
+    )
+    .parse(await cloudflare("containers/applications"));
+  // 名前だけでは削除せず、この配備先の旧音声DOに紐付くapplicationだけを退役させる。
+  for (const application of applications) {
+    if (owned.some((value) => value.id === application.durable_objects?.namespace_id))
+      await cloudflare(`containers/applications/${application.id}`, "DELETE");
+  }
+}
+
 async function main() {
   const cleanup = process.argv.includes("--cleanup");
   const plan = process.argv.includes("--plan");
@@ -228,266 +252,234 @@ async function main() {
         }
       : {}),
   };
-  let drained = false;
-  try {
-    const preparation = await Promise.allSettled([
-      (async () => {
-        console.time("DB・画像の配備準備");
+  const preparation = await Promise.allSettled([
+    (async () => {
+      console.time("DB・画像の配備準備");
+      try {
+        const storagePath = resolve(directory, "storage.json");
+        await writeFile(
+          storagePath,
+          JSON.stringify({
+            name: `${target.web}-storage`,
+            account_id: tablecastAccountId,
+            compatibility_date: "2026-09-03",
+            d1_databases: configs.api.d1_databases.map((value) => ({ ...value, remote: true })),
+            r2_buckets:
+              bucketExists || bucketCreated
+                ? configs.api.r2_buckets.map((value) => ({ ...value, remote: true }))
+                : [],
+          }),
+        );
+        const platform = await getPlatformProxy<
+          Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_MEDIA">
+        >({
+          configPath: storagePath,
+          envFiles: [resolve(directory, "empty.env")],
+          remoteBindings: true,
+          persist: false,
+        });
         try {
-          const storagePath = resolve(directory, "storage.json");
-          await writeFile(
-            storagePath,
-            JSON.stringify({
-              name: `${target.web}-storage`,
-              account_id: tablecastAccountId,
-              compatibility_date: "2026-09-03",
-              d1_databases: configs.api.d1_databases.map((value) => ({ ...value, remote: true })),
-              r2_buckets:
-                bucketExists || bucketCreated
-                  ? configs.api.r2_buckets.map((value) => ({ ...value, remote: true }))
-                  : [],
-            }),
-          );
-          const platform = await getPlatformProxy<
-            Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_MEDIA">
-          >({
-            configPath: storagePath,
-            envFiles: [resolve(directory, "empty.env")],
-            remoteBindings: true,
-            persist: false,
-          });
-          try {
-            if (bucketExists || bucketCreated) {
-              const ownerKey = "tablecast/deployment-owner.json";
-              const owner = {
-                repository: tablecastRepository,
-                environment: target.web,
-                databaseId: database.uuid,
-              };
-              if (bucketCreated)
-                await platform.env.TABLECAST_MEDIA.put(ownerKey, JSON.stringify(owner));
-              const stored = await platform.env.TABLECAST_MEDIA.get(ownerKey);
-              if (!stored || JSON.stringify(await stored.json()) !== JSON.stringify(owner))
-                throw new Error("R2の所有情報が一致しません。");
+          if (bucketExists || bucketCreated) {
+            const ownerKey = "tablecast/deployment-owner.json";
+            const owner = {
+              repository: tablecastRepository,
+              environment: target.web,
+              databaseId: database.uuid,
+            };
+            if (bucketCreated)
+              await platform.env.TABLECAST_MEDIA.put(ownerKey, JSON.stringify(owner));
+            const stored = await platform.env.TABLECAST_MEDIA.get(ownerKey);
+            if (!stored || JSON.stringify(await stored.json()) !== JSON.stringify(owner))
+              throw new Error("R2の所有情報が一致しません。");
+          }
+          if (cleanup) {
+            // Webを先に止め、他のWorkerが参照するAPIをforceで消さない。
+            const workers = z
+              .array(z.object({ id: z.string() }))
+              .parse(await cloudflare("workers/scripts"));
+            if (workers.some((value) => value.id === target.web))
+              await cloudflare(`workers/scripts/${target.web}`, "DELETE");
+            const namespaces = z
+              .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
+              .parse(await cloudflare("workers/durable_objects/namespaces?per_page=1000"));
+            if (namespaces.length >= 1000) throw new Error("DO一覧の上限に達しました。");
+            const owned = namespaces.filter((value) => value.script === target.api);
+            const applications = z
+              .array(
+                z.object({
+                  id: z.string(),
+                  durable_objects: z.object({ namespace_id: z.string() }).optional(),
+                }),
+              )
+              .parse(await cloudflare("containers/applications"));
+            for (const application of applications) {
+              if (owned.some((value) => value.id === application.durable_objects?.namespace_id))
+                await cloudflare(`containers/applications/${application.id}`, "DELETE");
             }
-            if (cleanup) {
-              // Webを先に止め、他のWorkerが参照するAPIをforceで消さない。
-              const workers = z
-                .array(z.object({ id: z.string() }))
-                .parse(await cloudflare("workers/scripts"));
-              if (workers.some((value) => value.id === target.web))
-                await cloudflare(`workers/scripts/${target.web}`, "DELETE");
-              const namespaces = z
-                .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
-                .parse(await cloudflare("workers/durable_objects/namespaces?per_page=1000"));
-              if (namespaces.length >= 1000) throw new Error("DO一覧の上限に達しました。");
-              const owned = namespaces.filter((value) => value.script === target.api);
-              const applications = z
-                .array(
-                  z.object({
-                    id: z.string(),
-                    durable_objects: z.object({ namespace_id: z.string() }).optional(),
-                  }),
-                )
-                .parse(await cloudflare("containers/applications"));
-              for (const application of applications) {
-                if (owned.some((value) => value.id === application.durable_objects?.namespace_id))
-                  await cloudflare(`containers/applications/${application.id}`, "DELETE");
-              }
-              if (workers.some((value) => value.id === target.api)) {
-                if (owned.length) {
-                  const retired = resolve(directory, "retired.js");
-                  await writeFile(
-                    retired,
-                    'export default { fetch() { return new Response("PR closed", { status: 410 }); } };',
-                  );
-                  const retiredConfig = resolve(directory, "retired.json");
-                  await writeFile(
-                    retiredConfig,
-                    JSON.stringify({
-                      name: target.api,
-                      account_id: tablecastAccountId,
-                      main: retired,
-                      compatibility_date: "2026-09-03",
-                      workers_dev: false,
-                      preview_urls: false,
-                      exports: Object.fromEntries(
-                        owned.map((value) => [
-                          value.class,
-                          { type: "durable-object", state: "deleted" },
-                        ]),
-                      ),
-                    }),
-                  );
-                  await wrangler(["deploy", "--config", retiredConfig]);
-                }
-                await cloudflare(`workers/scripts/${target.api}`, "DELETE");
-              }
-              if (bucketExists) {
-                for (;;) {
-                  const objects = await platform.env.TABLECAST_MEDIA.list({ limit: 1000 });
-                  const keys = objects.objects
-                    .map((value) => value.key)
-                    .filter((key) => key !== "tablecast/deployment-owner.json");
-                  if (!keys.length) break;
-                  await platform.env.TABLECAST_MEDIA.delete(keys);
-                }
-                await platform.env.TABLECAST_MEDIA.delete("tablecast/deployment-owner.json");
-              }
-            } else {
-              const workers = z
-                .array(z.object({ id: z.string() }))
-                .parse(await cloudflare("workers/scripts"));
-              if (workers.some((value) => value.id === target.web)) {
-                const response = await fetch(`${target.origin}/internal/deploy/drain`, {
-                  method: "POST",
-                  headers,
-                  redirect: "manual",
-                });
-                if (!response.ok)
-                  throw new Error(
-                    "通話中、またはdrainを確認できません。終了後に再配備してください。",
-                  );
-                drained = true;
-              }
-              await currentRevision(target, sha);
-              await wrangler([
-                "d1",
-                "migrations",
-                "apply",
-                "TABLECAST_DB",
-                "--remote",
-                "--config",
-                apiPath,
-              ]);
-              if (target.pr && secrets) {
-                const seeded = await seedPreviewDatabase(
-                  {
-                    ...platform.env,
-                    TABLECAST_AUTH_SECRET: secrets.TABLECAST_AUTH_SECRET ?? "",
-                    TABLECAST_ENV: "preview",
-                    TABLECAST_PUBLIC_ORIGIN: target.origin,
-                  },
-                  {
-                    email: "owner@tablecast.example",
-                    otherEmail: "koharu@tablecast.example",
-                    password: crypto.randomUUID(),
-                    otherPassword: crypto.randomUUID(),
-                    baseTime: Date.now(),
-                    profile: "demo",
-                  },
+            if (workers.some((value) => value.id === target.api)) {
+              if (owned.length) {
+                const retired = resolve(directory, "retired.js");
+                await writeFile(
+                  retired,
+                  'export default { fetch() { return new Response("PR closed", { status: 410 }); } };',
                 );
-                if (seeded) {
-                  await drizzle(platform.env.TABLECAST_DB)
-                    .update(deploymentOwner)
-                    .set({ seeded: 1 });
-                }
+                const retiredConfig = resolve(directory, "retired.json");
+                await writeFile(
+                  retiredConfig,
+                  JSON.stringify({
+                    name: target.api,
+                    account_id: tablecastAccountId,
+                    main: retired,
+                    compatibility_date: "2026-09-03",
+                    workers_dev: false,
+                    preview_urls: false,
+                    exports: Object.fromEntries(
+                      owned.map((value) => [
+                        value.class,
+                        { type: "durable-object", state: "deleted" },
+                      ]),
+                    ),
+                  }),
+                );
+                await wrangler(["deploy", "--config", retiredConfig]);
+              }
+              await cloudflare(`workers/scripts/${target.api}`, "DELETE");
+            }
+            if (bucketExists) {
+              for (;;) {
+                const objects = await platform.env.TABLECAST_MEDIA.list({ limit: 1000 });
+                const keys = objects.objects
+                  .map((value) => value.key)
+                  .filter((key) => key !== "tablecast/deployment-owner.json");
+                if (!keys.length) break;
+                await platform.env.TABLECAST_MEDIA.delete(keys);
+              }
+              await platform.env.TABLECAST_MEDIA.delete("tablecast/deployment-owner.json");
+            }
+          } else {
+            await currentRevision(target, sha);
+            await wrangler([
+              "d1",
+              "migrations",
+              "apply",
+              "TABLECAST_DB",
+              "--remote",
+              "--config",
+              apiPath,
+            ]);
+            if (target.pr && secrets) {
+              const seeded = await seedPreviewDatabase(
+                {
+                  ...platform.env,
+                  TABLECAST_AUTH_SECRET: secrets.TABLECAST_AUTH_SECRET ?? "",
+                  TABLECAST_ENV: "preview",
+                  TABLECAST_PUBLIC_ORIGIN: target.origin,
+                },
+                {
+                  email: "owner@tablecast.example",
+                  otherEmail: "koharu@tablecast.example",
+                  password: crypto.randomUUID(),
+                  otherPassword: crypto.randomUUID(),
+                  baseTime: Date.now(),
+                  profile: "demo",
+                },
+              );
+              if (seeded) {
+                await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });
               }
             }
-          } finally {
-            await platform.dispose();
           }
         } finally {
-          console.timeEnd("DB・画像の配備準備");
+          await platform.dispose();
         }
-      })(),
-      (async () => {
-        if (cleanup) return;
-        console.time("検証済みイメージの送信");
-        try {
-          // WranglerはDocker認証設定を共有するためimage間の送信は直列にする。
-          for (const image of ["tablecast-voice", ...(target.pr ? ["tablecast-emulate"] : [])])
-            await wrangler(["containers", "push", `${image}:${sha}`]);
-        } finally {
-          console.timeEnd("検証済みイメージの送信");
-        }
-      })(),
-    ]);
-    const failure = preparation.find((result) => result.status === "rejected");
-    if (failure) throw failure.reason;
-    if (cleanup) {
-      if (bucketExists) await cloudflare(`r2/buckets/${target.bucket}`, "DELETE");
-      await cloudflare(`d1/database/${database.uuid}`, "DELETE");
-      if (access) await cloudflare(`access/apps/${access.id}`, "DELETE");
-      console.info(`PR #${target.pr} の資源を削除しました。`);
-      return;
-    }
-    if (!secrets) throw new Error("配備secretがありません。");
-    await currentRevision(target, sha);
-    // Viteが出力した設定を利用し、APIを別bundleしない。
-    const outputs = await readdir(resolve(root, "apps/web/dist"));
-    const outputConfigs: { name: string; path: string }[] = [];
-    for (const folder of outputs) {
-      const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
-      if (existsSync(path))
-        outputConfigs.push({
-          name: z.object({ name: z.string() }).parse(JSON.parse(await readFile(path, "utf8"))).name,
-          path,
-        });
-    }
-    const webSecrets = resolve(directory, "web-secrets.json");
-    await writeFile(
-      webSecrets,
-      JSON.stringify(
-        secrets.TABLECAST_OTEL_AUTHORIZATION
-          ? { TABLECAST_OTEL_AUTHORIZATION: secrets.TABLECAST_OTEL_AUTHORIZATION }
-          : {},
-      ),
-      { mode: 0o600 },
-    );
-    for (const name of [target.api, target.web]) {
-      const config = outputConfigs.find((value) => value.name === name);
-      if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
-      const built = z
-        .looseObject({ vars: z.record(z.string(), z.unknown()) })
-        .parse(JSON.parse(await readFile(config.path, "utf8")));
-      const artifact =
-        name === target.api ? deploymentArtifact(built, target, sha, database.uuid) : built;
-      await writeFile(
-        config.path,
-        JSON.stringify({
-          ...artifact,
-          vars: {
-            ...artifact.vars,
-            TABLECAST_OTEL_CAPTURE_CONTENT: configs.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
-          },
-        }),
-      );
-      await wrangler([
-        "deploy",
-        "--config",
-        config.path,
-        ...(name === target.api
-          ? [
-              "--secrets-file",
-              resolve(directory, "secrets.json"),
-              "--containers-rollout",
-              "immediate",
-            ]
-          : ["--secrets-file", webSecrets]),
-      ]);
-    }
-    await waitForRelease(target.origin, headers, sha);
-    console.info(`配備確認済み: ${target.origin} (${sha})`);
-    if (process.env.GITHUB_STEP_SUMMARY)
-      await writeFile(
-        process.env.GITHUB_STEP_SUMMARY,
-        `配備URL: ${target.origin}\n\nSHA: ${sha}\n`,
-        { flag: "a" },
-      );
-  } finally {
-    if (drained) {
-      const response = await fetch(`${target.origin}/internal/deploy/resume`, {
-        method: "POST",
-        headers,
-        redirect: "manual",
-      });
-      if (!response.ok) {
-        console.error("音声の新規受付を再開できません。運用手順を確認してください。");
-        process.exitCode = 1;
+      } finally {
+        console.timeEnd("DB・画像の配備準備");
       }
-    }
+    })(),
+    (async () => {
+      if (cleanup || !target.pr) return;
+      console.time("検証済みイメージの送信");
+      try {
+        await wrangler(["containers", "push", `tablecast-emulate:${sha}`]);
+      } finally {
+        console.timeEnd("検証済みイメージの送信");
+      }
+    })(),
+  ]);
+  const failure = preparation.find((result) => result.status === "rejected");
+  if (failure) throw failure.reason;
+  if (cleanup) {
+    if (bucketExists) await cloudflare(`r2/buckets/${target.bucket}`, "DELETE");
+    await cloudflare(`d1/database/${database.uuid}`, "DELETE");
+    if (access) await cloudflare(`access/apps/${access.id}`, "DELETE");
+    console.info(`PR #${target.pr} の資源を削除しました。`);
+    return;
   }
+  if (!secrets) throw new Error("配備secretがありません。");
+  await currentRevision(target, sha);
+  // Viteが出力した設定を利用し、APIを別bundleしない。
+  const outputs = await readdir(resolve(root, "apps/web/dist"));
+  const outputConfigs: { name: string; path: string }[] = [];
+  for (const folder of outputs) {
+    const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
+    if (existsSync(path))
+      outputConfigs.push({
+        name: z.object({ name: z.string() }).parse(JSON.parse(await readFile(path, "utf8"))).name,
+        path,
+      });
+  }
+  const webSecrets = resolve(directory, "web-secrets.json");
+  await writeFile(
+    webSecrets,
+    JSON.stringify(
+      secrets.TABLECAST_OTEL_AUTHORIZATION
+        ? { TABLECAST_OTEL_AUTHORIZATION: secrets.TABLECAST_OTEL_AUTHORIZATION }
+        : {},
+    ),
+    { mode: 0o600 },
+  );
+  for (const name of [target.api, target.web]) {
+    const config = outputConfigs.find((value) => value.name === name);
+    if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
+    const built = z
+      .looseObject({ vars: z.record(z.string(), z.unknown()) })
+      .parse(JSON.parse(await readFile(config.path, "utf8")));
+    const artifact =
+      name === target.api ? deploymentArtifact(built, target, sha, database.uuid) : built;
+    await writeFile(
+      config.path,
+      JSON.stringify({
+        ...artifact,
+        vars: {
+          ...artifact.vars,
+          TABLECAST_OTEL_CAPTURE_CONTENT: configs.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
+        },
+      }),
+    );
+    if (name === target.api) {
+      await currentRevision(target, sha);
+      await retireLegacyVoiceContainer();
+    }
+    await wrangler([
+      "deploy",
+      "--config",
+      config.path,
+      ...(name === target.api
+        ? [
+            "--secrets-file",
+            resolve(directory, "secrets.json"),
+            "--containers-rollout",
+            "immediate",
+          ]
+        : ["--secrets-file", webSecrets]),
+    ]);
+  }
+  await waitForRelease(target.origin, headers, sha);
+  console.info(`配備確認済み: ${target.origin} (${sha})`);
+  if (process.env.GITHUB_STEP_SUMMARY)
+    await writeFile(process.env.GITHUB_STEP_SUMMARY, `配備URL: ${target.origin}\n\nSHA: ${sha}\n`, {
+      flag: "a",
+    });
 }
 
 if (import.meta.main) {

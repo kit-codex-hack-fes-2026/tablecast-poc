@@ -10,7 +10,6 @@ import { admin } from "./modules/stores/routes";
 import { systemRoutes } from "./modules/system/routes";
 import { demoRoutes } from "./modules/demo/routes";
 import { table } from "./modules/tables/routes";
-import { voiceRoutes } from "./modules/voice/routes";
 import type { ApiEnv } from "./platform/context";
 import { requestServices } from "./platform/context";
 import { handleError, handleRpcError, requestSecurity, requestTelemetry } from "./platform/http";
@@ -44,7 +43,6 @@ const app = new Hono<ApiEnv>()
   .route("/", systemRoutes)
   .route("/", authRoutes)
   .route("/", rpcRoutes)
-  .route("/internal/voice", voiceRoutes)
   .route("/mcp", mcpRoutes)
   .route("/", mediaRoutes);
 export type AppType = typeof rpcRoutes;

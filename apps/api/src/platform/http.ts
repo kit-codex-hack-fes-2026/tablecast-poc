@@ -18,7 +18,7 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   c.header("Cache-Control", "no-store");
   c.header("X-Content-Type-Options", "nosniff");
   // HonoがonErrorを適用した後の例外と最終ステータスを一箇所で記録する。
-  const channel = c.req.path.startsWith("/internal/voice/")
+  const channel = c.req.path.includes("/voice/")
     ? "voice"
     : c.req.path === "/mcp" || c.req.path.startsWith("/mcp/")
       ? "mcp"
@@ -62,11 +62,7 @@ export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   requestLog(attributes, status >= 500, c.env);
 });
 export const requestSecurity = createMiddleware<ApiEnv>(async (c, next) => {
-  if (
-    !["GET", "HEAD", "OPTIONS"].includes(c.req.method) &&
-    !c.req.path.startsWith("/internal/voice/") &&
-    c.req.path !== "/mcp"
-  ) {
+  if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method) && c.req.path !== "/mcp") {
     const origin = c.req.header("Origin");
     ensure(!origin || origin === c.env.TABLECAST_PUBLIC_ORIGIN, "ORIGIN_FORBIDDEN", 403);
     const site = c.req.header("Sec-Fetch-Site");

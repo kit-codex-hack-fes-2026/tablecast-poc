@@ -35,7 +35,7 @@
   "kiosk_voice_paused": "Voice is paused",
   "kiosk_voice_connecting": "Connecting voice",
   "kiosk_voice_listening": "Listening to you",
-  "kiosk_voice_thinking": "Let me check that",
+  "kiosk_voice_thinking": "Preparing a reply",
   "kiosk_voice_speaking": "Your cast is speaking",
   "kiosk_voice_error": "Voice is unavailable",
   "kiosk_voice_permission": "Microphone access is not allowed. Please check your browser settings.",
@@ -501,5 +501,6 @@
   "common_not_found": "This item could not be found. Select it again from the latest list.",
   "common_invalid_input": "Check and correct the information you entered.",
   "common_too_large": "The data is too large to send. Reduce the file size.",
-  "common_rate_limited": "Too many requests. Wait a moment, then try again."
+  "common_rate_limited": "Too many requests. Wait a moment, then try again.",
+  "voice_default_marin": "Marin (default)"
 }

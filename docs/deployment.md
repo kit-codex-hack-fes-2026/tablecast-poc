@@ -6,18 +6,17 @@ GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpre
 
 ## URLと実行先
 
-| 対象           | 本番                                      | PR #123の例                                      |
-| -------------- | ----------------------------------------- | ------------------------------------------------ |
-| 公開Web        | `https://tablecast.kit-codex.workers.dev` | `https://tablecast-pr-123.kit-codex.workers.dev` |
-| 非公開API      | `tablecast-api`                           | `tablecast-api-pr-123`                           |
-| D1             | `tablecast-db`                            | `tablecast-db-pr-123`                            |
-| R2             | `tablecast-media`                         | `tablecast-media-pr-123`                         |
-| Python agent名 | `tablecast-voice`                         | `tablecast-voice-pr-123`                         |
-| Google認証     | 実Google                                  | 専用Containerのemulate                           |
+| 対象       | 本番                                      | PR #123の例                                      |
+| ---------- | ----------------------------------------- | ------------------------------------------------ |
+| 公開Web    | `https://tablecast.kit-codex.workers.dev` | `https://tablecast-pr-123.kit-codex.workers.dev` |
+| 非公開API  | `tablecast-api`                           | `tablecast-api-pr-123`                           |
+| D1         | `tablecast-db`                            | `tablecast-db-pr-123`                            |
+| R2         | `tablecast-media`                         | `tablecast-media-pr-123`                         |
+| Google認証 | 実Google                                  | 専用Containerのemulate                           |
 
-Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService BindingがAPIを呼び、APIのworkers.devと両Workerのversion preview URLは無効にする。D1/R2/DO/Containersは環境ごとに分離する。LiveKit Cloudは共有1 projectであり、APIがRoom名とagent名に環境名を付ける。共有APIキーと割当量は独立したセキュリティ境界にはならない。
+Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService BindingがAPIを呼び、APIのworkers.devと両Workerのversion preview URLは無効にする。D1/R2/DOとPRのOAuth Containerは環境ごとに分離する。音声と業務モデルのOpenAI projectを共有する場合、APIキーと割当量は独立したセキュリティ境界にはならない。
 
-PythonはCloudflare Containersへ置き、LiveKit CloudにはSFU・Room・dispatchを任せる。WebRTCはWorkersを経由しない。MastraはAPI Worker内の既存実装を使い、別のStudioサーバーやhosted o11y exporterは追加しない。LiveKitの`record=False`を維持する。
+ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerが標準Responses delegationとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
 
 Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と全CI成功後の配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
 
@@ -36,17 +35,17 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Repository variable              | `TABLECAST_PREVIEW_ACCESS_POLICY_ID`                           | 許可するCloudflare accountメンバーだけがログインできる再利用可能なAllow policyのID |
 | Repository variable              | `TABLECAST_PREVIEW_SERVICE_POLICY_ID`                          | 上記service tokenだけを許可するService Auth policyのID                             |
 
-`TABLECAST_RUNTIME_SECRETS`には公開環境用の `OPENAI_API_KEY`、`INWORLD_API_KEY`、`LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、`TABLECAST_MODEL`、`TABLECAST_MODEL_API_KEY`、`TABLECAST_INWORLD_VOICES_API_KEY` を入れる。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。Pythonに必要な値はContainer起動時に注入する。ブラウザーへ返すLiveKit接続URLと限定JWTを除き、資格はサーバー側に留める。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-5.6-luna` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
 
-認証secretと内部tokenは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証と内部通信に影響するため通常のキー追加時に再生成しない。
+認証secretは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証に影響するため通常のキー追加時に再生成しない。
 
-Better Auth Dashboardの鍵は `production` Environmentから本番API Worker secretへだけ渡す。`TABLECAST_RUNTIME_SECRETS`、buildジョブ、公開config、Web、Python、previewへ含めない。本番配備はこの鍵が空なら資源変更前に停止する。鍵の登録・変更後も既存の認証masterは変更しない。
+Better Auth Dashboardの鍵は `production` Environmentから本番API Worker secretへだけ渡す。`TABLECAST_RUNTIME_SECRETS`、buildジョブ、公開config、Web、previewへ含めない。本番配備はこの鍵が空なら資源変更前に停止する。鍵の登録・変更後も既存の認証masterは変更しない。
 
 初回の本番配備では `0012_tablecast_auth_activity.sql` を既存migration工程で適用した後にWorkerを配備する。Dashboardの接続先は `https://tablecast.kit-codex.workers.dev`、認証パスは `/api/auth` とし、無料Starterの本番プロジェクトから接続する。接続には公開Web WorkerからAPIへの既存Service Bindingを使用する。配備後はhealthのrelease SHAに加え、Dashboardのユーザー・セッション表示、ログインイベント、最終利用日時を確認する。Dashboardの接続設定とこの本番確認はPRのCI成功だけでは完了としない。
 
 アプリのrollbackではnullableな `last_active_at` 列を残す。旧版でも既存ユーザーとセッションを使用でき、列を削除する破壊的なdown migrationは行わない。
 
-Access applicationはPRホスト名に対してWeb公開前に作成する。上記2 policyを参照し、Pythonと配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
+Access applicationはPRホスト名に対してWeb公開前に作成する。上記2 policyを参照し、配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
 
 ## Google Cloud Console
 
@@ -62,18 +61,18 @@ Web applicationの設定を次と完全一致させる。
 
 ## Actionsの処理
 
-1. format/lint/typecheck、単体・実Binding・Python、Workers/Storybook build、UI部品、Chromium/WebKit E2E、合成音声WebRTC、両Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
+1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
 4. 配備ジョブは全検証成功後にartifactを取得する。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
-5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。WranglerはDocker認証設定を共有するためimage同士の送信は直列にする。既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
+5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。WranglerはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。音声Containerへのdrain/resumeは行わない。初回の移行前には旧音声を明示停止し、`tablecast-v3-hosted-agents` で退役する `TablecastVoice` の予約が不要であることを確認する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
-D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
+D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
 ビルドの入口は `bun --no-env-file run build:deploy`、配備・cleanupの入口は `bun --no-env-file run deploy`。Wranglerの遠隔bindingを使う配備・cleanupだけを既存tsx経由のNode.js 24.7.0で実行する。同じ遠隔D1接続がBun 1.3.13では45秒以内に完了せず、Nodeでは約4秒で成功した。Bun内部の原因までは未特定。Wranglerの公式サポートruntimeはNodeであり、独自の通信互換処理は追加しない。依存管理、config生成、build、公式CLIの起動はBunを維持する。[Wranglerの実行要件](https://developers.cloudflare.com/workers/wrangler/install-and-update/#install-wrangler)
 
-DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`wrangler containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`wrangler deploy`で配備する。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。uv依存・VADモデルは既存Dockerfileのbuild段階で準備し、cold startでpip/uv installしない。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
+DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`wrangler containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`wrangler deploy`で配備する。Wranglerのversion・image digest出力と対象SHAを同じrunで追跡する。OAuth emulatorの依存は既存Dockerfileのbuild段階で準備する。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
 ## 初期データと再実行
 
@@ -135,21 +134,19 @@ bun --no-env-file run db:bootstrap --config .local/tablecast-bootstrap-config.js
 
 R2へ商品画像を登録する場合は `tablecast/` 配下のkeyをカタログに設定する。生成画像は `imageKind=illustration` とし、[画像の出所](../assets/demo/README.md)を保持する。DB・Cookie・実来店ログをローカルから移植しない。
 
-## Containerの停止と復旧
+## 音声とContainerの停止・復旧
 
-初期値は環境ごとに`standard-1`の音声Container 1個・同時1 session。DOの開始予約を記録し、ContainerのHTTP portとLiveKit `/worker`を確認してから限定JWTを返す。予約が埋まっている場合、音声開始は503となりGUIを維持する。これは未計測の最大性能ではなく入場上限。
+音声の送受信はブラウザーとGPT-Live、業務生成は標準Responses delegationが所有する。停止時にはAPIのvoice session失効に加え、GPT-Live sessionと委任処理を明示終了する。HTTP切断だけで生成の停止を保証しない。再開は利用者の明示操作で新しい接続を作り、D1のGUI・カート・注文状態を継続する。
 
-公式SDKの5分activity期限でLiveKitのactive jobsを確認する。job数が不明なら稼働を継続し、0件と扱わない。JWTは5分、未開始予約は10分まで保護する。実jobを確認済みの予約は全job終了時に解放する。期限確認は定期的なので、終了直後の正確な5分停止は保証しない。更新時には新規予約を止め、既存予約・jobが残れば更新を拒否する。
+PRのOAuth emulatorだけを `basic`・最大1台のContainerに置き、公式SDKの5分activity期限で停止する。本番は音声ContainerもOAuth Containerも持たない。配備scriptは対象APIの `TablecastVoice` namespaceを照合し、それに結び付いた旧Container applicationだけを先に削除する。Wranglerの設定から除くだけではapplicationの退役を保証しない。移行用DO migrationは旧 `TablecastVoice` だけを削除し、過去のmigrationタグと `StoreEvents`・`TablecastEmulate` を維持する。削除対象には音声runtimeの予約のみがあり、注文・履歴のD1は含まれない。
 
-SIGTERM時のPython drain timeoutは600秒。ただし基盤の強制終了猶予を延長する設定ではない。基盤障害・メンテナンス・killやPR closeは通話中でも停止し得る。別Containerへの無切断移送は実装しない。停止後は利用者が明示再開し、APIに保存した会話・GUI・カート・注文状態を使用する。未保存発話とモデル内部状態は復元できない場合がある。
-
-PR closeのworkflowは`pull_request_target: closed`から既定ブランチだけをcheckoutし、PRコードを特権実行しない。D1/R2の所有情報を確認後、Web、Container application、DOを退役させたAPI、R2、D1、Access applicationを削除する。対象は終了した同一repo PRだけ。本番・他PR・共有LiveKit projectは削除しない。Registryの過去imageはこのcleanupの対象外なので保存量を別途確認する。最初の導入PRでは、このworkflowがmainへ入ってからcleanupが使える。
+PR closeのworkflowは`pull_request_target: closed`から既定ブランチだけをcheckoutし、PRコードを特権実行しない。D1/R2の所有情報を確認後、Web、Container application、DOを退役させたAPI、R2、D1、Access applicationを削除する。対象は終了した同一repo PRだけ。本番・他PRは削除しない。Registryの過去imageはこのcleanupの対象外なので保存量を別途確認する。最初の導入PRでは、このworkflowがmainへ入ってからcleanupが使える。
 
 cleanup途中で所有markerだけが削除された場合も、自動採用せず手動確認で再開する。Container/DOの遠隔削除、配備途中の中断、複数PRでの分離は実環境の受入が必要。
 
 ## ローカル確認
 
-通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使い、ホストのPythonとローカルLiveKitを維持する。公開用configは次でsecret・遠隔書込みなしに生成できる。
+通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使う。公開用configは次でsecret・遠隔書込みなしに生成できる。
 
 ```sh
 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
@@ -159,17 +156,17 @@ TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" TABLECAST_WEB_CONFI
 
 `apps/web/dist/*/wrangler.json`のWorker名を調べ、対応する生成configへ`bun --no-env-file x wrangler deploy --dry-run --config <生成config>`を実行する。planのDB IDは検証用であり、遠隔配備には使わない。
 
-Docker Engineを起動した環境では、`wrangler dev`が実Containerをローカルでbuild・起動できる。Container用のDO bindingと`containers`設定を持つ専用configを使い、LiveKitはDockerから到達できるローカル接続先へ向ける。通常のbase configにはイメージ設定を追加せず、日常のローカル起動でContainerを二重起動しない。[Containersのローカル開発](https://developers.cloudflare.com/containers/local-dev/)
+Docker Engineを起動した環境では、`wrangler dev`が実Containerをローカルでbuild・起動できる。OAuth Container用のDO bindingと`containers`設定を持つ専用configを使う。通常のbase configにはイメージ設定を追加せず、日常のローカル起動でContainerを二重起動しない。[Containersのローカル開発](https://developers.cloudflare.com/containers/local-dev/)
 
 ## 切り戻しと残る受入
 
 配備runのWorker version ID・image digestと、移行前D1のTime Travel bookmarkを保存する。Web/APIが互換であればWorkerのrollbackと、旧SHAのDockerイメージ再配備を計画的に実施する。現行SHA検査があるため古いActions runの再実行では旧版へ戻せない。通常はmainへrevert PRを作り、新しいSHAとして同じCIを通す。Containerが旧imageに戻ったことをRegistry digestと起動後healthで確認する。
 
-WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書込みを停止し、失われる注文・支払を確認した復元点だけを使う。強制キャンセルでdrainが残った場合は対象URLへ内部token付き`POST /internal/deploy/resume`を送る。PRではAccess service tokenも必要。[Worker rollback](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)・[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+WorkerのrollbackはD1/R2/DOを戻さない。DB復元が必要なら営業書込みを停止し、失われる注文・支払を確認した復元点だけを使う。旧音声ContainerのDO削除はrollbackでは復元されない。移行前のPython構成へ戻す場合は別のDO移行と資源の再準備が必要になる。[Worker rollback](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)・[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
 
-公開先のGoogleログイン、Access拒否、初期組織、端末承認、注文の冪等性、DO再接続、画像、MCP認証を確認する。有料音声では実iPadの日英発話・割込み・停止・明示再開、30分通話、強制終了と履歴復元を確認する。cold/warm start、初回音声、shutdown、復旧、1/2/4 sessionのCPU/RSSと切断率は未計測。1 sessionの初期上限を最適値として扱わない。
+公開先のGoogleログイン、Access拒否、初期組織、端末承認、注文の冪等性、DO再接続、画像、MCP認証を確認する。有料音声では実iPadの日英発話・割込み・停止・明示再開、30分通話、強制終了と履歴復元を確認する。初回接続、最初の字幕・音声、業務ツール待ち、停止・復旧と複数sessionの切断率は別途測定する。
 
-月額約30 USD未満は目標であり、上限保証はない。Workers Paid、Containersの起動・待機とOAuth稼働、D1/R2/DO/Images、LiveKitのparticipant-minutes・転送量、OpenAI、Inworld、Actionsを集計する。Mastra hosted o11yやLiveKit managed Agent hostingの追加契約はこの変更では行わない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。
+月額約30 USD未満は目標であり、上限保証はない。Workers Paid、PRのOAuth Container、D1/R2/DO/Images、GPT-Live・Responses delegation、Actionsを集計する。旧LiveKit・音声Containerの費用を新構成の費用として数えない。各サービスの実使用量を10分試験前後で取り、月300分想定へ外挿する費用受入はIssue #34に残る。
 
 ## PWAの配備と更新
 
