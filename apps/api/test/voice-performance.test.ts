@@ -11,45 +11,7 @@ import { getTableState } from "../src/modules/tables/queries";
 import { runVoiceTurn } from "./voice-fixture";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
-// SQLは実D1で実行する。query builderの呼出しでなくbindingの実行往復を計測する。
-function measuredDatabase(binding: D1Database) {
-  const source = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
-  const stats = { roundtrips: 0, statements: 0 };
-  const statement = (original: D1PreparedStatement): D1PreparedStatement => {
-    const wrapped = new Proxy(original, {
-      get(target, key) {
-        if (key === "bind") return (...args: unknown[]) => statement(target.bind(...args));
-        const value: unknown = Reflect.get(target, key);
-        if (typeof value !== "function") return value;
-        return (...args: unknown[]): unknown => {
-          if (["run", "all", "raw", "first"].includes(String(key))) {
-            stats.roundtrips++;
-            stats.statements++;
-          }
-          return Reflect.apply(value, target, args);
-        };
-      },
-    });
-    source.set(wrapped, original);
-    return wrapped;
-  };
-  const database = new Proxy(binding, {
-    get(target, key) {
-      if (key === "prepare") return (sql: string) => statement(target.prepare(sql));
-      if (key === "batch")
-        return (items: D1PreparedStatement[]) => {
-          stats.roundtrips++;
-          stats.statements += items.length;
-          return target.batch(items.map((item) => source.get(item) ?? item));
-        };
-      const value: unknown = Reflect.get(target, key);
-      return typeof value === "function"
-        ? (...args: unknown[]): unknown => Reflect.apply(value, target, args)
-        : value;
-    },
-  });
-  return { database, stats };
-}
+import { measuredDatabase } from "./measured-database";
 
 it("商品数が増えても検索とカード表示の往復・出力が増えず実際に表示を保存する", async () => {
   await setupFixture();

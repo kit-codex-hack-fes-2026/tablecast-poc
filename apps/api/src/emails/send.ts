@@ -8,16 +8,22 @@ export type MailEnv = Partial<
     TablecastEnv,
     "TABLECAST_EMAIL" | "TABLECAST_EMAIL_FROM" | "TABLECAST_MAILPIT_URL" | "TABLECAST_ENV"
   >
->;
+> &
+  Pick<TablecastEnv, "TABLECAST_PUBLIC_ORIGIN">;
 export async function sendAccountEmail(
   env: MailEnv,
   to: string,
-  content: ComponentProps<typeof AccountEmail>,
+  content: Omit<ComponentProps<typeof AccountEmail>, "logoUrl">,
 ) {
   const { title } = content;
   ensure(env.TABLECAST_EMAIL_FROM, "EMAIL_NOT_CONFIGURED", 503);
-  const html = await render(createElement(AccountEmail, content));
-  const text = toPlainText(html);
+  const html = await render(
+    createElement(AccountEmail, {
+      ...content,
+      logoUrl: new URL("/brand/tablecast-logo.png", env.TABLECAST_PUBLIC_ORIGIN).href,
+    }),
+  );
+  const text = `TableCast\n\n${toPlainText(html)}`;
   if (env.TABLECAST_MAILPIT_URL) {
     const target = new URL(env.TABLECAST_MAILPIT_URL);
     ensure(

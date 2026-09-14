@@ -2,7 +2,7 @@ import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createEmulator } from "emulate";
 import { tablecastDemoIdentities, tablecastDemoLinkIdentity } from "./tablecast-demo-identities";
 
-const preview = process.env.TABLECAST_ENV === "preview";
+const preview = ["preview", "staging"].includes(process.env.TABLECAST_ENV ?? "");
 const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
 const port = Number(process.env.TABLECAST_OAUTH_PORT);
 if (
@@ -21,7 +21,14 @@ if (
     hostname === "localhost" ||
     hostname.endsWith(".orb.local")
   ) &&
-  !(preview && /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(origin))
+  !(
+    process.env.TABLECAST_ENV === "preview" &&
+    /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(origin)
+  ) &&
+  !(
+    process.env.TABLECAST_ENV === "staging" &&
+    origin === "https://tablecast-staging.kit-codex.workers.dev"
+  )
 ) {
   throw new Error("OAuth emulatorはローカル環境専用です。");
 }

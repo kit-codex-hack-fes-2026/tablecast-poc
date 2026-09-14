@@ -1,0 +1,64 @@
+name: TableCast release
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, closed]
+  workflow_run:
+    workflows: [CI]
+    types: [requested, completed]
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tablecast-release
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: staging
+          fetch-depth: 0
+      - uses: ./.github/actions/tablecast-setup
+      - name: Draft release PRの本文を更新
+        run: bun --no-env-file scripts/tablecast-release.ts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+  gate:
+    if: always()
+    needs: [update]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      statuses: write
+    steps:
+      # headのコード・artifactを実行しない。保護されたstagingの検査だけを使う。
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: staging
+          fetch-depth: 0
+      - uses: ./.github/actions/tablecast-setup
+      - name: mainへの統合条件を現在のheadへ記録
+        run: bun --no-env-file scripts/tablecast-release.ts --gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

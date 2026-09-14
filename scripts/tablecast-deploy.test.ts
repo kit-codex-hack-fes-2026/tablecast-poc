@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { waitForRelease } from "./tablecast-deploy";
+import { waitForRelease } from "./tablecast-deploy-api";
 import { seedMenuImages, uploadPreviewImage } from "./tablecast-seed-media";
 
 afterEach(() => {
@@ -100,16 +100,20 @@ describe("PR商品画像の投入", () => {
       expect.objectContaining({ md5: stored.etag, onlyIf: { etagDoesNotMatch: "*" } }),
     );
   });
-  test("応答だけ失われたputは保存内容を確認して再送しない", async () => {
-    vi.useFakeTimers();
-    const media = bucket();
-    media.head.mockResolvedValueOnce(null).mockResolvedValueOnce(stored);
-    media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
-    const result = uploadPreviewImage(media, stored.key, bytes);
-    await vi.runAllTimersAsync();
-    await result;
-    expect(media.put).toHaveBeenCalledTimes(1);
-  });
+  test.each([undefined, null])(
+    "応答だけ失われたputは保存内容を確認して再送しない（一覧結果%s）",
+    async (known) => {
+      vi.useFakeTimers();
+      const media = bucket();
+      if (known === undefined) media.head.mockResolvedValueOnce(null);
+      media.head.mockResolvedValueOnce(stored);
+      media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
+      const result = uploadPreviewImage(media, stored.key, bytes, undefined, known);
+      await vi.runAllTimersAsync();
+      await result;
+      expect(media.put).toHaveBeenCalledTimes(1);
+    },
+  );
   test.each([
     { code: "10001", attempts: 3 },
     { code: "10003", attempts: 1 },
@@ -144,35 +148,38 @@ describe("商品画像群の投入", () => {
     let maximum = 0;
     let calls = 0;
     const media = {
-      head: vi.fn<R2Bucket["head"]>().mockImplementation(async () => {
-        const index = calls++;
-        active++;
-        maximum = Math.max(maximum, active);
-        if (calls === 4) started.resolve();
-        try {
-          if (index === 0) {
-            await fail.promise;
-            throw new Error("head: failure (10003)");
-          }
-          await release.promise;
-          return null;
-        } finally {
-          active--;
-        }
-      }),
+      list: vi
+        .fn<R2Bucket["list"]>()
+        .mockResolvedValue({ objects: [], truncated: false, delimitedPrefixes: [] }),
+      head: vi.fn<R2Bucket["head"]>(),
       put: vi
         .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<R2Object | null>>()
-        .mockImplementation(async (key, bytes) => ({
-          key,
-          version: "test",
-          size: bytes.length,
-          etag: createHash("md5").update(bytes).digest("hex"),
-          httpEtag: '"test"',
-          uploaded: new Date(0),
-          storageClass: "Standard",
-          checksums: { toJSON: () => ({}) },
-          writeHttpMetadata: () => {},
-        })),
+        .mockImplementation(async (key, bytes) => {
+          const index = calls++;
+          active++;
+          maximum = Math.max(maximum, active);
+          if (calls === 4) started.resolve();
+          try {
+            if (index === 0) {
+              await fail.promise;
+              throw new Error("put: failure (10003)");
+            }
+            await release.promise;
+            return {
+              key,
+              version: "test",
+              size: bytes.length,
+              etag: createHash("md5").update(bytes).digest("hex"),
+              httpEtag: '"test"',
+              uploaded: new Date(0),
+              storageClass: "Standard",
+              checksums: { toJSON: () => ({}) },
+              writeHttpMetadata: () => {},
+            };
+          } finally {
+            active--;
+          }
+        }),
     };
     let settled = false;
     const result = seedMenuImages(media).finally(() => {
@@ -196,6 +203,7 @@ describe("商品画像群の投入", () => {
     }
     expect(active).toBe(0);
     expect(calls).toBe(4);
-    expect(media.put).toHaveBeenCalledTimes(3);
+    expect(media.put).toHaveBeenCalledTimes(4);
+    expect(media.head).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import { Brand } from "../components/brand";
 import { Pwa, PwaInstallHelp } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
@@ -13,6 +14,8 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { floorOptions, storesOptions } from "../features/store/store-query";
+import { catalogOptions } from "../features/store/menu-query";
+import { menuSectionSchema } from "../features/store/menu-model";
 import { LocaleProvider } from "../i18n/locale";
 import { loadInitial, sessionOptions } from "../lib/session-query";
 import { getLocale } from "../paraglide/runtime.js";
@@ -32,7 +35,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
         const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
-        const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : undefined;
+        const menuMatch = /^\/admin\/stores\/([^/]+)\/menu\/([^/]+)\/?$/.exec(location.pathname);
+        const catalogStoreId =
+          menuMatch && menuSectionSchema.safeParse(menuMatch[2]).success
+            ? decodeURIComponent(menuMatch[1])
+            : undefined;
+        const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : catalogStoreId;
         const search = new URLSearchParams(location.searchStr);
         // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
         const defaultFloor =
@@ -41,7 +49,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           !search.has("storeId") &&
           !search.has("section") &&
           !search.has("draftId");
-        const initial = await loadInitial(storeId, defaultFloor ? "true" : undefined);
+        const initial = await loadInitial(
+          storeId,
+          defaultFloor ? "true" : undefined,
+          catalogStoreId ? "catalog" : undefined,
+        );
         queryClient.setQueryData(sessionOptions.queryKey, initial.session);
         queryClient.setQueryData(storesOptions.queryKey, {
           stores: initial.stores,
@@ -49,6 +61,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         });
         if (initial.floor) {
           queryClient.setQueryData(floorOptions(initial.floor.store.id).queryKey, initial.floor);
+        }
+        if (initial.catalog) {
+          queryClient.setQueryData(
+            catalogOptions(initial.catalog.storeId).queryKey,
+            initial.catalog,
+          );
         }
       }
       const session = queryClient.getQueryData(sessionOptions.queryKey);
@@ -73,7 +91,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             ? "/tablecast-kiosk.webmanifest"
             : "/tablecast-staff.webmanifest",
       },
-      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png", sizes: "180x180" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-167.png", sizes: "167x167" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-152.png", sizes: "152x152" },
     ],
   }),
   shellComponent: Root,
@@ -81,7 +103,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   notFoundComponent: () => (
     <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
       <h1>404</h1>
-      <a href="/">TableCast</a>
+      <a href="/">
+        <Brand />
+      </a>
     </main>
   ),
 });

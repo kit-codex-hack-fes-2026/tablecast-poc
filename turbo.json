@@ -122,7 +122,11 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
     },
     "@tablecast/api#build:email": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/tablecast-catalog-config.ts"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/tablecast-catalog-config.ts",
+        "$TURBO_ROOT$/docs/design/logos/tablecast-logo.png"
+      ],
       "outputs": ["email-static/**"],
       "env": ["TABLECAST_RELEASE_SHA", "TABLECAST_PR_NUMBER"]
     }

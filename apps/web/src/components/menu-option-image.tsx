@@ -16,7 +16,8 @@ export function MenuOptionImage({
       <span
         ref={(frame) => {
           const image = frame?.querySelector("img");
-          if (image?.complete && image.naturalWidth === 0) setFailedKey(imageKey);
+          if (image?.currentSrc && image.complete && image.naturalWidth === 0)
+            setFailedKey(imageKey);
         }}
         aria-hidden="true"
         className="flex size-24 items-center justify-center overflow-hidden rounded-lg bg-muted"
