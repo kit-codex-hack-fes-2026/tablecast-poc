@@ -119,10 +119,14 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     );
   expect(mail).toBeDefined();
   const content = z
-    .object({ HTML: z.string() })
+    .object({ HTML: z.string(), Text: z.string() })
     .parse(
       await (await page.request.get(`${runtime.mailpitUrl}/api/v1/message/${mail?.ID}`)).json(),
     );
+  expect(content.HTML).toContain(`src="${baseURL}/brand/tablecast-logo.png"`);
+  expect(content.HTML).toContain('alt="TableCast"');
+  expect(content.Text).toMatch(/^TableCast\n/);
+  expect((await page.request.get("/brand/tablecast-logo.png")).ok()).toBe(true);
   const invitation = content.HTML.match(/href="([^"]*\/invitations\/[^"?]+)"/u)?.[1];
   expect(invitation).toBe(`${baseURL}/invitations/${invitationId}`);
   await page.context().clearCookies();

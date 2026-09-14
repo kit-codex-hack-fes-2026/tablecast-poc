@@ -84,6 +84,10 @@ codex plugin add tablecast@tablecast
 
 旧生成物に`# TableCast generated local MCP`が残る場合も自動削除しない。接続を切り替える開発者は旧`[mcp_servers.tablecast]`の接続先を確認して重複分だけを取り除き、他サーバーの設定を保持する。
 
+## ブランド画像の配布
+
+`plugins/tablecast/assets`に正本ロゴの黒・白透過PNGと白背景composerアイコンを同梱する。`plugin.json`の`interface.composerIcon`・`logo`・`logoDark`はpluginルートからの相対パスを使う。[素材の更新手順](design/icons/README.md#実装への配布)に従い、画像変更時もversionを更新する。ローカル生成は既存のディレクトリコピーで画像を含める。生成・manifest検証と、インストール済みクライアントへの反映は別々に確認する。
+
 ## 公開接続先の更新
 
 保守担当は[本番の配備先](deployment.md)と照合したHTTPS originを指定して、公開対象の`plugins/tablecast/.mcp.json`を更新する。

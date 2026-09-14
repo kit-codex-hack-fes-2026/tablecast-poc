@@ -1,3 +1,4 @@
+import { Brand } from "../components/brand";
 import { Pwa, PwaInstallHelp } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
@@ -90,7 +91,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             ? "/tablecast-kiosk.webmanifest"
             : "/tablecast-staff.webmanifest",
       },
-      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-180.png", sizes: "180x180" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-167.png", sizes: "167x167" },
+      { rel: "apple-touch-icon", href: "/icons/tablecast-152.png", sizes: "152x152" },
     ],
   }),
   shellComponent: Root,
@@ -98,7 +103,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   notFoundComponent: () => (
     <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
       <h1>404</h1>
-      <a href="/">TableCast</a>
+      <a href="/">
+        <Brand />
+      </a>
     </main>
   ),
 });
