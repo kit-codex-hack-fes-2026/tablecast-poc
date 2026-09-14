@@ -25,19 +25,21 @@ const app = new Hono<ApiEnv>()
   .use("*", requestTelemetry)
   .use("*", requestServices)
   .use("*", requestSecurity)
-  .use(
-    "*",
+  .use("*", (c, next) =>
     bodyLimit({
-      maxSize: 2 * 1024 * 1024,
-      onError: (c: Context<ApiEnv>) =>
-        c.json(
+      maxSize:
+        c.req.path === "/mcp" || /^\/api\/admin\/stores\/[^/]+\/images$/.test(c.req.path)
+          ? 8 * 1024 * 1024
+          : 2 * 1024 * 1024,
+      onError: (context: Context<ApiEnv>) =>
+        context.json(
           {
             error: { code: "BODY_TOO_LARGE", message: "BODY_TOO_LARGE" },
-            traceId: c.get("traceId"),
+            traceId: context.get("traceId"),
           },
           413,
         ),
-    }),
+    })(c, next),
   )
   .onError(handleError)
   .route("/", systemRoutes)

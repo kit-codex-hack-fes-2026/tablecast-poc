@@ -1,5 +1,11 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  imageMetadataSchema,
+  imageSourceSchema,
+  uploadedImageSchema,
+  uploadImageSchema,
+} from "./modules/media/model";
+export {
   bilingualSchema,
   contentSchema,
   modifierSchema,

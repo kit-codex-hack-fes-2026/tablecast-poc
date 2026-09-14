@@ -13,11 +13,38 @@ import {
   configDraftSchema,
   configurationSchema,
   voicePageSchema,
+  uploadedImageSchema,
 } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("2MiBを超える画像データをMCPから取り込み、JSON本文上限では拒否しない", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const bytes = new Uint8Array(5 * 1024 * 1024);
+  bytes.set(
+    Uint8Array.fromBase64(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+    ),
+  );
+  const uploaded = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        data: bytes.toBase64(),
+        mimeType: "image/png",
+        imageKind: "photograph",
+        imageSource: { generated: false, description: "店舗の写真" },
+      },
+    }),
+    uploadedImageSchema,
+  );
+  expect(uploaded.imageKind).toBe("photograph");
+  expect(await env.TABLECAST_MEDIA.head(uploaded.imageKey)).not.toBeNull();
+});
 
 const origin = "http://localhost:3000";
 async function post(path: string, body: unknown, headers: HeadersInit = {}) {
@@ -154,6 +181,18 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     await client.callTool({ name: "create_draft", arguments: {} }),
     configDraftSchema,
   );
+  const uploaded = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "店舗から依頼されたお茶の生成イメージ" },
+      },
+    }),
+    uploadedImageSchema,
+  );
   const configuration = configurationSchema.parse({
     ...published.configuration,
     products: published.configuration.products.map((product) =>
@@ -161,6 +200,9 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
         ? {
             ...product,
             price: 450,
+            imageKey: uploaded.imageKey,
+            imageKind: uploaded.imageKind,
+            imageSource: uploaded.imageSource,
             text: {
               ja: { ...product.text.ja, displayName: "焙じ茶", speechName: "ほうじちゃ" },
               en: {
@@ -304,6 +346,10 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
   );
   expect(current.version).toBe(published.version + 1);
   expect(current.configuration).toEqual(configuration);
+  const image = await exports.default.fetch(new Request(uploaded.url));
+  expect(image.status).toBe(200);
+  expect(image.headers.get("Content-Type")).toBe("image/webp");
+  expect((await image.arrayBuffer()).byteLength).toBeGreaterThan(0);
 });
 
 it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込みを拒否する", async () => {
@@ -315,6 +361,21 @@ it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込み�
       .storeId,
   ).toBe("tablecast-store");
   toolError(await client.callTool({ name: "create_draft", arguments: {} }), "WRITE_SCOPE_REQUIRED");
+  toolError(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "AAAA",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "生成画像" },
+      },
+    }),
+    "WRITE_SCOPE_REQUIRED",
+  );
+  expect((await env.TABLECAST_MEDIA.list({ prefix: "tablecast/uploads/" })).objects).toHaveLength(
+    0,
+  );
   expect(
     await env.TABLECAST_DB.prepare("SELECT COUNT(*) AS count FROM config_drafts").first("count"),
   ).toBe(0);
@@ -358,6 +419,18 @@ it("MCPはOAuth対象店舗・現行roleを要求ごとに照合する", async (
       .storeId,
   ).toBe("tablecast-store");
   toolError(await client.callTool({ name: "create_draft", arguments: {} }), "ADMIN_REQUIRED");
+  toolError(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "AAAA",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "生成画像" },
+      },
+    }),
+    "ADMIN_REQUIRED",
+  );
   await env.TABLECAST_DB.prepare(
     "DELETE FROM member WHERE organization_id='tablecast-org' AND user_id=?",
   )

@@ -36,6 +36,8 @@ codex mcp login tablecast --scopes tablecast:read
 
 書込みが必要な場合は`--scopes tablecast:read,tablecast:write`で再認可する。plugin経由でも手動接続でも、設定の公開には管理画面での明示承認が必要である。複数店舗では接続URLの`?storeId=...`で対象を指定する。省略時は許可された組織内の最初の店舗となる。
 
+商品画像の設定には`upload_image`を使い、返された画像キーと出所を`update_draft`へ渡す。[入力制限・画像データの受渡し・失敗時の再開](mcp.md#商品画像の取り込み)を参照する。画像生成が使えることと、生成ファイルをMCPへ渡せることは別であり、クライアントで実データの受渡しまで確認する。
+
 pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT WebはローカルのCodex設定を参照しないため、利用できるplugin経由で接続する。クライアントごとの対応と操作は[公式MCPガイド](https://learn.chatgpt.com/docs/extend/mcp)を参照する。
 
 ## ローカル接続

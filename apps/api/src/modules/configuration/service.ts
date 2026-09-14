@@ -10,6 +10,7 @@ import { configurationErrors } from "../catalog/pricing";
 import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import { notifyStore } from "../tables/mutations";
 import { voiceConfigurationErrors } from "../voice/catalog";
+import { requireConfigurationImages } from "../media/service";
 import {
   configurationIssueSchema,
   configurationSchema,
@@ -140,6 +141,7 @@ export async function updateDraft(
 
   requireManager(actor);
   const configuration = configurationSchema.parse(input.configuration);
+  await requireConfigurationImages(services, actor, configuration);
   const result = await db
     .update(business.configDrafts)
     .set({
@@ -264,6 +266,7 @@ export async function publishDraft(
       );
       ensure(draft.status === "ready", "DRAFT_CONFLICT");
       const catalog = await getCatalog(services, actor.storeId);
+      await requireConfigurationImages(services, actor, draft.configuration);
       const voiceErrors = await voiceConfigurationErrors(
         services.env,
         draft.configuration,

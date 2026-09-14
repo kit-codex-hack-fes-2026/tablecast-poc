@@ -15,6 +15,8 @@ import {
   validateDraft,
 } from "../configuration/service";
 import { listVoices } from "../voice/catalog";
+import { uploadImageSchema, uploadedImageSchema } from "../media/model";
+import { uploadImage } from "../media/service";
 import { voiceListQuerySchema } from "../voice/model";
 import { resolveMcpActor } from "./service";
 const result = (value: unknown) => ({
@@ -59,6 +61,25 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
       annotations: { readOnlyHint: true },
     },
     async (input) => result(await listVoices(c.env, actor, input)),
+  );
+  server.registerTool(
+    "upload_image",
+    {
+      description:
+        "店舗が利用を許可した商品画像をBase64で取り込む。PNG/JPEG/WebP、5MiB・1600万画素まで。dataはdata URLではなく画像ファイルのBase64。生成画像はimageSource.generated=true、imageKind=illustrationとし、出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+      inputSchema: uploadImageSchema.shape,
+      outputSchema: uploadedImageSchema.shape,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) => {
+      const uploaded = await uploadImage(c.get("services"), actor, input);
+      return { ...result(uploaded), structuredContent: uploaded };
+    },
   );
   server.registerTool(
     "create_draft",
