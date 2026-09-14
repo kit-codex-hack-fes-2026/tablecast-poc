@@ -55,6 +55,8 @@
   "kiosk_latest": "Latest conversation",
   "kiosk_transcribing": "Transcribing",
   "kiosk_menu": "Our menu",
+  "kiosk_menu_empty": "There are no items on the menu at the moment. Please use the button at the top of the screen to call a member of staff if you need help.",
+  "kiosk_category_empty": "There are no items in this category. Please choose another category or All.",
   "kiosk_all": "All",
   "kiosk_cart": "Your basket",
   "kiosk_orders": "Your orders",

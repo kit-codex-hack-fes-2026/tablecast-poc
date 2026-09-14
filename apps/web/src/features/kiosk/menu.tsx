@@ -61,6 +61,15 @@ export function ProductMenu({
           ))}
         </fieldset>
       )}
+      {!productIds && products.length === 0 && (
+        <p role="status" className="py-12 px-6 text-muted-foreground text-center">
+          {t(
+            catalog.configuration.products.length === 0
+              ? "kiosk_menu_empty"
+              : "kiosk_category_empty",
+          )}
+        </p>
+      )}
       <div className={productGrid({ recommended: Boolean(productIds) })}>
         {products.map((product) => (
           <Button

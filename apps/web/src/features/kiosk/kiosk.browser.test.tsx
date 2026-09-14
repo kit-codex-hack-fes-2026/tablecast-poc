@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { uiSectionInputSchema, type TableState } from "@tablecast/api/schema";
-import { catalog, table } from "../../../.storybook/tablecast-fixtures";
+import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../../i18n/locale";
 import { useRealtime } from "../../lib/use-realtime";
 import { Kiosk } from "./kiosk";
@@ -25,6 +25,7 @@ class TablecastSocket extends EventTarget {
   }
 }
 
+let catalogResponse: Response;
 let client: QueryClient;
 let current: TableState;
 let unexpected: string[];
@@ -32,6 +33,7 @@ const requests: Request[] = [];
 beforeEach(() => {
   vi.stubGlobal("WebSocket", TablecastSocket);
   TablecastSocket.instances = [];
+  catalogResponse = Response.json(catalog);
   current = structuredClone(table);
   current.uiSection = "cart";
   current.voiceState = "stopped";
@@ -46,9 +48,13 @@ beforeEach(() => {
       requests.push(request);
       const path = new URL(request.url).pathname;
       if (request.method === "GET" && path === "/api/table") return Response.json(current);
-      if (request.method === "GET" && path === "/api/table/catalog") return Response.json(catalog);
+      if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {
         return Response.json({ cursor: current.cursor, events: [] });
+      }
+      if (request.method === "POST" && path === "/api/table/call") {
+        current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
+        return Response.json(current);
       }
       if (request.method === "POST" && path === "/api/table/confirm") {
         current.snapshot = {
@@ -255,4 +261,62 @@ it("切断の再接続を一度予約し、unmount後は再接続もpollも開�
   expect(TablecastSocket.instances).toHaveLength(2);
   expect(requests).toHaveLength(before);
   expect(TablecastSocket.instances.every((item) => item.closed)).toBe(true);
+});
+
+it.each([
+  { locale: "ja", labels: ja },
+  { locale: "en", labels: en },
+] as const)("$localeの商品0件でも店員を呼べる", async ({ locale, labels }) => {
+  current.locale = locale;
+  current.uiSection = "menu";
+  current.staffCalled = false;
+  current.cart = { ...current.cart, lines: [], total: 0 };
+  catalogResponse = Response.json({
+    ...catalog,
+    configuration: { ...catalog.configuration, products: [], categories: [] },
+  });
+  await page.viewport(1280, 800);
+  await render(
+    <LocaleProvider initialLocale={locale}>
+      <QueryClientProvider client={client}>
+        <Kiosk />
+      </QueryClientProvider>
+    </LocaleProvider>,
+  );
+  await expect.element(page.getByText(labels.kiosk_menu_empty)).toBeVisible();
+  await page.screenshot({ path: `../../test-results/browser/tablecast-empty-menu-${locale}.png` });
+  await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
+  await expect
+    .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))
+    .toBeDisabled();
+  expect(requests.filter((request) => request.url.endsWith("/table/call"))).toHaveLength(1);
+});
+
+it.each([
+  { locale: "ja", labels: ja },
+  { locale: "en", labels: en },
+] as const)("$localeの商品取得失敗は空状態にせず再試行できる", async ({ locale, labels }) => {
+  current.locale = locale;
+  current.uiSection = "menu";
+  catalogResponse = Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
+  await render(
+    <LocaleProvider initialLocale={locale}>
+      <QueryClientProvider client={client}>
+        <Kiosk />
+      </QueryClientProvider>
+    </LocaleProvider>,
+  );
+  await expect.element(page.getByRole("alert")).toHaveTextContent(labels.common_unavailable);
+  await expect.element(page.getByText(labels.kiosk_menu_empty)).not.toBeInTheDocument();
+  await expect.element(page.getByText(labels.kiosk_category_empty)).not.toBeInTheDocument();
+  catalogResponse = Response.json(catalog);
+  await page.getByRole("button", { name: labels.common_retry, exact: true }).click();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: new RegExp(product.text[locale].displayName),
+      }),
+    )
+    .toBeEnabled();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
 });
