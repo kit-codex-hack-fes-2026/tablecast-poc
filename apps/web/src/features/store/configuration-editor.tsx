@@ -418,7 +418,7 @@ export function CastEditor({
               {t(language === "ja" ? "common_ja" : "common_en")}
             </legend>
             <label className="flex flex-col gap-2 text-sm">
-              {t("editor_cast_instructions")}
+              <span id={`${id}-${language}-instructions`}>{t("editor_cast_instructions")}</span>
               <textarea
                 className="min-h-40 rounded-lg border border-input p-2 text-base"
                 aria-labelledby={`${id}-${language} ${id}-${language}-instructions`}
