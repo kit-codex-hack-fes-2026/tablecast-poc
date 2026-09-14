@@ -1,6 +1,12 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useForm } from "@tanstack/react-form";
-import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -14,7 +20,7 @@ import { MenuOverview } from "./menu-overview";
 import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
 import { addMenuItem, menuLabels, type MenuSection } from "./menu-model";
-import { catalogOptions, draftOptions } from "./menu-query";
+import { catalogOptions, configurationImageUploadKey, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
 export function MenuItem({
@@ -69,6 +75,9 @@ function ItemForm({
   const storeId = store.id;
   const { locale, t } = useI18n();
   const client = useQueryClient();
+  const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const hasImageUploads = () =>
+    client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
   const navigate = useNavigate();
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
@@ -77,7 +86,7 @@ function ItemForm({
     (draft.status === "draft" || draft.status === "ready") &&
     (store.role === "owner" || store.role === "admin");
   const [version, setVersion] = useState(draft?.version ?? 0);
-  const [initial] = useState(() =>
+  const [initial, setInitial] = useState(() =>
     itemId === "new"
       ? addMenuItem(initialConfiguration, section, selectedId)
       : initialConfiguration,
@@ -85,12 +94,14 @@ function ItemForm({
   const form = useForm({
     defaultValues: { configuration: initial },
     onSubmit: async ({ value }) => {
+      if (hasImageUploads()) return;
       await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
   useBlocker({
-    shouldBlockFn: () => form.state.isDirty && !window.confirm(t("menu_leave_unsaved")),
-    enableBeforeUnload: () => form.state.isDirty,
+    shouldBlockFn: () =>
+      hasImageUploads() || (form.state.isDirty && !window.confirm(t("menu_leave_unsaved"))),
+    enableBeforeUnload: () => hasImageUploads() || form.state.isDirty,
   });
   const save = useMutation({
     mutationFn: (configuration: Configuration) => {
@@ -104,6 +115,7 @@ function ItemForm({
     },
     onSuccess: (next) => {
       setVersion(next.version);
+      setInitial(next.configuration);
       form.reset({ configuration: next.configuration });
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
@@ -224,15 +236,15 @@ function ItemForm({
                   <div className="flex items-center gap-3">
                     <Button
                       type="submit"
-                      data-pwa-blocked={dirty || save.isPending}
-                      disabled={save.isPending || (!dirty && itemId !== "new")}
+                      data-pwa-blocked={dirty || save.isPending || uploadingImages}
+                      disabled={save.isPending || uploadingImages || (!dirty && itemId !== "new")}
                     >
                       <Save />
                       {t("common_save")}
                     </Button>
-                    {dirty && (
+                    {(dirty || uploadingImages) && (
                       <span role="status" className="text-sm text-muted-foreground">
-                        {t("admin_unsaved")}
+                        {t(uploadingImages ? "editor_image_wait" : "admin_unsaved")}
                       </span>
                     )}
                   </div>
@@ -242,8 +254,10 @@ function ItemForm({
                 <ConfirmAction
                   label={t("menu_remove_item")}
                   subject={t("menu_remove_note")}
-                  disabled={remove.isPending}
-                  onConfirm={() => remove.mutate()}
+                  disabled={remove.isPending || uploadingImages}
+                  onConfirm={() => {
+                    if (!hasImageUploads()) remove.mutate();
+                  }}
                   icon={<Trash2 />}
                 />
               )}
