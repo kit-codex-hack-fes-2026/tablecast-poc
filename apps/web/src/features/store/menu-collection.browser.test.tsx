@@ -27,6 +27,7 @@ afterEach(async () => {
   await cleanup();
   client.clear();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 async function showMenu(
@@ -105,6 +106,28 @@ async function showMenu(
   );
   return { screen, router };
 }
+
+it.each(["tr", "az"])("ホストの%sロケールでもIced teaをicedとICEDで検索できる", async (locale) => {
+  // oxlint-disable-next-line typescript/unbound-method -- 保存したメソッドはcallで明示的なthisを渡して使う。
+  const lowerCase = String.prototype.toLocaleLowerCase;
+  vi.spyOn(String.prototype, "toLocaleLowerCase").mockImplementation(
+    function (this: string, locales) {
+      return lowerCase.call(this, locales ?? locale);
+    },
+  );
+  const value = structuredClone(catalog);
+  value.configuration.products = ["Iced tea", "iced tea"].map((displayName, index) => ({
+    ...structuredClone(product),
+    id: `tablecast-iced-tea-${index}`,
+    text: { ...product.text, en: { ...product.text.en, displayName } },
+  }));
+  const { screen } = await showMenu(value, "en");
+  for (const query of ["iced", "ICED"]) {
+    await screen.getByRole("searchbox", { name: en.menu_search }).fill(query);
+    await expect.element(screen.getByText("Iced tea", { exact: true })).toBeVisible();
+    await expect.element(screen.getByText("iced tea", { exact: true })).toBeVisible();
+  }
+});
 
 for (const locale of ["ja", "en"] as const) {
   const labels = locale === "ja" ? ja : en;
