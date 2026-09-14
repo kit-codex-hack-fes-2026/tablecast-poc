@@ -238,7 +238,7 @@ test("フロア・メニュー・履歴の初回読込も見出しと表を維�
       await expect(page.getByRole("table")).toBeVisible();
       release.resolve();
       await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-      expect(await title.boundingBox()).toEqual(heading);
+      await expect.poll(() => title.boundingBox()).toEqual(heading);
     } finally {
       release.resolve();
     }
