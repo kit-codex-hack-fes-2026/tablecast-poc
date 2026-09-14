@@ -184,6 +184,18 @@ export const EnglishLabels: Story = {
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const translations = canvas
+      .getAllByRole("group", { name: /^Group \d: Milk$/ })
+      .map((group) => within(group).getByText("Names and translations", { exact: true }));
+    for (const [index, translation] of translations.entries()) {
+      await expect(translation.closest("summary")).toHaveAccessibleName(
+        `Group ${index + 1}: Milk Names and translations`,
+      );
+    }
+    await userEvent.click(translations[1]);
+    await expect(
+      canvas.getByRole("textbox", { name: "Group 2: Milk English Display name" }),
+    ).toHaveValue("Milk");
     const option = within(canvas.getByRole("group", { name: "Group 2: Milk Option 3: Milk" }));
     await userEvent.click(option.getByText("Names, descriptions, images and combination rules"));
     const field = option.getByRole("textbox", {
@@ -220,6 +232,9 @@ export const WhitespaceIds: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const group = within(canvas.getByRole("group", { name: "グループ 1：ミルク" }));
+    await expect(
+      group.getByText("名称・翻訳", { exact: true }).closest("summary"),
+    ).toHaveAccessibleName("グループ 1：ミルク 名称・翻訳");
     const option = within(
       group.getByRole("group", { name: "グループ 1：ミルク 選択肢 1：ミルク" }),
     );
