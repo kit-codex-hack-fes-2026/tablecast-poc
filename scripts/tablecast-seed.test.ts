@@ -25,6 +25,7 @@ import { voiceTurnSchema } from "../apps/api/src/modules/voice/model";
 import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
 import { demoStores } from "./tablecast-fixtures";
+import { legacyIdentityIconUrl } from "./tablecast-seed-icons";
 
 const execute = promisify(execFile);
 
@@ -161,10 +162,51 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       await db.update(deploymentOwner).set({ seeded: 3 });
       await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("組織作成後");
       await db.update(deploymentOwner).set({ seeded: 1 });
+      // 旧固定URLを持つ既存previewでも、所属・営業データを再投入せず画像だけ更新する。
+      const originalOwner = await db
+        .select({ image: user.image })
+        .from(user)
+        .where(eq(user.id, "tablecast-partial-owner"))
+        .get();
+      const originalOrganisation = await db
+        .select({ id: organization.id, logo: organization.logo })
+        .from(organization)
+        .innerJoin(stores, eq(stores.organization_id, organization.id))
+        .where(eq(stores.id, "tablecast-komorebi"))
+        .get();
+      if (!originalOwner?.image || !originalOrganisation?.logo)
+        throw new Error("更新対象のデモ画像がありません。");
+      const oldOwnerIcon = legacyIdentityIconUrl("user", "tablecast-partial-owner");
+      await db.batch([
+        db.update(user).set({ image: oldOwnerIcon }).where(eq(user.id, "tablecast-partial-owner")),
+        db
+          .update(organization)
+          .set({ logo: legacyIdentityIconUrl("store", "tablecast-komorebi") })
+          .where(eq(organization.id, originalOrganisation.id)),
+      ]);
+      const ownerIconKey = `tablecast/avatars/${originalOwner.image.split("/").at(-1)}`;
+      const ownerIconVersion = (await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version;
       const refreshedImage = demoStores("smoke")[0]?.configuration.products[0]?.imageKey;
       if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
       await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      expect(
+        await db
+          .select({ image: user.image })
+          .from(user)
+          .where(eq(user.id, "tablecast-partial-owner"))
+          .get(),
+      ).toEqual(originalOwner);
+      expect(
+        await db
+          .select({ logo: organization.logo })
+          .from(organization)
+          .where(eq(organization.id, originalOrganisation.id))
+          .get(),
+      ).toEqual({ logo: originalOrganisation.logo });
+      expect((await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version).toBe(
+        ownerIconVersion,
+      );
       expect(
         (await platform.env.TABLECAST_MEDIA.head(refreshedImage))?.httpMetadata?.contentType,
       ).toBe("image/webp");
@@ -310,7 +352,11 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         const image = await platform.env.TABLECAST_MEDIA.get(
           `tablecast/avatars/${url?.split("/").at(-1)}`,
         );
-        expect(image?.httpMetadata?.contentType).toBe("image/svg+xml");
+        expect(image?.httpMetadata?.contentType).toBe("image/webp");
+        if (!image) throw new Error("seed画像がありません。");
+        const bytes = new Uint8Array(await image.arrayBuffer());
+        expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
+        expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe("WEBP");
       }
       // 店舗とユーザーが変更した画像は、再投入で初期画像へ戻さない。
       await db
@@ -329,6 +375,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
               .where(eq(stores.id, "tablecast-komorebi")),
           ),
         );
+      expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
       const repeated = await seedDemoDatabase(platform.env, credentials);
       expect(
         await db.select({ image: user.image }).from(user).where(eq(user.id, owner.id)).get(),

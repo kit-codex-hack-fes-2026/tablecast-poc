@@ -147,6 +147,7 @@ Codexの受付反応とレビュー結果を確認する。指摘への対応と
 1. 起動URLで客向け画面を開く。
 2. `/admin/live` へログインする。開発用の資格情報は、その環境の `.local/demo.json` にある。
    `emulate@0.11.1`のアイコン表示には[Bunの最小パッチ](../patches/README.md)を使い、通常の依存導入で適用する。ランダムスタッフ生成を廃止し、Fakerへの依存を削除した。
+   プロフィールは[生成WebP](demo/identities.md)を共通名簿から読み込む。`apps/emulate/Dockerfile`は実行ファイルを`apps/emulate/dist/index.js`へ配置し、`assets/demo/identities/*.webp`と同じ相対位置を維持する。フォントは実行ファイル隣の`fonts`へ同梱する。`.dockerignore`でも12点のWebPをビルドコンテキストに含める。
    新規seedのGoogle選択画面では、店舗・氏名・役割・アイコンから8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBや`.local/demo.json`は通常の再seedで変更しない。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻し、パスワードを保持する。
 3. 客向け画面の端末コードを卓へ割り当てる。
 4. 日英表示、商品追加、確認、注文を試す。メールはMailpitで確認する。

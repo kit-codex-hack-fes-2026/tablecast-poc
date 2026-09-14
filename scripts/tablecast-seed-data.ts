@@ -4,10 +4,10 @@ import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import type { BatchItem } from "drizzle-orm/batch";
 import * as business from "../apps/api/src/db/business-schema";
 import * as identity from "../apps/api/src/db/auth-schema";
-import { seedIdentityIcon } from "./tablecast-seed-icons";
+import { legacyIdentityIconUrl, seedIdentityIcon } from "./tablecast-seed-icons";
 import {
   tablecastDemoIdentities,
-  tablecastDemoPortrait,
+  tablecastDemoStoreIcons,
 } from "../apps/emulate/src/tablecast-demo-identities";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
 import {
@@ -544,6 +544,84 @@ export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredential
   return populateDemoDatabase(env, credentials);
 }
 
+function demoStaff(credentials: DemoCredentials) {
+  return tablecastDemoIdentities.map((person) => ({
+    ...person,
+    email:
+      person.role === "owner"
+        ? person.stores.some((storeId) => storeId === "tablecast-koharu")
+          ? credentials.otherEmail
+          : credentials.email
+        : person.email,
+  }));
+}
+
+async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentials) {
+  const staff = demoStaff(credentials);
+  const db = drizzle(env.TABLECAST_DB);
+  const [users, organisations] = await db.batch([
+    db
+      .select({ id: identity.user.id, email: identity.user.email })
+      .from(identity.user)
+      .where(
+        inArray(
+          identity.user.email,
+          staff.map((person) => person.email),
+        ),
+      ),
+    db
+      .select({
+        id: identity.organization.id,
+        storeId: sql<string>`${business.stores.id}`.as("store_id"),
+      })
+      .from(identity.organization)
+      .innerJoin(business.stores, eq(business.stores.organization_id, identity.organization.id))
+      .where(inArray(business.stores.id, Object.keys(tablecastDemoStoreIcons))),
+  ]);
+  const updates: BatchItem<"sqlite">[] = [];
+  for (const user of users) {
+    const person = staff.find((candidate) => candidate.email === user.email);
+    if (!person) continue;
+    const image = await seedIdentityIcon(env, person.imageFile);
+    updates.push(
+      db
+        .update(identity.user)
+        .set({ image })
+        .where(
+          and(
+            eq(identity.user.id, user.id),
+            or(
+              isNull(identity.user.image),
+              eq(identity.user.image, legacyIdentityIconUrl("user", user.id)),
+            ),
+          ),
+        ),
+    );
+  }
+  for (const organisation of organisations) {
+    const file = tablecastDemoStoreIcons[organisation.storeId];
+    if (!file) continue;
+    const logo = await seedIdentityIcon(env, file);
+    updates.push(
+      db
+        .update(identity.organization)
+        .set({ logo })
+        .where(
+          and(
+            eq(identity.organization.id, organisation.id),
+            or(
+              isNull(identity.organization.logo),
+              eq(identity.organization.logo, legacyIdentityIconUrl("store", organisation.storeId)),
+            ),
+          ),
+        ),
+    );
+  }
+  // 更新時点でも旧seedのURLかを判定し、並行した手動変更を保つ。
+  const [first, ...rest] = updates;
+  if (first) await db.batch([first, ...rest]);
+}
+
 export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
   if (
     env.TABLECAST_ENV !== "preview" ||
@@ -562,11 +640,13 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
   if (owner.seeded === 1) {
     // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
     await seedMenuImages(env.TABLECAST_MEDIA);
+    await refreshDemoIdentityIcons(env, credentials);
     return false;
   }
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
   if (owner.seeded === 2) {
     await seedMenuImages(env.TABLECAST_MEDIA, true);
+    await refreshDemoIdentityIcons(env, credentials);
     return true;
   }
   if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
@@ -637,15 +717,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   }
   const [firstRepair, ...remainingRepairs] = [...repairs, ...canonical];
   if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
-  const staff = tablecastDemoIdentities.map((person) => ({
-    ...person,
-    email:
-      person.role === "owner"
-        ? person.stores.some((storeId) => storeId === "tablecast-koharu")
-          ? credentials.otherEmail
-          : credentials.email
-        : person.email,
-  }));
+  const staff = demoStaff(credentials);
   const owners: string[] = [];
   for (const [email, password] of [
     [credentials.email, credentials.password],
@@ -688,7 +760,6 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
         .update(identity.user)
         .set({
           emailVerified: true,
-          image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id, tablecastDemoPortrait(person))})`,
         })
         .where(eq(identity.user.id, user.id)),
     );
@@ -714,12 +785,6 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
         body: { name: store.name, slug: `tablecast-store-${store.id}`, userId },
       }));
     if (!organization) throw new Error("デモ店舗を作成できませんでした。");
-    await db
-      .update(identity.organization)
-      .set({
-        logo: sql`coalesce(${identity.organization.logo},${await seedIdentityIcon(env, "store", store.id)})`,
-      })
-      .where(eq(identity.organization.id, organization.id));
     const owner: Owner = { id: organization.id, userId };
     const existing = await db
       .select()
@@ -793,6 +858,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     if (credentials.profile === "history") await seedHistory(db, store, owner);
     await seedCurrentTables(db, store, owner, credentials.baseTime);
   }
+  await refreshDemoIdentityIcons(env, credentials);
   const violations = await db.all(sql`PRAGMA foreign_key_check`);
   if (violations.length) throw new Error("デモデータの外部キーが不整合です。");
   const [stores, tables, historicalSessions, orders, events] = await db.batch([

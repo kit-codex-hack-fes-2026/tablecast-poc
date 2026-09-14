@@ -25,6 +25,8 @@
 | Westward Burgers Kyoto                     | 中村 美咲   | admin・店長          | `tablecast-koharu-admin@example.test`   |
 | Westward Burgers Kyoto                     | Alex Morgan | member・ホール担当   | `tablecast-koharu-staff@example.test`   |
 
+[店舗ロゴとプロフィール写真](identities.md)に各画像と人物の対応・生成元をまとめる。
+
 [共通名簿](../../apps/emulate/src/tablecast-demo-identities.ts)の氏名・所属ラベル・アイコンをseedと模擬OAuthで共有する。`tablecast-link@example.test`は未所属のアカウント連携確認専用で、店舗の8人・9所属に含めない。メールやOAuthの表示roleから権限を与えず、認証後のDB所属を使う。
 
 各3所属は新規DBまたは明示的なリセット時の初期状態である。通常の再seedで既存メンバー・編集した氏名・資格情報を削除や上書きしない。新規のローカル資格情報は名簿と同じ既定メールを使い、既存の`.local/demo.json`は維持する。通常の再seedで旧あかりを含む既存店舗や履歴を削除しない。

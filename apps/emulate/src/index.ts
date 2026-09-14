@@ -1,10 +1,7 @@
 import { renameSync, writeFileSync } from "node:fs";
 import { createEmulator } from "emulate";
-import {
-  tablecastDemoIdentities,
-  tablecastDemoLinkIdentity,
-  tablecastDemoPortrait,
-} from "./tablecast-demo-identities";
+import { readFileSync } from "node:fs";
+import { tablecastDemoIdentities, tablecastDemoLinkIdentity } from "./tablecast-demo-identities";
 
 const preview = process.env.TABLECAST_ENV === "preview";
 const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
@@ -42,7 +39,7 @@ const emulator = await createEmulator({
       users: [...tablecastDemoIdentities, tablecastDemoLinkIdentity].map((person) => ({
         email: person.email,
         name: `${person.name} · ${person.label}`,
-        picture: `data:image/svg+xml,${encodeURIComponent(tablecastDemoPortrait(person))}`,
+        picture: `data:image/webp;base64,${readFileSync(new URL(`../../../assets/demo/identities/${person.imageFile}`, import.meta.url)).toString("base64")}`,
         email_verified: true,
       })),
       oauth_clients: [
