@@ -261,6 +261,11 @@ if (!values.only && (values.generate || values.verify)) {
         continue;
       }
       if (values.verify) throw new Error(`重なり音声が未生成または不一致です: ${file}`);
+      if (
+        (await Bun.file(path).exists()) &&
+        (!receipts[file] || sha256(await readFile(path)) !== receipts[file].audioSha256)
+      )
+        throw new Error(`生成記録と一致しない重なり音声があります: ${file}`);
       await mkdir(dirname(path), { recursive: true });
       execFileSync("ffmpeg", [
         "-v",

@@ -13,6 +13,11 @@ import { useI18n } from "../../i18n/locale";
 import type { m } from "../../paraglide/messages.js";
 
 const allergenLabels: Partial<Record<string, keyof typeof m>> = {
+  crustaceans: "kiosk_allergen_crustaceans",
+  molluscs: "kiosk_allergen_molluscs",
+  buckwheat: "kiosk_allergen_buckwheat",
+  peanuts: "kiosk_allergen_peanuts",
+  mustard: "kiosk_allergen_mustard",
   fish: "kiosk_allergen_fish",
   wheat: "kiosk_allergen_wheat",
   soya: "kiosk_allergen_soya",

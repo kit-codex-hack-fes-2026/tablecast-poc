@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   deploymentOwner,
@@ -182,6 +182,24 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         .get();
       if (!originalOwner?.image || !originalOrganisation?.logo || !migratedOrganisation?.logo)
         throw new Error("更新対象のデモ画像がありません。");
+      const oldAdmin = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, "ren.tanaka@komorebi-shijo.com"))
+        .get();
+      if (!oldAdmin) throw new Error("旧スタッフの移行対象がありません。");
+      await db.batch([
+        db
+          .update(user)
+          .set({ email: "tablecast-member@example.test" })
+          .where(eq(user.id, oldAdmin.id)),
+        db
+          .update(member)
+          .set({ role: "member" })
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          ),
+      ]);
       const oldOwnerIcon = legacyIdentityIconUrl("user", "tablecast-partial-owner");
       const credentialAccounts = await db
         .select()
@@ -216,6 +234,39 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
       await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      expect(
+        await db
+          .select({ role: member.role })
+          .from(member)
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          )
+          .get(),
+      ).toEqual({ role: "admin" });
+      // 新メールへ移行後の手動変更は、通常の再seedで戻さない。
+      await db
+        .update(member)
+        .set({ role: "member" })
+        .where(
+          and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+        );
+      await seedPreviewDatabase(preview, credentials);
+      expect(
+        await db
+          .select({ role: member.role })
+          .from(member)
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          )
+          .get(),
+      ).toEqual({ role: "member" });
+      await db
+        .update(member)
+        .set({ role: "admin" })
+        .where(
+          and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+        );
+
       expect(await db.select().from(account).where(eq(account.providerId, "credential"))).toEqual(
         credentialAccounts,
       );

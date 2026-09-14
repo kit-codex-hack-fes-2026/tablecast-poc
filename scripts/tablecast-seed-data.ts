@@ -576,6 +576,26 @@ async function migrateDemoIdentityEmails(env: SeedEnv) {
       throw new Error(`デモメールの移行先が既存ユーザーと重複しています: ${person.email}`);
     const user = previous[0];
     if (!user) continue;
+    // 旧こもれびの一般スタッフを新デモの管理者へ移行する。通常の権限変更は保持する。
+    if (user.email === "tablecast-member@example.test")
+      updates.push(
+        db
+          .update(identity.member)
+          .set({ role: "admin" })
+          .where(
+            and(
+              eq(identity.member.userId, user.id),
+              eq(identity.member.role, "member"),
+              inArray(
+                identity.member.organizationId,
+                db
+                  .select({ id: business.stores.organization_id })
+                  .from(business.stores)
+                  .where(eq(business.stores.id, "tablecast-komorebi")),
+              ),
+            ),
+          ),
+      );
     updates.push(
       db
         .update(identity.user)
@@ -594,7 +614,7 @@ async function migrateDemoIdentityEmails(env: SeedEnv) {
         ),
     );
   }
-  // ユーザーID・所属・資格情報を保ち、メールと模擬OAuthのsubjectだけを同時に変更する。
+  // ユーザーID・資格情報を保ち、旧デモのメール・subject・既知の役割を同時に移行する。
   const [first, ...rest] = updates;
   if (first) await db.batch([first, ...rest]);
 }
