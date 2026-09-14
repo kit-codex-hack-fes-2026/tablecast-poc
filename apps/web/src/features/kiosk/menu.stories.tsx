@@ -297,3 +297,83 @@ export const Incomplete: Story = {
     />
   ),
 };
+
+export const EmptyMenu: Story = {
+  name: "商品0件の案内",
+  args: {
+    catalog: {
+      ...catalog,
+      configuration: { ...catalog.configuration, products: [], categories: [] },
+    },
+  },
+  play: async ({ canvasElement, globals }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      globals.locale === "en"
+        ? "There are no items on the menu"
+        : "現在ご注文いただける商品はありません",
+    );
+  },
+};
+export const EnglishEmptyMenu: Story = {
+  ...EmptyMenu,
+  name: "英語の商品0件の案内",
+  globals: { locale: "en" },
+};
+export const EmptyCategory: Story = {
+  name: "空のカテゴリからすべてへ戻る",
+  args: {
+    catalog: {
+      ...catalog,
+      configuration: {
+        ...catalog.configuration,
+        categories: [{ id: "tablecast-empty-category", text: relationText("デザート", "Dessert") }],
+      },
+    },
+  },
+  play: async ({ canvasElement, globals }) => {
+    const canvas = within(canvasElement);
+    const locale = globals.locale === "en" ? "en" : "ja";
+    await userEvent.click(
+      canvas.getByRole("button", { name: locale === "en" ? "Dessert" : "デザート" }),
+    );
+    await expect(canvas.getByRole("status")).toHaveTextContent(
+      locale === "en" ? "There are no items in this category" : "このカテゴリには商品がありません",
+    );
+    await userEvent.click(canvas.getByRole("button", { name: locale === "en" ? "All" : "すべて" }));
+    await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+    ).toBeEnabled();
+  },
+};
+export const EnglishEmptyCategory: Story = {
+  ...EmptyCategory,
+  name: "英語で空のカテゴリからすべてへ戻る",
+  globals: { locale: "en" },
+};
+export const SoldOutOnly: Story = {
+  name: "売切だけでも商品を表示する",
+  args: {
+    catalog: {
+      ...catalog,
+      configuration: { ...catalog.configuration, products: [{ ...product, available: false }] },
+    },
+  },
+  play: async ({ canvasElement, globals }) => {
+    const canvas = within(canvasElement);
+    const locale = globals.locale === "en" ? "en" : "ja";
+    await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("button", { name: new RegExp(product.text[locale].displayName) }),
+    ).toBeDisabled();
+    await expect(
+      canvas.getByText(locale === "en" ? "Sold out" : "売り切れ", { exact: true }),
+    ).toBeVisible();
+  },
+};
+export const EnglishSoldOutOnly: Story = {
+  ...SoldOutOnly,
+  name: "英語で売切だけでも商品を表示する",
+  globals: { locale: "en" },
+};

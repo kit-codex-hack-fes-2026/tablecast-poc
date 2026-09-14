@@ -4,6 +4,7 @@ import type { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import type { Catalog } from "../configuration/model";
 import type { Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
 import { getCatalog, sessionConfigVersion } from "../catalog/queries";
@@ -16,6 +17,7 @@ import {
   voiceCondition,
 } from "./mutations";
 import { getSession, getTableState } from "./queries";
+import { stopVoiceRoom } from "../voice/runtime";
 export async function setUiSection(
   services: ApiServices,
   actor: Actor,
@@ -61,14 +63,15 @@ export async function showProducts(
   services: ApiServices,
   actor: Actor,
   input: z.infer<typeof showProductsSchema>,
+  knownCatalog?: Catalog,
 ) {
   const db = services.db;
 
   ensure(actor.kind === "voice" && actor.turnId && actor.voiceSessionId, "VOICE_REQUIRED", 403);
   const parsed = showProductsSchema.safeParse(input);
   ensure(parsed.success, "INVALID_INPUT", 422);
-  await getSession(services, actor);
-  const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+  if (!knownCatalog) await getSession(services, actor);
+  const catalog = knownCatalog ?? (await getCatalog(services, actor.storeId, actor.demoId));
   const productIds = [...new Set(parsed.data.productIds)];
   ensure(
     productIds.every((id) => catalog.configuration.products.some((product) => product.id === id)),
@@ -82,7 +85,10 @@ export async function showProducts(
       sql`SELECT NULL,store_id,id,'voice.products',${JSON.stringify({ turnId: actor.turnId, productIds })},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open'${gate} AND ${sessionConfigVersion(actor.storeId, actor.tableSessionId)}=${catalog.version}`,
     );
   ensure(result.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId, {
+    cursor: result.meta.last_row_id,
+    demoId: actor.demoId,
+  });
   return { productIds };
 }
 
@@ -130,7 +136,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
       })
       .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
     invalidationStatement(services, actor, mutation),
-    interruptVoiceTurns(services, actor, mutation),
+    ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, "locale.changed", { locale }),
     // このツール自身が音声資格を失効させるため、完了状態も同じ更新へ含める。
     db.insert(business.tableEvents)
@@ -142,6 +148,7 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
   await notifyStore(services, actor.storeId, actor.tableSessionId);
+  if (row.voice_session_id) await stopVoiceRoom(services, row.voice_session_id);
   // 言語変更で失効させた音声資格を再利用せず、更新を認可した同じ卓を読み直す。
   return getTableState(services, {
     ...actor,
@@ -228,11 +235,12 @@ export async function closeTable(services: ApiServices, actor: Actor) {
             sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
           ),
         invalidationStatement(services, actor, mutation),
-        interruptVoiceTurns(services, actor, mutation),
+        ...interruptVoiceTurns(services, actor, mutation),
         eventStatement(services, actor, mutation, "table.closed", {}),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
       await notifyStore(services, actor.storeId, actor.tableSessionId);
+      if (table.voiceSessionId) await stopVoiceRoom(services, table.voiceSessionId);
       return getTableState(services, actor);
     },
     { env: services.env, input: { actor } },

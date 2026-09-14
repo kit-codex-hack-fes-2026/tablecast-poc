@@ -1,6 +1,5 @@
 import { tv } from "tailwind-variants";
 import { SmokeRing } from "@paper-design/shaders-react";
-import { createAudioAnalyser, type LocalAudioTrack, type RemoteAudioTrack } from "livekit-client";
 import {
   AudioLines,
   CircleAlert,
@@ -66,7 +65,7 @@ export function AudioWaveform({
   state,
   toolLabel,
 }: {
-  track?: LocalAudioTrack | RemoteAudioTrack;
+  track?: MediaStreamTrack;
   label: string;
   state: VoiceVisualState;
   toolLabel?: string;
@@ -102,7 +101,6 @@ export function AudioWaveform({
     });
     return () => animation.stop();
   }, [preset, still]);
-  const mediaStreamTrack = track?.mediaStreamTrack;
   const reactive = !still && (state === "listening" || state === "speaking");
   const volume = reactive ? audio.volume : 0;
   const brightness = reactive ? audio.brightness : 0;
@@ -123,15 +121,23 @@ export function AudioWaveform({
     context.moveTo(0, 24);
     context.lineTo(240, 24);
     context.stroke();
-    if (!track || !mediaStreamTrack || !reactive) return undefined;
-    let analysis: ReturnType<typeof createAudioAnalyser>;
+    if (!track || !reactive) return undefined;
+    let audioContext: AudioContext | undefined;
+    let source: MediaStreamAudioSourceNode;
+    let analyser: AnalyserNode;
     try {
-      analysis = createAudioAnalyser(track, { fftSize: 256 });
+      audioContext = new AudioContext();
+      source = audioContext.createMediaStreamSource(new MediaStream([track]));
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
     } catch {
+      void audioContext?.close();
       return undefined;
     }
-    const samples = new Uint8Array(analysis.analyser.fftSize);
-    const spectrum = new Uint8Array(analysis.analyser.frequencyBinCount);
+    const activeContext = audioContext;
+    const samples = new Uint8Array(analyser.fftSize);
+    const spectrum = new Uint8Array(analyser.frequencyBinCount);
     let frame = 0;
     let previous = 0;
     let smoothedVolume = 0;
@@ -141,8 +147,8 @@ export function AudioWaveform({
       frame = requestAnimationFrame(draw);
       if (now - previous < 50) return;
       previous = now;
-      analysis.analyser.getByteTimeDomainData(samples);
-      analysis.analyser.getByteFrequencyData(spectrum);
+      analyser.getByteTimeDomainData(samples);
+      analyser.getByteFrequencyData(spectrum);
       const energy = Math.sqrt(
         samples.reduce((sum, v) => sum + ((v - 128) / 128) ** 2, 0) / samples.length,
       );
@@ -166,9 +172,11 @@ export function AudioWaveform({
     frame = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(frame);
-      void analysis.cleanup();
+      source.disconnect();
+      analyser.disconnect();
+      void activeContext.close();
     };
-  }, [track, mediaStreamTrack, reactive]);
+  }, [track, reactive]);
   return (
     <figure
       className="flex items-center gap-3 py-1 text-foreground"

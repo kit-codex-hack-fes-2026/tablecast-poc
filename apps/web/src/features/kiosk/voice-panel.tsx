@@ -201,17 +201,31 @@ function useVoicePanel({
   for (const event of events)
     if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
       tools.set(event.data.toolCallId, event);
+  const turns = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.turn" && typeof event.data.turnId === "string")
+      turns.set(event.data.turnId, event);
   const failedTurns = new Set(
     events.flatMap((event) => (event.kind === "voice.failed" ? [event.data.turnId] : [])),
   );
-  const latestUserTurn = [...events].toReversed().find((event) => event.kind === "voice.user")
-    ?.data.turnId;
-  const running = [...tools.values()].filter(
-    (event) =>
-      event.data.state === "running" &&
+  for (const event of turns.values())
+    if (event.data.status === "failed") failedTurns.add(event.data.turnId);
+  const latestBusinessTurn =
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.turn" && event.data.status === "started")?.data
+      .turnId ??
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.tool" || event.kind === "voice.failed")?.data.turnId;
+  const running = [...tools.values()].filter((event) => {
+    const turn = typeof event.data.turnId === "string" ? turns.get(event.data.turnId) : undefined;
+    return (
+      (event.data.state === "requested" || event.data.state === "running") &&
       !failedTurns.has(event.data.turnId) &&
-      (!latestUserTurn || event.data.turnId === latestUserTurn),
-  );
+      (!turn || turn.data.status === "started")
+    );
+  });
   const active = !["idle", "paused", "error", "stopping"].includes(view.status);
   const status = {
     idle: t("kiosk_voice_paused"),
@@ -227,28 +241,37 @@ function useVoicePanel({
     running.length > 0 && (view.status === "thinking" || view.status === "speaking");
   const visualState: VoiceView["status"] | "tool" =
     usingTools && view.status === "thinking" ? "tool" : view.status;
-  const toolPhase = t("kiosk_tools_running");
+  const activeToolLabels = new Set<string>();
+  for (const event of running) {
+    const key =
+      typeof event.data.toolName === "string" ? toolLabels[event.data.toolName] : undefined;
+    if (key) activeToolLabels.add(t(key));
+  }
+  const toolPhase =
+    [...activeToolLabels].join(t("kiosk_tool_separator")) || t("kiosk_tools_working");
   const phase = visualState === "tool" ? toolPhase : status;
-  const assistantTurns = new Set(
-    merged.flatMap((line) => (line.role === "assistant" ? [line.turnId] : [])),
-  );
   function toolCards(turnId?: string) {
     return [...tools.values()].flatMap((event) => {
       if (event.data.turnId !== turnId) return [];
-      const failed = event.data.state === "error";
-      const pending = event.data.state === "running";
+      const pending = event.data.state === "requested" || event.data.state === "running";
+      const turn = turnId ? turns.get(turnId) : undefined;
+      const cancelled = event.data.errorCode === "VOICE_CANCELLED";
+      const failed =
+        !cancelled && (event.data.state === "error" || (pending && failedTurns.has(turnId)));
       const stale =
-        pending &&
-        (!active ||
-          failedTurns.has(turnId) ||
-          Boolean(latestUserTurn && turnId !== latestUserTurn));
+        cancelled || (pending && !failed && (!active || (turn && turn.data.status !== "started")));
       const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
       const title = t(toolLabels[name] ?? "kiosk_tool_action");
+      let toolStatus: keyof typeof m = "kiosk_tool_complete";
+      if (failed) toolStatus = "kiosk_tool_failed";
+      else if (stale) toolStatus = "kiosk_tool_interrupted";
+      else if (event.data.state === "requested") toolStatus = "kiosk_tool_waiting";
+      else if (pending) toolStatus = "kiosk_tool_running";
       return [
         <div
           key={String(event.data.toolCallId)}
-          className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
-          data-tool-state={stale ? "interrupted" : String(event.data.state)}
+          className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
+          data-tool-state={stale ? "interrupted" : failed ? "error" : String(event.data.state)}
         >
           {failed ? (
             <CircleAlert className="size-4 text-destructive" />
@@ -259,27 +282,25 @@ function useVoicePanel({
           ) : (
             <Check className="size-4 text-success" />
           )}
-          <span className="flex-1">
+          <span className="min-w-0 flex-1">
             {title}
+            {name === "getCatalog" && typeof event.data.query === "string" && (
+              <span className="mt-1 block wrap-break-word text-muted-foreground">
+                {t("kiosk_tool_search_label")}
+                {event.data.query}
+              </span>
+            )}
             {failed && (
               <span className="mt-1 block text-destructive">{t("kiosk_tool_failed_hint")}</span>
             )}
+            {debug && (
+              <code className="mt-1 block break-all text-muted-foreground">
+                {name} · {String(event.data.toolCallId)}
+                {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
+              </code>
+            )}
           </span>
-          <span className="text-muted-foreground">
-            {failed
-              ? t("kiosk_tool_failed")
-              : stale
-                ? t("kiosk_tool_interrupted")
-                : pending
-                  ? t("kiosk_tool_running")
-                  : t("kiosk_tool_complete")}
-          </span>
-          {debug && (
-            <code>
-              {name}
-              {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
-            </code>
-          )}
+          <span className="text-muted-foreground">{t(toolStatus)}</span>
         </div>,
       ];
     });
@@ -306,18 +327,24 @@ function useVoicePanel({
   }
   const timeline: { id: string; createdAt: number; line?: ConversationLine; turnId?: string }[] =
     merged.map((line) => ({ id: line.id, createdAt: line.createdAt, line }));
+  // 字幕の表示IDと業務turnを結び付けず、操作と商品カードを一か所に並べる。
   for (const turnId of new Set(
-    [...tools.values()].map((event) =>
-      typeof event.data.turnId === "string" ? event.data.turnId : undefined,
+    events.flatMap((event) =>
+      (event.kind === "voice.tool" || event.kind === "voice.products") &&
+      typeof event.data.turnId === "string"
+        ? [event.data.turnId]
+        : [],
     ),
   )) {
-    if (merged.some((line) => line.turnId === turnId)) continue;
     const first = events.find(
-      (event) => event.kind === "voice.tool" && event.data.turnId === turnId,
+      (event) =>
+        (event.kind === "voice.tool" || event.kind === "voice.products") &&
+        event.data.turnId === turnId,
     );
-    if (first) timeline.push({ id: `tool-${first.cursor}`, createdAt: first.createdAt, turnId });
+    if (first)
+      timeline.push({ id: `operation-${first.cursor}`, createdAt: first.createdAt, turnId });
   }
-  timeline.toSorted((left, right) => left.createdAt - right.createdAt);
+  timeline.sort((left, right) => left.createdAt - right.createdAt);
   const liveRole: ConversationLine["role"] = view.status === "listening" ? "user" : "assistant";
   const speakingLine =
     view.status === "speaking"
@@ -331,14 +358,13 @@ function useVoicePanel({
     debug,
     setDebug,
     merged,
-    latestUserTurn,
+    latestBusinessTurn,
     active,
     status,
     usingTools,
     visualState,
     toolPhase,
     phase,
-    assistantTurns,
     toolCards,
     products,
     timeline,
@@ -369,13 +395,12 @@ export function VoicePanel({
     debug,
     setDebug,
     merged,
-    latestUserTurn,
+    latestBusinessTurn,
     active,
     usingTools,
     visualState,
     toolPhase,
     phase,
-    assistantTurns,
     toolCards,
     products,
     timeline,
@@ -431,9 +456,6 @@ export function VoicePanel({
             const line = entry.line;
             return line ? (
               <div className="space-y-2" key={line.id}>
-                {line.role === "assistant" && (
-                  <div className="w-11/12 space-y-2">{toolCards(line.turnId)}</div>
-                )}
                 <ConversationMessage
                   line={line}
                   debug={debug}
@@ -446,15 +468,7 @@ export function VoicePanel({
                           : t("kiosk_reply_generating")
                         : undefined
                   }
-                >
-                  {line.role === "assistant" && products(line.turnId)}
-                </ConversationMessage>
-                {line.role === "user" && !assistantTurns.has(line.turnId) && (
-                  <div className="w-11/12 space-y-2">
-                    {toolCards(line.turnId)}
-                    {products(line.turnId)}
-                  </div>
-                )}
+                />
               </div>
             ) : (
               <div key={entry.id} className="w-11/12 space-y-2">
@@ -492,10 +506,7 @@ export function VoicePanel({
           )}
           {events
             .filter(
-              (event) =>
-                event.kind === "voice.failed" &&
-                event.data.turnId === latestUserTurn &&
-                !merged.some((line) => line.role === "user" && line.createdAt > event.createdAt),
+              (event) => event.kind === "voice.failed" && event.data.turnId === latestBusinessTurn,
             )
             .slice(-1)
             .map((event) => (

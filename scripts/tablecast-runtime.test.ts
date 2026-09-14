@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { assertLocalRuntime, localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
+import { localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -131,11 +131,26 @@ describe("開発資源の所有境界", () => {
       worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git"),
     );
   });
-  it("本番origin・別保存先・重複ポートへのreset要求を拒否する", () => {
+  it.each([
+    { label: "ホスト", container: "0", origin: "http://main.tablecast.localhost:3000" },
+    { label: "コンテナのlocalhost", container: "1", origin: "http://localhost:3000" },
+    {
+      label: "コンテナの専用ドメイン",
+      container: "1",
+      origin: "http://main.tablecast.container.localhost:3000",
+    },
+    { label: "OrbStack", container: "1", origin: "https://main.tablecast.orb.local" },
+  ])("$labelで自分のoriginを許可し不整合なreset要求を拒否する", async ({ container, origin }) => {
+    vi.stubEnv("TABLECAST_CONTAINER", container);
+    vi.stubEnv("TABLECAST_WORKTREE_NAME", "main");
+    vi.stubEnv("TABLECAST_REPO_NAME", "tablecast");
+    // コンテナ判定はモジュール読込時に確定するため、指定した環境で読み直す。
+    vi.resetModules();
+    const { assertLocalRuntime } = await import("./tablecast-runtime");
     const runtime = {
       id: "0123456789",
       root: "/tmp/tablecast",
-      origin: "http://main.tablecast.localhost:3000",
+      origin,
       ports: {
         proxy: 3000,
         web: 3001,
@@ -150,21 +165,13 @@ describe("開発資源の所有境界", () => {
       apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
       webConfig: "/tmp/tablecast/.local/web.wrangler.json",
     };
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, origin: "http://main.tablecast.localhost:3000" },
-        runtime.root,
-      ),
-    ).not.toThrow();
+    expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow();
     expect(() =>
       assertLocalRuntime(
         { ...runtime, origin: "http://tablecast-other.localhost:3000" },
         runtime.root,
       ),
     ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow(
-      "別worktree・非ローカル・不整合の設定を操作できません。",
-    );
     expect(() =>
       assertLocalRuntime({ ...runtime, origin: "https://tablecast.example.com" }, runtime.root),
     ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
@@ -215,42 +222,6 @@ it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async (
       TABLECAST_MODEL: "tablecast-local",
       TABLECAST_MODEL_API_KEY: "tablecast-local-key",
     });
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-it("Pythonの外部資格と別名はBunを介さずuvがenvファイルから解決する", async () => {
-  const root = await mkdtemp(join(tmpdir(), "tablecast-uv-env-"));
-  const execute = promisify(execFile);
-  try {
-    // Given: Python自身が読む開発資格と同一ファイル内の別名、別ファイルの接続設定。
-    await writeFile(
-      join(root, ".env.local"),
-      'TABLECAST_MODEL_API_KEY=tablecast-uv-key\nOPENAI_API_KEY="${TABLECAST_MODEL_API_KEY}"\n',
-    );
-    await writeFile(join(root, ".env.voice"), "LIVEKIT_URL=ws://127.0.0.1:7880\n");
-    // When: Bunのenvを継承せず、uvの標準読み込みでPythonを起動する。
-    const { stdout } = await execute(
-      "uv",
-      [
-        "run",
-        "--no-project",
-        "--offline",
-        "--python",
-        join(process.cwd(), "livekit/.venv/bin/python"),
-        "--env-file",
-        ".env.local",
-        "--env-file",
-        ".env.voice",
-        "python",
-        "-c",
-        "import os; print(os.environ['OPENAI_API_KEY'])",
-      ],
-      { cwd: root, env: { PATH: process.env.PATH, HOME: process.env.HOME } },
-    );
-    // Then: uvが展開した資格をPythonから参照できる。
-    expect(stdout.trim()).toBe("tablecast-uv-key");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

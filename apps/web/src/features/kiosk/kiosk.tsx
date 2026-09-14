@@ -190,8 +190,8 @@ function useTableSession({
     return () => clearTimeout(timer);
   }, [prepared]);
   useEffect(() => {
-    voice.synchronise(data.voiceSessionId, data.voiceState === "active");
-  }, [data.voiceSessionId, data.voiceState, voice]);
+    voice.synchronise(data.voiceSessionId, data.voiceState === "active", data.speechSpeed);
+  }, [data.voiceSessionId, data.voiceState, data.speechSpeed, voice]);
   const updateCart = useMutation({
     mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
       parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
@@ -373,7 +373,7 @@ function TableSession({
             onChoose={choose}
             onStart={() => {
               if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
-              else void voice.start(locale);
+              else void voice.start(locale, data.speechSpeed);
             }}
             controlDisabled={view.status === "stopping" || language.isPending}
             speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}

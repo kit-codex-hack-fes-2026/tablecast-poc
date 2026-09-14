@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "livekit"
+    "apps/*"
   ],
   "type": "module",
   "scripts": {
@@ -30,17 +29,18 @@
     "db:bootstrap": "bun --no-env-file scripts/tablecast-bootstrap.ts",
     "codegen": "turbo run i18n:compile",
     "prepare": "bun run hooks:install",
-    "setup": "bun install --frozen-lockfile && uv sync --project livekit --locked && bun run codegen",
+    "setup": "bun install --frozen-lockfile && bun run codegen",
     "dev:config": "NODE_ENV=development bun scripts/tablecast-runtime.ts",
     "db:migrate": "wrangler d1 migrations apply TABLECAST_DB --local --config .local/api.wrangler.json --persist-to .local/state",
     "dev:container": "turbo run dev:container --filter=@tablecast/web",
     "dev:proxy": "bun --env-file=.local/.env exec 'portless alias \"$TABLECAST_HOST\" \"$PORT\" && portless proxy start --foreground --no-tls --port \"$PORTLESS_PORT\"'",
     "dev:caddy": "caddy run --config .devcontainer/Caddyfile --adapter caddyfile",
     "dev:mailpit": "mailpit --listen 0.0.0.0:8025 --smtp 0.0.0.0:1025",
-    "dev:livekit": "livekit-server --config .local/livekit.yaml",
     "services:up": "docker compose --env-file .local/.env up --detach --wait",
     "services:down": "docker compose --env-file .local/.env down --timeout 5",
-    "services:status": "docker compose --env-file .local/.env ps"
+    "services:status": "docker compose --env-file .local/.env ps",
+    "build:email": "turbo run build:email",
+    "deploy:catalog": "bun --no-env-file scripts/tablecast-catalog-deploy.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260903.1",
@@ -55,7 +55,6 @@
     "drizzle-orm": "0.45.2",
     "jsonc-parser": "3.3.1",
     "lefthook": "2.1.12",
-    "livekit-server-sdk": "2.18.0",
     "oxfmt": "0.66.0",
     "oxlint": "1.81.0",
     "oxlint-tsgolint": "7.0.2001",
@@ -73,6 +72,7 @@
   },
   "packageManager": "bun@1.3.13",
   "patchedDependencies": {
-    "miniflare@5.20260903.0-alpha": "patches/miniflare@5.20260903.0-alpha.patch"
+    "miniflare@5.20260903.0-alpha": "patches/miniflare@5.20260903.0-alpha.patch",
+    "emulate@0.11.1": "patches/emulate@0.11.1.patch"
   }
 }

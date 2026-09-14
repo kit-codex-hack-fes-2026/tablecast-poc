@@ -1,7 +1,7 @@
 import type { Attributes } from "@opentelemetry/api";
 import { DomainError } from "./errors";
 
-// 本文収集を無効にした場合、providerのcauseは型と位置だけを残す。
+// 本文収集を無効にした場合、providerのcauseは型・位置と既知の制限情報だけを残す。
 const privateCauses = new Set([
   "INVALID_INPUT",
   "VOICE_CATALOG_UNAVAILABLE",
@@ -9,6 +9,11 @@ const privateCauses = new Set([
   "VOICE_RUNTIME_UNAVAILABLE",
   "VOICE_MODEL_FAILED",
   "VOICE_INTERNAL_ERROR",
+]);
+const providerLimitCodes = new Set([
+  "credit_balance_exhausted",
+  "insufficient_quota",
+  "rate_limit_exceeded",
 ]);
 export function redactCredentials(message: string, secrets: readonly string[]) {
   let value = message;
@@ -49,7 +54,13 @@ export function errorAttributes(
   secrets: readonly string[] = [],
   capture = false,
 ): Attributes {
-  const exceptions: { type: string; message: string; stack: string }[] = [];
+  const exceptions: {
+    type: string;
+    message: string;
+    stack: string;
+    httpStatus?: number;
+    providerCode?: string;
+  }[] = [];
   const seen = new Set<Error>();
   let hideMessage = false;
   while (error instanceof Error && !seen.has(error) && exceptions.length < 5) {
@@ -69,7 +80,21 @@ export function errorAttributes(
         return location?.[1] ? [`    at ${location[1]}`] : [];
       })
       .slice(0, 12);
-    exceptions.push({ type, message, stack: [`${type}: ${message}`, ...frames].join("\n") });
+    exceptions.push({
+      type,
+      message,
+      stack: [`${type}: ${message}`, ...frames].join("\n"),
+      ...("status" in error &&
+      typeof error.status === "number" &&
+      Number.isInteger(error.status) &&
+      error.status >= 400 &&
+      error.status <= 599
+        ? { httpStatus: error.status }
+        : {}),
+      ...("code" in error && typeof error.code === "string" && providerLimitCodes.has(error.code)
+        ? { providerCode: error.code }
+        : {}),
+    });
     hideMessage ||= !capture && error instanceof DomainError && privateCauses.has(error.code);
     error = error.cause;
   }

@@ -1,5 +1,5 @@
 import { render, toPlainText } from "@react-email/render";
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { ensure } from "../platform/errors";
 import { AccountEmail } from "./account-email";
 
@@ -12,13 +12,11 @@ export type MailEnv = Partial<
 export async function sendAccountEmail(
   env: MailEnv,
   to: string,
-  title: string,
-  message: string,
-  action: string,
-  url: string,
+  content: ComponentProps<typeof AccountEmail>,
 ) {
+  const { title } = content;
   ensure(env.TABLECAST_EMAIL_FROM, "EMAIL_NOT_CONFIGURED", 503);
-  const html = await render(createElement(AccountEmail, { title, message, action, url }));
+  const html = await render(createElement(AccountEmail, content));
   const text = toPlainText(html);
   if (env.TABLECAST_MAILPIT_URL) {
     const target = new URL(env.TABLECAST_MAILPIT_URL);

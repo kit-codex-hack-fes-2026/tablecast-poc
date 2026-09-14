@@ -53,7 +53,10 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.getByLabel("識別名").fill(slug);
   await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
   await expect(page).toHaveURL(/\/menu\/products$/);
+  // URL更新直後は店舗作成画面が残るため、遷移先の表示完了から操作する。
+  await expect(page.getByRole("heading", { name: "商品", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "メンバー", exact: true }).click();
+  await expect(page).toHaveURL(/\/members$/);
   await expect(
     page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
   ).toBeVisible();
@@ -80,9 +83,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await expect(
     page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
   ).toBeVisible();
-  const messages = await page.request.get(
-    `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`,
-  );
+  const messages = await page.request.get(`${runtime.mailpitUrl}/api/v1/messages`);
   const mail = z
     .object({
       messages: z.array(
@@ -103,11 +104,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   const content = z
     .object({ HTML: z.string() })
     .parse(
-      await (
-        await page.request.get(
-          `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/message/${mail?.ID}`,
-        )
-      ).json(),
+      await (await page.request.get(`${runtime.mailpitUrl}/api/v1/message/${mail?.ID}`)).json(),
     );
   const invitation = content.HTML.match(/href="([^"]*\/invitations\/[^"?]+)"/u)?.[1];
   expect(invitation).toBe(`${baseURL}/invitations/${invitationId}`);
@@ -181,11 +178,7 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
         }),
       ),
     })
-    .parse(
-      await (
-        await page.request.get(`http://127.0.0.1:${runtime.ports.mailpit}/api/v1/messages`)
-      ).json(),
-    );
+    .parse(await (await page.request.get(`${runtime.mailpitUrl}/api/v1/messages`)).json());
   const mail = messages.messages.find(
     (item) =>
       item.Subject.includes("Verify your email") && item.To.some((to) => to.Address === email),
@@ -194,11 +187,7 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
   const content = z
     .object({ HTML: z.string() })
     .parse(
-      await (
-        await page.request.get(
-          `http://127.0.0.1:${runtime.ports.mailpit}/api/v1/message/${mail?.ID}`,
-        )
-      ).json(),
+      await (await page.request.get(`${runtime.mailpitUrl}/api/v1/message/${mail?.ID}`)).json(),
     );
   const url = content.HTML.match(/href="([^"]*\/api\/auth\/verify-email[^"]+)"/u)?.[1]?.replaceAll(
     "&amp;",

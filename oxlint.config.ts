@@ -64,6 +64,9 @@ export default defineConfig({
   ignorePatterns: [
     ".agents/skills/animate/**",
     ".agents/skills/emil-design-eng/**",
+    ".agents/skills/hyperframes-core/**",
+    ".agents/skills/hyperframes-animation/**",
+    ".agents/skills/hyperframes-creative/**",
     ".agents/skills/mastra/**",
     "**/dist/**",
     "**/storybook-static/**",

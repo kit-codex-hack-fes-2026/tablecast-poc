@@ -57,8 +57,8 @@ async function seed() {
   const credentials = await demoCredentials(requestedProfile);
   const profile = requestedProfile ?? credentials.profile;
   if (args.includes("--reset")) {
-    if (!(await portAvailable(runtime.ports.web)) || !(await portAvailable(runtime.ports.agent)))
-      throw new Error("開発サーバーと音声AgentをCtrl+Cで停止してからリセットしてください。");
+    if (!(await portAvailable(runtime.ports.web)))
+      throw new Error("開発サーバーをCtrl+Cで停止してからリセットしてください。");
     await rm(runtime.state, { recursive: true, force: true });
     credentials.profile = profile;
     credentials.baseTime = Date.now();

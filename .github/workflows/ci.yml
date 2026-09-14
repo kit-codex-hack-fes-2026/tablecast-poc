@@ -15,11 +15,10 @@ concurrency:
 env:
   WRANGLER_SEND_METRICS: "false"
   DO_NOT_TRACK: "1"
-  ORT_DISABLE_TELEMETRY: "1"
 
 jobs:
   static:
-    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript, Ruff, ty)"
+    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,7 +28,6 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/tablecast-setup
         with:
-          python: "true"
           turbo: "true"
       - name: PRのコミットメッセージ
         if: github.event_name == 'pull_request'
@@ -44,7 +42,7 @@ jobs:
       - run: bun run format:check && bun run lint && bun run typecheck
 
   unit-web:
-    name: "Unit Test: Webロジックとseedデータ (Vitest)"
+    name: "Unit Test: Web・動画基盤・seedデータ (Vitest)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -57,19 +55,8 @@ jobs:
             run: bunx --no-install vitest run --project scripts-unit
           - name: Web
             run: bun run --cwd apps/web test
-
-  agent:
-    name: "Unit and Integration Test: 音声AgentとTTS接続 (pytest)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
-      - run: bun run --cwd livekit test
+          - name: Presentation
+            run: bun run --cwd apps/presentation test
 
   api:
     name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1)"
@@ -91,8 +78,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
       - run: bunx --no-install vitest run --project scripts-runtime
 
   workers-build:
@@ -130,6 +115,81 @@ jobs:
         with:
           turbo: "true"
       - run: bunx --no-install turbo run build:storybook
+      - run: bun --no-env-file run deploy:catalog --prepare-storybook
+        env:
+          TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+          TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-storybook-${{ github.event.pull_request.head.sha || github.sha }}
+          path: apps/web/storybook-static/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  email-build:
+    name: "Build: メールカタログ (React Email HTML)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: forkの配備対象外を記録
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo 'fork PRはsecretを使わずbuildのみ実施し、カタログ配備・コメント更新の対象外とする。' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          turbo: "true"
+      - run: bun --no-env-file run build:email
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/api/email-static/
+          retention-days: 1
+          if-no-files-found: error
+
+  catalog-deploy:
+    name: PRカタログの配備
+    needs: [static, unit-web, storybook-build, email-build, components]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: preview
+    permissions:
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: tablecast-deploy-${{ github.event.pull_request.number }}
+      queue: max
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
+      TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ env.TABLECAST_RELEASE_SHA }}
+      - uses: ./.github/actions/tablecast-setup
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/storybook-static/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/api/email-static/
+      - name: Access保護・検証済みSHAの配備
+        run: bun --no-env-file run deploy:catalog
 
   components:
     name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
@@ -150,13 +210,14 @@ jobs:
       - run: bun run test:browser
 
   e2e:
-    name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }})"
+    name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, webkit]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -172,42 +233,15 @@ jobs:
           - name: Mailpit image
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
-        run: bun run test:e2e --project=tablecast-${{ matrix.browser }}
+        run: bun run test:e2e --project=tablecast-${{ matrix.browser }} --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
-          name: tablecast-e2e-${{ matrix.browser }}
+          name: tablecast-e2e-${{ matrix.browser }}-${{ matrix.shard }}
           path: apps/web/test-results/
           include-hidden-files: true
           retention-days: 7
 
-  webrtc:
-    name: "Integration Test: 音声の送受信・停止 (Playwright, LiveKit WebRTC)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          python: "true"
-      - parallel:
-          - uses: ./.github/actions/tablecast-browser
-            with:
-              browsers: chromium
-          - uses: ./.github/actions/tablecast-browser-deps
-            with:
-              browsers: chromium
-      - name: Local WebRTC
-        run: |
-          bun --no-env-file run dev > /tmp/tablecast-dev.log 2>&1 &
-          TABLECAST_DEV_PID=$!
-          trap 'kill -TERM "$TABLECAST_DEV_PID" 2>/dev/null || true; wait "$TABLECAST_DEV_PID" || true; bun run services:down' EXIT
-          bun --no-env-file scripts/tablecast-livekit-check.ts
-      - name: 開発ログ
-        if: failure()
-        run: cat /tmp/tablecast-dev.log
   images:
     name: 配備用Containerイメージ
     runs-on: ubuntu-latest
@@ -218,15 +252,13 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: 音声AgentとPR用OAuthをlinux/amd64で検証
+      - name: PR用OAuthをlinux/amd64で検証
         run: |
-          docker build --platform linux/amd64 --tag "tablecast-voice:$TABLECAST_RELEASE_SHA" livekit
-          docker run --rm --network none --entrypoint python "tablecast-voice:$TABLECAST_RELEASE_SHA" -c 'from livekit.plugins import silero; silero.VAD.load()'
           docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag "tablecast-emulate:$TABLECAST_RELEASE_SHA" .
           trap 'docker rm --force tablecast-oauth-check' EXIT
           docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev "tablecast-emulate:$TABLECAST_RELEASE_SHA"
           curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
-          docker save "tablecast-voice:$TABLECAST_RELEASE_SHA" "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
+          docker save "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
@@ -238,19 +270,7 @@ jobs:
   deploy:
     name: 本番・PR配備
     needs:
-      [
-        static,
-        unit-web,
-        agent,
-        api,
-        dev-runtime,
-        workers-build,
-        storybook-build,
-        components,
-        e2e,
-        webrtc,
-        images,
-      ]
+      [static, unit-web, api, dev-runtime, workers-build, storybook-build, components, e2e, images]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -259,9 +279,10 @@ jobs:
       url: ${{ steps.target.outputs.url }}
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number || 'production' }}
+      queue: max
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
@@ -270,11 +291,9 @@ jobs:
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
+      TABLECAST_MODEL: gpt-5.6-luna
       TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
       TABLECAST_CONTAINER_METRICS_TOKEN: ${{ secrets.TABLECAST_CONTAINER_METRICS_TOKEN }}
-      TABLECAST_MASTRA_ACCESS_TOKEN: ${{ secrets.TABLECAST_MASTRA_ACCESS_TOKEN }}
-      TABLECAST_MASTRA_PROJECT_ID: ${{ vars.TABLECAST_MASTRA_PROJECT_ID }}
-      TABLECAST_MASTRA_ENDPOINT: https://observability.mastra.ai
       TABLECAST_OTEL_CAPTURE_CONTENT: ${{ vars.TABLECAST_OTEL_CAPTURE_CONTENT || 'true' }}
       TABLECAST_DEPLOY_SECRET: ${{ secrets.TABLECAST_DEPLOY_SECRET }}
       TABLECAST_GOOGLE_CLIENT_ID: ${{ secrets.TABLECAST_GOOGLE_CLIENT_ID }}
@@ -304,8 +323,75 @@ jobs:
         run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined).origin + "\n")'
       - name: 資源作成・移行・検証済み成果物の配備・SHA確認
         run: bun --no-env-file run deploy
-      - name: PRへ配備結果を記録
-        if: success() && github.event_name == 'pull_request'
-        run: |
-          bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(".local/tablecast-deploy/result.md", "配備確認済み: " + deploymentTarget(process.env.TABLECAST_PR_NUMBER).origin + "\n\n対象SHA: " + process.env.TABLECAST_RELEASE_SHA + "\n")'
-          gh pr comment "$TABLECAST_PR_NUMBER" --body-file .local/tablecast-deploy/result.md
+
+  preview-report:
+    name: PRプレビューの統合通知
+    needs: [deploy, catalog-deploy]
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    concurrency:
+      group: tablecast-deploy-${{ github.event.pull_request.number }}
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          TABLECAST_PREVIEW_RESULTS: ${{ toJSON(needs) }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        with:
+          script: |
+            const pr = context.payload.pull_request.number;
+            const sha = context.payload.pull_request.head.sha;
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            const current = async () => {
+              const {data} = await github.rest.pulls.get({...context.repo, pull_number: pr});
+              return data.state === 'open' && data.head.sha === sha && data.head.repo?.full_name === repository;
+            };
+            if (!await current()) return;
+            const results = JSON.parse(process.env.TABLECAST_PREVIEW_RESULTS);
+            const targets = [
+              {name: '製品', worker: `tablecast-pr-${pr}`, path: '/api/health', result: results.deploy.result},
+              ...['storybook', 'email'].map(kind => ({name: kind, kind, worker: `tablecast-${kind}-pr-${pr}`, path: '/_tablecast/release.json', result: results['catalog-deploy'].result})),
+            ];
+            const rows = await Promise.all(targets.map(async target => {
+              const origin = `https://${target.worker}.kit-codex.workers.dev`;
+              let served = '未確認（現在版不明）';
+              try {
+                const response = await fetch(`${origin}${target.path}`, {
+                  headers: {'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET},
+                  redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(10000),
+                });
+                if (!response.ok) throw new Error('配備情報を取得できません');
+                const release = await response.json();
+                if (target.kind && (release.repository !== repository || release.pr !== String(pr) || release.kind !== target.kind)) throw new Error('対象が一致しません');
+                const value = target.kind ? release.sha : release.releaseSha;
+                if (!/^[a-f0-9]{40}$/.test(value ?? '')) throw new Error('SHAが不正です');
+                served = value;
+              } catch {
+                // 取得できない現在版を、前回のコメントや今回の対象SHAで推測しない。
+              }
+              return `| ${target.name} | ${origin} | ${target.result} | ${served} |`;
+            }));
+            // 既存カタログコメントをそのまま統合コメントとして更新する。
+            const marker = '<!-- tablecast-catalog-preview -->';
+            const body = [marker, 'PRプレビュー（Cloudflare Accessへのログインが必要）', '',
+              `対象SHA: ${sha}`, '',
+              '| 対象 | URL | 配備jobの結果 | 通知時に確認できた配備SHA |',
+              '| --- | --- | --- | --- |', ...rows, '',
+              'Storybook・メールの結果は共通のカタログ配備jobの結果。詳細は実行結果を参照。', '',
+              `[実行結果](https://github.com/${repository}/actions/runs/${context.runId})`,
+            ].join('\n');
+            const comments = (await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr}))
+              .filter(comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker));
+            if (comments.length > 1) throw new Error('統合通知が重複しています');
+            if (!await current()) return;
+            if (comments.length) {
+              await github.rest.issues.updateComment({...context.repo, comment_id: comments[0].id, body});
+            } else {
+              await github.rest.issues.createComment({...context.repo, issue_number: pr, body});
+            }
+            await core.summary.addRaw(body).write();

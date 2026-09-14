@@ -1,6 +1,6 @@
-import { expect } from "@playwright/test";
-import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
+import { expect, type Page } from "@playwright/test";
+import { appendFile, mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import { catalogSchema } from "@tablecast/api/schema";
@@ -151,11 +151,42 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   }
 });
 
-test("別画面の未保存入力がある間は更新を待ち、入力を戻すと全画面へ自動適用する", async ({
+test("別画面の未保存入力がある間は更新を待ち、背景GET中でも入力を戻すと全画面へ自動適用する", async ({
   page,
   context,
   runtime,
-}) => {
+}, testInfo) => {
+  const observations: string[] = [];
+  const observe = (target: Page) =>
+    target.on("console", (message) => {
+      if (message.text().startsWith("tablecast-pwa-decision:"))
+        observations.push(message.text().slice("tablecast-pwa-decision:".length));
+    });
+  observe(page);
+  context.on("page", observe);
+  // アプリ登録より前に監視を開始し、応答の値だけを保存する
+  await context.addInitScript(() => {
+    navigator.serviceWorker.addEventListener(
+      "message",
+      (event: MessageEvent<{ type?: string }>) => {
+        const port = event.ports[0];
+        if (!port) return;
+        const original = port.postMessage.bind(port);
+        port.postMessage = (ready: unknown) => {
+          console.info(
+            "tablecast-pwa-decision:" +
+              JSON.stringify({
+                page: location.pathname,
+                type: event.data?.type,
+                ready,
+                blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+              }),
+          );
+          original(ready);
+        };
+      },
+    );
+  });
   // Given: 同じService Workerを共有する二画面と保存前のフォーム。
   await page.goto("/login");
   await page.evaluate(async () => {
@@ -174,9 +205,30 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
   try {
     await other.goto(`${runtime.origin}/`);
     await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
+    // 背景GETの完了を保留し、実QueryとWorkerの更新判定を競合させる
+    const background = await other.evaluateHandle(() => {
+      const original = window.fetch;
+      const gate = Promise.withResolvers<void>();
+      const state = { pending: false, release: () => gate.resolve() };
+      const fetch: typeof original = Object.assign(async (...args: Parameters<typeof original>) => {
+        const request = new Request(...args);
+        if (request.method === "GET" && new URL(request.url).pathname === "/api/table") {
+          state.pending = true;
+          await gate.promise;
+        }
+        return original(...args);
+      }, original);
+      window.fetch = fetch;
+      return state;
+    });
+    await expect.poll(() => background.evaluate((state) => state.pending)).toBe(true);
     let reloads = 0;
+    let otherReloads = 0;
     page.on("domcontentloaded", () => {
       reloads += 1;
+    });
+    other.on("domcontentloaded", () => {
+      otherReloads += 1;
     });
     // 自動更新の確認に対するキャンセルを、入力を戻す前に観測する。
     const decision = await page.evaluateHandle(() => {
@@ -187,9 +239,9 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
       return state;
     });
     // When: 配信済みService Workerの内容を更新する。
-    await runtime.setOnline(false);
     await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
-    await runtime.setOnline(true);
+    await runtime.restartWeb();
+
     await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) throw new Error("登録済みService Workerが必要です");
@@ -210,12 +262,35 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
     );
     expect(reloads).toBe(0);
     // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
-    await Promise.all([
-      page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-      other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-      page.getByLabel(ja.auth_email, { exact: true }).fill(""),
-    ]);
+    try {
+      await Promise.all([
+        page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+        other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+        page.getByLabel(ja.auth_email, { exact: true }).fill(""),
+      ]);
+    } finally {
+      for (const target of [page, other]) {
+        observations.push(
+          JSON.stringify(
+            await target.evaluate(async () => ({
+              page: location.pathname,
+              waiting: Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
+              blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+              inert: document.body.inert,
+            })),
+          ),
+        );
+      }
+      const path = testInfo.outputPath("tablecast-pwa-decisions.ndjson");
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, observations.join("\n"));
+      await testInfo.attach("全画面の更新判定", {
+        path,
+        contentType: "application/x-ndjson",
+      });
+    }
     expect(reloads).toBe(1);
+    expect(otherReloads).toBe(1);
     await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
     await expect
       .poll(() =>

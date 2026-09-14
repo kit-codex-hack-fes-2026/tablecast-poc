@@ -139,6 +139,8 @@ export const voiceTurns = sqliteTable("voice_turns", {
   status: text("status", { enum: ["started", "completed", "interrupted", "failed"] }).notNull(),
   started_at: integer("started_at").notNull(),
   ended_at: integer("ended_at"),
+  agent_session_id: text("agent_session_id"),
+  agent_finished_at: integer("agent_finished_at"),
 });
 
 export const deviceAssignments = sqliteTable("device_assignments", {

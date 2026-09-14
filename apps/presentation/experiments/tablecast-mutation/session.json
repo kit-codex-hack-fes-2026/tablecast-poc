@@ -1,0 +1,17 @@
+{
+  "origin": "http://mutation.tablecast-poc.container.localhost:3100",
+  "table": {
+    "id": "tablecast-komorebi-table-12",
+    "session": "60f01c7d-6b07-4354-8ea0-26e52364e3b2",
+    "name": "T12"
+  },
+  "oldAdapterProbe": {
+    "selector": "tab:おしながき",
+    "count": 0,
+    "result": "expected-incompatible"
+  },
+  "updatedAdapterProbe": {
+    "selector": "tab:商品を選ぶ",
+    "result": "passed"
+  }
+}

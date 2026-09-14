@@ -47,7 +47,7 @@ Better Authの組織機能で管理者・スタッフを管理し、OAuthとメ�
 
 ## 共通の注文操作
 
-GUI、MastraのTool、必要な管理操作はAPI内の同じ関数を呼ぶ。API内で自分のHTTP endpointを呼び直さない。
+GUI、Agents APIのfunction、必要な管理操作はAPI内の同じ関数を呼ぶ。API内で自分のHTTP endpointを呼び直さない。
 カートの変更は版番号付き。商品価格、在庫、プランの判定結果をLLMやブラウザーから採用しない。
 
 確認時に、商品・カスタマイズ・数量・適用プラン・金額を含む変更不可のスナップショットを作る。
@@ -74,4 +74,4 @@ D1に業務状態と確定イベントを同時に保存し、DOが購読者へ�
 確定発話、応答の完了・中断、カート変更、注文・会計、スタッフ呼出し、設定公開を記録する。暫定文字列、音声チャンク、内部推論は店舗ログに保存しない。
 話者番号は一時的ラベル。本人名・席・会計の根拠にしない。生音声の既定保存と年齢・性別の推定は行わない。
 
-HTTP・Mastra・LiveKit・DBの診断にはtraceId、tableSessionId、turnId、orderId、releaseShaを対応付ける。標準loggerとJSON出力を利用し、独自の観測フレームワークを作らない。
+HTTP・GPT-Live・Agents API・DBの診断にはtraceId、tableSessionId、turnId、orderId、releaseShaを対応付ける。標準loggerとJSON出力を利用し、独自の観測フレームワークを作らない。

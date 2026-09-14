@@ -1,0 +1,132 @@
+{
+  "date": "2026-09-14",
+  "issue": 1,
+  "pullRequest": 135,
+  "baseHead": "f8f79a7b1734ce995a5892465f269c4872db309e",
+  "scope": "入力から再編集・描画・完成MP4までの契約と、黙って省略される指定の監査",
+  "runtime": {
+    "os": "Windows",
+    "node": "v25.0.0",
+    "bun": "1.3.13"
+  },
+  "sourceHashes": {
+    "scripts/tablecast-edit-plan.ts": "32d3d467a0238a9609a73d543a3bee7592b064ad42ee472c25946be911eaadf7",
+    "scripts/tablecast-edit-guest.ts": "110485912a60d47f1248ce24022ff198e2dc429ce4a4c01ba1be135a128b5af4",
+    "scripts/tablecast-edit-role.ts": "bcc41cf048cbbba1c443c41b7e8e80deabe3dd635326d13c81c62ad95141ced3",
+    "scripts/tablecast-project.ts": "38a0191475b812fe902244341f8f806bd7f9fc6d39dc4d29073ca0f300946ea3",
+    "scripts/tablecast-build.ts": "eb7ba69bc2e4b2322ec296c9edc70a542d8f1373ccad3094fb6dd1437edf93ad",
+    "scripts/tablecast-input-contract.test.ts": "86318983eccc2f854df20ee54b6557e03ee7bdcdd52e024d2c9028beeaf9c827",
+    "scripts/tablecast-edit-plan.test.ts": "c1dda043aae02bf10cc0bec3920754daa409a3f9b6ac9dad52b753f9f6e6bddf",
+    "scripts/tablecast-render-contract.spec.ts": "a69258b161d07d78738f0551e4906380b252176cffb1859160d7d9c9c8dc45d1",
+    "playwright.config.ts": "2b6cf0fae214d67723fe788c16fa44aab397dde6a4a53842b940c5b7336010ee"
+  },
+  "checks": [
+    {
+      "area": "入力",
+      "result": "タイトル画像1枚／複数枚、表示形式5種類の全10ペアの競合、図に隠れる説明、空の実録説明、無効な強調・カメラ、まとめの全画像表示と表示時間を検査"
+    },
+    {
+      "area": "互換性",
+      "result": "現行台本・構造fixture・別題材BookFlow・アプリ変更試験の台本がスキーマを通過"
+    },
+    {
+      "area": "再編集",
+      "result": "保存素材4テイクを隔離コピーし、客側CLIで日本語9カットと英語1カット、店舗側CLIでstaffとadminを実際にOpenScreen export。元の122ファイルはSHA-256照合で変更なし"
+    },
+    {
+      "area": "複数カット",
+      "result": "単体テストで店舗の複数カットのズームと最長終端、編集元・端末・先頭カットの不一致、対象内外の出力フォルダ衝突を検査"
+    },
+    {
+      "area": "ブラウザー",
+      "result": "build:videosの後、配置・字幕・画像・端末・撮影・表示契約のPlaywright 20件が成功。新規ケースで9表示形式を実buildし、画像・動画・改行・タイムライン実行・まとめの順次表示を確認"
+    },
+    {
+      "area": "失敗時",
+      "result": "createVideoの実入口で、不正なタイトル画像指定は出力作成前に拒否し、素材欠落はstatus=failedのreportを保存することを確認"
+    },
+    {
+      "area": "最終静的検査",
+      "result": "Vitest 93件、lint、型検査、変更ファイルの整形、git diff --checkが成功"
+    }
+  ],
+  "renders": [
+    {
+      "run": "tablecast-review-product-20260914",
+      "status": "rendered-and-checked",
+      "duration": 117.3,
+      "peakDb": -1.1,
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "videoHash": "73c7b4206948a47ad4a1b03068b79973f8278a5e7b71f922461307f5247ce9eb",
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 117.3,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 117.3]]
+      },
+      "frames": 42
+    },
+    {
+      "run": "tablecast-review-technical-20260914",
+      "status": "rendered-and-checked",
+      "duration": 63.099999999999994,
+      "peakDb": -1.2,
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "videoHash": "01d546939b421e399164304b90470e781e5789ea388353c064627e2f174fde12",
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 63.1,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 63.1]]
+      },
+      "frames": 37
+    },
+    {
+      "run": "tablecast-review-booking-20260914",
+      "status": "rendered-and-checked",
+      "duration": 12,
+      "peakDb": null,
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "videoHash": "5beaad1abc63896d78ffba6991dba3c8f3724da8f8f5c489e9a32475fac6f68f",
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 12,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 12]]
+      },
+      "frames": 7
+    }
+  ],
+  "selfReview": {
+    "result": "確認した経路の未対応不具合なし。未知の不具合ゼロや任意の台本の品質を保証する結果ではない",
+    "postRenderChange": "MP4検証後に、編集対象外の役割と出力フォルダを共有する入力の拒否と回帰テスト1件を追加。最終93件と静的検査で再確認。描画・音声・出力コードの変更なし",
+    "evidence": "runの詳細report・ログ・MP4・抽出フレームはローカルoutputに保持。技術冒頭と商品英語場面の抽出フレームを目視確認。動画のデザイン採否は未評価"
+  },
+  "notPerformed": [
+    "アプリの新規実収録・有料TTSの呼び出し",
+    "新規checkout・別OS・任意アプリに対する実録の網羅試験",
+    "素材非共有の過去のアプリ変更試験の再実行"
+  ],
+  "sharing": "新しい検証用MP4・隔離素材はPRに追加せず、現行の共有動画と素材を保持。CIではLFSを取得せず単体テストを実行"
+}

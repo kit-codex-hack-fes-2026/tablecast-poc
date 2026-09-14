@@ -289,9 +289,10 @@ export const SpeakingWithTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "speaking" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const visual = canvasElement.querySelector("figure[data-voice-state=speaking]");
+    const visual = canvas.getByRole("figure");
     await expect(visual).toBeVisible();
-    await expect(canvas.getByText("ツール実行中", { exact: true })).toBeVisible();
+    await expect(visual).toHaveAttribute("data-voice-state", "speaking");
+    await expect(within(visual).getByText("商品を表示", { exact: true })).toBeVisible();
   },
 };
 export const PausedWithStaleTool: Story = {
@@ -300,10 +301,11 @@ export const PausedWithStaleTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "paused" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvasElement.querySelector("figure[data-voice-state=paused][data-motion=still]"),
-    ).toBeVisible();
-    await expect(canvas.queryByText("ツール実行中", { exact: true })).not.toBeInTheDocument();
+    const visual = canvas.getByRole("figure");
+    await expect(visual).toBeVisible();
+    await expect(visual).toHaveAttribute("data-voice-state", "paused");
+    await expect(visual).toHaveAttribute("data-motion", "still");
+    await expect(within(visual).queryByText("商品を表示", { exact: true })).not.toBeInTheDocument();
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
 };

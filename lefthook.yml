@@ -5,9 +5,18 @@ pre-commit:
   commands:
     format:
       glob: "*.{ts,tsx,js,json,jsonc,md,yml,yaml,css}"
+      exclude:
+        - "apps/presentation/assets/openscreen/**/*.json"
+        - ".agents/skills/hyperframes-core/**"
+        - ".agents/skills/hyperframes-animation/**"
+        - ".agents/skills/hyperframes-creative/**"
       run: bunx --no-install oxfmt --check {staged_files}
     lint:
       glob: "*.{ts,tsx,js}"
+      exclude:
+        - ".agents/skills/hyperframes-core/**"
+        - ".agents/skills/hyperframes-animation/**"
+        - ".agents/skills/hyperframes-creative/**"
       run: bun run codegen && bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
 commit-msg:
   commands:

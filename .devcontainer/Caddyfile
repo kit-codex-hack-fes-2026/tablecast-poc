@@ -10,9 +10,6 @@
 	handle_path /_tablecast/oauth/* {
 		reverse_proxy 127.0.0.1:3008
 	}
-	handle_path /_tablecast/livekit/* {
-		reverse_proxy 127.0.0.1:7880
-	}
 	handle {
 		reverse_proxy 127.0.0.1:3001
 	}

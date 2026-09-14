@@ -19,7 +19,6 @@
 | lefthook.yml                                     | 段階的な検証、部分stageの保全                            |
 | apps/webのtsconfig / Vite / Storybook            | クライアントとSSR、部品試験                              |
 | apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration                            |
-| livekit/pyproject.toml / uv.lock                 | Python依存、ruff、ty、pytest                             |
 
 採用版と実行内容は各manifestと設定ファイルを正本とする。標準ルールを追加・変更するときは導入版の対応と実効性を確認し、config共有packageは実際に必要になるまで作らない。
 
@@ -47,7 +46,7 @@
 ### import境界
 
 Webで許すAPI側のimportは `@tablecast/api/client` と、必要な公開schema/typeだけ。型だけならruntime評価させない。
-APIからWebのfeature・UIをimportしない。PythonはHTTPで接続し、TypeScriptの私有実装の構造をコピーしない。
+APIからWebのfeature・UIをimportしない。モデルはAPIの公式SDKを使い、ブラウザーへAPIキーや実行コードを含めない。
 `Bun.*` は開発scriptに限り、本番Workerやブラウザーで使わない。Node専用APIも実runtimeに合う範囲へ限定する。
 既存の設定によるimport制限で足りる限り、独自の境界チェッカーを作らない。
 
@@ -65,12 +64,10 @@ Oxlintの型付き解析は必要なエンジンとTypeScriptの互換条件が�
 型付きルールが実際に実行されることを小さい失敗例で確認する。`tsc --noEmit` を初期の型ゲートに残し、Oxlintだけで完全代替できると仮定しない。
 ルールのためだけに本番とテストで異なる型契約を作らない。
 
-## Oxfmt・Python
+## Oxfmt
 
-Oxfmtは追跡対象のコード・Markdown・設定に使用し、生成物・node_modules・uv.lock等の適切な対象外を設定する。
+Oxfmtは追跡対象のコード・Markdown・設定に使用し、生成物・node_modules等の適切な対象外を設定する。
 日本語文書やコメントを英語へ変換しない。文書の折返しを目的に説明を省略しない。
-Pythonはruff check、ruff format、ty check、pytest。Bun側と同じルールを無理に一対一で再現しない。
-ruffは基本エラー、import、未使用、安全な修正から始める。日本語のdocstring・テスト名を禁止するASCII限定ルールは有効にしない。
 第三者pluginの既存文体は無関係に書き換えない。patchに必要な自作の説明・テストは日本語で書き、上流へ提出する際の規約調整は別の差分として明示する。
 
 ## Lefthook
@@ -83,8 +80,8 @@ commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/c
 
 ## 依存・CI
 
-Bun/Node/Pythonの必要バージョン、lockfile、Wrangler/Vite/Cloudflare Vitestの互換組合せを最初の接続ゲートで固定する。
-CIはbun.lockとuv.lockの存在を検査し、frozen指定で導入する。未知の最新バージョンを毎回bunxで取得して検査を変えない。
+Bun/Nodeの必要バージョン、lockfile、Wrangler/Vite/Cloudflare Vitestの互換組合せを最初の接続ゲートで固定する。
+CIはbun.lockの存在を検査し、frozen指定で導入する。未知の最新バージョンを毎回bunxで取得して検査を変えない。
 通常はroot scriptからローカル導入済みCLIを起動する。workspace同士はworkspace依存を使い、同じ依存の不要な二重pinを増やさない。
 Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複数の同種静的ツールを一括必須化しない。
 生成型・migrationの差分を確認する。デプロイ、seed、reset、外部モデルの実行はTurbo cacheの再利用対象にしない。
@@ -95,9 +92,9 @@ Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複�
 
 ## CIの実行単位
 
-GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2E、合成音声WebRTCを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
+GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2Eを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
 
-共通actionは固定版のNode/Bunと、必要なジョブだけPythonを導入する。Bunの取得cacheとuvの公式cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は7日間保持する。
+共通actionは固定版のNode/Bunを導入する。Bunの取得cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は7日間保持する。
 
 ## skillsと追加pluginの所有
 
@@ -111,7 +108,7 @@ GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト�
 
 過去の修正履歴はIssueへ残し、同じ原因・類似構造に効く判断だけをskillへ反映する。descriptionは用途が判別できる短い文にし、全作業への発動や全文書読込を要求しない。実際に使うPR本文は[PRテンプレート](../.github/pull_request_template.md)を正本とし、skill内へコピーを持たない。[Astra向けの公式指針](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)をこの分担へ適用する。
 
-自作・外部skillsは `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra` の取得元は `skills-lock.json` で管理し、上流本文は整形対象外とする。導入は[セットアップ](setup.md#2c-agent開発環境)、更新は[tablecast-quality](../.agents/skills/tablecast-quality/SKILL.md)を参照する。個人設定やplugin同梱の同名skillをリポジトリから自動削除しない。
+自作・外部skillsは `.agents/skills` に直接置く。外部の `animate`、`emil-design-eng`、`mastra`、動画用の `hyperframes-core`・`hyperframes-animation`・`hyperframes-creative` の取得元は `skills-lock.json` で管理し、これらの上流本文・同梱スクリプトは整形・lintの対象外とする。動画スキルの固定版と採用範囲は[TOOLS.md](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に記録する。導入は[セットアップ](setup.md#2c-agent開発環境)、更新は[tablecast-quality](../.agents/skills/tablecast-quality/SKILL.md)を参照する。個人設定やplugin同梱の同名skillをリポジトリから自動削除しない。
 
 Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。Drizzle pluginはSQLリテラルの必要性や不要な直列読取を判定しない。これらは[API skill](../.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)に従い、新規実装時と差分レビューで呼出し経路・読取の依存関係・標準APIの採用を確認する。意味を推測するregexや独自の監査runnerを追加しない。
 

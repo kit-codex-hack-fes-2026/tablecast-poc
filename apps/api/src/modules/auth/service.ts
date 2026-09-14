@@ -1,3 +1,8 @@
+import {
+  invitationEmail,
+  verificationEmail,
+  resetPasswordEmail,
+} from "../../emails/account-content";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
@@ -30,10 +35,10 @@ export function createAuth(
       await sendAccountEmail(
         env,
         data.email,
-        "店舗への招待 / Restaurant invitation",
-        `${data.organization.name} に招待されました。You have been invited to join this restaurant.`,
-        "招待を確認 / View invitation",
-        `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
+        invitationEmail(
+          data.organization.name,
+          `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
+        ),
       );
     },
   );
@@ -115,26 +120,12 @@ export function createAuth(
     emailVerification: {
       sendOnSignUp: Boolean(env.TABLECAST_EMAIL_FROM),
       sendVerificationEmail: async ({ user, url }) =>
-        sendAccountEmail(
-          env,
-          user.email,
-          "メールアドレスの確認 / Verify your email",
-          "メールアドレスを確認してください。Please verify your email address.",
-          "確認 / Verify",
-          url,
-        ),
+        sendAccountEmail(env, user.email, verificationEmail(url)),
     },
     emailAndPassword: {
       ...options.emailAndPassword,
       sendResetPassword: async ({ user, url }) =>
-        sendAccountEmail(
-          env,
-          user.email,
-          "パスワードの再設定 / Reset password",
-          "新しいパスワードを設定してください。Please choose a new password.",
-          "再設定 / Reset",
-          url,
-        ),
+        sendAccountEmail(env, user.email, resetPasswordEmail(url)),
     },
     logger,
     database: drizzleAdapter(db, { provider: "sqlite", schema }),

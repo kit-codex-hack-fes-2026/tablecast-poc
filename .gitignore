@@ -55,3 +55,6 @@ apps/web/src/paraglide/
 # Vitest Browser Modeの失敗証跡
 .vitest-attachments/
 __screenshots__/
+
+# メールカタログの静的HTML
+apps/api/email-static/

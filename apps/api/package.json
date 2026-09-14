@@ -14,10 +14,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cf:typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false --include-runtime=false --env-interface TablecastEnv src/cloudflare-env.d.ts",
-    "lint": "oxlint src test oxlint.config.ts --type-aware --deny-warnings"
+    "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
+    "build:email": "bun --no-env-file scripts/tablecast-email-build.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "4.0.60",
     "@better-auth/drizzle-adapter": "1.7.2",
     "@better-auth/infra": "0.4.9",
     "@better-auth/oauth-provider": "1.7.2",
@@ -26,9 +26,6 @@
     "@hono/mcp": "0.3.2",
     "@hono/zod-validator": "0.9.1",
     "@inference-net/otel-cf-workers": "2.5.0",
-    "@mastra/core": "1.64.0",
-    "@mastra/observability": "1.17.6",
-    "@mastra/otel-bridge": "1.5.6",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@opentelemetry/api": "1.9.0",
     "@opentelemetry/resources": "2.2.0",
@@ -38,7 +35,7 @@
     "better-auth": "1.7.2",
     "drizzle-orm": "0.45.2",
     "hono": "4.13.7",
-    "livekit-server-sdk": "2.18.0",
+    "openai": "7.15.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zod": "4.5.4"

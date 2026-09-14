@@ -35,7 +35,7 @@
   "kiosk_voice_paused": "Voice is paused",
   "kiosk_voice_connecting": "Connecting voice",
   "kiosk_voice_listening": "Listening to you",
-  "kiosk_voice_thinking": "Let me check that",
+  "kiosk_voice_thinking": "Preparing a reply",
   "kiosk_voice_speaking": "Your cast is speaking",
   "kiosk_voice_error": "Voice is unavailable",
   "kiosk_voice_permission": "Microphone access is not allowed. Please check your browser settings.",
@@ -55,6 +55,8 @@
   "kiosk_latest": "Latest conversation",
   "kiosk_transcribing": "Transcribing",
   "kiosk_menu": "Our menu",
+  "kiosk_menu_empty": "There are no items on the menu at the moment. Please use the button at the top of the screen to call a member of staff if you need help.",
+  "kiosk_category_empty": "There are no items in this category. Please choose another category or All.",
   "kiosk_all": "All",
   "kiosk_cart": "Your basket",
   "kiosk_orders": "Your orders",
@@ -525,7 +527,7 @@
   "common_no_results": "No results",
   "kiosk_speech_speed": "Speech speed",
   "kiosk_following": "Following",
-  "kiosk_reply_interrupted": "The voice reply was interrupted. Check your basket and order history for the result.",
+  "kiosk_reply_interrupted": "This request could not be completed. Check your basket and order history for the result.",
   "kiosk_reply_generating": "Generating reply",
   "kiosk_cast_loading": "Loading cast settings",
   "kiosk_debug_prompt": "Cast and emotion prompt",
@@ -561,5 +563,10 @@
   "kiosk_allergens_none": "No declared allergens",
   "kiosk_allergen_separator": ", ",
   "common_language_native_ja": "日本語",
-  "common_language_native_en": "English"
+  "common_language_native_en": "English",
+  "voice_default_marin": "Marin (default)",
+  "kiosk_tools_working": "Working",
+  "kiosk_tool_waiting": "Waiting",
+  "kiosk_tool_separator": ", ",
+  "kiosk_tool_search_label": "Search: "
 }

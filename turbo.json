@@ -60,7 +60,7 @@
     },
     "//#dev:prepare": {
       "cache": false,
-      "passThroughEnv": ["TABLECAST_*", "INWORLD_API_KEY"]
+      "passThroughEnv": ["TABLECAST_*"]
     },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
@@ -82,11 +82,6 @@
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]
     },
-    "//#dev:livekit": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
-    },
     "@tablecast/emulate#dev": {
       "cache": false,
       "persistent": true,
@@ -102,7 +97,7 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"],
-      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit", "//#dev:livekit"]
+      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit"]
     },
     "@tablecast/web#build:local": {
       "dependsOn": ["//#dev:prepare"],
@@ -125,6 +120,11 @@
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+    },
+    "@tablecast/api#build:email": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/tablecast-catalog-config.ts"],
+      "outputs": ["email-static/**"],
+      "env": ["TABLECAST_RELEASE_SHA", "TABLECAST_PR_NUMBER"]
     }
   }
 }

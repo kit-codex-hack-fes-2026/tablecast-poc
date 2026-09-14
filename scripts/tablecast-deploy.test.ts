@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { waitForRelease } from "./tablecast-deploy";
-import { uploadPreviewImage } from "./tablecast-seed-media";
+import { seedMenuImages, uploadPreviewImage } from "./tablecast-seed-media";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -131,5 +131,71 @@ describe("PR商品画像の投入", () => {
     await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
     await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
     expect(media.put).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("商品画像群の投入", () => {
+  test("4件まで並行し、失敗後も開始済み処理を回収して次の画像群を投入しない", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const started = Promise.withResolvers<void>();
+    const fail = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    let active = 0;
+    let maximum = 0;
+    let calls = 0;
+    const media = {
+      head: vi.fn<R2Bucket["head"]>().mockImplementation(async () => {
+        const index = calls++;
+        active++;
+        maximum = Math.max(maximum, active);
+        if (calls === 4) started.resolve();
+        try {
+          if (index === 0) {
+            await fail.promise;
+            throw new Error("head: failure (10003)");
+          }
+          await release.promise;
+          return null;
+        } finally {
+          active--;
+        }
+      }),
+      put: vi
+        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<R2Object | null>>()
+        .mockImplementation(async (key, bytes) => ({
+          key,
+          version: "test",
+          size: bytes.length,
+          etag: createHash("md5").update(bytes).digest("hex"),
+          httpEtag: '"test"',
+          uploaded: new Date(0),
+          storageClass: "Standard",
+          checksums: { toJSON: () => ({}) },
+          writeHttpMetadata: () => {},
+        })),
+    };
+    let settled = false;
+    const result = seedMenuImages(media).finally(() => {
+      settled = true;
+    });
+    // rejectionの観測を先に登録し、回収前の失敗をunhandledにしない。
+    const rejected = (async () => {
+      await expect(result).rejects.toThrow("R2画像投入失敗");
+    })();
+    try {
+      await started.promise;
+      expect(maximum).toBe(4);
+      fail.resolve();
+      await vi.waitFor(() => expect(active).toBe(3));
+      expect(settled).toBe(false);
+      expect(calls).toBe(4);
+    } finally {
+      fail.resolve();
+      release.resolve();
+      await rejected;
+    }
+    expect(active).toBe(0);
+    expect(calls).toBe(4);
+    expect(media.put).toHaveBeenCalledTimes(3);
   });
 });
