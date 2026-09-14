@@ -5,6 +5,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { product } from "../../../.storybook/tablecast-fixtures";
 import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
+import { money } from "../../i18n/format";
 import { LocaleProvider } from "../../i18n/locale";
 import { ProductPage } from "./product-dialog";
 import "../../styles.css";
@@ -25,8 +26,8 @@ const pictured = productSchema.parse({
       max: 1,
       options: [
         {
-          id: "tablecast-sesame",
-          priceDelta: 0,
+          id: "tablecast sesame",
+          priceDelta: 80,
           available: true,
           text: text(
             "ごまバンズ",
@@ -60,7 +61,7 @@ const pictured = productSchema.parse({
       options: [
         {
           id: "tablecast-lettuce",
-          priceDelta: 0,
+          priceDelta: 40,
           available: true,
           text: text("レタス", "Lettuce", "歯触りのある葉野菜。", "Crisp leaves."),
           imageKey: "tablecast/images/tablecast-unavailable-lettuce.webp",
@@ -116,7 +117,9 @@ it.each([
     });
     await expect
       .element(sesame)
-      .toHaveAccessibleDescription(pictured.modifiers[0].options[0].text[locale].description);
+      .toHaveAccessibleDescription(
+        `${money(80, locale)} ${pictured.modifiers[0].options[0].text[locale].description}`,
+      );
     await expect.poll(() => document.querySelectorAll("img").length).toBe(0);
     await expect.element(screen.getByText(labels.kiosk_sold_out, { exact: true })).toBeVisible();
     await expect
@@ -144,6 +147,18 @@ it.each([
       name: locale === "ja" ? "チェダーチーズ: 数量を増やす" : "Cheddar: Increase quantity",
       exact: true,
     });
+    await expect
+      .element(increase)
+      .toHaveAccessibleDescription(
+        `${money(100, locale)} ${pictured.modifiers[2].options[0].text[locale].description}`,
+      );
+    await expect
+      .element(
+        screen.getByRole("checkbox", { name: locale === "ja" ? "レタス" : "Lettuce", exact: true }),
+      )
+      .toHaveAccessibleDescription(
+        `${money(40, locale)} ${pictured.modifiers[1].options[0].text[locale].description}`,
+      );
     await increase.click();
     await increase.click();
     await expect.element(increase).toBeDisabled();

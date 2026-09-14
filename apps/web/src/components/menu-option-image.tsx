@@ -12,8 +12,15 @@ export function MenuOptionImage({
   const [failedKey, setFailedKey] = useState<string | null>(null);
   if (!imageKey) return null;
   return (
-    <span className="flex w-24 shrink-0 flex-col gap-1" aria-hidden="true">
-      <span className="flex size-24 items-center justify-center overflow-hidden rounded-lg bg-muted">
+    <span className="flex w-24 shrink-0 flex-col gap-1">
+      <span
+        ref={(frame) => {
+          const image = frame?.querySelector("img");
+          if (image?.complete && image.naturalWidth === 0) setFailedKey(imageKey);
+        }}
+        aria-hidden="true"
+        className="flex size-24 items-center justify-center overflow-hidden rounded-lg bg-muted"
+      >
         {failedKey === imageKey ? (
           <ImageOff className="size-6 text-muted-foreground" />
         ) : (

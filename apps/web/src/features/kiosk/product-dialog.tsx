@@ -1,7 +1,7 @@
 import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { tv } from "tailwind-variants";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { ErrorNotice } from "../../components/error-notice";
@@ -38,20 +38,22 @@ const optionRow = tv({
 function OptionContent({
   option,
   locale,
+  id,
 }: {
   option: Product["modifiers"][number]["options"][number];
   locale: "ja" | "en";
+  id: string;
 }) {
   return (
     <span className="flex min-w-0 flex-1 items-center gap-3">
       <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
       <span className="min-w-0">
-        <span id={`${option.id}-name`} className="block font-medium wrap-break-word">
+        <span id={`${id}-name`} className="block font-medium wrap-break-word">
           {option.text[locale].displayName}
         </span>
         {option.text[locale].description && (
           <span
-            id={`${option.id}-description`}
+            id={`${id}-description`}
             className="mt-1 block text-sm leading-relaxed text-muted-foreground wrap-break-word"
           >
             {option.text[locale].description}
@@ -78,6 +80,7 @@ export function ProductPage({
   onSave: (line: CartLine) => void;
 }) {
   const { locale, t } = useI18n();
+  const id = useId();
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
@@ -110,7 +113,7 @@ export function ProductPage({
         <h2 className="text-lg font-semibold">{product.text[locale].displayName}</h2>
         <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
         <div className="my-3 text-lg font-semibold">{money(product.price, locale)}</div>
-        {product.modifiers.map((group) => (
+        {product.modifiers.map((group, groupIndex) => (
           <fieldset className="border-t border-t-border pt-5 px-0 pb-0.5 mb-4" key={group.id}>
             <legend className="flex items-center justify-between gap-3 w-full text-sm font-semibold pt-3.5">
               {group.text[locale].displayName}
@@ -147,7 +150,7 @@ export function ProductPage({
                     <span>{t("kiosk_no_selection")}</span>
                   </label>
                 )}
-                {group.options.map((option) => (
+                {group.options.map((option, optionIndex) => (
                   <label
                     className={optionRow({
                       selected: selections.some((item) => item.optionId === option.id),
@@ -157,13 +160,18 @@ export function ProductPage({
                     <RadioGroupItem
                       value={option.id}
                       disabled={!option.available || busy}
-                      aria-labelledby={`${option.id}-name`}
-                      aria-describedby={
-                        option.text[locale].description ? `${option.id}-description` : undefined
-                      }
+                      aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
+                      aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                     ></RadioGroupItem>
-                    <OptionContent option={option} locale={locale} />
-                    <small className="ml-auto text-sm whitespace-nowrap text-muted-foreground">
+                    <OptionContent
+                      option={option}
+                      locale={locale}
+                      id={`${id}-${groupIndex}-${optionIndex}`}
+                    />
+                    <small
+                      id={`${id}-${groupIndex}-${optionIndex}-price`}
+                      className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
+                    >
                       {!option.available
                         ? t("kiosk_sold_out")
                         : option.priceDelta !== 0
@@ -174,7 +182,7 @@ export function ProductPage({
                 ))}
               </RadioGroup>
             ) : (
-              group.options.map((option) => {
+              group.options.map((option, optionIndex) => {
                 const amount =
                   selections.find((item) => item.optionId === option.id)?.quantity ?? 0;
                 return (
@@ -184,25 +192,34 @@ export function ProductPage({
                   >
                     {group.kind === "multiple" ? (
                       <label
-                        htmlFor={`${option.id}-control`}
+                        htmlFor={`${id}-${groupIndex}-${optionIndex}-control`}
                         className="flex min-w-0 flex-1 items-center gap-3"
                       >
                         <Checkbox
-                          id={`${option.id}-control`}
+                          id={`${id}-${groupIndex}-${optionIndex}-control`}
                           checked={amount > 0}
                           onCheckedChange={(checked) => select(option.id, checked ? 1 : 0)}
                           disabled={!option.available || busy}
-                          aria-labelledby={`${option.id}-name`}
-                          aria-describedby={
-                            option.text[locale].description ? `${option.id}-description` : undefined
-                          }
+                          aria-labelledby={`${id}-${groupIndex}-${optionIndex}-name`}
+                          aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                         ></Checkbox>
-                        <OptionContent option={option} locale={locale} />
+                        <OptionContent
+                          option={option}
+                          locale={locale}
+                          id={`${id}-${groupIndex}-${optionIndex}`}
+                        />
                       </label>
                     ) : (
-                      <OptionContent option={option} locale={locale} />
+                      <OptionContent
+                        option={option}
+                        locale={locale}
+                        id={`${id}-${groupIndex}-${optionIndex}`}
+                      />
                     )}
-                    <small className="ml-auto text-sm whitespace-nowrap text-muted-foreground">
+                    <small
+                      id={`${id}-${groupIndex}-${optionIndex}-price`}
+                      className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
+                    >
                       {!option.available
                         ? t("kiosk_sold_out")
                         : option.priceDelta !== 0
@@ -218,6 +235,7 @@ export function ProductPage({
                           className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
                           variant="ghost"
                           type="button"
+                          aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           aria-label={`${option.text[locale].displayName}: ${t("common_decrease")}`}
                           disabled={amount === 0 || busy}
                           onClick={() => select(option.id, amount - 1)}
@@ -229,6 +247,7 @@ export function ProductPage({
                           className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
                           variant="ghost"
                           type="button"
+                          aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
                           aria-label={`${option.text[locale].displayName}: ${t("common_increase")}`}
                           disabled={amount >= option.maxQuantity || !option.available || busy}
                           onClick={() => select(option.id, amount + 1)}
