@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -29,12 +28,11 @@ export function VisitHistory({
           void history.refetch();
         }}
       />
-      {history.isPending ? (
-        <LoadingState />
-      ) : !history.data ? null : (
+      {(history.isPending || history.data) && (
         <VisitHistoryTable
           sessions={history.data?.pages.flatMap((page) => page.sessions) ?? []}
           onSelect={onSelect}
+          pending={history.isPending}
         />
       )}
       {history.hasNextPage && (
@@ -57,7 +55,9 @@ export function VisitHistory({
 export function VisitHistoryTable({
   sessions,
   onSelect,
+  pending = false,
 }: {
+  pending?: boolean;
   sessions: ClosedSessionSummary[];
   onSelect: (sessionId: string) => void;
 }) {
@@ -69,6 +69,7 @@ export function VisitHistoryTable({
   return (
     <DataTable
       data={sessions}
+      pending={pending}
       columns={columns}
       getRowId={(row) => row.id}
       empty={t("admin_history_empty")}

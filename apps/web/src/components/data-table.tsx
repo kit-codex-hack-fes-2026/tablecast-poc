@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { ErrorNotice } from "./error-notice";
-import { LoadingState } from "./loading-state";
+import { Skeleton } from "./ui/skeleton";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -52,15 +52,19 @@ export function DataTable<T>({
     getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
     initialState: { pagination: { pageSize: 20 } },
   });
-  if (pending) return <LoadingState />;
-  if (error && !data.length)
+  if (error && !data.length && !pending)
     return (
       <div className="min-h-80">
         <ErrorNotice error={error} onRetry={onRetry} />
       </div>
     );
   return (
-    <div className="min-h-80 space-y-3 motion-safe:animate-tablecast-enter">
+    <div className="min-h-80 space-y-3" aria-busy={pending}>
+      {pending && (
+        <span role="status" className="sr-only">
+          {t("common_loading")}
+        </span>
+      )}
       {searchLabel && (
         <label className="relative block max-w-sm">
           <Search
@@ -70,6 +74,7 @@ export function DataTable<T>({
           <span className="sr-only">{searchLabel}</span>
           <Input
             type="search"
+            disabled={pending && !data.length}
             className="pl-10"
             placeholder={searchLabel}
             value={filter}
@@ -96,7 +101,17 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.length ? (
+            {pending && !data.length ? (
+              ["first", "second"].map((id) => (
+                <tr key={id} aria-hidden="true">
+                  {table.getVisibleLeafColumns().map((column) => (
+                    <TableCell key={column.id}>
+                      <Skeleton className="h-11 w-full" />
+                    </TableCell>
+                  ))}
+                </tr>
+              ))
+            ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} data-row-id={row.id} className="hover:bg-secondary/50">
                   {row.getVisibleCells().map((cell) => (
@@ -122,14 +137,16 @@ export function DataTable<T>({
       {pagination && (
         <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
           <span>
-            {table.getFilteredRowModel().rows.length} {t("common_records")}
+            {pending
+              ? t("common_loading")
+              : `${table.getFilteredRowModel().rows.length} ${t("common_records")}`}
           </span>
           <div className="flex items-center gap-2">
             <Button
               size="icon"
               variant="outline"
               aria-label={t("common_previous_page")}
-              disabled={!table.getCanPreviousPage()}
+              disabled={pending || !table.getCanPreviousPage()}
               onClick={() => table.previousPage()}
             >
               <ChevronLeft />
@@ -141,7 +158,7 @@ export function DataTable<T>({
               size="icon"
               variant="outline"
               aria-label={t("common_next_page")}
-              disabled={!table.getCanNextPage()}
+              disabled={pending || !table.getCanNextPage()}
               onClick={() => table.nextPage()}
             >
               <ChevronRight />

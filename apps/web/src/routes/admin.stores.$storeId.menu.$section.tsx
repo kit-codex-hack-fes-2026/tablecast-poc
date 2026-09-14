@@ -7,7 +7,8 @@ export const Route = createFileRoute("/admin/stores/$storeId/menu/$section")({
   loader: async ({ context, params }) => {
     await context.queryClient.ensureQueryData(catalogOptions(params.storeId));
   },
-  component: Page,
+  pendingComponent: () => <Page />,
+  component: () => <Page />,
 });
 function Page() {
   const { section } = Route.useParams();

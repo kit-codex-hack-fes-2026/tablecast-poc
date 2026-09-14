@@ -6,7 +6,6 @@ import { ArrowUpRight, FilePenLine, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -128,15 +127,14 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
         error={catalog.error || draft.error || create.error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
-      {configuration ? (
+      {(configuration || !(catalog.error || draft.error)) && (
         <DataTable
-          data={rows(configuration)}
+          data={configuration ? rows(configuration) : []}
+          pending={!configuration}
           columns={columns}
           getRowId={(row) => row.id}
           searchLabel={t("menu_search")}
         />
-      ) : (
-        !(catalog.error || draft.error) && <LoadingState />
       )}
     </>
   );
