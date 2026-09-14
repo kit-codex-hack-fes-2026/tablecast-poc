@@ -82,12 +82,14 @@ export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId
           validators={{
             onChangeListenTo: ["kind"],
             onChange: ({ value, fieldApi }) =>
-              zodFieldValidator(
-                fieldApi.form.getFieldValue("kind") === "payment"
-                  ? z.number().int().min(1)
-                  : z.number().int(),
-                locale,
-              )({ value }),
+              Number.isNaN(value)
+                ? t("form_required")
+                : zodFieldValidator(
+                    fieldApi.form.getFieldValue("kind") === "payment"
+                      ? z.number().int().min(1)
+                      : z.number().int(),
+                    locale,
+                  )({ value }),
           }}
         >
           {(field) => <field.NumberField label={t("admin_amount")} step={1} required />}
