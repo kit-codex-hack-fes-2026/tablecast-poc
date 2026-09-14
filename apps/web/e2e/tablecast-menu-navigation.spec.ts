@@ -59,6 +59,9 @@ for (const { locale, labels } of [
       .screenshot({ path: testInfo.outputPath(`tablecast-menu-search-${locale}.png`) });
     await row.getByRole("link", { name: labels.admin_details, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${menu}/products/${product.id}`));
+    await expect(
+      page.getByRole("heading", { name: product.text[locale].displayName, exact: true }),
+    ).toBeVisible();
     expect(new URL(page.url()).search).toBe(context);
     let newDraftRequests = 0;
     page.on("request", (request) => {

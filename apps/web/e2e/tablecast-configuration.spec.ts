@@ -77,7 +77,7 @@ for (const { locale, labels } of [
       .getByRole("link", { name: labels.editor_products, exact: true })
       .click();
     await page.getByRole("link", { name: labels.admin_drafts, exact: true }).click();
-    await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}`);
+    await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}?returnSection=products`);
     await expect(
       page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
     ).toBeVisible();

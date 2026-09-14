@@ -97,6 +97,6 @@ export function ConfigurationRouteStatus({
       draft={draft.data}
     />
   ) : (
-    <span>{storeName}</span>
+    <span className="block text-sm font-semibold">{storeName}</span>
   );
 }
