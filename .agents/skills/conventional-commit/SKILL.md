@@ -5,6 +5,8 @@ description: TableCastのコミット分割・メッセージ作成・commitlint
 
 # Conventional Commits + Gitmoji
 
+この形式はコミットメッセージにだけ適用する。PRタイトルは[PR運用](../github-issue-pr-ops/references/pr-and-merge.md#タイトル)に従い、Conventional Commits形式やGitmojiの接頭辞を付けず、自然な日本語で変更内容を表す。
+
 ## メッセージ
 
 ```text

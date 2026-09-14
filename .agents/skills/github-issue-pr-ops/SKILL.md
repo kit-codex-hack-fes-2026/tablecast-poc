@@ -7,6 +7,8 @@ description: TableCastのIssue・PRの作成・更新・レビュー対応・引
 
 Issueに現在の目的・受入条件、PRに実装差分・検証、メタデータに担当・関係を置く。本文は日本語の常体、タイトルは内容が分かる自然な言葉にする。
 
+通常PR・release PRとも、タイトルは自然な日本語で変更内容を表す。`feat:`や`chore(scope):`などのConventional Commits形式やGitmojiの接頭辞を付けない。コミット規約をPRタイトルへ適用しない。
+
 ## 作業に応じた入口
 
 | 作業                                 | 使うもの                                                                                                                                        |
