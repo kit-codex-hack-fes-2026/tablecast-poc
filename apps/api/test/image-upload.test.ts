@@ -200,42 +200,51 @@ it("不正Base64・偽装形式・破損画像・容量超過・生成写真を�
   );
 });
 
-it("他店舗の画像・出所の改ざん・消えた画像を下書きと公開で拒否する", async () => {
-  const { staff } = await setupFixture();
-  const services = createApiServices(env);
-  const saved = await uploadImage(services, staff, input);
-  const other = { ...staff, storeId: "tablecast-other-store" };
-  const foreign = await uploadImage(services, other, input);
-  expect(foreign.imageKey).not.toBe(saved.imageKey);
-  let draft = await createDraft(services, staff);
-  const configuration = structuredClone(draft.configuration);
-  const product = configuration.products[0];
-  if (!product) throw new Error("商品fixtureがありません");
-  Object.assign(product, { imageKey: foreign.imageKey, ...metadata });
-  await expect(
-    updateDraft(services, staff, draft.id, { expectedVersion: draft.version, configuration }),
-  ).rejects.toMatchObject({ code: "IMAGE_FORBIDDEN" });
-  product.imageKey = saved.imageKey;
-  product.imageKind = "photograph";
-  await expect(
-    updateDraft(services, staff, draft.id, { expectedVersion: draft.version, configuration }),
-  ).rejects.toMatchObject({ code: "IMAGE_METADATA_MISMATCH" });
-  product.imageKind = "illustration";
-  draft = await updateDraft(services, staff, draft.id, {
-    expectedVersion: draft.version,
-    configuration,
-  });
-  await validateDraft(services, staff, draft.id, draft.version);
-  await env.TABLECAST_MEDIA.delete(saved.imageKey);
-  await expect(
-    publishDraft(services, staff, draft.id, {
+it.each(["商品", "選択肢"])(
+  "%sの他店舗画像・種別改ざん・消失を下書きと公開で拒否する",
+  async (target) => {
+    const { staff } = await setupFixture();
+    const services = createApiServices(env);
+    const saved = await uploadImage(services, staff, input);
+    const other = { ...staff, storeId: "tablecast-other-store" };
+    const foreign = await uploadImage(services, other, input);
+    expect(foreign.imageKey).not.toBe(saved.imageKey);
+    let draft = await createDraft(services, staff);
+    const configuration = structuredClone(draft.configuration);
+    const product =
+      target === "商品"
+        ? configuration.products[0]
+        : configuration.products.flatMap((item) => item.modifiers)[0]?.options[0];
+    if (!product) throw new Error("画像対象のfixtureがありません");
+    Object.assign(product, {
+      imageKey: foreign.imageKey,
+      ...(target === "商品" ? metadata : { imageKind: metadata.imageKind }),
+    });
+    await expect(
+      updateDraft(services, staff, draft.id, { expectedVersion: draft.version, configuration }),
+    ).rejects.toMatchObject({ code: "IMAGE_FORBIDDEN" });
+    product.imageKey = saved.imageKey;
+    product.imageKind = "photograph";
+    await expect(
+      updateDraft(services, staff, draft.id, { expectedVersion: draft.version, configuration }),
+    ).rejects.toMatchObject({ code: "IMAGE_METADATA_MISMATCH" });
+    product.imageKind = "illustration";
+    draft = await updateDraft(services, staff, draft.id, {
       expectedVersion: draft.version,
-      baseVersion: draft.baseVersion,
-      idempotencyKey: "tablecast-missing-image-publication",
-      approved: true,
-    }),
-  ).rejects.toMatchObject({ code: "IMAGE_NOT_FOUND" });
-});
+      configuration,
+    });
+    await validateDraft(services, staff, draft.id, draft.version);
+    await env.TABLECAST_MEDIA.delete(saved.imageKey);
+    await expect(
+      publishDraft(services, staff, draft.id, {
+        expectedVersion: draft.version,
+        baseVersion: draft.baseVersion,
+        idempotencyKey: "tablecast-missing-image-publication",
+        approved: true,
+      }),
+    ).rejects.toMatchObject({ code: "IMAGE_NOT_FOUND" });
+  },
+);
 
 it("管理APIは未認証・不正な出所JSONを拒否する", async () => {
   const { staff, cookie } = await setupFixture();

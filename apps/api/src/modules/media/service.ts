@@ -175,9 +175,18 @@ export async function requireConfigurationImages(
   actor: Actor,
   configuration: Configuration,
 ) {
-  const images = configuration.products.filter((product) =>
-    product.imageKey?.startsWith("tablecast/uploads/"),
-  );
+  const images = [
+    ...configuration.products.map((product) => ({ ...product, verifySource: true })),
+    ...configuration.products.flatMap((product) =>
+      product.modifiers.flatMap((modifier) =>
+        modifier.options.map((option) => ({
+          ...option,
+          imageSource: undefined,
+          verifySource: false,
+        })),
+      ),
+    ),
+  ].filter((image) => image.imageKey?.startsWith("tablecast/uploads/"));
   const stored = new Map(
     await Promise.all(
       [...new Set(images.map((product) => product.imageKey))].map(async (key) => {
@@ -194,8 +203,9 @@ export async function requireConfigurationImages(
     const metadata = imageMetadataSchema.parse(JSON.parse(asset.customMetadata.metadata ?? "null"));
     ensure(
       product.imageKind === metadata.imageKind &&
-        product.imageSource?.generated === metadata.imageSource.generated &&
-        product.imageSource?.description === metadata.imageSource.description,
+        (!product.verifySource ||
+          (product.imageSource?.generated === metadata.imageSource.generated &&
+            product.imageSource?.description === metadata.imageSource.description)),
       "IMAGE_METADATA_MISMATCH",
       422,
     );
