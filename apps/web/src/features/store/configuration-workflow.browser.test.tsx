@@ -18,6 +18,7 @@ import ja from "../../../messages/ja.json";
 import en from "../../../messages/en.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
+import { m } from "../../paraglide/messages";
 import { StoreShell } from "./store-shell";
 import { MenuItem } from "./menu-item";
 import { DraftPage } from "./settings-drafts";
@@ -30,6 +31,7 @@ let current: ConfigDraft;
 let unexpected: string[];
 let requests: Request[];
 let saveFailure = 0;
+let publishFailure = 0;
 let draftReadFailure = 0;
 let waitForSave: Promise<void> | undefined;
 let waitForCreate: Promise<void> | undefined;
@@ -73,6 +75,7 @@ beforeEach(() => {
   requests = [];
   unexpected = [];
   saveFailure = 0;
+  publishFailure = 0;
   draftReadFailure = 0;
   waitForSave = undefined;
   waitForCreate = undefined;
@@ -155,6 +158,8 @@ beforeEach(() => {
         return Response.json(current);
       }
       if (path === `${api}/drafts/${current.id}/publish`) {
+        if (publishFailure)
+          return Response.json({ error: { code: "DRAFT_CONFLICT" } }, { status: publishFailure });
         current = { ...current, status: "published" };
         return Response.json(current);
       }
@@ -354,6 +359,52 @@ it.each([
     });
   },
 );
+
+it("他スタッフの公開と競合したら公開版と下書きを再取得し、古い版の再公開を止める", async () => {
+  current.status = "ready";
+  const { screen } = await open(`${base}/changes/${draftId}`);
+  const main = screen.getByRole("main");
+  const publish = main.getByRole("button", { name: ja.admin_publish, exact: true });
+  await expect.element(publish).toBeEnabled();
+  await publish.click();
+  const confirmation = screen.getByRole("dialog", { name: ja.workflow_publish_title, exact: true });
+  // 公開確認を開いた後に、他スタッフが公開版と下書きの保存版を更新する。
+  publishedVersion = 2;
+  current = { ...current, version: 8, status: "draft" };
+  publishFailure = 409;
+  await confirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+  await expect.element(main.getByText(ja.workflow_stale, { exact: true })).toBeVisible();
+  await expect.element(confirmation).not.toBeInTheDocument();
+  await expect
+    .element(
+      main
+        .getByText(m.workflow_published_version({ version: 2 }, { locale: "ja" }), {
+          exact: true,
+        })
+        .first(),
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      main
+        .getByText(m.workflow_revision({ version: 8 }, { locale: "ja" }), { exact: true })
+        .first(),
+    )
+    .toBeVisible();
+  await expect
+    .element(main.getByRole("link", { name: ja.workflow_view_published, exact: true }))
+    .toHaveAttribute("href", `${base}/products`);
+  await expect.element(publish).toBeDisabled();
+  expect(requests.filter((request) => request.url.endsWith("/publish"))).toHaveLength(1);
+  expect(
+    requests.filter((request) => request.method === "GET" && request.url.endsWith("/catalog")),
+  ).toHaveLength(2);
+  expect(
+    requests.filter(
+      (request) => request.method === "GET" && request.url.endsWith(`/drafts/${draftId}`),
+    ),
+  ).toHaveLength(2);
+});
 
 it("編集開始では再開と新規を選び、再開時は下書きを増やさない", async () => {
   const { screen, router } = await open(`${base}/products`);
