@@ -197,6 +197,11 @@ test("フロア・メニュー・履歴の初回読込も見出しと表を維�
   ).toBe(true);
   await page.goto("/account");
   await expect(page.getByLabel(ja.account_name, { exact: true })).toBeEnabled();
+  const floorPath = await page
+    .getByRole("link", { name: ja.admin_live, exact: true })
+    .getAttribute("href");
+  if (!floorPath) throw new Error("選択中の店舗のフロアリンクがありません。");
+  const storePath = floorPath.replace(/\/floor$/u, "");
   // 初回の親route chunkが遅れても、その下のフロア待機表示へ到達する。
   await page.route("**/assets/*.js", async (route) => {
     await delay(500);
@@ -204,18 +209,18 @@ test("フロア・メニュー・履歴の初回読込も見出しと表を維�
   });
   for (const target of [
     {
-      path: "/admin/stores/tablecast-akari/floor",
-      endpoint: "**/api/admin/stores/tablecast-akari",
+      path: floorPath,
+      endpoint: `**/api${storePath}`,
       title: ja.admin_live,
     },
     {
-      path: "/admin/stores/tablecast-akari/menu/products",
-      endpoint: "**/api/admin/stores/tablecast-akari/catalog",
+      path: `${storePath}/menu/products`,
+      endpoint: `**/api${storePath}/catalog`,
       title: ja.editor_products,
     },
     {
-      path: "/admin/stores/tablecast-akari/visits",
-      endpoint: "**/api/admin/stores/tablecast-akari/history?*",
+      path: `${storePath}/visits`,
+      endpoint: `**/api${storePath}/history?*`,
       title: ja.admin_history,
     },
   ]) {

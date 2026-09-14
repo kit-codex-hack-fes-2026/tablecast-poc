@@ -4,8 +4,13 @@ import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import type { BatchItem } from "drizzle-orm/batch";
 import * as business from "../apps/api/src/db/business-schema";
 import * as identity from "../apps/api/src/db/auth-schema";
-import { seedIdentityIcon } from "./tablecast-seed-icons";
-import { fakerJA as faker } from "@faker-js/faker";
+import { legacyIdentityIconUrl, seedIdentityIcon } from "./tablecast-seed-icons";
+import {
+  tablecastDemoIdentities,
+  tablecastDemoLinkIdentity,
+  tablecastDemoEmail,
+  tablecastDemoStoreIcons,
+} from "../apps/emulate/src/tablecast-demo-identities";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
 import {
   configurationErrors,
@@ -44,6 +49,11 @@ export function sampleLine(config: Configuration, index = 2): CartLine {
 }
 
 type SeedEvent = { storeId: string; sessionId: string; kind: string; data: string; at: number };
+function syntheticSpeaker(sessionId: string, index: number | null) {
+  const streamId = `${sessionId}-synthetic-stream`;
+  return { id: index === null ? null : `${streamId}:${index}`, streamId, words: [] };
+}
+
 function event(
   storeId: string,
   sessionId: string,
@@ -241,6 +251,7 @@ async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store,
             role: "user",
             locale,
             status: "completed",
+            speaker: syntheticSpeaker(sessionId, number % guestCount),
             text:
               locale === "ja"
                 ? `${productName}について教えてください。`
@@ -298,6 +309,7 @@ async function seedHistory(db: DrizzleD1Database<typeof identity>, store: Store,
             role: "user",
             locale,
             status: "completed",
+            speaker: syntheticSpeaker(sessionId, number === 3 ? null : (number + 1) % guestCount),
             text:
               locale === "ja"
                 ? "画面で確認して注文します。"
@@ -379,7 +391,7 @@ async function seedCurrentTables(
       continue;
     const at = baseTime - number * 3 * 60_000;
     const locale = number % 3 === 0 ? "en" : "ja";
-    const guestCount = 2 + (number % 3);
+    const guestCount = state === 2 ? 2 : 2 + (number % 3);
     const rule = state === 6 ? store.configuration.plans[0] : null;
     const plan = rule ? { id: rule.id, startedAt: at, rules: rule } : null;
     const lines = state === 2 || state === 3 ? [sampleLine(store.configuration)] : [];
@@ -402,6 +414,62 @@ async function seedCurrentTables(
       }),
       event(store.id, sessionId, "table.opened", { guestCount, locale }, at),
     ];
+    if (state === 2) {
+      const product = store.configuration.products.find((item) => item.id === lines[0]?.productId);
+      if (!product) throw new Error("背景卓の会話に対応する商品がありません。");
+      const dialogue = [
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 0),
+          text:
+            locale === "ja"
+              ? "ふたりで楽しめるおすすめを教えてください。"
+              : "Could you recommend something for the two of us?",
+        },
+        {
+          role: "assistant",
+          text: `${product.text[locale].displayName}${locale === "ja" ? "。" : ". "}${product.text[locale].description}`,
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 1),
+          text: locale === "ja" ? "それを二つお願いします。" : "Two of those, please.",
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, 0),
+          text:
+            locale === "ja"
+              ? "すみません、一つに訂正してください。画面でも確認します。"
+              : "Sorry, please change that to one. We will check it on screen too.",
+        },
+        {
+          role: "assistant",
+          text:
+            locale === "ja"
+              ? `${product.text.ja.displayName}は一つでカートに入っています。注文はまだ送信していません。`
+              : `There is one ${product.text.en.displayName} in your basket. The order has not been sent yet.`,
+        },
+        {
+          role: "user",
+          speaker: syntheticSpeaker(sessionId, null),
+          text:
+            locale === "ja"
+              ? "少し待ってください。相談してから注文します。"
+              : "Please give us a moment. We will decide together before ordering.",
+        },
+      ];
+      for (const [index, line] of dialogue.entries())
+        statements.push(
+          event(
+            store.id,
+            sessionId,
+            `voice.${line.role}`,
+            { ...line, locale, status: "completed" },
+            at + (index + 1) * 5000,
+          ),
+        );
+    }
     if ((state >= 3 && state <= 7) || closed) {
       const snapshot = snapshotFor(
         store,
@@ -475,10 +543,173 @@ export type SeedEnv = Pick<
 
 export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
-  return populateDemoDatabase(env, credentials);
+  return populateDemoDatabase(env, normaliseDemoCredentials(credentials));
+}
+
+function normaliseDemoCredentials(credentials: DemoCredentials) {
+  const normalised = {
+    ...credentials,
+    email: tablecastDemoEmail(credentials.email),
+    otherEmail: tablecastDemoEmail(credentials.otherEmail),
+  };
+  const staff = demoStaff(normalised);
+  const emails = staff.map((person) => person.email.toLowerCase());
+  if (new Set(emails).size !== emails.length || emails.includes(tablecastDemoLinkIdentity.email))
+    throw new Error("独自オーナーメールがデモ人物と重複しています。");
+  return normalised;
+}
+
+async function migrateDemoIdentityEmails(env: SeedEnv) {
+  const people = [...tablecastDemoIdentities, tablecastDemoLinkIdentity];
+  const db = drizzle(env.TABLECAST_DB);
+  const users = await db
+    .select({ id: identity.user.id, email: identity.user.email })
+    .from(identity.user)
+    .where(
+      inArray(
+        identity.user.email,
+        people.flatMap((person) => [person.email, ...person.legacyEmails]),
+      ),
+    );
+  const updates: BatchItem<"sqlite">[] = [];
+  for (const person of people) {
+    const previous = users.filter((user) =>
+      person.legacyEmails.some((email) => email === user.email),
+    );
+    if (!previous.length) continue;
+    if (previous.length > 1 || users.some((user) => user.email === person.email))
+      throw new Error(`デモメールの移行先が既存ユーザーと重複しています: ${person.email}`);
+    const user = previous[0];
+    if (!user) continue;
+    // 旧こもれびの一般スタッフを新デモの管理者へ移行する。通常の権限変更は保持する。
+    if (user.email === "tablecast-member@example.test")
+      updates.push(
+        db
+          .update(identity.member)
+          .set({ role: "admin" })
+          .where(
+            and(
+              eq(identity.member.userId, user.id),
+              eq(identity.member.role, "member"),
+              inArray(
+                identity.member.organizationId,
+                db
+                  .select({ id: business.stores.organization_id })
+                  .from(business.stores)
+                  .where(eq(business.stores.id, "tablecast-komorebi")),
+              ),
+            ),
+          ),
+      );
+    updates.push(
+      db
+        .update(identity.user)
+        .set({ email: person.email })
+        .where(and(eq(identity.user.id, user.id), eq(identity.user.email, user.email))),
+      db
+        .update(identity.account)
+        .set({ accountId: person.email })
+        .where(
+          and(
+            eq(identity.account.userId, user.id),
+            eq(identity.account.providerId, "google"),
+            eq(identity.account.issuer, tablecastGoogleMockIssuer),
+            eq(identity.account.accountId, user.email),
+          ),
+        ),
+    );
+  }
+  // ユーザーID・資格情報を保ち、旧デモのメール・subject・既知の役割を同時に移行する。
+  const [first, ...rest] = updates;
+  if (first) await db.batch([first, ...rest]);
+}
+
+function demoStaff(credentials: DemoCredentials) {
+  return tablecastDemoIdentities.flatMap((person) => {
+    const email =
+      person.role === "owner"
+        ? person.stores.some((storeId) => storeId === "tablecast-koharu")
+          ? credentials.otherEmail
+          : credentials.email
+        : person.email;
+    // 独自メールは追加の所有者として保持し、Google名簿の所有者も必ず投入する。
+    return email === person.email ? [person] : [person, { ...person, email }];
+  });
+}
+
+async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentials) {
+  const staff = [...demoStaff(credentials), tablecastDemoLinkIdentity];
+  const db = drizzle(env.TABLECAST_DB);
+  const [users, organisations] = await db.batch([
+    db
+      .select({ id: identity.user.id, email: identity.user.email })
+      .from(identity.user)
+      .where(
+        inArray(
+          identity.user.email,
+          staff.map((person) => person.email),
+        ),
+      ),
+    db
+      .select({
+        id: identity.organization.id,
+        storeId: sql<string>`${business.stores.id}`.as("store_id"),
+      })
+      .from(identity.organization)
+      .innerJoin(business.stores, eq(business.stores.organization_id, identity.organization.id))
+      .where(inArray(business.stores.id, Object.keys(tablecastDemoStoreIcons))),
+  ]);
+  const updates: BatchItem<"sqlite">[] = [];
+  for (const user of users) {
+    const person = staff.find((candidate) => candidate.email === user.email);
+    if (!person) continue;
+    const image = await seedIdentityIcon(env, person.imageFile);
+    updates.push(
+      db
+        .update(identity.user)
+        .set({ image })
+        .where(
+          and(
+            eq(identity.user.id, user.id),
+            or(
+              isNull(identity.user.image),
+              eq(identity.user.image, legacyIdentityIconUrl("user", user.id)),
+            ),
+          ),
+        ),
+    );
+  }
+  for (const organisation of organisations) {
+    const file = tablecastDemoStoreIcons[organisation.storeId];
+    if (!file) continue;
+    const logo = await seedIdentityIcon(env, file);
+    updates.push(
+      db
+        .update(identity.organization)
+        .set({ logo })
+        .where(
+          and(
+            eq(identity.organization.id, organisation.id),
+            or(
+              isNull(identity.organization.logo),
+              inArray(identity.organization.logo, [
+                legacyIdentityIconUrl("store", organisation.storeId),
+                ...(organisation.storeId === "tablecast-hanul"
+                  ? [legacyIdentityIconUrl("store", "tablecast-akari")]
+                  : []),
+              ]),
+            ),
+          ),
+        ),
+    );
+  }
+  // 更新時点でも旧seedのURLかを判定し、並行した手動変更を保つ。
+  const [first, ...rest] = updates;
+  if (first) await db.batch([first, ...rest]);
 }
 
 export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
+  credentials = normaliseDemoCredentials(credentials);
   if (
     env.TABLECAST_ENV !== "preview" ||
     !/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
@@ -493,10 +724,18 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     `${owner.environment}.kit-codex.workers.dev` !== new URL(env.TABLECAST_PUBLIC_ORIGIN).hostname
   )
     throw new Error("PR初期投入の所有情報が一致しません。");
-  if (owner.seeded === 1) return false;
+  if (owner.seeded === 1) {
+    // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
+    await seedMenuImages(env.TABLECAST_MEDIA);
+    await migrateDemoIdentityEmails(env);
+    await refreshDemoIdentityIcons(env, credentials);
+    return false;
+  }
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
   if (owner.seeded === 2) {
     await seedMenuImages(env.TABLECAST_MEDIA, true);
+    await migrateDemoIdentityEmails(env);
+    await refreshDemoIdentityIcons(env, credentials);
     return true;
   }
   if (owner.seeded !== 0 && owner.seeded !== 3) throw new Error("PR初期投入の進捗が不正です。");
@@ -525,6 +764,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   await seedMenuImages(env.TABLECAST_MEDIA);
+  await migrateDemoIdentityEmails(env);
   const db = drizzle(env.TABLECAST_DB, { schema: identity });
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。
@@ -567,80 +807,24 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   }
   const [firstRepair, ...remainingRepairs] = [...repairs, ...canonical];
   if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
+  const staff = demoStaff(credentials);
   const owners: string[] = [];
-  for (const [email, password, name] of [
-    [credentials.email, credentials.password, "佐藤 晴香"],
-    [credentials.otherEmail, credentials.otherPassword, "山本 翼"],
+  for (const [email, password] of [
+    [credentials.email, credentials.password],
+    [credentials.otherEmail, credentials.otherPassword],
   ]) {
-    if (!email || !password || !name) throw new Error("デモ認証情報が不正です。");
+    const person = staff.find((candidate) => candidate.email === email);
+    if (!email || !password || !person) throw new Error("デモ認証情報が不正です。");
     const existing = await db
       .select({ id: identity.user.id })
       .from(identity.user)
       .where(eq(identity.user.email, email))
       .get();
-    const user = existing ?? (await auth.api.signUpEmail({ body: { email, password, name } })).user;
-    await db
-      .update(identity.user)
-      .set({
-        emailVerified: true,
-        image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
-      })
-      .where(eq(identity.user.id, user.id));
+    const user =
+      existing ??
+      (await auth.api.signUpEmail({ body: { email, password, name: person.name } })).user;
     owners.push(user.id);
   }
-  faker.seed(20260909);
-  const staff = [
-    {
-      email: "tablecast-owner@example.test",
-      name: "佐藤 晴香",
-      role: "admin",
-      store: "tablecast-komorebi",
-    },
-    {
-      email: "tablecast-member@example.test",
-      name: "田中 蓮",
-      role: "member",
-      store: "tablecast-komorebi",
-    },
-    {
-      email: "tablecast-akari@example.test",
-      name: "小林 直子",
-      role: "member",
-      store: "tablecast-akari",
-    },
-    {
-      email: "tablecast-koharu@example.test",
-      name: "山本 翼",
-      role: "admin",
-      store: "tablecast-koharu",
-    },
-  ];
-  const staffInserts: BatchItem<"sqlite">[] = [];
-  for (const store of demoStores(credentials.profile)) {
-    for (let index = 0; index < 12; index++) {
-      const email = `tablecast-${store.id}-member-${index + 1}@example.test`;
-      const name = faker.person.fullName();
-      const userId = `tablecast-seed-user-${store.id}-${index + 1}`;
-      const createdAt = credentials.baseTime - (index + 1) * 86400000;
-      staffInserts.push(
-        db
-          .insert(identity.user)
-          .values({
-            id: userId,
-            name,
-            email,
-            emailVerified: true,
-            createdAt: new Date(createdAt),
-            updatedAt: new Date(createdAt),
-            locale: "ja",
-          })
-          .onConflictDoNothing({ target: identity.user.email }),
-      );
-      staff.push({ email, name, role: index === 0 ? "admin" : "member", store: store.id });
-    }
-  }
-  const [firstStaff, ...remainingStaff] = staffInserts;
-  if (firstStaff) await db.batch([firstStaff, ...remainingStaff]);
   const existingStaff = await db
     .select({ id: identity.user.id, email: identity.user.email })
     .from(identity.user)
@@ -666,7 +850,6 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
         .update(identity.user)
         .set({
           emailVerified: true,
-          image: sql`coalesce(${identity.user.image},${await seedIdentityIcon(env, "user", user.id)})`,
         })
         .where(eq(identity.user.id, user.id)),
     );
@@ -692,12 +875,6 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
         body: { name: store.name, slug: `tablecast-store-${store.id}`, userId },
       }));
     if (!organization) throw new Error("デモ店舗を作成できませんでした。");
-    await db
-      .update(identity.organization)
-      .set({
-        logo: sql`coalesce(${identity.organization.logo},${await seedIdentityIcon(env, "store", store.id)})`,
-      })
-      .where(eq(identity.organization.id, organization.id));
     const owner: Owner = { id: organization.id, userId };
     const existing = await db
       .select()
@@ -714,7 +891,9 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       .where(eq(identity.member.organizationId, owner.id));
     const memberIds = new Set(existingMembers.map((member) => member.userId));
     const memberships: BatchItem<"sqlite">[] = [];
-    for (const person of staff.filter((candidate) => candidate.store === store.id)) {
+    for (const person of staff.filter((candidate) =>
+      candidate.stores.some((storeId) => storeId === store.id),
+    )) {
       const staffUserId = staffIds.get(person.email);
       if (!staffUserId) throw new Error("デモスタッフがありません。");
       memberships.push(
@@ -769,6 +948,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     if (credentials.profile === "history") await seedHistory(db, store, owner);
     await seedCurrentTables(db, store, owner, credentials.baseTime);
   }
+  await refreshDemoIdentityIcons(env, credentials);
   const violations = await db.all(sql`PRAGMA foreign_key_check`);
   if (violations.length) throw new Error("デモデータの外部キーが不整合です。");
   const [stores, tables, historicalSessions, orders, events] = await db.batch([

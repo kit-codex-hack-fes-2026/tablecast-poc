@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedDemoDatabase } from "./tablecast-seed-data";
+import { tablecastDemoEmail } from "../apps/emulate/src/tablecast-demo-identities";
 export { sampleLine } from "./tablecast-seed-data";
 import { portAvailable, readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
 
@@ -26,9 +27,9 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     const data: DemoCredentials = {
-      email: "owner@tablecast.example",
+      email: "haruka.sato@komorebi-shijo.com",
       password: randomUUID().replaceAll("-", ""),
-      otherEmail: "koharu@tablecast.example",
+      otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
       otherPassword: randomUUID().replaceAll("-", ""),
       baseTime: Date.now(),
       profile,
@@ -54,12 +55,19 @@ async function seed() {
       ? undefined
       : z.enum(["smoke", "demo", "history"]).parse(args[profileOption + 1]);
   const runtime = await readRuntime();
-  const credentials = await demoCredentials(requestedProfile);
+  const previousCredentials = await demoCredentials(requestedProfile);
+  const credentials = {
+    ...previousCredentials,
+    email: tablecastDemoEmail(previousCredentials.email),
+    otherEmail: tablecastDemoEmail(previousCredentials.otherEmail),
+  };
   const profile = requestedProfile ?? credentials.profile;
   if (args.includes("--reset")) {
     if (!(await portAvailable(runtime.ports.web)))
       throw new Error("開発サーバーをCtrl+Cで停止してからリセットしてください。");
     await rm(runtime.state, { recursive: true, force: true });
+    credentials.email = "haruka.sato@komorebi-shijo.com";
+    credentials.otherEmail = "tsubasa.yamamoto@westward-burgers-kyoto.com";
     credentials.profile = profile;
     credentials.baseTime = Date.now();
     await writeFile(
@@ -112,6 +120,15 @@ async function seed() {
     if (env.TABLECAST_ENV !== "development" || env.TABLECAST_PUBLIC_ORIGIN !== runtime.origin)
       throw new Error("seed対象がこのworktreeの開発環境ではありません。");
     const counts = await seedDemoDatabase(env, credentials);
+    if (
+      credentials.email !== previousCredentials.email ||
+      credentials.otherEmail !== previousCredentials.otherEmail
+    )
+      await writeFile(
+        join(tablecastLocal, "demo.json"),
+        JSON.stringify(credentials, null, 2) + "\n",
+        { mode: 0o600 },
+      );
     console.info(
       JSON.stringify(
         {

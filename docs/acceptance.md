@@ -78,10 +78,10 @@ ADMIN-01の卓経過時間と会計待ちは、最新100件の表示ログから
 - `bun run --cwd apps/web test:browser`: 部品に隣接するStorybook 39件成功。実音声・実DBの代用にはしない。
 - `bun run --cwd apps/web test`: [音声接続の単体試験](../apps/web/src/features/kiosk/voice-connection.test.ts)6件成功。LiveKit SDKの通信・capture境界はテスト用に置き換えている。
 - `bun --no-env-file run test:e2e`: 公式Vite previewと新居酒屋デモの実DBを使い、Chromium/WebKitの32件が成功。その後の縦画面の言語切替幅・長文ダイアログ修正では、影響する注文・文字拡大・不足選択・設定公開の12件を再実行して成功した。1024×768と768×1024、客・管理画面の日英200%文字の画像も確認した。
-- [注文フロー](../apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](../apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](../apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](../apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](../apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のあかりT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のあかりT12は変更しない。
+- [注文フロー](../apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](../apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](../apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](../apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](../apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のハヌルT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のハヌルT12は変更しない。
 - 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](../apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](../apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。実Inworldの標準voice一覧と外部MCPクライアントの接続は後続である。
 
-管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はあかり一商品の価格だけを一時変更し、元設定を新しい版として復元する。
+管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
 
 ## 診断と音声候補の追加検証
 

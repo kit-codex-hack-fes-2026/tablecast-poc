@@ -22,7 +22,7 @@ for (const { locale, labels } of [
         })
       ).ok(),
     ).toBe(true);
-    const storeId = "tablecast-akari";
+    const storeId = "tablecast-hanul";
     const base = `/admin/stores/${storeId}/menu`;
     const api = `/api/admin/stores/${storeId}`;
     await page.goto(`${base}/products`);

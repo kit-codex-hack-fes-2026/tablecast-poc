@@ -1,5 +1,7 @@
-import type { Modifier, Product } from "@tablecast/api/schema";
+import { optionSchema, type Modifier, type Product } from "@tablecast/api/schema";
+import { MenuOptionImage } from "../../components/menu-option-image";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { emptyText } from "./configuration-defaults";
@@ -17,6 +19,8 @@ function newOption(): Modifier["options"][number] {
     text: emptyText(),
     priceDelta: 0,
     available: false,
+    imageKey: null,
+    imageKind: "illustration",
     maxQuantity: 1,
     requires: [],
     excludes: [],
@@ -114,6 +118,35 @@ export function ModifiersEditor({
                     onChange={(text) => updateOption(group, option.id, { text })}
                     disabled={disabled}
                   />
+                  <div className="flex flex-wrap items-center gap-4">
+                    <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
+                    <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
+                      <label className="grid gap-2 text-sm">
+                        {t("editor_image")}
+                        <Input
+                          maxLength={300}
+                          value={option.imageKey ?? ""}
+                          onChange={(event) =>
+                            updateOption(group, option.id, { imageKey: event.target.value || null })
+                          }
+                        />
+                      </label>
+                      <label className="grid gap-2 text-sm">
+                        {t("editor_image_kind")}
+                        <NativeSelect
+                          value={option.imageKind}
+                          onChange={(event) =>
+                            updateOption(group, option.id, {
+                              imageKind: optionSchema.shape.imageKind.parse(event.target.value),
+                            })
+                          }
+                        >
+                          <option value="illustration">{t("kiosk_illustration")}</option>
+                          <option value="photograph">{t("editor_photograph")}</option>
+                        </NativeSelect>
+                      </label>
+                    </div>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <NumericField
                       label={t("editor_price_delta")}

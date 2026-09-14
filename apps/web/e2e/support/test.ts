@@ -139,7 +139,16 @@ export const test = base.extend<{
         await cp(join(template.directory, "state"), state, { recursive: true });
         start("bun", ["--no-env-file", join(root, "apps/emulate/src/index.ts")], {
           TABLECAST_PUBLIC_ORIGIN: origin,
-          TABLECAST_OAUTH_PORT: "0",
+          TABLECAST_OAUTH_PORT: String(
+            z.coerce
+              .number()
+              .int()
+              .min(1024)
+              .max(65535)
+              .parse(
+                Number(parentEnv.TABLECAST_E2E_OAUTH_BASE_PORT ?? 24000) + testInfo.parallelIndex,
+              ),
+          ),
           TABLECAST_OAUTH_READY_FILE: join(runtime.directory, "oauth-ready.json"),
         });
         const oauth = z.object({ url: z.url() }).parse(await readReady("oauth-ready.json"));

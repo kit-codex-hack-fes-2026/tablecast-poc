@@ -13,3 +13,9 @@
 !apps/emulate/src/
 !apps/emulate/src/**
 !apps/emulate/Dockerfile
+!apps/presentation/
+!apps/presentation/package.json
+!assets/
+!assets/demo/
+!assets/demo/identities/
+!assets/demo/identities/*.webp

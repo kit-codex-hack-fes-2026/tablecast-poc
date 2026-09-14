@@ -15,6 +15,8 @@ UIそのものの翻訳はWebのメッセージファイル、商品・プラン
 原資料から不明な原材料・アレルゲン・価格・対象プランは未確認とし、ChatGPTの推測で確定させない。
 生成画像は明示的な商品イメージとして扱い、実際の商品写真と偽らない。PoCで独自画像生成APIを必須実装しない。
 
+商品とカスタマイズ選択肢は同じ `imageKey`（既存 `/media/` のキー、未設定は `null`）と `imageKind`（`photograph` / `illustration`、省略時は `illustration`）を持つ。選択肢の説明は既存 `text.ja.description` / `text.en.description` を使う。画像フィールドのない旧設定は読み込み時に既定値を補い、DB migration は不要。既存 `get_configuration` / `update_draft` の設定 JSON で扱い、保存・検証だけでは公開せず、人間の公開承認後に客画面へ反映する。画像の送信・生成用 MCP tool は追加しない。
+
 ## ツールのまとまり
 
 初期は次の程度で足りる。型を一つの万能JSONにして検証を失わず、同じ意味の細粒度ツールを大量に増やさない。

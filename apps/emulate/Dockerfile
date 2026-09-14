@@ -8,13 +8,14 @@ COPY apps/web/package.json apps/web/package.json
 COPY apps/presentation/package.json apps/presentation/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY apps/emulate/src apps/emulate/src
-RUN bun build apps/emulate/src/index.ts --target=bun --outfile=tablecast-emulate.js
+RUN bun build apps/emulate/src/index.ts --target=bun --outfile=apps/emulate/dist/index.js
 
 FROM oven/bun:1.3.13-slim
 WORKDIR /app
-COPY --from=build --chown=bun:bun /app/tablecast-emulate.js ./
-COPY --from=build --chown=bun:bun /app/apps/emulate/node_modules/emulate/dist/fonts ./fonts
+COPY --from=build --chown=bun:bun /app/apps/emulate/dist ./apps/emulate/dist
+COPY --from=build --chown=bun:bun /app/apps/emulate/node_modules/emulate/dist/fonts ./apps/emulate/dist/fonts
+COPY --chown=bun:bun assets/demo/identities/*.webp ./assets/demo/identities/
 USER bun
 ENV TABLECAST_OAUTH_PORT=8080
 EXPOSE 8080
-CMD ["bun", "--no-env-file", "tablecast-emulate.js"]
+CMD ["bun", "--no-env-file", "apps/emulate/dist/index.js"]

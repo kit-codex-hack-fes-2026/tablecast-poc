@@ -1,17 +1,20 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { extname, resolve } from "node:path";
 
 const directory = resolve(import.meta.dirname, "../assets/demo");
 const keys = new Map<string, string>();
-export function imageKey(bytes: Uint8Array) {
-  return `tablecast/images/${createHash("sha256").update(bytes).digest("hex")}.png`;
+export function imageKey(bytes: Uint8Array, format: "png" | "webp" = "png") {
+  return `tablecast/images/${createHash("sha256").update(bytes).digest("hex")}.${format}`;
 }
 export function demoImageKey(file: string) {
   let key = keys.get(file);
   if (!key) {
-    key = imageKey(readFileSync(resolve(directory, file)));
+    key = imageKey(
+      readFileSync(resolve(directory, file)),
+      extname(file) === ".webp" ? "webp" : "png",
+    );
     keys.set(file, key);
   }
   return key;
@@ -20,7 +23,9 @@ export async function seedMenuImages(
   bucket: Parameters<typeof uploadPreviewImage>[0],
   legacy = false,
 ) {
-  const files = (await readdir(directory)).filter((name) => /^[a-z0-9-]+\.png$/.test(name)).sort();
+  const files = (await readdir(directory))
+    .filter((name) => /^[a-z0-9-]+\.(png|webp)$/.test(name))
+    .sort();
   console.time("商品画像の投入");
   try {
     for (let offset = 0; offset < files.length; offset += 4) {
@@ -28,7 +33,11 @@ export async function seedMenuImages(
       const results = await Promise.allSettled(
         files.slice(offset, offset + 4).map(async (file) => {
           const bytes = await readFile(resolve(directory, file));
-          await uploadPreviewImage(bucket, imageKey(bytes), bytes);
+          await uploadPreviewImage(
+            bucket,
+            imageKey(bytes, extname(file) === ".webp" ? "webp" : "png"),
+            bytes,
+          );
           if (legacy) await uploadPreviewImage(bucket, `tablecast/demo/${file}`, bytes);
         }),
       );
@@ -50,6 +59,7 @@ export async function uploadPreviewImage(
   },
   key: string,
   bytes: Uint8Array,
+  contentType: "image/png" | "image/webp" = key.endsWith(".webp") ? "image/webp" : "image/png",
 ) {
   const md5 = createHash("md5").update(bytes).digest("hex");
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -64,7 +74,7 @@ export async function uploadPreviewImage(
       const uploaded = await bucket.put(key, bytes, {
         onlyIf: { etagDoesNotMatch: "*" },
         md5,
-        httpMetadata: { contentType: "image/png" },
+        httpMetadata: { contentType },
         customMetadata: { source: "synthetic-demo" },
       });
       if (!uploaded || uploaded.etag !== md5 || uploaded.size !== bytes.length)

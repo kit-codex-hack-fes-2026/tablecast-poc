@@ -12,12 +12,23 @@ export const contentSchema = z
 
 export const bilingualSchema = z.object({ ja: contentSchema, en: contentSchema }).strict();
 
+const imageFields = {
+  imageKey: z
+    .string()
+    .max(300)
+    .regex(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/)
+    .nullable()
+    .default(null),
+  imageKind: z.enum(["photograph", "illustration"]).default("illustration"),
+};
+
 export const optionSchema = z
   .object({
     id,
     text: bilingualSchema,
     priceDelta: z.number().int().min(-100000).max(100000),
     available: z.boolean(),
+    ...imageFields,
     maxQuantity: z.number().int().min(1).max(20).default(1),
     requires: z.array(id).default([]),
     excludes: z.array(id).default([]),
@@ -43,13 +54,7 @@ export const productSchema = z
     price: money,
     available: z.boolean(),
     tags: z.array(id).default([]),
-    imageKey: z
-      .string()
-      .max(300)
-      .regex(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/)
-      .nullable()
-      .default(null),
-    imageKind: z.enum(["photograph", "illustration"]).default("illustration"),
+    ...imageFields,
     imageSource: imageSourceSchema.optional(),
     modifiers: z.array(modifierSchema).max(12).default([]),
     allergens: z

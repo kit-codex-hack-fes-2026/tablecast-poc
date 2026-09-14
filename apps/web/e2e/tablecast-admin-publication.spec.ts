@@ -16,7 +16,7 @@ for (const { language, labels, locale } of [
     request: staff,
     baseURL,
   }, testInfo) => {
-    const storeId = "tablecast-akari";
+    const storeId = "tablecast-hanul";
     const adminPath = `/api/admin/stores/${storeId}`;
     const headers = { Origin: baseURL ?? "" };
     const login = await staff.post("/api/auth/sign-in/email", { data: credentials, headers });

@@ -7,4 +7,6 @@ it("画像内容が同じならキーを再利用し、差し替えた内容だ�
   expect(imageKey(original)).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
   expect(imageKey(original)).toBe(imageKey(original.slice()));
   expect(imageKey(original)).not.toBe(imageKey(new TextEncoder().encode("replacement")));
+  expect(imageKey(original, "webp")).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
+  expect(imageKey(original, "webp")).not.toBe(imageKey(original));
 });

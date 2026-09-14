@@ -18,11 +18,11 @@ for (const { locale, labels } of [
     expect(
       (await page.request.post("/api/auth/sign-in/email", { headers, data: credentials })).status(),
     ).toBe(200);
-    const api = "/api/admin/stores/tablecast-akari";
+    const api = "/api/admin/stores/tablecast-hanul";
     const created = await page.request.post(`${api}/drafts`, { headers, data: {} });
     const draft = configDraftSchema.parse(await created.json());
     try {
-      await page.goto(`/admin/stores/tablecast-akari/menu/changes/${draft.id}/cast/settings`);
+      await page.goto(`/admin/stores/tablecast-hanul/menu/changes/${draft.id}/cast/settings`);
       await page
         .getByRole("button", { name: locale === "ja" ? "日本語" : "English", exact: true })
         .click();

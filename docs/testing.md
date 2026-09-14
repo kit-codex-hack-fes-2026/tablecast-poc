@@ -125,7 +125,7 @@ DBはケースの終了とともに破棄するため、後処理でプロフィ
 
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
-開発用seedは3店舗と36卓、固定の商品・利用場面にFakerのスタッフ36名を加える。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。
+開発用seedは3店舗と36卓、京料理店60商品・バーガー店12商品・韓国料理店30商品の計102商品を持つ。各組織はowner/admin/member各1名の3所属で、2店舗を兼任するownerを含め8人9所属を用意する。名簿は`apps/emulate/src/tablecast-demo-identities.ts`をGoogle OAuth emulatorと共有する。再実行で既存プロフィール、カート、注文、公開メニューを上書きしない。E2Eの操作対象はfixtureで空席にしているT10を使う。
 
 ## #35に基づく所有先の分離
 
@@ -184,7 +184,7 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 
 `runtime.setOnline(false)`は入口の待受を保持し、既存接続と新しい要求を切断する。`true`で同じoriginへ復帰する。ブラウザーのオフライン設定はWebKitのService Workerキャッシュ取得も止めるため使わない。通信障害の検証であり、Workerプロセスの再起動・DB復旧の証明とは区別する。Service Workerの更新試験はcase専用`client/sw.js`を書き換え、`runtime.restartWeb()`でWorker側のアセット情報を再読込してから`registration.update()`で配信を確認する。入口の待受は閉じず、再起動後のWorkerの実ポートへ転送先を更新する。最小の静的Workerでは再起動なしで本文が変わるが、実アプリの更新判定にはアセット情報の再構築が必要だった。
 
-`emulate@0.11.1`の公開APIは動的ポートの実URLを返さないため、`patches/emulate@0.11.1.patch`をBunの`patchedDependencies`で適用する。bind完了後の実ポートからdiscovery・issuer・seedのURLを構築し、初期化失敗ではlistenerを閉じる。明示baseUrlは保持する。固定ポートの既存dev/previewと動的ポートのE2Eを同じ公開APIで扱い、previewでのport 0は許可しない。上流で同じ契約が提供された版へ移行するときにパッチを外す。
+`emulate@0.11.1`はpatchを適用せず、標準APIの指定ポートで起動する。E2Eは`TABLECAST_E2E_OAUTH_BASE_PORT`（既定24000）+ PlaywrightのparallelIndexを使う。同一worker内はケース終了時にOAuthを停止して次のケースへ進み、他worktreeと同時実行する場合は異なる基点ポートを指定する。OAuth起動のscripts試験は`TABLECAST_TEST_OAUTH_PORT`（既定23999）を使う。利用中ポートのbind失敗はそのまま失敗とし、再試行しない。dev・previewの明示ポートも維持し、port 0は使用しない。
 
 `scripts/tablecast-e2e-runtime.test.ts`は実TCPとOAuth子プロセスで、ケース分離、停止中のポート保持、復帰、discoveryのURL一致、bind失敗の拒否を確認する。HTTP・OAuth・メール・DB・PWAの最終配線は既存Chromium/WebKit E2Eが確認する。
 

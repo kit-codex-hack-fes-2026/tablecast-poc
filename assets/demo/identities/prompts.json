@@ -1,0 +1,124 @@
+{
+  "generator": "built-in image_gen",
+  "source": "synthetic-demo",
+  "assets": [
+    {
+      "file": "haruka-sato.webp",
+      "subject": "佐藤 晴香",
+      "prompt": "Generate one square photorealistic profile photo for a fictional Japanese restaurant owner, Haruka Sato, a Japanese woman in her early 40s. A friend has photographed her sitting outdoors beside a small Kyoto cafe, subtle candid smile, looking toward camera, shoulder-length dark hair loosely tucked behind one ear, natural face and skin texture, cream linen shirt. Soft overcast daylight, muted leafy courtyard in shallow focus, relaxed authentic personal Instagram profile photo, not a corporate headshot, not fashion advertising. Head and shoulders centered with entire hairstyle visible and safe within a circular avatar crop. Face occupies enough of the square to read at 40px, modest headroom. Full-bleed square photograph, realistic photographic grain and imperfections. Fictional adult, do not resemble any real public figure. No letters, text, initials, logo, frames, border, vector or illustration.",
+      "generatedFile": "exec-73779296-de65-4344-8e03-8b6fac508421.png",
+      "generatedSha256": "81f9f66a5e01164b27be57916f674eb61f73db36235d171b2c5888f7afc397c3",
+      "sha256": "ef7d8bda6670937d6e18e6c29416bb997f7223fed1da202c67a979f2d937a9aa",
+      "bytes": 63524
+    },
+    {
+      "file": "ren-tanaka.webp",
+      "subject": "田中 蓮",
+      "prompt": "Generate one square photorealistic personal profile photo for fictional restaurant manager Ren Tanaka, a Japanese man around 33, short textured black hair, understated round metal glasses, navy casual shirt. Candid three-quarter view at a quiet counter after work, gently amused expression looking toward a friend just beside the camera. Warm amber indoor practical light, dark wooden background out of focus, intimate low-light mobile photo with natural skin, subtle grain. Distinct individual face, not model-perfect and not a passport/corporate photograph. Center the entire head and shoulders, retain hair silhouette within circular avatar crop, large face legible at tiny size. Single photograph, no collage. Fictional adult, no real person's likeness. No text, symbols, initials, frames, vector graphics or illustration.",
+      "generatedFile": "exec-9bafd07f-b62e-4bb0-9a3b-856cf28361fd.png",
+      "generatedSha256": "3097bc3c6421e4f518b036cf96ba73f3b4ed1247785f7c256c9974a30e573652",
+      "sha256": "f65ed6d1dcdc587f7306687644d4a33312539234f5ebe3204ca5032b36bec259",
+      "bytes": 31510
+    },
+    {
+      "file": "naoko-kobayashi.webp",
+      "subject": "小林 直子",
+      "prompt": "Create one square photorealistic Instagram-style personal avatar photo of fictional Japanese woman Naoko Kobayashi, around 46, short dark bob with wispy fringe, slight cheerful smile and natural smile lines. A spontaneous close portrait on a weekend walk beside a river; faded blue denim jacket, bright yet soft late-afternoon daylight, background pale water and distant plants rendered as soft bokeh. Lively personal mobile photography, realistic skin and texture, not beauty retouching, not corporate headshot. Entire head and upper shoulders centered, close enough to recognise at 40px, all important facial details within the circular crop safe area. Full bleed photograph, fictional adult not based on any identifiable real person. No text, monograms, stickers, logo, frame, SVG or illustration.",
+      "generatedFile": "exec-8fa52cd3-8f3f-4450-92c4-50d5f36e7b67.png",
+      "generatedSha256": "b9c343ba81c01ecd2b3aa8b8495412e19e4b789ce84332dead6f0044a93de95b",
+      "sha256": "39fa77a8600d299af5f03a579168ec1233f8b8ea14dad6b6200fd4c42fcc547b",
+      "bytes": 50760
+    },
+    {
+      "file": "aoi-ito.webp",
+      "subject": "伊藤 葵",
+      "prompt": "One photorealistic square personal Instagram avatar, a fictional Japanese woman in her mid twenties photographed from behind on a quiet seaside walk. Dark hair tied in a loose low bun, pale blue shirt, canvas tote shoulder strap. Her head and upper back are centered and large in frame, face completely hidden because she looks out toward the softly blurred blue sea. A breezy candid holiday phone photograph with natural sunlight and slight film grain. Warm human presence without showing a face. Distinct clear silhouette inside a circular avatar safe area, full bleed square photo. Do not show any text, initials, logo, frame, stickers, drawing or vector art.",
+      "generatedFile": "exec-157a59de-1ab3-4ee1-9827-cb790a980b2d.png",
+      "generatedSha256": "7a23ee2f9f189807dd3ed5530f49e7e306ac70a688a4dc657a28c95e48775b41",
+      "sha256": "035dfddbd20b68a1bd3006dea001ed59f252f304cde7883bb453d27f97d739ce",
+      "bytes": 43022
+    },
+    {
+      "file": "yuma-mori.webp",
+      "subject": "森 悠真",
+      "prompt": "One photorealistic square Instagram personal avatar photograph of a fictional Japanese man in his late twenties, face not visible. Chest-up close view from behind and slightly to the side as he pauses on a city bicycle beside a concrete Kyoto riverside path. Short dark hair under an olive green baseball cap, rust orange relaxed shirt, bicycle handlebar barely visible at the lower edge. He looks away from the camera toward the river so there are no recognisable facial features. Casual weekend mobile photography, cool overcast light, quiet grey-green river background blurred, honest everyday clothing and textures. Head and orange shoulders fill the centre for recognition at 40px and circular crop. No text, markings, initials, logo, border, drawing or illustration.",
+      "generatedFile": "exec-b090f60b-163d-48e8-b7f4-fa773f23c3c9.png",
+      "generatedSha256": "3e90a254b6ce0d0c84716db86f37adaeb68a5781a5b0bb26ffd098f30cf37d72",
+      "sha256": "f47534d53b48020c647f0dd007f52fed85b17e31e2a3f453d95a487cf95dda2d",
+      "bytes": 32730
+    },
+    {
+      "file": "tsubasa-yamamoto.webp",
+      "subject": "山本 翼",
+      "prompt": "Create one square photographic no-face personal social-media avatar, a fictional restaurant owner's hobby snapshot. Close-up of a hand gently holding a small terracotta ceramic espresso cup over a sunny cafe table, black metal film camera partially visible behind it. Focus on warm ceramic glaze, rich dark espresso and believable fingers on the cup handle, blue denim cuff. Side sunlight makes bold warm shadows, an authentic analogue-film snapshot, tactile and personal, no elaborate flat-lay styling. Cup and hand central and large enough to read at tiny avatar size and stay inside a circle crop. Background is a blurred deep teal cafe wall. No visible face, no words, no initials, logos, brand text, graphics, frame or illustration.",
+      "generatedFile": "exec-f9337e98-69e5-4f9d-94f2-a1d1b8ec462d.png",
+      "generatedSha256": "e3095764cda413d519503f2866f805a123095d585452f32fe3e650f663a12770",
+      "sha256": "65db68650f88948e29bb7c5353292f8e9ff07bb411d59aae817831201243a4cf",
+      "bytes": 49356
+    },
+    {
+      "file": "misaki-nakamura.webp",
+      "subject": "中村 美咲",
+      "prompt": "Create one photorealistic square no-face personal Instagram profile photograph for a fictional woman around 29. An informal mirror snapshot in a sunlit apartment entryway: she wears a dark forest-green knit top and holds a plain smartphone vertically directly in front of her entire face so all facial features are hidden. Shoulder-length dark wavy hair, silver ring, relaxed stance. Frame chest-up, centrally composed, warm cream wall and a soft out-of-focus houseplant at the side. Natural phone-camera imperfection and understated personal taste, not a glossy fashion ad. Phone, hair and shoulders remain inside the circular avatar safe area. Anatomically believable hands and reflection. No readable letters or brand on phone, no text, initials, stickers, borders, drawings, SVG or illustration.",
+      "generatedFile": "exec-7931ee4e-68d6-45c6-83b1-2b72a50230bb.png",
+      "generatedSha256": "07753796bf1061b11fe8b0fcd003e11c8c8486ac28f63a2d89a2d317bbf8c9dc",
+      "sha256": "b2c30d3b9f5e8b89bcda783580210e63e9c3839c7ecff08f2421b3696982b667",
+      "bytes": 38224
+    },
+    {
+      "file": "alex-morgan.webp",
+      "subject": "Alex Morgan",
+      "prompt": "Create one square photorealistic personal profile photo of a fictional British man around 30, light-brown curly hair, a few freckles and very light stubble, friendly unposed expression, wearing a faded blue cotton T-shirt. Candid close photo taken by a friend outdoors after a walk, muted sunlit brick wall and blurred bicycle background, cool natural morning light. Face centered but relaxed, natural uneven skin texture, ordinary social-media photo rather than corporate headshot or fashion model. Keep whole hairstyle with comfortable headroom, head and upper shoulders dominant and readable in a tiny circular profile icon. Full bleed square photograph. Entirely fictional adult, no known person's likeness. No text, initials, logo, frame, stickers, vector graphics or illustration.",
+      "generatedFile": "exec-d93c9826-f827-4298-86fa-92cf3eed76c7.png",
+      "generatedSha256": "bc7927d03b3f1a248f30fa90bda6fd49861696dca8b7c20d045e0cb615c5165f",
+      "sha256": "fc42e7c31c499414d45ee482f7f965aee4f544502419ee357991077e2b37656d",
+      "bytes": 53460
+    },
+    {
+      "file": "account-link.webp",
+      "subject": "連携確認用ユーザー",
+      "prompt": "One photorealistic square personal profile avatar photograph of a sleepy ginger tabby cat curled beside a bright apartment window. Close-up of the cat's face and front paws, eyes half-closed, pink nose, detailed whiskers and natural orange fur. Warm afternoon sunlight, soft cream linen background, spontaneous cosy mobile snapshot an ordinary person might use as an Instagram profile picture. Cat face centered and large, ears and paws comfortably inside the circular safe area. No people, no words, initials, symbols, logo, frame, sticker, illustration or vector graphics.",
+      "generatedFile": "exec-936d1ec4-28bb-4091-8ed4-ea0469f2126b.png",
+      "generatedSha256": "85447778c1d0c9ea0e1662bb57c49d27a320e9f597d72ec97cf588853b5ab706",
+      "sha256": "37c5480681fd07d4c359833fe62084c865c22a8ba087c655a53861fbdc375803",
+      "bytes": 50640
+    },
+    {
+      "file": "komorebi-logo.webp",
+      "subject": "京料理こもれび四条店",
+      "prompt": "Design one square authentic restaurant brand avatar for fictional Kyoto restaurant 京料理こもれび四条店. A refined ink-and-paper brand identity that looks commissioned from a Japanese calligrapher, not a generic computer icon. Central bespoke round brush emblem: two graceful overlapping maple leaves and a small shaft of sunlight suggested by negative space, deep indigo ink with subtle imperfect edges on warm off-white washi paper. Beneath the emblem, small expressive hand-brushed hiragana reads exactly こもれび. Balanced close composition, brand mark dominant, no thin decorative clutter. Whole mark and all lettering remain safely inside the central 75% diameter for circular profile cropping. Flat front-facing finished brand artwork, tactile ink print texture, not a photographed sign, no tilted mockup or stationery scenery. Original fictional restaurant brand, no existing logo. No big single initial, default font monogram, simple SVG-looking human shape, gradient, app UI or watermark.",
+      "editPrompt": "Edit this exact existing restaurant logo for a small circular profile avatar. Preserve its distinctive illustration, colours, readable brand lettering and natural ink texture. Make the ENTIRE existing logo including all lettering occupy only the central 70% of the square width AND height, centered as a single composition. Surround it with an OPAQUE warm cream paper background all the way to the four edges. The background must have NO transparency and no black. Do not add another badge, border, labels or words. Keep every letter and every illustration edge comfortably inside a centered circle with radius 44% of canvas width, so a circular crop will cut only blank cream paper. This is a framing/background correction, not a new logo design. Single square image.",
+      "generatedFile": "exec-ce25749c-2ed0-4c11-82ce-0574ad7d9d78.png",
+      "generatedSha256": "e4bb5e5a579d850482b7bcaeb2e921f20f83e4106577b3b77719439bd5924cc7",
+      "sha256": "e286f8b0fa12119964df43aca17835a4780d401855fbb4ea2d520130cbed6ec2",
+      "bytes": 36950
+    },
+    {
+      "file": "westward-logo.webp",
+      "subject": "Westward Burgers Kyoto",
+      "prompt": "Design one square distinctive finished restaurant logo avatar for the fictional Westward Burgers Kyoto. Authentic independent West Coast burger-and-craft-beer brand, bold 1970s California screen-printed style. Central custom illustrated emblem combining a plump burger bun with a low sun and two surf-like horizontal waves, chunky curved forms and confident handcrafted linework. The short word WESTWARD in expressive vintage rounded lettering arches closely over the emblem, tiny KYOTO below. Deep forest green, cream and restrained burnt orange. Cream background full bleed with subtle ink texture, few strong shapes remain readable at 40px. All lettering and emblem within the central 75% circular safe area, no border clipped at edges. Original original-looking restaurant identity, not copied from any real brand, no photograph of merchandise, no collage, no stock icon, no simple letters-in-a-square, no generic SVG placeholder, no gradients or UI.",
+      "editPrompt": "Edit this exact existing restaurant logo for a small circular profile avatar. Preserve its distinctive illustration, colours, readable brand lettering and natural ink texture. Make the ENTIRE existing logo including all lettering occupy only the central 70% of the square width AND height, centered as a single composition. Surround it with an OPAQUE warm cream paper background all the way to the four edges. The background must have NO transparency and no black. Do not add another badge, border, labels or words. Keep every letter and every illustration edge comfortably inside a centered circle with radius 44% of canvas width, so a circular crop will cut only blank cream paper. This is a framing/background correction, not a new logo design. Single square image.",
+      "generatedFile": "exec-fe37bffa-4b46-4d5c-ad43-e2db29ca0d05.png",
+      "generatedSha256": "d15d308023619cc0721a1f4b215b8de32151fe1220187eefa5abf1a0ded265e1",
+      "sha256": "809bb583ef31c4b741e091fb2d323b5f6ab777e2b2fff8e5cf2ce6f0bf10edcc",
+      "bytes": 31430
+    },
+    {
+      "file": "hanul-logo.webp",
+      "subject": "韓国食堂ハヌル三条店",
+      "prompt": "Design one square authentic independent Korean restaurant social profile logo for fictional 韓国食堂ハヌル三条店, Hanul. A charming bold hand-drawn white crane bird sitting above a small rice bowl, one red sun accent and confident cobalt-blue brush strokes, warm cream paper background. Distinctive welcoming neighbourhood Korean diner brand with slightly imperfect painted signwork energy, not formal Japanese calligraphy and not a generic stock pictogram. Custom hand-lettered Hangul 하늘, large and readable beneath the bird, tiny HANUL below. Logo bird and lettering form one compact recognisable brand, handmade screen-print ink texture, strong shapes legible in a 40px circular avatar. Keep whole mark and lettering within central 75% circular safe area. Flat frontal final brand graphic, no merchandise scene, no building, no photographs, no initials-only badge, no SVG placeholder, no gradients, no watermark. Completely original fictional brand.",
+      "editPrompt": "Edit this exact existing restaurant logo for a small circular profile avatar. Preserve its distinctive illustration, colours, readable brand lettering and natural ink texture. Make the ENTIRE existing logo including all lettering occupy only the central 70% of the square width AND height, centered as a single composition. Surround it with an OPAQUE warm cream paper background all the way to the four edges. The background must have NO transparency and no black. Do not add another badge, border, labels or words. Keep every letter and every illustration edge comfortably inside a centered circle with radius 44% of canvas width, so a circular crop will cut only blank cream paper. This is a framing/background correction, not a new logo design. Single square image.",
+      "generatedFile": "exec-edb253c6-8b48-4396-b6c0-bda7dd8c38bf.png",
+      "generatedSha256": "11433d542302418e12d5295b7f7706ec41425cd89f726591a55c50f4a9a74bc2",
+      "sha256": "b4786a7a2a1159e1f240658af06f1e9c19f8948c4a0a9d9cf69692b65dde00f9",
+      "bytes": 38264
+    }
+  ],
+  "generatedAt": "2026-09-14",
+  "encoding": {
+    "format": "webp",
+    "width": 512,
+    "height": 512,
+    "quality": 88
+  }
+}

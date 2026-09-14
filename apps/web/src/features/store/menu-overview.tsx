@@ -7,6 +7,7 @@ import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
+import { MenuOptionImage } from "../../components/menu-option-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -16,7 +17,16 @@ import { menuLabels, type MenuSection } from "./menu-model";
 import { draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
-type OptionRow = { id: string; group: string; name: string; price: number; available: boolean };
+type OptionRow = {
+  id: string;
+  group: string;
+  name: string;
+  description: string;
+  imageKey: string | null;
+  imageKind: "photograph" | "illustration";
+  price: number;
+  available: boolean;
+};
 export function MenuOverview({
   configuration,
   section,
@@ -229,6 +239,9 @@ export function MenuOverview({
                       id: option.id,
                       group: group.text[locale].displayName,
                       name: option.text[locale].displayName,
+                      description: option.text[locale].description,
+                      imageKey: option.imageKey,
+                      imageKind: option.imageKind,
                       price: option.priceDelta,
                       available: option.available,
                     })),
@@ -272,7 +285,23 @@ function menuOverviewColumns(
 ): ColumnDef<OptionRow>[] {
   return [
     { accessorKey: "group", header: t("editor_modifiers") },
-    { accessorKey: "name", header: t("editor_options") },
+    {
+      accessorKey: "name",
+      header: t("editor_options"),
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <MenuOptionImage imageKey={row.original.imageKey} imageKind={row.original.imageKind} />
+          <div className="min-w-0">
+            <span className="font-medium">{row.original.name}</span>
+            {row.original.description && (
+              <p className="mt-1 whitespace-normal text-sm text-muted-foreground">
+                {row.original.description}
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+    },
     {
       accessorKey: "price",
       header: t("editor_price_delta"),

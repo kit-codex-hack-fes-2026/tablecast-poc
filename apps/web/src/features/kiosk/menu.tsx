@@ -75,17 +75,17 @@ export function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 motion-safe:[&:hover:not(:disabled)_img]:scale-105 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
+            <span className="w-full aspect-square overflow-hidden rounded-md bg-muted flex items-center justify-center">
               {product.imageKey ? (
                 <ProductImage
-                  className="size-full object-cover transition-transform motion-reduce:transition-none duration-200 ease-out"
+                  className="size-full object-contain"
                   width={384}
-                  height={256}
+                  height={384}
                   sizes="(min-width: 1536px) 20vw, (min-width: 768px) 30vw, 50vw"
                   src={`/media/${product.imageKey}`}
                   alt=""
@@ -96,18 +96,21 @@ export function ProductMenu({
                   <small className="text-xs">{t("kiosk_no_image")}</small>
                 </span>
               )}
-              {!product.available && (
-                <span className="absolute top-auto inset-x-2 bottom-2 bg-card/90 py-1 px-1.5 text-xs rounded-sm text-center">
-                  {t("kiosk_sold_out")}
-                </span>
-              )}
-              {product.imageKey && product.imageKind === "illustration" && (
-                <span className="absolute left-1.5 bottom-1 py-px px-1 rounded-sm text-xs bg-card/90 text-muted-foreground">
-                  {t("kiosk_illustration")}
-                </span>
-              )}
             </span>
             <span className="flex flex-col flex-1 pt-2.5 px-0 pb-0">
+              {(!product.available ||
+                (product.imageKey && product.imageKind === "illustration")) && (
+                <span className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  {!product.available && (
+                    <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
+                      {t("kiosk_sold_out")}
+                    </span>
+                  )}
+                  {product.imageKey && product.imageKind === "illustration" && (
+                    <span>{t("kiosk_illustration")}</span>
+                  )}
+                </span>
+              )}
               <strong className="block text-xs leading-relaxed font-medium flex-1 2xl:text-sm">
                 {product.text[locale].displayName}
               </strong>

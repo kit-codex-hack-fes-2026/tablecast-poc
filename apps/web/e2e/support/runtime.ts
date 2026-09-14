@@ -26,9 +26,9 @@ export const runtime = schema.parse(
   JSON.parse(readFileSync(join(process.env.TABLECAST_E2E_DIRECTORY ?? "", "runtime.json"), "utf8")),
 );
 export const credentials = {
-  email: "tablecast-owner@example.test",
+  email: "haruka.sato@komorebi-shijo.com",
   password: "tablecast-isolated-test-password",
-  otherEmail: "tablecast-koharu@example.test",
+  otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
   otherPassword: "tablecast-isolated-other-password",
   baseTime: Date.now(),
   profile: "demo" as const,

@@ -1,7 +1,12 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { deploymentOwner, tableSessions, stores } from "../apps/api/src/db/business-schema";
-import { account, user, organization } from "../apps/api/src/db/auth-schema";
+import {
+  deploymentOwner,
+  tableSessions,
+  tableEvents,
+  stores,
+} from "../apps/api/src/db/business-schema";
+import { account, user, organization, member } from "../apps/api/src/db/auth-schema";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,7 +21,11 @@ import {
 } from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
 import { configurationSchema } from "../apps/api/src/schema";
+import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
+import { demoStores } from "./tablecast-fixtures";
+import { legacyIdentityIconUrl } from "./tablecast-seed-icons";
+import { tablecastDemoLinkIdentity } from "../apps/emulate/src/tablecast-demo-identities";
 
 const execute = promisify(execFile);
 
@@ -48,7 +57,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
     }),
   );
   const credentials: DemoCredentials = {
-    email: "tablecast-owner@example.test",
+    email: "haruka.sato@komorebi-shijo.com",
     password: "tablecast-local-seed-test-password",
     otherEmail: "tablecast-other@example.test",
     otherPassword: "tablecast-local-other-test-password",
@@ -111,10 +120,26 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         seedPreviewDatabase({ ...preview, TABLECAST_ENV: "production" }, credentials),
       ).rejects.toThrow("対象");
       await db.update(deploymentOwner).set({ environment: "tablecast-pr-34" });
+      // オーナー用の独自メールが既定人物と重なっても、権限を付けず書込み前に拒否する。
+      for (const email of [
+        "ren.tanaka@komorebi-shijo.com",
+        "tablecast-member@example.test",
+        tablecastDemoLinkIdentity.email,
+        credentials.otherEmail,
+      ]) {
+        await expect(seedPreviewDatabase(preview, { ...credentials, email })).rejects.toThrow(
+          "重複",
+        );
+        await expect(seedDemoDatabase(platform.env, { ...credentials, email })).rejects.toThrow(
+          "重複",
+        );
+      }
+      expect(await db.select().from(user)).toEqual([]);
+      expect(await db.select().from(member)).toEqual([]);
       // Given: R2障害で認証ユーザーだけが作成された、運用者が確認済みのPR。
       await db.insert(user).values({
         id: "tablecast-partial-owner",
-        email: credentials.email,
+        email: "tablecast-owner@example.test",
         name: "保持する名前",
         emailVerified: true,
         createdAt: new Date(),
@@ -153,7 +178,155 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       await db.update(deploymentOwner).set({ seeded: 3 });
       await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("組織作成後");
       await db.update(deploymentOwner).set({ seeded: 1 });
+      // 旧固定URLを持つ既存previewでも、所属・営業データを再投入せず画像だけ更新する。
+      const originalOwner = await db
+        .select({ image: user.image })
+        .from(user)
+        .where(eq(user.id, "tablecast-partial-owner"))
+        .get();
+      const originalOrganisation = await db
+        .select({ id: organization.id, logo: organization.logo })
+        .from(organization)
+        .innerJoin(stores, eq(stores.organization_id, organization.id))
+        .where(eq(stores.id, "tablecast-komorebi"))
+        .get();
+      const migratedOrganisation = await db
+        .select({ id: organization.id, logo: organization.logo })
+        .from(organization)
+        .innerJoin(stores, eq(stores.organization_id, organization.id))
+        .where(eq(stores.id, "tablecast-hanul"))
+        .get();
+      if (!originalOwner?.image || !originalOrganisation?.logo || !migratedOrganisation?.logo)
+        throw new Error("更新対象のデモ画像がありません。");
+      const oldAdmin = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, "ren.tanaka@komorebi-shijo.com"))
+        .get();
+      if (!oldAdmin) throw new Error("旧スタッフの移行対象がありません。");
+      await db.batch([
+        db
+          .update(user)
+          .set({ email: "tablecast-member@example.test" })
+          .where(eq(user.id, oldAdmin.id)),
+        db
+          .update(member)
+          .set({ role: "member" })
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          ),
+      ]);
+      const oldOwnerIcon = legacyIdentityIconUrl("user", "tablecast-partial-owner");
+      const credentialAccounts = await db
+        .select()
+        .from(account)
+        .where(eq(account.providerId, "credential"));
+      expect(credentialAccounts.length).toBeGreaterThan(0);
+      await db.batch([
+        db
+          .update(user)
+          .set({ image: oldOwnerIcon, email: "tablecast-owner@example.test" })
+          .where(eq(user.id, "tablecast-partial-owner")),
+        db.insert(account).values({
+          id: "tablecast-migrated-google",
+          issuer: "https://tablecast-google.localhost",
+          accountId: "tablecast-owner@example.test",
+          providerId: "google",
+          userId: "tablecast-partial-owner",
+          updatedAt: new Date(1),
+        }),
+        db
+          .update(organization)
+          .set({ logo: legacyIdentityIconUrl("store", "tablecast-komorebi") })
+          .where(eq(organization.id, originalOrganisation.id)),
+        db
+          .update(organization)
+          .set({ logo: legacyIdentityIconUrl("store", "tablecast-akari") })
+          .where(eq(organization.id, migratedOrganisation.id)),
+      ]);
+      const ownerIconKey = `tablecast/avatars/${originalOwner.image.split("/").at(-1)}`;
+      const ownerIconVersion = (await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version;
+      const refreshedImage = demoStores("smoke")[0]?.configuration.products[0]?.imageKey;
+      if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
+      await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      expect(
+        await db
+          .select({ role: member.role })
+          .from(member)
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          )
+          .get(),
+      ).toEqual({ role: "admin" });
+      // 新メールへ移行後の手動変更は、通常の再seedで戻さない。
+      await db
+        .update(member)
+        .set({ role: "member" })
+        .where(
+          and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+        );
+      await seedPreviewDatabase(preview, credentials);
+      expect(
+        await db
+          .select({ role: member.role })
+          .from(member)
+          .where(
+            and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+          )
+          .get(),
+      ).toEqual({ role: "member" });
+      await db
+        .update(member)
+        .set({ role: "admin" })
+        .where(
+          and(eq(member.userId, oldAdmin.id), eq(member.organizationId, originalOrganisation.id)),
+        );
+
+      expect(await db.select().from(account).where(eq(account.providerId, "credential"))).toEqual(
+        credentialAccounts,
+      );
+      expect(
+        await db
+          .select({ id: user.id, email: user.email })
+          .from(user)
+          .where(eq(user.id, "tablecast-partial-owner"))
+          .get(),
+      ).toEqual({ id: "tablecast-partial-owner", email: credentials.email });
+      expect(
+        await db
+          .select({ userId: account.userId, accountId: account.accountId })
+          .from(account)
+          .where(eq(account.id, "tablecast-migrated-google"))
+          .get(),
+      ).toEqual({ userId: "tablecast-partial-owner", accountId: credentials.email });
+      expect(
+        await db
+          .select({ image: user.image })
+          .from(user)
+          .where(eq(user.id, "tablecast-partial-owner"))
+          .get(),
+      ).toEqual(originalOwner);
+      expect(
+        await db
+          .select({ logo: organization.logo })
+          .from(organization)
+          .where(eq(organization.id, originalOrganisation.id))
+          .get(),
+      ).toEqual({ logo: originalOrganisation.logo });
+      expect(
+        await db
+          .select({ logo: organization.logo })
+          .from(organization)
+          .where(eq(organization.id, migratedOrganisation.id))
+          .get(),
+      ).toEqual({ logo: migratedOrganisation.logo });
+      expect((await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version).toBe(
+        ownerIconVersion,
+      );
+      expect(
+        (await platform.env.TABLECAST_MEDIA.head(refreshedImage))?.httpMetadata?.contentType,
+      ).toBe("image/webp");
       const counts = await seedDemoDatabase(platform.env, credentials);
       // Then: 規模だけでなく組織、プラン、支払、時系列の整合性を持つ。
       expect(counts).toMatchObject({
@@ -169,11 +342,12 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       const products = catalogs.results.flatMap(
         (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
       );
-      expect(products).toHaveLength(180);
+      expect(products).toHaveLength(102);
+      for (const product of products.filter((item) => item.imageKey))
+        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
       for (const product of products) {
-        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.png$/);
         expect(product.imageKind).toBe("illustration");
-        expect(product.allergens.note.ja).toContain("混入は未確認");
+        expect(product.allergens.note.ja).toMatch(/(?:混入|交差接触)は未確認/);
         expect(product.allergens.note.en).toContain("cross-contact");
         expect(product.allergens.note.en).toContain("unverified");
       }
@@ -234,6 +408,32 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         ),
       }).toMatchObject({ results: [] });
       expect(await db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
+      const conversation = (
+        await db
+          .select({ data: tableEvents.data_json })
+          .from(tableEvents)
+          .where(eq(tableEvents.table_session_id, "tablecast-komorebi-table-02-session"))
+          .orderBy(tableEvents.cursor)
+      )
+        .map((row) =>
+          z
+            .object({
+              source: z.literal("synthetic-demo"),
+              role: z.string().optional(),
+              text: z.string().optional(),
+              speaker: z.object({ id: z.string().nullable() }).optional(),
+            })
+            .parse(JSON.parse(row.data)),
+        )
+        .filter((line) => line.role === "user");
+      expect(new Set(conversation.map((line) => line.speaker?.id))).toEqual(
+        new Set([
+          "tablecast-komorebi-table-02-session-synthetic-stream:0",
+          "tablecast-komorebi-table-02-session-synthetic-stream:1",
+          null,
+        ]),
+      );
+      expect(conversation.some((line) => line.text?.includes("一つに訂正"))).toBe(true);
       const reserved = "tablecast-komorebi-table-01-session";
       await db
         .update(tableSessions)
@@ -263,13 +463,17 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
         ),
       };
-      expect(seededIcons.results.length).toBeGreaterThan(40);
+      expect(seededIcons.results.length).toBe(12);
       for (const { url } of seededIcons.results) {
         expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
         const image = await platform.env.TABLECAST_MEDIA.get(
           `tablecast/avatars/${url?.split("/").at(-1)}`,
         );
-        expect(image?.httpMetadata?.contentType).toBe("image/svg+xml");
+        expect(image?.httpMetadata?.contentType).toBe("image/webp");
+        if (!image) throw new Error("seed画像がありません。");
+        const bytes = new Uint8Array(await image.arrayBuffer());
+        expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
+        expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe("WEBP");
       }
       // 店舗とユーザーが変更した画像は、再投入で初期画像へ戻さない。
       await db
@@ -288,7 +492,25 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
               .where(eq(stores.id, "tablecast-komorebi")),
           ),
         );
+      // 連携用ユーザーは所属を付けず、作成後の再投入で画像だけを補う。
+      const linkUserId = "tablecast-test-account-link";
+      await db.insert(user).values({
+        id: linkUserId,
+        name: tablecastDemoLinkIdentity.name,
+        email: tablecastDemoLinkIdentity.email,
+      });
+      expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      const linkUser = await db.select().from(user).where(eq(user.id, linkUserId)).get();
+      expect(linkUser?.image).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
+      expect(await db.select().from(member).where(eq(member.userId, linkUserId))).toEqual([]);
+      await db
+        .update(user)
+        .set({ image: "https://example.test/custom-link-user.png" })
+        .where(eq(user.id, linkUserId));
       const repeated = await seedDemoDatabase(platform.env, credentials);
+      expect(
+        await db.select({ image: user.image }).from(user).where(eq(user.id, linkUserId)).get(),
+      ).toEqual({ image: "https://example.test/custom-link-user.png" });
       expect(
         await db.select({ image: user.image }).from(user).where(eq(user.id, owner.id)).get(),
       ).toEqual({
@@ -314,11 +536,31 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           sql`SELECT COUNT(*) count FROM stores s JOIN organization o ON o.id=s.organization_id AND o.name=s.name`,
         ),
       ).toEqual({ count: 3 });
-      expect(
-        await db.get(
-          sql`SELECT COUNT(*) count FROM member m JOIN stores s ON s.organization_id=m.organization_id`,
-        ),
-      ).toEqual({ count: 42 });
+      const memberships = await db
+        .select({ storeId: stores.id, role: member.role })
+        .from(member)
+        .innerJoin(stores, eq(stores.organization_id, member.organizationId));
+      expect(memberships).toHaveLength(10);
+      for (const storeId of ["tablecast-komorebi", "tablecast-hanul", "tablecast-koharu"])
+        expect(
+          memberships
+            .filter((membership) => membership.storeId === storeId)
+            .map((membership) => membership.role)
+            .sort(),
+        ).toEqual(
+          storeId === "tablecast-koharu"
+            ? ["admin", "member", "owner", "owner"]
+            : ["admin", "member", "owner"],
+        );
+      const westwardOwners = await db
+        .select({ email: user.email, role: member.role })
+        .from(member)
+        .innerJoin(user, eq(user.id, member.userId))
+        .innerJoin(stores, eq(stores.organization_id, member.organizationId))
+        .where(and(eq(stores.id, "tablecast-koharu"), eq(member.role, "owner")));
+      expect(westwardOwners.map((person) => person.email).sort()).toEqual(
+        [credentials.otherEmail, "tsubasa.yamamoto@westward-burgers-kyoto.com"].sort(),
+      );
       expect(await db.get(sql`SELECT COUNT(*) count FROM team`)).toEqual({ count: 0 });
       expect(repeated).toEqual(counts);
       expect(
@@ -328,6 +570,26 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           .where(eq(tableSessions.id, reserved))
           .get(),
       ).toEqual({ cart_version: 17 });
+      // 移行先が別ユーザーとして存在しても、自動で統合や削除をしない。
+      await db.insert(user).values({
+        id: "tablecast-email-conflict",
+        email: "tablecast-owner@example.test",
+        name: "保持する競合ユーザー",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("移行先");
+      expect(
+        await db
+          .select({ email: user.email })
+          .from(user)
+          .where(eq(user.id, "tablecast-email-conflict"))
+          .get(),
+      ).toEqual({ email: "tablecast-owner@example.test" });
+      expect(
+        await db.select({ email: user.email }).from(user).where(eq(user.id, owner.id)).get(),
+      ).toEqual({ email: credentials.email });
       await expect(
         seedDemoDatabase({ ...platform.env, TABLECAST_ENV: "production" }, credentials),
       ).rejects.toThrow("開発環境");
