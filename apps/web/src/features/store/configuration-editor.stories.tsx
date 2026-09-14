@@ -112,6 +112,8 @@ export const RestorePublishedVoice: Story = {
     const canvas = within(canvasElement);
     const group = within(canvas.getByRole("group", { name: "英語" }));
     const voice = group.getByRole("combobox", { name: /音声設定/ });
+    await expect(canvas.getByRole("textbox", { name: "日本語 接客方針" })).toBeInTheDocument();
+    await expect(canvas.getByRole("textbox", { name: "英語 接客方針" })).toBeInTheDocument();
     await expect(await group.findByText("音声一覧は未設定です。")).toBeInTheDocument();
     await expect(voice).toHaveValue("Ashley");
     await expect(group.getByRole("option", { name: "Olivia" })).toBeInTheDocument();
@@ -166,7 +168,10 @@ export const PagedVoices: Story = {
     const english = within(canvas.getByRole("group", { name: "English" }));
     const japanese = within(canvas.getByRole("group", { name: "Japanese" }));
     const voice = english.getByRole("combobox", { name: /Voice setting/ });
-    const instructions = english.getByRole("textbox");
+    const instructions = english.getByRole("textbox", { name: "English Service instructions" });
+    await expect(
+      japanese.getByRole("textbox", { name: "Japanese Service instructions" }),
+    ).toBeInTheDocument();
     await expect(
       await japanese.findByText("No standard voices are available."),
     ).toBeInTheDocument();
