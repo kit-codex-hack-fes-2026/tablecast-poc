@@ -35,12 +35,7 @@ import { draftsOptions } from "./store-query";
 import { parseResponse, rpc } from "../../lib/api";
 import { m } from "../../paraglide/messages";
 import { ConfigurationStatus, DraftStatus } from "../shell/configuration-status";
-import {
-  emptyMenuListSearch,
-  menuLabels,
-  menuSectionSchema,
-  type MenuReviewSearch,
-} from "./menu-model";
+import { menuLabels, menuSectionSchema, type MenuReviewSearch } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 import { ConfigurationChanges } from "./configuration-changes";
@@ -86,13 +81,7 @@ export function SettingsDrafts() {
     </>
   );
 }
-export function DraftPage({
-  draftId,
-  search = emptyMenuListSearch,
-}: {
-  draftId: string;
-  search?: MenuReviewSearch;
-}) {
+export function DraftPage({ draftId, search }: { draftId: string; search: MenuReviewSearch }) {
   const { returnSection = "products", ...listSearch } = search;
   const { id: storeId, role } = useStore();
   const { t, locale } = useI18n();
