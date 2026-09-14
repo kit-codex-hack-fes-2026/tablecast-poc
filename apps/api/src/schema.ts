@@ -20,6 +20,7 @@ export {
   configDraftSchema,
   configurationIssueSchema,
   configurationSchema,
+  draftChoicesPageSchema,
 } from "./modules/configuration/model";
 export type {
   Catalog,

@@ -51,6 +51,10 @@ for (const { locale, labels } of [
       (r) => new URL(r.url()).pathname === `${api}/drafts` && r.request().method() === "POST",
     );
     await page.getByRole("button", { name: labels.menu_start_editing, exact: true }).click();
+    await page
+      .getByRole("dialog", { name: labels.workflow_choose_title, exact: true })
+      .getByRole("button", { name: labels.editor_create_draft, exact: true })
+      .click();
     const draft = configDraftSchema.parse(await (await response).json());
     await expect(page).toHaveURL(new RegExp(`/changes/${draft.id}/products/`));
     const input = page.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true });
@@ -59,13 +63,21 @@ for (const { locale, labels } of [
     await expect(page.getByRole("status").filter({ hasText: labels.account_saved })).toBeVisible();
     await page.reload();
     await expect(input).toHaveValue("777");
+    await page.goto(detailUrl);
+    await page.getByRole("button", { name: labels.menu_start_editing, exact: true }).click();
+    await page
+      .getByRole("dialog", { name: labels.workflow_choose_title, exact: true })
+      .getByRole("button", { name: labels.workflow_resume, exact: true })
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/changes/${draft.id}/products/`));
+    await expect(input).toHaveValue("777");
     // Then: 個別ページから一覧、変更確認へ移動しても保存内容が維持される。
     await page
       .getByRole("main")
       .getByRole("link", { name: labels.editor_products, exact: true })
       .click();
     await page.getByRole("link", { name: labels.admin_drafts, exact: true }).click();
-    await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}`);
+    await expect(page).toHaveURL(`${baseURL}${base}/changes/${draft.id}?returnSection=products`);
     await expect(
       page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
     ).toBeVisible();

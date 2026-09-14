@@ -6,10 +6,14 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
+  type TableOptions,
+  type PaginationState,
+  type OnChangeFn,
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "../i18n/locale";
+import { m } from "../paraglide/messages";
 import { ErrorNotice } from "./error-notice";
 import { Skeleton } from "./ui/skeleton";
 
@@ -27,6 +31,10 @@ export function DataTable<T>({
   pending = false,
   error,
   onRetry,
+  state,
+  onGlobalFilterChange,
+  onPaginationChange,
+  manualFiltering,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
@@ -37,15 +45,21 @@ export function DataTable<T>({
   pending?: boolean;
   error?: unknown;
   onRetry?: () => void;
+  state?: { globalFilter?: string; pagination?: PaginationState };
+  onGlobalFilterChange?: OnChangeFn<string>;
+  onPaginationChange?: TableOptions<T>["onPaginationChange"];
+  manualFiltering?: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [filter, setFilter] = useState("");
   const table = useReactTable({
     data,
     columns,
     getRowId,
-    state: { globalFilter: filter },
-    onGlobalFilterChange: setFilter,
+    state: { globalFilter: filter, ...state },
+    onGlobalFilterChange: onGlobalFilterChange ?? setFilter,
+    ...(onPaginationChange ? { onPaginationChange, autoResetPageIndex: false } : {}),
+    manualFiltering,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -77,10 +91,10 @@ export function DataTable<T>({
             disabled={pending && !data.length}
             className="pl-10"
             placeholder={searchLabel}
-            value={filter}
+            value={state?.globalFilter ?? filter}
             onChange={(event) => {
-              setFilter(event.target.value);
-              table.setPageIndex(0);
+              table.setGlobalFilter(event.target.value);
+              if (!onGlobalFilterChange) table.setPageIndex(0);
             }}
           />
         </label>
@@ -139,7 +153,10 @@ export function DataTable<T>({
           <span>
             {pending
               ? t("common_loading")
-              : `${table.getFilteredRowModel().rows.length} ${t("common_records")}`}
+              : m.common_result_count(
+                  { count: table.getFilteredRowModel().rows.length },
+                  { locale },
+                )}
           </span>
           <div className="flex items-center gap-2">
             <Button

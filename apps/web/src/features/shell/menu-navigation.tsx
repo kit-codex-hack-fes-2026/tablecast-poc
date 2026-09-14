@@ -1,8 +1,9 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useParams, useSearch } from "@tanstack/react-router";
 import { FileClock, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
 
-import { menuLabels } from "../store/menu-model";
+import { ConfigurationRouteStatus } from "./configuration-status";
+import { menuLabels, menuReviewSearchSchema } from "../store/menu-model";
 const items = [
   { section: "products", Icon: UtensilsCrossed },
   { section: "categories", Icon: Tags },
@@ -19,16 +20,25 @@ export function MenuNavigation({
   onNavigate?: () => void;
 }) {
   const { t } = useI18n();
+  const { section: activeSection } = useParams({ strict: false });
+  const { returnSection, ...listSearch } = menuReviewSearchSchema.parse(
+    useSearch({ strict: false }),
+  );
+  const currentSection = activeSection ?? returnSection ?? "products";
   const className =
     "flex min-h-11 items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary data-[status=active]:bg-secondary data-[status=active]:font-semibold";
   return (
     <nav className="ml-4 space-y-1 border-l border-border pl-3" aria-label={t("admin_config")}>
+      <div className="py-2">
+        <ConfigurationRouteStatus storeId={storeId} storeName="" />
+      </div>
       {items.map(({ section, Icon }) =>
         draftId ? (
           <Link
             key={section}
             to="/admin/stores/$storeId/menu/changes/$draftId/$section"
             params={{ storeId, draftId, section }}
+            search={section === currentSection ? listSearch : {}}
             className={className}
             onClick={onNavigate}
           >
@@ -40,6 +50,7 @@ export function MenuNavigation({
             key={section}
             to="/admin/stores/$storeId/menu/$section"
             params={{ storeId, section }}
+            search={section === currentSection ? listSearch : {}}
             className={className}
             onClick={onNavigate}
           >
@@ -55,6 +66,7 @@ export function MenuNavigation({
             : "/admin/stores/$storeId/menu/changes"
         }
         params={{ storeId, draftId: draftId ?? "" }}
+        search={draftId ? { ...listSearch, returnSection: currentSection } : {}}
         activeOptions={{ exact: true }}
         className={className}
         onClick={onNavigate}

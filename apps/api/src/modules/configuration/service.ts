@@ -1,5 +1,5 @@
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -14,9 +14,11 @@ import { requireConfigurationImages } from "../media/service";
 import {
   configurationIssueSchema,
   configurationSchema,
+  draftChoiceSchema,
   type Catalog,
   type ConfigDraft,
   type Configuration,
+  type DraftChoicesQuery,
 } from "./model";
 function hasSensitiveField(value: unknown, path: string): boolean {
   return (
@@ -116,6 +118,58 @@ export async function listDrafts(services: ApiServices, actor: Actor) {
   ]);
   const catalog = catalogValue(catalogs[0]);
   return { drafts: rows.map((row) => draftValue(row, catalog)) };
+}
+export async function listDraftChoices(
+  services: ApiServices,
+  actor: Actor,
+  query: DraftChoicesQuery,
+) {
+  const db = services.db;
+  const [rows, catalogs] = await db.batch([
+    db
+      .select()
+      .from(business.configDrafts)
+      .where(
+        and(
+          eq(business.configDrafts.store_id, actor.storeId),
+          inArray(business.configDrafts.status, ["draft", "ready"]),
+          query.beforeUpdatedAt !== undefined && query.beforeId !== undefined
+            ? or(
+                lt(business.configDrafts.updated_at, query.beforeUpdatedAt),
+                and(
+                  eq(business.configDrafts.updated_at, query.beforeUpdatedAt),
+                  lt(business.configDrafts.id, query.beforeId),
+                ),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(business.configDrafts.updated_at), desc(business.configDrafts.id))
+      .limit(31),
+    catalogQuery(db, actor.storeId),
+  ]);
+  const catalog = catalogValue(catalogs[0]);
+  const page = rows.slice(0, 30);
+  const last = page.at(-1);
+  return {
+    drafts: page.map((row) => {
+      const draft = draftValue(row, catalog);
+      return {
+        id: draft.id,
+        baseVersion: draft.baseVersion,
+        version: draft.version,
+        status: draft.status,
+        updatedAt: draft.updatedAt,
+        changeCount: draft.changes.length,
+        sections: draftChoiceSchema.shape.sections.element.options.filter((section) =>
+          draft.changes.some((change) => change.path.split(".")[0] === section),
+        ),
+      };
+    }),
+    publishedVersion: catalog.version,
+    nextCursor:
+      rows.length > 30 && last ? { beforeUpdatedAt: last.updated_at, beforeId: last.id } : null,
+  };
 }
 export async function createDraft(services: ApiServices, actor: Actor) {
   const db = services.db;
