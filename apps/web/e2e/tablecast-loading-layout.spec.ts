@@ -204,18 +204,18 @@ test("フロア・メニュー・履歴の初回読込も見出しと表を維�
   });
   for (const target of [
     {
-      path: "/admin/stores/tablecast-akari/floor",
-      endpoint: "**/api/admin/stores/tablecast-akari",
+      path: "/admin/stores/tablecast-hanul/floor",
+      endpoint: "**/api/admin/stores/tablecast-hanul",
       title: ja.admin_live,
     },
     {
-      path: "/admin/stores/tablecast-akari/menu/products",
-      endpoint: "**/api/admin/stores/tablecast-akari/catalog",
+      path: "/admin/stores/tablecast-hanul/menu/products",
+      endpoint: "**/api/admin/stores/tablecast-hanul/catalog",
       title: ja.editor_products,
     },
     {
-      path: "/admin/stores/tablecast-akari/visits",
-      endpoint: "**/api/admin/stores/tablecast-akari/history?*",
+      path: "/admin/stores/tablecast-hanul/visits",
+      endpoint: "**/api/admin/stores/tablecast-hanul/history?*",
       title: ja.admin_history,
     },
   ]) {
