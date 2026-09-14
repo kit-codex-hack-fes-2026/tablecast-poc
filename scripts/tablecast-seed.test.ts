@@ -25,6 +25,7 @@ import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
 import { demoStores } from "./tablecast-fixtures";
 import { legacyIdentityIconUrl } from "./tablecast-seed-icons";
+import { tablecastDemoLinkIdentity } from "../apps/emulate/src/tablecast-demo-identities";
 
 const execute = promisify(execFile);
 
@@ -475,8 +476,25 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
               .where(eq(stores.id, "tablecast-komorebi")),
           ),
         );
+      // 連携用ユーザーは所属を付けず、作成後の再投入で画像だけを補う。
+      const linkUserId = "tablecast-test-account-link";
+      await db.insert(user).values({
+        id: linkUserId,
+        name: tablecastDemoLinkIdentity.name,
+        email: tablecastDemoLinkIdentity.email,
+      });
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      const linkUser = await db.select().from(user).where(eq(user.id, linkUserId)).get();
+      expect(linkUser?.image).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
+      expect(await db.select().from(member).where(eq(member.userId, linkUserId))).toEqual([]);
+      await db
+        .update(user)
+        .set({ image: "https://example.test/custom-link-user.png" })
+        .where(eq(user.id, linkUserId));
       const repeated = await seedDemoDatabase(platform.env, credentials);
+      expect(
+        await db.select({ image: user.image }).from(user).where(eq(user.id, linkUserId)).get(),
+      ).toEqual({ image: "https://example.test/custom-link-user.png" });
       expect(
         await db.select({ image: user.image }).from(user).where(eq(user.id, owner.id)).get(),
       ).toEqual({

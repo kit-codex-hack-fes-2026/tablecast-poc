@@ -633,7 +633,7 @@ function demoStaff(credentials: DemoCredentials) {
 }
 
 async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentials) {
-  const staff = demoStaff(credentials);
+  const staff = [...demoStaff(credentials), tablecastDemoLinkIdentity];
   const db = drizzle(env.TABLECAST_DB);
   const [users, organisations] = await db.batch([
     db
