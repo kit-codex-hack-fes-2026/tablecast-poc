@@ -273,6 +273,19 @@ export function validReleaseSource(pr: {
   );
 }
 
+export function validReleaseHead(pulls: Pull[], base: string, head: string) {
+  return (
+    pulls.length === 1 &&
+    pulls.every(
+      (pr) =>
+        pr.base.ref === "main" &&
+        validReleaseSource(pr) &&
+        pr.head.sha === head &&
+        pr.base.sha === base,
+    )
+  );
+}
+
 async function main() {
   const base = shaSchema.parse(await git("rev-parse", "origin/main"));
   const head = shaSchema.parse(await git("rev-parse", "origin/staging"));
@@ -290,9 +303,11 @@ async function main() {
       /* conflictは拒否する。 */
     }
     for (const sha of new Set(pulls.map((pr) => pr.head.sha))) {
-      const permitted = pulls
-        .filter((pr) => pr.head.sha === sha)
-        .every((pr) => validReleaseSource(pr) && pr.head.sha === head && pr.base.sha === base);
+      const permitted = validReleaseHead(
+        pulls.filter((pr) => pr.head.sha === sha),
+        base,
+        head,
+      );
       const ready =
         permitted && sameTree && state.served === head && state.run?.conclusion === "success";
       await github(`${prefix}/statuses/${sha}`, "POST", {

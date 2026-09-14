@@ -5,6 +5,7 @@ import {
   releaseChanges,
   renderRelease,
   validReleaseSource,
+  validReleaseHead,
   type ReleaseChange,
 } from "./tablecast-release";
 import { tablecastRepository } from "./tablecast-deploy-config";
@@ -124,4 +125,16 @@ test("mainには同一repoのstagingだけを許可する", () => {
   expect(
     validReleaseSource({ ...pr, head: { ...pr.head, repo: { full_name: "fork/tablecast-poc" } } }),
   ).toBe(false);
+});
+
+test("同じheadのrelease PRが重複した場合はマージ判定も拒否する", () => {
+  const pr = {
+    ...pull(1),
+    base: { ref: "main", sha: base },
+    head: { ...pull(1).head, ref: "staging" },
+  };
+  expect(validReleaseHead([pr], base, head)).toBe(true);
+  expect(validReleaseHead([], base, head)).toBe(false);
+  expect(validReleaseHead([pr, { ...pr, number: 2 }], base, head)).toBe(false);
+  expect(validReleaseHead([pr], base, previousHead)).toBe(false);
 });
