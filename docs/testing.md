@@ -115,7 +115,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ## E2Eの隔離
 
-`bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。GitHub ActionsのLinux runnerではhost networkとケース専用のloopbackポートを使い、vethの生成・削除による他ケースのChromiumの`ERR_NETWORK_CHANGED`を避ける。SMTPは未使用のためOS割当ポートにbindし、メール保存先はケース専用container内に保つ。ローカルのDocker Desktop/OrbStackでは従来のport publishを使用する。
+`bun run test:e2e` はPlaywrightの`test-scoped fixture`で各ケース専用のD1・R2・DO・Googleモック・Mailpit・Web/APIを起動する。各ケースで専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-case-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。DockerがMailpitの起動に必要である。LinuxではMailpitをhost networkで起動し、HTTPは`127.0.0.1:0`へbindする。同梱BusyBoxの`netstat -ltnp`でcontainer内の`1/mailpit`が所有するHTTP待受を一つに特定する。host networkの他プロセスのポートは採用しない。port 0へ接続してしまうイメージの既定healthcheckは無効にし、fixtureが実URLのHTTP成功と子プロセスの生存を確認する。SMTPはcontainer内のUnix socketを使う。TCPポートの事前確保とvethの生成・削除をなくし、メール保存先はケース専用container内に保つ。Mailpit 1.29.2のHTTP Unix socketはGETできるが送信APIが接続元アドレスの解析で失敗するため使わない。macOSのDocker Desktop/OrbStackではDockerの動的port publishを使い、inspectで実ポートを取得する。
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。ViteとSerwistの出力先は`TABLECAST_BUILD_DIRECTORY`で実行ごとの`build/`へ揃え、通常開発の`apps/web/dist`を上書きしない。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各ケースへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物をtemplateとし、各ケースのassets・deploy configから固有名のWeb/API WorkersをCloudflare Vite previewで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もケース内へ分け、別caseの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証も別環境であり、固定fixtureのIDが同じでも書込み先は共有しない。
 
@@ -123,7 +123,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 DBはケースの終了とともに破棄するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・container・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
 
-同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。Web・OAuth・Mailpitのポートは現在のCLIへ渡すため空き番号の確認後にbindする。確認から起動までの予約を保持するAPIはなく、外部プロセスによる先取りは残る制約である。bind失敗は起動失敗として記録し、別ポートへの自動再試行で隠さない。
+同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。ケースの入口はVite標準proxyを`port: 0`で一度だけ起動し、終了まで待受を保持する。実originをOAuth callbackとAPI varsへ設定後、Cloudflare previewも`port: 0`で起動し、listen完了時の実ポートへ転送する。空き番号を取得して解放する処理は使わない。OAuthとWorkerのreadyファイルは一時ファイルからrenameして公開し、異常終了と起動期限を確認する。bind失敗の自動再試行はしない。
 
 通常操作は、保存済み表示・有効化・反映後の値を観測してから次の操作へ進む。HTTP応答の受信だけでフォームのresetやiframeへの反映を完了と扱わない。意図した競合は下位層の明示barrierで確認する。会話注文デモは客の初期言語を明示し、言語・表示の保持と設定・注文の保持を別ケースへ分ける。端末寸法の全組合せは既存の`demo-viewport.browser.test.tsx`が担当する。全specと共通環境の確認結果は[#116](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/116)に置く。
 
@@ -166,7 +166,7 @@ bun run test:browser
 bun run test:e2e --project=tablecast-chromium
 ```
 
-E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。fixtureが起動した専用process groupを終了し、Viteの子孫のworkerdも残さない。失敗時は資格を除去した最大65,536文字のruntimeログを`testInfo.outputPath()`へ保存して添付する。画像・計測値も同じcase別の保存先を使う。migrationログはruntime削除前に`apps/web/test-results/tablecast-runtime/<run>/`へ保存する。テスト結果には認証情報を含むtraceを追加しない。
+E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。fixtureが起動した専用process groupと入口を終了し、Viteの子孫のworkerd、接続済みsocketも残さない。失敗時は資格を除去した最大65,536文字のruntimeログを`testInfo.outputPath()`へ保存して添付する。画像・計測値も同じcase別の保存先を使う。migrationログはruntime削除前に`apps/web/test-results/tablecast-runtime/<run>/`へ保存する。テスト結果には認証情報を含むtraceを追加しない。
 
 ### 型付きDB fixture
 
@@ -183,3 +183,11 @@ E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを
 PWA・メニュー公開・注文などの実動作試験はService Workerを有効にする。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する試験は、そのファイルの`test.use({ serviceWorkers: "block" })`でSW登録を止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
 
 ログイン後のSSR画面から次のdocument navigationへ進む場合は、見出しやURLだけでなく既存の操作部品が有効になるまで待つ。これによりhydrationとredirectの完了前に次の遷移を競合させない。
+
+### E2Eの通信停止とOAuthの動的ポート
+
+`runtime.setOnline(false)`は入口の待受を保持し、既存接続と新しい要求を切断する。`true`で同じoriginへ復帰する。ブラウザーのオフライン設定はWebKitのService Workerキャッシュ取得も止めるため使わない。通信障害の検証であり、Workerプロセスの再起動・DB復旧の証明とは区別する。Service Workerの更新試験はcase専用`client/sw.js`を書き換え、`runtime.restartWeb()`でWorker側のアセット情報を再読込してから`registration.update()`で配信を確認する。入口の待受は閉じず、再起動後のWorkerの実ポートへ転送先を更新する。最小の静的Workerでは再起動なしで本文が変わるが、実アプリの更新判定にはアセット情報の再構築が必要だった。
+
+`emulate@0.11.1`の公開APIは動的ポートの実URLを返さないため、`patches/emulate@0.11.1.patch`をBunの`patchedDependencies`で適用する。bind完了後の実ポートからdiscovery・issuer・seedのURLを構築し、初期化失敗ではlistenerを閉じる。明示baseUrlは保持する。固定ポートの既存dev/previewと動的ポートのE2Eを同じ公開APIで扱い、previewでのport 0は許可しない。上流で同じ契約が提供された版へ移行するときにパッチを外す。
+
+`scripts/tablecast-e2e-runtime.test.ts`は実TCPとOAuth子プロセスで、ケース分離、停止中のポート保持、復帰、discoveryのURL一致、bind失敗の拒否を確認する。HTTP・OAuth・メール・DB・PWAの最終配線は既存Chromium/WebKit E2Eが確認する。

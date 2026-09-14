@@ -187,9 +187,9 @@ test("別画面の未保存入力がある間は更新を待ち、入力を戻�
       return state;
     });
     // When: 配信済みService Workerの内容を更新する。
-    await runtime.setOnline(false);
     await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
-    await runtime.setOnline(true);
+    await runtime.restartWeb();
+
     await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) throw new Error("登録済みService Workerが必要です");

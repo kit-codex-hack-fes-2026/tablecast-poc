@@ -116,10 +116,12 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
-  const initialPage = await page.evaluate(() => performance.timeOrigin);
-  await runtime.setOnline(false);
+  // 時刻の丸めや補正ではなく、Documentの読み込みを観測する。
+  let documentLoads = 0;
+  page.on("domcontentloaded", () => documentLoads++);
   await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-live-table-update\n");
-  await runtime.setOnline(true);
+  await runtime.restartWeb();
+
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration();
     if (!registration) throw new Error("登録済みService Workerが必要です");
@@ -170,7 +172,7 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await expect(detail).not.toBeVisible();
   await expect(card).toContainText(prices.changed);
   await expect(card.locator("img")).toHaveAttribute("src", new RegExp(replacement));
-  expect(await page.evaluate(() => performance.timeOrigin)).toBe(initialPage);
+  expect(documentLoads).toBe(0);
   expect(
     await page.evaluate(async () =>
       Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
@@ -185,5 +187,5 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
     staff.post(`${adminPath}/tables/${table.id}/close`, { headers, data: {} }),
   ]);
   expect(closed.status()).toBe(200);
-  expect(await page.evaluate(() => performance.timeOrigin)).not.toBe(initialPage);
+  expect(documentLoads).toBe(1);
 });
