@@ -66,7 +66,7 @@ Web applicationの設定を次と完全一致させる。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
 4. 配備ジョブは全検証成功後にartifactを取得する。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
-5. 既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
+5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。WranglerはDocker認証設定を共有するためimage同士の送信は直列にする。既存Webがある場合は内部認証付きdrainを実施する。開始予約・実jobがあれば失敗して止まり、終了後にActionsを再実行する。drain成功後にD1 migration、初回PR seed、API/Container、Webの順で配備し、最後に新規音声受付を再開する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
 D1 migrationは追加型で旧APIとも互換にする。drainは音声だけで、GUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
@@ -77,7 +77,7 @@ DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからli
 
 ## 初期データと再実行
 
-PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。投入済みフラグがある再配備ではDB・注文・画像を変更しない。`db:seed`のdevelopment制限は維持し、公開PR専用入口が対象originと所有情報を検査する。初期voiceは未設定で、管理画面で実在voiceを確認して明示公開するまで音声開始できない。
+PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。商品画像は4件ずつ並行し、条件付きput・内容照合・既存のretry上限を保つ。失敗した群の開始済みI/Oを回収してから失敗し、次の群へ進まない。ログの`商品画像の投入`、`DB・画像の配備準備`、`検証済みイメージの送信`で区間時間を確認する。投入済みフラグがある再配備ではDB・注文・画像を変更しない。`db:seed`のdevelopment制限は維持し、公開PR専用入口が対象originと所有情報を検査する。初期voiceは未設定で、管理画面で実在voiceを確認して明示公開するまで音声開始できない。
 
 資源作成から所有情報記録、DB seed、画像登録の全体は原子的ではない。所有テーブルの`seeded`は`0`が未投入、`2`がDB投入済み・画像待ち、`1`が全投入完了を表す。DBはDrizzleの型付きschemaと`db.batch()`で投入する。`2`からの再配備はDBを変更せず、未投入画像だけを再開する。
 

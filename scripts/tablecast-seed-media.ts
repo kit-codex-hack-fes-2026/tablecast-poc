@@ -20,12 +20,23 @@ export async function seedMenuImages(
   bucket: Parameters<typeof uploadPreviewImage>[0],
   legacy = false,
 ) {
-  for (const file of (await readdir(directory))
-    .filter((name) => /^[a-z0-9-]+\.png$/.test(name))
-    .sort()) {
-    const bytes = await readFile(resolve(directory, file));
-    await uploadPreviewImage(bucket, imageKey(bytes), bytes);
-    if (legacy) await uploadPreviewImage(bucket, `tablecast/demo/${file}`, bytes);
+  const files = (await readdir(directory)).filter((name) => /^[a-z0-9-]+\.png$/.test(name)).sort();
+  console.time("商品画像の投入");
+  try {
+    for (let offset = 0; offset < files.length; offset += 4) {
+      // 失敗した場合も開始済みのR2操作を回収してからbindingを解放する。
+      const results = await Promise.allSettled(
+        files.slice(offset, offset + 4).map(async (file) => {
+          const bytes = await readFile(resolve(directory, file));
+          await uploadPreviewImage(bucket, imageKey(bytes), bytes);
+          if (legacy) await uploadPreviewImage(bucket, `tablecast/demo/${file}`, bytes);
+        }),
+      );
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure) throw failure.reason;
+    }
+  } finally {
+    console.timeEnd("商品画像の投入");
   }
 }
 

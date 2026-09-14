@@ -165,7 +165,7 @@ chmod 600 .env.local
 JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。CLIラッパーや暗号化envの復号は使わない。
 
 > [!NOTE]
-> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。
+> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の限定並列投入、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
 PythonはBunを経由せず、[uvの標準env読み込み](https://docs.astral.sh/uv/reference/cli/#uv-run)を使う。`.env.local` の4項目を設定し、Web/LiveKit Serverの起動後、別ターミナルで実行する。
 
