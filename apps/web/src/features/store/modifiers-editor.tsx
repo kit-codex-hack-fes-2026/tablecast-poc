@@ -14,6 +14,10 @@ import {
   ReferencesField,
 } from "./configuration-fields";
 
+function encodeEditorId(value: string) {
+  return encodeURIComponent(JSON.stringify(value));
+}
+
 function newOption(): Modifier["options"][number] {
   return {
     id: crypto.randomUUID(),
@@ -89,7 +93,7 @@ export function ModifiersEditor({
       aria-label={t("editor_modifiers")}
     >
       {product.modifiers.map((group, groupIndex) => {
-        const groupId = `${id}-${group.id}`;
+        const groupId = `${id}-${encodeEditorId(group.id)}`;
         return (
           <fieldset
             key={group.id}
@@ -168,7 +172,7 @@ export function ModifiersEditor({
                   key={option.id}
                   option={option}
                   title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
-                  id={`${groupId}-${option.id}`}
+                  id={`${groupId}-${encodeEditorId(option.id)}`}
                   labelledBy={groupId}
                   references={optionChoices.filter((choice) => choice.id !== option.id)}
                   disabled={disabled}
@@ -176,7 +180,9 @@ export function ModifiersEditor({
                   onChange={(change) => updateOption(group, option.id, change)}
                   onRemove={() => {
                     const next = group.options[optionIndex + 1] ?? group.options[optionIndex - 1];
-                    pendingFocus.current = next ? `${groupId}-${next.id}` : `${groupId}-add`;
+                    pendingFocus.current = next
+                      ? `${groupId}-${encodeEditorId(next.id)}`
+                      : `${groupId}-add`;
                     updateGroup(group.id, {
                       options: group.options.filter((item) => item.id !== option.id),
                     });
@@ -192,7 +198,7 @@ export function ModifiersEditor({
                 disabled={disabled || group.options.length >= 30}
                 onClick={() => {
                   const option = newOption();
-                  pendingFocus.current = `${groupId}-${option.id}`;
+                  pendingFocus.current = `${groupId}-${encodeEditorId(option.id)}`;
                   updateGroup(group.id, { options: [...group.options, option] });
                 }}
               >
@@ -208,7 +214,7 @@ export function ModifiersEditor({
               disabled={disabled}
               onClick={() => {
                 const next = product.modifiers[groupIndex + 1] ?? product.modifiers[groupIndex - 1];
-                pendingFocus.current = next ? `${id}-${next.id}` : `${id}-add`;
+                pendingFocus.current = next ? `${id}-${encodeEditorId(next.id)}` : `${id}-add`;
                 onChange(product.modifiers.filter((item) => item.id !== group.id));
               }}
             >
@@ -226,7 +232,7 @@ export function ModifiersEditor({
         disabled={disabled || product.modifiers.length >= 12}
         onClick={() => {
           const groupId = crypto.randomUUID();
-          pendingFocus.current = `${id}-${groupId}`;
+          pendingFocus.current = `${id}-${encodeEditorId(groupId)}`;
           onChange([
             ...product.modifiers,
             {
