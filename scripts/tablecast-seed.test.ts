@@ -447,7 +447,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
         ),
       };
-      expect(seededIcons.results.length).toBe(11);
+      expect(seededIcons.results.length).toBe(12);
       for (const { url } of seededIcons.results) {
         expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
         const image = await platform.env.TABLECAST_MEDIA.get(
@@ -507,14 +507,27 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         .select({ storeId: stores.id, role: member.role })
         .from(member)
         .innerJoin(stores, eq(stores.organization_id, member.organizationId));
-      expect(memberships).toHaveLength(9);
+      expect(memberships).toHaveLength(10);
       for (const storeId of ["tablecast-komorebi", "tablecast-hanul", "tablecast-koharu"])
         expect(
           memberships
             .filter((membership) => membership.storeId === storeId)
             .map((membership) => membership.role)
             .sort(),
-        ).toEqual(["admin", "member", "owner"]);
+        ).toEqual(
+          storeId === "tablecast-koharu"
+            ? ["admin", "member", "owner", "owner"]
+            : ["admin", "member", "owner"],
+        );
+      const westwardOwners = await db
+        .select({ email: user.email, role: member.role })
+        .from(member)
+        .innerJoin(user, eq(user.id, member.userId))
+        .innerJoin(stores, eq(stores.organization_id, member.organizationId))
+        .where(and(eq(stores.id, "tablecast-koharu"), eq(member.role, "owner")));
+      expect(westwardOwners.map((person) => person.email).sort()).toEqual(
+        [credentials.otherEmail, "tsubasa.yamamoto@westward-burgers-kyoto.com"].sort(),
+      );
       expect(await db.get(sql`SELECT COUNT(*) count FROM team`)).toEqual({ count: 0 });
       expect(repeated).toEqual(counts);
       expect(

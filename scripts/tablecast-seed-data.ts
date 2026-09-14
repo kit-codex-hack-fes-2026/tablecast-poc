@@ -620,15 +620,16 @@ async function migrateDemoIdentityEmails(env: SeedEnv) {
 }
 
 function demoStaff(credentials: DemoCredentials) {
-  return tablecastDemoIdentities.map((person) => ({
-    ...person,
-    email:
+  return tablecastDemoIdentities.flatMap((person) => {
+    const email =
       person.role === "owner"
         ? person.stores.some((storeId) => storeId === "tablecast-koharu")
           ? credentials.otherEmail
           : credentials.email
-        : person.email,
-  }));
+        : person.email;
+    // 独自メールは追加の所有者として保持し、Google名簿の所有者も必ず投入する。
+    return email === person.email ? [person] : [person, { ...person, email }];
+  });
 }
 
 async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentials) {
