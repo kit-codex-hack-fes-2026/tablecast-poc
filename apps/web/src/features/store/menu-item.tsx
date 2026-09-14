@@ -1,6 +1,12 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useForm } from "@tanstack/react-form";
-import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -17,7 +23,7 @@ import { MenuOverview } from "./menu-overview";
 import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
 import { addMenuItem, menuLabels, type MenuSection } from "./menu-model";
-import { catalogOptions, draftOptions } from "./menu-query";
+import { catalogOptions, configurationImageUploadKey, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
 export function MenuItem({
@@ -72,6 +78,9 @@ function ItemForm({
   const storeId = store.id;
   const { locale, t } = useI18n();
   const client = useQueryClient();
+  const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const hasImageUploads = () =>
+    client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
   const navigate = useNavigate();
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
@@ -90,16 +99,19 @@ function ItemForm({
   const form = useForm({
     defaultValues: { configuration: initial },
     onSubmit: async ({ value }) => {
+      if (hasImageUploads()) return;
       await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
   useBlocker({
     shouldBlockFn: () =>
-      editable &&
-      (form.state.isDirty || (itemId === "new" && !newSaved.current)) &&
-      !window.confirm(t("menu_leave_unsaved")),
+      hasImageUploads() ||
+      (editable &&
+        (form.state.isDirty || (itemId === "new" && !newSaved.current)) &&
+        !window.confirm(t("menu_leave_unsaved"))),
     enableBeforeUnload: () =>
-      editable && (form.state.isDirty || (itemId === "new" && !newSaved.current)),
+      hasImageUploads() ||
+      (editable && (form.state.isDirty || (itemId === "new" && !newSaved.current))),
   });
   const save = useMutation({
     mutationFn: (configuration: Configuration) => {
@@ -225,42 +237,15 @@ function ItemForm({
                 disabled={!editable || save.isPending}
                 className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
               >
-                {section === "products" && (
-                  <ProductsEditor
-                    storeId={store.id}
-                    value={configuration}
-                    selectedId={selectedId}
-                    onChange={(next) => form.setFieldValue("configuration", next)}
-                    disabled={!editable}
-                  />
-                )}
-                {section === "categories" && (
-                  <CategoriesEditor
-                    value={configuration}
-                    selectedId={selectedId}
-                    onChange={(next) => form.setFieldValue("configuration", next)}
-                    disabled={!editable}
-                  />
-                )}
-                {section === "plans" && (
-                  <PlansEditor
-                    value={configuration}
-                    selectedId={selectedId}
-                    onChange={(next) => form.setFieldValue("configuration", next)}
-                    disabled={!editable}
-                  />
-                )}
-                {section === "cast" && (
-                  <CastEditor
-                    storeId={storeId}
-                    value={configuration.cast}
-                    voices={[initial.cast.voice]}
-                    onChange={(cast) =>
-                      form.setFieldValue("configuration", { ...configuration, cast })
-                    }
-                    disabled={!editable}
-                  />
-                )}
+                <ItemFields
+                  section={section}
+                  storeId={storeId}
+                  value={configuration}
+                  selectedId={selectedId}
+                  retainedVoice={initial.cast.voice}
+                  onChange={(next) => form.setFieldValue("configuration", next)}
+                  disabled={!editable}
+                />
               </fieldset>
             )}
           </form.Subscribe>
@@ -272,16 +257,19 @@ function ItemForm({
                     <Button
                       type="submit"
                       data-pwa-blocked={
-                        dirty || save.isPending || (itemId === "new" && !newSaved.current)
+                        dirty ||
+                        save.isPending ||
+                        uploadingImages ||
+                        (itemId === "new" && !newSaved.current)
                       }
-                      disabled={save.isPending || (!dirty && itemId !== "new")}
+                      disabled={save.isPending || uploadingImages || (!dirty && itemId !== "new")}
                     >
                       <Save />
                       {t("common_save")}
                     </Button>
-                    {dirty && (
+                    {(dirty || uploadingImages) && (
                       <span role="status" className="text-sm text-muted-foreground">
-                        {t("admin_unsaved")}
+                        {t(uploadingImages ? "editor_image_wait" : "admin_unsaved")}
                       </span>
                     )}
                   </div>
@@ -291,8 +279,12 @@ function ItemForm({
                 <ConfirmAction
                   label={t("menu_remove_item")}
                   subject={t("menu_remove_note")}
-                  disabled={remove.isPending || save.isPending || reload.isPending}
-                  onConfirm={() => remove.mutate()}
+                  disabled={
+                    remove.isPending || save.isPending || reload.isPending || uploadingImages
+                  }
+                  onConfirm={() => {
+                    if (!hasImageUploads()) remove.mutate();
+                  }}
                   icon={<Trash2 />}
                 />
               )}
@@ -303,8 +295,9 @@ function ItemForm({
                       <ConfirmAction
                         label={t("workflow_revert")}
                         subject={t("workflow_revert_note")}
-                        disabled={save.isPending || reload.isPending}
+                        disabled={save.isPending || reload.isPending || uploadingImages}
                         onConfirm={() => {
+                          if (hasImageUploads()) return;
                           form.reset({ configuration: initial });
                           save.reset();
                         }}
@@ -317,13 +310,19 @@ function ItemForm({
                         role="link"
                         variant="outline"
                         disabled={
-                          dirty || save.isPending || (itemId === "new" && !newSaved.current)
+                          dirty ||
+                          save.isPending ||
+                          uploadingImages ||
+                          (itemId === "new" && !newSaved.current)
                         }
                         render={
                           <Link
                             to="/admin/stores/$storeId/menu/changes/$draftId"
                             params={{ storeId, draftId: draft.id }}
                             search={true}
+                            onClick={(event) => {
+                              if (hasImageUploads()) event.preventDefault();
+                            }}
                           />
                         }
                       >
@@ -347,12 +346,46 @@ function ItemForm({
         <ConfirmAction
           label={t("workflow_conflict_reload")}
           subject={t("workflow_conflict_reload_note")}
-          disabled={reload.isPending}
-          onConfirm={() => reload.mutate()}
+          disabled={reload.isPending || uploadingImages}
+          onConfirm={() => {
+            if (!hasImageUploads()) reload.mutate();
+          }}
           icon={<Undo2 />}
         />
       )}
       {editable && <p className="text-sm text-muted-foreground">{t("workflow_save_first")}</p>}
     </section>
   );
+}
+
+function ItemFields({
+  section,
+  retainedVoice,
+  ...props
+}: {
+  section: MenuSection;
+  retainedVoice: Configuration["cast"]["voice"];
+  storeId: string;
+  value: Configuration;
+  selectedId: string;
+  disabled: boolean;
+  onChange: (configuration: Configuration) => void;
+}) {
+  if (section === "cast")
+    return (
+      <CastEditor
+        storeId={props.storeId}
+        value={props.value.cast}
+        voices={[retainedVoice]}
+        onChange={(cast) => props.onChange({ ...props.value, cast })}
+        disabled={props.disabled}
+      />
+    );
+  const Editor =
+    section === "products"
+      ? ProductsEditor
+      : section === "categories"
+        ? CategoriesEditor
+        : PlansEditor;
+  return <Editor {...props} />;
 }

@@ -637,5 +637,6 @@
   "editor_image_source_required": "Enter an image source description of up to 500 characters.",
   "editor_image_upload": "Import and use image",
   "editor_image_apply": "Use this reference",
-  "editor_image_uploaded": "Image imported. Save the draft to keep your changes."
+  "editor_image_uploaded": "Image imported. Save the draft to keep your changes.",
+  "editor_image_wait": "Wait for image imports to finish before saving, deleting or leaving this page."
 }

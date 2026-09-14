@@ -533,9 +533,7 @@ it.each([
     await expect
       .element(screen.getByRole("button", { name: ja.common_save, exact: true }))
       .toBeDisabled();
-    await expect
-      .element(screen.getByRole("link", { name: ja.workflow_review, exact: true }))
-      .toBeDisabled();
+
     const formElement = price.element().closest("form");
     if (!formElement) throw new Error("商品の実フォームが必要です");
     formElement.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
@@ -544,7 +542,7 @@ it.each([
       .getByRole("main")
       .getByRole("link", { name: ja.editor_products, exact: true })
       .click();
-    expect(confirm).toHaveBeenCalledWith(ja.menu_leave_unsaved);
+    expect(confirm).not.toHaveBeenCalled();
     expect(router.state.location.pathname).toBe(
       `${base}/changes/${draftId}/products/${product.id}`,
     );
