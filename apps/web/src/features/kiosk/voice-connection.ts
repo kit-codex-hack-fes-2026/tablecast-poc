@@ -85,7 +85,12 @@ export class VoiceConnection {
         named &&
         this.microphoneView.selectedId !== "default" &&
         !devices.some((device) => device.deviceId === this.microphoneView.selectedId);
-      const error = missing ? "disconnected" : devices.length === 0 ? "empty" : undefined;
+      let error: MicrophoneError | undefined;
+      if (missing) {
+        error = "disconnected";
+      } else if (devices.length === 0) {
+        error = "empty";
+      }
       this.updateMicrophone(
         {
           devices: devices.filter((device) => device.deviceId),

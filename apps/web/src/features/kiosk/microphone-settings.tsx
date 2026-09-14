@@ -55,6 +55,14 @@ export function MicrophoneSettings({
   const selectedMissing =
     microphone.selectedId !== "default" &&
     !microphone.devices.some((device) => device.deviceId === microphone.selectedId);
+  let statusMessage: string | null = null;
+  if (microphone.switching) {
+    statusMessage = t("kiosk_microphone_switching");
+  } else if (microphone.activeLabel) {
+    statusMessage = `${t("kiosk_microphone_in_use")}: ${microphone.activeLabel}`;
+  } else if (paused) {
+    statusMessage = t("kiosk_microphone_paused");
+  }
   const options = [
     { value: "default", label: t("kiosk_microphone_default") },
     ...microphone.devices.flatMap((device, index) =>
@@ -126,13 +134,7 @@ export function MicrophoneSettings({
             </SelectContent>
           </Select>
           <p role="status" className="text-sm text-muted-foreground">
-            {microphone.switching
-              ? t("kiosk_microphone_switching")
-              : microphone.activeLabel
-                ? `${t("kiosk_microphone_in_use")}: ${microphone.activeLabel}`
-                : paused
-                  ? t("kiosk_microphone_paused")
-                  : null}
+            {statusMessage}
           </p>
           {microphone.permissionRequired && (
             <p className="text-sm text-muted-foreground">{t("kiosk_microphone_permission_hint")}</p>
