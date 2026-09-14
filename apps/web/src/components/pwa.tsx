@@ -27,7 +27,6 @@ export function Pwa() {
       const ready =
         navigator.onLine &&
         !client.isMutating() &&
-        !client.isFetching() &&
         router.state.status === "idle" &&
         !document.querySelector('[data-pwa-blocked="true"]') &&
         [...document.forms].every((form) => form.querySelector("[data-pwa-blocked]"));
