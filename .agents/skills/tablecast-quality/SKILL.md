@@ -20,3 +20,5 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 - skill・文書のみならmetadata、相対リンク、整形、現在のscript・設定との整合を確認する。代表依頼から必要な資料へ到達できるかを確認し、文言一致の回帰テストや専用harness検査runnerは追加しない。
 - lint・hooks・scriptを変えたら、対象の既存チェックと代表実行で実効性を確認する。rootとworkspaceの両方に影響するなら両方を検証し、広範囲の実装・共通設定を変えた場合は`bun run check`へ広げる。
 - 導入方法、env、CLI、Dev Containerを変えたら`setup.md`と既存の詳細手順を同じ差分で更新する。認証や外部接続を確認できない場合は未確認範囲を明示する。
+
+環境・配備・releaseの設定を変える場合は[配備手順](../../../docs/deployment.md#stagingとreleaseの運用)も更新する。通常の統合先はstaging、release本文はGitHub運用skillを正本とし、skills間に詳細を複製しない。

@@ -149,3 +149,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`bunx --no-install wrangler dev --assets apps/api/email-static`で確認し、終了時はWranglerと子workerdを停止する。
 
 生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
+
+## 統合先とrelease
+
+作業branchは`origin/staging`から作成し、stagingへPRを出す。共用stagingは[配備手順](deployment.md#stagingとreleaseの運用)に従って利用し、ローカル終了処理で停止・リセットしない。実装Issueの開発完了とmainへの本番releaseを区別する。

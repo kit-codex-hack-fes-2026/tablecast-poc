@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -61,13 +62,9 @@ export function Consent() {
     );
   return (
     <main className="min-h-dvh" data-pwa-blocked={Boolean(organization)}>
-      <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
-        <Link
-          data-ui="brand"
-          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
-          to="/"
-        >
-          TableCast
+      <header className="flex flex-wrap items-center justify-between gap-4 py-6 px-9 max-sm:p-6">
+        <Link data-ui="brand" className="inline-flex shrink-0 items-center" to="/">
+          <Brand />
         </Link>
         <LanguageSwitch onChange={setLocale} />
       </header>

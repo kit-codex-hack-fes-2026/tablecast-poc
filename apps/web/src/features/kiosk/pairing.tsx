@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { MonitorSmartphone } from "lucide-react";
@@ -31,13 +32,9 @@ export function Pairing({ onReady }: { onReady: () => void }) {
   }, [poll.data?.ready, onReady]);
   return (
     <main className="min-h-dvh" data-pwa-blocked={Boolean(request.data) || request.isPending}>
-      <header className="flex items-center justify-between py-6 px-9 max-sm:p-6">
-        <a
-          data-ui="brand"
-          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
-          href="/"
-        >
-          TableCast<span className="text-accent ml-px text-4xl">·</span>
+      <header className="flex flex-wrap items-center justify-between gap-4 py-6 px-9 max-sm:p-6">
+        <a data-ui="brand" className="inline-flex shrink-0 items-center" href="/">
+          <Brand />
         </a>
         <LanguageSwitch onChange={setLocale} />
       </header>
