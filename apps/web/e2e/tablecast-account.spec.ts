@@ -53,7 +53,10 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.getByLabel("識別名").fill(slug);
   await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
   await expect(page).toHaveURL(/\/menu\/products$/);
+  // URL更新直後は店舗作成画面が残るため、遷移先の表示完了から操作する。
+  await expect(page.getByRole("heading", { name: "商品", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "メンバー", exact: true }).click();
+  await expect(page).toHaveURL(/\/members$/);
   await expect(
     page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
   ).toBeVisible();
