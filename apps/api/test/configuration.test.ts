@@ -13,7 +13,12 @@ import {
 import { prepareConfirmation, updateCart } from "../src/modules/orders/service";
 import { getEvents } from "../src/modules/stores/queries";
 import { createApiServices } from "../src/platform/context";
-import { configDraftSchema, configurationIssueSchema, tableStateSchema } from "../src/schema";
+import {
+  configDraftSchema,
+  configurationIssueSchema,
+  draftChoicesPageSchema,
+  tableStateSchema,
+} from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import {
   device,
@@ -33,6 +38,92 @@ const table = async () =>
       )
     ).json(),
   );
+
+it("再開候補は小さな概要だけを返し、同じ更新時刻の31件目以降も重複なく取得できる", async () => {
+  const { staff, cookie } = await setupFixture();
+  const configuration = structuredClone(fixtureConfiguration);
+  configuration.cast.proactive = !configuration.cast.proactive;
+  const now = Date.now();
+  await env.TABLECAST_DB.batch([
+    ...Array.from({ length: 32 }, (_, index) =>
+      insertFixture(businessTables.configDrafts, {
+        id: `tablecast-choice-${String(index).padStart(2, "0")}`,
+        store_id: staff.storeId,
+        base_version: 1,
+        version: index,
+        status: index === 0 ? "ready" : "draft",
+        config_json: JSON.stringify(configuration),
+        created_by: staff.userId,
+        created_at: now,
+        updated_at: now,
+      }),
+    ),
+    insertFixture(
+      businessTables.configDrafts,
+      ["published", "discarded"].map((status) => ({
+        id: `tablecast-choice-${status}`,
+        store_id: staff.storeId,
+        base_version: 1,
+        status: status === "published" ? "published" : "discarded",
+        config_json: JSON.stringify(configuration),
+        created_by: staff.userId,
+        created_at: now,
+        updated_at: now + 1,
+      })),
+    ),
+  ]);
+  const endpoint = `http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/choices`;
+  const first = await exports.default.fetch(new Request(endpoint, { headers: { Cookie: cookie } }));
+  expect(first.status).toBe(200);
+  const raw = await first.json();
+  const page = draftChoicesPageSchema.parse(raw);
+  expect(page.drafts).toHaveLength(30);
+  expect(page.publishedVersion).toBe(1);
+  expect(page.drafts[0]).toMatchObject({
+    id: "tablecast-choice-31",
+    changeCount: 1,
+    sections: ["cast"],
+  });
+  expect(JSON.stringify(raw)).not.toContain("configuration");
+  expect(JSON.stringify(raw)).not.toContain('before"');
+  expect(JSON.stringify(raw).length).toBeLessThan(8000);
+  expect(page.nextCursor).not.toBeNull();
+  if (!page.nextCursor) throw new Error("続きの下書きが必要です");
+  const nextQuery = new URLSearchParams({
+    beforeUpdatedAt: String(page.nextCursor.beforeUpdatedAt),
+    beforeId: page.nextCursor.beforeId,
+  });
+  const second = await exports.default.fetch(
+    new Request(`${endpoint}?${nextQuery.toString()}`, { headers: { Cookie: cookie } }),
+  );
+  expect(second.status).toBe(200);
+  const last = draftChoicesPageSchema.parse(await second.json());
+  expect(last.drafts.map((draft) => draft.id)).toEqual([
+    "tablecast-choice-01",
+    "tablecast-choice-00",
+  ]);
+  expect(last.drafts[1]?.status).toBe("ready");
+  expect(last.nextCursor).toBeNull();
+  expect(new Set([...page.drafts, ...last.drafts].map((draft) => draft.id)).size).toBe(32);
+});
+
+it("下書き再開候補は未認証・他店舗アクセスと片方だけのカーソルを拒否する", async () => {
+  const { cookie } = await setupFixture();
+  for (const { path, headers, status } of [
+    { path: "tablecast-store/drafts/choices", headers: {}, status: 401 },
+    { path: "tablecast-other-store/drafts/choices", headers: { Cookie: cookie }, status: 403 },
+    {
+      path: "tablecast-store/drafts/choices?beforeId=tablecast-draft",
+      headers: { Cookie: cookie },
+      status: 400,
+    },
+  ]) {
+    const response = await exports.default.fetch(
+      new Request(`http://localhost:3000/api/admin/stores/${path}`, { headers }),
+    );
+    expect(response.status).toBe(status);
+  }
+});
 
 it.each([
   { name: "追加", remove: false },

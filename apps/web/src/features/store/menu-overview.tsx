@@ -1,25 +1,22 @@
 import type { Configuration } from "@tablecast/api/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft, Check, FilePenLine, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
-import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { StartConfigurationEditing } from "./configuration-workflow";
 import {
   emptyMenuListSearch,
   menuLabels,
   type MenuListSearch,
   type MenuSection,
 } from "./menu-model";
-import { draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
 type OptionRow = {
@@ -46,7 +43,6 @@ export function MenuOverview({
   const { id: storeId, role } = useStore();
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const client = useQueryClient();
   const item =
     section === "cast" ? null : configuration[section].find((value) => value.id === itemId);
   const product =
@@ -57,19 +53,6 @@ export function MenuOverview({
     section === "plans" ? configuration.plans.find((value) => value.id === itemId) : undefined;
   const planProducts = new Set(plan?.productIds);
   const planCategories = new Set(plan?.categoryIds);
-  const create = useMutation({
-    mutationFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
-    onSuccess: (next) => {
-      client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void navigate({
-        to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
-        params: { storeId, draftId: next.id, section, itemId },
-        search,
-      });
-    },
-  });
   const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
   return (
     <section className="space-y-6">
@@ -93,13 +76,20 @@ export function MenuOverview({
           {item?.text[locale].displayName ?? t(menuLabels[section])}
         </h1>
         {(role === "owner" || role === "admin") && (
-          <Button onClick={() => create.mutate()} disabled={create.isPending}>
-            <FilePenLine />
-            {t("menu_start_editing")}
-          </Button>
+          <StartConfigurationEditing
+            key={storeId}
+            section={section}
+            itemId={itemId}
+            onSelect={(draftId) =>
+              void navigate({
+                to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+                params: { storeId, draftId, section, itemId },
+                search,
+              })
+            }
+          />
         )}
       </div>
-      <ErrorNotice error={create.error} />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (

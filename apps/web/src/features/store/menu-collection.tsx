@@ -1,8 +1,8 @@
 import type { Configuration } from "@tablecast/api/schema";
-import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpRight, FilePenLine, ImageOff, Plus } from "lucide-react";
+import { ArrowUpRight, ImageOff, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -13,7 +13,8 @@ import { NativeSelect } from "../../components/ui/native-select";
 import { m } from "../../paraglide/messages";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { StartConfigurationEditing } from "./configuration-workflow";
+import { DraftStatus } from "../shell/configuration-status";
 import {
   emptyMenuListSearch,
   menuLabels,
@@ -57,19 +58,6 @@ export function MenuCollection({
   const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
   const editable = !draftId || draft.data?.status === "draft" || draft.data?.status === "ready";
   const manager = store.role === "owner" || store.role === "admin";
-  const client = useQueryClient();
-  const create = useMutation({
-    mutationFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
-    onSuccess: (next) => {
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void navigate({
-        to: "/admin/stores/$storeId/menu/changes/$draftId/$section",
-        params: { storeId, draftId: next.id, section },
-        search,
-      });
-    },
-  });
   const columns = useMemo(
     () => menuCollectionColumns(t, locale, section, draftId, storeId, search),
     [t, locale, section, draftId, storeId, search],
@@ -108,10 +96,10 @@ export function MenuCollection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {t(menuLabels[section])}
-          {draftId && (
-            <Badge className="ml-3" variant="secondary">
-              {t("admin_draft_version")}
-            </Badge>
+          {draft.data && (
+            <span className="ml-3">
+              <DraftStatus status={draft.data.status} />
+            </span>
           )}
         </h1>
         {manager &&
@@ -134,15 +122,23 @@ export function MenuCollection({
               </Button>
             )
           ) : (
-            <Button disabled={create.isPending || !configuration} onClick={() => create.mutate()}>
-              <FilePenLine />
-              {t("menu_start_editing")}
-            </Button>
+            <StartConfigurationEditing
+              key={storeId}
+              section={section}
+              disabled={!configuration}
+              onSelect={(nextDraftId) =>
+                void navigate({
+                  to: "/admin/stores/$storeId/menu/changes/$draftId/$section",
+                  params: { storeId, draftId: nextDraftId, section },
+                  search,
+                })
+              }
+            />
           ))}
       </div>
 
       <ErrorNotice
-        error={catalog.error || draft.error || create.error}
+        error={catalog.error || draft.error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
       {section === "products" && configuration && (
