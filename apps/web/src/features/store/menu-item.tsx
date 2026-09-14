@@ -280,7 +280,9 @@ function ItemForm({
                   <div className="flex items-center gap-3">
                     <Button
                       type="submit"
-                      data-pwa-blocked={dirty || save.isPending}
+                      data-pwa-blocked={
+                        dirty || save.isPending || (itemId === "new" && !newSaved.current)
+                      }
                       disabled={save.isPending || (!dirty && itemId !== "new")}
                     >
                       <Save />

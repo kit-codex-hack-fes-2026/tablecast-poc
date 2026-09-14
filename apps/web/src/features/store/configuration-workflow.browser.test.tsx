@@ -31,7 +31,10 @@ let unexpected: string[];
 let requests: Request[];
 let saveFailure = 0;
 let waitForSave: Promise<void> | undefined;
+let waitForCreate: Promise<void> | undefined;
+let publishedVersion = 1;
 const storeId = "tablecast-workflow-store";
+const otherStoreId = "tablecast-workflow-other-store";
 const draftId = "tablecast-workflow-draft";
 const base = `/admin/stores/${storeId}/menu`;
 const api = `/api/admin/stores/${storeId}`;
@@ -43,6 +46,13 @@ beforeEach(() => {
   client.setQueryData(["tablecast-stores"], {
     stores: [
       { id: storeId, name: "試験店舗", logo: null, role: "owner", organizationId: "tablecast-org" },
+      {
+        id: otherStoreId,
+        name: "切替先店舗",
+        logo: null,
+        role: "owner",
+        organizationId: "tablecast-org",
+      },
     ],
   });
   current = {
@@ -61,6 +71,8 @@ beforeEach(() => {
   unexpected = [];
   saveFailure = 0;
   waitForSave = undefined;
+  waitForCreate = undefined;
+  publishedVersion = 1;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -68,11 +80,13 @@ beforeEach(() => {
       requests.push(request);
       const path = new URL(request.url).pathname;
       if (path === "/api/auth/organization/get-full-organization") return Response.json(null);
+      if (path === `/api/admin/stores/${otherStoreId}/catalog`)
+        return Response.json({ ...catalog, storeId: otherStoreId });
       if (path === `${api}/catalog`)
         return Response.json({
           ...catalog,
           storeId,
-          version: current.status === "published" ? 2 : 1,
+          version: current.status === "published" ? 2 : publishedVersion,
         });
       if (path === "/api/admin/stores")
         return Response.json(client.getQueryData(["tablecast-stores"]));
@@ -93,6 +107,7 @@ beforeEach(() => {
           nextCursor: null,
         });
       if (path === `${api}/drafts` && request.method === "POST") {
+        await waitForCreate;
         current = { ...current, id: "tablecast-created-draft" };
         return Response.json(current);
       }
@@ -146,7 +161,9 @@ async function open(path: string, locale: "ja" | "en" = "ja") {
   const store = createRoute({
     getParentRoute: () => root,
     path: "/admin/stores/$storeId",
-    component: () => <StoreShell storeId={storeId} />,
+  });
+  store.update({
+    component: () => <StoreShell storeId={store.useParams<typeof router>().storeId} />,
   });
   const item = createRoute({
     getParentRoute: () => store,
@@ -332,3 +349,123 @@ it("編集開始では再開と新規を選び、再開時は下書きを増や�
     .toBe(`${base}/changes/${draftId}/products`);
   expect(requests.filter((request) => request.method === "POST")).toHaveLength(0);
 });
+
+it("版競合後の再読込は確認するまで入力を残し、承認後に最新の保存値を復元する", async () => {
+  const product = current.configuration.products[0];
+  if (!product) throw new Error("商品fixtureが必要です");
+  const { screen } = await open(`${base}/changes/${draftId}/products/${product.id}`);
+  const price = screen.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+  await price.fill("777");
+  current = {
+    ...current,
+    version: 8,
+    configuration: {
+      ...current.configuration,
+      products: current.configuration.products.map((item) =>
+        item.id === product.id ? { ...item, price: 900 } : item,
+      ),
+    },
+  };
+  saveFailure = 409;
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  const reload = screen.getByRole("button", { name: ja.workflow_conflict_reload, exact: true });
+  await reload.click();
+  const confirmation = screen.getByRole("alertdialog");
+  await confirmation.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(price).toHaveValue(777);
+  await reload.click();
+  await confirmation
+    .getByRole("button", { name: ja.workflow_conflict_reload, exact: true })
+    .click();
+  await expect.element(price).toHaveValue(900);
+  await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+  expect(current.version).toBe(8);
+});
+
+it("未保存で別設定へ移動しようとすると入力を保護し、取り消して編集を続けられる", async () => {
+  const product = current.configuration.products[0];
+  if (!product) throw new Error("商品fixtureが必要です");
+  const path = `${base}/changes/${draftId}/products/${product.id}`;
+  const { screen, router } = await open(path);
+  const price = screen.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+  await price.fill("777");
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  await screen
+    .getByRole("main")
+    .getByRole("link", { name: ja.editor_products, exact: true })
+    .click();
+  expect(confirm).toHaveBeenCalledWith(ja.menu_leave_unsaved);
+  expect(router.state.location.pathname).toBe(path);
+  await expect.element(price).toHaveValue(777);
+});
+
+it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻り先が見える", async () => {
+  await page.viewport(768, 1024);
+  const previousFontSize = document.documentElement.style.fontSize;
+  document.documentElement.style.fontSize = "32px";
+  try {
+    current.status = "ready";
+    publishedVersion = 2;
+    const { screen } = await open(`${base}/changes/${draftId}`);
+    await expect
+      .element(screen.getByRole("button", { name: ja.admin_publish, exact: true }))
+      .toBeDisabled();
+    await expect.element(screen.getByText(ja.workflow_stale, { exact: true })).toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: ja.workflow_view_published, exact: true }))
+      .toBeVisible();
+    const header = screen.getByRole("main").element().querySelector("header");
+    if (!header) throw new Error("設定のヘッダーが必要です");
+    expect(header.getBoundingClientRect().height).toBeLessThan(window.innerHeight / 2);
+    const publishedLink = screen
+      .getByRole("link", { name: ja.workflow_view_published, exact: true })
+      .element();
+    publishedLink.scrollIntoView({ block: "center" });
+    expect(publishedLink.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      header.getBoundingClientRect().bottom,
+    );
+    expect(publishedLink.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    await page.screenshot({
+      path: "../../../test-results/browser/tablecast-workflow-ipad-large-text.png",
+    });
+  } finally {
+    document.documentElement.style.fontSize = previousFontSize;
+    await page.viewport(1024, 768);
+  }
+});
+
+it.each(["閉じて開き直す", "店舗を切り替える"])(
+  "新規下書きの作成中に%sと、遅延応答で元の編集先へ移動しない",
+  async (action) => {
+    const pending = Promise.withResolvers<void>();
+    waitForCreate = pending.promise;
+    const { screen, router } = await open(`${base}/products`);
+    await screen.getByRole("button", { name: ja.menu_start_editing, exact: true }).click();
+    const choice = screen.getByRole("dialog", { name: ja.workflow_choose_title, exact: true });
+    await choice.getByRole("button", { name: ja.editor_create_draft, exact: true }).click();
+    await expect
+      .element(choice.getByRole("button", { name: ja.workflow_saving, exact: true }))
+      .toBeDisabled();
+    await choice.getByRole("button", { name: ja.common_close, exact: true }).click();
+    const destination =
+      action === "店舗を切り替える"
+        ? `/admin/stores/${otherStoreId}/menu/products`
+        : `${base}/products`;
+    if (action === "店舗を切り替える") {
+      await router.navigate({
+        to: "/admin/stores/$storeId/menu/$section",
+        params: { storeId: otherStoreId, section: "products" },
+      });
+    } else {
+      await screen.getByRole("button", { name: ja.menu_start_editing, exact: true }).click();
+    }
+    pending.resolve();
+    await expect.poll(() => client.isMutating()).toBe(0);
+    expect(router.state.location.pathname).toBe(destination);
+    expect(
+      client.getQueryData(["tablecast-draft", storeId, "tablecast-created-draft"]),
+    ).toMatchObject({ id: "tablecast-created-draft" });
+    expect(requests.filter((request) => request.method === "POST")).toHaveLength(1);
+  },
+);

@@ -107,7 +107,10 @@ for (const { language, labels, locale } of [
         editedProduct.text[contentLocale][key] +=
           contentLocale === "ja" ? "（確認用）" : " (review)";
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", {
+            name: `${contentLocale === "ja" ? labels.common_ja : labels.common_en} ${label}`,
+            exact: true,
+          })
           .fill(editedProduct.text[contentLocale][key]);
       }
     }
@@ -156,11 +159,17 @@ for (const { language, labels, locale } of [
         })
         .first();
       for (const { key, label } of contentFields) {
-        await expect(group.getByRole("textbox", { name: label, exact: true })).toHaveValue(
-          editedProduct.text[contentLocale][key],
-        );
+        await expect(
+          group.getByRole("textbox", {
+            name: `${contentLocale === "ja" ? labels.common_ja : labels.common_en} ${label}`,
+            exact: true,
+          }),
+        ).toHaveValue(editedProduct.text[contentLocale][key]);
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", {
+            name: `${contentLocale === "ja" ? labels.common_ja : labels.common_en} ${label}`,
+            exact: true,
+          })
           .fill(product.text[contentLocale][key]);
       }
     }
