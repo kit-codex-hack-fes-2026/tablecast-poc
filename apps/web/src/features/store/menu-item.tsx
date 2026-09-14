@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfigurationStatus } from "../shell/configuration-status";
 import { apiError } from "../../lib/api-error";
@@ -22,6 +22,7 @@ import { MenuOverview } from "./menu-overview";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
+import type { ImageStagedChange } from "./configuration-image-field";
 import {
   emptyMenuListSearch,
   addMenuItem,
@@ -94,9 +95,7 @@ function ItemForm({
   const storeId = store.id;
   const { locale, t } = useI18n();
   const client = useQueryClient();
-  const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
-  const hasImageUploads = () =>
-    client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const images = useImageEdits(storeId);
   const navigate = useNavigate();
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
@@ -114,19 +113,19 @@ function ItemForm({
   const form = useForm({
     defaultValues: { configuration: initial },
     onSubmit: async ({ value }) => {
-      if (hasImageUploads() || reload.isPending) return;
+      if (images.uploadingNow() || reload.isPending) return;
       await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
+  const hasUnsavedChanges = () =>
+    editable &&
+    (form.state.isDirty ||
+      images.staged.current.size > 0 ||
+      (itemId === "new" && !newSaved.current));
   useBlocker({
     shouldBlockFn: () =>
-      hasImageUploads() ||
-      (editable &&
-        (form.state.isDirty || (itemId === "new" && !newSaved.current)) &&
-        !window.confirm(t("menu_leave_unsaved"))),
-    enableBeforeUnload: () =>
-      hasImageUploads() ||
-      (editable && (form.state.isDirty || (itemId === "new" && !newSaved.current))),
+      images.uploadingNow() || (hasUnsavedChanges() && !window.confirm(t("menu_leave_unsaved"))),
+    enableBeforeUnload: () => images.uploadingNow() || hasUnsavedChanges(),
   });
   const save = useMutation({
     mutationFn: (configuration: Configuration) => {
@@ -161,6 +160,7 @@ function ItemForm({
       setInitial(next.configuration);
       form.reset({ configuration: next.configuration });
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
+      images.reset();
       save.reset();
     },
   });
@@ -220,7 +220,7 @@ function ItemForm({
                   ? { id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }
                   : undefined
               }
-              dirty={dirty || (itemId === "new" && !newSaved.current)}
+              dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved.current)}
               pending={save.isPending}
               error={save.error || reload.error}
             />
@@ -248,6 +248,8 @@ function ItemForm({
                 className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
               >
                 <ItemFields
+                  key={images.fieldKey}
+                  onImageStagedChange={images.onStagedChange}
                   section={section}
                   storeId={storeId}
                   value={configuration}
@@ -263,35 +265,23 @@ function ItemForm({
             <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
               <form.Subscribe selector={(state) => state.isDirty}>
                 {(dirty) => (
-                  <div className="flex items-center gap-3">
-                    <Button
-                      type="submit"
-                      data-pwa-blocked={
-                        dirty ||
-                        pending ||
-                        uploadingImages ||
-                        (itemId === "new" && !newSaved.current)
-                      }
-                      disabled={pending || uploadingImages || (!dirty && itemId !== "new")}
-                    >
-                      <Save />
-                      {t("common_save")}
-                    </Button>
-                    {(dirty || uploadingImages) && (
-                      <span role="status" className="text-sm text-muted-foreground">
-                        {t(uploadingImages ? "editor_image_wait" : "admin_unsaved")}
-                      </span>
-                    )}
-                  </div>
+                  <ItemSaveAction
+                    dirty={dirty}
+                    pending={pending}
+                    uploadingImages={images.uploading}
+                    stagedImages={images.hasStaged}
+                    newUnsaved={itemId === "new" && !newSaved.current}
+                    isNew={itemId === "new"}
+                  />
                 )}
               </form.Subscribe>
               {itemId !== "new" && section !== "cast" && (
                 <ConfirmAction
                   label={t("menu_remove_item")}
                   subject={t("menu_remove_note")}
-                  disabled={remove.isPending || pending || uploadingImages}
+                  disabled={remove.isPending || pending || images.uploading}
                   onConfirm={() => {
-                    if (!hasImageUploads()) remove.mutate();
+                    if (!images.uploadingNow()) remove.mutate();
                   }}
                   icon={<Trash2 />}
                 />
@@ -299,14 +289,15 @@ function ItemForm({
               <form.Subscribe selector={(state) => state.isDirty}>
                 {(dirty) => (
                   <>
-                    {dirty && (
+                    {(dirty || images.hasStaged) && (
                       <ConfirmAction
                         label={t("workflow_revert")}
                         subject={t("workflow_revert_note")}
-                        disabled={pending || uploadingImages}
+                        disabled={pending || images.uploading}
                         onConfirm={() => {
-                          if (hasImageUploads()) return;
+                          if (images.uploadingNow()) return;
                           form.reset({ configuration: initial });
+                          images.reset();
                           save.reset();
                         }}
                         icon={<Undo2 />}
@@ -319,7 +310,8 @@ function ItemForm({
                       disabled={
                         dirty ||
                         pending ||
-                        uploadingImages ||
+                        images.uploading ||
+                        images.hasStaged ||
                         (itemId === "new" && !newSaved.current)
                       }
                       render={
@@ -328,7 +320,8 @@ function ItemForm({
                           params={{ storeId, draftId: draft.id }}
                           search={{ ...search, returnSection: section }}
                           onClick={(event) => {
-                            if (hasImageUploads()) event.preventDefault();
+                            if (images.uploadingNow() || images.staged.current.size > 0)
+                              event.preventDefault();
                           }}
                         />
                       }
@@ -352,9 +345,9 @@ function ItemForm({
         <ConfirmAction
           label={t("workflow_conflict_reload")}
           subject={t("workflow_conflict_reload_note")}
-          disabled={pending || uploadingImages}
+          disabled={pending || images.uploading}
           onConfirm={() => {
-            if (!hasImageUploads() && !save.isPending) reload.mutate();
+            if (!images.uploadingNow() && !save.isPending) reload.mutate();
           }}
           icon={<Undo2 />}
         />
@@ -371,6 +364,7 @@ function ItemFields({
 }: {
   section: MenuSection;
   retainedVoice: Configuration["cast"]["voice"];
+  onImageStagedChange?: ImageStagedChange;
   storeId: string;
   value: Configuration;
   selectedId: string;
@@ -394,4 +388,72 @@ function ItemFields({
         ? CategoriesEditor
         : PlansEditor;
   return <Editor {...props} />;
+}
+
+function useImageEdits(storeId: string) {
+  const client = useQueryClient();
+  const uploading = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const staged = useRef(new Set<string>());
+  const [hasStaged, setHasStaged] = useState(false);
+  const [fieldKey, setFieldKey] = useState(0);
+  const onStagedChange = useCallback((id: string, isStaged: boolean) => {
+    if (isStaged) staged.current.add(id);
+    else staged.current.delete(id);
+    setHasStaged(staged.current.size > 0);
+  }, []);
+  return {
+    uploading,
+    uploadingNow: () =>
+      client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0,
+    staged,
+    hasStaged,
+    onStagedChange,
+    fieldKey,
+    reset: () => {
+      staged.current.clear();
+      setHasStaged(false);
+      setFieldKey((key) => key + 1);
+    },
+  };
+}
+
+function ItemSaveAction({
+  dirty,
+  pending,
+  uploadingImages,
+  stagedImages,
+  newUnsaved,
+  isNew,
+}: {
+  dirty: boolean;
+  pending: boolean;
+  uploadingImages: boolean;
+  stagedImages: boolean;
+  newUnsaved: boolean;
+  isNew: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        type="submit"
+        data-pwa-blocked={dirty || pending || uploadingImages || stagedImages || newUnsaved}
+        disabled={pending || uploadingImages || (!dirty && !isNew)}
+      >
+        <Save />
+        {t("common_save")}
+      </Button>
+      {(dirty || uploadingImages || stagedImages) && (
+        <span role="status" className="text-sm text-muted-foreground">
+          {t(
+            uploadingImages
+              ? "editor_image_wait"
+              : stagedImages
+                ? "editor_image_staged"
+                : "admin_unsaved",
+          )}
+        </span>
+      )}
+    </div>
+  );
 }

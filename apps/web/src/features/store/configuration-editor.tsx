@@ -23,7 +23,7 @@ import {
   ReferencesField,
   StringListField,
 } from "./configuration-fields";
-import { ConfigurationImageField } from "./configuration-image-field";
+import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { ModifiersEditor } from "./modifiers-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
@@ -42,7 +42,8 @@ export function ProductsEditor({
   onChange,
   disabled,
   selectedId,
-}: EditorProps & { storeId: string }) {
+  onImageStagedChange,
+}: EditorProps & { storeId: string; onImageStagedChange?: ImageStagedChange }) {
   const { t, locale } = useI18n();
   const product = value.products.find((item) => item.id === selectedId);
   function update(change: Partial<Product>) {
@@ -121,6 +122,7 @@ export function ProductsEditor({
               storeId={storeId}
               value={product}
               onChange={update}
+              onStagedChange={onImageStagedChange}
               disabled={disabled}
             />
           </ConfigurationSection>
@@ -213,6 +215,7 @@ export function ProductsEditor({
           </ConfigurationSection>
           <ConfigurationSection title={t("editor_modifiers")} icon={SlidersHorizontal}>
             <ModifiersEditor
+              onImageStagedChange={onImageStagedChange}
               storeId={storeId}
               key={product.id}
               product={product}

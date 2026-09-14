@@ -639,6 +639,8 @@
   "editor_image_apply": "Use this reference",
   "editor_image_uploaded": "Image imported. Save the draft to keep your changes.",
   "editor_image_wait": "Wait for image imports to finish before saving, deleting or leaving this page.",
+  "editor_image_reset": "Reset image input",
+  "editor_image_staged": "Image input is not yet applied. Apply or reset it in the image field.",
   "menu_all_categories": "All categories",
   "menu_availability": "Availability",
   "menu_all_availability": "All availability",

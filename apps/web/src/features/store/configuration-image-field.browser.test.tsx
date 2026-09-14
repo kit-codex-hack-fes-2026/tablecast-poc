@@ -84,6 +84,71 @@ async function setup(locale: "ja" | "en") {
   );
 }
 
+it("解除と別ファイルへの置換で出所・生成申告を持ち越さず、同じファイルの再試行では保持する", async () => {
+  const requests: FormData[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (new URL(request.url).pathname !== "/api/admin/stores/tablecast-images/images")
+      throw new Error(`未定義の要求: ${request.url}`);
+    requests.push(await request.formData());
+    if (requests.length === 1)
+      return Response.json({ error: { code: "IMAGE_PROCESSING_FAILED" } }, { status: 503 });
+    return Response.json({
+      imageKey: "tablecast/uploads/generated.webp",
+      imageKind: "illustration",
+      imageSource: { generated: true, description: "この候補の生成画像" },
+      url: "/media/tablecast/uploads/generated.webp",
+    });
+  });
+  await setup("ja");
+  await page.getByRole("button", { name: ja.editor_image_remove }).click();
+  await page.getByRole("combobox", { name: ja.editor_image_method }).selectOptions("existing");
+  await expect
+    .element(page.getByRole("textbox", { name: ja.editor_image_source, exact: true }))
+    .toHaveValue("");
+  await expect
+    .element(page.getByRole("combobox", { name: ja.editor_image_kind }))
+    .toHaveValue("illustration");
+  await page.getByRole("combobox", { name: ja.editor_image_method }).selectOptions("file");
+  await page.getByLabelText(ja.editor_image_choose).upload(png);
+  await page.getByRole("checkbox", { name: ja.editor_generated_image }).click();
+  await page
+    .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+    .fill("この候補の生成画像");
+  await page.getByRole("button", { name: ja.editor_image_upload }).click();
+  await page.getByRole("button", { name: ja.common_retry }).click();
+  await expect
+    .element(page.getByRole("status", { name: "編集した参照" }))
+    .toHaveTextContent("tablecast/uploads/generated.webp");
+  expect(requests.map((request) => request.get("metadata"))).toEqual([
+    JSON.stringify({
+      imageKind: "illustration",
+      imageSource: { generated: true, description: "この候補の生成画像" },
+    }),
+    JSON.stringify({
+      imageKind: "illustration",
+      imageSource: { generated: true, description: "この候補の生成画像" },
+    }),
+  ]);
+  const replacement = new File([await png.arrayBuffer()], "tablecast-new-photo.png", {
+    type: "image/png",
+  });
+  await page.getByLabelText(ja.editor_image_replace).upload(replacement);
+  await expect
+    .element(page.getByRole("checkbox", { name: ja.editor_generated_image }))
+    .not.toBeChecked();
+  await expect.element(page.getByRole("combobox", { name: ja.editor_image_kind })).toBeEnabled();
+  await expect
+    .element(page.getByRole("combobox", { name: ja.editor_image_kind }))
+    .toHaveValue("illustration");
+  await expect
+    .element(page.getByRole("textbox", { name: ja.editor_image_source, exact: true }))
+    .toHaveValue("");
+  await page.getByRole("button", { name: ja.editor_image_upload }).click();
+  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.editor_image_source_required);
+  expect(requests).toHaveLength(2);
+});
+
 it.each([
   { locale: "ja", labels: ja },
   { locale: "en", labels: en },
@@ -236,6 +301,9 @@ it("移動前の遅い取込結果で別の商品を変更しない", async () =
   );
   await setup("ja");
   await page.getByLabelText(ja.editor_image_replace).upload(png);
+  await page
+    .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+    .fill("この候補の出所");
   await page.getByRole("button", { name: ja.editor_image_upload }).click();
   await expect.poll(() => finish).toBeDefined();
   await page.getByRole("button", { name: "別の商品へ移動" }).click();
