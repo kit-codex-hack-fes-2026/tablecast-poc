@@ -238,6 +238,8 @@
   "editor_category": "カテゴリ",
   "editor_tags": "タグ",
   "editor_image": "画像参照",
+  "editor_image_source": "画像の出所",
+  "editor_generated_image": "生成画像",
   "editor_image_kind": "画像の種類",
   "editor_photograph": "実際の商品写真",
   "editor_contains": "含まれるアレルゲン",

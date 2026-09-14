@@ -4,6 +4,7 @@ import type { ApiEnv } from "../../platform/context";
 import { validateForm, validateQuery } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { catalogAdminRoutes } from "../catalog/routes";
+import { mediaAdminRoutes } from "../media/admin-routes";
 import { configurationAdminRoutes } from "../configuration/routes";
 import { devicesAdminRoutes } from "../devices/admin-routes";
 import { ordersAdminRoutes } from "../orders/routes";
@@ -38,6 +39,7 @@ export const admin = new Hono<ApiEnv>()
     );
   })
   .route("/", catalogAdminRoutes)
+  .route("/", mediaAdminRoutes)
   .route("/", voiceAdminRoutes)
   .route("/", tablesAdminRoutes)
   .route("/", ordersAdminRoutes)

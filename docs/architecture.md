@@ -193,6 +193,8 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 
 画像投入の所有者は`scripts/tablecast-seed-media.ts`。内容のSHA-256からキーを決め、既存の条件付きPUT・MD5照合・一時障害の再試行を共用する。画像投入完了後に既存の`Product.imageKey`を公開する。公開通知でcatalogを再取得し、変更のない画像のURLを維持する。新しいアップロードUIやDB migrationは追加しない。
 
+店舗からの商品画像取込は`modules/media/service.ts`が所有し、MCPの`upload_image`と`modules/media/admin-routes.ts`のmultipart APIで共有する。`stores/routes.ts`はmediaの管理routeも組み立てる。ChatGPTのfileParamsで受け取る期限付きファイルは許可したHTTPS配信先だけから取得する。取込後のWebP・店舗ID・申告された出所からSHA-256キー`tablecast/uploads/<hash>.webp`を決め、R2の条件付きPUTで再送を収束させる。画像と出所の店舗境界はConfiguration serviceの下書き保存・公開時にも照合する。追加のDBテーブルや認可系統は持たず、配信は既存`/media/*`の長期キャッシュを使う。詳細は[MCPの画像取込](mcp.md#商品画像の取り込み)を参照する。
+
 ### 開発者用メールカタログ
 
 APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts/tablecast-email-build.ts`が架空データを使った静的HTMLと一覧を生成する。カタログ専用workspace・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。

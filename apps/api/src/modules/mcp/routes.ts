@@ -15,6 +15,8 @@ import {
   validateDraft,
 } from "../configuration/service";
 import { listVoices } from "../voice/catalog";
+import { uploadImageSchema, uploadedImageSchema } from "../media/model";
+import { uploadImage } from "../media/service";
 import { voiceListQuerySchema } from "../voice/model";
 import { resolveMcpActor } from "./service";
 const result = (value: unknown) => ({
@@ -61,6 +63,26 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     async (input) => result(await listVoices(c.env, actor, input)),
   );
   server.registerTool(
+    "upload_image",
+    {
+      description:
+        "店舗設定用の商品画像を取り込む。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+      inputSchema: uploadImageSchema.shape,
+      outputSchema: uploadedImageSchema.shape,
+      _meta: { "openai/fileParams": ["file"] },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) => {
+      const uploaded = await uploadImage(c.get("services"), actor, input);
+      return { ...result(uploaded), structuredContent: uploaded };
+    },
+  );
+  server.registerTool(
     "create_draft",
     {
       description: "現在の公開版から変更下書きを作る。",
@@ -73,7 +95,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "update_draft",
     {
       description:
-        "カテゴリ・商品・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。",
+        "店名（storeName）・カテゴリ・商品画像・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。架空店の試作依頼では提案した店名・メニュー・価格を保存できる。実店舗の未知の安全情報は推測しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

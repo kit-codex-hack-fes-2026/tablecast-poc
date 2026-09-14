@@ -8,16 +8,44 @@ import app from "../src/app";
 import * as authTables from "../src/db/auth-schema";
 import * as businessTables from "../src/db/business-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { priceCart } from "../src/modules/catalog/pricing";
 import {
   catalogSchema,
   configDraftSchema,
   configurationSchema,
   voicePageSchema,
+  uploadedImageSchema,
 } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("2MiBを超える画像データをMCPから取り込み、JSON本文上限では拒否しない", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const bytes = new Uint8Array(5 * 1024 * 1024);
+  bytes.set(
+    Uint8Array.fromBase64(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+    ),
+  );
+  const uploaded = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        data: bytes.toBase64(),
+        mimeType: "image/png",
+        imageKind: "photograph",
+        imageSource: { generated: false, description: "店舗の写真" },
+      },
+    }),
+    uploadedImageSchema,
+  );
+  expect(uploaded.imageKind).toBe("photograph");
+  expect(await env.TABLECAST_MEDIA.head(uploaded.imageKey)).not.toBeNull();
+});
 
 const origin = "http://localhost:3000";
 async function post(path: string, body: unknown, headers: HeadersInit = {}) {
@@ -140,6 +168,183 @@ function toolError(value: unknown, code: string) {
   expect(content.text).toContain(code);
 }
 
+it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接客付きの検証済み下書きにする", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const published = toolData(
+    await client.callTool({ name: "get_configuration", arguments: {} }),
+    catalogSchema,
+  );
+  const descriptor = (await client.listTools()).tools.find((tool) => tool.name === "upload_image");
+  expect(descriptor).toMatchObject({ _meta: { "openai/fileParams": ["file"] } });
+  expect(descriptor?.inputSchema.properties?.file).toMatchObject({
+    properties: {
+      download_url: { type: "string" },
+      file_id: { type: "string" },
+      mime_type: { type: "string" },
+      file_name: { type: "string" },
+    },
+    required: ["download_url", "file_id"],
+  });
+  const downloadUrl =
+    "https://files.oaiusercontent.com/tablecast-generated-ramen?sig=tablecast-test-signature";
+  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+    expect(url instanceof Request ? url.url : url.toString()).toBe(downloadUrl);
+    expect(init?.redirect).toBe("manual");
+    expect(init?.headers).toBeUndefined();
+    return new Response(
+      Uint8Array.fromBase64(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+      ),
+      { headers: { "Content-Type": "image/png" } },
+    );
+  });
+  const image = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        file: { download_url: downloadUrl, file_id: "file-tablecast-ramen" },
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "架空店の二郎系ラーメンを描いた生成イメージ" },
+      },
+    }),
+    uploadedImageSchema,
+  );
+  let draft = toolData(
+    await client.callTool({ name: "create_draft", arguments: {} }),
+    configDraftSchema,
+  );
+  const configuration = configurationSchema.parse({
+    storeName: "麺屋 マシの頂",
+    categories: [{ id: "ramen", text: text("ラーメン", "Ramen") }],
+    products: [
+      { id: "ramen", ja: "ラーメン", en: "Ramen", price: 1000 },
+      { id: "pork-ramen", ja: "豚入りラーメン", en: "Ramen with extra pork", price: 1300 },
+      { id: "soupless", ja: "汁なし", en: "Brothless ramen", price: 1100 },
+    ].map((product) => ({
+      id: product.id,
+      categoryId: "ramen",
+      text: text(product.ja, product.en),
+      price: product.price,
+      available: true,
+      imageKey: image.imageKey,
+      imageKind: image.imageKind,
+      imageSource: image.imageSource,
+      allergens: {
+        contains: [],
+        evidence: "unknown",
+        crossContact: "unknown",
+        vegan: "unknown",
+        note: {
+          ja: "試作設定。原材料はスタッフに確認してください。",
+          en: "Sample menu. Please ask staff about ingredients.",
+        },
+      },
+      modifiers: [
+        { id: "noodles", ja: "麺量", en: "Noodle portion" },
+        { id: "vegetables", ja: "野菜", en: "Vegetables" },
+        { id: "garlic", ja: "ニンニク", en: "Garlic" },
+        { id: "fat", ja: "アブラ", en: "Pork fat" },
+        { id: "sauce", ja: "カラメ", en: "Seasoning" },
+      ].map((group) => ({
+        id: group.id,
+        text: text(group.ja, group.en),
+        kind: "single",
+        min: 1,
+        max: 1,
+        options: [
+          { id: "normal", ja: "普通", en: "Regular", extra: 0 },
+          { id: "mashi", ja: "マシ", en: "Extra", extra: 100 },
+          { id: "mashimashi", ja: "マシマシ", en: "Double extra", extra: 200 },
+        ].map((option) => ({
+          id: `${group.id}-${option.id}`,
+          text: text(option.ja, option.en),
+          priceDelta: group.id === "noodles" ? option.extra : 0,
+          available: true,
+        })),
+      })),
+    })),
+    plans: [],
+    cast: {
+      voice: { ja: null, en: null },
+      proactive: false,
+      instructions: {
+        ja: "明るく麺量とトッピングを順に確認する。マシマシは量を説明し、未確認のアレルゲンを断定しない。",
+        en: "Warmly confirm noodle portions and toppings in order. Explain double-extra portions and never assume allergen safety.",
+      },
+    },
+  });
+  draft = toolData(
+    await client.callTool({
+      name: "update_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version, configuration },
+    }),
+    configDraftSchema,
+  );
+  const ready = toolData(
+    await client.callTool({
+      name: "validate_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version },
+    }),
+    configDraftSchema,
+  );
+  expect(ready.status).toBe("ready");
+  expect(ready.errors).toEqual([]);
+  expect(ready.configuration).toEqual(configuration);
+  const diff = toolData(
+    await client.callTool({ name: "get_draft_diff", arguments: { draftId: draft.id } }),
+    configDraftSchema,
+  );
+  expect(diff.changes).toContainEqual({
+    path: "storeName",
+    before: published.storeName,
+    after: configuration.storeName,
+    sensitive: false,
+  });
+  expect(
+    toolData(await client.callTool({ name: "get_configuration", arguments: {} }), catalogSchema),
+  ).toEqual(published);
+  const cart = priceCart(
+    ready.configuration,
+    [
+      {
+        id: "tablecast-ramen-line",
+        productId: "ramen",
+        quantity: 1,
+        selections: ["noodles", "vegetables", "garlic", "fat", "sauce"].map((group) => ({
+          optionId: `${group}-mashimashi`,
+          quantity: 1,
+        })),
+      },
+    ],
+    1,
+  );
+  expect(cart.complete).toBe(true);
+  expect(cart.total).toBe(1200);
+  expect(provider).toHaveBeenCalledTimes(1);
+  expect(JSON.stringify(ready)).not.toContain("tablecast-test-signature");
+
+  // 店名も画像も、人の管理sessionによる公開までは現行店舗へ反映しない。
+  const response = await post(
+    `/api/admin/stores/tablecast-store/drafts/${draft.id}/publish`,
+    {
+      expectedVersion: draft.version,
+      baseVersion: draft.baseVersion,
+      idempotencyKey: "tablecast-ramen-name-publication",
+      approved: true,
+    },
+    { Cookie: cookie },
+  );
+  expect(response.status).toBe(200);
+  const current = toolData(
+    await client.callTool({ name: "get_configuration", arguments: {} }),
+    catalogSchema,
+  );
+  expect(current.storeName).toBe("麺屋 マシの頂");
+  expect(current.configuration).toEqual(configuration);
+});
+
 it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと対象版でのみ完了する", async () => {
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie);
@@ -154,6 +359,18 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
     await client.callTool({ name: "create_draft", arguments: {} }),
     configDraftSchema,
   );
+  const uploaded = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "店舗から依頼されたお茶の生成イメージ" },
+      },
+    }),
+    uploadedImageSchema,
+  );
   const configuration = configurationSchema.parse({
     ...published.configuration,
     products: published.configuration.products.map((product) =>
@@ -161,6 +378,9 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
         ? {
             ...product,
             price: 450,
+            imageKey: uploaded.imageKey,
+            imageKind: uploaded.imageKind,
+            imageSource: uploaded.imageSource,
             text: {
               ja: { ...product.text.ja, displayName: "焙じ茶", speechName: "ほうじちゃ" },
               en: {
@@ -304,6 +524,10 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
   );
   expect(current.version).toBe(published.version + 1);
   expect(current.configuration).toEqual(configuration);
+  const image = await exports.default.fetch(new Request(uploaded.url));
+  expect(image.status).toBe(200);
+  expect(image.headers.get("Content-Type")).toBe("image/webp");
+  expect((await image.arrayBuffer()).byteLength).toBeGreaterThan(0);
 });
 
 it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込みを拒否する", async () => {
@@ -315,6 +539,21 @@ it("読み取りだけのOAuth委譲では、管理者でもMCPの書き込み�
       .storeId,
   ).toBe("tablecast-store");
   toolError(await client.callTool({ name: "create_draft", arguments: {} }), "WRITE_SCOPE_REQUIRED");
+  toolError(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "AAAA",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "生成画像" },
+      },
+    }),
+    "WRITE_SCOPE_REQUIRED",
+  );
+  expect((await env.TABLECAST_MEDIA.list({ prefix: "tablecast/uploads/" })).objects).toHaveLength(
+    0,
+  );
   expect(
     await env.TABLECAST_DB.prepare("SELECT COUNT(*) AS count FROM config_drafts").first("count"),
   ).toBe(0);
@@ -358,6 +597,18 @@ it("MCPはOAuth対象店舗・現行roleを要求ごとに照合する", async (
       .storeId,
   ).toBe("tablecast-store");
   toolError(await client.callTool({ name: "create_draft", arguments: {} }), "ADMIN_REQUIRED");
+  toolError(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        mimeType: "image/png",
+        data: "AAAA",
+        imageKind: "illustration",
+        imageSource: { generated: true, description: "生成画像" },
+      },
+    }),
+    "ADMIN_REQUIRED",
+  );
   await env.TABLECAST_DB.prepare(
     "DELETE FROM member WHERE organization_id='tablecast-org' AND user_id=?",
   )

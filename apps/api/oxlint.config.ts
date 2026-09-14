@@ -171,7 +171,15 @@ export default defineConfig({
                 file: {
                   categories: "route",
                   captured: {
-                    module: ["catalog", "configuration", "devices", "orders", "tables", "voice"],
+                    module: [
+                      "catalog",
+                      "configuration",
+                      "devices",
+                      "media",
+                      "orders",
+                      "tables",
+                      "voice",
+                    ],
                   },
                 },
               },

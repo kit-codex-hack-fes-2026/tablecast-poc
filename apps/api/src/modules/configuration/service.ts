@@ -10,6 +10,7 @@ import { configurationErrors } from "../catalog/pricing";
 import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import { notifyStore } from "../tables/mutations";
 import { voiceConfigurationErrors } from "../voice/catalog";
+import { requireConfigurationImages } from "../media/service";
 import {
   configurationIssueSchema,
   configurationSchema,
@@ -88,7 +89,13 @@ function draftValue(row: typeof business.configDrafts.$inferSelect, catalog: Cat
     status: row.status,
     configuration,
     errors,
-    changes: differences(catalog.configuration, configuration),
+    changes: differences(
+      {
+        ...catalog.configuration,
+        ...(configuration.storeName !== undefined ? { storeName: catalog.storeName } : {}),
+      },
+      configuration,
+    ),
   };
 }
 export async function listDrafts(services: ApiServices, actor: Actor) {
@@ -140,6 +147,7 @@ export async function updateDraft(
 
   requireManager(actor);
   const configuration = configurationSchema.parse(input.configuration);
+  await requireConfigurationImages(services, actor, configuration);
   const result = await db
     .update(business.configDrafts)
     .set({
@@ -264,6 +272,7 @@ export async function publishDraft(
       );
       ensure(draft.status === "ready", "DRAFT_CONFLICT");
       const catalog = await getCatalog(services, actor.storeId);
+      await requireConfigurationImages(services, actor, draft.configuration);
       const voiceErrors = await voiceConfigurationErrors(
         services.env,
         draft.configuration,
@@ -286,6 +295,7 @@ export async function publishDraft(
         db
           .update(business.stores)
           .set({
+            name: draft.configuration.storeName,
             config_json: JSON.stringify(draft.configuration),
             config_version: sql`config_version+1`,
             updated_at: now,

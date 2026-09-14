@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { id, money } from "../../platform/model";
+import { imageSourceSchema } from "../media/model";
 export const contentSchema = z
   .object({
     displayName: z.string().min(1).max(150),
@@ -42,8 +43,14 @@ export const productSchema = z
     price: money,
     available: z.boolean(),
     tags: z.array(id).default([]),
-    imageKey: z.string().max(300).nullable().default(null),
+    imageKey: z
+      .string()
+      .max(300)
+      .regex(/^tablecast\/[a-zA-Z0-9/_-]+\.(png|jpg|webp|svg)$/)
+      .nullable()
+      .default(null),
     imageKind: z.enum(["photograph", "illustration"]).default("illustration"),
+    imageSource: imageSourceSchema.optional(),
     modifiers: z.array(modifierSchema).max(12).default([]),
     allergens: z
       .object({
