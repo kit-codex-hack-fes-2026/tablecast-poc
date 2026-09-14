@@ -94,17 +94,18 @@ for (const { language, labels, locale } of [
       { key: "description", label: labels.admin_description },
     ] as const;
     for (const contentLocale of ["ja", "en"] as const) {
+      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
       const group = editor
+        .getByRole("region", { name: labels.editor_translation, exact: true })
         .getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+          name: contentLanguage,
           exact: true,
-        })
-        .first();
+        });
       for (const { key, label } of contentFields) {
         editedProduct.text[contentLocale][key] +=
           contentLocale === "ja" ? "（確認用）" : " (review)";
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
           .fill(editedProduct.text[contentLocale][key]);
       }
     }
@@ -146,18 +147,19 @@ for (const { language, labels, locale } of [
       .first()
       .check();
     for (const contentLocale of ["ja", "en"] as const) {
+      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
       const group = editor
+        .getByRole("region", { name: labels.editor_translation, exact: true })
         .getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+          name: contentLanguage,
           exact: true,
-        })
-        .first();
+        });
       for (const { key, label } of contentFields) {
-        await expect(group.getByRole("textbox", { name: label, exact: true })).toHaveValue(
-          editedProduct.text[contentLocale][key],
-        );
+        await expect(
+          group.getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true }),
+        ).toHaveValue(editedProduct.text[contentLocale][key]);
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
           .fill(product.text[contentLocale][key]);
       }
     }

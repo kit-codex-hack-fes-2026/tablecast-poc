@@ -1,17 +1,23 @@
 import { optionSchema, type Modifier, type Product } from "@tablecast/api/schema";
+import { ChevronRight, Image, Plus, Trash2 } from "lucide-react";
+import { useEffect, useId, useRef } from "react";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
+import { m } from "../../paraglide/messages";
 import { emptyText } from "./configuration-defaults";
-
 import {
   BilingualFields,
   BooleanField,
   NumericField,
   ReferencesField,
 } from "./configuration-fields";
+
+function encodeEditorId(value: string) {
+  return encodeURIComponent(JSON.stringify(value));
+}
 
 function newOption(): Modifier["options"][number] {
   return {
@@ -37,213 +43,372 @@ export function ModifiersEditor({
   disabled: boolean;
 }) {
   const { t, locale } = useI18n();
+  const id = useId();
+  const root = useRef<HTMLFieldSetElement>(null);
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingFocus.current) return;
+    root.current?.querySelector<HTMLElement>(`#${CSS.escape(pendingFocus.current)}`)?.focus();
+    pendingFocus.current = null;
+  });
+  const rowTitle = (kind: string, index: number, name: string) =>
+    m.editor_row_title(
+      { kind, index: index + 1, name: name || t("editor_not_configured") },
+      { locale },
+    );
   const optionChoices = product.modifiers.flatMap((group, groupIndex) =>
     group.options.map((option, optionIndex) => ({
       id: option.id,
-      label: `${group.text[locale].displayName || `${t("editor_modifier")} ${groupIndex + 1}`} · ${option.text[locale].displayName || `${t("editor_option")} ${optionIndex + 1}`}`,
+      label: m.editor_option_reference(
+        {
+          group: rowTitle(t("editor_modifier"), groupIndex, group.text[locale].displayName),
+          option: rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName),
+        },
+        { locale },
+      ),
     })),
   );
-  function updateGroup(id: string, change: Partial<Modifier>) {
-    onChange(product.modifiers.map((group) => (group.id === id ? { ...group, ...change } : group)));
+  function updateGroup(groupId: string, change: Partial<Modifier>) {
+    onChange(
+      product.modifiers.map((group) => (group.id === groupId ? { ...group, ...change } : group)),
+    );
   }
-  function updateOption(group: Modifier, id: string, change: Partial<Modifier["options"][number]>) {
+  function updateOption(
+    group: Modifier,
+    optionId: string,
+    change: Partial<Modifier["options"][number]>,
+  ) {
     updateGroup(group.id, {
       options: group.options.map((option) =>
-        option.id === id ? { ...option, ...change } : option,
+        option.id === optionId ? { ...option, ...change } : option,
       ),
     });
   }
   return (
-    <fieldset className="grid min-w-0 gap-5" disabled={disabled}>
-      <legend className="mb-4 font-semibold">{t("editor_modifiers")}</legend>
-      {product.modifiers.map((group, groupIndex) => (
-        <fieldset key={group.id} className="grid min-w-0 gap-5 rounded-lg border border-border p-4">
-          <legend className="px-2 font-semibold">
-            {group.text[locale].displayName || `${t("editor_modifier")} ${groupIndex + 1}`}
-          </legend>
-          <BilingualFields
-            value={group.text}
-            onChange={(text) => updateGroup(group.id, { text })}
-            disabled={disabled}
-          />
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="grid gap-2">
-              {t("editor_kind")}
-              <NativeSelect
-                className="h-12 rounded-lg border border-input px-3 text-base"
-                value={group.kind}
+    <fieldset
+      ref={root}
+      className="grid min-w-0 gap-6"
+      disabled={disabled}
+      aria-label={t("editor_modifiers")}
+    >
+      {product.modifiers.map((group, groupIndex) => {
+        const groupId = `${id}-${encodeEditorId(group.id)}`;
+        return (
+          <fieldset
+            key={group.id}
+            aria-labelledby={groupId}
+            className="@container grid min-w-0 gap-5 rounded-xl border border-border p-4 @xl:p-5"
+          >
+            <legend className="max-w-full px-2">
+              <h3
+                id={groupId}
+                tabIndex={-1}
+                className="scroll-mt-6 wrap-anywhere text-base font-semibold outline-offset-4"
+              >
+                {rowTitle(t("editor_modifier"), groupIndex, group.text[locale].displayName)}
+              </h3>
+            </legend>
+            <div className="grid min-w-0 gap-4 @xl:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-sm">
+                <span id={`${groupId}-kind`}>{t("editor_kind")}</span>
+                <NativeSelect
+                  aria-labelledby={`${groupId} ${groupId}-kind`}
+                  value={group.kind}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const kind = event.target.value;
+                    if (kind === "single" || kind === "multiple" || kind === "quantity")
+                      updateGroup(group.id, { kind });
+                  }}
+                >
+                  <option value="single">{t("editor_single")}</option>
+                  <option value="multiple">{t("editor_multiple")}</option>
+                  <option value="quantity">{t("editor_quantity")}</option>
+                </NativeSelect>
+              </label>
+              <NumericField
+                labelledBy={groupId}
+                label={t("editor_min")}
+                value={group.min}
+                min={0}
+                max={20}
+                onChange={(min) => updateGroup(group.id, { min })}
                 disabled={disabled}
-                onChange={(event) => {
-                  const kind = event.target.value;
-                  if (kind === "single" || kind === "multiple" || kind === "quantity")
-                    updateGroup(group.id, { kind });
+              />
+              <NumericField
+                labelledBy={groupId}
+                label={t("editor_max")}
+                value={group.max}
+                min={1}
+                max={group.kind === "single" ? 1 : 20}
+                onChange={(max) => updateGroup(group.id, { max })}
+                disabled={disabled}
+              />
+            </div>
+            <details
+              className="group min-w-0"
+              onInvalidCapture={(event) => {
+                event.currentTarget.open = true;
+              }}
+            >
+              <summary
+                aria-labelledby={`${groupId} ${groupId}-translation`}
+                className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+              >
+                <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
+                <span id={`${groupId}-translation`}>{t("editor_translation")}</span>
+              </summary>
+              <div className="pt-4">
+                <BilingualFields
+                  labelledBy={groupId}
+                  value={group.text}
+                  onChange={(text) => updateGroup(group.id, { text })}
+                  disabled={disabled}
+                />
+              </div>
+            </details>
+            <div className="grid min-w-0 gap-6">
+              {group.options.map((option, optionIndex) => (
+                <ModifierOptionEditor
+                  key={option.id}
+                  option={option}
+                  title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
+                  id={`${groupId}-${encodeEditorId(option.id)}`}
+                  labelledBy={groupId}
+                  references={optionChoices.filter((choice) => choice.id !== option.id)}
+                  disabled={disabled}
+                  removable={group.options.length > 1}
+                  onChange={(change) => updateOption(group, option.id, change)}
+                  onRemove={() => {
+                    const next = group.options[optionIndex + 1] ?? group.options[optionIndex - 1];
+                    pendingFocus.current = next
+                      ? `${groupId}-${encodeEditorId(next.id)}`
+                      : `${groupId}-add`;
+                    updateGroup(group.id, {
+                      options: group.options.filter((item) => item.id !== option.id),
+                    });
+                  }}
+                />
+              ))}
+              <Button
+                id={`${groupId}-add`}
+                variant="outline"
+                type="button"
+                className="justify-self-start"
+                aria-labelledby={`${groupId}-add-label ${groupId}`}
+                disabled={disabled || group.options.length >= 30}
+                onClick={() => {
+                  const option = newOption();
+                  pendingFocus.current = `${groupId}-${encodeEditorId(option.id)}`;
+                  updateGroup(group.id, { options: [...group.options, option] });
                 }}
               >
-                <option value="single">{t("editor_single")}</option>
-                <option value="multiple">{t("editor_multiple")}</option>
-                <option value="quantity">{t("editor_quantity")}</option>
-              </NativeSelect>
-            </label>
-            <NumericField
-              label={t("editor_min")}
-              value={group.min}
-              min={0}
-              max={20}
-              onChange={(min) => updateGroup(group.id, { min })}
-              disabled={disabled}
-            />
-            <NumericField
-              label={t("editor_max")}
-              value={group.max}
-              min={1}
-              max={group.kind === "single" ? 1 : 20}
-              onChange={(max) => updateGroup(group.id, { max })}
-              disabled={disabled}
-            />
-          </div>
-          <fieldset className="grid min-w-0 gap-4">
-            <legend className="mb-3 font-semibold">{t("editor_options")}</legend>
-            {group.options.map((option, optionIndex) => {
-              const references = optionChoices.filter((choice) => choice.id !== option.id);
-              return (
-                <fieldset
-                  key={option.id}
-                  className="grid min-w-0 gap-4 rounded-lg border border-border p-4"
-                >
-                  <legend className="px-2 font-semibold">
-                    {option.text[locale].displayName || `${t("editor_option")} ${optionIndex + 1}`}
-                  </legend>
-                  <BilingualFields
-                    value={option.text}
-                    onChange={(text) => updateOption(group, option.id, { text })}
-                    disabled={disabled}
-                  />
-                  <div className="flex flex-wrap items-center gap-4">
-                    <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
-                    <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-                      <label className="grid gap-2 text-sm">
-                        {t("editor_image")}
-                        <Input
-                          maxLength={300}
-                          value={option.imageKey ?? ""}
-                          onChange={(event) =>
-                            updateOption(group, option.id, { imageKey: event.target.value || null })
-                          }
-                        />
-                      </label>
-                      <label className="grid gap-2 text-sm">
-                        {t("editor_image_kind")}
-                        <NativeSelect
-                          value={option.imageKind}
-                          onChange={(event) =>
-                            updateOption(group, option.id, {
-                              imageKind: optionSchema.shape.imageKind.parse(event.target.value),
-                            })
-                          }
-                        >
-                          <option value="illustration">{t("kiosk_illustration")}</option>
-                          <option value="photograph">{t("editor_photograph")}</option>
-                        </NativeSelect>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <NumericField
-                      label={t("editor_price_delta")}
-                      value={option.priceDelta}
-                      min={-100_000}
-                      max={100_000}
-                      onChange={(priceDelta) => updateOption(group, option.id, { priceDelta })}
-                      disabled={disabled}
-                    />
-                    <NumericField
-                      label={t("editor_max_quantity")}
-                      value={option.maxQuantity}
-                      min={1}
-                      max={20}
-                      onChange={(maxQuantity) => updateOption(group, option.id, { maxQuantity })}
-                      disabled={disabled}
-                    />
-                  </div>
-                  <BooleanField
-                    label={t("editor_available")}
-                    value={option.available}
-                    onChange={(available) => updateOption(group, option.id, { available })}
-                    disabled={disabled}
-                  />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <ReferencesField
-                      label={t("editor_requires")}
-                      value={option.requires}
-                      options={references}
-                      onChange={(requires) => updateOption(group, option.id, { requires })}
-                      disabled={disabled}
-                    />
-                    <ReferencesField
-                      label={t("editor_excludes")}
-                      value={option.excludes}
-                      options={references}
-                      onChange={(excludes) => updateOption(group, option.id, { excludes })}
-                      disabled={disabled}
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="justify-self-start"
-                    disabled={disabled || group.options.length <= 1}
-                    onClick={() =>
-                      updateGroup(group.id, {
-                        options: group.options.filter((item) => item.id !== option.id),
-                      })
-                    }
-                  >
-                    {t("editor_remove_option")}
-                  </Button>
-                </fieldset>
-              );
-            })}
+                <Plus aria-hidden="true" />
+                <span id={`${groupId}-add-label`}>{t("editor_add_option")}</span>
+              </Button>
+            </div>
             <Button
               variant="outline"
               type="button"
               className="justify-self-start"
-              disabled={disabled || group.options.length >= 30}
-              onClick={() => updateGroup(group.id, { options: [...group.options, newOption()] })}
+              aria-labelledby={`${groupId}-remove ${groupId}`}
+              disabled={disabled}
+              onClick={() => {
+                const next = product.modifiers[groupIndex + 1] ?? product.modifiers[groupIndex - 1];
+                pendingFocus.current = next ? `${id}-${encodeEditorId(next.id)}` : `${id}-add`;
+                onChange(product.modifiers.filter((item) => item.id !== group.id));
+              }}
             >
-              {t("editor_add_option")}
+              <Trash2 aria-hidden="true" />
+              <span id={`${groupId}-remove`}>{t("editor_remove_modifier")}</span>
             </Button>
           </fieldset>
-          <Button
-            variant="outline"
-            type="button"
-            className="justify-self-start"
-            disabled={disabled}
-            onClick={() => onChange(product.modifiers.filter((item) => item.id !== group.id))}
-          >
-            {t("editor_remove_modifier")}
-          </Button>
-        </fieldset>
-      ))}
+        );
+      })}
       <Button
+        id={`${id}-add`}
         variant="outline"
         type="button"
         className="justify-self-start"
         disabled={disabled || product.modifiers.length >= 12}
-        onClick={() =>
+        onClick={() => {
+          const groupId = crypto.randomUUID();
+          pendingFocus.current = `${id}-${encodeEditorId(groupId)}`;
           onChange([
             ...product.modifiers,
             {
-              id: crypto.randomUUID(),
+              id: groupId,
               text: emptyText(),
               kind: "single",
               min: 0,
               max: 1,
               options: [newOption()],
             },
-          ])
-        }
+          ]);
+        }}
       >
+        <Plus aria-hidden="true" />
         {t("editor_add_modifier")}
+      </Button>
+    </fieldset>
+  );
+}
+
+function ModifierOptionEditor({
+  option,
+  title,
+  id: optionId,
+  labelledBy,
+  references,
+  disabled,
+  removable,
+  onChange,
+  onRemove,
+}: {
+  option: Modifier["options"][number];
+  title: string;
+  id: string;
+  labelledBy: string;
+  references: { id: string; label: string }[];
+  disabled: boolean;
+  removable: boolean;
+  onChange: (change: Partial<Modifier["options"][number]>) => void;
+  onRemove: () => void;
+}) {
+  const { t } = useI18n();
+  const context = `${labelledBy} ${optionId}`;
+  return (
+    <fieldset aria-labelledby={context} className="grid min-w-0 gap-4 border-t border-border pt-4">
+      <legend className="max-w-full pt-4">
+        <h4
+          id={optionId}
+          tabIndex={-1}
+          className="scroll-mt-6 wrap-anywhere text-sm font-semibold outline-offset-4"
+        >
+          {title}
+        </h4>
+      </legend>
+      <div className="grid min-w-0 items-end gap-4 @xl:grid-cols-3">
+        <NumericField
+          labelledBy={context}
+          label={t("editor_price_delta")}
+          value={option.priceDelta}
+          min={-100_000}
+          max={100_000}
+          onChange={(priceDelta) => onChange({ priceDelta })}
+          disabled={disabled}
+        />
+        <NumericField
+          labelledBy={context}
+          label={t("editor_max_quantity")}
+          value={option.maxQuantity}
+          min={1}
+          max={20}
+          onChange={(maxQuantity) => onChange({ maxQuantity })}
+          disabled={disabled}
+        />
+        <BooleanField
+          labelledBy={context}
+          label={t("editor_available")}
+          value={option.available}
+          onChange={(available) => onChange({ available })}
+          disabled={disabled}
+        />
+      </div>
+      <details
+        className="group min-w-0"
+        onInvalidCapture={(event) => {
+          event.currentTarget.open = true;
+        }}
+      >
+        <summary
+          aria-labelledby={`${context} ${optionId}-details`}
+          className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+        >
+          <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
+          <span id={`${optionId}-details`}>{t("editor_option_details")}</span>
+        </summary>
+        <div className="grid min-w-0 gap-5 pt-4">
+          <BilingualFields
+            labelledBy={context}
+            value={option.text}
+            onChange={(text) => onChange({ text })}
+            disabled={disabled}
+          />
+          <fieldset
+            className="grid min-w-0 gap-4"
+            aria-labelledby={`${context} ${optionId}-images`}
+          >
+            <legend id={`${optionId}-images`} className="mb-3 text-sm font-semibold">
+              <span className="flex items-center gap-2">
+                <Image aria-hidden="true" className="size-4" />
+                {t("editor_images")}
+              </span>
+            </legend>
+            <div className="flex flex-wrap items-start gap-4">
+              <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
+              <div className="grid min-w-0 flex-1 gap-4 @xl:grid-cols-2">
+                <label className="grid gap-2 text-sm">
+                  <span id={`${optionId}-image`}>{t("editor_image")}</span>
+                  <Input
+                    aria-labelledby={`${context} ${optionId}-image`}
+                    maxLength={300}
+                    value={option.imageKey ?? ""}
+                    onChange={(event) =>
+                      onChange({
+                        imageKey: event.target.value || null,
+                      })
+                    }
+                  />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  <span id={`${optionId}-image-kind`}>{t("editor_image_kind")}</span>
+                  <NativeSelect
+                    aria-labelledby={`${context} ${optionId}-image-kind`}
+                    value={option.imageKind}
+                    onChange={(event) =>
+                      onChange({
+                        imageKind: optionSchema.shape.imageKind.parse(event.target.value),
+                      })
+                    }
+                  >
+                    <option value="illustration">{t("kiosk_illustration")}</option>
+                    <option value="photograph">{t("editor_photograph")}</option>
+                  </NativeSelect>
+                </label>
+              </div>
+            </div>
+          </fieldset>
+          <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
+            <ReferencesField
+              labelledBy={context}
+              label={t("editor_requires")}
+              value={option.requires}
+              options={references}
+              onChange={(requires) => onChange({ requires })}
+              disabled={disabled}
+            />
+            <ReferencesField
+              labelledBy={context}
+              label={t("editor_excludes")}
+              value={option.excludes}
+              options={references}
+              onChange={(excludes) => onChange({ excludes })}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+      </details>
+      <Button
+        variant="outline"
+        type="button"
+        className="justify-self-start"
+        aria-labelledby={`${optionId}-remove ${context}`}
+        disabled={disabled || !removable}
+        onClick={onRemove}
+      >
+        <Trash2 aria-hidden="true" />
+        <span id={`${optionId}-remove`}>{t("editor_remove_option")}</span>
       </Button>
     </fieldset>
   );

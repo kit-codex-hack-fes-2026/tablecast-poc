@@ -576,5 +576,15 @@
   "kiosk_tools_working": "処理中",
   "kiosk_tool_waiting": "待機中",
   "kiosk_tool_separator": "・",
-  "kiosk_tool_search_label": "検索："
+  "kiosk_tool_search_label": "検索：",
+  "editor_basic_information": "基本情報",
+  "editor_pricing_availability": "価格・販売状態",
+  "editor_translation": "名称・翻訳",
+  "editor_images": "画像",
+  "editor_pricing_duration": "料金・利用時間",
+  "editor_order_limits": "注文の制限",
+  "editor_plan_scope": "対象と追加料金",
+  "editor_option_details": "名称・説明・画像・組合せ条件",
+  "editor_row_title": "{kind} {index}：{name}",
+  "editor_option_reference": "{group} ／ {option}"
 }

@@ -26,24 +26,32 @@ for (const { locale, labels } of [
       await page
         .getByRole("button", { name: locale === "ja" ? "日本語" : "English", exact: true })
         .click();
-      const selects = page.getByRole("combobox", { name: labels.editor_voice, exact: true });
+      const japaneseVoice = page.getByRole("combobox", {
+        name: `${labels.common_ja} ${labels.editor_voice}`,
+        exact: true,
+      });
+      const englishVoice = page.getByRole("combobox", {
+        name: `${labels.common_en} ${labels.editor_voice}`,
+        exact: true,
+      });
       // When: 日英の音声を選び、既存の保存操作を実行する。
-      await expect(selects).toHaveCount(2);
+      await expect(japaneseVoice).toBeVisible();
+      await expect(englishVoice).toBeVisible();
       await expect(
-        selects.nth(0).getByRole("option", { name: "Marin", exact: true }),
+        japaneseVoice.getByRole("option", { name: "Marin", exact: true }),
       ).toBeAttached();
-      await selects.nth(0).selectOption("marin");
-      await selects.nth(1).selectOption("cedar");
+      await japaneseVoice.selectOption("marin");
+      await englishVoice.selectOption("cedar");
       await page.getByRole("button", { name: labels.common_save, exact: true }).click();
       await expect(
         page.getByRole("status").filter({ hasText: labels.account_saved }),
       ).toBeVisible();
       await page.reload();
       // Then: 実DBに保存され、ページを開き直しても選択を維持する。
-      await expect(selects.nth(0)).toHaveValue("marin");
-      await expect(selects.nth(1)).toHaveValue("cedar");
+      await expect(japaneseVoice).toHaveValue("marin");
+      await expect(englishVoice).toHaveValue("cedar");
       await expect(
-        selects.nth(0).getByRole("option", { name: "Marin", exact: true }),
+        japaneseVoice.getByRole("option", { name: "Marin", exact: true }),
       ).toBeAttached();
       const saved = configDraftSchema.parse(
         await (await page.request.get(`${api}/drafts/${draft.id}`)).json(),
