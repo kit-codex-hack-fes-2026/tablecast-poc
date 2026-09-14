@@ -5,13 +5,17 @@ import { z } from "zod";
 export const tablecastAccountId = "dbbd52d7d690afceea41fe920ae19f91";
 export const tablecastRepository = "kit-codex-hack-fes-2026/tablecast-poc";
 
-export function deploymentTarget(pr?: string) {
+export function deploymentTarget(pr?: string, environment = pr ? "preview" : "production") {
+  const mode = z.enum(["production", "staging", "preview"]).parse(environment);
+  if ((mode === "preview") !== Boolean(pr)) throw new Error("配備環境とPR番号が一致しません。");
   if (pr !== undefined && !/^[1-9][0-9]{0,8}$/.test(pr)) throw new Error("PR番号が不正です。");
-  const suffix = pr ? `-pr-${pr}` : "";
+  const suffix = pr ? `-pr-${pr}` : mode === "staging" ? "-staging" : "";
   const web = `tablecast${suffix}`;
   return {
     pr,
-    environment: pr ? "preview" : "production",
+    environment: mode,
+    branch: mode === "production" ? "main" : mode === "staging" ? "staging" : undefined,
+    emulate: mode !== "production",
     web,
     api: `tablecast-api${suffix}`,
     database: `tablecast-db${suffix}`,
@@ -20,6 +24,17 @@ export function deploymentTarget(pr?: string) {
   };
 }
 export type DeploymentTarget = ReturnType<typeof deploymentTarget>;
+
+// ブラウザーのログイン・同意とemulateは除外しない。
+export const stagingMcpPaths = [
+  "/mcp",
+  "/.well-known/oauth-protected-resource/mcp",
+  "/.well-known/oauth-authorization-server/api/auth",
+  "/.well-known/openid-configuration/api/auth",
+  "/api/auth/oauth2/register",
+  "/api/auth/oauth2/token",
+  "/api/auth/oauth2/revoke",
+];
 
 export function deploymentArtifact(
   input: unknown,
@@ -33,7 +48,10 @@ export function deploymentArtifact(
       name: z.literal(target.api),
       main: z.string(),
       no_bundle: z.literal(true),
-      vars: z.looseObject({ TABLECAST_RELEASE_SHA: z.literal(sha) }),
+      vars: z.looseObject({
+        TABLECAST_RELEASE_SHA: z.literal(sha),
+        TABLECAST_ENV: z.literal(target.environment),
+      }),
       d1_databases: z
         .array(
           z.looseObject({
@@ -49,7 +67,7 @@ export function deploymentArtifact(
             class_name: z.literal("TablecastEmulate"),
           }),
         )
-        .length(target.pr ? 1 : 0)
+        .length(target.emulate ? 1 : 0)
         .default([]),
     })
     .parse(input);
@@ -89,7 +107,7 @@ export function deploymentSecrets(
     TABLECAST_MODEL_API_KEY: required(runtime.TABLECAST_MODEL_API_KEY, "TABLECAST_MODEL_API_KEY"),
     TABLECAST_MODEL: required(input.TABLECAST_MODEL || runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
   };
-  if (target.pr) {
+  if (target.emulate) {
     secrets.TABLECAST_CONTAINER_METRICS_TOKEN = required(
       input.TABLECAST_CONTAINER_METRICS_TOKEN,
       "TABLECAST_CONTAINER_METRICS_TOKEN",
@@ -145,16 +163,16 @@ export function deploymentConfigs(
     main: resolve(root, "apps/api/src/worker.ts"),
     workers_dev: false,
     preview_urls: false,
-    triggers: { crons: target.pr ? ["*/5 * * * *"] : [] },
+    triggers: { crons: target.emulate ? ["*/5 * * * *"] : [] },
     vars: {
       ...telemetryVars,
       TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
       TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([
-        ...(target.pr ? [`${target.api}-tablecastemulate`] : []),
+        ...(target.emulate ? [`${target.api}-tablecastemulate`] : []),
       ]),
       TABLECAST_PUBLIC_ORIGIN: target.origin,
       TABLECAST_VOICE_ENABLED: "true",
-      ...(target.pr
+      ...(target.emulate
         ? {
             TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
             TABLECAST_GOOGLE_AUTHORIZE_URL: `${target.origin}/_tablecast/oauth`,
@@ -171,7 +189,7 @@ export function deploymentConfigs(
     ],
     r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: target.bucket }],
     containers: [
-      ...(target.pr
+      ...(target.emulate
         ? [
             {
               class_name: "TablecastEmulate",

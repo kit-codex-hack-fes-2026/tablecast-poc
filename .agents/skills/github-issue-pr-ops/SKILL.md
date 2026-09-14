@@ -7,6 +7,8 @@ description: TableCastのIssue・PRの作成・更新・レビュー対応・引
 
 Issueに現在の目的・受入条件、PRに実装差分・検証、メタデータに担当・関係を置く。本文は日本語の常体、タイトルは内容が分かる自然な言葉にする。
 
+通常PR・release PRとも、タイトルは自然な日本語で変更内容を表す。`feat:`や`chore(scope):`などのConventional Commits形式やGitmojiの接頭辞を付けない。コミット規約をPRタイトルへ適用しない。
+
 ## 作業に応じた入口
 
 | 作業                                 | 使うもの                                                                                                                                        |
@@ -25,6 +27,10 @@ Issueに現在の目的・受入条件、PRに実装差分・検証、メタデ�
 - 着手・再開時にIssueのAssigneeと既存branch・PRを取得する。未割当なら自分を割り当てて再確認する。他の担当者がいる場合は明示された引き継ぎに従う。排他制御はAssigneeだけで行い、branch・コメント・Projectsを追加ロックにしない。
 - 原則`1 実装Issue = 1 branch = 1 PR`。成果と確認方法で分割し、その成果に必要なテスト・文書は同じIssueに含める。大きな成果はepicとsub-issue、作業を阻害する実依存はGitHubのblocked by／blocking、統合順序はStackで表す。リンクだけで正式な関係を代用しない。
 - IssueとPRへ主目的の既存ラベルを付ける。対応Issueを既存Projectへ追加し、Priorityと実態に合うStatusを設定する。同じ作業のPR項目を重複作成しない。
+
+## release PR
+
+通常PRの統合先はstagingとする。`staging → main`の集約release PRだけを`1 実装Issue = 1 branch = 1 PR`の例外とし、[release運用](references/pr-and-merge.md#stagingとrelease-pr)と[専用テンプレート](../../../.github/release_pull_request_template.md)を使う。stagingへ統合したagentは関連PRと実差分を読んで概要・主な変更・移行手順を更新し、最新headの検証と編集済み本文を照合する。自動更新領域とagent編集領域を保全し、参照Issueを一括で閉じない。
 
 ## 成果物と完了
 

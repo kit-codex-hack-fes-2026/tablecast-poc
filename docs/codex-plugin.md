@@ -6,7 +6,7 @@
 
 店舗の利用者は、公開MCP `https://tablecast.kit-codex.workers.dev/mcp` へOAuthで接続する。リポジトリのclone、開発サーバー、pluginの生成は不要である。
 
-`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdの任意ダウンロードを提供する。画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
+`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
 
 `/account/mcp-sessions` ではOAuth接続の日時・scope・有効期限を確認し、不要な接続を解除する。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。認可・scopeの契約は[MCP仕様](mcp.md)を参照する。
 
@@ -84,6 +84,10 @@ codex plugin add tablecast@tablecast
 
 旧生成物に`# TableCast generated local MCP`が残る場合も自動削除しない。接続を切り替える開発者は旧`[mcp_servers.tablecast]`の接続先を確認して重複分だけを取り除き、他サーバーの設定を保持する。
 
+## ブランド画像の配布
+
+`plugins/tablecast/assets`に正本ロゴの黒・白透過PNGと白背景composerアイコンを同梱する。`plugin.json`の`interface.composerIcon`・`logo`・`logoDark`はpluginルートからの相対パスを使う。[素材の更新手順](design/icons/README.md#実装への配布)に従い、画像変更時もversionを更新する。ローカル生成は既存のディレクトリコピーで画像を含める。生成・manifest検証と、インストール済みクライアントへの反映は別々に確認する。
+
 ## 公開接続先の更新
 
 保守担当は[本番の配備先](deployment.md)と照合したHTTPS originを指定して、公開対象の`plugins/tablecast/.mcp.json`を更新する。
@@ -93,3 +97,7 @@ bun --no-env-file scripts/tablecast-plugin.ts "$TABLECAST_PUBLIC_ORIGIN"
 ```
 
 pluginのversionも更新し、Marketplaceからplugin・MCP・skillへの参照と本番接続先を確認してコミット・pushする。公開設定の変更と実際のデプロイ・OAuth疎通は別に確認する。ローカル生成物と公開パッケージを分け、checkout固有のポートや認証情報を公開しない。
+
+## stagingのremote MCP確認
+
+stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーでAccessへログインし、模擬Google認証・組織選択・scope同意を経て接続する。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。

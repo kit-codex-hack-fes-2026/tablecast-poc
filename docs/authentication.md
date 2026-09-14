@@ -69,3 +69,7 @@ Webは初期結果をリクエスト単位のQueryClientの既存session・store
 直接のフロアURLとログイン後のクライアント遷移の初期取得はOAuth resource・session/user・所属店舗・フロアbatchの4往復。従来の3 API合計9往復から削減する。セッション更新など追加書込のある要求は別に数える。これはDB往復数の変更であり、本番の表示時間や初回起動遅延の改善率を保証するものではない。
 
 PWAの新規ドキュメント起動は転送元のセッション・所属店舗3往復と転送先のフロア初期取得4往復を合わせた7往復。転送を伴う起動全体を4往復とは数えない。
+
+## stagingの認証
+
+stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[Accessの経路分離](deployment.md#remote-mcpのaccess)を参照する。

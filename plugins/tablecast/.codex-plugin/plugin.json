@@ -1,6 +1,6 @@
 {
   "name": "tablecast",
-  "version": "0.1.0+codex.20260914105500",
+  "version": "0.1.0+codex.20260914191814",
   "description": "TableCast\u306e\u5e97\u8217\u30e1\u30cb\u30e5\u30fc\u3068\u63a5\u5ba2\u8a2d\u5b9a\u3092\u7ba1\u7406\u3057\u307e\u3059\u3002",
   "author": {
     "name": "TableCast"
@@ -13,7 +13,10 @@
     "developerName": "TableCast",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
-    "defaultPrompt": "TableCast\u306e\u30e1\u30cb\u30e5\u30fc\u8a2d\u5b9a\u3092\u78ba\u8a8d\u3057\u3066\u3002"
+    "defaultPrompt": "TableCast\u306e\u30e1\u30cb\u30e5\u30fc\u8a2d\u5b9a\u3092\u78ba\u8a8d\u3057\u3066\u3002",
+    "composerIcon": "./assets/tablecast-composer.png",
+    "logo": "./assets/tablecast-icon.png",
+    "logoDark": "./assets/tablecast-symbol-white.png"
   },
   "mcpServers": "./.mcp.json",
   "repository": "https://github.com/kit-codex-hack-fes-2026/tablecast-poc"

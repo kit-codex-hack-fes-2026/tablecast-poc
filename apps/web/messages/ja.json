@@ -450,6 +450,7 @@
   "mcp_remote_sign_in": "認証方式にOAuthを選び、TableCastへログインします。",
   "mcp_remote_approve": "対象店舗と許可する操作を確認して同意し、新しい会話で利用します。",
   "mcp_endpoint": "MCP接続URL",
+  "mcp_staging_connection": "この環境はstagingです。検証にはこの画面のMCP URLを直接登録してください。Marketplaceの公開pluginは本番へ接続します。",
   "mcp_manual_steps": "次のURLをMCPクライアントに追加し、OAuthで接続します。TableCastへログイン後、対象店舗と操作権限を確認して同意してください。",
   "mcp_transport": "通信方式",
   "mcp_authentication": "認証方式",

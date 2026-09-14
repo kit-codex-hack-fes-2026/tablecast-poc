@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { expect, type Page } from "@playwright/test";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -19,6 +20,16 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     "href",
     "/tablecast-kiosk.webmanifest",
   );
+  const brand = page.getByRole("img", { name: "TableCast", exact: true });
+  await expect(brand).toBeVisible();
+  await expect(brand).toHaveJSProperty("naturalWidth", 500);
+  for (const icon of await page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').all()) {
+    const href = await icon.getAttribute("href");
+    if (!href) throw new Error("アイコンの参照先が必要です");
+    const response = await api.get(href);
+    expect(response.ok()).toBe(true);
+    expect(response.headers()["content-type"]).toMatch(/^image\//);
+  }
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
@@ -30,7 +41,20 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     ["staff", "/admin/live"],
   ]) {
     const response = await api.get(`/tablecast-${kind}.webmanifest`);
-    expect(await response.json()).toMatchObject({
+    const manifest = z
+      .object({
+        id: z.string(),
+        start_url: z.string(),
+        display: z.string(),
+        icons: z.array(z.object({ src: z.string() })),
+      })
+      .parse(await response.json());
+    for (const icon of manifest.icons) {
+      const image = await api.get(icon.src);
+      expect(image.ok()).toBe(true);
+      expect(image.headers()["content-type"]).toContain("image/png");
+    }
+    expect(manifest).toMatchObject({
       id: `/tablecast-${kind}`,
       start_url: start,
       display: "standalone",
@@ -97,6 +121,8 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   await page.reload();
   await expect(page.getByRole("heading", { name: "接続を確認してください" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Check your connection" })).toBeVisible();
+  await expect(brand).toBeVisible();
+  await expect(brand).toHaveJSProperty("naturalWidth", 500);
   await page.screenshot({ path: join(testInfo.outputDir, "tablecast-pwa-offline.png") });
   await runtime.setOnline(true);
   await page.getByRole("link", { name: "店側アプリ / Staff app" }).click();
