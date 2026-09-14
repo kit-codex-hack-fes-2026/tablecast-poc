@@ -2,6 +2,14 @@ import type { Configuration } from "@tablecast/api/schema";
 import { z } from "zod";
 import { emptyText } from "./configuration-defaults";
 export const menuSectionSchema = z.enum(["products", "categories", "plans", "cast"]);
+export const menuListSearchSchema = z.object({
+  q: z.string().optional().catch(undefined),
+  category: z.string().optional().catch(undefined),
+  availability: z.enum(["available", "sold-out"]).optional().catch(undefined),
+  page: z.number().int().positive().optional().catch(undefined),
+});
+export type MenuListSearch = z.infer<typeof menuListSearchSchema>;
+export const emptyMenuListSearch: MenuListSearch = {};
 export type MenuSection = z.infer<typeof menuSectionSchema>;
 export const menuLabels = {
   products: "editor_products",

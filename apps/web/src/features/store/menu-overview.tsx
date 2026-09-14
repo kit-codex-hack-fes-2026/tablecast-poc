@@ -13,7 +13,12 @@ import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { menuLabels, type MenuSection } from "./menu-model";
+import {
+  emptyMenuListSearch,
+  menuLabels,
+  type MenuListSearch,
+  type MenuSection,
+} from "./menu-model";
 import { draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
@@ -31,10 +36,12 @@ export function MenuOverview({
   configuration,
   section,
   itemId,
+  search = emptyMenuListSearch,
 }: {
   configuration: Configuration;
   section: MenuSection;
   itemId: string;
+  search?: MenuListSearch;
 }) {
   const { id: storeId, role } = useStore();
   const { locale, t } = useI18n();
@@ -59,6 +66,7 @@ export function MenuOverview({
       void navigate({
         to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
         params: { storeId, draftId: next.id, section, itemId },
+        search,
       });
     },
   });
@@ -69,7 +77,13 @@ export function MenuOverview({
         nativeButton={false}
         role="link"
         variant="ghost"
-        render={<Link to="/admin/stores/$storeId/menu/$section" params={{ storeId, section }} />}
+        render={
+          <Link
+            to="/admin/stores/$storeId/menu/$section"
+            params={{ storeId, section }}
+            search={search}
+          />
+        }
       >
         <ArrowLeft />
         {t(menuLabels[section])}
@@ -252,6 +266,32 @@ export function MenuOverview({
                 />
               </section>
             </>
+          )}
+          {section === "categories" && (
+            <section className="space-y-3">
+              <h2 className="font-semibold">{t("menu_category_products")}</h2>
+              <ul className="space-y-2">
+                {configuration.products.flatMap((entry) =>
+                  entry.categoryId === itemId
+                    ? [
+                        <li key={entry.id}>
+                          <Link
+                            className="underline underline-offset-4"
+                            to="/admin/stores/$storeId/menu/$section/$itemId"
+                            params={{ storeId, section: "products", itemId: entry.id }}
+                            search={{ category: itemId }}
+                          >
+                            {entry.text[locale].displayName}
+                          </Link>
+                        </li>,
+                      ]
+                    : [],
+                )}
+              </ul>
+              {!configuration.products.some((entry) => entry.categoryId === itemId) && (
+                <p>{t("common_empty")}</p>
+              )}
+            </section>
           )}
           {plan && (
             <div className="space-y-3">

@@ -13,7 +13,13 @@ import { MenuOverview } from "./menu-overview";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
-import { addMenuItem, menuLabels, type MenuSection } from "./menu-model";
+import {
+  emptyMenuListSearch,
+  addMenuItem,
+  menuLabels,
+  type MenuListSearch,
+  type MenuSection,
+} from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
@@ -21,10 +27,12 @@ export function MenuItem({
   section,
   itemId,
   draftId,
+  search = emptyMenuListSearch,
 }: {
   section: MenuSection;
   itemId: string;
   draftId?: string;
+  search?: MenuListSearch;
 }) {
   const store = useStore();
   const catalog = useQuery({ ...catalogOptions(store.id), enabled: !draftId });
@@ -39,14 +47,20 @@ export function MenuItem({
       {configuration ? (
         draftId && draft.data ? (
           <ItemForm
-            key={`${draftId ?? "published"}:${section}:${itemId}`}
+            key={`${store.id}:${draftId}:${section}:${itemId}`}
+            search={search}
             section={section}
             itemId={itemId}
             initialConfiguration={configuration}
             draft={draft.data}
           />
         ) : (
-          <MenuOverview configuration={configuration} section={section} itemId={itemId} />
+          <MenuOverview
+            search={search}
+            configuration={configuration}
+            section={section}
+            itemId={itemId}
+          />
         )
       ) : (
         !(catalog.error || draft.error) && <LoadingState />
@@ -59,11 +73,13 @@ function ItemForm({
   itemId,
   initialConfiguration,
   draft,
+  search,
 }: {
   section: MenuSection;
   itemId: string;
   initialConfiguration: Configuration;
   draft?: ConfigDraft;
+  search: MenuListSearch;
 }) {
   const store = useStore();
   const storeId = store.id;
@@ -112,6 +128,7 @@ function ItemForm({
           to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
           params: { storeId, draftId: next.id, section, itemId: selectedId },
           replace: true,
+          search,
         });
     },
   });
@@ -130,6 +147,7 @@ function ItemForm({
         void navigate({
           to: "/admin/stores/$storeId/menu/changes/$draftId/$section",
           params: { storeId, draftId: draft.id, section },
+          search,
         });
     },
   });
@@ -146,9 +164,14 @@ function ItemForm({
             <Link
               to="/admin/stores/$storeId/menu/changes/$draftId/$section"
               params={{ storeId, draftId: draft.id, section }}
+              search={search}
             />
           ) : (
-            <Link to="/admin/stores/$storeId/menu/$section" params={{ storeId, section }} />
+            <Link
+              to="/admin/stores/$storeId/menu/$section"
+              params={{ storeId, section }}
+              search={search}
+            />
           )
         }
       >

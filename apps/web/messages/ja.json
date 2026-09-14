@@ -575,5 +575,15 @@
   "kiosk_tools_working": "処理中",
   "kiosk_tool_waiting": "待機中",
   "kiosk_tool_separator": "・",
-  "kiosk_tool_search_label": "検索："
+  "kiosk_tool_search_label": "検索：",
+  "menu_all_categories": "すべてのカテゴリ",
+  "menu_availability": "販売状態",
+  "menu_all_availability": "すべての販売状態",
+  "menu_no_items": "登録された項目はありません。",
+  "menu_image_missing": "画像なし",
+  "menu_category_products": "所属商品",
+  "menu_plan_scope": "対象商品・カテゴリ・タグ",
+  "menu_plan_duration": "利用時間 {minutes}分",
+  "menu_plan_last_order": "ラストオーダー 終了{minutes}分前",
+  "common_result_count": "{count} 件"
 }

@@ -575,5 +575,15 @@
   "kiosk_tools_working": "Working",
   "kiosk_tool_waiting": "Waiting",
   "kiosk_tool_separator": ", ",
-  "kiosk_tool_search_label": "Search: "
+  "kiosk_tool_search_label": "Search: ",
+  "menu_all_categories": "All categories",
+  "menu_availability": "Availability",
+  "menu_all_availability": "All availability",
+  "menu_no_items": "No items have been added.",
+  "menu_image_missing": "No image",
+  "menu_category_products": "Products in this category",
+  "menu_plan_scope": "Included products, categories and tags",
+  "menu_plan_duration": "Duration: {minutes} minutes",
+  "menu_plan_last_order": "Last orders: {minutes} minutes before the end",
+  "common_result_count": "Results: {count}"
 }
