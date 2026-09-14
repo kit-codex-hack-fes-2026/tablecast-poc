@@ -51,10 +51,27 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   const storeName = `TableCast 受入試験 ${slug}`;
   await page.getByLabel("店舗名", { exact: true }).fill(storeName);
   await page.getByLabel("識別名").fill(slug);
+  // カタログ読込中も見出しと表を保ち、データの読込完了から次へ進む。
+  const catalogRequested = Promise.withResolvers<void>();
+  const catalogReady = Promise.withResolvers<void>();
+  await page.route("**/api/admin/stores/*/catalog", async (route) => {
+    catalogRequested.resolve();
+    await catalogReady.promise;
+    await route.continue();
+  });
   await page.getByRole("button", { name: "店舗を作成", exact: true }).click();
+  try {
+    await catalogRequested.promise;
+    await expect(page.getByRole("status").filter({ hasText: "読み込んでいます" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "商品", exact: true })).toBeVisible();
+    await expect(page.getByRole("table")).toBeVisible();
+  } finally {
+    catalogReady.resolve();
+  }
   await expect(page).toHaveURL(/\/menu\/products$/);
-  // URL更新直後は店舗作成画面が残るため、遷移先の表示完了から操作する。
+  // 見出しは読込中にも表示されるため、表の読込完了を待って一度だけ操作する。
   await expect(page.getByRole("heading", { name: "商品", exact: true })).toBeVisible();
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await page.getByRole("link", { name: "メンバー", exact: true }).click();
   await expect(page).toHaveURL(/\/members$/);
   await expect(
