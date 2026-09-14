@@ -16,6 +16,7 @@ export function StandardVoiceSelect({
   retained,
   disabled,
   labelledBy,
+  inputId,
   onChange,
 }: {
   storeId: string;
@@ -24,6 +25,7 @@ export function StandardVoiceSelect({
   retained: (string | null)[];
   disabled: boolean;
   labelledBy?: string;
+  inputId?: string;
   onChange: (voiceId: string | null) => void;
 }) {
   const id = useId();
@@ -48,6 +50,7 @@ export function StandardVoiceSelect({
       <label className="grid gap-2 text-sm">
         <span id={id}>{t("editor_voice")}</span>
         <NativeSelect
+          id={inputId}
           aria-labelledby={labelledBy ? `${labelledBy} ${id}` : id}
           className="h-12 rounded-lg border border-input px-3 text-base"
           value={value ?? ""}

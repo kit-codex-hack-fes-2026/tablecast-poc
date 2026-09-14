@@ -278,7 +278,7 @@
   "voice_catalog_empty": "No standard voices are available.",
   "voice_catalog_more": "Show more voices",
   "editor_not_configured": "Not configured",
-  "editor_proactive": "Proactive service mode",
+  "editor_proactive": "Proactive service",
   "editor_modifiers": "Customisations",
   "editor_add_modifier": "Add group",
   "editor_remove_modifier": "Remove group",

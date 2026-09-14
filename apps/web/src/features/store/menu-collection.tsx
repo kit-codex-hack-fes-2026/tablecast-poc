@@ -23,6 +23,7 @@ import {
 } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
+import { CastOverviewPage } from "./cast-overview-page";
 
 type ItemRow = {
   id: string;
@@ -45,6 +46,22 @@ export function MenuCollection({
   section: MenuSection;
   draftId?: string;
   search?: MenuListSearch;
+}) {
+  return section === "cast" ? (
+    <CastOverviewPage draftId={draftId} />
+  ) : (
+    <MenuListCollection section={section} draftId={draftId} search={search} />
+  );
+}
+
+function MenuListCollection({
+  section,
+  draftId,
+  search,
+}: {
+  section: Exclude<MenuSection, "cast">;
+  draftId?: string;
+  search: MenuListSearch;
 }) {
   const store = useStore();
   const storeId = store.id;
@@ -77,7 +94,7 @@ export function MenuCollection({
         }));
   }
   const data = configuration
-    ? menuCollectionRows(configuration, section, locale, t).filter(
+    ? menuCollectionRows(configuration, section, locale).filter(
         (row) =>
           (!search.q ||
             row.searchText.includes(search.q.trim().normalize("NFKC").toLocaleLowerCase())) &&
@@ -105,22 +122,20 @@ export function MenuCollection({
         {manager &&
           editable &&
           (draftId ? (
-            section !== "cast" && (
-              <Button
-                nativeButton={false}
-                role="link"
-                render={
-                  <Link
-                    to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
-                    params={{ storeId, draftId, section, itemId: "new" }}
-                    search={search}
-                  />
-                }
-              >
-                <Plus />
-                {t("common_add")}
-              </Button>
-            )
+            <Button
+              nativeButton={false}
+              role="link"
+              render={
+                <Link
+                  to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
+                  params={{ storeId, draftId, section, itemId: "new" }}
+                  search={search}
+                />
+              }
+            >
+              <Plus />
+              {t("common_add")}
+            </Button>
           ) : (
             <StartConfigurationEditing
               key={storeId}
@@ -215,7 +230,7 @@ export function MenuCollection({
 function menuCollectionColumns(
   t: ReturnType<typeof useI18n>["t"],
   locale: ReturnType<typeof useI18n>["locale"],
-  section: MenuSection,
+  section: Exclude<MenuSection, "cast">,
   draftId: string | undefined,
   storeId: string,
   search: MenuListSearch,
@@ -343,9 +358,8 @@ function menuCollectionColumns(
 
 function menuCollectionRows(
   configuration: Configuration,
-  section: MenuSection,
+  section: Exclude<MenuSection, "cast">,
   locale: ReturnType<typeof useI18n>["locale"],
-  t: ReturnType<typeof useI18n>["t"],
 ): ItemRow[] {
   const categories = new Map(configuration.categories.map((category) => [category.id, category]));
   if (section === "products")
@@ -376,32 +390,23 @@ function menuCollectionRows(
         searchText: normalise(menuSearchText(item)),
       };
     });
-  if (section === "plans")
-    return configuration.plans.map((item) => ({
-      id: item.id,
-      name: item.text[locale].displayName,
-      secondary: m.menu_plan_duration({ minutes: item.durationMinutes }, { locale }),
-      lastOrder: m.menu_plan_last_order({ minutes: item.lastOrderMinutesBeforeEnd }, { locale }),
-      price: item.pricePerPerson,
-      summary: [
-        ...configuration.products.flatMap((product) =>
-          item.productIds.includes(product.id) ? [product.text[locale].displayName] : [],
-        ),
-        ...configuration.categories.flatMap((category) =>
-          item.categoryIds.includes(category.id) ? [category.text[locale].displayName] : [],
-        ),
-        ...item.tags,
-      ].join(" · "),
-      searchText: normalise(menuSearchText(item)),
-    }));
-  return [
-    {
-      id: "settings",
-      name: t("editor_cast"),
-      secondary: configuration.cast.instructions[locale],
-      searchText: normalise(Object.values(configuration.cast.instructions).join(" ")),
-    },
-  ];
+  return configuration.plans.map((item) => ({
+    id: item.id,
+    name: item.text[locale].displayName,
+    secondary: m.menu_plan_duration({ minutes: item.durationMinutes }, { locale }),
+    lastOrder: m.menu_plan_last_order({ minutes: item.lastOrderMinutesBeforeEnd }, { locale }),
+    price: item.pricePerPerson,
+    summary: [
+      ...configuration.products.flatMap((product) =>
+        item.productIds.includes(product.id) ? [product.text[locale].displayName] : [],
+      ),
+      ...configuration.categories.flatMap((category) =>
+        item.categoryIds.includes(category.id) ? [category.text[locale].displayName] : [],
+      ),
+      ...item.tags,
+    ].join(" · "),
+    searchText: normalise(menuSearchText(item)),
+  }));
 }
 
 const menuSearchText = (item: Configuration["categories"][number]) =>

@@ -278,7 +278,7 @@
   "voice_catalog_empty": "選択できる標準音声はありません。",
   "voice_catalog_more": "音声をさらに表示",
   "editor_not_configured": "未設定",
-  "editor_proactive": "接客モード",
+  "editor_proactive": "自発的な声かけ",
   "editor_modifiers": "カスタマイズ",
   "editor_add_modifier": "グループを追加",
   "editor_remove_modifier": "グループを削除",

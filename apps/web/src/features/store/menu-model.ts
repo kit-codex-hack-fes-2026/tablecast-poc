@@ -80,3 +80,12 @@ export function addMenuItem(
     };
   return configuration;
 }
+
+export const castTargets = [
+  "instructions-ja",
+  "instructions-en",
+  "voice-ja",
+  "voice-en",
+  "proactive",
+] as const;
+export type CastTarget = (typeof castTargets)[number];

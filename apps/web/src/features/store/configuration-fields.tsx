@@ -36,17 +36,20 @@ export function BooleanField({
   onChange,
   disabled,
   labelledBy,
+  inputId,
 }: {
   label: string;
   value: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
   labelledBy?: string;
+  inputId?: string;
 }) {
   const id = useId();
   return (
     <label className="flex min-h-12 items-center gap-3 text-sm">
       <Checkbox.Root
+        id={inputId}
         aria-labelledby={labelledBy ? `${labelledBy} ${id}` : id}
         className="flex items-center justify-center border border-border rounded-md shrink-0 [&[data-checked]]:bg-primary [&[data-checked]]:border-primary [&[data-checked]]:text-card [&_span]:flex size-5"
         checked={value}

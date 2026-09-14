@@ -28,10 +28,12 @@ export function StartConfigurationEditing({
   itemId,
   disabled,
   onSelect,
+  label,
 }: {
   section: MenuSection;
   itemId?: string;
   disabled?: boolean;
+  label?: string;
   onSelect?: (draftId: string) => void;
 }) {
   const store = useStore();
@@ -95,7 +97,7 @@ export function StartConfigurationEditing({
     <>
       <Button disabled={disabled} onClick={() => setOpen(true)}>
         <FilePenLine />
-        {t("menu_start_editing")}
+        {label ?? t("menu_start_editing")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

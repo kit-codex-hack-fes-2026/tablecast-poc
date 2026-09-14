@@ -1,7 +1,7 @@
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useForm } from "@tanstack/react-form";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -18,6 +18,7 @@ import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
 import {
   emptyMenuListSearch,
+  castTargets,
   addMenuItem,
   menuLabels,
   type MenuListSearch,
@@ -84,6 +85,7 @@ function ItemForm({
   draft: ConfigDraft;
   search: MenuListSearch;
 }) {
+  const hash = useLocation({ select: (location) => location.hash });
   const store = useStore();
   const storeId = store.id;
   const { locale, t } = useI18n();
@@ -261,6 +263,7 @@ function ItemForm({
                 )}
                 {section === "cast" && (
                   <CastEditor
+                    focusTarget={castTargets.find((target) => target === hash)}
                     storeId={storeId}
                     value={configuration.cast}
                     voices={[initial.cast.voice]}

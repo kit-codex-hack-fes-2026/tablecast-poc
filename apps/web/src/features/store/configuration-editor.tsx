@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
-import { useId } from "react";
+import { useEffect, useId } from "react";
+import type { CastTarget } from "./menu-model";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
@@ -392,15 +393,20 @@ export function CastEditor({
   voices,
   onChange,
   disabled,
+  focusTarget,
 }: {
   storeId: string;
   value: Configuration["cast"];
   voices: Configuration["cast"]["voice"][];
   onChange: (value: Configuration["cast"]) => void;
   disabled: boolean;
+  focusTarget?: CastTarget;
 }) {
   const id = useId();
   const { t } = useI18n();
+  useEffect(() => {
+    if (focusTarget) document.getElementById(`${id}-${focusTarget}`)?.focus();
+  }, [focusTarget, id]);
   return (
     <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquare}>
       <div className="grid min-w-0 gap-6 @2xl:grid-cols-2">
@@ -410,8 +416,9 @@ export function CastEditor({
               {t(language === "ja" ? "common_ja" : "common_en")}
             </legend>
             <label className="flex flex-col gap-2 text-sm">
-              {t("editor_cast_instructions")}
+              <span id={`${id}-${language}-instructions`}>{t("editor_cast_instructions")}</span>
               <textarea
+                id={`${id}-instructions-${language}`}
                 className="min-h-40 rounded-lg border border-input p-2 text-base"
                 aria-labelledby={`${id}-${language} ${id}-${language}-instructions`}
                 maxLength={5000}
@@ -426,6 +433,7 @@ export function CastEditor({
             </label>
             <StandardVoiceSelect
               storeId={storeId}
+              inputId={`${id}-voice-${language}`}
               language={language}
               labelledBy={`${id}-${language}`}
               value={value.voice[language]}
@@ -439,6 +447,7 @@ export function CastEditor({
         ))}
       </div>
       <BooleanField
+        inputId={`${id}-proactive`}
         label={t("editor_proactive")}
         value={value.proactive}
         disabled={disabled}

@@ -6,7 +6,8 @@ import { Pencil } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
-import { CastOverview, type CastTarget } from "./cast-overview";
+import { CastOverview } from "./cast-overview";
+import type { CastTarget } from "./menu-model";
 
 const edit = fn<(target: CastTarget) => void>();
 const catalog = fn<() => Response>();

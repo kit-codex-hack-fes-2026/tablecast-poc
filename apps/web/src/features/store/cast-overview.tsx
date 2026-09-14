@@ -14,14 +14,9 @@ import {
   DialogScroll,
   DialogFooter,
 } from "../../components/ui/dialog";
+import type { CastTarget } from "./menu-model";
+import { ConfigurationSection } from "./configuration-fields";
 import { standardVoicesOptions } from "./menu-query";
-
-export type CastTarget =
-  | "instructions-ja"
-  | "instructions-en"
-  | "voice-ja"
-  | "voice-en"
-  | "proactive";
 
 export function CastOverview({
   storeId,
@@ -35,14 +30,8 @@ export function CastOverview({
   const { t } = useI18n();
   return (
     <div className="max-w-5xl space-y-8">
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-2">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <MessageSquareText className="size-5" aria-hidden="true" />
-            {t("editor_cast_instructions")}
-          </h2>
-          <p className="text-sm text-muted-foreground">{t("cast_instructions_note")}</p>
-        </div>
+      <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquareText}>
+        <p className="text-sm text-muted-foreground">{t("cast_instructions_note")}</p>
         <div className="grid gap-6 lg:grid-cols-2">
           {(["ja", "en"] as const).map((language) => (
             <InstructionOverview
@@ -53,15 +42,9 @@ export function CastOverview({
             />
           ))}
         </div>
-      </section>
-      <section className="space-y-5 border-t border-border pt-6">
-        <div className="space-y-2">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Mic className="size-5" aria-hidden="true" />
-            {t("editor_voice")}
-          </h2>
-          <p className="text-sm text-muted-foreground">{t("cast_voice_note")}</p>
-        </div>
+      </ConfigurationSection>
+      <ConfigurationSection title={t("editor_voice")} icon={Mic}>
+        <p className="text-sm text-muted-foreground">{t("cast_voice_note")}</p>
         <div className="grid gap-6 lg:grid-cols-2">
           {(["ja", "en"] as const).map((language) => (
             <section key={language} className="min-w-0 space-y-3">
@@ -71,18 +54,14 @@ export function CastOverview({
             </section>
           ))}
         </div>
-      </section>
-      <section className="space-y-4 border-t border-border pt-6">
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Sparkles className="size-5" aria-hidden="true" />
-          {t("editor_proactive")}
-        </h2>
+      </ConfigurationSection>
+      <ConfigurationSection title={t("editor_proactive")} icon={Sparkles}>
         <Badge variant={value.proactive ? "success" : "inactive"}>
           {t(value.proactive ? "cast_proactive_on" : "cast_proactive_off")}
         </Badge>
         <p className="text-sm text-muted-foreground">{t("cast_proactive_note")}</p>
         {renderEdit?.("proactive")}
-      </section>
+      </ConfigurationSection>
     </div>
   );
 }
@@ -160,7 +139,10 @@ function VoiceOverview({
   value: string | null;
 }) {
   const { t } = useI18n();
-  const voices = useInfiniteQuery(standardVoicesOptions(storeId, language));
+  const voices = useInfiniteQuery({
+    ...standardVoicesOptions(storeId, language),
+    retryOnMount: false,
+  });
   const voice = voices.data?.pages
     .flatMap((page) => page.voices)
     .find((item) => item.voiceId === value);
