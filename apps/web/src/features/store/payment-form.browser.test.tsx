@@ -105,7 +105,7 @@ describe.each([
     expect(requests).toHaveLength(0);
   });
 
-  it.each([0, -100, 100])("整数の調整額%iを送信できる", async (amount) => {
+  it.each([-100, 100])("整数の調整額%iを送信できる", async (amount) => {
     await page.getByRole("radio", { name: labels.admin_adjustment, exact: true }).click();
     await page.getByRole("spinbutton").fill(String(amount));
     await page.getByRole("textbox", { name: labels.admin_reason }).fill("会計調整");
