@@ -65,7 +65,7 @@ function probe(path: string) {
     .object({
       format: z.object({ duration: z.coerce.number().positive() }),
       streams: z.tuple([
-        z.object({ sample_rate: z.coerce.number().positive(), channels: z.number().positive() }),
+        z.object({ sample_rate: z.coerce.number().pipe(z.literal(48000)), channels: z.literal(1) }),
       ]),
     })
     .parse(

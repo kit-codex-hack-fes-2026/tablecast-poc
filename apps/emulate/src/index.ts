@@ -1,6 +1,5 @@
-import { renameSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createEmulator } from "emulate";
-import { readFileSync } from "node:fs";
 import { tablecastDemoIdentities, tablecastDemoLinkIdentity } from "./tablecast-demo-identities";
 
 const preview = process.env.TABLECAST_ENV === "preview";
@@ -9,8 +8,8 @@ const port = Number(process.env.TABLECAST_OAUTH_PORT);
 if (
   !origin ||
   !Number.isInteger(port) ||
-  (port !== 0 && port < 1024) ||
-  (preview && port === 0) ||
+  port < 1024 ||
+  port > 65535 ||
   (process.env.NODE_ENV === "production" && !preview)
 ) {
   throw new Error("TableCastのローカルOAuth設定が必要です。");
@@ -29,11 +28,7 @@ if (
 const emulator = await createEmulator({
   service: "google",
   port,
-  baseUrl: preview
-    ? `${origin}/_tablecast/oauth`
-    : port === 0
-      ? undefined
-      : `http://127.0.0.1:${port}`,
+  baseUrl: preview ? `${origin}/_tablecast/oauth` : `http://127.0.0.1:${port}`,
   seed: {
     google: {
       users: [...tablecastDemoIdentities, tablecastDemoLinkIdentity].map((person) => ({

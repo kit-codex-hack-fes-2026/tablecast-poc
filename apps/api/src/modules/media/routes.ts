@@ -25,9 +25,10 @@ export const mediaRoutes = new Hono<ApiEnv>()
       400,
     );
     const width = requestedWidth;
-    const cacheControl = /^tablecast\/(images\/[a-f0-9]{64}\.(png|webp)|uploads\/[a-f0-9]{64}\.webp)$/.test(key)
-      ? "public, max-age=31536000, immutable"
-      : "public, no-cache";
+    const cacheControl =
+      /^tablecast\/(images\/[a-f0-9]{64}\.(png|webp)|uploads\/[a-f0-9]{64}\.webp)$/.test(key)
+        ? "public, max-age=31536000, immutable"
+        : "public, no-cache";
     const asset = await c.env.TABLECAST_MEDIA.get(key);
     ensure(asset, "MEDIA_NOT_FOUND", 404);
     const etag = `W/"${asset.etag}-${width}-webp"`;

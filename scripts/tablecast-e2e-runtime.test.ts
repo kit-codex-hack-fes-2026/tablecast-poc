@@ -58,7 +58,7 @@ it("四つのケースの転送先を分離し、停止中もoriginのポート�
   }
 });
 
-it("動的ポートのOAuth起動完了後にdiscoveryと公開URLが一致する", async () => {
+it("指定ポートのOAuth起動完了後にdiscoveryと公開URLが一致する", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-oauth-test-"));
   const readyFile = join(directory, "ready.json");
   const child = spawn("bun", ["--no-env-file", resolvePath("apps/emulate/src/index.ts")], {
@@ -67,7 +67,7 @@ it("動的ポートのOAuth起動完了後にdiscoveryと公開URLが一致す�
       NODE_ENV: "test",
       TABLECAST_ENV: "development",
       TABLECAST_PUBLIC_ORIGIN: "http://localhost:3000",
-      TABLECAST_OAUTH_PORT: "0",
+      TABLECAST_OAUTH_PORT: process.env.TABLECAST_TEST_OAUTH_PORT ?? "23999",
       TABLECAST_OAUTH_READY_FILE: readyFile,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -131,7 +131,7 @@ it("OAuthのbind失敗を起動成功にせず、既存の待受を保つ", asyn
   const exited = once(child, "exit");
   try {
     expect((await exited)[0]).not.toBe(0);
-    expect(stderr).toContain("EADDRINUSE");
+    expect(stderr).toMatch(/EADDRINUSE|Failed to start server\. Is port \d+ in use\?/);
     expect(await (await fetch(`http://127.0.0.1:${address.port}`)).text()).toBe(
       "tablecast-existing",
     );

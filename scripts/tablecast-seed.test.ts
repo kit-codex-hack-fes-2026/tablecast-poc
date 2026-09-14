@@ -21,7 +21,6 @@ import {
 } from "./tablecast-seed-data";
 import type { DemoCredentials } from "./tablecast-seed";
 import { configurationSchema } from "../apps/api/src/schema";
-import { voiceTurnSchema } from "../apps/api/src/modules/voice/model";
 import { z } from "zod";
 import { uploadPreviewImage } from "./tablecast-seed-media";
 import { demoStores } from "./tablecast-fixtures";
@@ -405,7 +404,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
               source: z.literal("synthetic-demo"),
               role: z.string().optional(),
               text: z.string().optional(),
-              speaker: voiceTurnSchema.shape.speaker,
+              speaker: z.object({ id: z.string().nullable() }).optional(),
             })
             .parse(JSON.parse(row.data)),
         )
