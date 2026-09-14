@@ -9,6 +9,7 @@ import {
   Outlet,
   redirect,
   Scripts,
+  useMatchRoute,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { storesOptions } from "../features/store/store-query";
@@ -62,13 +63,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function Root({ children }: { children: ReactNode }) {
+  const matchRoute = useMatchRoute();
+  const demo = matchRoute({ to: "/admin/stores/$storeId/demo/$demoId" });
   return (
     <html lang={getLocale()}>
       <head>
         <HeadContent />
       </head>
       <body>
-        <LocaleProvider>
+        <LocaleProvider key={demo ? `${demo.storeId}/${demo.demoId}` : "app"} persist={!demo}>
           <MotionProvider>{children}</MotionProvider>
         </LocaleProvider>
         <Scripts />

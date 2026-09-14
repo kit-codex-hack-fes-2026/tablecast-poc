@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Kiosk } from "../features/kiosk/kiosk";
-import { LocaleProvider } from "../i18n/locale";
 import {
   tableOptions,
   tableCatalogOptions,
@@ -23,9 +22,5 @@ export const Route = createFileRoute("/admin/stores/$storeId_/demo_/$demoId")({
 function Page() {
   const { storeId, demoId } = Route.useParams();
   const endpoint = useMemo(() => demoTableEndpoint(storeId, demoId), [storeId, demoId]);
-  return (
-    <LocaleProvider persist={false}>
-      <Kiosk endpoint={endpoint} />
-    </LocaleProvider>
-  );
+  return <Kiosk endpoint={endpoint} />;
 }
