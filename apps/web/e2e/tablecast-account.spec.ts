@@ -50,9 +50,6 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   const storeName = `TableCast 受入試験 ${slug}`;
   // #145の調査: 認証情報を含めず、操作対象と遷移・取得の境界を記録する。
   const navigation: string[] = [];
-  page.on("console", (message) => {
-    if (message.text().startsWith("tablecast-navigation:")) navigation.push(message.text());
-  });
   page.on("framenavigated", (frame) => {
     if (frame === page.mainFrame()) navigation.push(`URL ${new URL(frame.url()).pathname}`);
   });
@@ -61,7 +58,8 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     if (path.startsWith("/api/admin/stores") || path.endsWith("/get-full-organization"))
       navigation.push(`${response.request().method()} ${path} ${response.status()}`);
   });
-  await page.evaluate(() => {
+  const interactions = await page.evaluateHandle(() => {
+    const events: object[] = [];
     for (const type of ["pointerdown", "pointerup", "click"]) {
       document.addEventListener(
         type,
@@ -69,25 +67,18 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
           const target = event.target;
           const link = target instanceof Element ? target.closest("a") : null;
           const record = {
+            time: performance.now(),
             type,
             path: location.pathname,
             href: link?.getAttribute("href"),
             heading: document.querySelector("h1")?.textContent,
           };
-          queueMicrotask(() =>
-            console.info(
-              "tablecast-navigation:",
-              JSON.stringify({
-                ...record,
-                connected: target instanceof Node && target.isConnected,
-                prevented: event.defaultPrevented,
-              }),
-            ),
-          );
+          events.push(record);
         },
         { capture: true },
       );
     }
+    return events;
   });
   try {
     await page.getByRole("link", { name: "店舗を作成", exact: true }).click();
@@ -105,7 +96,11 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     ).toHaveCount(0);
   } finally {
     const path = testInfo.outputPath("tablecast-navigation.log");
-    await writeFile(path, navigation.join("\n"));
+    await writeFile(
+      path,
+      JSON.stringify({ navigation, interactions: await interactions.jsonValue() }, null, 2),
+    );
+    await interactions.dispose();
     await testInfo.attach("tablecast-navigation", {
       path,
       contentType: "text/plain",
