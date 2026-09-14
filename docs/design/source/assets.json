@@ -1,0 +1,27 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/cloudflare/cloudflare-docs/production/src/assets/logo.svg",
+    "sha256": "ca5df5ab3c083f8eddcf588c7dc883861abd8650d2cb6937cf94fc112aed37a3",
+    "bytes": 1892,
+    "name": "cloudflare"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/cloudflare/cloudflare-docs/production/src/icons/d1.svg",
+    "sha256": "95f4d30259b641cd1c1ed5c46142a1ce4a8a83cb6e33d07fed0fd429b340d064",
+    "bytes": 798,
+    "name": "d1"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/TanStack/tanstack.com/main/public/images/brand/tanstack-stacked-black.svg",
+    "sha256": "1b94b0fafc7e7c6649f1bf3acaab3766f91186213fce56445a0831dba2b8cb2f",
+    "bytes": 4816,
+    "name": "tanstack"
+  },
+  {
+    "url": "https://mastra.ai/favicon/new-brand/icon.svg",
+    "sha256": "86e10e906894fff0bf22d95c1d172e3069f6b41ef9cba4c4d7921c196c777520",
+    "bytes": 1937,
+    "normalisation": "SVG rootにxmlnsのみ追加。path・色・viewBoxは公式データのまま。",
+    "name": "mastra"
+  }
+]
