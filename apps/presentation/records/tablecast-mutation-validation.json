@@ -1,0 +1,942 @@
+{
+  "date": "2026-09-13",
+  "issue": 1,
+  "conclusion": "大幅なUI・導線変更に対し、共通基盤を変更せず題材側の変更で2本の動画生成・再生検査が完了",
+  "scope": "同一の実API・データモデルを使うTableCastのUI改変。別業務・別APIへの移植や映像品質の承認は含まない。",
+  "application": {
+    "baseRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+    "checkout": "../tablecast-mutation-test",
+    "patch": "experiments/tablecast-mutation/application.patch",
+    "patchHash": "f8fae30253b500d20eb802ad112ce28136d30d49d4895c4e22c9ddb7ed69f54a",
+    "modifiedSource": [
+      {
+        "file": ".devcontainer/Caddyfile",
+        "sha256": "3517fbea9e39ce5963f98b6b0cab492820277af1b3a49a571134060475ed44e1"
+      },
+      {
+        "file": "apps/web/messages/en.json",
+        "sha256": "7f1f76dcf1bcb19dd0d4b9d0f0bc9db299b27d8b428dd25057118284cbaf2cac"
+      },
+      {
+        "file": "apps/web/messages/ja.json",
+        "sha256": "de65c5b7f7b3f4ab4696fcc03244bb12c2b8421caa637c44d85e2b009e0a91e5"
+      },
+      {
+        "file": "apps/web/src/features/kiosk/kiosk.tsx",
+        "sha256": "62c554cd519d6ae7fd14f6964edb5666fa9105dcc1c9ec719470be76fe48ea7c"
+      },
+      {
+        "file": "apps/web/src/features/kiosk/menu.tsx",
+        "sha256": "f2b2ed27b29c7332670d5e8701cc05729c257d8275957dfb600d4769c97457cc"
+      },
+      {
+        "file": "apps/web/src/features/store/table-detail.tsx",
+        "sha256": "0020a97e4df288a48532e4d4fd9eacba9741b98134560e63a03090c5f8176599"
+      },
+      {
+        "file": "apps/web/src/styles.css",
+        "sha256": "1e232122fea99f2a8586c42a320b6145f6f926a573b852794ee5c143855e5171"
+      }
+    ],
+    "apiUnchanged": true,
+    "origin": "http://mutation.tablecast-poc.container.localhost:3100",
+    "composeProject": "tablecast-mutation",
+    "isolatedDatabase": true
+  },
+  "fixedFoundation": {
+    "count": 35,
+    "unchanged": true,
+    "baseline": "records/tablecast-mutation-baseline.json"
+  },
+  "allowedAdaptations": [
+    "台本・字幕・カット・画像",
+    "撮影定義のタブ名",
+    "題材専用adapterの操作名・GUI手順・分割発話への完了待ち"
+  ],
+  "captures": {
+    "guest": "tablecast-mutation-guest-v4",
+    "staff": "tablecast-mutation-staff-v1",
+    "admin": "tablecast-mutation-admin-v1",
+    "freshMediaScenes": 13,
+    "formalShotEvidenceScenes": 8,
+    "table": "T12",
+    "sessionId": "60f01c7d-6b07-4354-8ea0-26e52364e3b2",
+    "orders": 1,
+    "cartLines": 0,
+    "newNarrationRequests": 0
+  },
+  "checks": {
+    "applicationLint": "passed",
+    "applicationTypecheck": "passed",
+    "relatedApplicationUnitTests": 2,
+    "adapterTypecheck": "passed",
+    "preservation": {
+      "fixedCoreFiles": [
+        {
+          "file": "scripts/tablecast-app-capture.ts",
+          "before": "1fd86f1c799a792637e49f3b9cc1dce2efa4760d54e0d81272aa60b632198879",
+          "after": "1fd86f1c799a792637e49f3b9cc1dce2efa4760d54e0d81272aa60b632198879"
+        },
+        {
+          "file": "scripts/tablecast-browser-audio.ts",
+          "before": "e9716522fcb744aefd0819fcfd7f808e03162e1b2260100f538342b0e297986b",
+          "after": "e9716522fcb744aefd0819fcfd7f808e03162e1b2260100f538342b0e297986b"
+        },
+        {
+          "file": "scripts/tablecast-build.ts",
+          "before": "9aaa04bfa1bec1222d840a2ce4881985a140c01e8f343e5766b1fb7a5081eed5",
+          "after": "9aaa04bfa1bec1222d840a2ce4881985a140c01e8f343e5766b1fb7a5081eed5"
+        },
+        {
+          "file": "scripts/tablecast-capture-check.ts",
+          "before": "77da2f09d00f9b58664ebc4c80c32472b5c304c1a0b6c236ee1d91b745733933",
+          "after": "77da2f09d00f9b58664ebc4c80c32472b5c304c1a0b6c236ee1d91b745733933"
+        },
+        {
+          "file": "scripts/tablecast-capture-types.ts",
+          "before": "0c5b881d62ae8d652b5dc68e3e70c102579ee19e254e92abae4f711fd90c29d8",
+          "after": "0c5b881d62ae8d652b5dc68e3e70c102579ee19e254e92abae4f711fd90c29d8"
+        },
+        {
+          "file": "scripts/tablecast-composition.test.ts",
+          "before": "27d7fb238202798dab2d145a963ea840e1710be53f4e6ab9cc499d148392f6cb",
+          "after": "27d7fb238202798dab2d145a963ea840e1710be53f4e6ab9cc499d148392f6cb"
+        },
+        {
+          "file": "scripts/tablecast-composition.ts",
+          "before": "a8a59ef3a33a57e0d2001f1747cadd47aa745dbc329d319a3f5e5dd90235431f",
+          "after": "a8a59ef3a33a57e0d2001f1747cadd47aa745dbc329d319a3f5e5dd90235431f"
+        },
+        {
+          "file": "scripts/tablecast-cursor.test.ts",
+          "before": "1e564def560943073c758faab113f18cd71d1ff92e362b92b0a237c0ed4cf84e",
+          "after": "1e564def560943073c758faab113f18cd71d1ff92e362b92b0a237c0ed4cf84e"
+        },
+        {
+          "file": "scripts/tablecast-cursor.ts",
+          "before": "b961b3e1d6d9f39ff86c2eea7d5ce3a201dc105fa9d6396b9492acc10708fd0b",
+          "after": "b961b3e1d6d9f39ff86c2eea7d5ce3a201dc105fa9d6396b9492acc10708fd0b"
+        },
+        {
+          "file": "scripts/tablecast-doctor.test.ts",
+          "before": "e284e75602c402b3bf980b332bbd70586b5cbf22cab2676c9642fc50e080fb73",
+          "after": "e284e75602c402b3bf980b332bbd70586b5cbf22cab2676c9642fc50e080fb73"
+        },
+        {
+          "file": "scripts/tablecast-doctor.ts",
+          "before": "f830d13f3f465c37c4eff4ac37685228191bc18f06b597763ef057f98b43e48e",
+          "after": "f830d13f3f465c37c4eff4ac37685228191bc18f06b597763ef057f98b43e48e"
+        },
+        {
+          "file": "scripts/tablecast-edit-guest.ts",
+          "before": "5735f2e0ca179e34214a2c5a60f4b0d3842c3d75be1ebc3dea902b71c5ebd6c8",
+          "after": "5735f2e0ca179e34214a2c5a60f4b0d3842c3d75be1ebc3dea902b71c5ebd6c8"
+        },
+        {
+          "file": "scripts/tablecast-edit-role.ts",
+          "before": "ac14d2f7a97da132217bfa3f3a0881491b1dfd4e56fd1c09d092b4fee124830c",
+          "after": "ac14d2f7a97da132217bfa3f3a0881491b1dfd4e56fd1c09d092b4fee124830c"
+        },
+        {
+          "file": "scripts/tablecast-layout.spec.ts",
+          "before": "b38e9a63093e3d96700e2ab7705d5a6bf1af35e683a6b3f1c0e31150c434583a",
+          "after": "b38e9a63093e3d96700e2ab7705d5a6bf1af35e683a6b3f1c0e31150c434583a"
+        },
+        {
+          "file": "scripts/tablecast-layout.ts",
+          "before": "ec22ea084cf6dda4d9d77589bcd49ab4c688a592348c1898b9622764013f7c44",
+          "after": "ec22ea084cf6dda4d9d77589bcd49ab4c688a592348c1898b9622764013f7c44"
+        },
+        {
+          "file": "scripts/tablecast-project.test.ts",
+          "before": "538f4690afd081fb54e3fb3e350ccaca195777be3aa46f2f651e918fe844f915",
+          "after": "538f4690afd081fb54e3fb3e350ccaca195777be3aa46f2f651e918fe844f915"
+        },
+        {
+          "file": "scripts/tablecast-project.ts",
+          "before": "d265c769d5568bcd1d04c61e94d7f1f8d110de64c592f3383d6b957603ba9757",
+          "after": "d265c769d5568bcd1d04c61e94d7f1f8d110de64c592f3383d6b957603ba9757"
+        },
+        {
+          "file": "scripts/tablecast-record-guest.ts",
+          "before": "18e653f9a950b795806df3f3aede8a1e84343fb3eaebd6eb0b76250f827616e3",
+          "after": "18e653f9a950b795806df3f3aede8a1e84343fb3eaebd6eb0b76250f827616e3"
+        },
+        {
+          "file": "scripts/tablecast-record-role.ts",
+          "before": "cc878f98bbeccabefb00be256354839b6c49c4cc9be4920de1f20d3c057df82c",
+          "after": "cc878f98bbeccabefb00be256354839b6c49c4cc9be4920de1f20d3c057df82c"
+        },
+        {
+          "file": "scripts/tablecast-shot.spec.ts",
+          "before": "ef3e039f86ec873411ebaf62ccbf7df43a436b35a692c726bf08005775e846c2",
+          "after": "ef3e039f86ec873411ebaf62ccbf7df43a436b35a692c726bf08005775e846c2"
+        },
+        {
+          "file": "scripts/tablecast-shot.test.ts",
+          "before": "fcef0dcff362a5a894458eb82f9299bed05f012b07b5b17a2551eeb4f0d13829",
+          "after": "fcef0dcff362a5a894458eb82f9299bed05f012b07b5b17a2551eeb4f0d13829"
+        },
+        {
+          "file": "scripts/tablecast-shot.ts",
+          "before": "76d0e8c065e57d7f12ca0bdb1fd533c95e799deeba9907e527e17734f5382329",
+          "after": "76d0e8c065e57d7f12ca0bdb1fd533c95e799deeba9907e527e17734f5382329"
+        },
+        {
+          "file": "scripts/tablecast-technical-schema.ts",
+          "before": "f3a936794e3cdf055dfe6bc2f139ebca78978ffdea417aa0ac4b9de6bd829f04",
+          "after": "f3a936794e3cdf055dfe6bc2f139ebca78978ffdea417aa0ac4b9de6bd829f04"
+        },
+        {
+          "file": "scripts/tablecast-technical.ts",
+          "before": "06169c47f907d4f7282f9003b602e6c8a0c0a6ac85a439d7e03f304e8a4ab4ad",
+          "after": "06169c47f907d4f7282f9003b602e6c8a0c0a6ac85a439d7e03f304e8a4ab4ad"
+        },
+        {
+          "file": "scripts/tablecast-tts.test.ts",
+          "before": "602da7a2007dfab6a769cbd4fffd8309ed4bdcadac96745e0ddadb3fd4524648",
+          "after": "602da7a2007dfab6a769cbd4fffd8309ed4bdcadac96745e0ddadb3fd4524648"
+        },
+        {
+          "file": "scripts/tablecast-tts.ts",
+          "before": "c125bf8b56ab66bc84b4d440dd48dd0e6fcd197f6a7fa06a1145f0a8ca139a2e",
+          "after": "c125bf8b56ab66bc84b4d440dd48dd0e6fcd197f6a7fa06a1145f0a8ca139a2e"
+        },
+        {
+          "file": "scripts/tablecast-video.ts",
+          "before": "3f957bff8e3cc53e37ee138567307a575d5e421b58f973934d1a48fbbcd70ac5",
+          "after": "3f957bff8e3cc53e37ee138567307a575d5e421b58f973934d1a48fbbcd70ac5"
+        },
+        {
+          "file": "scripts/tablecast-workflow.spec.ts",
+          "before": "ec78f2d430a17c2a9e7f9f8e919e1f116ae62b7994757ce34f66dfcb645a047e",
+          "after": "ec78f2d430a17c2a9e7f9f8e919e1f116ae62b7994757ce34f66dfcb645a047e"
+        },
+        {
+          "file": "scripts/tablecast-workflow.test.ts",
+          "before": "f50236b3ca6bf35ff3f2ffe54765f79d9e7a5b53e6ce4ff2140c7a388a4595eb",
+          "after": "f50236b3ca6bf35ff3f2ffe54765f79d9e7a5b53e6ce4ff2140c7a388a4595eb"
+        },
+        {
+          "file": "scripts/tablecast-zoom.test.ts",
+          "before": "10372e1e59d17b49472686739830a822397f04a67360e945e723f9c88dde1b81",
+          "after": "10372e1e59d17b49472686739830a822397f04a67360e945e723f9c88dde1b81"
+        },
+        {
+          "file": "scripts/tablecast-zoom.ts",
+          "before": "8444bd8f7a5b7ad6d8f13ffb7b501b1038151920e3e37cb9fc67b4d943babaa0",
+          "after": "8444bd8f7a5b7ad6d8f13ffb7b501b1038151920e3e37cb9fc67b4d943babaa0"
+        },
+        {
+          "file": "styles.css",
+          "before": "a37b3b1a41ca3f0f2e50560358832b99f8446e07dcbbdd2c4721cb104b2faf2f",
+          "after": "a37b3b1a41ca3f0f2e50560358832b99f8446e07dcbbdd2c4721cb104b2faf2f"
+        },
+        {
+          "file": "package.json",
+          "before": "f70dab8217fc1895b1a279fa20eeea784120ba95b2aee63debdd2b0ec9a8a09f",
+          "after": "f70dab8217fc1895b1a279fa20eeea784120ba95b2aee63debdd2b0ec9a8a09f"
+        },
+        {
+          "file": "playwright.config.ts",
+          "before": "ae4ff8da6b3cd9905fc3934c48473140075785edc0cb3ea624723d969c818219",
+          "after": "ae4ff8da6b3cd9905fc3934c48473140075785edc0cb3ea624723d969c818219"
+        },
+        {
+          "file": "tsconfig.json",
+          "before": "da963fbcc281365bda205bdb251ac602a434b4929a6d300d6869709164688f09",
+          "after": "da963fbcc281365bda205bdb251ac602a434b4929a6d300d6869709164688f09"
+        }
+      ],
+      "preservedVideos": [
+        {
+          "run": "tablecast-product-demo-v14",
+          "before": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f",
+          "after": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f",
+          "unchanged": true
+        },
+        {
+          "run": "tablecast-technical-evaluation-v17",
+          "before": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7",
+          "after": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7",
+          "unchanged": true
+        }
+      ],
+      "previousProductInputsUnchanged": true,
+      "previousProductInputCount": 72
+    }
+  },
+  "rejectedAttempts": [
+    {
+      "take": "tablecast-mutation-guest-v1",
+      "reason": "新規合成店舗で音声未選択。正規の設定APIで解消。"
+    },
+    {
+      "take": "tablecast-mutation-guest-v2",
+      "reason": "GUI照合後の音声が読み上げを行わず、confirmation-readの状態検査が停止。"
+    },
+    {
+      "take": "tablecast-mutation-guest-v3",
+      "reason": "注文は送信されたが、分割発話の最初のターンだけを待ち不採用。専用adapterで最後のターンを待つよう修正。"
+    },
+    {
+      "run": "tablecast-mutation-product-v1",
+      "reason": "素材末尾を約0.009秒超える台本を検出。台本の開始位置をフレーム境界へ調整。"
+    }
+  ],
+  "nonBlockingWarnings": [
+    {
+      "run": "tablecast-mutation-product-v2",
+      "code": "composition_file_too_large",
+      "detail": "生成HTMLが489行。HyperFrames lintはエラー0・警告1。保守性の分割推奨であり、固定試験中は生成器を変更しない。"
+    }
+  ],
+  "runs": [
+    {
+      "name": "tablecast-mutation-product-v2",
+      "report": "output/tablecast-mutation-product-v2/report.json",
+      "video": "output/tablecast-mutation-product-v2/video.mp4",
+      "project": "experiments/tablecast-mutation/product.json",
+      "status": "rendered-and-checked",
+      "startedAt": "2026-09-13T09:59:16.683Z",
+      "finishedAt": "2026-09-13T10:04:51.050Z",
+      "duration": 122.35000000000002,
+      "metadata": {
+        "format": {
+          "duration": 122.366667
+        },
+        "streams": [
+          {
+            "codec_type": "video",
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1"
+          },
+          {
+            "codec_type": "audio",
+            "codec_name": "aac",
+            "r_frame_rate": "0/0"
+          }
+        ]
+      },
+      "videoHash": "0285b9583d6d078aea1729184a3aa688eb162c13c6768874b78feb3f49d6e260",
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "peakDb": -1.1,
+      "frames": 45,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 122.366667,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 122.366667]]
+      },
+      "captureCoverage": [
+        {
+          "scene": "roles",
+          "evidence": false
+        },
+        {
+          "scene": "consult",
+          "evidence": false
+        },
+        {
+          "scene": "consult-answer",
+          "evidence": true
+        },
+        {
+          "scene": "voice-order",
+          "evidence": false
+        },
+        {
+          "scene": "order-added",
+          "evidence": true
+        },
+        {
+          "scene": "pause",
+          "evidence": true
+        },
+        {
+          "scene": "gui-review",
+          "evidence": false
+        },
+        {
+          "scene": "readback",
+          "evidence": true
+        },
+        {
+          "scene": "approval",
+          "evidence": true
+        },
+        {
+          "scene": "approval-result",
+          "evidence": true
+        },
+        {
+          "scene": "english",
+          "evidence": false
+        },
+        {
+          "scene": "staff",
+          "evidence": true
+        },
+        {
+          "scene": "admin",
+          "evidence": true
+        }
+      ],
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        },
+        {
+          "name": "frame-37",
+          "status": "passed",
+          "log": "frame-37.log"
+        },
+        {
+          "name": "frame-38",
+          "status": "passed",
+          "log": "frame-38.log"
+        },
+        {
+          "name": "frame-39",
+          "status": "passed",
+          "log": "frame-39.log"
+        },
+        {
+          "name": "frame-40",
+          "status": "passed",
+          "log": "frame-40.log"
+        },
+        {
+          "name": "frame-41",
+          "status": "passed",
+          "log": "frame-41.log"
+        },
+        {
+          "name": "frame-42",
+          "status": "passed",
+          "log": "frame-42.log"
+        },
+        {
+          "name": "frame-43",
+          "status": "passed",
+          "log": "frame-43.log"
+        },
+        {
+          "name": "frame-44",
+          "status": "passed",
+          "log": "frame-44.log"
+        }
+      ],
+      "editorialReview": "pending"
+    },
+    {
+      "name": "tablecast-mutation-technical-v1",
+      "report": "output/tablecast-mutation-technical-v1/report.json",
+      "video": "output/tablecast-mutation-technical-v1/video.mp4",
+      "project": "experiments/tablecast-mutation/project.json",
+      "status": "rendered-and-checked",
+      "startedAt": "2026-09-13T09:57:41.539Z",
+      "finishedAt": "2026-09-13T10:00:34.515Z",
+      "duration": 63.099999999999994,
+      "metadata": {
+        "format": {
+          "duration": 63.1
+        },
+        "streams": [
+          {
+            "codec_type": "video",
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1"
+          },
+          {
+            "codec_type": "audio",
+            "codec_name": "aac",
+            "r_frame_rate": "0/0"
+          }
+        ]
+      },
+      "videoHash": "731f5296fef319a41ece47c8be765552c5e70af9308977cfba3b430fecd09675",
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "peakDb": -1.2,
+      "frames": 37,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 63.1,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 63.1]]
+      },
+      "captureCoverage": [],
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        }
+      ],
+      "editorialReview": "pending"
+    }
+  ],
+  "cleanup": "専用Composeの2コンテナは停止。DB・独立clone・生成素材を保持。元のidleコンテナと既存動画は維持。",
+  "editorialReview": "pending-user",
+  "commitAndPush": "not-performed"
+}

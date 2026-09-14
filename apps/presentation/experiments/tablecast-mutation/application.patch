@@ -1,0 +1,453 @@
+diff --git a/.devcontainer/Caddyfile b/.devcontainer/Caddyfile
+index 683a702..5bf9d6a 100644
+--- a/.devcontainer/Caddyfile
++++ b/.devcontainer/Caddyfile
+@@ -2,7 +2,7 @@
+ 	auto_https off
+ 	admin off
+ }
+-:3000 {
++:3000, :3100 {
+ 	@tablecastOAuthCallback path /o/oauth2/v2/auth/callback
+ 	handle @tablecastOAuthCallback {
+ 		reverse_proxy 127.0.0.1:3008
+@@ -13,7 +13,12 @@
+ 	handle_path /_tablecast/livekit/* {
+ 		reverse_proxy 127.0.0.1:7880
+ 	}
++	# 開発専用。LiveKit管理SDKがprefixを使わず呼ぶ、現在必要なRoomServiceだけを転送する。
++	handle /twirp/livekit.RoomService/* {
++		reverse_proxy 127.0.0.1:7880
++	}
+ 	handle {
+ 		reverse_proxy 127.0.0.1:3001
+ 	}
+ }
++
+diff --git a/apps/web/messages/en.json b/apps/web/messages/en.json
+index 47a1a0e..5ebac7d 100644
+--- a/apps/web/messages/en.json
++++ b/apps/web/messages/en.json
+@@ -54,10 +54,10 @@
+   "kiosk_generating": "Responding",
+   "kiosk_latest": "Latest conversation",
+   "kiosk_transcribing": "Transcribing",
+-  "kiosk_menu": "Our menu",
++  "kiosk_menu": "Browse dishes",
+   "kiosk_all": "All",
+-  "kiosk_cart": "Your basket",
+-  "kiosk_orders": "Your orders",
++  "kiosk_cart": "Your selection",
++  "kiosk_orders": "Order progress",
+   "kiosk_bill": "Your bill",
+   "kiosk_choose": "Choose",
+   "kiosk_add": "Add to basket",
+@@ -76,7 +76,7 @@
+   "kiosk_vegan": "Listed as vegan",
+   "kiosk_cart_empty": "Your basket is empty",
+   "kiosk_missing": "Please complete your selection",
+-  "kiosk_review": "Review order",
++  "kiosk_review": "Review the details",
+   "kiosk_review_title": "Does everything look right?",
+   "kiosk_review_note": "Confirming sends this order to the restaurant.",
+   "kiosk_confirm": "Confirm and place order",
+@@ -137,11 +137,11 @@
+   "admin_details": "Details",
+   "admin_overview": "Overview",
+   "admin_logs": "Conversation & activity",
+-  "admin_orders": "Basket & orders",
++  "admin_orders": "Order desk",
+   "admin_payments": "Bill & payments",
+   "admin_diagnostics": "Diagnostics",
+   "admin_acknowledge": "Mark as attended",
+-  "admin_accept": "Accept order",
++  "admin_accept": "Start preparing",
+   "admin_serve": "Mark as served",
+   "admin_reject": "Reject order",
+   "admin_cancel_order": "Cancel order",
+@@ -499,5 +499,10 @@
+   "common_not_found": "This item could not be found. Select it again from the latest list.",
+   "common_invalid_input": "Check and correct the information you entered.",
+   "common_too_large": "The data is too large to send. Reduce the file size.",
+-  "common_rate_limited": "Too many requests. Wait a moment, then try again."
++  "common_rate_limited": "Too many requests. Wait a moment, then try again.",
++  "kiosk_checkout_open": "Open selection to review",
++  "kiosk_checkout_steps": "Order steps",
++  "kiosk_step_browse": "01 Browse",
++  "kiosk_step_review": "02 Review",
++  "kiosk_step_sent": "03 Send to kitchen"
+ }
+diff --git a/apps/web/messages/ja.json b/apps/web/messages/ja.json
+index 4f9c070..be50aa6 100644
+--- a/apps/web/messages/ja.json
++++ b/apps/web/messages/ja.json
+@@ -54,10 +54,10 @@
+   "kiosk_generating": "応答中",
+   "kiosk_latest": "最新の会話へ",
+   "kiosk_transcribing": "聞き取り中",
+-  "kiosk_menu": "おしながき",
++  "kiosk_menu": "商品を選ぶ",
+   "kiosk_all": "すべて",
+-  "kiosk_cart": "注文かご",
+-  "kiosk_orders": "注文履歴",
++  "kiosk_cart": "ご注文リスト",
++  "kiosk_orders": "お届け状況",
+   "kiosk_bill": "お会計",
+   "kiosk_choose": "選ぶ",
+   "kiosk_add": "注文かごに追加",
+@@ -76,7 +76,7 @@
+   "kiosk_vegan": "ヴィーガン対応の登録あり",
+   "kiosk_cart_empty": "注文かごは空です",
+   "kiosk_missing": "選択が必要です",
+-  "kiosk_review": "注文内容を確認",
++  "kiosk_review": "内容を照合する",
+   "kiosk_review_title": "こちらの内容でよろしいですか？",
+   "kiosk_review_note": "確定すると注文がお店へ送信されます。",
+   "kiosk_confirm": "この内容で注文する",
+@@ -137,11 +137,11 @@
+   "admin_details": "詳細",
+   "admin_overview": "概要",
+   "admin_logs": "会話・操作ログ",
+-  "admin_orders": "カート・注文",
++  "admin_orders": "注文の受付",
+   "admin_payments": "会計",
+   "admin_diagnostics": "診断",
+   "admin_acknowledge": "対応済みにする",
+-  "admin_accept": "注文を受け付ける",
++  "admin_accept": "調理を開始",
+   "admin_serve": "提供済みにする",
+   "admin_reject": "注文を断る",
+   "admin_cancel_order": "注文を取り消す",
+@@ -499,5 +499,10 @@
+   "common_not_found": "対象が見つかりません。最新の一覧から選び直してください。",
+   "common_invalid_input": "入力内容を確認して、修正してください。",
+   "common_too_large": "送信するデータが大きすぎます。ファイルのサイズを小さくしてください。",
+-  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。"
++  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。",
++  "kiosk_checkout_open": "リストを開いて確認へ",
++  "kiosk_checkout_steps": "ご注文の流れ",
++  "kiosk_step_browse": "01 商品を選ぶ",
++  "kiosk_step_review": "02 内容を確認",
++  "kiosk_step_sent": "03 お店へ送信"
+ }
+diff --git a/apps/web/src/features/kiosk/kiosk.tsx b/apps/web/src/features/kiosk/kiosk.tsx
+index d01ab78..8dc8090 100644
+--- a/apps/web/src/features/kiosk/kiosk.tsx
++++ b/apps/web/src/features/kiosk/kiosk.tsx
+@@ -316,8 +316,8 @@ function TableSession({
+   const hydrated = useHydrated();
+   const horizontal = useMediaQuery("(min-width: 40rem)");
+   const { defaultLayout, onLayoutChanged } = usePanelLayout({
+-    id: "tablecast-kiosk-layout",
+-    panelIds: ["tablecast-conversation", "tablecast-order"],
++    id: "tablecast-lab-kiosk-layout",
++    panelIds: ["tablecast-order", "tablecast-conversation"],
+   });
+   const {
+     locale,
+@@ -347,40 +347,19 @@ function TableSession({
+     voiceActive,
+   } = useTableSession({ data, refresh, endpoint });
+   return (
+-    <div data-ui="kiosk-shell" className="h-dvh flex flex-col overflow-hidden">
++    <div
++      data-ui="kiosk-shell"
++      className="h-[calc(100dvh-2.75rem)] flex flex-col overflow-hidden bg-background"
++    >
+       <KioskHeader data={data} language={language} call={call} />
++      <CheckoutSteps section={section} />
+       <ResizablePanelGroup
+         orientation={horizontal ? "horizontal" : "vertical"}
+-        className="flex-1 max-sm:flex-col!"
++        className="flex-1 min-h-0 max-sm:flex-col!"
+         defaultLayout={defaultLayout}
+         onLayoutChanged={onLayoutChanged}
+       >
+-        <ResizablePanel
+-          id="tablecast-conversation"
+-          defaultSize="50%"
+-          minSize="30%"
+-          className="h-full"
+-        >
+-          <VoicePanel
+-            view={view}
+-            lines={conversationLines(data.events)}
+-            events={data.events}
+-            catalog={catalog.data}
+-            snapshot={data.snapshot}
+-            onReview={() => prepare.mutate()}
+-            reviewPending={prepare.isPending}
+-            onChoose={choose}
+-            onStart={() => {
+-              if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
+-              else void voice.start(locale);
+-            }}
+-            controlDisabled={view.status === "stopping" || language.isPending}
+-            speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
+-            onSpeedChange={(value) => speed.mutate(value)}
+-          />
+-        </ResizablePanel>
+-        <ResizableHandle aria-label={t("kiosk_resize_panes")} />
+-        <ResizablePanel id="tablecast-order" defaultSize="50%" minSize="30%" className="h-full">
++        <ResizablePanel id="tablecast-order" defaultSize="58%" minSize="30%" className="h-full">
+           <aside className="h-full min-w-0 min-h-0 flex flex-col bg-card">
+             {data.plan && (
+               <div className="pt-5 px-5 pb-4 [&_h2]:text-xl [&_h2]:tracking-tight [&_h2]:mt-1 max-lg:px-6">
+@@ -401,7 +380,7 @@ function TableSession({
+             )}
+             <ErrorNotice error={screen.error} />
+             <Tabs.Root
+-              className="flex flex-col min-h-0 flex-1"
++              className="flex flex-col-reverse min-h-0 flex-1"
+               value={section}
+               onValueChange={(value) => {
+                 if (value === "menu" || value === "cart" || value === "orders" || value === "bill")
+@@ -410,7 +389,7 @@ function TableSession({
+             >
+               <Tabs.List
+                 data-ui="menu-tabs"
+-                className="flex border-b border-b-border py-0 px-3.5 gap-0 [&_button]:flex-1 [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2 [&_button]:px-1.5 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button[data-active]]:border-b-primary [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold max-lg:[&_button]:min-h-14 max-lg:[&_button]:text-xs"
++                className="flex shrink-0 gap-2 border-t border-border bg-muted p-2 [&_button]:flex-1 [&_button]:rounded-lg [&_button]:min-h-12 [&_button]:text-sm [&_button]:font-semibold [&_button]:px-2 [&_button[data-active]]:bg-primary [&_button[data-active]]:text-primary-foreground"
+               >
+                 <Tabs.Tab disabled={!hydrated} value="menu">
+                   {t("kiosk_menu")}
+@@ -577,19 +556,66 @@ function TableSession({
+                   prepare.isPending ||
+                   updateCart.isPending
+                 }
+-                onClick={() => prepare.mutate()}
++                onClick={() => (section === "cart" ? prepare.mutate() : setSection("cart"))}
+               >
+-                {t("kiosk_review")}
++                {section === "cart" ? t("kiosk_review") : t("kiosk_checkout_open")}
+                 <ChevronRight size={20} aria-hidden="true" />
+               </Button>
+             </div>
+           </aside>
+         </ResizablePanel>
++        <ResizableHandle aria-label={t("kiosk_resize_panes")} />
++        <ResizablePanel
++          id="tablecast-conversation"
++          defaultSize="42%"
++          minSize="30%"
++          className="h-full"
++        >
++          <VoicePanel
++            view={view}
++            lines={conversationLines(data.events)}
++            events={data.events}
++            catalog={catalog.data}
++            snapshot={data.snapshot}
++            onReview={() => prepare.mutate()}
++            reviewPending={prepare.isPending}
++            onChoose={choose}
++            onStart={() => {
++              if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
++              else void voice.start(locale);
++            }}
++            controlDisabled={view.status === "stopping" || language.isPending}
++            speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
++            onSpeedChange={(value) => speed.mutate(value)}
++          />
++        </ResizablePanel>
+       </ResizablePanelGroup>
+     </div>
+   );
+ }
+ 
++function CheckoutSteps({ section }: { section: UiSection }) {
++  const { t } = useI18n();
++  return (
++    <nav
++      aria-label={t("kiosk_checkout_steps")}
++      className="flex items-center gap-5 bg-primary px-5 py-2 text-sm text-primary-foreground"
++    >
++      <span className={section === "menu" ? "font-bold" : "opacity-80"}>
++        {t("kiosk_step_browse")}
++      </span>
++      <ChevronRight size={16} aria-hidden="true" />
++      <span className={section === "cart" ? "font-bold" : "opacity-80"}>
++        {t("kiosk_step_review")}
++      </span>
++      <ChevronRight size={16} aria-hidden="true" />
++      <span className={section === "orders" ? "font-bold" : "opacity-80"}>
++        {t("kiosk_step_sent")}
++      </span>
++    </nav>
++  );
++}
++
+ function KioskOrders({
+   data,
+   catalog,
+@@ -694,7 +720,10 @@ function KioskHeader({
+   return (
+     <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-white/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2">
+       <a className="text-xl font-bold tracking-tight" href={data.kind === "demo" ? "#" : "/"}>
+-        TableCast<span className="text-accent">·</span>
++        TableCast
++        <span className="ml-2 rounded bg-primary px-2 py-1 text-xs text-primary-foreground">
++          Lab
++        </span>
+       </a>
+       <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
+         <span className="max-w-48 truncate">{data.storeName}</span>
+diff --git a/apps/web/src/features/kiosk/menu.tsx b/apps/web/src/features/kiosk/menu.tsx
+index a843c41..8300ec4 100644
+--- a/apps/web/src/features/kiosk/menu.tsx
++++ b/apps/web/src/features/kiosk/menu.tsx
+@@ -8,9 +8,9 @@ import { money } from "../../i18n/format";
+ import { useI18n } from "../../i18n/locale";
+ 
+ const productGrid = tv({
+-  base: "grid grid-cols-2",
++  base: "grid grid-cols-1",
+   variants: {
+-    recommended: { true: "gap-3", false: "gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3" },
++    recommended: { true: "gap-3", false: "gap-3 p-4" },
+   },
+ });
+ 
+@@ -66,12 +66,12 @@ export function ProductMenu({
+           <Button
+             variant="ghost"
+             type="button"
+-            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 motion-safe:[&:hover:not(:disabled)_img]:scale-105 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
++            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 h-auto flex-row items-center gap-4 justify-start whitespace-normal p-3 text-left border border-border bg-card"
+             key={product.id}
+             onClick={() => onChoose(product)}
+             disabled={!product.available}
+           >
+-            <span className="w-full aspect-3/2 overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
++            <span className="w-28 shrink-0 aspect-square overflow-hidden rounded-md bg-muted relative flex items-center justify-center">
+               {product.imageKey ? (
+                 <ProductImage
+                   className="size-full object-cover transition-transform motion-reduce:transition-none duration-200 ease-out"
+@@ -98,8 +98,8 @@ export function ProductMenu({
+                 </span>
+               )}
+             </span>
+-            <span className="flex flex-col flex-1 pt-2.5 px-0 pb-0">
+-              <strong className="block text-xs leading-relaxed font-medium flex-1 2xl:text-sm">
++            <span className="flex min-w-0 flex-col flex-1 py-1">
++              <strong className="block text-base leading-relaxed font-semibold flex-1">
+                 {product.text[locale].displayName}
+               </strong>
+               <span className="flex items-center justify-between gap-1 text-xs font-semibold mt-1">
+diff --git a/apps/web/src/features/store/table-detail.tsx b/apps/web/src/features/store/table-detail.tsx
+index 8a724be..7bacc36 100644
+--- a/apps/web/src/features/store/table-detail.tsx
++++ b/apps/web/src/features/store/table-detail.tsx
+@@ -89,7 +89,7 @@ export function TableDetail({
+     onViewChange,
+   });
+   return (
+-    <section className="space-y-5">
++    <section className="space-y-4">
+       <Button
+         nativeButton={false}
+         role="link"
+@@ -107,6 +107,26 @@ export function TableDetail({
+         </p>
+       )}
+       <ErrorNotice error={detail.error || action.error} />
++      <div className="grid grid-cols-3 gap-2 rounded-xl bg-primary p-4 text-primary-foreground">
++        <div>
++          <span className="text-xs">{t("order_submitted")}</span>
++          <strong className="block text-2xl">
++            {table.orders.filter((order) => order.status === "submitted").length}
++          </strong>
++        </div>
++        <div>
++          <span className="text-xs">{t("order_accepted")}</span>
++          <strong className="block text-2xl">
++            {table.orders.filter((order) => order.status === "accepted").length}
++          </strong>
++        </div>
++        <div>
++          <span className="text-xs">{t("order_served")}</span>
++          <strong className="block text-2xl">
++            {table.orders.filter((order) => order.status === "served").length}
++          </strong>
++        </div>
++      </div>
+       {table && (
+         <Tabs.Root
+           className="flex min-h-0 flex-1 flex-col"
+@@ -123,15 +143,15 @@ export function TableDetail({
+           }}
+         >
+           <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-sm [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
++            <Tabs.Tab disabled={!hydrated} value="orders">
++              {t("admin_orders")}
++            </Tabs.Tab>
+             <Tabs.Tab disabled={!hydrated} value="overview">
+               {t("admin_overview")}
+             </Tabs.Tab>
+             <Tabs.Tab disabled={!hydrated} value="logs">
+               {t("admin_logs")}
+             </Tabs.Tab>
+-            <Tabs.Tab disabled={!hydrated} value="orders">
+-              {t("admin_orders")}
+-            </Tabs.Tab>
+             <Tabs.Tab disabled={!hydrated} value="billing">
+               {t("admin_payments")}
+             </Tabs.Tab>
+@@ -281,14 +301,18 @@ function SessionOrders({
+   const { t, locale } = useI18n();
+   return (
+     <Tabs.Panel value="orders">
+-      <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
+-      <CartLines lines={table.cart.lines} />
++      {table.cart.lines.length > 0 && (
++        <>
++          <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
++          <CartLines lines={table.cart.lines} />
++        </>
++      )}
+       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
+       {table.orders.map((order) => (
+         <article
+           key={order.id}
+           data-ui="order-card"
+-          className="border border-border rounded-md m-3.5 overflow-hidden"
++          className="border-2 border-primary rounded-xl my-3 overflow-hidden shadow-sm"
+         >
+           <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-sm">
+             <time>{time(order.createdAt, locale)}</time>
+diff --git a/apps/web/src/styles.css b/apps/web/src/styles.css
+index 1a0f68a..7a5fa08 100644
+--- a/apps/web/src/styles.css
++++ b/apps/web/src/styles.css
+@@ -52,24 +52,24 @@
+     #38bdf8,
+     #6366f1
+   );
+-  --brand-accent: #18181b;
++  --brand-accent: #075e58;
+   --radius: 0.625rem;
+-  --background: #fafafa;
++  --background: #f2f7f5;
+   --foreground: #18181b;
+   --card: #ffffff;
+   --card-foreground: #18181b;
+   --popover: #ffffff;
+   --popover-foreground: #18181b;
+-  --primary: #18181b;
++  --primary: #075e58;
+   --primary-foreground: #ffffff;
+-  --secondary: #f4f4f5;
++  --secondary: #e0efea;
+   --secondary-foreground: #18181b;
+-  --muted: #f4f4f5;
++  --muted: #eaf3ef;
+   --muted-foreground: #3f3f46;
+-  --accent: #f4f4f5;
++  --accent: #e0efea;
+   --accent-foreground: #18181b;
+   --destructive: #ad3429;
+-  --border: #e4e4e7;
++  --border: #c5dcd3;
+   --input: #71717a;
+   --ring: #18181b;
+ }

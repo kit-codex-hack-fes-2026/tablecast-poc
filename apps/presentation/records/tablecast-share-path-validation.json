@@ -1,0 +1,759 @@
+{
+  "date": "2026-09-13",
+  "issue": 1,
+  "scope": "共有用の保存先を正規化し、不足した旧3テイクの原録画を追加。変更前原本はGit対象外の.local/tablecast-share-paths-1789301433576へ保全。過去の実行結果・ハッシュは当時の履歴として保持する。",
+  "changes": [
+    {
+      "file": "apps/presentation/HANDOFF.md",
+      "beforeSha256": "a1b225e1b6fdb5f94ac345db9f46ce719cf52842c222372e67205aab437834ba",
+      "afterSha256": "119db8d405556c41f40e8258896f7df149a8f5dcaf0f18e880177fb36a30cfd5"
+    },
+    {
+      "file": "apps/presentation/assets/images/tablecast-poc-concept-v2.md",
+      "beforeSha256": "c997ab2ba6f6378ab77c13667be74c3da55edc3626e0291d2e347f8bf474a892",
+      "afterSha256": "d1427f917388e659c6b6bf9a0fc3b8da01d29401cce839e0210c2eb2a784a549"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/portable/tablecast-edit.openscreen",
+      "beforeSha256": "221f1af59773b229a13eff1d5cd59acc7d79231112c97aaab3b0f6b077553dee",
+      "afterSha256": "13af2554ab37071f249c168ae5495a38b3d68a410711d1092dfd25d8363a390f"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/tablecast-edit.openscreen",
+      "beforeSha256": "9433ca2d50df145fd413d041c4bc2101bf8f4f3583c79ab8bc3faf6bc3a4a5ee",
+      "afterSha256": "13af2554ab37071f249c168ae5495a38b3d68a410711d1092dfd25d8363a390f"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/tablecast-raw.openscreen",
+      "beforeSha256": "a6e5d170d2789fe36a84d2cff55b8a014c25b8cb46384e5f695f05ff89f3b18c",
+      "afterSha256": "e69e16655524dc50cb538aa683b121775ef2d21a64d8132455f7dd7f2f0319fe"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/tablecast-record.log",
+      "beforeSha256": "39025ce1558f5655f5e8325d2bb5bed082910bef8d3cc6bf8170238028f95554",
+      "afterSha256": "e05d3f2521fcc71da1129fa9415318d2df8c7778858587f389f58301d546da3b"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/portable/tablecast-edit.openscreen",
+      "beforeSha256": "9b6b8d580c7eec1abadaa1ce8cd79a058032f8d9399a0cbb7f31882d862c4b7c",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/tablecast-edit.openscreen",
+      "beforeSha256": "40df8d386f1e8f0b4e4f30b9adee971bd7081490ec3dc0fc6d51903a6e65e58e",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/tablecast-raw.openscreen",
+      "beforeSha256": "0495c338678a6d7b3783b45e7a853d76bdee9eb86c349b8ae138bcac00a8ad70",
+      "afterSha256": "95dfdc516c2bd2c4f69183d18194a2776c38334f68a0c410bfb4d5acf1e6c705"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/tablecast-record.log",
+      "beforeSha256": "94ce9c8bff60aeaf8592ac9ad86590c69777256106c06868b174c69a99a90255",
+      "afterSha256": "8d73b1fab7debc3bc3554e0a46290cf9323087a9b90138988d8d58d332246c27"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/portable/tablecast-edit.openscreen",
+      "beforeSha256": "5e6a529ff98439d1d209163bfc90c6f4b0d9b8c6c2976726f5cb6041ecac203d",
+      "afterSha256": "aa329ea66b44a67333866a88217fd683b878bf5d30a0500128d58f3cdfd08bfc"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/tablecast-edit.openscreen",
+      "beforeSha256": "ae14a79ad5f693d820af674e641c0b2eb484904f8d50384b82b36f1447c4f15b",
+      "afterSha256": "aa329ea66b44a67333866a88217fd683b878bf5d30a0500128d58f3cdfd08bfc"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/tablecast-raw.openscreen",
+      "beforeSha256": "31a7793cbdc3c45d4b8131563fa8ff80e8e8dfc0d2a543ccbd01605e5df65179",
+      "afterSha256": "8dbfe86227665b323a4207c7089b771161bc1002ae88de532fa1006cb015e2c8"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/tablecast-record.log",
+      "beforeSha256": "0bf68eafaab14ebd4706ddfc719150c94b6ec88aaa7ef85e6f3376ed2c893dd5",
+      "afterSha256": "df0092798bfef03fb10cd12b8b55eaa59361d93fb1d25fbdc619ceb2a9ec04ee"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/original/tablecast-raw.openscreen",
+      "beforeSha256": "e6055790e6e58fa1de159e0028ca9a38d30d6b53c10e9217f47790d55a5f2118",
+      "afterSha256": "3f59afed6b4f5c9c7b0a52bed4c62535a3321e9994894fa6715dcbe147581905"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/portable/tablecast-edit.openscreen",
+      "beforeSha256": "c0c5c3b570c123583e75ffe68627aa951c6fd6091ca72295b09dd377e60a0b0a",
+      "afterSha256": "6f0272a632417f28f763169cd6b73229f3d77ca70503c142ed14e5d9f84664a8"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-edit.openscreen",
+      "beforeSha256": "003a6bbd088a61ea20b0724dc6fb8737d8b1b609c6471832a2c91550841bf018",
+      "afterSha256": "6f0272a632417f28f763169cd6b73229f3d77ca70503c142ed14e5d9f84664a8"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-raw.openscreen",
+      "beforeSha256": "a967dbf4ff305d96d23023a99703462b94e49ad47e4787d077f282957d094841",
+      "afterSha256": "2b6231c1ab77286719df2ee4b12a9013e670479f2c5518395bc5adeba6706be2"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-record.log",
+      "beforeSha256": "0eb8812a5d1ec3d3964f79963b25deb2648e78039d753c2aa145e94947fe0dbf",
+      "afterSha256": "abcd16041a2c1a812a2f564a5ece3bbced4b36a0d68ba3c511a888a0b818139a"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/original/tablecast-raw.openscreen",
+      "beforeSha256": "1b88b62f95b0592386097ea91d43e0919d699e7b9023488be4a2e94b35f6f93d",
+      "afterSha256": "65ee383e31de4b1e046d556cf68c34eb7edc072be824bf90531bb64ec52b72ae"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/portable/tablecast-edit.openscreen",
+      "beforeSha256": "561e0b2af229695836790d04c8c9332658b203b110d4c6d5a7f56c14e97005ac",
+      "afterSha256": "da6de384a266472493dba695bce79dd5903c690521fb9aa1ef8577c37cdc35ba"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-edit.openscreen",
+      "beforeSha256": "5b7e881f2ea0c8bf974e38a66a5cbb48060c8b9f27635944e5363a16c7c18fd1",
+      "afterSha256": "da6de384a266472493dba695bce79dd5903c690521fb9aa1ef8577c37cdc35ba"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-raw.openscreen",
+      "beforeSha256": "ffd206bee760ed073ef5e78f148e19e1d9c14de4601f3d51c0d9fe976c8d81f1",
+      "afterSha256": "f4cd6781267095e5f1e817184bb5a23444189974af9feb6b6c0ca67ad791c422"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-record.log",
+      "beforeSha256": "b880e456c98bced3e2443363fd75066961173c97353c8d34e5d28349cd671968",
+      "afterSha256": "e0e4f58ec8063b724c9dc62bd4855891388f0d24685ad3dd377a39574bdbb6f6"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/original/tablecast-raw.openscreen",
+      "beforeSha256": "b7064df09366787f883d8f29292aae69c8c207dbbd1bcc8aa299f683b5d06750",
+      "afterSha256": "b6cb23157ea32fa5c7a35240f5d52202d0f5922daa67fc2299b5a4ca7402d47a"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/portable/tablecast-edit.openscreen",
+      "beforeSha256": "c1bba908a973c1580c0e659e5222963b685fbe70a85ca4b525e95eca25218e8d",
+      "afterSha256": "1dc72e368fadb8ea10fa099050dd1b0840fa7db8f7b6ccdafa4c0ab7471b8b30"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-edit.openscreen",
+      "beforeSha256": "ab207f53f92c835937cbb13ba6b63911004d09a80269d57e2a2a95dfde007360",
+      "afterSha256": "1dc72e368fadb8ea10fa099050dd1b0840fa7db8f7b6ccdafa4c0ab7471b8b30"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-raw.openscreen",
+      "beforeSha256": "31035e2157a679ebfe5a2b649f13ddd0d5f377ee79ea78aa36a4c86ab3bb802a",
+      "afterSha256": "b442f92324854e2b354695e0c934089ec48091ff1d324c5da192f28291e6040f"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-record.log",
+      "beforeSha256": "7aa7d4e399c4b004170f5dd35c0acc5f10ef753edd19dcf80e6dfac50ea2646b",
+      "afterSha256": "a3cd29eca115ea2d11089e4466f5348c3a23ba0f4e2981393a1dcfc3537f9fda"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/original/tablecast-raw.openscreen",
+      "beforeSha256": "810ff91c3218268745db58803185d522b13c08f166f50dd770ffba33cc046cdd",
+      "afterSha256": "4280445fdc1630775255b29b4bbe12c5848a516a3e1818071dc09beb05a13deb"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/portable/tablecast-edit.openscreen",
+      "beforeSha256": "6edfc925a25c69d417baeca243ee1f5581aeb87ee145cbf77e072465115d5101",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-edit.openscreen",
+      "beforeSha256": "243b1224efc998c92560b05de0fe87dd895d0a59beb5db93c3d3ec02b9e9e3a6",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-raw.openscreen",
+      "beforeSha256": "58456fb7e117a48f88c65c9c7a2a5dc45f2b390a83b43c22d4531398c23b6c69",
+      "afterSha256": "5417014c4d9babee943527be2d4c80d28976150f6e60d02c53111fcf76d21842"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-record.log",
+      "beforeSha256": "785b39c3492d8187cc091952c6e30b1c89565f6cc64107daa1f1623016e3d1dc",
+      "afterSha256": "3d2ec161459253034d244821380c19ca2923acaf7ecf8a07a38b1eae6fbf99b8"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/original/tablecast-raw.openscreen",
+      "beforeSha256": "f1c74d5d8728c867d0d2935f6a9f3ef1396270605ba2788f03686ac10159bdcc",
+      "afterSha256": "49bd152c1f8a0233f12e3a8609646c4d1d66e065eec89608fdfb7fab18dffca9"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/portable/tablecast-edit.openscreen",
+      "beforeSha256": "d79a4151b8773d4445b1abcabfcbebf022f26d8e133643b9092ca9b7a2243cfc",
+      "afterSha256": "3f48599b9d70ba9e1066e251f2fbd49c2b4c17d7b56defc3e85afbe8c398bcf9"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/tablecast-edit.openscreen",
+      "beforeSha256": "9d75bab81d4ccff50aea1c53b37197e3074627e74b17a23e91af932fc7ceb4fd",
+      "afterSha256": "3f48599b9d70ba9e1066e251f2fbd49c2b4c17d7b56defc3e85afbe8c398bcf9"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/tablecast-raw.openscreen",
+      "beforeSha256": "a2c7304d6dfb78a32fba6fd3745f1f64fd24f1885d30ca5fb7e6b56073bc8a72",
+      "afterSha256": "354556b65dc97b74ef62fcf9e4f75b6ab3a64eab174b762ada88619c543f9543"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/tablecast-record.log",
+      "beforeSha256": "e20ef6d6045e9bef62c369ec6ea54f6d05a0f667fb1631ca93956e2bb80734b1",
+      "afterSha256": "013f0ad363bc14838c1faf34884719b5a6d3d190254a3f73ee95b7077d655350"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/original/tablecast-raw.openscreen",
+      "beforeSha256": "abd7833c2351d8d6576e42c2aa87144747ec4f99e51e99bdaaeee432e3a86ffb",
+      "afterSha256": "83f814092a00f3a01d0878276160ccf6720d36411acf9a0cb427080a66892eda"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/portable/tablecast-edit.openscreen",
+      "beforeSha256": "0b03d675b1ba3c13124e431ac1822d1f70768cc4c101c2612ecb6df319a08c93",
+      "afterSha256": "58afd17420f73bd350c38e0e383a4b592d55c06f6465e88b400652c607030ff5"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/tablecast-edit.openscreen",
+      "beforeSha256": "bfa7885eb9815466cc4eb6a7b537097d8696feba93e405c455fab8a2e4f17695",
+      "afterSha256": "58afd17420f73bd350c38e0e383a4b592d55c06f6465e88b400652c607030ff5"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/tablecast-raw.openscreen",
+      "beforeSha256": "30e6785863f3fbd47463c236581fb55eb0613853df61dc387a6ddb2731acefbe",
+      "afterSha256": "8be0f40a5b8da1cf3485e89a7aceb903e1208e05baca3a24cd426f0ed31eaf8c"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/tablecast-record.log",
+      "beforeSha256": "4c860ae440ba5706703100d4cc538c6d37da0cf782c64b6e4ee351a84e7a9dd4",
+      "afterSha256": "2a046bd032fd8c2620542d6ab09ae4b3f538ae80b68549be7e91eca3d981d4c1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/original/tablecast-raw.openscreen",
+      "beforeSha256": "cdcd039a4fb3f7f4d7952c99be573aa3fe6c46a30bea480f8f97416176819865",
+      "afterSha256": "28f8ce2663227aae1a60111f5eca1b423c57c34cc1867ca8cec10f9b30c5fecc"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/portable/tablecast-edit.openscreen",
+      "beforeSha256": "af59967d97ca4b777b94fff442f1f5aa89de26e28d53e7b39eb21fe492f6958a",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/tablecast-edit.openscreen",
+      "beforeSha256": "234209c86981c9ab9f98478432169036a4744d2d4376d84d6cb3129641e1bb6f",
+      "afterSha256": "dc4fd4cc2b45020f6e60a2657f231ea4c848cf89910ab08dd46d275661be63d1"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/tablecast-raw.openscreen",
+      "beforeSha256": "208269055712895daf16c3314005e4fc292f697c2156d08d0b060a234b6ff0f7",
+      "afterSha256": "9519ac674fe0748c38bb47c9ba68c965a004980a0e36165cae44de61af3b61da"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/tablecast-record.log",
+      "beforeSha256": "379303b859820853235a896ab85f101d290a030a7738c08be6edab442c526195",
+      "afterSha256": "47b7ccc2967fb295e46e8e43eb0ee4ba3c334313bdefd44ff912f4a322ac5558"
+    },
+    {
+      "file": "apps/presentation/experiments/tablecast-mutation/compose.yaml",
+      "beforeSha256": "9960d78dd24a26354bafa4cc2e56a9904b93d28d5b2208880c6430054daf1d0c",
+      "afterSha256": "0a609b991833cde717f62f8c556e0761cfd856fdef8ff3ff30592f70acc9eb94"
+    },
+    {
+      "file": "apps/presentation/records/tablecast-mutation-validation.json",
+      "beforeSha256": "1f17e860605d6d8c6312a2010430ad9e3798ae8b7c2bb00d2dfc1d0eb8d10e25",
+      "afterSha256": "8d9b5bf8af6aa45b23e0fa19c466f0932ea9c629906b135b583a0deeef4cc139"
+    }
+  ],
+  "additions": [
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/original/recording-1789195442146.mp4",
+      "bytes": 95355105,
+      "sha256": "7e0e9cbf5ec7218d1fb882586815e9bd2877e42290453472a2114594ae4023ad"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/original/recording-1789195442146.mp4.cursor.json",
+      "bytes": 1856432,
+      "sha256": "5000f543cb8bdb95cab9962c6e8e2571fde5ad0fd52e4cc05f652fc8077414cb"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/original/recording-1789195699594.mp4",
+      "bytes": 1188823,
+      "sha256": "2f12cd731d06621a1768693d5b948c97aebe843577921eb7d8c0f5f0cf8d5d15"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/original/recording-1789195699594.mp4.cursor.json",
+      "bytes": 121093,
+      "sha256": "968e2c71688221fea367044bd3e5fe886e9146231b7b4eddc8829344ce7cdb0c"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/original/recording-1789225133510.mp4",
+      "bytes": 21634136,
+      "sha256": "212730755ca98af52e70b1cef91fb162859c8f15d2ae354dce74f46ec929404a"
+    },
+    {
+      "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/original/recording-1789225133510.mp4.cursor.json",
+      "bytes": 198703,
+      "sha256": "8696ff1a6d50dfe8c286841733c9516eb2f68adafd9a5385a3a03bbbad7c0a65"
+    }
+  ],
+  "previousValidation": "records/tablecast-pr-validation.json",
+  "normalization": {
+    "projectMedia": "projectファイル基準の相対パス。OpenScreen info/packはprojectのあるフォルダーから実行する。",
+    "logs": "ローカル保存先を[OPENSCREEN_RECORDINGS]・[REPOSITORY]・[LOCALAPPDATA]等で置換。時刻は保持する。",
+    "historicalCheckout": "records/tablecast-mutation-validation.jsonのapplication.checkoutはリポジトリルート基準の相対パス。結果と当時のハッシュは変更しない。"
+  },
+  "restore": {
+    "platform": "Windows",
+    "transport": "独立したローカルsnapshotを新規cloneし、LFS pointerからgit lfs pullで復元。空白を含む別フォルダーで検証。",
+    "snapshot": "becb0030b10cf44540dba1d306b6ebad1be22b34",
+    "lfsFiles": 207,
+    "lfsFsck": "passed",
+    "byteIdenticalAssets": 293,
+    "unchangedOriginalEvidenceJson": 73,
+    "sharedFilmsUnchanged": 4,
+    "install": "bun --no-env-file install --frozen-lockfile --ignore-scripts / passed"
+  },
+  "openscreen": {
+    "version": "1.11",
+    "projects": [
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-guest-v13/tablecast-raw.openscreen",
+        "media": "original/recording-1789195442146.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-iphone-staff-v13/tablecast-raw.openscreen",
+        "media": "original/recording-1789195699594.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-macbook-admin-v13/tablecast-raw.openscreen",
+        "media": "original/recording-1789225133510.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/original/tablecast-raw.openscreen",
+        "media": "recording-1789288405684.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-7d6adc7-admin-v1/tablecast-raw.openscreen",
+        "media": "original/recording-1789288405684.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/original/tablecast-raw.openscreen",
+        "media": "recording-1789290184620.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-english-v1/tablecast-raw.openscreen",
+        "media": "original/recording-1789290184620.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/original/tablecast-raw.openscreen",
+        "media": "recording-1789289818377.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-guest-v5/tablecast-raw.openscreen",
+        "media": "original/recording-1789289818377.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/original/tablecast-raw.openscreen",
+        "media": "recording-1789290087084.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/tablecast-raw.openscreen",
+        "media": "original/recording-1789290087084.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/original/tablecast-raw.openscreen",
+        "media": "recording-1789293239438.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-admin-v1/tablecast-raw.openscreen",
+        "media": "original/recording-1789293239438.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/original/tablecast-raw.openscreen",
+        "media": "recording-1789292848674.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-guest-v4/tablecast-raw.openscreen",
+        "media": "original/recording-1789292848674.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/original/tablecast-raw.openscreen",
+        "media": "recording-1789293173431.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/portable/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/tablecast-edit.openscreen",
+        "media": "tablecast-source-cursor.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      },
+      {
+        "file": "apps/presentation/assets/openscreen/tablecast-mutation-staff-v1/tablecast-raw.openscreen",
+        "media": "original/recording-1789293173431.mp4",
+        "exists": true,
+        "cursorSidecar": true
+      }
+    ],
+    "rawPacks": [
+      {
+        "take": "assets/openscreen/tablecast-guest-v13",
+        "mediaHash": "7e0e9cbf5ec7218d1fb882586815e9bd2877e42290453472a2114594ae4023ad",
+        "cursorHash": "5000f543cb8bdb95cab9962c6e8e2571fde5ad0fd52e4cc05f652fc8077414cb"
+      },
+      {
+        "take": "assets/openscreen/tablecast-iphone-staff-v13",
+        "mediaHash": "2f12cd731d06621a1768693d5b948c97aebe843577921eb7d8c0f5f0cf8d5d15",
+        "cursorHash": "968e2c71688221fea367044bd3e5fe886e9146231b7b4eddc8829344ce7cdb0c"
+      },
+      {
+        "take": "assets/openscreen/tablecast-macbook-admin-v13",
+        "mediaHash": "212730755ca98af52e70b1cef91fb162859c8f15d2ae354dce74f46ec929404a",
+        "cursorHash": "8696ff1a6d50dfe8c286841733c9516eb2f68adafd9a5385a3a03bbbad7c0a65"
+      },
+      {
+        "take": "assets/openscreen/tablecast-main-7d6adc7-admin-v1",
+        "mediaHash": "1fc6d4bfa5933b2f3e84254ad58f460b52296ae9702a87a70961a0d864dac394",
+        "cursorHash": "e9715be17e9a0bb0e4ec27baaf8f16295f233c4613ed7837f7465ef4915b0dd5"
+      },
+      {
+        "take": "assets/openscreen/tablecast-main-rerecord-english-v1",
+        "mediaHash": "4502e82c44b8581eb0b23360d9431105f87f9910a74a2ea1d43ed18d5d7276fe",
+        "cursorHash": "bc3f91da21b3fd6b5518572f54ba40932c80c91f93fd2de77f9b12edcd6c5782"
+      },
+      {
+        "take": "assets/openscreen/tablecast-main-rerecord-guest-v5",
+        "mediaHash": "62a25164631fd9459a0d40364b9d796f26b8b395e29796efd85284af5af24266",
+        "cursorHash": "ca793e1eee3e2c2744656b686f6811bd3692694209e3109b6305f4b3425cb575"
+      },
+      {
+        "take": "assets/openscreen/tablecast-main-rerecord-staff-v2",
+        "mediaHash": "1db4c84fd87dd4299d80fc92a6856008facdfac80d8990f4211fca5fe79a4fe1",
+        "cursorHash": "3cf5c0d52a0e49aaf3bf2636af31579c6599d5ca327afd192beccfc0f98d4cb3"
+      },
+      {
+        "take": "assets/openscreen/tablecast-mutation-admin-v1",
+        "mediaHash": "324e5598979f15d97af004a1cc9e92ab8db0ca804eb27e4a3b175d54f51c3fb3",
+        "cursorHash": "bee840f9ca3b2a615f4ad0e5c53657232b44cea8a755077a503bcfadbadaf21e"
+      },
+      {
+        "take": "assets/openscreen/tablecast-mutation-guest-v4",
+        "mediaHash": "9a026a250ad9df6db6b4ec8fc45c4b7e49f1804ff1034c908d36756de9f08fdc",
+        "cursorHash": "ed92f2ce6f252cdae75007eff281b773a8e784f5cbebfa4af06f8a9145eeceaf"
+      },
+      {
+        "take": "assets/openscreen/tablecast-mutation-staff-v1",
+        "mediaHash": "77bdf58c24d12c5ab38144810b0a4871911f206a31270164bb58dc48725083a0",
+        "cursorHash": "cf19104a71fb72bcbbcea5d0d07d8ddabc023b9741b061dde6c8f235bbc5ccc0"
+      }
+    ],
+    "exports": [
+      {
+        "name": "tablecast-restored-edited-staff",
+        "relativeProject": "restored media/apps/presentation/assets/openscreen/tablecast-main-rerecord-staff-v2/portable/tablecast-edit.openscreen",
+        "media": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "codec_type": "video",
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "codec_name": "aac",
+              "codec_type": "audio"
+            }
+          ],
+          "format": {
+            "duration": "30.000000"
+          }
+        },
+        "bytes": 638066,
+        "sha256": "8ca843946ccd643468f3bfe2335e321f09ee0bad2994e4c1564b3d97ee898a60",
+        "fullyDecoded": true
+      },
+      {
+        "name": "tablecast-restored-raw-staff",
+        "relativeProject": "verification/packed/tablecast-iphone-staff-v13/tablecast-raw.openscreen",
+        "media": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "codec_type": "video",
+              "width": 1920,
+              "height": 1080
+            },
+            {
+              "codec_name": "aac",
+              "codec_type": "audio"
+            }
+          ],
+          "format": {
+            "duration": "18.000000"
+          }
+        },
+        "bytes": 1062096,
+        "sha256": "c5f8910c3b85ea982765d74a664aee77b415305909b3662307bb25923138032f",
+        "fullyDecoded": true
+      }
+    ],
+    "editorSettingsPreserved": 37,
+    "logCaptureTimesPreserved": 10
+  },
+  "compose": {
+    "missingVariableRejected": true,
+    "explicitCheckoutResolved": true,
+    "createHostPath": false,
+    "containersStarted": false
+  },
+  "checks": {
+    "unitTests": 46,
+    "unitTestFiles": 9,
+    "presentationLint": "passed",
+    "presentationTypecheck": "passed",
+    "rootFormat": "passed",
+    "representativeExportFrames": "各exportの5秒時点で実画面を確認。映像デザインの評価は含まない。",
+    "compositions": [
+      {
+        "film": "product",
+        "status": "composition-checked",
+        "steps": [
+          {
+            "name": "build",
+            "status": "passed",
+            "log": "build.log"
+          },
+          {
+            "name": "layout",
+            "status": "passed",
+            "log": "layout.log"
+          },
+          {
+            "name": "lint",
+            "status": "passed",
+            "log": "lint.log"
+          },
+          {
+            "name": "transitions",
+            "status": "passed",
+            "log": "transitions.log"
+          }
+        ],
+        "layout": {
+          "startTime": "2026-09-13T12:18:29.531Z",
+          "duration": 6475.531,
+          "expected": 6,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "report": "apps/presentation/output/tablecast-share-path-product-v1/report.json",
+        "reportSha256": "eb5a0f69e4150f4bd50d7e7db59de07bc0655ab63e1a7d1398d90e48aa2dad82",
+        "lint": "◆  Linting tablecast-share-path-product-v1/index.html\n\n  ⚠ composition_file_too_large: This HTML composition file has 410 lines. Smaller sub-compositions are easier to read, iterate on, and diff.\n    Fix: Split coherent scenes or layers into separate .html files under compositions/, then mount them from the parent with data-composition-src so each file stays small enough to inspect, revise, and validate independently.\n\n◇  0 error(s), 1 warning(s)\n"
+      },
+      {
+        "film": "technical",
+        "status": "composition-checked",
+        "steps": [
+          {
+            "name": "build",
+            "status": "passed",
+            "log": "build.log"
+          },
+          {
+            "name": "layout",
+            "status": "passed",
+            "log": "layout.log"
+          },
+          {
+            "name": "lint",
+            "status": "passed",
+            "log": "lint.log"
+          },
+          {
+            "name": "transitions",
+            "status": "passed",
+            "log": "transitions.log"
+          }
+        ],
+        "layout": {
+          "startTime": "2026-09-13T12:20:00.639Z",
+          "duration": 5654.017000000001,
+          "expected": 6,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "report": "apps/presentation/output/tablecast-share-path-technical-v1/report.json",
+        "reportSha256": "e94140a53317d3a1c0ccba0142bba57a116ad0ec5427a0cce77fa118a6dc23a4",
+        "lint": "◆  Linting tablecast-share-path-technical-v1/index.html\n\n◇  0 errors, 0 warnings\n"
+      }
+    ]
+  },
+  "sharing": {
+    "totalAssetBytes": 914385605,
+    "originalRecordings": 10
+  },
+  "notPerformed": [
+    "GitHub LFS upload / push / remote CI / PR creation",
+    "OpenScreen GUIでの手動編集操作",
+    "別PC・別OSでの実行",
+    "実アプリの再収録・有料TTS",
+    "今回のパス整理後のHyperFrames完成MP4再render（構成検査まで実施。以前の2本の全編再生成記録を保持）"
+  ],
+  "finalChecks": {
+    "stagedDiffFiles": 419,
+    "lfsFiles": 207,
+    "lfsFsck": "passed",
+    "cachedDiffCheck": "passed",
+    "maxNormalBlobBytes": 2520684,
+    "formerUserNameInTrackedText": 0,
+    "formerUserNameInStagedText": 0,
+    "uncommittedWorkingDiffFiles": 0,
+    "changedFileHashesVerified": 51,
+    "originalBackupIgnored": true
+  }
+}

@@ -12,6 +12,8 @@ workspaceとGit共通ディレクトリをホストと同じ絶対パスへmount
 
 コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthとLiveKit signalingをCaddy経由の同一originへ集約する。LiveKitのRTC TCP/UDPには公開側と同じポートを渡す。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
 
+動画workspaceの`apps/presentation/node_modules`も専用volumeへ分離する。Windowsホストの録画・書き出しは[動画ワークフロー](../apps/presentation/WORKFLOW.md)に従う。開発用の`*.container.localhost`は`extra_hosts`でコンテナ内のloopbackへ解決し、SSRから同一originへ接続できるようにする。CaddyのLiveKit RoomService経路は、ローカル撮影ツールからのroom管理に使用する。
+
 TurboのログでWeb/API・LiveKit・OAuth・Mailpitの起動を確認する。Grafanaの初期化は別に時間がかかることがある。ホストのブラウザーから開発URLへアクセスする。`*.localhost` は同じホスト内の開発用で、実iPad向けのネットワーク構成ではない。
 
 ## OrbStackのHTTPS

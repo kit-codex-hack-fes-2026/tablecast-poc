@@ -44,7 +44,7 @@ jobs:
       - run: bun run format:check && bun run lint && bun run typecheck
 
   unit-web:
-    name: "Unit Test: Webロジックとseedデータ (Vitest)"
+    name: "Unit Test: Web・動画基盤・seedデータ (Vitest)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -57,6 +57,8 @@ jobs:
             run: bunx --no-install vitest run --project scripts-unit
           - name: Web
             run: bun run --cwd apps/web test
+          - name: Presentation
+            run: bun run --cwd apps/presentation test
 
   agent:
     name: "Unit and Integration Test: 音声AgentとTTS接続 (pytest)"

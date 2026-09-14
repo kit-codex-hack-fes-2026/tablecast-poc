@@ -12,6 +12,8 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     init: true
+    extra_hosts:
+      - "${TABLECAST_WORKTREE_NAME:-main}.${TABLECAST_REPO_NAME:-tablecast-poc}.container.localhost:127.0.0.1"
     working_dir: ${TABLECAST_WORKSPACE_FOLDER:?Run tablecast-init.sh first}
     command: [sh, -c, 'git config --global --add safe.directory "$$PWD" && sleep infinity']
     depends_on:
@@ -44,6 +46,7 @@ services:
       - tablecast-web-node:${TABLECAST_WORKSPACE_FOLDER}/apps/web/node_modules
       - tablecast-api-node:${TABLECAST_WORKSPACE_FOLDER}/apps/api/node_modules
       - tablecast-emulate-node:${TABLECAST_WORKSPACE_FOLDER}/apps/emulate/node_modules
+      - tablecast-presentation-node:${TABLECAST_WORKSPACE_FOLDER}/apps/presentation/node_modules
       - tablecast-livekit-node:${TABLECAST_WORKSPACE_FOLDER}/livekit/node_modules
       - tablecast-python:${TABLECAST_WORKSPACE_FOLDER}/livekit/.venv
       - tablecast-state:${TABLECAST_WORKSPACE_FOLDER}/.local
@@ -55,6 +58,7 @@ volumes:
   tablecast-web-node:
   tablecast-api-node:
   tablecast-emulate-node:
+  tablecast-presentation-node:
   tablecast-livekit-node:
   tablecast-python:
   tablecast-state:

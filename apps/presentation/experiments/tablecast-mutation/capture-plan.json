@@ -1,0 +1,85 @@
+{
+  "consult-answer": {
+    "intent": "質問への商品の味わいの回答",
+    "steps": [],
+    "subject": {
+      "selector": "article[data-role=assistant]",
+      "text": "香り|味|フルーティー",
+      "required": ["香り|味|フルーティー"]
+    },
+    "hold": 4
+  },
+  "order-added": {
+    "intent": "音声で指定した商品・冷酒・90ml・数量1・780円",
+    "state": "cart-ready",
+    "steps": [],
+    "subject": {
+      "selector": "[data-ui=cart-lines] > li",
+      "required": ["月凪|つきなぎ", "冷酒", "90|九十", "数量.*1", "780"]
+    },
+    "hold": 4
+  },
+  "readback": {
+    "intent": "読み上げと承認の対象となる確認カード",
+    "steps": [],
+    "subject": {
+      "selector": "section[aria-label=会話] div:has(> p):has(> button)",
+      "required": ["780", "90|九十", "注文"]
+    },
+    "hold": 4
+  },
+  "approval": {
+    "intent": "読み上げと承認の対象となる確認カード",
+    "state": "confirmation-read",
+    "steps": [],
+    "subject": {
+      "selector": "section[aria-label=会話] div:has(> p):has(> button)",
+      "required": ["780", "90|九十", "注文"]
+    },
+    "hold": 4
+  },
+  "approval-result": {
+    "intent": "送信された同じ商品の注文履歴",
+    "state": "order-submitted",
+    "steps": [
+      {
+        "role": "tab",
+        "name": "^お届け状況$"
+      }
+    ],
+    "subject": {
+      "selector": "[role=tabpanel]",
+      "text": "月凪|つきなぎ",
+      "required": ["月凪|つきなぎ", "780"]
+    },
+    "hold": 4
+  },
+  "pause": {
+    "intent": "音声停止後も同じ注文内容が残る",
+    "state": "voice-stopped",
+    "steps": [],
+    "subject": {
+      "selector": "[data-ui=cart-lines] > li",
+      "required": ["月凪|つきなぎ", "780", "90|九十"]
+    },
+    "hold": 4
+  },
+  "staff": {
+    "intent": "客が送信した同じ商品の注文と受付",
+    "steps": [],
+    "subject": {
+      "selector": "[data-ui=cart-lines] > li",
+      "required": ["月凪|つきなぎ", "780", "90|九十"]
+    },
+    "hold": 4
+  },
+  "admin": {
+    "intent": "商品案内の根拠となる選べる容量と追加料金",
+    "steps": [],
+    "subject": {
+      "selector": "table tr:has-text(\"日本酒の容量\") > td:nth-child(-n+3)",
+      "required": ["日本酒の容量", "九十ミリリットル", "六十ミリリットル", "160"]
+    },
+    "hold": 5
+  }
+}

@@ -37,6 +37,27 @@
       "skillPath": "github-project-ops/SKILL.md",
       "computedHash": "a919e2a6dd91aee1face140115e93b04534c4d89f87a6e6953ff4369f3340b06"
     },
+    "hyperframes-animation": {
+      "source": "heygen-com/hyperframes",
+      "ref": "6e3308be4f2ab886597fcee7c5896a5f842ec4b6",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-animation/SKILL.md",
+      "computedHash": "ef98227adde752fac33fa4e98cea3c32e3623054c9e09e7253f2be7f00495d36"
+    },
+    "hyperframes-core": {
+      "source": "heygen-com/hyperframes",
+      "ref": "6e3308be4f2ab886597fcee7c5896a5f842ec4b6",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-core/SKILL.md",
+      "computedHash": "25cfe8fbe121593f6a542e03cea733f88c89d4ec043db6e07d948c415df72e3f"
+    },
+    "hyperframes-creative": {
+      "source": "heygen-com/hyperframes",
+      "ref": "6e3308be4f2ab886597fcee7c5896a5f842ec4b6",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes-creative/SKILL.md",
+      "computedHash": "8483595fb0beaa4bdbc878a94e55ca7bb02994b26f8d01dfdd44470579a8d168"
+    },
     "mastra": {
       "source": "mastra-ai/skills",
       "sourceType": "github",

@@ -1,0 +1,22 @@
+{
+  "take": "assets/openscreen/tablecast-mutation-guest-v4",
+  "audioOffset": 1.64,
+  "cuts": {
+    "roles": [1.74, 4.6],
+    "consult": [9.8, 4],
+    "consult-answer": [22.65, 11.95],
+    "voice-order": [35.15, 5.7],
+    "order-added": [46.9, 12.4],
+    "pause": [65.2, 6.767],
+    "readback": [84.45, 13.65],
+    "approval": [99, 8.9],
+    "approval-result": [113.55, 12.95],
+    "english": [142.55, 7.9]
+  },
+  "guiReview": {
+    "start": 71.967,
+    "duration": 4.133
+  },
+  "narration": "既存6本を再利用。実会話は今回の音声。",
+  "newTtsRequests": 0
+}

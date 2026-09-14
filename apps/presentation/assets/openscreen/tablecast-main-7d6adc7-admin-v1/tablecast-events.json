@@ -1,0 +1,301 @@
+{
+  "source": "Actual Playwright-dispatched DOM pointer events",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "route": "/admin/stores/tablecast-komorebi/menu/products",
+  "captureStartedAtMs": 1789288406365,
+  "pointer": [
+    {
+      "at": 1789288406445,
+      "x": 720,
+      "y": 720,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408679,
+      "x": 740.3531494140625,
+      "y": 703.9600219726562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408681,
+      "x": 760.7062377929688,
+      "y": 687.9199829101562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408687,
+      "x": 781.0593872070312,
+      "y": 671.8800048828125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408693,
+      "x": 801.4124755859375,
+      "y": 655.8400268554688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408699,
+      "x": 821.765625,
+      "y": 639.7999877929688,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408705,
+      "x": 842.1187744140625,
+      "y": 623.760009765625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408711,
+      "x": 862.4718627929688,
+      "y": 607.719970703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408717,
+      "x": 882.8250122070312,
+      "y": 591.6799926757812,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408724,
+      "x": 903.1781005859375,
+      "y": 575.6400146484375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408730,
+      "x": 923.53125,
+      "y": 559.5999755859375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408736,
+      "x": 943.8843994140625,
+      "y": 543.5599975585938,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408742,
+      "x": 964.2374877929688,
+      "y": 527.52001953125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408748,
+      "x": 984.5906372070312,
+      "y": 511.4800109863281,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408754,
+      "x": 1004.9437255859375,
+      "y": 495.44000244140625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408760,
+      "x": 1025.296875,
+      "y": 479.3999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408766,
+      "x": 1045.6500244140625,
+      "y": 463.3599853515625,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408772,
+      "x": 1066.003173828125,
+      "y": 447.32000732421875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408778,
+      "x": 1086.356201171875,
+      "y": 431.2799987792969,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408786,
+      "x": 1106.7093505859375,
+      "y": 415.239990234375,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408790,
+      "x": 1127.0625,
+      "y": 399.20001220703125,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408796,
+      "x": 1147.4156494140625,
+      "y": 383.1600036621094,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408802,
+      "x": 1167.768798828125,
+      "y": 367.1199951171875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408808,
+      "x": 1188.121826171875,
+      "y": 351.0799865722656,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288408815,
+      "x": 1208.4749755859375,
+      "y": 335.0400085449219,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288408830,
+      "x": 1228.828125,
+      "y": 319,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288420439,
+      "x": 1228.8199462890625,
+      "y": 319,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288420442,
+      "x": 1228.8199462890625,
+      "y": 319,
+      "interactionType": "click",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288420565,
+      "x": 1228.8199462890625,
+      "y": 319,
+      "interactionType": "mouseup",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288428256,
+      "x": 1106.738037109375,
+      "y": 287.8999938964844,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428264,
+      "x": 984.656005859375,
+      "y": 256.79998779296875,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428271,
+      "x": 862.573974609375,
+      "y": 225.6999969482422,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428276,
+      "x": 740.4920043945312,
+      "y": 194.60000610351562,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428283,
+      "x": 618.4099731445312,
+      "y": 163.5,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428288,
+      "x": 496.3280029296875,
+      "y": 132.39999389648438,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428294,
+      "x": 374.2460021972656,
+      "y": 101.30000305175781,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428300,
+      "x": 252.16400146484375,
+      "y": 70.19999694824219,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    },
+    {
+      "at": 1789288428306,
+      "x": 130.08200073242188,
+      "y": 39.099998474121094,
+      "interactionType": "move",
+      "cursorType": "pointer"
+    },
+    {
+      "at": 1789288428312,
+      "x": 8,
+      "y": 8,
+      "interactionType": "move",
+      "cursorType": "arrow"
+    }
+  ],
+  "shots": [
+    {
+      "sceneId": "admin",
+      "definition": "ee6c6f0c9b1e9d01c7cfc4ac3ab862bddba9b4ac54d70ac1249d9c6ebd09064d",
+      "readyAt": 1789288428253,
+      "endAt": 1789288433276,
+      "target": {
+        "label": "商品案内の根拠となる選べる容量と追加料金",
+        "x": 0.2125,
+        "y": 0.7344444444444445,
+        "width": 0.6291124131944444,
+        "height": 0.21777777777777774
+      },
+      "text": "日本酒の容量\nお試し 六十ミリリットル\n¥0\n日本酒の容量\nグラス 九十ミリリットル\n¥160\n日本酒の容量\n一合 百八十ミリリットル\n¥520\n日本酒の容量\n小瓶 三百ミリリットル\n¥980",
+      "image": "tablecast-shot-admin.png"
+    }
+  ]
+}

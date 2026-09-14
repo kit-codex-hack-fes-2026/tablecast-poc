@@ -1,0 +1,660 @@
+{
+  "date": "2026-09-13",
+  "project": "projects/tablecast-main-rerecord.json",
+  "projectHash": "517ca1eb79b310b6f03a12af2c7de017c4a24ff946f0461f9ea92a200164b7b8",
+  "applicationRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+  "editorialReview": "pending-user",
+  "captures": {
+    "guest": "assets/openscreen/tablecast-main-rerecord-guest-v5",
+    "english": "assets/openscreen/tablecast-main-rerecord-english-v1",
+    "staff": "assets/openscreen/tablecast-main-rerecord-staff-v2",
+    "admin": "assets/openscreen/tablecast-main-7d6adc7-admin-v1",
+    "adminNote": "Reused immediately preceding capture on the same main revision",
+    "input": "Cached synthetic speech WAV; live application responses",
+    "freshMediaScenes": 12,
+    "formalShotEvidenceScenes": 8
+  },
+  "codeChecks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "unitTests": 43
+  },
+  "runs": [
+    {
+      "name": "tablecast-product-demo-v14",
+      "report": "output/tablecast-product-demo-v14/report.json",
+      "video": "output/tablecast-product-demo-v14/video.mp4",
+      "status": "rendered-and-checked",
+      "startedAt": "2026-09-13T09:09:31.136Z",
+      "finishedAt": "2026-09-13T09:14:45.526Z",
+      "applicationRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+      "duration": 117.3,
+      "videoHash": "73a03aba6c0d625fe178acadf7f92000c3e83ca45448d898dd0d6df1bad0946f",
+      "metadata": {
+        "format": {
+          "duration": 117.3
+        },
+        "streams": [
+          {
+            "codec_type": "video",
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1"
+          },
+          {
+            "codec_type": "audio",
+            "codec_name": "aac",
+            "r_frame_rate": "0/0"
+          }
+        ]
+      },
+      "peakDb": -1.1,
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "frameCount": 42,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 117.3,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 117.3]]
+      },
+      "captureCoverage": [
+        {
+          "scene": "roles",
+          "evidence": false
+        },
+        {
+          "scene": "consult",
+          "evidence": false
+        },
+        {
+          "scene": "consult-answer",
+          "evidence": true
+        },
+        {
+          "scene": "voice-order",
+          "evidence": false
+        },
+        {
+          "scene": "order-added",
+          "evidence": true
+        },
+        {
+          "scene": "pause",
+          "evidence": true
+        },
+        {
+          "scene": "readback",
+          "evidence": true
+        },
+        {
+          "scene": "approval",
+          "evidence": true
+        },
+        {
+          "scene": "approval-result",
+          "evidence": true
+        },
+        {
+          "scene": "english",
+          "evidence": false
+        },
+        {
+          "scene": "staff",
+          "evidence": true
+        },
+        {
+          "scene": "admin",
+          "evidence": true
+        }
+      ],
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        },
+        {
+          "name": "frame-37",
+          "status": "passed",
+          "log": "frame-37.log"
+        },
+        {
+          "name": "frame-38",
+          "status": "passed",
+          "log": "frame-38.log"
+        },
+        {
+          "name": "frame-39",
+          "status": "passed",
+          "log": "frame-39.log"
+        },
+        {
+          "name": "frame-40",
+          "status": "passed",
+          "log": "frame-40.log"
+        },
+        {
+          "name": "frame-41",
+          "status": "passed",
+          "log": "frame-41.log"
+        }
+      ],
+      "editorialReview": "pending"
+    },
+    {
+      "name": "tablecast-technical-evaluation-v17",
+      "report": "output/tablecast-technical-evaluation-v17/report.json",
+      "video": "output/tablecast-technical-evaluation-v17/video.mp4",
+      "status": "rendered-and-checked",
+      "startedAt": "2026-09-13T09:09:31.326Z",
+      "finishedAt": "2026-09-13T09:12:32.667Z",
+      "applicationRevision": "7d6adc7f9aa813ecdb0f3e5b5248c4ca85c8c919",
+      "duration": 63.099999999999994,
+      "videoHash": "afe3a39e15002f2d2ab90f13262b19a62050a0f903dfd27f7dfa98e175c9d2e7",
+      "metadata": {
+        "format": {
+          "duration": 63.1
+        },
+        "streams": [
+          {
+            "codec_type": "video",
+            "codec_name": "h264",
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1"
+          },
+          {
+            "codec_type": "audio",
+            "codec_name": "aac",
+            "r_frame_rate": "0/0"
+          }
+        ]
+      },
+      "peakDb": -1,
+      "layout": {
+        "expected": 6,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "frameCount": 37,
+      "playback": {
+        "ended": true,
+        "error": null,
+        "duration": 63.1,
+        "muted": false,
+        "rate": 1,
+        "played": [[0, 63.1]]
+      },
+      "captureCoverage": [],
+      "steps": [
+        {
+          "name": "build",
+          "status": "passed",
+          "log": "build.log"
+        },
+        {
+          "name": "layout",
+          "status": "passed",
+          "log": "layout.log"
+        },
+        {
+          "name": "lint",
+          "status": "passed",
+          "log": "lint.log"
+        },
+        {
+          "name": "transitions",
+          "status": "passed",
+          "log": "transitions.log"
+        },
+        {
+          "name": "render",
+          "status": "passed",
+          "log": "render.log"
+        },
+        {
+          "name": "metadata",
+          "status": "passed",
+          "log": "metadata.log"
+        },
+        {
+          "name": "decode",
+          "status": "passed",
+          "log": "decode.log"
+        },
+        {
+          "name": "volume",
+          "status": "passed",
+          "log": "volume.log"
+        },
+        {
+          "name": "frame-0",
+          "status": "passed",
+          "log": "frame-0.log"
+        },
+        {
+          "name": "frame-1",
+          "status": "passed",
+          "log": "frame-1.log"
+        },
+        {
+          "name": "frame-2",
+          "status": "passed",
+          "log": "frame-2.log"
+        },
+        {
+          "name": "frame-3",
+          "status": "passed",
+          "log": "frame-3.log"
+        },
+        {
+          "name": "frame-4",
+          "status": "passed",
+          "log": "frame-4.log"
+        },
+        {
+          "name": "frame-5",
+          "status": "passed",
+          "log": "frame-5.log"
+        },
+        {
+          "name": "frame-6",
+          "status": "passed",
+          "log": "frame-6.log"
+        },
+        {
+          "name": "frame-7",
+          "status": "passed",
+          "log": "frame-7.log"
+        },
+        {
+          "name": "frame-8",
+          "status": "passed",
+          "log": "frame-8.log"
+        },
+        {
+          "name": "frame-9",
+          "status": "passed",
+          "log": "frame-9.log"
+        },
+        {
+          "name": "frame-10",
+          "status": "passed",
+          "log": "frame-10.log"
+        },
+        {
+          "name": "frame-11",
+          "status": "passed",
+          "log": "frame-11.log"
+        },
+        {
+          "name": "frame-12",
+          "status": "passed",
+          "log": "frame-12.log"
+        },
+        {
+          "name": "frame-13",
+          "status": "passed",
+          "log": "frame-13.log"
+        },
+        {
+          "name": "frame-14",
+          "status": "passed",
+          "log": "frame-14.log"
+        },
+        {
+          "name": "frame-15",
+          "status": "passed",
+          "log": "frame-15.log"
+        },
+        {
+          "name": "frame-16",
+          "status": "passed",
+          "log": "frame-16.log"
+        },
+        {
+          "name": "frame-17",
+          "status": "passed",
+          "log": "frame-17.log"
+        },
+        {
+          "name": "frame-18",
+          "status": "passed",
+          "log": "frame-18.log"
+        },
+        {
+          "name": "frame-19",
+          "status": "passed",
+          "log": "frame-19.log"
+        },
+        {
+          "name": "frame-20",
+          "status": "passed",
+          "log": "frame-20.log"
+        },
+        {
+          "name": "frame-21",
+          "status": "passed",
+          "log": "frame-21.log"
+        },
+        {
+          "name": "frame-22",
+          "status": "passed",
+          "log": "frame-22.log"
+        },
+        {
+          "name": "frame-23",
+          "status": "passed",
+          "log": "frame-23.log"
+        },
+        {
+          "name": "frame-24",
+          "status": "passed",
+          "log": "frame-24.log"
+        },
+        {
+          "name": "frame-25",
+          "status": "passed",
+          "log": "frame-25.log"
+        },
+        {
+          "name": "frame-26",
+          "status": "passed",
+          "log": "frame-26.log"
+        },
+        {
+          "name": "frame-27",
+          "status": "passed",
+          "log": "frame-27.log"
+        },
+        {
+          "name": "frame-28",
+          "status": "passed",
+          "log": "frame-28.log"
+        },
+        {
+          "name": "frame-29",
+          "status": "passed",
+          "log": "frame-29.log"
+        },
+        {
+          "name": "frame-30",
+          "status": "passed",
+          "log": "frame-30.log"
+        },
+        {
+          "name": "frame-31",
+          "status": "passed",
+          "log": "frame-31.log"
+        },
+        {
+          "name": "frame-32",
+          "status": "passed",
+          "log": "frame-32.log"
+        },
+        {
+          "name": "frame-33",
+          "status": "passed",
+          "log": "frame-33.log"
+        },
+        {
+          "name": "frame-34",
+          "status": "passed",
+          "log": "frame-34.log"
+        },
+        {
+          "name": "frame-35",
+          "status": "passed",
+          "log": "frame-35.log"
+        },
+        {
+          "name": "frame-36",
+          "status": "passed",
+          "log": "frame-36.log"
+        }
+      ],
+      "editorialReview": "pending"
+    }
+  ],
+  "preservedCanonicalVideos": [
+    {
+      "path": "output/tablecast-product-demo.mp4",
+      "sha256": "af1f3077b0b0099457d255e54be9934b8ba4dff12bac45ae87e0ffe4376c32bb"
+    },
+    {
+      "path": "output/tablecast-technical-evaluation.mp4",
+      "sha256": "8691dd9175b68897d0d12ac7de453a8fd46b0558ab3f464f794b6af0f5e1a9dc"
+    }
+  ],
+  "cleanup": "Started dev and agent processes and own LGTM container stopped; original idle development container, volumes and stash retained",
+  "notes": "No editorial approval, other-application validation, commit or push."
+}
