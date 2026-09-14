@@ -193,3 +193,9 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 `apps/api/test/voice-performance.test.ts` は実D1のbinding往復とSQL実行数を計測する。8件・200件の商品で検索とカード表示を実行し、表示が保存され、最大8件の出力とページ情報が返ることを確認する。上限は業務関数の往復5回、HTTP認証・所有卓確認・通知を含む経路の往復7回、出力6000byteとする。外部モデル時間は含まない。実音声の1秒目標とは分けて評価する。
 
 性能変更ではSQL時間、binding待ち、通知、モデル、実再生を区別し、既存性能予算を超えたら原因を修正する。データ量と同時実行を変えてN+1や不要な直列待ちを検出し、単なるquery数一致やsleep・retryでの成功を証拠にしない。
+
+## stagingとreleaseの受入
+
+環境・secret分離、release本文の対象PR・取消・重複排除・編集保全・確認待ちは既存Vitestで検証する。全体リセットはAPI統合の実D1で全業務・OAuthデータ削除と所有台帳保持を確認する。実stagingでは通常再配備のデータ・画像・認可保持、リセット後の旧token拒否、Accessの公開経路と保護経路、ChatGPT/CodexのOAuth・MCP読取・下書き更新を確認する。CI成功だけで実クライアント確認や本番公開を完了としない。対象SHAと未実施範囲をrelease PRへ記録する。
+
+PR本文の編集だけではCIを再実行しない。base変更後に新しい統合先の検査が必要な場合は、作業branchへ最新stagingを取り込んだheadをpushする。releaseは保護されたstagingのCI・配備SHAとmainとの合成treeを照合する。

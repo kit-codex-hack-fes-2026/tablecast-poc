@@ -2,9 +2,20 @@ import { z } from "zod";
 type PreviewEnv = Pick<TablecastEnv, "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN"> &
   Partial<Pick<TablecastEnv, "TABLECAST_EMULATE">>;
 
+export function isHostedEmulator(env: { TABLECAST_ENV?: string; TABLECAST_PUBLIC_ORIGIN: string }) {
+  return (
+    (env.TABLECAST_ENV === "preview" &&
+      /^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
+        env.TABLECAST_PUBLIC_ORIGIN,
+      )) ||
+    (env.TABLECAST_ENV === "staging" &&
+      env.TABLECAST_PUBLIC_ORIGIN === "https://tablecast-staging.kit-codex.workers.dev")
+  );
+}
+
 export function previewOAuthFetch(env: PreviewEnv, path: string, init?: RequestInit) {
-  if (env.TABLECAST_ENV !== "preview" || !env.TABLECAST_EMULATE)
-    throw new Error("PR専用OAuthの設定がありません。");
+  if (!isHostedEmulator(env) || !env.TABLECAST_EMULATE)
+    throw new Error("検証環境のOAuthの設定がありません。");
   return env.TABLECAST_EMULATE.getByName("tablecast-emulate").fetch(
     new Request(`http://tablecast-emulate${path}`, init),
   );
@@ -23,7 +34,7 @@ export function previewGoogleToken(env: PreviewEnv) {
         ...(data.codeVerifier ? { code_verifier: data.codeVerifier } : {}),
       }),
     });
-    if (!response.ok) throw new Error("PR専用OAuthのコード交換に失敗しました。");
+    if (!response.ok) throw new Error("検証環境のOAuthのコード交換に失敗しました。");
     const token = z
       .object({ access_token: z.string(), expires_in: z.number() })
       .parse(await response.json());

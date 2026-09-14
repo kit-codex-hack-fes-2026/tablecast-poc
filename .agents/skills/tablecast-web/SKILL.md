@@ -23,3 +23,5 @@ description: TableCastのWeb画面・SSR・データ取得・フォーム・日�
 ## 変更範囲に応じた確認
 
 Web実装ではworkspaceの`lint`・`typecheck`と関連テストを実行する。操作・focus・layoutは`test:browser`等の実ブラウザー、SSR・認証・注文の最終配線は代表E2Eで確認する。部品のみの変更に全E2Eを一律に要求しない。保証の分担は[テスト戦略](../../../docs/testing.md)、PRの実動作証拠は[Issue・PR skill](../github-issue-pr-ops/SKILL.md)を使う。
+
+stagingのMCP導入案内は現在環境のURLとtablecast-staging名を表示し、本番pluginとの接続先の違いを日英で説明する。

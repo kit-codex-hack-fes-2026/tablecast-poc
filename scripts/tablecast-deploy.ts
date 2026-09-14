@@ -1,4 +1,5 @@
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
+import { resetStagingDatabase } from "./tablecast-staging-reset";
+import { cloudflare, currentRevision, waitForRelease } from "./tablecast-deploy-api";
 import process from "node:process";
 import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
@@ -19,37 +20,62 @@ import {
   deploymentTarget,
   tablecastAccountId,
   tablecastRepository,
+  stagingMcpPaths,
 } from "./tablecast-deploy-config";
 
 const root = resolve(import.meta.dirname, "..");
 const directory = resolve(root, ".local/tablecast-deploy");
-const target = deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined);
+const target = deploymentTarget(
+  process.env.TABLECAST_PR_NUMBER || undefined,
+  z.enum(["production", "staging", "preview"]).parse(process.env.TABLECAST_DEPLOY_ENV),
+);
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
 
-export async function waitForRelease(
-  origin: string,
-  headers: Record<string, string>,
-  releaseSha: string,
-) {
-  for (let attempt = 1; attempt <= 12; attempt++) {
-    try {
-      const response = await fetch(`${origin}/api/health`, {
-        headers,
-        redirect: "manual",
-        signal: AbortSignal.timeout(5_000),
-      });
-      const health = z.object({ releaseSha: z.string() }).safeParse(await response.json());
-      if (response.ok && health.success && health.data.releaseSha === releaseSha) return;
-      console.info(`配備の反映待ち ${attempt}/12: HTTP ${response.status}`);
-    } catch {
-      // 一時的な接続失敗やHTML応答は再試行し、資格を含み得る応答本文は出さない。
-      console.info(`配備の反映待ち ${attempt}/12: healthを取得できません。`);
-    }
-    if (attempt < 12) await new Promise((complete) => setTimeout(complete, 5_000));
+async function verifyStagingMcp() {
+  // Access資格を送らず、機械通信はOAuthまで届きWebはAccessに留まることを検査する。
+  const request = (path: string, init?: RequestInit) =>
+    fetch(`${target.origin}${path}`, {
+      ...init,
+      redirect: "manual",
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
+  for (const path of stagingMcpPaths.filter((value) => value.startsWith("/.well-known/"))) {
+    const response = await request(path);
+    if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
+      throw new Error(`stagingのOAuth discoveryに到達できません: ${path}`);
+    const metadata = z
+      .object({ resource: z.string().optional(), issuer: z.string().optional() })
+      .parse(await response.json());
+    if (
+      metadata.resource !== `${target.origin}/mcp` &&
+      metadata.issuer !== `${target.origin}/api/auth`
+    )
+      throw new Error("stagingのOAuth discoveryが別環境を参照しています。");
   }
-  throw new Error("配備先のrelease SHAを期限内に確認できません。");
+  const mcp = await request("/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+  });
+  if (
+    mcp.status !== 401 ||
+    !mcp.headers
+      .get("www-authenticate")
+      ?.includes(`${target.origin}/.well-known/oauth-protected-resource/mcp`)
+  )
+    throw new Error("stagingの未認証MCPがOAuthの401を返しません。");
+  for (const path of ["/", "/_tablecast/oauth", "/api/auth/oauth2/authorize"]) {
+    const response = await request(path);
+    if (
+      response.status !== 302 ||
+      !response.headers.get("location")?.includes(".cloudflareaccess.com/")
+    )
+      throw new Error(`stagingのブラウザー経路がAccessで保護されていません: ${path}`);
+  }
+  console.info("stagingのAccess分離・OAuth discovery・未認証MCP拒否を確認しました。");
 }
 
 async function run(args: [string, ...string[]], env: Record<string, string> = {}) {
@@ -133,7 +159,7 @@ async function resources(create: boolean) {
 }
 
 async function accessApplication(create: boolean) {
-  if (!target.pr) return undefined;
+  if (!target.emulate) return undefined;
   const apps = z.array(accessSchema).parse(await cloudflare("access/apps?per_page=1000"));
   if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
   const app = apps.find((value) => value.name === target.web);
@@ -152,6 +178,34 @@ async function accessApplication(create: boolean) {
         { id: servicePolicy, precedence: 2 },
       ],
     });
+    if (target.environment === "staging") {
+      const name = `${target.web}-mcp`;
+      const existing = apps.find((value) => value.name === name);
+      if (existing && existing.domain !== `${domain}/mcp`)
+        throw new Error("MCP Accessの所有対象が一致しません。");
+      await cloudflare(
+        `access/apps${existing ? `/${existing.id}` : ""}`,
+        existing ? "PUT" : "POST",
+        {
+          name,
+          domain: `${domain}/mcp`,
+          type: "self_hosted",
+          destinations: stagingMcpPaths.map((path) => ({
+            type: "public",
+            uri: `${domain}${path}`,
+          })),
+          app_launcher_visible: false,
+          policies: [
+            {
+              name: "TableCast MCP OAuth",
+              decision: "bypass",
+              include: [{ everyone: {} }],
+              precedence: 1,
+            },
+          ],
+        },
+      );
+    }
   }
   return app;
 }
@@ -180,11 +234,20 @@ async function retireLegacyVoiceContainer() {
   }
 }
 
-async function main() {
-  const cleanup = process.argv.includes("--cleanup");
+async function main(resetFinished = false) {
+  const reset = process.argv.includes("--reset") && !resetFinished;
+  if (process.argv.includes("--reset") && process.argv.includes("--cleanup"))
+    throw new Error("resetとcleanupは同時に指定できません。");
+  const cleanup = process.argv.includes("--cleanup") || reset;
+  if (
+    reset &&
+    (target.environment !== "staging" ||
+      process.env.TABLECAST_RESET_CONFIRM !== "tablecast-staging")
+  )
+    throw new Error("staging専用リセットの確認がありません。");
   const plan = process.argv.includes("--plan");
   const build = process.argv.includes("--build");
-  if (cleanup && !target.pr) throw new Error("本番資源はcleanupできません。");
+  if (cleanup && !target.pr && !reset) throw new Error("本番資源はcleanupできません。");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await writeFile(resolve(directory, "empty.env"), "", { mode: 0o600 });
   if (plan || build) {
@@ -211,13 +274,47 @@ async function main() {
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
-  await currentRevision(target, sha, cleanup);
-  const secrets = cleanup ? undefined : deploymentSecrets(target, { ...process.env });
+  await currentRevision(target, sha, cleanup && !reset);
+  const secrets = cleanup && !reset ? undefined : deploymentSecrets(target, { ...process.env });
+  // 資源変更前に、CI成果物が対象環境・SHAのものか確認する。
+  const outputConfigs: { name: string; path: string }[] = [];
+  if (!cleanup || reset) {
+    for (const folder of await readdir(resolve(root, "apps/web/dist"))) {
+      const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
+      if (!existsSync(path)) continue;
+      const built = z
+        .looseObject({ name: z.string() })
+        .parse(JSON.parse(await readFile(path, "utf8")));
+      if (built.name === target.api)
+        deploymentArtifact(built, target, sha, "11111111-1111-4111-8111-111111111111");
+      else if (built.name === target.web)
+        z.object({
+          vars: z.object({
+            TABLECAST_RELEASE_SHA: z.literal(sha),
+            TABLECAST_ENV: z.literal(target.environment),
+          }),
+          services: z
+            .array(
+              z.object({ binding: z.literal("TABLECAST_API"), service: z.literal(target.api) }),
+            )
+            .length(1),
+        }).parse(built);
+      outputConfigs.push({ name: built.name, path });
+    }
+    if (
+      ![target.api, target.web].every((name) =>
+        outputConfigs.some((config) => config.name === name),
+      )
+    )
+      throw new Error("対象環境のCI成果物が揃っていません。");
+  }
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
   const { database, bucketExists, bucketCreated } = await resources(!cleanup);
+  if (reset && (!database || !bucketExists))
+    throw new Error("stagingのD1・R2が揃っていません。所有資源を確認してください。");
   if (!database && !bucketExists) {
-    if (cleanup && access) await cloudflare(`access/apps/${access.id}`, "DELETE");
+    if (cleanup && !reset && access) await cloudflare(`access/apps/${access.id}`, "DELETE");
     return;
   }
   if (!database) throw new Error("D1の所有台帳がありません。残存R2を手動確認してください。");
@@ -245,7 +342,7 @@ async function main() {
   }
   const headers = {
     authorization: `Bearer ${secrets?.TABLECAST_VOICE_API_TOKEN ?? ""}`,
-    ...(target.pr && secrets
+    ...(target.emulate && secrets
       ? {
           "CF-Access-Client-Id": secrets.CF_ACCESS_CLIENT_ID ?? "",
           "CF-Access-Client-Secret": secrets.CF_ACCESS_CLIENT_SECRET ?? "",
@@ -292,13 +389,70 @@ async function main() {
             if (!stored || JSON.stringify(await stored.json()) !== JSON.stringify(owner))
               throw new Error("R2の所有情報が一致しません。");
           }
+          const resetKey = "tablecast/staging-reset.json";
+          if (target.environment === "staging") {
+            const pending = await platform.env.TABLECAST_MEDIA.get(resetKey);
+            if (pending && !reset && !resetFinished)
+              throw new Error("stagingリセットが途中です。手動リセットを再実行してください。");
+            if (reset) {
+              if (pending) {
+                const previous = z
+                  .object({ sha: z.string().regex(/^[a-f0-9]{40}$/) })
+                  .safeParse(await pending.json());
+                if (!previous.success)
+                  throw new Error("途中リセットの記録が不正です。所有情報を確認してください。");
+                await platform.env.TABLECAST_MEDIA.put(
+                  resetKey,
+                  JSON.stringify({
+                    sha,
+                    previousSha: previous.data.sha,
+                    resumedAt: new Date().toISOString(),
+                  }),
+                );
+              } else {
+                await waitForRelease(target.origin, headers, sha);
+                await platform.env.TABLECAST_MEDIA.put(
+                  resetKey,
+                  JSON.stringify({ sha, startedAt: new Date().toISOString() }),
+                );
+              }
+            }
+          }
+          const recordReset = async (phase: string) => {
+            if (!reset) return;
+            await platform.env.TABLECAST_MEDIA.put(
+              resetKey,
+              JSON.stringify({ sha, phase, updatedAt: new Date().toISOString() }),
+            );
+          };
           if (cleanup) {
             // Webを先に止め、他のWorkerが参照するAPIをforceで消さない。
             const workers = z
               .array(z.object({ id: z.string() }))
               .parse(await cloudflare("workers/scripts"));
-            if (workers.some((value) => value.id === target.web))
+            if (reset) {
+              const maintenance = resolve(directory, "maintenance.js");
+              await writeFile(
+                maintenance,
+                'export default {fetch(){return new Response("TableCast staging maintenance", {status:503, headers:{"Cache-Control":"no-store"}})}};',
+              );
+              const maintenanceConfig = resolve(directory, "maintenance.json");
+              await writeFile(
+                maintenanceConfig,
+                JSON.stringify({
+                  name: target.web,
+                  account_id: tablecastAccountId,
+                  main: maintenance,
+                  compatibility_date: "2026-09-03",
+                  workers_dev: true,
+                  preview_urls: false,
+                }),
+              );
+              await wrangler(["deploy", "--config", maintenanceConfig]);
+              await recordReset("maintenance");
+            } else if (workers.some((value) => value.id === target.web)) {
               await cloudflare(`workers/scripts/${target.web}`, "DELETE");
+            }
             const namespaces = z
               .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
               .parse(await cloudflare("workers/durable_objects/namespaces?per_page=1000"));
@@ -345,17 +499,30 @@ async function main() {
               }
               await cloudflare(`workers/scripts/${target.api}`, "DELETE");
             }
+            await recordReset("runtime-removed");
             if (bucketExists) {
               for (;;) {
                 const objects = await platform.env.TABLECAST_MEDIA.list({ limit: 1000 });
                 const keys = objects.objects
                   .map((value) => value.key)
-                  .filter((key) => key !== "tablecast/deployment-owner.json");
+                  .filter(
+                    (key) =>
+                      key !== "tablecast/deployment-owner.json" && (!reset || key !== resetKey),
+                  );
                 if (!keys.length) break;
                 await platform.env.TABLECAST_MEDIA.delete(keys);
               }
-              await platform.env.TABLECAST_MEDIA.delete("tablecast/deployment-owner.json");
+              if (!reset)
+                await platform.env.TABLECAST_MEDIA.delete("tablecast/deployment-owner.json");
             }
+            await recordReset("media-cleared");
+            if (reset)
+              await resetStagingDatabase({
+                ...platform.env,
+                TABLECAST_ENV: target.environment,
+                TABLECAST_PUBLIC_ORIGIN: target.origin,
+              });
+            await recordReset("data-cleared");
           } else {
             await currentRevision(target, sha);
             await wrangler([
@@ -367,12 +534,12 @@ async function main() {
               "--config",
               apiPath,
             ]);
-            if (target.pr && secrets) {
+            if (target.emulate && secrets) {
               const seeded = await seedPreviewDatabase(
                 {
                   ...platform.env,
                   TABLECAST_AUTH_SECRET: secrets.TABLECAST_AUTH_SECRET ?? "",
-                  TABLECAST_ENV: "preview",
+                  TABLECAST_ENV: target.environment,
                   TABLECAST_PUBLIC_ORIGIN: target.origin,
                 },
                 {
@@ -397,7 +564,7 @@ async function main() {
       }
     })(),
     (async () => {
-      if (cleanup || !target.pr) return;
+      if (cleanup || !target.emulate) return;
       console.time("検証済みイメージの送信");
       try {
         await wrangler(["containers", "push", `tablecast-emulate:${sha}`]);
@@ -408,6 +575,22 @@ async function main() {
   ]);
   const failure = preparation.find((result) => result.status === "rejected");
   if (failure) throw failure.reason;
+  if (reset) {
+    await main(true);
+    const platform = await getPlatformProxy<Pick<TablecastEnv, "TABLECAST_MEDIA">>({
+      configPath: resolve(directory, "storage.json"),
+      envFiles: [resolve(directory, "empty.env")],
+      remoteBindings: true,
+      persist: false,
+    });
+    try {
+      await platform.env.TABLECAST_MEDIA.delete("tablecast/staging-reset.json");
+    } finally {
+      await platform.dispose();
+    }
+    console.info("stagingを初期化しました。ログインとMCP認可をやり直してください。");
+    return;
+  }
   if (cleanup) {
     if (bucketExists) await cloudflare(`r2/buckets/${target.bucket}`, "DELETE");
     await cloudflare(`d1/database/${database.uuid}`, "DELETE");
@@ -417,17 +600,6 @@ async function main() {
   }
   if (!secrets) throw new Error("配備secretがありません。");
   await currentRevision(target, sha);
-  // Viteが出力した設定を利用し、APIを別bundleしない。
-  const outputs = await readdir(resolve(root, "apps/web/dist"));
-  const outputConfigs: { name: string; path: string }[] = [];
-  for (const folder of outputs) {
-    const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
-    if (existsSync(path))
-      outputConfigs.push({
-        name: z.object({ name: z.string() }).parse(JSON.parse(await readFile(path, "utf8"))).name,
-        path,
-      });
-  }
   const webSecrets = resolve(directory, "web-secrets.json");
   await writeFile(
     webSecrets,
@@ -475,6 +647,7 @@ async function main() {
     ]);
   }
   await waitForRelease(target.origin, headers, sha);
+  if (target.environment === "staging") await verifyStagingMcp();
   console.info(`配備確認済み: ${target.origin} (${sha})`);
   if (process.env.GITHUB_STEP_SUMMARY)
     await writeFile(process.env.GITHUB_STEP_SUMMARY, `配備URL: ${target.origin}\n\nSHA: ${sha}\n`, {

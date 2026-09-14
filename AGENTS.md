@@ -28,6 +28,8 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 他worktreeの生成状態・プロセス・コンテナは、下記のマージ後の終了処理を除き操作しない。ロックファイルとDBマイグレーションは統合担当が調整する。変更に関係しない作業ツリーの差分を保つ。
 
+通常の開発branchは`origin/staging`を起点とし、PRの統合先をstagingにする。mainへの通常のマージはstagingからのrelease PRに限定する。stagingへ統合したagentはrelease PRの関連PR・概要・変更内容・移行手順を現在の差分へ更新し、Draft解除・マージ前にも照合する。本文の自動領域と編集領域、集約PRのIssue例外は[release運用](.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)に従う。常設stagingの停止・全体リセットをローカル作業の終了処理に含めない。
+
 ## 製品とデータの不変条件
 
 - 価格・売切・プラン・権限・注文確定はAPIで判断する。LLM入力を権限や金額の根拠にしない。
