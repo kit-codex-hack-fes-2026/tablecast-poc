@@ -32,9 +32,11 @@ bun run video --project examples/tablecast-booking/project.json --film demo --na
 
 reportには入力台本・参照素材・生成コードのハッシュ、アプリHEADと作業ツリー状態、撮影証跡の適用範囲を記録する。実行中に入力が変われば失敗する。HEADだけで未commitのコードを表現できるとは扱わない。通常名への反映は全編レビュー後に対象だけをコピーする。
 
+共有reportの`project`と`inputHashes`はリポジトリルート基準の相対パスで保存し、`inputPathBase: repository`を付ける。通常の`video`入口に渡す台本もリポジトリ内へ置く。工程ログは診断情報を含むため、共有前に個人パス等を確認する。
+
 ### 題材ごとに変えるもの
 
-- `brand.name/title`でヘッダー・画面枠・末尾・HTMLタイトルを変える。任意の`brand.roles`（customer/staff/admin）と`brand.speakers`（narrator/customer/cast/instruction）で表示名を変える。これらのキーはレイアウト用の枠として維持する。1920×1080・30fps・日本語と既存スタイルは標準プリセット。
+- `brand.name/title`でヘッダー・画面枠・末尾・HTMLタイトルを変える。任意の`brand.roles`（customer/staff/admin）と`brand.speakers`（narrator/customer/cast/instruction）で表示名を変える。これらのキーはレイアウト用の枠として維持する。1920×1080・30fps・日本語と既存スタイルは標準プリセット。ファイル一覧の見出しは`sourceHeading`で指定でき、未指定は`REPOSITORY`。参照元はリポジトリ内の相対パスに限定し、親参照・絶対パス・境界外へのリンクは拒否する。
 - 場面の本文は`technical`・`diagram`・`sourceTree`・`images`・`media`から一つだけ指定する。タイトル画像は1枚、まとめは画像と説明を一対一で最大3枚とする。まとめの`pointFocus`は全画像を表示し、最後の結論への切り替え前に表示を終える時刻にする。`titleLines`は各形式の見出しの改行指定、`camera`の移動は動画素材だけに適用する。
 - 画像・録画・音声は引き続きpresentationルートの`assets/`へ置く。台本の場所を変えても素材パスの基準は変わらない。別アプリの実装根拠はリポジトリ内の相対パスで管理する。外部リポジトリならこのworkspaceをその開発環境へ配置し直し、素材・出典の参照を合わせる。
 - `TABLECAST_PRESENTATION_PROJECT`を指定すると、TTS・既存編集・収録もその台本を使う。TableCastの既定台本はpresentationルートの`capture-plan.json`、別題材は台本と同じフォルダの`capture-plan.json`を読む。`TABLECAST_PRESENTATION_CAPTURE_PLAN`を指定すると、どちらの場合もそのファイルを優先する。指定パスはpresentationルートからの相対パスまたは絶対パス。
@@ -116,13 +118,13 @@ bun run tts:live --film technical
 if ($LASTEXITCODE -ne 0) { throw 'TTS生成失敗' }
 ```
 
-`INWORLD_API_KEY` を環境から渡す方法もある。秘密値を表示しない。この入口は有料APIを使う。保存済み音声は発話・声・モデル等のハッシュで再利用する。破損時にキャッシュを一括削除して再課金しない。
+`INWORLD_API_KEY` を環境から渡す方法もある。秘密値を表示しない。この入口は有料APIを使う。保存済み音声は発話・声・モデル等のハッシュで再利用する。発話IDだけを変更した場合は同じハッシュの既存WAVを検証し、新しいIDのファイル名へコピーする。既存ファイル名は維持し、破損時は再生成せず停止する。キャッシュを一括削除して再課金しない。
 
 技術編の尺は実音声＋末尾0.8秒をフレーム単位で計算する。生成後は `technical.focus` のcue・offsetを実際の発話へ合わせる。音声を変更しても古い強調時刻が自動的に正しくなるわけではない。実会話の `media.audio: true` 区間へ別TTSを重ねない。
 
 ## 保存済み実録を再編集
 
-`projects/tablecast-main-rerecord.json` の `media.file/project/zoom` を確認し、新しい版の保存先を用意する。現行素材は [HANDOFF.md](SHARING.md) の表を参照。入力の編集projectや媒体へ書き込む処理なので、採用済みの比較用素材を先に保持する。
+`projects/tablecast-main-rerecord.json` の `media.file/project/zoom` を確認し、新しい版の保存先を用意する。現行素材は [SHARING.md](SHARING.md) の表を参照。入力の編集projectや媒体へ書き込む処理なので、採用済みの比較用素材を先に保持する。
 
 ```powershell
 bun --no-env-file scripts/tablecast-edit-guest.ts
@@ -143,7 +145,7 @@ Windowsの客録画は元ウィンドウ1026×850、client領域 `crop=1024:768:
 
 [CAPTURE.md](CAPTURE.md)から始める。必要な情報を `capture-plan.json` で定義し、成功後に採用済み台本へ反映する。実UI・API・実応答を使い、失敗テイクを成功扱いにしない。
 
-アプリのローカル起動と認証状態を確認する。収録先の既定はmain。別ブランチ・別worktreeでは`TABLECAST_CAPTURE_ORIGIN`を設定し、doctorにも同じoriginを指定する。他作業のDockerやプロセスを再起動しない。
+アプリのローカル起動と認証状態を確認する。収録先の既定はmain。別ブランチ・別worktreeでは`TABLECAST_CAPTURE_ORIGIN`を設定する。doctorも撮影と同じ環境変数・Chromeの名前解決規則を使い、`--origin`で明示した場合だけ上書きする。他作業のDockerやプロセスを再起動しない。
 
 ```powershell
 bun run doctor
@@ -155,6 +157,9 @@ capture:checkは短い録画・ズームの確認で、会話・注文全行程�
 新しい撮影の例（保存名は未使用名へ変更）：
 
 ```powershell
+$env:TABLECAST_CAPTURE_STORAGE_STATE_GUEST = '.local/tablecast-ipad-fresh-auth.json'
+$env:TABLECAST_CAPTURE_STORAGE_STATE_ADMIN = '.local/tablecast-admin-auth.json'
+$env:TABLECAST_CAPTURE_STORAGE_STATE_STAFF = '.local/tablecast-staff-auth.json'
 node scripts/tablecast-record-guest.ts tablecast-guest-new-take
 if ($LASTEXITCODE -ne 0) { throw '客側収録失敗' }
 node scripts/tablecast-record-role.ts admin tablecast-admin-new-take
@@ -166,7 +171,7 @@ if ($LASTEXITCODE -ne 0) { throw '店員収録失敗' }
 
 確定注文が1件あり注文かごが空の同じ合成来店で、英語応答だけを追加撮影する場合は`node scripts/tablecast-record-guest.ts tablecast-english-new-take english`を使える。別テイクの実音声・字幕・カットとして対応付ける。[最新mainの再収録記録](records/tablecast-rerecord-validation.json)を参照する。
 
-必要な役割だけを実行する。客は認可済みの新しい合成来店・空カート／注文0件が必要で、有料の実会話と注文操作を行う。店員は同じ注文を参照する。認証状態は `TABLECAST_CAPTURE_STORAGE_STATE` で指定する。店員収録では `TABLECAST_GUEST_CAPTURE_EVENTS` に今回成功した客側テイクのイベントファイルを必ず指定する（リポジトリルートからの相対パスまたは絶対パス）。上の客側保存名を変えた場合はこのパスも合わせる。管理者収録には不要。既定の認証ファイル名だけで、現在も有効とは判断しない。
+必要な役割だけを実行する。客は認可済みの新しい合成来店・空カート／注文0件が必要で、有料の実会話と注文操作を行う。店員は同じ注文を参照する。認証状態は客に `TABLECAST_CAPTURE_STORAGE_STATE_GUEST`、店員に `TABLECAST_CAPTURE_STORAGE_STATE_STAFF`、管理者に `TABLECAST_CAPTURE_STORAGE_STATE_ADMIN` をそれぞれ必須指定する。リポジトリルートからの相対パスまたは絶対パスを使う。旧共通変数 `TABLECAST_CAPTURE_STORAGE_STATE` へのフォールバックは行わない。店員収録では `TABLECAST_GUEST_CAPTURE_EVENTS` に今回成功した客側テイクのイベントファイルを必ず指定する（リポジトリルートからの相対パスまたは絶対パス）。上の客側保存名を変えた場合はこのパスも合わせる。管理者収録には不要。指定した認証状態が現在の役割・店舗で有効か、収録前に確認する。
 
 成功時のtake・shot・イベント・音声・元録画を保持する。字幕・cut・zoom・必要な静止画を新テイクへ合わせ、旧発話の時刻を流用しない。GUI編集では各素材フォルダのportable projectを優先し、絶対パスを確認する。
 
@@ -179,3 +184,5 @@ if ($LASTEXITCODE -ne 0) { throw '店員収録失敗' }
 5. 対象の全編を個別に提示する。見た目の採否はユーザーに委ねる。
 
 短い試写は `bun run build:film --film technical --scenes tech-evidence --out dist/reuse-check` のように別ディレクトリへ生成できる。レビュー成果物は最終的に全編へ戻す。
+
+入力時点で拒否する条件: 話者表示名の改行、まとめ画像の連続した同一pointFocus、BGMと効果音が両方0のsoundtrack、コンパイルできない撮影用正規表現。無音の作品ではsoundtrackを省略する。撮影のsubject.text/requiredは台本・撮影計画の読込時に正規表現を検査し、実収録や有料音声処理の開始前に停止する。

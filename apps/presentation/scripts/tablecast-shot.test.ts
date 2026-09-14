@@ -15,6 +15,22 @@ const shot = shotSchema.parse({
   hold: 4,
 });
 const target = { label: shot.intent, x: 0.5, y: 0.2, width: 0.45, height: 0.3 };
+test.each(["[", "(", "\\"])("撮影の正規表現%sを計画の読込時点で拒否する", (pattern) => {
+  const text = shotSchema.safeParse({ ...shot, subject: { ...shot.subject, text: pattern } });
+  const required = shotSchema.safeParse({
+    ...shot,
+    subject: { ...shot.subject, required: [pattern] },
+  });
+  expect(text.error?.issues).toContainEqual(
+    expect.objectContaining({ path: ["subject", "text"], message: "撮影の正規表現が不正です" }),
+  );
+  expect(required.error?.issues).toContainEqual(
+    expect.objectContaining({
+      path: ["subject", "required", 0],
+      message: "撮影の正規表現が不正です",
+    }),
+  );
+});
 const evidence = {
   sceneId: "added",
   definition: shotHash(shot),

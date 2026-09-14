@@ -1,4 +1,5 @@
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 import { parseEnv, parseArgs } from "node:util";
@@ -9,6 +10,7 @@ import {
   readProject,
   root,
   speechRequest,
+  speechHash,
   type Project,
   type SpeechCue,
   needsVoice,
@@ -73,6 +75,16 @@ export async function generateAudio(args: string[] = []) {
       if (exists) {
         await readAudioDuration(path);
         console.info(`${item.id}: 保存済み音声を再利用`);
+        continue;
+      }
+      const cache = (await readdir(resolve(root, "assets/audio")))
+        .sort()
+        .find((name) => name.endsWith(`-${speechHash(project, item)}.wav`));
+      if (cache) {
+        const cachedPath = resolve(root, "assets/audio", cache);
+        await readAudioDuration(cachedPath);
+        await copyFile(cachedPath, path, constants.COPYFILE_EXCL);
+        console.info(`${item.id}: 同じ生成条件の保存済み音声を再利用`);
         continue;
       }
       const audio = await requestSpeech(project, item, apiKey);

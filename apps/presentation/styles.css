@@ -67,6 +67,8 @@
   stroke-dasharray: 6 5;
 }
 .tech-connection > .tech-trace {
+  visibility: hidden;
+  opacity: 0;
   stroke: #087d79;
   stroke-width: 4;
   stroke-dasharray: 1;
@@ -196,6 +198,8 @@
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 0 3px #ffffffb3;
 }
 .tech-summary-band {
   position: absolute;
@@ -557,16 +561,17 @@ ol {
   height: 108px;
   padding: 6px 26px;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   background: #151619;
   color: #fff;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 550;
   line-height: 1.3;
-  text-align: center;
-  border-radius: 10px;
-  z-index: 10;
+  text-align: left;
+  border-radius: 0;
+  z-index: 50;
+  gap: 25px;
 }
 .caption span {
   text-wrap: balance;
@@ -577,7 +582,7 @@ footer {
   right: 64px;
   top: 1042px;
   font-size: 22px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #45534b;
 }
 .progress {
@@ -604,14 +609,6 @@ footer {
   transform-origin: left center;
 }
 
-.caption {
-  z-index: 50;
-  font-size: 32px;
-  text-align: left;
-  gap: 25px;
-  justify-content: flex-start;
-  border-radius: 0;
-}
 .speaker-name {
   width: 252px;
   flex-shrink: 0;
@@ -645,10 +642,6 @@ footer {
 .speaker-customer .speaker-name {
   color: #c9ddff;
   border-color: #93a9c6;
-}
-footer {
-  line-height: 1.4;
-  top: 1042px;
 }
 .diagram-body {
   position: absolute;
@@ -848,8 +841,6 @@ footer {
   letter-spacing: 0.035em;
   color: #365d96;
   line-height: 1.5;
-}
-.role-label {
   display: inline-block;
   padding: 8px 16px;
   background: #eaf0f7;
@@ -1162,10 +1153,6 @@ footer {
   line-height: 1.4;
   margin-top: 8px;
 }
-.tech-outline {
-  z-index: 5;
-  box-shadow: 0 0 0 3px #ffffffb3;
-}
 .tech-view-sequence .tech-state {
   padding: 12px 24px;
 }
@@ -1283,12 +1270,10 @@ footer {
 .tech-view-test-matrix .tech-plain .tech-detail {
   font-size: 25px;
   margin-top: 8px;
+  line-height: 1.4;
 }
 .tech-view-test-matrix .tech-plain {
   padding: 0;
-}
-.tech-view-test-matrix .tech-plain .tech-detail {
-  line-height: 1.4;
 }
 .tech-view-latency .tech-event {
   padding: 0;

@@ -244,8 +244,13 @@ test(
       const start = Number(await page.locator("#scene-" + scene.id).getAttribute("data-start"));
       const focuses = [...scene.technical.focus, ...scene.technical.focus.slice(0, 1)];
       for (const focus of focuses) {
-        const at =
-          start + (scene.cues.find((c) => c.id === focus.cue)?.at ?? 0) + focus.offset + 0.7;
+        const focusAt = (scene.cues.find((c) => c.id === focus.cue)?.at ?? 0) + focus.offset;
+        const next = scene.technical.focus[scene.technical.focus.indexOf(focus) + 1];
+        const end = next
+          ? (scene.cues.find((c) => c.id === next.cue)?.at ?? 0) + next.offset
+          : Number(await page.locator("#scene-" + scene.id).getAttribute("data-duration"));
+        // 短い強調区間でも、次の注目先へ移った後を誤って検査しない。
+        const at = start + focusAt + Math.min(0.7, (end - focusAt) / 2);
         expect(
           (await page.evaluate(inspectLayout, { sceneId: scene.id, time: at })).issues,
         ).toEqual([]);
@@ -261,6 +266,25 @@ test(
           );
         expect(active.sort((a, b) => String(a).localeCompare(String(b)))).toEqual(
           focus.targets.filter((id) => scene.technical?.panels.some((p) => p.id === id)).sort(),
+        );
+        const connections = await page
+          .locator("#scene-" + scene.id + " .tech-connection")
+          .evaluateAll((nodes) =>
+            nodes.flatMap((node) => {
+              const trace = node.querySelector(".tech-trace");
+              if (!trace) throw new Error("矢印の強調線がありません");
+              const style = getComputedStyle(trace);
+              return style.visibility !== "hidden" &&
+                Number(style.opacity) > 0 &&
+                Number.parseFloat(style.strokeDashoffset) < 0.999
+                ? [node.id.split("-tech-").at(-1)]
+                : [];
+            }),
+          );
+        expect(connections.sort((a, b) => String(a).localeCompare(String(b)))).toEqual(
+          focus.targets
+            .filter((id) => scene.technical?.connections.some((c) => c.id === id))
+            .sort(),
         );
         await expect(
           page.locator("#scene-" + scene.id + " .tech-summary").filter({ visible: true }),

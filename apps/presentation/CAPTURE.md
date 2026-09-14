@@ -38,3 +38,9 @@ Issue #1の動画生成基盤として、操作の完了ではなく「見せた
 管理画面は `tablecast-macbook-admin-v12b` で実収録・実測・OpenScreen書き出しまで成功。`output/tablecast-v12-capture-admin.mp4` はその場面の試写。
 
 客側の再撮影では、最初は承認結果より先に履歴を開いてしまう撮影順の問題、その後は空の音声入力と `VOICE_INTERNAL_ERROR` を検出した。履歴を開く条件と音声中の操作順を修正し、失敗したテイクは不採用。この時点では注文成立までの新しい客側一式は未完成で、商品紹介v13には成功済みの客・店員素材と再撮影した管理画面を組み込んだ。現行版の保存先・残件は [HANDOFF.md](HANDOFF.md) を参照する。
+
+OpenScreenの実行ファイルを変更する場合は`TABLECAST_OPENSCREEN`を指定する。doctorとcapture:checkの`--openscreen`を指定した場合はそちらを優先する。未指定のWindowsではLOCALAPPDATA配下、他OSではPATH上の`openscreen`を探す。パス解決は他OSでの収録成功を保証せず、現行の収録手順はWindows対象。
+
+カーソル合成の画像は選択した実行ファイルの隣の`resources/cursors/default`から取得する。ポータブル版は`TABLECAST_OPENSCREEN`へ実行ファイルのフルパスを指定する。別の資材配置やPATH上のコマンドを使う場合は`TABLECAST_OPENSCREEN_CURSORS`へ`arrow.png`・`pointer.png`を含むフォルダーを指定する。この指定は実行ファイル側の既定資材より優先する。
+
+固定cropを適用する前に、収録幅がviewport幅+2、収録高がviewport高+82であることを厳密に確認する。DPIや装飾によって幅が広がった録画も拒否し、出力の比率だけが正しい位置ずれ素材を作らない。

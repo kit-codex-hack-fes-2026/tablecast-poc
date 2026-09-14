@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { z } from "zod";
 import type { pointerEvent } from "./tablecast-capture-types.ts";
+import { openscreenPath } from "./tablecast-openscreen.ts";
 
 type Event = z.infer<typeof pointerEvent>;
 // 画像の中心ではなく矢印の先端・指先を実際の操作座標へ置く。
@@ -11,6 +12,13 @@ export const cursorArt = {
   arrow: { width: 42, height: 70, tipX: 0.119, tipY: 0.0874 },
   pointer: { width: 58, height: 73, tipX: 0.3893, tipY: 0.0032 },
 };
+export async function copyCursorAssets(out: string) {
+  const resources = process.env.TABLECAST_OPENSCREEN_CURSORS?.trim()
+    ? resolve(process.env.TABLECAST_OPENSCREEN_CURSORS)
+    : resolve(dirname(openscreenPath()), "resources/cursors/default");
+  for (const type of Object.keys(cursorArt))
+    await copyFile(resolve(resources, `${type}.png`), resolve(out, `tablecast-cursor-${type}.png`));
+}
 export function cursorAt(events: Event[], at: number) {
   if (
     !events.some(
@@ -85,15 +93,7 @@ export async function composeCursor(
     previous = signature;
   }
   await writeFile(resolve(out, "tablecast-cursor.commands"), commands.join("\n"));
-  for (const type of Object.keys(cursorArt))
-    await copyFile(
-      resolve(
-        process.env.LOCALAPPDATA ?? "",
-        "Programs/Openscreen/resources/cursors/default",
-        `${type}.png`,
-      ),
-      resolve(out, `tablecast-cursor-${type}.png`),
-    );
+  await copyCursorAssets(out);
   const filter = `[0:v]fps=30,sendcmd=f=tablecast-cursor.commands[base];[1:v]scale=-1:${height}[arrow];[2:v]scale=-1:${height}[hand];[base][arrow]overlay@arrow=x=-1000:y=-1000:eval=frame[mid];[mid][hand]overlay@pointer=x=-1000:y=-1000:eval=frame[v]`;
   const target = resolve(out, "tablecast-source-cursor.mp4");
   await run(

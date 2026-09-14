@@ -1,10 +1,16 @@
+import { openscreenPath } from "./tablecast-openscreen.ts";
 // OpenScreenの標準version 2 projectを編集し、同じCLIで書き出す。
 // 元録画・実際のイベントを保ち、画面と音声の開始時刻だけを合わせる。
 import { execFile } from "node:child_process";
 import { readFile, writeFile, access } from "node:fs/promises";
 import { resolve, win32 } from "node:path";
 import { promisify } from "node:util";
-import { screenProject, captureEvents, videoDimensions } from "./tablecast-capture-types.ts";
+import {
+  screenProject,
+  captureEvents,
+  videoDimensions,
+  assertCaptureFrame,
+} from "./tablecast-capture-types.ts";
 import { zoomRegions } from "./tablecast-zoom.ts";
 import { readProject, projectPath } from "./tablecast-project.ts";
 import { bindShotZoom } from "./tablecast-shot.ts";
@@ -14,7 +20,7 @@ import { composeCursor } from "./tablecast-cursor.ts";
 const run = promisify(execFile);
 const root = resolve(import.meta.dirname, "..");
 const project = await readProject();
-const openscreen = resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
+const openscreen = openscreenPath();
 const options = { windowsHide: true, timeout: 300000, maxBuffer: 8000000 };
 for (const { media: guest, scenes } of recordingEdits(project, ["customer"])) {
   const out = resolve(root, guest.project, "..");
@@ -58,8 +64,7 @@ for (const { media: guest, scenes } of recordingEdits(project, ["customer"])) {
       ).stdout,
     ),
   ).streams[0];
-  if (dims.width !== 1026 || dims.height !== 850)
-    throw new Error("Chromeのclient領域が実測済み配置と異なります");
+  assertCaptureFrame(dims, { width: 1024, height: 768 });
   const normalized = resolve(out, "tablecast-source.mp4");
   // 音声や開始時刻を変更した再編集でも、古い前処理キャッシュを流用しない。
   console.info("画面の比率・実音声の時刻・音量を調整");

@@ -1,6 +1,8 @@
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
 import {
   waitForTablecastState,
   tablecastCaptureOrigin,
+  tablecastCaptureStorageState,
   tablecastHostArguments,
   readTablecastGuestCapture,
 } from "./tablecast-app-capture.ts";
@@ -19,11 +21,13 @@ import {
   captureBrowserPointer,
   screenProject,
   videoDimensions,
+  assertCaptureFrame,
 } from "./tablecast-capture-types.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
 const role = process.argv[2];
 if (role !== "admin" && role !== "staff") throw new Error("admin または staff を指定してください");
+const storageState = tablecastCaptureStorageState(role);
 const name = role === "admin" ? "macbook-admin" : "iphone-staff";
 const viewport = role === "admin" ? { width: 1440, height: 900 } : { width: 390, height: 844 };
 const plan = await readCaptureProject();
@@ -37,7 +41,7 @@ const out = resolve(
   process.argv[3] ?? `tablecast-${name}-${Date.now()}`,
 );
 await mkdir(out, { recursive: false });
-const openscreen = resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
+const openscreen = openscreenPath();
 const run = promisify(execFile);
 const options = { windowsHide: true, timeout: 180000, maxBuffer: 8000000 };
 const browser = await chromium.launch({
@@ -52,10 +56,7 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage({
     viewport,
-    storageState: resolve(
-      root,
-      process.env.TABLECAST_CAPTURE_STORAGE_STATE ?? ".local/tablecast-staff-auth.json",
-    ),
+    storageState,
   });
   const store = encodeURIComponent(process.env.TABLECAST_CAPTURE_STORE ?? "tablecast-komorebi");
   const route =
@@ -81,12 +82,7 @@ try {
     await locator.click({ delay: 120 });
   };
   const title = `TableCast ${name} ${Date.now()}`;
-  await page.evaluate((windowTitle) => {
-    document.title = windowTitle;
-    new MutationObserver(() => {
-      if (document.title !== windowTitle) document.title = windowTitle;
-    }).observe(document.head, { childList: true, subtree: true, characterData: true });
-  }, title);
+  await page.evaluate(pinWindowTitle, title);
   await page.bringToFront();
   const rawProject = resolve(out, "tablecast-raw.openscreen");
   const recorder = spawn(
@@ -186,8 +182,7 @@ try {
       ).stdout,
     ),
   ).streams[0];
-  if (dims.width < viewport.width + 2 || dims.height !== viewport.height + 82)
-    throw new Error(`Chrome client領域が実測済み配置と異なります: ${JSON.stringify(dims)}`);
+  assertCaptureFrame(dims, viewport);
   await run(openscreen, ["pack", rawProject, "--out", resolve(out, "original"), "--json"], options);
   const padX = (1920 - viewport.width) / 2,
     padY = (1080 - viewport.height) / 2;

@@ -1,10 +1,30 @@
+import { openscreenPath } from "./tablecast-openscreen.ts";
 import { execFile } from "node:child_process";
-import { resolve } from "node:path";
 import process from "node:process";
 import { parseArgs, promisify } from "node:util";
 import { z } from "zod";
+import { chromium } from "@playwright/test";
+import { tablecastCaptureOrigin, tablecastHostArguments } from "./tablecast-app-capture.ts";
 
 const run = promisify(execFile);
+
+export async function checkCaptureHealth(origin = tablecastCaptureOrigin()) {
+  // 撮影と同じChrome・名前解決規則で、指定worktreeへ接続する。
+  const browser = await chromium.launch({
+    channel: "chrome",
+    args: tablecastHostArguments(origin),
+  });
+  try {
+    const page = await browser.newPage();
+    const health = new URL("/api/health", origin).href;
+    const response = await page.goto(health, { timeout: 8_000, waitUntil: "domcontentloaded" });
+    if (!response?.ok() || response.request().redirectedFrom() || page.url() !== health)
+      throw new Error(`アプリのヘルスチェック: HTTP ${response?.status() ?? "応答なし"}`);
+    return response.status();
+  } finally {
+    await browser.close();
+  }
+}
 
 // OpenScreen --json は単一のJSONではなく、進捗と完了を別行に出す。
 export function openScreenResult(stdout: string): unknown {
@@ -31,14 +51,10 @@ async function main() {
     options: {
       openscreen: { type: "string" },
       window: { type: "string" },
-      origin: { type: "string", default: "http://127.0.0.1:3000" },
+      origin: { type: "string" },
     },
   });
-  const openscreen =
-    values.openscreen ??
-    (process.platform === "win32" && process.env.LOCALAPPDATA
-      ? resolve(process.env.LOCALAPPDATA, "Programs/Openscreen/Openscreen.exe")
-      : "openscreen");
+  const openscreen = openscreenPath(values.openscreen);
   const options = { windowsHide: true, timeout: 30_000, encoding: "utf8" as const };
   for (const command of ["node", "ffmpeg", "ffprobe"])
     await run(command, [command === "node" ? "--version" : "-version"], options);
@@ -61,17 +77,9 @@ async function main() {
     console.info(`OK: 録画対象 ${matches[0]?.name}`);
   }
 
-  const origin = new URL(values.origin);
-  if (origin.protocol !== "http:" && origin.protocol !== "https:")
-    throw new Error("アプリの接続先はHTTPまたはHTTPSで指定してください");
-  if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/")
-    throw new Error("アプリの接続先にはoriginだけを指定してください");
-  const response = await fetch(new URL("/api/health", origin), {
-    redirect: "error",
-    signal: AbortSignal.timeout(8_000),
-  });
-  if (!response.ok) throw new Error(`アプリのヘルスチェック: HTTP ${response.status}`);
-  console.info(`OK: 実アプリ HTTP ${response.status}`);
+  const origin = tablecastCaptureOrigin(values.origin);
+  const status = await checkCaptureHealth(origin);
+  console.info(`OK: 実アプリ ${origin} HTTP ${status}`);
   console.info("ブラウザーの実操作・音声通話・録画の成功は、別途短い収録で確認してください。");
 }
 

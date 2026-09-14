@@ -25,6 +25,8 @@ import {
 } from "./tablecast-project";
 import { diagramLink, diagramMarkup, musicEnvelope } from "./tablecast-composition";
 import { technicalMarkup } from "./tablecast-technical";
+import { resolveSource } from "./tablecast-source.ts";
+import { recapFocus, recapHandoffDuration } from "./tablecast-project.ts";
 
 try {
   const { values } = parseArgs({
@@ -38,7 +40,7 @@ try {
     throw new Error("--film または --scenes を指定してください");
   if (values.scenes && !values.out) throw new Error("場面の試写には --out を指定してください");
   const project = selectScenes(selectScenes(source, film?.scenes.join(",")), values.scenes);
-  const brand = project.brand ?? { name: "TableCast", title: "TableCast — 声で相談、そのまま注文" };
+  const brand = project.brand ?? { name: "Demo", title: "製品デモ" };
   const roleNames = project.brand?.roles ?? roles;
   const speakerNames = project.brand?.speakers ?? speakers;
   const durations: Record<string, number> = {};
@@ -48,7 +50,7 @@ try {
   const imageSizes = new Map<string, { width: number; height: number }>();
   const files = new Set(["assets/fonts/NotoSansJP-VF.ttf", "assets/fonts/LICENSE"]);
   for (const scene of project.scenes) {
-    for (const path of scene.technical?.sources ?? []) await access(resolve(root, "../..", path));
+    for (const path of scene.technical?.sources ?? []) await resolveSource(path);
     for (const panel of scene.technical?.panels ?? []) {
       if (panel.icon) {
         await access(resolve(root, panel.icon));
@@ -59,7 +61,7 @@ try {
         files.add(panel.image);
       }
     }
-    for (const entry of scene.sourceTree ?? []) await access(resolve(root, "../..", entry.path));
+    for (const entry of scene.sourceTree ?? []) await resolveSource(entry.path);
     for (const image of scene.images ?? []) {
       files.add(image);
       if (!imageSizes.has(image))
@@ -70,7 +72,7 @@ try {
       durations[item.id] = await readAudioDuration(resolve(root, file));
       files.add(file);
     }
-    if (scene.media && !files.has(scene.media.file)) {
+    if (scene.media && !videoSizes.has(scene.media.file)) {
       const footage = await mediaInfo(resolve(root, scene.media.file));
       const video = footage.streams.find((stream) => stream.codec_type === "video");
       if (!video?.width || !video.height)
@@ -236,7 +238,7 @@ try {
         content = diagram.html;
         animations.push(...diagram.animations);
       } else if (scene.sourceTree) {
-        content = `<div class="source-body"><div class="source-tree"><p class="source-heading">REPOSITORY / 実在する責務とファイル</p>${scene.sourceTree
+        content = `<div class="source-body"><div class="source-tree"><p class="source-heading">${h(scene.sourceHeading ?? "REPOSITORY")}</p>${scene.sourceTree
           .map(
             (entry) =>
               `<div class="source-row" style="padding-left:${24 + entry.depth * 28}px"><code>${h(
@@ -258,9 +260,8 @@ try {
       } else if (scene.images && scene.kind === "result") {
         content = `<div class="recap-body"><div id="${prefix}-recap" class="recap-layout"><div class="recap-copy"><p class="role-label">${h(scene.kicker)}</p><ol class="recap-points">${scene.points.map((point, index) => `<li id="${prefix}-label-${index}">${h(point)}</li>`).join("")}</ol></div><div class="recap-gallery">${scene.images.map((file, index) => `<figure id="${prefix}-shot-${index}" class="recap-shot"><img src="${h(file)}" alt="${h(scene.points[index] ?? "実録画面")}"></figure>`).join("")}</div></div><div id="${prefix}-signature" class="end-signature"><p class="end-wordmark">${h(brand.name)}</p><p class="end-line">${heading}</p></div></div>`;
         // 音声に沿って根拠を順に見せ、最後の名乗りでロゴへ渡す。
-        const focus =
-          scene.pointFocus ?? scene.images.map((_, point) => ({ at: point * 0.9, point }));
-        const handoff = scene.duration - 2.35;
+        const focus = recapFocus(scene);
+        const handoff = scene.duration - recapHandoffDuration;
         focus.forEach(({ at, point }, index) => {
           animations.push(
             `tl.fromTo("#${prefix}-shot-${point}", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2 }, ${scene.start + at});`,
@@ -288,13 +289,12 @@ try {
         const height = (width * size.height) / size.width;
         const initial = { x: 940 + (884 - width) / 2, y: 174 + (680 - height) / 2 };
         const next = timing.scenes[sceneIndex + 1];
-        const device = values.film === "product" ? next?.device : undefined;
-        content = `<div class="opening-layout"><div class="opening-copy"><h2 class="opening-title">${(scene.titleLines ?? [scene.title]).map((line) => `<span>${h(line)}</span>`).join("")}</h2><p class="opening-description">${h(scene.kicker)}</p><ol class="opening-points">${points.join("")}</ol></div><div id="${prefix}-screen" class="opening-screen ${device ? `framed-${device}` : ""}" style="width:${width}px;height:${height}px;left:${initial.x}px;top:${initial.y}px">${frameMarkup(device)}<img src="${h(image)}" alt="${h(brand.name)}の実アプリ画面"></div></div>`;
         const nextSize = next?.media && videoSizes.get(next.media.file);
-        if (
-          nextSize &&
-          Math.abs(size.width / size.height - nextSize.width / nextSize.height) < 0.003
-        ) {
+        const continuous =
+          nextSize && Math.abs(size.width / size.height - nextSize.width / nextSize.height) < 0.003;
+        const device = continuous ? next?.device : undefined;
+        content = `<div class="opening-layout"><div class="opening-copy"><h2 class="opening-title">${(scene.titleLines ?? [scene.title]).map((line) => `<span>${h(line)}</span>`).join("")}</h2><p class="opening-description">${h(scene.kicker)}</p><ol class="opening-points">${points.join("")}</ol></div><div id="${prefix}-screen" class="opening-screen ${device ? `framed-${device}` : ""}" style="width:${width}px;height:${height}px;left:${initial.x}px;top:${initial.y}px">${frameMarkup(device)}<img src="${h(image)}" alt="${h(brand.name)}の実アプリ画面"></div></div>`;
+        if (continuous) {
           const destination = screenLayout(nextSize, next?.device);
           animations.push(
             `tl.to("#${prefix} .opening-copy", { autoAlpha: 0, duration: 0.25 }, ${scene.start + scene.duration - 1.2});`,
@@ -314,20 +314,15 @@ try {
           );
         }
       }
-      (scene.diagram ? [] : scene.points).forEach((_, pointIndex) => {
-        const pointAt =
-          scene.kind === "demo"
-            ? (scene.camera[pointIndex]?.at ?? (scene.duration * pointIndex) / scene.points.length)
-            : (scene.duration * pointIndex) / scene.points.length;
-        if (scene.sourceTree) {
-          const start = scene.start + pointAt;
+      if (scene.sourceTree)
+        scene.points.forEach((_, pointIndex) => {
+          const start = scene.start + (scene.duration * pointIndex) / scene.points.length;
           const end = scene.start + (scene.duration * (pointIndex + 1)) / scene.points.length;
           animations.push(
             `tl.set("#${prefix}-point-${pointIndex}", { backgroundColor: "#e8edf8", borderColor: "#647dcc" }, ${start});`,
             `tl.set("#${prefix}-point-${pointIndex}", { backgroundColor: "transparent", borderColor: "#d9dce1" }, ${end});`,
           );
-        }
-      });
+        });
       const callouts = scene.kind === "demo" ? (scene.pointFocus ?? [{ at: 0, point: 0 }]) : [];
       if (callouts.length) {
         const previous = timing.scenes[sceneIndex - 1];

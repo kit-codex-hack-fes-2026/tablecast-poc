@@ -1,3 +1,4 @@
+import { openscreenPath } from "./tablecast-openscreen.ts";
 // 保存した店員・管理者の収録を、台本の注目先で再編集する。有料音声や再収録は不要。
 import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
@@ -13,7 +14,7 @@ import { recordingEdits } from "./tablecast-edit-plan";
 
 const run = promisify(execFile);
 const source = await readProject();
-const openscreen = resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
+const openscreen = openscreenPath();
 const options = { windowsHide: true, timeout: 300000, maxBuffer: 8000000 };
 for (const { media, device, scenes, sourceTrim, end } of recordingEdits(source, [
   "staff",

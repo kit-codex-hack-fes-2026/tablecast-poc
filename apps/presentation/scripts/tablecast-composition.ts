@@ -13,8 +13,9 @@ export function diagramLink(fromId: string, toId: string, boardId: string) {
     const down = to.top > from.top;
     return `M ${x} ${(down ? from.bottom : from.top) - board.top} L ${x} ${(down ? to.top : to.bottom) - board.top}`;
   }
-  const x1 = from.right - board.left,
-    x2 = to.left - board.left;
+  const rightward = from.left < to.left;
+  const x1 = (rightward ? from.right : from.left) - board.left,
+    x2 = (rightward ? to.left : to.right) - board.left;
   const y1 = from.top + from.height / 2 - board.top;
   const y2 = to.top + to.height / 2 - board.top;
   const mid = (x1 + x2) / 2;
@@ -48,17 +49,25 @@ export function diagramMarkup(scene: Timing["scenes"][number], prefix: string) {
     const cue = scene.cues.find((part) => part.id === focus.cue);
     if (!cue) throw new Error(`図に対応する発話がありません: ${focus.cue}`);
     const start = scene.start + cue.at + focus.offset;
+    const next = diagram.focus[index + 1];
+    const end = next
+      ? scene.start + (scene.cues.find((part) => part.id === next.cue)?.at ?? 0) + next.offset
+      : scene.start + scene.duration;
     animations.push(
       `tl.set("#${prefix} .diagram-ring, #${prefix} .diagram-pointer, #${prefix} .diagram-focus", { autoAlpha: 0 }, ${start});`,
       `tl.set("#${prefix} .diagram-node", { backgroundColor: "#ffffff" }, ${start});`,
       `tl.set("#${prefix}-focus-${index}", { autoAlpha: 1 }, ${start});`,
     );
+    if (index > 0)
+      animations.push(
+        `tl.set("#${prefix} .diagram-ring rect", { strokeDashoffset: 1 }, ${start});`,
+      );
     for (const target of focus.targets) {
       const selector = `#${prefix}-node-${target}`;
       animations.push(
         `tl.set("${selector}", { backgroundColor: "#fff4df" }, ${start});`,
         `tl.set("${selector} .diagram-ring, ${selector} .diagram-pointer", { autoAlpha: 1 }, ${start});`,
-        `tl.fromTo("${selector} rect", { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.28, ease: "power1.out" }, ${start});`,
+        `tl.fromTo("${selector} rect", { strokeDashoffset: 1 }, { strokeDashoffset: 0, autoRound: false, duration: ${Math.min(0.28, end - start)}, ease: "power1.out", immediateRender: false }, ${start});`,
       );
     }
   });

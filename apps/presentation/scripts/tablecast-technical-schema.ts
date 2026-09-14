@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sourcePathSchema } from "./tablecast-source.ts";
 
 const id = z.string().regex(/^[a-z][a-z0-9-]*$/);
 const point = z.tuple([z.number().min(0).max(1792), z.number().min(0).max(660)]);
@@ -16,7 +17,7 @@ export const technicalSchema = z
       "latency",
     ]),
     legend: z.string().min(1),
-    sources: z.array(z.string().regex(/^[a-zA-Z0-9/_.-]+$/)).min(1),
+    sources: z.array(sourcePathSchema).min(1),
     panels: z
       .array(
         z.object({

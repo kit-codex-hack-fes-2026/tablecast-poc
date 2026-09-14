@@ -3,9 +3,43 @@ import current from "../projects/tablecast-main-rerecord.json";
 import sample from "../sample.json";
 import booking from "../examples/tablecast-booking/project.json";
 import mutation from "../experiments/tablecast-mutation/project.json";
-import { projectSchema, timeline, type Project } from "./tablecast-project";
+import { projectSchema, speakers, timeline, type Project } from "./tablecast-project";
 
 const project = projectSchema.parse(current);
+test.each(["\n", "\r", "\r\n\r\n00:01.000 --> 00:02.000\r\n"])(
+  "話者名の改行をWebVTT生成前に拒否する: %j",
+  (lineBreak) => {
+    for (const key of Object.keys(speakers)) {
+      const result = projectSchema.safeParse({
+        ...project,
+        brand: { ...project.brand, speakers: { ...speakers, [key]: `話者${lineBreak}別の行` } },
+      });
+      expect(result.error?.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["brand", "speakers", key],
+          message: "話者名は1行で指定してください",
+        }),
+      );
+    }
+  },
+);
+
+test.each([0, 0.1])(
+  "BGMと効果音が両方0の設定はsoundtrack省略を案内する（speechVolume=%s）",
+  (speechVolume) => {
+    const result = projectSchema.safeParse({
+      ...project,
+      soundtrack: { ...project.soundtrack, musicVolume: 0, effectVolume: 0, speechVolume },
+    });
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({
+        path: ["soundtrack"],
+        message: "無音にする場合はsoundtrackを省略してください",
+      }),
+    );
+    expect(projectSchema.safeParse({ ...project, soundtrack: undefined }).success).toBe(true);
+  },
+);
 function scene(id: string) {
   const found = project.scenes.find((item) => item.id === id);
   if (!found) throw new Error(`場面が必要です: ${id}`);
@@ -14,7 +48,7 @@ function scene(id: string) {
 const parse = (item: Project["scenes"][number]) =>
   projectSchema.parse({ ...project, films: undefined, scenes: [item] });
 
-test.each([current, sample, booking, mutation])("既存台本と別題材の入力互換性を保つ", (input) => {
+test.each([current, sample, booking])("既存台本と別題材の入力互換性を保つ", (input) => {
   expect(projectSchema.safeParse(input).success).toBe(true);
 });
 
@@ -87,4 +121,52 @@ test("まとめは全画像の表示予定と結論へ移る前の表示時間�
   expect(() => timeline({ ...input, scenes: [item] }, durations, {})).toThrow("結論へ切り替える尺");
   item.duration = 6;
   expect(() => timeline({ ...input, scenes: [item] }, durations, {})).not.toThrow();
+});
+
+test("過去の変更試験台本は保存したまま、境界外の参照を現行入力として拒否する", () => {
+  expect(projectSchema.safeParse(mutation).success).toBe(false);
+});
+
+test("まとめの同じ画像を連続指定すると描画前に拒否する", () => {
+  const item = scene("closing");
+  item.pointFocus = [
+    { at: 0, point: 0 },
+    ...(item.images ?? []).map((_, point) => ({ at: point + 0.5, point })),
+  ];
+  expect(() => parse(item)).toThrow("同じ画像を連続");
+});
+
+test.each(["../outside.md", "/outside.md"])(
+  "技術図とファイル一覧の参照%sを両方拒否する",
+  (path) => {
+    const technical = scene("tech-intro");
+    if (!technical.technical) throw new Error("技術図が必要です");
+    technical.technical.sources = [path];
+    expect(
+      projectSchema.safeParse({ ...project, films: undefined, scenes: [technical] }).success,
+    ).toBe(false);
+    const files = {
+      ...scene("opening"),
+      images: undefined,
+      sourceTree: [{ path, detail: "出典", depth: 0 }],
+    };
+    expect(projectSchema.safeParse({ ...project, films: undefined, scenes: [files] }).success).toBe(
+      false,
+    );
+  },
+);
+
+test("場面の検証エラーが該当する場面番号とフィールドを返す", () => {
+  const input = {
+    ...project,
+    films: undefined,
+    scenes: [scene("opening"), { ...scene("staff"), duration: 12 }],
+  };
+  const result = projectSchema.safeParse(input);
+  expect(result.error?.issues).toContainEqual(
+    expect.objectContaining({
+      path: ["scenes", 1, "duration"],
+      message: "実録の尺はmedia.durationだけで指定してください",
+    }),
+  );
 });

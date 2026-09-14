@@ -5,6 +5,14 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Project } from "./tablecast-project.ts";
 import { fitZoom, zoomMotion } from "./tablecast-zoom.ts";
+const capturePattern = z.string().refine((pattern) => {
+  try {
+    RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
+}, "撮影の正規表現が不正です");
 
 // 撮影の目的・画面操作・成立条件を台本に置く。編集の対象矩形は撮影時に測る。
 export const shotSchema = z.object({
@@ -15,8 +23,8 @@ export const shotSchema = z.object({
     .default([]),
   subject: z.object({
     selector: z.string().min(1),
-    text: z.string().optional(),
-    required: z.array(z.string().min(1)).min(1),
+    text: capturePattern.optional(),
+    required: z.array(capturePattern.min(1)).min(1),
   }),
   hold: z.number().min(2.5).max(30),
 });
@@ -112,9 +120,12 @@ export async function measureSubject(subject: Locator) {
         top = 0,
         right = innerWidth,
         bottom = innerHeight;
-      for (let node = element.parentElement; node; node = node.parentElement) {
+      let shown = getComputedStyle(element).visibility === "visible";
+      for (let node: Element | null = element; node; node = node.parentElement) {
         const style = getComputedStyle(node),
           bounds = node.getBoundingClientRect();
+        if (style.display === "none" || Number(style.opacity) === 0) shown = false;
+        if (node === element) continue;
         if (/auto|scroll|hidden|clip/.test(style.overflowX)) {
           left = Math.max(left, bounds.left);
           right = Math.min(right, bounds.right);
@@ -130,6 +141,7 @@ export async function measureSubject(subject: Locator) {
         width: box.width / innerWidth,
         height: box.height / innerHeight,
         visible:
+          shown &&
           box.width > 0 &&
           box.height > 0 &&
           box.left >= left - 1 &&

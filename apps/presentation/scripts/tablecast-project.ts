@@ -7,9 +7,15 @@ import { z } from "zod";
 import { shotSchema } from "./tablecast-shot.ts";
 import { zoomMotion } from "./tablecast-zoom.ts";
 import { technicalSchema } from "./tablecast-technical-schema.ts";
+import { sourcePathSchema } from "./tablecast-source.ts";
 
 export const root = resolve(import.meta.dirname, "..");
 export const cameraTransitionDuration = 1.1;
+export const recapHandoffDuration = 2.35;
+export const recapFocus = (item: {
+  pointFocus?: { at: number; point: number }[];
+  images?: string[];
+}) => item.pointFocus ?? (item.images ?? []).map((_, point) => ({ at: point * 0.9, point }));
 // 既存録画のviewport検証と、役割に対応する表示枠の識別子。
 export const devices = {
   ipad: { label: "iPad / タブレット", width: 1024, height: 768 },
@@ -25,6 +31,10 @@ export const speakers = {
   instruction: "操作・状態",
 } as const;
 const id = z.string().regex(/^[a-z][a-z0-9-]*$/);
+const speakerLabel = z
+  .string()
+  .min(1)
+  .regex(/^[^\r\n]+$/, "話者名は1行で指定してください");
 const cue = z.object({
   id,
   at: z.number().nonnegative(),
@@ -54,7 +64,7 @@ const scene = z.object({
   sourceTree: z
     .array(
       z.object({
-        path: z.string().regex(/^[a-zA-Z0-9/_.-]+$/),
+        path: sourcePathSchema,
         detail: z.string().min(1).max(50),
         depth: z.number().int().min(0).max(2),
       }),
@@ -62,6 +72,7 @@ const scene = z.object({
     .min(1)
     .max(14)
     .optional(),
+  sourceHeading: z.string().min(1).optional(),
   technical: technicalSchema.optional(),
   cues: z.array(cue).min(1),
   role: z.enum(["customer", "staff", "admin"]).optional(),
@@ -169,10 +180,10 @@ export const projectSchema = z
           .optional(),
         speakers: z
           .object({
-            narrator: z.string().min(1),
-            customer: z.string().min(1),
-            cast: z.string().min(1),
-            instruction: z.string().min(1),
+            narrator: speakerLabel,
+            customer: speakerLabel,
+            cast: speakerLabel,
+            instruction: speakerLabel,
           })
           .optional(),
       })
@@ -200,6 +211,10 @@ export const projectSchema = z
         effectVolume: z.number().min(0).max(0.5),
         credit: z.string().max(260).optional(),
       })
+      .refine(
+        (sound) => sound.musicVolume > 0 || sound.effectVolume > 0,
+        "無音にする場合はsoundtrackを省略してください",
+      )
       .optional(),
     scenes: z.array(scene).min(1),
     films: z
@@ -229,6 +244,8 @@ export const projectSchema = z
     for (const [sceneIndex, item] of project.scenes.entries()) {
       const issue = (field: string, message: string) =>
         ctx.addIssue({ code: "custom", path: ["scenes", sceneIndex, field], message });
+      if (item.sourceHeading && !item.sourceTree)
+        issue("sourceHeading", "ファイル一覧の見出しにはsourceTreeが必要です");
       if (
         [item.technical, item.diagram, item.sourceTree, item.images, item.media].filter(Boolean)
           .length > 1
@@ -250,6 +267,13 @@ export const projectSchema = z
       )
         issue("pointFocus", "まとめの静止画をすべて表示する強調時刻を指定してください");
       if (
+        item.kind === "result" &&
+        item.pointFocus?.some(
+          (focus, index) => index > 0 && focus.point === item.pointFocus?.[index - 1]?.point,
+        )
+      )
+        issue("pointFocus", "まとめの同じ画像を連続した注目先に指定できません");
+      if (
         item.kind !== "demo" &&
         (item.camera.length !== 1 ||
           item.camera[0]?.x !== 0.5 ||
@@ -258,23 +282,17 @@ export const projectSchema = z
       )
         issue("camera", "カメラ移動は実録場面だけに指定してください");
       if (item.duration && item.media)
-        ctx.addIssue({ code: "custom", message: "実録の尺はmedia.durationだけで指定してください" });
+        issue("duration", "実録の尺はmedia.durationだけで指定してください");
       if (Boolean(item.device) !== Boolean(item.role) || (item.device && item.kind !== "demo"))
-        ctx.addIssue({ code: "custom", message: "実録の端末と役割は一緒に指定してください" });
+        issue("device", "実録の端末と役割は一緒に指定してください");
       if (item.images && item.kind !== "title" && item.kind !== "result")
-        ctx.addIssue({
-          code: "custom",
-          message: "静止画は導入またはまとめの場面に指定してください",
-        });
+        issue("images", "静止画は導入またはまとめの場面に指定してください");
       if (item.kind === "result" && item.images && item.images.length !== item.points.length)
-        ctx.addIssue({ code: "custom", message: "まとめの静止画と説明は一対一にしてください" });
+        issue("images", "まとめの静止画と説明は一対一にしてください");
       if (item.media?.project && (item.camera.length !== 1 || item.camera[0]?.zoom !== 1))
-        ctx.addIssue({ code: "custom", message: "OpenScreen済み素材へ二重ズームを指定できません" });
+        issue("camera", "OpenScreen済み素材へ二重ズームを指定できません");
       if (item.capture && (!item.device || !item.media))
-        ctx.addIssue({
-          code: "custom",
-          message: "撮影定義は役割と端末のある実録場面に指定してください",
-        });
+        issue("capture", "撮影定義は役割と端末のある実録場面に指定してください");
       for (const track of [
         item.technical?.focus,
         item.diagram?.focus,
@@ -288,15 +306,12 @@ export const projectSchema = z
           track.some((focus) => !item.cues.some((part) => part.id === focus.cue)) ||
           starts.some((start, index) => index > 0 && start <= (starts[index - 1] ?? 0))
         )
-          ctx.addIssue({
-            code: "custom",
-            message: "注目先は実在する発話を参照し、時刻を昇順に指定してください",
-          });
+          issue("focus", "注目先は実在する発話を参照し、時刻を昇順に指定してください");
       }
       if (item.media?.zoom?.mode === "detail" && !item.media.project)
-        ctx.addIssue({ code: "custom", message: "素材の注目先にはOpenScreen projectが必要です" });
+        issue("media", "素材の注目先にはOpenScreen projectが必要です");
       if (item.media?.project && !item.media.zoom)
-        ctx.addIssue({ code: "custom", message: "実録にはズームの判断と理由を指定してください" });
+        issue("media", "実録にはズームの判断と理由を指定してください");
       const zoom = item.media?.zoom;
       if (zoom?.mode === "detail") {
         const enterAt = (item.cues.find((part) => part.id === zoom.cue)?.at ?? 0) + zoom.offset;
@@ -306,12 +321,9 @@ export const projectSchema = z
           (!zoom.continueFrom && enterAt + zoomMotion.enter + 0.6 > holdEnd) ||
           (zoom.exitAt !== undefined && zoom.exitAt + zoomMotion.exit > sceneDuration)
         )
-          ctx.addIssue({
-            code: "custom",
-            message: "ズームの移動・保持・引きを場面内に確保してください",
-          });
+          issue("media", "ズームの移動・保持・引きを場面内に確保してください");
         if (zoom.target.x + zoom.target.width > 1 || zoom.target.y + zoom.target.height > 1)
-          ctx.addIssue({ code: "custom", message: "ズーム対象の範囲が画面外です" });
+          issue("media", "ズーム対象の範囲が画面外です");
         if (zoom.continueFrom) {
           const previous = project.scenes.find((candidate) => candidate.id === zoom.continueFrom);
           if (
@@ -321,10 +333,7 @@ export const projectSchema = z
             previous.media.zoom?.mode !== "detail" ||
             JSON.stringify(previous.media.zoom.target) !== JSON.stringify(zoom.target)
           )
-            ctx.addIssue({
-              code: "custom",
-              message: "継続ズームは同じ素材・対象の先行場面を参照してください",
-            });
+            issue("media", "継続ズームは同じ素材・対象の先行場面を参照してください");
         }
       }
       if (item.diagram) {
@@ -339,27 +348,24 @@ export const projectSchema = z
               !nodes.includes(link.from) || !nodes.includes(link.to) || link.from === link.to,
           )
         )
-          ctx.addIssue({
-            code: "custom",
-            message: "技術図の要素IDと接続・注目先を確認してください",
-          });
+          issue("diagram", "技術図の要素IDと接続・注目先を確認してください");
       }
       if ((item.kind === "demo") !== Boolean(item.media))
-        ctx.addIssue({ code: "custom", message: "実録場面だけに動画素材を指定してください" });
+        issue("media", "実録場面だけに動画素材を指定してください");
       if (item.kind === "demo") {
         const initial = item.camera[0];
         if (initial?.x !== 0.5 || initial.y !== 0.5 || initial.zoom !== 1)
-          ctx.addIssue({ code: "custom", message: "実録場面は画面全体から始めてください" });
+          issue("camera", "実録場面は画面全体から始めてください");
         // キーフレームは到達時刻。実際の移動開始まで全体表示を2.3秒保つ。
         if (item.camera[1] && item.camera[1].at < 2.3 + cameraTransitionDuration)
-          ctx.addIssue({ code: "custom", message: "冒頭の全体表示を保ってから拡大してください" });
+          issue("camera", "冒頭の全体表示を保ってから拡大してください");
       }
       for (const track of [item.cues, item.camera]) {
         if (
           track[0]?.at !== 0 ||
           track.some((part, index, all) => index > 0 && part.at <= (all[index - 1]?.at ?? 0))
         )
-          ctx.addIssue({ code: "custom", message: "字幕・カメラは0秒から昇順に配置してください" });
+          issue("timeline", "字幕・カメラは0秒から昇順に配置してください");
       }
     }
   });
@@ -417,12 +423,14 @@ export async function readCaptureProject() {
 export function speechRequest(project: Project, item: SpeechCue) {
   return { ...project.tts, text: item.speech ?? item.text };
 }
-export function audioPath(project: Project, item: SpeechCue) {
-  const hash = createHash("sha256")
+export function speechHash(project: Project, item: SpeechCue) {
+  return createHash("sha256")
     .update(JSON.stringify(speechRequest(project, item)))
     .digest("hex")
     .slice(0, 16);
-  return `assets/audio/${item.id}-${hash}.wav`;
+}
+export function audioPath(project: Project, item: SpeechCue) {
+  return `assets/audio/${item.id}-${speechHash(project, item)}.wav`;
 }
 const execute = promisify(execFile);
 export async function requireLocalMedia(path: string) {
@@ -551,8 +559,8 @@ export function timeline(
     )
       throw new Error(`説明の強調は実在する項目と場面内の昇順時刻が必要です: ${item.id}`);
     if (item.kind === "result" && item.images) {
-      const focus = item.pointFocus ?? item.images.map((_, point) => ({ at: point * 0.9, point }));
-      if (focus.some((entry) => entry.at + 0.2 > duration - 2.35))
+      const focus = recapFocus(item);
+      if (focus.some((entry) => entry.at + 0.2 > duration - recapHandoffDuration))
         throw new Error(`まとめの静止画を表示してから結論へ切り替える尺が必要です: ${item.id}`);
     }
     spoken.forEach((part, index) => {

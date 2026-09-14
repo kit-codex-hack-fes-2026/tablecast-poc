@@ -1,13 +1,20 @@
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
 import { chromium } from "@playwright/test";
 import { execFile, spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
-import { setTimeout } from "node:timers/promises";
+import { setTimeout as sleep } from "node:timers/promises";
 import { parseArgs, promisify } from "node:util";
 import { z } from "zod";
 import { openScreenResult } from "./tablecast-doctor.ts";
-import { captureBrowserPointer } from "./tablecast-capture-types.ts";
+import {
+  captureBrowserPointer,
+  screenProject,
+  videoDimensions,
+  assertCaptureFrame,
+  pointerEvent,
+} from "./tablecast-capture-types.ts";
 import { tablecastCaptureOrigin, tablecastHostArguments } from "./tablecast-app-capture.ts";
 
 // 認証済みの合成店舗で、商品詳細を開いて戻る短い収録を行う。
@@ -24,9 +31,7 @@ async function main() {
   if (!values["storage-state"]) throw new Error("--storage-state に認証済みの保存先が必要です");
   const out = resolve(values.out);
   await mkdir(out, { recursive: false });
-  const openscreen =
-    values.openscreen ??
-    resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
+  const openscreen = openscreenPath(values.openscreen);
   const run = promisify(execFile);
   const commandOptions = { windowsHide: true, timeout: 90_000, maxBuffer: 8_000_000 };
   const windowTitle = `TableCast capture check ${Date.now()}`;
@@ -54,7 +59,7 @@ async function main() {
       .getByRole("button")
       .filter({ has: page.getByText("枝豆", { exact: true }) });
     await product.waitFor();
-    await page.evaluate(`document.title = ${JSON.stringify(windowTitle)}`);
+    await page.evaluate(pinWindowTitle, windowTitle);
     await page.bringToFront();
     const { stdout: sources } = await run(openscreen, ["sources", "--json"], commandOptions);
     const inventory = z
@@ -90,11 +95,11 @@ async function main() {
       while (!stdout.includes("Recording started")) {
         if (closed || Date.now() > deadline)
           throw new Error("OpenScreenの録画開始を確認できません");
-        await setTimeout(100);
+        await sleep(100);
       }
       console.info("OK: Playwrightで実アプリ表示 / OpenScreenで録画開始");
       await page.mouse.move(150, 650);
-      await setTimeout(2_000);
+      await sleep(2_000);
       const productBox = await product.boundingBox();
       if (!productBox) throw new Error("商品の位置を取得できません");
       await page.mouse.move(
@@ -105,7 +110,7 @@ async function main() {
       await product.click({ delay: 120 });
       await page.getByRole("heading", { name: "枝豆", exact: true }).waitFor();
       await page.screenshot({ path: resolve(out, "tablecast-detail.png") });
-      await setTimeout(5_000);
+      await sleep(5_000);
       const back = page.getByRole("button", { name: "おしながき", exact: true });
       const backBox = await back.boundingBox();
       if (!backBox) throw new Error("戻るボタンの位置を取得できません");
@@ -126,13 +131,7 @@ async function main() {
       await writeFile(resolve(out, "tablecast-record.log"), stdout + stderr);
     }
     // GUIと同じversion 2のprojectに、商品詳細の手動ズームを保存する。
-    const project = z
-      .object({
-        version: z.literal(2),
-        media: z.looseObject({ screenVideoPath: z.string() }),
-        editor: z.looseObject({}),
-      })
-      .parse(JSON.parse(await readFile(rawProject, "utf8")));
+    const project = screenProject.parse(JSON.parse(await readFile(rawProject, "utf8")));
     const { stdout: dimensions } = await run(
       "ffprobe",
       [
@@ -149,9 +148,10 @@ async function main() {
       commandOptions,
     );
     // このWindows/Chrome配置で実測したclient領域。異なるDPIを推測して切り抜かない。
-    z.object({
-      streams: z.tuple([z.object({ width: z.literal(1026), height: z.literal(850) })]),
-    }).parse(JSON.parse(dimensions));
+    assertCaptureFrame(videoDimensions.parse(JSON.parse(dimensions)).streams[0], {
+      width: 1024,
+      height: 768,
+    });
     const { stdout: original } = await run(
       openscreen,
       ["pack", rawProject, "--out", resolve(out, "original"), "--json"],
@@ -186,16 +186,8 @@ async function main() {
     const captureStartedAtMs = Number(stderr.match(/"captureStartedAtMs":(\d+)/)?.[1]);
     if (!Number.isFinite(captureStartedAtMs)) throw new Error("録画の開始時刻がありません");
     const events = z
-      .array(
-        z.object({
-          at: z.number(),
-          x: z.number(),
-          y: z.number(),
-          cursorType: z.string(),
-          interactionType: z.enum(["move", "click", "mouseup"]),
-        }),
-      )
-      .parse(await page.evaluate("window.tablecastPointerEvents"));
+      .array(pointerEvent)
+      .parse(await page.evaluate(() => window.tablecastPointerEvents));
     await writeFile(
       resolve(out, "tablecast-pointer-events.json"),
       JSON.stringify(

@@ -10,7 +10,7 @@ vi.mock("node:fs/promises", { spy: true });
 const project = projectSchema.parse(sample);
 const item = { id: "tablecast-test", at: 0, text: "字幕", speech: "読み上げ" };
 afterEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -45,6 +45,7 @@ test("課金済み音声の検証失敗でもファイルを残し、再実行�
   vi.spyOn(files, "stat")
     .mockRejectedValueOnce(Object.assign(new Error(), { code: "ENOENT" }))
     .mockResolvedValue(existingFile);
+  vi.spyOn(files, "readdir").mockResolvedValue([]);
   const write = vi.spyOn(files, "writeFile").mockResolvedValue(undefined);
   const remove = vi.spyOn(files, "rm").mockResolvedValue(undefined);
   const fetchMock = vi
@@ -78,6 +79,37 @@ test("Inworldへ読み補正と生成設定を送り、返された音声をデ�
     }),
   );
 });
+
+test.each([false, true])(
+  "発話IDだけの変更は同じ生成条件のWAVを再利用する（破損=%s）",
+  async (corrupt) => {
+    const original = project.scenes[0];
+    if (!original?.cues[0]) throw new Error("保存済み音声に対応する発話が必要です");
+    const renamed = { ...original.cues[0], id: "tablecast-renamed-cache-regression" };
+    vi.stubEnv("INWORLD_API_KEY", "tablecast-test-key");
+    vi.stubEnv("TABLECAST_PRESENTATION_ENV_FILE", "");
+    vi.spyOn(projectFiles, "readProject").mockResolvedValue({
+      ...project,
+      scenes: [{ ...original, cues: [renamed] }],
+    });
+    vi.spyOn(files, "mkdir").mockResolvedValue(undefined);
+    vi.spyOn(files, "rm").mockResolvedValue(undefined);
+    const duration = vi.spyOn(projectFiles, "readAudioDuration");
+    if (corrupt) duration.mockRejectedValue(new Error("音声検証失敗"));
+    else duration.mockResolvedValue(1);
+    const copy = vi.spyOn(files, "copyFile").mockResolvedValue(undefined);
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await generateAudio().then(
+      () => "再利用",
+      (error: Error) => error.message,
+    );
+    expect(result).toBe(corrupt ? "音声検証失敗" : "再利用");
+    expect(copy).toHaveBeenCalledTimes(corrupt ? 0 : 1);
+    expect(String(duration.mock.calls[0]?.[0])).not.toContain(renamed.id);
+    expect(fetchMock).not.toHaveBeenCalled();
+  },
+);
 
 test.each([
   { label: "HTTPエラー", response: new Response("tablecast-secret", { status: 429 }) },

@@ -15,6 +15,13 @@ export const screenProject = z.object({
 export const videoDimensions = z.object({
   streams: z.tuple([z.object({ width: z.number(), height: z.number() })]),
 });
+export function assertCaptureFrame(
+  frame: { width: number; height: number },
+  viewport: { width: number; height: number },
+) {
+  if (frame.width !== viewport.width + 2 || frame.height !== viewport.height + 82)
+    throw new Error(`Chrome client領域が実測済み配置と異なります: ${JSON.stringify(frame)}`);
+}
 export const recordedTable = z.looseObject({
   id: z.string(),
   tableId: z.string(),
@@ -55,17 +62,21 @@ declare global {
 // Playwrightが実際に送ったイベントだけをブラウザー内で記録する。
 export function captureBrowserPointer() {
   window.tablecastPointerEvents = [];
-  for (const kind of ["pointermove", "pointerdown", "pointerup"] as const) {
+  const interactionTypes = {
+    pointermove: "move",
+    pointerdown: "click",
+    pointerup: "mouseup",
+  } as const;
+  for (const [kind, interactionType] of Object.entries(interactionTypes)) {
     document.addEventListener(
       kind,
       (event) => {
-        if (!(event.target instanceof Element)) return;
+        if (!(event instanceof PointerEvent) || !(event.target instanceof Element)) return;
         window.tablecastPointerEvents.push({
           at: Date.now(),
           x: event.clientX,
           y: event.clientY,
-          interactionType:
-            kind === "pointerdown" ? "click" : kind === "pointerup" ? "mouseup" : "move",
+          interactionType,
           cursorType: getComputedStyle(event.target).cursor === "pointer" ? "pointer" : "arrow",
         });
       },

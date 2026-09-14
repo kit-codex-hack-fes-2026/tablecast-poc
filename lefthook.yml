@@ -6,6 +6,7 @@ pre-commit:
     format:
       glob: "*.{ts,tsx,js,json,jsonc,md,yml,yaml,css}"
       exclude:
+        - "apps/presentation/assets/openscreen/**/*.json"
         - ".agents/skills/hyperframes-core/**"
         - ".agents/skills/hyperframes-animation/**"
         - ".agents/skills/hyperframes-creative/**"

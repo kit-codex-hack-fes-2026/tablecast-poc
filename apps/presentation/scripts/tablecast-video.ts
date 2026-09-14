@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
 import { chromium } from "@playwright/test";
 import { z } from "zod";
+import { resolveSource, repositoryPath } from "./tablecast-source.ts";
 import {
   audioPath,
   needsVoice,
@@ -36,6 +37,14 @@ export function videoPaths(name: string, films: string[]) {
   return { composition: `dist/${name}`, output: `output/${name}` };
 }
 
+export function validatedPeakDb(log: string) {
+  const peak = Number(log.match(/max_volume: ([-.0-9]+) dB/)?.[1]);
+  // volumedetectは16bitへ変換して測り、デジタル無音も-infではなく-91.0 dBと報告する。
+  if (!Number.isFinite(peak) || peak <= -91 || peak >= 0)
+    throw new Error("音声が無音またはピークを超えています");
+  return peak;
+}
+
 export async function createVideo(args: string[]) {
   const { values } = parseArgs({
     args,
@@ -55,6 +64,7 @@ export async function createVideo(args: string[]) {
   if (projectPath() !== resolve(root, "sample.json") && !source.brand)
     throw new Error("別題材の台本にはbrandを指定してください");
   const project = selectScenes(source, film.scenes.join(","));
+  const sharedProjectPath = repositoryPath(projectPath());
   const paths = videoPaths(values.name, Object.keys(source.films ?? {}));
   const directory = resolve(root, paths.output);
   const composition = resolve(root, paths.composition);
@@ -66,7 +76,8 @@ export async function createVideo(args: string[]) {
   const report: Record<string, unknown> = {
     status: "running",
     startedAt: new Date().toISOString(),
-    project: projectPath(),
+    project: sharedProjectPath,
+    inputPathBase: "repository",
     film: values.film,
     composition: paths.composition,
     renderRequested: values.render,
@@ -136,7 +147,7 @@ export async function createVideo(args: string[]) {
         ...(scene.technical?.sources ?? []),
         ...(scene.sourceTree?.map((e) => e.path) ?? []),
       ])
-        inputs.add(resolve(root, "../..", file));
+        inputs.add(await resolveSource(file));
       if (scene.media) {
         inputs.add(resolve(root, scene.media.file));
         for (const file of [scene.media.project, scene.media.shot])
@@ -151,7 +162,9 @@ export async function createVideo(args: string[]) {
         inputs.add(resolve(root, file));
     const hashes = async () =>
       Object.fromEntries(
-        await Promise.all([...inputs].sort().map(async (file) => [file, await sha(file)] as const)),
+        await Promise.all(
+          [...inputs].sort().map(async (file) => [repositoryPath(file), await sha(file)] as const),
+        ),
       );
     const before = await hashes();
     report.inputHashes = before;
@@ -280,10 +293,7 @@ export async function createVideo(args: string[]) {
           "null",
           "-",
         ]);
-        const peak = Number(volume.stderr.match(/max_volume: ([-.0-9]+) dB/)?.[1]);
-        if (!Number.isFinite(peak) || peak >= 0)
-          throw new Error("音声が無音またはピークを超えています");
-        report.peakDb = peak;
+        report.peakDb = validatedPeakDb(volume.stderr);
       }
       const times = [
         ...new Set(

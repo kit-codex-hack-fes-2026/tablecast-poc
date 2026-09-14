@@ -3,6 +3,23 @@ import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { captureShot, measureSubject, shotSchema } from "./tablecast-shot";
 
+test("@product 撮影対象自身と祖先の非表示・透明化を検出する", async ({ page }) => {
+  for (const style of ["visibility:hidden", "opacity:0", "display:none"]) {
+    for (const parent of [false, true]) {
+      await page.setContent(
+        `<div style="${parent ? style : ""}"><article style="${parent ? "" : style}">撮影内容</article></div>`,
+      );
+      expect((await measureSubject(page.locator("article"))).visible, `${style}/${parent}`).toBe(
+        false,
+      );
+    }
+  }
+  await page.setContent(
+    '<div style="visibility:hidden"><article style="visibility:visible">撮影内容</article></div>',
+  );
+  expect((await measureSubject(page.locator("article"))).visible).toBe(true);
+});
+
 test("@product 撮影対象の複数セルをまとめ、祖先による欠けを検出する", async ({ page }) => {
   await page.setContent(
     '<div style="height:60px;overflow:hidden"><div class="subject" style="height:40px">90ml</div><div class="subject" style="height:40px">￥160</div></div>',

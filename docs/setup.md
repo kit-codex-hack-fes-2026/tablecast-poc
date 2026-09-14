@@ -62,6 +62,16 @@ docker compose -f .devcontainer/compose.yaml port tablecast 6006
 > [!NOTE]
 > Docker socketは渡さない。Dockerを直接使うE2Eは2BのホストかCIで実行する。コンテナ内のブラウザー試験には `bunx --no-install playwright install --with-deps chromium webkit` が必要。実iPadはlocalhostへ接続できないため、[実機試験](development.md#実機公開環境)を参照する。
 
+動画のbuildでもFFprobeを使うため、Dev ContainerイメージはFFmpeg/FFprobeを含む。既存コンテナはイメージを再buildする。動画の配置検査・完成MP4再生はH.264/AAC対応のGoogle Chromeを使うため、Linux amd64のコンテナでは依存導入後に次を追加実行する。通常アプリのChromium/WebKit導入とは別の前提である。
+
+```sh
+bunx --no-install playwright install --with-deps chrome
+ffmpeg -version
+ffprobe -version
+```
+
+Linux arm64へのGoogle Chrome導入はこの手順の対象外。動画制作は[Windowsの生成環境](../apps/presentation/SHARING.md#新しいcheckoutで生成する)を使う。OpenScreenによる実収録・再編集もWindowsホストで行う。
+
 ## 2B. ホストでmise・uv・Bunを使う
 
 [miseの公式手順](https://mise.jdx.dev/getting-started.html)に従ってzshで有効化する。`.zshrc` への追記は未設定の場合に一度だけ行う。

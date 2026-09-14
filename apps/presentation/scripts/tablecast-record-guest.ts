@@ -1,6 +1,8 @@
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
 import {
   waitForTablecastState,
   tablecastCaptureOrigin,
+  tablecastCaptureStorageState,
   tablecastHostArguments,
   tablecastVoiceEvents,
   tablecastResponseComplete,
@@ -18,6 +20,7 @@ import { captureBrowserAudio } from "./tablecast-browser-audio.ts";
 import { captureBrowserPointer, recordedTable, screenProject } from "./tablecast-capture-types.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
+const storageState = tablecastCaptureStorageState("guest");
 const englishOnly = process.argv[3] === "english";
 if (process.argv[3] && !englishOnly) throw new Error("部分収録は english を指定してください");
 const out = resolve(
@@ -26,7 +29,7 @@ const out = resolve(
   process.argv[2] ?? `tablecast-guest-${Date.now()}`,
 );
 const origin = tablecastCaptureOrigin();
-const openscreen = resolve(process.env.LOCALAPPDATA ?? "", "Programs/Openscreen/Openscreen.exe");
+const openscreen = openscreenPath();
 await mkdir(out, { recursive: false });
 const browser = await chromium.launch({
   channel: "chrome",
@@ -48,10 +51,7 @@ let voiceStarted = false;
 try {
   const context = await browser.newContext({
     viewport: { width: 1024, height: 768 },
-    storageState: resolve(
-      root,
-      process.env.TABLECAST_CAPTURE_STORAGE_STATE ?? ".local/tablecast-ipad-fresh-auth.json",
-    ),
+    storageState,
   });
   await context.addInitScript(captureBrowserAudio);
   const page = await context.newPage();
@@ -101,12 +101,7 @@ try {
     await locator.click({ delay: 120 });
   };
   const title = `TableCast guest final ${Date.now()}`;
-  await page.evaluate((windowTitle) => {
-    document.title = windowTitle;
-    new MutationObserver(() => {
-      if (document.title !== windowTitle) document.title = windowTitle;
-    }).observe(document.head, { childList: true, subtree: true, characterData: true });
-  }, title);
+  await page.evaluate(pinWindowTitle, title);
   await page.bringToFront();
   const audioStartedAt = await page.evaluate(() => window.tablecastCapture.start());
   recorder = spawn(

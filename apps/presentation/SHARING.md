@@ -5,6 +5,7 @@ Issue #1の動画基盤として、生成コード・台本・採用素材・原
 ## 共有するもの
 
 - 現行作例は`projects/tablecast-main-rerecord.json`。mainの`7d6adc7`に追従して再収録した商品紹介v14・技術紹介v17に対応する。
+- 保存済みv17は描画修正前の比較用。現行コードでの再生成は前の矢印の強調を消し、説明対象の線だけを滑らかに描くため、強調表示の見た目が異なる。完成MP4は置換せず、修正版の採用はユーザー評価後に判断する。
 - `sample.json`は単体テストが読む構造fixtureとして維持する。旧版専用の録画・画像は共有せず、この台本からの動画再生成は対象外。
 - `examples/tablecast-booking/project.json`は別ブランド・場面名の模式台本。別アプリの実収録の証拠ではない。
 - UI変更試験は完成動画・アプリ差分・当時の台本・検証記録を共有する。原録画と再実行専用スクリプトは共有しないため、保存素材だけで試験動画を再生成することはできない。[試験結果](experiments/tablecast-mutation/BRIEF.md)を参照。
@@ -21,6 +22,10 @@ Issue #1の動画基盤として、生成コード・台本・採用素材・原
 完成動画は既存成果物からコピーしたもので、コード整理後の再生成物による置換ではない。見た目の評価状態は[引き継ぎ](HANDOFF.md)に従う。BGM・SEの出典と加工は[音源記録](assets/audio/README.md)、フォントのライセンスは`assets/fonts/LICENSE`、カーソル画像のMITライセンスは[OpenScreenのライセンス](assets/openscreen/tablecast-cursor-LICENSE)に含む。
 
 ルートの `bun run build` はアプリのビルド。動画だけを生成する場合はpresentationで `bun run build:videos`、通常の制作・検査・MP4化には `bun run video` を使う。既定の台本は現行作例。
+
+## Dev Containerで生成する
+
+Linux amd64では[Dev Containerの導入手順](../../docs/setup.md#2a-dev-containerを使う)でFFmpeg/FFprobeとGoogle Chromeを用意してから、以下と同じ素材取得・build・検査を行う。Chromiumの導入だけでは動画検査に必要なChromeは入らない。再収録・OpenScreen編集はWindowsホストで行う。
 
 ## 新しいcheckoutで生成する
 
@@ -78,7 +83,7 @@ try {
 
 編集済みprojectを復元する場合は`tablecast-raw.openscreen`を`tablecast-edit.openscreen`へ変更する。作成したbundle内のprojectをOpenScreenで開くか、`export <bundle内のproject> --out <新しいMP4> --json`で書き出す。bundle名・出力名は未使用のものにする。原録画のpackだけでは、別保存の実会話音声の同期やカーソル合成は行わない。それらをやり直す場合は既存の編集スクリプトを使う。
 
-新しいテイクの共有前にも、原録画を`original/`へpackして同梱し、projectのメディア参照を上記の相対パスへ直す。ログのユーザーディレクトリは`[USERPROFILE]`等の記号へ置換する。原本をGit対象外へ保全した上で変更前後のハッシュ・参照先の存在・復元結果を記録する。OpenScreenで保存・packすると絶対パスが再び入るため、再編集後の共有時にも確認する。
+新しいテイクの共有前にも、原録画を`original/`へpackして同梱し、projectのメディア参照を上記の相対パスへ直す。ログのユーザーディレクトリやUNCのサーバー・共有名は`[USERPROFILE]`等の記号へ置換する。原本をGit対象外へ保全した上で変更前後のハッシュ・参照先の存在・復元結果を記録する。OpenScreenで保存・packすると絶対パスが再び入るため、再編集後の共有時にも確認する。
 
 再編集は素材・編集projectを更新するので、保存版を維持する場合は作業用checkoutで行う。新規収録はWindowsのChrome実測配置1026×850とOpenScreenの標準インストール先に依存する。台本・操作adapterの更新方法は[ワークフロー](WORKFLOW.md)を参照する。
 

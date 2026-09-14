@@ -3,6 +3,19 @@ import type { Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { captureEvents } from "./tablecast-capture-types.ts";
+import { repositoryRoot } from "./tablecast-source.ts";
+
+export function tablecastCaptureStorageState(role: "guest" | "staff" | "admin") {
+  const variables = {
+    guest: "TABLECAST_CAPTURE_STORAGE_STATE_GUEST",
+    staff: "TABLECAST_CAPTURE_STORAGE_STATE_STAFF",
+    admin: "TABLECAST_CAPTURE_STORAGE_STATE_ADMIN",
+  } as const;
+  const variable = variables[role];
+  const value = process.env[variable];
+  if (!value?.trim()) throw new Error(`${variable}に役割ごとの認証状態を指定してください`);
+  return resolve(repositoryRoot, value);
+}
 
 // 店員収録には今回の客側テイクを明示し、過去の合成来店へ接続しない。
 export async function readTablecastGuestCapture() {
@@ -63,24 +76,23 @@ export async function waitForTablecastState(page: Page, value: string) {
         voiceState: z.string(),
       })
       .parse(input);
-    const ready =
-      state === "order-submitted"
-        ? table.orders.length > 0 && table.cart.lines.length === 0
-        : state === "confirmation-read"
-          ? table.snapshot?.status === "read"
-          : state === "voice-stopped"
-            ? table.voiceState === "stopped"
-            : table.cart.lines.length > 0;
-    if (ready) return;
+    const ready = {
+      "cart-ready": table.cart.lines.length > 0,
+      "order-submitted": table.orders.length > 0 && table.cart.lines.length === 0,
+      "confirmation-read": table.snapshot?.status === "read",
+      "voice-stopped": table.voiceState === "stopped",
+    } satisfies Record<typeof state, boolean>;
+    if (ready[state]) return;
     if (Date.now() > deadline) throw new Error(`撮影に必要な状態になりません: ${state}`);
     await page.waitForTimeout(250);
   }
 }
 
-export function tablecastCaptureOrigin() {
-  const url = new URL(
-    process.env.TABLECAST_CAPTURE_ORIGIN ?? "http://main.tablecast-poc.container.localhost:3000",
-  );
+export function tablecastCaptureOrigin(
+  value = process.env.TABLECAST_CAPTURE_ORIGIN ??
+    "http://main.tablecast-poc.container.localhost:3000",
+) {
+  const url = new URL(value);
   if (
     !["http:", "https:"].includes(url.protocol) ||
     url.username ||
