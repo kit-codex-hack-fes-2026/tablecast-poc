@@ -645,7 +645,7 @@
   "menu_image_missing": "No image",
   "menu_category_products": "Products in this category",
   "menu_plan_scope": "Included products, categories and tags",
-  "menu_plan_duration": "Duration: {minutes} minutes",
-  "menu_plan_last_order": "Last orders: {minutes} minutes before the end",
+  "menu_plan_duration": "Duration: {minutes} min",
+  "menu_plan_last_order": "Last orders: {minutes} min before the end",
   "common_result_count": "Results: {count}"
 }

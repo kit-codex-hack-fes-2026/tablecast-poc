@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import { test } from "./support/test";
+import { money } from "../src/i18n/format";
 import { credentials } from "./support/runtime";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
@@ -126,6 +127,7 @@ for (const { locale, labels } of [
     await expect(page.getByRole("combobox", { name: labels.menu_availability })).toHaveValue(
       "available",
     );
+    await expect(row.getByText(money(product.price + 100, locale), { exact: true })).toBeVisible();
     const currentResponse = await page.request.get(`${api}/catalog`);
     expect(currentResponse.status()).toBe(200);
     const current = catalogSchema.parse(await currentResponse.json());

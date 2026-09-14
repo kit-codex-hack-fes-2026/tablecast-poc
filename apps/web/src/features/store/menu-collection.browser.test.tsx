@@ -251,6 +251,9 @@ it("カテゴリに所属商品と件数を表示し、プランに価格・対�
     to: "/admin/stores/$storeId/menu/$section",
     params: { storeId: value.storeId, section: "plans" },
   });
+  await expect
+    .element(screen.getByRole("columnheader", { name: ja.editor_plan_price }))
+    .toBeVisible();
   await expect.element(screen.getByText("¥3,200", { exact: true })).toBeVisible();
   await expect.element(screen.getByText("利用時間 90分", { exact: true })).toBeVisible();
   await expect
@@ -258,6 +261,11 @@ it("カテゴリに所属商品と件数を表示し、プランに価格・対�
     .toBeVisible();
   await expect.element(screen.getByText(/日本酒 · seasonal/)).toBeVisible();
   await page.screenshot({ path: "../../test-results/browser/tablecast-menu-plans-ja.png" });
+  await screen.getByRole("link", { name: ja.admin_details, exact: true }).click();
+  await expect
+    .element(screen.getByRole("heading", { name: ja.editor_tags, exact: true }))
+    .toBeVisible();
+  await expect.element(screen.getByText("seasonal", { exact: true })).toBeVisible();
 });
 
 it("初回読込・通信失敗・登録なしを区別し、再取得失敗でも商品と検索条件を残す", async () => {
