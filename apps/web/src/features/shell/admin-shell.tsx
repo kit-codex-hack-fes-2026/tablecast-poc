@@ -66,7 +66,7 @@ export function AdminShell({
           minSize={desktop ? "20rem" : 0}
         >
           <main className="h-full min-w-0 overflow-y-auto bg-white md:rounded-2xl md:border md:border-border">
-            <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-border bg-white/95 px-4 backdrop-blur-sm md:rounded-t-2xl">
+            <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-white/95 px-4 py-2 backdrop-blur-sm @container md:rounded-t-2xl">
               <Button
                 size="icon"
                 variant="ghost"
@@ -90,7 +90,7 @@ export function AdminShell({
               >
                 <PanelLeft />
               </Button>
-              <div className="min-w-0 flex-1 border-l border-border py-2 pl-3 text-base font-medium">
+              <div className="order-last min-w-0 basis-full border-l border-border py-2 pl-3 text-base font-medium @3xl:order-0 @3xl:basis-64 @3xl:grow">
                 {header ??
                   t(
                     sidebar.tab === "organisations"
@@ -100,7 +100,9 @@ export function AdminShell({
                         : "account_title",
                   )}
               </div>
-              <LanguageSwitch onChange={setLocale} />
+              <div className="ml-auto">
+                <LanguageSwitch onChange={setLocale} />
+              </div>
             </header>
             <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
               {children}

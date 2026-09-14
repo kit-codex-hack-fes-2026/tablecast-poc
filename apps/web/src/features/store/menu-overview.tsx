@@ -301,6 +301,8 @@ export function MenuOverview({
                   )
                   .join(" · ") || "—"}
               </p>
+              <h2 className="font-semibold">{t("editor_tags")}</h2>
+              <p>{plan.tags.join(" · ") || "—"}</p>
             </div>
           )}
         </>

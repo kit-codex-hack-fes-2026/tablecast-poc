@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FilePenLine, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -30,10 +30,10 @@ export function StartConfigurationEditing({
   onSelect,
   label,
 }: {
+  label?: string;
   section: MenuSection;
   itemId?: string;
   disabled?: boolean;
-  label?: string;
   onSelect?: (draftId: string) => void;
 }) {
   const store = useStore();
@@ -42,6 +42,17 @@ export function StartConfigurationEditing({
   const navigate = useNavigate();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
+  const interaction = useRef(0);
+  useEffect(
+    () => () => {
+      interaction.current += 1;
+    },
+    [],
+  );
+  function changeOpen(next: boolean) {
+    interaction.current += 1;
+    setOpen(next);
+  }
   const choices = useInfiniteQuery({
     queryKey: ["tablecast-draft-choices", storeId],
     initialPageParam: null,
@@ -67,7 +78,7 @@ export function StartConfigurationEditing({
     enabled: open,
   });
   function select(draftId: string) {
-    setOpen(false);
+    changeOpen(false);
     if (onSelect) onSelect(draftId);
     else if (itemId)
       void navigate({
@@ -83,23 +94,25 @@ export function StartConfigurationEditing({
       });
   }
   const create = useMutation({
-    mutationFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
-    onSuccess: (draft) => {
-      client.setQueryData(draftOptions(storeId, draft.id).queryKey, draft);
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
-      select(draft.id);
+    mutationFn: (source: { storeId: string; interaction: number }) =>
+      parseResponse(
+        rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId: source.storeId } }),
+      ),
+    onSuccess: (draft, source) => {
+      client.setQueryData(draftOptions(source.storeId, draft.id).queryKey, draft);
+      void client.invalidateQueries({ queryKey: ["tablecast-drafts", source.storeId] });
+      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", source.storeId] });
+      if (source.interaction === interaction.current) select(draft.id);
     },
   });
   if (store.role !== "owner" && store.role !== "admin") return null;
   return (
     <>
-      <Button disabled={disabled} onClick={() => setOpen(true)}>
+      <Button disabled={disabled} onClick={() => changeOpen(true)}>
         <FilePenLine />
         {label ?? t("menu_start_editing")}
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("workflow_choose_title")}</DialogTitle>
@@ -111,8 +124,11 @@ export function StartConfigurationEditing({
           <DialogScroll className="space-y-4">
             <ErrorNotice
               error={choices.error || create.error}
-              onRetry={() => void choices.refetch()}
-              retrying={choices.isFetching}
+              onRetry={() => {
+                if (create.error) create.mutate({ storeId, interaction: interaction.current });
+                else void choices.refetch();
+              }}
+              retrying={choices.isFetching || create.isPending}
             />
             {choices.isPending ? (
               <LoadingState />
@@ -130,9 +146,7 @@ export function StartConfigurationEditing({
                       >
                         <ConfigurationStatus
                           storeName={store.name}
-                          publishedVersion={
-                            choices.data.pages[0]?.publishedVersion ?? draft.baseVersion
-                          }
+                          publishedVersion={page.publishedVersion}
                           draft={draft}
                         />
                         <p className="text-sm">
@@ -170,9 +184,12 @@ export function StartConfigurationEditing({
                 </>
               )
             )}
-            <Button disabled={create.isPending} onClick={() => create.mutate()}>
+            <Button
+              disabled={create.isPending}
+              onClick={() => create.mutate({ storeId, interaction: interaction.current })}
+            >
               <Plus />
-              {t("editor_create_draft")}
+              {t(create.isPending ? "workflow_saving" : "editor_create_draft")}
             </Button>
           </DialogScroll>
         </DialogContent>
