@@ -251,3 +251,25 @@ test("戻り先なしのログインはフロアを一括取得し、アカウ�
   expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
   expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
 });
+
+test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ page, baseURL }) => {
+  expect(
+    (
+      await page.request.post("/api/auth/sign-in/email", {
+        headers: { Origin: baseURL ?? "" },
+        data: credentials,
+      })
+    ).ok(),
+  ).toBe(true);
+  const manifest = z
+    .object({ start_url: z.string() })
+    .parse(await (await page.request.get("/tablecast-staff.webmanifest")).json());
+  const launch = await page.request.get(manifest.start_url, { maxRedirects: 0 });
+  expect(launch.status()).toBe(307);
+  const destination = launch.headers()["location"];
+  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
+  const floor = await page.request.get(destination);
+  expect(floor.ok()).toBe(true);
+  expect(await floor.text()).toContain("フロアの様子");
+  expect(floor.headers()["cache-control"]).toBe("private, no-store");
+});

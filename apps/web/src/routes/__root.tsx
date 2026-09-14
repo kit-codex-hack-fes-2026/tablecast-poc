@@ -34,7 +34,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
         const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : undefined;
         const search = new URLSearchParams(location.searchStr);
+        // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
         const defaultFloor =
+          typeof window !== "undefined" &&
           location.pathname === "/admin/live" &&
           !search.has("storeId") &&
           !search.has("section") &&
