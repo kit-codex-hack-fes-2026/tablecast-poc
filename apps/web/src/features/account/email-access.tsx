@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { z } from "zod";
@@ -42,9 +43,9 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
   });
   return (
     <main className="mx-auto max-w-md space-y-6 px-6 py-12">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <a href="/" className="text-2xl font-semibold">
-          TableCast
+          <Brand />
         </a>
         <LanguageSwitch onChange={setLocale} />
       </header>
