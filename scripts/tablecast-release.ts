@@ -365,7 +365,7 @@ async function main() {
       base: "main",
       head: "staging",
       draft: true,
-      title: "chore(release): stagingをmainへ反映する",
+      title: "stagingの変更を本番へリリースする",
       body,
     });
   }
