@@ -70,6 +70,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await expect(page.getByRole("button", { name: "日本語", exact: true })).toBeEnabled();
   await details.click();
   await expect(optionImage.getByText(ja.editor_image_empty, { exact: true })).toBeVisible();
   await optionImage
@@ -88,6 +89,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await expect(page.getByRole("button", { name: "日本語", exact: true })).toBeEnabled();
   await details.click();
   await expect(optionImage.locator("img")).toHaveAttribute("src", new RegExp(option.imageKey));
   const uploadedKeys: string[] = [];
@@ -129,6 +131,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await expect(page.getByRole("button", { name: "日本語", exact: true })).toBeEnabled();
   await details.click();
   await expect(optionImage.locator("img")).toHaveAttribute("src", new RegExp(uploadedKeys[1]));
   const image = optionImage.locator("img");
