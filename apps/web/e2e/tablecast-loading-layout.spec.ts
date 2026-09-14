@@ -197,6 +197,11 @@ test("フロア・メニュー・履歴の初回読込も見出しと表を維�
   ).toBe(true);
   await page.goto("/account");
   await expect(page.getByLabel(ja.account_name, { exact: true })).toBeEnabled();
+  // 初回の親route chunkが遅れても、その下のフロア待機表示へ到達する。
+  await page.route("**/assets/*.js", async (route) => {
+    await delay(500);
+    await route.continue();
+  });
   for (const target of [
     {
       path: "/admin/stores/tablecast-akari/floor",
