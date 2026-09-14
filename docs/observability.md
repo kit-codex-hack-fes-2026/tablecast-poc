@@ -4,6 +4,8 @@
 
 [索引](README.md) / [開発環境](development.md)
 
+SSRの取得依存・DB往復予算・cold/warmの比較結果は[SSR初期取得の調査と計測](ssr-initial-performance.md)を参照する。
+
 ## 送信経路
 
 Hono APIとTanStack StartのWorker入口を`@inference-net/otel-cf-workers`で計測する。StartのAPI proxyにもW3C trace contextを付け、APIのDrizzle D1・DO bindingと同じtraceへつなぐ。公開`@tablecast/api/telemetry`はWorker向けの設定・送信境界であり、ブラウザーからimportしない。
