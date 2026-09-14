@@ -84,3 +84,7 @@ voiceはGPT-Liveの標準voiceを選ぶ。Custom Voiceやreference uploadの項�
 ローカルは[CodexのMCP接続手順](codex-plugin.md#ローカル接続)でOAuthとtoolの実行を確認する。プロトコルの診断にはMCP Inspectorも使える。ChatGPTのクラウドからの到達には対応するトンネルまたはHTTPS公開が必要で、localhostだけでは接続できない。[S15](sources.md#s15)
 実際の店舗ChatGPTプラン・ワークスペースで書き込みMCPが使えることをデモ前に確認する。過去のプラン別制限を固定仕様として書き写さない。
 テストだけの認証無効化や本番Secretの埋込みで接続を成立させない。
+
+## stagingでの検証
+
+stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意はCloudflare Accessの対象で、機械通信のMCP・discovery・DCR・token・revokeだけAccessを除外する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。

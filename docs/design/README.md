@@ -29,7 +29,7 @@
 
 ## favicon・Appleアイコン
 
-[アイコン一覧と書き出し仕様](icons/README.md)。ロゴ正本から生成したfaviconのSVG・ICOと、Apple touch iconのPNGを用意した。Webへの組み込みは別途行う。
+[アイコン一覧と書き出し仕様](icons/README.md)。ロゴ正本から生成したfaviconのSVG・ICOと、Apple touch iconのPNGを用意した。Webのhead・両PWA manifest・オフライン配信に組み込む。配布先と更新手順は[アイコン一覧](icons/README.md#実装への配布)を参照する。
 
 ## 配布範囲と出典
 

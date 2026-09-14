@@ -15,7 +15,7 @@ import { sendAccountEmail } from "../../emails/send";
 import type { Database } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { authOptions } from "./options";
-import { previewGoogleToken, previewOAuthFetch } from "./preview";
+import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./preview";
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
 export function createAuth(
   env: AuthEnv,
@@ -47,7 +47,7 @@ export function createAuth(
     ensure(
       (env.TABLECAST_ENV === "development" &&
         ["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname)) ||
-        (env.TABLECAST_ENV === "preview" &&
+        (isHostedEmulator(env) &&
           Boolean(env.TABLECAST_EMULATE) &&
           emulator === "http://tablecast-emulate"),
       "OAUTH_EMULATOR_LOCAL_ONLY",
@@ -81,21 +81,25 @@ export function createAuth(
                   accountIssuer: tablecastGoogleMockIssuer,
                   authorizationUrl: `${env.TABLECAST_GOOGLE_AUTHORIZE_URL || emulator}/o/oauth2/v2/auth`,
                   tokenUrl: `${emulator}/oauth2/token`,
-                  ...(env.TABLECAST_ENV === "preview"
-                    ? { getToken: previewGoogleToken({ ...env, TABLECAST_ENV: "preview" }) }
+                  ...(isHostedEmulator(env)
+                    ? {
+                        getToken: previewGoogleToken({
+                          ...env,
+                          TABLECAST_ENV: env.TABLECAST_ENV ?? "",
+                        }),
+                      }
                     : {}),
                   // emulateのsubは再起動で変わるため、確認済みメールを開発用IDとする。
                   accountSubject: ({ profile }) => z.email().parse(profile.email).toLowerCase(),
                   getUserInfo: async (tokens) => {
                     const init = { headers: { authorization: `Bearer ${tokens.accessToken}` } };
-                    const response =
-                      env.TABLECAST_ENV === "preview"
-                        ? await previewOAuthFetch(
-                            { ...env, TABLECAST_ENV: "preview" },
-                            "/oauth2/v2/userinfo",
-                            init,
-                          )
-                        : await fetch(`${emulator}/oauth2/v2/userinfo`, init);
+                    const response = isHostedEmulator(env)
+                      ? await previewOAuthFetch(
+                          { ...env, TABLECAST_ENV: env.TABLECAST_ENV ?? "" },
+                          "/oauth2/v2/userinfo",
+                          init,
+                        )
+                      : await fetch(`${emulator}/oauth2/v2/userinfo`, init);
                     if (!response.ok) return null;
                     const profile = z
                       .object({

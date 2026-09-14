@@ -450,6 +450,7 @@
   "mcp_remote_sign_in": "Choose OAuth as the authentication method and sign in to TableCast.",
   "mcp_remote_approve": "Review and approve the restaurant and permissions, then use the connection in a new conversation.",
   "mcp_endpoint": "MCP server URL",
+  "mcp_staging_connection": "This is staging. Register the MCP URL shown here directly for testing. The published Marketplace plugin connects to production.",
   "mcp_manual_steps": "Add the URL below to your MCP client and connect with OAuth. Sign in to TableCast, then review and approve the restaurant and permissions.",
   "mcp_transport": "Transport",
   "mcp_authentication": "Authentication",

@@ -5,7 +5,7 @@ export class TablecastEmulate extends Container<TablecastEnv> {
   override sleepAfter = "5m";
   override envVars: Record<string, string> = {
     TABLECAST_PUBLIC_ORIGIN: this.env.TABLECAST_PUBLIC_ORIGIN,
-    TABLECAST_ENV: "preview",
+    TABLECAST_ENV: this.env.TABLECAST_ENV,
     TABLECAST_OAUTH_PORT: "8080",
   };
 }

@@ -26,3 +26,5 @@ description: TableCastのAPI・認可・DB処理と、GUI・音声・MCPが共�
 API実装ではworkspaceの`lint`・`typecheck`と関連する既存テストを実行する。DB・認可・競合は[テスト戦略](../../../docs/testing.md)の実Bindingを使い、mockで保証した扱いにしない。公開RPCを変えたらWebの型検査、SSR・認証・注文の接続を変えたら代表経路まで確認する。
 
 配置・依存の変更はOxlintのboundaries設定と照合する。route→DB、service→HTTP、query→更新、model→実行コードを許可するignoreを足さず、必要な新規境界は構成文書と設定へ明示する。
+
+stagingの模擬認証は環境名・固定origin・Container bindingを照合する。本番へのemulate混入は拒否し、通常配備のOAuth情報保持と全体リセット後の失効を区別して確認する。

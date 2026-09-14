@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
@@ -67,12 +68,8 @@ export function Login() {
     <main className="min-h-dvh flex grid-cols-2 justify-center items-center p-6 max-sm:flex max-sm:flex-col">
       <section className="p-7 flex flex-col items-stretch w-full max-w-144 [&_h2]:text-2xl [&_h2]:-mt-3 [&_h2]:mx-0 [&_h2]:mb-2.5 [&_[data-slot=button][data-size=text]]:justify-center [&_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6">
         <header className="flex flex-wrap items-center justify-between gap-6">
-          <Link
-            data-ui="brand"
-            className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight max-lg:text-2xl"
-            to="/"
-          >
-            TableCast<span className="text-accent ml-px text-4xl">·</span>
+          <Link data-ui="brand" className="inline-flex shrink-0 items-center" to="/">
+            <Brand />
           </Link>
           <LanguageSwitch
             onChange={(next) => {

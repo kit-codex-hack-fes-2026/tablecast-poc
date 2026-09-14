@@ -5,6 +5,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Tailwind,
@@ -16,11 +17,13 @@ export function AccountEmail({
   message,
   action,
   url,
+  logoUrl,
 }: {
   title: string;
   message: string;
   action: string;
   url: string;
+  logoUrl: string;
 }) {
   return (
     <Html lang="ja">
@@ -29,7 +32,7 @@ export function AccountEmail({
       <Tailwind>
         <Body className="bg-zinc-100 font-sans text-zinc-950">
           <Container className="mx-auto my-10 rounded-2xl bg-white p-8">
-            <Text className="text-xl font-bold">TableCast</Text>
+            <Img src={logoUrl} width="200" height="48" alt="TableCast" />
             <Heading className="text-2xl">{title}</Heading>
             <Text className="text-base leading-7">{message}</Text>
             <Section className="my-8">

@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type {
@@ -53,11 +54,8 @@ export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }
   if ((table.data === null && wasConnected) || table.data?.status === "closed")
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
-        <span
-          data-ui="brand"
-          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
-        >
-          TableCast
+        <span data-ui="brand" className="inline-flex shrink-0 items-center">
+          <Brand />
         </span>
         <h1>{t("kiosk_closed")}</h1>
       </main>
@@ -66,12 +64,8 @@ export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }
   if (!table.data)
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
-        <a
-          data-ui="brand"
-          className="inline-flex items-baseline font-bold text-2xl tracking-tighter leading-tight [&_span]:text-accent [&_span]:ml-px [&_span]:text-4xl max-lg:text-2xl"
-          href="/"
-        >
-          TableCast
+        <a data-ui="brand" className="inline-flex shrink-0 items-center" href="/">
+          <Brand />
         </a>
         {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
       </main>
@@ -701,7 +695,7 @@ function KioskHeader({
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-white/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2">
       <a className="text-xl font-bold tracking-tight" href={data.kind === "demo" ? "#" : "/"}>
-        TableCast<span className="text-accent">·</span>
+        <Brand />
       </a>
       <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
         <span className="max-w-48 truncate">{data.storeName}</span>

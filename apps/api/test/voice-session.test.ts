@@ -171,53 +171,65 @@ it("同じ音声session・他卓・切替後の新turnを古い停止要求で�
   ).toEqual({ status: "started" });
 });
 
-it("認証した卓だけにLiveのSDPを返し、サーバー資格を渡さない", async () => {
-  await setupFixture();
-  const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
-    expect(url instanceof Request ? url.url : url.toString()).toBe(
-      "https://api.openai.com/v1/live/sessions",
-    );
-    if (typeof init?.body !== "string") throw new Error("Liveの開始本文がない");
-    expect(JSON.parse(init.body)).toMatchObject({
-      session: {
-        model: "gpt-live-1",
-        store: false,
-        delegation: {
-          type: "responses",
-          responses: {
-            model: "gpt-5.6-luna",
-            reasoning: { effort: "none" },
-            service_tier: "priority",
-            parallel_tool_calls: true,
+it.each(["ja", "en"] as const)(
+  "認証した卓の%s接客設定を両モデルへ渡し、SDPだけを返す",
+  async (locale) => {
+    await setupFixture();
+    await changeLocale(createApiServices(env), device, locale);
+    const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      expect(url instanceof Request ? url.url : url.toString()).toBe(
+        "https://api.openai.com/v1/live/sessions",
+      );
+      if (typeof init?.body !== "string") throw new Error("Liveの開始本文がない");
+      expect(JSON.parse(init.body)).toMatchObject({
+        session: {
+          model: "gpt-live-1",
+          store: false,
+          delegation: {
+            type: "responses",
+            responses: {
+              model: "gpt-5.6-luna",
+              reasoning: { effort: "none" },
+              service_tier: "priority",
+              parallel_tool_calls: true,
+            },
           },
         },
-      },
-      transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
+        transport: { type: "webrtc", sdp: "tablecast-sdp-offer" },
+      });
+      for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.stringContaining(configuration.cast.instructions[locale]),
+        );
+        expect(JSON.parse(init.body)).toHaveProperty(
+          path,
+          expect.not.stringContaining(
+            configuration.cast.instructions[locale === "ja" ? "en" : "ja"],
+          ),
+        );
+      }
+      return Response.json({
+        session: { id: "tablecast-live-created" },
+        transport: { type: "webrtc", sdp: "tablecast-sdp-answer" },
+      });
     });
-    expect(JSON.parse(init.body)).toHaveProperty(
-      "session.delegation.responses.instructions",
-      expect.stringContaining(configuration.cast.instructions.ja),
+    const ctx = createExecutionContext();
+    const response = await app.request(startRequest(), undefined, configured(), ctx);
+    expect(response.status).toBe(200);
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({
+      voiceSessionId: "tablecast-live-created",
+      sdp: "tablecast-sdp-answer",
+    });
+    expect(body).not.toContain("tablecast-private-model-key");
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect((await getTableState(createApiServices(env), device)).voiceSessionId).toBe(
+      "tablecast-live-created",
     );
-    return Response.json({
-      session: { id: "tablecast-live-created" },
-      transport: { type: "webrtc", sdp: "tablecast-sdp-answer" },
-    });
-  });
-  const ctx = createExecutionContext();
-  const response = await app.request(startRequest(), undefined, configured(), ctx);
-  expect(response.status).toBe(200);
-  const body = await response.text();
-  expect(JSON.parse(body)).toMatchObject({
-    voiceSessionId: "tablecast-live-created",
-    sdp: "tablecast-sdp-answer",
-  });
-  expect(body).not.toContain("tablecast-private-model-key");
-  expect(provider).toHaveBeenCalledTimes(1);
-  expect((await getTableState(createApiServices(env), device)).voiceSessionId).toBe(
-    "tablecast-live-created",
-  );
-  await waitOnExecutionContext(ctx);
-});
+    await waitOnExecutionContext(ctx);
+  },
+);
 
 it("認証なしのブラウザーは音声開始と委任を実行できない", async () => {
   const provider = vi.spyOn(globalThis, "fetch");

@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createElement } from "react";
 import { render } from "@react-email/render";
@@ -31,10 +31,17 @@ const samples = [
 
 await rm(directory, { recursive: true, force: true });
 await mkdir(resolve(directory, "_tablecast"), { recursive: true });
+await mkdir(resolve(directory, "assets"), { recursive: true });
+await cp(
+  resolve(import.meta.dirname, "../../../docs/design/logos/tablecast-logo.png"),
+  resolve(directory, "assets/tablecast-logo.png"),
+);
 for (const sample of samples) {
   await writeFile(
     resolve(directory, `${sample.name}.html`),
-    await render(createElement(AccountEmail, sample.content)),
+    await render(
+      createElement(AccountEmail, { ...sample.content, logoUrl: "./assets/tablecast-logo.png" }),
+    ),
   );
 }
 await writeFile(
@@ -51,7 +58,7 @@ await writeFile(
 await writeFile(resolve(directory, "_redirects"), "/ /index.html 200\n");
 await writeFile(
   resolve(directory, "_headers"),
-  "/*\n  Cache-Control: no-store\n  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'\n",
+  "/*\n  Cache-Control: no-store\n  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'\n",
 );
 await writeFile(
   resolve(directory, "_tablecast/release.json"),

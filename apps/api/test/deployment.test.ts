@@ -19,3 +19,25 @@ test("本番へemulator設定が混入すると実Googleへ黙って切り替え
     }),
   ).toThrow("OAUTH_EMULATOR_LOCAL_ONLY");
 });
+
+test("stagingは固定originだけで模擬OAuthを許可する", async () => {
+  const { isHostedEmulator } = await import("../src/modules/auth/preview");
+  expect(
+    isHostedEmulator({
+      TABLECAST_ENV: "staging",
+      TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
+    }),
+  ).toBe(true);
+  expect(
+    isHostedEmulator({
+      TABLECAST_ENV: "staging",
+      TABLECAST_PUBLIC_ORIGIN: "https://tablecast.kit-codex.workers.dev",
+    }),
+  ).toBe(false);
+  expect(
+    isHostedEmulator({
+      TABLECAST_ENV: "production",
+      TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
+    }),
+  ).toBe(false);
+});
