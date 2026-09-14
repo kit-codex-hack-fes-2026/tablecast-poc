@@ -33,6 +33,7 @@ let saveFailure = 0;
 let waitForSave: Promise<void> | undefined;
 let waitForCreate: Promise<void> | undefined;
 let waitForImage: Promise<void> | undefined;
+let waitForDraftRead: Promise<void> | undefined;
 let publishedVersion = 1;
 const storeId = "tablecast-workflow-store";
 const otherStoreId = "tablecast-workflow-other-store";
@@ -74,6 +75,7 @@ beforeEach(() => {
   waitForSave = undefined;
   waitForCreate = undefined;
   waitForImage = undefined;
+  waitForDraftRead = undefined;
   publishedVersion = 1;
   vi.stubGlobal(
     "fetch",
@@ -124,8 +126,10 @@ beforeEach(() => {
       }
       if (path === `${api}/drafts` && request.method === "GET")
         return Response.json({ drafts: [current] });
-      if (path === `${api}/drafts/${current.id}` && request.method === "GET")
+      if (path === `${api}/drafts/${current.id}` && request.method === "GET") {
+        await waitForDraftRead;
         return Response.json(current);
+      }
       if (path === `${api}/drafts/${current.id}` && request.method === "PUT") {
         await waitForSave;
         if (saveFailure)
@@ -558,3 +562,85 @@ it.each([
       .toBeVisible();
   },
 );
+
+it("再読込GETの待機中は画像取込・編集・保存を止め、最新値の取得後に再開できる", async () => {
+  const product = current.configuration.products[0];
+  if (!product) throw new Error("商品fixtureが必要です");
+  product.imageKey = null;
+  const { screen } = await open(`${base}/changes/${draftId}/products/${product.id}`);
+  const price = screen.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+  const save = screen.getByRole("button", { name: ja.common_save, exact: true });
+  const imageField = screen
+    .getByRole("group", { name: ja.editor_image_settings, exact: true })
+    .first();
+  const imageFile = imageField.getByLabelText(ja.editor_image_choose);
+  await imageFile.upload(
+    new File(
+      [
+        Uint8Array.fromBase64(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        ),
+      ],
+      "tablecast-reload.png",
+      { type: "image/png" },
+    ),
+  );
+  await imageField
+    .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+    .fill("店舗の料理写真");
+  const upload = imageField.getByRole("button", { name: ja.editor_image_upload, exact: true });
+  await price.fill("777");
+  saveFailure = 409;
+  await save.click();
+  await screen.getByRole("button", { name: ja.workflow_conflict_reload, exact: true }).click();
+  const pending = Promise.withResolvers<void>();
+  waitForDraftRead = pending.promise;
+  current = {
+    ...current,
+    version: 8,
+    configuration: {
+      ...current.configuration,
+      products: current.configuration.products.map((item) =>
+        item.id === product.id ? { ...item, price: 900 } : item,
+      ),
+    },
+  };
+  await screen
+    .getByRole("alertdialog")
+    .getByRole("button", { name: ja.workflow_conflict_reload, exact: true })
+    .click();
+  await expect
+    .poll(
+      () =>
+        requests.filter(
+          (request) => request.method === "GET" && request.url.endsWith(`/drafts/${draftId}`),
+        ).length,
+    )
+    .toBe(2);
+  await expect.element(imageFile).toBeDisabled();
+  await expect.element(upload).toBeDisabled();
+  await expect.element(price).toBeDisabled();
+  await expect.element(save).toBeDisabled();
+  const formElement = price.element().closest("form");
+  if (!formElement) throw new Error("商品の実フォームが必要です");
+  formElement.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  pending.resolve();
+  await expect.element(price).toHaveValue(900);
+  await expect.element(price).toBeEnabled();
+  await expect.element(imageFile).toBeEnabled();
+  await expect.element(upload).toBeEnabled();
+  expect(requests.filter((request) => request.url.endsWith("/images"))).toHaveLength(0);
+  expect(requests.filter((request) => request.method === "PUT")).toHaveLength(1);
+  await upload.click();
+  await expect
+    .element(imageField.getByRole("status").filter({ hasText: ja.editor_image_uploaded }))
+    .toBeVisible();
+  await price.fill("901");
+  saveFailure = 0;
+  await save.click();
+  await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
+  expect(current.configuration.products.find((item) => item.id === product.id)).toMatchObject({
+    price: 901,
+    imageKey: "tablecast/uploads/workflow-upload.png",
+  });
+});

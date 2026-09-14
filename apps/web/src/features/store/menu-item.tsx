@@ -99,7 +99,7 @@ function ItemForm({
   const form = useForm({
     defaultValues: { configuration: initial },
     onSubmit: async ({ value }) => {
-      if (hasImageUploads()) return;
+      if (hasImageUploads() || reload.isPending) return;
       await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
@@ -151,6 +151,7 @@ function ItemForm({
       save.reset();
     },
   });
+  const pending = save.isPending || reload.isPending;
   const remove = useMutation({
     mutationFn: async () => {
       const configuration = form.state.values.configuration;
@@ -234,7 +235,7 @@ function ItemForm({
           <form.Subscribe selector={(state) => state.values.configuration}>
             {(configuration) => (
               <fieldset
-                disabled={!editable || save.isPending}
+                disabled={!editable || pending}
                 className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
               >
                 <ItemFields
@@ -258,11 +259,11 @@ function ItemForm({
                       type="submit"
                       data-pwa-blocked={
                         dirty ||
-                        save.isPending ||
+                        pending ||
                         uploadingImages ||
                         (itemId === "new" && !newSaved.current)
                       }
-                      disabled={save.isPending || uploadingImages || (!dirty && itemId !== "new")}
+                      disabled={pending || uploadingImages || (!dirty && itemId !== "new")}
                     >
                       <Save />
                       {t("common_save")}
@@ -279,9 +280,7 @@ function ItemForm({
                 <ConfirmAction
                   label={t("menu_remove_item")}
                   subject={t("menu_remove_note")}
-                  disabled={
-                    remove.isPending || save.isPending || reload.isPending || uploadingImages
-                  }
+                  disabled={remove.isPending || pending || uploadingImages}
                   onConfirm={() => {
                     if (!hasImageUploads()) remove.mutate();
                   }}
@@ -295,7 +294,7 @@ function ItemForm({
                       <ConfirmAction
                         label={t("workflow_revert")}
                         subject={t("workflow_revert_note")}
-                        disabled={save.isPending || reload.isPending || uploadingImages}
+                        disabled={pending || uploadingImages}
                         onConfirm={() => {
                           if (hasImageUploads()) return;
                           form.reset({ configuration: initial });
@@ -311,7 +310,7 @@ function ItemForm({
                         variant="outline"
                         disabled={
                           dirty ||
-                          save.isPending ||
+                          pending ||
                           uploadingImages ||
                           (itemId === "new" && !newSaved.current)
                         }
@@ -346,9 +345,9 @@ function ItemForm({
         <ConfirmAction
           label={t("workflow_conflict_reload")}
           subject={t("workflow_conflict_reload_note")}
-          disabled={reload.isPending || uploadingImages}
+          disabled={pending || uploadingImages}
           onConfirm={() => {
-            if (!hasImageUploads()) reload.mutate();
+            if (!hasImageUploads() && !save.isPending) reload.mutate();
           }}
           icon={<Undo2 />}
         />
