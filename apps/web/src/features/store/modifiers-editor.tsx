@@ -151,9 +151,12 @@ export function ModifiersEditor({
                 event.currentTarget.open = true;
               }}
             >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+              <summary
+                aria-labelledby={`${groupId} ${groupId}-translation`}
+                className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+              >
                 <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
-                {t("editor_translation")}
+                <span id={`${groupId}-translation`}>{t("editor_translation")}</span>
               </summary>
               <div className="pt-4">
                 <BilingualFields
