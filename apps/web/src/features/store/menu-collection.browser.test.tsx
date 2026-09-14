@@ -21,18 +21,23 @@ import { catalogOptions, draftOptions } from "./menu-query";
 import { DraftPage } from "./settings-drafts";
 import "../../styles.css";
 
-vi.mock("./store-shell", () => ({ useStore: () => ({ id: "tablecast-story", role: "member" }) }));
+let storeRole = "member";
+vi.mock("./store-shell", () => ({
+  useStore: () => ({ id: "tablecast-story", name: "店舗", role: storeRole }),
+}));
 let client: QueryClient;
 afterEach(async () => {
   await cleanup();
   client.clear();
   vi.unstubAllGlobals();
+  storeRole = "member";
 });
 
 async function showMenu(
   value: Catalog | undefined,
   locale: Locale = "ja",
   path = "/admin/stores/tablecast-story/menu/products",
+  draftStatus: ConfigDraft["status"] = "published",
 ) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
@@ -44,7 +49,7 @@ async function showMenu(
       storeId: value.storeId,
       version: 2,
       baseVersion: 1,
-      status: "published",
+      status: draftStatus,
       configuration: value.configuration,
       errors: [],
       changes: [],
@@ -90,8 +95,19 @@ async function showMenu(
       return <DraftPage draftId={review.useParams().draftId} search={review.useSearch()} />;
     },
   });
+  const draftList = createRoute({
+    getParentRoute: () => root,
+    path: "/admin/stores/$storeId/menu/changes/$draftId/$section",
+    params: {
+      parse: (params) => ({ ...params, section: menuSectionSchema.parse(params.section) }),
+    },
+    component: function DraftCollection() {
+      const { section, draftId } = draftList.useParams();
+      return <MenuCollection section={section} draftId={draftId} />;
+    },
+  });
   const router = createRouter({
-    routeTree: root.addChildren([list, detail, review]),
+    routeTree: root.addChildren([list, detail, review, draftList]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   const screen = await render(
@@ -322,3 +338,69 @@ it("公開確認から元のプラン一覧へ検索とページを戻し、別�
   expect(router.state.location.pathname).toBe("/admin/stores/tablecast-story/menu/products");
   expect(router.state.location.search).toEqual({});
 });
+
+function mockCastVoices() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        window.location.origin,
+      );
+      if (url.pathname === "/api/admin/stores/tablecast-story/voices")
+        return Response.json({
+          voices: [{ voiceId: "marin", displayName: "Marin", langCode: "ja" }],
+          nextPageToken: null,
+        });
+      throw new Error(`未定義の要求: ${url.pathname}`);
+    }),
+  );
+}
+
+it("閲覧権限で商品一覧から接客概要へ移動してもhooksと一覧表示が切り替わり、編集入口を出さない", async () => {
+  mockCastVoices();
+  const { screen, router } = await showMenu(catalog);
+  await router.navigate({
+    to: "/admin/stores/$storeId/menu/$section",
+    params: { storeId: catalog.storeId, section: "cast" },
+  });
+  await expect
+    .element(screen.getByRole("heading", { name: ja.editor_cast, exact: true }))
+    .toBeVisible();
+  await expect.element(screen.getByRole("table")).not.toBeInTheDocument();
+  await expect.element(screen.getByRole("searchbox")).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole("button", { name: ja.cast_edit_proactive, exact: true }))
+    .not.toBeInTheDocument();
+  await router.navigate({
+    to: "/admin/stores/$storeId/menu/$section",
+    params: { storeId: catalog.storeId, section: "categories" },
+  });
+  await expect.element(screen.getByRole("table")).toBeVisible();
+});
+
+for (const status of ["published", "discarded"] as const) {
+  it(`管理者が${status}の接客概要を直接開くと状態を示し、編集入口を出さない`, async () => {
+    storeRole = "owner";
+    mockCastVoices();
+    const { screen } = await showMenu(
+      catalog,
+      "ja",
+      "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/cast",
+      status,
+    );
+    await expect.element(screen.getByText(ja[`draft_${status}`], { exact: true })).toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: ja.cast_edit_proactive, exact: true }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("button", { name: ja.cast_edit_proactive, exact: true }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("link", { name: ja.workflow_review, exact: true }))
+      .toHaveAttribute(
+        "href",
+        "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft?returnSection=cast",
+      );
+  });
+}
