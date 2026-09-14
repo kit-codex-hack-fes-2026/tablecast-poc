@@ -48,9 +48,9 @@ export default async function setup() {
       TABLECAST_AUTH_SECRET: "tablecast-isolated-e2e-auth-secret-never-used-outside-tests",
       TABLECAST_RELEASE_SHA: "tablecast-e2e",
       TABLECAST_VOICE_ENABLED: "false",
-      TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
-      TABLECAST_GOOGLE_AUTHORIZE_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
-      TABLECAST_MAILPIT_URL: `http://127.0.0.1:${runtime.ports.mailpit}`,
+      TABLECAST_GOOGLE_EMULATOR_URL: `${runtime.origin}/_tablecast/oauth`,
+      TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth`,
+      TABLECAST_MAILPIT_URL: `${runtime.origin}/_tablecast/mailpit`,
       TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
     };
     const d1 = [
