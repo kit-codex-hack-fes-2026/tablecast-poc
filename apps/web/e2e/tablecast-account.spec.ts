@@ -12,7 +12,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
 }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
-  await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
+  await page.getByRole("button", { name: /haruka.sato@komorebi-shijo.com/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   const session = z
@@ -58,10 +58,10 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.getByRole("link", { name: "メンバー", exact: true }).click();
   await expect(page).toHaveURL(/\/members$/);
   await expect(
-    page.getByRole("table").getByText("tablecast-owner@example.test", { exact: true }),
+    page.getByRole("table").getByText("haruka.sato@komorebi-shijo.com", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
+    page.getByRole("table").getByText("ren.tanaka@komorebi-shijo.com", { exact: true }),
   ).toHaveCount(0);
   await page.getByRole("link", { name: "招待", exact: true }).click();
   await page.getByRole("link", { name: "メンバーを招待", exact: true }).click();
@@ -69,9 +69,9 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await expect(page.getByRole("heading", { name: "メンバーを招待", exact: true })).toBeVisible();
   await page
     .getByRole("textbox", { name: "メールアドレス", exact: true })
-    .fill("tablecast-member@example.test");
+    .fill("ren.tanaka@komorebi-shijo.com");
   await expect(page.getByRole("textbox", { name: "メールアドレス", exact: true })).toHaveValue(
-    "tablecast-member@example.test",
+    "ren.tanaka@komorebi-shijo.com",
   );
   const sending = page.waitForResponse(
     (response) =>
@@ -81,7 +81,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.getByRole("button", { name: "招待メールを送信" }).click();
   const invitationId = z.object({ id: z.string() }).parse(await (await sending).json()).id;
   await expect(
-    page.getByRole("table").getByText("tablecast-member@example.test", { exact: true }),
+    page.getByRole("table").getByText("ren.tanaka@komorebi-shijo.com", { exact: true }),
   ).toBeVisible();
   const messages = await page.request.get(`${runtime.mailpitUrl}/api/v1/messages`);
   const mail = z
@@ -98,7 +98,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
     .messages.find(
       (item) =>
         item.Subject.includes("Restaurant invitation") &&
-        item.To.some((to) => to.Address === "tablecast-member@example.test"),
+        item.To.some((to) => to.Address === "ren.tanaka@komorebi-shijo.com"),
     );
   expect(mail).toBeDefined();
   const content = z
@@ -111,7 +111,7 @@ test("Googleログインから名前変更・店舗作成・招待メールま�
   await page.context().clearCookies();
   await page.goto(invitation ?? "/organisations");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
-  await page.getByRole("button", { name: /tablecast-member@example.test/ }).click();
+  await page.getByRole("button", { name: /ren.tanaka@komorebi-shijo.com/ }).click();
   await page.getByRole("button", { name: "参加する", exact: true }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
@@ -137,7 +137,7 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   });
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
-  await page.getByRole("button", { name: /tablecast-owner@example.test/ }).click();
+  await page.getByRole("button", { name: /haruka.sato@komorebi-shijo.com/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
@@ -161,7 +161,7 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
   baseURL,
   runtime,
 }) => {
-  const email = "tablecast-link@example.test";
+  const email = "rin.ogawa@komorebi-shijo.com";
   const password = "tablecast-email-link-acceptance-password";
   const signup = await page.request.post("/api/auth/sign-up/email", {
     headers: { Origin: baseURL ?? "" },
@@ -208,7 +208,7 @@ test("確認済みメールのパスワードとGoogleで同じユーザーへ�
   await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL ?? "" }, data: {} });
   await page.goto("/login");
   await page.getByRole("button", { name: "Googleでログイン" }).click();
-  await page.getByRole("button", { name: /tablecast-link@example.test/ }).click();
+  await page.getByRole("button", { name: /rin.ogawa@komorebi-shijo.com/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "店舗を作成", exact: true }).click();

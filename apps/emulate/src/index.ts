@@ -46,6 +46,7 @@ const emulator = await createEmulator({
         {
           client_id: "tablecast-local-google",
           client_secret: "tablecast-local-google-secret",
+          name: "TableCast",
           redirect_uris: [`${origin}/api/auth/callback/google`],
         },
       ],

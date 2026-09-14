@@ -12,7 +12,7 @@ Node.js 24.7.0と実Miniflareを用い、ローカルHTTPサーバーでfetchだ
 
 ## emulate 0.11.1 のGoogleユーザー画像
 
-[emulate@0.11.1.patch](emulate@0.11.1.patch)は、Google OAuthのユーザー選択画面で標準seedの`picture`を表示する。氏名・店舗・役割と同じ名簿のアイコンを選べるようにするため、#118で追加した。画像なしの既存HTMLは維持し、画像読込失敗時はイニシャル表示へ戻す。属性値には上流の`escapeAttr`を使う。
+[emulate@0.11.1.patch](emulate@0.11.1.patch)は、Google OAuthのユーザー選択画面で標準seedの`picture`を表示する。氏名・店舗・役割と同じ名簿のアイコンを選べるようにするため、#118で追加した。画像なしの既存HTMLは維持し、画像読込失敗時はイニシャル表示へ戻す。属性値には上流の`escapeAttr`を使う。氏名・店舗・権限を主行、メールを副行へ表示し、デモ人物が存在するときは既定のTest Userを一覧から外す。
 
 対象版は`emulate@0.11.1`、上流タグ`v0.11.1`のSHAは`037ffc1ae13b477ee0eb0733b60b912a128e9375`。対応する上流ソースは[共通ユーザー部品](https://github.com/vercel-labs/emulate/blob/037ffc1ae13b477ee0eb0733b60b912a128e9375/packages/%40emulators/core/src/ui.ts)と[Google OAuth](https://github.com/vercel-labs/emulate/blob/037ffc1ae13b477ee0eb0733b60b912a128e9375/packages/%40emulators/google/src/routes/oauth.ts)。配布物のGoogle専用bundleだけを変更し、他providerの画面を変えない。
 

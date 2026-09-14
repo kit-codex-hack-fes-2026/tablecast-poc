@@ -6,7 +6,7 @@ Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider
 
 `bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。URL・ポートは `.local/runtime.json`、メール一覧はその `ports.mailpit` の `http://127.0.0.1:<port>`。既存データは保持する。
 
-Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedでは既存の資格情報を維持する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
+Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedではパスワードと手動メールを維持し、既知の旧デモメールだけを移行する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
 
 `/account` で名前・画像・ログイン中の端末・Google連携・パスキーを管理する。店舗とBetter Authの組織は1対1で、チーム階層を使わない。`/organisations` は店舗一覧、`/stores/new` は店舗作成、`/admin/stores/:storeId/members` はその店舗のメンバー、`/admin/stores/:storeId/invitations` は招待一覧である。
 
@@ -46,17 +46,19 @@ Cloudflare Email Service で送信ドメインを検証し、送信可能なメ�
 
 ## デモの所属とローカルID
 
-GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)を使う。各店舗の組織にowner・admin・memberを1名ずつ登録し、京料理こもれび四条店・韓国食堂ハヌル三条店のownerである佐藤 晴香を共有するため、人物は8人・所属は9件となる。Westward Burgers Kyotoのownerは山本 翼、京料理こもれび四条店の伊藤 葵はmemberである。具体的な[氏名・role・メール一覧](demo/stores.md#店舗と組織)を参照する。`tablecast-link@example.test`は未所属の連携確認専用で、店舗メンバーに数えない。
+GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)を使う。各店舗の組織にowner・admin・memberを1名ずつ登録し、京料理こもれび四条店・韓国食堂ハヌル三条店のownerである佐藤 晴香を共有するため、人物は8人・所属は9件となる。Westward Burgers Kyotoのownerは山本 翼、京料理こもれび四条店の伊藤 葵はmemberである。具体的な[氏名・role・メール一覧](demo/stores.md#店舗と組織)を参照する。`rin.ogawa@komorebi-shijo.com`は小川凛の未所属の連携確認専用で、店舗メンバーに数えない。
 
-デモ店舗IDは`tablecast-komorebi`・`tablecast-koharu`・`tablecast-hanul`である。ハヌルのadminは`tablecast-hanul@example.test`、memberは`tablecast-hanul-staff@example.test`を使う。
+デモ店舗IDは`tablecast-komorebi`・`tablecast-koharu`・`tablecast-hanul`である。ハヌルのadminは`naoko.kobayashi@hanul-sanjo.com`、memberは`yuma.mori@hanul-sanjo.com`を使う。
 
-各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・資格情報を上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
+各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・パスワード・手動メールを上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
 
 seedはユーザー画像と店舗アイコンをローカルで生成し、R2へ保存する。未設定の場合だけ補い、保存済みの画像を保持する。店舗アイコンはBetter Authの組織の`logo`を使用し、`/admin/stores/$storeId/profile`で責任者・管理者が変更できる。ユーザー画像と共通の形式・サイズ検証を行う。
 
 emulateは起動ごとに`sub`を生成するため、開発用Googleに限りissuerを`https://tablecast-google.localhost`、subjectを確認済みメールに固定する。seedは旧localhost issuerの重複だけを統合する。実Googleのissuer・subjectは変更しない。
 
 管理画面の店舗切替はサイドバーに集約する。未所属の場合は店舗作成へのリンクと招待メールからの参加方法を表示する。Google連携解除・パスキー削除・セッション失効・メンバー削除は対象を確認して実行する。
+
+デモメールは[共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)の名.姓@店舗名.comを使う。旧デモメールの移行は開発/PR seedだけで行い、ユーザーID・所属・資格情報を保持する。模擬Googleのメール由来subjectを同時に更新し、実Googleのsubjectは変更しない。新旧アドレスが別ユーザーに割り当て済みなら停止する。Google選択画面はemulateの標準表示を使い、メールを主行、氏名・店舗・権限を副行に表示する。
 
 ## 管理画面の初期取得
 

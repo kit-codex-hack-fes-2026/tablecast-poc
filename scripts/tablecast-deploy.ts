@@ -376,8 +376,8 @@ async function main() {
                   TABLECAST_PUBLIC_ORIGIN: target.origin,
                 },
                 {
-                  email: "owner@tablecast.example",
-                  otherEmail: "koharu@tablecast.example",
+                  email: "haruka.sato@komorebi-shijo.com",
+                  otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
                   password: crypto.randomUUID(),
                   otherPassword: crypto.randomUUID(),
                   baseTime: Date.now(),

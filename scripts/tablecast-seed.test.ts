@@ -57,7 +57,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
     }),
   );
   const credentials: DemoCredentials = {
-    email: "tablecast-owner@example.test",
+    email: "haruka.sato@komorebi-shijo.com",
     password: "tablecast-local-seed-test-password",
     otherEmail: "tablecast-other@example.test",
     otherPassword: "tablecast-local-other-test-password",
@@ -123,7 +123,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       // Given: R2障害で認証ユーザーだけが作成された、運用者が確認済みのPR。
       await db.insert(user).values({
         id: "tablecast-partial-owner",
-        email: credentials.email,
+        email: "tablecast-owner@example.test",
         name: "保持する名前",
         emailVerified: true,
         createdAt: new Date(),
@@ -183,8 +183,24 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       if (!originalOwner?.image || !originalOrganisation?.logo || !migratedOrganisation?.logo)
         throw new Error("更新対象のデモ画像がありません。");
       const oldOwnerIcon = legacyIdentityIconUrl("user", "tablecast-partial-owner");
+      const credentialAccounts = await db
+        .select()
+        .from(account)
+        .where(eq(account.providerId, "credential"));
+      expect(credentialAccounts.length).toBeGreaterThan(0);
       await db.batch([
-        db.update(user).set({ image: oldOwnerIcon }).where(eq(user.id, "tablecast-partial-owner")),
+        db
+          .update(user)
+          .set({ image: oldOwnerIcon, email: "tablecast-owner@example.test" })
+          .where(eq(user.id, "tablecast-partial-owner")),
+        db.insert(account).values({
+          id: "tablecast-migrated-google",
+          issuer: "https://tablecast-google.localhost",
+          accountId: "tablecast-owner@example.test",
+          providerId: "google",
+          userId: "tablecast-partial-owner",
+          updatedAt: new Date(1),
+        }),
         db
           .update(organization)
           .set({ logo: legacyIdentityIconUrl("store", "tablecast-komorebi") })
@@ -200,6 +216,23 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
       await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
+      expect(await db.select().from(account).where(eq(account.providerId, "credential"))).toEqual(
+        credentialAccounts,
+      );
+      expect(
+        await db
+          .select({ id: user.id, email: user.email })
+          .from(user)
+          .where(eq(user.id, "tablecast-partial-owner"))
+          .get(),
+      ).toEqual({ id: "tablecast-partial-owner", email: credentials.email });
+      expect(
+        await db
+          .select({ userId: account.userId, accountId: account.accountId })
+          .from(account)
+          .where(eq(account.id, "tablecast-migrated-google"))
+          .get(),
+      ).toEqual({ userId: "tablecast-partial-owner", accountId: credentials.email });
       expect(
         await db
           .select({ image: user.image })
@@ -440,6 +473,26 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           .where(eq(tableSessions.id, reserved))
           .get(),
       ).toEqual({ cart_version: 17 });
+      // 移行先が別ユーザーとして存在しても、自動で統合や削除をしない。
+      await db.insert(user).values({
+        id: "tablecast-email-conflict",
+        email: "tablecast-owner@example.test",
+        name: "保持する競合ユーザー",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await expect(seedPreviewDatabase(preview, credentials)).rejects.toThrow("移行先");
+      expect(
+        await db
+          .select({ email: user.email })
+          .from(user)
+          .where(eq(user.id, "tablecast-email-conflict"))
+          .get(),
+      ).toEqual({ email: "tablecast-owner@example.test" });
+      expect(
+        await db.select({ email: user.email }).from(user).where(eq(user.id, owner.id)).get(),
+      ).toEqual({ email: credentials.email });
       await expect(
         seedDemoDatabase({ ...platform.env, TABLECAST_ENV: "production" }, credentials),
       ).rejects.toThrow("開発環境");

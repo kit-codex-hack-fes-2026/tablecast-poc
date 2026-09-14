@@ -25,7 +25,7 @@
 | 山本 翼 / Westward owner           | ![山本 翼](../../assets/demo/identities/tsubasa-yamamoto.webp)        | コーヒーカップを持つ手とカメラ                     |
 | 中村 美咲 / Westward admin         | ![中村 美咲](../../assets/demo/identities/misaki-nakamura.webp)       | 緑のニット、スマートフォンで顔を隠した鏡越しの写真 |
 | Alex Morgan / Westward member      | ![Alex Morgan](../../assets/demo/identities/alex-morgan.webp)         | 30代、巻き毛、青いシャツ、煉瓦の背景               |
-| 連携確認用ユーザー / 未所属        | ![連携確認用ユーザー](../../assets/demo/identities/account-link.webp) | 窓辺の茶トラ猫                                     |
+| 小川 凛 / 未所属・連携確認         | ![連携確認用ユーザー](../../assets/demo/identities/account-link.webp) | 窓辺の茶トラ猫                                     |
 
 ## 実装との対応
 
@@ -40,3 +40,11 @@ seedは同じWebPをR2へ保存し、DBの`user.image`と`organization.logo`か�
 新しいURLは画像内容のSHA-256から生成するUUIDを使い、長期キャッシュされた旧SVGとは別キーになる。旧キーは過去の参照向けに残し、同じキーへ異なる画像を上書きしない。
 
 [生成プロンプトとSHA-256](../../assets/demo/identities/prompts.json)には全12点の原本識別子・編集指示・原本とWebPのハッシュを記録する。PNGからWebPへの処理は`cwebp -q 88 -resize 512 512`による縮小・圧縮だけである。PRの確認用スクリーンショットはこのアセットディレクトリへ保存しない。
+
+## メールとGoogleでの表示名
+
+メールは名.姓@店舗名.comに揃える。こもれびは`komorebi-shijo.com`、Westwardは`westward-burgers-kyoto.com`、ハヌルは`hanul-sanjo.com`を使う。共有オーナーの佐藤晴香はこもれびのアドレス、未所属の小川凛は同ドメインの連携確認専用アドレスを持つ。
+
+Google選択画面は氏名・店舗名・権限（owner/admin/member）を主行、メールを副行に表示する。デモ人物が登録されている場合はemulate既定のTest Userを一覧から外す。表示上の権限は案内であり、実際の認可はログイン後のDB所属による。
+
+既知の旧デモメールは通常のseed・PR再配備で新メールへ移行する。ユーザーID・所属・パスワード・実Googleの識別子を保持し、既存の模擬Google連携は同じユーザーIDのまま新メールへ対応付ける。手動のメールは変更しない。新旧メールが別ユーザーとして同時に存在する場合は自動統合せず停止する。ローカルの資格情報ファイルはDB投入成功後にメールだけを更新する。

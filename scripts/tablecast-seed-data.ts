@@ -7,6 +7,8 @@ import * as identity from "../apps/api/src/db/auth-schema";
 import { legacyIdentityIconUrl, seedIdentityIcon } from "./tablecast-seed-icons";
 import {
   tablecastDemoIdentities,
+  tablecastDemoLinkIdentity,
+  tablecastDemoEmail,
   tablecastDemoStoreIcons,
 } from "../apps/emulate/src/tablecast-demo-identities";
 import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
@@ -541,7 +543,60 @@ export type SeedEnv = Pick<
 
 export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   if (env.TABLECAST_ENV !== "development") throw new Error("seedは開発環境に限定されています。");
-  return populateDemoDatabase(env, credentials);
+  return populateDemoDatabase(env, normaliseDemoCredentials(credentials));
+}
+
+function normaliseDemoCredentials(credentials: DemoCredentials) {
+  return {
+    ...credentials,
+    email: tablecastDemoEmail(credentials.email),
+    otherEmail: tablecastDemoEmail(credentials.otherEmail),
+  };
+}
+
+async function migrateDemoIdentityEmails(env: SeedEnv) {
+  const people = [...tablecastDemoIdentities, tablecastDemoLinkIdentity];
+  const db = drizzle(env.TABLECAST_DB);
+  const users = await db
+    .select({ id: identity.user.id, email: identity.user.email })
+    .from(identity.user)
+    .where(
+      inArray(
+        identity.user.email,
+        people.flatMap((person) => [person.email, ...person.legacyEmails]),
+      ),
+    );
+  const updates: BatchItem<"sqlite">[] = [];
+  for (const person of people) {
+    const previous = users.filter((user) =>
+      person.legacyEmails.some((email) => email === user.email),
+    );
+    if (!previous.length) continue;
+    if (previous.length > 1 || users.some((user) => user.email === person.email))
+      throw new Error(`デモメールの移行先が既存ユーザーと重複しています: ${person.email}`);
+    const user = previous[0];
+    if (!user) continue;
+    updates.push(
+      db
+        .update(identity.user)
+        .set({ email: person.email })
+        .where(and(eq(identity.user.id, user.id), eq(identity.user.email, user.email))),
+      db
+        .update(identity.account)
+        .set({ accountId: person.email })
+        .where(
+          and(
+            eq(identity.account.userId, user.id),
+            eq(identity.account.providerId, "google"),
+            eq(identity.account.issuer, tablecastGoogleMockIssuer),
+            eq(identity.account.accountId, user.email),
+          ),
+        ),
+    );
+  }
+  // ユーザーID・所属・資格情報を保ち、メールと模擬OAuthのsubjectだけを同時に変更する。
+  const [first, ...rest] = updates;
+  if (first) await db.batch([first, ...rest]);
 }
 
 function demoStaff(credentials: DemoCredentials) {
@@ -628,6 +683,7 @@ async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentia
 }
 
 export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
+  credentials = normaliseDemoCredentials(credentials);
   if (
     env.TABLECAST_ENV !== "preview" ||
     !/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
@@ -645,12 +701,14 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
   if (owner.seeded === 1) {
     // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
     await seedMenuImages(env.TABLECAST_MEDIA);
+    await migrateDemoIdentityEmails(env);
     await refreshDemoIdentityIcons(env, credentials);
     return false;
   }
   // 2はDB投入済み・画像待ち。営業データを再投入せず画像だけを再開する。
   if (owner.seeded === 2) {
     await seedMenuImages(env.TABLECAST_MEDIA, true);
+    await migrateDemoIdentityEmails(env);
     await refreshDemoIdentityIcons(env, credentials);
     return true;
   }
@@ -680,6 +738,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
   await seedMenuImages(env.TABLECAST_MEDIA);
+  await migrateDemoIdentityEmails(env);
   const db = drizzle(env.TABLECAST_DB, { schema: identity });
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
   // 以前のローカルemulate連携だけを統合し、実Googleの識別子は変更しない。

@@ -14,22 +14,22 @@
 
 こもれびとWestwardは既存の店舗IDを維持する。韓国食堂ハヌル三条店は専用IDの`tablecast-hanul`を持ち、新規DB・明示リセットの初期構成で旧あかりに代わる。3店舗・3組織・各3所属を基本とする。複数店舗を管理するownerを共有するため、8人・9所属となる。模擬ログインでは氏名・所属・役割・アイコンを見て選べるようにする。
 
-| 店舗                                       | 氏名        | role・担当           | 模擬Googleメール                        |
-| ------------------------------------------ | ----------- | -------------------- | --------------------------------------- |
-| 京料理こもれび四条店・韓国食堂ハヌル三条店 | 佐藤 晴香   | owner・2店舗の責任者 | `tablecast-owner@example.test`          |
-| 京料理こもれび四条店                       | 田中 蓮     | admin・店長          | `tablecast-member@example.test`         |
-| 京料理こもれび四条店                       | 伊藤 葵     | member・ホール担当   | `tablecast-komorebi-staff@example.test` |
-| 韓国食堂ハヌル三条店                       | 小林 直子   | admin・店長          | `tablecast-hanul@example.test`          |
-| 韓国食堂ハヌル三条店                       | 森 悠真     | member・ホール担当   | `tablecast-hanul-staff@example.test`    |
-| Westward Burgers Kyoto                     | 山本 翼     | owner・店舗責任者    | `tablecast-koharu@example.test`         |
-| Westward Burgers Kyoto                     | 中村 美咲   | admin・店長          | `tablecast-koharu-admin@example.test`   |
-| Westward Burgers Kyoto                     | Alex Morgan | member・ホール担当   | `tablecast-koharu-staff@example.test`   |
+| 店舗                                       | 氏名        | role・担当           | 模擬Googleメール                              |
+| ------------------------------------------ | ----------- | -------------------- | --------------------------------------------- |
+| 京料理こもれび四条店・韓国食堂ハヌル三条店 | 佐藤 晴香   | owner・2店舗の責任者 | `haruka.sato@komorebi-shijo.com`              |
+| 京料理こもれび四条店                       | 田中 蓮     | admin・店長          | `ren.tanaka@komorebi-shijo.com`               |
+| 京料理こもれび四条店                       | 伊藤 葵     | member・ホール担当   | `aoi.ito@komorebi-shijo.com`                  |
+| 韓国食堂ハヌル三条店                       | 小林 直子   | admin・店長          | `naoko.kobayashi@hanul-sanjo.com`             |
+| 韓国食堂ハヌル三条店                       | 森 悠真     | member・ホール担当   | `yuma.mori@hanul-sanjo.com`                   |
+| Westward Burgers Kyoto                     | 山本 翼     | owner・店舗責任者    | `tsubasa.yamamoto@westward-burgers-kyoto.com` |
+| Westward Burgers Kyoto                     | 中村 美咲   | admin・店長          | `misaki.nakamura@westward-burgers-kyoto.com`  |
+| Westward Burgers Kyoto                     | Alex Morgan | member・ホール担当   | `alex.morgan@westward-burgers-kyoto.com`      |
 
 [店舗ロゴとプロフィール写真](identities.md)に各画像と人物の対応・生成元をまとめる。
 
-[共通名簿](../../apps/emulate/src/tablecast-demo-identities.ts)の氏名・所属ラベル・アイコンをseedと模擬OAuthで共有する。`tablecast-link@example.test`は未所属のアカウント連携確認専用で、店舗の8人・9所属に含めない。メールやOAuthの表示roleから権限を与えず、認証後のDB所属を使う。
+[共通名簿](../../apps/emulate/src/tablecast-demo-identities.ts)の氏名・所属ラベル・アイコンをseedと模擬OAuthで共有する。`rin.ogawa@komorebi-shijo.com`は小川凛の未所属アカウント連携確認専用で、店舗の8人・9所属に含めない。メールやOAuthの表示roleから権限を与えず、認証後のDB所属を使う。
 
-各3所属は新規DBまたは明示的なリセット時の初期状態である。通常の再seedで既存メンバー・編集した氏名・資格情報を削除や上書きしない。新規のローカル資格情報は名簿と同じ既定メールを使い、既存の`.local/demo.json`は維持する。通常の再seedで旧あかりを含む既存店舗や履歴を削除しない。
+各3所属は新規DBまたは明示的なリセット時の初期状態である。通常の再seedで既存メンバー・編集した氏名・パスワード・手動メールを削除や上書きしない。新規のローカル資格情報は名簿と同じ既定メールを使い、既存の`.local/demo.json`はパスワードと手動メールを維持し、既知の旧デモメールだけをseed成功後に移行する。通常の再seedで旧あかりを含む既存店舗や履歴を削除しない。
 
 ## 京料理こもれび四条店
 

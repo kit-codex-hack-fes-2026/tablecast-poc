@@ -99,3 +99,42 @@ index 88d7f22488fb292edfab32ecf52f3cbae3d79a24..64aa8f5ea7a1209e3702f588fef49149
  export {
    createEmulator
  };
+diff --git a/dist/dist-OLOR4IHC.js b/dist/dist-OLOR4IHC.js
+index 8217b0dab26b3b7a821bd3f63e5057f323691e3e..043a536d5057b6128d22e582cff902ba90281aff 100644
+--- a/dist/dist-OLOR4IHC.js
++++ b/dist/dist-OLOR4IHC.js
+@@ -2685,6 +2685,8 @@
+   display:flex;align-items:center;justify-content:center;flex-shrink:0;
+   font-family:'Geist Pixel',monospace;
+ }
++.avatar:has(>img){position:relative;overflow:hidden;}
++.avatar>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+ .user-text{min-width:0;}
+ .user-login{font-weight:600;font-size:.875rem;display:block;color:#33ff00;}
+ .user-meta{color:#1a8c00;font-size:.75rem;margin-top:1px;}
+@@ -2942,7 +2944,7 @@
+   return `<form class="user-form" method="post" action="${escapeAttr(opts.formAction)}">
+ ${hiddens}
+ <button type="submit" class="user-btn">
+-  <span class="avatar">${escapeHtml(opts.letter)}</span>
++  <span class="avatar">${escapeHtml(opts.letter)}${opts.picture ? `<img src="${escapeAttr(opts.picture)}" alt="" onerror="this.remove()"/>` : ""}</span>
+   <span class="user-text">
+     <span class="user-login">${escapeHtml(opts.login)}</span>
+     ${nameLine}${emailLine}
+@@ -3073,13 +3075,13 @@
+       clientName = client.name;
+     }
+     const subtitleText = clientName ? `Sign in to <strong>${escapeHtml(clientName)}</strong> with your Google account.` : "Choose a seeded user to continue.";
+-    const users = gs.users.all();
++    const users = gs.users.all().filter((user, _index, all) => all.length === 1 || user.email !== "testuser@gmail.com");
+     const userButtons = users.map((user) => {
+       return renderUserButton({
+         letter: (user.email[0] ?? "?").toUpperCase(),
+-        login: user.email,
+-        name: user.name,
++        login: user.name || user.email,
+         email: user.email,
++        picture: user.picture,
+         formAction: "/o/oauth2/v2/auth/callback",
+         hiddenFields: {
+           email: user.email,
