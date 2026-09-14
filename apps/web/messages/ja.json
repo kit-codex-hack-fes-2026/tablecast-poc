@@ -638,6 +638,7 @@
   "editor_image_upload": "画像を取り込んで使用",
   "editor_image_apply": "この参照を使用",
   "editor_image_uploaded": "画像を取り込みました。変更を残すには下書きを保存してください。",
+  "editor_image_wait": "画像の取込が終わるまで保存・削除・画面移動はできません。",
   "menu_all_categories": "すべてのカテゴリ",
   "menu_availability": "販売状態",
   "menu_all_availability": "すべての販売状態",

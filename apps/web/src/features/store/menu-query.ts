@@ -1,6 +1,8 @@
 import type { Catalog, ConfigDraft } from "@tablecast/api/schema";
 import { queryOptions } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
+export const configurationImageUploadKey = (storeId: string) =>
+  ["tablecast-configuration-image-upload", storeId] as const;
 export const catalogOptions = (storeId: string) =>
   queryOptions({
     queryKey: ["tablecast-admin-catalog", storeId],

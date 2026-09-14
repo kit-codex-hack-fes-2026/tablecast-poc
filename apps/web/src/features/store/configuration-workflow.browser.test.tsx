@@ -32,6 +32,7 @@ let requests: Request[];
 let saveFailure = 0;
 let waitForSave: Promise<void> | undefined;
 let waitForCreate: Promise<void> | undefined;
+let waitForImage: Promise<void> | undefined;
 let publishedVersion = 1;
 const storeId = "tablecast-workflow-store";
 const otherStoreId = "tablecast-workflow-other-store";
@@ -72,6 +73,7 @@ beforeEach(() => {
   saveFailure = 0;
   waitForSave = undefined;
   waitForCreate = undefined;
+  waitForImage = undefined;
   publishedVersion = 1;
   vi.stubGlobal(
     "fetch",
@@ -90,6 +92,15 @@ beforeEach(() => {
         });
       if (path === "/api/admin/stores")
         return Response.json(client.getQueryData(["tablecast-stores"]));
+      if (path === `${api}/images` && request.method === "POST") {
+        await waitForImage;
+        return Response.json({
+          imageKey: "tablecast/uploads/workflow-upload.png",
+          imageKind: "photograph",
+          imageSource: { generated: false, description: "店舗の料理写真" },
+          url: "/media/tablecast/uploads/workflow-upload.png",
+        });
+      }
       if (path === `${api}/drafts/choices`)
         return Response.json({
           drafts: [
@@ -468,5 +479,83 @@ it.each(["閉じて開き直す", "店舗を切り替える"])(
       client.getQueryData(["tablecast-draft", storeId, "tablecast-created-draft"]),
     ).toMatchObject({ id: "tablecast-created-draft" });
     expect(requests.filter((request) => request.method === "POST")).toHaveLength(1);
+  },
+);
+
+it.each([
+  { action: "取消", label: ja.workflow_revert },
+  { action: "再読込", label: ja.workflow_conflict_reload },
+])(
+  "画像取込中の$actionを待機し、取込完了後に保存値へ戻して古い入力を再適用しない",
+  async ({ action, label }) => {
+    const product = current.configuration.products[0];
+    if (!product) throw new Error("商品fixtureが必要です");
+    product.imageKey = null;
+    const originalPrice = product.price;
+    const pending = Promise.withResolvers<void>();
+    waitForImage = pending.promise;
+    const { screen, router } = await open(`${base}/changes/${draftId}/products/${product.id}`);
+    const price = screen.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+    if (action === "再読込") {
+      await price.fill("777");
+      saveFailure = 409;
+      await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+    }
+    const restore = screen.getByRole("button", { name: label, exact: true });
+    const writesBeforeUpload = requests.filter((request) => request.method === "PUT").length;
+    const imageField = screen
+      .getByRole("group", { name: ja.editor_image_settings, exact: true })
+      .first();
+    await imageField
+      .getByLabelText(ja.editor_image_choose)
+      .upload(
+        new File(
+          [
+            Uint8Array.fromBase64(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+            ),
+          ],
+          "tablecast-dish.png",
+          { type: "image/png" },
+        ),
+      );
+    await imageField
+      .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+      .fill("店舗の料理写真");
+    await imageField.getByRole("button", { name: ja.editor_image_upload, exact: true }).click();
+    await expect
+      .element(imageField.getByRole("status").filter({ hasText: ja.form_submitting }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByRole("link", { name: ja.workflow_review, exact: true }))
+      .toBeDisabled();
+    await price.fill("777");
+    await expect.element(restore).toBeDisabled();
+    await expect
+      .element(screen.getByRole("button", { name: ja.common_save, exact: true }))
+      .toBeDisabled();
+
+    const formElement = price.element().closest("form");
+    if (!formElement) throw new Error("商品の実フォームが必要です");
+    formElement.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    await screen
+      .getByRole("main")
+      .getByRole("link", { name: ja.editor_products, exact: true })
+      .click();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe(
+      `${base}/changes/${draftId}/products/${product.id}`,
+    );
+    pending.resolve();
+    await expect.poll(() => client.isMutating()).toBe(0);
+    await expect.element(price).toHaveValue(777);
+    expect(requests.filter((request) => request.method === "PUT")).toHaveLength(writesBeforeUpload);
+    await restore.click();
+    await screen.getByRole("alertdialog").getByRole("button", { name: label, exact: true }).click();
+    await expect.element(price).toHaveValue(originalPrice);
+    await expect
+      .element(imageField.getByText(ja.editor_image_empty, { exact: true }))
+      .toBeVisible();
   },
 );
