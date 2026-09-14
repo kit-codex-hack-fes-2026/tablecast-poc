@@ -35,13 +35,15 @@ stagingからmainへrelease PRをマージするまでprodは更新されない�
 
 商品ID、名前、読上げ名、価格、販売状態、画像、選択肢、アレルギー欄、他の商品・カテゴリ・プラン・キャストは保持する。新しい味・産地・調理方法・安全性を付け加えない。公開前に差分がこの二つの説明だけであることを確認する。
 
+合成デモのアレルギー補足にも変更前の商品説明と同じ文が含まれるが、今回は言い回しだけを整え、原材料・調理内容・数量は変えない。補足の記載は引き続き正しいため、商品説明との文面一致を目的に変更しない。客画面では両方を読み、内容に矛盾がないことを確認する。
+
 ## 認証・収録環境
 
 Cloudflare Access、TableCastの店舗アカウント、ChatGPTへのログインは録画開始前に済ませる。stagingの手動導入画面にあるMCP URLを使う。公開MarketplaceのTableCast pluginはprod向けなので、この実演の接続に代用しない。
 
 OAuthの認可コード、トークン、Cookie、認可URL、個人の会話履歴は素材・制作メモ・GitHubに残さない。ChatGPTの実演用会話とTableCastの対象商品画面だけを撮る。
 
-OpenScreen 1.11.0のMicrosoft Store版の導入とプロセス起動は確認済み。Nodeの `execFile` でCLIの `help` を取得し、`record`・`export`・`pack`・`--auto-zoom` があることを確認した。PowerShellでの直接実行だけでは標準出力を取得できなかった。このセッションのComputer Useはブラウザー操作のみ対応し、OpenScreenのネイティブGUI操作と録画開始は未確認。導入済みであることを録画可能の証拠にしない。
+OpenScreen 1.11.0のMicrosoft Store版の導入とプロセス起動は確認済み。Nodeの `execFile` でCLIの `help` を取得し、`record`・`export`・`pack`・`--auto-zoom` があることを確認した。PowerShellでの直接実行だけでは標準出力を取得できなかった。Windows用Computer UseでOpenScreenのウィンドウと録画コントロールを取得できたが、GUIからの録画開始は未確認。CLIの試し録画は完了したものの、`--window` はタイトルの部分一致で別ウィンドウを選んだため、実演素材には採用しない。収録前に録画対象と映像を確認する。
 
 Node 24.19、Bun 1.3.13で制作workspaceとrootの依存を `--frozen-lockfile` 付きで導入した。lockfileは変更していない。FFmpeg・採用素材・全編生成の検査は後続の収録・編集段階で行う。
 
