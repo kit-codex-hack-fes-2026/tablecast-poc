@@ -79,3 +79,50 @@ it("ハッシュ付き画像だけ長期保存を許可し、固定キーは毎�
     );
   }
 });
+
+it("変換結果を再利用し、幅・元画像の更新・削除をキャッシュから分離する", async () => {
+  const key = "tablecast/demo/tablecast-transform-cache.png";
+  const png = Uint8Array.fromBase64(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+  );
+  await env.TABLECAST_MEDIA.put(key, png);
+  const url = `http://localhost:3000/media/${key}?width=128`;
+  const first = await exports.default.fetch(new Request(url));
+  expect(first.status).toBe(200);
+  expect(first.headers.get("X-Tablecast-Image-Cache")).toBe("MISS");
+  const bytes = await first.arrayBuffer();
+  await expect
+    .poll(async () => {
+      const repeat = await exports.default.fetch(new Request(`${url}&ignored=value`));
+      expect(await repeat.arrayBuffer()).toEqual(bytes);
+      expect(repeat.headers.get("Cache-Control")).toBe("public, no-cache");
+      return repeat.headers.get("X-Tablecast-Image-Cache");
+    })
+    .toBe("HIT");
+
+  const otherWidth = await exports.default.fetch(new Request(url.replace("128", "256")));
+  expect(otherWidth.headers.get("X-Tablecast-Image-Cache")).toBe("MISS");
+  expect(otherWidth.headers.get("ETag")).not.toBe(first.headers.get("ETag"));
+  await otherWidth.arrayBuffer();
+  const unchanged = await exports.default.fetch(
+    new Request(url, {
+      headers: { "If-None-Match": first.headers.get("ETag") ?? "" },
+    }),
+  );
+  expect(unchanged.status).toBe(304);
+  expect(await unchanged.text()).toBe("");
+
+  // 同じキーを別の実画像バイト列へ差し替え、旧ETagでは304にもcache hitにもならない。
+  await env.TABLECAST_MEDIA.put(key, bytes);
+  const updated = await exports.default.fetch(
+    new Request(url, {
+      headers: { "If-None-Match": first.headers.get("ETag") ?? "" },
+    }),
+  );
+  expect(updated.status).toBe(200);
+  expect(updated.headers.get("X-Tablecast-Image-Cache")).toBe("MISS");
+  expect(updated.headers.get("ETag")).not.toBe(first.headers.get("ETag"));
+  await updated.arrayBuffer();
+  await env.TABLECAST_MEDIA.delete(key);
+  expect((await exports.default.fetch(new Request(url))).status).toBe(404);
+});

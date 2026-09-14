@@ -13,6 +13,62 @@ declare global {
   }
 }
 
+test("代表管理ページのSSRデータをhydrationで再取得せず表示と操作へ使う", async ({
+  page,
+  baseURL,
+  runtime,
+}, testInfo) => {
+  expect(
+    (
+      await page.request.post("/api/auth/sign-in/email", {
+        headers: { Origin: baseURL ?? "" },
+        data: credentials,
+      })
+    ).ok(),
+  ).toBe(true);
+  const samples = [];
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/catalog)?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
+        path,
+      )
+    )
+      requests.push(path);
+  });
+  for (const [path, heading] of [
+    ["/account", "アカウント"],
+    ["/admin/live", "フロアの様子"],
+    ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
+  ]) {
+    // Cookie・DB・ブラウザーcacheを保ち、Worker再起動直後と同じURLの反復を分ける。
+    await runtime.restartWeb();
+    for (let sample = 0; sample < 4; sample++) {
+      requests.length = 0;
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      // 実際にメニューを開いてhydration後の操作可能状態を確認する。
+      await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
+      const timing = await page.evaluate(() => {
+        const navigation = performance.getEntriesByType("navigation")[0];
+        if (!(navigation instanceof PerformanceNavigationTiming)) throw new Error("計測値なし");
+        return {
+          ttfbMs: navigation.responseStart - navigation.startTime,
+          documentMs: navigation.responseEnd - navigation.startTime,
+          interactiveMs: performance.now(),
+          redirectMs: navigation.redirectEnd - navigation.redirectStart,
+          firstContentfulPaintMs:
+            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
+        };
+      });
+      expect(requests).toEqual([]);
+      samples.push({ path, sample, worker: sample === 0 ? "cold" : "warm", ...timing });
+    }
+  }
+  await writeFile(testInfo.outputPath("ssr-performance.json"), JSON.stringify(samples, null, 2));
+});
+
 test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿名リクエストへ漏らさない", async ({
   page,
   browser,
