@@ -35,7 +35,12 @@ import { draftsOptions } from "./store-query";
 import { parseResponse, rpc } from "../../lib/api";
 import { m } from "../../paraglide/messages";
 import { ConfigurationStatus, DraftStatus } from "../shell/configuration-status";
-import { menuLabels, menuSectionSchema } from "./menu-model";
+import {
+  emptyMenuListSearch,
+  menuLabels,
+  menuSectionSchema,
+  type MenuReviewSearch,
+} from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 import { ConfigurationChanges } from "./configuration-changes";
@@ -81,7 +86,14 @@ export function SettingsDrafts() {
     </>
   );
 }
-export function DraftPage({ draftId }: { draftId: string }) {
+export function DraftPage({
+  draftId,
+  search = emptyMenuListSearch,
+}: {
+  draftId: string;
+  search?: MenuReviewSearch;
+}) {
+  const { returnSection = "products", ...listSearch } = search;
   const { id: storeId, role } = useStore();
   const { t, locale } = useI18n();
   const client = useQueryClient();
@@ -208,13 +220,13 @@ export function DraftPage({ draftId }: { draftId: string }) {
                 <Link
                   to="/admin/stores/$storeId/menu/changes/$draftId/$section"
                   params={{ storeId, draftId, section }}
-                  search={true}
+                  search={section === returnSection ? listSearch : {}}
                 />
               ) : (
                 <Link
                   to="/admin/stores/$storeId/menu/$section"
                   params={{ storeId, section }}
-                  search={true}
+                  search={section === returnSection ? listSearch : {}}
                 />
               )
             }
@@ -230,8 +242,8 @@ export function DraftPage({ draftId }: { draftId: string }) {
           render={
             <Link
               to="/admin/stores/$storeId/menu/$section"
-              params={{ storeId, section: "products" }}
-              search={true}
+              params={{ storeId, section: returnSection }}
+              search={listSearch}
             />
           }
         >

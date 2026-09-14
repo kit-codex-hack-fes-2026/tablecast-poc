@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { menuReviewSearchSchema } from "../features/store/menu-model";
 import { DraftPage } from "../features/store/settings-drafts";
 import { catalogOptions, draftOptions } from "../features/store/menu-query";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/$draftId")({
+  validateSearch: menuReviewSearchSchema,
   loader: async ({ context, params }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(draftOptions(params.storeId, params.draftId)),

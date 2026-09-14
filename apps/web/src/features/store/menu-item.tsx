@@ -327,6 +327,7 @@ function ItemForm({
                         <Link
                           to="/admin/stores/$storeId/menu/changes/$draftId"
                           params={{ storeId, draftId: draft.id }}
+                          search={{ ...search, returnSection: section }}
                         />
                       }
                     >

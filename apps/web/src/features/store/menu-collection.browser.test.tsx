@@ -1,4 +1,4 @@
-import type { Catalog, Locale } from "@tablecast/api/schema";
+import type { Catalog, ConfigDraft, Locale } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -16,8 +16,9 @@ import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { MenuCollection } from "./menu-collection";
 import { MenuOverview } from "./menu-overview";
-import { menuListSearchSchema, menuSectionSchema } from "./menu-model";
-import { catalogOptions } from "./menu-query";
+import { menuListSearchSchema, menuReviewSearchSchema, menuSectionSchema } from "./menu-model";
+import { catalogOptions, draftOptions } from "./menu-query";
+import { DraftPage } from "./settings-drafts";
 import "../../styles.css";
 
 vi.mock("./store-shell", () => ({ useStore: () => ({ id: "tablecast-story", role: "member" }) }));
@@ -37,6 +38,19 @@ async function showMenu(
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
   });
   if (value) client.setQueryData(catalogOptions(value.storeId).queryKey, value);
+  if (value)
+    client.setQueryData(draftOptions(value.storeId, "tablecast-published-draft").queryKey, {
+      id: "tablecast-published-draft",
+      storeId: value.storeId,
+      version: 2,
+      baseVersion: 1,
+      status: "published",
+      configuration: value.configuration,
+      errors: [],
+      changes: [],
+      createdAt: 1,
+      updatedAt: 2,
+    } satisfies ConfigDraft);
   const root = createRootRoute();
   const list = createRoute({
     getParentRoute: () => root,
@@ -68,8 +82,16 @@ async function showMenu(
       );
     },
   });
+  const review = createRoute({
+    getParentRoute: () => root,
+    path: "/admin/stores/$storeId/menu/changes/$draftId",
+    validateSearch: menuReviewSearchSchema,
+    component: function Review() {
+      return <DraftPage draftId={review.useParams().draftId} search={review.useSearch()} />;
+    },
+  });
   const router = createRouter({
-    routeTree: root.addChildren([list, detail]),
+    routeTree: root.addChildren([list, detail, review]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   const screen = await render(
@@ -276,4 +298,19 @@ it("初回読込・通信失敗・登録なしを区別し、再取得失敗で�
   client.setQueryData(catalogOptions(catalog.storeId).queryKey, empty);
   await screen.getByRole("searchbox", { name: ja.menu_search }).fill("");
   await expect.element(screen.getByText(ja.menu_no_items, { exact: true })).toBeVisible();
+});
+
+it("公開確認から元のプラン一覧へ検索とページを戻し、別の一覧へ進むと条件を引き継がない", async () => {
+  const { screen, router } = await showMenu(
+    catalog,
+    "ja",
+    "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft?q=Sake&page=2&returnSection=plans",
+  );
+  await screen.getByRole("link", { name: ja.workflow_view_published }).click();
+  expect(router.state.location.pathname).toBe("/admin/stores/tablecast-story/menu/plans");
+  expect(router.state.location.search).toEqual({ q: "Sake", page: 2 });
+  router.history.back();
+  await screen.getByRole("link", { name: ja.editor_products, exact: true }).click();
+  expect(router.state.location.pathname).toBe("/admin/stores/tablecast-story/menu/products");
+  expect(router.state.location.search).toEqual({});
 });

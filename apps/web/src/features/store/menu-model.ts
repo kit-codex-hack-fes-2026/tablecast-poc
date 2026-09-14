@@ -8,6 +8,10 @@ export const menuListSearchSchema = z.object({
   availability: z.enum(["available", "sold-out"]).optional().catch(undefined),
   page: z.number().int().positive().optional().catch(undefined),
 });
+export const menuReviewSearchSchema = menuListSearchSchema.extend({
+  returnSection: menuSectionSchema.optional().catch(undefined),
+});
+export type MenuReviewSearch = z.infer<typeof menuReviewSearchSchema>;
 export type MenuListSearch = z.infer<typeof menuListSearchSchema>;
 export const emptyMenuListSearch: MenuListSearch = {};
 export type MenuSection = z.infer<typeof menuSectionSchema>;
