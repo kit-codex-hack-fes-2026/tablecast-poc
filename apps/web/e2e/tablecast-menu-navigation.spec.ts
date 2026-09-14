@@ -52,6 +52,7 @@ for (const { locale, labels } of [
       .getByRole("row")
       .filter({ has: page.getByText(product.text[locale].displayName, { exact: true }) });
     await expect(row).toBeVisible();
+    await expect(page).toHaveURL(/availability=available/);
     const context = new URL(page.url()).search;
     await page
       .getByRole("main")

@@ -185,6 +185,7 @@ async function open(path: string, locale: "ja" | "en" = "ja") {
   review.update({
     component: () => (
       <DraftPage
+        search={{}}
         key={review.useParams<typeof router>().draftId}
         draftId={review.useParams<typeof router>().draftId}
       />

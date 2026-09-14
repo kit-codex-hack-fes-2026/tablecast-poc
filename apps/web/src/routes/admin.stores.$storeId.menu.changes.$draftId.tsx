@@ -14,5 +14,5 @@ export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/$draft
 });
 function Page() {
   const { draftId } = Route.useParams();
-  return <DraftPage key={draftId} draftId={draftId} />;
+  return <DraftPage key={draftId} draftId={draftId} search={Route.useSearch()} />;
 }
