@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { FileClock, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
 
+import { ConfigurationRouteStatus } from "./configuration-status";
 import { menuLabels } from "../store/menu-model";
 const items = [
   { section: "products", Icon: UtensilsCrossed },
@@ -23,6 +24,9 @@ export function MenuNavigation({
     "flex min-h-11 items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary data-[status=active]:bg-secondary data-[status=active]:font-semibold";
   return (
     <nav className="ml-4 space-y-1 border-l border-border pl-3" aria-label={t("admin_config")}>
+      <div className="py-2">
+        <ConfigurationRouteStatus storeId={storeId} storeName="" />
+      </div>
       {items.map(({ section, Icon }) =>
         draftId ? (
           <Link

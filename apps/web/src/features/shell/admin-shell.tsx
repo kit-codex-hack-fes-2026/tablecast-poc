@@ -90,7 +90,7 @@ export function AdminShell({
               >
                 <PanelLeft />
               </Button>
-              <div className="min-w-0 flex-1 truncate border-l border-border pl-3 text-base font-medium">
+              <div className="min-w-0 flex-1 border-l border-border py-2 pl-3 text-base font-medium">
                 {header ??
                   t(
                     sidebar.tab === "organisations"
