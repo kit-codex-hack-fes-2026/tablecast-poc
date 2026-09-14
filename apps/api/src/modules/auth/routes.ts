@@ -5,10 +5,10 @@ import {
 import { Hono } from "hono";
 import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
-import { previewOAuthFetch } from "./preview";
+import { isHostedEmulator, previewOAuthFetch } from "./preview";
 export const authRoutes = new Hono<ApiEnv>()
   .on(["GET", "POST"], ["/_tablecast/oauth/*", "/o/oauth2/v2/auth/*", "/_emulate/*"], (c) => {
-    if (c.env.TABLECAST_ENV !== "preview") return c.notFound();
+    if (!isHostedEmulator(c.env)) return c.notFound();
     const url = new URL(c.req.url);
     const path =
       (url.pathname.startsWith("/_tablecast/oauth/")

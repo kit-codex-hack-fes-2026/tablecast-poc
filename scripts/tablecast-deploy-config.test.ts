@@ -223,3 +223,29 @@ test.each([
     );
   }
 });
+
+test("stagingは固定の資源と認証secretを保持しpreviewと同じ模擬認証を使う", () => {
+  const target = deploymentTarget(undefined, "staging");
+  const config = deploymentConfigs(
+    target,
+    "a".repeat(40),
+    "11111111-1111-4111-8111-111111111111",
+    "/tablecast",
+    {},
+    {},
+  );
+  expect(target.origin).toBe("https://tablecast-staging.kit-codex.workers.dev");
+  expect(config.api.vars.TABLECAST_ENV).toBe("staging");
+  expect(config.api.vars.TABLECAST_GOOGLE_AUTHORIZE_URL).toBe(`${target.origin}/_tablecast/oauth`);
+  expect(config.api.containers).toHaveLength(1);
+  const secrets = deploymentSecrets(target, input);
+  expect(secrets).not.toHaveProperty("TABLECAST_GOOGLE_CLIENT_SECRET");
+  expect(secrets).not.toHaveProperty("TABLECAST_BETTER_AUTH_API_KEY");
+  expect(deploymentSecrets(deploymentTarget(undefined, "staging"), input)).toEqual(secrets);
+  expect(secrets.TABLECAST_AUTH_SECRET).not.toBe(
+    deploymentSecrets(deploymentTarget("189"), input).TABLECAST_AUTH_SECRET,
+  );
+  expect(() => deploymentTarget("189", "staging")).toThrow("配備環境とPR番号");
+  expect(() => deploymentTarget(undefined, "preview")).toThrow("配備環境とPR番号");
+  expect(() => deploymentTarget(undefined, "stagin")).toThrow("Invalid option");
+});

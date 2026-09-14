@@ -1,3 +1,4 @@
+import { Brand } from "./brand";
 import { useState, useTransition } from "react";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 import { Link, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
@@ -35,8 +36,8 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
     >
       <h1 className="text-xl font-semibold">{t("common_error")}</h1>
       <ErrorNotice error={retryError ?? error} onRetry={retry} retrying={retrying} />
-      <Link to="/" className="underline underline-offset-4">
-        TableCast
+      <Link to="/" className="w-fit">
+        <Brand />
       </Link>
     </section>
   );

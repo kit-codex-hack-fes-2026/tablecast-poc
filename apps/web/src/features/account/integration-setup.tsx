@@ -8,7 +8,7 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import connection from "../../../../../plugins/tablecast/.mcp.json";
+import { integrationConnection } from "./integration-query";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
 import { CopyValue } from "../../components/copy-value";
 import { Badge } from "../../components/ui/badge";
@@ -54,11 +54,18 @@ function Guide({
   );
 }
 
-export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
+export function IntegrationSetup({
+  mode,
+  connection = integrationConnection(""),
+}: {
+  mode: "plugins" | "manual";
+  connection?: ReturnType<typeof integrationConnection>;
+}) {
   const { t } = useI18n();
-  const endpoint = connection.mcpServers.tablecast.url;
+  const { endpoint, name, staging } = connection;
   return (
     <IntegrationsShell>
+      {staging && <p>{t("mcp_staging_connection")}</p>}
       {mode === "plugins" ? (
         <>
           <Guide
@@ -111,7 +118,7 @@ export function IntegrationSetup({ mode }: { mode: "plugins" | "manual" }) {
             </dl>
             <CopyValue
               label="Codex CLI"
-              value={`codex mcp add tablecast --url ${JSON.stringify(endpoint)}\ncodex mcp login tablecast --scopes tablecast:read,tablecast:write`}
+              value={`codex mcp add ${name} --url ${JSON.stringify(endpoint)}\ncodex mcp login ${name} --scopes tablecast:read,tablecast:write`}
             />
           </Guide>
           <Guide title="Agent Skills" icon={<Download className="size-5" />}>

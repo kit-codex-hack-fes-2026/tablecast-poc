@@ -249,6 +249,29 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       const refreshedImage = demoStores("smoke")[0]?.configuration.products[0]?.imageKey;
       if (!refreshedImage) throw new Error("再投入を確認する商品画像がありません。");
       await platform.env.TABLECAST_MEDIA.delete(refreshedImage);
+      // stagingは手動変更と画像削除を保ち、previewだけ従来のfixture修復を行う。
+      await db.update(deploymentOwner).set({ environment: "tablecast-staging" });
+      const stagingUsers = await db.select().from(user);
+      const stagingStores = await db.select().from(stores);
+      const stagingAccounts = await db.select().from(account);
+      expect(
+        await seedPreviewDatabase(
+          {
+            ...platform.env,
+            TABLECAST_ENV: "staging",
+            TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
+          },
+          credentials,
+        ),
+      ).toBe(false);
+      expect(await db.select().from(user)).toEqual(stagingUsers);
+      expect(await db.select().from(stores)).toEqual(stagingStores);
+      expect(await db.select().from(account)).toEqual(stagingAccounts);
+      expect(await platform.env.TABLECAST_MEDIA.head(refreshedImage)).toBeNull();
+      expect((await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version).toBe(
+        ownerIconVersion,
+      );
+      await db.update(deploymentOwner).set({ environment: "tablecast-pr-34" });
       expect(await seedPreviewDatabase(preview, credentials)).toBe(false);
       expect(
         await db

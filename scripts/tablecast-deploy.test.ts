@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { waitForRelease } from "./tablecast-deploy";
+import { waitForRelease } from "./tablecast-deploy-api";
 import { seedMenuImages, uploadPreviewImage } from "./tablecast-seed-media";
 
 afterEach(() => {
