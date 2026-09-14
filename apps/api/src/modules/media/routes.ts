@@ -51,7 +51,7 @@ export const mediaRoutes = new Hono<ApiEnv>()
       etag: asset.etag,
       format: "webp",
     }).toString();
-    const cacheKey = new Request(cacheUrl);
+    const cacheKey = new Request(cacheUrl.toString());
     const cached = await cache.match(cacheKey);
     if (cached) {
       await asset.body.cancel();
