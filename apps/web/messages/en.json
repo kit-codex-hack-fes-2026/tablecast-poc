@@ -575,5 +575,19 @@
   "kiosk_tools_working": "Working",
   "kiosk_tool_waiting": "Waiting",
   "kiosk_tool_separator": ", ",
-  "kiosk_tool_search_label": "Search: "
+  "kiosk_tool_search_label": "Search: ",
+  "cast_instructions_note": "Set the tone and guidance for each language. Products, prices and orders follow the store configuration.",
+  "cast_voice_note": "Choose the voice used to serve guests in each language. Unset voices use the default.",
+  "cast_proactive_note": "When on, the cast can offer timely suggestions during service. When off, it still responds to guests.",
+  "cast_proactive_on": "ON (enabled)",
+  "cast_proactive_off": "OFF (disabled)",
+  "cast_instructions_unset": "No service instructions have been set.",
+  "cast_voice_unset": "Not set",
+  "cast_voice_unavailable": "Unavailable",
+  "cast_voice_unavailable_note": "The saved voice is no longer available. Service uses the default voice, Marin.",
+  "cast_show_full": "Show full instructions",
+  "cast_edit_instructions": "Edit {language} instructions",
+  "cast_edit_voice": "Edit {language} voice",
+  "cast_edit_proactive": "Edit proactive service",
+  "cast_overview_note": "Review your store’s service settings and choose what to edit."
 }

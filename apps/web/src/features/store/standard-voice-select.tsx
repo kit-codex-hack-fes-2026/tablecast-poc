@@ -5,8 +5,8 @@ import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 
-import { parseResponse, rpc } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
+import { standardVoicesOptions } from "./menu-query";
 
 export function StandardVoiceSelect({
   storeId,
@@ -24,24 +24,7 @@ export function StandardVoiceSelect({
   onChange: (voiceId: string | null) => void;
 }) {
   const { t } = useI18n();
-  const voices = useInfiniteQuery({
-    queryKey: ["tablecast-standard-voices", storeId, language],
-    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) => {
-      return parseResponse(
-        rpc.api.admin.stores[":storeId"].voices.$get(
-          {
-            param: { storeId },
-            query: { locale: language, ...(pageParam !== null ? { pageToken: pageParam } : {}) },
-          },
-          { init: { signal } },
-        ),
-      );
-    },
-    initialPageParam: null,
-    getNextPageParam: (page) => page.nextPageToken,
-    retry: false,
-    staleTime: 60_000,
-  });
+  const voices = useInfiniteQuery(standardVoicesOptions(storeId, language));
   const choices = new Map<string, string>();
   for (const voiceId of [...retained, value]) {
     if (voiceId !== null) choices.set(voiceId, voiceId);

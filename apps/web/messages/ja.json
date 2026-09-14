@@ -575,5 +575,19 @@
   "kiosk_tools_working": "処理中",
   "kiosk_tool_waiting": "待機中",
   "kiosk_tool_separator": "・",
-  "kiosk_tool_search_label": "検索："
+  "kiosk_tool_search_label": "検索：",
+  "cast_instructions_note": "接客の口調や案内方針を言語ごとに指定します。商品・価格・注文の判断は店舗の設定に従います。",
+  "cast_voice_note": "各言語で接客するときの声を設定します。未設定の場合は標準音声を使います。",
+  "cast_proactive_note": "ONにすると、接客中に状況に応じた声かけを行います。OFFでも、お客さまからの呼びかけには応答します。",
+  "cast_proactive_on": "ON（有効）",
+  "cast_proactive_off": "OFF（無効）",
+  "cast_instructions_unset": "接客指示は未設定です。",
+  "cast_voice_unset": "未設定",
+  "cast_voice_unavailable": "利用不可",
+  "cast_voice_unavailable_note": "保存された音声は現在利用できません。接客では標準音声のMarinを使います。",
+  "cast_show_full": "全文を表示",
+  "cast_edit_instructions": "{language}の接客指示を編集",
+  "cast_edit_voice": "{language}の音声を編集",
+  "cast_edit_proactive": "自発的な声かけを編集",
+  "cast_overview_note": "店舗の接客設定を確認し、変更する項目から編集を始められます。"
 }
