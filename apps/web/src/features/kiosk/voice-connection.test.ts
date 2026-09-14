@@ -60,7 +60,12 @@ class VoiceAudio {
     VoiceAudio.instances.push(this);
   }
 }
-const track = { kind: "audio", stop: vi.fn<() => void>() };
+const track = {
+  kind: "audio",
+  label: "Built-in",
+  addEventListener: vi.fn<() => void>(),
+  stop: vi.fn<() => void>(),
+};
 class VoiceMediaStream {
   getTracks = () => [track];
   getAudioTracks = () => [track];

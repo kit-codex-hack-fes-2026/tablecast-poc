@@ -102,7 +102,8 @@ export function TableDetail({
       <h1 className="text-2xl font-semibold">{table?.tableName ?? t("common_loading")}</h1>
       {table && (
         <p className="text-base text-muted-foreground">
-          {table.guestCount} {t("admin_guests")} · {table.locale === "ja" ? "日本語" : "English"} ·{" "}
+          {table.guestCount} {t("admin_guests")} ·{" "}
+          {t(table.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} ·{" "}
           <DateTime value={table.openedAt} />
         </p>
       )}

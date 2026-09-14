@@ -38,7 +38,7 @@ export function DataTable<T>({
   error?: unknown;
   onRetry?: () => void;
 }) {
-  const { locale } = useI18n();
+  const { t } = useI18n();
   const [filter, setFilter] = useState("");
   const table = useReactTable({
     data,
@@ -112,7 +112,7 @@ export function DataTable<T>({
                   colSpan={columns.length}
                   className="h-32 text-center text-base text-muted-foreground"
                 >
-                  {empty ?? (locale === "ja" ? "該当するデータがありません" : "No results")}
+                  {empty ?? t("common_no_results")}
                 </TableCell>
               </tr>
             )}
@@ -122,13 +122,13 @@ export function DataTable<T>({
       {pagination && (
         <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
           <span>
-            {table.getFilteredRowModel().rows.length} {locale === "ja" ? "件" : "records"}
+            {table.getFilteredRowModel().rows.length} {t("common_records")}
           </span>
           <div className="flex items-center gap-2">
             <Button
               size="icon"
               variant="outline"
-              aria-label={locale === "ja" ? "前のページ" : "Previous page"}
+              aria-label={t("common_previous_page")}
               disabled={!table.getCanPreviousPage()}
               onClick={() => table.previousPage()}
             >
@@ -140,7 +140,7 @@ export function DataTable<T>({
             <Button
               size="icon"
               variant="outline"
-              aria-label={locale === "ja" ? "次のページ" : "Next page"}
+              aria-label={t("common_next_page")}
               disabled={!table.getCanNextPage()}
               onClick={() => table.nextPage()}
             >

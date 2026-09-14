@@ -177,27 +177,37 @@ it.each([
 );
 
 it("音声開始が失敗しても実Queryのカートと画面操作を維持する", async () => {
-  // APIの開始拒否を検証するため、端末のマイク許可だけを公開境界で通す。
-  vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(new MediaStream());
-  await render(
-    <LocaleProvider initialLocale="ja">
-      <QueryClientProvider client={client}>
-        <Kiosk />
-      </QueryClientProvider>
-    </LocaleProvider>,
-  );
-  await expect.element(page.getByRole("button", { name: "音声を再開", exact: true })).toBeVisible();
-  const before = structuredClone(current.cart);
-  await page.getByRole("button", { name: "音声を再開", exact: true }).click();
-  await expect
-    .element(page.getByText("音声サービスの準備が整い次第ご利用いただけます。"))
-    .toBeVisible();
-  await page.getByRole("tab", { name: "おしながき", exact: true }).click();
-  await expect
-    .element(page.getByRole("tab", { name: "おしながき", exact: true }))
-    .toHaveAttribute("aria-selected", "true");
-  expect(client.getQueryData<TableState>(["tablecast-table"])?.cart).toEqual(before);
-  expect(requests.filter((request) => request.url.endsWith("/voice/start"))).toHaveLength(1);
+  // APIの開始拒否まで実WebRTCを通し、OSのマイク取得だけを無音トラックに置き換える。
+  const audio = new AudioContext();
+  const stream = audio.createMediaStreamDestination().stream;
+  try {
+    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+    await render(
+      <LocaleProvider initialLocale="ja">
+        <QueryClientProvider client={client}>
+          <Kiosk />
+        </QueryClientProvider>
+      </LocaleProvider>,
+    );
+    await expect
+      .element(page.getByRole("button", { name: "音声を再開", exact: true }))
+      .toBeVisible();
+    const before = structuredClone(current.cart);
+    await page.getByRole("button", { name: "音声を再開", exact: true }).click();
+    await expect
+      .element(page.getByText("音声サービスの準備が整い次第ご利用いただけます。"))
+      .toBeVisible();
+    await page.getByRole("tab", { name: "おしながき", exact: true }).click();
+    await expect
+      .element(page.getByRole("tab", { name: "おしながき", exact: true }))
+      .toHaveAttribute("aria-selected", "true");
+    expect(client.getQueryData<TableState>(["tablecast-table"])?.cart).toEqual(before);
+    expect(requests.filter((request) => request.url.endsWith("/voice/start"))).toHaveLength(1);
+    expect(stream.getAudioTracks()[0].readyState).toBe("ended");
+  } finally {
+    stream.getTracks().forEach((track) => track.stop());
+    await audio.close();
+  }
 });
 
 function Subscription({ storeId, onChange }: { storeId: string; onChange: () => void }) {
@@ -299,6 +309,7 @@ it.each([
   { locale: "ja", labels: ja },
   { locale: "en", labels: en },
 ] as const)("$localeの商品取得失敗は空状態にせず再試行できる", async ({ locale, labels }) => {
+  vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
   current.locale = locale;
   current.uiSection = "menu";
   catalogResponse = Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
@@ -309,7 +320,12 @@ it.each([
       </QueryClientProvider>
     </LocaleProvider>,
   );
-  await expect.element(page.getByRole("alert")).toHaveTextContent(labels.common_unavailable);
+  const catalogError = page.getByRole("alert").filter({ hasText: labels.common_unavailable });
+  const microphoneError = page
+    .getByRole("alert")
+    .filter({ hasText: labels.kiosk_microphone_error_empty });
+  await expect.element(catalogError).toBeVisible();
+  await expect.element(microphoneError).toBeVisible();
   await expect.element(page.getByText(labels.kiosk_menu_empty)).not.toBeInTheDocument();
   await expect.element(page.getByText(labels.kiosk_category_empty)).not.toBeInTheDocument();
   catalogResponse = Response.json(catalog);
@@ -321,5 +337,6 @@ it.each([
       }),
     )
     .toBeEnabled();
-  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  await expect.element(catalogError).not.toBeInTheDocument();
+  await expect.element(microphoneError).toBeVisible();
 });

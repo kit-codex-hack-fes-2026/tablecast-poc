@@ -10,16 +10,17 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
+import type { m } from "../../paraglide/messages.js";
 
-const allergenLabels: Record<string, { ja: string; en: string }> = {
-  fish: { ja: "魚類", en: "Fish" },
-  wheat: { ja: "小麦", en: "Wheat" },
-  soya: { ja: "大豆", en: "Soya" },
-  egg: { ja: "卵", en: "Egg" },
-  sesame: { ja: "ごま", en: "Sesame" },
-  prawn: { ja: "えび", en: "Prawn" },
-  barley: { ja: "大麦", en: "Barley" },
-  milk: { ja: "乳", en: "Milk" },
+const allergenLabels: Partial<Record<string, keyof typeof m>> = {
+  fish: "kiosk_allergen_fish",
+  wheat: "kiosk_allergen_wheat",
+  soya: "kiosk_allergen_soya",
+  egg: "kiosk_allergen_egg",
+  sesame: "kiosk_allergen_sesame",
+  prawn: "kiosk_allergen_prawn",
+  barley: "kiosk_allergen_barley",
+  milk: "kiosk_allergen_milk",
 };
 
 export function ProductPage({
@@ -192,12 +193,13 @@ export function ProductPage({
           <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
           <p className="mb-2 text-sm font-semibold">
             {product.allergens.contains
-              .map((item) => allergenLabels[item]?.[locale] ?? item)
-              .join(locale === "ja" ? "・" : ", ") ||
+              .map((item) => {
+                const key = allergenLabels[item];
+                return key ? t(key) : item;
+              })
+              .join(t("kiosk_allergen_separator")) ||
               (product.allergens.evidence === "verified"
-                ? locale === "ja"
-                  ? "登録された含有アレルゲンなし"
-                  : "No declared allergens"
+                ? t("kiosk_allergens_none")
                 : t("kiosk_unknown"))}
           </p>
           <p className="block text-xs leading-loose text-muted-foreground">

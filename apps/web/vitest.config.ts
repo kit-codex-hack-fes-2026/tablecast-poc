@@ -61,7 +61,7 @@ export default defineConfig({
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: ["react", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
         },
-        plugins: [storybookTest({ configDir: "./.storybook" })],
+        plugins: [tailwindcss(), storybookTest({ configDir: "./.storybook" })],
         test: {
           name: "storybook",
           browser: {
