@@ -54,3 +54,20 @@ it("所属を失ったスタッフは初期取得でフロアを読めない", a
   );
   expect(response.status).toBe(403);
 });
+
+it("既定フロアの初期取得は所属店舗を選び、セッションだけの初期取得はフロアを読まない", async () => {
+  const { cookie, staff } = await setupFixture();
+  const get = (query: string) =>
+    exports.default.fetch(
+      new Request(`http://localhost:3000/api/admin/initial${query}`, {
+        headers: { Cookie: cookie },
+      }),
+    );
+  const initial = await (
+    await get("?defaultFloor=true")
+  ).json<{ floor: { store: { id: string } } }>();
+  expect(initial.floor.store.id).toBe(staff.storeId);
+  expect(await (await get("")).json()).toMatchObject({ floor: null });
+  await fixtureDb.delete(member).where(eq(member.userId, staff.userId));
+  expect(await (await get("?defaultFloor=true")).json()).toMatchObject({ stores: [], floor: null });
+});

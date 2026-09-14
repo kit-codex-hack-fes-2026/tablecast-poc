@@ -210,3 +210,44 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
   await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true });
   expect(pageErrors).toEqual([]);
 });
+
+test("戻り先なしのログインはフロアを一括取得し、アカウント更新はセッションだけを再取得する", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
+  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
+  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
+  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
+  expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
+
+  await page.goto("/account");
+  await page.getByLabel("名前", { exact: true }).fill("初期取得テスト");
+  requests.length = 0;
+  const refreshed = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
+  );
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  expect((await refreshed).ok()).toBe(true);
+  await expect(page.getByText("更新しました", { exact: true })).toBeVisible();
+  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+  expect(
+    requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
+  ).toEqual([]);
+
+  await page.clock.install();
+  await page.clock.fastForward(31_000);
+  requests.length = 0;
+  const focused = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  expect((await focused).ok()).toBe(true);
+  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+  expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
+  expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
+});

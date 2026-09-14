@@ -7,7 +7,9 @@ import { getAdminState, listMemberStores } from "./queries";
 
 export const initialRoutes = new Hono<ApiEnv>().get(
   "/api/admin/initial",
-  validateQuery(z.object({ storeId: z.string().min(1).optional() })),
+  validateQuery(
+    z.object({ storeId: z.string().min(1).optional(), defaultFloor: z.enum(["true"]).optional() }),
+  ),
   async (c) => {
     const services = c.get("services");
     const { response: session, headers } = await services.auth.api.getSession({
@@ -17,8 +19,13 @@ export const initialRoutes = new Hono<ApiEnv>().get(
     for (const cookie of headers.getSetCookie()) c.header("set-cookie", cookie, { append: true });
     if (!session) return c.json({ session: null, stores: [], floor: null }, 200);
     const stores = await listMemberStores(services, session.user.id);
-    const { storeId } = c.req.valid("query");
-    const membership = stores.find((store) => store.id === storeId);
+    const { storeId, defaultFloor } = c.req.valid("query");
+    const membership = storeId
+      ? stores.find((store) => store.id === storeId)
+      : defaultFloor
+        ? (stores.find((store) => store.organizationId === session.session.activeOrganizationId) ??
+          stores[0])
+        : undefined;
     if (storeId) ensure(membership, "STORE_FORBIDDEN", 403);
     const floor = membership
       ? await getAdminState(services, {

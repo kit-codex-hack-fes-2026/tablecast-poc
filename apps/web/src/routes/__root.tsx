@@ -33,14 +33,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ) {
         const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
         const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : undefined;
-        const initial = await loadInitial(storeId);
+        const search = new URLSearchParams(location.searchStr);
+        const defaultFloor =
+          location.pathname === "/admin/live" &&
+          !search.has("storeId") &&
+          !search.has("section") &&
+          !search.has("draftId");
+        const initial = await loadInitial(storeId, defaultFloor ? "true" : undefined);
         queryClient.setQueryData(sessionOptions.queryKey, initial.session);
         queryClient.setQueryData(storesOptions.queryKey, {
           stores: initial.stores,
           locale: initial.session?.user.locale ?? "ja",
         });
-        if (storeId && initial.floor) {
-          queryClient.setQueryData(floorOptions(storeId).queryKey, initial.floor);
+        if (initial.floor) {
+          queryClient.setQueryData(floorOptions(initial.floor.store.id).queryKey, initial.floor);
         }
       }
       const session = queryClient.getQueryData(sessionOptions.queryKey);
