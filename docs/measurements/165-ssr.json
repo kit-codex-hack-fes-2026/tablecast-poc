@@ -1,0 +1,360 @@
+{
+  "baseSha": "0150bf6bd396c3b4774d48823d9da68e2117ead7",
+  "environment": "macOS / Bun 1.3.13 / Node 24.2.0 / local workerd / Chromium",
+  "browser": {
+    "before": [
+      {
+        "path": "/account",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 777.5,
+        "documentMs": 784,
+        "interactiveMs": 1127.6999998092651,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 868
+      },
+      {
+        "path": "/account",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 81.90000009536743,
+        "documentMs": 82.40000009536743,
+        "interactiveMs": 179.7000002861023,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 104
+      },
+      {
+        "path": "/account",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 51.69999980926514,
+        "documentMs": 52.69999980926514,
+        "interactiveMs": 150.5,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 76
+      },
+      {
+        "path": "/account",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 52.69999980926514,
+        "documentMs": 53,
+        "interactiveMs": 133.7999997138977,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 76
+      },
+      {
+        "path": "/admin/live",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 746.2000002861023,
+        "documentMs": 748.3000001907349,
+        "interactiveMs": 843.9000000953674,
+        "redirectMs": 670.8000001907349,
+        "firstContentfulPaintMs": 776
+      },
+      {
+        "path": "/admin/live",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 64.09999990463257,
+        "documentMs": 65.40000009536743,
+        "interactiveMs": 164.59999990463257,
+        "redirectMs": 15.400000095367432,
+        "firstContentfulPaintMs": 88
+      },
+      {
+        "path": "/admin/live",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 56.200000286102295,
+        "documentMs": 59.09999990463257,
+        "interactiveMs": 152.5,
+        "redirectMs": 13.400000095367432,
+        "firstContentfulPaintMs": 80
+      },
+      {
+        "path": "/admin/live",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 59.19999980926514,
+        "documentMs": 61.69999980926514,
+        "interactiveMs": 160.5,
+        "redirectMs": 24.59999990463257,
+        "firstContentfulPaintMs": 84
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 597.9000000953674,
+        "documentMs": 610.2999997138977,
+        "interactiveMs": 694.9000000953674,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 624
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 76,
+        "documentMs": 88.2000002861023,
+        "interactiveMs": 272.30000019073486,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 100
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 48,
+        "documentMs": 56.799999713897705,
+        "interactiveMs": 143,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 72
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 60.200000286102295,
+        "documentMs": 69.7000002861023,
+        "interactiveMs": 153.7000002861023,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 84
+      }
+    ],
+    "after": [
+      {
+        "path": "/account",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 527.1999998092651,
+        "documentMs": 533.6999998092651,
+        "interactiveMs": 772.6999998092651,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 604
+      },
+      {
+        "path": "/account",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 54.40000009536743,
+        "documentMs": 55.19999980926514,
+        "interactiveMs": 131.40000009536743,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 72
+      },
+      {
+        "path": "/account",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 34.5,
+        "documentMs": 34.80000019073486,
+        "interactiveMs": 110.30000019073486,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 52
+      },
+      {
+        "path": "/account",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 33.10000038146973,
+        "documentMs": 33.5,
+        "interactiveMs": 112.90000009536743,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 52
+      },
+      {
+        "path": "/admin/live",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 536.2000002861023,
+        "documentMs": 537.2000002861023,
+        "interactiveMs": 618.4000000953674,
+        "redirectMs": 479.8999996185303,
+        "firstContentfulPaintMs": 564
+      },
+      {
+        "path": "/admin/live",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 43.09999990463257,
+        "documentMs": 45.40000009536743,
+        "interactiveMs": 121,
+        "redirectMs": 9.400000095367432,
+        "firstContentfulPaintMs": 64
+      },
+      {
+        "path": "/admin/live",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 37.799999713897705,
+        "documentMs": 39.19999980926514,
+        "interactiveMs": 113,
+        "redirectMs": 9.600000381469727,
+        "firstContentfulPaintMs": 56
+      },
+      {
+        "path": "/admin/live",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 39.90000009536743,
+        "documentMs": 42.09999990463257,
+        "interactiveMs": 115.59999990463257,
+        "redirectMs": 11.400000095367432,
+        "firstContentfulPaintMs": 60
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 0,
+        "worker": "cold",
+        "ttfbMs": 520.3000001907349,
+        "documentMs": 529.3000001907349,
+        "interactiveMs": 614.7000002861023,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 544
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 1,
+        "worker": "warm",
+        "ttfbMs": 50.19999980926514,
+        "documentMs": 61.59999990463257,
+        "interactiveMs": 230.09999990463257,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 72
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 2,
+        "worker": "warm",
+        "ttfbMs": 38.59999990463257,
+        "documentMs": 45.59999990463257,
+        "interactiveMs": 115.80000019073486,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 60
+      },
+      {
+        "path": "/admin/stores/tablecast-komorebi/menu/products",
+        "sample": 3,
+        "worker": "warm",
+        "ttfbMs": 39.799999713897705,
+        "documentMs": 43.5,
+        "interactiveMs": 132.7999997138977,
+        "redirectMs": 0,
+        "firstContentfulPaintMs": 60
+      }
+    ],
+    "fixture": {
+      "profile": "demo",
+      "stores": 3,
+      "tablesPerStore": 12,
+      "komorebiProducts": 60
+    }
+  },
+  "catalogApi": [
+    {
+      "count": 1,
+      "sample": 0,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 3,
+        "elapsedMs": 14
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 1,
+        "elapsedMs": 4
+      },
+      "bytes": 1760
+    },
+    {
+      "count": 1,
+      "sample": 1,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 1,
+        "elapsedMs": 8
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 1,
+        "elapsedMs": 3
+      },
+      "bytes": 1760
+    },
+    {
+      "count": 1,
+      "sample": 2,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 1,
+        "elapsedMs": 7
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 2,
+        "elapsedMs": 4
+      },
+      "bytes": 1760
+    },
+    {
+      "count": 100,
+      "sample": 0,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 3,
+        "elapsedMs": 7
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 1,
+        "elapsedMs": 4
+      },
+      "bytes": 59864
+    },
+    {
+      "count": 100,
+      "sample": 1,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 10,
+        "elapsedMs": 15
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 2,
+        "elapsedMs": 5
+      },
+      "bytes": 59864
+    },
+    {
+      "count": 100,
+      "sample": 2,
+      "before": {
+        "roundtrips": 7,
+        "statements": 7,
+        "bindingMs": 3,
+        "elapsedMs": 8
+      },
+      "after": {
+        "roundtrips": 4,
+        "statements": 4,
+        "bindingMs": 0,
+        "elapsedMs": 5
+      },
+      "bytes": 59864
+    }
+  ]
+}
