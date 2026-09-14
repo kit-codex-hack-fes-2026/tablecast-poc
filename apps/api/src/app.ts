@@ -5,6 +5,7 @@ import { authRoutes } from "./modules/auth/routes";
 import { devicesRoutes } from "./modules/devices/routes";
 import { mcpRoutes } from "./modules/mcp/routes";
 import { mediaRoutes } from "./modules/media/routes";
+import { performanceRoutes } from "./modules/performance/routes";
 import { initialRoutes } from "./modules/stores/initial-routes";
 import { storesRoutes } from "./modules/stores/collection-routes";
 import { admin } from "./modules/stores/routes";
@@ -20,6 +21,7 @@ const rpcRoutes = new Hono<ApiEnv>()
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
   .route("/", initialRoutes)
+  .route("/", performanceRoutes)
   .route("/api/admin/stores/:storeId/demo", demoRoutes)
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table);
@@ -30,9 +32,11 @@ const app = new Hono<ApiEnv>()
   .use("*", (c, next) =>
     bodyLimit({
       maxSize:
-        c.req.path === "/mcp" || /^\/api\/admin\/stores\/[^/]+\/images$/.test(c.req.path)
-          ? 8 * 1024 * 1024
-          : 2 * 1024 * 1024,
+        c.req.path === "/api/performance"
+          ? 16 * 1024
+          : c.req.path === "/mcp" || /^\/api\/admin\/stores\/[^/]+\/images$/.test(c.req.path)
+            ? 8 * 1024 * 1024
+            : 2 * 1024 * 1024,
       onError: (context: Context<ApiEnv>) =>
         context.json(
           {

@@ -10,8 +10,9 @@ import {
   redirect,
   Scripts,
   useMatchRoute,
+  useRouterState,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { floorOptions, storesOptions } from "../features/store/store-query";
 import { LocaleProvider } from "../i18n/locale";
 import { loadInitial, sessionOptions } from "../lib/session-query";
@@ -105,6 +106,14 @@ function Root({ children }: { children: ReactNode }) {
 }
 
 function RootContent() {
+  const loading = useRouterState({ select: (state) => state.isLoading });
+  useEffect(() => {
+    if (loading) return;
+    const readyAt = performance.now();
+    void import("../lib/performance")
+      .then(({ startPerformance }) => startPerformance(readyAt))
+      .catch(() => undefined);
+  }, [loading]);
   const { panelCookies } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>

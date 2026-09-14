@@ -250,3 +250,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 ### メールプレビュー依存
 
 メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
+### ブラウザー性能の収集
+
+Webの依存に`web-vitals` 6.2.1を追加した。通常の`bun install --frozen-lockfile`で導入され、専用の資格情報やブラウザー向けOTLP endpointは不要。Web/APIを同じreleaseで配備し、既存のWorker用OTel設定で送信する。Grafanaへ`infra/grafana/dashboards/tablecast-browser-performance.json`をimportする。指標と標本数・欠測の扱いは[観測手順](observability.md#ブラウザーの継続計測156)を参照する。

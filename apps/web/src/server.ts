@@ -1,6 +1,6 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { instrument } from "@inference-net/otel-cf-workers";
-import { context, propagation } from "@opentelemetry/api";
+import { context, propagation, trace } from "@opentelemetry/api";
 import { telemetryConfig, requestLog, type TelemetryEnv } from "@tablecast/api/telemetry";
 import { paraglideMiddleware } from "./paraglide/server.js";
 
@@ -44,6 +44,11 @@ export default instrument(
           return response;
         }
         const response = await start.fetch(request);
+        const traceId = trace.getActiveSpan()?.spanContext().traceId;
+        const release = env.TABLECAST_RELEASE_SHA ?? "local";
+        if (/^(?:[a-f0-9]{7,40}|tablecast-e2e|local)$/.test(release))
+          response.headers.append("Server-Timing", `tablecast-release;desc="${release}"`);
+        if (traceId) response.headers.append("Server-Timing", `tablecast-trace;desc="${traceId}"`);
         status = response.status;
         return response;
       } finally {

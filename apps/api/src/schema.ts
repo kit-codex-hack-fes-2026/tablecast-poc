@@ -94,3 +94,6 @@ export type { ApiError, Locale } from "./platform/model";
 export { showProductsSchema } from "./modules/voice/model";
 
 export { demoSchema, demoUpdateSchema, type Demo, type DemoUpdate } from "./modules/demo/model";
+
+export { performanceBatchSchema, performanceMetricSchema } from "./modules/performance/model";
+export type { PerformanceMetric } from "./modules/performance/model";

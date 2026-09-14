@@ -1,7 +1,13 @@
 import { test } from "./support/test";
 import { expect } from "@playwright/test";
-import type { CartLine } from "@tablecast/api/schema";
-import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
+import {
+  adminStateSchema,
+  catalogSchema,
+  tableStateSchema,
+  performanceBatchSchema,
+  type PerformanceMetric,
+  type CartLine,
+} from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
@@ -24,6 +30,11 @@ for (const { staffLanguage, labels } of [
       viewport: { width: 1024, height: 768 },
     });
     const guest = await guestContext.newPage();
+    const samples: PerformanceMetric[] = [];
+    guest.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/performance" && request.postData())
+        samples.push(...performanceBatchSchema.parse(request.postDataJSON()).metrics);
+    });
     const storeId = "tablecast-komorebi";
     try {
       await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
@@ -224,6 +235,17 @@ for (const { staffLanguage, labels } of [
       await staff.getByRole("tab", { name: labels.admin_overview, exact: true }).click();
       await staff.getByRole("button", { name: labels.admin_close_session, exact: true }).click();
       await expect(guest.getByRole("heading", { name: "Thank you for joining us" })).toBeVisible();
+      await expect
+        .poll(() => samples.some((metric) => metric.name === "cart-visible"), { timeout: 15_000 })
+        .toBe(true);
+      await expect
+        .poll(() => samples.some((metric) => metric.name === "order-visible"), { timeout: 15_000 })
+        .toBe(true);
+      for (const name of ["cart-api", "cart-visible", "order-api", "order-visible"]) {
+        expect(samples.find((metric) => metric.name === name)?.apiRequestId).toMatch(
+          /^[a-f0-9-]{36}$/,
+        );
+      }
     } finally {
       // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
       await guestContext.close();

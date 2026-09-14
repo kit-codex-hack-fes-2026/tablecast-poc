@@ -139,3 +139,27 @@ voice session / アプリのturn / tool call IDとHTTP traceを区別して記�
 ブラウザーでsession.delegation.createdとresponse.created / response.completed、tool HTTP、入力音声終了、出力音声を同じ時計で測る。モデルusageはresponseイベントのusageから取得し、cached・cache write・outputを分ける。推論完了・字幕到着・実再生は異なる。
 
 D1はspanとsql_duration_msを分け、取得できる場合にserved_by_region / served_by_primary / total_attemptsも残す。差分を純粋なネットワークRTTと断定しない。属性の許可だけでは、bindingやadapterが返さないmetadataを取得できた証拠にはならない。
+
+## ブラウザーの継続計測（#156）
+
+Webは標準`web-vitals` 6.2.1でLCP・INP・CLS・FCP・TTFBを収集する。`page-ready`は最初のroute読込が完了したReact effectまでのNavigation Timing起点の時間であり、標準TTIではない。LCPなどはドキュメントの入口ページへ帰属させ、SPA内の別ページへ誤帰属させない。BFCacheはライブラリの新しいmetric IDとnavigation種別で区別する。未対応ブラウザー・操作なしのINP・JS無効・配送失敗は欠測で、0として補わない。
+
+ページ種別は固定の分類、端末区分は粗いポインターと画面幅によるphone/tablet/desktopの推定とする。`first` / `return` はorigin内のlocalStorageにある訪問済みフラグの有無で、利用者IDや来店回数を表さない。保存できない場合は`unknown`。WorkerやD1のcold/warmとは別の軸である。URL、query、店舗・卓・利用者ID、DOM selector、入力内容、User-Agent全体は送らない。
+
+同originの`POST /api/performance`が16KiB・最大20件のbatchを検証し、既存OTel/Lokiへ`tablecast.browser_metric`として記録する。認証やDB読込は不要で、ブラウザー申告値を業務判断には使わない。通常は5秒ごとのfetch、ページ非表示時はsendBeaconでbest effort送信する。永続queueや自動再送は作らず、観測停止で画面・注文を失敗させない。公開endpointなのでOrigin検証はブラウザーからの別origin送信を防ぐためのもので、認証やbot対策とは扱わない。
+
+受信時のenvironment・PR番号はWorkerのresourceから決める。SSRが`Server-Timing`で返すreleaseとtrace IDをブラウザーが引き継ぎ、`tablecast.rum.release`と`tablecast.rum.document_trace_id`に置く。開いたままの旧ページがあるため、ブラウザーreleaseと受信APIのservice.versionを混同しない。PWAのHTTP転送では最終ドキュメントのSSR traceへつながり、転送元のtraceを含むと断定しない。
+
+GUIの`cart-api` / `order-api`は操作のmutation開始からHTTP応答ヘッダー到着まで、`cart-visible` / `order-visible`は対応するカート版／注文IDがReactへ反映され、次の描画フレームを経るまでを測る。後者はカート金額の更新を含む。途中で画面を離れる・描画されない場合はvisible標本を作らない。音声やMCP操作の時間とは区別する。API応答のX-Request-Idを`tablecast.rum.api_request_id`へ渡し、既存の`tablecast.request_completed`ログの`tablecast_request_id`から注文のtraceへ進む。通信・認可エラーは成功の分位値から除く。
+
+### 集計と読み方
+
+`infra/grafana/dashboards/tablecast-browser-performance.json`を既存Grafanaへimportする。環境、PR、ページ種別、端末、初回／再訪、ブラウザーreleaseで絞り、同じ期間・条件で比較する。Lokiの`last_over_time`でmetric IDごとの最後に受信した値を選び、Grafana標準のlabelsToFieldsとgroupByのp75・p50・p95・countで集計する。同じweb-vitals指標の更新通知を別標本として重複加算しない。分位値の定義はGrafana標準reducerに従い、別ツールの補間方式と混ぜない。標本数は利用者数ではない。
+
+LCP・INP・CLSはp75、注文はp50/p95と標本数を併記する。データは受信時刻で期間抽出され、送信されなかった標本は復元できない。集計中の訪問には暫定値が含まれる。Lokiのseries上限やエラーが出たら期間・条件を狭め、部分取得を全件のp75として報告しない。実利用の少数標本・ローカル検証・合成データを本番の性能保証にしない。
+
+### 改善前後の検証
+
+対象SHA、URL、認証状態、商品・画像・カート行数、端末・ブラウザー、ネットワーク条件、期間、標本数を揃える。Navigation TimingのTTFB、FCP/LCP、page-readyを同じrelease・ページ・visit・navigation区分で比較する。操作も同じ商品・カスタマイズでcart-api/visibleとorder-api/visibleを比較する。既存OTelのHTTP・D1 binding時間・SQL時間を並べ、SQL外の待ちをSQL最適化の効果に含めない。旧releaseに計測がなければ、今回導入したRUMだけで過去のp75を復元できない。
+
+参照: [web-vitals公式](https://github.com/GoogleChrome/web-vitals)、[Lokiの範囲集計](https://grafana.com/docs/loki/latest/query/metric_queries/)、[Grafanaの標準計算](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/query-transform-data/calculation-types/)。

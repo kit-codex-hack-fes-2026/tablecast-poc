@@ -26,6 +26,7 @@ import {
 import { money, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
+import { afterPerformancePaint, reportPerformance } from "../../lib/performance";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
@@ -108,6 +109,36 @@ function useTableSession({
   const [prepared, setSnapshot] = useState<Snapshot>();
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
   const [ordered, setOrdered] = useState(false);
+  const cartTiming = useRef<
+    { started: number; version: number; apiRequestId?: string } | undefined
+  >(undefined);
+  const orderTiming = useRef<
+    { started: number; orderId: string; apiRequestId?: string } | undefined
+  >(undefined);
+  useEffect(() => {
+    const timing = cartTiming.current;
+    if (!timing || data.cart.version < timing.version) return undefined;
+    return afterPerformancePaint(() => {
+      reportPerformance({
+        name: "cart-visible",
+        value: performance.now() - timing.started,
+        apiRequestId: timing.apiRequestId,
+      });
+      cartTiming.current = undefined;
+    });
+  }, [data.cart.version]);
+  useEffect(() => {
+    const timing = orderTiming.current;
+    if (!timing || !data.orders.some((order) => order.id === timing.orderId)) return undefined;
+    return afterPerformancePaint(() => {
+      reportPerformance({
+        name: "order-visible",
+        value: performance.now() - timing.started,
+        apiRequestId: timing.apiRequestId,
+      });
+      orderTiming.current = undefined;
+    });
+  }, [data.orders]);
   const receive = (updated: TableState) =>
     client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
   const screen = useMutation({
@@ -193,8 +224,26 @@ function useTableSession({
     voice.synchronise(data.voiceSessionId, data.voiceState === "active", data.speechSpeed);
   }, [data.voiceSessionId, data.voiceState, data.speechSpeed, voice]);
   const updateCart = useMutation({
-    mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
-      parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
+    mutationFn: async ({
+      lines,
+      expectedVersion,
+    }: {
+      lines: CartLine[];
+      expectedVersion: number;
+    }) => {
+      const started = performance.now();
+      const response = await endpoint.client.cart.$put({ json: { expectedVersion, lines } });
+      const apiRequestId = response.headers.get("X-Request-Id") ?? undefined;
+      reportPerformance({
+        name: "cart-api",
+        value: performance.now() - started,
+        apiRequestId,
+        outcome: response.ok ? "success" : "error",
+      });
+      const updated = await parseResponse(Promise.resolve(response));
+      cartTiming.current = { started, version: updated.cart.version, apiRequestId };
+      return updated;
+    },
     onSuccess: (updated) => {
       receive(updated);
       setChosen(undefined);
@@ -221,12 +270,21 @@ function useTableSession({
     onError: refresh,
   });
   const submit = useMutation({
-    mutationFn: (confirmation: Snapshot) => {
-      return parseResponse(
-        endpoint.client.orders.$post({
-          json: { snapshotId: confirmation.id, idempotencyKey: submitKey, approved: true },
-        }),
-      );
+    mutationFn: async (confirmation: Snapshot) => {
+      const started = performance.now();
+      const response = await endpoint.client.orders.$post({
+        json: { snapshotId: confirmation.id, idempotencyKey: submitKey, approved: true },
+      });
+      const apiRequestId = response.headers.get("X-Request-Id") ?? undefined;
+      reportPerformance({
+        name: "order-api",
+        value: performance.now() - started,
+        apiRequestId,
+        outcome: response.ok ? "success" : "error",
+      });
+      const order = await parseResponse(Promise.resolve(response));
+      orderTiming.current = { started, orderId: order.id, apiRequestId };
+      return order;
     },
     onSuccess: () => {
       setSnapshot(undefined);

@@ -1,0 +1,759 @@
+{
+  "uid": "tablecast-browser-performance",
+  "title": "TableCast ブラウザー性能",
+  "tags": ["tablecast"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "templating": {
+    "list": [
+      {
+        "name": "tablecast_loki",
+        "label": "Loki",
+        "type": "datasource",
+        "query": "loki",
+        "refresh": 1,
+        "regex": "/^(?!.*alert-state-history).*$/"
+      },
+      {
+        "name": "environment",
+        "label": "環境",
+        "type": "custom",
+        "query": "development,preview,production",
+        "current": {
+          "text": "preview",
+          "value": "preview"
+        }
+      },
+      {
+        "name": "pr",
+        "label": "PR番号（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "page",
+        "label": "ページ種別（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "device",
+        "label": "端末区分（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "visit",
+        "label": "初回・再訪（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "release",
+        "label": "ブラウザーのrelease（全件は .*）",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "表示性能 p75・標本数",
+      "description": "指定期間内に最後に受信したmetric IDごとの値を使用する。更新回数を標本数に数えない。未対応ブラウザーや未配送は欠測。大きい期間はLokiのseries上限に合わせて絞る。",
+      "type": "table",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"tablecast-api\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]browser_metric$\" | tablecast_rum_page=~\"$page\" | tablecast_rum_device=~\"$device\" | tablecast_rum_visit=~\"$visit\" | tablecast_rum_release=~\"$release\" | tablecast_outcome=\"success\" | tablecast_rum_metric=~\"LCP|INP|FCP|TTFB|page-ready\" | unwrap tablecast_rum_value | __error__=\"\" [$__range]) by (tablecast_rum_id, tablecast_rum_metric, tablecast_rum_page, tablecast_rum_device, tablecast_rum_visit, tablecast_rum_navigation, tablecast_rum_release)",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "tablecast_rum_metric": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_page": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_device": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_visit": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_navigation": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_release": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": ["p75", "count"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*count.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "displayName",
+                "value": "標本数"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_metric"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "指標"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_page"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ページ"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_device"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "端末"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_visit"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "訪問"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_navigation"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "遷移"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_release"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "release"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p50.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p50"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p75.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p75"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p95.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p95"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 2,
+      "title": "CLS p75・標本数",
+      "description": "指定期間内に最後に受信したmetric IDごとの値を使用する。更新回数を標本数に数えない。未対応ブラウザーや未配送は欠測。大きい期間はLokiのseries上限に合わせて絞る。",
+      "type": "table",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"tablecast-api\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]browser_metric$\" | tablecast_rum_page=~\"$page\" | tablecast_rum_device=~\"$device\" | tablecast_rum_visit=~\"$visit\" | tablecast_rum_release=~\"$release\" | tablecast_outcome=\"success\" | tablecast_rum_metric=~\"CLS\" | unwrap tablecast_rum_value | __error__=\"\" [$__range]) by (tablecast_rum_id, tablecast_rum_metric, tablecast_rum_page, tablecast_rum_device, tablecast_rum_visit, tablecast_rum_navigation, tablecast_rum_release)",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "tablecast_rum_metric": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_page": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_device": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_visit": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_navigation": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_release": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": ["p75", "count"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*count.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "displayName",
+                "value": "標本数"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_metric"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "指標"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_page"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ページ"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_device"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "端末"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_visit"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "訪問"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_navigation"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "遷移"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_release"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "release"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p50.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p50"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p75.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p75"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p95.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p95"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 3,
+      "title": "注文操作 p50・p95・標本数",
+      "description": "指定期間内に最後に受信したmetric IDごとの値を使用する。更新回数を標本数に数えない。未対応ブラウザーや未配送は欠測。大きい期間はLokiのseries上限に合わせて絞る。",
+      "type": "table",
+      "datasource": {
+        "type": "loki",
+        "uid": "$tablecast_loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time({service_namespace=\"tablecast\",deployment_environment_name=\"$environment\",service_name=\"tablecast-api\"} | tablecast_pr_number=~\"$pr\" |~ \"^tablecast[.]browser_metric$\" | tablecast_rum_page=~\"$page\" | tablecast_rum_device=~\"$device\" | tablecast_rum_visit=~\"$visit\" | tablecast_rum_release=~\"$release\" | tablecast_outcome=\"success\" | tablecast_rum_metric=~\"cart-api|cart-visible|order-api|order-visible\" | unwrap tablecast_rum_value | __error__=\"\" [$__range]) by (tablecast_rum_id, tablecast_rum_metric, tablecast_rum_page, tablecast_rum_device, tablecast_rum_visit, tablecast_rum_navigation, tablecast_rum_release)",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "tablecast_rum_metric": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_page": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_device": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_visit": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_navigation": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "tablecast_rum_release": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": ["p50", "p95", "count"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*count.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "displayName",
+                "value": "標本数"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_metric"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "指標"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_page"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ページ"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_device"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "端末"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_visit"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "訪問"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_navigation"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "遷移"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tablecast_rum_release"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "release"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p50.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p50"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p75.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p75"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*p95.*"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p95"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}
