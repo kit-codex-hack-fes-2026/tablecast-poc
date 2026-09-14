@@ -64,3 +64,19 @@ export function Floor() {
     </>
   );
 }
+
+export function FloorPending() {
+  const { t } = useI18n();
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">{t("admin_live")}</h1>
+        <span role="status" className="text-sm text-muted-foreground">
+          {t("common_loading")}
+        </span>
+      </div>
+      <TableMetrics tables={[]} vacantCount={0} pending />
+      <TableTimeline tables={[]} pending onSelect={() => undefined} />
+    </>
+  );
+}

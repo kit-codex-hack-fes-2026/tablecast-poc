@@ -23,7 +23,9 @@ export function TableTimeline({
   onSelect,
   onOpen,
   initialNow,
+  pending = false,
 }: {
+  pending?: boolean;
   tables: TableState[];
   initialNow?: number;
   vacantTables?: { id: string; name: string }[];
@@ -60,6 +62,7 @@ export function TableTimeline({
   );
   return (
     <DataTable
+      pending={pending}
       data={rows}
       columns={columns}
       getRowId={(row) => row.id}

@@ -7,7 +7,8 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/")({
   loader: async ({ context, params }) => {
     await context.queryClient.ensureInfiniteQueryData(historyOptions(params.storeId));
   },
-  component: Page,
+  pendingComponent: () => <Page />,
+  component: () => <Page />,
 });
 function Page() {
   const { storeId } = Route.useParams();

@@ -1,11 +1,14 @@
 import type { TableState } from "@tablecast/api/schema";
 import { Bell, CircleDollarSign, Radio, Users } from "lucide-react";
+import { Skeleton } from "../../components/ui/skeleton";
 import { useI18n } from "../../i18n/locale";
 
 export function TableMetrics({
   tables,
   vacantCount,
+  pending = false,
 }: {
+  pending?: boolean;
   tables: TableState[];
   vacantCount: number;
 }) {
@@ -54,8 +57,8 @@ export function TableMetrics({
             />
           </div>
           <strong className="text-3xl font-medium tracking-tight group-data-attention:text-accent-foreground">
-            {value}
-            {total !== undefined && (
+            {pending ? <Skeleton className="h-9 w-16" /> : value}
+            {!pending && total !== undefined && (
               <small className="ml-2 text-base text-muted-foreground">/ {total}</small>
             )}
           </strong>

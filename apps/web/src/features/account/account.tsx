@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, useSuspenseQueries } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
@@ -36,11 +36,11 @@ import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 import { SettingsShell } from "../shell/settings-shell";
 
-function useAccount() {
+function useAccount(pending: boolean) {
   const { t } = useI18n();
   const session = useQuery(sessionOptions);
   const client = useQueryClient();
-  const [sessions, accounts, keys] = useSuspenseQueries({
+  const [sessions, accounts, keys] = useQueries({
     queries: [accountSessionsOptions, accountLinksOptions, accountKeysOptions],
   });
   const change = useMutation({
@@ -60,10 +60,11 @@ function useAccount() {
     keys,
     change,
     section,
+    loading: pending || sessions.isPending || accounts.isPending || keys.isPending,
   };
 }
-export function Account() {
-  const controller = useAccount();
+export function Account({ pending = false }: { pending?: boolean }) {
+  const controller = useAccount(pending);
   const { t, change, sessions, accounts, keys } = controller;
   return (
     <SettingsShell>
@@ -111,7 +112,7 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
           <input
             className="sr-only"
             type="file"
-            disabled={change.isPending}
+            disabled={change.isPending || controller.loading}
             accept="image/png,image/jpeg,image/webp"
             onChange={(event) => {
               const file = event.target.files?.[0];
@@ -142,18 +143,21 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
                 required
                 maxLength={100}
                 autoComplete="name"
+                disabled={controller.loading}
               />
             )}
           </form.AppField>
         </div>
         <form.AppForm>
-          <form.SubmitButton disabled={change.isPending}>{t("account_save")}</form.SubmitButton>
+          <form.SubmitButton disabled={change.isPending || controller.loading}>
+            {t("account_save")}
+          </form.SubmitButton>
         </form.AppForm>
       </form>
       {!session.data?.user.emailVerified && (
         <Button
           variant="outline"
-          disabled={change.isPending}
+          disabled={change.isPending || controller.loading}
           onClick={() =>
             change.mutate(async () => {
               authResult(
@@ -180,8 +184,14 @@ type Session = NonNullable<AccountController["sessions"]["data"]>[number];
 function AccountConnections({ controller }: { controller: AccountController }) {
   const { t, accounts, change, session, section } = controller;
   const columns = useMemo(
-    () => connectionColumns(t, session.data?.user.email, change.isPending, change.mutate),
-    [t, session.data?.user.email, change.isPending, change.mutate],
+    () =>
+      connectionColumns(
+        t,
+        session.data?.user.email,
+        change.isPending || controller.loading,
+        change.mutate,
+      ),
+    [t, session.data?.user.email, change.isPending, controller.loading, change.mutate],
   );
   return (
     <section className={section}>
@@ -197,22 +207,24 @@ function AccountConnections({ controller }: { controller: AccountController }) {
         columns={columns}
         getRowId={(row) => row.id}
       />
-      {accounts.data && !accounts.data.some((item) => item.providerId === "google") && (
-        <Button
-          variant="outline"
-          disabled={change.isPending}
-          onClick={() =>
-            change.mutate(async () => {
-              authResult(
-                await authClient.linkSocial({ provider: "google", callbackURL: "/account" }),
-              );
-            })
-          }
-        >
-          <GoogleIcon />
-          {t("account_link_google")}
-        </Button>
-      )}
+      <div className="min-h-11">
+        {(!accounts.data || !accounts.data.some((item) => item.providerId === "google")) && (
+          <Button
+            variant="outline"
+            disabled={change.isPending || controller.loading}
+            onClick={() =>
+              change.mutate(async () => {
+                authResult(
+                  await authClient.linkSocial({ provider: "google", callbackURL: "/account" }),
+                );
+              })
+            }
+          >
+            <GoogleIcon />
+            {t("account_link_google")}
+          </Button>
+        )}
+      </div>
     </section>
   );
 }
@@ -269,8 +281,8 @@ function connectionColumns(
 function AccountPasskeys({ controller }: { controller: AccountController }) {
   const { t, keys, change, section } = controller;
   const columns = useMemo(
-    () => passkeyColumns(t, change.isPending, change.mutate),
-    [t, change.isPending, change.mutate],
+    () => passkeyColumns(t, change.isPending || controller.loading, change.mutate),
+    [t, change.isPending, controller.loading, change.mutate],
   );
   const form = useAppForm({
     defaultValues: { name: "" },
@@ -308,11 +320,17 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
       >
         <div className="min-w-48 flex-1">
           <form.AppField name="name" validators={{ onChange: z.string().max(100) }}>
-            {(field) => <field.TextField label={t("account_key_name")} maxLength={100} />}
+            {(field) => (
+              <field.TextField
+                label={t("account_key_name")}
+                maxLength={100}
+                disabled={controller.loading}
+              />
+            )}
           </form.AppField>
         </div>
         <form.AppForm>
-          <form.SubmitButton disabled={change.isPending}>
+          <form.SubmitButton disabled={change.isPending || controller.loading}>
             <Plus />
             {t("account_add_passkey")}
           </form.SubmitButton>
@@ -364,8 +382,14 @@ function passkeyColumns(
 function AccountSessions({ controller }: { controller: AccountController }) {
   const { t, sessions, session, change, section } = controller;
   const columns = useMemo(
-    () => loginSessionColumns(t, session.data?.session.id, change.isPending, change.mutate),
-    [t, session.data?.session.id, change.isPending, change.mutate],
+    () =>
+      loginSessionColumns(
+        t,
+        session.data?.session.id,
+        change.isPending || controller.loading,
+        change.mutate,
+      ),
+    [t, session.data?.session.id, change.isPending, controller.loading, change.mutate],
   );
   return (
     <section className={section}>
@@ -384,7 +408,7 @@ function AccountSessions({ controller }: { controller: AccountController }) {
       <ConfirmAction
         label={t("account_revoke_others")}
         subject={t("account_keep_current")}
-        disabled={change.isPending}
+        disabled={change.isPending || controller.loading}
         icon={<LogOut />}
         onConfirm={() =>
           change.mutate(async () => {
