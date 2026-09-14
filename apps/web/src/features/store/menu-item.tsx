@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -78,6 +78,13 @@ function ItemForm({
   const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
   const hasImageUploads = () =>
     client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
+  const stagedImages = useRef(new Set<string>());
+  const [hasStagedImages, setHasStagedImages] = useState(false);
+  const onImageStagedChange = useCallback((id: string, staged: boolean) => {
+    if (staged) stagedImages.current.add(id);
+    else stagedImages.current.delete(id);
+    setHasStagedImages(stagedImages.current.size > 0);
+  }, []);
   const navigate = useNavigate();
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
@@ -100,8 +107,11 @@ function ItemForm({
   });
   useBlocker({
     shouldBlockFn: () =>
-      hasImageUploads() || (form.state.isDirty && !window.confirm(t("menu_leave_unsaved"))),
-    enableBeforeUnload: () => hasImageUploads() || form.state.isDirty,
+      hasImageUploads() ||
+      ((form.state.isDirty || stagedImages.current.size > 0) &&
+        !window.confirm(t("menu_leave_unsaved"))),
+    enableBeforeUnload: () =>
+      hasImageUploads() || form.state.isDirty || stagedImages.current.size > 0,
   });
   const save = useMutation({
     mutationFn: (configuration: Configuration) => {
@@ -192,6 +202,7 @@ function ItemForm({
               >
                 {section === "products" && (
                   <ProductsEditor
+                    onImageStagedChange={onImageStagedChange}
                     storeId={store.id}
                     value={configuration}
                     selectedId={selectedId}
@@ -236,13 +247,15 @@ function ItemForm({
                   <div className="flex items-center gap-3">
                     <Button
                       type="submit"
-                      data-pwa-blocked={dirty || save.isPending || uploadingImages}
+                      data-pwa-blocked={
+                        dirty || save.isPending || uploadingImages || hasStagedImages
+                      }
                       disabled={save.isPending || uploadingImages || (!dirty && itemId !== "new")}
                     >
                       <Save />
                       {t("common_save")}
                     </Button>
-                    {(dirty || uploadingImages) && (
+                    {(dirty || uploadingImages || hasStagedImages) && (
                       <span role="status" className="text-sm text-muted-foreground">
                         {t(uploadingImages ? "editor_image_wait" : "admin_unsaved")}
                       </span>

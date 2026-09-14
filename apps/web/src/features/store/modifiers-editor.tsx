@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
-import { ConfigurationImageField } from "./configuration-image-field";
+import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { emptyText } from "./configuration-defaults";
 import {
   BilingualFields,
@@ -36,11 +36,13 @@ export function ModifiersEditor({
   storeId,
   product,
   onChange,
+  onImageStagedChange,
   disabled,
 }: {
   storeId: string;
   product: Product;
   onChange: (modifiers: Modifier[]) => void;
+  onImageStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
   const { t, locale } = useI18n();
@@ -168,6 +170,7 @@ export function ModifiersEditor({
             <div className="grid min-w-0 gap-6">
               {group.options.map((option, optionIndex) => (
                 <ModifierOptionEditor
+                  onImageStagedChange={onImageStagedChange}
                   storeId={storeId}
                   key={option.id}
                   option={option}
@@ -264,6 +267,7 @@ function ModifierOptionEditor({
   removable,
   onChange,
   onRemove,
+  onImageStagedChange,
 }: {
   storeId: string;
   option: Modifier["options"][number];
@@ -275,6 +279,7 @@ function ModifierOptionEditor({
   removable: boolean;
   onChange: (change: Partial<Modifier["options"][number]>) => void;
   onRemove: () => void;
+  onImageStagedChange?: ImageStagedChange;
 }) {
   const { t } = useI18n();
   const context = `${labelledBy} ${optionId}`;
@@ -347,6 +352,7 @@ function ModifierOptionEditor({
               </span>
             </legend>
             <ConfigurationImageField
+              onStagedChange={onImageStagedChange}
               key={`${storeId}:${option.id}`}
               storeId={storeId}
               value={option}

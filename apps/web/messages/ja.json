@@ -607,5 +607,6 @@
   "editor_image_upload": "画像を取り込んで使用",
   "editor_image_apply": "この参照を使用",
   "editor_image_uploaded": "画像を取り込みました。変更を残すには下書きを保存してください。",
-  "editor_image_wait": "画像の取込が終わるまで保存・削除・画面移動はできません。"
+  "editor_image_wait": "画像の取込が終わるまで保存・削除・画面移動はできません。",
+  "editor_image_reset": "画像の入力を戻す"
 }
