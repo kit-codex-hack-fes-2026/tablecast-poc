@@ -98,8 +98,6 @@ export function DraftPage({ draftId }: { draftId: string }) {
     client.setQueryData(draftOptions(storeId, draftId).queryKey, next);
     void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
     void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
-    void client.invalidateQueries({ queryKey: ["tablecast-admin-catalog", storeId] });
-    void client.invalidateQueries({ queryKey: ["tablecast-stores"] });
   }
   const validate = useMutation({
     mutationFn: () => {
@@ -125,6 +123,8 @@ export function DraftPage({ draftId }: { draftId: string }) {
     },
     onSuccess: (next) => {
       saved(next);
+      void client.invalidateQueries({ queryKey: ["tablecast-admin-catalog", storeId] });
+      void client.invalidateQueries({ queryKey: ["tablecast-stores"] });
       setConfirmPublish(false);
     },
   });
