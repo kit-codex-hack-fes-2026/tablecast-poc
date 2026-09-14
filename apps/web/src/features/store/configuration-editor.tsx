@@ -23,6 +23,7 @@ import {
   ReferencesField,
   StringListField,
 } from "./configuration-fields";
+import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { ModifiersEditor } from "./modifiers-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
@@ -35,7 +36,14 @@ type EditorProps = {
   selectedId: string;
 };
 
-export function ProductsEditor({ value, onChange, disabled, selectedId }: EditorProps) {
+export function ProductsEditor({
+  storeId,
+  value,
+  onChange,
+  disabled,
+  selectedId,
+  onImageStagedChange,
+}: EditorProps & { storeId: string; onImageStagedChange?: ImageStagedChange }) {
   const { t, locale } = useI18n();
   const product = value.products.find((item) => item.id === selectedId);
   function update(change: Partial<Product>) {
@@ -109,29 +117,14 @@ export function ProductsEditor({ value, onChange, disabled, selectedId }: Editor
             />
           </ConfigurationSection>
           <ConfigurationSection title={t("editor_images")} icon={Image}>
-            <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
-              <label className="flex flex-col gap-2 text-sm">
-                {t("editor_image")}
-                <Input
-                  maxLength={300}
-                  value={product.imageKey ?? ""}
-                  onChange={(event) => update({ imageKey: event.target.value || null })}
-                />
-              </label>
-              <label className="flex flex-col gap-2 text-sm">
-                {t("editor_image_kind")}
-                <NativeSelect
-                  className={selectClass}
-                  value={product.imageKind}
-                  onChange={(event) =>
-                    update({ imageKind: productSchema.shape.imageKind.parse(event.target.value) })
-                  }
-                >
-                  <option value="illustration">{t("kiosk_illustration")}</option>
-                  <option value="photograph">{t("editor_photograph")}</option>
-                </NativeSelect>
-              </label>
-            </div>
+            <ConfigurationImageField
+              key={`${storeId}:${product.id}`}
+              storeId={storeId}
+              value={product}
+              onChange={update}
+              onStagedChange={onImageStagedChange}
+              disabled={disabled}
+            />
           </ConfigurationSection>
           <ConfigurationSection title={t("kiosk_allergens")} icon={ShieldCheck}>
             <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
@@ -222,6 +215,8 @@ export function ProductsEditor({ value, onChange, disabled, selectedId }: Editor
           </ConfigurationSection>
           <ConfigurationSection title={t("editor_modifiers")} icon={SlidersHorizontal}>
             <ModifiersEditor
+              onImageStagedChange={onImageStagedChange}
+              storeId={storeId}
               key={product.id}
               product={product}
               disabled={disabled}

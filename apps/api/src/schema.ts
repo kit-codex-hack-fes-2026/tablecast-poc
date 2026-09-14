@@ -1,5 +1,6 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  maxImageBytes,
   imageMetadataSchema,
   imageSourceSchema,
   uploadedImageSchema,

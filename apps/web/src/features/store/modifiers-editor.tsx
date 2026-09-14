@@ -1,12 +1,12 @@
-import { optionSchema, type Modifier, type Product } from "@tablecast/api/schema";
+import { type Modifier, type Product } from "@tablecast/api/schema";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Image, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
-import { MenuOptionImage } from "../../components/menu-option-image";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
+import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { emptyText } from "./configuration-defaults";
 import {
   BilingualFields,
@@ -14,6 +14,7 @@ import {
   NumericField,
   ReferencesField,
 } from "./configuration-fields";
+import { configurationImageUploadKey } from "./menu-query";
 
 function encodeEditorId(value: string) {
   return encodeURIComponent(JSON.stringify(value));
@@ -34,15 +35,21 @@ function newOption(): Modifier["options"][number] {
 }
 
 export function ModifiersEditor({
+  storeId,
   product,
   onChange,
+  onImageStagedChange,
   disabled,
 }: {
+  storeId: string;
   product: Product;
   onChange: (modifiers: Modifier[]) => void;
+  onImageStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
   const { t, locale } = useI18n();
+  const client = useQueryClient();
+  const uploadingImages = useIsMutating({ mutationKey: configurationImageUploadKey(storeId) }) > 0;
   const id = useId();
   const root = useRef<HTMLFieldSetElement>(null);
   const pendingFocus = useRef<string | null>(null);
@@ -170,6 +177,8 @@ export function ModifiersEditor({
             <div className="grid min-w-0 gap-6">
               {group.options.map((option, optionIndex) => (
                 <ModifierOptionEditor
+                  onImageStagedChange={onImageStagedChange}
+                  storeId={storeId}
                   key={option.id}
                   option={option}
                   title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
@@ -177,9 +186,11 @@ export function ModifiersEditor({
                   labelledBy={groupId}
                   references={optionChoices.filter((choice) => choice.id !== option.id)}
                   disabled={disabled}
-                  removable={group.options.length > 1}
+                  removable={group.options.length > 1 && !uploadingImages}
                   onChange={(change) => updateOption(group, option.id, change)}
                   onRemove={() => {
+                    if (client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }))
+                      return;
                     const next = group.options[optionIndex + 1] ?? group.options[optionIndex - 1];
                     pendingFocus.current = next
                       ? `${groupId}-${encodeEditorId(next.id)}`
@@ -212,8 +223,10 @@ export function ModifiersEditor({
               type="button"
               className="justify-self-start"
               aria-labelledby={`${groupId}-remove ${groupId}`}
-              disabled={disabled}
+              disabled={disabled || uploadingImages}
               onClick={() => {
+                if (client.isMutating({ mutationKey: configurationImageUploadKey(storeId) }))
+                  return;
                 const next = product.modifiers[groupIndex + 1] ?? product.modifiers[groupIndex - 1];
                 pendingFocus.current = next ? `${id}-${encodeEditorId(next.id)}` : `${id}-add`;
                 onChange(product.modifiers.filter((item) => item.id !== group.id));
@@ -255,6 +268,7 @@ export function ModifiersEditor({
 }
 
 function ModifierOptionEditor({
+  storeId,
   option,
   title,
   id: optionId,
@@ -264,7 +278,9 @@ function ModifierOptionEditor({
   removable,
   onChange,
   onRemove,
+  onImageStagedChange,
 }: {
+  storeId: string;
   option: Modifier["options"][number];
   title: string;
   id: string;
@@ -274,6 +290,7 @@ function ModifierOptionEditor({
   removable: boolean;
   onChange: (change: Partial<Modifier["options"][number]>) => void;
   onRemove: () => void;
+  onImageStagedChange?: ImageStagedChange;
 }) {
   const { t } = useI18n();
   const context = `${labelledBy} ${optionId}`;
@@ -345,39 +362,14 @@ function ModifierOptionEditor({
                 {t("editor_images")}
               </span>
             </legend>
-            <div className="flex flex-wrap items-start gap-4">
-              <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
-              <div className="grid min-w-0 flex-1 gap-4 @xl:grid-cols-2">
-                <label className="grid gap-2 text-sm">
-                  <span id={`${optionId}-image`}>{t("editor_image")}</span>
-                  <Input
-                    aria-labelledby={`${context} ${optionId}-image`}
-                    maxLength={300}
-                    value={option.imageKey ?? ""}
-                    onChange={(event) =>
-                      onChange({
-                        imageKey: event.target.value || null,
-                      })
-                    }
-                  />
-                </label>
-                <label className="grid gap-2 text-sm">
-                  <span id={`${optionId}-image-kind`}>{t("editor_image_kind")}</span>
-                  <NativeSelect
-                    aria-labelledby={`${context} ${optionId}-image-kind`}
-                    value={option.imageKind}
-                    onChange={(event) =>
-                      onChange({
-                        imageKind: optionSchema.shape.imageKind.parse(event.target.value),
-                      })
-                    }
-                  >
-                    <option value="illustration">{t("kiosk_illustration")}</option>
-                    <option value="photograph">{t("editor_photograph")}</option>
-                  </NativeSelect>
-                </label>
-              </div>
-            </div>
+            <ConfigurationImageField
+              onStagedChange={onImageStagedChange}
+              key={`${storeId}:${option.id}`}
+              storeId={storeId}
+              value={option}
+              disabled={disabled}
+              onChange={({ imageKey, imageKind }) => onChange({ imageKey, imageKind })}
+            />
           </fieldset>
           <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
             <ReferencesField

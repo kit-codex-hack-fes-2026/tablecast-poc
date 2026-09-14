@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { configurationSchema } from "@tablecast/api/schema";
 import { expect, userEvent, within } from "storybook/test";
@@ -84,34 +85,37 @@ function ConfigurationLayout({
   initialConfiguration?: typeof configuration;
 }) {
   const { t, locale } = useI18n();
+  const [client] = useState(() => new QueryClient());
   const [value, setValue] = useState(initialConfiguration);
   const [saved, setSaved] = useState(false);
   const item = value[section][0];
   const props = { value, onChange: setValue, selectedId: item.id, disabled: false };
   return (
-    <main className="mx-auto max-w-4xl space-y-8 p-6">
-      <h1 className="text-2xl font-semibold">{item.text[locale].displayName}</h1>
-      <form
-        className="space-y-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSaved(true);
-        }}
-      >
-        <fieldset className="min-w-0 space-y-5">
-          {section === "products" && <ProductsEditor {...props} />}
-          {section === "categories" && <CategoriesEditor {...props} />}
-          {section === "plans" && <PlansEditor {...props} />}
-        </fieldset>
-        <div className="sticky bottom-0 flex flex-wrap gap-3 border-t bg-background py-4">
-          <Button type="submit">
-            <Save aria-hidden="true" />
-            {t("common_save")}
-          </Button>
-          <output>{saved ? t("account_saved") : ""}</output>
-        </div>
-      </form>
-    </main>
+    <QueryClientProvider client={client}>
+      <main className="mx-auto max-w-4xl space-y-8 p-6">
+        <h1 className="text-2xl font-semibold">{item.text[locale].displayName}</h1>
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSaved(true);
+          }}
+        >
+          <fieldset className="min-w-0 space-y-5">
+            {section === "products" && <ProductsEditor {...props} storeId="tablecast-story" />}
+            {section === "categories" && <CategoriesEditor {...props} />}
+            {section === "plans" && <PlansEditor {...props} />}
+          </fieldset>
+          <div className="sticky bottom-0 flex flex-wrap gap-3 border-t bg-background py-4">
+            <Button type="submit">
+              <Save aria-hidden="true" />
+              {t("common_save")}
+            </Button>
+            <output>{saved ? t("account_saved") : ""}</output>
+          </div>
+        </form>
+      </main>
+    </QueryClientProvider>
   );
 }
 const meta = { title: "店舗/設定フォームの配置", component: ConfigurationLayout } satisfies Meta<
