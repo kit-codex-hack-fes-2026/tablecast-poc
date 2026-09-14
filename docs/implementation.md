@@ -10,7 +10,7 @@
 AGENTS.mdとdocs/README.mdを読み、$minimum-implに従ってTableCastの実装を開始してください。
 
 既存ファイル、manifest、exports、Git差分を先に確認し、存在しない実装を前提にしないでください。
-Bun + Turborepo、TanStack Start + Hono/Mastra、root livekitのPython、Inworld STT/TTSを使います。
+Bun + Turborepo、TanStack Start + Hono、GPT-LiveのWebRTC、hosted OpenAI Agents APIを使います。
 packages/domain、packages/contracts、独立Storybookアプリは作りません。
 客と店側の両UIを日英対応にし、会話を広く表示し、言語と音声停止・再開を目立たせてください。
 
@@ -25,15 +25,15 @@ packages/domain、packages/contracts、独立Storybookアプリは作りませ�
 ## 段階0: 実物の確認と互換性
 
 既存リポジトリにコードがあれば、全置換せず利用可能な構成を特定する。初期状態なら公式の最小templateから始める。
-Bun、TypeScript、Vite、TanStack Start、Cloudflare plugin、Wrangler、Hono、Mastra、Vitest、Storybookの互換組合せを確認する。
-PythonのLiveKit coreとInworld plugin、uv/ty/ruff/pytestを合わせ、lockfileへ固定する。架空の最新モデル・voice名を設定しない。
+Bun、TypeScript、Vite、TanStack Start、Cloudflare plugin、Wrangler、Hono、OpenAI SDK、Vitest、Storybookの互換組合せを確認する。
+公式OpenAI SDKとbrowser WebRTCの公開契約を確認し、lockfileへ固定する。架空の最新モデル・voice名を設定しない。
 起動URL・state・秘密情報の所有を明確にし、最初のworktreeだけでローカル起動する。
 
 ## 段階1: リスクの高い接続を小さく確認
 
-通常の日本語・英語STT/TTS、Inworld演技とbreak、字幕からのタグ除去、PythonからHono/Mastra streamを確認する。
+日本語・英語のGPT-Live音声、字幕差分の表示、HonoとAgents APIのfunction・本文stream・取消を確認する。
 STTに話者・時刻がない場合だけ公式pluginへpatchし、上流と同じ試験を行う。
-LLM生成の中断、HTTP取消、音声停止、再開、注文確認の固定読上げ受渡しを最小構成で確認する。
+LLM生成の中断、HTTP取消、音声停止、再開、GPT-Liveの業務委任と自然な注文確認を最小構成で確認する。
 未検証の接続を型キャストやmock成功で隠して大量のUI実装へ進まない。必要な機能を維持できない点は証拠と選択肢を記録する。
 
 ## 段階2: GUIから実業務までの縦断
@@ -44,7 +44,7 @@ Storybookはこの時点からWeb内で使い、日英、長文、停止、エ�
 
 ## 段階3: 音声とリアルタイムを接続
 
-Mastra ToolをGUIと同じAPI内の操作関数へ接続する。音声でカートを作り、GUIで変更し、同じsnapshotを確認する。
+Agents APIのfunctionをGUIと同じAPI内の操作関数へ接続する。音声でカートを作り、GUIで変更し、同じsnapshotを確認する。
 D1の業務eventとDOの配信・欠落回復を接続し、店舗の卓タイムラインを完成させる。
 会話領域、停止・再開・言語変更の競合、古いturnの書込み、タグ漏れ、エコーを検証する。
 
@@ -52,23 +52,23 @@ D1の業務eventとDOの配信・欠落回復を接続し、店舗の卓タイ�
 
 MCPで日英メニュー・speechName・プラン・キャストを下書き登録し、検証・公開する。
 本物のschemaと業務経路に合わせてseed、背景卓の進行、resetを実装する。
-3つ以上のworktreeを同時起動し、ホスト、Cookie、TCP/UDP、state、LiveKitを分離できることを確認する。
+3つ以上のworktreeを同時起動し、ホスト、Cookie、port、stateを分離できることを確認する。
 
 ## 段階5: 公開環境と受入
 
-Workerのbuild・migration・secret・Service Bindingをデプロイし、Python Agentも対象環境へ配置する。
+Workerのbuild・migration・secret・Service Bindingをデプロイし、GPT-LiveとAgents APIの実接続を確認する。
 実iPad、日英、実Inworld、MCP、管理画面を通した受入試験を行う。
 本番設定の記録、ログ、故障時GUI継続、再デプロイ、データを失わないmigrationの運用を残す。
 受入条件を満たさない機能を説明だけで完成にしない。
 
 ## worktreeでの担当分割
 
-| 担当       | 主な所有範囲                                             | 同時変更を避ける箇所 |
-| ---------- | -------------------------------------------------------- | -------------------- |
-| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合      | lockfile、共通設定   |
-| Web        | kiosk、admin、日英、Storybook                            | APIの内部実装        |
-| 業務API    | 認証、catalog、cart/order/billing、MCP、DB、DO           | root起動構成         |
-| 音声       | root livekit、Mastra接続、発話、upstream patch、実機試験 | APIの業務ロジック    |
+| 担当       | 主な所有範囲                                        | 同時変更を避ける箇所 |
+| ---------- | --------------------------------------------------- | -------------------- |
+| 基盤・統合 | root設定、local起動、公開exports、CI、migration統合 | lockfile、共通設定   |
+| Web        | kiosk、admin、日英、Storybook                       | APIの内部実装        |
+| 業務API    | 認証、catalog、cart/order/billing、MCP、DB、DO      | root起動構成         |
+| 音声       | GPT-Live WebRTC、Agents API接続、発話、実機試験     | APIの業務ロジック    |
 
 契約の変更は所有API側で先に確定し、consumerのテストも同じ変更で更新する。
 担当を分けるためだけにpackageを増やさない。ディレクトリ所有と小さいPRで十分である。

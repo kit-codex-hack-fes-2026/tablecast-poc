@@ -1,248 +1,442 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
-import { z } from "zod";
-import app from "../src/app";
-import * as businessTables from "../src/db/business-schema";
-import { getTableState } from "../src/modules/tables/queries";
+import { eq } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as business from "../src/db/business-schema";
+import { conversationHistory, invokeVoiceTool } from "../src/modules/voice/realtime";
+import { recordConversationItems } from "../src/modules/voice/conversation";
 import { setVoiceSession } from "../src/modules/voice/service";
+import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
-import { insertFixture } from "./database-fixture";
-import { device, setupFixture } from "./fixture";
+import type { voiceToolNameSchema } from "../src/modules/voice/model";
+import type { z } from "zod";
+import type { Product } from "../src/schema";
+import { configuration, device, setupFixture, text as configurationText } from "./fixture";
 
-const voiceId = "tablecast-realtime-fixture";
-const headers = {
-  authorization: "Bearer tablecast-test-voice-token",
-  "content-type": "application/json",
-};
-async function request(path: string, body?: object) {
-  const context = createExecutionContext();
-  const response = await app.request(
-    `/internal/voice/${path}`,
-    { method: body ? "POST" : "GET", headers, ...(body ? { body: JSON.stringify(body) } : {}) },
-    {
-      ...env,
-      TABLECAST_MODEL: "gpt-5.6-luna",
-      TABLECAST_MODEL_API_KEY: "tablecast-test-model-key",
-    },
-    context,
-  );
-  await waitOnExecutionContext(context);
-  return response;
-}
-async function start(turnId = "tablecast-turn") {
-  return request("turns", {
-    transport: "realtime",
-    voiceSessionId: voiceId,
-    turnId,
-    locale: "ja",
-    messages: [{ role: "user", content: "" }],
-  });
-}
+afterEach(() => vi.restoreAllMocks());
+const voiceId = "tablecast-tool-voice";
+const services = () => createApiServices(env);
 async function setup() {
   await setupFixture();
-  await setVoiceSession(createApiServices(env), device, voiceId);
-  expect((await start()).status).toBe(200);
+  await setVoiceSession(services(), device, voiceId);
+  await services().db.batch([
+    services()
+      .db.insert(business.voiceTurns)
+      .values({
+        id: "tablecast-turn",
+        voice_session_id: voiceId,
+        table_session_id: device.tableSessionId ?? "",
+        store_id: device.storeId,
+        status: "started",
+        started_at: Date.now(),
+        locale: "ja",
+      }),
+    services()
+      .db.update(business.tableSessions)
+      .set({ active_turn_id: "tablecast-turn" })
+      .where(eq(business.tableSessions.id, device.tableSessionId ?? "")),
+  ]);
 }
 const tool = (
-  toolName: string,
-  args = {},
-  turnId = "tablecast-turn",
-  toolCallId = crypto.randomUUID(),
+  toolName: z.infer<typeof voiceToolNameSchema>,
+  args: Record<string, unknown> = {},
+  callId = crypto.randomUUID(),
 ) =>
-  request("tools", {
-    voiceSessionId: voiceId,
-    turnId,
-    toolName,
-    toolCallId,
-    arguments: args,
-  });
+  invokeVoiceTool(
+    services(),
+    {
+      voiceSessionId: voiceId,
+      turnId: "tablecast-turn",
+      toolCallId: callId,
+      toolName,
+      arguments: args,
+    },
+    new AbortController().signal,
+  );
 
-describe("Realtimeの音声認可と業務ツール境界", () => {
-  it("字幕を待たずに開始しAPIの正本からモデルとツールを取得する", async () => {
+describe("Responses functionと共通業務の認可", () => {
+  it.each(["アイス烏龍茶", "冷たいうーろん茶", "ウーロンティーを一つ"])(
+    "登録名や別名を含む%sから必須選択肢付きの商品詳細を一回で取得する",
+    async (query) => {
+      await setup();
+      const products = configuration.products.map((product) => ({
+        ...product,
+        text: {
+          ...product.text,
+          ja:
+            product.id === "tea"
+              ? {
+                  ...product.text.ja,
+                  displayName: "烏龍茶",
+                  speechName: "うーろん茶",
+                  aliases: ["ウーロンティー", ""],
+                }
+              : { ...product.text.ja, aliases: ["", " "] },
+        },
+        ...(product.id === "tea"
+          ? {
+              modifiers: [
+                {
+                  id: "temperature",
+                  text: configurationText("温度", "Temperature"),
+                  kind: "single",
+                  min: 1,
+                  max: 1,
+                  options: [
+                    {
+                      id: "ice",
+                      text: configurationText("アイス", "Iced"),
+                      priceDelta: 0,
+                      available: true,
+                    },
+                  ],
+                },
+              ],
+            }
+          : {}),
+      }));
+      await services()
+        .db.update(business.stores)
+        .set({ config_json: JSON.stringify({ ...configuration, products }) })
+        .where(eq(business.stores.id, device.storeId));
+
+      const result = await tool("getCatalog", { query });
+      expect(result.result).toMatchObject({
+        detail: true,
+        products: [
+          {
+            id: "tea",
+            allergens: configuration.products[0]?.allergens,
+            modifiers: [{ id: "temperature", min: 1, options: [{ id: "ice" }] }],
+          },
+        ],
+      });
+      expect(result.result).toHaveProperty("products.length", 1);
+    },
+  );
+  it("無指定は一覧、未登録名は空の結果を返し、商品IDとカテゴリIDの検索を維持する", async () => {
     await setup();
-    const response = await request(`realtime?voiceSessionId=${voiceId}`);
-    const config = z
-      .object({ model: z.string(), tools: z.array(z.object({ name: z.string() })) })
-      .parse(await response.json());
-    expect(config.model).toBe("gpt-realtime-2.1");
-    expect(config.tools.map((item) => item.name)).toContain("updateCart");
-    expect(JSON.stringify(config)).not.toContain("tablecast-test-model-key");
-    expect((await tool("getCatalog")).status).toBe(200);
-    expect((await tool("setSpeechSpeed", { speed: 1.5 })).status).toBe(200);
-    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1.5);
-  });
-  it("失敗後の新セッションへ同じ来店の発話と再生済み部分だけを時系列で復元する", async () => {
-    await setup();
-    await request("transcript", {
-      voiceSessionId: voiceId,
-      turnId: "tablecast-turn",
-      text: "香りのよい日本酒が好きです",
-    });
-    await request("turns/tablecast-turn/end", { voiceSessionId: voiceId, status: "failed" });
-    await request("playback", {
-      voiceSessionId: voiceId,
-      turnId: "tablecast-turn",
-      text: "そらしずくと、",
-      interrupted: true,
-    });
-    expect(
-      await env.TABLECAST_DB.prepare(
-        "SELECT status FROM voice_turns WHERE id='tablecast-turn'",
-      ).first<string>("status"),
-    ).toBe("failed");
-    // 別の来店と画面用イベントは、会話文脈へ混ぜない。
-    await insertFixture(businessTables.tableSessions, {
-      id: "tablecast-other-visit",
-      store_id: "tablecast-store",
-      table_id: "tablecast-table",
-      locale: "ja",
-      guest_count: 1,
-      opened_at: 0,
-      status: "closed",
-    }).run();
-    await insertFixture(businessTables.tableEvents, {
-      store_id: "tablecast-store",
-      table_session_id: "tablecast-other-visit",
-      kind: "voice.user",
-      data_json: JSON.stringify({ text: "別の来店の秘密" }),
-      created_at: 0,
-    }).run();
-    await start("tablecast-tools");
-    await tool("getCatalog", {}, "tablecast-tools");
-    await start("tablecast-empty-caption");
-    await setVoiceSession(createApiServices(env), device, null);
-    await setVoiceSession(createApiServices(env), device, "tablecast-resumed");
-    const response = await request("realtime?voiceSessionId=tablecast-resumed");
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      history: [
-        { role: "user", content: "香りのよい日本酒が好きです", interrupted: false },
-        { role: "assistant", content: "そらしずくと、", interrupted: true },
-      ],
-    });
-    expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
-    expect((await getTableState(createApiServices(env), device)).orders).toHaveLength(0);
-  });
-  it("復元履歴は新しい発話を優先して本文量を制限する", async () => {
-    await setup();
-    for (const text of ["古い話", "あ".repeat(9000), "い".repeat(9000), "直前の希望"]) {
-      await insertFixture(businessTables.tableEvents, {
-        store_id: "tablecast-store",
-        table_session_id: "tablecast-session",
-        kind: "voice.user",
-        data_json: JSON.stringify({ text }),
-        created_at: 0,
-      }).run();
+    for (const args of [{}]) {
+      const result = await tool("getCatalog", args);
+      expect(result.result).toMatchObject({ detail: false });
+      expect(result.result).toHaveProperty("products.length", 2);
+      expect(result.result).not.toHaveProperty("products.0.allergens");
+      expect(result.result).not.toHaveProperty("products.1.modifiers");
     }
-    const response = await request(`realtime?voiceSessionId=${voiceId}`);
-    expect(await response.json()).toMatchObject({
-      history: [
-        { role: "user", content: "い".repeat(9000), interrupted: false },
-        { role: "user", content: "直前の希望", interrupted: false },
+    expect((await tool("getCatalog", { query: "未登録の商品", show: true })).result).toMatchObject({
+      total: 0,
+      more: false,
+      products: [],
+      displayedProductIds: [],
+    });
+    expect((await tool("getCatalog", { query: "tea" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "tea" }],
+    });
+    const category = await tool("getCatalog", { query: "drinks" });
+    expect(category.result).toMatchObject({ detail: false });
+    expect(category.result).toHaveProperty("products.length", 2);
+  });
+  it("日英のカテゴリ名・読み・別名から概要を取得し、選んだ商品IDで必須選択を確認する", async () => {
+    await setup();
+    const sake: Product["text"] = configurationText("日本酒", "Rice wine");
+    sake.ja.speechName = "にほんしゅ";
+    sake.ja.aliases.push("清酒");
+    sake.en.speechName = "Sah keh";
+    sake.en.aliases.push("Japanese alcoholic drink");
+    const sashimi = configurationText("刺身", "Raw fish");
+    sashimi.ja.speechName = "さしみ";
+    const products = configuration.products.map((product) => ({
+      ...product,
+      categoryId: product.id === "tea" ? "sashimi" : "sake",
+    }));
+    await services()
+      .db.update(business.stores)
+      .set({
+        config_json: JSON.stringify({
+          ...configuration,
+          categories: [
+            { id: "sake", text: sake },
+            { id: "sashimi", text: sashimi },
+          ],
+          products,
+        }),
+      })
+      .where(eq(business.stores.id, device.storeId));
+    for (const query of [
+      "日本酒",
+      "にほんしゅ",
+      "清酒",
+      "Rice wine",
+      "Sah keh",
+      "Japanese alcoholic drink",
+    ])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: false,
+        products: [
+          {
+            id: "coffee",
+            categoryId: "sake",
+            speechName: configuration.products[1]?.text.ja.speechName,
+          },
+        ],
+      });
+    for (const query of ["刺身", "さしみ", "Raw fish"])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: false,
+        products: [{ id: "tea", categoryId: "sashimi" }],
+      });
+    const combined = (await tool("getCatalog", { query: "刺身 日本酒" })).result;
+    expect(combined).toMatchObject({ detail: false, products: [{ id: "tea" }, { id: "coffee" }] });
+    expect(combined).not.toHaveProperty("products.1.modifiers");
+    expect(combined).not.toHaveProperty("products.1.allergens");
+    expect((await tool("getCatalog", { query: "coffee" })).result).toMatchObject({
+      detail: true,
+      products: [
+        {
+          id: "coffee",
+          allergens: configuration.products[1]?.allergens,
+          modifiers: [{ min: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+        },
       ],
     });
   });
-  it("不正な引数と新ターン開始後の旧ツールを拒否する", async () => {
+  it("正式銘柄名・ID・読み・別名の一致を共通語より優先し、複数商品の部分検索は維持する", async () => {
     await setup();
-    expect((await tool("setSpeechSpeed", { speed: 1.6 })).status).toBe(422);
-    expect((await start("tablecast-next")).status).toBe(200);
-    expect((await tool("setSpeechSpeed", { speed: 0.5 })).status).toBe(409);
-    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1);
+    const base = configuration.products[0];
+    if (!base) throw new Error("検索対象の商品がありません");
+    const tsukinagi: Product["text"] = configurationText(
+      "こもれび 月凪 純米吟醸",
+      "Komorebi Tsukinagi Junmai ginjo",
+    );
+    tsukinagi.ja.speechName = "こもれび つきなぎ 純米吟醸";
+    tsukinagi.ja.aliases.push("つきなぎ");
+    tsukinagi.en.aliases.push("Tsukinagi");
+    const yukiakari = configurationText("こもれび 雪灯 純米酒", "Komorebi Yukiakari Junmai");
+    const products = [
+      { ...base, id: "sake-tsukinagi", text: tsukinagi, price: 620 },
+      { ...base, id: "sake-yukiakari", text: yukiakari, price: 540 },
+      {
+        ...base,
+        id: "sashimi",
+        text: configurationText("お造り三種盛り", "Three-fish sashimi selection"),
+        price: 1280,
+      },
+    ];
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify({ ...configuration, products }) })
+      .where(eq(business.stores.id, device.storeId));
+    for (const query of [
+      "こもれび 月凪 純米吟醸",
+      "Komorebi Tsukinagi Junmai ginjo",
+      "こもれび つきなぎ 純米吟醸",
+      "つきなぎ",
+      "Tsukinagi",
+      " SAKE-TSUKINAGI ",
+    ])
+      expect((await tool("getCatalog", { query })).result).toMatchObject({
+        detail: true,
+        products: [{ id: "sake-tsukinagi", price: 620, allergens: base.allergens }],
+      });
+    expect((await tool("getCatalog", { query: "こもれび 雪灯 純米酒" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "sake-yukiakari", price: 540 }],
+    });
+    expect((await tool("getCatalog", { query: "月凪 雪灯" })).result).toMatchObject({
+      detail: false,
+      products: [{ id: "sake-tsukinagi" }, { id: "sake-yukiakari" }],
+    });
+    const missing = (await tool("getCatalog", { query: "未登録の銘柄" })).result;
+    expect(missing).toMatchObject({ detail: false });
+    expect(missing).toHaveProperty("products.length", 0);
+    expect(missing).not.toHaveProperty("products.0.allergens");
   });
-  it("同じcall IDの並行要求を一回だけ実行する", async () => {
+  it("多数のカテゴリ商品を省略せず概要で返し、個別詳細の取得では最新価格と必須選択を保つ", async () => {
     await setup();
-    const responses = await Promise.all([
-      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
-      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-turn", "tablecast-call"),
-    ]);
-    expect(responses.map((response) => response.status).toSorted((a, b) => a - b)).toEqual([
-      200, 409,
-    ]);
-    expect((await getTableState(createApiServices(env), device)).speechSpeed).toBe(1.2);
-    const events = await env.TABLECAST_DB.prepare(
-      "SELECT kind FROM table_events WHERE kind='voice.speed'",
-    ).all();
-    expect(events.results).toHaveLength(1);
-  });
-  it("遅れて届いた字幕を元のターンだけへ保存する", async () => {
-    await setup();
-    await start("tablecast-next");
-    expect(
-      (
-        await request("transcript", {
-          voiceSessionId: voiceId,
-          turnId: "tablecast-turn",
-          text: "ほうじ茶を一つ",
-        })
-      ).status,
-    ).toBe(200);
-    const row = await env.TABLECAST_DB.prepare(
-      "SELECT data_json FROM table_events WHERE kind='voice.user' AND json_extract(data_json,'$.turnId')='tablecast-turn'",
-    ).first<string>("data_json");
-    expect(JSON.parse(row ?? "{}")).toMatchObject({ text: "ほうじ茶を一つ", speaker: null });
-    expect((await tool("getTableState", {}, "tablecast-next")).status).toBe(200);
-  });
-  it("固定確認の読み上げ前と同じ発話での送信を拒否し、新発話の承認で送信する", async () => {
-    await setup();
-    expect(
-      (
-        await tool("updateCart", {
-          expectedVersion: 0,
-          lines: [{ id: "tablecast-tea", productId: "tea", quantity: 1, selections: [] }],
-        })
-      ).status,
-    ).toBe(200);
-    const prepared = z
-      .object({ result: z.object({ snapshotId: z.string() }) })
-      .parse(await (await tool("prepareConfirmation", { expectedVersion: 1 })).json());
-    const approval = {
-      snapshotId: prepared.result.snapshotId,
-      approved: true,
-      idempotencyKey: "tablecast-submit",
+    const base = configuration.products[1];
+    if (!base) throw new Error("検索対象の商品がありません");
+    const products = Array.from({ length: 28 }, (_, index) => ({
+      ...base,
+      id: `sake-${index}`,
+      categoryId: "sake",
+      text: {
+        ja: {
+          ...base.text.ja,
+          displayName: `日本酒銘柄${index}`,
+          speechName: `にほんしゅめいがら${index}`,
+          description: "辛口。表示価格は60mlです。",
+          aliases: [`別名${index}`],
+        },
+        en: {
+          ...base.text.en,
+          displayName: `Sake ${index}`,
+          speechName: `Sake ${index}`,
+          description: "Dry. The displayed price is for 60ml.",
+          aliases: [`Alias ${index}`],
+        },
+      },
+      available: index !== 27,
+      tags: ["popular"],
+    }));
+    const menu = {
+      ...configuration,
+      categories: [{ id: "sake", text: configurationText("日本酒", "Sake") }],
+      products,
     };
-    expect((await tool("submitOrder", approval)).status).toBe(409);
-    expect(
-      (
-        await request("confirmations/read", {
-          voiceSessionId: voiceId,
-          turnId: "tablecast-turn",
-          snapshotId: approval.snapshotId,
-        })
-      ).status,
-    ).toBe(200);
-    expect((await tool("submitOrder", approval)).status).toBe(409);
-    await start("tablecast-approval");
-    expect((await tool("submitOrder", approval, "tablecast-approval")).status).toBe(200);
-    expect((await getTableState(createApiServices(env), device)).orders).toHaveLength(1);
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify(menu) })
+      .where(eq(business.stores.id, device.storeId));
+    const overview = (await tool("getCatalog", { query: "日本酒" })).result;
+    expect(overview).toMatchObject({ detail: false });
+    expect(overview).toHaveProperty("products.length", 8);
+    expect(overview).toMatchObject({ total: 28, more: true });
+    const lastPage = (await tool("getCatalog", { query: "日本酒", offset: 24 })).result;
+    expect(lastPage).toMatchObject({ total: 28, more: false });
+    expect(lastPage).toHaveProperty("products.3.available", false);
+    expect(overview).toHaveProperty("products.0.speechName", "にほんしゅめいがら0");
+    expect(overview).toHaveProperty("products.0.description", "辛口。表示価格は60mlです。");
+    for (const field of ["aliases", "tags", "allergens", "modifiers"])
+      expect(overview).not.toHaveProperty(`products.0.${field}`);
+    const selected = (await tool("getCatalog", { query: "sake-0" })).result;
+    expect(selected).toMatchObject({
+      detail: true,
+      products: [
+        {
+          id: "sake-0",
+          price: base.price,
+          allergens: base.allergens,
+          modifiers: [{ min: 1, max: 1, options: [{ priceDelta: 0 }, { priceDelta: 100 }] }],
+        },
+      ],
+    });
+    await services()
+      .db.update(business.stores)
+      .set({
+        config_json: JSON.stringify({
+          ...menu,
+          products: products.map((product) =>
+            product.id === "sake-0" ? { ...product, price: 650 } : product,
+          ),
+        }),
+      })
+      .where(eq(business.stores.id, device.storeId));
+    expect((await tool("getCatalog", { query: "別名0" })).result).toMatchObject({
+      detail: true,
+      products: [{ id: "sake-0", price: 650, allergens: base.allergens }],
+    });
   });
-  it("自発接客のturnでは業務を変更できない", async () => {
-    await setupFixture();
-    await setVoiceSession(createApiServices(env), device, voiceId);
-    await env.TABLECAST_DB.prepare(
-      "UPDATE stores SET config_json=json_set(config_json,'$.cast.proactive',json('true')) WHERE id=?",
-    )
-      .bind(device.storeId)
-      .run();
-    expect(
-      (
-        await request("turns", {
-          transport: "realtime",
-          voiceSessionId: voiceId,
-          turnId: "tablecast-proactive",
-          locale: "ja",
-          trigger: "proactive",
-          messages: [],
-        })
-      ).status,
-    ).toBe(200);
-    expect((await tool("getCatalog", {}, "tablecast-proactive")).status).toBe(200);
-    expect((await tool("callStaff", {}, "tablecast-proactive")).status).toBe(403);
-  });
-  it("音声停止後は設定取得も業務操作も拒否する", async () => {
+  it("JSON Schema違反と停止後の操作を拒否する", async () => {
     await setup();
-    await setVoiceSession(createApiServices(env), device, null);
-    expect((await request(`realtime?voiceSessionId=${voiceId}`)).status).toBe(409);
-    expect((await tool("getCatalog")).status).toBe(409);
+    await expect(tool("setSpeechSpeed", { speed: 1.6 })).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+    });
+    await setVoiceSession(services(), device, null);
+    await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
+    expect((await getTableState(services(), device)).staffCalled).toBe(false);
+  });
+  it("同じcall IDの同時実行を一回だけ許可する", async () => {
+    await setup();
+    const results = await Promise.allSettled([
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-same-call"),
+      tool("setSpeechSpeed", { speed: 1.2 }, "tablecast-same-call"),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const state = await getTableState(services(), device);
+    expect(state.speechSpeed).toBe(1.2);
+    expect(state.events.filter((event) => event.kind === "voice.speed")).toHaveLength(1);
+  });
+  it("次の発話が開始したら古い業務呼出しを拒否する", async () => {
+    await setup();
+    await services()
+      .db.update(business.tableSessions)
+      .set({ active_turn_id: "tablecast-new-turn" })
+      .where(eq(business.tableSessions.id, device.tableSessionId ?? ""));
+    await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
+    expect((await getTableState(services(), device)).staffCalled).toBe(false);
+  });
+  it("自発接客の呼出しには読取専用toolだけを許可する", async () => {
+    await setup();
+    await services().db.batch([
+      services()
+        .db.update(business.stores)
+        .set({
+          config_json: JSON.stringify({
+            ...configuration,
+            cast: { ...configuration.cast, proactive: true },
+          }),
+        })
+        .where(eq(business.stores.id, device.storeId)),
+      services()
+        .db.insert(business.tableEvents)
+        .values({
+          store_id: device.storeId,
+          table_session_id: device.tableSessionId,
+          kind: "voice.proactive",
+          data_json: JSON.stringify({ turnId: "tablecast-turn" }),
+          created_at: Date.now(),
+        }),
+    ]);
+    await expect(tool("getCatalog")).resolves.toHaveProperty("result.products");
+    await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_TOOL_FORBIDDEN" });
+    const state = await getTableState(services(), device);
+    expect(state.staffCalled).toBe(false);
+    expect(
+      state.events
+        .filter((event) => event.kind === "voice.tool" && event.data.toolName === "callStaff")
+        .at(-1)?.data,
+    ).toMatchObject({ state: "error", errorCode: "VOICE_TOOL_FORBIDDEN" });
+  });
+});
+
+describe("字幕履歴の保存と参照", () => {
+  it("委任のない会話も重複せず保存し、別の来店に渡さない", async () => {
+    await setup();
+    const item = {
+      voiceSessionId: voiceId,
+      itemId: "tablecast-greeting",
+      role: "user" as const,
+      text: "こんにちは",
+      interrupted: false,
+    };
+    await recordConversationItems(services(), device, { voiceSessionId: voiceId, items: [item] });
+    await recordConversationItems(services(), device, { voiceSessionId: voiceId, items: [item] });
+    expect(await conversationHistory(services(), device)).toEqual([
+      { role: "user", content: "こんにちは", interrupted: false },
+    ]);
+    expect(
+      await conversationHistory(services(), { ...device, tableSessionId: "tablecast-other-table" }),
+    ).toEqual([]);
+    await setVoiceSession(services(), device, null);
+    await expect(
+      recordConversationItems(services(), device, { voiceSessionId: voiceId, items: [item] }),
+    ).rejects.toMatchObject({
+      code: "VOICE_SESSION_STALE",
+    });
+  });
+  it("新しい会話を優先して履歴の文字数を制限する", async () => {
+    await setup();
+    for (const [index, text] of [
+      "古い会話",
+      "あ".repeat(9000),
+      "い".repeat(9000),
+      "直前の希望",
+    ].entries())
+      await recordConversationItems(services(), device, {
+        voiceSessionId: voiceId,
+        items: [
+          {
+            itemId: `tablecast-item-${index}`,
+            role: "user",
+            text,
+            interrupted: false,
+          },
+        ],
+      });
+    expect((await conversationHistory(services(), device)).map((item) => item.content)).toEqual([
+      "い".repeat(9000),
+      "直前の希望",
+    ]);
   });
 });

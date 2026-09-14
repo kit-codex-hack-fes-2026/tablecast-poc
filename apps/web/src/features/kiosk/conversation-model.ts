@@ -48,10 +48,11 @@ export function conversationLines(events: TableEvent[]): ConversationLine[] {
 }
 
 export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: "ja" | "en") {
-  const merged = lines.filter((line) => line.text.trim());
+  const saved = lines.filter((line) => line.text.trim());
+  const merged: ConversationLine[] = [];
   for (const message of view.messages ?? []) {
     if (!message.text && (message.role === "user" || message.final)) continue;
-    const index = merged.findIndex(
+    const index = saved.findIndex(
       (line) =>
         line.role === message.role &&
         (message.turnId
@@ -59,8 +60,20 @@ export function mergeConversation(lines: ConversationLine[], view: VoiceView, lo
           : line.text === message.text && Math.abs(line.createdAt - message.createdAt) < 15000),
     );
     if (index >= 0) {
-      const line = merged[index];
-      if (line) merged[index] = { ...line, rawText: message.rawText };
+      const [line] = saved.splice(index, 1);
+      if (line)
+        merged.push({
+          ...line,
+          // 保存時刻とcursorへ切り替えると、表示中の吹き出しが後発の発話を追い越す。
+          id: `live-${message.role}-${message.id}`,
+          createdAt: message.createdAt,
+          text:
+            line.interrupted || line.text.length >= message.text.length ? line.text : message.text,
+          interrupted: line.interrupted || message.interrupted === true,
+          rawText: message.rawText,
+          live: !message.final && !line.interrupted,
+          displayIncomplete: message.displayIncomplete,
+        });
     } else
       merged.push({
         ...message,
@@ -70,5 +83,5 @@ export function mergeConversation(lines: ConversationLine[], view: VoiceView, lo
         live: !message.final,
       });
   }
-  return merged.toSorted((a, b) => a.createdAt - b.createdAt);
+  return [...saved, ...merged].toSorted((a, b) => a.createdAt - b.createdAt);
 }

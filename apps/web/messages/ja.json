@@ -35,7 +35,7 @@
   "kiosk_voice_paused": "音声は停止中です",
   "kiosk_voice_connecting": "音声につないでいます",
   "kiosk_voice_listening": "お話をうかがっています",
-  "kiosk_voice_thinking": "お調べしています",
+  "kiosk_voice_thinking": "回答を準備しています",
   "kiosk_voice_speaking": "キャストがお話ししています",
   "kiosk_voice_error": "音声に接続できません",
   "kiosk_voice_permission": "マイクの利用が許可されていません。ブラウザーの設定をご確認ください。",
@@ -501,5 +501,6 @@
   "common_not_found": "対象が見つかりません。最新の一覧から選び直してください。",
   "common_invalid_input": "入力内容を確認して、修正してください。",
   "common_too_large": "送信するデータが大きすぎます。ファイルのサイズを小さくしてください。",
-  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。"
+  "common_rate_limited": "操作が集中しています。しばらく待ってから、もう一度お試しください。",
+  "voice_default_marin": "Marin（既定）"
 }

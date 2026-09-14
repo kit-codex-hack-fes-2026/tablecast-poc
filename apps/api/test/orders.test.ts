@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import app from "../src/app";
 import * as businessTables from "../src/db/business-schema";
 import {
@@ -9,7 +10,6 @@ import {
   validateDraft,
 } from "../src/modules/configuration/service";
 import {
-  markConfirmationRead,
   prepareConfirmation,
   recordPayment,
   submitOrder,
@@ -24,6 +24,8 @@ import { createApiServices } from "../src/platform/context";
 import { planSchema, tableStateSchema } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { device, deviceToken, setupFixture, text } from "./fixture";
+
+afterEach(() => vi.restoreAllMocks());
 
 const stop = (voiceSessionId: string) =>
   exports.default.fetch(
@@ -339,13 +341,14 @@ it("停止操作が先行した場合は遅れて完了した音声開始をDB�
   ).rejects.toMatchObject({ code: "SESSION_STALE" });
   expect((await getTableState(createApiServices(env), device)).voiceState).toBe("stopped");
 });
-it("別タブからの二重音声開始を拒否して元のRoomを維持する", async () => {
+it("別タブからの二重音声開始を拒否して元のsessionを維持する", async () => {
   await setupFixture();
   await setVoiceSession(createApiServices(env), device, "tablecast-original-voice");
   const response = await exports.default.fetch(
     new Request("http://localhost:3000/api/table/voice/start", {
       method: "POST",
-      headers: { Cookie: `tablecast.device=${deviceToken}` },
+      headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ sdp: "tablecast-sdp-offer" }),
     }),
   );
   expect(response.status).toBe(409);
@@ -359,28 +362,36 @@ it("別タブからの二重音声開始を拒否して元のRoomを維持する
   ).toEqual({ voice_session_id: "tablecast-original-voice", voice_version: 1 });
 });
 it.each(["false", "true"])(
-  "音声有効設定%sに従い、準備未完了ではRoom tokenを発行しない",
+  "音声有効設定%sに従い、無効時はLive sessionを発行しない",
   async (enabled) => {
     await setupFixture();
     await env.TABLECAST_DB.prepare(
       "UPDATE stores SET config_json=json_set(config_json,'$.cast.voice.ja','tablecast-voice-fixture-ja','$.cast.voice.en','tablecast-voice-fixture-en') WHERE id='tablecast-store'",
     ).run();
+    const provider = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        session: { id: "tablecast-live-created" },
+        transport: { type: "webrtc", sdp: "tablecast-sdp-answer" },
+      }),
+    );
+    const ctx = createExecutionContext();
     const response = await app.request(
       new Request("http://localhost:3000/api/table/voice/start", {
         method: "POST",
-        headers: { Cookie: `tablecast.device=${deviceToken}` },
+        headers: { Cookie: `tablecast.device=${deviceToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ sdp: "tablecast-sdp-offer" }),
       }),
       undefined,
       {
         ...env,
         TABLECAST_VOICE_ENABLED: enabled,
-        TABLECAST_LIVEKIT_URL: "ws://tablecast-livekit.local",
-        TABLECAST_LIVEKIT_API_KEY: "tablecast-test-key",
-        TABLECAST_LIVEKIT_API_SECRET: "tablecast-test-secret",
         TABLECAST_MODEL_API_KEY: "tablecast-test-model-key",
-        TABLECAST_MODEL: "gpt-4.1-mini",
+        TABLECAST_MODEL: "gpt-5.6-luna",
       },
+      ctx,
     );
+    await waitOnExecutionContext(ctx);
+    expect(provider).toHaveBeenCalledTimes(enabled === "true" ? 1 : 0);
     expect(response.status).toBe(enabled === "true" ? 200 : 503);
     expect((await getTableState(createApiServices(env), device)).voiceState).toBe(
       enabled === "true" ? "active" : "stopped",
@@ -522,7 +533,7 @@ it.each([
     ).total,
   ).toBe(800);
 });
-it("音声確認の読了後に開始した新しいturnだけが承認できる", async () => {
+it("音声確認を作成した後の新しいturnだけが読了通知なしで承認できる", async () => {
   await setupFixture();
   await setVoiceSession(createApiServices(env), device, "tablecast-voice-session");
   await insertFixture(businessTables.voiceTurns, {
@@ -555,9 +566,8 @@ it("音声確認の読了後に開始した新しいturnだけが承認できる
   await expect(submitOrder(createApiServices(env), first, input)).rejects.toMatchObject({
     code: "NEW_APPROVAL_TURN_REQUIRED",
   });
-  await markConfirmationRead(createApiServices(env), first, snapshot.id);
   await env.TABLECAST_DB.prepare(
-    "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) SELECT 'tablecast-approval','tablecast-voice-session','tablecast-session','tablecast-store','started',read_at+1 FROM confirmations WHERE id=?",
+    "INSERT INTO voice_turns(id,voice_session_id,table_session_id,store_id,status,started_at) SELECT 'tablecast-approval','tablecast-voice-session','tablecast-session','tablecast-store','started',created_at+1 FROM confirmations WHERE id=?",
   )
     .bind(snapshot.id)
     .run();

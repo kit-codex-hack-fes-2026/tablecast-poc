@@ -2,10 +2,10 @@
 
 [仕様索引](README.md) · [開発環境の仕組み](development.md) · [テスト戦略](testing.md)
 
-macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもLiveKit・Mailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
+macOSではHomebrewと、起動済みのOrbStackまたはDocker Desktopを使う。ホスト開発でもMailpit・GrafanaにはDockerが必要である。外部APIキーなしでGUI注文・ログイン・メールを開発できる。Composeは2.24.4以降を使い、`docker compose version` で確認する（Dev Containerの[ポート置換](https://docs.docker.com/reference/compose-file/merge/#replace-value)に必要）。
 
 > [!TIP]
-> `package.json` に実行するCLI、`turbo.json` に順序と常駐タスクを記載する。WebはTurborepo、コンテナ資源はCompose、Pythonはuvで管理する。独自のdaemonや起動ラッパーは使わない。
+> `package.json` に実行するCLI、`turbo.json` に順序と常駐タスクを記載する。WebはTurborepo、コンテナ資源はComposeで管理する。独自のdaemonや起動ラッパーは使わない。
 
 ## 1. cloneとworktree
 
@@ -24,13 +24,13 @@ cd ../tablecast-my-change
 `my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/my-change` で開く。以降は作業先のworktreeルートで実行する。
 
 > [!IMPORTANT]
-> `node_modules`、`livekit/.venv`、`.local` はworktree間でコピーしない。Git標準のworktree作成では環境ファイルもコピーされない。Codexの `.worktreeinclude` は `.env.local` のみを対象にする。
+> `node_modules`、`.local` はworktree間でコピーしない。Git標準のworktree作成では環境ファイルもコピーされない。Codexの `.worktreeinclude` は `.env.local` のみを対象にする。
 
 ## 2A. Dev Containerを使う
 
 動画素材は`.lfsconfig`により通常のclone・pullでは取得しない。動画を扱う場合だけGit LFSを導入し、[動画の共有と復元](../apps/presentation/SHARING.md)に従って取得範囲と`--exclude=`を指定した`git lfs pull`を実行する。通常の動画生成にはアプリ起動・APIキーは不要。現在の再収録・OpenScreen編集手順はWindows環境を対象とする。共有projectの再編集は、projectのあるフォルダーでOpenScreenの`pack`を実行して作業用bundleを作る。UI変更試験は[当時の検証記録と完成動画](../apps/presentation/experiments/tablecast-mutation/BRIEF.md)を共有する。
 
-ホストにNode・Bun・uv・Pythonは不要。Dev Containers対応エディタでworktreeを開き、Reopen in Containerを実行する。初期化が `.devcontainer/.env` を生成し、`postCreateCommand` が `bun run setup` を実行する。
+ホストにNode・Bunは不要。Dev Containers対応エディタでworktreeを開き、Reopen in Containerを実行する。初期化が `.devcontainer/.env` を生成し、`postCreateCommand` が `bun run setup` を実行する。
 
 コンテナのターミナルで起動する。
 
@@ -49,7 +49,7 @@ docker compose -f .devcontainer/compose.yaml exec tablecast bun run dev:containe
 
 起動ログの `http://<worktree>.<repo>.container.localhost:<port>` をホストのブラウザーで開く。shellは `docker compose -f .devcontainer/compose.yaml exec tablecast bash` で開ける。
 
-ホストと同じ絶対パスへworktreeとGit共通ディレクトリをmountするため、コンテナ内でもGit操作ができる。worktreeの作成・削除はホストで行う。Linux依存・Python環境・DBは専用volumeへ保存する。
+ホストと同じ絶対パスへworktreeとGit共通ディレクトリをmountするため、コンテナ内でもGit操作ができる。worktreeの作成・削除はホストで行う。Linux依存・DBは専用volumeへ保存する。
 
 ```sh
 docker compose -f .devcontainer/compose.yaml port tablecast 8025
@@ -72,7 +72,7 @@ ffprobe -version
 
 Linux arm64へのGoogle Chrome導入はこの手順の対象外。動画制作は[Windowsの生成環境](../apps/presentation/SHARING.md#新しいcheckoutで生成する)を使う。OpenScreenによる実収録・再編集もWindowsホストで行う。
 
-## 2B. ホストでmise・uv・Bunを使う
+## 2B. ホストでmise・Bunを使う
 
 [miseの公式手順](https://mise.jdx.dev/getting-started.html)に従ってzshで有効化する。`.zshrc` への追記は未設定の場合に一度だけ行う。
 
@@ -84,13 +84,12 @@ mise trust
 mise install
 bun --version
 node --version
-uv --version
 docker info
 bun run setup
 bun run dev
 ```
 
-[mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13、uv 0.11.26を指定する。Python 3.13はuvが取得する。`setup` は固定lockでJS/Python依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
+[mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
 `dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthとproxyも起動する。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
@@ -153,7 +152,7 @@ Codexの受付反応とレビュー結果を確認する。指摘への対応と
 > [!NOTE]
 > `.local/demo.json` の資格情報をチャット・Issue・PR・スクリーンショットへ含めない。
 
-## 4. envとPython音声
+## 4. envと音声接続
 
 外部音声などを試す場合だけ、雛形をコピーして値を記入する。既存ファイルは上書きしない。
 
@@ -167,30 +166,26 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 > [!NOTE]
 > 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の限定並列投入、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
-PythonはBunを経由せず、[uvの標準env読み込み](https://docs.astral.sh/uv/reference/cli/#uv-run)を使う。`.env.local` の4項目を設定し、Web/LiveKit Serverの起動後、別ターミナルで実行する。
+`.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-```sh
-uv run --project livekit tablecast-voice download-files
-uv run --project livekit --env-file .env.local --env-file .local/.env.voice tablecast-voice dev
-```
+OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
 
-4項目は `TABLECAST_MODEL_API_KEY`、`INWORLD_API_KEY`、日英の `TABLECAST_INWORLD_VOICE_JA/EN`。雛形の `OPENAI_API_KEY=${TABLECAST_MODEL_API_KEY}` は同じファイル内でuvが展開するSDK標準名である。Bunで資格をPythonへコピーしない。店舗のキャスト設定でも日英Voice IDを登録・公開する。
+業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
-| ファイル                      | 用途                                                     |
-| ----------------------------- | -------------------------------------------------------- |
-| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない            |
-| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス                    |
-| `.local/.env.voice`           | uvが読むworktree固有の音声接続先と鍵。外部資格は含めない |
-| `.local/.dev.vars`            | Wrangler用の生成済み設定・鍵                             |
-| `apps/api/.dev.vars.example`  | Wranglerのbinding型生成用。起動設定としてコピーしない    |
-| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                      |
+| ファイル                      | 用途                                                  |
+| ----------------------------- | ----------------------------------------------------- |
+| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない         |
+| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス                 |
+| `.local/.dev.vars`            | Wrangler用の生成済み設定・鍵                          |
+| `apps/api/.dev.vars.example`  | Wranglerのbinding型生成用。起動設定としてコピーしない |
+| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                   |
 
-Pythonの外部設定は `.env.local` に置く。uvは明示したファイルを読み、Bunの環境別ファイルの自動選択には依存しない。音声一覧だけの取得には `TABLECAST_INWORLD_VOICES_API_KEY` を使う。`TABLECAST_MODEL` はMastraのテキスト応答・自発接客で使うため維持する。
+旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。開発用の外部キーは `TABLECAST_MODEL_API_KEY` だけにまとめる。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
 
 旧 `.env.secrets.local` は雛形に残る項目を `.env.local` へ移して削除する。ローカルGoogle認証は模擬サービスなので旧Google資格は不要。本番資格は [配備手順](deployment.md)で管理する。envの変更後は各ターミナルをCtrl+Cで止めて再起動する。
 
 > [!WARNING]
-> 実音声の利用と `tablecast-voice-check` は外部サービスの費用が発生する。通常の `check` には含めない。有料試験の明示フラグと手順は [LiveKit](../livekit/README.md)を参照する。
+> 実音声の利用はGPT-LiveとResponses delegationの費用が発生する。通常の `check` には含めない。[音声接続の検証境界](voice/integration.md#観測と検証)に従い、許可された専用卓で実行する。
 
 ## 5. 日常の操作
 
@@ -210,7 +205,7 @@ Pythonの外部設定は `.env.local` に置く。uvは明示したファイル�
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 
-Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpit・LiveKitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
+Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
 
 GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
 
@@ -226,7 +221,7 @@ E2Eはケースごとに専用環境を作り、通常のdevは不要。入口�
 
 ## 6. 終了・再開・復旧
 
-WebはTurboを実行したターミナル、音声AgentはuvのターミナルでCtrl+Cを押す。ホストのDockerサービスは別管理なので、終了時に `bun run services:down` を実行する。コンテナ環境全体はホストで次を実行する。
+WebはTurboを実行したターミナルでCtrl+Cを押す。ホストのDockerサービスは別管理なので、終了時に `bun run services:down` を実行する。コンテナ環境全体はホストで次を実行する。
 
 ```sh
 docker compose -f .devcontainer/compose.yaml down
@@ -239,9 +234,9 @@ docker compose -f .devcontainer/compose.yaml down
 | Dockerに接続できない           | OrbStack/Docker Desktopと `docker info`、選択中のcontextを確認                                                                                    |
 | コンテナの公開ポートが使用中   | 自Composeをdownし、`TABLECAST_PORT_BASE=61000 sh .devcontainer/tablecast-init.sh` で空いている7ポートへ変更してup。エディタにも同じ環境変数を渡す |
 | 起動が失敗する                 | ターミナルのTurbo出力と `bun run services:status` を確認。Ctrl+Cで止めて再実行                                                                    |
-| 初期化が稼働中として拒否される | 自worktreeのWebと音声AgentをCtrl+Cで止めてから実行                                                                                                |
+| 初期化が稼働中として拒否される | 自worktreeのWebをCtrl+Cで止めてから実行                                                                                                           |
 | 依存・生成コード・hooksがない  | `bun run setup`。hooksだけなら `bun run hooks:install`                                                                                            |
-| 音声が未設定になる             | envの4項目と店舗のVoice IDを確認し、uvを再起動。値をログへ出さない                                                                                |
+| 音声が未設定になる             | OpenAI projectの権限、envの2項目と店舗のVoice IDを確認し、Web/APIを再起動。値をログへ出さない                                                     |
 | コンテナのGitが動かない        | ホストでinitして再作成。clone元を移動した場合はworktree配置も修復                                                                                 |
 
 変更を保存し、関連プロセスを停止したらホストで `git worktree remove ../tablecast-my-change` を実行する。ツールの版・env・タスク・devcontainerを変更したら、この文書も同じ差分で更新する。実行済みの検証と未実施範囲は区別して報告する。

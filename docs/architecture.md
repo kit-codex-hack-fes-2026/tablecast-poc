@@ -9,19 +9,17 @@ flowchart LR
     Customer[客向け日英UI] --> Web[TanStack Start Worker]
     Staff[店舗日英UI] --> Web
     ChatGPT[店舗ChatGPT] --> Web
-    Web -->|Service Binding| API[Hono・Mastra・Better Auth・MCP]
+    Web -->|Service Binding| API[Hono・Better Auth・MCP]
     API --> D1[(D1)]
     API --> DO[店舗DO]
     API --> R2[R2・Images]
-    Customer <-->|WebRTC| Media[LiveKit Server]
-    Media <--> Voice[Python LiveKit Agent]
-    Voice -->|認証済みHTTP| Web
-    Voice --> Inworld[Inworld TTS]
-    Voice <--> Model[OpenAI Realtime 2.1]
+    Customer <-->|WebRTC| Voice[OpenAI GPT-Live 1]
+    Customer -->|tool HTTP| Web
+    Voice <--> Agent[Luna / Responses delegation]
 ```
 
-Web/APIの2 WorkersとPython Agentに限定する。DOのclassはAPI Workerに置く。独立したMastraサーバー、画像Worker、翻訳Workerは初期には追加しない。
-業務の正本はD1。LiveKitは現在の音声と再生状況、OpenAI Realtimeは音声理解と応答生成、Mastraのツール定義はAPI内の業務操作、DOは通知を担当する。
+Web/APIの2 Workersをアプリの実行単位にする。DOのclassはAPI Workerに置き、PRのOAuth emulatorだけをContainerに置く。音声サーバーやPython runtimeは運用しない。
+業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、LunaはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知を担当する。
 
 ## ディレクトリ
 
@@ -76,15 +74,8 @@ tablecast/
 │       ├── drizzle.config.ts
 │       ├── wrangler.jsonc
 │       └── package.json
-├── livekit/
-│   ├── src/tablecast_livekit/
-│   ├── tests/
-│   ├── pyproject.toml
-│   ├── uv.lock
-│   └── package.json
 ├── scripts/
 ├── fixtures/demo/
-├── patches/livekit-inworld/
 ├── package.json
 ├── bun.lock
 ├── turbo.json
@@ -95,13 +86,12 @@ tablecast/
 └── .worktreeinclude
 ```
 
-rootのBun workspacesは `apps/*` と `livekit`。Python配下のpackage.jsonはTurboからuvを呼ぶ薄いタスク窓口で、Python依存は記載しない。
-独自名は `@tablecast/web`、`@tablecast/api`、`@tablecast/livekit`。Python distributionは `tablecast-livekit`、moduleは `tablecast_livekit` とする。
+rootのBun workspacesは `apps/*`。`@tablecast/web`、`@tablecast/api`、開発・PR認証用の `@tablecast/emulate` を置く。依存はrootの `bun.lock` で固定する。
 
 ## 業務moduleと依存の寿命
 
 Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。小さな処理にcontroller/service/repository/interfaceを一組ずつ生成しない。
-APIではroute・Mastra Tool・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
+APIではroute・音声のfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
@@ -119,27 +109,27 @@ DB queryが十分短ければ操作関数内に置いてよい。複雑なquery�
 
 卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
 
-GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声Room操作は`voice/runtime.ts`へ依存する。
+GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
 
 HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tablecast/api/client`、共有が必要な公開型・schemaだけは `@tablecast/api/schema` から明示公開する。
-これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・Mastra実行コードをruntime importしないことをbuildで確認する。
-型はtype-only importで扱い、画面専用のstateと業務契約を無理に一つにしない。Pythonとの少数のJSON契約はAPI schemaを正本にして実データの契約テストで照合する。全APIの巨大SDKは生成しない。
+これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・モデル実行コードをruntime importしないことをbuildで確認する。
+型はtype-only importで扱い、画面専用のstateと業務契約を無理に一つにしない。音声のブラウザーとAPIの契約も同じ公開schemaを使う。全APIの巨大SDKは生成しない。
 
 共有packageを作るのは、実在する独立した複数consumerと、切り出した方が変更箇所を減らす根拠がある場合だけ。
 
 ## 単一オリジン
 
-Web入口が `/api/*`、`/mcp`、OAuth metadata、`/media/*`、認証済み `/internal/voice/*` をService Bindingで内部転送する。[S10](sources.md#s10)
+Web入口が `/api/*`、`/mcp`、OAuth metadata、`/media/*` をService Bindingで内部転送する。[S10](sources.md#s10)
 別APIホストへのredirectはしない。レスポンスのstream、AbortSignal、複数Set-Cookie、WebSocket upgradeを維持し、bodyを全読みしない。
 
 同一オリジンにすることで広いCORS許可やCookieのドメイン共有は不要になる。ただし通常のSecure/HttpOnly/SameSite、CSRF、認可、OAuth callback設定は必要。
 Cookieはhost-only。認証済み応答、カート、注文、ログは共有キャッシュに置かない。
-LiveKitのsignalingとWebRTCメディアは別の通信経路であり、UDPをService Bindingへ通す設計にはしない。
+GPT-LiveへのWebRTCメディアは直接通信であり、SDPの開始要求・業務委任・停止だけを認証済みAPIへ送る。
 
 ## 認証・設定・公開境界
 
-認可されたコンテキストをHonoが確定し、Mastra RequestContextへ渡す。LLMの店舗IDを信用しない。
-MCPやVoiceのサービスtokenはブラウザーCookieと分け、内部パスという名称だけで安全と扱わない。
+認可されたコンテキストをHonoが確定して業務関数へ渡す。モデルが指定した店舗IDを信用しない。
+MCPのOAuthとブラウザーのCookieをそれぞれ検証し、内部パスという名称だけで安全と扱わない。
 開発用seed・リセット・模擬イベントの経路は、本番bundleに含めないか、本番で確実に無効化し試験する。
 
 設定は下書き→検証→公開。公開版は変更せず、新版を作る。注文に適用した商品名・modifier・価格・ルールを保存し、後日の変更から独立させる。
@@ -157,7 +147,7 @@ Cloudflareの `nodejs_compat_do_not_populate_process_env` を指定し、Worker�
 
 ## 本番・PRの配備境界
 
-mainは`tablecast.kit-codex.workers.dev`、同一repoのPRは`tablecast-pr-<番号>.kit-codex.workers.dev`へGitHub Actionsから配備する。Web/APIのService BindingとAPIによる業務判断を維持し、D1/R2/DO/Containersは環境別、LiveKit CloudはRoom/agent名を分離した共有projectにする。Pythonを起動するDOが同時1 sessionの予約と更新受付を管理する。PRのOAuth emulatorも専用Containerで、公開入口はAccessで保護する。本番Google、secrets、初期投入、停止・復旧の契約は[公開手順](deployment.md)を参照する。
+mainは`tablecast.kit-codex.workers.dev`、同一repoのPRは`tablecast-pr-<番号>.kit-codex.workers.dev`へGitHub Actionsから配備する。Web/APIのService BindingとAPIによる業務判断を維持し、D1/R2/DOは環境別にする。音声と業務モデルはOpenAIへ接続する。PRのOAuth emulatorは専用Containerで、公開入口はAccessで保護する。本番Google、secrets、初期投入、停止・復旧の契約は[公開手順](deployment.md)を参照する。
 
 ## APIと画面のデータ取得
 

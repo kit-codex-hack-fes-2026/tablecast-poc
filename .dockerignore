@@ -13,5 +13,3 @@
 !apps/emulate/src/
 !apps/emulate/src/**
 !apps/emulate/Dockerfile
-!livekit/
-!livekit/package.json

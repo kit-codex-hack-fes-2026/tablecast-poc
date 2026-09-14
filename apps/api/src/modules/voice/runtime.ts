@@ -1,91 +1,65 @@
-import { context, propagation } from "@opentelemetry/api";
-import {
-  AccessToken,
-  RoomAgentDispatch,
-  RoomConfiguration,
-  RoomServiceClient,
-  ServerError,
-  TrackSource,
-} from "livekit-server-sdk";
+import { z } from "zod";
+import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
-export const voiceParticipantIdentity = (voiceSessionId: string) =>
-  `tablecast-device-${voiceSessionId}`;
 
-export const voiceRoomName = (env: TablecastEnv, sessionId: string) =>
-  `${env.TABLECAST_AGENT_NAME || "tablecast"}-${sessionId}`;
+const liveControlEvent = z.object({ type: z.string() });
 
-export async function stopVoiceRoom(env: TablecastEnv, voiceSessionId: string) {
-  if (
-    !env.TABLECAST_LIVEKIT_URL ||
-    !env.TABLECAST_LIVEKIT_API_KEY ||
-    !env.TABLECAST_LIVEKIT_API_SECRET
-  )
-    return;
-  const service = new RoomServiceClient(
-    env.TABLECAST_LIVEKIT_URL,
-    env.TABLECAST_LIVEKIT_API_KEY,
-    env.TABLECAST_LIVEKIT_API_SECRET,
-    { failover: false, requestTimeout: 5 },
+export async function closeLiveSession(services: ApiServices, voiceSessionId: string) {
+  // Workersの標準WebSocket接続を使う。Node専用wsや常駐中継は不要。
+  const response = await fetch(
+    `https://api.openai.com/v1/live/sessions/${encodeURIComponent(voiceSessionId)}/attach`,
+    {
+      headers: {
+        Upgrade: "websocket",
+        Authorization: `Bearer ${services.env.TABLECAST_MODEL_API_KEY}`,
+      },
+      signal: AbortSignal.timeout(10_000),
+      redirect: "manual",
+    },
   );
+  if (response.status === 404 || response.status === 410) return;
+  const socket = response.webSocket;
+  ensure(socket, "VOICE_SESSION_STOP_FAILED", 503);
   try {
-    await service.deleteRoom(voiceRoomName(env, voiceSessionId));
-  } catch (error) {
-    if (!(error instanceof ServerError && error.code === "not_found"))
-      throw new DomainError("VOICE_ROOM_STOP_FAILED", 503, "VOICE_ROOM_STOP_FAILED", undefined, {
-        cause: error,
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () =>
+          reject(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
+        10_000,
+      );
+      const finish = (error?: Error) => {
+        clearTimeout(timer);
+        if (error) reject(error);
+        else resolve();
+      };
+      socket.addEventListener("message", (event) => {
+        // 制御イベントだけを読む。音声や字幕を停止ログに含めない。
+        if (typeof event.data !== "string") return;
+        try {
+          const parsed = liveControlEvent.safeParse(JSON.parse(event.data));
+          if (!parsed.success) return;
+          if (parsed.data.type === "session.closed") finish();
+          else if (parsed.data.type === "error")
+            finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED"));
+        } catch {
+          /* 不正な通知は期限付きの停止確認へ任せる。 */
+        }
       });
+      socket.addEventListener("error", () =>
+        finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
+      );
+      socket.addEventListener("close", () =>
+        finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED")),
+      );
+      socket.accept();
+      socket.send(JSON.stringify({ type: "session.close" }));
+    });
+  } finally {
+    socket.close(1000, "TableCast voice stopped");
   }
-  if (env.TABLECAST_CONTAINERS_ENABLED === "true")
-    await env.TABLECAST_VOICE.getByName("tablecast-voice").release(voiceSessionId);
 }
 
-export async function issueVoiceToken(env: TablecastEnv, voiceSessionId: string) {
-  ensure(
-    env.TABLECAST_LIVEKIT_URL &&
-      env.TABLECAST_LIVEKIT_API_KEY &&
-      env.TABLECAST_LIVEKIT_API_SECRET &&
-      env.TABLECAST_VOICE_API_TOKEN &&
-      env.TABLECAST_MODEL_API_KEY,
-    "VOICE_NOT_CONFIGURED",
-    503,
-  );
-  const roomName = voiceRoomName(env, voiceSessionId);
-  const token = new AccessToken(env.TABLECAST_LIVEKIT_API_KEY, env.TABLECAST_LIVEKIT_API_SECRET, {
-    identity: voiceParticipantIdentity(voiceSessionId),
-    ttl: "5m",
-  });
-  token.addGrant({
-    roomJoin: true,
-    room: roomName,
-    canPublish: true,
-    canPublishSources: [TrackSource.MICROPHONE],
-    canSubscribe: true,
-    canPublishData: false,
-    canUpdateOwnMetadata: false,
-  });
-  const traceContext: Record<string, string> = {};
-  propagation.inject(context.active(), traceContext);
-  token.roomConfig = new RoomConfiguration({
-    agents: [
-      new RoomAgentDispatch({
-        agentName: env.TABLECAST_AGENT_NAME || "tablecast-voice",
-        metadata: JSON.stringify({ voiceSessionId, traceContext }),
-      }),
-    ],
-  });
-  const jwt = await token.toJwt();
-  if (env.TABLECAST_CONTAINERS_ENABLED === "true") {
-    try {
-      await env.TABLECAST_VOICE.getByName("tablecast-voice").reserve(voiceSessionId);
-    } catch (error) {
-      throw new DomainError(
-        "VOICE_RUNTIME_UNAVAILABLE",
-        503,
-        "VOICE_RUNTIME_UNAVAILABLE",
-        undefined,
-        { cause: error },
-      );
-    }
-  }
-  return { url: env.TABLECAST_LIVEKIT_URL, token: jwt, voiceSessionId };
+export async function stopVoiceRoom(services: ApiServices, voiceSessionId: string) {
+  if (services.env.TABLECAST_MODEL_API_KEY) await closeLiveSession(services, voiceSessionId);
+  return true;
 }

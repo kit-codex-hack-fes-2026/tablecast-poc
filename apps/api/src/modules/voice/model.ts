@@ -18,13 +18,19 @@ export const voiceToolNameSchema = z.enum([
   "showProducts",
 ]);
 
-export const voiceToolEventSchema = z.object({
-  turnId: id,
-  toolCallId: id,
-  toolName: voiceToolNameSchema,
-  state: z.enum(["running", "completed", "error"]),
-  errorCode: z.enum(["VOICE_TOOL_FAILED", "VOICE_CANCELLED"]).optional(),
-});
+export const voiceToolEventSchema = z
+  .object({
+    turnId: id,
+    toolCallId: id,
+    toolName: voiceToolNameSchema,
+    state: z.enum(["requested", "running", "completed", "error"]),
+    query: z.string().max(100).optional(),
+    errorCode: z
+      .string()
+      .regex(/^[A-Z][A-Z0-9_]{0,79}$/)
+      .optional(),
+  })
+  .refine((event) => event.query === undefined || event.toolName === "getCatalog");
 
 export const voiceProductsEventSchema = showProductsSchema.extend({ turnId: id });
 
@@ -60,7 +66,6 @@ export type VoiceTrigger = z.infer<typeof voiceTriggerSchema>;
 
 export const voiceTurnSchema = z
   .object({
-    transport: z.enum(["cascade", "realtime"]).default("cascade"),
     turnId: id,
     voiceSessionId: id,
     locale: localeSchema,
@@ -73,42 +78,45 @@ export const voiceTurnSchema = z
         ]),
       )
       .max(100),
-    speaker: z
-      .object({
-        id: z.string().nullable(),
-        streamId: z.string().max(100),
-        words: z
-          .array(
-            z
-              .object({
-                text: z.string().max(500),
-                speakerId: z.string().nullable(),
-                startTime: z.number().nonnegative().nullable(),
-                endTime: z.number().nonnegative().nullable(),
-              })
-              .strict(),
-          )
-          .max(2000),
-      })
-      .strict()
-      .optional(),
   })
   .strict();
 
 export { id } from "../../platform/model";
 
-export const sessionBody = z.object({ voiceSessionId: id, turnId: id });
-
-export const transcriptSchema = sessionBody.extend({ text: z.string().max(10000) }).strict();
-
-export const toolSchema = sessionBody
-  .extend({
+export const toolSchema = z
+  .object({
+    voiceSessionId: id,
+    turnId: id,
     toolName: voiceToolNameSchema,
     toolCallId: id,
     arguments: z.record(z.string(), z.unknown()),
   })
   .strict();
 
-export const playbackSchema = sessionBody
-  .extend({ text: z.string().max(10000), interrupted: z.boolean() })
+const conversationItemSchema = z
+  .object({
+    itemId: id,
+    role: z.enum(["user", "assistant"]),
+    text: z.string().min(1).max(10000),
+    interrupted: z.boolean().default(false),
+  })
+  .strict();
+
+export const voiceStartSchema = z.object({ sdp: z.string().min(1).max(64000) }).strict();
+
+export const voiceDelegationSchema = z
+  .object({
+    voiceSessionId: id,
+    delegationId: id.nullable(),
+    locale: localeSchema,
+    messages: voiceTurnSchema.shape.messages,
+    trigger: voiceTriggerSchema.default("user"),
+  })
+  .strict();
+
+export const voiceConversationSchema = z
+  .object({
+    voiceSessionId: id,
+    items: z.array(conversationItemSchema).min(1).max(20),
+  })
   .strict();

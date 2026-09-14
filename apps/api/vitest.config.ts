@@ -10,7 +10,6 @@ const bindings = {
           TABLECAST_AUTH_SECRET: "tablecast-test-secret-that-is-long-enough-for-local-tests",
           TABLECAST_ENV: "test",
           TABLECAST_PUBLIC_ORIGIN: "http://localhost:3000",
-          TABLECAST_VOICE_API_TOKEN: "tablecast-test-voice-token",
         },
       },
     }),

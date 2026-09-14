@@ -6,7 +6,6 @@ COPY apps/emulate/package.json apps/emulate/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY apps/presentation/package.json apps/presentation/package.json
-COPY livekit/package.json livekit/package.json
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY apps/emulate/src apps/emulate/src
 RUN bun build apps/emulate/src/index.ts --target=bun --outfile=tablecast-emulate.js

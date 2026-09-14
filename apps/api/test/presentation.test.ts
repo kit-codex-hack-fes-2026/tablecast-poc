@@ -303,7 +303,7 @@ it("商品詳細は同店舗の公開商品だけを許可し、売切は閲覧�
   expect((await getTableState(createApiServices(env), device)).selectedProductId).toBeNull();
 });
 
-it("話速の上下限を保存して音声configへ返し、送音とturnと注文確認を維持する", async () => {
+it("話速の上下限を卓へ返し、送音とturnと注文確認を維持する", async () => {
   await setupVoice();
   await updateCart(createApiServices(env), device, {
     expectedVersion: 0,
@@ -332,17 +332,6 @@ it("話速の上下限を保存して音声configへ返し、送音とturnと注
         .bind(device.tableSessionId)
         .first("active_turn_id"),
     ).toBe(voice.turnId);
-    const config = await exports.default.fetch(
-      new Request(
-        `http://localhost:3000/internal/voice/config?voiceSessionId=${voice.voiceSessionId}`,
-        { headers: { Authorization: "Bearer tablecast-test-voice-token" } },
-      ),
-    );
-    expect(config.status).toBe(200);
-    expect(await config.json()).toMatchObject({
-      speechSpeed: speed,
-      voiceSessionId: voice.voiceSessionId,
-    });
   }
 });
 

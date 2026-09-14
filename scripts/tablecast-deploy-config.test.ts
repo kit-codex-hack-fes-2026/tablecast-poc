@@ -10,11 +10,7 @@ const input = {
   TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
   TABLECAST_OTEL_AUTHORIZATION: "tablecast-ingestion-secret",
   TABLECAST_RUNTIME_SECRETS: JSON.stringify({
-    LIVEKIT_URL: "wss://tablecast.example.test",
-    LIVEKIT_API_KEY: "tablecast-livekit-key",
-    LIVEKIT_API_SECRET: "tablecast-livekit-secret",
-    OPENAI_API_KEY: "tablecast-openai-secret",
-    INWORLD_API_KEY: "tablecast-inworld-secret",
+    TABLECAST_MODEL_API_KEY: "tablecast-openai-secret",
     TABLECAST_MODEL: "tablecast-test-model",
   }),
   TABLECAST_DEPLOY_SECRET: "tablecast-deployment-test-master-secret",
@@ -26,6 +22,15 @@ const input = {
 };
 
 describe("本番とPRの配備境界", () => {
+  test("配備時に指定した業務モデルを優先し既存のAPIキーを維持する", () => {
+    const secrets = deploymentSecrets(deploymentTarget("104"), {
+      ...input,
+      TABLECAST_MODEL: "gpt-5.6-luna",
+    });
+    expect(secrets.TABLECAST_MODEL).toBe("gpt-5.6-luna");
+    expect(secrets.TABLECAST_MODEL_API_KEY).toBe("tablecast-openai-secret");
+  });
+
   test("Dashboardの鍵がある場合、本番だけへ渡してPRのsecretと公開configへ含めない", () => {
     expect(deploymentSecrets(deploymentTarget(), input).TABLECAST_BETTER_AUTH_API_KEY).toBe(
       input.TABLECAST_BETTER_AUTH_API_KEY,
@@ -75,7 +80,6 @@ describe("本番とPRの配備境界", () => {
     expect(deployed.no_bundle).toBe(true);
     expect(deployed.d1_databases[0]?.database_id).toBe(databaseId);
     expect(deployed.containers.map((container) => container.image)).toEqual([
-      `registry.cloudflare.com/dbbd52d7d690afceea41fe920ae19f91/tablecast-voice:${sha}`,
       `registry.cloudflare.com/dbbd52d7d690afceea41fe920ae19f91/tablecast-emulate:${sha}`,
     ]);
     expect(() => deploymentArtifact(artifact, target, "b".repeat(40), databaseId)).toThrow(
@@ -113,21 +117,18 @@ describe("本番とPRの配備境界", () => {
     const firstSecrets = deploymentSecrets(first, input);
     const secondSecrets = deploymentSecrets(second, input);
     expect(first.origin).toBe("https://tablecast-pr-34.kit-codex.workers.dev");
-    for (const key of ["web", "api", "database", "bucket", "agent"] as const)
+    for (const key of ["web", "api", "database", "bucket"] as const)
       expect(first[key]).not.toBe(second[key]);
     expect(firstSecrets.TABLECAST_GOOGLE_CLIENT_SECRET).toBeUndefined();
     expect(firstSecrets.TABLECAST_GOOGLE_CLIENT_ID).toBeUndefined();
-    expect(firstSecrets.OPENAI_API_KEY).toBe(secondSecrets.OPENAI_API_KEY);
+    expect(firstSecrets.TABLECAST_MODEL_API_KEY).toBe(secondSecrets.TABLECAST_MODEL_API_KEY);
     expect(firstSecrets.TABLECAST_AUTH_SECRET).not.toBe(secondSecrets.TABLECAST_AUTH_SECRET);
-    expect(firstSecrets.TABLECAST_VOICE_API_TOKEN).not.toBe(
-      secondSecrets.TABLECAST_VOICE_API_TOKEN,
-    );
     expect(deploymentSecrets(first, input).TABLECAST_AUTH_SECRET).toBe(
       firstSecrets.TABLECAST_AUTH_SECRET,
     );
   });
 
-  test("PR設定を生成すると専用OAuthと各1台のContainerを配備する", () => {
+  test("PR設定を生成すると専用OAuthのContainerを1台を配備する", () => {
     const config = deploymentConfigs(
       deploymentTarget("34"),
       "a".repeat(40),
@@ -140,10 +141,9 @@ describe("本番とPRの配備境界", () => {
     expect(config.api.vars.TABLECAST_GOOGLE_AUTHORIZE_URL).toBe(
       "https://tablecast-pr-34.kit-codex.workers.dev/_tablecast/oauth",
     );
-    expect(config.api.containers).toHaveLength(2);
+    expect(config.api.containers).toHaveLength(1);
     expect(config.api.triggers.crons).toEqual(["*/5 * * * *"]);
     expect(JSON.parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)).toEqual([
-      "tablecast-api-pr-34-tablecastvoice",
       "tablecast-api-pr-34-tablecastemulate",
     ]);
     expect(config.web).not.toHaveProperty("triggers");
@@ -212,8 +212,11 @@ test.each([
   { pr: undefined, environment: "本番" },
   { pr: "74", environment: "preview" },
 ])("$environmentで監視資格がなければ配備を拒否する", ({ pr }) => {
-  // Given: Cronを登録する配備先と、片方が欠けた監視資格。
-  for (const key of ["TABLECAST_CONTAINER_METRICS_TOKEN", "TABLECAST_OTEL_AUTHORIZATION"]) {
+  // Given: 本文送信とpreviewのContainer収集に必要な監視資格。
+  for (const key of [
+    "TABLECAST_OTEL_AUTHORIZATION",
+    ...(pr ? ["TABLECAST_CONTAINER_METRICS_TOKEN"] : []),
+  ]) {
     // When / Then: Workerへの書込み前に不足した設定名で失敗する。
     expect(() => deploymentSecrets(deploymentTarget(pr), { ...input, [key]: undefined })).toThrow(
       key,

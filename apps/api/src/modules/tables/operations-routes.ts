@@ -9,7 +9,7 @@ import { prepareConfirmation, submitOrder, updateCart } from "../orders/service"
 import { getEvents } from "../stores/queries";
 import { speechSpeedInputSchema } from "../voice/model";
 import { setSpeechSpeed } from "../voice/service";
-import { startVoiceSession, stopVoiceSession } from "../voice/session";
+import { voiceRoutes } from "../voice/routes";
 import { uiSectionInputSchema } from "./model";
 import { getTableState } from "./queries";
 import { callStaff, changeLocale, requestBill, setUiSection } from "./service";
@@ -51,22 +51,7 @@ export const tableOperations = new Hono<ApiEnv>()
   .patch("/locale", validate(z.object({ locale: localeSchema }).strict()), async (c) =>
     c.json(await changeLocale(c.get("services"), c.get("actor"), c.req.valid("json").locale), 200),
   )
-  .post("/voice/start", async (c) =>
-    c.json(await startVoiceSession(c.get("services"), c.get("actor")), 200),
-  )
-  .post(
-    "/voice/stop",
-    validate(z.object({ voiceSessionId: z.string().optional() }).strict()),
-    async (c) =>
-      c.json(
-        await stopVoiceSession(
-          c.get("services"),
-          c.get("actor"),
-          c.req.valid("json").voiceSessionId,
-        ),
-        200,
-      ),
-  )
+  .route("/voice", voiceRoutes)
   .get(
     "/events",
     validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),

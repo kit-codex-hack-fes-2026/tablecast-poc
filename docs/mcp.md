@@ -44,7 +44,7 @@ ChatGPTの書き込み確認とTableCastの権限・対象版検証を組み合�
 ## キャスト設定
 
 [既定ペルソナ](voice/speech.md) を初期値とする。店舗の自由文は会話表現に限り、システムの認可・確認・安全制約より下位に置く。
-voiceはInworldの標準voiceを選ぶ。Custom Voiceやreference uploadの項目は作らない。
+voiceはGPT-Liveの標準voiceを選ぶ。Custom Voiceやreference uploadの項目は作らない。
 管理者が日本語で説明した演技方針をChatGPTが英語steering向けに整えることはよいが、編集画面の説明や文書を英語固定にしない。
 
 ## 認証と開発

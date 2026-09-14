@@ -482,6 +482,7 @@ type Food = {
   ingredients: readonly [string, string];
   contains: string[] | null;
   speech?: string;
+  aliases?: string[];
 };
 const foods: Food[] = [
   {
@@ -868,11 +869,13 @@ const drinks: Food[] = [
     ingredients: ["烏龍茶を選んだ温度で提供します", "Oolong tea served at your chosen temperature"],
     contains: [],
     speech: "ウーロン茶",
+    aliases: ["お茶"],
   },
   {
     id: "green-tea",
     ja: "緑茶",
     en: "Japanese green tea",
+    aliases: ["お茶"],
     price: 340,
     category: "drinks",
     image: "green-tea",
@@ -973,6 +976,7 @@ export function demoStores(profile: "smoke" | "demo" | "history") {
       text.ja.aliases = [
         ...new Set([
           item.speech ?? item.ja,
+          ...(item.aliases ?? []),
           item.id === "karaage" ? "からあげ" : item.ja.replaceAll(" ", ""),
         ]),
       ];
