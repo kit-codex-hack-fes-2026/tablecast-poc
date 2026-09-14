@@ -1,5 +1,5 @@
 import { resetStagingDatabase } from "./tablecast-staging-reset";
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
+import { cloudflare, currentRevision, waitForRelease } from "./tablecast-deploy-api";
 import process from "node:process";
 import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
@@ -27,35 +27,11 @@ const root = resolve(import.meta.dirname, "..");
 const directory = resolve(root, ".local/tablecast-deploy");
 const target = deploymentTarget(
   process.env.TABLECAST_PR_NUMBER || undefined,
-  process.env.TABLECAST_DEPLOY_ENV || undefined,
+  z.enum(["production", "staging", "preview"]).parse(process.env.TABLECAST_DEPLOY_ENV),
 );
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
 const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
-
-export async function waitForRelease(
-  origin: string,
-  headers: Record<string, string>,
-  releaseSha: string,
-) {
-  for (let attempt = 1; attempt <= 12; attempt++) {
-    try {
-      const response = await fetch(`${origin}/api/health`, {
-        headers,
-        redirect: "manual",
-        signal: AbortSignal.timeout(5_000),
-      });
-      const health = z.object({ releaseSha: z.string() }).safeParse(await response.json());
-      if (response.ok && health.success && health.data.releaseSha === releaseSha) return;
-      console.info(`配備の反映待ち ${attempt}/12: HTTP ${response.status}`);
-    } catch {
-      // 一時的な接続失敗やHTML応答は再試行し、資格を含み得る応答本文は出さない。
-      console.info(`配備の反映待ち ${attempt}/12: healthを取得できません。`);
-    }
-    if (attempt < 12) await new Promise((complete) => setTimeout(complete, 5_000));
-  }
-  throw new Error("配備先のrelease SHAを期限内に確認できません。");
-}
 
 async function verifyStagingMcp() {
   // Access資格を送らず、機械通信はOAuthまで届きWebはAccessに留まることを検査する。
@@ -442,6 +418,13 @@ async function main(resetFinished = false) {
               }
             }
           }
+          const recordReset = async (phase: string) => {
+            if (!reset) return;
+            await platform.env.TABLECAST_MEDIA.put(
+              resetKey,
+              JSON.stringify({ sha, phase, updatedAt: new Date().toISOString() }),
+            );
+          };
           if (cleanup) {
             // Webを先に止め、他のWorkerが参照するAPIをforceで消さない。
             const workers = z
@@ -466,6 +449,7 @@ async function main(resetFinished = false) {
                 }),
               );
               await wrangler(["deploy", "--config", maintenanceConfig]);
+              await recordReset("maintenance");
             } else if (workers.some((value) => value.id === target.web)) {
               await cloudflare(`workers/scripts/${target.web}`, "DELETE");
             }
@@ -515,6 +499,7 @@ async function main(resetFinished = false) {
               }
               await cloudflare(`workers/scripts/${target.api}`, "DELETE");
             }
+            await recordReset("runtime-removed");
             if (bucketExists) {
               for (;;) {
                 const objects = await platform.env.TABLECAST_MEDIA.list({ limit: 1000 });
@@ -530,12 +515,14 @@ async function main(resetFinished = false) {
               if (!reset)
                 await platform.env.TABLECAST_MEDIA.delete("tablecast/deployment-owner.json");
             }
+            await recordReset("media-cleared");
             if (reset)
               await resetStagingDatabase({
                 ...platform.env,
                 TABLECAST_ENV: target.environment,
                 TABLECAST_PUBLIC_ORIGIN: target.origin,
               });
+            await recordReset("data-cleared");
           } else {
             await currentRevision(target, sha);
             await wrangler([

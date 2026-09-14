@@ -149,8 +149,8 @@ cleanup途中で所有markerだけが削除された場合も、自動採用せ�
 通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使う。公開用configは次でsecret・遠隔書込みなしに生成できる。
 
 ```sh
-TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
-TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
+TABLECAST_DEPLOY_ENV=production TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
+TABLECAST_DEPLOY_ENV=preview TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
 TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" TABLECAST_WEB_CONFIG="$PWD/.local/tablecast-deploy/web.json" bun --no-env-file run --cwd apps/web build
 ```
 
@@ -204,7 +204,7 @@ CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する�
 
 開発の標準経路は作業branch → staging → main。default branchはstagingとする。stagingは `https://tablecast-staging.kit-codex.workers.dev`、MCPは同originの`/mcp`。資源名は`tablecast-staging`、`tablecast-api-staging`、`tablecast-db-staging`、`tablecast-media-staging`。D1/R2/DO/Containerは本番・previewから分離する。
 
-`TABLECAST_DEPLOY_ENV`は`production`、`staging`、`preview`のいずれか。previewだけ`TABLECAST_PR_NUMBER`を必須にし、他環境との併用を拒否する。CIはpush先branchから配備環境を選び、検査成功後に同じSHAの成果物を配備する。通常配備はmigrationと未投入時の共通demo seedだけを行う。既存のデータ・画像・認証secretは保持する。fixture変更を取り込み直す場合は全体リセットを明示実行する。
+配備CLIでは`TABLECAST_DEPLOY_ENV`を必須とし、未指定なら資源変更前に停止する。値は`production`、`staging`、`preview`のいずれか。previewだけ`TABLECAST_PR_NUMBER`を必須にし、他環境との併用を拒否する。CIはpush先branchから配備環境を選び、検査成功後に同じSHAの成果物を配備する。通常配備はmigrationと未投入時の共通demo seedだけを行う。既存のデータ・画像・認証secretは保持する。fixture変更を取り込み直す場合は全体リセットを明示実行する。
 
 ### GitHubの初期設定
 
@@ -224,7 +224,7 @@ GitHub ActionsのCIからRun workflowを開き、branchにstaging、`staging_res
 
 D1とR2の資源ID・所有台帳・migration履歴は保持し、schemaに定義された全業務・認証データとR2画像を消去する。D1はDrizzleの同一batch内で外部キー検証を遅延し、全削除後に再検証する。Webをメンテナンス応答へ切り替え、既存DO・Container・API Workerを退役して再作成する。最新demoを投入し、同じSHAを配備・疎通確認後に完了する。全アカウント、OAuthクライアント、セッション、MCP tokenが失われるため、ログインとMCP認可をやり直す。
 
-R2の`tablecast/staging-reset.json`は途中リセットの記録。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。Access、固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
+R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。Access、固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
 
 ### release PR
 

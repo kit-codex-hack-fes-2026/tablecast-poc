@@ -720,6 +720,7 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
   )
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) {
+    if (env.TABLECAST_ENV === "staging") return false;
     // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
     await seedMenuImages(env.TABLECAST_MEDIA);
     await migrateDemoIdentityEmails(env);
