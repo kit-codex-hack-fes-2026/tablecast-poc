@@ -80,6 +80,10 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
   await expect(page.getByRole("button", { name: ja.admin_publish, exact: true })).toBeEnabled();
   expect(catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json())).toEqual(original);
   await page.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+  await page
+    .getByRole("dialog", { name: ja.workflow_publish_title, exact: true })
+    .getByRole("button", { name: ja.admin_publish, exact: true })
+    .click();
   await expect(page.getByRole("button", { name: ja.admin_publish, exact: true })).toHaveCount(0);
   const published = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
   expect(

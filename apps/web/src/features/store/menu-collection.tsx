@@ -1,8 +1,8 @@
 import type { Configuration } from "@tablecast/api/schema";
-import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { skipToken, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpRight, FilePenLine, Plus } from "lucide-react";
+import { ArrowUpRight, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -11,7 +11,8 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { StartConfigurationEditing } from "./configuration-workflow";
+import { DraftStatus } from "../shell/configuration-status";
 import { menuLabels, type MenuSection } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
@@ -29,7 +30,6 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
   const store = useStore();
   const storeId = store.id;
   const { locale, t } = useI18n();
-  const navigate = useNavigate();
   const catalog = useQuery({ ...catalogOptions(storeId), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(storeId, draftId ?? ""),
@@ -38,18 +38,6 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
   const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
   const editable = !draftId || draft.data?.status === "draft" || draft.data?.status === "ready";
   const manager = store.role === "owner" || store.role === "admin";
-  const client = useQueryClient();
-  const create = useMutation({
-    mutationFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
-    onSuccess: (next) => {
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void navigate({
-        to: "/admin/stores/$storeId/menu/changes/$draftId/$section",
-        params: { storeId, draftId: next.id, section },
-      });
-    },
-  });
   const columns = useMemo(
     () => menuCollectionColumns(t, locale, section, draftId, storeId),
     [t, locale, section, draftId, storeId],
@@ -91,10 +79,10 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {t(menuLabels[section])}
-          {draftId && (
-            <Badge className="ml-3" variant="secondary">
-              {t("admin_draft_version")}
-            </Badge>
+          {draft.data && (
+            <span className="ml-3">
+              <DraftStatus status={draft.data.status} />
+            </span>
           )}
         </h1>
         {manager &&
@@ -116,15 +104,12 @@ export function MenuCollection({ section, draftId }: { section: MenuSection; dra
               </Button>
             )
           ) : (
-            <Button disabled={create.isPending || !configuration} onClick={() => create.mutate()}>
-              <FilePenLine />
-              {t("menu_start_editing")}
-            </Button>
+            <StartConfigurationEditing section={section} disabled={!configuration} />
           ))}
       </div>
 
       <ErrorNotice
-        error={catalog.error || draft.error || create.error}
+        error={catalog.error || draft.error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
       {(configuration || !(catalog.error || draft.error)) && (

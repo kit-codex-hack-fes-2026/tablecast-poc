@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { id, localeSchema } from "../../platform/model";
+import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
 import { bilingualSchema, modifierSchema, planSchema, productSchema } from "../catalog/model";
 export const configurationSchema = z
   .object({
@@ -101,6 +101,32 @@ export type ConfigDraft = {
   updatedAt: number;
   changes: { path: string; before: unknown; after: unknown; sensitive: boolean }[];
 };
+
+export const draftChoicesQuerySchema = z
+  .object({
+    beforeUpdatedAt: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+    beforeId: id.optional(),
+  })
+  .strict()
+  .refine((query) => (query.beforeUpdatedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+export type DraftChoicesQuery = z.infer<typeof draftChoicesQuerySchema>;
+
+export const draftChoiceSchema = z.object({
+  id: z.string(),
+  baseVersion: z.number().int(),
+  version: z.number().int(),
+  status: z.enum(["draft", "ready", "published", "discarded"]),
+  updatedAt: z.number().int(),
+  changeCount: z.number().int(),
+  sections: z.array(z.enum(["products", "categories", "plans", "cast", "storeName"])),
+});
+export const draftChoicesPageSchema = z.object({
+  drafts: z.array(draftChoiceSchema),
+  publishedVersion: z.number().int(),
+  nextCursor: z.object({ beforeUpdatedAt: z.number().int(), beforeId: z.string() }).nullable(),
+});
 
 export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   createdAt: z.number().int(),

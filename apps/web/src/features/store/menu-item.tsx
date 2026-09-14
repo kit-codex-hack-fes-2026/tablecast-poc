@@ -2,8 +2,11 @@ import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useForm } from "@tanstack/react-form";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ActionFeedback } from "../../components/action-feedback";
+import { ConfigurationStatus } from "../shell/configuration-status";
+import { apiError } from "../../lib/api-error";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -39,7 +42,7 @@ export function MenuItem({
       {configuration ? (
         draftId && draft.data ? (
           <ItemForm
-            key={`${draftId ?? "published"}:${section}:${itemId}`}
+            key={`${store.id}:${draftId ?? "published"}:${section}:${itemId}`}
             section={section}
             itemId={itemId}
             initialConfiguration={configuration}
@@ -76,8 +79,10 @@ function ItemForm({
     !!draft &&
     (draft.status === "draft" || draft.status === "ready") &&
     (store.role === "owner" || store.role === "admin");
+  const catalog = useQuery(catalogOptions(storeId));
+  const newSaved = useRef(false);
   const [version, setVersion] = useState(draft?.version ?? 0);
-  const [initial] = useState(() =>
+  const [initial, setInitial] = useState(() =>
     itemId === "new"
       ? addMenuItem(initialConfiguration, section, selectedId)
       : initialConfiguration,
@@ -89,8 +94,12 @@ function ItemForm({
     },
   });
   useBlocker({
-    shouldBlockFn: () => form.state.isDirty && !window.confirm(t("menu_leave_unsaved")),
-    enableBeforeUnload: () => form.state.isDirty,
+    shouldBlockFn: () =>
+      editable &&
+      (form.state.isDirty || (itemId === "new" && !newSaved.current)) &&
+      !window.confirm(t("menu_leave_unsaved")),
+    enableBeforeUnload: () =>
+      editable && (form.state.isDirty || (itemId === "new" && !newSaved.current)),
   });
   const save = useMutation({
     mutationFn: (configuration: Configuration) => {
@@ -103,16 +112,31 @@ function ItemForm({
       );
     },
     onSuccess: (next) => {
+      newSaved.current = true;
       setVersion(next.version);
+      setInitial(next.configuration);
       form.reset({ configuration: next.configuration });
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
+      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
       if (itemId === "new")
         void navigate({
           to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
           params: { storeId, draftId: next.id, section, itemId: selectedId },
           replace: true,
+          search: true,
         });
+    },
+  });
+  const reload = useMutation({
+    mutationFn: () =>
+      client.fetchQuery({ ...draftOptions(storeId, draft?.id ?? ""), staleTime: 0 }),
+    onSuccess: (next) => {
+      setVersion(next.version);
+      setInitial(next.configuration);
+      form.reset({ configuration: next.configuration });
+      client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
+      save.reset();
     },
   });
   const remove = useMutation({
@@ -144,6 +168,7 @@ function ItemForm({
         render={
           draft ? (
             <Link
+              search={true}
               to="/admin/stores/$storeId/menu/changes/$draftId/$section"
               params={{ storeId, draftId: draft.id, section }}
             />
@@ -162,6 +187,28 @@ function ItemForm({
             : (item?.text[locale].displayName ?? t(menuLabels[section]))}
         </h1>
       </div>
+      <form.Subscribe selector={(state) => state.isDirty}>
+        {(dirty) =>
+          catalog.data && (
+            <ConfigurationStatus
+              storeName={store.name}
+              publishedVersion={catalog.data.version}
+              draft={
+                draft
+                  ? { id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }
+                  : undefined
+              }
+              dirty={dirty || (itemId === "new" && !newSaved.current)}
+              pending={save.isPending}
+              error={save.error || reload.error}
+            />
+          )
+        }
+      </form.Subscribe>
+      {draft && catalog.data && editable && catalog.data.version !== draft.baseVersion && (
+        <p className="text-destructive">{t("workflow_stale")}</p>
+      )}
+      {!editable && <p className="text-muted-foreground">{t("workflow_terminal_note")}</p>}
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
@@ -241,19 +288,68 @@ function ItemForm({
                 <ConfirmAction
                   label={t("menu_remove_item")}
                   subject={t("menu_remove_note")}
-                  disabled={remove.isPending}
+                  disabled={remove.isPending || save.isPending || reload.isPending}
                   onConfirm={() => remove.mutate()}
                   icon={<Trash2 />}
                 />
               )}
-              <output className="text-sm text-success" aria-live="polite">
-                {save.isSuccess ? t("account_saved") : ""}
-              </output>
+              <form.Subscribe selector={(state) => state.isDirty}>
+                {(dirty) => (
+                  <>
+                    {dirty && (
+                      <ConfirmAction
+                        label={t("workflow_revert")}
+                        subject={t("workflow_revert_note")}
+                        disabled={save.isPending || reload.isPending}
+                        onConfirm={() => {
+                          form.reset({ configuration: initial });
+                          save.reset();
+                        }}
+                        icon={<Undo2 />}
+                      />
+                    )}
+                    {draft && (
+                      <Button
+                        nativeButton={false}
+                        role="link"
+                        variant="outline"
+                        disabled={
+                          dirty || save.isPending || (itemId === "new" && !newSaved.current)
+                        }
+                        render={
+                          <Link
+                            to="/admin/stores/$storeId/menu/changes/$draftId"
+                            params={{ storeId, draftId: draft.id }}
+                            search={true}
+                          />
+                        }
+                      >
+                        {t("workflow_review")}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </form.Subscribe>
             </div>
           )}
         </form>
       )}
-      <ErrorNotice error={save.error || remove.error} />
+      <ActionFeedback
+        pending={save.isPending}
+        error={save.error || remove.error || reload.error}
+        success={save.isSuccess}
+        successMessage={t("account_saved")}
+      />
+      {editable && apiError(save.error)?.status === 409 && (
+        <ConfirmAction
+          label={t("workflow_conflict_reload")}
+          subject={t("workflow_conflict_reload_note")}
+          disabled={reload.isPending}
+          onConfirm={() => reload.mutate()}
+          icon={<Undo2 />}
+        />
+      )}
+      {editable && <p className="text-sm text-muted-foreground">{t("workflow_save_first")}</p>}
     </section>
   );
 }

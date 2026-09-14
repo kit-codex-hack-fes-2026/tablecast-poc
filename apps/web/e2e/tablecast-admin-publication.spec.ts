@@ -59,7 +59,10 @@ for (const { language, labels, locale } of [
       page.getByRole("button", { name: labels.admin_validate, exact: true }),
     ).toBeEnabled();
     // 利用者と同じリンクで編集へ進む。
-    await page.getByRole("link", { name: labels.editor_products, exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: labels.editor_products, exact: true })
+      .click();
     await page
       .getByRole("row")
       .filter({
@@ -225,6 +228,16 @@ for (const { language, labels, locale } of [
       (response) => new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}/publish`,
     );
     await publish.click();
+    const confirmation = page.getByRole("dialog", {
+      name: labels.workflow_publish_title,
+      exact: true,
+    });
+    await expect(confirmation).toBeVisible();
+    expect(publicationRequests).toBe(0);
+    await confirmation.screenshot({
+      path: testInfo.outputPath("tablecast-publication-confirmation.png"),
+    });
+    await confirmation.getByRole("button", { name: labels.admin_publish, exact: true }).click();
     const published = await publishedResponse;
     expect(published.status()).toBe(200);
     expect(configDraftSchema.parse(await published.json()).status).toBe("published");
