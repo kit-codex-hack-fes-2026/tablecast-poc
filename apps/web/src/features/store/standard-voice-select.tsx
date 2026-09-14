@@ -1,5 +1,6 @@
 import { type Locale } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useId } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -14,6 +15,7 @@ export function StandardVoiceSelect({
   value,
   retained,
   disabled,
+  labelledBy,
   onChange,
 }: {
   storeId: string;
@@ -21,8 +23,10 @@ export function StandardVoiceSelect({
   value: string | null;
   retained: (string | null)[];
   disabled: boolean;
+  labelledBy?: string;
   onChange: (voiceId: string | null) => void;
 }) {
+  const id = useId();
   const { t } = useI18n();
   const voices = useInfiniteQuery({
     queryKey: ["tablecast-standard-voices", storeId, language],
@@ -58,9 +62,10 @@ export function StandardVoiceSelect({
   }
   return (
     <div className="space-y-3">
-      <label>
-        {t("editor_voice")}
+      <label className="grid gap-2 text-sm">
+        <span id={id}>{t("editor_voice")}</span>
         <NativeSelect
+          aria-labelledby={labelledBy ? `${labelledBy} ${id}` : id}
           className="h-12 rounded-lg border border-input px-3 text-base"
           value={value ?? ""}
           disabled={disabled}
