@@ -12,9 +12,9 @@ import {
   useMatchRoute,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { storesOptions } from "../features/store/store-query";
+import { floorOptions, storesOptions } from "../features/store/store-query";
 import { LocaleProvider } from "../i18n/locale";
-import { sessionOptions } from "../lib/session-query";
+import { loadInitial, sessionOptions } from "../lib/session-query";
 import { getLocale } from "../paraglide/runtime.js";
 import stylesheet from "../styles.css?url";
 
@@ -26,9 +26,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         location.pathname,
       )
     ) {
-      const session = await context.queryClient.ensureQueryData(sessionOptions);
+      const { queryClient } = context;
+      if (
+        queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
+        queryClient.getQueryData(storesOptions.queryKey) === undefined
+      ) {
+        const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
+        const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : undefined;
+        const search = new URLSearchParams(location.searchStr);
+        // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
+        const defaultFloor =
+          typeof window !== "undefined" &&
+          location.pathname === "/admin/live" &&
+          !search.has("storeId") &&
+          !search.has("section") &&
+          !search.has("draftId");
+        const initial = await loadInitial(storeId, defaultFloor ? "true" : undefined);
+        queryClient.setQueryData(sessionOptions.queryKey, initial.session);
+        queryClient.setQueryData(storesOptions.queryKey, {
+          stores: initial.stores,
+          locale: initial.session?.user.locale ?? "ja",
+        });
+        if (initial.floor) {
+          queryClient.setQueryData(floorOptions(initial.floor.store.id).queryKey, initial.floor);
+        }
+      }
+      const session = queryClient.getQueryData(sessionOptions.queryKey);
       if (!session) throw redirect({ to: "/login", search: { returnTo: location.href } });
-      await context.queryClient.ensureQueryData(storesOptions);
     }
     return { panelCookies };
   },

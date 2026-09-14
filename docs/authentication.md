@@ -53,3 +53,13 @@ seedはユーザー画像と店舗アイコンをローカルで生成し、R2�
 emulateは起動ごとに`sub`を生成するため、開発用Googleに限りissuerを`https://tablecast-google.localhost`、subjectを確認済みメールに固定する。seedは旧localhost issuerの重複だけを統合する。実Googleのissuer・subjectは変更しない。
 
 管理画面の店舗切替はサイドバーに集約する。未所属の場合は店舗作成へのリンクと招待メールからの参加方法を表示する。Google連携解除・パスキー削除・セッション失効・メンバー削除は対象を確認して実行する。
+
+## 管理画面の初期取得
+
+管理画面の初回読込は `/api/admin/initial` でセッションと所属店舗を同時に取得する。フロアURLの場合は `storeId` を付け、所属店舗の照会結果から権限を確認したうえで既存のフロア状態を取得する。戻り先指定のないメールログイン後のクライアント遷移では、`/admin/live` に対して `defaultFloor=true` を付け、active organizationの所属店舗、なければ先頭の所属店舗のフロアも取得する。PWA起動など `/admin/live` への新規ドキュメント要求では、転送後にSSRのQueryClientが作り直されるためフロアを先読みしない。転送元はセッション・所属店舗のみを取得し、フロアは転送先で取得する。認証結果やbindingをWorker全体へキャッシュしない。Better Authが返す更新CookieはAPIからSSR応答まで引き継ぐ。
+
+Webは初期結果をリクエスト単位のQueryClientの既存session・stores・floor queryへ設定し、loaderと画面で再利用する。セッション単独の再取得はBetter Authのget-sessionを使い、店舗一覧を再取得しない。以降のフロア再取得は既存の店舗APIを通り、その都度認可する。未認証の初期取得は空の店舗一覧とnullのsession・floorを返し、Webがログインへ戻す。所属外のstoreIdは403にする。
+
+直接のフロアURLとログイン後のクライアント遷移の初期取得はOAuth resource・session/user・所属店舗・フロアbatchの4往復。従来の3 API合計9往復から削減する。セッション更新など追加書込のある要求は別に数える。これはDB往復数の変更であり、本番の表示時間や初回起動遅延の改善率を保証するものではない。
+
+PWAの新規ドキュメント起動は転送元のセッション・所属店舗3往復と転送先のフロア初期取得4往復を合わせた7往復。転送を伴う起動全体を4往復とは数えない。

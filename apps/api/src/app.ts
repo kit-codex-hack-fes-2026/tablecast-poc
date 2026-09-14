@@ -5,6 +5,7 @@ import { authRoutes } from "./modules/auth/routes";
 import { devicesRoutes } from "./modules/devices/routes";
 import { mcpRoutes } from "./modules/mcp/routes";
 import { mediaRoutes } from "./modules/media/routes";
+import { initialRoutes } from "./modules/stores/initial-routes";
 import { storesRoutes } from "./modules/stores/collection-routes";
 import { admin } from "./modules/stores/routes";
 import { systemRoutes } from "./modules/system/routes";
@@ -18,6 +19,7 @@ const rpcRoutes = new Hono<ApiEnv>()
   .route("/", accountRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
+  .route("/", initialRoutes)
   .route("/api/admin/stores/:storeId/demo", demoRoutes)
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table);
