@@ -28,7 +28,7 @@ cd ../tablecast-my-change
 
 ## 2A. Dev Containerを使う
 
-PRの保存素材からの動画生成は専用GitHub Actionsでも実行する。runnerの導入ツール、Artifactsの取得と再実行は[PRのデモ動画](../apps/presentation/CI.md)を参照する。
+PRのheadからアプリを起動し、注文・提供・会計を新規収録する専用GitHub Actionsを用意する。ローカル入口は`bun run --cwd apps/presentation tablecast:pr-demo`。Docker・Chrome・FFmpegが必要で、LFS素材や有料モデルは使わない。導入・実行環境、Artifactsの取得と再実行は[PRのデモ動画](../apps/presentation/CI.md)を参照する。
 
 動画素材は`.lfsconfig`により通常のclone・pullでは取得しない。動画を扱う場合だけGit LFSを導入し、[動画の共有と復元](../apps/presentation/SHARING.md)に従って取得範囲と`--exclude=`を指定した`git lfs pull`を実行する。通常の動画生成にはアプリ起動・APIキーは不要。現在の再収録・OpenScreen編集手順はWindows環境を対象とする。共有projectの再編集は、projectのあるフォルダーでOpenScreenの`pack`を実行して作業用bundleを作る。UI変更試験は[当時の検証記録と完成動画](../apps/presentation/experiments/tablecast-mutation/BRIEF.md)を共有する。
 

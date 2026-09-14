@@ -4,5 +4,5 @@
     "types": ["bun", "node"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
-  "include": ["scripts/**/*.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["scripts/**/*.ts", "capture/**/*.ts", "vitest.config.ts", "playwright*.config.ts"]
 }

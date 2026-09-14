@@ -37,13 +37,15 @@ function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
 }
 
 export const test = base.extend<{
+  releaseSha: string;
   runtime: CaseRuntime & {
     setOnline: (online: boolean) => Promise<void>;
     restartWeb: () => Promise<void>;
   };
 }>({
+  releaseSha: ["tablecast-e2e", { option: true }],
   runtime: [
-    async ({ browserName }, use, testInfo) => {
+    async ({ browserName, releaseSha }, use, testInfo) => {
       const runtime = createCaseRuntime();
       let gateway: Awaited<ReturnType<typeof startGateway>> | undefined;
       const name = `${basename(runtime.directory).toLowerCase()}-${browserName}`;
@@ -197,7 +199,7 @@ export const test = base.extend<{
           TABLECAST_ENV: "development",
           TABLECAST_PUBLIC_ORIGIN: origin,
           TABLECAST_AUTH_SECRET: "tablecast-isolated-e2e-auth-secret-never-used-outside-tests",
-          TABLECAST_RELEASE_SHA: "tablecast-e2e",
+          TABLECAST_RELEASE_SHA: releaseSha,
           TABLECAST_VOICE_ENABLED: "false",
           TABLECAST_GOOGLE_EMULATOR_URL: oauth.url,
           TABLECAST_GOOGLE_AUTHORIZE_URL: oauth.url,

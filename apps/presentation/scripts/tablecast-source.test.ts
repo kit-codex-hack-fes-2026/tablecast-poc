@@ -3,21 +3,8 @@ import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveSource, sourcePathSchema, repositoryPath } from "./tablecast-source.ts";
-import { readProject } from "./tablecast-project.ts";
 
 const temporary: string[] = [];
-test("既定台本の実装根拠がLFSなしでリポジトリ内に解決できる", async () => {
-  const project = await readProject();
-  const sources = new Set(
-    project.scenes.flatMap((scene) => [
-      ...(scene.technical?.sources ?? []),
-      ...(scene.sourceTree?.map((entry) => entry.path) ?? []),
-    ]),
-  );
-  expect(sources.size).toBeGreaterThan(0);
-  for (const source of sources) await expect(resolveSource(source)).resolves.toBeTypeOf("string");
-});
-
 test("共有レポートの入力名をリポジトリ相対へ変え、外部の入力は拒否する", () => {
   const base = join(tmpdir(), "tablecast-report", "repo");
   expect(repositoryPath(join(base, "apps", "presentation", "project.json"), base)).toBe(

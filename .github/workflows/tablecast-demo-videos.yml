@@ -13,16 +13,15 @@ concurrency:
 
 env:
   DO_NOT_TRACK: "1"
-  GIT_LFS_SKIP_SMUDGE: "1"
-  HYPERFRAMES_BROWSER_PATH: /usr/bin/google-chrome
+  WRANGLER_SEND_METRICS: "false"
   TABLECAST_VIDEO_RUN: tablecast-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   videos:
-    name: "Video Test: 商品紹介・技術紹介の生成と再生 (HyperFrames, Playwright, FFmpeg)"
+    name: "Video Test: PRの実アプリで注文・提供・会計を収録 (Playwright, D1, FFmpeg)"
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
@@ -31,143 +30,62 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           lfs: false
-
-      - name: 計測と診断ログの保存先を準備
-        id: prepare
-        run: |
-          mkdir -p apps/presentation/output/ci
-          date +%s > apps/presentation/output/ci/started-at
-          git rev-parse HEAD > apps/presentation/output/ci/source-sha.txt
-
-      - name: 動画に必要な保存素材だけを取得
-        env:
-          GIT_LFS_PROGRESS: ${{ github.workspace }}/apps/presentation/output/ci/lfs-progress.log
-        run: |
-          git lfs install --local
-          tablecast_lfs_dir=$(git rev-parse --git-path lfs/objects)
-          mkdir -p "$tablecast_lfs_dir"
-          find "$tablecast_lfs_dir" -type f -printf '%s\n' | awk '{sum += $1} END {print sum+0}' > apps/presentation/output/ci/lfs-before-bytes
-          git lfs pull --include='apps/presentation/assets/audio/**,apps/presentation/assets/demo/**,apps/presentation/assets/fonts/**,apps/presentation/assets/images/**' --exclude= 2>&1 | tee apps/presentation/output/ci/lfs-pull.log
-          git -c lfs.fetchexclude='apps/presentation/assets/openscreen/**,apps/presentation/assets/films/**' lfs fsck 2>&1 | tee apps/presentation/output/ci/lfs-fsck.log
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: "24.7.0"
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-        with:
-          bun-version: "1.3.13"
-      - name: 固定依存を導入
-        run: bun --no-env-file install --frozen-lockfile --ignore-scripts
+      - uses: ./.github/actions/tablecast-setup
       - name: ChromeとFFmpegを導入
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg
           bunx --no-install playwright install --with-deps chrome
-          { node --version; bun --version; google-chrome --version; ffmpeg -version; } > apps/presentation/output/ci/tools.log
-      - name: 動画基盤の既存単体テスト
-        id: tests
-        run: bun run --cwd apps/presentation test 2>&1 | tee apps/presentation/output/ci/unit-tests.log
-
-      - name: 商品紹介を生成・検査
-        id: product
-        working-directory: apps/presentation
-        run: bun run video --project projects/tablecast-main-rerecord.json --film product --name "$TABLECAST_VIDEO_RUN-product" --render 2>&1 | tee output/ci/product.log
-      - name: 検査済みの商品紹介を保存
-        id: product_artifact
-        if: ${{ !cancelled() && steps.product.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: ${{ env.TABLECAST_VIDEO_RUN }}-product
-          path: apps/presentation/output/${{ env.TABLECAST_VIDEO_RUN }}-product/
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
-
-      - name: 技術紹介を生成・検査
-        id: technical
-        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
-        working-directory: apps/presentation
-        run: bun run video --project projects/tablecast-main-rerecord.json --film technical --name "$TABLECAST_VIDEO_RUN-technical" --render 2>&1 | tee output/ci/technical.log
-      - name: 検査済みの技術紹介を保存
-        id: technical_artifact
-        if: ${{ !cancelled() && steps.technical.outcome == 'success' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: ${{ env.TABLECAST_VIDEO_RUN }}-technical
-          path: apps/presentation/output/${{ env.TABLECAST_VIDEO_RUN }}-technical/
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
-
-      - name: 実測と生成結果を記録
-        if: ${{ always() && steps.prepare.outcome == 'success' }}
-        env:
-          TABLECAST_PRODUCT_STATUS: ${{ steps.product.outcome }}
-          TABLECAST_TECHNICAL_STATUS: ${{ steps.technical.outcome }}
+      - name: PRのアプリとDBを起動して実操作を収録・検査
+        id: capture
         run: |
-          tablecast_lfs_dir=$(git rev-parse --git-path lfs/objects)
-          tablecast_lfs_after=0
-          if test -d "$tablecast_lfs_dir"; then
-            tablecast_lfs_after=$(find "$tablecast_lfs_dir" -type f -printf '%s\n' | awk '{sum += $1} END {print sum+0}')
-          fi
-          tablecast_lfs_before=$(cat apps/presentation/output/ci/lfs-before-bytes 2>/dev/null || echo 0)
-          tablecast_started=$(cat apps/presentation/output/ci/started-at)
-          jq -n \
-            --arg sha "$(cat apps/presentation/output/ci/source-sha.txt)" \
-            --arg run "$TABLECAST_VIDEO_RUN" \
-            --arg product "$TABLECAST_PRODUCT_STATUS" \
-            --arg technical "$TABLECAST_TECHNICAL_STATUS" \
-            --argjson seconds "$(($(date +%s) - tablecast_started))" \
-            --argjson lfsBytes "$((tablecast_lfs_after - tablecast_lfs_before))" \
-            --argjson productBytes "$(du -sb "apps/presentation/output/$TABLECAST_VIDEO_RUN-product" 2>/dev/null | cut -f1 || echo 0)" \
-            --argjson technicalBytes "$(du -sb "apps/presentation/output/$TABLECAST_VIDEO_RUN-technical" 2>/dev/null | cut -f1 || echo 0)" \
-            '{sourceSha: $sha, run: $run, product: $product, technical: $technical, elapsedSecondsBeforeDiagnosticsUpload: $seconds, newLfsObjectBytes: $lfsBytes, productDirectoryBytes: $productBytes, technicalDirectoryBytes: $technicalBytes, capture: "保存素材から再生成。変更後アプリの再収録は行っていません。"}' \
-            > apps/presentation/output/ci/metrics.json
-
-      - name: 失敗時を含む診断ログを保存
+          mkdir -p apps/presentation/output
+          bun run --cwd apps/presentation tablecast:pr-demo 2>&1 | tee apps/presentation/output/tablecast-pr-capture.log
+      - name: 検査済みの実操作動画と対象SHAを保存
+        id: demo
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ env.TABLECAST_VIDEO_RUN }}-demo
+          path: |
+            apps/presentation/output/tablecast-pr-capture/**/customer/video.mp4
+            apps/presentation/output/tablecast-pr-capture/**/staff/video.mp4
+            apps/presentation/output/tablecast-pr-capture/**/report.json
+            apps/presentation/output/tablecast-pr-capture/**/*.png
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: 失敗時を含む診断結果を保存
         id: diagnostics
-        if: ${{ always() && steps.prepare.outcome == 'success' }}
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: ${{ env.TABLECAST_VIDEO_RUN }}-diagnostics
           path: |
-            apps/presentation/output/ci/
-            apps/presentation/output/${{ env.TABLECAST_VIDEO_RUN }}-*/**/*.log
-            apps/presentation/output/${{ env.TABLECAST_VIDEO_RUN }}-*/**/*.json
-            apps/presentation/output/${{ env.TABLECAST_VIDEO_RUN }}-*/**/test-failed-*.png
-          if-no-files-found: error
+            apps/presentation/output/tablecast-pr-capture.log
+            apps/presentation/output/tablecast-pr-capture-results.json
+            apps/presentation/output/tablecast-pr-capture/**/*.log
+            apps/presentation/output/tablecast-pr-capture/**/test-failed-*.png
+            apps/presentation/output/tablecast-pr-capture/**/error-context.md
+            apps/web/test-results/tablecast-runtime/
+          if-no-files-found: warn
           retention-days: 7
-
-      - name: ダウンロード先と結果をサマリーへ表示
+      - name: 取得先と今回の収録結果を表示
         if: always()
         env:
-          TABLECAST_PRODUCT_STATUS: ${{ steps.product.outcome }}
-          TABLECAST_TECHNICAL_STATUS: ${{ steps.technical.outcome }}
-          TABLECAST_PRODUCT_UPLOAD_STATUS: ${{ steps.product_artifact.outcome }}
-          TABLECAST_TECHNICAL_UPLOAD_STATUS: ${{ steps.technical_artifact.outcome }}
-          TABLECAST_DIAGNOSTICS_STATUS: ${{ steps.diagnostics.outcome }}
-          TABLECAST_PRODUCT_URL: ${{ steps.product_artifact.outputs.artifact-url }}
-          TABLECAST_TECHNICAL_URL: ${{ steps.technical_artifact.outputs.artifact-url }}
+          TABLECAST_CAPTURE_STATUS: ${{ steps.capture.outcome }}
+          TABLECAST_UPLOAD_STATUS: ${{ steps.demo.outcome }}
+          TABLECAST_DEMO_URL: ${{ steps.demo.outputs.artifact-url }}
           TABLECAST_DIAGNOSTICS_URL: ${{ steps.diagnostics.outputs.artifact-url }}
         run: |
           {
-            echo '## デモ動画の生成結果'
+            echo '## PRの実アプリを収録したデモ'
             echo "対象: $TABLECAST_VIDEO_RUN"
-            echo
-            echo '**保存素材からの再生成です。変更後アプリの再収録は行っていません。アプリだけの変更では保存録画は更新されません。**'
-            echo '既定の技術紹介は収録版7d6adc7の旧構成を説明する記録です。現行PRの構成やテスト結果を説明するものではありません。'
-            echo '有料TTS・LLMは呼び出しません。内容・音・見た目の人によるレビューは未実施です。'
-            echo
-            echo "- 商品紹介: 生成・検査=$TABLECAST_PRODUCT_STATUS / 保存=$TABLECAST_PRODUCT_UPLOAD_STATUS ${TABLECAST_PRODUCT_URL:+[Artifact]($TABLECAST_PRODUCT_URL)}"
-            echo "- 技術紹介: 生成・検査=$TABLECAST_TECHNICAL_STATUS / 保存=$TABLECAST_TECHNICAL_UPLOAD_STATUS ${TABLECAST_TECHNICAL_URL:+[Artifact]($TABLECAST_TECHNICAL_URL)}"
-            echo "- 診断: 保存=$TABLECAST_DIAGNOSTICS_STATUS ${TABLECAST_DIAGNOSTICS_URL:+[ログと実測]($TABLECAST_DIAGNOSTICS_URL)}"
-            echo '- 保存期間: 7日。再実行はActionsの Re-run all jobs を使用します。'
-            echo '- 完全な実行時間とZIP保存容量はActionsのジョブ時間と各Artifactのsizeで確認してください。'
-            if test -f apps/presentation/output/ci/metrics.json; then
-              echo
-              echo 'LFSは新規取得したオブジェクトの実バイト数（通信ヘッダー・再送を除く）。directoryBytesは圧縮前の出力サイズです。'
-              echo '```json'
-              cat apps/presentation/output/ci/metrics.json
-              echo '```'
-            fi
+            echo "- 起動・操作・録画・再生検査: $TABLECAST_CAPTURE_STATUS / 保存: $TABLECAST_UPLOAD_STATUS"
+            echo "- ${TABLECAST_DEMO_URL:+[客向け・店側のMP4と収録記録]($TABLECAST_DEMO_URL)}"
+            echo "- ${TABLECAST_DIAGNOSTICS_URL:+[診断結果]($TABLECAST_DIAGNOSTICS_URL)}"
+            echo '- 今回のheadからビルドした実Web・API・D1を使用。注文・提供・会計の固定GUIシナリオを新規収録します。'
+            echo '- 音声接客は無効。動画は無音で、保存録画・旧構成の技術紹介・有料TTS・LLMは使用しません。'
+            echo '- 固定シナリオ外の変更は自動では映りません。必要に応じて撮影シナリオも同じPRで更新してください。'
+            echo '- 7日保存。同じSHAの再収録はRe-run all jobs、変更後の再収録はPRへpush。保存済みの旧実行は期限まで残ります。'
+            echo '- LFS転送なし。実行時間・保存容量はこの実行のジョブ時間とArtifactsのsizeで確認できます。'
           } >> "$GITHUB_STEP_SUMMARY"
