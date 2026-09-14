@@ -176,7 +176,7 @@ function ItemForm({
             {(configuration) => (
               <fieldset
                 disabled={!editable || save.isPending}
-                className="min-w-0 space-y-5 [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-base [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
+                className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
               >
                 {section === "products" && (
                   <ProductsEditor

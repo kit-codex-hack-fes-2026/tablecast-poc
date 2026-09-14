@@ -151,7 +151,7 @@ export function ConfigurationImageField({
   }
   return (
     <fieldset className="grid min-w-0 gap-4" disabled={disabled} aria-describedby={`${id}-hint`}>
-      <legend className="mb-3 font-semibold">{t("editor_image_settings")}</legend>
+      <legend className="sr-only">{t("editor_image_settings")}</legend>
       <div className="flex flex-wrap gap-6">
         <ImagePreview
           key={value.imageKey ?? "none"}

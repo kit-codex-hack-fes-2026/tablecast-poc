@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { fn } from "storybook/test";
+import { useI18n } from "../../i18n/locale";
 import { ConfigurationImageField } from "./configuration-image-field";
 
 const meta = {
@@ -14,11 +15,13 @@ const meta = {
     onChange: fn(),
   },
   render: function Render(args) {
+    const { t } = useI18n();
     const [client] = useState(() => new QueryClient());
     const [value, setValue] = useState(args.value);
     return (
       <QueryClientProvider client={client}>
-        <div className="mx-auto max-w-xl p-6">
+        <div className="mx-auto max-w-xl space-y-4 p-6">
+          <h1 className="text-lg font-semibold">{t("editor_image_settings")}</h1>
           <ConfigurationImageField {...args} value={value} onChange={setValue} />
         </div>
       </QueryClientProvider>

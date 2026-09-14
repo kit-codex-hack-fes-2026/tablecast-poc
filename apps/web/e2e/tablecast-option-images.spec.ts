@@ -45,15 +45,20 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.goto(`${menu}/products/${product.id}`);
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   // When: 解除と既存参照指定を保存し、続いて実取込APIから商品・選択肢を置換する
-  const optionGroup = page.getByRole("group", { name: option.text.ja.displayName, exact: true });
+  const optionGroup = page.getByRole("group", {
+    name: `グループ 1：${picturedModifier.text.ja.displayName} 選択肢 ${picturedModifier.options.indexOf(option) + 1}：${option.text.ja.displayName}`,
+    exact: true,
+  });
   const optionImage = optionGroup.getByRole("group", {
     name: ja.editor_image_settings,
     exact: true,
   });
+  await optionGroup.getByText(ja.editor_option_details, { exact: true }).click();
   await optionImage.getByRole("button", { name: ja.editor_image_remove }).click();
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await optionGroup.getByText(ja.editor_option_details, { exact: true }).click();
   await expect(optionImage.getByText(ja.editor_image_empty, { exact: true })).toBeVisible();
   await optionImage
     .getByRole("combobox", { name: ja.editor_image_method })
@@ -63,12 +68,12 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
     .fill(option.imageKey);
   await optionImage.getByRole("button", { name: ja.editor_image_apply }).click();
   await optionGroup
-    .getByRole("group", { name: ja.common_ja, exact: true })
-    .getByRole("textbox", { name: ja.admin_description, exact: true })
+    .getByRole("textbox", { name: new RegExp(`${ja.common_ja} ${ja.admin_description}$`) })
     .fill(description);
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await optionGroup.getByText(ja.editor_option_details, { exact: true }).click();
   await expect(optionImage.locator("img")).toHaveAttribute("src", new RegExp(option.imageKey));
   const uploadedKeys: string[] = [];
   for (const [index, target] of [product, option].entries()) {
@@ -109,6 +114,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await optionGroup.getByText(ja.editor_option_details, { exact: true }).click();
   await expect(optionImage.locator("img")).toHaveAttribute("src", new RegExp(uploadedKeys[1]));
   const image = optionImage.locator("img");
   await expect
@@ -120,6 +126,8 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
     )
     .toBe(true);
   await page.setViewportSize({ width: 768, height: 1024 });
+  await optionImage.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollBy(0, -120));
   await optionImage.screenshot({ path: testInfo.outputPath("tablecast-image-ja-portrait.png") });
   await page.getByRole("button", { name: "English", exact: true }).click();
   const englishImage = page

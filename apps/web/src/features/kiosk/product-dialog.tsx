@@ -12,9 +12,8 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
 
-const allergenLabels: Partial<Record<string, keyof typeof m>> = {
+const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   crustaceans: "kiosk_allergen_crustaceans",
   molluscs: "kiosk_allergen_molluscs",
   buckwheat: "kiosk_allergen_buckwheat",
