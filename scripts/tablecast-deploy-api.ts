@@ -42,7 +42,7 @@ export async function currentRevision(
     "api",
     target.pr
       ? `repos/${tablecastRepository}/pulls/${target.pr}`
-      : `repos/${tablecastRepository}/commits/main`,
+      : `repos/${tablecastRepository}/commits/${target.branch}`,
   ]);
   const value: unknown = JSON.parse(gh.stdout);
   if (target.pr) {
@@ -59,6 +59,6 @@ export async function currentRevision(
     )
       throw new Error("PRが更新・終了したか、同一リポジトリのPRではありません。");
   } else if (z.object({ sha: z.string() }).parse(value).sha !== sha) {
-    throw new Error("mainが更新されました。新しいCIの配備に任せます。");
+    throw new Error("配備対象branchが更新されました。新しいCIの配備に任せます。");
   }
 }

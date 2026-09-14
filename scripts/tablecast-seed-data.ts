@@ -1,3 +1,4 @@
+import { isHostedEmulator } from "../apps/api/src/modules/auth/preview";
 import { seedMenuImages } from "./tablecast-seed-media";
 import { and, count, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
@@ -710,13 +711,7 @@ async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentia
 
 export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
   credentials = normaliseDemoCredentials(credentials);
-  if (
-    env.TABLECAST_ENV !== "preview" ||
-    !/^https:\/\/tablecast-pr-[1-9][0-9]*\.kit-codex\.workers\.dev$/.test(
-      env.TABLECAST_PUBLIC_ORIGIN,
-    )
-  )
-    throw new Error("PR初期投入の対象が不正です。");
+  if (!isHostedEmulator(env)) throw new Error("検証環境の初期投入対象が不正です。");
   const db = drizzle(env.TABLECAST_DB);
   const owner = await db.select().from(business.deploymentOwner).get();
   if (

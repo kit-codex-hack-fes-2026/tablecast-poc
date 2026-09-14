@@ -2,8 +2,16 @@ name: CI
 
 on:
   pull_request:
+    branches-ignore: [main]
+    types: [opened, synchronize, reopened, edited]
   push:
-    branches: [main]
+    branches: [main, staging]
+  workflow_dispatch:
+    inputs:
+      staging_reset:
+        description: staging全体をリセットする場合はtablecast-stagingを入力
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -15,6 +23,7 @@ concurrency:
 env:
   WRANGLER_SEND_METRICS: "false"
   DO_NOT_TRACK: "1"
+  TABLECAST_DEPLOY_ENV: ${{ github.event_name != 'pull_request' && (github.ref_name == 'staging' && 'staging' || 'production') || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'staging' && 'production' || 'preview') }}
 
 jobs:
   static:
@@ -36,7 +45,7 @@ jobs:
           TABLECAST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bunx --no-install commitlint --from "$TABLECAST_BASE_SHA" --to "$TABLECAST_HEAD_SHA" --verbose
       - name: mainのコミットメッセージ
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: bunx --no-install commitlint --last --verbose
       # codegenを共有するlint/typecheckは順に実行する。
       - run: bun run format:check && bun run lint && bun run typecheck
@@ -86,7 +95,7 @@ jobs:
     timeout-minutes: 15
     env:
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -117,7 +126,7 @@ jobs:
       - run: bunx --no-install turbo run build:storybook
       - run: bun --no-env-file run deploy:catalog --prepare-storybook
         env:
-          TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+          TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
           TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -132,7 +141,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: forkの配備対象外を記録
@@ -155,7 +164,7 @@ jobs:
   catalog-deploy:
     name: PRカタログの配備
     needs: [static, unit-web, storybook-build, email-build, components]
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: preview
@@ -168,7 +177,7 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
@@ -240,7 +249,7 @@ jobs:
           name: tablecast-e2e-${{ matrix.browser }}-${{ matrix.shard }}
           path: apps/web/test-results/
           include-hidden-files: true
-          retention-days: 7
+          retention-days: 1
 
   images:
     name: 配備用Containerイメージ
@@ -268,20 +277,31 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    name: 本番・PR配備
+    name: 本番・staging・PR配備
     needs:
-      [static, unit-web, api, dev-runtime, workers-build, storybook-build, components, e2e, images]
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+      [
+        static,
+        unit-web,
+        api,
+        dev-runtime,
+        workers-build,
+        storybook-build,
+        email-build,
+        components,
+        e2e,
+        images,
+      ]
+    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')) || (github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      name: ${{ github.event_name != 'pull_request' && (github.ref_name == 'staging' && 'staging' || 'production') || 'preview' }}
       url: ${{ steps.target.outputs.url }}
     permissions:
       contents: read
       pull-requests: read
     concurrency:
-      group: tablecast-deploy-${{ github.event.pull_request.number || 'production' }}
+      group: tablecast-deploy-${{ github.event.pull_request.number || github.ref_name }}
       queue: max
       cancel-in-progress: false
     env:
@@ -289,7 +309,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.number }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
       TABLECAST_MODEL: gpt-5.6-luna
       TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
@@ -320,14 +340,44 @@ jobs:
         run: docker load --input .local/tablecast-deploy/tablecast-images.tar.gz
       - name: 配備先URL
         id: target
-        run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined).origin + "\n")'
+        run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined, process.env.TABLECAST_DEPLOY_ENV).origin + "\n")'
       - name: 資源作成・移行・検証済み成果物の配備・SHA確認
-        run: bun --no-env-file run deploy
+        env:
+          TABLECAST_RESET_CONFIRM: ${{ inputs.staging_reset }}
+        run: |
+          if [ "$TABLECAST_RESET_CONFIRM" = "tablecast-staging" ]; then
+            bun --no-env-file run deploy --reset
+          else
+            bun --no-env-file run deploy
+          fi
+
+  required:
+    name: TableCast CI
+    if: always()
+    needs:
+      [
+        static,
+        unit-web,
+        api,
+        dev-runtime,
+        workers-build,
+        storybook-build,
+        email-build,
+        components,
+        e2e,
+        images,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 全検査の成功確認
+        env:
+          TABLECAST_RESULTS: ${{ toJSON(needs) }}
+        run: node -e 'if (Object.values(JSON.parse(process.env.TABLECAST_RESULTS)).some(job => job.result !== "success")) process.exit(1)'
 
   preview-report:
     name: PRプレビューの統合通知
     needs: [deploy, catalog-deploy]
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

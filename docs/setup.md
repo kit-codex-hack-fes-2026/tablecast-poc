@@ -17,7 +17,7 @@ Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew insta
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc
 git fetch origin
-git worktree add -b codex/my-change ../tablecast-my-change origin/main
+git worktree add -b codex/my-change ../tablecast-my-change origin/staging
 cd ../tablecast-my-change
 ```
 
@@ -256,3 +256,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 ### メールプレビュー依存
 
 メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
+## stagingと本番release
+
+開発の標準branchはstaging。本番はmainへのrelease PRで更新する。常設環境・GitHub Appの初期設定・手動リセットは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。ローカル終了処理で常設stagingを停止しない。
