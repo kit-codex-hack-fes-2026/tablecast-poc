@@ -160,7 +160,13 @@ function tableTimelineColumns(
       id: "locale",
       header: t("admin_locale"),
       cell: ({ row }) =>
-        row.original.visit ? (row.original.visit.locale === "ja" ? "日本語" : "English") : "—",
+        row.original.visit
+          ? t(
+              row.original.visit.locale === "ja"
+                ? "common_language_native_ja"
+                : "common_language_native_en",
+            )
+          : "—",
     },
     {
       id: "cart",

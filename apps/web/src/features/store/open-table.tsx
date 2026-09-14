@@ -93,8 +93,8 @@ export function OpenTable({
                     field.handleChange(event.target.value === "en" ? "en" : "ja")
                   }
                 >
-                  <option value="ja">日本語</option>
-                  <option value="en">English</option>
+                  <option value="ja">{t("common_language_native_ja")}</option>
+                  <option value="en">{t("common_language_native_en")}</option>
                 </NativeSelect>
                 <FieldErrors errors={field.state.meta.errors} />
               </label>

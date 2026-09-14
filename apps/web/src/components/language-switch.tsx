@@ -31,7 +31,7 @@ export function LanguageSwitch({
           alt=""
           aria-hidden="true"
         />
-        日本語
+        {t("common_language_native_ja")}
       </Button>
       <Button
         className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
@@ -48,7 +48,7 @@ export function LanguageSwitch({
           alt=""
           aria-hidden="true"
         />
-        English
+        {t("common_language_native_en")}
       </Button>
     </fieldset>
   );

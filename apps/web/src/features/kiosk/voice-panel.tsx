@@ -24,6 +24,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
+import type { m } from "../../paraglide/messages.js";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
@@ -133,27 +134,19 @@ function ConversationMessage({
         <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_interrupted")}</p>
       )}
       {line.displayIncomplete && (
-        <p className="mt-1 text-xs text-muted-foreground">
-          {locale === "ja"
-            ? "表示を同期中。発話が終わると更新されます。"
-            : "Syncing the transcript. It will update after playback."}
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_transcript_syncing")}</p>
       )}
       {line.synthetic && (
         <p className="mt-1 text-xs text-muted-foreground">{t("common_synthetic")}</p>
       )}
       {debug && line.rawText && (
         <details className="mt-2 rounded-lg border border-dashed border-border p-3 text-xs">
-          <summary className="cursor-pointer">
-            {locale === "ja" ? "発話タグ・生成原文" : "Speech tags and generated text"}
-          </summary>
+          <summary className="cursor-pointer">{t("kiosk_debug_raw_text")}</summary>
           <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
         </details>
       )}
       {debug && line.role === "user" && !line.speaker && (
-        <p className="mt-1 text-xs">
-          {locale === "ja" ? "話者情報なし（推定しません）" : "Speaker metadata unavailable"}
-        </p>
+        <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
       )}
       {debug && line.streamId && (
         <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
@@ -164,17 +157,17 @@ function ConversationMessage({
   );
 }
 
-const toolLabels: Record<string, [string, string]> = {
-  getCatalog: ["おしながきを確認", "Checking the menu"],
-  getTableState: ["注文・画面を確認", "Checking your order and screen"],
-  updateCart: ["注文かごを更新", "Updating your basket"],
-  prepareConfirmation: ["注文内容を確認", "Preparing order confirmation"],
-  submitOrder: ["注文を送信", "Sending your order"],
-  callStaff: ["店員を呼ぶ", "Calling staff"],
-  showProducts: ["商品を表示", "Showing dishes and drinks"],
-  setLanguage: ["言語を変更", "Changing language"],
-  setSpeechSpeed: ["話速を変更", "Changing speech speed"],
-  setUiSection: ["注文画面を切り替え", "Changing the order view"],
+const toolLabels: Partial<Record<string, keyof typeof m>> = {
+  getCatalog: "kiosk_tool_get_catalog",
+  getTableState: "kiosk_tool_get_table_state",
+  updateCart: "kiosk_tool_update_cart",
+  prepareConfirmation: "kiosk_tool_prepare_confirmation",
+  submitOrder: "kiosk_tool_submit_order",
+  callStaff: "kiosk_tool_call_staff",
+  showProducts: "kiosk_tool_show_products",
+  setLanguage: "kiosk_tool_set_language",
+  setSpeechSpeed: "kiosk_tool_set_speech_speed",
+  setUiSection: "kiosk_tool_set_ui_section",
 };
 
 type VoicePanelProps = {
@@ -234,7 +227,7 @@ function useVoicePanel({
     running.length > 0 && (view.status === "thinking" || view.status === "speaking");
   const visualState: VoiceView["status"] | "tool" =
     usingTools && view.status === "thinking" ? "tool" : view.status;
-  const toolPhase = locale === "ja" ? "ツール実行中" : "Using tools";
+  const toolPhase = t("kiosk_tools_running");
   const phase = visualState === "tool" ? toolPhase : status;
   const assistantTurns = new Set(
     merged.flatMap((line) => (line.role === "assistant" ? [line.turnId] : [])),
@@ -250,8 +243,7 @@ function useVoicePanel({
           failedTurns.has(turnId) ||
           Boolean(latestUserTurn && turnId !== latestUserTurn));
       const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
-      const title =
-        toolLabels[name]?.[locale === "ja" ? 0 : 1] ?? (locale === "ja" ? "処理" : "Action");
+      const title = t(toolLabels[name] ?? "kiosk_tool_action");
       return [
         <div
           key={String(event.data.toolCallId)}
@@ -270,29 +262,17 @@ function useVoicePanel({
           <span className="flex-1">
             {title}
             {failed && (
-              <span className="mt-1 block text-destructive">
-                {locale === "ja"
-                  ? "処理を完了できませんでした。画面から再度操作できます。"
-                  : "This action could not be completed. You can try it again on screen."}
-              </span>
+              <span className="mt-1 block text-destructive">{t("kiosk_tool_failed_hint")}</span>
             )}
           </span>
           <span className="text-muted-foreground">
             {failed
-              ? locale === "ja"
-                ? "エラー"
-                : "Failed"
+              ? t("kiosk_tool_failed")
               : stale
-                ? locale === "ja"
-                  ? "中断"
-                  : "Interrupted"
+                ? t("kiosk_tool_interrupted")
                 : pending
-                  ? locale === "ja"
-                    ? "実行中"
-                    : "Running"
-                  : locale === "ja"
-                    ? "完了"
-                    : "Complete"}
+                  ? t("kiosk_tool_running")
+                  : t("kiosk_tool_complete")}
           </span>
           {debug && (
             <code>
@@ -420,7 +400,7 @@ export function VoicePanel({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={locale === "ja" ? "デバッグ表示" : "Show debug details"}
+          aria-label={t("kiosk_debug_details")}
           aria-pressed={debug}
           onClick={() => setDebug(!debug)}
         >
@@ -429,14 +409,11 @@ export function VoicePanel({
       </header>
       {debug && (
         <details className="border-b border-dashed border-border py-3 text-xs">
-          <summary className="cursor-pointer">
-            {locale === "ja" ? "接客・感情プロンプト" : "Cast and emotion prompt"}
-          </summary>
+          <summary className="cursor-pointer">{t("kiosk_debug_prompt")}</summary>
           <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">
             {castInstructions}
             {"\n\n"}
-            {catalog?.configuration.cast.instructions[locale] ||
-              (locale === "ja" ? "店舗設定を読み込み中" : "Loading cast settings")}
+            {catalog?.configuration.cast.instructions[locale] || t("kiosk_cast_loading")}
           </pre>
         </details>
       )}
@@ -466,9 +443,7 @@ export function VoicePanel({
                       : line.live
                         ? line.role === "user"
                           ? t("kiosk_transcribing")
-                          : locale === "ja"
-                            ? "返答を生成中"
-                            : "Generating reply"
+                          : t("kiosk_reply_generating")
                         : undefined
                   }
                 >
@@ -529,17 +504,12 @@ export function VoicePanel({
                 className="flex gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-sm text-destructive"
               >
                 <CircleAlert className="size-4 shrink-0" />
-                {locale === "ja"
-                  ? "音声の返答が途切れました。注文結果は注文かご・履歴で確認できます。"
-                  : "The voice reply was interrupted. Check your basket and order history for the result."}
+                {t("kiosk_reply_interrupted")}
                 {debug && typeof event.data.code === "string" && <code>{event.data.code}</code>}
               </output>
             ))}
         </ConversationContent>
-        <ConversationScrollButton
-          label={t("kiosk_latest")}
-          followLabel={locale === "ja" ? "自動追従中" : "Following"}
-        />
+        <ConversationScrollButton label={t("kiosk_latest")} followLabel={t("kiosk_following")} />
       </Conversation>
       {view.status === "error" && (
         <output className="rounded-lg bg-destructive/5 p-3 text-sm">
@@ -617,7 +587,7 @@ export function VoicePanel({
                   <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
                     <Slider.Indicator className="rounded-full bg-primary" />
                     <Slider.Thumb
-                      aria-label={locale === "ja" ? "話す速さ" : "Speech speed"}
+                      aria-label={t("kiosk_speech_speed")}
                       className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     />
                   </Slider.Track>

@@ -84,7 +84,11 @@ export function ActivityLog({
                 {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
                 {event.data.text}
                 <small className="block text-sm text-muted-foreground mt-0.5">
-                  {event.data.locale === "en" ? "English" : "日本語"}
+                  {t(
+                    event.data.locale === "en"
+                      ? "common_language_native_en"
+                      : "common_language_native_ja",
+                  )}
                   {typeof event.data.source === "string" &&
                     event.data.source.startsWith("synthetic-") &&
                     ` · ${t("common_synthetic")}`}
