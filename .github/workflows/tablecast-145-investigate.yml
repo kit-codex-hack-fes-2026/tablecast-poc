@@ -35,6 +35,8 @@ jobs:
           - name: Mailpit image
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
+        run: bun run test:e2e --project=tablecast-${{ matrix.browser }}
+      - name: メンバー遷移の反復確認
         run: bun run test:e2e tablecast-account.spec.ts --grep 'Googleログインから名前変更' --repeat-each=8 --project=tablecast-${{ matrix.browser }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
