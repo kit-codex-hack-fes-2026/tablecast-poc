@@ -1,3 +1,4 @@
+import { Brand } from "../../components/brand";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,7 +18,6 @@ import {
   Store,
   UserRound,
   Users,
-  UtensilsCrossed,
 } from "lucide-react";
 import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
@@ -85,12 +85,8 @@ export function AdminSidebar({
         to="/admin/live"
         className="flex h-14 shrink-0 items-center gap-2 px-2 font-semibold"
         onClick={onNavigate}
-        title="TableCast"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <UtensilsCrossed className="size-4" />
-        </span>
-        {!collapsed && "TableCast"}
+        <Brand variant={collapsed ? "symbol" : "logo"} />
       </Link>
       {!collapsed && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-white p-2">

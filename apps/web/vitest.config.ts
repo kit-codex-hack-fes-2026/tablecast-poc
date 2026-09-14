@@ -49,7 +49,11 @@ export default defineConfig({
               { browser: "chromium" },
               {
                 browser: "webkit",
-                include: ["src/features/store/device-qr-reader.browser.test.tsx"],
+                include: [
+                  "src/features/store/device-qr-reader.browser.test.tsx",
+                  "src/components/product-image.browser.test.tsx",
+                  "src/components/menu-option-image.browser.test.tsx",
+                ],
               },
             ],
           },

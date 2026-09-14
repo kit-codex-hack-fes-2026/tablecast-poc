@@ -1,8 +1,8 @@
-# 本番・PR環境のCI/CD
+# 本番・staging・PR環境のCI/CD
 
 [仕様索引](README.md) · [開発環境](development.md) · [残る受入](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/34)
 
-GitHub Actionsはmainを本番、同一リポジトリ内のPRを独立したpreviewへ配備する。常設stagingは追加しない。配備実装は [tablecast-deploy.ts](../scripts/tablecast-deploy.ts)、URLとsecretの契約は [tablecast-deploy-config.ts](../scripts/tablecast-deploy-config.ts) にある。配備・受入の最新結果はPRとIssue #34に記録する。
+GitHub Actionsはmainを本番、stagingを常設検証環境、同一リポジトリ内の開発PRを独立したpreviewへ配備する。release PRはstagingで確認する。配備実装は [tablecast-deploy.ts](../scripts/tablecast-deploy.ts)、URLとsecretの契約は [tablecast-deploy-config.ts](../scripts/tablecast-deploy-config.ts) にある。配備・受入の最新結果はPRとIssue #34に記録する。
 
 ## URLと実行先
 
@@ -82,7 +82,7 @@ PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だ
 
 認証fixtureの作成中に停止したPRは、運用者が所有情報・ユーザー一覧と、組織・店舗・注文・セッションが未作成であることを確認した場合だけ、対象PRの`seeded=0`を`3`へ変更して再開できる。既存ユーザーのID・名前・認証情報を保持する。`3`でも組織・店舗が存在すれば停止する。営業データがあるDBや本番にこの復旧手順を使わない。
 
-商品画像は最大4件を並列投入する。既存objectのMD5 ETagとサイズが一致すれば省略し、異なる内容は上書きせず失敗する。PUTにはMD5と未存在条件を付ける。R2の一時障害`10001`だけを1秒・2秒待って最大3回試し、結果不明の場合も再度HEADで保存済みか確認する。権限エラーや整合性エラーは即時失敗し、同時に始めた処理が完了してから接続を破棄する。これは配備時の外部サービス障害への対応であり、テストのretryではない。
+通常の初回投入・再配備は、seedの店舗構成が参照する商品・選択肢の画像だけを対象とする。旧固定キーの復旧では旧構成を保つため全素材を対象にする。商品画像は`tablecast/images/`をR2の`list`で一括照合し、`truncated`と`cursor`で全ページを辿る。旧固定キーの復旧時だけ`tablecast/demo/`も照合する。既存objectのMD5 ETagとサイズが一致すればHEAD・PUTを省略し、異なる内容は上書きせず失敗する。不足画像は最大4件を並列投入する。成功ログは投入件数・既存件数・送信byte数へ集約する。初回投入では必要な画像本体の送信は残る。2026-09-15の素材では全201枚・110,991,441 Bから、デモ参照164枚・31,068,514 Bへ絞る（約72%減）。現在のデモ参照164枚の画像群では、通常の照合は一覧1要求で済むが、保存数が増えればページ数に応じて増える。LISTはR2のClass A操作、HEADはClass B操作なので、料金は要求数だけで比較しない。PUTにはMD5と未存在条件を付ける。R2の一時障害`10001`だけを1秒・2秒待って最大3回試し、結果不明の場合も再度HEADで保存済みか確認する。権限エラーや整合性エラーは即時失敗し、同時に始めた処理が完了してから接続を破棄する。これは配備時の外部サービス障害への対応であり、テストのretryではない。
 
 記録前の中断、`0`のまま残った部分seed、所有情報の欠落は失敗として止め、自動修復しない。管理者が該当PRの所有情報・D1全件数・外部キー・配備ログを照合し、DB投入完了が証明できる場合だけ`0`から`2`へ進捗を補正する。未証明のデータや営業中データへresetを流用しない。
 
@@ -149,8 +149,8 @@ cleanup途中で所有markerだけが削除された場合も、自動採用せ�
 通常は既存の`bun run dev:prepare`、`bun run dev`、`bun run dev:parity`を使う。公開用configは次でsecret・遠隔書込みなしに生成できる。
 
 ```sh
-TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
-TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
+TABLECAST_DEPLOY_ENV=production TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
+TABLECAST_DEPLOY_ENV=preview TABLECAST_PR_NUMBER=123 TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run deploy --plan
 TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" TABLECAST_WEB_CONFIG="$PWD/.local/tablecast-deploy/web.json" bun --no-env-file run --cwd apps/web build
 ```
 
@@ -199,3 +199,35 @@ CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する�
 再配備は最新headに対するCI runを再実行する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。カタログ削除が失敗しても、セットアップが成功しworkflowがキャンセルされていなければ製品側の削除を試行する。カタログ側の失敗はjob結果に残す。削除後の再実行は安全に終了し、reopenは通常のCIで再作成する。手動復旧はセットアップ済みのホスト環境で行い、GitHub CLI `gh` と対象repositoryを読める認証（`gh auth status`）、配備用のCloudflare tokenを用意する。Dev Containerには `gh` を同梱しない。対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
 
 追加資源はPRごとに2 Workersと専用Access applicationで、メール用D1/R2/KV/DO/Containerは作らない。既存Workers Paidの契約を共有するため、Workerごとの追加基本料はない。両カタログの静的配信は無料で、メール用のWorker実行課金は発生しない。含有枠とAccessの人数・application数、accountのWorker数、Actions artifact容量を監視する。含有枠内なら追加費用0を想定できるが、超過料金まで0とは保証しない。標準GitHub hosted runnerは公開repositoryでは無料で、artifact等は別枠となる。[Workers料金](https://developers.cloudflare.com/workers/platform/pricing/)・[Static Assets料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)・[Worker上限](https://developers.cloudflare.com/workers/platform/limits/)を契約時点で確認する。
+
+## stagingとreleaseの運用
+
+開発の標準経路は作業branch → staging → main。default branchはstagingとする。stagingは `https://tablecast-staging.kit-codex.workers.dev`、MCPは同originの`/mcp`。資源名は`tablecast-staging`、`tablecast-api-staging`、`tablecast-db-staging`、`tablecast-media-staging`。D1/R2/DO/Containerは本番・previewから分離する。
+
+配備CLIでは`TABLECAST_DEPLOY_ENV`を必須とし、未指定なら資源変更前に停止する。値は`production`、`staging`、`preview`のいずれか。previewだけ`TABLECAST_PR_NUMBER`を必須にし、他環境との併用を拒否する。CIはpush先branchから配備環境を選び、検査成功後に同じSHAの成果物を配備する。通常配備はmigrationと未投入時の共通demo seedだけを行う。既存のデータ・画像・認証secretは保持する。fixture変更を取り込み直す場合は全体リセットを明示実行する。
+
+### GitHubの初期設定
+
+- Environment `staging`を作り、配備branchをstagingに限定する。既存のrepository配備secretとAccess policyを使う。実GoogleとBetter Auth Dashboardの資格はproductionだけに保存する。
+- ActionsのWorkflow permissionsでAllow GitHub Actions to create and approve pull requestsを有効にする。workflow既定権限はreadのままとし、release更新jobだけContents/Actions読取・Pull requests書込を指定する。既存の`GITHUB_TOKEN`を使い、専用App・PAT・秘密鍵を追加しない。PRレビューの自動承認やマージは行わない。
+- `GITHUB_TOKEN`で作ったPRの追加workflowは[GitHubの仕様](https://docs.github.com/en/actions/concepts/security/github_token)により承認待ちになる場合がある。その実行に依存せず、main宛のPRは通常CIの対象から外し、staging pushの`TableCast CI`と同SHAの配備をrelease gateで検査する。通常のstaging宛PRとmain pushの本番CIは維持する。
+- main/stagingのrulesetはbranch名を明示し、PR、`TableCast CI`、削除禁止、force push禁止、merge commitを必須にする。mainにはさらに`TableCast release`を要求する。既存の管理者bypassは緊急対応用に維持する。
+- stagingの配備とチェックが実在してからdefault branchを変更し、main宛の通常PRをstaging宛へ変更する。stack上段のbaseは直下のbranchを維持する。
+
+### remote MCPのAccess
+
+Web・ログイン・同意・emulateはpreviewと同じAccess Allow/Service Authで保護する。`stagingMcpPaths`で列挙したMCP、discovery、DCR、token交換・refresh、revokeだけ別Access applicationでBypassする。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。`/api/auth/*`全体をBypassしない。未認証MCPはOAuthの401を返す。Access資格なしでdiscoveryとDCRが到達可能であること、ブラウザーの模擬ログインはAccess資格なしでは利用できないことを別々に検証する。
+
+### staging全体のリセット
+
+GitHub ActionsのCIからRun workflowを開き、branchにstaging、`staging_reset`に`tablecast-staging`を指定する。検査・ビルド後、通常配備と同じ排他制御下で全体リセットする。初回は現在のstaging headと配備SHAの一致が必要。対象SHA・workflow結果を記録する。
+
+D1とR2の資源ID・所有台帳・migration履歴は保持し、schemaに定義された全業務・認証データとR2画像を消去する。D1はDrizzleの同一batch内で外部キー検証を遅延し、全削除後に再検証する。Webをメンテナンス応答へ切り替え、既存DO・Container・API Workerを退役して再作成する。最新demoを投入し、同じSHAを配備・疎通確認後に完了する。全アカウント、OAuthクライアント、セッション、MCP tokenが失われるため、ログインとMCP認可をやり直す。
+
+R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。Access、固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
+
+### release PR
+
+pushとCI完了時に現在のmainとの差分を集約し、Draft release PRを1本作成・更新する。差分がない場合は開いた集約PRを閉じ、新規作成しない。関連PR・元PR冒頭の要約・SHA・CI・配備状況は自動領域へ書き、概要・主な変更・移行手順・実クライアント検証はagentが編集する。[本文・確認手順](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)を使う。
+
+mainへの通常マージには同一repoの最新staging、stagingの最新pushまたは手動リセットCIの成功、同SHAの疎通、mainとの合成treeとstaging treeの一致が必要。mainに緊急修正がある場合はstagingへ戻して再検証する。集約はmerge commitを使い、stagingを削除・rebaseしない。本番の配備確認はmain pushのCIとhealthで別に行う。

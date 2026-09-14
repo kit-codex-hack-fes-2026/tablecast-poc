@@ -86,7 +86,7 @@ export function ProductMenu({
                   className="size-full object-contain"
                   width={384}
                   height={384}
-                  sizes="(min-width: 1536px) 20vw, (min-width: 768px) 30vw, 50vw"
+                  sizes="(min-width: 1536px) 17vw, (min-width: 640px) 25vw, 50vw"
                   src={`/media/${product.imageKey}`}
                   alt=""
                 />
