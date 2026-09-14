@@ -207,6 +207,7 @@ it("未変更フォームでも画像の選択候補と取込失敗後の入力�
   const back = form.getByRole("link", { name: ja.editor_products, exact: true });
   await image.getByLabelText(ja.editor_image_choose).upload(png);
   await expect.element(save).toHaveAttribute("data-pwa-blocked", "true");
+  await expect.element(form.getByText(ja.editor_image_staged, { exact: true })).toBeVisible();
   const beforeUnload = new Event("beforeunload", { cancelable: true });
   window.dispatchEvent(beforeUnload);
   expect(beforeUnload.defaultPrevented).toBe(true);

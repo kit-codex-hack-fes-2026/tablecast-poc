@@ -257,7 +257,13 @@ function ItemForm({
                     </Button>
                     {(dirty || uploadingImages || hasStagedImages) && (
                       <span role="status" className="text-sm text-muted-foreground">
-                        {t(uploadingImages ? "editor_image_wait" : "admin_unsaved")}
+                        {t(
+                          uploadingImages
+                            ? "editor_image_wait"
+                            : hasStagedImages
+                              ? "editor_image_staged"
+                              : "admin_unsaved",
+                        )}
                       </span>
                     )}
                   </div>
