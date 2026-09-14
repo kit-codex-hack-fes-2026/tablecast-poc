@@ -79,12 +79,14 @@ const configuration = configurationSchema.parse({
 
 function ConfigurationLayout({
   section = "products",
+  initialConfiguration = configuration,
 }: {
   section?: "products" | "categories" | "plans";
+  initialConfiguration?: typeof configuration;
 }) {
   const { t, locale } = useI18n();
   const [client] = useState(() => new QueryClient());
-  const [value, setValue] = useState(configuration);
+  const [value, setValue] = useState(initialConfiguration);
   const [saved, setSaved] = useState(false);
   const item = value[section][0];
   const props = { value, onChange: setValue, selectedId: item.id, disabled: false };
@@ -194,5 +196,51 @@ export const EnglishLabels: Story = {
     await expect(
       option.getByRole("textbox", { name: "Group 2: Milk Option 3: Milk Japanese Spoken name" }),
     ).toHaveValue("ミルク");
+  },
+};
+
+export const WhitespaceIds: Story = {
+  name: "空白を含む業務IDでも行と入力の文脈ラベルと削除後フォーカスを維持する",
+  args: {
+    initialConfiguration: {
+      ...configuration,
+      products: configuration.products.map((product) => ({
+        ...product,
+        modifiers: product.modifiers.map((group, groupIndex) => ({
+          ...group,
+          id: `milk group ${groupIndex}`,
+          options: group.options.map((option, optionIndex) => ({
+            ...option,
+            id: `milk option\t${groupIndex}-${optionIndex}`,
+          })),
+        })),
+      })),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const group = within(canvas.getByRole("group", { name: "グループ 1：ミルク" }));
+    const option = within(
+      group.getByRole("group", { name: "グループ 1：ミルク 選択肢 1：ミルク" }),
+    );
+    const price = option.getByRole("spinbutton", {
+      name: "グループ 1：ミルク 選択肢 1：ミルク 追加料金（税込・円）",
+    });
+    await userEvent.clear(price);
+    await userEvent.type(price, "125");
+    await expect(price).toHaveFocus();
+    await userEvent.click(option.getByText("名称・説明・画像・組合せ条件", { exact: true }));
+    await expect(
+      option.getByRole("textbox", { name: "グループ 1：ミルク 選択肢 1：ミルク 英語 読上げ名" }),
+    ).toHaveValue("Milk");
+    await userEvent.click(
+      option.getByRole("button", { name: "選択肢を削除 グループ 1：ミルク 選択肢 1：ミルク" }),
+    );
+    await expect(group.getByRole("heading", { name: "選択肢 1：ミルク" })).toHaveFocus();
+    await expect(
+      group.getByRole("spinbutton", {
+        name: "グループ 1：ミルク 選択肢 1：ミルク 追加料金（税込・円）",
+      }),
+    ).toHaveValue(50);
   },
 };
