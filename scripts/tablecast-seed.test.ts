@@ -120,6 +120,22 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         seedPreviewDatabase({ ...preview, TABLECAST_ENV: "production" }, credentials),
       ).rejects.toThrow("対象");
       await db.update(deploymentOwner).set({ environment: "tablecast-pr-34" });
+      // オーナー用の独自メールが既定人物と重なっても、権限を付けず書込み前に拒否する。
+      for (const email of [
+        "ren.tanaka@komorebi-shijo.com",
+        "tablecast-member@example.test",
+        tablecastDemoLinkIdentity.email,
+        credentials.otherEmail,
+      ]) {
+        await expect(seedPreviewDatabase(preview, { ...credentials, email })).rejects.toThrow(
+          "重複",
+        );
+        await expect(seedDemoDatabase(platform.env, { ...credentials, email })).rejects.toThrow(
+          "重複",
+        );
+      }
+      expect(await db.select().from(user)).toEqual([]);
+      expect(await db.select().from(member)).toEqual([]);
       // Given: R2障害で認証ユーザーだけが作成された、運用者が確認済みのPR。
       await db.insert(user).values({
         id: "tablecast-partial-owner",

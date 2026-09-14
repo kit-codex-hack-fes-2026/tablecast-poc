@@ -547,11 +547,16 @@ export async function seedDemoDatabase(env: SeedEnv, credentials: DemoCredential
 }
 
 function normaliseDemoCredentials(credentials: DemoCredentials) {
-  return {
+  const normalised = {
     ...credentials,
     email: tablecastDemoEmail(credentials.email),
     otherEmail: tablecastDemoEmail(credentials.otherEmail),
   };
+  const staff = demoStaff(normalised);
+  const emails = staff.map((person) => person.email.toLowerCase());
+  if (new Set(emails).size !== emails.length || emails.includes(tablecastDemoLinkIdentity.email))
+    throw new Error("独自オーナーメールがデモ人物と重複しています。");
+  return normalised;
 }
 
 async function migrateDemoIdentityEmails(env: SeedEnv) {
