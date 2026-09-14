@@ -611,7 +611,12 @@ async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentia
             eq(identity.organization.id, organisation.id),
             or(
               isNull(identity.organization.logo),
-              eq(identity.organization.logo, legacyIdentityIconUrl("store", organisation.storeId)),
+              inArray(identity.organization.logo, [
+                legacyIdentityIconUrl("store", organisation.storeId),
+                ...(organisation.storeId === "tablecast-hanul"
+                  ? [legacyIdentityIconUrl("store", "tablecast-akari")]
+                  : []),
+              ]),
             ),
           ),
         ),

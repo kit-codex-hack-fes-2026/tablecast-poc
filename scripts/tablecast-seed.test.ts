@@ -174,7 +174,13 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         .innerJoin(stores, eq(stores.organization_id, organization.id))
         .where(eq(stores.id, "tablecast-komorebi"))
         .get();
-      if (!originalOwner?.image || !originalOrganisation?.logo)
+      const migratedOrganisation = await db
+        .select({ id: organization.id, logo: organization.logo })
+        .from(organization)
+        .innerJoin(stores, eq(stores.organization_id, organization.id))
+        .where(eq(stores.id, "tablecast-hanul"))
+        .get();
+      if (!originalOwner?.image || !originalOrganisation?.logo || !migratedOrganisation?.logo)
         throw new Error("更新対象のデモ画像がありません。");
       const oldOwnerIcon = legacyIdentityIconUrl("user", "tablecast-partial-owner");
       await db.batch([
@@ -183,6 +189,10 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           .update(organization)
           .set({ logo: legacyIdentityIconUrl("store", "tablecast-komorebi") })
           .where(eq(organization.id, originalOrganisation.id)),
+        db
+          .update(organization)
+          .set({ logo: legacyIdentityIconUrl("store", "tablecast-akari") })
+          .where(eq(organization.id, migratedOrganisation.id)),
       ]);
       const ownerIconKey = `tablecast/avatars/${originalOwner.image.split("/").at(-1)}`;
       const ownerIconVersion = (await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version;
@@ -204,6 +214,13 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           .where(eq(organization.id, originalOrganisation.id))
           .get(),
       ).toEqual({ logo: originalOrganisation.logo });
+      expect(
+        await db
+          .select({ logo: organization.logo })
+          .from(organization)
+          .where(eq(organization.id, migratedOrganisation.id))
+          .get(),
+      ).toEqual({ logo: migratedOrganisation.logo });
       expect((await platform.env.TABLECAST_MEDIA.head(ownerIconKey))?.version).toBe(
         ownerIconVersion,
       );
