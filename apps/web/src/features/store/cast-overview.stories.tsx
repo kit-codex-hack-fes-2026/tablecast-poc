@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { expect, fn, spyOn, userEvent, within } from "storybook/test";
+import { expect, fn, spyOn, userEvent, waitFor, within } from "storybook/test";
 import { Pencil } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -100,11 +100,16 @@ export const JapaneseLongInstructions: Story = {
     const expand = canvas.getAllByRole("button", { name: "全文を表示" })[0];
     expand.focus();
     await userEvent.keyboard("{Enter}");
-    const dialog = await within(document.body).findByRole("dialog", { name: "接客方針" });
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: "接客方針",
+    });
     const fullText = within(dialog).getByText(japanese.trim(), { exact: false });
     await expect(fullText.textContent).toBe(japanese.repeat(30));
     await userEvent.keyboard("{Escape}");
-    await expect(expand).toHaveFocus();
+    await waitFor(async () => {
+      await expect(dialog).not.toBeInTheDocument();
+      await expect(expand).toHaveFocus();
+    });
     await userEvent.click(canvas.getByRole("button", { name: "英語の音声を編集" }));
     await expect(edit).toHaveBeenCalledWith("voice-en");
     await expect(canvas.getByText("ON（有効）")).toBeVisible();
