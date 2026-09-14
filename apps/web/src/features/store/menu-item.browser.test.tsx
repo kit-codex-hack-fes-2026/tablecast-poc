@@ -189,6 +189,58 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
   }
 });
 
+it("未変更フォームでも画像の選択候補と取込失敗後の入力を離脱確認で保護し、入力を戻すと解除する", async () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    if (path === "/api/auth/organization/get-full-organization" || path === "/api/auth/get-session")
+      return Response.json(null);
+    if (path === `/api/admin/stores/${storeId}/images` && request.method === "POST")
+      return Response.json({ error: { code: "IMAGE_PROCESSING_FAILED" } }, { status: 503 });
+    throw new Error(`未定義の要求: ${request.method} ${path}`);
+  });
+  await mountForm();
+  const form = page.getByRole("main");
+  const image = form.getByRole("region", { name: ja.editor_images, exact: true });
+  const save = form.getByRole("button", { name: ja.common_save, exact: true });
+  const back = form.getByRole("link", { name: ja.editor_products, exact: true });
+  await image.getByLabelText(ja.editor_image_choose).upload(png);
+  await expect.element(save).toHaveAttribute("data-pwa-blocked", "true");
+  await expect.element(form.getByText(ja.editor_image_staged, { exact: true })).toBeVisible();
+  const beforeUnload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(beforeUnload);
+  expect(beforeUnload.defaultPrevented).toBe(true);
+  await back.click();
+  expect(confirm).toHaveBeenCalledTimes(1);
+  await expect
+    .element(form.getByRole("heading", { name: product.text.ja.displayName }))
+    .toBeVisible();
+  await image.getByRole("textbox", { name: ja.editor_image_source, exact: true }).fill("店舗写真");
+  await image.getByRole("button", { name: ja.editor_image_upload }).click();
+  await expect.element(image.getByRole("button", { name: ja.common_retry })).toBeVisible();
+  await expect.element(save).toHaveAttribute("data-pwa-blocked", "true");
+  await back.click();
+  expect(confirm).toHaveBeenCalledTimes(2);
+  await expect.element(image.getByRole("img", { name: ja.editor_image_candidate })).toBeVisible();
+  await page.viewport(1024, 768);
+  image
+    .getByRole("button", { name: ja.editor_image_reset })
+    .element()
+    .scrollIntoView({ block: "center" });
+  await page.screenshot({
+    path: "../../../test-results/browser/tablecast-image-staged-reset-ja.png",
+  });
+  await image.getByRole("button", { name: ja.editor_image_reset, exact: true }).click();
+  await expect.element(save).toHaveAttribute("data-pwa-blocked", "false");
+  const clearedBeforeUnload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(clearedBeforeUnload);
+  expect(clearedBeforeUnload.defaultPrevented).toBe(false);
+  await back.click();
+  await expect.element(page.getByRole("heading", { name: "商品一覧へ移動済み" })).toBeVisible();
+  expect(confirm).toHaveBeenCalledTimes(2);
+});
+
 it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試行との同時完了でも全結果を保存する", async () => {
   const responses = [
     Promise.withResolvers<Response>(),

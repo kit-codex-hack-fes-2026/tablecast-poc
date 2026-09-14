@@ -18,6 +18,38 @@ import { BooleanField } from "./configuration-fields";
 import { configurationImageUploadKey } from "./menu-query";
 
 type ImageValue = Pick<Product, "imageKey" | "imageKind" | "imageSource">;
+export type ImageStagedChange = (id: string, staged: boolean) => void;
+type ImageMetadata = Pick<Product, "imageKind"> & {
+  imageSource: NonNullable<Product["imageSource"]>;
+};
+type ImageInput = {
+  candidate: { file: File; url: string } | null;
+  imageKey: string;
+  metadata: ImageMetadata;
+  staged: boolean;
+  error:
+    | "editor_image_invalid_file"
+    | "editor_image_invalid_key"
+    | "editor_image_source_required"
+    | null;
+};
+const emptyMetadata = {
+  imageKind: "illustration" as const,
+  imageSource: { generated: false, description: "" },
+};
+
+function imageInput(value: ImageValue): ImageInput {
+  return {
+    candidate: null,
+    imageKey: value.imageKey ?? "",
+    metadata: {
+      imageKind: value.imageKind,
+      imageSource: value.imageSource ?? emptyMetadata.imageSource,
+    },
+    staged: false,
+    error: null,
+  };
+}
 
 function ImagePreview({ src, label }: { src: string | null; label: string }) {
   const { t } = useI18n();
@@ -64,33 +96,33 @@ export function ConfigurationImageField({
   storeId,
   value,
   onChange,
+  onStagedChange,
   disabled,
 }: {
   storeId: string;
   value: ImageValue;
   onChange: (value: ImageValue) => void;
+  onStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
   const { t } = useI18n();
   const id = useId();
   const [mode, setMode] = useState("file");
-  const [candidate, setCandidate] = useState<{ file: File; url: string } | null>(null);
-  const [imageKey, setImageKey] = useState(value.imageKey ?? "");
-  const [metadata, setMetadata] = useState({
-    imageKind: value.imageKind,
-    imageSource: value.imageSource ?? { generated: false, description: "" },
-  });
-  const [error, setError] = useState<
-    "editor_image_invalid_file" | "editor_image_invalid_key" | "editor_image_source_required" | null
-  >(null);
+  const [input, setInput] = useState(() => imageInput(value));
+  const { candidate, imageKey, metadata, staged, error } = input;
+  function updateInput(change: Partial<ImageInput>) {
+    setInput((previous) => ({ ...previous, ...change }));
+    if (change.staged !== undefined) onStagedChange?.(id, change.staged);
+  }
   const mounted = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      onStagedChange?.(id, false);
     };
-  }, []);
+  }, [id, onStagedChange]);
   useEffect(
     () => () => {
       if (candidate) URL.revokeObjectURL(candidate.url);
@@ -99,11 +131,11 @@ export function ConfigurationImageField({
   );
   const upload = useMutation({
     mutationKey: configurationImageUploadKey(storeId),
-    mutationFn: ({ file, metadata: input }: { file: File; metadata: typeof metadata }) =>
+    mutationFn: ({ file, metadata: submission }: { file: File; metadata: ImageMetadata }) =>
       parseResponse(
         rpc.api.admin.stores[":storeId"].images.$post({
           param: { storeId },
-          form: { image: file, metadata: JSON.stringify(input) },
+          form: { image: file, metadata: JSON.stringify(submission) },
         }),
       ),
     onSuccess: (result) => {
@@ -113,8 +145,7 @@ export function ConfigurationImageField({
         imageKind: result.imageKind,
         imageSource: result.imageSource,
       });
-      setImageKey(result.imageKey);
-      setCandidate(null);
+      updateInput(imageInput(result));
       if (fileInput.current) fileInput.current.value = "";
     },
   });
@@ -123,31 +154,33 @@ export function ConfigurationImageField({
   }, [upload.isSuccess]);
   const busy = disabled || upload.isPending;
   function apply() {
-    setError(null);
+    updateInput({ error: null });
     if (mode === "file") {
       if (!candidate) return;
       const parsed = imageMetadataSchema.safeParse(metadata);
       if (!parsed.success) {
-        setError("editor_image_source_required");
+        updateInput({ error: "editor_image_source_required" });
         return;
       }
       upload.mutate({ file: candidate.file, metadata: parsed.data });
     } else {
       const parsed = productSchema.shape.imageKey.safeParse(imageKey.trim());
       if (!parsed.success) {
-        setError("editor_image_invalid_key");
+        updateInput({ error: "editor_image_invalid_key" });
         return;
       }
       const source = imageMetadataSchema.safeParse(metadata);
       if (!source.success && parsed.data?.startsWith("tablecast/uploads/")) {
-        setError("editor_image_source_required");
+        updateInput({ error: "editor_image_source_required" });
         return;
       }
-      onChange({
+      const next = {
         imageKey: parsed.data,
         imageKind: metadata.imageKind,
         imageSource: source.success ? source.data.imageSource : undefined,
-      });
+      };
+      onChange(next);
+      updateInput(imageInput(next));
       upload.reset();
     }
   }
@@ -184,9 +217,7 @@ export function ConfigurationImageField({
             disabled={busy}
             onClick={() => {
               onChange({ imageKey: null, imageKind: "illustration", imageSource: undefined });
-              setImageKey("");
-              setCandidate(null);
-              setError(null);
+              updateInput(imageInput({ imageKey: null, imageKind: "illustration" }));
               upload.reset();
               if (fileInput.current) fileInput.current.value = "";
               fileInput.current?.focus();
@@ -207,7 +238,7 @@ export function ConfigurationImageField({
           value={mode}
           onChange={(event) => {
             setMode(event.target.value);
-            setError(null);
+            updateInput({ error: null });
             upload.reset();
           }}
         >
@@ -231,18 +262,22 @@ export function ConfigurationImageField({
               onChange={(event) => {
                 const file = event.currentTarget.files?.[0];
                 if (!file) return;
-                setError(null);
+                updateInput({ error: null });
                 upload.reset();
                 if (
                   !file.size ||
                   file.size > maxImageBytes ||
                   !["image/png", "image/jpeg", "image/webp"].includes(file.type)
                 ) {
-                  setError("editor_image_invalid_file");
+                  updateInput({ error: "editor_image_invalid_file" });
                   event.currentTarget.value = "";
                   return;
                 }
-                setCandidate({ file, url: URL.createObjectURL(file) });
+                updateInput({
+                  candidate: { file, url: URL.createObjectURL(file) },
+                  metadata: emptyMetadata,
+                  staged: true,
+                });
               }}
             />
           </label>
@@ -262,8 +297,7 @@ export function ConfigurationImageField({
             disabled={busy}
             aria-describedby={`${id}-key ${id}-error`}
             onChange={(event) => {
-              setImageKey(event.target.value);
-              setError(null);
+              updateInput({ imageKey: event.target.value, staged: true, error: null });
             }}
           />
           <span id={`${id}-key`} className="text-muted-foreground">
@@ -273,54 +307,15 @@ export function ConfigurationImageField({
       )}
       {(candidate || mode === "existing") && (
         <>
-          <label className="grid gap-2 text-sm">
-            {t("editor_image_kind")}
-            <NativeSelect
-              value={metadata.imageKind}
-              disabled={busy || metadata.imageSource.generated}
-              onChange={(event) =>
-                setMetadata({
-                  ...metadata,
-                  imageKind: productSchema.shape.imageKind.parse(event.target.value),
-                })
-              }
-            >
-              <option value="illustration">{t("kiosk_illustration")}</option>
-              <option value="photograph">{t("editor_photograph")}</option>
-            </NativeSelect>
-          </label>
-          <BooleanField
-            label={t("editor_generated_image")}
+          <ImageMetadataFields
+            id={id}
+            value={metadata}
             disabled={busy}
-            value={metadata.imageSource.generated}
-            onChange={(generated) =>
-              setMetadata({
-                imageKind: generated ? "illustration" : metadata.imageKind,
-                imageSource: { ...metadata.imageSource, generated },
-              })
+            invalid={error === "editor_image_source_required"}
+            onChange={(nextMetadata) =>
+              updateInput({ metadata: nextMetadata, staged: true, error: null })
             }
           />
-          <label className="grid gap-2 text-sm">
-            <span id={`${id}-source-label`}>{t("editor_image_source")}</span>
-            <Input
-              aria-labelledby={`${id}-source-label`}
-              aria-invalid={error === "editor_image_source_required"}
-              maxLength={500}
-              value={metadata.imageSource.description}
-              disabled={busy}
-              aria-describedby={`${id}-source ${id}-error`}
-              onChange={(event) => {
-                setMetadata({
-                  ...metadata,
-                  imageSource: { ...metadata.imageSource, description: event.target.value },
-                });
-                setError(null);
-              }}
-            />
-            <span id={`${id}-source`} className="text-muted-foreground">
-              {t("editor_image_source_hint")}
-            </span>
-          </label>
           <Button
             type="button"
             variant="outline"
@@ -338,6 +333,22 @@ export function ConfigurationImageField({
           </Button>
         </>
       )}
+      {staged && (
+        <Button
+          type="button"
+          variant="outline"
+          className="justify-self-start"
+          disabled={busy}
+          onClick={() => {
+            updateInput(imageInput(value));
+            upload.reset();
+            if (fileInput.current) fileInput.current.value = "";
+            fileInput.current?.focus();
+          }}
+        >
+          {t("editor_image_reset")}
+        </Button>
+      )}
       {error && (
         <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           {t(error)}
@@ -350,5 +361,72 @@ export function ConfigurationImageField({
         successMessage={t("editor_image_uploaded")}
       />
     </fieldset>
+  );
+}
+
+function ImageMetadataFields({
+  id,
+  value,
+  disabled,
+  invalid,
+  onChange,
+}: {
+  id: string;
+  value: ImageMetadata;
+  disabled: boolean;
+  invalid: boolean;
+  onChange: (value: ImageMetadata) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <label className="grid gap-2 text-sm">
+        {t("editor_image_kind")}
+        <NativeSelect
+          value={value.imageKind}
+          disabled={disabled || value.imageSource.generated}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              imageKind: productSchema.shape.imageKind.parse(event.target.value),
+            })
+          }
+        >
+          <option value="illustration">{t("kiosk_illustration")}</option>
+          <option value="photograph">{t("editor_photograph")}</option>
+        </NativeSelect>
+      </label>
+      <BooleanField
+        label={t("editor_generated_image")}
+        disabled={disabled}
+        value={value.imageSource.generated}
+        onChange={(generated) =>
+          onChange({
+            imageKind: generated ? "illustration" : value.imageKind,
+            imageSource: { ...value.imageSource, generated },
+          })
+        }
+      />
+      <label className="grid gap-2 text-sm">
+        <span id={`${id}-source-label`}>{t("editor_image_source")}</span>
+        <Input
+          aria-labelledby={`${id}-source-label`}
+          aria-invalid={invalid}
+          maxLength={500}
+          value={value.imageSource.description}
+          disabled={disabled}
+          aria-describedby={`${id}-source ${id}-error`}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              imageSource: { ...value.imageSource, description: event.target.value },
+            })
+          }
+        />
+        <span id={`${id}-source`} className="text-muted-foreground">
+          {t("editor_image_source_hint")}
+        </span>
+      </label>
+    </>
   );
 }

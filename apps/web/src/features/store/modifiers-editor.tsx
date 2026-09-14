@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
-import { ConfigurationImageField } from "./configuration-image-field";
+import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { emptyText } from "./configuration-defaults";
 import {
   BilingualFields,
@@ -13,6 +13,10 @@ import {
   NumericField,
   ReferencesField,
 } from "./configuration-fields";
+
+function encodeEditorId(value: string) {
+  return encodeURIComponent(JSON.stringify(value));
+}
 
 function newOption(): Modifier["options"][number] {
   return {
@@ -32,11 +36,13 @@ export function ModifiersEditor({
   storeId,
   product,
   onChange,
+  onImageStagedChange,
   disabled,
 }: {
   storeId: string;
   product: Product;
   onChange: (modifiers: Modifier[]) => void;
+  onImageStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
   const { t, locale } = useI18n();
@@ -89,7 +95,7 @@ export function ModifiersEditor({
       aria-label={t("editor_modifiers")}
     >
       {product.modifiers.map((group, groupIndex) => {
-        const groupId = `${id}-${group.id}`;
+        const groupId = `${id}-${encodeEditorId(group.id)}`;
         return (
           <fieldset
             key={group.id}
@@ -164,11 +170,12 @@ export function ModifiersEditor({
             <div className="grid min-w-0 gap-6">
               {group.options.map((option, optionIndex) => (
                 <ModifierOptionEditor
+                  onImageStagedChange={onImageStagedChange}
                   storeId={storeId}
                   key={option.id}
                   option={option}
                   title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
-                  id={`${groupId}-${option.id}`}
+                  id={`${groupId}-${encodeEditorId(option.id)}`}
                   labelledBy={groupId}
                   references={optionChoices.filter((choice) => choice.id !== option.id)}
                   disabled={disabled}
@@ -176,7 +183,9 @@ export function ModifiersEditor({
                   onChange={(change) => updateOption(group, option.id, change)}
                   onRemove={() => {
                     const next = group.options[optionIndex + 1] ?? group.options[optionIndex - 1];
-                    pendingFocus.current = next ? `${groupId}-${next.id}` : `${groupId}-add`;
+                    pendingFocus.current = next
+                      ? `${groupId}-${encodeEditorId(next.id)}`
+                      : `${groupId}-add`;
                     updateGroup(group.id, {
                       options: group.options.filter((item) => item.id !== option.id),
                     });
@@ -192,7 +201,7 @@ export function ModifiersEditor({
                 disabled={disabled || group.options.length >= 30}
                 onClick={() => {
                   const option = newOption();
-                  pendingFocus.current = `${groupId}-${option.id}`;
+                  pendingFocus.current = `${groupId}-${encodeEditorId(option.id)}`;
                   updateGroup(group.id, { options: [...group.options, option] });
                 }}
               >
@@ -208,7 +217,7 @@ export function ModifiersEditor({
               disabled={disabled}
               onClick={() => {
                 const next = product.modifiers[groupIndex + 1] ?? product.modifiers[groupIndex - 1];
-                pendingFocus.current = next ? `${id}-${next.id}` : `${id}-add`;
+                pendingFocus.current = next ? `${id}-${encodeEditorId(next.id)}` : `${id}-add`;
                 onChange(product.modifiers.filter((item) => item.id !== group.id));
               }}
             >
@@ -226,7 +235,7 @@ export function ModifiersEditor({
         disabled={disabled || product.modifiers.length >= 12}
         onClick={() => {
           const groupId = crypto.randomUUID();
-          pendingFocus.current = `${id}-${groupId}`;
+          pendingFocus.current = `${id}-${encodeEditorId(groupId)}`;
           onChange([
             ...product.modifiers,
             {
@@ -258,6 +267,7 @@ function ModifierOptionEditor({
   removable,
   onChange,
   onRemove,
+  onImageStagedChange,
 }: {
   storeId: string;
   option: Modifier["options"][number];
@@ -269,6 +279,7 @@ function ModifierOptionEditor({
   removable: boolean;
   onChange: (change: Partial<Modifier["options"][number]>) => void;
   onRemove: () => void;
+  onImageStagedChange?: ImageStagedChange;
 }) {
   const { t } = useI18n();
   const context = `${labelledBy} ${optionId}`;
@@ -341,6 +352,7 @@ function ModifierOptionEditor({
               </span>
             </legend>
             <ConfigurationImageField
+              onStagedChange={onImageStagedChange}
               key={`${storeId}:${option.id}`}
               storeId={storeId}
               value={option}
