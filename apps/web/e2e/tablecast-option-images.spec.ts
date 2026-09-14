@@ -6,6 +6,7 @@ import {
   tableStateSchema,
 } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
+import { m } from "../src/paraglide/messages";
 import { credentials } from "./support/runtime";
 import { test } from "./support/test";
 
@@ -43,27 +44,50 @@ test("選択肢の画像を下書きで設定し、公開承認後に客が写�
   await page.goto(`${menu}/products/${product.id}`);
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   // When: 下書きから画像を外して保存し、実際のバンズ写真と説明を再設定する。
-  const optionGroup = page.getByRole("group", { name: option.text.ja.displayName, exact: true });
-  const imageField = optionGroup.getByRole("textbox", { name: ja.editor_image, exact: true });
+  const groupName = m.editor_row_title(
+    { kind: ja.editor_modifier, index: 1, name: picturedModifier.text.ja.displayName },
+    { locale: "ja" },
+  );
+  const optionName = m.editor_row_title(
+    {
+      kind: ja.editor_option,
+      index: picturedModifier.options.findIndex((item) => item.id === option.id) + 1,
+      name: option.text.ja.displayName,
+    },
+    { locale: "ja" },
+  );
+  const context = `${groupName} ${optionName}`;
+  const optionGroup = page.getByRole("group", { name: context, exact: true });
+  const details = optionGroup.getByText(ja.editor_option_details, { exact: true });
+  await details.click();
+  const imageField = optionGroup.getByRole("textbox", {
+    name: `${context} ${ja.editor_image}`,
+    exact: true,
+  });
   await imageField.fill("");
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await details.click();
   await expect(imageField).toHaveValue("");
   await expect(optionGroup.locator("img")).toHaveCount(0);
   await imageField.fill(option.imageKey);
   await optionGroup
     .getByRole("group", { name: ja.common_ja, exact: true })
-    .getByRole("textbox", { name: ja.admin_description, exact: true })
+    .getByRole("textbox", {
+      name: `${context} ${ja.common_ja} ${ja.admin_description}`,
+      exact: true,
+    })
     .fill(description);
   await optionGroup
-    .getByRole("combobox", { name: ja.editor_image_kind, exact: true })
+    .getByRole("combobox", { name: `${context} ${ja.editor_image_kind}`, exact: true })
     .selectOption("illustration");
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
+  await details.click();
   await expect(
-    optionGroup.getByRole("textbox", { name: ja.editor_image, exact: true }),
+    optionGroup.getByRole("textbox", { name: `${context} ${ja.editor_image}`, exact: true }),
   ).toHaveValue(option.imageKey);
   const image = optionGroup.locator("img");
   await expect(image).toBeVisible();

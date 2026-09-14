@@ -91,7 +91,7 @@ test("店舗アイコンを変更し、再読込後の設定とサイドバー�
   // Given: 画像付きのseedと管理者。
   await page.goto("/admin/stores/tablecast-komorebi/profile");
   await expect(page.getByRole("heading", { name: ja.store_profile, exact: true })).toBeVisible();
-  const initial = page.getByRole("region", { name: ja.store_profile, exact: true }).locator("img");
+  const initial = page.getByRole("region", { name: ja.editor_images, exact: true }).locator("img");
   await expect(initial).toHaveAttribute("src", /\/api\/avatars\//);
   await expect
     .poll(() =>
