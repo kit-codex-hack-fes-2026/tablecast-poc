@@ -55,6 +55,8 @@
   "kiosk_latest": "最新の会話へ",
   "kiosk_transcribing": "聞き取り中",
   "kiosk_menu": "おしながき",
+  "kiosk_menu_empty": "現在ご注文いただける商品はありません。ご不明な点は画面上部から店員をお呼びください。",
+  "kiosk_category_empty": "このカテゴリには商品がありません。別のカテゴリ、またはすべてを選んでください。",
   "kiosk_all": "すべて",
   "kiosk_cart": "注文かご",
   "kiosk_orders": "注文履歴",
