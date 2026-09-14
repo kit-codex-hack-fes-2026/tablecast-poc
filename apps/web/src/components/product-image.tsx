@@ -41,7 +41,8 @@ export function ProductImage({
       ref={
         blurDataURL
           ? (frame) => {
-              if (frame?.querySelector("img")?.complete) setSettledSrc(src);
+              const image = frame?.querySelector("img");
+              if (image?.currentSrc && image.complete) setSettledSrc(src);
             }
           : undefined
       }

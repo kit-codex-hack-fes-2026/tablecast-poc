@@ -29,7 +29,7 @@ LCPは24件条件で遅くなり、120件条件では速くなった。cold 1標
 
 `blurDataURL`の生成・保存元は呼出し側の静的素材である。Storyでは24pxのぼかしSVG data URLを事前定義した。追加HTTP要求は0件、未指定の既存カタログにはpayloadの追加も0。指定する場合だけdata URL文字列がHTML/JSの転送へ加わる。目安を1KB以下とし、一律自動生成・DB列追加・SSR画像解析は採用しない。読込前後の実画面と動画はPRへ添付する。表示待ちの見た目の改善であり、本画像の完了やLCPを早めたという結果ではない。
 
-Unpic 1.0.2の`unstyled`は背景styleも抑止する。公開Image propsにはstyle/refもないため、ネイティブspanのCSS変数とTailwind utilityで背景・比率を渡し、同じspanでhydration前の画像完了を確認する。背景は成功・失敗時に消す。透過SVG、未指定、失敗、画像なし、SSR完了後のhydrationをVitest Browser/Storybookで確認した。[Unpicの背景仕様](https://unpic.pics/img/react/#background)
+Unpic 1.0.2の`unstyled`は背景styleも抑止する。公開Image propsにはstyle/refもないため、ネイティブspanのCSS変数とTailwind utilityで背景・比率を渡し、同じspanでhydration前の画像完了を確認する。背景は成功・失敗時に消す。WebKitでは遅延画像が読込開始前にも`complete=true`を返したため、完了判定には`currentSrc`の選択済みも必要とする。これにより選択肢画像の早すぎる失敗表示を防ぐ。画像のBrowserテスト4件をChromium/WebKit双方で実行する。透過SVG、未指定、失敗、画像なし、SSR完了後のhydrationをVitest Browser/Storybookで確認した。[Unpicの背景仕様](https://unpic.pics/img/react/#background)
 
 店舗・ユーザー画像は商品画像と異なり、`/api/avatars/:key`で原本をimmutable配信する。既存seedのWebPは店舗3枚が31,430〜38,264 B、ユーザー9枚が31,510〜63,524 B。手動アップロードは既存の1MB上限がある。今回は原本配信を変更せず、商品キャッシュによる削減値に混ぜない。
 
