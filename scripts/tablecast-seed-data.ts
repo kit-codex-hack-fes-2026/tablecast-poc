@@ -726,7 +726,11 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     throw new Error("PR初期投入の所有情報が一致しません。");
   if (owner.seeded === 1) {
     // 再配備で追加された内容アドレス付き画像も補い、既存の営業データは再投入しない。
-    await seedMenuImages(env.TABLECAST_MEDIA);
+    await seedMenuImages(
+      env.TABLECAST_MEDIA,
+      false,
+      demoStores(credentials.profile).map((store) => store.configuration),
+    );
     await migrateDemoIdentityEmails(env);
     await refreshDemoIdentityIcons(env, credentials);
     return false;
@@ -763,7 +767,11 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
 }
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
-  await seedMenuImages(env.TABLECAST_MEDIA);
+  await seedMenuImages(
+    env.TABLECAST_MEDIA,
+    false,
+    demoStores(credentials.profile).map((store) => store.configuration),
+  );
   await migrateDemoIdentityEmails(env);
   const db = drizzle(env.TABLECAST_DB, { schema: identity });
   const auth = createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db);
