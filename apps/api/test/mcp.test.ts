@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -10,13 +11,15 @@ import * as businessTables from "../src/db/business-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { priceCart } from "../src/modules/catalog/pricing";
 import {
+  statisticsResultSchema,
   catalogSchema,
   configDraftSchema,
   configurationSchema,
   voicePageSchema,
   uploadedImageSchema,
 } from "../src/schema";
-import { insertFixture } from "./database-fixture";
+import { addStatisticsSession, statisticsPeriod } from "./statistics-fixture";
+import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -800,4 +803,63 @@ it("アカウントのMCP連携一覧は承認scopeと日時を返し、取消�
   await expect(client.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject(
     { code: 401 },
   );
+});
+
+it("統計MCPは読取りscopeでHTTPと同じ集計を返し、権限変更と失効を検証する", async () => {
+  const { cookie, staff } = await setupFixture();
+  await addStatisticsSession(staff, {
+    id: "statistics-mcp",
+    closedAt: Date.parse(statisticsPeriod.from),
+    orders: [{ productId: "tea", quantity: 2 }],
+  });
+  const { token } = await authorise(cookie, "tablecast:read");
+  const client = await connect(token);
+  const response = toolData(
+    await client.callTool({
+      name: "get_statistics",
+      arguments: { ...statisticsPeriod, view: "products" },
+    }),
+    statisticsResultSchema,
+  );
+  const http = await exports.default.fetch(
+    new Request(
+      `${origin}/api/admin/stores/${staff.storeId}/statistics?${new URLSearchParams({ ...statisticsPeriod, view: "products" }).toString()}`,
+      { headers: { Cookie: cookie } },
+    ),
+  );
+  const data = statisticsResultSchema.parse(await http.json());
+  expect(response.summary).toEqual(data.summary);
+  expect(response.rows).toEqual(data.rows);
+  expect(response.rows[0]).toMatchObject({ quantity: 2, orderRate: 1 });
+  expect(
+    (await client.listTools()).tools.find((tool) => tool.name === "get_statistics")?.annotations
+      ?.readOnlyHint,
+  ).toBe(true);
+  toolError(await client.callTool({ name: "create_draft", arguments: {} }), "WRITE_SCOPE_REQUIRED");
+  await expect(connect(token, "other-store")).rejects.toBeDefined();
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "member" })
+    .where(eq(authTables.member.id, "tablecast-member"));
+  toolError(
+    await client.callTool({ name: "get_statistics", arguments: statisticsPeriod }),
+    "ADMIN_REQUIRED",
+  );
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "owner" })
+    .where(eq(authTables.member.id, "tablecast-member"));
+  const sessions = await exports.default.fetch(
+    new Request(`${origin}/api/account/mcp-sessions`, { headers: { Cookie: cookie } }),
+  );
+  const session = z
+    .object({ sessions: z.array(z.object({ id: z.string() })) })
+    .parse(await sessions.json()).sessions[0];
+  if (!session) throw new Error("MCP接続がありません");
+  expect(
+    (await post(`/api/account/mcp-sessions/${session.id}/revoke`, {}, { Cookie: cookie })).status,
+  ).toBe(200);
+  await expect(
+    client.callTool({ name: "get_statistics", arguments: statisticsPeriod }),
+  ).rejects.toMatchObject({ code: 401 });
 });
