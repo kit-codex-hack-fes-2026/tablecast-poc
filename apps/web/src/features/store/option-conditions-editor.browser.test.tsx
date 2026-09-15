@@ -191,6 +191,9 @@ it("参照切れと候補なしを説明し、API試行の失敗後も入力を�
   await expect.element(screen.getByRole("alert")).toBeVisible();
   await expect.element(choice).toHaveValue("Toppings / A");
   expect(fetch).toHaveBeenCalledTimes(1);
+  await choice.fill("B");
+  await page.getByRole("option", { name: /Toppings \/ B/ }).click();
+  await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
 });
 
 it.each([
@@ -269,3 +272,49 @@ it("商品から削除した試行の選択肢を除き、商品を戻しても�
     .element(screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }))
     .not.toBeChecked();
 });
+
+it.each([
+  { locale: "ja", labels: ja },
+  { locale: "en", labels: en },
+] as const)(
+  "$localeで入力変更後に届いた試行失敗を表示せず、再試行の失敗も数量・選択変更で消す",
+  async ({ locale, labels }) => {
+    const initial = structuredClone(product);
+    const group = initial.modifiers[0];
+    if (!group) throw new Error("数量fixtureがありません");
+    group.kind = "quantity";
+    const first = Promise.withResolvers<Response>();
+    const fetch = vi
+      .fn<() => Promise<Response>>()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementation(async () => failure());
+    vi.stubGlobal("fetch", fetch);
+    const screen = await setup(locale, initial);
+    try {
+      await screen.getByText(labels.condition_try, { exact: true }).click();
+      const run = screen.getByRole("button", { name: labels.condition_run });
+      const quantity = screen.getByRole("combobox", {
+        name: `Toppings / X (X) · ${labels.common_quantity}`,
+        exact: true,
+      });
+      await run.click();
+      await expect.element(run).toBeDisabled();
+      await quantity.selectOptions("2");
+      first.resolve(failure());
+      await expect.element(run).toBeEnabled();
+      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+      await run.click();
+      await expect.element(screen.getByRole("alert")).toBeVisible();
+      await quantity.selectOptions("3");
+      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+      await run.click();
+      await expect.element(screen.getByRole("alert")).toBeVisible();
+      await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+    } finally {
+      first.resolve(failure());
+    }
+  },
+);
+
+const failure = () => Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });

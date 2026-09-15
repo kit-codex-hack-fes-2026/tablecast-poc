@@ -526,7 +526,7 @@ export function OptionConditionsEditor({
         >
           {t("condition_run")}
         </Button>
-        <ErrorNotice error={preview.error} />
+        <ErrorNotice error={preview.variables?.signature === signature ? preview.error : null} />
         {result && (
           <div role="status" className="mt-3 space-y-2 text-sm">
             {!result.applied && <p>{t("condition_not_applied")}</p>}
