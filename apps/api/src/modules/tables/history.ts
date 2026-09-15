@@ -55,45 +55,62 @@ export async function getTimeline(
           ),
         )
       : undefined;
-  const rows = await services.db
-    .select({
-      id: tableSessions.id,
-      tableId: tableSessions.table_id,
-      guestCount: tableSessions.guest_count,
-      status: tableSessions.status,
-      openedAt: tableSessions.opened_at,
-      closedAt: tableSessions.closed_at,
-    })
+  const db = services.db;
+  const fields = {
+    id: tableSessions.id,
+    tableId: tableSessions.table_id,
+    guestCount: tableSessions.guest_count,
+    status: tableSessions.status,
+    openedAt: tableSessions.opened_at,
+    closedAt: tableSessions.closed_at,
+  };
+  const scope = and(
+    eq(tableSessions.store_id, actor.storeId),
+    eq(tableSessions.kind, "table"),
+    lt(tableSessions.opened_at, endAt),
+    cursor,
+  );
+  // 閉卓日時の下限をindexへ渡し、空の日でも古い閉卓履歴を走査しない。
+  const closed = db
+    .select(fields)
     .from(tableSessions)
     .where(
       and(
-        eq(tableSessions.store_id, actor.storeId),
-        eq(tableSessions.kind, "table"),
-        lt(tableSessions.opened_at, endAt),
-        cursor,
+        scope,
+        eq(tableSessions.status, "closed"),
+        gte(tableSessions.closed_at, startAt),
         or(
-          // 未来日に現在の利用中セッションを延ばさない。
-          observedAt >= startAt
-            ? and(eq(tableSessions.status, "open"), lte(tableSessions.opened_at, observedAt))
-            : undefined,
-          and(
-            eq(tableSessions.status, "closed"),
-            or(
-              gt(tableSessions.closed_at, startAt),
-              and(
-                eq(tableSessions.closed_at, tableSessions.opened_at),
-                gte(tableSessions.opened_at, startAt),
-              ),
-              // 欠損した終了時刻を利用中や来店なしへ置き換えない。
-              isNull(tableSessions.closed_at),
-              lt(tableSessions.closed_at, tableSessions.opened_at),
-            ),
-          ),
+          gt(tableSessions.closed_at, startAt),
+          eq(tableSessions.closed_at, tableSessions.opened_at),
         ),
       ),
-    )
-    .orderBy(desc(tableSessions.opened_at), desc(tableSessions.id))
-    .limit(query.limit + 1);
+    );
+  const open = db
+    .select(fields)
+    .from(tableSessions)
+    .where(and(scope, eq(tableSessions.status, "open"), lte(tableSessions.opened_at, observedAt)));
+  // UNION ALLの後に同じ不変cursor順で絞る。未来日に利用中を延ばさない。
+  const visits = (observedAt >= startAt ? closed.unionAll(open) : closed).as("visits");
+  const [rows, invalid] = await db.batch([
+    db
+      .select()
+      .from(visits)
+      .orderBy(desc(visits.openedAt), desc(visits.id))
+      .limit(query.limit + 1),
+    // 不正な終了時刻は専用のpartial indexで検出し、来店なしへ置き換えない。
+    db
+      .select({ id: tableSessions.id })
+      .from(tableSessions)
+      .where(
+        and(
+          scope,
+          eq(tableSessions.status, "closed"),
+          or(isNull(tableSessions.closed_at), lt(tableSessions.closed_at, tableSessions.opened_at)),
+        ),
+      )
+      .limit(1),
+  ]);
+  ensure(invalid.length === 0, "TIMELINE_INVALID_SESSION", 409);
   const parsed = timelineSessionSchema.array().safeParse(rows);
   ensure(parsed.success, "TIMELINE_INVALID_SESSION", 409);
   const sessions = parsed.data.slice(0, query.limit);

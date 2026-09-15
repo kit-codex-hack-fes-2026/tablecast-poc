@@ -232,3 +232,71 @@ it("100卓・1万履歴でもページの内容と上限を保ち、認可込み
     }
   }
 });
+
+it("古い履歴が1万件でも空の日と少数来店の日の読取件数を増やさない", async ({ annotate }) => {
+  const { cookie } = await setupFixture();
+  const sparseStart = startAt + 2 * 86_400_000;
+  await fixtureDb
+    .insert(tableSessions)
+    .values([
+      closed("tablecast-sparse-a", sparseStart + 1000, sparseStart + 60_000),
+      closed("tablecast-sparse-b", sparseStart + 120_000, sparseStart + 180_000),
+      closed("tablecast-sparse-zero", sparseStart, sparseStart),
+    ]);
+  for (const count of [100, 10_000]) {
+    for (let offset = count === 100 ? 0 : 100; offset < count; offset += 100) {
+      await env.TABLECAST_DB.batch(
+        Array.from({ length: 100 }, (_, n) => {
+          const openedAt = startAt - (offset + n + 1) * 60_000;
+          return insertFixture(
+            tableSessions,
+            closed(`tablecast-old-${offset + n}`, openedAt, openedAt + 1000),
+          );
+        }),
+      );
+    }
+    for (const selected of ["2026-09-02", "2026-09-03"]) {
+      for (let sample = 0; sample < 3; sample++) {
+        const { database, stats, timing, batches } = measuredDatabase(env.TABLECAST_DB);
+        const ctx = createExecutionContext();
+        const started = performance.now();
+        const response = await app.request(
+          `${base}?date=${selected}`,
+          { headers: { Cookie: cookie } },
+          { ...env, TABLECAST_DB: database },
+          ctx,
+        );
+        const result = timelinePageSchema.parse(await response.json());
+        const elapsedMs = performance.now() - started;
+        await waitOnExecutionContext(ctx);
+        expect(response.status).toBe(200);
+        expect(result.sessions.map((session) => session.id)).toEqual(
+          selected === "2026-09-02"
+            ? []
+            : ["tablecast-sparse-b", "tablecast-sparse-a", "tablecast-sparse-zero"],
+        );
+        expect(result.nextCursor).toBeNull();
+        expect(stats.roundtrips).toBeLessThanOrEqual(4);
+        const measured = batches.flat();
+        expect(measured.length).toBeGreaterThan(0);
+        const rowsRead = measured.reduce((sum, query) => sum + query.rowsRead, 0);
+        const sqlMs = measured.reduce((sum, query) => sum + query.sqlMs, 0);
+        expect(rowsRead).toBeLessThanOrEqual(64);
+        expect(elapsedMs).toBeLessThan(1000);
+        await annotate(
+          JSON.stringify({
+            count,
+            date: selected,
+            sample,
+            rowsRead,
+            sqlMs,
+            ...stats,
+            ...timing,
+            elapsedMs,
+          }),
+          "空日・少数来店の性能測定",
+        );
+      }
+    }
+  }
+});
