@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { gamesTableRoutes } from "../games/routes";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { localeSchema } from "../../platform/model";
@@ -52,6 +53,7 @@ export const tableOperations = new Hono<ApiEnv>()
     c.json(await changeLocale(c.get("services"), c.get("actor"), c.req.valid("json").locale), 200),
   )
   .route("/voice", voiceRoutes)
+  .route("/games", gamesTableRoutes)
   .get(
     "/events",
     validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),

@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ChevronsUpDown,
   History,
+  Gamepad2,
   LayoutDashboard,
   LogOut,
   MonitorSmartphone,
@@ -186,36 +187,30 @@ export function AdminSidebar({
                 </Collapsible.Panel>
               </Collapsible.Root>
             )}
-            <Link
-              className={item}
-              to="/admin/stores/$storeId/members"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("org_members")}
-            >
-              <Users className="size-5 shrink-0" />
-              {!collapsed && t("org_members")}
-            </Link>
-            <Link
-              className={item}
-              to="/admin/stores/$storeId/devices"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("device_title")}
-            >
-              <MonitorSmartphone className="size-5 shrink-0" />
-              {!collapsed && t("device_title")}
-            </Link>
-            <Link
-              className={item}
-              to="/admin/stores/$storeId/profile"
-              params={{ storeId: selectedStore }}
-              title={t("store_profile")}
-              onClick={onNavigate}
-            >
-              <Store className="size-5 shrink-0" />
-              {!collapsed && t("store_profile")}
-            </Link>
+            {(
+              [
+                { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
+                {
+                  to: "/admin/stores/$storeId/devices",
+                  label: "device_title",
+                  Icon: MonitorSmartphone,
+                },
+                { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
+                { to: "/admin/stores/$storeId/games", label: "games_title", Icon: Gamepad2 },
+              ] as const
+            ).map(({ to, label, Icon }) => (
+              <Link
+                key={to}
+                className={item}
+                to={to}
+                params={{ storeId: selectedStore }}
+                title={t(label)}
+                onClick={onNavigate}
+              >
+                <Icon className="size-5 shrink-0" />
+                {!collapsed && t(label)}
+              </Link>
+            ))}
           </>
         ) : (
           <Link className={item} to="/organisations" onClick={onNavigate}>

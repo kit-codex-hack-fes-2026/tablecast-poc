@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { gamesAdminRoutes } from "../games/admin-routes";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validateForm, validateQuery } from "../../platform/validation";
@@ -44,4 +45,5 @@ export const admin = new Hono<ApiEnv>()
   .route("/", tablesAdminRoutes)
   .route("/", ordersAdminRoutes)
   .route("/", devicesAdminRoutes)
-  .route("/", configurationAdminRoutes);
+  .route("/", configurationAdminRoutes)
+  .route("/games", gamesAdminRoutes);

@@ -83,6 +83,19 @@ ADMIN-01の卓経過時間と会計待ちは、最新100件の表示ログから
 
 管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
 
+## 卓上ゲーム（Issue #191）
+
+[ゲームプラグイン仕様](game-plugins.md)に従う。画面で完結するv1はAI評価・発話を使わない。
+
+| ID      | 条件                                                                                                                        |
+| ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| GAME-01 | Codexの実MCPで仕様を取得し、生成パッケージを下書き登録・検証できる。人間の試遊・承認前は卓へ公開しない                      |
+| GAME-02 | 生成コードを本体から隔離し、親DOM・Cookie・外部リソース読込・接続・注文APIへ到達させない。店舗・卓・要求権限をAPIで認可する |
+| GAME-03 | 公開版をプレイ中に固定し、公開停止・旧版への切替・状態の競合を処理する                                                      |
+| GAME-04 | モックゲームを日英・複数人で開始し、交代・スキップ・結果発表・終了まで遊べる。カートと音声停止意思を維持する                |
+
+今回のゲーム制作はモックで基盤を検証する。Codexからの実ゲーム制作・stagingでの試遊は別セッションで行う。ローカルのAPI/ブラウザー試験を実Codex接続・staging・実iPad検証の代わりにしない。
+
 ## 診断と音声候補の追加検証
 
 APIの新規診断7件は実workerd/D1/Mastraで要求ID、認可済みturn、公開runId、拒否・途中失敗・取消・204と非漏洩を検証する。Pythonの新規10件はHTTPと実AgentSessionを使い、要求・生成・通常再生・固定確認・遅い旧turnのIDを対応付ける。APIの応答headerを受信できない時と、SDKが失敗metricsを発行しない時は不明を補わない。[API診断試験](../apps/api/test/voice-diagnostics.test.ts)、[Python診断試験](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/ada9be31253a8f8f63a24b3908f42ea20d9d8e07/livekit/tests/test_diagnostics.py)

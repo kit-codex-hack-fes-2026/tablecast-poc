@@ -52,6 +52,7 @@ export default defineConfig({
                 include: [
                   "src/features/store/device-qr-reader.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
+                  "src/components/game-frame.browser.test.tsx",
                   "src/components/menu-option-image.browser.test.tsx",
                 ],
               },

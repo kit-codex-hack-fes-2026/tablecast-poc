@@ -174,6 +174,7 @@ export default defineConfig({
                     module: [
                       "catalog",
                       "configuration",
+                      "games",
                       "devices",
                       "media",
                       "orders",

@@ -2,6 +2,8 @@
 
 [索引](README.md)
 
+ゲームの登録・公開・プレイ状態はAPIの`modules/games`が所有する。既存R2とD1を使い、生成コードはsandbox iframeで本体から隔離する。共通の実行表示は`components/game-frame`、保存・公開操作は各featureが所有する。[ゲームプラグイン仕様](game-plugins.md)を参照する。
+
 ## 実行単位
 
 ```mermaid

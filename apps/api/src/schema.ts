@@ -1,5 +1,12 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  gameManifestSchema,
+  gamePackageSchema,
+  gameMessageSchema,
+  gameStateSchema,
+} from "./modules/games/model";
+export type { GameManifest, GamePackage, GameState } from "./modules/games/model";
+export {
   maxImageBytes,
   imageMetadataSchema,
   imageSourceSchema,
