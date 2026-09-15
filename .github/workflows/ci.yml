@@ -48,11 +48,8 @@ jobs:
       - name: mainのコミットメッセージ
         if: github.event_name != 'pull_request'
         run: bunx --no-install commitlint --last --verbose
-      # setupでcodegen済み。format/lint/typecheckを並列実行する。
-      - parallel:
-          - run: bun run format:check
-          - run: bun run lint
-          - run: bun run typecheck
+      # lint/typecheckのTurbo依存が共有のi18n出力を復元するため、直列に実行する。
+      - run: bun run format:check && bun run lint && bun run typecheck
 
   unit-web:
     name: "Unit/Integration: Web・seed・dev-runtime (Vitest)"
