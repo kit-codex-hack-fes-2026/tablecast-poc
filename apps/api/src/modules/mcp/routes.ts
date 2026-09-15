@@ -1,3 +1,19 @@
+import { listCouponRules, listIssuedCoupons, listRewardMembers } from "../customer-coupons/queries";
+import {
+  saveCouponRule,
+  issueCustomerCoupon,
+  revokeCustomerCoupon,
+} from "../customer-coupons/service";
+import {
+  couponPageSchema,
+  couponDefinitionSchema,
+  issueCouponSchema,
+  rewardMembersSchema,
+  revokeCouponSchema,
+} from "../customer-coupons/model";
+import { getPointPolicy } from "../customer-points/queries";
+import { setPointPolicy } from "../customer-points/service";
+import { pointPolicySchema } from "../customer-points/model";
 import { getStatistics } from "../statistics/service";
 import { statisticsQuerySchema, statisticsResultSchema } from "../statistics/model";
 import { StreamableHTTPTransport } from "@hono/mcp";
@@ -47,6 +63,80 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
   c.set("errorPhase", "mcp.registration");
   const server = new McpServer({ name: "tablecast-settings", version: "0.1.0" });
 
+  server.registerTool(
+    "get_point_policy",
+    {
+      description: "店舗のポイント付与設定を取得する。",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () => result(await getPointPolicy(c.get("services"), actor)),
+  );
+  server.registerTool(
+    "set_point_policy",
+    {
+      description: "将来の来店に適用するポイント設定を変更する。",
+      inputSchema: pointPolicySchema.shape,
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async (input) => result(await setPointPolicy(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "list_coupon_rules",
+    {
+      description: "店舗のクーポン発行ルールをページ取得する。",
+      inputSchema: couponPageSchema.shape,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => result(await listCouponRules(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "save_coupon_rule",
+    {
+      description:
+        "画像と日英条件を持つクーポン発行ルールを作成・更新する。発行済み券は変更しない。",
+      inputSchema: couponDefinitionSchema.shape,
+      annotations: { readOnlyHint: false, destructiveHint: true },
+    },
+    async (input) => result(await saveCouponRule(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "list_reward_members",
+    {
+      description: "特典の発行先を選ぶため店舗会員のIDと表示名を検索する。個人記憶は含まない。",
+      inputSchema: rewardMembersSchema.shape,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => result(await listRewardMembers(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "list_issued_coupons",
+    {
+      description: "店舗が発行した券と状態をページ取得する。",
+      inputSchema: couponPageSchema.shape,
+      annotations: { readOnlyHint: true },
+    },
+    async (input) => result(await listIssuedCoupons(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "issue_coupon",
+    {
+      description: "手動発行ルールから指定会員へ券を発行する。同じidempotencyKeyで再送する。",
+      inputSchema: issueCouponSchema.shape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    },
+    async (input) => result(await issueCustomerCoupon(c.get("services"), actor, input)),
+  );
+  server.registerTool(
+    "revoke_coupon",
+    {
+      description: "未使用券を理由付きで取り消す。ポイントの返却は別途訂正が必要。",
+      inputSchema: revokeCouponSchema.extend({ couponId: z.string().min(1) }).shape,
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+    },
+    async (input) =>
+      result(await revokeCustomerCoupon(c.get("services"), actor, input.couponId, input.reason)),
+  );
   server.registerTool(
     "get_game_spec",
     {
@@ -178,7 +268,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "upload_image",
     {
       description:
-        "店舗設定用の商品画像を取り込む。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品画像・クーポン券面を取り込む。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品へ設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },

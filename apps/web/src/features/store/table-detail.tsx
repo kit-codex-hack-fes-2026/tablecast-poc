@@ -1,3 +1,4 @@
+import { CouponVisit } from "./coupon-visit";
 import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
@@ -243,7 +244,8 @@ export function TableDetail({
                   </div>
                 </dl>
               </div>
-              {table.status === "open" && <PaymentForm storeId={storeId} sessionId={table.id} />}
+              <CouponVisit storeId={storeId} sessionId={table.id} />
+              <PaymentForm storeId={storeId} sessionId={table.id} />
               <PointVisit storeId={storeId} sessionId={table.id} />
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">

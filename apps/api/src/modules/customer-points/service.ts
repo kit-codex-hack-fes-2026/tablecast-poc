@@ -1,3 +1,4 @@
+import { issueEligibleCoupons } from "../customer-coupons/issuance";
 import { and, eq, exists, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { z } from "zod";
 import {
@@ -82,7 +83,7 @@ export async function setPointPolicy(
 }
 export function pointEntryStatement(
   services: ApiServices,
-  actor: Actor,
+  actor: Pick<Actor, "storeId" | "userId">,
   membershipId: string,
   delta: number,
   kind: "award" | "exchange" | "correction",
@@ -188,6 +189,12 @@ export async function confirmCustomerPoints(
       visit.idempotencyKey === input.idempotencyKey && existing?.recipients === recipientJson,
       "POINT_VISIT_ALREADY_CONFIRMED",
       409,
+    );
+    await issueEligibleCoupons(
+      services,
+      actor.storeId,
+      visit.allocations.map((allocation) => allocation.membershipId),
+      "visit",
     );
     return visit;
   }
@@ -324,8 +331,20 @@ export async function confirmCustomerPoints(
       "POINT_VISIT_STALE",
       409,
     );
+    await issueEligibleCoupons(
+      services,
+      actor.storeId,
+      current.allocations.map((allocation) => allocation.membershipId),
+      "visit",
+    );
     return current;
   }
+  await issueEligibleCoupons(
+    services,
+    actor.storeId,
+    recipients.map((recipient) => recipient.membershipId),
+    "visit",
+  );
   await notifyStore(services, actor.storeId, visit.sessionId);
   return getPointVisit(services, actor);
 }

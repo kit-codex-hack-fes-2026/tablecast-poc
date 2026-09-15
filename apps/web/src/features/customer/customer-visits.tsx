@@ -107,6 +107,14 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
   const data = visit.data;
   return (
     <article className="space-y-7">
+      <Link
+        to="/member/$storeId/coupons"
+        params={{ storeId }}
+        search={{ sessionId }}
+        className="inline-flex rounded-lg border px-4 py-3 font-medium"
+      >
+        {t("coupons")}
+      </Link>
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">{data.storeName}</h1>
         <p className="text-muted-foreground">

@@ -190,6 +190,7 @@ export function AdminSidebar({
             )}
             {(
               [
+                { to: "/admin/stores/$storeId/coupons", label: "coupons", Icon: Gift },
                 {
                   to: "/admin/stores/$storeId/points",
                   label: "customer_points_policy",

@@ -1,4 +1,6 @@
 import { statisticsAdminRoutes } from "../statistics/routes";
+
+import { couponsAdminRoutes } from "../customer-coupons/admin-routes";
 import { pointsAdminRoutes } from "../customer-points/admin-routes";
 import { Hono } from "hono";
 import { gamesAdminRoutes } from "../games/admin-routes";
@@ -43,6 +45,7 @@ export const admin = new Hono<ApiEnv>()
   })
   .route("/", statisticsAdminRoutes)
   .route("/", pointsAdminRoutes)
+  .route("/", couponsAdminRoutes)
   .route("/", catalogAdminRoutes)
   .route("/", mediaAdminRoutes)
   .route("/", voiceAdminRoutes)

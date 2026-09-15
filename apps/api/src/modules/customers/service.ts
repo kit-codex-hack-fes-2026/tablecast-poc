@@ -1,3 +1,4 @@
+import { issueEligibleCoupons } from "../customer-coupons/issuance";
 import { and, eq, exists, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { customerMemberships, customerVisitParticipants } from "../../db/business-schema";
@@ -46,7 +47,10 @@ export async function enrolCustomer(services: ApiServices, actor: CustomerActor)
       // 入会の再送で、後から撤回した同意を復活させない。
       setWhere: eq(customerMemberships.active, false),
     });
-  return getCustomerStore(services, actor);
+  const result = await getCustomerStore(services, actor);
+  if (result.membership)
+    await issueEligibleCoupons(services, actor.storeId, [result.membership.id], "enrol");
+  return result;
 }
 
 export async function updateCustomerPreferences(

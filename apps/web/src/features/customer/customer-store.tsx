@@ -109,6 +109,13 @@ export function CustomerStore({ storeId }: { storeId: string }) {
             >
               {t("customer_points")}
             </Link>
+            <Link
+              to="/member/$storeId/coupons"
+              params={{ storeId }}
+              className="rounded-lg border px-4 py-3 font-medium"
+            >
+              {t("coupons")}
+            </Link>
           </nav>
           <CustomerVisits storeId={storeId} />
           <CustomerPreferences key={data.membership.revision} data={data} />

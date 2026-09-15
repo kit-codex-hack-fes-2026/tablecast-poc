@@ -3,7 +3,12 @@ import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
-import { adminStateSchema, tableStateSchema } from "@tablecast/api/schema";
+import {
+  adminStateSchema,
+  tableStateSchema,
+  uploadedImageSchema,
+  catalogSchema,
+} from "@tablecast/api/schema";
 import { z } from "zod";
 
 test.use({ viewport: { width: 390, height: 844 }, trace: "off" });
@@ -86,7 +91,14 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
 }, testInfo) => {
   const contexts = await Promise.all([
     browser.newContext({ baseURL, viewport: { width: 1024, height: 768 } }),
-    browser.newContext({ baseURL, viewport: { width: 390, height: 844 } }),
+    browser.newContext({
+      baseURL,
+      viewport: { width: 390, height: 844 },
+      recordVideo: {
+        dir: testInfo.outputPath("tablecast-phone-video"),
+        size: { width: 390, height: 844 },
+      },
+    }),
     browser.newContext({ baseURL, viewport: { width: 390, height: 844 } }),
   ]);
   const [tabletContext, firstContext, secondContext] = contexts;
@@ -133,6 +145,49 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
           })
         ).json(),
       );
+    // 券面は実R2への画像アップロードと店舗側フォームを通して設定する。
+    await staff.goto(`/admin/stores/${storeId}/coupons`);
+    await staff.getByRole("button", { name: ja.coupon_new, exact: true }).click();
+    await staff.getByLabel(ja.coupon_title_ja).fill("会員の100円割引");
+    await staff.getByLabel(ja.coupon_title_en).fill("Member discount");
+    await staff.getByLabel(ja.coupon_description_ja).fill("会計から100円割り引きます。");
+    await staff.getByLabel(ja.coupon_description_en).fill("JPY 100 off your bill.");
+    await staff.getByLabel(ja.coupon_trigger).selectOption("exchange");
+    await staff.getByLabel(ja.coupon_threshold).fill("3");
+    const imageField = staff.getByRole("group", { name: ja.editor_image_settings, exact: true });
+    const catalog = catalogSchema.parse(
+      await (await staff.request.get(`${adminBase}/catalog`)).json(),
+    );
+    const imageKey = catalog.configuration.products.find((product) => product.imageKey)?.imageKey;
+    if (!imageKey) throw new Error("試験用の画像が必要です");
+    const imageFile = await staff.request.get(`/media/${imageKey}`);
+    expect(imageFile.status()).toBe(200);
+    await imageField.getByLabel(ja.editor_image_choose).setInputFiles({
+      name: "tablecast-coupon.webp",
+      mimeType: "image/webp",
+      buffer: await imageFile.body(),
+    });
+    await imageField
+      .getByRole("textbox", { name: ja.editor_image_source, exact: true })
+      .fill("店舗が利用を許可したテスト用メニュー画像");
+    const uploadFinished = staff.waitForResponse(
+      (response) =>
+        response.url().endsWith(`${adminBase}/images`) && response.request().method() === "POST",
+    );
+    await imageField.getByRole("button", { name: ja.editor_image_upload }).click();
+    const upload = await uploadFinished;
+    expect(upload.status()).toBe(200);
+    uploadedImageSchema.parse(await upload.json());
+    const ruleSaved = staff.waitForResponse(
+      (response) =>
+        response.url().endsWith("/coupons/rules") && response.request().method() === "POST",
+    );
+    await staff.getByRole("button", { name: ja.account_save, exact: true }).click();
+    expect((await ruleSaved).status()).toBe(200);
+    await staff.screenshot({
+      path: testInfo.outputPath("tablecast-coupon-rules.png"),
+      fullPage: true,
+    });
     const visit = await open();
     const device = z
       .object({ device_code: z.string(), user_code: z.string() })
@@ -223,6 +278,62 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       path: testInfo.outputPath("tablecast-customer-points.png"),
       fullPage: true,
     });
+    await first.goto(`/member/${storeId}/coupons?sessionId=${visit.id}`);
+    await first.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+    await expect(first.getByText(ja.coupon_available, { exact: true })).toBeVisible();
+    const requested = first.waitForResponse(
+      (response) => response.url().endsWith("/request") && response.request().method() === "POST",
+    );
+    await expect(first.getByRole("button", { name: ja.coupon_request })).toBeEnabled();
+    await first.getByRole("button", { name: ja.coupon_request }).click();
+    expect((await requested).status()).toBe(200);
+    await first.screenshot({
+      path: testInfo.outputPath("tablecast-customer-coupon.png"),
+      fullPage: true,
+    });
+    expect(
+      (
+        await staff.request.post(`${adminBase}/tables/${visit.id}/payments`, {
+          data: {
+            amount: 1000,
+            kind: "adjustment",
+            reason: "会計",
+            idempotencyKey: crypto.randomUUID(),
+          },
+        })
+      ).ok(),
+    ).toBe(true);
+    await staff.goto(`/admin/stores/${storeId}/visits/${visit.id}?view=billing`);
+    const applied = staff.waitForResponse(
+      (response) =>
+        response.url().endsWith("/coupons/apply") && response.request().method() === "POST",
+    );
+    await staff.getByRole("button", { name: ja.coupon_apply, exact: true }).click();
+    expect((await applied).status()).toBe(200);
+    await expect(staff.getByText("−¥100", { exact: true })).toBeVisible();
+    await staff.screenshot({
+      path: testInfo.outputPath("tablecast-coupon-billing.png"),
+      fullPage: true,
+    });
+    const cancelled = staff.waitForResponse(
+      (response) =>
+        response.url().endsWith("/coupons/cancel") && response.request().method() === "POST",
+    );
+    await staff.getByLabel(ja.coupon_reason, { exact: true }).fill("会計訂正のため取消");
+    await staff.getByRole("button", { name: ja.coupon_cancel, exact: true }).click();
+    expect((await cancelled).status()).toBe(200);
+    expect(
+      (
+        await staff.request.post(`${adminBase}/tables/${visit.id}/payments`, {
+          data: {
+            amount: 1000,
+            kind: "payment",
+            reason: "会計",
+            idempotencyKey: crypto.randomUUID(),
+          },
+        })
+      ).ok(),
+    ).toBe(true);
     await first.goto(`/member/${storeId}/visits/${visit.id}`);
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);
     await expect(

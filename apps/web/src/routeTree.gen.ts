@@ -30,8 +30,10 @@ import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
 import { Route as MemberStoreIdIndexRouteImport } from './routes/member.$storeId.index'
 import { Route as MemberStoreIdConsumptionRouteImport } from './routes/member.$storeId.consumption'
+import { Route as MemberStoreIdCouponsRouteImport } from './routes/member.$storeId.coupons'
 import { Route as MemberStoreIdMemoriesRouteImport } from './routes/member.$storeId.memories'
 import { Route as MemberStoreIdPointsRouteImport } from './routes/member.$storeId.points'
+import { Route as AdminStoresStoreIdCouponsRouteImport } from './routes/admin.stores.$storeId.coupons'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
@@ -162,6 +164,11 @@ const MemberStoreIdConsumptionRoute =
     path: '/consumption',
     getParentRoute: () => MemberStoreIdRoute,
   } as any)
+const MemberStoreIdCouponsRoute = MemberStoreIdCouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
 const MemberStoreIdMemoriesRoute = MemberStoreIdMemoriesRouteImport.update({
   id: '/memories',
   path: '/memories',
@@ -172,6 +179,12 @@ const MemberStoreIdPointsRoute = MemberStoreIdPointsRouteImport.update({
   path: '/points',
   getParentRoute: () => MemberStoreIdRoute,
 } as any)
+const AdminStoresStoreIdCouponsRoute =
+  AdminStoresStoreIdCouponsRouteImport.update({
+    id: '/coupons',
+    path: '/coupons',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
   id: '/floor',
   path: '/floor',
@@ -317,9 +330,11 @@ export interface FileRoutesByFullPath {
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -361,9 +376,11 @@ export interface FileRoutesByTo {
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -408,9 +425,11 @@ export interface FileRoutesById {
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/coupons': typeof MemberStoreIdCouponsRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
+  '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -456,9 +475,11 @@ export interface FileRouteTypes {
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
     | '/member/$storeId/points'
     | '/member/$storeId/'
+    | '/admin/stores/$storeId/coupons'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -500,9 +521,11 @@ export interface FileRouteTypes {
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
     | '/member/$storeId/points'
     | '/member/$storeId'
+    | '/admin/stores/$storeId/coupons'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -546,9 +569,11 @@ export interface FileRouteTypes {
     | '/account_/integrations/plugins'
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
+    | '/member/$storeId/coupons'
     | '/member/$storeId/memories'
     | '/member/$storeId/points'
     | '/member/$storeId/'
+    | '/admin/stores/$storeId/coupons'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -742,6 +767,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemberStoreIdConsumptionRouteImport
       parentRoute: typeof MemberStoreIdRoute
     }
+    '/member/$storeId/coupons': {
+      id: '/member/$storeId/coupons'
+      path: '/coupons'
+      fullPath: '/member/$storeId/coupons'
+      preLoaderRoute: typeof MemberStoreIdCouponsRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
     '/member/$storeId/memories': {
       id: '/member/$storeId/memories'
       path: '/memories'
@@ -755,6 +787,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/member/$storeId/points'
       preLoaderRoute: typeof MemberStoreIdPointsRouteImport
       parentRoute: typeof MemberStoreIdRoute
+    }
+    '/admin/stores/$storeId/coupons': {
+      id: '/admin/stores/$storeId/coupons'
+      path: '/coupons'
+      fullPath: '/admin/stores/$storeId/coupons'
+      preLoaderRoute: typeof AdminStoresStoreIdCouponsRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
     }
     '/admin/stores/$storeId/floor': {
       id: '/admin/stores/$storeId/floor'
@@ -908,6 +947,7 @@ declare module '@tanstack/react-router' {
 
 interface MemberStoreIdRouteChildren {
   MemberStoreIdConsumptionRoute: typeof MemberStoreIdConsumptionRoute
+  MemberStoreIdCouponsRoute: typeof MemberStoreIdCouponsRoute
   MemberStoreIdMemoriesRoute: typeof MemberStoreIdMemoriesRoute
   MemberStoreIdPointsRoute: typeof MemberStoreIdPointsRoute
   MemberStoreIdIndexRoute: typeof MemberStoreIdIndexRoute
@@ -916,6 +956,7 @@ interface MemberStoreIdRouteChildren {
 
 const MemberStoreIdRouteChildren: MemberStoreIdRouteChildren = {
   MemberStoreIdConsumptionRoute: MemberStoreIdConsumptionRoute,
+  MemberStoreIdCouponsRoute: MemberStoreIdCouponsRoute,
   MemberStoreIdMemoriesRoute: MemberStoreIdMemoriesRoute,
   MemberStoreIdPointsRoute: MemberStoreIdPointsRoute,
   MemberStoreIdIndexRoute: MemberStoreIdIndexRoute,
@@ -942,6 +983,7 @@ const MemberRouteWithChildren =
   MemberRoute._addFileChildren(MemberRouteChildren)
 
 interface AdminStoresStoreIdRouteChildren {
+  AdminStoresStoreIdCouponsRoute: typeof AdminStoresStoreIdCouponsRoute
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
@@ -963,6 +1005,7 @@ interface AdminStoresStoreIdRouteChildren {
 }
 
 const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
+  AdminStoresStoreIdCouponsRoute: AdminStoresStoreIdCouponsRoute,
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
   AdminStoresStoreIdGamesRoute: AdminStoresStoreIdGamesRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,

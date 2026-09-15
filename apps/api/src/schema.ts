@@ -156,3 +156,11 @@ export {
   confirmPointsSchema,
   pointCorrectionSchema,
 } from "./modules/customer-points/model";
+
+export {
+  couponRuleSchema,
+  couponDefinitionSchema,
+  issueCouponSchema,
+  applyCouponSchema,
+  cancelCouponUseSchema,
+} from "./modules/customer-coupons/model";

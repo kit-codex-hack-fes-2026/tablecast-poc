@@ -104,3 +104,9 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 ## 店舗統計
 
 `get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。
+
+## 会員特典の管理
+
+`get_point_policy` / `set_point_policy`で将来の来店向けポイント設定を扱う。`list_coupon_rules` / `save_coupon_rule`は券面画像と日英条件を含む発行ルール、`list_reward_members`は発行先の会員ID・表示名、`list_issued_coupons`は発行済み券の状態をページ取得する。`issue_coupon`は手動ルールから冪等キー付きで発行し、`revoke_coupon`は未使用券を理由付きで取り消す。
+
+券面は既存の`upload_image`で取り込み、返された画像キーと出所を保存する。書込みには既存の店舗管理権限を検証し、GUIと同じAPI serviceを通す。発行済み券の条件は後から変更しない。会員の個人記憶を一覧・検索するMCP操作は設けない。
