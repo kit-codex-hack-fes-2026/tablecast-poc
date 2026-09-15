@@ -117,3 +117,10 @@ export {
   type InstructionDocument,
   type InstructionBlock,
 } from "./modules/configuration/instruction-model";
+
+export {
+  statisticsQuerySchema,
+  statisticsResultSchema,
+  type StatisticsQuery,
+  type StatisticsResult,
+} from "./modules/statistics/model";
