@@ -372,6 +372,7 @@ function TableSession({
             controlDisabled={view.status === "stopping" || language.isPending}
             speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
             onSpeedChange={(value) => speed.mutate(value)}
+            onSuggestion={(text) => voice.sendSuggestion(text, view.suggestions)}
             onMicrophoneChange={(deviceId) => {
               void voice.selectMicrophone(deviceId);
             }}

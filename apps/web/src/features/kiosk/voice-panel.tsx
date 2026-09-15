@@ -174,6 +174,7 @@ type VoicePanelProps = {
   view: VoiceView;
   lines: ConversationLine[];
   onStart: () => void;
+  onSuggestion?: (text: string) => void;
   events?: TableEvent[];
   catalog?: Catalog;
   onChoose?: (product: Product) => void;
@@ -377,6 +378,7 @@ export function VoicePanel({
   view,
   lines,
   onStart,
+  onSuggestion,
   events = [],
   catalog,
   onChoose,
@@ -544,10 +546,18 @@ export function VoicePanel({
             aria-label={t("kiosk_reply_hints")}
           >
             <h3 className="text-xs font-medium text-muted-foreground">{t("kiosk_reply_hints")}</h3>
-            <ul className="grid gap-x-5 gap-y-1 text-sm leading-relaxed sm:grid-cols-3">
+            <p className="text-xs text-muted-foreground">{t("kiosk_reply_hints_help")}</p>
+            <ul className="grid max-h-64 gap-2 overflow-y-auto p-1 text-sm leading-relaxed">
               {view.suggestions?.map((suggestion) => (
                 <li key={suggestion} className="min-w-0 wrap-break-word">
-                  {suggestion}
+                  <Button
+                    variant="outline"
+                    className="h-auto min-h-11 w-full justify-start whitespace-normal wrap-anywhere px-3 py-2 text-left leading-relaxed"
+                    disabled={!onSuggestion || controlDisabled}
+                    onClick={() => onSuggestion?.(suggestion)}
+                  >
+                    {suggestion}
+                  </Button>
                 </li>
               ))}
             </ul>

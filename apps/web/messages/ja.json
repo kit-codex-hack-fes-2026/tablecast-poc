@@ -1,4 +1,5 @@
 {
+  "kiosk_reply_hints_help": "そのまま話すか、タップして送信できます",
   "kiosk_reply_hints": "こんなふうに話しかけられます",
   "kiosk_opening_failed": "開始のご案内ができませんでした。おすすめを教えて、などと話しかけてください。",
   "editor_opening_instructions": "開始時の接客方針・例文",

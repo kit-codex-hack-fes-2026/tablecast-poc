@@ -109,7 +109,7 @@ export const voiceSuggestionsSchema = voiceOpeningSchema
   .extend({ itemId: id, text: z.string().min(1).max(10000) })
   .strict();
 export const voiceSuggestionsResultSchema = z
-  .object({ suggestions: z.array(z.string().min(1).max(120)).max(3) })
+  .object({ suggestions: z.array(z.string().min(1).max(500)).max(3) })
   .strict();
 export const voiceOpeningResultSchema = z.object({ text: z.string().min(1).max(1000) }).strict();
 export const voiceOpeningContextSchema = z.object({

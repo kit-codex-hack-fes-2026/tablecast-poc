@@ -52,6 +52,7 @@ type Caption = {
   message: LiveMessage;
   start: number;
   end: number;
+  selected?: boolean;
   fragments: { text: string; start: number; end: number }[];
   timer?: ReturnType<typeof setTimeout>;
 };
@@ -472,6 +473,7 @@ export class VoiceConnection {
     // 字幕のまとまりは表示だけに使い、委任開始や業務の中断条件には使わない。
     let caption = this.captions.findLast(
       (row) =>
+        !row.selected &&
         row.message.role === role &&
         !row.message.interrupted &&
         row.message.text.length + event.delta.length <= 10000 &&
@@ -577,6 +579,56 @@ export class VoiceConnection {
     if (this.pendingCaptions.size) await this.saveCaptions(sessionId);
   }
 
+  sendSuggestion(text: string, source: string[] | undefined) {
+    const channel = this.channel;
+    if (
+      !this.desired ||
+      !this.ready ||
+      !this.sessionId ||
+      channel?.readyState !== "open" ||
+      source !== this.view.suggestions ||
+      !source?.includes(text) ||
+      this.delegation ||
+      this.responses.size
+    )
+      return;
+    this.clearGuidance();
+    const id = crypto.randomUUID();
+    try {
+      // 選択した文を標準の利用客入力として送る。commentaryやモデル指示にはしない。
+      channel.send(
+        JSON.stringify({
+          type: "response.item.create",
+          event_id: id,
+          item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
+        }),
+      );
+      channel.send(JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }));
+      const caption: Caption = {
+        message: {
+          id,
+          turnId: id,
+          role: "user",
+          locale: this.locale,
+          text,
+          final: true,
+          createdAt: Date.now(),
+        },
+        start: 0,
+        end: 0,
+        fragments: [],
+        selected: true,
+      };
+      this.captions.push(caption);
+      this.finishCaption(caption, false);
+      this.emit({ messages: this.captions.map((row) => row.message), status: "thinking" });
+      this.scheduleSave();
+      this.scheduleProactive(this.attempt);
+    } catch {
+      void this.fail(this.attempt);
+    }
+  }
+
   private async registerDelegation(
     id: string | null,
     trigger: "user" | "proactive",
@@ -584,6 +636,8 @@ export class VoiceConnection {
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
     try {
+      await this.saveCaptions(this.sessionId);
+      if (!this.current(attempt) || !this.sessionId) return undefined;
       const response = await this.client.voice.delegations.$post(
         {
           json: {

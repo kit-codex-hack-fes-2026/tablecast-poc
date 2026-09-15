@@ -44,11 +44,19 @@ const caption = event(3, "voice.user", {
   turnId: line.turnId,
   locale: "ja",
 });
-function Surface({ children, locale = "ja" }: { children: ReactNode; locale?: "ja" | "en" }) {
+function Surface({
+  children,
+  locale = "ja",
+  fullHeight = false,
+}: {
+  children: ReactNode;
+  locale?: "ja" | "en";
+  fullHeight?: boolean;
+}) {
   return (
     <LocaleProvider initialLocale={locale}>
       <MotionProvider>
-        <div className="h-160 max-w-2xl">{children}</div>
+        <div className={fullHeight ? "h-dvh max-w-2xl" : "h-160 max-w-2xl"}>{children}</div>
       </MotionProvider>
     </LocaleProvider>
   );
@@ -58,19 +66,24 @@ afterEach(async () => {
 });
 
 it.each(["ja", "en"] as const)(
-  "%sの発話ヒントを非操作の文として表示し、停止時に消す",
+  "%sの長い店舗別返答を全文表示し、タップ送信と停止時の非表示に対応する",
   async (locale) => {
     const suggestions =
       locale === "ja"
-        ? ["説明をお願いします", "おすすめを教えて", "少しメニューを見ます"]
+        ? [
+            "こもれび 月凪 純米吟醸は、どんな香りや味わいのお酒ですか？ 合わせる料理を選びたいので、お店のメニューから相性のよいものも教えてください。",
+            "こもれび 月凪 純米吟醸の60 mLと90 mLでは、料金はそれぞれいくらですか？ 注文する前に、容量の選び方を教えてください。",
+            "まず料理のメニューを見てから、お酒を選びたいです。こもれび 月凪 純米吟醸の注文はまだせず、料理の種類を案内してください。",
+          ]
         : [
-            "Please explain how to order",
-            "What would you recommend?",
-            "I'd like a little time to look at the menu",
+            "Could you tell me more about the aroma and flavour of Komorebi Tsukinagi junmai ginjo? I would also like to hear which dishes on your menu pair well with it before choosing what to order.",
+            "How much do the 60 mL and 90 mL servings of Komorebi Tsukinagi cost? Please explain the serving options before I place an order.",
+            "I would like to look at the food menu before choosing a sake. Please show me the dishes available, without adding Komorebi Tsukinagi to my order yet.",
           ];
+    const onSuggestion = vi.fn<(text: string) => void>();
     const heading = locale === "ja" ? "こんなふうに話しかけられます" : "You could say";
     const content = (status: "listening" | "paused") => (
-      <Surface locale={locale}>
+      <Surface locale={locale} fullHeight>
         <VoicePanel
           view={{ status, suggestions }}
           lines={[
@@ -82,11 +95,12 @@ it.each(["ja", "en"] as const)(
               interrupted: false,
               text:
                 locale === "ja"
-                  ? "いらっしゃいませ。卓上喫茶へようこそ。よければご注文の仕方をご案内しましょうか？"
-                  : "Welcome to Tabletop Café. Would you like a quick guide to ordering?",
+                  ? "いらっしゃいませ。本日はこもれび 月凪 純米吟醸をご用意しています。お酒の特徴や料理との合わせ方をご案内しましょうか？"
+                  : "Welcome. We have Komorebi Tsukinagi junmai ginjo on our menu. Would you like to hear about its flavour and food pairings?",
             },
           ]}
           onStart={vi.fn<() => void>()}
+          onSuggestion={onSuggestion}
         />
       </Surface>
     );
@@ -95,11 +109,21 @@ it.each(["ja", "en"] as const)(
     const region = screen.getByRole("region", { name: heading });
     for (const suggestion of suggestions)
       await expect.element(region.getByText(suggestion, { exact: true })).toBeVisible();
-    await expect.element(region.getByRole("button")).not.toBeInTheDocument();
+    await region.getByRole("button", { name: suggestions[0], exact: true }).click();
+    expect(onSuggestion).toHaveBeenCalledExactlyOnceWith(suggestions[0]);
     await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();
     await page.screenshot({
       path: `../../../test-results/browser/tablecast-voice-hints-${locale}.png`,
     });
+    await page.viewport(1024, 768);
+    await expect
+      .element(
+        screen.getByRole("button", {
+          name: locale === "ja" ? "音声を停止" : "Stop voice",
+          exact: true,
+        }),
+      )
+      .toBeVisible();
     await screen.rerender(content("paused"));
     await expect.element(screen.getByRole("region", { name: heading })).not.toBeInTheDocument();
   },

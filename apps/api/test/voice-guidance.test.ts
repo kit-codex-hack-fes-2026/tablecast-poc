@@ -10,7 +10,7 @@ import { recordConversationItems } from "../src/modules/voice/conversation";
 import { createVoiceOpening, createVoiceSuggestions } from "../src/modules/voice/guidance";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { device, deviceToken, setupFixture } from "./fixture";
+import { configuration, device, deviceToken, setupFixture, text as localizedText } from "./fixture";
 
 const configured = () => ({
   ...env,
@@ -186,6 +186,106 @@ it("最新の保存済みAI字幕だけから返答例を作り、本人情報�
   });
   const body: unknown = JSON.parse(z.string().parse(provider.mock.calls[0]?.[1]?.body));
   expect(body).not.toHaveProperty("tools");
+});
+
+it("同じ字幕の並行要求と再送は一度だけ生成し、本文の更新では再生成できる", async () => {
+  await setupFixture();
+  const services = createApiServices(configured());
+  await setVoiceSession(services, device, sessionId);
+  await saveAssistant(services);
+  const provider = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async () =>
+      modelResponse({ suggestions: ["ほうじ茶について教えてください"] }),
+    );
+  const results = await Promise.allSettled([
+    createVoiceSuggestions(services, device, source, signal()),
+    createVoiceSuggestions(services, device, source, signal()),
+  ]);
+  expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+  await expect(createVoiceSuggestions(services, device, source, signal())).rejects.toMatchObject({
+    code: "VOICE_GUIDANCE_ALREADY_REQUESTED",
+  });
+  expect(provider).toHaveBeenCalledOnce();
+  const updated = source.text + " ほうじ茶についてもご紹介できます。";
+  await saveAssistant(services, updated);
+  await createVoiceSuggestions(services, device, { ...source, text: updated }, signal());
+  expect(provider).toHaveBeenCalledTimes(2);
+});
+
+it("公開された店舗方針と会話中の商品を優先し、長い候補を省略せず返す", async () => {
+  await setupFixture();
+  const services = createApiServices(configured());
+  const menu = structuredClone(configuration);
+  menu.cast.openingInstructions = {
+    ja: "ほうじ茶の味わいを案内する",
+    en: "Explain our roasted green tea",
+  };
+  const base = configuration.products[0];
+  if (!base) throw new Error("商品fixtureが必要です");
+  menu.products = Array.from({ length: 20 }, (_, index) => ({
+    ...base,
+    id: `tablecast-drink-${index}`,
+    text: localizedText(`お茶${index}号`, `Tea number ${index}`),
+    price: 400 + index,
+    available: index !== 19,
+  }));
+  await services.db
+    .update(business.stores)
+    .set({ config_json: JSON.stringify(menu) })
+    .where(eq(business.stores.id, device.storeId));
+  await setVoiceSession(services, device, sessionId);
+  const latest = "お茶18号とお茶19号をご紹介しました。どちらについて詳しく知りたいですか？";
+  await saveAssistant(services, latest);
+  const long =
+    "お茶18号について、香りや味わい、どのような料理と合わせるとよいかを教えてください。".repeat(4);
+  const provider = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(modelResponse({ suggestions: [long] }));
+  expect(
+    (await createVoiceSuggestions(services, device, { ...source, text: latest }, signal()))
+      .suggestions,
+  ).toEqual([long]);
+  const request = z
+    .object({ input: z.string() })
+    .parse(JSON.parse(z.string().parse(provider.mock.calls[0]?.[1]?.body)));
+  const context = z
+    .object({
+      storeName: z.string(),
+      instructions: z.string(),
+      openingInstructions: z.string(),
+      menu: z.object({
+        products: z.array(
+          z.object({
+            id: z.string(),
+            displayName: z.string(),
+            price: z.number(),
+            available: z.boolean(),
+          }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(request.input));
+  expect(context).toMatchObject({
+    storeName: "卓上喫茶",
+    instructions: "丁寧な接客",
+    openingInstructions: "ほうじ茶の味わいを案内する",
+  });
+  expect(context.menu.products).toEqual([
+    expect.objectContaining({
+      id: "tablecast-drink-18",
+      displayName: "お茶18号",
+      price: 418,
+      available: true,
+    }),
+    expect.objectContaining({
+      id: "tablecast-drink-19",
+      displayName: "お茶19号",
+      price: 419,
+      available: false,
+    }),
+  ]);
+  expect(provider).toHaveBeenCalledOnce();
 });
 
 it.each(["別卓", "停止", "本文不一致", "新しい客発話"])(

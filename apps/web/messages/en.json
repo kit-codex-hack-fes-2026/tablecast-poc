@@ -1,4 +1,5 @@
 {
+  "kiosk_reply_hints_help": "Say it aloud, or tap a reply to send it",
   "kiosk_reply_hints": "You could say",
   "kiosk_opening_failed": "We could not play the welcome. You can still speak — try asking for a recommendation.",
   "editor_opening_instructions": "Opening guidance and examples",

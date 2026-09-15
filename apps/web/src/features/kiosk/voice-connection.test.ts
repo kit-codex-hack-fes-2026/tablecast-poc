@@ -270,6 +270,65 @@ describe("開始案内と発話ヒント", () => {
     expect(changes.at(-1)?.suggestions).toEqual([]);
   });
 
+  async function readyReply() {
+    vi.useFakeTimers();
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    const text = "こもれび 月凪 純米吟醸に合う料理を、メニューから教えてください。";
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/suggestions")) {
+        const source = z
+          .object({ itemId: z.string(), text: z.string() })
+          .parse(JSON.parse(z.string().parse(options?.body)));
+        return Response.json({ ...source, locale: "ja", suggestions: [text] });
+      }
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value, changes } = connection();
+    await value.start("ja");
+    caption("assistant", "お酒に合う料理をご案内しましょうか？", 100, 800);
+    await vi.advanceTimersByTimeAsync(1500);
+    const source = changes.at(-1)?.suggestions;
+    return { value, changes, source, text };
+  }
+
+  it("タップした返答だけを一度送信し、委任の開始前に客の会話として保存する", async () => {
+    const { value, changes, source, text } = await readyReply();
+    expect(source).toEqual([text]);
+    value.sendSuggestion(text, source);
+    value.sendSuggestion(text, source);
+    const sent = peer().channel.send.mock.calls.map(([data]) =>
+      z.object({ type: z.string(), item: z.unknown().optional() }).parse(JSON.parse(data)),
+    );
+    expect(sent.filter((event) => event.type === "response.item.create")).toEqual([
+      {
+        type: "response.item.create",
+        item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
+      },
+    ]);
+    expect(sent.filter((event) => event.type === "response.create")).toHaveLength(1);
+    expect(changes.at(-1)?.suggestions).toEqual([]);
+    delegate("tablecast-tapped-reply");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(
+      requests.filter(({ path }) => path.endsWith("/conversation")).at(-1)?.body,
+    ).toMatchObject({ items: [expect.objectContaining({ role: "user", text })] });
+    expect(requests.at(-1)?.path).toContain("/delegations");
+    caption("user", "料理を見せて", 200, 900);
+    expect(changes.at(-1)?.messages?.filter((message) => message.role === "user")).toHaveLength(2);
+  });
+
+  it.each(["停止", "新しい字幕", "別の候補配列"])("%sの後は候補を送信しない", async (operation) => {
+    const { value, source, text } = await readyReply();
+    expect(source).toEqual([text]);
+    if (operation === "停止") await value.stop();
+    if (operation === "新しい字幕") caption("user", "待って", 1000, 1200);
+    value.sendSuggestion(text, operation === "別の候補配列" ? [text] : source);
+    expect(
+      peer().channel.send.mock.calls.filter(([data]) => data.includes("response.item.create")),
+    ).toEqual([]);
+  });
+
   it("客字幕が前の行へ追記されても古いAI字幕のタイマーからヒントを生成しない", async () => {
     vi.useFakeTimers();
     const { value, changes } = connection();
