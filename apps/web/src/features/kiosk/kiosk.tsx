@@ -39,6 +39,7 @@ import { latestTable } from "./table-cache";
 import { tableCatalogOptions, tableQueryKey, tableOptions } from "./table-query";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
 import { VoicePanel } from "./voice-panel";
+import { KioskGames } from "./games";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
 export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }) {
@@ -346,6 +347,12 @@ function TableSession({
   return (
     <div data-ui="kiosk-shell" className="h-dvh flex flex-col overflow-hidden">
       <KioskHeader data={data} language={language} call={call} />
+      <KioskGames
+        endpoint={endpoint}
+        locale={locale}
+        players={data.guestCount}
+        stopVoice={() => voice.stop()}
+      />
       <ResizablePanelGroup
         orientation={horizontal ? "horizontal" : "vertical"}
         className="flex-1 max-sm:flex-col!"

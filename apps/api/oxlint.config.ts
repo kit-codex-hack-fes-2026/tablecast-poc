@@ -180,6 +180,7 @@ export default defineConfig({
                       "catalog",
                       "statistics",
                       "configuration",
+                      "games",
                       "devices",
                       "media",
                       "orders",

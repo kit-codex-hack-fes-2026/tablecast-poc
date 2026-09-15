@@ -41,7 +41,7 @@ PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`c
 - 店舗・卓の境界を認可する。秘密情報をログへ出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaとDrizzleを使う。[API skill](.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)でSQL断片の根拠と呼出し経路全体のDB往復を確認する。直接の`prepare()`を新設せず、複数操作は`db.batch()`、生SQLはmigration・PRAGMA・query builderで不足する部分に限る。
 - GPT-Live 1の標準WebRTCとResponses delegation（gpt-5.6-luna）を使う。Mastra・LiveKit・hosted Agents APIを追加しない。独自STTクライアント、private monkeypatch、依存packageの直接編集をしない。
-- ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
+- ゲームの制作・登録・公開・実行は[ゲームプラグイン仕様](docs/game-plugins.md)に従う。生成コードへ注文権限・認証情報を渡さない。Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
 
 ## 配置と表現
 

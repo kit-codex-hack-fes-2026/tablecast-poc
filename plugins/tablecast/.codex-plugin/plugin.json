@@ -1,15 +1,15 @@
 {
   "name": "tablecast",
-  "version": "0.1.0+codex.20260915115000",
-  "description": "店舗の資料からメニューを設定し、接客の改善提案と営業の統計分析を支援します。",
+  "version": "0.2.0",
+  "description": "店舗の資料からのメニュー設定、接客の改善提案、営業の統計分析と卓上ゲーム制作を支援します。",
   "author": {
     "name": "TableCast"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "TableCast",
-    "shortDescription": "資料から設定・接客提案・営業分析",
-    "longDescription": "メニュー写真や資料から日英の下書きを作り、接客の改善提案と売上・注文の統計分析を行います。採用した案を設定へ反映し、公開は管理画面で確認します。",
+    "shortDescription": "店舗設定・接客提案・営業分析・ゲーム制作",
+    "longDescription": "メニュー写真や資料から日英の下書きを作り、接客の改善提案と売上・注文の統計分析を行います。卓上ゲームを制作・登録・検証し、設定とゲームの公開は管理画面で人が承認します。",
     "developerName": "TableCast",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
