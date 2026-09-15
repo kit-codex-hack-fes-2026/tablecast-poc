@@ -152,6 +152,16 @@ export default async function setup() {
       maxBuffer: 5 * 1024 * 1024,
     });
     await execute("docker", ["pull", "axllent/mailpit:v1.29.2"]);
+    // CI/ローカルともDocker imageからMailpitバイナリを抽出し、ケースごとのcontainer起動を避ける。
+    const extract = `tablecast-mailpit-extract-${basename(runtime.directory)}`;
+    await execute("docker", ["rm", "--force", extract]).catch(() => undefined);
+    await execute("docker", ["create", "--name", extract, "axllent/mailpit:v1.29.2"]);
+    try {
+      await execute("docker", ["cp", `${extract}:/mailpit`, join(runtime.directory, "mailpit")]);
+      await execute("chmod", ["755", join(runtime.directory, "mailpit")]);
+    } finally {
+      await execute("docker", ["rm", "--force", extract]).catch(() => undefined);
+    }
     return stop;
   } catch (error) {
     try {
