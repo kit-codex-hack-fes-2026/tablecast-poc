@@ -72,7 +72,7 @@ PWAの新規ドキュメント起動は転送元のセッション・所属店�
 
 ## stagingの認証
 
-stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[Accessの経路分離](deployment.md#remote-mcpのaccess)を参照する。
+stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[stagingの公開](deployment.md#stagingの公開とremote-mcp)を参照する。
 
 ## 客向け会員
 

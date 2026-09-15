@@ -25,15 +25,11 @@ export function deploymentTarget(pr?: string, environment = pr ? "preview" : "pr
 }
 export type DeploymentTarget = ReturnType<typeof deploymentTarget>;
 
-// ブラウザーのログイン・同意とemulateは除外しない。
-export const stagingMcpPaths = [
-  "/mcp",
+// 公開stagingでOAuth discoveryの到達先を検査する。
+export const stagingDiscoveryPaths = [
   "/.well-known/oauth-protected-resource/mcp",
   "/.well-known/oauth-authorization-server/api/auth",
   "/.well-known/openid-configuration/api/auth",
-  "/api/auth/oauth2/register",
-  "/api/auth/oauth2/token",
-  "/api/auth/oauth2/revoke",
 ];
 
 export function deploymentArtifact(
@@ -112,11 +108,6 @@ export function deploymentSecrets(
       input.TABLECAST_CONTAINER_METRICS_TOKEN,
       "TABLECAST_CONTAINER_METRICS_TOKEN",
     );
-    secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");
-    secrets.CF_ACCESS_CLIENT_SECRET = required(
-      input.CF_ACCESS_CLIENT_SECRET,
-      "CF_ACCESS_CLIENT_SECRET",
-    );
   } else {
     secrets.TABLECAST_BETTER_AUTH_API_KEY = required(
       input.TABLECAST_BETTER_AUTH_API_KEY,
@@ -129,6 +120,13 @@ export function deploymentSecrets(
     secrets.TABLECAST_GOOGLE_CLIENT_SECRET = required(
       input.TABLECAST_GOOGLE_CLIENT_SECRET,
       "TABLECAST_GOOGLE_CLIENT_SECRET",
+    );
+  }
+  if (target.environment === "preview") {
+    secrets.CF_ACCESS_CLIENT_ID = required(input.CF_ACCESS_CLIENT_ID, "CF_ACCESS_CLIENT_ID");
+    secrets.CF_ACCESS_CLIENT_SECRET = required(
+      input.CF_ACCESS_CLIENT_SECRET,
+      "CF_ACCESS_CLIENT_SECRET",
     );
   }
   return secrets;

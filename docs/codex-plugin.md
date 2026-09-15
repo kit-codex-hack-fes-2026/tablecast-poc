@@ -118,7 +118,7 @@ pluginのversionも更新し、Marketplaceからplugin・MCP・skillへの参照
 
 ## stagingのremote MCP確認
 
-stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーでAccessへログインし、模擬Google認証・組織選択・scope同意を経て接続する。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。
+stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーで模擬Google認証・組織選択・scope同意を経て接続する。stagingへのCloudflare Accessログインは不要。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。
 
 ## テーマ制作skill
 

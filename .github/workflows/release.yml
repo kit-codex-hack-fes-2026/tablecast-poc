@@ -37,8 +37,6 @@ jobs:
         run: bun --no-env-file scripts/tablecast-release.ts
         env:
           GH_TOKEN: ${{ github.token }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
   gate:
     if: always()
@@ -60,5 +58,3 @@ jobs:
         run: bun --no-env-file scripts/tablecast-release.ts --gate
         env:
           GH_TOKEN: ${{ github.token }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
