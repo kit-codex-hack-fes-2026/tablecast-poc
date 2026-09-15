@@ -31,9 +31,11 @@ import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$s
 import { Route as MemberStoreIdIndexRouteImport } from './routes/member.$storeId.index'
 import { Route as MemberStoreIdConsumptionRouteImport } from './routes/member.$storeId.consumption'
 import { Route as MemberStoreIdMemoriesRouteImport } from './routes/member.$storeId.memories'
+import { Route as MemberStoreIdPointsRouteImport } from './routes/member.$storeId.points'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
+import { Route as AdminStoresStoreIdPointsRouteImport } from './routes/admin.stores.$storeId.points'
 import { Route as AdminStoresStoreIdProfileRouteImport } from './routes/admin.stores.$storeId.profile'
 import { Route as AdminStoresStoreIdDemoRouteImport } from './routes/admin.stores.$storeId_.demo'
 import { Route as MemberStoreIdVisitsSessionIdRouteImport } from './routes/member.$storeId.visits.$sessionId'
@@ -165,6 +167,11 @@ const MemberStoreIdMemoriesRoute = MemberStoreIdMemoriesRouteImport.update({
   path: '/memories',
   getParentRoute: () => MemberStoreIdRoute,
 } as any)
+const MemberStoreIdPointsRoute = MemberStoreIdPointsRouteImport.update({
+  id: '/points',
+  path: '/points',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
 const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
   id: '/floor',
   path: '/floor',
@@ -179,6 +186,12 @@ const AdminStoresStoreIdMembersRoute =
   AdminStoresStoreIdMembersRouteImport.update({
     id: '/members',
     path: '/members',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdPointsRoute =
+  AdminStoresStoreIdPointsRouteImport.update({
+    id: '/points',
+    path: '/points',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
 const AdminStoresStoreIdProfileRoute =
@@ -305,10 +318,12 @@ export interface FileRoutesByFullPath {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
   '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
@@ -347,10 +362,12 @@ export interface FileRoutesByTo {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId/demo': typeof AdminStoresStoreIdDemoRoute
   '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
@@ -392,10 +409,12 @@ export interface FileRoutesById {
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
   '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
   '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
+  '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
+  '/admin/stores/$storeId/points': typeof AdminStoresStoreIdPointsRoute
   '/admin/stores/$storeId/profile': typeof AdminStoresStoreIdProfileRoute
   '/admin/stores/$storeId_/demo': typeof AdminStoresStoreIdDemoRoute
   '/member/$storeId/visits/$sessionId': typeof MemberStoreIdVisitsSessionIdRoute
@@ -438,10 +457,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
     | '/member/$storeId/memories'
+    | '/member/$storeId/points'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/demo'
     | '/member/$storeId/visits/$sessionId'
@@ -480,10 +501,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
     | '/member/$storeId/memories'
+    | '/member/$storeId/points'
     | '/member/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId/demo'
     | '/member/$storeId/visits/$sessionId'
@@ -524,10 +547,12 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId'
     | '/member/$storeId/consumption'
     | '/member/$storeId/memories'
+    | '/member/$storeId/points'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
+    | '/admin/stores/$storeId/points'
     | '/admin/stores/$storeId/profile'
     | '/admin/stores/$storeId_/demo'
     | '/member/$storeId/visits/$sessionId'
@@ -724,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemberStoreIdMemoriesRouteImport
       parentRoute: typeof MemberStoreIdRoute
     }
+    '/member/$storeId/points': {
+      id: '/member/$storeId/points'
+      path: '/points'
+      fullPath: '/member/$storeId/points'
+      preLoaderRoute: typeof MemberStoreIdPointsRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
     '/admin/stores/$storeId/floor': {
       id: '/admin/stores/$storeId/floor'
       path: '/floor'
@@ -743,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/admin/stores/$storeId/members'
       preLoaderRoute: typeof AdminStoresStoreIdMembersRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
+    '/admin/stores/$storeId/points': {
+      id: '/admin/stores/$storeId/points'
+      path: '/points'
+      fullPath: '/admin/stores/$storeId/points'
+      preLoaderRoute: typeof AdminStoresStoreIdPointsRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
     '/admin/stores/$storeId/profile': {
@@ -870,6 +909,7 @@ declare module '@tanstack/react-router' {
 interface MemberStoreIdRouteChildren {
   MemberStoreIdConsumptionRoute: typeof MemberStoreIdConsumptionRoute
   MemberStoreIdMemoriesRoute: typeof MemberStoreIdMemoriesRoute
+  MemberStoreIdPointsRoute: typeof MemberStoreIdPointsRoute
   MemberStoreIdIndexRoute: typeof MemberStoreIdIndexRoute
   MemberStoreIdVisitsSessionIdRoute: typeof MemberStoreIdVisitsSessionIdRoute
 }
@@ -877,6 +917,7 @@ interface MemberStoreIdRouteChildren {
 const MemberStoreIdRouteChildren: MemberStoreIdRouteChildren = {
   MemberStoreIdConsumptionRoute: MemberStoreIdConsumptionRoute,
   MemberStoreIdMemoriesRoute: MemberStoreIdMemoriesRoute,
+  MemberStoreIdPointsRoute: MemberStoreIdPointsRoute,
   MemberStoreIdIndexRoute: MemberStoreIdIndexRoute,
   MemberStoreIdVisitsSessionIdRoute: MemberStoreIdVisitsSessionIdRoute,
 }
@@ -904,6 +945,7 @@ interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
+  AdminStoresStoreIdPointsRoute: typeof AdminStoresStoreIdPointsRoute
   AdminStoresStoreIdProfileRoute: typeof AdminStoresStoreIdProfileRoute
   AdminStoresStoreIdDevicesNewRoute: typeof AdminStoresStoreIdDevicesNewRoute
   AdminStoresStoreIdInvitationsNewRoute: typeof AdminStoresStoreIdInvitationsNewRoute
@@ -924,6 +966,7 @@ const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
   AdminStoresStoreIdGamesRoute: AdminStoresStoreIdGamesRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
+  AdminStoresStoreIdPointsRoute: AdminStoresStoreIdPointsRoute,
   AdminStoresStoreIdProfileRoute: AdminStoresStoreIdProfileRoute,
   AdminStoresStoreIdDevicesNewRoute: AdminStoresStoreIdDevicesNewRoute,
   AdminStoresStoreIdInvitationsNewRoute: AdminStoresStoreIdInvitationsNewRoute,

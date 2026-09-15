@@ -149,3 +149,10 @@ export {
   customerMemoryInputSchema,
   customerConsumptionSchema,
 } from "./modules/customer-memory/model";
+
+export {
+  pointRulesSchema,
+  pointPolicySchema,
+  confirmPointsSchema,
+  pointCorrectionSchema,
+} from "./modules/customer-points/model";

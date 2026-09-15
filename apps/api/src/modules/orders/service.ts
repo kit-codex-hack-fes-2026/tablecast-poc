@@ -1,3 +1,4 @@
+import { pointBillingCorrectionStatements } from "../customer-points/service";
 import { measured, observeOperation } from "../../platform/telemetry";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
@@ -438,6 +439,19 @@ export async function recordPayment(
         );
       else ensure(table.bill.due + input.amount >= 0, "ADJUSTMENT_AMOUNT", 422);
       const mutation = crypto.randomUUID();
+      const pointCorrections =
+        input.kind === "adjustment"
+          ? await pointBillingCorrectionStatements(
+              services,
+              actor,
+              table.bill.orderedTotal +
+                table.bill.adjustmentTotal +
+                table.bill.planTotal +
+                input.amount,
+              input.idempotencyKey,
+              mutation,
+            )
+          : [];
       const result = await db.batch([
         db
           .update(business.tableSessions)
@@ -450,6 +464,7 @@ export async function recordPayment(
           .select(
             sql`SELECT ${crypto.randomUUID()},store_id,id,${input.idempotencyKey},${input.kind},${input.amount},${input.reason},${actor.userId},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation}`,
           ),
+        ...pointCorrections,
         invalidationStatement(services, actor, mutation),
         eventStatement(services, actor, mutation, `billing.${input.kind}`, {
           amount: input.amount,

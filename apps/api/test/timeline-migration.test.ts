@@ -2,7 +2,7 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq, sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
-import { tableSessions } from "../src/db/business-schema";
+import { tableSessions, customerPointVisits } from "../src/db/business-schema";
 import { getTimeline } from "../src/modules/tables/history";
 import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
@@ -52,6 +52,8 @@ it.for([false, true])(
       .set({ opened_at: start + day, closed_at: start + day })
       .where(eq(tableSessions.id, id));
     expect((await visits()).sessions.map((row) => row.id)).toEqual([staff.tableSessionId]);
+    // 移行時に作られた未確定のポイント規則を先に片付け、来店原本の参照制約を保つ。
+    await fixtureDb.delete(customerPointVisits).where(eq(customerPointVisits.sessionId, id));
     await fixtureDb.delete(tableSessions).where(eq(tableSessions.id, id));
     expect(await fixtureDb.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
     expect(

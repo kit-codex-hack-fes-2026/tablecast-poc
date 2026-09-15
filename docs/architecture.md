@@ -206,3 +206,5 @@ APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts
 ## 店舗会員
 
 `modules/customers`はスタッフ所属と分離した会員認可・同意を所有する。共通ログインからuser IDを確定し、`CustomerActor`の店舗と本人で認可する。`customer_memberships`は店舗別の同意版・許可・更新版を持つ。Webの`features/customer`は会員用の一列の画面と既存RPCによる取得を所有する。仕様と今後の追加境界は[会員仕様](membership.md)を参照する。
+
+`modules/customer-visits`は短寿命のQRと参加履歴、`modules/customer-memory`は個人の飲食記録・記憶・接客対象の失効を所有する。`modules/customer-points`は来店開始時のルール固定、参加実績の確認、配分と台帳を所有する。店舗管理のrouteはポイント設定・確認の管理APIも組み立てる。会計の調整とポイントの再配分を同じD1 batchへ入れ、独立した残高キャッシュを持たない。

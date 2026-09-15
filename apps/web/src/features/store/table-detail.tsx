@@ -1,3 +1,4 @@
+import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Order } from "@tablecast/api/schema";
@@ -243,6 +244,7 @@ export function TableDetail({
                 </dl>
               </div>
               {table.status === "open" && <PaymentForm storeId={storeId} sessionId={table.id} />}
+              <PointVisit storeId={storeId} sessionId={table.id} />
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">
               <dl className="">

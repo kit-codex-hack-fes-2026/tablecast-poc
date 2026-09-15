@@ -105,6 +105,23 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
         })
       ).ok(),
     ).toBe(true);
+    const policy = z
+      .object({ version: z.number() })
+      .parse(await (await staff.request.get(`${adminBase}/points/policy`)).json());
+    expect(
+      (
+        await staff.request.post(`${adminBase}/points/policy`, {
+          headers: { Origin: baseURL ?? "" },
+          data: {
+            expectedVersion: policy.version,
+            enabled: true,
+            kind: "visit",
+            points: 4,
+            unitYen: 100,
+          },
+        })
+      ).ok(),
+    ).toBe(true);
     const floor = adminStateSchema.parse(await (await staff.request.get(adminBase)).json());
     const vacant = floor.vacantTables[0];
     if (!vacant) throw new Error("試験用の空卓が必要です");
@@ -179,6 +196,34 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       path: testInfo.outputPath("tablecast-customer-companions.png"),
       fullPage: true,
     });
+    await staff.goto(`/admin/stores/${storeId}/visits/${visit.id}?view=billing`);
+    const points = staff.locator("section").filter({
+      has: staff.getByRole("heading", { name: ja.customer_points_confirm, exact: true }),
+    });
+    await expect(points.getByRole("checkbox")).toHaveCount(2);
+    for (const checkbox of await points.getByRole("checkbox").all()) await checkbox.check();
+    const awarded = staff.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/tables/${visit.id}/points`) &&
+        response.request().method() === "POST",
+    );
+    await points.getByRole("button", { name: ja.customer_points_award }).click();
+    expect((await awarded).status()).toBe(200);
+    await expect(points.getByText(ja.customer_points_confirmed, { exact: true })).toBeVisible();
+    await staff.screenshot({
+      path: testInfo.outputPath("tablecast-customer-points-staff.png"),
+      fullPage: true,
+    });
+    await first.goto(`/member/${storeId}/points`);
+    await expect(
+      first.getByRole("heading", { name: ja.customer_points, exact: true }),
+    ).toBeVisible();
+    await expect(first.getByText("+4 pt", { exact: true })).toBeVisible();
+    await first.screenshot({
+      path: testInfo.outputPath("tablecast-customer-points.png"),
+      fullPage: true,
+    });
+    await first.goto(`/member/${storeId}/visits/${visit.id}`);
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);
     await expect(
       first.getByRole("status").filter({ hasText: ja.customer_disconnected }),

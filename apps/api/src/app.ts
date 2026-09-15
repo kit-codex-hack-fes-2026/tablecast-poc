@@ -1,3 +1,4 @@
+import { customerPointsRoutes } from "./modules/customer-points/routes";
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { accountRoutes } from "./modules/account/routes";
@@ -23,6 +24,7 @@ const rpcRoutes = new Hono<ApiEnv>()
   .route("/", customerRoutes)
   .route("/api/customer", customerVisitRoutes)
   .route("/api/customer", customerMemoryRoutes)
+  .route("/api/customer", customerPointsRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
   .route("/", initialRoutes)

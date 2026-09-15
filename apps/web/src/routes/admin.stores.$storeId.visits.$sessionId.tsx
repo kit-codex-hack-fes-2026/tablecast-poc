@@ -1,3 +1,4 @@
+import { pointVisitOptions } from "../features/store/point-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { TableDetail } from "../features/store/table-detail";
@@ -12,9 +13,10 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
   }),
   loaderDeps: ({ search }) => ({ view: search.view }),
   loader: async ({ context, params, deps }) => {
-    const table = await context.queryClient.ensureQueryData(
-      tableDetailOptions(params.storeId, params.sessionId),
-    );
+    const [table] = await Promise.all([
+      context.queryClient.ensureQueryData(tableDetailOptions(params.storeId, params.sessionId)),
+      context.queryClient.ensureQueryData(pointVisitOptions(params.storeId, params.sessionId)),
+    ]);
     if (deps.view === "orders")
       await context.queryClient.ensureQueryData(
         catalogOptions(params.storeId, table.configVersion),

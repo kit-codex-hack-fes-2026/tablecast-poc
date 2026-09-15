@@ -1,3 +1,4 @@
+import { snapshotPointPolicy } from "../customer-points/service";
 import { observeOperation } from "../../platform/telemetry";
 import { and, eq, sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -302,6 +303,7 @@ export async function openTable(
           .select(
             sql`SELECT ${sessionId},${actor.storeId},${input.tableId},'table',${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
           ),
+        snapshotPointPolicy(services, actor.storeId, sessionId),
         db
           .insert(business.tableEvents)
           .select(

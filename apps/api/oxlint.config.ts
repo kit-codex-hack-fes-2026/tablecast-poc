@@ -179,6 +179,7 @@ export default defineConfig({
                     module: [
                       "catalog",
                       "statistics",
+                      "customer-points",
                       "configuration",
                       "games",
                       "devices",
