@@ -22,6 +22,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 | [製品と業務](product.md)               | 対象、認証、注文、カスタマイズ、プラン、会計、安全性 |
 | [認証・アカウント](authentication.md)  | Google、パスキー、招待、プロフィール、メール         |
 | [Codexプラグイン](codex-plugin.md)     | OAuth接続、ローカル検証、GitHub配布                  |
+| [ゲームプラグイン](game-plugins.md)    | ゲーム制作・登録・試遊・承認・公開・隔離実行         |
 | [Dev Container](devcontainer.md)       | Docker Desktop・OrbStackの再現環境                   |
 | [画面と国際化](ui.md)                  | 大きな会話領域、停止再開、日英キオスク・管理画面     |
 | [構成とディレクトリ](architecture.md)  | 2 Workers、依存方向、最小のファイル配置、公開契約    |
