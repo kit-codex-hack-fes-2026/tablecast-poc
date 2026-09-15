@@ -236,11 +236,19 @@ it("100卓・1万履歴でもページの内容と上限を保ち、認可込み
   }
 });
 
-it.for(["before", "after", "both"] as const)(
+it.for(["before", "after", "both", "both-long"] as const)(
   "前後の履歴が各1万件でも空日・少数来店の読取件数を増やさない: %s",
   async (direction, { annotate }) => {
     const { cookie } = await setupFixture();
     const sparseStart = startAt + 2 * 86_400_000;
+    if (direction === "both-long") {
+      await fixtureDb
+        .insert(tableSessions)
+        .values([
+          closed("tablecast-long-overlap", startAt - 70 * 86_400_000, sparseStart + 60_000),
+          closed("tablecast-long-before", startAt - 80 * 86_400_000, startAt),
+        ]);
+    }
     await fixtureDb
       .insert(tableSessions)
       .values([
@@ -253,16 +261,18 @@ it.for(["before", "after", "both"] as const)(
         await env.TABLECAST_DB.batch(
           Array.from({ length: 100 }, (_, n) => {
             const i = offset + n;
-            return (direction === "both" ? ["before", "after"] : [direction]).map((side) => {
-              const openedAt =
-                side === "before"
-                  ? startAt - (i + 1) * 60_000
-                  : startAt + 4 * 86_400_000 + i * 60_000;
-              return insertFixture(
-                tableSessions,
-                closed(`tablecast-${side}-${i}`, openedAt, openedAt + 1000),
-              );
-            });
+            return (direction.startsWith("both") ? ["before", "after"] : [direction]).map(
+              (side) => {
+                const openedAt =
+                  side === "before"
+                    ? startAt - (i + 1) * 60_000
+                    : startAt + 4 * 86_400_000 + i * 60_000;
+                return insertFixture(
+                  tableSessions,
+                  closed(`tablecast-${side}-${i}`, openedAt, openedAt + 1000),
+                );
+              },
+            );
           }).flat(),
         );
       }
@@ -281,11 +291,12 @@ it.for(["before", "after", "both"] as const)(
           const elapsedMs = performance.now() - started;
           await waitOnExecutionContext(ctx);
           expect(response.status).toBe(200);
-          expect(result.sessions.map((session) => session.id)).toEqual(
-            selected === "2026-09-02"
+          expect(result.sessions.map((session) => session.id)).toEqual([
+            ...(selected === "2026-09-02"
               ? []
-              : ["tablecast-sparse-b", "tablecast-sparse-a", "tablecast-sparse-zero"],
-          );
+              : ["tablecast-sparse-b", "tablecast-sparse-a", "tablecast-sparse-zero"]),
+            ...(direction === "both-long" ? ["tablecast-long-overlap"] : []),
+          ]);
           expect(result.nextCursor).toBeNull();
           expect(stats.roundtrips).toBeLessThanOrEqual(4);
           const measured = batches.flat();
@@ -313,3 +324,37 @@ it.for(["before", "after", "both"] as const)(
     }
   },
 );
+
+it("同じ日の1万来店の深いcursorでも先頭ページを走査し直さない", async () => {
+  const { cookie } = await setupFixture();
+  for (let offset = 0; offset < 10_000; offset += 100) {
+    await env.TABLECAST_DB.batch(
+      Array.from({ length: 100 }, (_, n) =>
+        insertFixture(
+          tableSessions,
+          closed(
+            `tablecast-dense-${String(offset + n).padStart(5, "0")}`,
+            startAt + 1000,
+            startAt + 2000,
+          ),
+        ),
+      ),
+    );
+  }
+  const { database, batches } = measuredDatabase(env.TABLECAST_DB);
+  const ctx = createExecutionContext();
+  const response = await app.request(
+    `${base}?date=${date}&limit=10&beforeOpenedAt=${startAt + 1000}&beforeId=tablecast-dense-00020`,
+    { headers: { Cookie: cookie } },
+    { ...env, TABLECAST_DB: database },
+    ctx,
+  );
+  expect(response.status).toBe(200);
+  const result = timelinePageSchema.parse(await response.json());
+  await waitOnExecutionContext(ctx);
+  expect(result.sessions.map((session) => session.id)).toEqual(
+    Array.from({ length: 10 }, (_, i) => `tablecast-dense-${String(19 - i).padStart(5, "0")}`),
+  );
+  expect(result.nextCursor).toEqual({ openedAt: startAt + 1000, id: "tablecast-dense-00010" });
+  expect(batches.flat().reduce((sum, query) => sum + query.rowsRead, 0)).toBeLessThanOrEqual(64);
+});

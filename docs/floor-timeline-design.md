@@ -113,17 +113,19 @@ hydration後は既存の分単位更新に合わせる。復帰時には現在�
 
 ### indexとDB往復
 
-利用中と閉卓済みをDrizzleの`UNION ALL`で統合し、その後にopened_atとIDで並べてlimit+1件へ絞る。閉卓済みは店舗の最長滞在時間Dを式indexの先頭1件から求め、`startAt - D <= opened_at < endAt`を開卓時刻indexへ渡す。重なりの厳密な条件も維持する。これにより選択日より後の来店と、最大滞在時間よりも古い来店を検索範囲から外す。Dは同じSQL内で求め、固定日数による長期滞在の欠落やアプリ側cacheの陳腐化を避ける。利用中は店舗別のpartial indexで絞る。結果の行数・cursor・6列の契約は維持する。
+閉卓済みは`tablecast_timeline_days`の店舗・日付・開卓時刻・IDのindexからlimit+1件のIDを取り、来店本体へjoinする。利用中は既存の店舗別partial indexで取得し、Drizzleの`UNION ALL`で合わせて同じ不変cursor順にlimitを適用する。日付の前後に履歴が多くても、長期滞在が混在しても、別日の通常来店を走査しない。結果の6列・cursor・店舗認可は維持する。
 
-終了時刻がNULLまたは開始より前の閉卓記録は、別のpartial indexで1件だけ検出する。正常来店の検索と不整合検出を`db.batch()`へまとめるため、期間APIは2文・1往復、認可を含むHTTPは5文・4往復である。不整合検出は終了時刻の不正判定を式indexの等値条件にする。これにより開卓時刻の範囲検索と合わせて不正な記録だけを読む。算術演算・NULL処理・indexの式を値として比較する箇所だけにSQL断片を使い、select・条件・subqueryはDrizzleで構築する。別々のHTTPやアプリ側での全件結合は追加しない。
+日付索引は来店IDと日本時間の日付の対応だけを保持し、並び替え用の開卓時刻を複製する。価格・状態・人数等は来店本体を正本とする。`AFTER INSERT`と対象列の`AFTER UPDATE` triggerが閉卓済み実卓の重なる日を再生成し、削除は外部キーのCASCADEで反映する。半開区間を使い、深夜ちょうどの閉卓は翌日へ入れず、ゼロ時間は開始日だけへ入れる。終了時刻がNULLまたは開始より前の記録は索引へ入れず、不整合用の式indexで検出して409を返す。
 
-`0015`の広いopened_at indexは、一致行が少ない日に古い閉卓履歴を走査する問題があった。レビューで判明したこの問題を`0016_tablecast_timeline_access_paths.sql`で修正し、旧indexを削除して利用中・不整合専用indexへ置き換える。`0017_tablecast_timeline_duration_bound.sql`は閉卓済みの開卓時刻indexと最長滞在を求める式indexを追加し、前後両方向の累積履歴走査を避ける。`0015`・`0016`はPR環境へ適用済みなので書き換えず、追加migrationで更新する。
+正常検索と不整合検出は`db.batch()`の2文・1往復で、認可込みHTTPは5文・4往復を維持する。来店の閉卓成功は`UPDATE RETURNING`の来店行数で判定する。triggerの派生行数を含むD1 `meta.changes`を業務上の更新件数として扱わず、元の版条件とmutationの一致を維持する。
 
-実D1試験は選択日の前だけ・後だけ・前後双方に100／10,000件ずつの履歴を置き、空の日と3来店の日を各3標本測る。期間SQLの読取件数は空の日3〜4行・3来店の日6〜7行で、同じ分布では履歴件数を増やしても一定だった。64読取行以内・4往復以内・1,000ms未満を返却内容と同じrequestで保証する。通常の100卓・30件取得も4往復・4,576 bytesを維持する。
+`0015`・`0016`はPR環境へ適用済みのため維持する。未配備の`0017`を`0017_tablecast_timeline_day_index.sql`へ置き換え、日付索引の作成・既存閉卓履歴のbackfill・trigger・不整合indexの更新を行う。旧アプリの閉卓処理はtriggerが増やす変更件数と互換でないため、配備時は閉卓操作を止めてmigration適用から新アプリ配備までを行い、その後に閉卓を再開する。旧アプリへ戻す場合もtriggerは索引を更新するが、旧アプリの閉卓処理はD1の変更件数判定と互換でないため、アプリだけのrollbackは行わない。rollback時は旧アプリへの切替と同時に日付索引の2 triggerを除去する対応migrationが必要である。
 
-[Drizzleのset operation](https://orm.drizzle.team/docs/set-operations)と既存batchを使う。[D1の返却meta](https://developers.cloudflare.com/d1/worker-api/return-object/)のSQL時間・読取行数をbinding時間とは別に記録する。読取行数の予算は期間queryの2文に対し、往復とHTTP時間は認可込みの入口から測る。rawの認可queryのSQL時間を測定済みとは扱わない。
+実D1で前だけ・後だけ・前後双方に各100／10,000履歴を置いた空日・3来店日と、同じ大量履歴へ70日を超す滞在を混ぜた1来店日・4来店日を各3標本測る。空日3行・3来店日12行、長期滞在を混ぜた1来店日6行・4来店日15行で、履歴件数を増やしても一定だった。64読取行以内・4往復以内・1,000ms未満を、返却内容と同じrequestで保証する。通常の100卓・30件取得も4往復・4,576 bytesを維持する。同日1万来店の深いcursorでも、行値比較でindexから直接10件を取り64読取行以内を確認する。移行試験は既存70日滞在のbackfill、閉卓時刻修正、NULL、ゼロ時間、demo切替、削除・外部キーを確認する。
 
-[SQLiteの式index](https://www.sqlite.org/expridx.html)は滞在時間の最大値を全件集約なしで取得するために使う。検索範囲は最長滞在時間に依存し、極端に長い滞在があれば範囲が広がるため、任意の滞在分布で読取行数が一定になる保証はない。70日を跨ぐ来店と直前日のゼロ時間来店を含む境界試験で欠落・誤包含を確認する。remote D1の実ネットワーク遅延・本番規模の分布は未測定である。
+[SQLiteのtrigger](https://www.sqlite.org/lang_createtrigger.html)と[再帰CTE](https://www.sqlite.org/lang_with.html)をmigrationで使い、日付索引と正本を同じ書込みにまとめる。通常の読取はDrizzleのselect・join・union・batchを使う。[D1の返却meta](https://developers.cloudflare.com/d1/worker-api/return-object/)から期間SQLの時間・読取件数を測り、認可込みのHTTPとbindingの時間とは分ける。
+
+索引の保存行数と閉卓・時刻変更・backfillの書込量は滞在日数に比例する。通常来店は1〜2行、70日を跨ぐ来店は71行以上となる。日々の再取得で累積履歴を走査する費用を、閉卓時の一度の索引更新へ移す判断である。極端に長い不正な時刻や大量の長期滞在に対するmigration時間・remote D1の費用は未測定であり、本番への移行時に既存件数と滞在日数を確認する。
 
 ## query・更新・失敗
 
@@ -160,6 +162,6 @@ hydration後は既存の分単位更新に合わせる。復帰時には現在�
 - 長い帯だけが文字を収められる。狭い帯には時間以上の最小幅や文字を詰めず、時刻・人数・注意状態は展開一覧から確認・選択できる。
 - 実iPad、VoiceOver、日付跨ぎの長時間連続稼働、remote D1の実SQL時間と読取行数は未確認。Chromium/WebKitと寸法の検証を実機の操作感の保証と混同しない。
 - 初回／再取得失敗は既存ErrorNotice、店舗・日付の分離はQuery keyとAbortSignalに依拠する。これら全組合せの遅延通信試験は未実施。
-- migrationはindex追加だけで既存データの変換はない。先にmigrationを適用でき、アプリを戻してもindexが残ることによる契約変更はない。
+- migrationは既存来店を変更せず、日付索引をbackfillする。閉卓時の変更件数判定を更新するため、旧アプリへ戻す場合のtrigger除去を移行手順に従って行う。
 
 調査時の判断は[Issueコメント](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/184#issuecomment-5671820663)に残す。以後の実装・検証・未確認範囲はPRを正本とする。

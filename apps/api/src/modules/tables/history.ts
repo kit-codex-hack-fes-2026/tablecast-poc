@@ -1,24 +1,11 @@
-import {
-  and,
-  desc,
-  eq,
-  gt,
-  gte,
-  isNull,
-  isNotNull,
-  lt,
-  lte,
-  notInArray,
-  or,
-  sql,
-  sum,
-} from "drizzle-orm";
+import { and, desc, eq, isNull, isNotNull, lt, lte, notInArray, or, sql, sum } from "drizzle-orm";
 import {
   orders,
   payments,
   restaurantTables,
   tableEvents,
   tableSessions,
+  timelineDays,
 } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -70,37 +57,28 @@ export async function getTimeline(
     lt(tableSessions.opened_at, endAt),
     cursor,
   );
-  // 店舗の最長滞在を式indexの先頭から取り、開卓日時の両端を絞る。
-  // 固定の日数で切らないため、長期滞在や日跨ぎも欠落させない。
-  const duration = sql<number>`${tableSessions.closed_at} - ${tableSessions.opened_at}`;
-  const maximumDuration = db
-    .select({ duration })
-    .from(tableSessions)
+  // 日付索引からcursor順の1ページだけを取り、来店本体へ接続する。
+  const closedPage = db
+    .select({ id: timelineDays.table_session_id })
+    .from(timelineDays)
     .where(
       and(
-        eq(tableSessions.store_id, actor.storeId),
-        eq(tableSessions.kind, "table"),
-        eq(tableSessions.status, "closed"),
+        eq(timelineDays.store_id, actor.storeId),
+        eq(timelineDays.day_start, startAt),
+        query.beforeOpenedAt !== undefined && query.beforeId !== undefined
+          ? sql`(${timelineDays.opened_at}, ${timelineDays.table_session_id}) < (${query.beforeOpenedAt}, ${query.beforeId})`
+          : undefined,
       ),
     )
-    .orderBy(desc(duration))
-    .limit(1);
+    .orderBy(desc(timelineDays.opened_at), desc(timelineDays.table_session_id))
+    .limit(query.limit + 1)
+    .as("closed_page");
   const closed = db
     .select(fields)
-    .from(tableSessions)
-    .where(
-      and(
-        scope,
-        eq(tableSessions.status, "closed"),
-        gte(tableSessions.opened_at, sql`${startAt} - max(coalesce((${maximumDuration}), 0), 0)`),
-        or(
-          gt(tableSessions.closed_at, startAt),
-          and(
-            eq(tableSessions.closed_at, tableSessions.opened_at),
-            gte(tableSessions.opened_at, startAt),
-          ),
-        ),
-      ),
+    .from(closedPage)
+    .innerJoin(
+      tableSessions,
+      and(eq(tableSessions.id, closedPage.id), eq(tableSessions.store_id, actor.storeId)),
     );
   const open = db
     .select(fields)

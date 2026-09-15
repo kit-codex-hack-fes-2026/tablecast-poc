@@ -74,6 +74,18 @@ export const tableSessions = sqliteTable("table_sessions", {
   closed_at: integer("closed_at"),
 });
 
+// 閉卓済み来店と日本時間の日付の対応。migrationのtriggerで原子的に維持する。
+export const timelineDays = sqliteTable(
+  "tablecast_timeline_days",
+  {
+    table_session_id: text("table_session_id").notNull(),
+    store_id: text("store_id").notNull(),
+    day_start: integer("day_start").notNull(),
+    opened_at: integer("opened_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.table_session_id, table.day_start] })],
+);
+
 export const confirmations = sqliteTable("confirmations", {
   id: text("id").primaryKey().notNull(),
   store_id: text("store_id").notNull(),
