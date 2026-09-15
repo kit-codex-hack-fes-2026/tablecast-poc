@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import {
   customerConsumption,
   customerContexts,
@@ -78,6 +78,68 @@ export async function customerServiceTarget(services: ApiServices, actor: Actor)
       : undefined;
   return { session, context, participants, target };
 }
+// 最初に選んだ対象・同意と、読取り時点の来店・音声状態を同じSQLで照合する。
+function customerReadGate(
+  services: ApiServices,
+  actor: Actor,
+  snapshot: Awaited<ReturnType<typeof customerServiceTarget>>,
+) {
+  const { session, context, participants } = snapshot;
+  if (!context) return sql`0`;
+  const current = currentCustomerParticipants(services, actor.storeId, session.id).as(
+    "current_customer_readers",
+  );
+  const matching = services.db
+    .select({ count: sql<number>`count(*)` })
+    .from(current)
+    .where(
+      participants.length
+        ? or(
+            ...participants.map((person) =>
+              and(
+                eq(current.membership.id, person.membership.id),
+                eq(current.membership.revision, person.membership.revision),
+              ),
+            ),
+          )
+        : sql`0`,
+    );
+  return exists(
+    services.db
+      .select({ id: customerContexts.sessionId })
+      .from(customerContexts)
+      .innerJoin(
+        tableSessions,
+        and(
+          eq(tableSessions.id, customerContexts.sessionId),
+          eq(tableSessions.store_id, actor.storeId),
+        ),
+      )
+      .where(
+        and(
+          eq(customerContexts.sessionId, session.id),
+          eq(customerContexts.storeId, actor.storeId),
+          eq(customerContexts.token, context.token),
+          eq(tableSessions.status, "open"),
+          sql`(${matching})=${participants.length}`,
+          actor.kind === "voice"
+            ? and(
+                eq(tableSessions.voice_session_id, actor.voiceSessionId ?? ""),
+                eq(tableSessions.voice_state, "active"),
+                actor.turnId ? eq(tableSessions.active_turn_id, actor.turnId) : undefined,
+              )
+            : undefined,
+        ),
+      ),
+  );
+}
+function customerReadProof(services: ApiServices, gate: ReturnType<typeof customerReadGate>) {
+  return services.db
+    .select({ id: customerContexts.sessionId })
+    .from(customerContexts)
+    .where(gate)
+    .limit(1);
+}
 export async function listCustomerMemories(
   services: ApiServices,
   actor: CustomerActor,
@@ -138,7 +200,8 @@ export async function listCustomerConsumption(
   return { records, nextCursor: rows.length > query.limit ? (records.at(-1)?.id ?? null) : null };
 }
 export async function customerRecommendationContext(services: ApiServices, actor: Actor) {
-  const { session, context, participants, target } = await customerServiceTarget(services, actor);
+  const snapshot = await customerServiceTarget(services, actor);
+  const { session, context, participants, target } = snapshot;
   if (!target || !context)
     return {
       mode: "shared",
@@ -147,12 +210,15 @@ export async function customerRecommendationContext(services: ApiServices, actor
       consumption: [],
       source: null,
     };
-  const [memories, consumption, sources] = await services.db.batch([
+  const gate = customerReadGate(services, actor, snapshot);
+  const [valid, memories, consumption, sources] = await services.db.batch([
+    customerReadProof(services, gate),
     services.db
       .select({ content: customerMemories.content })
       .from(customerMemories)
       .where(
         and(
+          gate,
           eq(customerMemories.membershipId, target.membership.id),
           sql`${target.membership.useMemories}=1`,
           eq(customerMemories.storeId, actor.storeId),
@@ -170,6 +236,7 @@ export async function customerRecommendationContext(services: ApiServices, actor
       .innerJoin(orders, and(eq(orders.id, customerConsumption.orderId)))
       .where(
         and(
+          gate,
           eq(customerConsumption.membershipId, target.membership.id),
           sql`${target.membership.useMemories}=1`,
           eq(customerConsumption.storeId, actor.storeId),
@@ -183,6 +250,7 @@ export async function customerRecommendationContext(services: ApiServices, actor
       .from(customerMemorySources)
       .where(
         and(
+          gate,
           eq(customerMemorySources.membershipId, target.membership.id),
           eq(customerMemorySources.contextToken, context.token),
           eq(customerMemorySources.voiceSessionId, session.voice_session_id ?? ""),
@@ -191,6 +259,7 @@ export async function customerRecommendationContext(services: ApiServices, actor
       )
       .limit(1),
   ]);
+  ensure(valid.length === 1, "CUSTOMER_CONTEXT_STALE", 409);
   return {
     mode: target.membership.useMemories ? "personal" : "permission-disabled",
     needsTarget: false,
@@ -207,7 +276,9 @@ export async function customerSuggestions(
   actor: Actor,
   input: { kind: "usual" | "untried" | "companions"; offset: number },
 ) {
-  const { session, participants, target } = await customerServiceTarget(services, actor);
+  const snapshot = await customerServiceTarget(services, actor);
+  const { session, participants, target } = snapshot;
+  const gate = customerReadGate(services, actor, snapshot);
   if (input.kind !== "companions" && (!target || !target.membership.useMemories))
     return { needsTarget: !target, products: [], more: false };
   const catalog = await getCatalog(services, actor.storeId);
@@ -256,39 +327,49 @@ export async function customerSuggestions(
       .limit(1)
       .get();
     if (!past) return { needsTarget: false, products: [], more: false };
-    const shared = await services.db
-      .select({ snapshot: orders.snapshot_json })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.store_id, actor.storeId),
-          eq(orders.table_session_id, past.id),
-          inArray(orders.status, ["accepted", "served"]),
+    const [valid, shared] = await services.db.batch([
+      customerReadProof(services, gate),
+      services.db
+        .select({ snapshot: orders.snapshot_json })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.store_id, actor.storeId),
+            eq(orders.table_session_id, past.id),
+            inArray(orders.status, ["accepted", "served"]),
+            gate,
+          ),
         ),
-      );
+    ]);
+    ensure(valid.length === 1, "CUSTOMER_CONTEXT_STALE", 409);
     for (const order of shared)
       for (const line of snapshotSchema.parse(JSON.parse(order.snapshot)).lines)
         counts.set(line.productId, (counts.get(line.productId) ?? 0) + line.quantity);
   } else {
     ensure(target, "CUSTOMER_TARGET_REQUIRED", 422);
-    const rows = await services.db
-      .select({
-        productId: customerConsumption.productId,
-        quantity: sql<number>`sum(${customerConsumption.quantity})`.mapWith(Number),
-      })
-      .from(customerConsumption)
-      .innerJoin(
-        orders,
-        and(eq(orders.id, customerConsumption.orderId), eq(orders.store_id, actor.storeId)),
-      )
-      .where(
-        and(
-          eq(customerConsumption.storeId, actor.storeId),
-          eq(customerConsumption.membershipId, target.membership.id),
-          sql`${customerConsumption.productId} IN (SELECT value FROM json_each(${JSON.stringify(catalog.configuration.products.map((p) => p.id))}))`,
-        ),
-      )
-      .groupBy(customerConsumption.productId);
+    const [valid, rows] = await services.db.batch([
+      customerReadProof(services, gate),
+      services.db
+        .select({
+          productId: customerConsumption.productId,
+          quantity: sql<number>`sum(${customerConsumption.quantity})`.mapWith(Number),
+        })
+        .from(customerConsumption)
+        .innerJoin(
+          orders,
+          and(eq(orders.id, customerConsumption.orderId), eq(orders.store_id, actor.storeId)),
+        )
+        .where(
+          and(
+            eq(customerConsumption.storeId, actor.storeId),
+            eq(customerConsumption.membershipId, target.membership.id),
+            gate,
+            sql`${customerConsumption.productId} IN (SELECT value FROM json_each(${JSON.stringify(catalog.configuration.products.map((p) => p.id))}))`,
+          ),
+        )
+        .groupBy(customerConsumption.productId),
+    ]);
+    ensure(valid.length === 1, "CUSTOMER_CONTEXT_STALE", 409);
     counts = new Map(rows.map((row) => [row.productId, row.quantity]));
   }
   const candidates = catalog.configuration.products

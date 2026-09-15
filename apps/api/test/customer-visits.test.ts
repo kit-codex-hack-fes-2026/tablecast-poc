@@ -1,22 +1,34 @@
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { expect, it } from "vitest";
+import { assert, expect, it } from "vitest";
 import { user } from "../src/db/auth-schema";
 import {
   customerVisitCodes,
   customerVisitParticipants,
   devices,
+  orders,
+  confirmations,
   tableSessions,
 } from "../src/db/business-schema";
 import { createApiServices } from "../src/platform/context";
-import { enrolCustomer, updateCustomerPreferences } from "../src/modules/customers/service";
+import {
+  enrolCustomer,
+  leaveCustomerMembership,
+  updateCustomerPreferences,
+} from "../src/modules/customers/service";
 import {
   createCustomerVisitCode,
   joinCustomerVisit,
   leaveCustomerVisit,
   resolveCustomerVisit,
 } from "../src/modules/customer-visits/service";
-import { getCustomerVisit, getDeviceParticipants } from "../src/modules/customer-visits/queries";
+import { updateCart, prepareConfirmation, submitOrder } from "../src/modules/orders/service";
+import { getTableState } from "../src/modules/tables/queries";
+import {
+  getCustomerVisit,
+  getDeviceParticipants,
+  listCustomerOrders,
+} from "../src/modules/customer-visits/queries";
 import { fixtureDb } from "./database-fixture";
 import { device, deviceToken, setupFixture } from "./fixture";
 
@@ -127,4 +139,68 @@ it("会員認証と参加実績を要求し、端末Cookieを会員権限とし�
   await expect(
     getCustomerVisit(services, { ...customer, storeId: "other" }, device.tableSessionId),
   ).rejects.toMatchObject({ code: "CUSTOMER_MEMBERSHIP_REQUIRED" });
+});
+
+it("退会で参加を終了し、再入会だけでは卓への接続を復活させない", async () => {
+  const { services, customer, tablet, code } = await setupCustomers();
+  await joinCustomerVisit(services, customer.userId, code);
+  await leaveCustomerMembership(services, customer, 1);
+  await enrolCustomer(services, customer);
+  expect((await getCustomerVisit(services, customer, device.tableSessionId)).connected).toBe(false);
+  expect((await getDeviceParticipants(services, tablet)).participants).toHaveLength(0);
+  expect((await joinCustomerVisit(services, customer.userId, code)).connected).toBe(true);
+});
+
+it("注文IDの大小と異なる日時順でもページ境界に欠落や重複を作らない", async () => {
+  const { services, customer, tablet, code } = await setupCustomers();
+  await joinCustomerVisit(services, customer.userId, code);
+  const state = await getTableState(services, tablet);
+  const cart = await updateCart(services, tablet, {
+    expectedVersion: state.cart.version,
+    lines: [{ id: "page-tea", productId: "tea", quantity: 1, selections: [] }],
+  });
+  const snapshot = await prepareConfirmation(services, tablet, {
+    expectedVersion: cart.cart.version,
+    channel: "gui",
+  });
+  const submitted = await submitOrder(services, tablet, {
+    snapshotId: snapshot.id,
+    idempotencyKey: "page-order",
+    approved: true,
+  });
+  const original = await fixtureDb.select().from(orders).where(eq(orders.id, submitted.id)).get();
+  assert(original);
+  const confirmation = await fixtureDb
+    .select()
+    .from(confirmations)
+    .where(eq(confirmations.id, original.snapshot_id))
+    .get();
+  assert(confirmation);
+  await fixtureDb.update(orders).set({ created_at: 0 }).where(eq(orders.id, original.id));
+  const rows = Array.from({ length: 22 }, (_, index) => ({
+    ...original,
+    id: `tablecast-order-${String(22 - index).padStart(2, "0")}`,
+    idempotency_key: `page-${index}`,
+    created_at: 100 + Math.floor(index / 2),
+  }));
+  for (const row of rows)
+    await fixtureDb.batch([
+      fixtureDb.insert(confirmations).values({ ...confirmation, id: row.id }),
+      fixtureDb.insert(orders).values({ ...row, snapshot_id: row.id }),
+    ]);
+  const first = await listCustomerOrders(services, customer, device.tableSessionId, { limit: 20 });
+  assert(first.nextOrderCursor);
+  const next = await listCustomerOrders(services, customer, device.tableSessionId, {
+    limit: 20,
+    beforeId: first.nextOrderCursor.beforeId,
+    beforeCreatedAt: Number(first.nextOrderCursor.beforeCreatedAt),
+  });
+  const expected = rows
+    .toSorted((a, b) => b.created_at - a.created_at || b.id.localeCompare(a.id))
+    .map((r) => r.id);
+  expect([...first.orders, ...next.orders].map((row) => row.id)).toEqual([
+    ...expected,
+    original.id,
+  ]);
+  expect(next.nextOrderCursor).toBeNull();
 });

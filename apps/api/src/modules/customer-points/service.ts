@@ -399,7 +399,7 @@ export async function pointBillingCorrectionStatements(
         allocation.membershipId,
         next.points - allocation.points,
         "correction",
-        `billing:${reference}`,
+        `billing:${visit.sessionId}:${reference}`,
         "会計訂正による差分 / Bill correction",
         gate,
       ),

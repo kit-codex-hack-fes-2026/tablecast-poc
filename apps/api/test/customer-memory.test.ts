@@ -2,7 +2,7 @@ import { updateCart, prepareConfirmation, submitOrder } from "../src/modules/ord
 import { getTableState } from "../src/modules/tables/queries";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { assert, expect, it } from "vitest";
+import { afterEach, assert, expect, it, vi } from "vitest";
 import { user } from "../src/db/auth-schema";
 import {
   customerMemories,
@@ -31,6 +31,10 @@ import {
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { fixtureDb } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 async function setup() {
   const { staff } = await setupFixture();
   const services = createApiServices(env);
@@ -213,4 +217,92 @@ it("個人の飲食編集は注文・会計原本を変更せず、未体験の�
   expect(
     (await listCustomerConsumption(services, customer, { limit: 20 })).records[0]?.quantity,
   ).toBe(0);
+});
+
+it.each(["context", "usual", "untried"] as const)(
+  "%sの対象取得後に同意を撤回したら最終読取りを拒否する",
+  async (kind) => {
+    const { services, customer } = await setup();
+    await writeCustomerMemory(services, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: "辛口が好き",
+    });
+    const actor = await activate();
+    const captured = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const batch = env.TABLECAST_DB.batch.bind(env.TABLECAST_DB);
+    vi.spyOn(env.TABLECAST_DB, "batch").mockImplementationOnce(
+      async <T>(statements: D1PreparedStatement[]) => {
+        const result = await batch<T>(statements);
+        captured.resolve();
+        await release.promise;
+        return result;
+      },
+    );
+    const reading =
+      kind === "context"
+        ? customerRecommendationContext(services, actor)
+        : customerSuggestions(services, actor, { kind, offset: 0 });
+    const rejected = reading.then(
+      () => null,
+      (error: unknown) => error,
+    );
+    try {
+      await captured.promise;
+      await updateCustomerPreferences(services, customer, {
+        revision: 1,
+        shareCompanions: true,
+        useMemories: false,
+        saveMemories: false,
+      });
+    } finally {
+      release.resolve();
+    }
+    await expect(rejected).resolves.toMatchObject({ code: "CUSTOMER_CONTEXT_STALE" });
+  },
+);
+
+it("文脈解除のDB完了後に別の解除が入っても元の音声を一度停止する", async () => {
+  const { services, customer } = await setup();
+  await activate();
+  const stopping = {
+    ...services,
+    env: { ...services.env, TABLECAST_MODEL_API_KEY: "tablecast-test-key" },
+  };
+  const fetcher = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+    async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 404 }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const batch = env.TABLECAST_DB.batch.bind(env.TABLECAST_DB);
+  vi.spyOn(env.TABLECAST_DB, "batch").mockImplementationOnce(
+    async <T>(statements: D1PreparedStatement[]) => {
+      const result = await batch<T>(statements);
+      captured.resolve();
+      await release.promise;
+      return result;
+    },
+  );
+  const first = writeCustomerMemory(stopping, customer, {
+    id: crypto.randomUUID(),
+    revision: 0,
+    content: "最初の変更",
+  });
+  try {
+    await captured.promise;
+    await writeCustomerMemory(stopping, customer, {
+      id: crypto.randomUUID(),
+      revision: 0,
+      content: "同時の変更",
+    });
+  } finally {
+    release.resolve();
+  }
+  await first;
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0]?.[0]).toBe(
+    "https://api.openai.com/v1/live/sessions/tablecast-memory-voice/attach",
+  );
 });

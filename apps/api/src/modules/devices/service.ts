@@ -90,7 +90,7 @@ export async function approveDevice(
 export async function revokeDevice(services: ApiServices, actor: Actor, id: string) {
   requireManager(actor);
   const token = crypto.randomUUID();
-  await services.db.batch([
+  const result = await services.db.batch([
     services.db
       .update(business.devices)
       .set({ revoked_at: Date.now() })
@@ -111,7 +111,7 @@ export async function revokeDevice(services: ApiServices, actor: Actor, id: stri
       token,
     ),
   ]);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return { revoked: true };
 }
 

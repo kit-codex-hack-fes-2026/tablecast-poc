@@ -159,7 +159,11 @@ it("同一会計への同時適用は一枚に限り、元の使用を指定し�
     idempotencyKey: crypto.randomUUID(),
     reason: "会計取消",
   };
-  await cancelCustomerCouponUse(services, actor, cancel);
+  const cancellations = await Promise.all([
+    cancelCustomerCouponUse(services, actor, cancel),
+    cancelCustomerCouponUse(services, actor, cancel),
+  ]);
+  expect(cancellations).toEqual([{ cancelled: true }, { cancelled: true }]);
   await cancelCustomerCouponUse(services, actor, cancel);
   expect((await getTableState(services, actor)).bill.due).toBe(1000);
   expect(await fixtureDb.select().from(payments)).toHaveLength(3);

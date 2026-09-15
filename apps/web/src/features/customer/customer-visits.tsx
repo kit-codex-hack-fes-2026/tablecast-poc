@@ -4,6 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { ConsumptionEditor } from "./customer-consumption";
@@ -85,10 +86,47 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
   const orderPages = useInfiniteQuery({
     ...customerOrdersOptions(storeId, sessionId),
     initialData: {
-      pages: [{ orders: visit.data.orders, nextOrderId: visit.data.nextOrderId }],
+      pages: [
+        {
+          orders: visit.data.orders,
+          nextOrderId: visit.data.nextOrderId,
+          nextOrderCursor: visit.data.nextOrderCursor,
+        },
+      ],
       pageParams: [undefined],
     },
   });
+  useEffect(() => {
+    const options = customerOrdersOptions(storeId, sessionId);
+    const cached = client.getQueryData(options.queryKey);
+    if (cached && cached.pages.length > 1) {
+      // 続きを開いている場合は全ページを再検証し、境界の移動による欠落を防ぐ。
+      void client.invalidateQueries({ queryKey: options.queryKey, exact: true });
+    } else {
+      client.setQueryData(
+        options.queryKey,
+        {
+          pages: [
+            {
+              orders: visit.data.orders,
+              nextOrderId: visit.data.nextOrderId,
+              nextOrderCursor: visit.data.nextOrderCursor,
+            },
+          ],
+          pageParams: [undefined],
+        },
+        { updatedAt: visit.dataUpdatedAt },
+      );
+    }
+  }, [
+    client,
+    storeId,
+    sessionId,
+    visit.dataUpdatedAt,
+    visit.data.orders,
+    visit.data.nextOrderId,
+    visit.data.nextOrderCursor,
+  ]);
   const leave = useMutation({
     mutationFn: () =>
       parseResponse(

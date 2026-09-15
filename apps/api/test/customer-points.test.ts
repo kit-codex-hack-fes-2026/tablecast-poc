@@ -167,3 +167,48 @@ it("付与対象ゼロを明示確定でき、会員APIからスタッフ操作�
     ),
   ).rejects.toMatchObject({ code: "ADMIN_REQUIRED" });
 });
+
+it("別来店で同じ会計訂正キーを使っても配分と残高を両方更新する", async () => {
+  const { services, actor, customer, other, tablet } = await setup();
+  let currentActor = actor;
+  let currentTablet = tablet;
+  for (let visitIndex = 0; visitIndex < 2; visitIndex++) {
+    const visit = await getPointVisit(services, currentActor);
+    await confirmCustomerPoints(services, currentActor, {
+      expectedVersion: visit.expectedVersion,
+      participantIds: visit.participants.map((p) => p.id),
+      idempotencyKey: "same-confirmation",
+    });
+    await recordPayment(services, currentActor, {
+      amount: 200,
+      kind: "adjustment",
+      reason: "後からの訂正",
+      idempotencyKey: "same-correction",
+    });
+    expect((await getPointVisit(services, currentActor)).allocations.map((a) => a.points)).toEqual([
+      1, 1,
+    ]);
+    expect((await getCustomerPoints(services, customer, { limit: 20 })).balance).toBe(
+      visitIndex + 1,
+    );
+    await recordPayment(services, currentActor, {
+      amount: 200,
+      kind: "payment",
+      reason: "会計",
+      idempotencyKey: "same-payment",
+    });
+    await closeTable(services, currentActor);
+    if (visitIndex === 0) {
+      const next = await openTable(services, actor, {
+        tableId: "tablecast-table",
+        guestCount: 2,
+        locale: "ja",
+      });
+      currentActor = { ...actor, tableSessionId: next.id };
+      currentTablet = { ...tablet, tableSessionId: next.id };
+      const code = await createCustomerVisitCode(services, currentTablet);
+      await joinCustomerVisit(services, customer.userId, code.code);
+      await joinCustomerVisit(services, other.userId, code.code);
+    }
+  }
+});

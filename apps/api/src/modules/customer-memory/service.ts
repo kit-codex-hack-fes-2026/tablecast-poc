@@ -68,6 +68,10 @@ export function resetCustomerContextStatements(
           selectedParticipantId: participantId,
           previousVoiceSessionId: sql`excluded.previous_voice_session_id`,
         },
+      })
+      .returning({
+        sessionId: customerContexts.sessionId,
+        previousVoiceSessionId: customerContexts.previousVoiceSessionId,
       }),
     db
       .update(tableSessions)
@@ -144,12 +148,9 @@ export function customerSessionsScope(services: ApiServices, membershipId: strin
 export async function finishCustomerContextChange(
   services: ApiServices,
   storeId: string,
-  token: string,
+  contexts: readonly { sessionId: string; previousVoiceSessionId: string | null }[],
 ) {
-  const contexts = await services.db
-    .select()
-    .from(customerContexts)
-    .where(and(eq(customerContexts.storeId, storeId), eq(customerContexts.token, token)));
+  // 同じbatchのRETURNINGを使い、後続の文脈変更で停止対象を失わない。
   await Promise.all(
     contexts.map(async (context) => {
       await notifyStore(services, storeId, context.sessionId);
@@ -199,7 +200,7 @@ export async function selectCustomerTarget(
     ),
   ]);
   ensure(result[0].meta.changes === 1, "CUSTOMER_CONTEXT_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return { token, selectedParticipantId: input.participantId };
 }
 export async function writeCustomerMemory(
@@ -273,7 +274,7 @@ export async function writeCustomerMemory(
     ),
   ]);
   ensure(result[0].meta.changes === 1, "CUSTOMER_MEMORY_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return { saved: true };
 }
 export async function deleteCustomerMemory(
@@ -326,7 +327,7 @@ export async function deleteCustomerMemory(
       ),
   ]);
   ensure(result[0].meta.changes === 1, "CUSTOMER_MEMORY_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return { deleted: true };
 }
 export async function recordCustomerMemorySource(

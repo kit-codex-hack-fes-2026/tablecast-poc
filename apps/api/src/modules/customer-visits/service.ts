@@ -142,7 +142,7 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
   ]);
   const validResult = joined.at(-1);
   ensure(Array.isArray(validResult) && validResult.length, "CUSTOMER_VISIT_CODE_EXPIRED", 409);
-  await finishCustomerContextChange(services, visit.storeId, contextToken);
+  await finishCustomerContextChange(services, visit.storeId, joined[1]);
   const actor = { kind: "customer", userId, storeId: visit.storeId } as const;
   const result = await getCustomerVisit(services, actor, visit.sessionId);
   await notifyStore(services, visit.storeId, visit.sessionId);
@@ -157,7 +157,7 @@ export async function leaveCustomerVisit(
   const visit = await requireCustomerVisit(services, actor, sessionId);
   const now = Date.now();
   const contextToken = crypto.randomUUID();
-  await services.db.batch([
+  const result = await services.db.batch([
     services.db
       .update(customerVisitParticipants)
       .set({ leftAt: now })
@@ -205,7 +205,7 @@ export async function leaveCustomerVisit(
         ),
     ),
   ]);
-  await finishCustomerContextChange(services, actor.storeId, contextToken);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   await notifyStore(services, actor.storeId, sessionId);
   return getCustomerVisit(services, actor, sessionId);
 }

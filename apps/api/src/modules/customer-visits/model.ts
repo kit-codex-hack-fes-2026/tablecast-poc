@@ -9,7 +9,12 @@ export const customerVisitPageSchema = z
   .refine((page) => (page.beforeJoinedAt === undefined) === (page.beforeId === undefined), {
     message: "来店履歴のカーソルは日時とIDを組で指定する",
   });
-export const customerOrderPageSchema = z.object({
-  beforeId: z.string().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-});
+export const customerOrderPageSchema = z
+  .object({
+    beforeCreatedAt: z.coerce.number().int().nonnegative().optional(),
+    beforeId: z.string().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .refine((page) => (page.beforeCreatedAt === undefined) === (page.beforeId === undefined), {
+    message: "注文履歴のカーソルは日時とIDを組で指定する",
+  });
