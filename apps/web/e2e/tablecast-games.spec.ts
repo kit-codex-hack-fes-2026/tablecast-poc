@@ -22,6 +22,8 @@ for (const { locale, labels, language } of [
     const guestContext = await browser.newContext({
       baseURL,
       viewport: { width: 1180, height: 820 },
+      // 障害を差し替えるHTTP境界をService Workerに迂回させない。
+      serviceWorkers: "block",
     });
     try {
       expect(
@@ -149,6 +151,7 @@ for (const { locale, labels, language } of [
         ).json(),
       ).cart;
       const guest = await guestContext.newPage();
+      await guest.bringToFront();
       await guest.goto("/");
       await guest.getByRole("button", { name: labels.games_title, exact: true }).click();
       await guest.getByRole("button", { name: labels.games_start, exact: true }).click();
@@ -162,7 +165,11 @@ for (const { locale, labels, language } of [
         playing.getByRole("heading", { name: locale === "ja" ? "結果発表" : "Results" }),
       ).toBeVisible();
       await guest.screenshot({ path: testInfo.outputPath(`tablecast-games-guest-${locale}.png`) });
+      const failedPoll = guest.waitForEvent("requestfailed", {
+        predicate: (request) => /\/api\/table\/games\/runs\/[^/]+$/.test(request.url()),
+      });
       await guest.route("**/api/table/games/runs/*", (route) => route.abort());
+      await failedPoll;
       await expect(guest.locator("iframe")).toHaveCount(0);
       await expect(guest.getByText(labels.games_unavailable, { exact: true })).toBeVisible();
       await guest.unroute("**/api/table/games/runs/*");
