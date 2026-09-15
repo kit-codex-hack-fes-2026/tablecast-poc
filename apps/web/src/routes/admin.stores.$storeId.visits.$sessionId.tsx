@@ -10,11 +10,15 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
       .default("overview")
       .catch("overview"),
   }),
-  loader: async ({ context, params }) => {
+  loaderDeps: ({ search }) => ({ view: search.view }),
+  loader: async ({ context, params, deps }) => {
     const table = await context.queryClient.ensureQueryData(
       tableDetailOptions(params.storeId, params.sessionId),
     );
-    await context.queryClient.ensureQueryData(catalogOptions(params.storeId, table.configVersion));
+    if (deps.view === "orders")
+      await context.queryClient.ensureQueryData(
+        catalogOptions(params.storeId, table.configVersion),
+      );
   },
   component: Page,
 });

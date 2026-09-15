@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Catalog, OptionCondition, TableState } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -80,16 +81,21 @@ it.each(["ja", "en"] as const)(
     // 設定画面に残る旧版cacheを卓の現在版と混同しない。
     client.setQueryData(catalogOptions(state.storeId).queryKey, catalog);
     const root = createRootRoute({
-      component: () => (
-        <main className="p-6">
-          <TableDetail
-            storeId={state.storeId}
-            tableId={state.id}
-            view="orders"
-            onViewChange={() => undefined}
-          />
-        </main>
-      ),
+      component: function Visit() {
+        const [view, setView] = useState<
+          "overview" | "logs" | "orders" | "billing" | "diagnostics"
+        >("overview");
+        return (
+          <main className="p-6">
+            <TableDetail
+              storeId={state.storeId}
+              tableId={state.id}
+              view={view}
+              onViewChange={setView}
+            />
+          </main>
+        );
+      },
     });
     const router = createRouter({
       routeTree: root,
@@ -106,6 +112,14 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(page.getByRole("heading", { name: state.tableName, exact: true }))
       .toBeVisible();
+    expect(requests).toEqual([]);
+    await page
+      .getByRole("tab", { name: locale === "ja" ? "会計" : "Bill & payments", exact: true })
+      .click();
+    expect(requests).toEqual([]);
+    await page
+      .getByRole("tab", { name: locale === "ja" ? "カート・注文" : "Basket & orders", exact: true })
+      .click();
     await page.screenshot({
       path: `../../../test-results/browser/tablecast-staff-conditions-${locale}.png`,
     });
