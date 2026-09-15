@@ -449,6 +449,33 @@ export function CastEditor({
                 }
               />
             </div>
+            <label className="flex flex-col gap-2 text-sm">
+              <span id={`${id}-${language}-opening`}>{t("editor_opening_instructions")}</span>
+              <p className="text-xs text-muted-foreground" id={`${id}-${language}-opening-note`}>
+                {t("cast_opening_note")}
+              </p>
+              <textarea
+                id={`${id}-opening-${language}`}
+                className="min-h-32 rounded-lg border border-input p-2 text-base"
+                aria-labelledby={`${id}-${language} ${id}-${language}-opening`}
+                aria-describedby={`${id}-${language}-opening-note`}
+                maxLength={5000}
+                value={value.openingInstructions?.[language] ?? ""}
+                placeholder={t(
+                  language === "ja" ? "cast_opening_example_ja" : "cast_opening_example_en",
+                )}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    openingInstructions: {
+                      ja: value.openingInstructions?.ja ?? "",
+                      en: value.openingInstructions?.en ?? "",
+                      [language]: event.target.value,
+                    },
+                  })
+                }
+              />
+            </label>
             <StandardVoiceSelect
               storeId={storeId}
               inputId={`${id}-voice-${language}`}

@@ -14,7 +14,7 @@ const meta = {
       </div>
     ),
   ],
-  args: { view: { status: "idle" }, lines: [], onStart: fn() },
+  args: { view: { status: "idle" }, lines: [], onStart: fn(), onSuggestion: fn() },
 } satisfies Meta<typeof VoicePanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -30,6 +30,53 @@ export const Welcome: Story = {
   },
 };
 export const English: Story = { name: "英語の初回表示", globals: { locale: "en" } };
+export const ReplyHints: Story = {
+  name: "店舗に合う具体的な返答とタップ送信",
+  args: {
+    view: {
+      status: "listening",
+      suggestions: [
+        "こもれび 月凪 純米吟醸は、どんな香りや味わいのお酒ですか？ 合わせる料理を選びたいので、お店のメニューから相性のよいものも教えてください。",
+        "こもれび 月凪 純米吟醸の60 mLと90 mLでは、料金はそれぞれいくらですか？ 注文する前に、容量の選び方を教えてください。",
+        "まず料理のメニューを見てから、お酒を選びたいです。こもれび 月凪 純米吟醸の注文はまだせず、料理の種類を案内してください。",
+      ],
+    },
+    lines: [
+      {
+        id: "tablecast-opening",
+        role: "assistant",
+        text: "いらっしゃいませ。本日はこもれび 月凪 純米吟醸をご用意しています。お酒の特徴や料理との合わせ方をご案内しましょうか？",
+        locale: "ja",
+        createdAt: 1788645000000,
+        interrupted: false,
+      },
+    ],
+  },
+};
+export const EnglishReplyHints: Story = {
+  name: "英語の開始案内と返答例",
+  globals: { locale: "en" },
+  args: {
+    view: {
+      status: "listening",
+      suggestions: [
+        "Could you tell me more about the aroma and flavour of Komorebi Tsukinagi junmai ginjo? I would also like to hear which dishes on your menu pair well with it before choosing what to order.",
+        "How much do the 60 mL and 90 mL servings of Komorebi Tsukinagi cost? Please explain the serving options before I place an order.",
+        "I would like to look at the food menu before choosing a sake. Please show me the dishes available, without adding Komorebi Tsukinagi to my order yet.",
+      ],
+    },
+    lines: [
+      {
+        id: "tablecast-opening",
+        role: "assistant",
+        text: "Welcome. We have Komorebi Tsukinagi junmai ginjo on our menu. Would you like to hear about its flavour and food pairings?",
+        locale: "en",
+        createdAt: 1788645000000,
+        interrupted: false,
+      },
+    ],
+  },
+};
 export const Paused: Story = {
   name: "停止しても会話を保持",
   args: {

@@ -1,4 +1,5 @@
 import type { TableRecord } from "../../db/records";
+import type { Catalog } from "../configuration/model";
 import type { TableState } from "../tables/model";
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
@@ -43,6 +44,7 @@ export function createCastTools(
   signal: AbortSignal,
   trigger: VoiceTrigger = "user",
   currentSession?: TableRecord,
+  currentCatalog?: Catalog,
 ) {
   const guard = () => signal.throwIfAborted();
   return {
@@ -65,7 +67,7 @@ export function createCastTools(
       execute: async ({ query, offset = 0, limit = 8, show = false, includePlans = false }) => {
         guard();
         const session = currentSession ?? (await getSession(services, actor));
-        const catalog = await getCatalog(services, actor.storeId, actor.demoId);
+        const catalog = currentCatalog ?? (await getCatalog(services, actor.storeId, actor.demoId));
         const locale = session.locale;
         const searchText = query?.trim().toLocaleLowerCase();
         const terms = searchText?.split(/\s+/).filter(Boolean);

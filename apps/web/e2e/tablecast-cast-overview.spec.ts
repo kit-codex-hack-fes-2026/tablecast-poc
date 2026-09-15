@@ -90,6 +90,18 @@ for (const { locale, labels } of [
         role: "textbox",
         field: `${labels.common_en} ${labels.editor_cast_instructions}`,
       },
+      {
+        hash: "opening-ja",
+        label: labels.cast_edit_opening.replace("{language}", labels.common_ja),
+        role: "textbox",
+        field: `${labels.common_ja} ${labels.editor_opening_instructions}`,
+      },
+      {
+        hash: "opening-en",
+        label: labels.cast_edit_opening.replace("{language}", labels.common_en),
+        role: "textbox",
+        field: `${labels.common_en} ${labels.editor_opening_instructions}`,
+      },
     ] as const) {
       await main.getByRole("link", { name: target.label, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`${editPath}#${target.hash}$`));

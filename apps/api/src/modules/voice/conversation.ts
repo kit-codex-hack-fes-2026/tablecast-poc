@@ -30,6 +30,7 @@ export async function recordConversationItems(
   const statements = input.items.flatMap((item) => {
     const kind = item.role === "user" ? "voice.user" : "voice.assistant";
     const data = JSON.stringify({
+      voiceSessionId: input.voiceSessionId,
       turnId: item.itemId,
       role: item.role,
       locale: session.locale,

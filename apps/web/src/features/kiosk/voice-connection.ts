@@ -52,6 +52,7 @@ type Caption = {
   message: LiveMessage;
   start: number;
   end: number;
+  selected?: boolean;
   fragments: { text: string; start: number; end: number }[];
   timer?: ReturnType<typeof setTimeout>;
 };
@@ -89,6 +90,9 @@ export class VoiceConnection {
   private readyTimer?: ReturnType<typeof setTimeout>;
   private proactiveTimer?: ReturnType<typeof setTimeout>;
   private proactive = false;
+  private openingRequest?: AbortController;
+  private suggestionsRequest?: AbortController;
+  private guidanceVersion = 0;
   private locale: Locale = "ja";
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
@@ -249,7 +253,8 @@ export class VoiceConnection {
     this.activeDelegation = undefined;
     this.transcriptEvents.clear();
     const attempt = ++this.attempt;
-    this.emit({ status: "connecting", messages: [] });
+    this.clearGuidance();
+    this.emit({ status: "connecting", messages: [], openingFailed: false });
     try {
       const peer = new RTCPeerConnection();
       this.peer = peer;
@@ -278,11 +283,13 @@ export class VoiceConnection {
         }
         if (!event || typeof event !== "object" || !("type" in event)) return;
         if (event.type === "session.started") {
+          if (this.ready) return;
           clearTimeout(this.readyTimer);
           this.ready = true;
           this.emit({ status: "listening" });
           this.updateSpeechSpeed();
           this.scheduleProactive(attempt);
+          void this.opening(attempt);
         } else if (event.type === "session.closed" || event.type === "error") {
           void this.fail(attempt);
         } else {
@@ -293,6 +300,7 @@ export class VoiceConnection {
             if (delegation.success) {
               const id = delegation.data.delegation.id;
               if (!this.delegations.has(id)) {
+                this.clearGuidance();
                 this.activeDelegation = id;
                 this.delegation?.abort();
                 this.delegation = undefined;
@@ -401,6 +409,7 @@ export class VoiceConnection {
       return Promise.resolve();
     this.desired = false;
     this.ready = false;
+    this.clearGuidance();
     ++this.attempt;
     this.startingRequest?.abort();
     this.startingRequest = undefined;
@@ -458,10 +467,13 @@ export class VoiceConnection {
     if (this.transcriptEvents.has(event.event_id) || event.end_ms < event.start_ms || !event.delta)
       return;
     this.transcriptEvents.add(event.event_id);
+    this.clearGuidance();
+    const guidanceVersion = this.guidanceVersion;
     const role = event.type === "session.input_transcript.delta" ? "user" : "assistant";
     // 字幕のまとまりは表示だけに使い、委任開始や業務の中断条件には使わない。
     let caption = this.captions.findLast(
       (row) =>
+        !row.selected &&
         row.message.role === role &&
         !row.message.interrupted &&
         row.message.text.length + event.delta.length <= 10000 &&
@@ -511,6 +523,12 @@ export class VoiceConnection {
         status: this.delegation ? "thinking" : "listening",
       });
       this.scheduleSave();
+      if (
+        guidanceVersion === this.guidanceVersion &&
+        current.message.role === "assistant" &&
+        this.captions.at(-1) === current
+      )
+        void this.suggestReplies(current, attempt);
     }, 1500);
     this.emit({
       messages: this.captions.map((row) => row.message),
@@ -561,6 +579,56 @@ export class VoiceConnection {
     if (this.pendingCaptions.size) await this.saveCaptions(sessionId);
   }
 
+  sendSuggestion(text: string, source: string[] | undefined) {
+    const channel = this.channel;
+    if (
+      !this.desired ||
+      !this.ready ||
+      !this.sessionId ||
+      channel?.readyState !== "open" ||
+      source !== this.view.suggestions ||
+      !source?.includes(text) ||
+      this.delegation ||
+      this.responses.size
+    )
+      return;
+    this.clearGuidance();
+    const id = crypto.randomUUID();
+    try {
+      // 選択した文を標準の利用客入力として送る。commentaryやモデル指示にはしない。
+      channel.send(
+        JSON.stringify({
+          type: "response.item.create",
+          event_id: id,
+          item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
+        }),
+      );
+      channel.send(JSON.stringify({ type: "response.create", event_id: crypto.randomUUID() }));
+      const caption: Caption = {
+        message: {
+          id,
+          turnId: id,
+          role: "user",
+          locale: this.locale,
+          text,
+          final: true,
+          createdAt: Date.now(),
+        },
+        start: 0,
+        end: 0,
+        fragments: [],
+        selected: true,
+      };
+      this.captions.push(caption);
+      this.finishCaption(caption, false);
+      this.emit({ messages: this.captions.map((row) => row.message), status: "thinking" });
+      this.scheduleSave();
+      this.scheduleProactive(this.attempt);
+    } catch {
+      void this.fail(this.attempt);
+    }
+  }
+
   private async registerDelegation(
     id: string | null,
     trigger: "user" | "proactive",
@@ -568,6 +636,9 @@ export class VoiceConnection {
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
     try {
+      if (this.captions.at(-1)?.selected) await this.saveCaptions(this.sessionId);
+      else void this.saveCaptions(this.sessionId).catch(() => this.onSync());
+      if (!this.current(attempt) || !this.sessionId) return undefined;
       const response = await this.client.voice.delegations.$post(
         {
           json: {
@@ -615,7 +686,11 @@ export class VoiceConnection {
     if (!pending || pending.handled) return;
     pending.handled = true;
     const turnId = await this.delegations.get(id);
-    if (!this.current(attempt) || this.activeDelegation !== id || !this.sessionId) return;
+    if (!this.current(attempt)) return;
+    if (this.activeDelegation !== id || !this.sessionId) {
+      this.responses.delete(event.response.id);
+      return;
+    }
     if (!turnId) {
       // 登録失敗でもfunction結果を返し、backendを未応答toolの待機に残さない。
       for (const call of pending.calls)
@@ -743,6 +818,87 @@ export class VoiceConnection {
     this.proactiveTimer = setTimeout(() => {
       if (!this.delegation) void this.proactiveSuggestion(attempt);
     }, 180000);
+  }
+
+  private clearGuidance() {
+    ++this.guidanceVersion;
+    this.openingRequest?.abort();
+    this.openingRequest = undefined;
+    this.suggestionsRequest?.abort();
+    this.suggestionsRequest = undefined;
+    this.emit({ suggestions: [], openingFailed: false });
+  }
+
+  private async opening(attempt: number) {
+    if (!this.sessionId || !this.current(attempt) || this.captions.length || this.activeDelegation)
+      return;
+    const controller = new AbortController();
+    this.openingRequest = controller;
+    const version = this.guidanceVersion;
+    try {
+      const response = await this.client.voice.opening.$post(
+        { json: { voiceSessionId: this.sessionId } },
+        { init: { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) } },
+      );
+      if (response.status === 204) return;
+      const result = await parseResponse(Promise.resolve(response));
+      if (
+        !result ||
+        !this.current(attempt) ||
+        controller.signal.aborted ||
+        version !== this.guidanceVersion ||
+        result.locale !== this.locale
+      )
+        return;
+      this.channel?.send(
+        JSON.stringify({
+          type: "session.commentary.append",
+          event_id: crypto.randomUUID(),
+          delegation_id: null,
+          content: `音声接続の開始案内です。客の発話・依頼ではありません。次の検証済み案内を自然に話してください。業務操作や追加の提案はしません。${JSON.stringify(result.text)}`,
+        }),
+      );
+    } catch {
+      if (this.current(attempt) && !controller.signal.aborted && version === this.guidanceVersion)
+        this.emit({ openingFailed: true });
+    } finally {
+      if (this.openingRequest === controller) this.openingRequest = undefined;
+    }
+  }
+
+  private async suggestReplies(caption: Caption, attempt: number) {
+    const sessionId = this.sessionId;
+    if (!sessionId || !this.current(attempt) || caption.message.interrupted || this.delegation)
+      return;
+    const version = this.guidanceVersion;
+    const text = caption.message.text;
+    const controller = new AbortController();
+    this.suggestionsRequest = controller;
+    try {
+      // APIが対象字幕を検証できるよう保存を待つ。音声の再生・次の発話は待たせない。
+      await this.saveCaptions(sessionId);
+      if (!this.current(attempt) || controller.signal.aborted || version !== this.guidanceVersion)
+        return;
+      const result = await parseResponse(
+        this.client.voice.suggestions.$post(
+          { json: { voiceSessionId: sessionId, itemId: caption.message.id, text } },
+          { init: { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) } },
+        ),
+      );
+      if (
+        this.current(attempt) &&
+        !controller.signal.aborted &&
+        version === this.guidanceVersion &&
+        result.locale === this.locale &&
+        result.itemId === caption.message.id &&
+        result.text === text
+      )
+        this.emit({ suggestions: result.suggestions });
+    } catch {
+      // 発話ヒントの失敗は音声接続を終了せず、次の案内から生成し直す。
+    } finally {
+      if (this.suggestionsRequest === controller) this.suggestionsRequest = undefined;
+    }
   }
 
   private async proactiveSuggestion(attempt: number) {

@@ -8,6 +8,8 @@ import {
   voiceConversationSchema,
   voiceDelegationSchema,
   voiceStartSchema,
+  voiceOpeningSchema,
+  voiceSuggestionsSchema,
 } from "./model";
 import { ensure } from "../../platform/errors";
 import { getSession } from "../tables/queries";
@@ -15,10 +17,31 @@ import { invokeVoiceTool } from "./realtime";
 import { finishVoiceTurn } from "./turns";
 import { recordConversationItems } from "./conversation";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
+import { createVoiceOpening, createVoiceSuggestions } from "./guidance";
 
 // 卓端末とデモの認証済み経路からだけ組み込む。音声用の共有bearer資格は不要。
 export const voiceRoutes = new Hono<ApiEnv>()
   .use("*", bodyLimit({ maxSize: 256 * 1024 }))
+  .post("/opening", validate(voiceOpeningSchema), async (c) => {
+    const result = await createVoiceOpening(
+      c.get("services"),
+      c.get("actor"),
+      c.req.valid("json").voiceSessionId,
+      c.req.raw.signal,
+    );
+    return result ? c.json(result, 200) : c.body(null, 204);
+  })
+  .post("/suggestions", validate(voiceSuggestionsSchema), async (c) =>
+    c.json(
+      await createVoiceSuggestions(
+        c.get("services"),
+        c.get("actor"),
+        c.req.valid("json"),
+        c.req.raw.signal,
+      ),
+      200,
+    ),
+  )
   .post("/start", validate(voiceStartSchema), async (c) => {
     const started = startVoiceSession(
       c.get("services"),

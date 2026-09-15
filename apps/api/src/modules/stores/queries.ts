@@ -5,12 +5,13 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { catalogQuery, catalogValue } from "../catalog/queries";
 import type { TableEvent } from "../tables/model";
-import { eventValue, tableStateValue } from "../tables/queries";
+import { eventValue, publicTableEvents, tableStateValue } from "../tables/queries";
 import type { AdminState } from "./model";
 export async function getAdminState(services: ApiServices, actor: Actor): Promise<AdminState> {
   const db = services.db;
   const storeEvents = and(
     eq(business.tableEvents.store_id, actor.storeId),
+    publicTableEvents,
     or(
       isNull(business.tableEvents.table_session_id),
       inArray(
@@ -133,7 +134,7 @@ export async function getAdminState(services: ApiServices, actor: Actor): Promis
       .select()
       .from(business.tableEvents)
       .where(
-        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND table_session_id IN (${active})) WHERE position<=100)`,
+        sql`store_id=${actor.storeId} AND cursor IN (SELECT cursor FROM (SELECT cursor,row_number() OVER (PARTITION BY table_session_id ORDER BY cursor DESC) AS position FROM table_events WHERE store_id=${actor.storeId} AND ${publicTableEvents} AND table_session_id IN (${active})) WHERE position<=100)`,
       )
       .orderBy(business.tableEvents.cursor),
     db
@@ -214,6 +215,7 @@ export async function getEvents(
         eq(business.tableEvents.store_id, actor.storeId),
         scope,
         gt(business.tableEvents.cursor, after),
+        publicTableEvents,
       ),
     )
     .orderBy(business.tableEvents.cursor)

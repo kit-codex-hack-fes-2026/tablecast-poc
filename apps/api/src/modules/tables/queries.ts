@@ -1,5 +1,5 @@
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, exists, gt, inArray, sum as sumAmount } from "drizzle-orm";
+import { and, desc, eq, exists, gt, inArray, notInArray, sum as sumAmount } from "drizzle-orm";
 import * as business from "../../db/business-schema";
 import type { ConfirmationRecord, EventRecord, OrderRecord, TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
@@ -18,6 +18,13 @@ import {
   type Order,
 } from "../orders/model";
 import { eventDataSchema, tablePlanSchema, type TableEvent, type TableState } from "./model";
+
+// 生成回数と重複を制御する予約は、会話・注文の公開履歴へ含めない。
+export const publicTableEvents = notInArray(business.tableEvents.kind, [
+  "voice.opening",
+  "voice.suggestions",
+]);
+
 export async function getSession(services: ApiServices, actor: Actor): Promise<TableRecord> {
   const db = services.db;
 
@@ -199,6 +206,7 @@ export async function getTableState(services: ApiServices, actor: Actor): Promis
               and(
                 eq(business.tableEvents.table_session_id, sessionId),
                 eq(business.tableEvents.store_id, actor.storeId),
+                publicTableEvents,
               ),
             )
             .orderBy(desc(business.tableEvents.cursor))

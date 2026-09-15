@@ -74,7 +74,9 @@ const meta = {
                 ? t("cast_edit_proactive")
                 : target.startsWith("instructions")
                   ? m.cast_edit_instructions({ language }, { locale })
-                  : m.cast_edit_voice({ language }, { locale });
+                  : target.startsWith("opening")
+                    ? m.cast_edit_opening({ language }, { locale })
+                    : m.cast_edit_voice({ language }, { locale });
             return (
               <Button type="button" variant="outline" onClick={() => edit(target)}>
                 <Pencil />
@@ -112,6 +114,10 @@ export const JapaneseLongInstructions: Story = {
     });
     await userEvent.click(canvas.getByRole("button", { name: "英語の音声を編集" }));
     await expect(edit).toHaveBeenCalledWith("voice-en");
+    await userEvent.click(canvas.getByRole("button", { name: "日本語の開始案内を編集" }));
+    await expect(edit).toHaveBeenCalledWith("opening-ja");
+    await userEvent.click(canvas.getByRole("button", { name: "英語の開始案内を編集" }));
+    await expect(edit).toHaveBeenCalledWith("opening-en");
     await expect(canvas.getByText("ON（有効）")).toBeVisible();
   },
 };

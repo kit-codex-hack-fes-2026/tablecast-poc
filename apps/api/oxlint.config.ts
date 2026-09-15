@@ -24,7 +24,7 @@ const files = [
   ["auth-factory", "src/modules/auth/{service,options,preview}.ts"],
   [
     "voice-operation",
-    "src/modules/voice/{agent,realtime,turns,session,observability,conversation}.ts",
+    "src/modules/voice/{agent,realtime,turns,session,observability,conversation,guidance}.ts",
   ],
   ["service", "src/modules/voice/runtime.ts"],
   ["provider", "src/modules/voice/catalog.ts"],

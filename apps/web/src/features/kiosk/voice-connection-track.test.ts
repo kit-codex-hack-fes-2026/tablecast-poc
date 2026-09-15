@@ -137,6 +137,7 @@ beforeEach(() => {
         sdp: "tablecast-answer",
         proactive: false,
       });
+    if (path.endsWith("/opening")) return new Response(null, { status: 204 });
     if (path.endsWith("/stop")) return Response.json({ ok: true });
     throw new Error("未定義の要求");
   });
@@ -192,7 +193,7 @@ it.each([
     expect(getUserMedia).toHaveBeenCalledTimes(2);
     expect(peer().addTrack).toHaveBeenCalledOnce();
     expect(peer().close).not.toHaveBeenCalled();
-    expect(requests).toHaveLength(1);
+    expect(requests.map(({ path }) => path.split("/").at(-1))).toEqual(["start", "opening"]);
     sources[0].dispatchEvent(new Event("ended"));
     expect(changes.at(-1)?.status).toBe("listening");
     await connection.stop();

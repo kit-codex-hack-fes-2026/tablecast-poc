@@ -84,6 +84,8 @@ export function addMenuItem(
 export const castTargets = [
   "instructions-ja",
   "instructions-en",
+  "opening-ja",
+  "opening-en",
   "voice-ja",
   "voice-en",
   "proactive",

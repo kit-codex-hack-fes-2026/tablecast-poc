@@ -148,6 +148,8 @@ beforeEach(() => {
         sdp: "tablecast-answer",
         proactive: false,
       });
+    if (path.endsWith("/opening")) return new Response(null, { status: 204 });
+    if (path.endsWith("/suggestions")) return Response.json({ suggestions: [] });
     if (path.endsWith("/delegations"))
       return Response.json({ kind: "accepted", turnId: "tablecast-turn" });
     if (path.endsWith("/tools")) return Response.json({ result: { products: [] } });
@@ -163,12 +165,273 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   const unexpected = requests.filter(
     ({ path }) =>
-      !["/start", "/stop", "/conversation", "/delegations", "/tools", "/finish"].some((ending) =>
-        path.endsWith(ending),
-      ),
+      ![
+        "/start",
+        "/stop",
+        "/conversation",
+        "/delegations",
+        "/tools",
+        "/finish",
+        "/opening",
+        "/suggestions",
+      ].some((ending) => path.endsWith(ending)),
   );
   if (unexpected.length)
     throw new Error(`未定義の要求: ${unexpected.map(({ path }) => path).join(", ")}`);
+});
+
+describe("開始案内と発話ヒント", () => {
+  it("接続完了の重複イベントでも開始案内を一度だけ送り、客発話を作らない", async () => {
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/opening"))
+        return Response.json({ text: "いらっしゃいませ。", locale: "ja", mode: "welcome" });
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value } = connection();
+    await value.start("ja");
+    peer().channel.receive({ type: "session.started" });
+    await vi.waitFor(() =>
+      expect(
+        peer().channel.send.mock.calls.filter(
+          ([data]) => sentEvent(data).type === "session.commentary.append",
+        ),
+      ).toHaveLength(1),
+    );
+    expect(
+      peer().channel.send.mock.calls.some(
+        ([data]) => sentEvent(data).type === "response.item.create",
+      ),
+    ).toBe(false);
+    expect(requests.some(({ path }) => path.endsWith("/conversation"))).toBe(false);
+  });
+
+  it.each(["停止", "客発話", "委任", "言語変更"])(
+    "開始案内の生成中の%sで古い案内を破棄する",
+    async (operation) => {
+      const pending = deferred<Response>();
+      const fallback = vi.mocked(apiFetch).getMockImplementation();
+      vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+        if ((input instanceof Request ? input.url : input.toString()).endsWith("/opening"))
+          return pending.promise;
+        if (!fallback) throw new Error("API fixtureが必要です");
+        return fallback(input, options);
+      });
+      const { value } = connection();
+      await value.start("ja");
+      const oldPeer = peer();
+      if (operation === "客発話") caption("user", "おすすめを教えて", 100, 500);
+      else if (operation === "委任") delegate();
+      else await value.stop();
+      if (operation === "言語変更") await value.start("en");
+      pending.resolve(Response.json({ text: "古い開始案内", locale: "ja", mode: "welcome" }));
+      await vi.waitFor(() =>
+        expect(
+          vi.mocked(apiFetch).mock.settledResults.every((result) => result.type !== "incomplete"),
+        ).toBe(true),
+      );
+      expect(oldPeer.channel.send.mock.calls.some(([data]) => data.includes("古い開始案内"))).toBe(
+        false,
+      );
+      expect(peer().channel.send.mock.calls.some(([data]) => data.includes("古い開始案内"))).toBe(
+        false,
+      );
+    },
+  );
+
+  it("最新AI字幕を保存してからヒントを取得し、次の発話で消す", async () => {
+    vi.useFakeTimers();
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    let suggestionInput: unknown;
+    let savedBeforeSuggestion = false;
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/suggestions")) {
+        suggestionInput = JSON.parse(z.string().parse(options?.body));
+        const source = z.object({ itemId: z.string(), text: z.string() }).parse(suggestionInput);
+        savedBeforeSuggestion = requests.some(({ path }) => path.endsWith("/conversation"));
+        return Response.json({
+          ...source,
+          locale: "ja",
+          suggestions: ["説明をお願いします", "あとでお願いします"],
+        });
+      }
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value, changes } = connection();
+    await value.start("ja");
+    caption("assistant", "ご案内しましょうか？", 100, 800);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(savedBeforeSuggestion).toBe(true);
+    expect(suggestionInput).toMatchObject({ text: "ご案内しましょうか？" });
+    expect(changes.at(-1)?.suggestions).toEqual(["説明をお願いします", "あとでお願いします"]);
+    caption("user", "あとで", 1000, 1300);
+    expect(changes.at(-1)?.suggestions).toEqual([]);
+  });
+
+  async function readyReply() {
+    vi.useFakeTimers();
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    const text = "こもれび 月凪 純米吟醸に合う料理を、メニューから教えてください。";
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/suggestions")) {
+        const source = z
+          .object({ itemId: z.string(), text: z.string() })
+          .parse(JSON.parse(z.string().parse(options?.body)));
+        return Response.json({ ...source, locale: "ja", suggestions: [text] });
+      }
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value, changes } = connection();
+    await value.start("ja");
+    caption("assistant", "お酒に合う料理をご案内しましょうか？", 100, 800);
+    await vi.advanceTimersByTimeAsync(1500);
+    const source = changes.at(-1)?.suggestions;
+    return { value, changes, source, text };
+  }
+
+  it("タップした返答だけを一度送信し、委任の開始前に客の会話として保存する", async () => {
+    const { value, changes, source, text } = await readyReply();
+    expect(source).toEqual([text]);
+    value.sendSuggestion(text, source);
+    value.sendSuggestion(text, source);
+    const sent = peer().channel.send.mock.calls.map(([data]) =>
+      z.object({ type: z.string(), item: z.unknown().optional() }).parse(JSON.parse(data)),
+    );
+    expect(sent.filter((event) => event.type === "response.item.create")).toEqual([
+      {
+        type: "response.item.create",
+        item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
+      },
+    ]);
+    expect(sent.filter((event) => event.type === "response.create")).toHaveLength(1);
+    expect(changes.at(-1)?.suggestions).toEqual([]);
+    delegate("tablecast-tapped-reply");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(
+      requests.filter(({ path }) => path.endsWith("/conversation")).at(-1)?.body,
+    ).toMatchObject({ items: [expect.objectContaining({ role: "user", text })] });
+    expect(requests.at(-1)?.path).toContain("/delegations");
+    caption("user", "料理を見せて", 200, 900);
+    expect(changes.at(-1)?.messages?.filter((message) => message.role === "user")).toHaveLength(2);
+  });
+
+  it.each(["停止", "新しい字幕", "別の候補配列"])("%sの後は候補を送信しない", async (operation) => {
+    const { value, source, text } = await readyReply();
+    expect(source).toEqual([text]);
+    if (operation === "停止") await value.stop();
+    if (operation === "新しい字幕") caption("user", "待って", 1000, 1200);
+    value.sendSuggestion(text, operation === "別の候補配列" ? [text] : source);
+    expect(
+      peer().channel.send.mock.calls.filter(([data]) => data.includes("response.item.create")),
+    ).toEqual([]);
+  });
+
+  it("割込み前の応答が遅れて終了しても、新しい返答例を送信できる", async () => {
+    const { value, changes, text } = await readyReply();
+    const receive = (delegationId: string, event: unknown) =>
+      peer().channel.receive({ type: "response.event", delegation_id: delegationId, event });
+    delegate("item_old");
+    receive("item_old", { type: "response.created", response: { id: "resp_old" } });
+    receive("item_old", {
+      type: "response.output_item.done",
+      response_id: "resp_old",
+      item: { type: "function_call", call_id: "call_old", name: "getCatalog", arguments: "{}" },
+    });
+    delegate("item_new");
+    receive("item_new", { type: "response.created", response: { id: "resp_new" } });
+    receive("item_old", { type: "response.completed", response: { id: "resp_old" } });
+    receive("item_new", { type: "response.completed", response: { id: "resp_new" } });
+    await vi.advanceTimersByTimeAsync(0);
+    caption("assistant", "月凪に合わせる料理をご紹介しましょうか？", 2000, 2800);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(changes.at(-1)?.suggestions).toEqual([text]);
+    value.sendSuggestion(text, changes.at(-1)?.suggestions);
+    expect(peer().channel.send.mock.calls.some(([data]) => data.includes('"input_text"'))).toBe(
+      true,
+    );
+    expect(requests.filter(({ path }) => path.endsWith("/tools"))).toEqual([]);
+  });
+
+  it("通常の音声は字幕保存を待たず委任し、保存失敗でも接続を継続する", async () => {
+    vi.useFakeTimers();
+    const pending = deferred<Response>();
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/conversation"))
+        return pending.promise;
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value } = connection();
+    await value.start("ja");
+    caption("user", "おすすめの料理を教えてください", 100, 800);
+    await vi.advanceTimersByTimeAsync(1500);
+    delegate();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
+    pending.resolve(Response.json({ error: { code: "TEMPORARY_FAILURE" } }, { status: 503 }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(peer().close).not.toHaveBeenCalled();
+  });
+
+  it("客字幕が前の行へ追記されても古いAI字幕のタイマーからヒントを生成しない", async () => {
+    vi.useFakeTimers();
+    const { value, changes } = connection();
+    await value.start("ja");
+    caption("user", "注文の仕方", 0, 300);
+    caption("assistant", "ご案内しましょうか？", 400, 700);
+    await vi.advanceTimersByTimeAsync(500);
+    caption("user", "は分かります", 800, 1000);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(requests.some(({ path }) => path.endsWith("/suggestions"))).toBe(false);
+    expect(changes.at(-1)?.suggestions).toEqual([]);
+  });
+
+  it.each(["客発話", "新しいAI字幕", "停止"])(
+    "候補の取得中の%sで遅着したヒントを破棄する",
+    async (operation) => {
+      vi.useFakeTimers();
+      const pending = deferred<Response>();
+      const fallback = vi.mocked(apiFetch).getMockImplementation();
+      let suggestionInput: unknown;
+      vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+        if ((input instanceof Request ? input.url : input.toString()).endsWith("/suggestions")) {
+          suggestionInput = JSON.parse(z.string().parse(options?.body));
+          return pending.promise;
+        }
+        if (!fallback) throw new Error("API fixtureが必要です");
+        return fallback(input, options);
+      });
+      const { value, changes } = connection();
+      await value.start("ja");
+      caption("assistant", "ご案内しましょうか？", 100, 800);
+      await vi.advanceTimersByTimeAsync(1500);
+      const source = z.object({ itemId: z.string(), text: z.string() }).parse(suggestionInput);
+      if (operation === "停止") await value.stop();
+      else caption(operation === "客発話" ? "user" : "assistant", "次の話題", 2000, 2500);
+      pending.resolve(Response.json({ ...source, locale: "ja", suggestions: ["古いヒント"] }));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(changes.at(-1)?.suggestions).toEqual([]);
+    },
+  );
+
+  it("開始案内の失敗でもマイクと会話接続を維持し、声で始める案内を表示する", async () => {
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/opening"))
+        return Response.json({ error: { code: "VOICE_MODEL_FAILED" } }, { status: 503 });
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value, changes } = connection();
+    await value.start("ja");
+    await vi.waitFor(() => expect(changes.at(-1)?.openingFailed).toBe(true));
+    expect(changes.at(-1)?.status).toBe("listening");
+    expect(track.stop).not.toHaveBeenCalled();
+  });
 });
 
 describe("GPT-Live音声の明示的な停止と再開", () => {
