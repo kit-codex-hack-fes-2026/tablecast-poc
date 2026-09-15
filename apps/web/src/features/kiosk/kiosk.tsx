@@ -47,7 +47,13 @@ import { VoicePanel } from "./voice-panel";
 import { KioskGames } from "./games";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
-export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }) {
+export function Kiosk({
+  endpoint = tableEndpoint,
+  evaluation = false,
+}: {
+  endpoint?: TableEndpoint;
+  evaluation?: boolean;
+}) {
   const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { t } = useI18n();
   const client = useQueryClient();
@@ -66,7 +72,7 @@ export function Kiosk({ endpoint = tableEndpoint }: { endpoint?: TableEndpoint }
         <h1>{t("kiosk_closed")}</h1>
       </main>
     );
-  if (table.data === null) return <Pairing onReady={refresh} />;
+  if (table.data === null) return <Pairing onReady={refresh} evaluation={evaluation} />;
   if (!table.data)
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
