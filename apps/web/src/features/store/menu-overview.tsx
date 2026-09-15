@@ -1,20 +1,23 @@
+import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowLeft, Check, FilePenLine, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable } from "../../components/data-table";
-import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
-import { menuLabels, type MenuSection } from "./menu-model";
-import { draftOptions } from "./menu-query";
+import { StartConfigurationEditing } from "./configuration-workflow";
+import {
+  emptyMenuListSearch,
+  menuLabels,
+  type MenuListSearch,
+  type MenuSection,
+} from "./menu-model";
 import { useStore } from "./store-shell";
 
 type OptionRow = {
@@ -31,15 +34,16 @@ export function MenuOverview({
   configuration,
   section,
   itemId,
+  search = emptyMenuListSearch,
 }: {
   configuration: Configuration;
   section: MenuSection;
   itemId: string;
+  search?: MenuListSearch;
 }) {
   const { id: storeId, role } = useStore();
   const { locale, t } = useI18n();
   const navigate = useNavigate();
-  const client = useQueryClient();
   const item =
     section === "cast" ? null : configuration[section].find((value) => value.id === itemId);
   const product =
@@ -50,18 +54,6 @@ export function MenuOverview({
     section === "plans" ? configuration.plans.find((value) => value.id === itemId) : undefined;
   const planProducts = new Set(plan?.productIds);
   const planCategories = new Set(plan?.categoryIds);
-  const create = useMutation({
-    mutationFn: () =>
-      parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
-    onSuccess: (next) => {
-      client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void navigate({
-        to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
-        params: { storeId, draftId: next.id, section, itemId },
-      });
-    },
-  });
   const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
   return (
     <section className="space-y-6">
@@ -69,7 +61,13 @@ export function MenuOverview({
         nativeButton={false}
         role="link"
         variant="ghost"
-        render={<Link to="/admin/stores/$storeId/menu/$section" params={{ storeId, section }} />}
+        render={
+          <Link
+            to="/admin/stores/$storeId/menu/$section"
+            params={{ storeId, section }}
+            search={search}
+          />
+        }
       >
         <ArrowLeft />
         {t(menuLabels[section])}
@@ -79,13 +77,20 @@ export function MenuOverview({
           {item?.text[locale].displayName ?? t(menuLabels[section])}
         </h1>
         {(role === "owner" || role === "admin") && (
-          <Button onClick={() => create.mutate()} disabled={create.isPending}>
-            <FilePenLine />
-            {t("menu_start_editing")}
-          </Button>
+          <StartConfigurationEditing
+            key={storeId}
+            section={section}
+            itemId={itemId}
+            onSelect={(draftId) =>
+              void navigate({
+                to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+                params: { storeId, draftId, section, itemId },
+                search,
+              })
+            }
+          />
         )}
       </div>
-      <ErrorNotice error={create.error} />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
@@ -168,9 +173,9 @@ export function MenuOverview({
                   </>
                 ) : (
                   <>
-                    <p className="whitespace-pre-wrap leading-relaxed">
-                      {configuration.cast.instructions[language] || "—"}
-                    </p>
+                    <div className="leading-relaxed">
+                      <InstructionView value={configuration.cast.instructions[language]} />
+                    </div>
                     <dl>
                       <dt className="text-sm text-muted-foreground">{t("editor_voice")}</dt>
                       <dd>{configuration.cast.voice[language] ?? t("editor_not_configured")}</dd>
@@ -253,6 +258,32 @@ export function MenuOverview({
               </section>
             </>
           )}
+          {section === "categories" && (
+            <section className="space-y-3">
+              <h2 className="font-semibold">{t("menu_category_products")}</h2>
+              <ul className="space-y-2">
+                {configuration.products.flatMap((entry) =>
+                  entry.categoryId === itemId
+                    ? [
+                        <li key={entry.id}>
+                          <Link
+                            className="underline underline-offset-4"
+                            to="/admin/stores/$storeId/menu/$section/$itemId"
+                            params={{ storeId, section: "products", itemId: entry.id }}
+                            search={{ category: itemId }}
+                          >
+                            {entry.text[locale].displayName}
+                          </Link>
+                        </li>,
+                      ]
+                    : [],
+                )}
+              </ul>
+              {!configuration.products.some((entry) => entry.categoryId === itemId) && (
+                <p>{t("common_empty")}</p>
+              )}
+            </section>
+          )}
           {plan && (
             <div className="space-y-3">
               <h2 className="font-semibold">{t("editor_included_products")}</h2>
@@ -271,6 +302,8 @@ export function MenuOverview({
                   )
                   .join(" · ") || "—"}
               </p>
+              <h2 className="font-semibold">{t("editor_tags")}</h2>
+              <p>{plan.tags.join(" · ") || "—"}</p>
             </div>
           )}
         </>

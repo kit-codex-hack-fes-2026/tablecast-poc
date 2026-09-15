@@ -1,3 +1,4 @@
+import { instructionText } from "@tablecast/api/schema";
 import { tv, type VariantProps } from "tailwind-variants";
 import { Slider } from "@base-ui/react/slider";
 import type { Catalog, Product, Snapshot, TableEvent } from "@tablecast/api/schema";
@@ -24,7 +25,6 @@ import {
 import { Button } from "../../components/ui/button";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "./menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
@@ -157,7 +157,7 @@ function ConversationMessage({
   );
 }
 
-const toolLabels: Partial<Record<string, keyof typeof m>> = {
+const toolLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   getCatalog: "kiosk_tool_get_catalog",
   getTableState: "kiosk_tool_get_table_state",
   updateCart: "kiosk_tool_update_cart",
@@ -262,7 +262,7 @@ function useVoicePanel({
         cancelled || (pending && !failed && (!active || (turn && turn.data.status !== "started")));
       const name = typeof event.data.toolName === "string" ? event.data.toolName : "";
       const title = t(toolLabels[name] ?? "kiosk_tool_action");
-      let toolStatus: keyof typeof m = "kiosk_tool_complete";
+      let toolStatus: Parameters<ReturnType<typeof useI18n>["t"]>[0] = "kiosk_tool_complete";
       if (failed) toolStatus = "kiosk_tool_failed";
       else if (stale) toolStatus = "kiosk_tool_interrupted";
       else if (event.data.state === "requested") toolStatus = "kiosk_tool_waiting";
@@ -411,6 +411,7 @@ export function VoicePanel({
   return (
     <section
       className="relative flex h-full min-h-0 min-w-0 flex-col px-3"
+      data-theme-part="conversation"
       aria-label={t("kiosk_conversation")}
     >
       <header className="flex items-center justify-between gap-2 border-b border-border py-1">
@@ -438,7 +439,9 @@ export function VoicePanel({
           <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">
             {castInstructions}
             {"\n\n"}
-            {catalog?.configuration.cast.instructions[locale] || t("kiosk_cast_loading")}
+            {catalog
+              ? instructionText(catalog.configuration.cast.instructions[locale])
+              : t("kiosk_cast_loading")}
           </pre>
         </details>
       )}
@@ -535,7 +538,10 @@ export function VoicePanel({
           <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
         </output>
       )}
-      <footer className="shrink-0 border-t border-white/80 bg-white/65 px-1 pb-2 pt-1 backdrop-blur-xl">
+      <footer
+        data-theme-part="voice-controls"
+        className="shrink-0 border-t border-white/80 bg-card/65 px-1 pb-2 pt-1 backdrop-blur-xl"
+      >
         {active ? (
           <Suspense
             fallback={
@@ -642,7 +648,7 @@ function VoiceIdle({
     >
       <div
         aria-hidden="true"
-        className="flex size-20 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5"
+        className="flex size-20 shrink-0 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-black/5"
       >
         <MicOff className="size-4" />
       </div>

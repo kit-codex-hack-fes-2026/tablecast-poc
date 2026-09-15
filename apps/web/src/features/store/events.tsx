@@ -1,9 +1,8 @@
 import type { TableEvent } from "@tablecast/api/schema";
 import { dateTime, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
 
-const eventKeys: Record<string, keyof typeof m> = {
+const eventKeys: Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]> = {
   "cart.updated": "event_cart_updated",
   "order.submitted": "event_order_submitted",
   "staff.called": "event_staff_called",
@@ -23,7 +22,7 @@ const eventKeys: Record<string, keyof typeof m> = {
   "voice.proactive": "event_voice_proactive",
   "confirmation.prepared": "event_confirmation_created",
 };
-const orderStatusKeys: Record<string, keyof typeof m> = {
+const orderStatusKeys: Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]> = {
   accepted: "event_order_accepted",
   served: "event_order_served",
   cancelled: "event_order_cancelled",

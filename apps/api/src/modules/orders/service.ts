@@ -1,3 +1,6 @@
+import { issueConfirmedVisitCoupons } from "../customer-coupons/issuance";
+import { requireNoAppliedCoupon } from "../customer-coupons/queries";
+import { pointBillingCorrectionStatements } from "../customer-points/service";
 import { measured, observeOperation } from "../../platform/telemetry";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import * as business from "../../db/business-schema";
@@ -224,6 +227,7 @@ export async function submitOrder(
         ensure(existing.snapshot_id === input.snapshotId, "IDEMPOTENCY_CONFLICT");
         return orderValue(existing);
       }
+      await requireNoAppliedCoupon(services, actor);
       const confirmation = confirmations[0];
       ensure(confirmation, "CONFIRMATION_NOT_FOUND", 404);
       const { catalog, plan } = await measured("tablecast.order.pricing", () =>
@@ -364,8 +368,10 @@ export async function changeOrderStatus(
       ensure(transitions[row.status].includes(status), "ORDER_TRANSITION");
       const scoped = { ...actor, tableSessionId: row.table_session_id };
       const table = await getTableState(services, scoped);
-      if (status === "cancelled" || status === "rejected")
+      if (status === "cancelled" || status === "rejected") {
+        await requireNoAppliedCoupon(services, scoped);
         ensure(table.bill.due >= row.total, "PAYMENT_CORRECTION_REQUIRED");
+      }
       const mutation = crypto.randomUUID();
       const now = Date.now();
       const result = await db.batch([
@@ -424,10 +430,12 @@ export async function recordPayment(
             existing.reason === input.reason,
           "IDEMPOTENCY_CONFLICT",
         );
+        if (input.kind === "adjustment")
+          await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
         return getTableState(services, actor);
       }
       const table = await getTableState(services, actor);
-      ensure(table.status === "open", "SESSION_CLOSED");
+      if (input.kind === "adjustment") await requireNoAppliedCoupon(services, actor);
       if (input.kind === "payment")
         ensure(
           input.amount > 0
@@ -438,18 +446,32 @@ export async function recordPayment(
         );
       else ensure(table.bill.due + input.amount >= 0, "ADJUSTMENT_AMOUNT", 422);
       const mutation = crypto.randomUUID();
+      const pointCorrections =
+        input.kind === "adjustment"
+          ? await pointBillingCorrectionStatements(
+              services,
+              actor,
+              table.bill.orderedTotal +
+                table.bill.adjustmentTotal +
+                table.bill.planTotal +
+                input.amount,
+              input.idempotencyKey,
+              mutation,
+            )
+          : [];
       const result = await db.batch([
         db
           .update(business.tableSessions)
           .set({ cart_version: sql`cart_version+1`, mutation_id: mutation })
           .where(
-            sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND cart_version=${table.cart.version} AND status='open'`,
+            sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND cart_version=${table.cart.version} AND status=${table.status}`,
           ),
         db
           .insert(business.payments)
           .select(
             sql`SELECT ${crypto.randomUUID()},store_id,id,${input.idempotencyKey},${input.kind},${input.amount},${input.reason},${actor.userId},${Date.now()} FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation}`,
           ),
+        ...pointCorrections,
         invalidationStatement(services, actor, mutation),
         eventStatement(services, actor, mutation, `billing.${input.kind}`, {
           amount: input.amount,
@@ -479,6 +501,8 @@ export async function recordPayment(
           "BILLING_CONFLICT",
         );
       }
+      if (input.kind === "adjustment")
+        await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
       await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },

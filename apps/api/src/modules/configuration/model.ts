@@ -1,15 +1,36 @@
+import { appearanceSchema, bannerSchema, brandingSchema } from "../appearance/model";
 import { z } from "zod";
-import { id, localeSchema } from "../../platform/model";
-import { bilingualSchema, modifierSchema, planSchema, productSchema } from "../catalog/model";
+import { castInstructionSchema } from "./instruction-model";
+import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
+import {
+  bilingualSchema,
+  modifierSchema,
+  planSchema,
+  productSchema,
+  conditionLimits,
+  productConditionNodeCount,
+} from "../catalog/model";
+import { selectionSchema } from "../orders/model";
 export const configurationSchema = z
   .object({
+    branding: brandingSchema.optional(),
+    appearance: appearanceSchema.optional(),
+    banners: z.array(bannerSchema).max(12).optional(),
     storeName: z.string().trim().min(1).max(150).optional(),
     categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
-    products: z.array(productSchema).max(2000),
+    products: z
+      .array(productSchema)
+      .max(2000)
+      .refine(
+        (products) =>
+          products.reduce((sum, product) => sum + productConditionNodeCount(product), 0) <=
+          conditionLimits.configurationNodes,
+        { message: "CONDITION_CONFIGURATION_LIMIT" },
+      ),
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
-        instructions: z.object({ ja: z.string().max(5000), en: z.string().max(5000) }),
+        instructions: z.object({ ja: castInstructionSchema, en: castInstructionSchema }),
         voice: z.object({
           ja: z.string().min(1).max(100).nullable(),
           en: z.string().min(1).max(100).nullable(),
@@ -21,6 +42,14 @@ export const configurationSchema = z
   .strict();
 
 export type Configuration = z.infer<typeof configurationSchema>;
+
+export const conditionPreviewSchema = z
+  .object({
+    product: productSchema,
+    optionId: id,
+    selections: z.array(selectionSchema).max(100),
+  })
+  .strict();
 
 export const configurationIssueBase = z.object({
   path: z.array(z.union([z.string(), z.number().int().nonnegative()])),
@@ -101,6 +130,43 @@ export type ConfigDraft = {
   updatedAt: number;
   changes: { path: string; before: unknown; after: unknown; sensitive: boolean }[];
 };
+
+export const draftChoicesQuerySchema = z
+  .object({
+    beforeUpdatedAt: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+    beforeId: id.optional(),
+  })
+  .strict()
+  .refine((query) => (query.beforeUpdatedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+export type DraftChoicesQuery = z.infer<typeof draftChoicesQuerySchema>;
+
+export const draftChoiceSchema = z.object({
+  id: z.string(),
+  baseVersion: z.number().int(),
+  version: z.number().int(),
+  status: z.enum(["draft", "ready", "published", "discarded"]),
+  updatedAt: z.number().int(),
+  changeCount: z.number().int(),
+  sections: z.array(
+    z.enum([
+      "products",
+      "categories",
+      "plans",
+      "cast",
+      "storeName",
+      "branding",
+      "appearance",
+      "banners",
+    ]),
+  ),
+});
+export const draftChoicesPageSchema = z.object({
+  drafts: z.array(draftChoiceSchema),
+  publishedVersion: z.number().int(),
+  nextCursor: z.object({ beforeUpdatedAt: z.number().int(), beforeId: z.string() }).nullable(),
+});
 
 export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   createdAt: z.number().int(),

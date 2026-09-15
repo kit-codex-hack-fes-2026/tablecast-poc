@@ -93,8 +93,8 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
       await change
         .mutateAsync(async () => {
           authResult(await authClient.updateUser(value));
+          formApi.reset(value);
         })
-        .then(() => formApi.reset(value))
         .catch(() => undefined);
     },
   });
@@ -143,7 +143,7 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
                 required
                 maxLength={100}
                 autoComplete="name"
-                disabled={controller.loading}
+                disabled={change.isPending || controller.loading}
               />
             )}
           </form.AppField>

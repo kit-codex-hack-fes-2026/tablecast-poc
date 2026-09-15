@@ -59,7 +59,10 @@ for (const { language, labels, locale } of [
       page.getByRole("button", { name: labels.admin_validate, exact: true }),
     ).toBeEnabled();
     // 利用者と同じリンクで編集へ進む。
-    await page.getByRole("link", { name: labels.editor_products, exact: true }).click();
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: labels.editor_products, exact: true })
+      .click();
     await page
       .getByRole("row")
       .filter({
@@ -94,17 +97,18 @@ for (const { language, labels, locale } of [
       { key: "description", label: labels.admin_description },
     ] as const;
     for (const contentLocale of ["ja", "en"] as const) {
+      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
       const group = editor
+        .getByRole("region", { name: labels.editor_translation, exact: true })
         .getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+          name: contentLanguage,
           exact: true,
-        })
-        .first();
+        });
       for (const { key, label } of contentFields) {
         editedProduct.text[contentLocale][key] +=
           contentLocale === "ja" ? "（確認用）" : " (review)";
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
           .fill(editedProduct.text[contentLocale][key]);
       }
     }
@@ -146,18 +150,19 @@ for (const { language, labels, locale } of [
       .first()
       .check();
     for (const contentLocale of ["ja", "en"] as const) {
+      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
       const group = editor
+        .getByRole("region", { name: labels.editor_translation, exact: true })
         .getByRole("group", {
-          name: contentLocale === "ja" ? labels.common_ja : labels.common_en,
+          name: contentLanguage,
           exact: true,
-        })
-        .first();
+        });
       for (const { key, label } of contentFields) {
-        await expect(group.getByRole("textbox", { name: label, exact: true })).toHaveValue(
-          editedProduct.text[contentLocale][key],
-        );
+        await expect(
+          group.getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true }),
+        ).toHaveValue(editedProduct.text[contentLocale][key]);
         await group
-          .getByRole("textbox", { name: label, exact: true })
+          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
           .fill(product.text[contentLocale][key]);
       }
     }
@@ -225,6 +230,16 @@ for (const { language, labels, locale } of [
       (response) => new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}/publish`,
     );
     await publish.click();
+    const confirmation = page.getByRole("dialog", {
+      name: labels.workflow_publish_title,
+      exact: true,
+    });
+    await expect(confirmation).toBeVisible();
+    expect(publicationRequests).toBe(0);
+    await confirmation.screenshot({
+      path: testInfo.outputPath("tablecast-publication-confirmation.png"),
+    });
+    await confirmation.getByRole("button", { name: labels.admin_publish, exact: true }).click();
     const published = await publishedResponse;
     expect(published.status()).toBe(200);
     expect(configDraftSchema.parse(await published.json()).status).toBe("published");

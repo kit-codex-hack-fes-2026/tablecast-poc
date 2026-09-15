@@ -18,6 +18,7 @@ permissions:
 
 concurrency:
   group: tablecast-${{ github.workflow }}-${{ github.ref }}
+  # 配備jobも含むため、PR更新で実行中のworkflowを中断しない。
   cancel-in-progress: false
 
 env:
@@ -47,13 +48,13 @@ jobs:
       - name: mainのコミットメッセージ
         if: github.event_name != 'pull_request'
         run: bunx --no-install commitlint --last --verbose
-      # codegenを共有するlint/typecheckは順に実行する。
+      # lint/typecheckのTurbo依存が共有のi18n出力を復元するため、直列に実行する。
       - run: bun run format:check && bun run lint && bun run typecheck
 
   unit-web:
-    name: "Unit Test: Web・動画基盤・seedデータ (Vitest)"
+    name: "Unit/Integration: Web・seed・dev-runtime (Vitest)"
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -66,83 +67,31 @@ jobs:
             run: bun run --cwd apps/web test
           - name: Presentation
             run: bun run --cwd apps/presentation test
+          - name: Dev runtime
+            run: bunx --no-install vitest run --project scripts-runtime
 
   api:
-    name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1)"
+    name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1, shard ${{ matrix.shard }}/2)"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
-      - run: bun run --cwd apps/api test
+      - run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
 
-  dev-runtime:
-    name: "Integration Test: 開発環境の起動とDB初期化 (Vitest)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-      - run: bunx --no-install vitest run --project scripts-runtime
-
-  workers-build:
-    name: "Build: WebとAPIのデプロイ用成果物 (Vite, Wrangler)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          turbo: "true"
-      - run: bun --no-env-file run build:deploy
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/dist/
-          include-hidden-files: true
-          retention-days: 1
-          if-no-files-found: error
-
-  storybook-build:
-    name: "Build: Componentカタログ (Storybook)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: ./.github/actions/tablecast-setup
-        with:
-          turbo: "true"
-      - run: bunx --no-install turbo run build:storybook
-      - run: bun --no-env-file run deploy:catalog --prepare-storybook
-        env:
-          TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
-          TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: tablecast-storybook-${{ github.event.pull_request.head.sha || github.sha }}
-          path: apps/web/storybook-static/
-          include-hidden-files: true
-          retention-days: 1
-          if-no-files-found: error
-
-  email-build:
-    name: "Build: メールカタログ (React Email HTML)"
+  build:
+    name: "Build: Workers・Storybook・Email"
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
     steps:
       - name: forkの配備対象外を記録
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
@@ -153,7 +102,30 @@ jobs:
       - uses: ./.github/actions/tablecast-setup
         with:
           turbo: "true"
-      - run: bun --no-env-file run build:email
+      # Webの生成ファイルを共有するWorkersとStorybookは同時にbuildしない。
+      - name: Workers
+        run: bun --no-env-file run build:deploy
+      - parallel:
+          - name: Storybook
+            run: |
+              bunx --no-install turbo run build:storybook
+              bun --no-env-file run deploy:catalog --prepare-storybook
+          - name: Email
+            run: bun --no-env-file run build:email
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/dist/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/storybook-static/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
@@ -163,7 +135,7 @@ jobs:
 
   catalog-deploy:
     name: PRカタログの配備
-    needs: [static, unit-web, storybook-build, email-build, components]
+    needs: [static, unit-web, build, components]
     if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -225,7 +197,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, webkit]
+        browser: ${{ github.event_name == 'pull_request' && fromJSON('["chromium"]') || fromJSON('["chromium","webkit"]') }}
         shard: [1, 2]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -276,32 +248,20 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  deploy:
-    name: 本番・staging・PR配備
-    needs:
-      [
-        static,
-        unit-web,
-        api,
-        dev-runtime,
-        workers-build,
-        storybook-build,
-        email-build,
-        components,
-        e2e,
-        images,
-      ]
-    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')) || (github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository)
+  deploy-preview:
+    name: PRプレビュー配備
+    needs: [static, build, images]
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: ${{ github.event_name != 'pull_request' && (github.ref_name == 'staging' && 'staging' || 'production') || 'preview' }}
+      name: preview
       url: ${{ steps.target.outputs.url }}
     permissions:
       contents: read
       pull-requests: read
     concurrency:
-      group: tablecast-deploy-${{ github.event.pull_request.number || github.ref_name }}
+      group: tablecast-deploy-${{ github.event.pull_request.number }}
       queue: max
       cancel-in-progress: false
     env:
@@ -310,6 +270,62 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
       TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
+      TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
+      TABLECAST_MODEL: gpt-5.6-luna
+      TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
+      TABLECAST_CONTAINER_METRICS_TOKEN: ${{ secrets.TABLECAST_CONTAINER_METRICS_TOKEN }}
+      TABLECAST_OTEL_CAPTURE_CONTENT: ${{ vars.TABLECAST_OTEL_CAPTURE_CONTENT || 'true' }}
+      TABLECAST_DEPLOY_SECRET: ${{ secrets.TABLECAST_DEPLOY_SECRET }}
+      TABLECAST_GOOGLE_CLIENT_ID: ${{ secrets.TABLECAST_GOOGLE_CLIENT_ID }}
+      TABLECAST_GOOGLE_CLIENT_SECRET: ${{ secrets.TABLECAST_GOOGLE_CLIENT_SECRET }}
+      TABLECAST_BETTER_AUTH_API_KEY: ${{ secrets.TABLECAST_BETTER_AUTH_API_KEY }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+      TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
+      TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ env.TABLECAST_RELEASE_SHA }}
+      - uses: ./.github/actions/tablecast-setup
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
+          path: apps/web/dist/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
+          path: .local/tablecast-deploy/
+      - name: 検証済みContainerイメージを読み込む
+        run: docker load --input .local/tablecast-deploy/tablecast-images.tar.gz
+      - name: 配備先URL
+        id: target
+        run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined, process.env.TABLECAST_DEPLOY_ENV).origin + "\n")'
+      - name: 資源作成・移行・検証済み成果物の配備・SHA確認
+        run: bun --no-env-file run deploy
+
+  deploy:
+    name: 本番・staging配備
+    needs: [static, unit-web, api, build, components, e2e, images]
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.ref_name == 'staging' && 'staging' || 'production' }}
+      url: ${{ steps.target.outputs.url }}
+    permissions:
+      contents: read
+      pull-requests: read
+    concurrency:
+      group: tablecast-deploy-${{ github.ref_name }}
+      queue: max
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
+      TABLECAST_RELEASE_SHA: ${{ github.sha }}
+      TABLECAST_PR_NUMBER: ""
       TABLECAST_RUNTIME_SECRETS: ${{ secrets.TABLECAST_RUNTIME_SECRETS }}
       TABLECAST_MODEL: gpt-5.6-luna
       TABLECAST_OTEL_AUTHORIZATION: ${{ secrets.TABLECAST_OTEL_AUTHORIZATION }}
@@ -354,19 +370,7 @@ jobs:
   required:
     name: TableCast CI
     if: always()
-    needs:
-      [
-        static,
-        unit-web,
-        api,
-        dev-runtime,
-        workers-build,
-        storybook-build,
-        email-build,
-        components,
-        e2e,
-        images,
-      ]
+    needs: [static, unit-web, api, build, components, e2e, images]
     runs-on: ubuntu-latest
     steps:
       - name: 全検査の成功確認
@@ -376,7 +380,7 @@ jobs:
 
   preview-report:
     name: PRプレビューの統合通知
-    needs: [deploy, catalog-deploy]
+    needs: [deploy-preview, catalog-deploy]
     if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -404,7 +408,7 @@ jobs:
             if (!await current()) return;
             const results = JSON.parse(process.env.TABLECAST_PREVIEW_RESULTS);
             const targets = [
-              {name: '製品', worker: `tablecast-pr-${pr}`, path: '/api/health', result: results.deploy.result},
+              {name: '製品', worker: `tablecast-pr-${pr}`, path: '/api/health', result: results['deploy-preview'].result},
               ...['storybook', 'email'].map(kind => ({name: kind, kind, worker: `tablecast-${kind}-pr-${pr}`, path: '/_tablecast/release.json', result: results['catalog-deploy'].result})),
             ];
             const rows = await Promise.all(targets.map(async target => {

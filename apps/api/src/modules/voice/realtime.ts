@@ -1,6 +1,6 @@
 import { trace } from "@opentelemetry/api";
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -23,6 +23,17 @@ export async function conversationHistory(
         eq(business.tableEvents.store_id, actor.storeId),
         eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
         inArray(business.tableEvents.kind, ["voice.user", "voice.assistant"]),
+        notExists(
+          services.db
+            .select({ id: business.customerContexts.sessionId })
+            .from(business.customerContexts)
+            .where(
+              and(
+                eq(business.customerContexts.sessionId, actor.tableSessionId ?? ""),
+                eq(business.customerContexts.storeId, actor.storeId),
+              ),
+            ),
+        ),
         sql`length(trim(json_extract(${business.tableEvents.data_json},'$.text')))>0`,
       ),
     )

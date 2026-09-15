@@ -164,6 +164,13 @@ for (const { language, locale, labels, nextLabels, nextLanguage } of [
     await expect(detailPage.locator("[data-ui='bill-summary']")).toBeVisible();
     await expect(detailPage.locator("form, input, textarea, select")).toHaveCount(0);
 
+    await detailPage.getByRole("button", { name: labels.admin_adjustment, exact: true }).click();
+    await expect(detailPage.locator("form")).toHaveCount(1);
+    await expect(detailPage.getByRole("radio", { name: labels.admin_adjustment })).toBeChecked();
+    await detailPage.screenshot({
+      path: testInfo.outputPath("tablecast-closed-bill-correction.png"),
+    });
+
     const latestPage = page.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === eventPath && !url.searchParams.has("before") && response.ok();

@@ -379,6 +379,15 @@ export class VoiceConnection {
     else if (this.sessionId === sessionId && active) this.updateSpeechSpeed();
   }
 
+  clearCustomerContext() {
+    void this.stop({ serverStopped: true });
+    for (const caption of this.captions) clearTimeout(caption.timer);
+    this.captions = [];
+    this.pendingCaptions.clear();
+    this.transcriptEvents.clear();
+    this.emit({ messages: [] });
+  }
+
   private updateSpeechSpeed() {
     if (!this.ready || !this.desired || this.speechSpeed === this.requestedSpeechSpeed) return;
     this.channel?.send(

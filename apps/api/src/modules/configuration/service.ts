@@ -1,12 +1,14 @@
 import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
+import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { requireManager } from "../auth/policy";
-import { configurationErrors } from "../catalog/pricing";
+import { configurationErrors, priceCart } from "../catalog/pricing";
+import { evaluateCondition, losesConditions, productConditionErrors } from "../catalog/conditions";
+import type { OptionCondition } from "../catalog/model";
 import { catalogQuery, catalogValue, getCatalog } from "../catalog/queries";
 import { notifyStore } from "../tables/mutations";
 import { voiceConfigurationErrors } from "../voice/catalog";
@@ -14,9 +16,12 @@ import { requireConfigurationImages } from "../media/service";
 import {
   configurationIssueSchema,
   configurationSchema,
+  type conditionPreviewSchema,
+  draftChoiceSchema,
   type Catalog,
   type ConfigDraft,
   type Configuration,
+  type DraftChoicesQuery,
 } from "./model";
 function hasSensitiveField(value: unknown, path: string): boolean {
   return (
@@ -29,6 +34,7 @@ function hasSensitiveField(value: unknown, path: string): boolean {
 function differences(before: unknown, after: unknown, path = ""): ConfigDraft["changes"] {
   if (JSON.stringify(before) === JSON.stringify(after)) return [];
   if (
+    !/^cast\.instructions\.(ja|en)$/.test(path) &&
     before !== null &&
     after !== null &&
     typeof before === "object" &&
@@ -117,6 +123,58 @@ export async function listDrafts(services: ApiServices, actor: Actor) {
   const catalog = catalogValue(catalogs[0]);
   return { drafts: rows.map((row) => draftValue(row, catalog)) };
 }
+export async function listDraftChoices(
+  services: ApiServices,
+  actor: Actor,
+  query: DraftChoicesQuery,
+) {
+  const db = services.db;
+  const [rows, catalogs] = await db.batch([
+    db
+      .select()
+      .from(business.configDrafts)
+      .where(
+        and(
+          eq(business.configDrafts.store_id, actor.storeId),
+          inArray(business.configDrafts.status, ["draft", "ready"]),
+          query.beforeUpdatedAt !== undefined && query.beforeId !== undefined
+            ? or(
+                lt(business.configDrafts.updated_at, query.beforeUpdatedAt),
+                and(
+                  eq(business.configDrafts.updated_at, query.beforeUpdatedAt),
+                  lt(business.configDrafts.id, query.beforeId),
+                ),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(business.configDrafts.updated_at), desc(business.configDrafts.id))
+      .limit(31),
+    catalogQuery(db, actor.storeId),
+  ]);
+  const catalog = catalogValue(catalogs[0]);
+  const page = rows.slice(0, 30);
+  const last = page.at(-1);
+  return {
+    drafts: page.map((row) => {
+      const draft = draftValue(row, catalog);
+      return {
+        id: draft.id,
+        baseVersion: draft.baseVersion,
+        version: draft.version,
+        status: draft.status,
+        updatedAt: draft.updatedAt,
+        changeCount: draft.changes.length,
+        sections: draftChoiceSchema.shape.sections.element.options.filter((section) =>
+          draft.changes.some((change) => change.path.split(".")[0] === section),
+        ),
+      };
+    }),
+    publishedVersion: catalog.version,
+    nextCursor:
+      rows.length > 30 && last ? { beforeUpdatedAt: last.updated_at, beforeId: last.id } : null,
+  };
+}
 export async function createDraft(services: ApiServices, actor: Actor) {
   const db = services.db;
 
@@ -141,12 +199,35 @@ export async function updateDraft(
   services: ApiServices,
   actor: Actor,
   id: string,
-  input: { expectedVersion: number; configuration: Configuration },
+  input: { expectedVersion: number; configuration: Configuration; instructionFormatVersion?: 1 },
 ) {
   const db = services.db;
 
   requireManager(actor);
   const configuration = configurationSchema.parse(input.configuration);
+  const previous = await db
+    .select({ configuration: business.configDrafts.config_json })
+    .from(business.configDrafts)
+    .where(
+      and(
+        eq(business.configDrafts.id, id),
+        eq(business.configDrafts.store_id, actor.storeId),
+        eq(business.configDrafts.version, input.expectedVersion),
+      ),
+    )
+    .get();
+  ensure(previous, "DRAFT_CONFLICT");
+  ensure(
+    !losesConditions(configurationSchema.parse(JSON.parse(previous.configuration)), configuration),
+    "CONFIGURATION_FORMAT_UNSUPPORTED",
+    422,
+  );
+  ensure(
+    input.instructionFormatVersion === 1 ||
+      Object.values(configuration.cast.instructions).every((value) => typeof value === "string"),
+    "DRAFT_CONFLICT",
+    409,
+  );
   await requireConfigurationImages(services, actor, configuration);
   const result = await db
     .update(business.configDrafts)
@@ -162,6 +243,9 @@ export async function updateDraft(
         eq(business.configDrafts.id, id),
         eq(business.configDrafts.store_id, actor.storeId),
         eq(business.configDrafts.version, input.expectedVersion),
+        input.instructionFormatVersion === 1
+          ? undefined
+          : sql`json_type(${business.configDrafts.config_json}, '$.cast.instructions.ja') = 'text' AND json_type(${business.configDrafts.config_json}, '$.cast.instructions.en') = 'text'`,
         inArray(business.configDrafts.status, ["draft", "ready"]),
       ),
     );
@@ -272,6 +356,11 @@ export async function publishDraft(
       );
       ensure(draft.status === "ready", "DRAFT_CONFLICT");
       const catalog = await getCatalog(services, actor.storeId);
+      ensure(
+        !losesConditions(catalog.configuration, draft.configuration),
+        "CONFIGURATION_FORMAT_UNSUPPORTED",
+        422,
+      );
       await requireConfigurationImages(services, actor, draft.configuration);
       const voiceErrors = await voiceConfigurationErrors(
         services.env,
@@ -348,4 +437,66 @@ export async function publishDraft(
     },
     { env: services.env, input: { actor, id, input } },
   );
+}
+
+export function previewConditions(actor: Actor, input: z.infer<typeof conditionPreviewSchema>) {
+  requireManager(actor);
+  const errors = productConditionErrors(input.product);
+  const option = input.product.modifiers
+    .flatMap((group) => group.options)
+    .find((item) => item.id === input.optionId);
+  ensure(option, "OPTION_NOT_FOUND", 422);
+  const selected = new Set(input.selections.map((selection) => selection.optionId));
+  const applied = selected.has(option.id);
+  const nodes = (
+    expression: OptionCondition,
+    path: (string | number)[] = [],
+  ): { path: (string | number)[]; matched: boolean }[] => [
+    { path, matched: evaluateCondition(expression, selected) },
+    ...(expression.kind === "not"
+      ? nodes(expression.child, [...path, "child"])
+      : expression.kind === "option"
+        ? []
+        : expression.children.flatMap((child, index) =>
+            nodes(child, [...path, "children", index]),
+          )),
+  ];
+  let selectionError: string | null = null;
+  try {
+    const cart = priceCart(
+      { products: [input.product] },
+      [
+        {
+          id: "tablecast-condition-preview",
+          productId: input.product.id,
+          quantity: 1,
+          selections: input.selections,
+        },
+      ],
+      0,
+    );
+    if (!cart.complete) selectionError = "CART_INCOMPLETE";
+  } catch (error) {
+    if (!(error instanceof DomainError)) throw error;
+    selectionError = error.code;
+  }
+  return {
+    errors,
+    selectionError,
+    applied,
+    conditions: (["requires", "excludes"] as const).map((relation) => {
+      const expression = option.conditions?.[relation];
+      const matched = expression
+        ? evaluateCondition(expression, selected)
+        : relation === "requires"
+          ? option.requires.every((id) => selected.has(id))
+          : option.excludes.some((id) => selected.has(id));
+      return {
+        relation,
+        matched,
+        satisfied: !applied || (relation === "requires" ? matched : !matched),
+        nodes: expression ? nodes(expression) : [],
+      };
+    }),
+  };
 }

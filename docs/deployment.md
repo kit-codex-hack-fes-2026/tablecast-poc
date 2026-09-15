@@ -18,7 +18,7 @@ Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService Binding
 
 ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerが標準Responses delegationとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
 
-Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と全CI成功後の配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
+Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。PRプレビューの製品配備は静的解析・Workers/イメージ成果物の準備後に開始し、本番・staging配備は全必須検査の成功後に行う。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
 
 ## 最初に登録するもの
 
@@ -188,7 +188,7 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加し、両方をWorkers Static Assetsで配信する。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
 
-CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildがすべて成功した場合に配備jobを実行する。前提jobが失敗・skip・cancelされた場合は配備job自体もskipされ、統合通知でも成功扱いにしない。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
+CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildがすべて成功した場合に配備jobを実行する。前提jobが失敗・skip・cancelされた場合は配備job自体もskipされ、統合通知でも成功扱いにしない。CI workflow全体も`cancel-in-progress: false`とし、PR更新で開始済みの移行・配備を中断しない。検査だけをキャンセル可能にするには、配備を別workflowへ分離する設計が必要となる。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policiesの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
@@ -208,15 +208,15 @@ CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する�
 
 ### GitHubの初期設定
 
-- Environment `staging`を作り、配備branchをstagingに限定する。既存のrepository配備secretとAccess policyを使う。実GoogleとBetter Auth Dashboardの資格はproductionだけに保存する。
+- Environment `staging`を作り、配備branchをstagingに限定する。既存のrepository配備secretを使う。stagingはAccess資格なしで公開し、PR previewだけ既存Access policyで保護する。実GoogleとBetter Auth Dashboardの資格はproductionだけに保存する。
 - ActionsのWorkflow permissionsでAllow GitHub Actions to create and approve pull requestsを有効にする。workflow既定権限はreadのままとし、release更新jobだけContents/Actions読取・Pull requests書込を指定する。既存の`GITHUB_TOKEN`を使い、専用App・PAT・秘密鍵を追加しない。PRレビューの自動承認やマージは行わない。
 - `GITHUB_TOKEN`で作ったPRの追加workflowは[GitHubの仕様](https://docs.github.com/en/actions/concepts/security/github_token)により承認待ちになる場合がある。その実行に依存せず、main宛のPRは通常CIの対象から外し、staging pushの`TableCast CI`と同SHAの配備をrelease gateで検査する。通常のstaging宛PRとmain pushの本番CIは維持する。
 - main/stagingのrulesetはbranch名を明示し、PR、`TableCast CI`、削除禁止、force push禁止、merge commitを必須にする。mainにはさらに`TableCast release`を要求する。既存の管理者bypassは緊急対応用に維持する。
 - stagingの配備とチェックが実在してからdefault branchを変更し、main宛の通常PRをstaging宛へ変更する。stack上段のbaseは直下のbranchを維持する。
 
-### remote MCPのAccess
+### stagingの公開とremote MCP
 
-Web・ログイン・同意・emulateはpreviewと同じAccess Allow/Service Authで保護する。`stagingMcpPaths`で列挙したMCP、discovery、DCR、token交換・refresh、revokeだけ別Access applicationでBypassする。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。`/api/auth/*`全体をBypassしない。未認証MCPはOAuthの401を返す。Access資格なしでdiscoveryとDCRが到達可能であること、ブラウザーの模擬ログインはAccess資格なしでは利用できないことを別々に検証する。
+stagingのWeb・模擬ログイン・同意・MCPをAccess資格なしで公開する。配備時は旧staging専用のWeb・MCP Access applicationの所有先を確認して解除し、PR previewのapplicationと共有policyは維持する。stagingへAccess service tokenは渡さない。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。未認証のWebが200を返し、discoveryがstagingを参照し、未認証MCPがOAuthの401を返すことを配備後に検証する。模擬Googleログインの架空ユーザー選択も公開されるため、stagingはデモ・検証データで運用する。
 
 ### staging全体のリセット
 
@@ -224,7 +224,7 @@ GitHub ActionsのCIからRun workflowを開き、branchにstaging、`staging_res
 
 D1とR2の資源ID・所有台帳・migration履歴は保持し、schemaに定義された全業務・認証データとR2画像を消去する。D1はDrizzleの同一batch内で外部キー検証を遅延し、全削除後に再検証する。Webをメンテナンス応答へ切り替え、既存DO・Container・API Workerを退役して再作成する。最新demoを投入し、同じSHAを配備・疎通確認後に完了する。全アカウント、OAuthクライアント、セッション、MCP tokenが失われるため、ログインとMCP認可をやり直す。
 
-R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。Access、固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
+R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
 
 ### release PR
 

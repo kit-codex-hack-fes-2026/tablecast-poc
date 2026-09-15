@@ -1,3 +1,5 @@
+import { castInstructionSchema } from "@tablecast/api/schema";
+import { InstructionView } from "./instruction-view";
 import { Children } from "react";
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
@@ -5,6 +7,17 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
 const labels = {
+  branding: "theme_logo",
+  logo: "theme_logo",
+  appearance: "theme_title",
+  banners: "theme_banners",
+  alt: "theme_alt",
+  assets: "theme_assets",
+  customCss: "theme_css",
+  parts: "theme_parts",
+  hotspots: "theme_region",
+  productId: "theme_product",
+  enabled: "theme_visible",
   storeName: "org_name",
   imageSource: "editor_image_source",
   generated: "editor_generated_image",
@@ -30,6 +43,10 @@ const labels = {
   options: "editor_options",
   priceDelta: "editor_price_delta",
   maxQuantity: "editor_max_quantity",
+  conditions: "condition_editor",
+  children: "condition_group",
+  child: "condition_not_scope",
+  optionId: "condition_leaf",
   requires: "editor_requires",
   excludes: "editor_excludes",
   allergens: "kiosk_allergens",
@@ -121,6 +138,7 @@ export function ConfigurationChanges({
           "productIds",
           "categoryIds",
           "excludedOptionIds",
+          "optionId",
           "requires",
           "excludes",
         ].includes(key)
@@ -132,6 +150,10 @@ export function ConfigurationChanges({
         if (value === "single") return t("editor_single");
         if (value === "multiple") return t("editor_multiple");
         if (value === "quantity") return t("editor_quantity");
+        if (value === "and") return t("condition_all");
+        if (value === "or") return t("condition_any");
+        if (value === "not") return t("condition_not_scope");
+        if (value === "option") return t("condition_leaf");
       }
       if (["evidence", "crossContact", "vegan"].includes(key)) {
         if (value === "unknown") return t("editor_unknown");
@@ -189,7 +211,12 @@ export function ConfigurationChanges({
                 <section className="min-w-0" key={label}>
                   <h4 className="text-muted-foreground text-sm mb-1.5">{label}</h4>
                   <div className="whitespace-pre-wrap wrap-break-word text-base">
-                    {valueText(value, key)}
+                    {/^cast\.instructions\.(ja|en)$/.test(change.path) &&
+                    castInstructionSchema.safeParse(value).success ? (
+                      <InstructionView value={castInstructionSchema.parse(value)} />
+                    ) : (
+                      valueText(value, key)
+                    )}
                   </div>
                 </section>
               ))}
