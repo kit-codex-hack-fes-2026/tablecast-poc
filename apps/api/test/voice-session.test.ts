@@ -259,9 +259,11 @@ it.each([
     });
     expect(body).not.toContain("tablecast-private-model-key");
     expect(provider).toHaveBeenCalledTimes(1);
-    expect((await getTableState(createApiServices(env), device)).voiceSessionId).toBe(
-      "tablecast-live-created",
-    );
+    const state = await getTableState(createApiServices(env), device);
+    expect(state.voiceSessionId).toBe("tablecast-live-created");
+    expect(state.events.find((event) => event.kind === "voice.started")?.data).toMatchObject({
+      openingContext: { instructions: instructionText(selected.cast.instructions[locale]) },
+    });
     await waitOnExecutionContext(ctx);
   },
 );
