@@ -1,5 +1,10 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  customerConsentVersion,
+  enrolCustomerSchema,
+  customerPreferencesSchema,
+} from "./modules/customers/model";
+export {
   gameManifestSchema,
   gamePackageSchema,
   gameMessageSchema,
@@ -139,3 +144,23 @@ export {
   type StatisticsQuery,
   type StatisticsResult,
 } from "./modules/statistics/model";
+
+export {
+  customerMemoryInputSchema,
+  customerConsumptionSchema,
+} from "./modules/customer-memory/model";
+
+export {
+  pointRulesSchema,
+  pointPolicySchema,
+  confirmPointsSchema,
+  pointCorrectionSchema,
+} from "./modules/customer-points/model";
+
+export {
+  couponRuleSchema,
+  couponDefinitionSchema,
+  issueCouponSchema,
+  applyCouponSchema,
+  cancelCouponUseSchema,
+} from "./modules/customer-coupons/model";

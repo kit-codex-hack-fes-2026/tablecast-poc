@@ -7,6 +7,9 @@ export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).str
 
 export const voiceToolNameSchema = z.enum([
   "getCatalog",
+  "getCustomerContext",
+  "getCustomerSuggestions",
+  "saveCustomerMemory",
   "getTableState",
   "updateCart",
   "prepareConfirmation",

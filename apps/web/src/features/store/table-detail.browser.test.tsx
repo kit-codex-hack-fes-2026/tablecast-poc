@@ -66,6 +66,23 @@ it.each(["ja", "en"] as const)(
     const requests: string[] = [];
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
       const path = new URL(new Request(input, init).url).pathname;
+      // 会計の会員情報取得は、検証対象のカタログ取得と分ける。
+      if (path === `/api/admin/stores/${state.storeId}/tables/${state.id}/coupons`)
+        return Promise.resolve(
+          Response.json({ expectedVersion: state.cart.version, requested: [], uses: [] }),
+        );
+      if (path === `/api/admin/stores/${state.storeId}/tables/${state.id}/points`)
+        return Promise.resolve(
+          Response.json({
+            sessionId: state.id,
+            expectedVersion: state.cart.version,
+            rules: { enabled: false, kind: "visit", points: 0, unitYen: 100 },
+            confirmedAt: null,
+            participants: [],
+            allocations: [],
+            idempotencyKey: null,
+          }),
+        );
       requests.push(path);
       if (path === `/api/admin/stores/${state.storeId}/catalog`)
         return Promise.resolve(Response.json(current));

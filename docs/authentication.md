@@ -73,3 +73,7 @@ PWAの新規ドキュメント起動は転送元のセッション・所属店�
 ## stagingの認証
 
 stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[Accessの経路分離](deployment.md#remote-mcpのaccess)を参照する。
+
+## 客向け会員
+
+`/member`は共通のBetter Authログインから利用する。`customer_memberships`の店舗別会員はスタッフの組織所属と別で、入会で管理権限を付与しない。初回同意の版と各許可・更新版を保存する。入会の再送は既存の同意撤回を変更しない。設定の更新・退会は会員本人と店舗・更新版を確認する。会員APIとSSRはprivate/no-storeで応答する。[会員仕様](membership.md)を参照する。

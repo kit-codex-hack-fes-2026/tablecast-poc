@@ -1,3 +1,5 @@
+import { CustomerOrderAttribution } from "./customer-order-attribution";
+import { CustomerVisitPanel } from "./customer-visit-panel";
 import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
@@ -189,6 +191,15 @@ function useTableSession({
   useEffect(() => {
     voice.synchronise(data.voiceSessionId, data.voiceState === "active", data.speechSpeed);
   }, [data.voiceSessionId, data.voiceState, data.speechSpeed, voice]);
+  const customerContextCursor =
+    data.events.findLast((event) => event.kind === "customer.context-reset")?.cursor ?? 0;
+  const previousCustomerContext = useRef(0);
+  useEffect(() => {
+    if (customerContextCursor > previousCustomerContext.current) {
+      previousCustomerContext.current = customerContextCursor;
+      voice.clearCustomerContext();
+    }
+  }, [customerContextCursor, voice]);
   const updateCart = useMutation({
     mutationFn: ({ lines, expectedVersion }: { lines: CartLine[]; expectedVersion: number }) =>
       parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
@@ -347,12 +358,7 @@ function TableSession({
   return (
     <div data-ui="kiosk-shell" className="h-dvh flex flex-col overflow-hidden">
       <KioskHeader data={data} language={language} call={call} />
-      <KioskGames
-        endpoint={endpoint}
-        locale={locale}
-        players={data.guestCount}
-        stopVoice={() => voice.stop()}
-      />
+      <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
       <ResizablePanelGroup
         orientation={horizontal ? "horizontal" : "vertical"}
         className="flex-1 max-sm:flex-col!"
@@ -538,7 +544,7 @@ function TableSession({
                     </>
                   )}
                 </Tabs.Panel>
-                <KioskOrders data={data} catalog={catalog} />
+                <KioskOrders data={data} catalog={catalog} endpoint={endpoint} />
                 <KioskBilling data={data} call={call} />
               </div>
             </Tabs.Root>
@@ -611,9 +617,11 @@ function KioskPlanSummary({ plan }: { plan: TableState["plan"] }) {
 function KioskOrders({
   data,
   catalog,
+  endpoint,
 }: {
   data: TableState;
   catalog: ReturnType<typeof useTableSession>["catalog"];
+  endpoint: TableEndpoint;
 }) {
   const { t, locale } = useI18n();
   return (
@@ -637,6 +645,9 @@ function KioskOrders({
               lines={order.snapshot.lines}
               products={catalog.data?.configuration.products}
             />
+            {data.kind === "table" && (
+              <CustomerOrderAttribution endpoint={endpoint} order={order} />
+            )}
           </article>
         ))
       )}
@@ -728,5 +739,34 @@ function KioskHeader({
         {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
       </Button>
     </header>
+  );
+}
+
+function KioskVisitTools({
+  data,
+  endpoint,
+  stopVoice,
+}: {
+  data: TableState;
+  endpoint: TableEndpoint;
+  stopVoice: () => Promise<void>;
+}) {
+  return (
+    <>
+      {data.kind === "table" && (
+        <CustomerVisitPanel
+          key={data.id}
+          endpoint={endpoint}
+          sessionId={data.id}
+          cursor={data.events.at(-1)?.cursor ?? 0}
+        />
+      )}
+      <KioskGames
+        endpoint={endpoint}
+        locale={data.locale}
+        players={data.guestCount}
+        stopVoice={stopVoice}
+      />
+    </>
   );
 }

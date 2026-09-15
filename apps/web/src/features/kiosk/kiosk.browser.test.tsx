@@ -47,6 +47,14 @@ beforeEach(() => {
       const request = new Request(input, init);
       requests.push(request);
       const path = new URL(request.url).pathname;
+      if (request.method === "GET" && path === "/api/table/participants")
+        return Response.json({ participants: [], context: null });
+      if (request.method === "POST" && path === "/api/table/customer-code")
+        return Response.json({
+          code: "a".repeat(64),
+          expiresAt: Date.now() + 300000,
+          url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
+        });
       if (request.method === "GET" && path === "/api/table") return Response.json(current);
       if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {

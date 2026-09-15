@@ -166,6 +166,13 @@ test("アカウント取得の失敗でも枠を保って再試行し、再取�
   await expect(name).toBeEnabled();
   const release = Promise.withResolvers<void>();
   const requested = Promise.withResolvers<void>();
+  const saveRequested = Promise.withResolvers<void>();
+  const releaseSave = Promise.withResolvers<void>();
+  await page.route("**/api/auth/update-user", async (route) => {
+    saveRequested.resolve();
+    await releaseSave.promise;
+    await route.continue();
+  });
   await page.route("**/api/auth/list-sessions", async (route) => {
     requested.resolve();
     await release.promise;
@@ -174,6 +181,9 @@ test("アカウント取得の失敗でも枠を保って再試行し、再取�
   try {
     await name.fill("保存する名前");
     await page.getByRole("button", { name: ja.account_save, exact: true }).click();
+    await saveRequested.promise;
+    await expect(name).toBeDisabled();
+    releaseSave.resolve();
     await requested.promise;
     await expect(page.getByRole("status")).toHaveText(ja.account_saved);
     await name.fill("入力途中の名前");
@@ -182,6 +192,7 @@ test("アカウント取得の失敗でも枠を保って再試行し、再取�
     await expect(name).toHaveValue("入力途中の名前");
     await expect(page.locator("#tablecast-admin-sidebar:visible")).toBeVisible();
   } finally {
+    releaseSave.resolve();
     release.resolve();
   }
 });

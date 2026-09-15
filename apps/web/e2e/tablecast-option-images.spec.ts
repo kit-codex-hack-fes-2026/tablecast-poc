@@ -221,6 +221,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
     exact: true,
   });
   const guestImage = group.locator("img").first();
+  await guestImage.scrollIntoViewIfNeeded();
   await expect(guestImage).toBeVisible();
   await expect
     .poll(() =>

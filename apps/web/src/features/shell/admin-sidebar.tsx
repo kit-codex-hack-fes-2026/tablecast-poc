@@ -10,6 +10,7 @@ import {
   ChevronsUpDown,
   History,
   Gamepad2,
+  Gift,
   LayoutDashboard,
   LogOut,
   MonitorSmartphone,
@@ -189,6 +190,12 @@ export function AdminSidebar({
             )}
             {(
               [
+                { to: "/admin/stores/$storeId/coupons", label: "coupons", Icon: Gift },
+                {
+                  to: "/admin/stores/$storeId/points",
+                  label: "customer_points_policy",
+                  Icon: Gift,
+                },
                 { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
                 {
                   to: "/admin/stores/$storeId/devices",

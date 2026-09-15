@@ -187,6 +187,19 @@ export async function requireConfigurationImages(
       ),
     ),
   ].filter((image) => image.imageKey?.startsWith("tablecast/uploads/"));
+  return requireImageAssets(services, actor, images);
+}
+
+export async function requireImageAssets(
+  services: ApiServices,
+  actor: Actor,
+  images: {
+    imageKey?: string | null;
+    imageKind: z.infer<typeof imageMetadataSchema>["imageKind"];
+    imageSource?: z.infer<typeof imageMetadataSchema>["imageSource"] | null;
+    verifySource: boolean;
+  }[],
+) {
   const stored = new Map(
     await Promise.all(
       [...new Set(images.map((product) => product.imageKey))].map(async (key) => {

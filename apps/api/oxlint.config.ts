@@ -32,7 +32,8 @@ const files = [
     "pure",
     "src/modules/{catalog/pricing,catalog/conditions,auth/policy,voice/prompt,voice/diagnostics}.ts",
   ],
-  ["mutation", "src/modules/tables/mutations.ts"],
+  ["mutation", "src/modules/{tables,customer-coupons}/mutations.ts"],
+  ["service", "src/modules/customer-coupons/issuance.ts"],
   ["model", "src/modules/configuration/instruction-model.ts"],
   ["pure", "src/modules/configuration/instruction-response.ts"],
   ["model", "src/modules/*/model.ts"],
@@ -179,6 +180,8 @@ export default defineConfig({
                     module: [
                       "catalog",
                       "statistics",
+                      "customer-points",
+                      "customer-coupons",
                       "configuration",
                       "games",
                       "devices",
