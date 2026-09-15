@@ -49,6 +49,20 @@ export function CastOverview({
           ))}
         </div>
       </ConfigurationSection>
+      <ConfigurationSection title={t("editor_opening_instructions")} icon={MessageSquareText}>
+        <p className="text-sm text-muted-foreground">{t("cast_opening_note")}</p>
+        <div className="grid gap-6 lg:grid-cols-2">
+          {(["ja", "en"] as const).map((language) => (
+            <section key={language} className="min-w-0 space-y-3">
+              <h3 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h3>
+              <p className="whitespace-pre-wrap wrap-break-word text-sm">
+                {value.openingInstructions?.[language]?.trim() || t("cast_opening_default")}
+              </p>
+              {renderEdit?.(`opening-${language}`)}
+            </section>
+          ))}
+        </div>
+      </ConfigurationSection>
       <ConfigurationSection title={t("editor_voice")} icon={Mic}>
         <p className="text-sm text-muted-foreground">{t("cast_voice_note")}</p>
         <div className="grid gap-6 lg:grid-cols-2">

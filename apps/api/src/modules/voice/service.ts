@@ -13,7 +13,11 @@ import {
   voiceCondition,
 } from "../tables/mutations";
 import { getSession, getTableState } from "../tables/queries";
-import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
+import {
+  speechSpeedInputSchema,
+  voiceToolEventSchema,
+  type voiceOpeningContextSchema,
+} from "./model";
 
 // 会話画面へ公開する引数はメニュー検索語だけに限る。
 export function voiceToolQuery(toolName: string, argumentsValue: unknown) {
@@ -89,6 +93,7 @@ export async function setVoiceSession(
   voiceSessionId: string | null,
   expectedVoiceSessionId?: string,
   expectedVoiceVersion?: number,
+  openingContext?: z.infer<typeof voiceOpeningContextSchema>,
 ) {
   const db = services.db;
 
@@ -117,6 +122,7 @@ export async function setVoiceSession(
     ...interruptVoiceTurns(services, actor, mutation),
     eventStatement(services, actor, mutation, voiceSessionId ? "voice.started" : "voice.stopped", {
       voiceSessionId: voiceSessionId ?? row.voice_session_id,
+      ...(openingContext ? { openingContext } : {}),
     }),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");

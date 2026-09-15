@@ -43,6 +43,20 @@ for (const { locale, labels } of [
       ).toBeAttached();
       await japaneseVoice.selectOption("marin");
       await englishVoice.selectOption("cedar");
+      const openingInstructions = {
+        ja: "旬の料理を一つ紹介し、詳しい説明が必要か尋ねる。",
+        en: "Introduce one seasonal dish and offer to explain it.",
+      };
+      const japaneseOpening = page.getByRole("textbox", {
+        name: `${labels.common_ja} ${labels.editor_opening_instructions}`,
+        exact: true,
+      });
+      const englishOpening = page.getByRole("textbox", {
+        name: `${labels.common_en} ${labels.editor_opening_instructions}`,
+        exact: true,
+      });
+      await japaneseOpening.fill(openingInstructions.ja);
+      await englishOpening.fill(openingInstructions.en);
       await page.getByRole("button", { name: labels.common_save, exact: true }).click();
       await expect(
         page.getByRole("status").filter({ hasText: labels.account_saved }),
@@ -51,6 +65,8 @@ for (const { locale, labels } of [
       // Then: 実DBに保存され、ページを開き直しても選択を維持する。
       await expect(japaneseVoice).toHaveValue("marin");
       await expect(englishVoice).toHaveValue("cedar");
+      await expect(japaneseOpening).toHaveValue(openingInstructions.ja);
+      await expect(englishOpening).toHaveValue(openingInstructions.en);
       await expect(
         japaneseVoice.getByRole("option", { name: "Marin", exact: true }),
       ).toBeAttached();
@@ -58,6 +74,7 @@ for (const { locale, labels } of [
         await (await page.request.get(`${api}/drafts/${draft.id}`)).json(),
       );
       expect(saved.configuration.cast.voice).toEqual({ ja: "marin", en: "cedar" });
+      expect(saved.configuration.cast.openingInstructions).toEqual(openingInstructions);
       await page.screenshot({
         path: testInfo.outputPath(`tablecast-gpt-live-voices-${locale}.png`),
         fullPage: true,
@@ -92,6 +109,7 @@ for (const { locale, labels } of [
       );
       expect(published.version).toBe(original.version + 1);
       expect(published.configuration.cast.voice).toEqual({ ja: "marin", en: "cedar" });
+      expect(published.configuration.cast.openingInstructions).toEqual(openingInstructions);
       expect(
         configDraftSchema.parse(await (await page.request.get(`${api}/drafts/${draft.id}`)).json())
           .status,
@@ -99,6 +117,12 @@ for (const { locale, labels } of [
       await page.goto("/admin/stores/tablecast-hanul/menu/cast/settings");
       await expect(page.getByRole("main").getByText(/^marin$/i)).toBeVisible();
       await expect(page.getByRole("main").getByText(/^cedar$/i)).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(openingInstructions.ja, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("main").getByText(openingInstructions.en, { exact: true }),
+      ).toBeVisible();
     } finally {
       const current = configDraftSchema.parse(
         await (await page.request.get(`${api}/drafts/${draft.id}`)).json(),

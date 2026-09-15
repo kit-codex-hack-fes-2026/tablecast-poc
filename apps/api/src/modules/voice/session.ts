@@ -108,7 +108,11 @@ export async function startVoiceSession(
     });
   try {
     requestSignal.throwIfAborted();
-    await setVoiceSession(services, actor, created.session.id, undefined, row.voice_version);
+    await setVoiceSession(services, actor, created.session.id, undefined, row.voice_version, {
+      storeName: catalog.storeName,
+      instructions: instructionText(catalog.configuration.cast.instructions[row.locale]),
+      openingInstructions: catalog.configuration.cast.openingInstructions?.[row.locale] ?? "",
+    });
     requestSignal.throwIfAborted();
   } catch (error) {
     try {

@@ -30,6 +30,49 @@ export const Welcome: Story = {
   },
 };
 export const English: Story = { name: "英語の初回表示", globals: { locale: "en" } };
+export const ReplyHints: Story = {
+  name: "開始案内と声で答えるヒント",
+  args: {
+    view: {
+      status: "listening",
+      suggestions: ["説明をお願いします", "おすすめを教えて", "少しメニューを見ます"],
+    },
+    lines: [
+      {
+        id: "tablecast-opening",
+        role: "assistant",
+        text: "いらっしゃいませ。卓上喫茶へようこそ。よければご注文の仕方をご案内しましょうか？",
+        locale: "ja",
+        createdAt: 1788645000000,
+        interrupted: false,
+      },
+    ],
+  },
+};
+export const EnglishReplyHints: Story = {
+  name: "英語の開始案内と返答例",
+  globals: { locale: "en" },
+  args: {
+    view: {
+      status: "listening",
+      suggestions: [
+        "Please explain how to order",
+        "What would you recommend?",
+        "I'd like a little time to look at the menu",
+      ],
+    },
+    lines: [
+      {
+        id: "tablecast-opening",
+        role: "assistant",
+        text: "Welcome to Tabletop Café. Would you like a quick guide to ordering?",
+        locale: "en",
+        createdAt: 1788645000000,
+        interrupted: false,
+      },
+    ],
+  },
+};
 export const Paused: Story = {
   name: "停止しても会話を保持",
   args: {

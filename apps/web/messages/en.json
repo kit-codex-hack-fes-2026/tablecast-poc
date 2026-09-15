@@ -1,4 +1,11 @@
 {
+  "kiosk_reply_hints": "You could say",
+  "kiosk_opening_failed": "We could not play the welcome. You can still speak — try asking for a recommendation.",
+  "editor_opening_instructions": "Opening guidance and examples",
+  "cast_opening_note": "Set the opening topic and example wording. The AI creates a short introduction with one question, checking products against the published menu. Resuming the same visit uses a brief greeting. Leave blank to welcome guests and offer help with ordering.",
+  "cast_opening_default": "Welcome guests by the restaurant name and offer to explain how to order.",
+  "cast_opening_example_ja": "落ち着いた雰囲気で歓迎し、初めてなら注文方法をご案内する。例：いらっしゃいませ。当店へようこそ。よければご注文の仕方をご案内しましょうか？",
+  "cast_opening_example_en": "Welcome guests warmly and offer to explain how to order. For example: Welcome to our restaurant. Would you like a quick guide to ordering?",
   "common_brand": "TableCast",
   "common_language": "Display language",
   "common_close": "Close",

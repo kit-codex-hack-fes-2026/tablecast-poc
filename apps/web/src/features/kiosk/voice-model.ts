@@ -35,6 +35,8 @@ export type MicrophoneView = {
 };
 export const initialMicrophone: MicrophoneView = { devices: [], selectedId: "default" };
 export type VoiceView = {
+  suggestions?: string[];
+  openingFailed?: boolean;
   microphone?: MicrophoneView;
   status: VoiceStatus;
   error?: "permission" | "unconfigured" | "connection" | "active";

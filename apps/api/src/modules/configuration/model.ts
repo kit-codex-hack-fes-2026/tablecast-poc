@@ -11,6 +11,10 @@ export const configurationSchema = z
     cast: z
       .object({
         instructions: z.object({ ja: castInstructionSchema, en: castInstructionSchema }),
+        openingInstructions: z
+          .object({ ja: z.string().max(5000), en: z.string().max(5000) })
+          .strict()
+          .optional(),
         voice: z.object({
           ja: z.string().min(1).max(100).nullable(),
           en: z.string().min(1).max(100).nullable(),

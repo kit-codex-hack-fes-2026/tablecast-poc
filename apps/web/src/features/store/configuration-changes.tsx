@@ -51,6 +51,7 @@ const labels = {
   excludedOptionIds: "editor_excluded_options",
   includedOptionSurcharge: "editor_option_surcharge",
   instructions: "editor_cast_instructions",
+  openingInstructions: "editor_opening_instructions",
   voice: "editor_voice",
   proactive: "editor_proactive",
   ja: "common_ja",

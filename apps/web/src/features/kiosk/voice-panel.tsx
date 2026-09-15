@@ -538,6 +538,24 @@ export function VoicePanel({
         </output>
       )}
       <footer className="shrink-0 border-t border-white/80 bg-white/65 px-1 pb-2 pt-1 backdrop-blur-xl">
+        {active && Boolean(view.suggestions?.length) && (
+          <section
+            className="space-y-2 border-b border-border px-2 py-3"
+            aria-label={t("kiosk_reply_hints")}
+          >
+            <h3 className="text-xs font-medium text-muted-foreground">{t("kiosk_reply_hints")}</h3>
+            <ul className="grid gap-x-5 gap-y-1 text-sm leading-relaxed sm:grid-cols-3">
+              {view.suggestions?.map((suggestion) => (
+                <li key={suggestion} className="min-w-0 wrap-break-word">
+                  {suggestion}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {active && view.openingFailed && (
+          <p className="p-2 text-sm text-muted-foreground">{t("kiosk_opening_failed")}</p>
+        )}
         {active ? (
           <Suspense
             fallback={

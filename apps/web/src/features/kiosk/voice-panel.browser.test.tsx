@@ -2,6 +2,7 @@ import type { TableEvent } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
@@ -55,6 +56,54 @@ function Surface({ children, locale = "ja" }: { children: ReactNode; locale?: "j
 afterEach(async () => {
   await cleanup();
 });
+
+it.each(["ja", "en"] as const)(
+  "%sの発話ヒントを非操作の文として表示し、停止時に消す",
+  async (locale) => {
+    const suggestions =
+      locale === "ja"
+        ? ["説明をお願いします", "おすすめを教えて", "少しメニューを見ます"]
+        : [
+            "Please explain how to order",
+            "What would you recommend?",
+            "I'd like a little time to look at the menu",
+          ];
+    const heading = locale === "ja" ? "こんなふうに話しかけられます" : "You could say";
+    const content = (status: "listening" | "paused") => (
+      <Surface locale={locale}>
+        <VoicePanel
+          view={{ status, suggestions }}
+          lines={[
+            {
+              id: "tablecast-welcome",
+              role: "assistant",
+              locale,
+              createdAt: startedAt,
+              interrupted: false,
+              text:
+                locale === "ja"
+                  ? "いらっしゃいませ。卓上喫茶へようこそ。よければご注文の仕方をご案内しましょうか？"
+                  : "Welcome to Tabletop Café. Would you like a quick guide to ordering?",
+            },
+          ]}
+          onStart={vi.fn<() => void>()}
+        />
+      </Surface>
+    );
+    await page.viewport(768, 1024);
+    const screen = await render(content("listening"));
+    const region = screen.getByRole("region", { name: heading });
+    for (const suggestion of suggestions)
+      await expect.element(region.getByText(suggestion, { exact: true })).toBeVisible();
+    await expect.element(region.getByRole("button")).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();
+    await page.screenshot({
+      path: `../../../test-results/browser/tablecast-voice-hints-${locale}.png`,
+    });
+    await screen.rerender(content("paused"));
+    await expect.element(screen.getByRole("region", { name: heading })).not.toBeInTheDocument();
+  },
+);
 
 it("保存通知と字幕の続きが届いても吹き出しを作り直さず前後の発話やツールとの位置を保つ", async () => {
   const messages: LiveMessage[] = [

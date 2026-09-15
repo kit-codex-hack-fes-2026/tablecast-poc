@@ -348,6 +348,41 @@ it("未保存入力を戻す確認では下書きを破棄せず、最後の保�
   expect(requests.filter((request) => request.url.endsWith("/discard"))).toHaveLength(0);
 });
 
+it("日英の開始方針を保存し、公開確認に含める", async () => {
+  const { screen } = await open(`${base}/changes/${draftId}/cast/settings#opening-ja`);
+  const japanese = screen.getByRole("textbox", {
+    name: `${ja.common_ja} ${ja.editor_opening_instructions}`,
+    exact: true,
+  });
+  const english = screen.getByRole("textbox", {
+    name: `${ja.common_en} ${ja.editor_opening_instructions}`,
+    exact: true,
+  });
+  await expect.element(japanese).toHaveFocus();
+  await japanese.fill("旬の料理を一つ紹介し、興味があるか尋ねる");
+  await english.fill(
+    "Introduce one seasonal dish and ask whether the guest would like to hear more.",
+  );
+  await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect
+    .poll(() => current.configuration.cast.openingInstructions)
+    .toEqual({
+      ja: "旬の料理を一つ紹介し、興味があるか尋ねる",
+      en: "Introduce one seasonal dish and ask whether the guest would like to hear more.",
+    });
+  const reviewLink = screen.getByRole("link", { name: ja.workflow_review, exact: true });
+  await expect.element(reviewLink).toBeEnabled();
+  await reviewLink.click();
+  await screen.getByRole("button", { name: ja.admin_validate, exact: true }).click();
+  const publish = screen.getByRole("button", { name: ja.admin_publish, exact: true });
+  await expect.element(publish).toBeEnabled();
+  await publish.click();
+  const confirmation = screen.getByRole("dialog", { name: ja.workflow_publish_title, exact: true });
+  await expect.element(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+  await expect.poll(() => current.status).toBe("published");
+});
+
 it("接客入力を戻しても初回移動用のhashへfocusを移し直さない", async () => {
   const initial = instructionText(current.configuration.cast.instructions.ja);
   const { screen } = await open(`${base}/changes/${draftId}/cast/settings#instructions-ja`);

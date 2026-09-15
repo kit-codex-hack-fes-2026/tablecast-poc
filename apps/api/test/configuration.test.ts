@@ -39,6 +39,44 @@ const table = async () =>
     ).json(),
   );
 
+it("旧設定をそのまま読み、開始方針は下書き保存では公開せず承認後に日英を反映する", async () => {
+  const { staff } = await setupFixture();
+  const services = createApiServices(env);
+  const before = await getCatalog(services, staff.storeId);
+  expect(before.configuration.cast.openingInstructions).toBeUndefined();
+  const created = await createDraft(services, staff);
+  const openingInstructions = { ja: "旬の料理を紹介する", en: "Introduce a seasonal dish." };
+  const draft = await updateDraft(services, staff, created.id, {
+    expectedVersion: created.version,
+    configuration: {
+      ...created.configuration,
+      cast: { ...created.configuration.cast, openingInstructions },
+    },
+  });
+  expect(
+    (await getCatalog(services, staff.storeId)).configuration.cast.openingInstructions,
+  ).toBeUndefined();
+  expect(
+    (await getDraft(services, staff, draft.id)).configuration.cast.openingInstructions,
+  ).toEqual(openingInstructions);
+  expect(draft.changes).toContainEqual({
+    path: "cast.openingInstructions",
+    before: null,
+    after: openingInstructions,
+    sensitive: false,
+  });
+  await validateDraft(services, staff, draft.id, draft.version);
+  await publishDraft(services, staff, draft.id, {
+    expectedVersion: draft.version,
+    baseVersion: draft.baseVersion,
+    idempotencyKey: "tablecast-opening-publication",
+    approved: true,
+  });
+  expect(
+    (await getCatalog(services, staff.storeId)).configuration.cast.openingInstructions,
+  ).toEqual(openingInstructions);
+});
+
 it("再開候補は小さな概要だけを返し、同じ更新時刻の31件目以降も重複なく取得できる", async () => {
   const { staff, cookie } = await setupFixture();
   const configuration = structuredClone(fixtureConfiguration);

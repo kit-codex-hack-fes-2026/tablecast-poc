@@ -416,6 +416,10 @@ it("MCPで日英設定を下書き・検証し、公開は人の管理sessionと
         ja: "料理の文化を短く説明する",
         en: "Briefly explain the cultural background of the dishes.",
       },
+      openingInstructions: {
+        ja: "旬の料理を一つ紹介し、興味があるか尋ねる",
+        en: "Introduce one seasonal dish and ask whether the guest would like to hear more.",
+      },
       proactive: true,
     },
   });

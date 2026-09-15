@@ -14,8 +14,15 @@ export async function conversationHistory(
   actor: { storeId: string; tableSessionId?: string },
   maxCharacters = 16000,
 ) {
+  return conversationHistoryValue(await conversationHistoryQuery(services, actor), maxCharacters);
+}
+
+export function conversationHistoryQuery(
+  services: ApiServices,
+  actor: { storeId: string; tableSessionId?: string },
+) {
   // 同じ来店のSDK字幕を再利用する。実際に聞こえた範囲との厳密な一致は求めない。
-  const rows = await services.db
+  return services.db
     .select({ kind: business.tableEvents.kind, data_json: business.tableEvents.data_json })
     .from(business.tableEvents)
     .where(
@@ -28,6 +35,12 @@ export async function conversationHistory(
     )
     .orderBy(desc(business.tableEvents.cursor))
     .limit(40);
+}
+
+export function conversationHistoryValue(
+  rows: Awaited<ReturnType<typeof conversationHistoryQuery>>,
+  maxCharacters = 16000,
+) {
   const history: { role: "user" | "assistant"; content: string; interrupted: boolean }[] = [];
   let characters = 0;
   for (const row of rows) {

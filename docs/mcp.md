@@ -2,6 +2,8 @@
 
 [索引](README.md)
 
+接客設定の`cast.openingInstructions.ja/en`で音声開始時の方針・例文を編集できる。省略した旧設定は歓迎と注文方法の案内を既定とする。`get_configuration`・`update_draft`の既存設定JSONで扱い、公開承認後の次の音声開始から適用する。通常方針や無言時の自発接客とは独立した項目である。
+
 ## 役割
 
 店舗のChatGPTがメニュー画像・PDF・表を読み、日英コンテンツを生成し、TableCastのRemote MCPへ下書き登録する。

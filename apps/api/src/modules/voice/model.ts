@@ -104,6 +104,20 @@ const conversationItemSchema = z
 
 export const voiceStartSchema = z.object({ sdp: z.string().min(1).max(64000) }).strict();
 
+export const voiceOpeningSchema = z.object({ voiceSessionId: id }).strict();
+export const voiceSuggestionsSchema = voiceOpeningSchema
+  .extend({ itemId: id, text: z.string().min(1).max(10000) })
+  .strict();
+export const voiceSuggestionsResultSchema = z
+  .object({ suggestions: z.array(z.string().min(1).max(120)).max(3) })
+  .strict();
+export const voiceOpeningResultSchema = z.object({ text: z.string().min(1).max(1000) }).strict();
+export const voiceOpeningContextSchema = z.object({
+  storeName: z.string(),
+  instructions: z.string(),
+  openingInstructions: z.string(),
+});
+
 export const voiceDelegationSchema = z
   .object({
     voiceSessionId: id,
