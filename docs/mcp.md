@@ -8,6 +8,12 @@
 TableCast内にOCR・翻訳Agent・別の設定チャットを作らない。管理画面には確認、差分、必要な手動修正と公開を用意する。
 UIそのものの翻訳はWebのメッセージファイル、商品・プラン・キャストはDBにある日英コンテンツを正本にする。
 
+### 選択肢の条件式
+
+`update_draft`のoptionには任意の`conditions: { version: 2, requires, excludes }`を渡せる。式は`{kind:"option", optionId}`、`{kind:"and"|"or", children}`、`{kind:"not", child}`で、条件なしは`null`とする。旧`requires` / `excludes`配列を持つ選択肢も混在できるが、一つの選択肢で新条件と空でない旧配列を併記しない。式は深さ8、各AND/ORは2〜8子、式64節、商品1,024節、設定65,536節まで。`get_configuration`のJSON Schemaは深さごとの参照を含む有限schemaを返し、節数合計はAPIが追加検証する。
+
+取得した`conditions`を省略して全体保存すると`CONFIGURATION_FORMAT_UNSUPPORTED`となる。条件を削除するときは`version:2`と両式の`null`を明示する。実際の選択肢・商品削除は可能。既存draft・releaseの一括移行やDB migrationは不要。新形式を保存した環境へ旧APIを戻す場合は、先に条件を互換形式へ戻す移行が必要となる。
+
 ## 管理できるもの
 
 卓上ゲームは`get_game_spec`で契約を取得し、`register_game`・`validate_game`で下書き登録と検証を行う。管理画面で人が試遊して承認する。ゲームの契約とツール一覧は[ゲームプラグイン仕様](game-plugins.md)を参照する。

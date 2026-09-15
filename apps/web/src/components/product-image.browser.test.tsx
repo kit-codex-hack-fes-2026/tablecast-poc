@@ -46,7 +46,7 @@ it("読込失敗で背景を消して通知し、画像差替え後は再び読�
   );
   const image = view.getByRole("img", { name: "商品" }).element();
   await expect.poll(() => onError.mock.calls.length).toBe(1);
-  expect(getComputedStyle(image).backgroundImage).toBe("none");
+  await expect.poll(() => getComputedStyle(image).backgroundImage).toBe("none");
   expect(image.getBoundingClientRect().height).toBe(96);
   await view.rerender(
     <div style={{ marginTop: 20000 }}>

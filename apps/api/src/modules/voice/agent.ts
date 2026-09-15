@@ -180,6 +180,10 @@ export function createCastTools(
                       id: option.id,
                       priceDelta: option.priceDelta,
                       available: option.available,
+                      maxQuantity: option.maxQuantity,
+                      ...(option.conditions
+                        ? { conditions: option.conditions }
+                        : { requires: option.requires, excludes: option.excludes }),
                       displayName: option.text[locale].displayName,
                       speechName: option.text[locale].speechName,
                       description: option.text[locale].description,
@@ -253,7 +257,7 @@ export function createCastTools(
           updateCart: castTool({
             id: "updateCart",
             description:
-              "現行expectedVersionに対してカートを更新する。既存行を保持し、客の選択をselectionsへ含める。指定のない必須項目は選ばず、返ったmissingをまとめて尋ねる。任意項目は指定がなければ未選択。数量不明の単品注文は1、追加数量が曖昧なら確認する。注文確定には別のprepareConfirmationと次発話の明示承認が必要。",
+              "現行expectedVersionに対してカートを更新する。既存行を保持し、客の選択をselectionsへ含める。指定のない必須項目は選ばず、返ったmissingとconditionIssuesを確認する。conditionIssuesのoptionIdの条件式は詳細カタログで確認する。requiresは式が成立する必要があり、andは全て、orはいずれか、notは未選択を表す。ORの全候補を必須と説明しない。条件のoptionIdの名称は取得済みの詳細カタログを使う。任意項目は指定がなければ未選択。数量不明の単品注文は1、追加数量が曖昧なら確認する。注文確定には別のprepareConfirmationと次発話の明示承認が必要。",
             inputSchema: cartUpdateSchema,
             execute: async (input) => {
               guard();
@@ -328,6 +332,14 @@ export function voiceTableState(state: TableState) {
         unitPrice: line.unitPrice,
         total: line.total,
         missing: line.missing,
+        ...(line.conditionIssues?.length
+          ? {
+              conditionIssues: line.conditionIssues.map(({ optionId, relation }) => ({
+                optionId,
+                relation,
+              })),
+            }
+          : {}),
         planCovered: line.planCovered,
         options: line.options.map((option) => ({
           id: option.id,

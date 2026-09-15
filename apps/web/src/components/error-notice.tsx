@@ -23,7 +23,8 @@ export function ErrorNotice({
       ? validationIssuesSchema.safeParse(failure.details)
       : undefined;
   if (failure) {
-    if (failure.status === 401) message = t("common_session_error");
+    if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") message = t("condition_upgrade_error");
+    else if (failure.status === 401) message = t("common_session_error");
     else if (failure.status === 403) message = t("common_forbidden");
     else if (failure.status === 404) message = t("common_not_found");
     else if (failure.status === 409 || failure.status === 410) message = t("common_conflict");
