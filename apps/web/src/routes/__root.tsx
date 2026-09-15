@@ -1,4 +1,5 @@
 import { Brand } from "../components/brand";
+import { PwaInstallToast } from "../components/pwa-install-toast";
 import { Pwa, PwaInstallHelp } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
@@ -135,6 +136,7 @@ function RootContent() {
       <Pwa />
       <Outlet />
       <PwaInstallHelp />
+      <PwaInstallToast />
     </PanelLayoutProvider>
   );
 }
