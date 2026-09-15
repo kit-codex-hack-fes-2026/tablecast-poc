@@ -1,6 +1,6 @@
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
-import type { Order } from "@tablecast/api/schema";
+import type { Order, Product } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { DateTime } from "../../components/date-time";
@@ -13,6 +13,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { CartLines } from "../../components/cart-lines";
+import { catalogOptions } from "./menu-query";
 import { tableDetailOptions } from "./store-query";
 import { ActivityLog } from "./events";
 import { SessionActivity } from "./session-activity";
@@ -30,6 +31,7 @@ function useTableDetail({
   const route = rpc.api.admin.stores[":storeId"];
   const param = { storeId, id: tableId };
   const detail = useSuspenseQuery(tableDetailOptions(storeId, tableId));
+  const catalog = useSuspenseQuery(catalogOptions(storeId, detail.data.configVersion));
   const client = useQueryClient();
   useRealtime(detail.data.status === "open" ? { storeId } : undefined, detail.data.cursor, () => {
     void client.invalidateQueries({ queryKey: ["tablecast-table-detail", storeId, tableId] });
@@ -68,6 +70,8 @@ function useTableDetail({
     action,
     orderStatus,
     table,
+    products:
+      catalog.data.version === table.configVersion ? catalog.data.configuration.products : [],
   };
 }
 export function TableDetail({
@@ -82,7 +86,7 @@ export function TableDetail({
   onViewChange: (view: "overview" | "logs" | "orders" | "billing" | "diagnostics") => void;
 }) {
   const hydrated = useHydrated();
-  const { t, locale, detail, action, orderStatus, table } = useTableDetail({
+  const { t, locale, detail, action, orderStatus, table, products } = useTableDetail({
     storeId,
     tableId,
     view,
@@ -210,7 +214,12 @@ export function TableDetail({
                 closed={table.status === "closed"}
               />
             </Tabs.Panel>
-            <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+            <SessionOrders
+              products={products}
+              table={table}
+              action={action}
+              orderStatus={orderStatus}
+            />
             <Tabs.Panel value="billing">
               <div
                 data-ui="bill-summary"
@@ -271,10 +280,12 @@ export function TableDetail({
 }
 
 function SessionOrders({
+  products,
   table,
   action,
   orderStatus,
 }: {
+  products: Product[];
   table: NonNullable<ReturnType<typeof useTableDetail>["table"]>;
   action: NonNullable<ReturnType<typeof useTableDetail>["action"]>;
   orderStatus: NonNullable<ReturnType<typeof useTableDetail>["orderStatus"]>;
@@ -283,7 +294,7 @@ function SessionOrders({
   return (
     <Tabs.Panel value="orders">
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
-      <CartLines lines={table.cart.lines} />
+      <CartLines lines={table.cart.lines} products={products} />
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
       {table.orders.map((order) => (
         <article

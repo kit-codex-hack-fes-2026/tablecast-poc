@@ -62,6 +62,9 @@ test("条件を画面で保存・再読込・公開し、客が未充足行を�
     name: "グループ 1：トッピング 選択肢 1：X",
     exact: true,
   });
+  await expect(
+    owner.getByRole("button", { name: new RegExp(`^${ja.editor_remove_option}`) }),
+  ).toBeEnabled();
   await owner.locator("summary").click();
   await owner.getByRole("button", { name: ja.condition_add, exact: true }).first().click();
   const choices = owner.getByRole("combobox", { name: ja.condition_choose });
@@ -84,6 +87,9 @@ test("条件を画面で保存・再読込・公開し、客が未充足行を�
   expect((await savedResponse).status()).toBe(200);
   await expect(admin.getByText(ja.admin_unsaved, { exact: true })).toHaveCount(0);
   await admin.reload();
+  await expect(
+    owner.getByRole("button", { name: new RegExp(`^${ja.editor_remove_option}`) }),
+  ).toBeEnabled();
   await owner.locator("summary").click();
   await expect(choices).toHaveCount(3);
   await expect(owner.getByRole("combobox", { name: ja.condition_operator }).nth(1)).toHaveValue(
@@ -148,7 +154,14 @@ test("条件を画面で保存・再読込・公開し、客が未充足行を�
       },
     });
     expect(changed.status()).toBe(200);
-    expect(tableStateSchema.parse(await changed.json()).cart.complete).toBe(false);
+    const incomplete = tableStateSchema.parse(await changed.json());
+    expect(incomplete.cart.complete).toBe(false);
+    expect(incomplete.cart.lines[0]?.conditionIssues).toEqual([
+      { optionId: "X", relation: "requires" },
+    ]);
+    await admin.goto(`/admin/stores/${storeId}/visits/${current.id}?view=orders`);
+    await expect(admin.getByRole("tabpanel")).toContainText("トッピング / A");
+    await expect(admin.getByRole("tabpanel")).toContainText("トッピング / B");
     await guest.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
     await expect(guest.getByRole("tabpanel")).toContainText(ja.condition_requires);
     await guest

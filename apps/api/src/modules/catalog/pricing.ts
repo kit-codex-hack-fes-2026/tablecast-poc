@@ -174,7 +174,6 @@ export function priceCart(
         conditionIssues.push({
           optionId: option.id,
           relation: "requires",
-          expression: conditions.requires,
         });
       options.push({
         id: option.id,

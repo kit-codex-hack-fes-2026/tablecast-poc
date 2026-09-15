@@ -1,13 +1,11 @@
 import { z } from "zod";
 import type { Locale } from "../../platform/model";
 import { id, localeSchema } from "../../platform/model";
-import { optionConditionSchema, type OptionCondition } from "../catalog/model";
 
 export const conditionIssueSchema = z
   .object({
     optionId: id,
     relation: z.enum(["requires", "excludes"]),
-    expression: optionConditionSchema,
   })
   .strict();
 export const selectionSchema = z
@@ -50,7 +48,6 @@ export type PricedLine = CartLine & {
   conditionIssues?: {
     optionId: string;
     relation: "requires" | "excludes";
-    expression: OptionCondition;
   }[];
   planCovered: boolean;
 };

@@ -368,3 +368,66 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
       );
   }
 });
+
+it.each([
+  {
+    locale: "ja",
+    labels: ja,
+    aliases: Array.from({ length: 31 }, (_, index) => `別名${index}`),
+    path: ["configuration", "products", 0, "text", "ja", "aliases"],
+    message: "30件以下にしてください",
+  },
+  {
+    locale: "en",
+    labels: en,
+    aliases: ["a".repeat(101)],
+    path: ["configuration", "products", 0, "text", "ja", "aliases", 0],
+    message: "Use at most 100 characters",
+  },
+] as const)(
+  "$localeで別名の不備を条件エラーにせず、APIの項目パスを表示して修正後に保存する",
+  async ({ locale, labels, aliases, path, message }) => {
+    const saved: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url).pathname;
+      if (url === "/api/auth/organization/get-full-organization" || url === "/api/auth/get-session")
+        return Response.json(null);
+      if (url === `/api/admin/stores/${storeId}/drafts/${draftId}` && request.method === "PUT") {
+        const body: { configuration: Configuration } = await request.json();
+        saved.push(body.configuration);
+        if (saved.length === 1)
+          return Response.json(
+            {
+              error: {
+                code: "INVALID_INPUT",
+                details: [{ path, code: "too_big", messages: { ja: message, en: message } }],
+              },
+            },
+            { status: 422 },
+          );
+        return Response.json({ ...initial, version: 2, configuration: body.configuration });
+      }
+      throw new Error(`未定義の要求: ${request.method} ${url}`);
+    });
+    const initial = await mountForm(locale);
+    const field = page
+      .getByRole("textbox", { name: `${labels.common_ja} ${labels.editor_aliases}`, exact: true })
+      .first();
+    await field.fill(aliases.join("\n"));
+    await page.getByRole("button", { name: labels.common_save, exact: true }).click();
+    await expect
+      .element(page.getByRole("alert").filter({ hasText: message }))
+      .toHaveTextContent(path.join(" · "));
+    await expect
+      .element(page.getByText(labels.condition_invalid, { exact: true }))
+      .not.toBeInTheDocument();
+    await expect.element(field).toHaveValue(aliases.join("\n"));
+    await field.fill("修正した別名");
+    await page.getByRole("button", { name: labels.common_save, exact: true }).click();
+    await expect.poll(() => saved.length).toBe(2);
+    await expect
+      .element(page.getByRole("status").filter({ hasText: labels.account_saved }))
+      .toBeVisible();
+  },
+);

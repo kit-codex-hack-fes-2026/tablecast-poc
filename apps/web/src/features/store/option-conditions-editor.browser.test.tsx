@@ -70,6 +70,23 @@ function Form({ initial = product }: { initial?: Product }) {
           })
         }
       />
+      <button
+        type="button"
+        onClick={() =>
+          setValue((current) => ({
+            ...current,
+            modifiers: current.modifiers.map((group) => ({
+              ...group,
+              options: group.options.filter((option) => option.id !== "A"),
+            })),
+          }))
+        }
+      >
+        選択肢Aを削除
+      </button>
+      <button type="button" onClick={() => setValue(initial)}>
+        商品を戻す
+      </button>
       <output aria-label="編集結果">
         {JSON.stringify(value.modifiers[0]?.options[0]?.conditions)}
       </output>
@@ -230,3 +247,25 @@ it.each([
     expect(requests[2]).toMatchObject({ selections: [] });
   },
 );
+
+it("商品から削除した試行の選択肢を除き、商品を戻しても選択を復活させない", async () => {
+  const requests: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push(await new Request(input, init).json());
+    return Response.json({ applied: true, errors: [], conditions: [], selectionError: null });
+  });
+  const screen = await setup("ja");
+  await screen.getByText(ja.condition_try, { exact: true }).click();
+  await screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }).click();
+  await screen.getByRole("button", { name: "選択肢Aを削除", exact: true }).click();
+  await expect
+    .element(screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }))
+    .not.toBeInTheDocument();
+  await screen.getByRole("button", { name: ja.condition_run }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 1 }] });
+  await screen.getByRole("button", { name: "商品を戻す", exact: true }).click();
+  await expect
+    .element(screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }))
+    .not.toBeChecked();
+});

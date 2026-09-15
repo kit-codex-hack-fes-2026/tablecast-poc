@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { TableDetail } from "../features/store/table-detail";
+import { catalogOptions } from "../features/store/menu-query";
 import { tableDetailOptions } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
   validateSearch: z.object({
@@ -10,7 +11,10 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
       .catch("overview"),
   }),
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(tableDetailOptions(params.storeId, params.sessionId));
+    const table = await context.queryClient.ensureQueryData(
+      tableDetailOptions(params.storeId, params.sessionId),
+    );
+    await context.queryClient.ensureQueryData(catalogOptions(params.storeId, table.configVersion));
   },
   component: Page,
 });

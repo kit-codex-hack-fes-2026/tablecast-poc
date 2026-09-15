@@ -342,6 +342,11 @@ export function OptionConditionsEditor({
     .flatMap((group) => group.options)
     .find((item) => item.id === optionId);
   const [selections, setSelections] = useState<CartLine["selections"]>([{ optionId, quantity: 1 }]);
+  const optionIds = new Set(
+    product.modifiers.flatMap((group) => group.options.map((item) => item.id)),
+  );
+  const presentSelections = selections.filter((selection) => optionIds.has(selection.optionId));
+  if (presentSelections.length !== selections.length) setSelections(presentSelections);
   const root = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<"requires" | "excludes" | null>(null);
   const signature = JSON.stringify([product, selections]);

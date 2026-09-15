@@ -522,7 +522,11 @@ function TableSession({
                     <>
                       <CartLines
                         lines={data.cart.lines}
-                        products={catalog.data?.configuration.products}
+                        products={
+                          catalog.data?.version === data.configVersion
+                            ? catalog.data.configuration.products
+                            : undefined
+                        }
                         onQuantity={(line, quantity) =>
                           updateCart.mutate({
                             lines: currentLines().map((item) =>

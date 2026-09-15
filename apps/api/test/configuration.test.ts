@@ -568,7 +568,7 @@ it("条件の保存・公開・注文を共有し、条件消失と古い版の�
   const incomplete = await updateCart(services, device, { expectedVersion: 0, lines: [line] });
   expect(incomplete.cart.complete).toBe(false);
   expect(incomplete.cart.lines[0]?.conditionIssues).toEqual([
-    { optionId: "dairy", relation: "requires", expression: { kind: "option", optionId: "oat" } },
+    { optionId: "dairy", relation: "requires" },
   ]);
   await expect(
     prepareConfirmation(services, device, {

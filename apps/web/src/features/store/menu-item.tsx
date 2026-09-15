@@ -127,18 +127,14 @@ function ItemForm({
   async function submitConfiguration(form: HTMLFormElement) {
     if (!editable || images.uploadingNow() || reload.isPending || save.isPending) return;
     const parsed = configurationSchema.safeParse(configuration);
-    setEditor((current) => ({ ...current, conditionError: !parsed.success }));
-    if (!parsed.success) {
-      const invalid = form.querySelector<HTMLElement>('[aria-invalid="true"]');
-      let parent = invalid?.parentElement;
-      while (parent && parent !== form) {
-        if (parent instanceof HTMLDetailsElement) parent.open = true;
-        parent = parent.parentElement;
-      }
-      invalid?.focus();
+    const invalidConditions =
+      parsed.error?.issues.some((issue) => issue.path.includes("conditions")) ?? false;
+    setEditor((current) => ({ ...current, conditionError: invalidConditions }));
+    if (invalidConditions) {
+      focusInvalidCondition(form);
       return;
     }
-    await save.mutateAsync(parsed.data).catch(() => undefined);
+    await save.mutateAsync(configuration).catch(() => undefined);
   }
   const hasUnsavedChanges = () =>
     editable && (dirty || images.staged.current.size > 0 || (itemId === "new" && !newSaved));
@@ -477,4 +473,14 @@ function ItemSaveAction({
       )}
     </div>
   );
+}
+
+function focusInvalidCondition(form: HTMLFormElement) {
+  const invalid = form.querySelector<HTMLElement>('[aria-invalid="true"]');
+  let parent = invalid?.parentElement;
+  while (parent && parent !== form) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true;
+    parent = parent.parentElement;
+  }
+  invalid?.focus();
 }

@@ -323,7 +323,7 @@ it.each(Array.from({ length: 8 }, (_, mask) => ({ mask })))(
     expect(cart.complete).toBe(matched);
     expect(cart.lines[0]?.missing).toEqual([]);
     expect(cart.lines[0]?.conditionIssues).toEqual(
-      matched ? undefined : [{ optionId: "X", relation: "requires", expression }],
+      matched ? undefined : [{ optionId: "X", relation: "requires" }],
     );
     owner.conditions = { version: 2, requires: null, excludes: expression };
     let failure: string | null = null;
