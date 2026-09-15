@@ -1,4 +1,19 @@
-import { and, desc, eq, isNotNull, lt, notInArray, sql, sum } from "drizzle-orm";
+import {
+  gte,
+  inArray,
+  asc,
+  and,
+  desc,
+  eq,
+  isNull,
+  isNotNull,
+  lt,
+  lte,
+  notInArray,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import {
   orders,
   payments,
@@ -15,8 +30,163 @@ import {
   type HistoryQuery,
   type SessionEventsPage,
   type SessionEventsQuery,
+  storeTimeZone,
+  timelineSessionSchema,
+  type TimelinePage,
+  type TimelineQuery,
 } from "./model";
 import { billValue, eventValue, getSession } from "./queries";
+
+export async function getTimeline(
+  services: ApiServices,
+  actor: Actor,
+  query: TimelineQuery,
+): Promise<TimelinePage> {
+  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+  const startAt = Date.parse(`${query.date}T00:00:00+09:00`);
+  const endAt = startAt + 86_400_000;
+  const observedAt = Date.now();
+  const cursor =
+    query.beforeOpenedAt !== undefined && query.beforeId !== undefined
+      ? sql`(${tableSessions.opened_at}, ${tableSessions.id}) < (${query.beforeOpenedAt}, ${query.beforeId})`
+      : undefined;
+  const db = services.db;
+  const fields = {
+    id: tableSessions.id,
+    tableId: tableSessions.table_id,
+    guestCount: tableSessions.guest_count,
+    status: tableSessions.status,
+    openedAt: tableSessions.opened_at,
+    closedAt: tableSessions.closed_at,
+  };
+  const scope = and(
+    eq(tableSessions.store_id, actor.storeId),
+    eq(tableSessions.kind, "table"),
+    cursor,
+  );
+  // 日を葉とする二分木の祖先だけを検索する。長期滞在も通常来店の検索幅を広げない。
+  // 2^31のoffsetでZodのsafe integer timestamp全域を32 bitの正の日へ収める。
+  const day = Math.floor((startAt + 32_400_000) / 86_400_000) + 2 ** 31;
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let bit = 0; bit < 32; bit++) {
+    const fork = Math.floor(day / 2 ** (bit + 1)) * 2 ** (bit + 2) + 2 ** (bit + 1) - 1;
+    (fork < 2 * day ? left : right).push(fork);
+  }
+  const sameDay = db
+    .select(fields)
+    .from(tableSessions)
+    .where(
+      and(
+        scope,
+        eq(tableSessions.status, "closed"),
+        eq(tableSessions.timeline_start_day, tableSessions.timeline_end_day),
+        eq(tableSessions.timeline_start_day, day),
+      ),
+    );
+  const longStore = and(
+    eq(tableSessions.store_id, actor.storeId),
+    eq(tableSessions.kind, "table"),
+    eq(tableSessions.status, "closed"),
+    lt(tableSessions.timeline_start_day, tableSessions.timeline_end_day),
+  );
+  const minimumFork = db
+    .select({ fork: tableSessions.timeline_fork })
+    .from(tableSessions)
+    .where(longStore)
+    .orderBy(asc(tableSessions.timeline_fork))
+    .limit(1);
+  const maximumFork = db
+    .select({ fork: tableSessions.timeline_fork })
+    .from(tableSessions)
+    .where(longStore)
+    .orderBy(desc(tableSessions.timeline_fork))
+    .limit(1);
+  // 存在する境界の範囲へ祖先候補を絞り、空のindex探索を繰り返さない。
+  // json_eachは32個の固定候補をSQLへ渡す標準のtable-valued function。
+  const ancestors = (nodes: number[]) =>
+    db
+      .select({ fork: sql<number>`value` })
+      .from(sql`json_each(${JSON.stringify(nodes)})`)
+      .where(and(gte(sql`value`, sql`(${minimumFork})`), lte(sql`value`, sql`(${maximumFork})`)));
+  const longScope = and(longStore, cursor);
+  const closed = sameDay
+    .unionAll(
+      db
+        .select(fields)
+        .from(tableSessions)
+        .where(
+          and(
+            longScope,
+            inArray(tableSessions.timeline_fork, ancestors(left)),
+            gte(tableSessions.timeline_end_day, day),
+          ),
+        ),
+    )
+    .unionAll(
+      db
+        .select(fields)
+        .from(tableSessions)
+        .where(
+          and(
+            longScope,
+            inArray(tableSessions.timeline_fork, ancestors(right)),
+            lte(tableSessions.timeline_start_day, day),
+          ),
+        ),
+    );
+  const open = db
+    .select(fields)
+    .from(tableSessions)
+    .where(
+      and(
+        scope,
+        lt(tableSessions.opened_at, endAt),
+        eq(tableSessions.status, "open"),
+        lte(tableSessions.opened_at, observedAt),
+      ),
+    );
+  // UNION ALLの後に同じ不変cursor順で絞る。未来日に利用中を延ばさない。
+  const visits = (observedAt >= startAt ? closed.unionAll(open) : closed).as("visits");
+  const [rows, invalid] = await db.batch([
+    db
+      .select()
+      .from(visits)
+      .orderBy(desc(visits.openedAt), desc(visits.id))
+      .limit(query.limit + 1),
+    // 不正な終了時刻は専用のpartial indexで検出し、来店なしへ置き換えない。
+    db
+      .select({ id: tableSessions.id })
+      .from(tableSessions)
+      .where(
+        and(
+          scope,
+          lt(tableSessions.opened_at, endAt),
+          eq(tableSessions.status, "closed"),
+          eq(
+            sql<number>`${or(isNull(tableSessions.closed_at), lt(tableSessions.closed_at, tableSessions.opened_at))}`,
+            1,
+          ),
+        ),
+      )
+      .limit(1),
+  ]);
+  ensure(invalid.length === 0, "TIMELINE_INVALID_SESSION", 409);
+  const parsed = timelineSessionSchema.array().safeParse(rows);
+  ensure(parsed.success, "TIMELINE_INVALID_SESSION", 409);
+  const sessions = parsed.data.slice(0, query.limit);
+  const last = sessions.at(-1);
+  return {
+    date: query.date,
+    timeZone: storeTimeZone,
+    startAt,
+    endAt,
+    observedAt,
+    sessions,
+    nextCursor: rows.length > query.limit && last ? { openedAt: last.openedAt, id: last.id } : null,
+  };
+}
+
 export async function getHistory(
   services: ApiServices,
   actor: Actor,

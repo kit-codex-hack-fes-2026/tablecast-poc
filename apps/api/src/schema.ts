@@ -57,6 +57,11 @@ export {
   eventsSchema,
   historyPageSchema,
   historyQuerySchema,
+  storeTimeZone,
+  storeDateSchema,
+  timelineQuerySchema,
+  timelineSessionSchema,
+  timelinePageSchema,
   sessionEventsPageSchema,
   sessionEventsQuerySchema,
   tableEventSchema,
@@ -69,6 +74,9 @@ export type {
   ClosedSessionSummary,
   HistoryPage,
   HistoryQuery,
+  TimelinePage,
+  TimelineQuery,
+  TimelineSession,
   SessionEventsPage,
   SessionEventsQuery,
   TableEvent,
@@ -106,3 +114,10 @@ export {
   type InstructionDocument,
   type InstructionBlock,
 } from "./modules/configuration/instruction-model";
+
+export {
+  statisticsQuerySchema,
+  statisticsResultSchema,
+  type StatisticsQuery,
+  type StatisticsResult,
+} from "./modules/statistics/model";

@@ -92,3 +92,7 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 ### 接客方針の文書形式
 
 `cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。
+
+## 店舗統計
+
+`get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。
