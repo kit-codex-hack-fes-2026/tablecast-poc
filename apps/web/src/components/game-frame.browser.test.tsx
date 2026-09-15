@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import type { GamePackage, GameState } from "@tablecast/api/schema";
 import { GameFrame } from "./game-frame";
@@ -17,6 +17,11 @@ const initialState = {};
 const parentOrigin = window.location.origin;
 
 it("隔離した生成コードは親DOM・Cookie・外部通信へ到達できず、許可した状態だけを保存する", async () => {
+  document.cookie = "tablecast-game-test=parent; Path=/; SameSite=Strict";
+  onTestFinished(() => {
+    document.cookie = "tablecast-game-test=; Path=/; Max-Age=0";
+  });
+  expect(document.cookie).toContain("tablecast-game-test=parent");
   const onSave = vi.fn<(value: GameState) => Promise<void>>().mockResolvedValue();
   const onExit = vi.fn<() => void>();
   const target = new URL("/favicon.ico", window.location.href).href;
@@ -28,7 +33,7 @@ it("隔離した生成コードは親DOM・Cookie・外部通信へ到達でき�
     tablecast.ready.then(async (context) => {
       const result = { locale: context.locale, players: context.players };
       try { parent.document.body.dataset.gameEscaped = "true"; result.parent = "allowed"; } catch { result.parent = "blocked"; }
-      try { result.cookie = document.cookie; } catch { result.cookie = "blocked"; }
+      try { result.cookie = document.cookie.includes("tablecast-game-test=parent") ? "allowed" : "blocked"; } catch { result.cookie = "blocked"; }
       const violation = new Promise(resolve => addEventListener("securitypolicyviolation", event => { if (event.effectiveDirective === "connect-src") resolve(event.effectiveDirective); }));
       try { await fetch(${JSON.stringify(target)}, {mode: "no-cors"}); result.network = "allowed"; } catch { result.network = "blocked"; result.policy = await violation; }
       try { localStorage.setItem("tablecast-game-test", "value"); result.storage = "allowed"; } catch { result.storage = "blocked"; }
