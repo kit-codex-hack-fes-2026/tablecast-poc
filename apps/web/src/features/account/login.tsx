@@ -18,7 +18,7 @@ function safeReturn() {
   return requested?.startsWith("/") && !requested.startsWith("//") ? requested : undefined;
 }
 
-export function Login() {
+export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
@@ -86,7 +86,17 @@ export function Login() {
             void form.handleSubmit();
           }}
         >
-          <h1 className="text-2xl mb-3">{t("auth_subtitle")}</h1>
+          <h1 className="text-2xl mb-3">
+            {evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
+          </h1>
+          {evaluation && (
+            <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
+              <p>{t("evaluation_login_note")}</p>
+              <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
+              <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
+              <p>{t("evaluation_shared")}</p>
+            </aside>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -94,7 +104,7 @@ export function Login() {
             onClick={() => social.mutate("google")}
           >
             <GoogleIcon className="size-5" />
-            {t("auth_google")}
+            {evaluation ? t("evaluation_login_button") : t("auth_google")}
           </Button>
           <Button
             type="button"
