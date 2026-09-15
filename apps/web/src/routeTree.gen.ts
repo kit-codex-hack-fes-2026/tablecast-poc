@@ -29,6 +29,8 @@ import { Route as AccountIntegrationsManualRouteImport } from './routes/account_
 import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
 import { Route as AdminStoresStoreIdRouteImport } from './routes/admin.stores.$storeId'
 import { Route as MemberStoreIdIndexRouteImport } from './routes/member.$storeId.index'
+import { Route as MemberStoreIdConsumptionRouteImport } from './routes/member.$storeId.consumption'
+import { Route as MemberStoreIdMemoriesRouteImport } from './routes/member.$storeId.memories'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
@@ -150,6 +152,17 @@ const AdminStoresStoreIdRoute = AdminStoresStoreIdRouteImport.update({
 const MemberStoreIdIndexRoute = MemberStoreIdIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => MemberStoreIdRoute,
+} as any)
+const MemberStoreIdConsumptionRoute =
+  MemberStoreIdConsumptionRouteImport.update({
+    id: '/consumption',
+    path: '/consumption',
+    getParentRoute: () => MemberStoreIdRoute,
+  } as any)
+const MemberStoreIdMemoriesRoute = MemberStoreIdMemoriesRouteImport.update({
+  id: '/memories',
+  path: '/memories',
   getParentRoute: () => MemberStoreIdRoute,
 } as any)
 const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
@@ -290,6 +303,8 @@ export interface FileRoutesByFullPath {
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
@@ -330,6 +345,8 @@ export interface FileRoutesByTo {
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
@@ -373,6 +390,8 @@ export interface FileRoutesById {
   '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
+  '/member/$storeId/consumption': typeof MemberStoreIdConsumptionRoute
+  '/member/$storeId/memories': typeof MemberStoreIdMemoriesRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
@@ -417,6 +436,8 @@ export interface FileRouteTypes {
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/memories'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
@@ -457,6 +478,8 @@ export interface FileRouteTypes {
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/memories'
     | '/member/$storeId'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
@@ -499,6 +522,8 @@ export interface FileRouteTypes {
     | '/account_/integrations/manual'
     | '/account_/integrations/plugins'
     | '/admin/stores/$storeId'
+    | '/member/$storeId/consumption'
+    | '/member/$storeId/memories'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
@@ -685,6 +710,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemberStoreIdIndexRouteImport
       parentRoute: typeof MemberStoreIdRoute
     }
+    '/member/$storeId/consumption': {
+      id: '/member/$storeId/consumption'
+      path: '/consumption'
+      fullPath: '/member/$storeId/consumption'
+      preLoaderRoute: typeof MemberStoreIdConsumptionRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
+    '/member/$storeId/memories': {
+      id: '/member/$storeId/memories'
+      path: '/memories'
+      fullPath: '/member/$storeId/memories'
+      preLoaderRoute: typeof MemberStoreIdMemoriesRouteImport
+      parentRoute: typeof MemberStoreIdRoute
+    }
     '/admin/stores/$storeId/floor': {
       id: '/admin/stores/$storeId/floor'
       path: '/floor'
@@ -829,11 +868,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface MemberStoreIdRouteChildren {
+  MemberStoreIdConsumptionRoute: typeof MemberStoreIdConsumptionRoute
+  MemberStoreIdMemoriesRoute: typeof MemberStoreIdMemoriesRoute
   MemberStoreIdIndexRoute: typeof MemberStoreIdIndexRoute
   MemberStoreIdVisitsSessionIdRoute: typeof MemberStoreIdVisitsSessionIdRoute
 }
 
 const MemberStoreIdRouteChildren: MemberStoreIdRouteChildren = {
+  MemberStoreIdConsumptionRoute: MemberStoreIdConsumptionRoute,
+  MemberStoreIdMemoriesRoute: MemberStoreIdMemoriesRoute,
   MemberStoreIdIndexRoute: MemberStoreIdIndexRoute,
   MemberStoreIdVisitsSessionIdRoute: MemberStoreIdVisitsSessionIdRoute,
 }

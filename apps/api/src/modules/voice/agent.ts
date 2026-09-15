@@ -13,9 +13,12 @@ import { getSession, getTableState } from "../tables/queries";
 import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
 import { showProductsSchema, type VoiceTrigger } from "./model";
 import { castInstructions } from "./prompt";
+import { customerRecommendationContext, customerSuggestions } from "../customer-memory/queries";
+import { saveAutomaticCustomerMemory } from "../customer-memory/service";
+import { saveCustomerMemorySchema, customerSuggestionsSchema } from "../customer-memory/model";
 import { setSpeechSpeed } from "./service";
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
-  return `${castInstructions}\n応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した情報を再取得しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を一回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
+  return `${castInstructions}\n個人履歴やいつもの注文を依頼されたらgetCustomerContextで対象と許可を確認する。本人の明確な好み・希望を聞いた時はgetCustomerContextとsaveCustomerMemoryで保存する。声から本人を識別せず、対象が曖昧なら保存しない。応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した情報を再取得しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を一回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
 }
 
 function castTool<T extends z.ZodType>(options: {
@@ -46,6 +49,40 @@ export function createCastTools(
 ) {
   const guard = () => signal.throwIfAborted();
   return {
+    getCustomerSuggestions: castTool({
+      id: "getCustomerSuggestions",
+      description:
+        "usualは本人が飲食した商品、untriedは本人の飲食記録にない販売中の商品、companionsは現在と同じ同行者構成の前回来店の共有注文から候補を返す。未体験を断定せず記録上未体験と伝える。注文前にgetCatalogで現在の必須選択を確認し、通常の確認と承認を経る。moreならnextOffsetで続き。",
+      inputSchema: customerSuggestionsSchema,
+      execute: async (input) => {
+        guard();
+        return customerSuggestions(services, actor, input);
+      },
+    }),
+    getCustomerContext: castTool({
+      id: "getCustomerContext",
+      description:
+        "現在の接客対象について許可された個人記憶と飲食記録を取得する。needsTargetならiPadで本人の選択を依頼し、声や名前から識別しない。記録にない商品を未体験と断定する前にmoreConsumptionを確認する。現在の商品価格・販売状態・必須選択はgetCatalogで再確認する。sourceは今回の発話だけ。",
+      inputSchema: z.object({}).strict(),
+      execute: async () => {
+        guard();
+        return customerRecommendationContext(services, actor);
+      },
+    }),
+    ...(trigger === "user"
+      ? {
+          saveCustomerMemory: castTool({
+            id: "saveCustomerMemory",
+            description:
+              "接客対象本人の明確な一人称の好み・希望だけを自動保存する。getCustomerContextが返した今回のsourceの原文からquoteを抜き出す。話者が曖昧、複数人の混ざった発言、背景会話、他人についての推測は保存しない。保存許可がなくsourceがnullなら実行しない。",
+            inputSchema: saveCustomerMemorySchema,
+            execute: async (input) => {
+              guard();
+              return saveAutomaticCustomerMemory(services, actor, input);
+            },
+          }),
+        }
+      : {}),
     getCatalog: castTool({
       id: "getCatalog",
       description:

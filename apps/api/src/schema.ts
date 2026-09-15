@@ -144,3 +144,8 @@ export {
   type StatisticsQuery,
   type StatisticsResult,
 } from "./modules/statistics/model";
+
+export {
+  customerMemoryInputSchema,
+  customerConsumptionSchema,
+} from "./modules/customer-memory/model";

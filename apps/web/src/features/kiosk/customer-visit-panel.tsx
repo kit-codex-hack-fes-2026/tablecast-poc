@@ -40,6 +40,18 @@ export function CustomerVisitPanel({
       parseResponse(endpoint.client.participants.$get({}, { init: { signal } })),
     refetchInterval: 10_000,
   });
+  const selectTarget = useMutation({
+    mutationFn: (participantId: string | null) =>
+      parseResponse(
+        endpoint.client["customer-target"].$post({
+          json: { participantId, token: participants.data?.context?.token ?? "" },
+        }),
+      ),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["tablecast-participants", sessionId] }),
+  });
+  const target =
+    participants.data?.context?.selectedParticipantId ??
+    (participants.data?.participants.length === 1 ? participants.data.participants[0]?.id : null);
   return (
     <section
       aria-label={t("customer_join_visit")}
@@ -50,11 +62,35 @@ export function CustomerVisitPanel({
         <p className="text-sm text-muted-foreground">{t("customer_scan_hint")}</p>
         <ul className="flex flex-wrap gap-2">
           {participants.data?.participants.map((person) => (
-            <li key={person.id} className="rounded-full bg-muted px-3 py-1 text-sm">
-              {person.name ?? t("customer_anonymous")}
+            <li key={person.id}>
+              <Button
+                size="sm"
+                variant={target === person.id ? "default" : "outline"}
+                aria-pressed={target === person.id}
+                disabled={selectTarget.isPending}
+                onClick={() => selectTarget.mutate(person.id)}
+              >
+                {person.name ?? t("customer_anonymous")}
+              </Button>
             </li>
           ))}
         </ul>
+        {!!participants.data?.participants.length && (
+          <div className="flex items-center gap-3 text-sm">
+            <span>{t("customer_target_hint")}</span>
+            {participants.data.participants.length > 1 && (
+              <Button
+                size="sm"
+                variant={!target ? "default" : "outline"}
+                disabled={selectTarget.isPending}
+                onClick={() => selectTarget.mutate(null)}
+              >
+                {t("customer_shared_service")}
+              </Button>
+            )}
+          </div>
+        )}
+        <ErrorNotice error={selectTarget.error} />
         <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
       </div>
       <div className="shrink-0">

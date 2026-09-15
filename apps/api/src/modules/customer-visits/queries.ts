@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { user } from "../../db/auth-schema";
 import {
+  customerConsumption,
+  customerContexts,
   customerMemberships,
   customerVisitCodes,
   customerVisitParticipants,
@@ -119,10 +121,22 @@ export async function getDeviceParticipants(services: ApiServices, actor: Actor)
     )
     .get();
   ensure(current, "SESSION_CLOSED", 409);
-  return {
-    sessionId: current.id,
-    participants: await listVisitParticipants(services, actor.storeId, [current.id], true),
-  };
+  const [participants, contexts] = await services.db.batch([
+    listVisitParticipants(services, actor.storeId, [current.id], true),
+    services.db
+      .select({
+        token: customerContexts.token,
+        selectedParticipantId: customerContexts.selectedParticipantId,
+      })
+      .from(customerContexts)
+      .where(
+        and(
+          eq(customerContexts.sessionId, current.id),
+          eq(customerContexts.storeId, actor.storeId),
+        ),
+      ),
+  ]);
+  return { sessionId: current.id, participants, context: contexts[0] ?? null };
 }
 
 export async function requireCustomerVisit(
@@ -166,9 +180,9 @@ export async function getCustomerVisit(
   sessionId: string,
 ) {
   const visit = await requireCustomerVisit(services, actor, sessionId);
-  const [participants, orderPage] = await Promise.all([
+  const [participants, orderRows] = await services.db.batch([
     listVisitParticipants(services, actor.storeId, [sessionId], false),
-    customerOrderPage(services, actor.storeId, sessionId, { limit: 20 }),
+    customerOrderRows(services, actor.storeId, sessionId, { limit: 20 }),
   ]);
   return {
     storeId: actor.storeId,
@@ -181,7 +195,7 @@ export async function getCustomerVisit(
     participantId: visit.participation.id,
     connected: visit.session.status === "open" && visit.participation.leftAt === null,
     participants,
-    ...orderPage,
+    ...(await customerOrderValue(services, actor.storeId, visit.membership.id, orderRows, 20)),
   };
 }
 
@@ -254,13 +268,13 @@ export async function listCustomerVisits(
   };
 }
 
-async function customerOrderPage(
+function customerOrderRows(
   services: ApiServices,
   storeId: string,
   sessionId: string,
   query: { beforeId?: string; limit: number },
 ) {
-  const rows = await services.db
+  return services.db
     .select({ id: orders.id, status: orders.status, snapshot: orders.snapshot_json })
     .from(orders)
     .where(
@@ -272,14 +286,43 @@ async function customerOrderPage(
     )
     .orderBy(desc(orders.id))
     .limit(query.limit + 1);
-  const page = rows.slice(0, query.limit);
+}
+async function customerOrderValue(
+  services: ApiServices,
+  storeId: string,
+  membershipId: string,
+  rows: Awaited<ReturnType<typeof customerOrderRows>>,
+  limit: number,
+) {
+  const page = rows.slice(0, limit);
+  const records = await services.db
+    .select({
+      orderId: customerConsumption.orderId,
+      lineId: customerConsumption.lineId,
+      quantity: customerConsumption.quantity,
+      shared: customerConsumption.shared,
+      revision: customerConsumption.revision,
+    })
+    .from(customerConsumption)
+    .where(
+      and(
+        eq(customerConsumption.storeId, storeId),
+        eq(customerConsumption.membershipId, membershipId),
+        inArray(
+          customerConsumption.orderId,
+          page.map((order) => order.id),
+        ),
+      ),
+    );
+  const byOrder = Map.groupBy(records, (record) => record.orderId);
   return {
     orders: page.map((order) => ({
       id: order.id,
       status: order.status,
       snapshot: snapshotSchema.parse(JSON.parse(order.snapshot)),
+      personalRecords: byOrder.get(order.id) ?? [],
     })),
-    nextOrderId: rows.length > query.limit ? (page.at(-1)?.id ?? null) : null,
+    nextOrderId: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
   };
 }
 export async function listCustomerOrders(
@@ -288,6 +331,12 @@ export async function listCustomerOrders(
   sessionId: string,
   query: { beforeId?: string; limit: number },
 ) {
-  await requireCustomerVisit(services, actor, sessionId);
-  return customerOrderPage(services, actor.storeId, sessionId, query);
+  const { membership } = await requireCustomerVisit(services, actor, sessionId);
+  return customerOrderValue(
+    services,
+    actor.storeId,
+    membership.id,
+    await customerOrderRows(services, actor.storeId, sessionId, query),
+    query.limit,
+  );
 }

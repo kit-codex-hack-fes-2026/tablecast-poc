@@ -1,5 +1,9 @@
+import {
+  resetCustomerContextStatements,
+  finishCustomerContextChange,
+} from "../customer-memory/service";
 import { isAPIError } from "better-auth/api";
-import { and, desc, eq } from "drizzle-orm";
+import { and, inArray, desc, eq } from "drizzle-orm";
 import { user } from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -85,10 +89,29 @@ export async function approveDevice(
 }
 export async function revokeDevice(services: ApiServices, actor: Actor, id: string) {
   requireManager(actor);
-  await services.db
-    .update(business.devices)
-    .set({ revoked_at: Date.now() })
-    .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId)));
+  const token = crypto.randomUUID();
+  await services.db.batch([
+    services.db
+      .update(business.devices)
+      .set({ revoked_at: Date.now() })
+      .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId))),
+    ...resetCustomerContextStatements(
+      services,
+      actor.storeId,
+      and(
+        eq(business.tableSessions.status, "open"),
+        inArray(
+          business.tableSessions.table_id,
+          services.db
+            .select({ id: business.devices.table_id })
+            .from(business.devices)
+            .where(and(eq(business.devices.id, id), eq(business.devices.store_id, actor.storeId))),
+        ),
+      ),
+      token,
+    ),
+  ]);
+  await finishCustomerContextChange(services, actor.storeId, token);
   return { revoked: true };
 }
 

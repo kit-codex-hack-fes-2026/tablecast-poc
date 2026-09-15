@@ -11,6 +11,10 @@ import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { hashDeviceToken } from "../auth/service";
+import {
+  resetCustomerContextStatements,
+  finishCustomerContextChange,
+} from "../customer-memory/service";
 import { getCustomerStore } from "../customers/queries";
 import type { CustomerActor } from "../customers/model";
 import { notifyStore } from "../tables/mutations";
@@ -99,7 +103,8 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
     .from(customerMemberships)
     .innerJoin(valid, eq(valid.storeId, customerMemberships.storeId))
     .where(and(eq(customerMemberships.userId, userId), eq(customerMemberships.active, true)));
-  await db.batch([
+  const contextToken = crypto.randomUUID();
+  const joined = await db.batch([
     db
       .insert(customerVisitParticipants)
       .select(source)
@@ -108,6 +113,12 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
         set: { leftAt: null },
         setWhere: sql`${customerVisitParticipants.leftAt} IS NOT NULL`,
       }),
+    ...resetCustomerContextStatements(
+      services,
+      visit.storeId,
+      eq(tableSessions.id, visit.sessionId),
+      contextToken,
+    ),
     db.insert(tableEvents).select(
       db
         .select({
@@ -127,7 +138,11 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
           ),
         ),
     ),
+    validVisitCode(services, tokenHash),
   ]);
+  const validResult = joined.at(-1);
+  ensure(Array.isArray(validResult) && validResult.length, "CUSTOMER_VISIT_CODE_EXPIRED", 409);
+  await finishCustomerContextChange(services, visit.storeId, contextToken);
   const actor = { kind: "customer", userId, storeId: visit.storeId } as const;
   const result = await getCustomerVisit(services, actor, visit.sessionId);
   await notifyStore(services, visit.storeId, visit.sessionId);
@@ -141,6 +156,7 @@ export async function leaveCustomerVisit(
 ) {
   const visit = await requireCustomerVisit(services, actor, sessionId);
   const now = Date.now();
+  const contextToken = crypto.randomUUID();
   await services.db.batch([
     services.db
       .update(customerVisitParticipants)
@@ -163,6 +179,12 @@ export async function leaveCustomerVisit(
           ),
         ),
       ),
+    ...resetCustomerContextStatements(
+      services,
+      actor.storeId,
+      eq(tableSessions.id, sessionId),
+      contextToken,
+    ),
     services.db.insert(tableEvents).select(
       services.db
         .select({
@@ -183,6 +205,7 @@ export async function leaveCustomerVisit(
         ),
     ),
   ]);
+  await finishCustomerContextChange(services, actor.storeId, contextToken);
   await notifyStore(services, actor.storeId, sessionId);
   return getCustomerVisit(services, actor, sessionId);
 }

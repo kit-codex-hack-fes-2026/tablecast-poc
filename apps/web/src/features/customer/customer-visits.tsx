@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Users } from "lucide-react";
+import { ConsumptionEditor } from "./customer-consumption";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -146,9 +147,16 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
               <p className="text-sm text-muted-foreground">{t(`order_${order.status}`)}</p>
               <ul className="space-y-2">
                 {order.snapshot.lines.map((line) => (
-                  <li key={line.id} className="flex justify-between gap-3">
+                  <li key={line.id} className="space-y-2">
                     <span>{line.name[locale]}</span>
-                    <span>× {line.quantity}</span>
+                    <span> × {line.quantity}</span>
+                    <ConsumptionEditor
+                      storeId={storeId}
+                      orderId={order.id}
+                      lineId={line.id}
+                      {...order.personalRecords.find((record) => record.lineId === line.id)}
+                      key={`${line.id}:${order.personalRecords.find((record) => record.lineId === line.id)?.revision ?? 0}`}
+                    />
                   </li>
                 ))}
               </ul>

@@ -53,6 +53,28 @@ test("会員証の初回同意と設定変更をスマホで行い、再表示�
     path: testInfo.outputPath("tablecast-customer-card-en.png"),
     fullPage: true,
   });
+  await page.getByRole("link", { name: en.customer_memories, exact: true }).click();
+  await page.getByRole("button", { name: en.customer_memory_add }).click();
+  await page
+    .getByRole("textbox", { name: en.customer_memory_content })
+    .fill("I prefer less sweet drinks.");
+  await page.getByRole("button", { name: en.account_save, exact: true }).click();
+  await expect(page.getByText("I prefer less sweet drinks.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: en.customer_edit, exact: true }).click();
+  await page
+    .getByRole("textbox", { name: en.customer_memory_content })
+    .fill("I prefer dry gin cocktails.");
+  await page.getByRole("button", { name: en.account_save, exact: true }).click();
+  await expect(page.getByText("I prefer dry gin cocktails.", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("I prefer dry gin cocktails.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: en.customer_memory_add })).toBeEnabled();
+  await page.screenshot({
+    path: testInfo.outputPath("tablecast-customer-memories-en.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: en.customer_delete, exact: true }).click();
+  await expect(page.getByText("I prefer dry gin cocktails.", { exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: en.customer_title, exact: true }).click();
   await expect(page.getByRole("link", { name: /京料理こもれび/ })).toBeVisible();
 });

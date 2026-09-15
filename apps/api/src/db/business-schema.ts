@@ -272,3 +272,58 @@ export const gameRuns = sqliteTable("game_runs", {
   revision: integer("revision").notNull().default(0),
   ended_at: integer("ended_at"),
 });
+
+export const customerContexts = sqliteTable("customer_contexts", {
+  sessionId: text("session_id").primaryKey(),
+  storeId: text("store_id").notNull(),
+  token: text("token").notNull(),
+  selectedParticipantId: text("selected_participant_id"),
+  previousVoiceSessionId: text("previous_voice_session_id"),
+});
+export const customerMemorySources = sqliteTable("customer_memory_sources", {
+  id: text("id").primaryKey(),
+  storeId: text("store_id").notNull(),
+  membershipId: text("membership_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  voiceSessionId: text("voice_session_id").notNull(),
+  turnId: text("turn_id").notNull(),
+  contextToken: text("context_token").notNull(),
+  consentRevision: integer("consent_revision").notNull(),
+  content: text("content").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+export const customerMemories = sqliteTable(
+  "customer_memories",
+  {
+    id: text("id").primaryKey(),
+    storeId: text("store_id").notNull(),
+    membershipId: text("membership_id").notNull(),
+    sourceId: text("source_id"),
+    sourceKind: text("source_kind", { enum: ["manual", "voice"] }).notNull(),
+    content: text("content").notNull(),
+    revision: integer("revision").notNull().default(1),
+    edited: integer("edited", { mode: "boolean" }).notNull().default(false),
+    deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("customer_memories_source").on(t.membershipId, t.sourceId)],
+);
+export const customerConsumption = sqliteTable(
+  "customer_consumption",
+  {
+    id: text("id").primaryKey(),
+    storeId: text("store_id").notNull(),
+    membershipId: text("membership_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    orderId: text("order_id").notNull(),
+    lineId: text("line_id").notNull(),
+    productId: text("product_id").notNull(),
+    quantity: integer("quantity").notNull(),
+    shared: integer("shared", { mode: "boolean" }).notNull(),
+    revision: integer("revision").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("customer_consumption_line").on(t.membershipId, t.orderId, t.lineId)],
+);

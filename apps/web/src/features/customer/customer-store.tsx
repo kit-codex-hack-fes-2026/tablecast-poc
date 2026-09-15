@@ -1,7 +1,7 @@
 import { CustomerVisits } from "./customer-visits";
 import { customerConsentVersion } from "@tablecast/api/schema";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { useAppForm } from "../../components/form";
@@ -87,6 +87,22 @@ export function CustomerStore({ storeId }: { storeId: string }) {
       </section>
       {data.membership?.active ? (
         <>
+          <nav className="grid grid-cols-2 gap-3">
+            <Link
+              className="rounded-xl border p-4 font-medium"
+              to="/member/$storeId/memories"
+              params={{ storeId }}
+            >
+              {t("customer_memories")}
+            </Link>
+            <Link
+              className="rounded-xl border p-4 font-medium"
+              to="/member/$storeId/consumption"
+              params={{ storeId }}
+            >
+              {t("customer_consumption")}
+            </Link>
+          </nav>
           <CustomerVisits storeId={storeId} />
           <CustomerPreferences key={data.membership.revision} data={data} />
         </>

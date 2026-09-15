@@ -1,3 +1,4 @@
+import { apiError } from "../../lib/api-error";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -39,6 +40,15 @@ export function CustomerJoin({ code }: { code: string }) {
   useEffect(() => {
     if (destination.data?.membership?.active && isIdle) mutate();
   }, [destination.data?.membership?.active, isIdle, mutate]);
+  const needsLogin = apiError(destination.error ?? error)?.status === 401;
+  useEffect(() => {
+    if (needsLogin)
+      void navigate({
+        to: "/login",
+        search: { returnTo: `/member/join?code=${encodeURIComponent(code)}` },
+        replace: true,
+      });
+  }, [needsLogin, navigate, code]);
   if (destination.isPending) return <LoadingState />;
   if (destination.error)
     return (
