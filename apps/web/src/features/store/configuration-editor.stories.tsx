@@ -168,6 +168,14 @@ export const PagedVoices: Story = {
     const english = within(canvas.getByRole("group", { name: "English" }));
     const japanese = within(canvas.getByRole("group", { name: "Japanese" }));
     const voice = english.getByRole("combobox", { name: /Voice setting/ });
+    // 初回の遅延モジュール変換を含むため、Browserテストと同じ待機時間にする。
+    await waitFor(
+      () =>
+        expect(
+          english.getByRole("textbox", { name: "English Service instructions" }),
+        ).toHaveAttribute("contenteditable", "true"),
+      { timeout: 5000 },
+    );
     const instructions = english.getByRole("textbox", { name: "English Service instructions" });
     await expect(
       japanese.getByRole("textbox", { name: "Japanese Service instructions" }),
@@ -178,7 +186,9 @@ export const PagedVoices: Story = {
     await expect(
       await english.findByRole("option", { name: "Ashley — English" }),
     ).toBeInTheDocument();
-    await userEvent.type(instructions, "Speak calmly.");
+    // ProseMirrorの貼付け処理で入力し、合成typeによるDOM直接変更を避ける。
+    await userEvent.click(instructions);
+    await userEvent.paste("Speak calmly.");
 
     // 次ページだけ失敗しても、既取得の候補と編集中の指示は保つ。
     await userEvent.click(english.getByRole("button", { name: "Show more voices" }));
@@ -191,7 +201,7 @@ export const PagedVoices: Story = {
       await english.findByRole("option", { name: "Dennis — English" }),
     ).toBeInTheDocument();
     await expect(english.getAllByRole("option", { name: "Ashley — English" })).toHaveLength(1);
-    await expect(instructions).toHaveValue("Speak calmly.");
+    await expect(instructions).toHaveTextContent("Speak calmly.");
     await expect(
       english.queryByRole("button", { name: "Show more voices" }),
     ).not.toBeInTheDocument();

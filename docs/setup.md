@@ -260,3 +260,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 ## stagingと本番release
 
 開発の標準branchはstaging。本番はmainへのrelease PRで更新する。常設環境・ActionsのPR作成許可・手動リセットは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。ローカル終了処理で常設stagingを停止しない。
+
+### 接客エディターの依存
+
+Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-kit・suggestionを使用する。rootの `bun.lock` と通常の `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。保存形式を読めるAPIを先に配備する。互換性とロールバック条件は[接客エディター設計](prompt-editor-design.md#読取互換と展開)を参照する。

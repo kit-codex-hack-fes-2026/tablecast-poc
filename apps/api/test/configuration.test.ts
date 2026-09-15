@@ -504,3 +504,84 @@ it("画像フィールドがない旧公開設定を読み、下書きで選択�
   expect(published.configuration.products[1]?.modifiers[0]?.options[0]?.imageKey).toBeNull();
   expect(saved.version).toBe(draft.version + 1);
 });
+
+it("接客文書の保存・公開・互換表示を保ち、旧clientによる書式の上書きを拒否する", async () => {
+  const { staff, cookie } = await setupFixture();
+  const services = createApiServices(env);
+  const draft = await createDraft(services, staff);
+  const configuration = structuredClone(draft.configuration);
+  configuration.cast.instructions.ja = {
+    format: "tiptap-json",
+    version: 1,
+    document: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "接客方針" }] },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "丁寧に", marks: [{ type: "bold" }] }],
+        },
+      ],
+    },
+  };
+  const endpoint = `http://localhost:3000/api/admin/stores/${staff.storeId}/drafts/${draft.id}`;
+  const response = await exports.default.fetch(
+    new Request(endpoint, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+        "X-Tablecast-Instructions": "1",
+      },
+      body: JSON.stringify({
+        expectedVersion: draft.version,
+        instructionFormatVersion: 1,
+        configuration,
+      }),
+    }),
+  );
+  expect(response.status).toBe(200);
+  const saved = configDraftSchema.parse(await response.json());
+  expect(saved.configuration.cast.instructions.ja).toEqual(configuration.cast.instructions.ja);
+  expect(
+    saved.changes.filter((change) => change.path.startsWith("cast.instructions")),
+  ).toHaveLength(1);
+  const legacy = configDraftSchema.parse(
+    await (
+      await exports.default.fetch(new Request(endpoint, { headers: { Cookie: cookie } }))
+    ).json(),
+  );
+  expect(legacy.configuration.cast.instructions.ja).toBe("## 接客方針\n\n**丁寧に**");
+  const rejected = await exports.default.fetch(
+    new Request(endpoint, {
+      method: "PUT",
+      headers: {
+        Cookie: cookie,
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expectedVersion: saved.version, configuration: legacy.configuration }),
+    }),
+  );
+  expect(rejected.status).toBe(409);
+  expect((await getDraft(services, staff, saved.id)).version).toBe(saved.version);
+  const ready = await validateDraft(services, staff, saved.id, saved.version);
+  await publishDraft(services, staff, saved.id, {
+    expectedVersion: ready.version,
+    baseVersion: ready.baseVersion,
+    idempotencyKey: "tablecast-rich-instructions",
+    approved: true,
+  });
+  expect((await getCatalog(services, staff.storeId)).configuration.cast.instructions.ja).toEqual(
+    configuration.cast.instructions.ja,
+  );
+  const publicResponse = await exports.default.fetch(
+    new Request("http://localhost:3000/api/table/catalog", {
+      headers: { Cookie: `tablecast.device=${deviceToken}` },
+    }),
+  );
+  expect(await publicResponse.json()).toMatchObject({
+    configuration: { cast: { instructions: { ja: "## 接客方針\n\n**丁寧に**" } } },
+  });
+});

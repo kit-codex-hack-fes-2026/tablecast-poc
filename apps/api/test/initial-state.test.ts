@@ -1,3 +1,4 @@
+import { configurationSchema, type CastInstruction } from "../src/schema";
 import { exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { member, session } from "../src/db/auth-schema";
@@ -106,3 +107,43 @@ it("既定フロアの初期取得は所属店舗を選び、セッションだ�
   await fixtureDb.delete(member).where(eq(member.userId, staff.userId));
   expect(await (await get("?defaultFloor=true")).json()).toMatchObject({ stores: [], floor: null });
 });
+
+it.each([undefined, "0", "1"])(
+  "初期カタログは接客文書の対応版%sに応じて旧文字列と保存文書を返す",
+  async (version) => {
+    const { cookie, staff } = await setupFixture();
+    const rich = {
+      format: "tiptap-json",
+      version: 1,
+      document: {
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "接客方針" }] },
+        ],
+      },
+    } satisfies CastInstruction;
+    const published = structuredClone(configuration);
+    const instructions = { ja: rich, en: "Keep *literal* instructions.\n\nSpeak calmly." };
+    await fixtureDb
+      .update(stores)
+      .set({
+        config_json: JSON.stringify({ ...published, cast: { ...published.cast, instructions } }),
+      })
+      .where(eq(stores.id, staff.storeId));
+    const headers = new Headers({ Cookie: cookie });
+    if (version !== undefined) headers.set("X-Tablecast-Instructions", version);
+    const response = await exports.default.fetch(
+      new Request(`http://localhost:3000/api/admin/initial?storeId=${staff.storeId}&view=catalog`, {
+        headers,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const initial = await response.json<{ catalog: { configuration: unknown }; floor: unknown }>();
+    const result = configurationSchema.parse(initial.catalog.configuration);
+    expect(result.cast.instructions).toEqual({
+      ja: version === "1" ? rich : "## 接客方針",
+      en: instructions.en,
+    });
+    expect(initial.floor).toBeNull();
+  },
+);
