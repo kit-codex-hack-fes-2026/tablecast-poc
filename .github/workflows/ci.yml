@@ -18,7 +18,8 @@ permissions:
 
 concurrency:
   group: tablecast-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # 配備jobも含むため、PR更新で実行中のworkflowを中断しない。
+  cancel-in-progress: false
 
 env:
   WRANGLER_SEND_METRICS: "false"
