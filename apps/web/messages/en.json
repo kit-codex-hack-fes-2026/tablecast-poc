@@ -670,6 +670,7 @@
   "cast_voice_unavailable_note": "The saved voice is no longer available. Service uses the default voice, Marin.",
   "cast_show_full": "Show full instructions",
   "cast_edit_instructions": "Edit {language} instructions",
+  "cast_edit_opening": "Edit {language} opening guidance",
   "cast_edit_voice": "Edit {language} voice",
   "cast_edit_proactive": "Edit proactive service",
   "cast_overview_note": "Review your store’s service settings and choose what to edit.",

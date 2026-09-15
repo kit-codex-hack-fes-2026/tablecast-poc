@@ -32,7 +32,9 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
         ? t("cast_edit_proactive")
         : target.startsWith("instructions")
           ? m.cast_edit_instructions({ language }, { locale })
-          : m.cast_edit_voice({ language }, { locale });
+          : target.startsWith("opening")
+            ? m.cast_edit_opening({ language }, { locale })
+            : m.cast_edit_voice({ language }, { locale });
     return draftId ? (
       <Button
         nativeButton={false}

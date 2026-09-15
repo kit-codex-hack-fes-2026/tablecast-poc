@@ -670,6 +670,7 @@
   "cast_voice_unavailable_note": "保存された音声は現在利用できません。接客では標準音声のMarinを使います。",
   "cast_show_full": "全文を表示",
   "cast_edit_instructions": "{language}の接客指示を編集",
+  "cast_edit_opening": "{language}の開始案内を編集",
   "cast_edit_voice": "{language}の音声を編集",
   "cast_edit_proactive": "自発的な声かけを編集",
   "cast_overview_note": "店舗の接客設定を確認し、変更する項目から編集を始められます。",
