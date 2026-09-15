@@ -31,6 +31,6 @@ export function visitPosition(
     left: Math.max(0, ((start - startAt) / (endAt - startAt)) * 100),
     width: Math.max(0, ((end - start) / (endAt - startAt)) * 100),
     continuesBefore: session.openedAt < startAt,
-    continuesAfter: (session.closedAt ?? now) >= endAt,
+    continuesAfter: session.closedAt === null ? now >= endAt : session.closedAt > endAt,
   };
 }

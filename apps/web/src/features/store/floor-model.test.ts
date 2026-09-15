@@ -53,3 +53,11 @@ it("ゼロ時間・現在時刻より後の来店に架空の幅を与えない"
     ).width,
   ).toBe(0);
 });
+
+it("日末ちょうどの閉卓は翌日へ継続せず、利用中だけ継続を示す", () => {
+  expect(visitPosition({ ...visit, closedAt: end }, start, end, end).continuesAfter).toBe(false);
+  expect(visitPosition({ ...visit, closedAt: end + 1 }, start, end, end).continuesAfter).toBe(true);
+  expect(
+    visitPosition({ ...visit, status: "open", closedAt: null }, start, end, end).continuesAfter,
+  ).toBe(true);
+});

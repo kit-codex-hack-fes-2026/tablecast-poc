@@ -70,9 +70,7 @@ export function TableCalendar({
     sessions.toSorted((a, b) => a.openedAt - b.openedAt || a.id.localeCompare(b.id)),
     (session) => session.tableId,
   );
-  const visible = rows.filter((row) =>
-    row.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-  );
+  const visible = rows.filter((row) => row.name.toLowerCase().includes(search.toLowerCase()));
   const initialiseScroll = useEffectEvent((request: number) => {
     const element = viewport.current;
     if (!element) return;
