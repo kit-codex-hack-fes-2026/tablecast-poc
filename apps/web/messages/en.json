@@ -803,5 +803,22 @@
   "customer_leave_notice": "Your personal data will no longer be used or automatically saved for service. Your identity will be hidden in companions’ history. The restaurant retains its order and bill records.",
   "customer_leave_confirm": "Confirm leaving",
   "customer_install_title": "Add to your phone’s home screen",
-  "customer_install_steps": "On iPhone, use the Share menu in Safari. On Android, use your browser’s menu to add this app to your home screen."
+  "customer_install_steps": "On iPhone, use the Share menu in Safari. On Android, use your browser’s menu to add this app to your home screen.",
+  "customer_visits": "Your visits",
+  "customer_visits_empty": "No visits yet.",
+  "customer_more": "Show more",
+  "customer_connected": "Connected",
+  "customer_disconnected": "Disconnected",
+  "customer_companions": "Who you came with",
+  "customer_anonymous": "Companion",
+  "customer_you": "You",
+  "customer_shared_orders": "What your table ordered",
+  "customer_shared_orders_note": "These are the table’s orders, separate from your personal food and drink record.",
+  "customer_leave_visit": "Leave this visit",
+  "customer_scan_again": "This QR code could not be verified. Please scan the current code on the restaurant’s iPad.",
+  "customer_connecting": "Connecting to your visit…",
+  "customer_join_visit": "Visit QR code",
+  "customer_scan_phone": "Scan with your phone to remember your visit",
+  "customer_scan_hint": "Everyone at the table can scan this code.",
+  "customer_show_qr": "Show QR code"
 }

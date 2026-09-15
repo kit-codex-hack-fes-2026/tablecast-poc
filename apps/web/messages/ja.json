@@ -803,5 +803,22 @@
   "customer_leave_notice": "接客での個人データ利用と自動保存を停止し、同行者の履歴では匿名になります。店舗の注文・会計記録は残ります。",
   "customer_leave_confirm": "退会を確定",
   "customer_install_title": "スマホのホーム画面に追加",
-  "customer_install_steps": "iPhoneはSafariの共有メニュー、Androidはブラウザーのメニューからホーム画面に追加できます。"
+  "customer_install_steps": "iPhoneはSafariの共有メニュー、Androidはブラウザーのメニューからホーム画面に追加できます。",
+  "customer_visits": "来店の記録",
+  "customer_visits_empty": "まだ来店の記録はありません。",
+  "customer_more": "もっと見る",
+  "customer_connected": "接続済み",
+  "customer_disconnected": "接続終了",
+  "customer_companions": "一緒に来た人",
+  "customer_anonymous": "同行者",
+  "customer_you": "あなた",
+  "customer_shared_orders": "この卓で頼んだもの",
+  "customer_shared_orders_note": "卓全体の注文です。自分が飲食した品の記録とは区別されます。",
+  "customer_leave_visit": "この来店から退出",
+  "customer_scan_again": "QRコードを確認できませんでした。お店のiPadに表示されている新しいQRコードを読み取ってください。",
+  "customer_connecting": "来店に接続しています…",
+  "customer_join_visit": "来店に参加するQRコード",
+  "customer_scan_phone": "スマホで読み取って、来店を記録",
+  "customer_scan_hint": "一緒に来た方も、それぞれ読み取れます。",
+  "customer_show_qr": "QRコードを表示"
 }

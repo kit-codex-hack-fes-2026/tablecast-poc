@@ -26,6 +26,31 @@ export const deploymentOwner = sqliteTable("tablecast_deployment_owner", {
   seeded: integer("seeded").notNull().default(0),
 });
 
+export const customerVisitCodes = sqliteTable("customer_visit_codes", {
+  deviceId: text("device_id").primaryKey(),
+  storeId: text("store_id").notNull(),
+  sessionId: text("session_id").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+export const customerVisitParticipants = sqliteTable(
+  "customer_visit_participants",
+  {
+    id: text("id").primaryKey(),
+    storeId: text("store_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    membershipId: text("membership_id").notNull(),
+    joinedAt: integer("joined_at").notNull(),
+    leftAt: integer("left_at"),
+  },
+  (table) => [
+    uniqueIndex("customer_visit_participants_session_member").on(
+      table.sessionId,
+      table.membershipId,
+    ),
+  ],
+);
+
 export const payments = sqliteTable("payments", {
   id: text("id").primaryKey(),
   store_id: text("store_id").notNull(),

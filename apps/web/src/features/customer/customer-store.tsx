@@ -1,3 +1,4 @@
+import { CustomerVisits } from "./customer-visits";
 import { customerConsentVersion } from "@tablecast/api/schema";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -85,7 +86,10 @@ export function CustomerStore({ storeId }: { storeId: string }) {
         )}
       </section>
       {data.membership?.active ? (
-        <CustomerPreferences key={data.membership.revision} data={data} />
+        <>
+          <CustomerVisits storeId={storeId} />
+          <CustomerPreferences key={data.membership.revision} data={data} />
+        </>
       ) : (
         <CustomerConsent storeId={storeId} />
       )}
