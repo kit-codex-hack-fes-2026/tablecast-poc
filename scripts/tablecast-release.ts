@@ -243,10 +243,6 @@ async function validation(head: string) {
   let served = "未確認";
   try {
     const response = await fetch(`${deploymentTarget(undefined, "staging").origin}/api/health`, {
-      headers: {
-        "CF-Access-Client-Id": process.env.CF_ACCESS_CLIENT_ID ?? "",
-        "CF-Access-Client-Secret": process.env.CF_ACCESS_CLIENT_SECRET ?? "",
-      },
       redirect: "manual",
       signal: AbortSignal.timeout(10000),
       cache: "no-store",

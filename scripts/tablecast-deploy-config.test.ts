@@ -238,7 +238,13 @@ test("stagingは固定の資源と認証secretを保持しpreviewと同じ模擬
   expect(config.api.vars.TABLECAST_ENV).toBe("staging");
   expect(config.api.vars.TABLECAST_GOOGLE_AUTHORIZE_URL).toBe(`${target.origin}/_tablecast/oauth`);
   expect(config.api.containers).toHaveLength(1);
-  const secrets = deploymentSecrets(target, input);
+  const secrets = deploymentSecrets(target, {
+    ...input,
+    CF_ACCESS_CLIENT_ID: undefined,
+    CF_ACCESS_CLIENT_SECRET: undefined,
+  });
+  expect(secrets).not.toHaveProperty("CF_ACCESS_CLIENT_ID");
+  expect(secrets).not.toHaveProperty("CF_ACCESS_CLIENT_SECRET");
   expect(secrets).not.toHaveProperty("TABLECAST_GOOGLE_CLIENT_SECRET");
   expect(secrets).not.toHaveProperty("TABLECAST_BETTER_AUTH_API_KEY");
   expect(deploymentSecrets(deploymentTarget(undefined, "staging"), input)).toEqual(secrets);

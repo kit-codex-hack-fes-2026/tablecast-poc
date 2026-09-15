@@ -202,6 +202,6 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 
 ## stagingとreleaseの受入
 
-環境・secret分離、release本文の対象PR・取消・重複排除・編集保全・確認待ちは既存Vitestで検証する。全体リセットはAPI統合の実D1で全業務・OAuthデータ削除と所有台帳保持を確認する。実stagingでは通常再配備のデータ・画像・認可保持、リセット後の旧token拒否、Accessの公開経路と保護経路、ChatGPT/CodexのOAuth・MCP読取・下書き更新を確認する。CI成功だけで実クライアント確認や本番公開を完了としない。対象SHAと未実施範囲をrelease PRへ記録する。
+環境・secret分離、release本文の対象PR・取消・重複排除・編集保全・確認待ちは既存Vitestで検証する。全体リセットはAPI統合の実D1で全業務・OAuthデータ削除と所有台帳保持を確認する。実stagingでは通常再配備のデータ・画像・認可保持、リセット後の旧token拒否、Access資格なしでのWeb到達と未認証MCPのOAuth拒否、ChatGPT/CodexのOAuth・MCP読取・下書き更新を確認する。CI成功だけで実クライアント確認や本番公開を完了としない。対象SHAと未実施範囲をrelease PRへ記録する。
 
 PR本文の編集だけではCIを再実行しない。base変更後に新しい統合先の検査が必要な場合は、作業branchへ最新stagingを取り込んだheadをpushする。releaseは保護されたstagingのCI・配備SHAとmainとの合成treeを照合する。

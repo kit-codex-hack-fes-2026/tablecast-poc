@@ -208,15 +208,15 @@ CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する�
 
 ### GitHubの初期設定
 
-- Environment `staging`を作り、配備branchをstagingに限定する。既存のrepository配備secretとAccess policyを使う。実GoogleとBetter Auth Dashboardの資格はproductionだけに保存する。
+- Environment `staging`を作り、配備branchをstagingに限定する。既存のrepository配備secretを使う。stagingはAccess資格なしで公開し、PR previewだけ既存Access policyで保護する。実GoogleとBetter Auth Dashboardの資格はproductionだけに保存する。
 - ActionsのWorkflow permissionsでAllow GitHub Actions to create and approve pull requestsを有効にする。workflow既定権限はreadのままとし、release更新jobだけContents/Actions読取・Pull requests書込を指定する。既存の`GITHUB_TOKEN`を使い、専用App・PAT・秘密鍵を追加しない。PRレビューの自動承認やマージは行わない。
 - `GITHUB_TOKEN`で作ったPRの追加workflowは[GitHubの仕様](https://docs.github.com/en/actions/concepts/security/github_token)により承認待ちになる場合がある。その実行に依存せず、main宛のPRは通常CIの対象から外し、staging pushの`TableCast CI`と同SHAの配備をrelease gateで検査する。通常のstaging宛PRとmain pushの本番CIは維持する。
 - main/stagingのrulesetはbranch名を明示し、PR、`TableCast CI`、削除禁止、force push禁止、merge commitを必須にする。mainにはさらに`TableCast release`を要求する。既存の管理者bypassは緊急対応用に維持する。
 - stagingの配備とチェックが実在してからdefault branchを変更し、main宛の通常PRをstaging宛へ変更する。stack上段のbaseは直下のbranchを維持する。
 
-### remote MCPのAccess
+### stagingの公開とremote MCP
 
-Web・ログイン・同意・emulateはpreviewと同じAccess Allow/Service Authで保護する。`stagingMcpPaths`で列挙したMCP、discovery、DCR、token交換・refresh、revokeだけ別Access applicationでBypassする。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。`/api/auth/*`全体をBypassしない。未認証MCPはOAuthの401を返す。Access資格なしでdiscoveryとDCRが到達可能であること、ブラウザーの模擬ログインはAccess資格なしでは利用できないことを別々に検証する。
+stagingのWeb・模擬ログイン・同意・MCPをAccess資格なしで公開する。配備時は旧staging専用のWeb・MCP Access applicationの所有先を確認して解除し、PR previewのapplicationと共有policyは維持する。stagingへAccess service tokenは渡さない。アプリのOAuth・PKCE・resource・scope・組織／店舗認可は維持する。未認証のWebが200を返し、discoveryがstagingを参照し、未認証MCPがOAuthの401を返すことを配備後に検証する。模擬Googleログインの架空ユーザー選択も公開されるため、stagingはデモ・検証データで運用する。
 
 ### staging全体のリセット
 
@@ -224,7 +224,7 @@ GitHub ActionsのCIからRun workflowを開き、branchにstaging、`staging_res
 
 D1とR2の資源ID・所有台帳・migration履歴は保持し、schemaに定義された全業務・認証データとR2画像を消去する。D1はDrizzleの同一batch内で外部キー検証を遅延し、全削除後に再検証する。Webをメンテナンス応答へ切り替え、既存DO・Container・API Workerを退役して再作成する。最新demoを投入し、同じSHAを配備・疎通確認後に完了する。全アカウント、OAuthクライアント、セッション、MCP tokenが失われるため、ログインとMCP認可をやり直す。
 
-R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。Access、固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
+R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime退役・画像消去・DB消去の到達工程を記録する。記録が残る間、通常配備は停止する。CIの手動リセットを再実行すると、所有情報を再確認し、現在のCI成功版で初期化を再開する。記録を手で消して部分状態を公開しない。固定URL、本番・PR資源は削除しない。データのdown migrationは行わない。
 
 ### release PR
 

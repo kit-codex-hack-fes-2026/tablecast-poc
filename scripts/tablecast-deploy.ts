@@ -20,7 +20,7 @@ import {
   deploymentTarget,
   tablecastAccountId,
   tablecastRepository,
-  stagingMcpPaths,
+  stagingDiscoveryPaths,
 } from "./tablecast-deploy-config";
 
 const root = resolve(import.meta.dirname, "..");
@@ -31,10 +31,15 @@ const target = deploymentTarget(
 );
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
-const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
+const accessSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  domain: z.string().optional(),
+  destinations: z.array(z.object({ type: z.string(), uri: z.string().optional() })).optional(),
+});
 
-async function verifyStagingMcp() {
-  // Access資格を送らず、機械通信はOAuthまで届きWebはAccessに留まることを検査する。
+async function verifyStaging() {
+  // Access資格なしでWeb・OAuthへ到達し、MCPのアプリ認可が維持されることを検査する。
   const request = (path: string, init?: RequestInit) =>
     fetch(`${target.origin}${path}`, {
       ...init,
@@ -42,7 +47,7 @@ async function verifyStagingMcp() {
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
     });
-  for (const path of stagingMcpPaths.filter((value) => value.startsWith("/.well-known/"))) {
+  for (const path of stagingDiscoveryPaths) {
     const response = await request(path);
     if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
       throw new Error(`stagingのOAuth discoveryに到達できません: ${path}`);
@@ -70,12 +75,14 @@ async function verifyStagingMcp() {
   for (const path of ["/", "/_tablecast/oauth", "/api/auth/oauth2/authorize"]) {
     const response = await request(path);
     if (
-      response.status !== 302 ||
-      !response.headers.get("location")?.includes(".cloudflareaccess.com/")
+      response.status >= 500 ||
+      response.headers.get("location")?.includes(".cloudflareaccess.com/") ||
+      (path === "/" &&
+        (!response.ok || !response.headers.get("content-type")?.includes("text/html")))
     )
-      throw new Error(`stagingのブラウザー経路がAccessで保護されていません: ${path}`);
+      throw new Error(`stagingのブラウザー経路へ公開アクセスできません: ${path}`);
   }
-  console.info("stagingのAccess分離・OAuth discovery・未認証MCP拒否を確認しました。");
+  console.info("stagingのWeb公開・OAuth discovery・未認証MCP拒否を確認しました。");
 }
 
 async function run(args: [string, ...string[]], env: Record<string, string> = {}) {
@@ -162,8 +169,28 @@ async function accessApplication(create: boolean) {
   if (!target.emulate) return undefined;
   const apps = z.array(accessSchema).parse(await cloudflare("access/apps?per_page=1000"));
   if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
-  const app = apps.find((value) => value.name === target.web);
   const domain = new URL(target.origin).hostname;
+  if (target.environment === "staging") {
+    // 公開運用への移行時に旧staging専用applicationだけを解除する。
+    const owned = apps.filter((value) => [target.web, `${target.web}-mcp`].includes(value.name));
+    for (const app of owned) {
+      const expected = app.name === target.web ? domain : `${domain}/mcp`;
+      if (
+        app.domain !== expected ||
+        app.destinations?.some(
+          (value) =>
+            value.type !== "public" ||
+            (value.uri !== domain && !value.uri?.startsWith(`${domain}/`)),
+        )
+      )
+        throw new Error("staging Accessの所有対象が一致しません。");
+    }
+    if (create) {
+      for (const app of owned) await cloudflare(`access/apps/${app.id}`, "DELETE");
+    }
+    return undefined;
+  }
+  const app = apps.find((value) => value.name === target.web);
   if (app && app.domain !== domain) throw new Error("Accessの所有対象が一致しません。");
   if (create) {
     const policy = z.string().min(1).parse(process.env.TABLECAST_PREVIEW_ACCESS_POLICY_ID);
@@ -178,34 +205,6 @@ async function accessApplication(create: boolean) {
         { id: servicePolicy, precedence: 2 },
       ],
     });
-    if (target.environment === "staging") {
-      const name = `${target.web}-mcp`;
-      const existing = apps.find((value) => value.name === name);
-      if (existing && existing.domain !== `${domain}/mcp`)
-        throw new Error("MCP Accessの所有対象が一致しません。");
-      await cloudflare(
-        `access/apps${existing ? `/${existing.id}` : ""}`,
-        existing ? "PUT" : "POST",
-        {
-          name,
-          domain: `${domain}/mcp`,
-          type: "self_hosted",
-          destinations: stagingMcpPaths.map((path) => ({
-            type: "public",
-            uri: `${domain}${path}`,
-          })),
-          app_launcher_visible: false,
-          policies: [
-            {
-              name: "TableCast MCP OAuth",
-              decision: "bypass",
-              include: [{ everyone: {} }],
-              precedence: 1,
-            },
-          ],
-        },
-      );
-    }
   }
   return app;
 }
@@ -342,7 +341,7 @@ async function main(resetFinished = false) {
   }
   const headers = {
     authorization: `Bearer ${secrets?.TABLECAST_VOICE_API_TOKEN ?? ""}`,
-    ...(target.emulate && secrets
+    ...(target.environment === "preview" && secrets
       ? {
           "CF-Access-Client-Id": secrets.CF_ACCESS_CLIENT_ID ?? "",
           "CF-Access-Client-Secret": secrets.CF_ACCESS_CLIENT_SECRET ?? "",
@@ -647,7 +646,7 @@ async function main(resetFinished = false) {
     ]);
   }
   await waitForRelease(target.origin, headers, sha);
-  if (target.environment === "staging") await verifyStagingMcp();
+  if (target.environment === "staging") await verifyStaging();
   console.info(`配備確認済み: ${target.origin} (${sha})`);
   if (process.env.GITHUB_STEP_SUMMARY)
     await writeFile(process.env.GITHUB_STEP_SUMMARY, `配備URL: ${target.origin}\n\nSHA: ${sha}\n`, {
