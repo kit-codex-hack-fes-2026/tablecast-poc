@@ -109,13 +109,12 @@ export default function PromptEditorInput({
         if (!html) return data.files.length > 0 && !data.getData("text/plain");
         const incoming = instructionClipboard(html);
         if (incoming.omitted) setNotice(true);
-        view.dispatch(
-          view.state.tr
-            .replaceSelection(
-              ProseMirrorParser.fromSchema(view.state.schema).parseSlice(incoming.content),
-            )
-            .scrollIntoView(),
+        const content = ProseMirrorParser.fromSchema(view.state.schema).parseSlice(
+          incoming.content,
         );
+        // 除外後に本文がなければ、選択中の文章を空の貼付けで消さない。
+        if (incoming.omitted && content.size === 0) return true;
+        view.dispatch(view.state.tr.replaceSelection(content).scrollIntoView());
         return true;
       },
       handleDrop: (view, event, _slice, moved) => {

@@ -178,3 +178,19 @@ it("通常入力のUndoで旧文字列へ戻り、Redoと強調中の改行も�
   await expect.element(page.getByRole("status", { name: "保存本文" })).toHaveTextContent("太字");
   await expect.element(page.getByRole("status", { name: "保存本文" })).toHaveTextContent("続き");
 });
+
+it("画像のみのHTML貼付けは選択中の既存本文を消さない", async () => {
+  await render(<Harness initial="保持する本文" />);
+  const input = page.getByRole("textbox", { name: "日本語 接客方針" });
+  await input.click();
+  await userEvent.keyboard("{Control>}a{/Control}");
+  const data = new DataTransfer();
+  data.setData("text/html", '<p><img src="https://example.invalid/image.png"></p>');
+  input
+    .element()
+    .dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  await expect.element(input).toHaveTextContent("保持する本文");
+  await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
+});
