@@ -45,6 +45,10 @@
 | DEPLOY-01    | Web/APIを公開環境へ配置しGPT-Live・Agents APIと接続して、日英実音声・MCP・ダッシュボードが連動する                             |
 | OPS-01       | 生音声を既定保存せず、Secretがログ・ブラウザー・session名へ漏れず、診断用IDで追跡できる                                        |
 
+## CIで確認するブラウザー範囲
+
+PRのマージ前はChromium E2Eの2 shardを必須とする。WebKit E2Eはstaging/mainへのpushと手動CIで実行するため、WebKit固有の回帰はstaging統合後に検出される。PRのCI成功だけではWebKit・iPad実機の受入完了としない。releaseの受入判定では対象staging SHAのChromium・WebKit両方の成功を確認し、実機・実音声等の未実施項目は別途残す。配備gateと実行範囲は[テスト戦略](testing.md#ciのジョブとキャッシュ)に従う。以下の過去の両ブラウザー確認記録は、最新PRでの実施結果を意味しない。
+
 ## ローカルUI受入の記録
 
 更新: 2026-09-06。外部Inworld・LLM・公開環境を接続せずに確認した範囲を記録する。部品試験、SDK境界の単体試験、実DBのブラウザー試験を区別し、この記録だけで音声・実機・公開環境を含む合格とは判定しない。

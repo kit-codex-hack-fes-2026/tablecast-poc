@@ -99,11 +99,13 @@ Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日
 
 ## CIのジョブとキャッシュ
 
-workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、Web/seedのVitest unit、API/D1/MCPのVitest、開発CLI/seed統合、Vitest Browser/StorybookのComponent・a11y、Playwright E2E、Workers build、Storybook buildを分ける。WorkersとStorybookの成果物・失敗は独立したjobで確認する。
+workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、API/D1/MCP、Component・a11y、Playwright E2Eを別jobで確認する。Web・seed・動画基盤・開発CLIのVitestはunit-webへ統合する。Workers・Storybook・Emailはbuildへ統合し、Workers完了後にStorybook・Emailを実行する。成果物は個別のartifactで保存し、失敗は各stepで確認する。
 
-全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixでChromium・WebKitを各2分割の計4jobに分け、Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、全shardの成功を配備の条件とする。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
+全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixを使う。PRはChromiumを2分割の計2job、staging/mainへのpushと手動実行はChromium・WebKitを各2分割の計4jobで検査する。Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、イベントごとに選ばれた全shardの成功を集約チェックの条件とする。PRの製品プレビューは静的解析・build・images成功後に先行配備する。staging・本番配備は両browserを含む全必須検査の成功を待つ。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
 
-APIは1job・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
+PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
+
+APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
 GitHub Actionsの`actions/cache`で静的解析と2種類のbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、Workersの`dist`・deploy configとStorybookの`storybook-static`を出力として復元する。テストtaskは`cache: false`で毎回実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メール、テスト結果は永続キャッシュへ入れない。
 
