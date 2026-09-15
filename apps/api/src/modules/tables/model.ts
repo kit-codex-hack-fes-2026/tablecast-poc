@@ -75,6 +75,51 @@ export const sessionEventsQuerySchema = z
 
 export type HistoryQuery = z.infer<typeof historyQuerySchema>;
 
+// 現行PoCの店舗日は日英とも日本時間。端末のタイムゾーンとは独立する。
+export const storeTimeZone = "Asia/Tokyo";
+export const storeDateSchema = z.iso.date();
+export const timelineQuerySchema = z
+  .object({
+    date: storeDateSchema,
+    beforeOpenedAt: decimalQuerySchema
+      .pipe(z.number().int().nonnegative().max(8_640_000_000_000_000))
+      .optional(),
+    beforeId: id.refine((value) => value.trim().length > 0).optional(),
+    limit: decimalQuerySchema.pipe(z.number().int().min(1).max(200)).default(100),
+  })
+  .strict()
+  .refine((query) => (query.beforeOpenedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+
+export const timelineSessionSchema = z
+  .object({
+    id,
+    tableId: id,
+    guestCount: z.number().int().positive(),
+    status: z.enum(["open", "closed"]),
+    openedAt: z.number().int(),
+    closedAt: z.number().int().nullable(),
+  })
+  .refine((session) =>
+    session.status === "open"
+      ? session.closedAt === null
+      : session.closedAt !== null && session.closedAt >= session.openedAt,
+  );
+
+export const timelinePageSchema = z.object({
+  date: storeDateSchema,
+  timeZone: z.literal(storeTimeZone),
+  startAt: z.number().int(),
+  endAt: z.number().int(),
+  observedAt: z.number().int(),
+  sessions: z.array(timelineSessionSchema),
+  nextCursor: z.object({ openedAt: z.number().int(), id }).nullable(),
+});
+export type TimelineQuery = z.infer<typeof timelineQuerySchema>;
+export type TimelinePage = z.infer<typeof timelinePageSchema>;
+export type TimelineSession = z.infer<typeof timelineSessionSchema>;
+
 export type SessionEventsQuery = z.infer<typeof sessionEventsQuerySchema>;
 
 export const tablePlanSchema = z.object({

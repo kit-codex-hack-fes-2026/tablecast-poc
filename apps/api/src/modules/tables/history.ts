@@ -1,4 +1,18 @@
-import { and, desc, eq, isNotNull, lt, notInArray, sql, sum } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  gte,
+  isNull,
+  isNotNull,
+  lt,
+  lte,
+  notInArray,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import {
   orders,
   payments,
@@ -15,8 +29,86 @@ import {
   type HistoryQuery,
   type SessionEventsPage,
   type SessionEventsQuery,
+  storeTimeZone,
+  timelineSessionSchema,
+  type TimelinePage,
+  type TimelineQuery,
 } from "./model";
 import { billValue, eventValue, getSession } from "./queries";
+
+export async function getTimeline(
+  services: ApiServices,
+  actor: Actor,
+  query: TimelineQuery,
+): Promise<TimelinePage> {
+  ensure(actor.kind === "staff", "STAFF_REQUIRED", 403);
+  const startAt = Date.parse(`${query.date}T00:00:00+09:00`);
+  const endAt = startAt + 86_400_000;
+  const observedAt = Date.now();
+  const cursor =
+    query.beforeOpenedAt !== undefined && query.beforeId !== undefined
+      ? or(
+          lt(tableSessions.opened_at, query.beforeOpenedAt),
+          and(
+            eq(tableSessions.opened_at, query.beforeOpenedAt),
+            lt(tableSessions.id, query.beforeId),
+          ),
+        )
+      : undefined;
+  const rows = await services.db
+    .select({
+      id: tableSessions.id,
+      tableId: tableSessions.table_id,
+      guestCount: tableSessions.guest_count,
+      status: tableSessions.status,
+      openedAt: tableSessions.opened_at,
+      closedAt: tableSessions.closed_at,
+    })
+    .from(tableSessions)
+    .where(
+      and(
+        eq(tableSessions.store_id, actor.storeId),
+        eq(tableSessions.kind, "table"),
+        lt(tableSessions.opened_at, endAt),
+        cursor,
+        or(
+          // 未来日に現在の利用中セッションを延ばさない。
+          observedAt >= startAt
+            ? and(eq(tableSessions.status, "open"), lte(tableSessions.opened_at, observedAt))
+            : undefined,
+          and(
+            eq(tableSessions.status, "closed"),
+            or(
+              gt(tableSessions.closed_at, startAt),
+              and(
+                eq(tableSessions.closed_at, tableSessions.opened_at),
+                gte(tableSessions.opened_at, startAt),
+              ),
+              // 欠損した終了時刻を利用中や来店なしへ置き換えない。
+              isNull(tableSessions.closed_at),
+              lt(tableSessions.closed_at, tableSessions.opened_at),
+            ),
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(tableSessions.opened_at), desc(tableSessions.id))
+    .limit(query.limit + 1);
+  const parsed = timelineSessionSchema.array().safeParse(rows);
+  ensure(parsed.success, "TIMELINE_INVALID_SESSION", 409);
+  const sessions = parsed.data.slice(0, query.limit);
+  const last = sessions.at(-1);
+  return {
+    date: query.date,
+    timeZone: storeTimeZone,
+    startAt,
+    endAt,
+    observedAt,
+    sessions,
+    nextCursor: rows.length > query.limit && last ? { openedAt: last.openedAt, id: last.id } : null,
+  };
+}
+
 export async function getHistory(
   services: ApiServices,
   actor: Actor,
