@@ -183,7 +183,9 @@ export const PagedVoices: Story = {
     await expect(
       await english.findByRole("option", { name: "Ashley — English" }),
     ).toBeInTheDocument();
-    await userEvent.type(instructions, "Speak calmly.", { delay: 10 });
+    // ProseMirrorの貼付け処理で入力し、合成typeによるDOM直接変更を避ける。
+    await userEvent.click(instructions);
+    await userEvent.paste("Speak calmly.");
 
     // 次ページだけ失敗しても、既取得の候補と編集中の指示は保つ。
     await userEvent.click(english.getByRole("button", { name: "Show more voices" }));
