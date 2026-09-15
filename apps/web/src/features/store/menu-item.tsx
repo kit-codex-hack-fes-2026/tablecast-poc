@@ -78,6 +78,28 @@ export function MenuItem({
     </>
   );
 }
+type ConditionError =
+  | "condition_invalid"
+  | "condition_product_limit"
+  | "condition_configuration_limit"
+  | null;
+type EditorState = {
+  initial: Configuration;
+  configuration: Configuration;
+  version: number;
+  newSaved: boolean;
+  conditionError: ConditionError;
+};
+
+function conditionValidationMessage(configuration: Configuration): ConditionError {
+  const issues = configurationSchema.safeParse(configuration).error?.issues ?? [];
+  if (issues.some((issue) => issue.message === "CONDITION_PRODUCT_LIMIT"))
+    return "condition_product_limit";
+  if (issues.some((issue) => issue.message === "CONDITION_CONFIGURATION_LIMIT"))
+    return "condition_configuration_limit";
+  return issues.some((issue) => issue.path.includes("conditions")) ? "condition_invalid" : null;
+}
+
 function ItemForm({
   section,
   itemId,
@@ -104,7 +126,7 @@ function ItemForm({
     (store.role === "owner" || store.role === "admin");
   const catalog = useQuery(catalogOptions(storeId));
   // 設定全体の編集状態を保持し、再帰した条件をフォームの全深層キーへ展開しない。
-  const [editor, setEditor] = useState(() => {
+  const [editor, setEditor] = useState<EditorState>(() => {
     const initial =
       itemId === "new"
         ? addMenuItem(initialConfiguration, section, selectedId)
@@ -114,7 +136,7 @@ function ItemForm({
       configuration: initial,
       version: draft.version,
       newSaved: false,
-      conditionError: false,
+      conditionError: null,
     };
   });
   const { initial, configuration, version, newSaved, conditionError } = editor;
@@ -126,12 +148,10 @@ function ItemForm({
   const dirty = configuration !== initial;
   async function submitConfiguration(form: HTMLFormElement) {
     if (!editable || images.uploadingNow() || reload.isPending || save.isPending) return;
-    const parsed = configurationSchema.safeParse(configuration);
-    const invalidConditions =
-      parsed.error?.issues.some((issue) => issue.path.includes("conditions")) ?? false;
-    setEditor((current) => ({ ...current, conditionError: invalidConditions }));
-    if (invalidConditions) {
-      focusInvalidCondition(form);
+    const failure = conditionValidationMessage(configuration);
+    setEditor((current) => ({ ...current, conditionError: failure }));
+    if (failure) {
+      focusInvalidCondition(form, failure !== "condition_invalid");
       return;
     }
     await save.mutateAsync(configuration).catch(() => undefined);
@@ -158,7 +178,7 @@ function ItemForm({
         configuration: next.configuration,
         version: next.version,
         newSaved: true,
-        conditionError: false,
+        conditionError: null,
       });
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
@@ -180,7 +200,7 @@ function ItemForm({
         initial: next.configuration,
         configuration: next.configuration,
         version: next.version,
-        conditionError: false,
+        conditionError: null,
       }));
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       images.reset();
@@ -211,7 +231,7 @@ function ItemForm({
     <section className="space-y-6">
       {conditionError && (
         <p role="alert" className="text-destructive">
-          {t("condition_invalid")}
+          {t(conditionError)}
         </p>
       )}
       <Button
@@ -313,7 +333,7 @@ function ItemForm({
                     onConfirm={() => {
                       if (images.uploadingNow()) return;
                       setConfiguration(initial);
-                      setEditor((current) => ({ ...current, conditionError: false }));
+                      setEditor((current) => ({ ...current, conditionError: null }));
                       images.reset();
                       save.reset();
                     }}
@@ -475,8 +495,12 @@ function ItemSaveAction({
   );
 }
 
-function focusInvalidCondition(form: HTMLFormElement) {
-  const invalid = form.querySelector<HTMLElement>('[aria-invalid="true"]');
+function focusInvalidCondition(form: HTMLFormElement, aggregate: boolean) {
+  const invalid =
+    form.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+    (aggregate
+      ? form.querySelector<HTMLElement>("[data-condition-editor] [data-node-control]")
+      : null);
   let parent = invalid?.parentElement;
   while (parent && parent !== form) {
     if (parent instanceof HTMLDetailsElement) parent.open = true;

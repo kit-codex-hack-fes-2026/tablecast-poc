@@ -677,6 +677,8 @@
   "condition_self": "この選択肢自身は参照できません",
   "condition_sold_out": "売切・選択例では利用不可",
   "condition_invalid": "選択肢と条件の構造を確認してください。AND・ORは2〜8項目、深さ8・1式64節までです。",
+  "condition_product_limit": "この商品の条件は合計1,024節までです。条件を減らしてから保存してください。",
+  "condition_configuration_limit": "設定全体の条件は合計65,536節までです。この商品または他の商品の条件を減らしてから保存してください。",
   "condition_leaf": "選択肢",
   "condition_operator": "グループの条件",
   "condition_all": "AND · すべて",

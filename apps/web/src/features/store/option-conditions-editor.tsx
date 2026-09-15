@@ -406,7 +406,12 @@ export function OptionConditionsEditor({
   );
   const result = preview.data?.signature === signature ? preview.data.result : undefined;
   return (
-    <div ref={root} className="grid min-w-0 gap-5" aria-label={t("condition_editor")}>
+    <div
+      ref={root}
+      data-condition-editor
+      className="grid min-w-0 gap-5"
+      aria-label={t("condition_editor")}
+    >
       <div className="space-y-1">
         <h5 className="font-semibold">{t("condition_editor")}</h5>
         <p className="text-sm text-muted-foreground">{t("condition_help")}</p>

@@ -677,6 +677,8 @@
   "condition_self": "Cannot reference this option itself",
   "condition_sold_out": "Sold out · unavailable in a selection",
   "condition_invalid": "Check the option and rule structure. AND and OR need 2–8 items, with at most 8 levels and 64 nodes per expression.",
+  "condition_product_limit": "This product can have at most 1,024 condition nodes in total. Reduce its conditions before saving.",
+  "condition_configuration_limit": "The configuration can have at most 65,536 condition nodes in total. Reduce the conditions in this or other products before saving.",
   "condition_leaf": "Option",
   "condition_operator": "Group operator",
   "condition_all": "AND · All of these",
