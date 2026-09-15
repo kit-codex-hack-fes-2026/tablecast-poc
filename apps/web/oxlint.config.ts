@@ -26,6 +26,7 @@ const boundaryFiles = [
   ["model", "src/features/kiosk/table-cache.ts"],
   ["runtime", "src/features/kiosk/voice-connection.ts"],
   ["model", "src/features/store/device-qr-code.ts"],
+  ["runtime", "src/features/store/prompt-editor-extensions.ts"],
   ["feature", "src/features/*/*.tsx"],
 ];
 

@@ -94,3 +94,7 @@ voiceはGPT-Liveの標準voiceを選ぶ。Custom Voiceやreference uploadの項�
 ## stagingでの検証
 
 stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意はCloudflare Accessの対象で、機械通信のMCP・discovery・DCR・token・revokeだけAccessを除外する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。
+
+### 接客方針の文書形式
+
+`cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。

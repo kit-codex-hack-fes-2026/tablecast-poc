@@ -703,5 +703,22 @@
   "condition_true": "成立",
   "condition_false": "不成立",
   "condition_selection_error": "他の選択・販売条件も確認してください",
-  "condition_upgrade_error": "この画面では保存済みの条件を保持できません。再読み込みして、対応した画面で編集してください。"
+  "condition_upgrade_error": "この画面では保存済みの条件を保持できません。再読み込みして、対応した画面で編集してください。",
+  "prompt_loading": "エディターを読み込んでいます…",
+  "prompt_paragraph": "本文",
+  "prompt_heading": "見出し",
+  "prompt_bullet": "箇条書き",
+  "prompt_numbered": "番号付きリスト",
+  "prompt_toolbar": "接客方針の書式",
+  "prompt_block": "段落の種類",
+  "prompt_bold": "太字",
+  "prompt_italic": "斜体",
+  "prompt_undo": "元に戻す",
+  "prompt_redo": "やり直す",
+  "prompt_hint": "行頭の / で書式を検索 · 画像は使用できません",
+  "prompt_limit": "書式と改行を含め5,000文字以内に短くしてから保存してください。入力内容は保持されています。",
+  "prompt_omitted": "画像・添付・埋込は取り込めません。対応する文章だけを貼り付けました。",
+  "prompt_no_commands": "一致する書式がありません",
+  "prompt_load_error": "エディターを読み込めませんでした。本文を保持したまま再試行できます。",
+  "prompt_structure": "この構造は取り込めません。リストの入れ子は3段までです。"
 }

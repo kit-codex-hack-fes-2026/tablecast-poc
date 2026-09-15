@@ -34,6 +34,7 @@ function hasSensitiveField(value: unknown, path: string): boolean {
 function differences(before: unknown, after: unknown, path = ""): ConfigDraft["changes"] {
   if (JSON.stringify(before) === JSON.stringify(after)) return [];
   if (
+    !/^cast\.instructions\.(ja|en)$/.test(path) &&
     before !== null &&
     after !== null &&
     typeof before === "object" &&
@@ -198,7 +199,7 @@ export async function updateDraft(
   services: ApiServices,
   actor: Actor,
   id: string,
-  input: { expectedVersion: number; configuration: Configuration },
+  input: { expectedVersion: number; configuration: Configuration; instructionFormatVersion?: 1 },
 ) {
   const db = services.db;
 
@@ -221,6 +222,12 @@ export async function updateDraft(
     "CONFIGURATION_FORMAT_UNSUPPORTED",
     422,
   );
+  ensure(
+    input.instructionFormatVersion === 1 ||
+      Object.values(configuration.cast.instructions).every((value) => typeof value === "string"),
+    "DRAFT_CONFLICT",
+    409,
+  );
   await requireConfigurationImages(services, actor, configuration);
   const result = await db
     .update(business.configDrafts)
@@ -236,6 +243,9 @@ export async function updateDraft(
         eq(business.configDrafts.id, id),
         eq(business.configDrafts.store_id, actor.storeId),
         eq(business.configDrafts.version, input.expectedVersion),
+        input.instructionFormatVersion === 1
+          ? undefined
+          : sql`json_type(${business.configDrafts.config_json}, '$.cast.instructions.ja') = 'text' AND json_type(${business.configDrafts.config_json}, '$.cast.instructions.en') = 'text'`,
         inArray(business.configDrafts.status, ["draft", "ready"]),
       ),
     );

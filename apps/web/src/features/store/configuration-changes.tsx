@@ -1,3 +1,5 @@
+import { castInstructionSchema } from "@tablecast/api/schema";
+import { InstructionView } from "./instruction-view";
 import { Children } from "react";
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
@@ -198,7 +200,12 @@ export function ConfigurationChanges({
                 <section className="min-w-0" key={label}>
                   <h4 className="text-muted-foreground text-sm mb-1.5">{label}</h4>
                   <div className="whitespace-pre-wrap wrap-break-word text-base">
-                    {valueText(value, key)}
+                    {/^cast\.instructions\.(ja|en)$/.test(change.path) &&
+                    castInstructionSchema.safeParse(value).success ? (
+                      <InstructionView value={castInstructionSchema.parse(value)} />
+                    ) : (
+                      valueText(value, key)
+                    )}
                   </div>
                 </section>
               ))}

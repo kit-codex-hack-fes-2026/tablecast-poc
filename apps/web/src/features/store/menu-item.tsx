@@ -1,4 +1,10 @@
-import { configurationSchema, type ConfigDraft, type Configuration } from "@tablecast/api/schema";
+import {
+  instructionText,
+  instructionLimit,
+  configurationSchema,
+  type ConfigDraft,
+  type Configuration,
+} from "@tablecast/api/schema";
 import {
   skipToken,
   useIsMutating,
@@ -146,8 +152,11 @@ function ItemForm({
       configuration: typeof update === "function" ? update(current.configuration) : update,
     }));
   const dirty = configuration !== initial;
+  const invalidInstructions = Object.values(configuration.cast.instructions).some(
+    (instruction) => instructionText(instruction).length > instructionLimit,
+  );
   async function submitConfiguration(form: HTMLFormElement) {
-    if (!editable || images.uploadingNow() || reload.isPending || save.isPending) return;
+    if (!editable || invalidInstructions || images.uploadingNow() || pending) return;
     const failure = conditionValidationMessage(configuration);
     setEditor((current) => ({ ...current, conditionError: failure }));
     if (failure) {
@@ -168,7 +177,11 @@ function ItemForm({
       return parseResponse(
         rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
           param: { storeId, id: draft.id },
-          json: { expectedVersion: version, configuration: nextConfiguration },
+          json: {
+            expectedVersion: version,
+            configuration: nextConfiguration,
+            instructionFormatVersion: 1,
+          },
         }),
       );
     },
@@ -260,11 +273,7 @@ function ItemForm({
         <ConfigurationStatus
           storeName={store.name}
           publishedVersion={catalog.data.version}
-          draft={
-            draft
-              ? { id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }
-              : undefined
-          }
+          draft={{ id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }}
           dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
           pending={save.isPending}
           error={save.error || reload.error}
@@ -297,13 +306,14 @@ function ItemForm({
               selectedId={selectedId}
               retainedVoice={initial.cast.voice}
               onChange={setConfiguration}
-              disabled={!editable}
+              disabled={!editable || pending}
             />
           </fieldset>
 
           {editable && (
             <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
               <ItemSaveAction
+                invalid={invalidInstructions}
                 dirty={dirty}
                 pending={pending}
                 uploadingImages={images.uploading}
@@ -455,6 +465,7 @@ function useImageEdits(storeId: string) {
 }
 
 function ItemSaveAction({
+  invalid = false,
   dirty,
   pending,
   uploadingImages,
@@ -462,6 +473,7 @@ function ItemSaveAction({
   newUnsaved,
   isNew,
 }: {
+  invalid?: boolean;
   dirty: boolean;
   pending: boolean;
   uploadingImages: boolean;
@@ -475,7 +487,7 @@ function ItemSaveAction({
       <Button
         type="submit"
         data-pwa-blocked={dirty || pending || uploadingImages || stagedImages || newUnsaved}
-        disabled={pending || uploadingImages || (!dirty && !isNew)}
+        disabled={invalid || pending || uploadingImages || (!dirty && !isNew)}
       >
         <Save />
         {t("common_save")}

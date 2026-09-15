@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { castInstructionSchema } from "./instruction-model";
 import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
 import {
   bilingualSchema,
@@ -25,7 +26,7 @@ export const configurationSchema = z
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
-        instructions: z.object({ ja: z.string().max(5000), en: z.string().max(5000) }),
+        instructions: z.object({ ja: castInstructionSchema, en: castInstructionSchema }),
         voice: z.object({
           ja: z.string().min(1).max(100).nullable(),
           en: z.string().min(1).max(100).nullable(),
