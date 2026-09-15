@@ -1,6 +1,6 @@
 import { test as base } from "@playwright/test";
 import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, constants, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { startGateway } from "./gateway";
-import { createCaseRuntime, credentials, runtime as template, type CaseRuntime } from "./runtime";
+import { createWorkerRuntime, credentials, runtime as template, type CaseRuntime } from "./runtime";
 
 // API client由来のWorker global型ではprocessがanyになる。fixtureの実行環境はNodeである。
 declare const process: NodeJS.Process;
@@ -36,20 +36,21 @@ function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
   }
 }
 
-export const test = base.extend<{
-  runtime: CaseRuntime & {
-    setOnline: (online: boolean) => Promise<void>;
-    restartWeb: () => Promise<void>;
-  };
-}>({
-  runtime: [
-    async ({ browserName }, use, testInfo) => {
-      const runtime = createCaseRuntime();
+type RuntimeHandles = CaseRuntime & {
+  setOnline: (online: boolean) => Promise<void>;
+  restartWeb: () => Promise<void>;
+  prepareForTest: () => Promise<void>;
+  flushLog: (path: string) => Promise<void>;
+};
+
+export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: RuntimeHandles }>({
+  workerRuntime: [
+    async ({ browserName }, use, workerInfo) => {
+      const runtime = createWorkerRuntime(workerInfo.parallelIndex);
       let gateway: Awaited<ReturnType<typeof startGateway>> | undefined;
       const name = `${basename(runtime.directory).toLowerCase()}-${browserName}`;
       const children: ChildProcess[] = [];
       const expectedStops = new Set<ChildProcess>();
-      const container = `${name}-mailpit`;
       const errors: unknown[] = [];
       const secrets = [
         ...diagnosticSecrets(parentEnv),
@@ -63,7 +64,13 @@ export const test = base.extend<{
         // 資格を除去してから上限を適用し、値の途中だけが証跡へ残るのを避ける。
         log = `${log}${redactCredentials(message, secrets)}\n`.slice(-65_536);
       };
-      record(JSON.stringify({ case: name, directory: runtime.directory }));
+      record(
+        JSON.stringify({
+          worker: name,
+          directory: runtime.directory,
+          parallelIndex: workerInfo.parallelIndex,
+        }),
+      );
       let failure: Error | undefined;
       const start = (command: string, args: string[], env: NodeJS.ProcessEnv = {}) => {
         const child = spawn(command, args, {
@@ -71,11 +78,11 @@ export const test = base.extend<{
           env: {
             ...parentEnv,
             WRANGLER_LOG_PATH: join(runtime.directory, "wrangler.log"),
-            // 別caseのWorker登録・解除で、このruntimeを再構成させない。
+            // 別workerのWorker登録・解除で、このruntimeを再構成させない。
             WRANGLER_REGISTRY_PATH: join(runtime.directory, "registry"),
             ...env,
           },
-          // case専用のprocess groupで、Viteが起動するworkerdも同じ寿命にする。
+          // worker専用のprocess groupで、Viteが起動するworkerdも同じ寿命にする。
           detached: true,
           stdio: ["ignore", "pipe", "pipe"],
         });
@@ -106,7 +113,7 @@ export const test = base.extend<{
             await delay(50);
           }
         }
-        throw new Error(`case専用process group ${child.pid}の終了を確認できませんでした。`);
+        throw new Error(`worker専用process group ${child.pid}の終了を確認できませんでした。`);
       };
       const waitFor = async <T>(check: () => Promise<T | undefined>): Promise<T> => {
         const deadline = Date.now() + 60_000;
@@ -116,7 +123,7 @@ export const test = base.extend<{
           if (result !== undefined) return result;
           await delay(50);
         }
-        throw new Error("ケースの起動完了を確認できませんでした。");
+        throw new Error("worker runtimeの起動完了を確認できませんでした。");
       };
       const readReady = (file: string) =>
         waitFor(async () => {
@@ -129,13 +136,87 @@ export const test = base.extend<{
             throw error;
           }
         });
+      const state = join(runtime.directory, "state");
+      let mailpitUrl = "";
+      let ingress: Awaited<ReturnType<typeof startGateway>> | undefined;
+      let webProcess: ChildProcess | undefined;
+      let testsPrepared = 0;
+      let clientSource: string | undefined;
+      let mailpitMode: "binary" | "docker" = "binary";
+      const container = `${name}-mailpit`;
+      const waitUntilReady = async (origin: string) => {
+        const deadline = Date.now() + 60_000;
+        let ready = false;
+        while (Date.now() < deadline) {
+          if (failure) throw failure;
+          try {
+            const results = await Promise.all([
+              fetch(`${origin}/api/admin/stores`, { signal: AbortSignal.timeout(2000) }),
+              fetch(`${mailpitUrl}/api/v1/info`, {
+                signal: AbortSignal.timeout(2000),
+              }),
+              fetch(`${oauthUrl}/.well-known/openid-configuration`, {
+                signal: AbortSignal.timeout(2000),
+              }),
+            ]);
+            if (results[0]?.status === 401 && results[1]?.ok && results[2]?.ok) {
+              ready = true;
+              break;
+            }
+          } catch {}
+          await new Promise((done) => setTimeout(done, 100));
+        }
+        if (!ready) throw new Error("worker専用の受入環境を起動できませんでした。");
+      };
+      let oauthUrl = "";
+      const startWeb = () =>
+        start(
+          "node",
+          [
+            join(root, "apps/web/node_modules/.bin/vite"),
+            "preview",
+            "--config",
+            join(import.meta.dirname, "tablecast-preview.config.ts"),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--strictPort",
+            "--logLevel",
+            "warn",
+          ],
+          { TABLECAST_E2E_CASE_DIRECTORY: runtime.directory },
+        );
+      const resetRuntimeState = async () => {
+        // writerを止めてから保存状態と配信ファイルを復元する。稼働中のSQLiteはコピーしない。
+        if (!ingress || !webProcess) throw new Error("worker runtimeが未起動です。");
+        ingress.setOnline(false);
+        await stop(webProcess);
+        const stopped = children.indexOf(webProcess);
+        if (stopped >= 0) children.splice(stopped, 1);
+        await rm(join(runtime.directory, "web-ready.json"), { force: true });
+        await rm(state, { recursive: true, force: true });
+        await cp(join(template.directory, "state"), state, { recursive: true });
+        if (clientSource) {
+          await rm(join(runtime.directory, "client"), { recursive: true, force: true });
+          await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+        }
+        const cleared = await fetch(`${mailpitUrl}/api/v1/messages`, { method: "DELETE" });
+        if (!cleared.ok)
+          throw new Error(`Mailpitのメッセージ削除に失敗しました: ${cleared.status}`);
+        webProcess = startWeb();
+        const replacement = z
+          .object({ port: z.number().int().positive() })
+          .parse(await readReady("web-ready.json"));
+        ingress.setWebPort(replacement.port);
+        ingress.setOnline(true);
+        await waitUntilReady(ingress.origin);
+      };
       try {
-        const ingress = await startGateway(runtime.directory);
+        ingress = await startGateway(runtime.directory);
         gateway = ingress;
         const origin = ingress.origin;
         record(JSON.stringify({ origin }));
-        const state = join(runtime.directory, "state");
-        // writerをdispose済みのtemplate全体を複製する。稼働中のSQLiteはコピーしない。
         await cp(join(template.directory, "state"), state, { recursive: true });
         start("bun", ["--no-env-file", join(root, "apps/emulate/src/index.ts")], {
           TABLECAST_PUBLIC_ORIGIN: origin,
@@ -146,62 +227,92 @@ export const test = base.extend<{
               .min(1024)
               .max(65535)
               .parse(
-                Number(parentEnv.TABLECAST_E2E_OAUTH_BASE_PORT ?? 24000) + testInfo.parallelIndex,
+                Number(parentEnv.TABLECAST_E2E_OAUTH_BASE_PORT ?? 24000) + workerInfo.parallelIndex,
               ),
           ),
           TABLECAST_OAUTH_READY_FILE: join(runtime.directory, "oauth-ready.json"),
         });
         const oauth = z.object({ url: z.url() }).parse(await readReady("oauth-ready.json"));
+        oauthUrl = oauth.url;
         const linux = process.platform === "linux";
-        start("docker", [
-          "run",
-          "--name",
-          container,
-          "-e",
-          "MP_DISABLE_VERSION_CHECK=true",
-          ...(linux
-            ? [
-                "--network",
-                "host",
-                // 既定healthcheckはport 0へ接続するため、下の実URLのready判定へ任せる。
-                "--no-healthcheck",
-                "-e",
-                "MP_UI_BIND_ADDR=127.0.0.1:0",
-                "-e",
-                "MP_SMTP_BIND_ADDR=unix:/tmp/tablecast-mailpit-smtp.sock:600",
-              ]
-            : ["-p", "127.0.0.1::8025"]),
-          "axllent/mailpit:v1.29.2",
-        ]);
-        const mailpitPort = await waitFor(async () => {
-          // 起動をやり直さず、起動済みcontainerの実bindだけを取得する。
-          const result = await execute(
-            "docker",
-            linux
-              ? ["exec", container, "netstat", "-ltnp"]
-              : ["inspect", "--format", "{{json .NetworkSettings.Ports}}", container],
-            { timeout: 2000 },
-          ).catch(() => undefined);
-          if (!result) return undefined;
-          if (linux) {
-            // host networkの他プロセスを候補にせず、containerのPID 1を照合する。
-            const matches = [
-              ...result.stdout.matchAll(
-                /^tcp\s+\d+\s+\d+\s+127\.0\.0\.1:(\d+)\s+\S+\s+LISTEN\s+1\/mailpit\s*$/gm,
-              ),
-            ];
-            if (matches.length > 1) throw new Error("MailpitのHTTP待受が一つに定まりません。");
-            return matches[0] ? z.coerce.number().int().positive().parse(matches[0][1]) : undefined;
+        const mailpitBin = join(template.directory, "mailpit");
+        if (linux) {
+          try {
+            await access(mailpitBin, constants.X_OK);
+          } catch {
+            throw new Error(
+              `Mailpitバイナリがありません: ${mailpitBin}。global setupでDocker imageから抽出してください。`,
+            );
           }
-          const ports = z
-            .record(
-              z.string(),
-              z.array(z.object({ HostPort: z.coerce.number().int().positive() })).nullable(),
-            )
-            .parse(JSON.parse(result.stdout));
-          return ports["8025/tcp"]?.[0]?.HostPort;
+          const mailpitPort = z.coerce
+            .number()
+            .int()
+            .min(1024)
+            .max(65535)
+            .parse(
+              Number(parentEnv.TABLECAST_E2E_MAILPIT_BASE_PORT ?? 25000) + workerInfo.parallelIndex,
+            );
+          const smtpPort = z.coerce
+            .number()
+            .int()
+            .min(1024)
+            .max(65535)
+            .parse(
+              Number(parentEnv.TABLECAST_E2E_SMTP_BASE_PORT ?? 26000) + workerInfo.parallelIndex,
+            );
+          start(
+            mailpitBin,
+            [
+              "--listen",
+              `127.0.0.1:${mailpitPort}`,
+              "--smtp",
+              `127.0.0.1:${smtpPort}`,
+              "--disable-version-check",
+            ],
+            { MP_DISABLE_VERSION_CHECK: "true" },
+          );
+          mailpitUrl = `http://127.0.0.1:${mailpitPort}`;
+        } else {
+          // Docker imageのバイナリはLinux向けのため、macOS等ではcontainerをworker寿命で1回起動する。
+          mailpitMode = "docker";
+          start("docker", [
+            "run",
+            "--name",
+            container,
+            "-e",
+            "MP_DISABLE_VERSION_CHECK=true",
+            "-p",
+            "127.0.0.1::8025",
+            "axllent/mailpit:v1.29.2",
+          ]);
+          const mailpitPort = await waitFor(async () => {
+            const result = await execute(
+              "docker",
+              ["inspect", "--format", "{{json .NetworkSettings.Ports}}", container],
+              { timeout: 2000 },
+            ).catch(() => undefined);
+            if (!result) return undefined;
+            const ports = z
+              .record(
+                z.string(),
+                z.array(z.object({ HostPort: z.coerce.number().int().positive() })).nullable(),
+              )
+              .parse(JSON.parse(result.stdout));
+            return ports["8025/tcp"]?.[0]?.HostPort;
+          });
+          mailpitUrl = `http://127.0.0.1:${mailpitPort}`;
+        }
+        await waitFor(async () => {
+          try {
+            const response = await fetch(`${mailpitUrl}/api/v1/info`, {
+              signal: AbortSignal.timeout(2000),
+            });
+            return response.ok ? true : undefined;
+          } catch {
+            return undefined;
+          }
         });
-        const mailpitUrl = `http://127.0.0.1:${mailpitPort}`;
+        record(JSON.stringify({ mailpitMode, mailpitUrl }));
         const vars = {
           TABLECAST_ENV: "development",
           TABLECAST_PUBLIC_ORIGIN: origin,
@@ -221,10 +332,10 @@ export const test = base.extend<{
           const config = builtConfig.parse(
             JSON.parse(await readFile(join(build, "wrangler.json"), "utf8")),
           );
-          if (config.assets)
-            await cp(resolve(build, config.assets.directory), join(runtime.directory, "client"), {
-              recursive: true,
-            });
+          if (config.assets) {
+            clientSource = resolve(build, config.assets.directory);
+            await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+          }
           await writeFile(
             join(runtime.directory, `${worker}.json`),
             JSON.stringify({
@@ -259,25 +370,7 @@ export const test = base.extend<{
             auxiliaryWorkers: [{ configPath: join(runtime.directory, "api.json") }],
           }),
         );
-        const startWeb = () =>
-          start(
-            "node",
-            [
-              join(root, "apps/web/node_modules/.bin/vite"),
-              "preview",
-              "--config",
-              join(import.meta.dirname, "tablecast-preview.config.ts"),
-              "--host",
-              "127.0.0.1",
-              "--port",
-              "0",
-              "--strictPort",
-              "--logLevel",
-              "warn",
-            ],
-            { TABLECAST_E2E_CASE_DIRECTORY: runtime.directory },
-          );
-        let webProcess = startWeb();
+        webProcess = startWeb();
         const web = z
           .object({ port: z.number().int().positive() })
           .parse(await readReady("web-ready.json"));
@@ -290,36 +383,18 @@ export const test = base.extend<{
             mailpit: mailpitUrl,
           }),
         );
-        const deadline = Date.now() + 60_000;
-        let ready = false;
-        while (Date.now() < deadline) {
-          if (failure) throw failure;
-          try {
-            const results = await Promise.all([
-              fetch(`${origin}/api/admin/stores`, { signal: AbortSignal.timeout(2000) }),
-              fetch(`${vars.TABLECAST_MAILPIT_URL}/api/v1/info`, {
-                signal: AbortSignal.timeout(2000),
-              }),
-              fetch(`${vars.TABLECAST_GOOGLE_EMULATOR_URL}/.well-known/openid-configuration`, {
-                signal: AbortSignal.timeout(2000),
-              }),
-            ]);
-            if (results[0]?.status === 401 && results[1]?.ok && results[2]?.ok) {
-              ready = true;
-              break;
-            }
-          } catch {}
-          await new Promise((done) => setTimeout(done, 100));
-        }
-        if (!ready) throw new Error("case専用の受入環境を起動できませんでした。");
-        await use({
+        await waitUntilReady(ingress.origin);
+        const handles: RuntimeHandles = {
           ...runtime,
           origin,
           mailpitUrl,
           restartWeb: async () => {
+            if (!ingress || !webProcess) throw new Error("worker runtimeが未起動です。");
             ingress.setOnline(false);
             await stop(webProcess);
-            await rm(join(runtime.directory, "web-ready.json"));
+            const stopped = children.indexOf(webProcess);
+            if (stopped >= 0) children.splice(stopped, 1);
+            await rm(join(runtime.directory, "web-ready.json"), { force: true });
             webProcess = startWeb();
             const replacement = z
               .object({ port: z.number().int().positive() })
@@ -328,9 +403,18 @@ export const test = base.extend<{
             ingress.setOnline(true);
           },
           setOnline: async (online) => {
-            ingress.setOnline(online);
+            ingress?.setOnline(online);
           },
-        });
+          prepareForTest: async () => {
+            if (testsPrepared++ === 0) return;
+            await resetRuntimeState();
+          },
+          flushLog: async (path: string) => {
+            await mkdir(dirname(path), { recursive: true });
+            await writeFile(path, log, { mode: 0o600 });
+          },
+        };
+        await use(handles);
         if (failure) throw failure;
       } catch (error) {
         errors.push(error);
@@ -338,21 +422,26 @@ export const test = base.extend<{
         const cleanup = await Promise.allSettled([
           gateway?.close(),
           ...children.toReversed().map(stop),
-          execute("docker", ["rm", "--force", container], { timeout: 10000 }).catch(
-            (error: Error) => {
-              if (!error.message.includes(`No such container: ${container}`)) throw error;
-            },
-          ),
+          mailpitMode === "docker"
+            ? execute("docker", ["rm", "--force", container], { timeout: 10000 }).catch(
+                (error: Error) => {
+                  if (!error.message.includes(`No such container: ${container}`)) throw error;
+                },
+              )
+            : Promise.resolve(),
         ]);
         for (const result of cleanup) if (result.status === "rejected") errors.push(result.reason);
         try {
-          if (errors.length || testInfo.status !== testInfo.expectedStatus) {
+          if (errors.length) {
             for (const error of errors)
               record(error instanceof Error ? error.message : String(error));
-            const path = testInfo.outputPath("tablecast-runtime.log");
+            const path = join(
+              root,
+              "apps/web/test-results/tablecast-runtime",
+              `${name}-worker.log`,
+            );
             await mkdir(dirname(path), { recursive: true });
             await writeFile(path, log, { mode: 0o600 });
-            await testInfo.attach("TableCast実行環境", { path, contentType: "text/plain" });
           }
         } catch (error) {
           errors.push(error);
@@ -364,7 +453,26 @@ export const test = base.extend<{
           }
         }
       }
-      if (errors.length) throw new AggregateError(errors, "case専用の受入環境で失敗しました。");
+      if (errors.length) throw new AggregateError(errors, "worker専用の受入環境で失敗しました。");
+    },
+    { scope: "worker", timeout: 180_000 },
+  ],
+  runtime: [
+    async ({ workerRuntime }, use, testInfo) => {
+      await workerRuntime.prepareForTest();
+      try {
+        await use(workerRuntime);
+      } finally {
+        if (testInfo.status !== testInfo.expectedStatus) {
+          const path = testInfo.outputPath("tablecast-runtime.log");
+          try {
+            await workerRuntime.flushLog(path);
+            await testInfo.attach("TableCast実行環境", { path, contentType: "text/plain" });
+          } catch {
+            // 失敗証跡の添付自体でテスト結果を上書きしない。
+          }
+        }
+      }
     },
     { timeout: 120_000 },
   ],

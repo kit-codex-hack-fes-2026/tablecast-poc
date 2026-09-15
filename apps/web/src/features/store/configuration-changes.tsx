@@ -32,6 +32,10 @@ const labels = {
   options: "editor_options",
   priceDelta: "editor_price_delta",
   maxQuantity: "editor_max_quantity",
+  conditions: "condition_editor",
+  children: "condition_group",
+  child: "condition_not_scope",
+  optionId: "condition_leaf",
   requires: "editor_requires",
   excludes: "editor_excludes",
   allergens: "kiosk_allergens",
@@ -124,6 +128,7 @@ export function ConfigurationChanges({
           "productIds",
           "categoryIds",
           "excludedOptionIds",
+          "optionId",
           "requires",
           "excludes",
         ].includes(key)
@@ -135,6 +140,10 @@ export function ConfigurationChanges({
         if (value === "single") return t("editor_single");
         if (value === "multiple") return t("editor_multiple");
         if (value === "quantity") return t("editor_quantity");
+        if (value === "and") return t("condition_all");
+        if (value === "or") return t("condition_any");
+        if (value === "not") return t("condition_not_scope");
+        if (value === "option") return t("condition_leaf");
       }
       if (["evidence", "crossContact", "vegan"].includes(key)) {
         if (value === "unknown") return t("editor_unknown");

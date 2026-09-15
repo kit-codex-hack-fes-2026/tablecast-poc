@@ -1,19 +1,15 @@
 import { type Modifier, type Product } from "@tablecast/api/schema";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Image, Plus, Trash2 } from "lucide-react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
 import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { emptyText } from "./configuration-defaults";
-import {
-  BilingualFields,
-  BooleanField,
-  NumericField,
-  ReferencesField,
-} from "./configuration-fields";
+import { BilingualFields, BooleanField, NumericField } from "./configuration-fields";
+import { OptionConditionsEditor } from "./option-conditions-editor";
 import { configurationImageUploadKey } from "./menu-query";
 
 function encodeEditorId(value: string) {
@@ -43,7 +39,7 @@ export function ModifiersEditor({
 }: {
   storeId: string;
   product: Product;
-  onChange: (modifiers: Modifier[]) => void;
+  onChange: React.Dispatch<React.SetStateAction<Modifier[]>>;
   onImageStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
@@ -63,18 +59,6 @@ export function ModifiersEditor({
       { kind, index: index + 1, name: name || t("editor_not_configured") },
       { locale },
     );
-  const optionChoices = product.modifiers.flatMap((group, groupIndex) =>
-    group.options.map((option, optionIndex) => ({
-      id: option.id,
-      label: m.editor_option_reference(
-        {
-          group: rowTitle(t("editor_modifier"), groupIndex, group.text[locale].displayName),
-          option: rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName),
-        },
-        { locale },
-      ),
-    })),
-  );
   function updateGroup(groupId: string, change: Partial<Modifier>) {
     onChange(
       product.modifiers.map((group) => (group.id === groupId ? { ...group, ...change } : group)),
@@ -85,11 +69,18 @@ export function ModifiersEditor({
     optionId: string,
     change: Partial<Modifier["options"][number]>,
   ) {
-    updateGroup(group.id, {
-      options: group.options.map((option) =>
-        option.id === optionId ? { ...option, ...change } : option,
+    onChange((current) =>
+      current.map((item) =>
+        item.id === group.id
+          ? {
+              ...item,
+              options: item.options.map((option) =>
+                option.id === optionId ? { ...option, ...change } : option,
+              ),
+            }
+          : item,
       ),
-    });
+    );
   }
   return (
     <fieldset
@@ -184,7 +175,7 @@ export function ModifiersEditor({
                   title={rowTitle(t("editor_option"), optionIndex, option.text[locale].displayName)}
                   id={`${groupId}-${encodeEditorId(option.id)}`}
                   labelledBy={groupId}
-                  references={optionChoices.filter((choice) => choice.id !== option.id)}
+                  product={product}
                   disabled={disabled}
                   removable={group.options.length > 1 && !uploadingImages}
                   onChange={(change) => updateOption(group, option.id, change)}
@@ -273,7 +264,7 @@ function ModifierOptionEditor({
   title,
   id: optionId,
   labelledBy,
-  references,
+  product,
   disabled,
   removable,
   onChange,
@@ -285,7 +276,7 @@ function ModifierOptionEditor({
   title: string;
   id: string;
   labelledBy: string;
-  references: { id: string; label: string }[];
+  product: Product;
   disabled: boolean;
   removable: boolean;
   onChange: (change: Partial<Modifier["options"][number]>) => void;
@@ -294,6 +285,7 @@ function ModifierOptionEditor({
 }) {
   const { t } = useI18n();
   const context = `${labelledBy} ${optionId}`;
+  const [conditionsVisible, setConditionsVisible] = useState(false);
   return (
     <fieldset aria-labelledby={context} className="grid min-w-0 gap-4 border-t border-border pt-4">
       <legend className="max-w-full pt-4">
@@ -333,6 +325,9 @@ function ModifierOptionEditor({
         />
       </div>
       <details
+        onToggle={(event) => {
+          if (event.currentTarget.open) setConditionsVisible(true);
+        }}
         className="group min-w-0"
         onInvalidCapture={(event) => {
           event.currentTarget.open = true;
@@ -371,24 +366,15 @@ function ModifierOptionEditor({
               onChange={({ imageKey, imageKind }) => onChange({ imageKey, imageKind })}
             />
           </fieldset>
-          <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
-            <ReferencesField
-              labelledBy={context}
-              label={t("editor_requires")}
-              value={option.requires}
-              options={references}
-              onChange={(requires) => onChange({ requires })}
+          {conditionsVisible && (
+            <OptionConditionsEditor
+              storeId={storeId}
+              product={product}
+              optionId={option.id}
               disabled={disabled}
+              onChange={onChange}
             />
-            <ReferencesField
-              labelledBy={context}
-              label={t("editor_excludes")}
-              value={option.excludes}
-              options={references}
-              onChange={(excludes) => onChange({ excludes })}
-              disabled={disabled}
-            />
-          </div>
+          )}
         </div>
       </details>
       <Button

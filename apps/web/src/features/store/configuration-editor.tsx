@@ -33,7 +33,7 @@ const selectClass = "h-12 rounded-lg border border-input px-3 text-base";
 
 type EditorProps = {
   value: Configuration;
-  onChange: (value: Configuration) => void;
+  onChange: React.Dispatch<React.SetStateAction<Configuration>>;
   disabled: boolean;
   selectedId: string;
 };
@@ -49,12 +49,12 @@ export function ProductsEditor({
   const { t, locale } = useI18n();
   const product = value.products.find((item) => item.id === selectedId);
   function update(change: Partial<Product>) {
-    onChange({
-      ...value,
-      products: value.products.map((item) =>
+    onChange((current) => ({
+      ...current,
+      products: current.products.map((item) =>
         item.id === selectedId ? { ...item, ...change } : item,
       ),
-    });
+    }));
   }
   return (
     <>
@@ -222,7 +222,20 @@ export function ProductsEditor({
               key={product.id}
               product={product}
               disabled={disabled}
-              onChange={(modifiers) => update({ modifiers })}
+              onChange={(modifiers) =>
+                onChange((current) => ({
+                  ...current,
+                  products: current.products.map((item) =>
+                    item.id === selectedId
+                      ? {
+                          ...item,
+                          modifiers:
+                            typeof modifiers === "function" ? modifiers(item.modifiers) : modifiers,
+                        }
+                      : item,
+                  ),
+                }))
+              }
             />
           </ConfigurationSection>
         </>

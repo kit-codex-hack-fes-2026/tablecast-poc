@@ -899,6 +899,53 @@ it("アカウントのMCP連携一覧は承認scopeと日時を返し、取消�
   );
 });
 
+it("MCPは有限条件schemaを公開し、条件を往復保存して旧形式による消失を拒否する", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const descriptor = (await client.listTools()).tools.find((item) => item.name === "update_draft");
+  expect(JSON.stringify(descriptor?.inputSchema)).toContain("tablecastConditionDepth8");
+  expect(JSON.stringify(descriptor?.inputSchema).length).toBeLessThan(30000);
+  let draft = toolData(
+    await client.callTool({ name: "create_draft", arguments: {} }),
+    configDraftSchema,
+  );
+  const configuration = structuredClone(draft.configuration);
+  const owner = configuration.products[1]?.modifiers[0]?.options[0];
+  if (!owner) throw new Error("条件fixtureがありません");
+  owner.conditions = {
+    version: 2,
+    requires: { kind: "not", child: { kind: "option", optionId: "oat" } },
+    excludes: null,
+  };
+  draft = toolData(
+    await client.callTool({
+      name: "update_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version, configuration },
+    }),
+    configDraftSchema,
+  );
+  expect(draft.configuration.products[1]?.modifiers[0]?.options[0]?.conditions).toEqual(
+    owner.conditions,
+  );
+  const ready = toolData(
+    await client.callTool({
+      name: "validate_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version },
+    }),
+    configDraftSchema,
+  );
+  expect(ready.errors).toEqual([]);
+  delete owner.conditions;
+  toolError(
+    await client.callTool({
+      name: "update_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version, configuration },
+    }),
+    "CONFIGURATION_FORMAT_UNSUPPORTED",
+  );
+});
+
 it("統計MCPは読取りscopeでHTTPと同じ集計を返し、権限変更と失効を検証する", async () => {
   const { cookie, staff } = await setupFixture();
   await addStatisticsSession(staff, {

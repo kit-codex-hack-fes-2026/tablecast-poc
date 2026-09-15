@@ -1,12 +1,28 @@
 import { z } from "zod";
 import { castInstructionSchema } from "./instruction-model";
 import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
-import { bilingualSchema, modifierSchema, planSchema, productSchema } from "../catalog/model";
+import {
+  bilingualSchema,
+  modifierSchema,
+  planSchema,
+  productSchema,
+  conditionLimits,
+  productConditionNodeCount,
+} from "../catalog/model";
+import { selectionSchema } from "../orders/model";
 export const configurationSchema = z
   .object({
     storeName: z.string().trim().min(1).max(150).optional(),
     categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
-    products: z.array(productSchema).max(2000),
+    products: z
+      .array(productSchema)
+      .max(2000)
+      .refine(
+        (products) =>
+          products.reduce((sum, product) => sum + productConditionNodeCount(product), 0) <=
+          conditionLimits.configurationNodes,
+        { message: "CONDITION_CONFIGURATION_LIMIT" },
+      ),
     plans: z.array(planSchema).max(30),
     cast: z
       .object({
@@ -26,6 +42,14 @@ export const configurationSchema = z
   .strict();
 
 export type Configuration = z.infer<typeof configurationSchema>;
+
+export const conditionPreviewSchema = z
+  .object({
+    product: productSchema,
+    optionId: id,
+    selections: z.array(selectionSchema).max(100),
+  })
+  .strict();
 
 export const configurationIssueBase = z.object({
   path: z.array(z.union([z.string(), z.number().int().nonnegative()])),

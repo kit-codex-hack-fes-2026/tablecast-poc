@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
+// 子プロセスの30秒制限に加え、fixtureの準備と後片付けの時間を確保する。
 it(
   "APIのレイヤー外importは拒否し、model・共有依存の型・route合成を許可する",
   { timeout: 45_000 },
