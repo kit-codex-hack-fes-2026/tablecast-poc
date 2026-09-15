@@ -392,23 +392,7 @@ function TableSession({
         <ResizableHandle aria-label={t("kiosk_resize_panes")} />
         <ResizablePanel id="tablecast-order" defaultSize="50%" minSize="30%" className="h-full">
           <aside className="h-full min-w-0 min-h-0 flex flex-col bg-card">
-            {data.plan && (
-              <div className="pt-5 px-5 pb-4 [&_h2]:text-xl [&_h2]:tracking-tight [&_h2]:mt-1 max-lg:px-6">
-                <div className="mt-3 flex justify-between gap-2 text-xs border border-border py-1.5 px-2.5 rounded-sm">
-                  <span>{data.plan.rules.text[locale].displayName}</span>
-                  <small className="text-xs text-muted-foreground whitespace-nowrap">
-                    {t("kiosk_last_order")}{" "}
-                    {time(
-                      data.plan.startedAt +
-                        (data.plan.rules.durationMinutes -
-                          data.plan.rules.lastOrderMinutesBeforeEnd) *
-                          60_000,
-                      locale,
-                    )}
-                  </small>
-                </div>
-              </div>
-            )}
+            <KioskPlanSummary plan={data.plan} />
             <ErrorNotice error={screen.error} />
             <Tabs.Root
               className="flex flex-col min-h-0 flex-1"
@@ -600,6 +584,26 @@ function TableSession({
           </aside>
         </ResizablePanel>
       </ResizablePanelGroup>
+    </div>
+  );
+}
+
+function KioskPlanSummary({ plan }: { plan: TableState["plan"] }) {
+  const { t, locale } = useI18n();
+  if (!plan) return null;
+  return (
+    <div className="pt-5 px-5 pb-4 [&_h2]:text-xl [&_h2]:tracking-tight [&_h2]:mt-1 max-lg:px-6">
+      <div className="mt-3 flex justify-between gap-2 text-xs border border-border py-1.5 px-2.5 rounded-sm">
+        <span>{plan.rules.text[locale].displayName}</span>
+        <small className="text-xs text-muted-foreground whitespace-nowrap">
+          {t("kiosk_last_order")}{" "}
+          {time(
+            plan.startedAt +
+              (plan.rules.durationMinutes - plan.rules.lastOrderMinutesBeforeEnd) * 60_000,
+            locale,
+          )}
+        </small>
+      </div>
     </div>
   );
 }
