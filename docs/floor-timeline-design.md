@@ -119,7 +119,7 @@ hydration後は既存の分単位更新に合わせる。復帰時には現在�
 
 `0015`の広いopened_at indexは、一致行が少ない日に古い閉卓履歴を走査する問題があった。レビューで判明したこの問題を`0016_tablecast_timeline_access_paths.sql`で修正し、旧indexを削除して利用中・不整合専用indexへ置き換える。`0017_tablecast_timeline_duration_bound.sql`は閉卓済みの開卓時刻indexと最長滞在を求める式indexを追加し、前後両方向の累積履歴走査を避ける。`0015`・`0016`はPR環境へ適用済みなので書き換えず、追加migrationで更新する。
 
-実D1試験は選択日の前だけ・後だけ・前後双方に100／10,000件ずつの履歴を置き、空の日と3来店の日を各3標本測る。期間SQLの読取件数は空の日4行・3来店の日7行で、履歴の方向と件数によらず一定だった。64読取行以内・4往復以内・1,000ms未満を返却内容と同じrequestで保証する。通常の100卓・30件取得も4往復・4,576 bytesを維持する。
+実D1試験は選択日の前だけ・後だけ・前後双方に100／10,000件ずつの履歴を置き、空の日と3来店の日を各3標本測る。期間SQLの読取件数は空の日3〜4行・3来店の日6〜7行で、同じ分布では履歴件数を増やしても一定だった。64読取行以内・4往復以内・1,000ms未満を返却内容と同じrequestで保証する。通常の100卓・30件取得も4往復・4,576 bytesを維持する。
 
 [Drizzleのset operation](https://orm.drizzle.team/docs/set-operations)と既存batchを使う。[D1の返却meta](https://developers.cloudflare.com/d1/worker-api/return-object/)のSQL時間・読取行数をbinding時間とは別に記録する。読取行数の予算は期間queryの2文に対し、往復とHTTP時間は認可込みの入口から測る。rawの認可queryのSQL時間を測定済みとは扱わない。
 
