@@ -233,14 +233,12 @@ export async function closeTable(services: ApiServices, actor: Actor) {
           })
           .where(
             sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
-          )
-          .returning({ id: business.tableSessions.id }),
+          ),
         invalidationStatement(services, actor, mutation),
         ...interruptVoiceTurns(services, actor, mutation),
         eventStatement(services, actor, mutation, "table.closed", {}),
       ]);
-      // triggerの派生行数を含むmeta.changesではなく、更新した来店そのものを確認する。
-      ensure(result[0].length === 1, "SESSION_STALE");
+      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
       await notifyStore(services, actor.storeId, actor.tableSessionId);
       if (table.voiceSessionId) await stopVoiceRoom(services, table.voiceSessionId);
       return getTableState(services, actor);

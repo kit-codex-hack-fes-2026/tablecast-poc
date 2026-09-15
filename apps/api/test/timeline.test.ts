@@ -358,3 +358,44 @@ it("同じ日の1万来店の深いcursorでも先頭ページを走査し直さ
   expect(result.nextCursor).toEqual({ openedAt: startAt + 1000, id: "tablecast-dense-00010" });
   expect(batches.flat().reduce((sum, query) => sum + query.rowsRead, 0)).toBeLessThanOrEqual(64);
 });
+
+it("二分木の境界と1970年前後でも日跨ぎを単純な重なり判定と一致させる", async () => {
+  const { staff } = await setupFixture();
+  const dates = ["1969-12-31", "1970-01-01", "2026-09-01", "2099-01-01"];
+  const rows = [
+    closed("tablecast-entire-range", -Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER),
+  ];
+  for (const selected of dates) {
+    const baseTime = Date.parse(`${selected}T00:00:00+09:00`);
+    for (let first = -4; first <= 4; first++) {
+      for (let last = first; last <= 4; last++) {
+        rows.push(
+          closed(
+            `tablecast-boundary-${selected}-${first}-${last}`,
+            baseTime + first * 86_400_000,
+            baseTime + last * 86_400_000,
+          ),
+        );
+      }
+    }
+  }
+  for (let offset = 0; offset < rows.length; offset += 100) {
+    await env.TABLECAST_DB.batch(
+      rows.slice(offset, offset + 100).map((row) => insertFixture(tableSessions, row)),
+    );
+  }
+  for (const selected of dates) {
+    const from = Date.parse(`${selected}T00:00:00+09:00`);
+    const expected = rows
+      .filter(
+        (row) =>
+          row.opened_at < from + 86_400_000 &&
+          row.closed_at !== null &&
+          (row.closed_at > from || (row.closed_at === row.opened_at && row.opened_at >= from)),
+      )
+      .toSorted((a, b) => b.opened_at - a.opened_at || (a.id < b.id ? 1 : -1));
+    const result = await getTimeline(createApiServices(env), staff, { date: selected, limit: 200 });
+    expect(result.sessions.map((row) => row.id)).toEqual(expected.map((row) => row.id));
+    expect(result.nextCursor).toBeNull();
+  }
+});

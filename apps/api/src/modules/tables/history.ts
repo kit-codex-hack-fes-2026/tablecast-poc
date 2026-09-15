@@ -1,11 +1,25 @@
-import { and, desc, eq, isNull, isNotNull, lt, lte, notInArray, or, sql, sum } from "drizzle-orm";
+import {
+  gte,
+  inArray,
+  asc,
+  and,
+  desc,
+  eq,
+  isNull,
+  isNotNull,
+  lt,
+  lte,
+  notInArray,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import {
   orders,
   payments,
   restaurantTables,
   tableEvents,
   tableSessions,
-  timelineDays,
 } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -34,13 +48,7 @@ export async function getTimeline(
   const observedAt = Date.now();
   const cursor =
     query.beforeOpenedAt !== undefined && query.beforeId !== undefined
-      ? or(
-          lt(tableSessions.opened_at, query.beforeOpenedAt),
-          and(
-            eq(tableSessions.opened_at, query.beforeOpenedAt),
-            lt(tableSessions.id, query.beforeId),
-          ),
-        )
+      ? sql`(${tableSessions.opened_at}, ${tableSessions.id}) < (${query.beforeOpenedAt}, ${query.beforeId})`
       : undefined;
   const db = services.db;
   const fields = {
@@ -54,36 +62,90 @@ export async function getTimeline(
   const scope = and(
     eq(tableSessions.store_id, actor.storeId),
     eq(tableSessions.kind, "table"),
-    lt(tableSessions.opened_at, endAt),
     cursor,
   );
-  // 日付索引からcursor順の1ページだけを取り、来店本体へ接続する。
-  const closedPage = db
-    .select({ id: timelineDays.table_session_id })
-    .from(timelineDays)
+  // 日を葉とする二分木の祖先だけを検索する。長期滞在も通常来店の検索幅を広げない。
+  // 2^31のoffsetでZodのsafe integer timestamp全域を32 bitの正の日へ収める。
+  const day = Math.floor((startAt + 32_400_000) / 86_400_000) + 2 ** 31;
+  const left: number[] = [];
+  const right: number[] = [];
+  for (let bit = 0; bit < 32; bit++) {
+    const fork = Math.floor(day / 2 ** (bit + 1)) * 2 ** (bit + 2) + 2 ** (bit + 1) - 1;
+    (fork < 2 * day ? left : right).push(fork);
+  }
+  const sameDay = db
+    .select(fields)
+    .from(tableSessions)
     .where(
       and(
-        eq(timelineDays.store_id, actor.storeId),
-        eq(timelineDays.day_start, startAt),
-        query.beforeOpenedAt !== undefined && query.beforeId !== undefined
-          ? sql`(${timelineDays.opened_at}, ${timelineDays.table_session_id}) < (${query.beforeOpenedAt}, ${query.beforeId})`
-          : undefined,
+        scope,
+        eq(tableSessions.status, "closed"),
+        eq(tableSessions.timeline_start_day, tableSessions.timeline_end_day),
+        eq(tableSessions.timeline_start_day, day),
       ),
+    );
+  const longStore = and(
+    eq(tableSessions.store_id, actor.storeId),
+    eq(tableSessions.kind, "table"),
+    eq(tableSessions.status, "closed"),
+    lt(tableSessions.timeline_start_day, tableSessions.timeline_end_day),
+  );
+  const minimumFork = db
+    .select({ fork: tableSessions.timeline_fork })
+    .from(tableSessions)
+    .where(longStore)
+    .orderBy(asc(tableSessions.timeline_fork))
+    .limit(1);
+  const maximumFork = db
+    .select({ fork: tableSessions.timeline_fork })
+    .from(tableSessions)
+    .where(longStore)
+    .orderBy(desc(tableSessions.timeline_fork))
+    .limit(1);
+  // 存在する境界の範囲へ祖先候補を絞り、空のindex探索を繰り返さない。
+  // json_eachは32個の固定候補をSQLへ渡す標準のtable-valued function。
+  const ancestors = (nodes: number[]) =>
+    db
+      .select({ fork: sql<number>`value` })
+      .from(sql`json_each(${JSON.stringify(nodes)})`)
+      .where(and(gte(sql`value`, sql`(${minimumFork})`), lte(sql`value`, sql`(${maximumFork})`)));
+  const longScope = and(longStore, cursor);
+  const closed = sameDay
+    .unionAll(
+      db
+        .select(fields)
+        .from(tableSessions)
+        .where(
+          and(
+            longScope,
+            inArray(tableSessions.timeline_fork, ancestors(left)),
+            gte(tableSessions.timeline_end_day, day),
+          ),
+        ),
     )
-    .orderBy(desc(timelineDays.opened_at), desc(timelineDays.table_session_id))
-    .limit(query.limit + 1)
-    .as("closed_page");
-  const closed = db
-    .select(fields)
-    .from(closedPage)
-    .innerJoin(
-      tableSessions,
-      and(eq(tableSessions.id, closedPage.id), eq(tableSessions.store_id, actor.storeId)),
+    .unionAll(
+      db
+        .select(fields)
+        .from(tableSessions)
+        .where(
+          and(
+            longScope,
+            inArray(tableSessions.timeline_fork, ancestors(right)),
+            lte(tableSessions.timeline_start_day, day),
+          ),
+        ),
     );
   const open = db
     .select(fields)
     .from(tableSessions)
-    .where(and(scope, eq(tableSessions.status, "open"), lte(tableSessions.opened_at, observedAt)));
+    .where(
+      and(
+        scope,
+        lt(tableSessions.opened_at, endAt),
+        eq(tableSessions.status, "open"),
+        lte(tableSessions.opened_at, observedAt),
+      ),
+    );
   // UNION ALLの後に同じ不変cursor順で絞る。未来日に利用中を延ばさない。
   const visits = (observedAt >= startAt ? closed.unionAll(open) : closed).as("visits");
   const [rows, invalid] = await db.batch([
@@ -99,6 +161,7 @@ export async function getTimeline(
       .where(
         and(
           scope,
+          lt(tableSessions.opened_at, endAt),
           eq(tableSessions.status, "closed"),
           eq(
             sql<number>`${or(isNull(tableSessions.closed_at), lt(tableSessions.closed_at, tableSessions.opened_at))}`,
