@@ -57,8 +57,10 @@ TanStack Formが入力の正本、Tiptapが選択と編集履歴を所有する�
 
 - API unit: 旧文字列、改行、空文書、書式、文字数、禁止ノード・属性、過度の構造、JSON schema。
 - D1統合: HTTP保存・公開・再取得、言語単位の差分、旧応答、旧クライアントの上書き拒否。音声開始の実経路から両モデルの要求本文を検査する。
-- Browser: 編集・Undo・再読込、スラッシュ、合成compositionイベント、HTML混在貼付け、ファイルdrop、disabled、上限保持、503・409後の両言語と書式保持。
+- Browser: 編集・Undo・再読込、スラッシュ、合成compositionイベント、HTML混在貼付け・画像のみの貼付けでの選択本文保護、ファイルdrop、disabled、上限保持、503・409後の両言語と書式保持。
 - Chromium/WebKit E2E: 日本語・英語の概要→編集→保存→再読込→公開。実DBとbuildされたアプリを使う。
+
+Browser / Storybookの依存最適化には、遅延読込するTiptapも事前に含める。テスト途中の依存再最適化によるページ再読込を避ける。
 
 実行結果・対象commit・画像はPRへ記録する。合成compositionイベントは実iPadの日本語IME・VoiceOverの検証を代替しない。実機のIME・支援技術による確認は未実施。
 

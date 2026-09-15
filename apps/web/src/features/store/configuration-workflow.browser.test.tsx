@@ -314,6 +314,7 @@ it.each([503, 409])(
     await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
     await expect.element(japanese).toHaveAttribute("contenteditable", "false");
     await expect.element(english).toHaveAttribute("contenteditable", "false");
+    await expect.element(screen.getByText(ja.form_submitting, { exact: true })).toBeVisible();
     pending.resolve();
     await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
     expect(instructionText(current.configuration.cast.instructions.ja)).toBe("## 接客方針を保持");
