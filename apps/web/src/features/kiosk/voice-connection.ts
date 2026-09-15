@@ -685,7 +685,11 @@ export class VoiceConnection {
     if (!pending || pending.handled) return;
     pending.handled = true;
     const turnId = await this.delegations.get(id);
-    if (!this.current(attempt) || this.activeDelegation !== id || !this.sessionId) return;
+    if (!this.current(attempt)) return;
+    if (this.activeDelegation !== id || !this.sessionId) {
+      this.responses.delete(event.response.id);
+      return;
+    }
     if (!turnId) {
       // 登録失敗でもfunction結果を返し、backendを未応答toolの待機に残さない。
       for (const call of pending.calls)

@@ -329,6 +329,32 @@ describe("開始案内と発話ヒント", () => {
     ).toEqual([]);
   });
 
+  it("割込み前の応答が遅れて終了しても、新しい返答例を送信できる", async () => {
+    const { value, changes, text } = await readyReply();
+    const receive = (delegationId: string, event: unknown) =>
+      peer().channel.receive({ type: "response.event", delegation_id: delegationId, event });
+    delegate("item_old");
+    receive("item_old", { type: "response.created", response: { id: "resp_old" } });
+    receive("item_old", {
+      type: "response.output_item.done",
+      response_id: "resp_old",
+      item: { type: "function_call", call_id: "call_old", name: "getCatalog", arguments: "{}" },
+    });
+    delegate("item_new");
+    receive("item_new", { type: "response.created", response: { id: "resp_new" } });
+    receive("item_old", { type: "response.completed", response: { id: "resp_old" } });
+    receive("item_new", { type: "response.completed", response: { id: "resp_new" } });
+    await vi.advanceTimersByTimeAsync(0);
+    caption("assistant", "月凪に合わせる料理をご紹介しましょうか？", 2000, 2800);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(changes.at(-1)?.suggestions).toEqual([text]);
+    value.sendSuggestion(text, changes.at(-1)?.suggestions);
+    expect(peer().channel.send.mock.calls.some(([data]) => data.includes('"input_text"'))).toBe(
+      true,
+    );
+    expect(requests.filter(({ path }) => path.endsWith("/tools"))).toEqual([]);
+  });
+
   it("客字幕が前の行へ追記されても古いAI字幕のタイマーからヒントを生成しない", async () => {
     vi.useFakeTimers();
     const { value, changes } = connection();
