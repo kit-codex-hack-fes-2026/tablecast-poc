@@ -692,7 +692,7 @@
   "condition_or": "or",
   "condition_not": "not",
   "condition_try": "Try a selection",
-  "condition_try_help": "Check a selection of one of each option with the API. This does not save a draft or basket. Remaining plan allowances and time are checked when ordering.",
+  "condition_try_help": "Choose options and quantities to check with the API. You can also try quantities above the configured limit. This does not save a draft or basket. Remaining plan allowances and time are checked when ordering.",
   "condition_run": "Check this selection",
   "condition_not_applied": "These rules do not apply because the owning option is not selected.",
   "condition_satisfied": "Satisfied",

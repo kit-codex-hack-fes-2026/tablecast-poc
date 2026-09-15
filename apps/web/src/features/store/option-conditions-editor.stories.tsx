@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { productSchema, type Product } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { useI18n } from "../../i18n/locale";
 import { OptionConditionsEditor } from "./option-conditions-editor";
 
@@ -99,3 +100,22 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Nested: Story = { name: "AND・OR・NOTと選択肢の補完" };
 export const English: Story = { name: "英語の条件編集", globals: { locale: "en" } };
+
+export const Quantities: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByText(/選択例で確認|Try a selection/));
+    await userEvent.selectOptions(canvas.getByRole("combobox", { name: /\(X\) · / }), "3");
+  },
+  name: "数量を指定する選択例",
+  args: {
+    initial: {
+      ...product,
+      modifiers: product.modifiers.map((group) => ({
+        ...group,
+        kind: "quantity",
+        options: group.options.map((option) => ({ ...option, maxQuantity: 3 })),
+      })),
+    },
+  },
+};

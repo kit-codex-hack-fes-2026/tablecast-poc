@@ -5,6 +5,7 @@ import {
   type OptionCondition,
   type OptionConditions,
   type Product,
+  type CartLine,
 } from "@tablecast/api/schema";
 import { useMutation } from "@tanstack/react-query";
 import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
@@ -39,6 +40,7 @@ type Choice = {
   available: boolean;
   invalid: boolean;
   missing?: boolean;
+  allowsQuantity?: boolean;
 };
 type NodeProps = {
   node: OptionCondition;
@@ -339,13 +341,19 @@ export function OptionConditionsEditor({
   const option = product.modifiers
     .flatMap((group) => group.options)
     .find((item) => item.id === optionId);
-  const [selections, setSelections] = useState<string[]>([optionId]);
+  const [selections, setSelections] = useState<CartLine["selections"]>([{ optionId, quantity: 1 }]);
   const root = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<"requires" | "excludes" | null>(null);
   const signature = JSON.stringify([product, selections]);
-  const selectedIds = new Set(selections);
+  const quantities = new Map(
+    selections.map((selection) => [selection.optionId, selection.quantity]),
+  );
   const preview = useMutation({
-    mutationFn: async (request: { signature: string; product: Product; selections: string[] }) => ({
+    mutationFn: async (request: {
+      signature: string;
+      product: Product;
+      selections: CartLine["selections"];
+    }) => ({
       signature: request.signature,
       result: await parseResponse(
         rpc.api.admin.stores[":storeId"].conditions.preview.$post({
@@ -353,10 +361,7 @@ export function OptionConditionsEditor({
           json: {
             product: request.product,
             optionId,
-            selections: request.selections.map((selectedId) => ({
-              optionId: selectedId,
-              quantity: 1,
-            })),
+            selections: request.selections,
           },
         }),
       ),
@@ -385,6 +390,7 @@ export function OptionConditionsEditor({
       search: `${item.id} ${group.text.ja.displayName} ${group.text.en.displayName} ${item.text.ja.displayName} ${item.text.en.displayName}`,
       available: item.available,
       invalid: item.id === optionId,
+      allowsQuantity: group.kind === "quantity",
     })),
   );
   const update = (relation: "requires" | "excludes", expression: OptionCondition | null) =>
@@ -462,19 +468,49 @@ export function OptionConditionsEditor({
         <p className="mb-3 text-sm text-muted-foreground">{t("condition_try_help")}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {choices.map((choice) => (
-            <label key={choice.id} className="flex min-h-11 items-center gap-2 text-sm">
-              <Checkbox
-                checked={selectedIds.has(choice.id)}
-                onCheckedChange={(checked) =>
-                  setSelections((current) =>
-                    checked
-                      ? [...current, choice.id]
-                      : current.filter((item) => item !== choice.id),
-                  )
-                }
-              />
-              {choice.label} <span className="text-xs text-muted-foreground">{choice.id}</span>
-            </label>
+            <div key={choice.id} className="flex min-w-0 flex-wrap items-center gap-2">
+              <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-sm">
+                <Checkbox
+                  disabled={disabled}
+                  checked={quantities.has(choice.id)}
+                  onCheckedChange={(checked) =>
+                    setSelections((current) =>
+                      checked
+                        ? [...current, { optionId: choice.id, quantity: 1 }]
+                        : current.filter((item) => item.optionId !== choice.id),
+                    )
+                  }
+                />
+                <span className="wrap-anywhere">
+                  {choice.label} <span className="text-xs text-muted-foreground">{choice.id}</span>
+                </span>
+              </label>
+              {choice.allowsQuantity && quantities.has(choice.id) && (
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  {t("common_quantity")}
+                  <NativeSelect
+                    aria-label={`${choice.label} (${choice.id}) · ${t("common_quantity")}`}
+                    className="min-h-11 w-20"
+                    value={quantities.get(choice.id)}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const quantity = Number(event.target.value);
+                      setSelections((current) =>
+                        current.map((item) =>
+                          item.optionId === choice.id ? { ...item, quantity } : item,
+                        ),
+                      );
+                    }}
+                  >
+                    {Array.from({ length: 20 }, (_value, index) => (
+                      <option key={index + 1} value={index + 1}>
+                        {index + 1}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </label>
+              )}
+            </div>
           ))}
         </div>
         <Button

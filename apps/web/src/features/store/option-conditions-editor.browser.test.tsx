@@ -175,3 +175,58 @@ it("参照切れと候補なしを説明し、API試行の失敗後も入力を�
   await expect.element(choice).toHaveValue("Toppings / A");
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it.each([
+  { locale: "ja", labels: ja },
+  { locale: "en", labels: en },
+] as const)(
+  "$localeの試行で数量をそのまま送り、変更後に古い結果を隠す",
+  async ({ locale, labels }) => {
+    const initial = structuredClone(product);
+    const group = initial.modifiers[0];
+    const owner = group?.options[0];
+    if (!group || !owner) throw new Error("数量fixtureがありません");
+    group.kind = "quantity";
+    owner.maxQuantity = 2;
+    const requests: unknown[] = [];
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input, init) => {
+        requests.push(await new Request(input, init).json());
+        return Response.json({
+          applied: true,
+          errors: [],
+          conditions: [],
+          selectionError: "OPTION_QUANTITY",
+        });
+      },
+    );
+    vi.stubGlobal("fetch", fetch);
+    const screen = await setup(locale, initial);
+    await screen.getByText(labels.condition_try, { exact: true }).click();
+    const quantity = screen.getByRole("combobox", {
+      name: `Toppings / X (X) · ${labels.common_quantity}`,
+      exact: true,
+    });
+    await expect.element(quantity).toHaveValue("1");
+    await quantity.selectOptions("3");
+    await screen.getByRole("button", { name: labels.condition_run }).click();
+    await expect
+      .element(screen.getByRole("status", { name: "", exact: true }))
+      .toHaveTextContent("OPTION_QUANTITY");
+    expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 3 }] });
+    await quantity.selectOptions("2");
+    await expect
+      .element(screen.getByRole("status", { name: "", exact: true }))
+      .not.toBeInTheDocument();
+    await screen.getByRole("button", { name: labels.condition_run }).click();
+    await expect
+      .element(screen.getByRole("status", { name: "", exact: true }))
+      .toHaveTextContent("OPTION_QUANTITY");
+    expect(requests[1]).toMatchObject({ selections: [{ optionId: "X", quantity: 2 }] });
+    await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+    await expect.element(quantity).not.toBeInTheDocument();
+    await screen.getByRole("button", { name: labels.condition_run }).click();
+    await expect.element(screen.getByRole("status", { name: "", exact: true })).toBeVisible();
+    expect(requests[2]).toMatchObject({ selections: [] });
+  },
+);

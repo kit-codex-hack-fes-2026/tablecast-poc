@@ -713,3 +713,53 @@ it("公開済み条件を旧下書きで消せず、参照切れは検証と公�
     }),
   ).rejects.toMatchObject({ code: "CONFIGURATION_FORMAT_UNSUPPORTED" });
 });
+
+it("数量を含む条件試行で選択肢上限とグループの最小・最大数を判定する", async () => {
+  const { staff, cookie } = await setupFixture();
+  const product = structuredClone(fixtureConfiguration.products[1]);
+  const group = product?.modifiers[0];
+  const owner = group?.options[0];
+  if (!product || !group || !owner) throw new Error("数量fixtureがありません");
+  group.kind = "quantity";
+  group.min = 2;
+  group.max = 3;
+  for (const option of group.options) option.maxQuantity = 2;
+  owner.conditions = {
+    version: 2,
+    requires: {
+      kind: "or",
+      children: [
+        { kind: "option", optionId: "oat" },
+        { kind: "not", child: { kind: "option", optionId: "oat" } },
+      ],
+    },
+    excludes: null,
+  };
+  const endpoint = `http://localhost:3000/api/admin/stores/${staff.storeId}/conditions/preview`;
+  const before = await getCatalog(createApiServices(env), staff.storeId);
+  for (const { selections, selectionError } of [
+    { selections: [{ optionId: owner.id, quantity: 1 }], selectionError: "CART_INCOMPLETE" },
+    { selections: [{ optionId: owner.id, quantity: 2 }], selectionError: null },
+    { selections: [{ optionId: owner.id, quantity: 3 }], selectionError: "OPTION_QUANTITY" },
+    {
+      selections: [
+        { optionId: owner.id, quantity: 2 },
+        { optionId: "oat", quantity: 2 },
+      ],
+      selectionError: "TOO_MANY_OPTIONS",
+    },
+  ]) {
+    const response = await call(endpoint, cookie, { product, optionId: owner.id, selections });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      applied: true,
+      selectionError,
+      errors: [],
+      conditions: [
+        { relation: "requires", matched: true, satisfied: true },
+        { relation: "excludes", matched: false, satisfied: true },
+      ],
+    });
+  }
+  expect(await getCatalog(createApiServices(env), staff.storeId)).toEqual(before);
+});

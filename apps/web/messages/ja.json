@@ -692,7 +692,7 @@
   "condition_or": "または",
   "condition_not": "次の条件に当てはまらない",
   "condition_try": "選択例で確認",
-  "condition_try_help": "各選択肢を1点ずつ選んだ場合をAPIで確認します。下書きやカートは保存しません。実際のプラン残数・時間は注文時に確認します。",
+  "condition_try_help": "選択肢と数量を指定してAPIで確認します。数量は上限を超える例も試せます。下書きやカートは保存しません。実際のプラン残数・時間は注文時に確認します。",
   "condition_run": "この選択例を確認",
   "condition_not_applied": "元の選択肢を選んでいないため、この条件は適用されません。",
   "condition_satisfied": "条件を満たしています",
