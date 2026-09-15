@@ -158,11 +158,19 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
   await expect(page.getByRole("button", { name: ja.admin_publish, exact: true })).toBeEnabled();
   expect(catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json())).toEqual(original);
+  const publication = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === `${api}/drafts/${draft.id}/publish`,
+  );
   await page.getByRole("button", { name: ja.admin_publish, exact: true }).click();
   await page
     .getByRole("dialog", { name: ja.workflow_publish_title, exact: true })
     .getByRole("button", { name: ja.admin_publish, exact: true })
     .click();
+  const publicationResponse = await publication;
+  expect(publicationResponse.status()).toBe(200);
+  expect(configDraftSchema.parse(await publicationResponse.json()).status).toBe("published");
   await expect(page.getByRole("button", { name: ja.admin_publish, exact: true })).toHaveCount(0);
   const published = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
   expect(published.configuration.products.find((item) => item.id === product.id)).toMatchObject({
