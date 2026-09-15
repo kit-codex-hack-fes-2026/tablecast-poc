@@ -1,3 +1,5 @@
+import { getStatistics } from "../statistics/service";
+import { statisticsQuerySchema, statisticsResultSchema } from "../statistics/model";
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isAPIError } from "better-auth/api";
@@ -41,6 +43,26 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
   const actor = await resolveMcpActor(c.get("services"), principal, c.req.query("storeId"));
   c.set("errorPhase", "mcp.registration");
   const server = new McpServer({ name: "tablecast-settings", version: "0.1.0" });
+
+  server.registerTool(
+    "get_statistics",
+    {
+      description:
+        "期間内に閉卓した通常来店の統計を取得する。まずsummaryで母数・売上・除外条件を確認し、productsまたはmodifiersで注文傾向を調べる。from/toはUTC offset付き日時で開始を含み終了を含まない。ページはID順で、続きは同じ条件とnextCursorをcursorへ渡す。owner/adminの読取りscopeで利用でき、設定は変更しない。",
+      inputSchema: statisticsQuerySchema,
+      outputSchema: statisticsResultSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) => {
+      const data = await getStatistics(c.get("services"), actor, input);
+      return { ...result(data), structuredContent: data };
+    },
+  );
 
   server.registerTool(
     "get_configuration",
