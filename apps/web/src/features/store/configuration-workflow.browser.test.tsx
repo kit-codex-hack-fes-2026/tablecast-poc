@@ -1,4 +1,4 @@
-import type { ConfigDraft } from "@tablecast/api/schema";
+import { instructionText, configurationSchema, type ConfigDraft } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -12,7 +12,6 @@ import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { configurationSchema } from "@tablecast/api/schema";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import en from "../../../messages/en.json";
@@ -282,6 +281,48 @@ it.each([503, 409])(
   },
 );
 
+it.each([503, 409])(
+  "接客文書は保存失敗%s後も両言語と書式を保ち、待機中は編集を止める",
+  async (status) => {
+    const { screen } = await open(`${base}/changes/${draftId}/cast/settings#instructions-ja`);
+    const japanese = screen.getByRole("textbox", {
+      name: `${ja.common_ja} ${ja.editor_cast_instructions}`,
+      exact: true,
+    });
+    const english = screen.getByRole("textbox", {
+      name: `${ja.common_en} ${ja.editor_cast_instructions}`,
+      exact: true,
+    });
+    await expect.element(japanese).toHaveAttribute("contenteditable", "true");
+    await japanese.fill("接客方針を保持");
+    await screen
+      .getByRole("combobox", { name: ja.prompt_block })
+      .first()
+      .selectOptions("heading-2");
+    await english.fill("Keep English instructions");
+    saveFailure = status;
+    await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+    await expect.element(screen.getByRole("alert")).toBeVisible();
+    await expect.element(japanese).toHaveTextContent("接客方針を保持");
+    await expect.element(english).toHaveTextContent("Keep English instructions");
+    await expect
+      .element(screen.getByRole("combobox", { name: ja.prompt_block }).first())
+      .toHaveValue("heading-2");
+    saveFailure = 0;
+    const pending = Promise.withResolvers<void>();
+    waitForSave = pending.promise;
+    await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
+    await expect.element(japanese).toHaveAttribute("contenteditable", "false");
+    await expect.element(english).toHaveAttribute("contenteditable", "false");
+    pending.resolve();
+    await expect.element(screen.getByText(ja.account_saved, { exact: true })).toBeVisible();
+    expect(instructionText(current.configuration.cast.instructions.ja)).toBe("## 接客方針を保持");
+    expect(instructionText(current.configuration.cast.instructions.en)).toBe(
+      "Keep English instructions",
+    );
+  },
+);
+
 it("未保存入力を戻す確認では下書きを破棄せず、最後の保存値へ戻る", async () => {
   const product = current.configuration.products[0];
   if (!product) throw new Error("商品fixtureが必要です");
@@ -307,7 +348,7 @@ it("未保存入力を戻す確認では下書きを破棄せず、最後の保�
 });
 
 it("接客入力を戻しても初回移動用のhashへfocusを移し直さない", async () => {
-  const initial = current.configuration.cast.instructions.ja;
+  const initial = instructionText(current.configuration.cast.instructions.ja);
   const { screen } = await open(`${base}/changes/${draftId}/cast/settings#instructions-ja`);
   const instructions = screen.getByRole("textbox", {
     name: `${ja.common_ja} ${ja.editor_cast_instructions}`,
@@ -321,7 +362,7 @@ it("接客入力を戻しても初回移動用のhashへfocusを移し直さな�
     .getByRole("button", { name: ja.workflow_revert, exact: true })
     .click();
   await expect.element(screen.getByRole("alertdialog")).not.toBeInTheDocument();
-  await expect.element(instructions).toHaveValue(initial);
+  await expect.element(instructions).toHaveTextContent(initial);
   await expect.element(instructions).not.toHaveFocus();
 });
 

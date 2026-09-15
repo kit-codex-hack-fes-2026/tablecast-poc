@@ -665,5 +665,22 @@
   "cast_edit_instructions": "{language}の接客指示を編集",
   "cast_edit_voice": "{language}の音声を編集",
   "cast_edit_proactive": "自発的な声かけを編集",
-  "cast_overview_note": "店舗の接客設定を確認し、変更する項目から編集を始められます。"
+  "cast_overview_note": "店舗の接客設定を確認し、変更する項目から編集を始められます。",
+  "prompt_loading": "エディターを読み込んでいます…",
+  "prompt_paragraph": "本文",
+  "prompt_heading": "見出し",
+  "prompt_bullet": "箇条書き",
+  "prompt_numbered": "番号付きリスト",
+  "prompt_toolbar": "接客方針の書式",
+  "prompt_block": "段落の種類",
+  "prompt_bold": "太字",
+  "prompt_italic": "斜体",
+  "prompt_undo": "元に戻す",
+  "prompt_redo": "やり直す",
+  "prompt_hint": "行頭の / で書式を検索 · 画像は使用できません",
+  "prompt_limit": "書式と改行を含め5,000文字以内に短くしてから保存してください。入力内容は保持されています。",
+  "prompt_omitted": "画像・添付・埋込は取り込めません。対応する文章だけを貼り付けました。",
+  "prompt_no_commands": "一致する書式がありません",
+  "prompt_load_error": "エディターを読み込めませんでした。本文を保持したまま再試行できます。",
+  "prompt_structure": "この構造は取り込めません。リストの入れ子は3段までです。"
 }

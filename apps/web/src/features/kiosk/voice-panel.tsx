@@ -1,3 +1,4 @@
+import { instructionText } from "@tablecast/api/schema";
 import { tv, type VariantProps } from "tailwind-variants";
 import { Slider } from "@base-ui/react/slider";
 import type { Catalog, Product, Snapshot, TableEvent } from "@tablecast/api/schema";
@@ -437,7 +438,9 @@ export function VoicePanel({
           <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">
             {castInstructions}
             {"\n\n"}
-            {catalog?.configuration.cast.instructions[locale] || t("kiosk_cast_loading")}
+            {catalog
+              ? instructionText(catalog.configuration.cast.instructions[locale])
+              : t("kiosk_cast_loading")}
           </pre>
         </details>
       )}

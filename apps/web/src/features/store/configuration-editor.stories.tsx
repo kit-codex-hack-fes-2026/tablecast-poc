@@ -168,6 +168,11 @@ export const PagedVoices: Story = {
     const english = within(canvas.getByRole("group", { name: "English" }));
     const japanese = within(canvas.getByRole("group", { name: "Japanese" }));
     const voice = english.getByRole("combobox", { name: /Voice setting/ });
+    await waitFor(() =>
+      expect(
+        english.getByRole("textbox", { name: "English Service instructions" }),
+      ).toHaveAttribute("contenteditable", "true"),
+    );
     const instructions = english.getByRole("textbox", { name: "English Service instructions" });
     await expect(
       japanese.getByRole("textbox", { name: "Japanese Service instructions" }),
@@ -178,7 +183,7 @@ export const PagedVoices: Story = {
     await expect(
       await english.findByRole("option", { name: "Ashley — English" }),
     ).toBeInTheDocument();
-    await userEvent.type(instructions, "Speak calmly.");
+    await userEvent.type(instructions, "Speak calmly.", { delay: 10 });
 
     // 次ページだけ失敗しても、既取得の候補と編集中の指示は保つ。
     await userEvent.click(english.getByRole("button", { name: "Show more voices" }));
@@ -191,7 +196,7 @@ export const PagedVoices: Story = {
       await english.findByRole("option", { name: "Dennis — English" }),
     ).toBeInTheDocument();
     await expect(english.getAllByRole("option", { name: "Ashley — English" })).toHaveLength(1);
-    await expect(instructions).toHaveValue("Speak calmly.");
+    await expect(instructions).toHaveTextContent("Speak calmly.");
     await expect(
       english.queryByRole("button", { name: "Show more voices" }),
     ).not.toBeInTheDocument();
