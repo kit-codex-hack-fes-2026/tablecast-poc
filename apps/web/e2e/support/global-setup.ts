@@ -157,11 +157,7 @@ export default async function setup() {
     await execute("docker", ["rm", "--force", extract]).catch(() => undefined);
     await execute("docker", ["create", "--name", extract, "axllent/mailpit:v1.29.2"]);
     try {
-      await execute("docker", [
-        "cp",
-        `${extract}:/mailpit`,
-        join(runtime.directory, "mailpit"),
-      ]);
+      await execute("docker", ["cp", `${extract}:/mailpit`, join(runtime.directory, "mailpit")]);
       await execute("chmod", ["755", join(runtime.directory, "mailpit")]);
     } finally {
       await execute("docker", ["rm", "--force", extract]).catch(() => undefined);

@@ -143,14 +143,14 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
       let testsPrepared = 0;
       let mailpitMode: "binary" | "docker" = "binary";
       const container = `${name}-mailpit`;
-      const waitUntilReady = async () => {
+      const waitUntilReady = async (origin: string) => {
         const deadline = Date.now() + 60_000;
         let ready = false;
         while (Date.now() < deadline) {
           if (failure) throw failure;
           try {
             const results = await Promise.all([
-              fetch(`${ingress!.origin}/api/admin/stores`, { signal: AbortSignal.timeout(2000) }),
+              fetch(`${origin}/api/admin/stores`, { signal: AbortSignal.timeout(2000) }),
               fetch(`${mailpitUrl}/api/v1/info`, {
                 signal: AbortSignal.timeout(2000),
               }),
@@ -207,7 +207,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           .parse(await readReady("web-ready.json"));
         ingress.setWebPort(replacement.port);
         ingress.setOnline(true);
-        await waitUntilReady();
+        await waitUntilReady(ingress.origin);
       };
       try {
         ingress = await startGateway(runtime.directory);
@@ -247,8 +247,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
             .min(1024)
             .max(65535)
             .parse(
-              Number(parentEnv.TABLECAST_E2E_MAILPIT_BASE_PORT ?? 25000) +
-                workerInfo.parallelIndex,
+              Number(parentEnv.TABLECAST_E2E_MAILPIT_BASE_PORT ?? 25000) + workerInfo.parallelIndex,
             );
           const smtpPort = z.coerce
             .number()
@@ -381,7 +380,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
             mailpit: mailpitUrl,
           }),
         );
-        await waitUntilReady();
+        await waitUntilReady(ingress.origin);
         const handles: RuntimeHandles = {
           ...runtime,
           origin,

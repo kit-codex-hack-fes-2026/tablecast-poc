@@ -37,9 +37,7 @@ export const credentials = {
 // templateはglobal setupで閉じた後は読み取り専用。各workerへstorageを複製する。
 export function createWorkerRuntime(parallelIndex: number) {
   return {
-    directory: mkdtempSync(
-      join(runtime.directory, `tablecast-worker-${parallelIndex}-`),
-    ),
+    directory: mkdtempSync(join(runtime.directory, `tablecast-worker-${parallelIndex}-`)),
   };
 }
 export type CaseRuntime = ReturnType<typeof createWorkerRuntime> & {
