@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // 配備CLIが作成する運用テーブル。0=未着手、2=DB完了・画像待ち、1=全体完了。
@@ -72,6 +73,25 @@ export const tableSessions = sqliteTable("table_sessions", {
   plan_json: text("plan_json"),
   opened_at: integer("opened_at").notNull(),
   closed_at: integer("closed_at"),
+  timeline_start_day: integer("timeline_start_day").generatedAlwaysAs(
+    sql`((opened_at - ((opened_at + 32400000) % 86400000 + 86400000) % 86400000 + 32400000) / 86400000 + 2147483648)`,
+  ),
+  timeline_end_day: integer("timeline_end_day").generatedAlwaysAs(
+    sql`((max(opened_at, closed_at - 1) - ((max(opened_at, closed_at - 1) + 32400000) % 86400000 + 86400000) % 86400000 + 32400000) / 86400000 + 2147483648)`,
+  ),
+  timeline_fork: integer("timeline_fork").generatedAlwaysAs(
+    sql.raw(
+      [
+        "CASE WHEN closed_at IS NULL OR closed_at < opened_at THEN NULL",
+        "WHEN timeline_start_day=timeline_end_day THEN 2*timeline_start_day",
+        ...Array.from({ length: 32 }, (_, i) => {
+          const bit = 31 - i;
+          return `WHEN (timeline_start_day >> ${bit}) != (timeline_end_day >> ${bit}) THEN ((timeline_start_day >> ${bit + 1}) << ${bit + 2}) + ${2 ** (bit + 1)} - 1`;
+        }),
+        "END",
+      ].join("\n"),
+    ),
+  ),
 });
 
 export const confirmations = sqliteTable("confirmations", {
