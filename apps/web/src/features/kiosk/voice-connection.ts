@@ -636,7 +636,8 @@ export class VoiceConnection {
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
     try {
-      await this.saveCaptions(this.sessionId);
+      if (this.captions.at(-1)?.selected) await this.saveCaptions(this.sessionId);
+      else void this.saveCaptions(this.sessionId).catch(() => this.onSync());
       if (!this.current(attempt) || !this.sessionId) return undefined;
       const response = await this.client.voice.delegations.$post(
         {

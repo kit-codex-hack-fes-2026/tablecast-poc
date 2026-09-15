@@ -355,6 +355,28 @@ describe("開始案内と発話ヒント", () => {
     expect(requests.filter(({ path }) => path.endsWith("/tools"))).toEqual([]);
   });
 
+  it("通常の音声は字幕保存を待たず委任し、保存失敗でも接続を継続する", async () => {
+    vi.useFakeTimers();
+    const pending = deferred<Response>();
+    const fallback = vi.mocked(apiFetch).getMockImplementation();
+    vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+      if ((input instanceof Request ? input.url : input.toString()).endsWith("/conversation"))
+        return pending.promise;
+      if (!fallback) throw new Error("API fixtureが必要です");
+      return fallback(input, options);
+    });
+    const { value } = connection();
+    await value.start("ja");
+    caption("user", "おすすめの料理を教えてください", 100, 800);
+    await vi.advanceTimersByTimeAsync(1500);
+    delegate();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(requests.filter(({ path }) => path.endsWith("/delegations"))).toHaveLength(1);
+    pending.resolve(Response.json({ error: { code: "TEMPORARY_FAILURE" } }, { status: 503 }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(peer().close).not.toHaveBeenCalled();
+  });
+
   it("客字幕が前の行へ追記されても古いAI字幕のタイマーからヒントを生成しない", async () => {
     vi.useFakeTimers();
     const { value, changes } = connection();

@@ -1,11 +1,12 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
 import { getTableState } from "../src/modules/tables/queries";
+import { getAdminState, getEvents } from "../src/modules/stores/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { createVoiceOpening, createVoiceSuggestions } from "../src/modules/voice/guidance";
 import { setVoiceSession } from "../src/modules/voice/service";
@@ -74,7 +75,7 @@ it("初回は接続時の設定で歓迎し、同じ接続の並行要求は一�
   expect(JSON.stringify(calls[0])).toContain("ご注文方法を案内する");
   const state = await getTableState(services, device);
   expect(state.cart.lines).toEqual([]);
-  expect(state.events.filter((event) => event.kind === "voice.opening")).toHaveLength(1);
+  expect(state.events.filter((event) => event.kind === "voice.opening")).toEqual([]);
   expect(state.events.some((event) => event.kind === "voice.user")).toBe(false);
 });
 
@@ -213,7 +214,7 @@ it("同じ字幕の並行要求と再送は一度だけ生成し、本文の更�
   expect(provider).toHaveBeenCalledTimes(2);
 });
 
-it("字幕を書き換えても接続ごとの上限を超えず、予約に会話本文を複製しない", async () => {
+it("接続の生成上限を守り、内部予約で公開履歴を埋めない", async () => {
   await setupFixture();
   const services = createApiServices(configured());
   await setVoiceSession(services, device, sessionId);
@@ -249,12 +250,55 @@ it("字幕を書き換えても接続ごとの上限を超えず、予約に会�
   ).rejects.toMatchObject({ code: "VOICE_GUIDANCE_UNAVAILABLE" });
   expect(provider).toHaveBeenCalledOnce();
   const state = await getTableState(services, device);
-  const reservation = state.events.findLast((event) => event.kind === "voice.suggestions");
+  const reservation = await services.db
+    .select()
+    .from(business.tableEvents)
+    .where(
+      and(
+        eq(business.tableEvents.store_id, device.storeId),
+        eq(business.tableEvents.kind, "voice.suggestions"),
+      ),
+    )
+    .orderBy(desc(business.tableEvents.cursor))
+    .get();
   const data = z
     .object({ voiceSessionId: z.literal(sessionId), reservationKey: z.string() })
     .strict()
-    .parse(reservation?.data);
+    .parse(JSON.parse(reservation?.data_json ?? "null"));
   expect(data.reservationKey).toMatch(/^[a-f0-9]{64}$/);
+  const staff = { kind: "staff", storeId: device.storeId, role: "owner" } as const;
+  const admin = await getAdminState(services, staff);
+  const deviceEvents = await getEvents(services, device);
+  const staffEvents = await getEvents(services, staff);
+  const table = admin.tables.find((row) => row.id === device.tableSessionId);
+  expect(table).toBeDefined();
+  for (const events of [
+    state.events,
+    table?.events ?? [],
+    admin.events,
+    deviceEvents.events,
+    staffEvents.events,
+  ]) {
+    expect(events.some((event) => event.kind === "voice.started")).toBe(true);
+    expect(events.some((event) => event.kind === "voice.assistant")).toBe(true);
+    expect(
+      events.filter((event) => ["voice.opening", "voice.suggestions"].includes(event.kind)),
+    ).toEqual([]);
+  }
+  await recordConversationItems(services, device, {
+    voiceSessionId: sessionId,
+    items: [
+      {
+        itemId: "tablecast-next-user",
+        role: "user",
+        text: "詳しく教えてください",
+        interrupted: false,
+      },
+    ],
+  });
+  const next = await getEvents(services, device, deviceEvents.cursor);
+  expect(next.events.map((event) => event.kind)).toEqual(["voice.user"]);
+  expect(next.cursor).toBeGreaterThan(deviceEvents.cursor);
 });
 
 it("公開された店舗方針と会話中の商品を優先し、長い候補を省略せず返す", async () => {
