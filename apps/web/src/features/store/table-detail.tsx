@@ -245,7 +245,12 @@ export function TableDetail({
                 </dl>
               </div>
               <CouponVisit storeId={storeId} sessionId={table.id} />
-              <PaymentForm storeId={storeId} sessionId={table.id} />
+              <PaymentForm
+                key={table.status}
+                storeId={storeId}
+                sessionId={table.id}
+                closed={table.status === "closed"}
+              />
               <PointVisit storeId={storeId} sessionId={table.id} />
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">
