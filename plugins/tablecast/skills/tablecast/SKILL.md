@@ -69,3 +69,7 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 4. 画像生成を呼び、実際の生成ファイルをupload_imageで取り込んで対象商品に設定する。未生成の画像や架空のキーで済ませない。imageKindはillustration、出所は生成した架空の商品イメージとする。
 5. アレルゲン・交差接触・ヴィーガン対応は根拠なしにverified/controlled/yesへせずunknownを保持し、日英で未確認の案内を付ける。二郎系向けの日英の接客指示をcast.instructionsへ設定し、音声IDは既存値またはlist_voicesの標準音声だけを使う。
 6. update_draft → validate_draft → get_draft_diffを実行し、エラーを修正してreadyまで進める。商品と画像、マシマシ設定、店名、未確認の安全情報、draftId・版を報告する。公開せず保存する依頼ではreadyで止める。公開の明示依頼がある場合だけrequest_publicationの人向け確認画面を案内する。
+
+## 店舗の見た目を作る
+
+テーマ・店舗ロゴ・チラシの制作は同梱の[tablecast-theme](../tablecast-theme/SKILL.md)を使う。構造化した店舗ロゴはbranding.logoへ設定し、組織共通アイコンとは区別する。メニューや接客設定と同じ下書き・公開の承認を使う。

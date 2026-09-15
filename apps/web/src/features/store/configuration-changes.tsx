@@ -7,6 +7,17 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
 const labels = {
+  branding: "theme_logo",
+  logo: "theme_logo",
+  appearance: "theme_title",
+  banners: "theme_banners",
+  alt: "theme_alt",
+  assets: "theme_assets",
+  customCss: "theme_css",
+  parts: "theme_parts",
+  hotspots: "theme_region",
+  productId: "theme_product",
+  enabled: "theme_visible",
   storeName: "org_name",
   imageSource: "editor_image_source",
   generated: "editor_generated_image",

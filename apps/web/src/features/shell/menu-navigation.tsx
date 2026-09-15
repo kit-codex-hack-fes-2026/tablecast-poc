@@ -60,6 +60,15 @@ export function MenuNavigation({
         ),
       )}
       <Link
+        to="/admin/stores/$storeId/design"
+        params={{ storeId }}
+        search={{ draftId }}
+        className={className}
+        onClick={onNavigate}
+      >
+        {t("theme_title")}
+      </Link>
+      <Link
         to={
           draftId
             ? "/admin/stores/$storeId/menu/changes/$draftId"

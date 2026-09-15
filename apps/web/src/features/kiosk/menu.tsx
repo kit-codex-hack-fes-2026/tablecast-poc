@@ -1,3 +1,4 @@
+import { MenuBanners } from "./menu-banners";
 import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
@@ -33,6 +34,7 @@ export function ProductMenu({
   );
   return (
     <>
+      {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
       {!productIds && (
         <fieldset
           className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 scrollbar-none"
@@ -42,6 +44,7 @@ export function ProductMenu({
             className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
             variant="ghost"
             type="button"
+            data-theme-part="category-button"
             aria-pressed={category === "all"}
             onClick={() => setCategory("all")}
           >
@@ -53,6 +56,7 @@ export function ProductMenu({
               variant="ghost"
               type="button"
               key={item.id}
+              data-theme-part="category-button"
               aria-pressed={category === item.id}
               onClick={() => setCategory(item.id)}
             >
@@ -76,6 +80,7 @@ export function ProductMenu({
             variant="ghost"
             type="button"
             className="flex rounded-md min-w-0 [&:disabled]:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}
             disabled={!product.available}

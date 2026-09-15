@@ -310,7 +310,10 @@ export function ProductPage({
         ),
       )}
       <ErrorNotice error={error} />
-      <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3">
+      <div
+        data-theme-part="checkout"
+        className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3"
+      >
         <div
           data-ui="quantity-control"
           className="inline-flex items-center border border-border rounded-md shrink-0"
@@ -340,6 +343,7 @@ export function ProductPage({
           </Button>
         </div>
         <Button
+          data-theme-part="action-button"
           variant="default"
           size="lg"
           type="button"

@@ -34,6 +34,7 @@ import { Route as MemberStoreIdCouponsRouteImport } from './routes/member.$store
 import { Route as MemberStoreIdMemoriesRouteImport } from './routes/member.$storeId.memories'
 import { Route as MemberStoreIdPointsRouteImport } from './routes/member.$storeId.points'
 import { Route as AdminStoresStoreIdCouponsRouteImport } from './routes/admin.stores.$storeId.coupons'
+import { Route as AdminStoresStoreIdDesignRouteImport } from './routes/admin.stores.$storeId.design'
 import { Route as AdminStoresStoreIdFloorRouteImport } from './routes/admin.stores.$storeId.floor'
 import { Route as AdminStoresStoreIdGamesRouteImport } from './routes/admin.stores.$storeId.games'
 import { Route as AdminStoresStoreIdMembersRouteImport } from './routes/admin.stores.$storeId.members'
@@ -183,6 +184,12 @@ const AdminStoresStoreIdCouponsRoute =
   AdminStoresStoreIdCouponsRouteImport.update({
     id: '/coupons',
     path: '/coupons',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
+const AdminStoresStoreIdDesignRoute =
+  AdminStoresStoreIdDesignRouteImport.update({
+    id: '/design',
+    path: '/design',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
 const AdminStoresStoreIdFloorRoute = AdminStoresStoreIdFloorRouteImport.update({
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -381,6 +389,7 @@ export interface FileRoutesByTo {
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -430,6 +439,7 @@ export interface FileRoutesById {
   '/member/$storeId/points': typeof MemberStoreIdPointsRoute
   '/member/$storeId/': typeof MemberStoreIdIndexRoute
   '/admin/stores/$storeId/coupons': typeof AdminStoresStoreIdCouponsRoute
+  '/admin/stores/$storeId/design': typeof AdminStoresStoreIdDesignRoute
   '/admin/stores/$storeId/floor': typeof AdminStoresStoreIdFloorRoute
   '/admin/stores/$storeId/games': typeof AdminStoresStoreIdGamesRoute
   '/admin/stores/$storeId/members': typeof AdminStoresStoreIdMembersRoute
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/member/$storeId/points'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/member/$storeId/points'
     | '/member/$storeId'
     | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -574,6 +586,7 @@ export interface FileRouteTypes {
     | '/member/$storeId/points'
     | '/member/$storeId/'
     | '/admin/stores/$storeId/coupons'
+    | '/admin/stores/$storeId/design'
     | '/admin/stores/$storeId/floor'
     | '/admin/stores/$storeId/games'
     | '/admin/stores/$storeId/members'
@@ -795,6 +808,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdCouponsRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId/design': {
+      id: '/admin/stores/$storeId/design'
+      path: '/design'
+      fullPath: '/admin/stores/$storeId/design'
+      preLoaderRoute: typeof AdminStoresStoreIdDesignRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/floor': {
       id: '/admin/stores/$storeId/floor'
       path: '/floor'
@@ -984,6 +1004,7 @@ const MemberRouteWithChildren =
 
 interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdCouponsRoute: typeof AdminStoresStoreIdCouponsRoute
+  AdminStoresStoreIdDesignRoute: typeof AdminStoresStoreIdDesignRoute
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
   AdminStoresStoreIdMembersRoute: typeof AdminStoresStoreIdMembersRoute
@@ -1006,6 +1027,7 @@ interface AdminStoresStoreIdRouteChildren {
 
 const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
   AdminStoresStoreIdCouponsRoute: AdminStoresStoreIdCouponsRoute,
+  AdminStoresStoreIdDesignRoute: AdminStoresStoreIdDesignRoute,
   AdminStoresStoreIdFloorRoute: AdminStoresStoreIdFloorRoute,
   AdminStoresStoreIdGamesRoute: AdminStoresStoreIdGamesRoute,
   AdminStoresStoreIdMembersRoute: AdminStoresStoreIdMembersRoute,
@@ -1060,12 +1082,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

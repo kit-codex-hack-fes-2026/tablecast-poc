@@ -110,3 +110,9 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 `get_point_policy` / `set_point_policy`で将来の来店向けポイント設定を扱う。`list_coupon_rules` / `save_coupon_rule`は券面画像と日英条件を含む発行ルール、`list_reward_members`は発行先の会員ID・表示名、`list_issued_coupons`は発行済み券の状態をページ取得する。`issue_coupon`は手動ルールから冪等キー付きで発行し、`revoke_coupon`は未使用券を理由付きで取り消す。
 
 券面は既存の`upload_image`で取り込み、返された画像キーと出所を保存する。書込みには既存の店舗管理権限を検証し、GUIと同じAPI serviceを通す。発行済み券の条件は後から変更しない。会員の個人記憶を一覧・検索するMCP操作は設けない。
+
+## テーマ・店舗ロゴ・チラシ
+
+`get_configuration`のschemaに`branding.logo`・`appearance`・`banners`を含む。画像は既存の`upload_image`で登録し、返されたキー・種別・出所に日英のaltを付けて設定する。店舗ロゴは組織共通ロゴとは別である。テーマ画像、ロゴ、チラシの画像所有と出所は下書き保存・公開時に検証する。
+
+`update_draft`で設定を保持しながら変更し、`validate_draft`・`get_draft_diff`・`request_publication`を使う。禁止CSSは行・列と理由を含む入力エラー、欠損商品は既存のPRODUCT_NOT_FOUNDを返す。領域IDとバナーIDは重複させない。詳しい制作例は製品pluginのtablecast-theme skillを参照する。テーマ文字列と画像を音声の業務tool結果へ複製しない。

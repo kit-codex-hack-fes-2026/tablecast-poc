@@ -164,3 +164,15 @@ export {
   applyCouponSchema,
   cancelCouponUseSchema,
 } from "./modules/customer-coupons/model";
+
+export {
+  appearanceSchema,
+  bannerSchema,
+  brandingSchema,
+  themeImageSchema,
+  themePartSchema,
+  themeParts,
+  themeFonts,
+  themeCssRules,
+} from "./modules/appearance/model";
+export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";

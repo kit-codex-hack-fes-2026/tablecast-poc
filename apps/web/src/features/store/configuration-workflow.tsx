@@ -152,7 +152,15 @@ export function StartConfigurationEditing({
                         <p className="text-sm">
                           {draft.sections
                             .map((target) =>
-                              t(target === "storeName" ? "org_name" : menuLabels[target]),
+                              t(
+                                target === "storeName"
+                                  ? "org_name"
+                                  : target === "branding" ||
+                                      target === "appearance" ||
+                                      target === "banners"
+                                    ? "theme_title"
+                                    : menuLabels[target],
+                              ),
                             )
                             .join(" · ")}
                         </p>

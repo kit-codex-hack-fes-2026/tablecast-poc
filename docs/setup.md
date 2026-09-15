@@ -264,3 +264,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 ### 接客エディターの依存
 
 Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-kit・suggestionを使用する。rootの `bun.lock` と通常の `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。保存形式を読めるAPIを先に配備する。互換性とロールバック条件は[接客エディター設計](prompt-editor-design.md#読取互換と展開)を参照する。
+
+### 店舗テーマの開発依存
+
+追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。

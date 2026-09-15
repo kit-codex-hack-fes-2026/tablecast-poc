@@ -21,8 +21,20 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
   unique(config.categories, ["categories"]);
   unique(config.products, ["products"]);
   unique(config.plans, ["plans"]);
+  unique(config.banners ?? [], ["banners"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
+  for (const [bannerIndex, banner] of (config.banners ?? []).entries()) {
+    unique(banner.hotspots, ["banners", bannerIndex, "hotspots"]);
+    for (const [spotIndex, spot] of banner.hotspots.entries()) {
+      if (!products.has(spot.productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: ["banners", bannerIndex, "hotspots", spotIndex, "productId"],
+          params: { productId: spot.productId },
+        });
+    }
+  }
   for (const [productIndex, product] of config.products.entries()) {
     const productPath = ["products", productIndex];
     errors.push(...productConditionErrors(product, productPath));
