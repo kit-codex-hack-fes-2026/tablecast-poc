@@ -202,3 +202,7 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts/tablecast-email-build.ts`が架空データを使った静的HTMLと一覧を生成する。カタログ専用workspace・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。
 
 店舗統計はAPIの `modules/statistics` が期間・母数・集計を所有する。管理HTTPとMCPから同じserviceと公開schemaを使い、クライアント側は比較・可視化・提案を担当する。[統計の定義](statistics.md)を参照する。
+
+## 店舗会員
+
+`modules/customers`はスタッフ所属と分離した会員認可・同意を所有する。共通ログインからuser IDを確定し、`CustomerActor`の店舗と本人で認可する。`customer_memberships`は店舗別の同意版・許可・更新版を持つ。Webの`features/customer`は会員用の一列の画面と既存RPCによる取得を所有する。仕様と今後の追加境界は[会員仕様](membership.md)を参照する。

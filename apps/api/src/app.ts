@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { accountRoutes } from "./modules/account/routes";
+import { customerRoutes } from "./modules/customers/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { devicesRoutes } from "./modules/devices/routes";
 import { mcpRoutes } from "./modules/mcp/routes";
@@ -17,6 +18,7 @@ import { handleError, handleRpcError, requestSecurity, requestTelemetry } from "
 const rpcRoutes = new Hono<ApiEnv>()
   .onError(handleRpcError)
   .route("/", accountRoutes)
+  .route("/", customerRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
   .route("/", initialRoutes)

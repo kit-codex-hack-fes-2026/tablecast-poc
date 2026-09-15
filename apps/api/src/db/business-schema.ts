@@ -1,5 +1,23 @@
 import { sql } from "drizzle-orm";
-import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+
+export const customerMemberships = sqliteTable(
+  "customer_memberships",
+  {
+    id: text("id").primaryKey(),
+    storeId: text("store_id").notNull(),
+    userId: text("user_id").notNull(),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    shareCompanions: integer("share_companions", { mode: "boolean" }).notNull(),
+    useMemories: integer("use_memories", { mode: "boolean" }).notNull(),
+    saveMemories: integer("save_memories", { mode: "boolean" }).notNull(),
+    consentVersion: integer("consent_version").notNull(),
+    revision: integer("revision").notNull().default(1),
+    joinedAt: integer("joined_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("customer_memberships_store_user").on(table.storeId, table.userId)],
+);
 
 // 配備CLIが作成する運用テーブル。0=未着手、2=DB完了・画像待ち、1=全体完了。
 export const deploymentOwner = sqliteTable("tablecast_deployment_owner", {

@@ -14,12 +14,15 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as ConsentRouteImport } from './routes/consent'
 import { Route as DeviceRouteImport } from './routes/device'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MemberRouteImport } from './routes/member'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
+import { Route as MemberIndexRouteImport } from './routes/member.index'
+import { Route as MemberStoreIdRouteImport } from './routes/member.$storeId'
 import { Route as StoresNewRouteImport } from './routes/stores.new'
 import { Route as AccountIntegrationsManualRouteImport } from './routes/account_.integrations.manual'
 import { Route as AccountIntegrationsPluginsRouteImport } from './routes/account_.integrations.plugins'
@@ -69,6 +72,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MemberRoute = MemberRouteImport.update({
+  id: '/member',
+  path: '/member',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrganisationsRoute = OrganisationsRouteImport.update({
   id: '/organisations',
   path: '/organisations',
@@ -98,6 +106,16 @@ const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
   id: '/invitations/$invitationId',
   path: '/invitations/$invitationId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MemberIndexRoute = MemberIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MemberRoute,
+} as any)
+const MemberStoreIdRoute = MemberStoreIdRouteImport.update({
+  id: '/$storeId',
+  path: '/$storeId',
+  getParentRoute: () => MemberRoute,
 } as any)
 const StoresNewRoute = StoresNewRouteImport.update({
   id: '/stores/new',
@@ -239,13 +257,16 @@ export interface FileRoutesByFullPath {
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
   '/login': typeof LoginRoute
+  '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/$storeId': typeof MemberStoreIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/member/': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
@@ -281,7 +302,9 @@ export interface FileRoutesByTo {
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/$storeId': typeof MemberStoreIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/member': typeof MemberIndexRoute
   '/account/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
@@ -312,13 +335,16 @@ export interface FileRoutesById {
   '/consent': typeof ConsentRoute
   '/device': typeof DeviceRoute
   '/login': typeof LoginRoute
+  '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
+  '/member/$storeId': typeof MemberStoreIdRoute
   '/stores/new': typeof StoresNewRoute
+  '/member/': typeof MemberIndexRoute
   '/account_/integrations/manual': typeof AccountIntegrationsManualRoute
   '/account_/integrations/plugins': typeof AccountIntegrationsPluginsRoute
   '/admin/stores/$storeId': typeof AdminStoresStoreIdRouteWithChildren
@@ -350,13 +376,16 @@ export interface FileRouteTypes {
     | '/consent'
     | '/device'
     | '/login'
+    | '/member'
     | '/organisations'
     | '/register'
     | '/reset-password'
     | '/account/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/member/$storeId'
     | '/stores/new'
+    | '/member/'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
@@ -392,7 +421,9 @@ export interface FileRouteTypes {
     | '/account/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/member/$storeId'
     | '/stores/new'
+    | '/member'
     | '/account/integrations/manual'
     | '/account/integrations/plugins'
     | '/admin/stores/$storeId'
@@ -422,13 +453,16 @@ export interface FileRouteTypes {
     | '/consent'
     | '/device'
     | '/login'
+    | '/member'
     | '/organisations'
     | '/register'
     | '/reset-password'
     | '/account_/mcp-sessions'
     | '/admin/live'
     | '/invitations/$invitationId'
+    | '/member/$storeId'
     | '/stores/new'
+    | '/member/'
     | '/account_/integrations/manual'
     | '/account_/integrations/plugins'
     | '/admin/stores/$storeId'
@@ -459,6 +493,7 @@ export interface RootRouteChildren {
   ConsentRoute: typeof ConsentRoute
   DeviceRoute: typeof DeviceRoute
   LoginRoute: typeof LoginRoute
+  MemberRoute: typeof MemberRouteWithChildren
   OrganisationsRoute: typeof OrganisationsRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -510,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/member': {
+      id: '/member'
+      path: '/member'
+      fullPath: '/member'
+      preLoaderRoute: typeof MemberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/organisations': {
       id: '/organisations'
       path: '/organisations'
@@ -551,6 +593,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/invitations/$invitationId'
       preLoaderRoute: typeof InvitationsInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/member/': {
+      id: '/member/'
+      path: '/'
+      fullPath: '/member/'
+      preLoaderRoute: typeof MemberIndexRouteImport
+      parentRoute: typeof MemberRoute
+    }
+    '/member/$storeId': {
+      id: '/member/$storeId'
+      path: '/$storeId'
+      fullPath: '/member/$storeId'
+      preLoaderRoute: typeof MemberStoreIdRouteImport
+      parentRoute: typeof MemberRoute
     }
     '/stores/new': {
       id: '/stores/new'
@@ -716,6 +772,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MemberRouteChildren {
+  MemberStoreIdRoute: typeof MemberStoreIdRoute
+  MemberIndexRoute: typeof MemberIndexRoute
+}
+
+const MemberRouteChildren: MemberRouteChildren = {
+  MemberStoreIdRoute: MemberStoreIdRoute,
+  MemberIndexRoute: MemberIndexRoute,
+}
+
+const MemberRouteWithChildren =
+  MemberRoute._addFileChildren(MemberRouteChildren)
+
 interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdFloorRoute: typeof AdminStoresStoreIdFloorRoute
   AdminStoresStoreIdGamesRoute: typeof AdminStoresStoreIdGamesRoute
@@ -773,6 +842,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConsentRoute: ConsentRoute,
   DeviceRoute: DeviceRoute,
   LoginRoute: LoginRoute,
+  MemberRoute: MemberRouteWithChildren,
   OrganisationsRoute: OrganisationsRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,

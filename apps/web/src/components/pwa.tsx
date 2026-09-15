@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { Serwist } from "@serwist/window";
 import { useI18n } from "../i18n/locale";
 
@@ -93,14 +93,21 @@ export function Pwa() {
 
 export function PwaInstallHelp() {
   const { t } = useI18n();
+  const customer = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/member"),
+  });
   return (
     <details data-pwa-install className="m-3 text-sm text-muted-foreground print:hidden">
-      <summary className="cursor-pointer">{t("pwa_install_title")}</summary>
-      <p className="mt-2">{t("pwa_install_steps")}</p>
-      <div className="mt-2 flex gap-4">
-        <a href="/">{t("pwa_kiosk")}</a>
-        <a href="/admin/live">{t("pwa_staff")}</a>
-      </div>
+      <summary className="cursor-pointer">
+        {t(customer ? "customer_install_title" : "pwa_install_title")}
+      </summary>
+      <p className="mt-2">{t(customer ? "customer_install_steps" : "pwa_install_steps")}</p>
+      {!customer && (
+        <div className="mt-2 flex gap-4">
+          <a href="/">{t("pwa_kiosk")}</a>
+          <a href="/admin/live">{t("pwa_staff")}</a>
+        </div>
+      )}
     </details>
   );
 }

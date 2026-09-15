@@ -20,6 +20,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 | -------------------------------------- | ---------------------------------------------------- |
 | [セットアップ](setup.md)               | clone、worktree、Dev Container・mise、env、初回確認  |
 | [製品と業務](product.md)               | 対象、認証、注文、カスタマイズ、プラン、会計、安全性 |
+| [店舗会員・記憶・特典](membership.md)  | QR参加、同行履歴、個人記憶、ポイント、クーポン       |
 | [認証・アカウント](authentication.md)  | Google、パスキー、招待、プロフィール、メール         |
 | [Codexプラグイン](codex-plugin.md)     | OAuth接続、ローカル検証、GitHub配布                  |
 | [ゲームプラグイン](game-plugins.md)    | ゲーム制作・登録・試遊・承認・公開・隔離実行         |
