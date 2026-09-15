@@ -2,13 +2,13 @@ name: TableCast release
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main]
   pull_request_target:
     branches: [main]
     types: [opened, synchronize, reopened, edited, closed]
   workflow_run:
     workflows: [CI]
-    types: [requested, completed]
+    types: [completed]
     branches: [staging]
   workflow_dispatch:
 
