@@ -265,6 +265,19 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie);
   const client = await connect(token);
+  const spec = toolData(
+    await client.callTool({ name: "get_theme_spec", arguments: {} }),
+    z.object({
+      storeId: z.string(),
+      schema: z.object({ properties: z.record(z.string(), z.unknown()) }),
+      artwork: z.array(z.object({ role: z.string(), target: z.string() })),
+      editorUrl: z.string(),
+    }),
+  );
+  expect(spec.storeId).toBe("tablecast-store");
+  expect(spec.schema.properties).toHaveProperty("appearance");
+  expect(spec.artwork.map((item) => item.role)).toEqual(["background", "logo", "banner"]);
+  expect(new URL(spec.editorUrl).pathname).toBe("/admin/stores/tablecast-store/design");
   const published = toolData(
     await client.callTool({ name: "get_configuration", arguments: {} }),
     catalogSchema,
@@ -300,9 +313,24 @@ it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存�
           ...published.configuration,
           branding: { logo: asset },
           appearance: {
+            composition: {
+              masthead: {
+                visible: true,
+                align: "center",
+                logoWidth: 280,
+                logoHeight: 96,
+                padding: 16,
+              },
+              banners: { columns: 2, gap: 16 },
+            },
             colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
             fonts: { heading: "serif", body: "sans" },
             assets: { paper: asset },
+            parts: {
+              screen: {
+                image: { asset: "paper", fit: "repeat", x: 50, y: 50, opacity: 1, tileSize: 256 },
+              },
+            },
             customCss:
               '[data-theme-part="product-card"] { background-image:var(--tablecast-image-paper); border-width:3px; border-style:solid; }',
           },

@@ -8,6 +8,7 @@ import { StoreTheme } from "../../components/store-theme";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { StoreLogo } from "./store-logo";
 import { MenuBanners } from "./menu-banners";
+import { ProductMenu } from "./menu";
 import { Button } from "../../components/ui/button";
 import "../../styles.css";
 const image: ThemeImage = {
@@ -124,4 +125,51 @@ it("濃色テーマのダイアログと明るいアクセントのボタンに�
   expect(getComputedStyle(dialog).color).toBe("rgb(255, 255, 255)");
   expect(getComputedStyle(order).color).toBe("rgb(0, 0, 0)");
   expect(getComputedStyle(back).backgroundColor).toBe("rgb(24, 24, 27)");
+});
+
+it("チラシの2列と全幅をメニュー幅に合わせて配置しロゴ失敗でも見出しを残す", async () => {
+  const themed = structuredClone(catalog);
+  themed.configuration.storeName = "一乗寺 剛麺研究所";
+  themed.configuration.branding = { logo: image };
+  themed.configuration.appearance = {
+    composition: {
+      masthead: { visible: true, align: "center", logoWidth: 280, logoHeight: 96, padding: 16 },
+      banners: { columns: 2, gap: 16 },
+    },
+  };
+  themed.configuration.banners = ["first", "second", "wide"].map((id) => ({
+    id,
+    enabled: true,
+    image,
+    span: id === "wide" ? "full" : "column",
+    hotspots: [{ id, productId: product.id, rect: { x: 0, y: 0, width: 1, height: 1 } }],
+  }));
+  await render(
+    <LocaleProvider initialLocale="ja">
+      <div data-testid="menu-width" style={{ width: 640 }}>
+        <ProductMenu
+          catalog={themed}
+          onChoose={vi.fn<(product: (typeof catalog.configuration.products)[number]) => void>()}
+        />
+      </div>
+    </LocaleProvider>,
+  );
+  const container = page.getByTestId("menu-width").element();
+  if (!(container instanceof HTMLElement)) throw new Error("メニュー要素が必要です");
+  for (const img of container.querySelectorAll("img")) img.dispatchEvent(new Event("error"));
+  const figures = container.querySelectorAll("figure");
+  const first = figures[0],
+    second = figures[1],
+    wide = figures[2];
+  if (!first || !second || !wide) throw new Error("チラシが必要です");
+  await expect
+    .poll(() => second.getBoundingClientRect().x > first.getBoundingClientRect().x)
+    .toBe(true);
+  expect(wide.getBoundingClientRect().width).toBeGreaterThan(
+    first.getBoundingClientRect().width * 1.9,
+  );
+  container.style.width = "320px";
+  await expect.poll(() => second.getBoundingClientRect().x).toBe(first.getBoundingClientRect().x);
+  expect(container.scrollWidth).toBeLessThanOrEqual(320);
+  await expect.element(page.getByRole("heading", { name: "一乗寺 剛麺研究所" })).toBeVisible();
 });

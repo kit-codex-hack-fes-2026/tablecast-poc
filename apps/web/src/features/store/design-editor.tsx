@@ -1,3 +1,4 @@
+import { ThemeCompositionEditor } from "./theme-composition-editor";
 import { useMutation } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
 import { configurationImageUploadKey } from "./menu-query";
@@ -24,6 +25,8 @@ const partNames = {
   conversation: "theme_conversation",
   "voice-controls": "theme_voice_controls",
   menu: "theme_menu",
+  "menu-masthead": "theme_masthead",
+  banner: "theme_banner",
   "product-card": "theme_product_card",
   "category-button": "theme_category_button",
   "menu-tab": "theme_menu_tab",
@@ -232,6 +235,11 @@ export function DesignEditor({
           {t("theme_add_asset")}
         </Button>
       </section>
+      <ThemeCompositionEditor
+        appearance={appearance}
+        disabled={disabled}
+        onChange={updateAppearance}
+      />
       <ThemePartsEditor
         appearance={appearance}
         disabled={disabled}
@@ -626,6 +634,30 @@ function ThemePartsEditor({
                       <option value="repeat">{t("theme_repeat")}</option>
                     </NativeSelect>
                   </label>
+                  <label>
+                    {t(style.image.fit === "repeat" ? "theme_tile_size" : "theme_image_width")}
+                    <Input
+                      type="number"
+                      disabled={disabled}
+                      min={style.image.fit === "repeat" ? 32 : 10}
+                      max={style.image.fit === "repeat" ? 1024 : 200}
+                      value={
+                        (style.image.fit === "repeat"
+                          ? style.image.tileSize
+                          : style.image.widthPercent) ?? ""
+                      }
+                      onChange={(event) => {
+                        if (style.image)
+                          update({
+                            image: {
+                              ...style.image,
+                              [style.image.fit === "repeat" ? "tileSize" : "widthPercent"]:
+                                event.target.value === "" ? undefined : Number(event.target.value),
+                            },
+                          });
+                      }}
+                    />
+                  </label>
                   {(["x", "y", "opacity"] as const).map((name) => (
                     <label key={name}>
                       {t(name === "x" ? "theme_x" : name === "y" ? "theme_y" : "theme_opacity")}
@@ -712,6 +744,22 @@ function BannersEditor({
               updateBanner(index, { ...banner, image: image ?? structuredClone(emptyImage) })
             }
           />
+          <label>
+            {t("theme_banner_span")}
+            <NativeSelect
+              disabled={disabled}
+              value={banner.span ?? "column"}
+              onChange={(event) =>
+                updateBanner(index, {
+                  ...banner,
+                  span: event.target.value === "full" ? "full" : "column",
+                })
+              }
+            >
+              <option value="column">{t("theme_banner_column")}</option>
+              <option value="full">{t("theme_banner_full")}</option>
+            </NativeSelect>
+          </label>
           <HotspotEditor
             banner={banner}
             configuration={value}

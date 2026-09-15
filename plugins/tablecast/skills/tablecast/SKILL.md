@@ -72,4 +72,4 @@ upload_image応答のimageKey・imageKind・imageSourceを対象商品へ設定�
 
 ## 店舗の見た目を作る
 
-テーマ・店舗ロゴ・チラシの制作は同梱の[tablecast-theme](../tablecast-theme/SKILL.md)を使う。構造化した店舗ロゴはbranding.logoへ設定し、組織共通アイコンとは区別する。メニューや接客設定と同じ下書き・公開の承認を使う。
+テーマ・店舗ロゴ・チラシの制作は同梱の[tablecast-theme](../tablecast-theme/SKILL.md)を使う。get_theme_specの素材別ガイドを読み、クライアントの画像生成機能で背景・ロゴ案・チラシを独立して作り、実注文UIで配置を確認する。配色の変更だけを画像テーマ完成としない。構造化した店舗ロゴはbranding.logoへ設定し、組織共通アイコンとは区別する。メニューや接客設定と同じ下書き・公開の承認を使う。

@@ -1,4 +1,5 @@
 import { MenuBanners } from "./menu-banners";
+import { StoreLogo } from "./store-logo";
 import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
@@ -27,6 +28,7 @@ export function ProductMenu({
   const { locale, t } = useI18n();
   const [category, setCategory] = useState("all");
   const selectedIds = new Set(productIds);
+  const masthead = catalog.configuration.appearance?.composition?.masthead;
   const products = catalog.configuration.products.filter((product) =>
     productIds
       ? selectedIds.has(product.id)
@@ -34,6 +36,25 @@ export function ProductMenu({
   );
   return (
     <>
+      {!productIds && masthead?.visible && (
+        <div
+          data-theme-part="menu-masthead"
+          className="flex flex-col gap-2 mx-4 mt-3"
+          style={{
+            padding: masthead.padding,
+            alignItems: masthead.align === "center" ? "center" : "flex-start",
+          }}
+        >
+          <StoreLogo
+            logo={catalog.configuration.branding?.logo}
+            width={masthead.logoWidth}
+            height={masthead.logoHeight}
+          />
+          <h2 className="text-sm font-semibold">
+            {catalog.configuration.storeName ?? catalog.storeName}
+          </h2>
+        </div>
+      )}
       {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
       {!productIds && (
         <fieldset

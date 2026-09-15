@@ -26,6 +26,13 @@ import { ensure } from "../../platform/errors";
 import { getCatalog } from "../catalog/queries";
 import { configurationSchema } from "../configuration/model";
 import {
+  appearanceSchema,
+  bannerSchema,
+  brandingSchema,
+  themeParts,
+  themeFonts,
+} from "../appearance/model";
+import {
   createDraft,
   discardDraft,
   getDraft,
@@ -265,10 +272,73 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     async (input) => result(await listVoices(c.env, actor, input)),
   );
   server.registerTool(
+    "get_theme_spec",
+    {
+      description:
+        "背景・ロゴ・チラシの画像生成と配置に使う現行schema、素材別の制作要件、公開部品とプレビュー導線を取得する。参考画像を使うテーマ制作の最初にget_configurationと併せて読む。画像生成そのものはクライアントの画像生成機能で行う。",
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async () =>
+      result({
+        storeId: actor.storeId,
+        schema: z.toJSONSchema(
+          z.object({
+            branding: brandingSchema.optional(),
+            appearance: appearanceSchema.optional(),
+            banners: z.array(bannerSchema).max(12).optional(),
+          }),
+        ),
+        publicParts: themeParts,
+        fonts: Object.keys(themeFonts),
+        artwork: [
+          {
+            role: "background",
+            target: "appearance.assets → appearance.parts[part].image",
+            suggestedSize: "1536×1024",
+            brief:
+              "文字なし。店の素材感を出し、中央80%は低コントラストで余白を残す。墨・木目・模様は端に寄せる。coverは切れるため重要な文字や絵を置かない。repeat素材は四辺が繋がるように作る。",
+            placement:
+              "全体screen、会話conversation、menuなどに割当。widthPercentは単発画像の相対幅、tileSizeは反復幅px。前面のbackgroundをtransparentにすると背面素材が見える。",
+          },
+          {
+            role: "logo",
+            target: "branding.logo",
+            suggestedSize: "1200×400 透過PNG",
+            brief:
+              "提供された公式ロゴをそのまま使う。新規制作を依頼された場合だけ生成し、生成案と明示。文字を正確に、透明な余白を8%程度残し、280px幅でも読める太さにする。背景・影・UIを焼き込まない。",
+            placement:
+              "ヘッダー枠は固定。メニューで大きく見せる場合はappearance.composition.mastheadのvisible/align/logoWidth/logoHeight/paddingを設定する。",
+          },
+          {
+            role: "banner",
+            target: "banners[].image",
+            suggestedSize: "1536×1024 または 1536×768",
+            brief:
+              "実在する商品の確認済み画像・商品名を使う。料理を主役にし、店の書体・背景と揃える。文字は8%の安全余白内に置く。未確認の価格・期間限定・割引を創作しない。価格・翻訳・操作ラベルはHTMLにも残す。",
+            placement:
+              "画像全体を切り抜かず表示。hotspotsは完成画像の比率座標。composition.bannersは1/2列とgap、banner.span=fullは全幅。2列は狭いメニューで1列になる。",
+          },
+        ],
+        workflow: [
+          "クライアントの画像生成・編集機能を探索して素材ごとに生成する。TableCastのMCPは生成を代行しない。利用できなければ画像待ちと明示し、配色だけを画像テーマ完成と報告しない。",
+          "完成画像を目視確認し、upload_imageへ実ファイルまたは実バイト列を渡す。imageSource.generated=trueとimageKind=illustrationを付け、返された画像参照へ日英altを追加する。",
+          "既存の全configurationを保ち、テーマの項目だけ更新する。update_draftに最新expectedVersionとinstructionFormatVersion:1を渡す。validate_draft、get_draft_diffで商品・接客の保持を確認する。",
+          "管理画面の実注文プレビューで日英・縦横、ロゴ寸法、背景と文字、チラシ領域と商品詳細を確認する。生成モックアップを実装済み画面の証拠にしない。",
+        ],
+        editorUrl: `${c.env.TABLECAST_PUBLIC_ORIGIN}/admin/stores/${encodeURIComponent(actor.storeId)}/design`,
+      }),
+  );
+  server.registerTool(
     "upload_image",
     {
       description:
-        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
+        "店舗設定用の商品・店舗ロゴ・テーマ装飾・チラシ画像・クーポン券面を取り込む。画像テーマは先にget_theme_specで素材別の寸法と配置を確認し、クライアントの画像生成機能で別々に制作する。ChatGPTで生成・添付した画像はfileへ渡す（fileParams対応）。Base64クライアントはfileの代わりにdataとmimeTypeを使う。PNG/JPEG/WebP、5MiB・1600万画素まで。生成画像はimageSource.generated=true、imageKind=illustrationとし出所の説明を付ける。返されたimageKey・imageKind・imageSourceをupdate_draftの商品、branding.logo、appearance.assets、bannersの画像へ設定する。ロゴ・装飾・チラシにはaltの日英説明も設定する。画像URLは公開配信される。公開メニューは人の承認まで変更しない。",
       inputSchema: uploadImageSchema.shape,
       outputSchema: uploadedImageSchema.shape,
       _meta: { "openai/fileParams": ["file"] },

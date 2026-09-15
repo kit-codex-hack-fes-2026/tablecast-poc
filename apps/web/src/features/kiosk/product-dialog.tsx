@@ -262,31 +262,7 @@ export function ProductPage({
             )}
           </fieldset>
         ))}
-        <div className="bg-surface-subtle rounded-md p-4 mt-1">
-          <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-          <p className="mb-2 text-sm font-semibold">
-            {product.allergens.contains
-              .map((item) => {
-                const key = allergenLabels[item];
-                return key ? t(key) : item;
-              })
-              .join(t("kiosk_allergen_separator")) ||
-              (product.allergens.evidence === "verified"
-                ? t("kiosk_allergens_none")
-                : t("kiosk_unknown"))}
-          </p>
-          <p className="block text-xs leading-loose text-muted-foreground">
-            {product.allergens.note[locale] || t("kiosk_unknown")}
-          </p>
-          {product.allergens.vegan === "yes" && (
-            <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
-          )}
-          {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-            <p className="block text-xs leading-loose text-muted-foreground">
-              {t("kiosk_cross_contact")}
-            </p>
-          )}
-        </div>
+        <ProductAllergens product={product} />
       </div>
       {product.modifiers.flatMap((group) =>
         group.options.map((option) =>
@@ -363,5 +339,36 @@ export function ProductPage({
         </Button>
       </div>
     </section>
+  );
+}
+
+function ProductAllergens({ product }: { product: Product }) {
+  const { locale, t } = useI18n();
+  return (
+    <div className="bg-surface-subtle rounded-md p-4 mt-1">
+      <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
+      <p className="mb-2 text-sm font-semibold">
+        {product.allergens.contains
+          .map((item) => {
+            const key = allergenLabels[item];
+            return key ? t(key) : item;
+          })
+          .join(t("kiosk_allergen_separator")) ||
+          (product.allergens.evidence === "verified"
+            ? t("kiosk_allergens_none")
+            : t("kiosk_unknown"))}
+      </p>
+      <p className="block text-xs leading-loose text-muted-foreground">
+        {product.allergens.note[locale] || t("kiosk_unknown")}
+      </p>
+      {product.allergens.vegan === "yes" && (
+        <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
+      )}
+      {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
+        <p className="block text-xs leading-loose text-muted-foreground">
+          {t("kiosk_cross_contact")}
+        </p>
+      )}
+    </div>
   );
 }

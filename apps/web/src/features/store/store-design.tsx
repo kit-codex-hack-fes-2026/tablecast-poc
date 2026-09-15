@@ -68,6 +68,9 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
     </div>
   );
 }
+function designValues({ branding, appearance, banners }: Configuration) {
+  return { branding, appearance, banners };
+}
 function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigDraft }) {
   const store = useStore();
   const { t } = useI18n();
@@ -87,10 +90,10 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   const editable =
     ["draft", "ready"].includes(draft.status) && ["owner", "admin"].includes(store.role);
   const form = useForm({
-    defaultValues: { configuration: initial },
+    defaultValues: designValues(initial),
     onSubmit: async ({ value }) => {
       if (!staged.current.size && !uploads)
-        await save.mutateAsync(value.configuration).catch(() => undefined);
+        await save.mutateAsync({ ...initial, ...value }).catch(() => undefined);
     },
   });
   useBlocker({
@@ -121,7 +124,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
     },
     onSuccess: (next) => {
       setVersion(next.version);
-      form.reset({ configuration: next.configuration });
+      form.reset(designValues(next.configuration));
       client.setQueryData(draftOptions(store.id, draft.id).queryKey, next);
       void client.invalidateQueries({ queryKey: ["tablecast-drafts", store.id] });
       void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", store.id] });
@@ -129,7 +132,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   });
   const preview = useMutation({
     mutationFn: async () => {
-      if (form.state.isDirty) await save.mutateAsync(form.state.values.configuration);
+      if (form.state.isDirty) await save.mutateAsync({ ...initial, ...form.state.values });
       const demo = await parseResponse(
         rpc.api.admin.stores[":storeId"].demo.$post({ param: { storeId: store.id } }),
       );
@@ -152,7 +155,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
     mutationFn: () => client.fetchQuery({ ...draftOptions(store.id, draft.id), staleTime: 0 }),
     onSuccess: (next) => {
       setVersion(next.version);
-      form.reset({ configuration: next.configuration });
+      form.reset(designValues(next.configuration));
       staged.current.clear();
       setHasStaged(false);
       setIssues([]);
@@ -221,14 +224,18 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
           ))}
         </ul>
       )}
-      <form.Subscribe selector={(state) => state.values.configuration}>
+      <form.Subscribe selector={(state) => state.values}>
         {(configuration) => (
           <DesignEditor
             key={editorRevision}
             organisationLogo={store.logo}
             storeId={store.id}
-            value={configuration}
-            onChange={(value) => form.setFieldValue("configuration", value)}
+            value={{ ...initial, ...configuration }}
+            onChange={(value) => {
+              form.setFieldValue("branding", value.branding);
+              form.setFieldValue("appearance", value.appearance);
+              form.setFieldValue("banners", value.banners);
+            }}
             disabled={!editable || pending}
             onStagedChange={onStagedChange}
           />

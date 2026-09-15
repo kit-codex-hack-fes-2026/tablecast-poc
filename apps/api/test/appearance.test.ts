@@ -71,6 +71,26 @@ it("画像外の領域と存在しない商品を検出する", () => {
     }).success,
   ).toBe(false);
 });
+it("画像の配置が操作領域を押し潰す寸法や無制限の列数を拒否する", () => {
+  expect(
+    appearanceSchema.safeParse({ composition: { banners: { columns: 10, gap: -2 } } }).success,
+  ).toBe(false);
+  expect(
+    appearanceSchema.safeParse({
+      composition: {
+        masthead: { visible: true, align: "center", logoWidth: 2000, logoHeight: 0, padding: -10 },
+      },
+    }).success,
+  ).toBe(false);
+  expect(
+    appearanceSchema.safeParse({
+      assets: { paper: image },
+      parts: {
+        menu: { image: { asset: "paper", fit: "repeat", x: 50, y: 50, opacity: 1, tileSize: 0 } },
+      },
+    }).success,
+  ).toBe(false);
+});
 it("店舗ロゴ・装飾・チラシの他店舗画像を拒否し公開まで客側へ反映しない", async () => {
   const firstProduct = configuration.products[0];
   if (!firstProduct) throw new Error("PRODUCT_REQUIRED");

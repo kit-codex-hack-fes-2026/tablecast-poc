@@ -365,6 +365,7 @@ function TableSession({
         className="h-dvh flex flex-col overflow-hidden"
       >
         <KioskHeader
+          storeName={catalog.data?.configuration.storeName}
           logo={catalog.data?.configuration.branding?.logo}
           data={data}
           language={language}
@@ -716,12 +717,14 @@ function KioskBilling({
 }
 
 function KioskHeader({
+  storeName,
   logo,
   data,
   language,
   call,
 }: {
   logo?: ThemeImage | null;
+  storeName?: string;
   data: TableState;
   language: ReturnType<typeof useTableSession>["language"];
   call: ReturnType<typeof useTableSession>["call"];
@@ -737,7 +740,7 @@ function KioskHeader({
       </a>
       <StoreLogo logo={logo} />
       <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
-        <span className="max-w-48 truncate">{data.storeName}</span>
+        <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
         <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
       </div>
       <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />

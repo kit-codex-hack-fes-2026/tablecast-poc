@@ -9,6 +9,8 @@ export const themeParts = [
   "conversation",
   "voice-controls",
   "menu",
+  "menu-masthead",
+  "banner",
   "product-card",
   "category-button",
   "menu-tab",
@@ -39,6 +41,19 @@ const decoration = z
     x: z.number().min(0).max(100),
     y: z.number().min(0).max(100),
     opacity: z.number().min(0).max(1),
+    widthPercent: z
+      .number()
+      .min(10)
+      .max(200)
+      .optional()
+      .describe("単発画像の幅（部品に対する%）。省略時はfitに従う。"),
+    tileSize: z
+      .number()
+      .int()
+      .min(32)
+      .max(1024)
+      .optional()
+      .describe("repeat時のタイル幅px。省略時は原寸。"),
   })
   .strict();
 export const themePartSchema = z
@@ -110,6 +125,28 @@ export function themeCssRules(css: string, assets: string[] = []) {
 
 export const appearanceSchema = z
   .object({
+    composition: z
+      .object({
+        masthead: z
+          .object({
+            visible: z.boolean(),
+            align: z.enum(["start", "center"]),
+            logoWidth: z.number().int().min(120).max(360),
+            logoHeight: z.number().int().min(40).max(160),
+            padding: z.number().int().min(0).max(32),
+          })
+          .strict()
+          .optional(),
+        banners: z
+          .object({
+            columns: z.union([z.literal(1), z.literal(2)]),
+            gap: z.number().int().min(8).max(32),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
     colours: z.object({ ink: colour, paper: colour, accent: colour }).strict().optional(),
     fonts: z
       .object({
@@ -151,6 +188,10 @@ export const bannerSchema = z
     id: z.string().min(1).max(100),
     image: themeImageSchema,
     enabled: z.boolean(),
+    span: z
+      .enum(["column", "full"])
+      .optional()
+      .describe("2列配置でfullは全幅。画像は切り抜かない。"),
     hotspots: z
       .array(
         z
