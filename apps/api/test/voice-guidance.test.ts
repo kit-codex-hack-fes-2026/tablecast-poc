@@ -204,13 +204,57 @@ it("同じ字幕の並行要求と再送は一度だけ生成し、本文の更�
   ]);
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
   await expect(createVoiceSuggestions(services, device, source, signal())).rejects.toMatchObject({
-    code: "VOICE_GUIDANCE_ALREADY_REQUESTED",
+    code: "VOICE_GUIDANCE_UNAVAILABLE",
   });
   expect(provider).toHaveBeenCalledOnce();
   const updated = source.text + " ほうじ茶についてもご紹介できます。";
   await saveAssistant(services, updated);
   await createVoiceSuggestions(services, device, { ...source, text: updated }, signal());
   expect(provider).toHaveBeenCalledTimes(2);
+});
+
+it("字幕を書き換えても接続ごとの上限を超えず、予約に会話本文を複製しない", async () => {
+  await setupFixture();
+  const services = createApiServices(configured());
+  await setVoiceSession(services, device, sessionId);
+  await saveAssistant(services);
+  const rows = Array.from({ length: 119 }, (_, index) => ({
+    store_id: device.storeId,
+    table_session_id: device.tableSessionId ?? "",
+    kind: "voice.suggestions",
+    created_at: Date.now(),
+    data_json: JSON.stringify({
+      voiceSessionId: sessionId,
+      reservationKey: `tablecast-prior-${index}`,
+    }),
+  }));
+  await services.db.batch([
+    services.db.insert(business.tableEvents).values(rows.slice(0, 20)),
+    ...Array.from({ length: 5 }, (_, index) =>
+      services.db
+        .insert(business.tableEvents)
+        .values(rows.slice((index + 1) * 20, (index + 2) * 20)),
+    ),
+  ]);
+  const provider = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async () =>
+      modelResponse({ suggestions: ["ほうじ茶について教えてください"] }),
+    );
+  await createVoiceSuggestions(services, device, source, signal());
+  const updated = source.text + " ほうじ茶をご用意しています。";
+  await saveAssistant(services, updated);
+  await expect(
+    createVoiceSuggestions(services, device, { ...source, text: updated }, signal()),
+  ).rejects.toMatchObject({ code: "VOICE_GUIDANCE_UNAVAILABLE" });
+  expect(provider).toHaveBeenCalledOnce();
+  const state = await getTableState(services, device);
+  const reservation = state.events.findLast((event) => event.kind === "voice.suggestions");
+  const data = z
+    .object({ voiceSessionId: z.literal(sessionId), reservationKey: z.string() })
+    .strict()
+    .parse(reservation?.data);
+  expect(data.reservationKey).toMatch(/^[a-f0-9]{64}$/);
 });
 
 it("公開された店舗方針と会話中の商品を優先し、長い候補を省略せず返す", async () => {
