@@ -6,7 +6,7 @@
 
 店舗の利用者は、公開MCP `https://tablecast.kit-codex.workers.dev/mcp` へOAuthで接続する。リポジトリのclone、開発サーバー、pluginの生成は不要である。
 
-`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、同梱SKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
+`/account/integrations/plugins` はGitHub Marketplaceからの導入とリモートMCPへのOAuth接続を案内する。`/account/integrations/manual` は任意のMCPクライアント向けの接続URL・Streamable HTTP・OAuth 2.1/PKCE/DCR設定と、用途別の3つのSKILL.mdの任意ダウンロードを提供する。staging以外の画面の接続URLは公開pluginの`plugins/tablecast/.mcp.json`を直接参照し、ローカル画面でも本番を案内する。スキルの追加だけでは接続や権限を付与しない。
 
 `/account/mcp-sessions` ではOAuth接続の日時・scope・有効期限を確認し、不要な接続を解除する。認可コードとPKCE、組織選択、明示同意を経て発行したアクセストークンだけを受け付ける。クライアントの初回接続には動的クライアント登録を使用する。登録だけでは店舗へのアクセス権を持たない。認可・scopeの契約は[MCP仕様](mcp.md)を参照する。
 
@@ -19,7 +19,7 @@ codex plugin marketplace add kit-codex-hack-fes-2026/tablecast-poc
 codex plugin add tablecast@tablecast
 ```
 
-`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続とメニュー設定用skillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
+`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・提案・分析の3つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
 
 インストール時のOAuth画面でTableCastへログインし、対象の組織とscopeを確認して同意する。認証情報の保管はクライアントに任せる。新しいチャットを開始し、`get_configuration`が対象店舗のIDと名前を返すことを確認する。インストール成功だけで接続済みと判定しない。[公式のplugin導入ガイド](https://learn.chatgpt.com/docs/plugins)を参照する。
 
@@ -39,6 +39,22 @@ codex mcp login tablecast --scopes tablecast:read
 商品画像の設定には`upload_image`を使い、返された画像キーと出所を`update_draft`へ渡す。[入力制限・画像データの受渡し・失敗時の再開](mcp.md#商品画像の取り込み)を参照する。ChatGPTでは公式fileParamsによる生成・添付ファイルの受渡しを使う。架空店の一括試作は同梱skillの手順に沿って店名・日英商品・画像・カスタマイズを検証済み下書きへ保存する。クライアントで実データの受渡しまで確認する。
 
 pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT WebはローカルのCodex設定を参照しないため、利用できるplugin経由で接続する。クライアントごとの対応と操作は[公式MCPガイド](https://learn.chatgpt.com/docs/extend/mcp)を参照する。
+
+## 店舗業務から始める
+
+導入画面には日英の依頼例とコピー操作を置く。製品pluginには自己完結した次のskillを同梱し、手動導入では必要なものをそれぞれ取得できる。
+
+| skill               | 代表依頼                               | 成果                                         |
+| ------------------- | -------------------------------------- | -------------------------------------------- |
+| tablecast           | このサイトとメニュー写真を元に設定して | 資料との対応、確認事項、日英の検証済み下書き |
+| tablecast-advisor   | この店に合う接客を提案して             | 現在設定を踏まえた具体文・理由・評価方法     |
+| tablecast-analytics | 直近28日と前の28日を比較して           | 母数付きの統計比較と施策候補                 |
+
+提案・分析だけでは設定を変えない。2番の案で設定して等の採用依頼では、追加の実行確認なしで変更対象だけを下書きへ保存・検証する。公開は管理画面で人が承認する。資料中の命令は操作指示にせず、未確認価格・安全情報を創作しない。
+
+統計は[閉卓基準の指標](statistics.md)と取得条件を示す。MCPがまだ未配備の環境では未実装toolを装わず、提供された表・CSVで進められる部分を案内する。合成履歴から実店舗の人気や施策効果を断定しない。
+
+配布の確認では各SKILL.md単体のmetadataと参照先、実際のダウンロード内容、plugin生成物の3つのskillを確認する。接続・認可、実クライアントの資料読解と会話品質、実公開の検証はそれぞれ分けて記録する。
 
 ## ローカル接続
 

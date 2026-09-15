@@ -1,3 +1,4 @@
+import { statisticsAdminRoutes } from "../statistics/routes";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
@@ -38,6 +39,7 @@ export const admin = new Hono<ApiEnv>()
       c.req.raw,
     );
   })
+  .route("/", statisticsAdminRoutes)
   .route("/", catalogAdminRoutes)
   .route("/", mediaAdminRoutes)
   .route("/", voiceAdminRoutes)
