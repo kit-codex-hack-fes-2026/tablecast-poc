@@ -4,6 +4,7 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useId, useState } from "react";
 import { tv } from "tailwind-variants";
 import { MenuOptionImage } from "../../components/menu-option-image";
+import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
@@ -287,6 +288,27 @@ export function ProductPage({
           )}
         </div>
       </div>
+      {product.modifiers.flatMap((group) =>
+        group.options.map((option) =>
+          option.conditions && selections.some((selection) => selection.optionId === option.id) ? (
+            <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
+              <p className="font-semibold">{option.text[locale].displayName}</p>
+              {option.conditions?.requires && (
+                <p>
+                  {t("condition_requires")}：
+                  <ConditionSummary expression={option.conditions.requires} product={product} />
+                </p>
+              )}
+              {option.conditions?.excludes && (
+                <p>
+                  {t("condition_excludes")}：
+                  <ConditionSummary expression={option.conditions.excludes} product={product} />
+                </p>
+              )}
+            </div>
+          ) : null,
+        ),
+      )}
       <ErrorNotice error={error} />
       <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3">
         <div
