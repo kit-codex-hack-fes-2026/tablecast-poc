@@ -119,6 +119,8 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 DBはケース開始時のtemplate差し替えで初期化するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
 
+ケース間では配信clientディレクトリもビルド成果物から復元し、PWA試験が変更したService Workerや追加ファイルを持ち越さない。ケース内の`restartWeb()`は変更を維持する。
+
 CIの統合buildジョブもWorkersの完了後にStorybook・Emailを実行する。TurboキャッシュはSHA付きのキーで保存し、共通prefixで以前の成果物を復元する。
 
 同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。ケースの入口はVite標準proxyを`port: 0`で一度だけ起動し、終了まで待受を保持する。実originをOAuth callbackとAPI varsへ設定後、Cloudflare previewも`port: 0`で起動し、listen完了時の実ポートへ転送する。空き番号を取得して解放する処理は使わない。OAuthとWorkerのreadyファイルは一時ファイルからrenameして公開し、異常終了と起動期限を確認する。bind失敗の自動再試行はしない。

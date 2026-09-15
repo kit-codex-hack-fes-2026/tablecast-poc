@@ -141,6 +141,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
       let ingress: Awaited<ReturnType<typeof startGateway>> | undefined;
       let webProcess: ChildProcess | undefined;
       let testsPrepared = 0;
+      let clientSource: string | undefined;
       let mailpitMode: "binary" | "docker" = "binary";
       const container = `${name}-mailpit`;
       const waitUntilReady = async (origin: string) => {
@@ -186,8 +187,8 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           ],
           { TABLECAST_E2E_CASE_DIRECTORY: runtime.directory },
         );
-      const resetPersistedState = async () => {
-        // writerを止めてからtemplateのD1/R2/DOを差し替える。稼働中のSQLiteはコピーしない。
+      const resetRuntimeState = async () => {
+        // writerを止めてから保存状態と配信ファイルを復元する。稼働中のSQLiteはコピーしない。
         if (!ingress || !webProcess) throw new Error("worker runtimeが未起動です。");
         ingress.setOnline(false);
         await stop(webProcess);
@@ -196,6 +197,10 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
         await rm(join(runtime.directory, "web-ready.json"), { force: true });
         await rm(state, { recursive: true, force: true });
         await cp(join(template.directory, "state"), state, { recursive: true });
+        if (clientSource) {
+          await rm(join(runtime.directory, "client"), { recursive: true, force: true });
+          await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+        }
         const cleared = await fetch(`${mailpitUrl}/api/v1/messages`, { method: "DELETE" }).catch(
           () => undefined,
         );
@@ -329,10 +334,10 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           const config = builtConfig.parse(
             JSON.parse(await readFile(join(build, "wrangler.json"), "utf8")),
           );
-          if (config.assets)
-            await cp(resolve(build, config.assets.directory), join(runtime.directory, "client"), {
-              recursive: true,
-            });
+          if (config.assets) {
+            clientSource = resolve(build, config.assets.directory);
+            await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+          }
           await writeFile(
             join(runtime.directory, `${worker}.json`),
             JSON.stringify({
@@ -404,7 +409,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           },
           prepareForTest: async () => {
             if (testsPrepared++ === 0) return;
-            await resetPersistedState();
+            await resetRuntimeState();
           },
           flushLog: async (path: string) => {
             await mkdir(dirname(path), { recursive: true });
