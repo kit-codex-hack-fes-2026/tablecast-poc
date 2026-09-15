@@ -22,7 +22,10 @@ vi.mock("../shell/settings-shell", () => ({
     <main className="mx-auto max-w-4xl space-y-6 p-8">{children}</main>
   ),
 }));
-afterEach(cleanup);
+afterEach(async () => {
+  await cleanup();
+  vi.restoreAllMocks();
+});
 
 test.each([
   { locale: "ja", labels: ja },
@@ -51,7 +54,54 @@ test.each([
   await expect
     .element(page.getByText("codex mcp login tablecast-staging", { exact: false }))
     .toHaveTextContent("tablecast:read,tablecast:write");
-  await page.screenshot({
-    path: `../../../test-results/browser/tablecast-staging-mcp-${locale}.png`,
-  });
+  const copy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+  for (const [label, prompt] of [
+    [labels.mcp_scenario_setup, labels.mcp_prompt_setup],
+    [labels.mcp_scenario_advisor, labels.mcp_prompt_advisor],
+    [labels.mcp_scenario_analytics, labels.mcp_prompt_analytics],
+  ]) {
+    await expect
+      .element(page.getByRole("textbox", { name: label, exact: true }))
+      .toHaveValue(prompt);
+    await page
+      .getByRole("button", { name: `${label}: ${labels.common_copy}`, exact: true })
+      .click();
+    expect(copy).toHaveBeenLastCalledWith(prompt);
+  }
+  for (const [label, name] of [
+    [labels.mcp_skill_download, "tablecast"],
+    [labels.mcp_skill_advisor_download, "tablecast-advisor"],
+    [labels.mcp_skill_analytics_download, "tablecast-analytics"],
+  ]) {
+    const link = page.getByRole("link", { name: label, exact: true });
+    await expect.element(link).toHaveAttribute("download", "SKILL.md");
+    const href = link.element().getAttribute("href");
+    if (!href) throw new Error("ダウンロード先がありません");
+    const content = await (await fetch(href)).text();
+    expect(content).toContain(`name: ${name}\n`);
+    expect(content).toContain("get_configuration");
+  }
+  const scenarios = page
+    .getByRole("heading", { name: labels.mcp_scenarios_title, exact: true })
+    .element()
+    .closest("section");
+  const downloads = page
+    .getByRole("heading", { name: "Agent Skills", exact: true })
+    .element()
+    .closest("section");
+  if (!scenarios || !downloads) throw new Error("案内の領域がありません");
+  await page
+    .elementLocator(scenarios)
+    .screenshot({ path: `../../../test-results/browser/tablecast-staging-mcp-${locale}.png` });
+  await page
+    .elementLocator(downloads)
+    .screenshot({ path: `../../../test-results/browser/tablecast-plugin-downloads-${locale}.png` });
+  await page.viewport(390, 844);
+  await expect
+    .element(page.getByRole("textbox", { name: labels.mcp_scenario_setup, exact: true }))
+    .toBeVisible();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  await page
+    .elementLocator(scenarios)
+    .screenshot({ path: `../../../test-results/browser/tablecast-plugin-mobile-${locale}.png` });
 });

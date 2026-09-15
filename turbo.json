@@ -11,7 +11,7 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
-        "$TURBO_ROOT$/plugins/tablecast/skills/tablecast/SKILL.md",
+        "$TURBO_ROOT$/plugins/tablecast/skills/*/SKILL.md",
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/api/wrangler.jsonc",
         "$TURBO_ROOT$/.local/tablecast-deploy/api.json",
