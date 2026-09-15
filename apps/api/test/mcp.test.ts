@@ -261,6 +261,132 @@ function toolError(value: unknown, code: string) {
   expect(content.text).toContain(code);
 }
 
+it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存し管理画面から同じ版を取得する", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const spec = toolData(
+    await client.callTool({ name: "get_theme_spec", arguments: {} }),
+    z.object({
+      storeId: z.string(),
+      schema: z.object({ properties: z.record(z.string(), z.unknown()) }),
+      artwork: z.array(z.object({ role: z.string(), target: z.string() })),
+      editorUrl: z.string(),
+    }),
+  );
+  expect(spec.storeId).toBe("tablecast-store");
+  expect(spec.schema.properties).toHaveProperty("appearance");
+  expect(spec.artwork.map((item) => item.role)).toEqual(["background", "logo", "banner"]);
+  expect(new URL(spec.editorUrl).pathname).toBe("/admin/stores/tablecast-store/design");
+  const published = toolData(
+    await client.callTool({ name: "get_configuration", arguments: {} }),
+    catalogSchema,
+  );
+  const image = toolData(
+    await client.callTool({
+      name: "upload_image",
+      arguments: {
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        mimeType: "image/png",
+        imageKind: "illustration",
+        imageSource: { generated: false, description: "提供された店舗ロゴ" },
+      },
+    }),
+    uploadedImageSchema,
+  );
+  const { url: _url, ...reference } = image;
+  const asset = { ...reference, alt: { ja: "店舗ロゴ", en: "Store logo" } };
+  const product = published.configuration.products[0];
+  if (!product) throw new Error("商品が必要です");
+  let draft = toolData(
+    await client.callTool({ name: "create_draft", arguments: {} }),
+    configDraftSchema,
+  );
+  draft = toolData(
+    await client.callTool({
+      name: "update_draft",
+      arguments: {
+        draftId: draft.id,
+        expectedVersion: draft.version,
+        instructionFormatVersion: 1,
+        configuration: {
+          ...published.configuration,
+          branding: { logo: asset },
+          appearance: {
+            composition: {
+              masthead: {
+                visible: true,
+                align: "center",
+                logoWidth: 280,
+                logoHeight: 96,
+                padding: 16,
+              },
+              banners: { columns: 2, gap: 16 },
+            },
+            colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
+            fonts: { heading: "serif", body: "sans" },
+            assets: { paper: asset },
+            parts: {
+              screen: {
+                image: { asset: "paper", fit: "repeat", x: 50, y: 50, opacity: 1, tileSize: 256 },
+              },
+            },
+            customCss:
+              '[data-theme-part="product-card"] { background-image:var(--tablecast-image-paper); border-width:3px; border-style:solid; }',
+          },
+          banners: [
+            {
+              id: "flyer",
+              image: asset,
+              enabled: true,
+              hotspots: [
+                { id: "first", productId: product.id, rect: { x: 0, y: 0, width: 1, height: 1 } },
+              ],
+            },
+          ],
+        },
+      },
+    }),
+    configDraftSchema,
+  );
+  draft = toolData(
+    await client.callTool({
+      name: "validate_draft",
+      arguments: { draftId: draft.id, expectedVersion: draft.version },
+    }),
+    configDraftSchema,
+  );
+  expect(draft.status).toBe("ready");
+  expect(draft.configuration.products).toEqual(published.configuration.products);
+  expect(draft.configuration.cast).toEqual(published.configuration.cast);
+  const response = await exports.default.fetch(
+    new Request(`${origin}/api/admin/stores/tablecast-store/drafts/${draft.id}`, {
+      headers: { Cookie: cookie },
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(configDraftSchema.parse(await response.json())).toEqual(draft);
+  expect(
+    toolData(
+      await client.callTool({ name: "get_draft_diff", arguments: { draftId: draft.id } }),
+      configDraftSchema,
+    ).configuration.branding?.logo,
+  ).toEqual(asset);
+  expect(
+    toolData(
+      await client.callTool({
+        name: "request_publication",
+        arguments: { draftId: draft.id, expectedVersion: draft.version },
+      }),
+      z.object({ status: z.string() }),
+    ).status,
+  ).toBe("human_approval_required");
+  expect(
+    toolData(await client.callTool({ name: "get_configuration", arguments: {} }), catalogSchema)
+      .configuration,
+  ).toEqual(published.configuration);
+});
+
 it("架空の二郎系店舗を店名・生成画像・マシマシ・日英接客付きの検証済み下書きにする", async () => {
   const { cookie } = await setupFixture();
   const { token } = await authorise(cookie);

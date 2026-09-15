@@ -185,7 +185,7 @@ export function AudioWaveform({
     >
       <div
         aria-hidden="true"
-        className="relative size-20 shrink-0 rounded-full bg-white shadow-sm ring-1 ring-black/5"
+        className="relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
       >
         <SmokeRing
           className="absolute inset-0 rounded-full blur-xs"

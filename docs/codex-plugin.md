@@ -119,3 +119,11 @@ pluginのversionも更新し、Marketplaceからplugin・MCP・skillへの参照
 ## stagingのremote MCP確認
 
 stagingの管理画面に表示される固定URLを`tablecast-staging`名で直接登録する。本番pluginとローカル接続は維持する。ブラウザーでAccessへログインし、模擬Google認証・組織選択・scope同意を経て接続する。ChatGPT・Codexそれぞれで設定取得と下書き更新を確認し、公開は管理画面の明示承認で行う。再配備後の認可保持と、全体リセット後の旧token拒否・再認可を区別して記録する。[環境・リセット](deployment.md#stagingとreleaseの運用)を参照する。
+
+## テーマ制作skill
+
+製品pluginはメニュー設定skillと`tablecast-theme`を同梱する。後者は構造化した店舗ロゴ、部品テーマ、登録画像、CSS、複数商品リンクを持つチラシの制作を扱う。正本は`.agents/skills/tablecast-theme/SKILL.md`で、`scripts/tablecast-plugin.ts`が配布用の`plugins/tablecast/skills/tablecast-theme`へコピーする。配布用コピーを手編集しない。
+
+接続先を書き換えずに同梱skillを同期する場合は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`を使う。ローカル・公開plugin生成時にも同じ正本をコピーする。手動MCP導入画面から各skillを個別にダウンロードできる。テーマskillは自己完結し、リポジトリ内の開発資料へのアクセスを要求しない。
+
+`tablecast-theme`は画像中心の制作例、素材ごとの生成プロンプト、登録画像とレイアウト設定の対応を同梱する。`get_theme_spec`から稼働中サーバーの現行schemaを取得し、クライアントの画像生成機能を使って背景・透過ロゴ案・チラシを独立して作る。MCPサーバーに画像生成モデルやAPIキー設定を追加しない。提供済み公式ロゴを優先し、実UIの確認結果と未生成の素材を区別する。

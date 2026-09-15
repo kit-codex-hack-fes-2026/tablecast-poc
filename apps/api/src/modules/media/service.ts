@@ -176,6 +176,13 @@ export async function requireConfigurationImages(
   configuration: Configuration,
 ) {
   const images = [
+    ...[
+      configuration.branding?.logo,
+      ...Object.values(configuration.appearance?.assets ?? {}),
+      ...(configuration.banners ?? []).map((banner) => banner.image),
+    ]
+      .filter((image) => image != null)
+      .map((image) => ({ ...image, verifySource: true })),
     ...configuration.products.map((product) => ({ ...product, verifySource: true })),
     ...configuration.products.flatMap((product) =>
       product.modifiers.flatMap((modifier) =>

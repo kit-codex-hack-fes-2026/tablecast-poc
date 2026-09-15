@@ -1,3 +1,4 @@
+import { appearanceSchema, bannerSchema, brandingSchema } from "../appearance/model";
 import { z } from "zod";
 import { castInstructionSchema } from "./instruction-model";
 import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
@@ -12,6 +13,9 @@ import {
 import { selectionSchema } from "../orders/model";
 export const configurationSchema = z
   .object({
+    branding: brandingSchema.optional(),
+    appearance: appearanceSchema.optional(),
+    banners: z.array(bannerSchema).max(12).optional(),
     storeName: z.string().trim().min(1).max(150).optional(),
     categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
     products: z
@@ -145,7 +149,18 @@ export const draftChoiceSchema = z.object({
   status: z.enum(["draft", "ready", "published", "discarded"]),
   updatedAt: z.number().int(),
   changeCount: z.number().int(),
-  sections: z.array(z.enum(["products", "categories", "plans", "cast", "storeName"])),
+  sections: z.array(
+    z.enum([
+      "products",
+      "categories",
+      "plans",
+      "cast",
+      "storeName",
+      "branding",
+      "appearance",
+      "banners",
+    ]),
+  ),
 });
 export const draftChoicesPageSchema = z.object({
   drafts: z.array(draftChoiceSchema),

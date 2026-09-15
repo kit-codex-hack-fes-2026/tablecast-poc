@@ -58,7 +58,7 @@ export function AdminSidebar({
   const session = useQuery(sessionOptions);
   const path = useRouterState({ select: (state) => state.location.pathname });
   const { draftId } = useParams({ strict: false });
-  const inMenu = path.includes("/menu/");
+  const inMenu = path.includes("/menu/") || path.endsWith("/design");
   const navigate = useNavigate();
   const client = useQueryClient();
   const active = authClient.useActiveOrganization();

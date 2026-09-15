@@ -348,3 +348,43 @@ it.each([
   await expect.element(catalogError).not.toBeInTheDocument();
   await expect.element(microphoneError).toBeVisible();
 });
+
+it("店舗テーマでもヘッダーと音声・カート操作を縦横で維持する", async () => {
+  current.uiSection = "menu";
+  current.staffCalled = false;
+  catalogResponse = Response.json({
+    ...catalog,
+    configuration: {
+      ...catalog.configuration,
+      appearance: {
+        colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
+        parts: {
+          header: { background: "#fff8e7" },
+          "product-card": { borderWidth: 3, borderColor: "#201a16", radius: 4, shadow: "offset" },
+        },
+      },
+    },
+  });
+  await page.viewport(1180, 820);
+  await render(
+    <LocaleProvider initialLocale="ja">
+      <QueryClientProvider client={client}>
+        <Kiosk />
+      </QueryClientProvider>
+    </LocaleProvider>,
+  );
+  for (const [width, height] of [
+    [1180, 820],
+    [820, 1180],
+  ]) {
+    await page.viewport(width, height);
+    await expect.element(page.getByRole("button", { name: ja.kiosk_call_staff })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: ja.kiosk_review })).toBeVisible();
+    const voice = document.querySelector('[data-theme-part="voice-controls"]');
+    if (!voice) throw new Error("音声操作が必要です");
+    expect(voice.getBoundingClientRect().height).toBeGreaterThan(0);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+  }
+  await page.getByRole("button", { name: ja.kiosk_call_staff }).click();
+  await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
+});

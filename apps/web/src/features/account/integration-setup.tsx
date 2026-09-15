@@ -1,3 +1,4 @@
+import themeSkill from "../../../../../plugins/tablecast/skills/tablecast-theme/SKILL.md?raw";
 import {
   Blocks,
   MessagesSquare,
@@ -147,6 +148,12 @@ export function IntegrationSetup({
                   title: t("mcp_scenario_advisor"),
                   label: t("mcp_skill_advisor_download"),
                   content: advisorSkill,
+                },
+                {
+                  name: "tablecast-theme",
+                  title: t("theme_title"),
+                  label: t("theme_skill_download"),
+                  content: themeSkill,
                 },
                 {
                   name: "tablecast-analytics",

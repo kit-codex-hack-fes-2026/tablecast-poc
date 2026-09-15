@@ -2,7 +2,14 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
 
-const published = process.argv[2];
+const syncOnly = process.argv.includes("--skills-only");
+await cp(
+  join(tablecastRoot, ".agents/skills/tablecast-theme"),
+  join(tablecastRoot, "plugins/tablecast/skills/tablecast-theme"),
+  { recursive: true },
+);
+const published = syncOnly ? undefined : process.argv[2];
+if (syncOnly) process.exit(0);
 const origin = published ? new URL(published).origin : (await readRuntime()).origin;
 if (
   published &&

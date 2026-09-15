@@ -23,5 +23,10 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["scripts/**/*.ts", "*.config.ts", "apps/api/src/cloudflare-env.d.ts"]
+  "include": [
+    "scripts/**/*.ts",
+    "*.config.ts",
+    "apps/api/src/cloudflare-env.d.ts",
+    "apps/api/src/modules/appearance/css-tree.d.ts"
+  ]
 }
