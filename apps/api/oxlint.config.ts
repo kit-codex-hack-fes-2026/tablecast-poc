@@ -28,7 +28,10 @@ const files = [
   ],
   ["service", "src/modules/voice/runtime.ts"],
   ["provider", "src/modules/voice/catalog.ts"],
-  ["pure", "src/modules/{catalog/pricing,auth/policy,voice/prompt,voice/diagnostics}.ts"],
+  [
+    "pure",
+    "src/modules/{catalog/pricing,catalog/conditions,auth/policy,voice/prompt,voice/diagnostics}.ts",
+  ],
   ["mutation", "src/modules/tables/mutations.ts"],
   ["model", "src/modules/*/model.ts"],
   ["query", "src/modules/*/{queries,history}.ts"],

@@ -95,7 +95,7 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "update_draft",
     {
       description:
-        "店名（storeName）・カテゴリ・商品画像・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。架空店の試作依頼では提案した店名・メニュー・価格を保存できる。実店舗の未知の安全情報は推測しない。",
+        "店名（storeName）・カテゴリ・商品画像・カスタマイズ・翻訳・プラン・キャストの変更を下書きへ一括保存する。条件は選択肢のconditions.version=2とrequires/excludesのoption・and・or・notで表す。既存conditionsを落とさず、解除はrequires/excludesをnullにする。conditionsと非空の旧requires/excludes配列は併記しない。架空店の試作依頼では提案した店名・メニュー・価格を保存できる。実店舗の未知の安全情報は推測しない。",
       inputSchema: {
         draftId: z.string(),
         expectedVersion: z.number().int(),

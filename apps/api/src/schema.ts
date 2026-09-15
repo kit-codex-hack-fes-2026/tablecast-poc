@@ -13,14 +13,24 @@ export {
   optionSchema,
   planSchema,
   productSchema,
+  optionConditionSchema,
+  optionConditionsSchema,
+  conditionLimits,
 } from "./modules/catalog/model";
-export type { Modifier, Plan, Product } from "./modules/catalog/model";
+export type {
+  Modifier,
+  Plan,
+  Product,
+  OptionCondition,
+  OptionConditions,
+} from "./modules/catalog/model";
 export {
   catalogSchema,
   configDraftSchema,
   configurationIssueSchema,
   configurationSchema,
   draftChoicesPageSchema,
+  conditionPreviewSchema,
 } from "./modules/configuration/model";
 export type {
   Catalog,
@@ -39,6 +49,7 @@ export {
   selectionSchema,
   snapshotSchema,
   submitSchema,
+  conditionIssueSchema,
 } from "./modules/orders/model";
 export type {
   Bill,

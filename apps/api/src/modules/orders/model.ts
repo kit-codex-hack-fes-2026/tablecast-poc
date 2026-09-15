@@ -1,6 +1,15 @@
 import { z } from "zod";
 import type { Locale } from "../../platform/model";
 import { id, localeSchema } from "../../platform/model";
+import { optionConditionSchema, type OptionCondition } from "../catalog/model";
+
+export const conditionIssueSchema = z
+  .object({
+    optionId: id,
+    relation: z.enum(["requires", "excludes"]),
+    expression: optionConditionSchema,
+  })
+  .strict();
 export const selectionSchema = z
   .object({ optionId: id, quantity: z.number().int().min(1).max(20) })
   .strict();
@@ -38,6 +47,11 @@ export type PricedLine = CartLine & {
   unitPrice: number;
   total: number;
   missing: string[];
+  conditionIssues?: {
+    optionId: string;
+    relation: "requires" | "excludes";
+    expression: OptionCondition;
+  }[];
   planCovered: boolean;
 };
 
@@ -105,6 +119,7 @@ export const pricedLineSchema: z.ZodType<PricedLine> = cartLineSchema.extend({
   unitPrice: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
   missing: z.array(z.string()),
+  conditionIssues: z.array(conditionIssueSchema).optional(),
   planCovered: z.boolean(),
 });
 

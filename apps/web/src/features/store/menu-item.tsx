@@ -1,5 +1,4 @@
-import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
-import { useForm } from "@tanstack/react-form";
+import { configurationSchema, type ConfigDraft, type Configuration } from "@tablecast/api/schema";
 import {
   skipToken,
   useIsMutating,
@@ -104,44 +103,67 @@ function ItemForm({
     (draft.status === "draft" || draft.status === "ready") &&
     (store.role === "owner" || store.role === "admin");
   const catalog = useQuery(catalogOptions(storeId));
-  const newSaved = useRef(false);
-  const [version, setVersion] = useState(() => draft.version);
-  const [initial, setInitial] = useState(() =>
-    itemId === "new"
-      ? addMenuItem(initialConfiguration, section, selectedId)
-      : initialConfiguration,
-  );
-  const form = useForm({
-    defaultValues: { configuration: initial },
-    onSubmit: async ({ value }) => {
-      if (images.uploadingNow() || reload.isPending) return;
-      await save.mutateAsync(value.configuration).catch(() => undefined);
-    },
+  // 設定全体の編集状態を保持し、再帰した条件をフォームの全深層キーへ展開しない。
+  const [editor, setEditor] = useState(() => {
+    const initial =
+      itemId === "new"
+        ? addMenuItem(initialConfiguration, section, selectedId)
+        : initialConfiguration;
+    return {
+      initial,
+      configuration: initial,
+      version: draft.version,
+      newSaved: false,
+      conditionError: false,
+    };
   });
+  const { initial, configuration, version, newSaved, conditionError } = editor;
+  const setConfiguration = (update: React.SetStateAction<Configuration>) =>
+    setEditor((current) => ({
+      ...current,
+      configuration: typeof update === "function" ? update(current.configuration) : update,
+    }));
+  const dirty = configuration !== initial;
+  async function submitConfiguration(form: HTMLFormElement) {
+    if (!editable || images.uploadingNow() || reload.isPending || save.isPending) return;
+    const parsed = configurationSchema.safeParse(configuration);
+    setEditor((current) => ({ ...current, conditionError: !parsed.success }));
+    if (!parsed.success) {
+      const invalid = form.querySelector<HTMLElement>('[aria-invalid="true"]');
+      let parent = invalid?.parentElement;
+      while (parent && parent !== form) {
+        if (parent instanceof HTMLDetailsElement) parent.open = true;
+        parent = parent.parentElement;
+      }
+      invalid?.focus();
+      return;
+    }
+    await save.mutateAsync(parsed.data).catch(() => undefined);
+  }
   const hasUnsavedChanges = () =>
-    editable &&
-    (form.state.isDirty ||
-      images.staged.current.size > 0 ||
-      (itemId === "new" && !newSaved.current));
+    editable && (dirty || images.staged.current.size > 0 || (itemId === "new" && !newSaved));
   useBlocker({
     shouldBlockFn: () =>
       images.uploadingNow() || (hasUnsavedChanges() && !window.confirm(t("menu_leave_unsaved"))),
     enableBeforeUnload: () => images.uploadingNow() || hasUnsavedChanges(),
   });
   const save = useMutation({
-    mutationFn: (configuration: Configuration) => {
+    mutationFn: (nextConfiguration: Configuration) => {
       return parseResponse(
         rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
           param: { storeId, id: draft.id },
-          json: { expectedVersion: version, configuration },
+          json: { expectedVersion: version, configuration: nextConfiguration },
         }),
       );
     },
     onSuccess: (next) => {
-      newSaved.current = true;
-      setVersion(next.version);
-      setInitial(next.configuration);
-      form.reset({ configuration: next.configuration });
+      setEditor({
+        initial: next.configuration,
+        configuration: next.configuration,
+        version: next.version,
+        newSaved: true,
+        conditionError: false,
+      });
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
       void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
@@ -157,9 +179,13 @@ function ItemForm({
   const reload = useMutation({
     mutationFn: () => client.fetchQuery({ ...draftOptions(storeId, draft.id), staleTime: 0 }),
     onSuccess: (next) => {
-      setVersion(next.version);
-      setInitial(next.configuration);
-      form.reset({ configuration: next.configuration });
+      setEditor((current) => ({
+        ...current,
+        initial: next.configuration,
+        configuration: next.configuration,
+        version: next.version,
+        conditionError: false,
+      }));
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       images.reset();
       save.reset();
@@ -168,7 +194,6 @@ function ItemForm({
   const pending = save.isPending || reload.isPending;
   const remove = useMutation({
     mutationFn: async () => {
-      const configuration = form.state.values.configuration;
       if (section === "cast") return;
       await save.mutateAsync({
         ...configuration,
@@ -188,6 +213,11 @@ function ItemForm({
     section === "cast" ? null : initial[section].find((value) => value.id === selectedId);
   return (
     <section className="space-y-6">
+      {conditionError && (
+        <p role="alert" className="text-destructive">
+          {t("condition_invalid")}
+        </p>
+      )}
       <Button
         nativeButton={false}
         role="link"
@@ -210,24 +240,20 @@ function ItemForm({
             : (item?.text[locale].displayName ?? t(menuLabels[section]))}
         </h1>
       </div>
-      <form.Subscribe selector={(state) => state.isDirty}>
-        {(dirty) =>
-          catalog.data && (
-            <ConfigurationStatus
-              storeName={store.name}
-              publishedVersion={catalog.data.version}
-              draft={
-                draft
-                  ? { id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }
-                  : undefined
-              }
-              dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved.current)}
-              pending={save.isPending}
-              error={save.error || reload.error}
-            />
-          )
-        }
-      </form.Subscribe>
+      {catalog.data && (
+        <ConfigurationStatus
+          storeName={store.name}
+          publishedVersion={catalog.data.version}
+          draft={
+            draft
+              ? { id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }
+              : undefined
+          }
+          dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
+          pending={save.isPending}
+          error={save.error || reload.error}
+        />
+      )}
       {catalog.data && editable && catalog.data.version !== draft.baseVersion && (
         <p className="text-destructive">{t("workflow_stale")}</p>
       )}
@@ -238,44 +264,38 @@ function ItemForm({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void form.handleSubmit();
+            void submitConfiguration(event.currentTarget);
           }}
           className="max-w-4xl space-y-6"
         >
-          <form.Subscribe selector={(state) => state.values.configuration}>
-            {(configuration) => (
-              <fieldset
-                disabled={!editable || pending}
-                className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
-              >
-                <ItemFields
-                  key={section === "cast" ? "cast" : images.fieldKey}
-                  onImageStagedChange={images.onStagedChange}
-                  section={section}
-                  storeId={storeId}
-                  value={configuration}
-                  selectedId={selectedId}
-                  retainedVoice={initial.cast.voice}
-                  onChange={(next) => form.setFieldValue("configuration", next)}
-                  disabled={!editable}
-                />
-              </fieldset>
-            )}
-          </form.Subscribe>
+          <fieldset
+            disabled={!editable || pending}
+            className="min-w-0 space-y-8 [&_input:disabled]:opacity-100 [&_textarea:disabled]:opacity-100 [&_select:disabled]:opacity-100"
+          >
+            <ItemFields
+              key={section === "cast" ? "cast" : images.fieldKey}
+              onImageStagedChange={images.onStagedChange}
+              section={section}
+              storeId={storeId}
+              value={configuration}
+              selectedId={selectedId}
+              retainedVoice={initial.cast.voice}
+              onChange={setConfiguration}
+              disabled={!editable}
+            />
+          </fieldset>
+
           {editable && (
             <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(dirty) => (
-                  <ItemSaveAction
-                    dirty={dirty}
-                    pending={pending}
-                    uploadingImages={images.uploading}
-                    stagedImages={images.hasStaged}
-                    newUnsaved={itemId === "new" && !newSaved.current}
-                    isNew={itemId === "new"}
-                  />
-                )}
-              </form.Subscribe>
+              <ItemSaveAction
+                dirty={dirty}
+                pending={pending}
+                uploadingImages={images.uploading}
+                stagedImages={images.hasStaged}
+                newUnsaved={itemId === "new" && !newSaved}
+                isNew={itemId === "new"}
+              />
+
               {itemId !== "new" && section !== "cast" && (
                 <ConfirmAction
                   label={t("menu_remove_item")}
@@ -287,51 +307,49 @@ function ItemForm({
                   icon={<Trash2 />}
                 />
               )}
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(dirty) => (
-                  <>
-                    {(dirty || images.hasStaged) && (
-                      <ConfirmAction
-                        label={t("workflow_revert")}
-                        subject={t("workflow_revert_note")}
-                        disabled={pending || images.uploading}
-                        onConfirm={() => {
-                          if (images.uploadingNow()) return;
-                          form.reset({ configuration: initial });
-                          images.reset();
-                          save.reset();
-                        }}
-                        icon={<Undo2 />}
-                      />
-                    )}
-                    <Button
-                      nativeButton={false}
-                      role="link"
-                      variant="outline"
-                      disabled={
-                        dirty ||
-                        pending ||
-                        images.uploading ||
-                        images.hasStaged ||
-                        (itemId === "new" && !newSaved.current)
-                      }
-                      render={
-                        <Link
-                          to="/admin/stores/$storeId/menu/changes/$draftId"
-                          params={{ storeId, draftId: draft.id }}
-                          search={{ ...search, returnSection: section }}
-                          onClick={(event) => {
-                            if (images.uploadingNow() || images.staged.current.size > 0)
-                              event.preventDefault();
-                          }}
-                        />
-                      }
-                    >
-                      {t("workflow_review")}
-                    </Button>
-                  </>
+
+              <>
+                {(dirty || images.hasStaged) && (
+                  <ConfirmAction
+                    label={t("workflow_revert")}
+                    subject={t("workflow_revert_note")}
+                    disabled={pending || images.uploading}
+                    onConfirm={() => {
+                      if (images.uploadingNow()) return;
+                      setConfiguration(initial);
+                      setEditor((current) => ({ ...current, conditionError: false }));
+                      images.reset();
+                      save.reset();
+                    }}
+                    icon={<Undo2 />}
+                  />
                 )}
-              </form.Subscribe>
+                <Button
+                  nativeButton={false}
+                  role="link"
+                  variant="outline"
+                  disabled={
+                    dirty ||
+                    pending ||
+                    images.uploading ||
+                    images.hasStaged ||
+                    (itemId === "new" && !newSaved)
+                  }
+                  render={
+                    <Link
+                      to="/admin/stores/$storeId/menu/changes/$draftId"
+                      params={{ storeId, draftId: draft.id }}
+                      search={{ ...search, returnSection: section }}
+                      onClick={(event) => {
+                        if (images.uploadingNow() || images.staged.current.size > 0)
+                          event.preventDefault();
+                      }}
+                    />
+                  }
+                >
+                  {t("workflow_review")}
+                </Button>
+              </>
             </div>
           )}
         </form>
@@ -370,7 +388,7 @@ function ItemFields({
   value: Configuration;
   selectedId: string;
   disabled: boolean;
-  onChange: (configuration: Configuration) => void;
+  onChange: React.Dispatch<React.SetStateAction<Configuration>>;
 }) {
   const hash = useLocation({ select: (location) => location.hash });
   if (section === "cast")

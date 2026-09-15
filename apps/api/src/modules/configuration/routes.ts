@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate, validateQuery } from "../../platform/validation";
-import { configurationSchema, draftChoicesQuerySchema } from "./model";
+import { configurationSchema, draftChoicesQuerySchema, conditionPreviewSchema } from "./model";
 import {
   createDraft,
   discardDraft,
@@ -12,10 +12,14 @@ import {
   publishDraft,
   updateDraft,
   validateDraft,
+  previewConditions,
 } from "./service";
 const versionSchema = z.object({ expectedVersion: z.number().int().nonnegative() }).strict();
 
 export const configurationAdminRoutes = new Hono<ApiEnv>()
+  .post("/conditions/preview", validate(conditionPreviewSchema), (c) =>
+    c.json(previewConditions(c.get("actor"), c.req.valid("json")), 200),
+  )
   .get("/drafts", async (c) => c.json(await listDrafts(c.get("services"), c.get("actor")), 200))
   .post("/drafts", async (c) => c.json(await createDraft(c.get("services"), c.get("actor")), 200))
   .get("/drafts/choices", validateQuery(draftChoicesQuerySchema), async (c) =>

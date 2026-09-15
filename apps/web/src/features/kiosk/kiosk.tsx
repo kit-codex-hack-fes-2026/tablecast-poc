@@ -139,7 +139,9 @@ function useTableSession({
       : {
           product: selectedProduct,
           line: data.cart.lines.find(
-            (line) => line.productId === selectedProduct.id && line.missing.length > 0,
+            (line) =>
+              line.productId === selectedProduct.id &&
+              (line.missing.length > 0 || !!line.conditionIssues?.length),
           ),
           configVersion: data.configVersion,
           cartVersion: data.cart.version,

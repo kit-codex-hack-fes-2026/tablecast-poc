@@ -1,5 +1,6 @@
 import type { PricedLine, Product } from "@tablecast/api/schema";
 import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
+import { ConditionSummary } from "./condition-summary";
 import { ProductImage } from "./product-image";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -114,6 +115,15 @@ export function CartLines({
               </Button>
             )}
           </div>
+          {line.conditionIssues?.map((issue) => (
+            <p key={issue.optionId} className="mt-2 text-sm text-destructive">
+              {t("condition_requires")}：
+              <ConditionSummary
+                expression={issue.expression}
+                product={productsById.get(line.productId)}
+              />
+            </p>
+          ))}
           {line.missing.length > 0 && (
             <span className="text-xs text-destructive inline-flex mt-1.5">
               {t("kiosk_missing")}
