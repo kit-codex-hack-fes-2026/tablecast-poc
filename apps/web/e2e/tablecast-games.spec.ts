@@ -50,10 +50,10 @@ for (const { locale, labels, language } of [
             },
             html: '<h1 id="turn"></h1><button id="next"></button><button id="skip"></button><button id="finish"></button>',
             css: "body { font: 22px system-ui; padding: 32px; } button { min-height: 48px; padding: 12px 24px; margin: 8px; }",
-            javascript: `tablecast.ready.then(({locale, players}) => {
+            javascript: `tablecast.ready.then(({locale, players, state}) => {
             const text = locale === "ja" ? {next:"次の人へ", skip:"スキップ", finish:"終了", result:"結果発表"} : {next:"Next player", skip:"Skip", finish:"Finish", result:"Results"};
             const heading = document.getElementById("turn"), next = document.getElementById("next"), skip = document.getElementById("skip"), finish = document.getElementById("finish");
-            let turn = 1; heading.textContent = String(turn); next.textContent = text.next; skip.textContent = text.skip; finish.textContent = text.finish;
+            let turn = Number(state.turn ?? 1); heading.textContent = turn > players ? text.result : String(turn); next.textContent = text.next; skip.textContent = text.skip; finish.textContent = text.finish;
             const advance = async () => { turn++; await tablecast.save({turn}); heading.textContent = turn > players ? text.result : String(turn); next.disabled = skip.disabled = turn > players; };
             next.onclick = skip.onclick = advance; finish.onclick = () => tablecast.exit();
           });`,
@@ -70,6 +70,7 @@ for (const { locale, labels, language } of [
       await expect(previewButton).toBeEnabled();
       await previewButton.click();
       const preview = page.frameLocator("iframe");
+      await expect(previewButton).toBeDisabled();
       await expect(
         preview.getByRole("button", { name: locale === "ja" ? "次の人へ" : "Next player" }),
       ).toBeVisible();
@@ -161,6 +162,14 @@ for (const { locale, labels, language } of [
         playing.getByRole("heading", { name: locale === "ja" ? "結果発表" : "Results" }),
       ).toBeVisible();
       await guest.screenshot({ path: testInfo.outputPath(`tablecast-games-guest-${locale}.png`) });
+      await guest.route("**/api/table/games/runs/*", (route) => route.abort());
+      await expect(guest.locator("iframe")).toHaveCount(0);
+      await expect(guest.getByText(labels.games_unavailable, { exact: true })).toBeVisible();
+      await guest.unroute("**/api/table/games/runs/*");
+      await expect(
+        playing.getByRole("heading", { name: locale === "ja" ? "結果発表" : "Results" }),
+      ).toBeVisible();
+
       await playing
         .getByRole("button", { name: locale === "ja" ? "終了" : "Finish", exact: true })
         .click();
@@ -169,6 +178,42 @@ for (const { locale, labels, language } of [
       await expect(
         guest.getByText(product.text[locale].displayName, { exact: true }).first(),
       ).toBeVisible();
+      expect(
+        tableStateSchema.parse(await (await guestContext.request.get("/api/table")).json()).cart,
+      ).toEqual(cart);
+      await guest.getByRole("button", { name: labels.games_title, exact: true }).click();
+      const release = Promise.withResolvers<void>();
+      await guest.route("**/api/table/games/tablecast-turns/start", async (route) => {
+        await release.promise;
+        await route.continue();
+      });
+      const started = guest.waitForResponse((response) =>
+        response.url().endsWith("/games/tablecast-turns/start"),
+      );
+      await guest.getByRole("button", { name: labels.games_start, exact: true }).click();
+      await guest.getByRole("button", { name: labels.games_return, exact: true }).click();
+      release.resolve();
+      const delayed = z.object({ id: z.uuid() }).parse(await (await started).json());
+      await expect
+        .poll(async () =>
+          (await guestContext.request.get(`/api/table/games/runs/${delayed.id}`)).status(),
+        )
+        .toBe(409);
+      await guest.unroute("**/api/table/games/tablecast-turns/start");
+      await guest.getByRole("button", { name: labels.games_title, exact: true }).click();
+      await expect(guest.locator("iframe")).toHaveCount(0);
+      await guest.getByRole("button", { name: labels.games_start, exact: true }).click();
+      await expect(guest.locator("iframe")).toHaveCount(1);
+      expect(
+        (
+          await page.request.post(`${path}/games/tablecast-turns/disable`, {
+            data: { expectedRevision: 1 },
+          })
+        ).status(),
+      ).toBe(200);
+      await expect(guest.locator("iframe")).toHaveCount(0);
+      await expect(guest.getByText(labels.games_unavailable, { exact: true })).toBeVisible();
+      await guest.getByRole("button", { name: labels.games_return, exact: true }).click();
       expect(
         tableStateSchema.parse(await (await guestContext.request.get("/api/table")).json()).cart,
       ).toEqual(cart);

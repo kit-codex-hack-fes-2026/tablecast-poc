@@ -12,13 +12,13 @@ export const gamesOptions = (storeId: string, after = "") =>
         ),
       ),
   });
-export const gameOptions = (storeId: string, gameId: string) =>
+export const gameOptions = (storeId: string, gameId: string, before?: string) =>
   queryOptions({
-    queryKey: ["tablecast-game", storeId, gameId],
+    queryKey: ["tablecast-game", storeId, gameId, before],
     queryFn: ({ signal }) =>
       parseResponse(
         rpc.api.admin.stores[":storeId"].games[":gameId"].$get(
-          { param: { storeId, gameId } },
+          { param: { storeId, gameId }, query: { before } },
           { init: { signal } },
         ),
       ),

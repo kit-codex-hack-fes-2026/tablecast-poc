@@ -85,11 +85,11 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
     "get_game",
     {
       description:
-        "ゲームの最新20版と状態を取得する。特定の版のソースはget_game_sourceで取得する。",
-      inputSchema: { gameId: z.string().max(60) },
+        "ゲームの版と状態を20件ずつ取得する。nextBeforeがあればbeforeへ渡す。版のソースはget_game_sourceで取得する。",
+      inputSchema: { gameId: z.string().max(60), before: z.uuid().optional() },
       annotations: { readOnlyHint: true },
     },
-    async ({ gameId }) => result(await getGame(c.get("services"), actor, gameId)),
+    async ({ gameId, before }) => result(await getGame(c.get("services"), actor, gameId, before)),
   );
   server.registerTool(
     "get_game_source",

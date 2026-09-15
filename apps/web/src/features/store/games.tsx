@@ -63,7 +63,8 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
   const { role } = useStore();
   const manager = ["owner", "admin"].includes(role);
   const client = useQueryClient();
-  const game = useQuery(gameOptions(storeId, gameId));
+  const [before, setBefore] = useState<string>();
+  const game = useQuery(gameOptions(storeId, gameId, before));
   const [previewVersion, setPreviewVersion] = useState<string>();
   const [previewReady, setPreviewReady] = useState(false);
   const endpoint = rpc.api.admin.stores[":storeId"].games[":gameId"];
@@ -207,7 +208,7 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={pending || version.status !== "ready"}
+                  disabled={pending || version.status !== "ready" || previewVersion === version.id}
                   onClick={() => {
                     setPreviewReady(false);
                     setPreviewVersion(version.id);
@@ -229,7 +230,18 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
           </li>
         ))}
       </ul>
-      {game.data.hasOlderVersions && <p>{t("games_older_versions")}</p>}
+      <div className="flex gap-3">
+        {before && (
+          <Button variant="outline" onClick={() => setBefore(undefined)}>
+            {t("common_back")}
+          </Button>
+        )}
+        {game.data.nextBefore && (
+          <Button variant="outline" onClick={() => setBefore(game.data?.nextBefore ?? undefined)}>
+            {t("games_older_versions")}
+          </Button>
+        )}
+      </div>
     </article>
   );
 }

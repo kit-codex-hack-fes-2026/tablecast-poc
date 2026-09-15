@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, isNotNull } from "drizzle-orm";
+import { and, desc, eq, gt, lt, or, isNull, isNotNull } from "drizzle-orm";
 import { gamePlugins, gameRuns, gameVersions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
@@ -23,7 +23,13 @@ export async function listGames(services: ApiServices, actor: Actor, after = "")
   };
 }
 
-export async function getGame(services: ApiServices, actor: Actor, gameId: string) {
+export async function getGame(
+  services: ApiServices,
+  actor: Actor,
+  gameId: string,
+  before?: string,
+) {
+  const cursor = before ? await getGameVersion(services, actor, gameId, before) : undefined;
   const [games, versions] = await services.db.batch([
     services.db
       .select()
@@ -32,7 +38,18 @@ export async function getGame(services: ApiServices, actor: Actor, gameId: strin
     services.db
       .select()
       .from(gameVersions)
-      .where(and(eq(gameVersions.store_id, actor.storeId), eq(gameVersions.game_id, gameId)))
+      .where(
+        and(
+          eq(gameVersions.store_id, actor.storeId),
+          eq(gameVersions.game_id, gameId),
+          cursor
+            ? or(
+                lt(gameVersions.created_at, cursor.created_at),
+                and(eq(gameVersions.created_at, cursor.created_at), lt(gameVersions.id, cursor.id)),
+              )
+            : undefined,
+        ),
+      )
       .orderBy(desc(gameVersions.created_at), desc(gameVersions.id))
       .limit(21),
   ]);
@@ -50,7 +67,7 @@ export async function getGame(services: ApiServices, actor: Actor, gameId: strin
       published: !!row.published_by,
       createdAt: row.created_at,
     })),
-    hasOlderVersions: versions.length > 20,
+    nextBefore: versions.length > 20 ? versions[19]?.id : null,
   };
 }
 

@@ -20,8 +20,16 @@ export const gamesAdminRoutes = new Hono<ApiEnv>()
   .post("/", validate(registerGameSchema), async (c) =>
     c.json(await registerGame(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
-  .get("/:gameId", async (c) =>
-    c.json(await getGame(c.get("services"), c.get("actor"), c.req.param("gameId")), 200),
+  .get("/:gameId", validateQuery(z.object({ before: z.uuid().optional() })), async (c) =>
+    c.json(
+      await getGame(
+        c.get("services"),
+        c.get("actor"),
+        c.req.param("gameId"),
+        c.req.valid("query").before,
+      ),
+      200,
+    ),
   )
   .post("/:gameId/versions/:versionId/validate", async (c) =>
     c.json(

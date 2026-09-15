@@ -412,3 +412,40 @@ it("公開ゲーム一覧は50件ずつ返し、続きから重複せずに取�
   expect(last.games.map((game) => game.id)).toEqual([ids[50]]);
   expect(last.next).toBeNull();
 });
+
+it("20版を超えても履歴から古い公開版を取得して復帰できる", async () => {
+  const { staff } = await setupFixture();
+  const api = services();
+  const first = await registerGame(api, staff, {
+    gameId: "tablecast-history",
+    package: gamePackage,
+  });
+  await validateGame(api, staff, first.gameId, first.versionId);
+  await confirmGamePreview(api, staff, first.gameId, first.versionId);
+  await publishGame(api, staff, first.gameId, {
+    versionId: first.versionId,
+    expectedRevision: 0,
+    approved: true,
+  });
+  await api.db
+    .update(gameVersions)
+    .set({ created_at: 0 })
+    .where(eq(gameVersions.id, first.versionId));
+  for (let index = 0; index < 20; index++)
+    await registerGame(api, staff, { gameId: first.gameId, package: gamePackage });
+  const recent = await getGame(api, staff, first.gameId);
+  expect(recent.versions).toHaveLength(20);
+  expect(recent.versions.some((version) => version.id === first.versionId)).toBe(false);
+  const older = await getGame(api, staff, first.gameId, recent.nextBefore ?? undefined);
+  expect(older.versions.map((version) => version.id)).toEqual([first.versionId]);
+  expect(older.nextBefore).toBeNull();
+  await disableGame(api, staff, first.gameId, 1);
+  const version = older.versions[0];
+  if (!version) throw new Error("以前の版が見つかりません");
+  const restored = await publishGame(api, staff, first.gameId, {
+    versionId: version.id,
+    expectedRevision: 2,
+    approved: true,
+  });
+  expect(restored.activeVersionId).toBe(first.versionId);
+});

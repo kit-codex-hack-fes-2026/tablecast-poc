@@ -1,7 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import type { Locale } from "@tablecast/api/schema";
+import type { GameState, Locale } from "@tablecast/api/schema";
 import { Gamepad2 } from "lucide-react";
 import { GameFrame } from "../../components/game-frame";
 import { ErrorNotice } from "../../components/error-notice";
@@ -30,7 +30,7 @@ export function KioskGames({
   const [after, setAfter] = useState("");
   const [open, setOpen] = useState(false);
   const [run, setRun] = useState<Run>();
-  const revision = useRef(0);
+  const opening = useRef(0);
   const client = useQueryClient();
   const runId = run?.id;
   const games = useQuery({
@@ -56,13 +56,18 @@ export function KioskGames({
     mutationFn: stopVoice,
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: tableQueryKey(endpoint) });
+      opening.current += 1;
       setOpen(true);
     },
   });
   const start = useMutation({
-    mutationFn: (gameId: string) => startGame(endpoint, gameId),
-    onSuccess: (value) => {
-      revision.current = value.revision;
+    mutationFn: async (gameId: string) => startGame(endpoint, gameId),
+    onMutate: () => opening.current,
+    onSuccess: (value, _gameId, startedOpening) => {
+      if (startedOpening !== opening.current) {
+        end.mutate(value.id);
+        return;
+      }
       client.setQueryData(["tablecast-game-run", endpoint.key, value.id], {
         id: value.id,
         versionId: value.versionId,
@@ -80,6 +85,7 @@ export function KioskGames({
       client.removeQueries({ queryKey: ["tablecast-game-run", endpoint.key, endedId] }),
   });
   const close = () => {
+    opening.current += 1;
     if (run) end.mutate(run.id);
     setRun(undefined);
     setOpen(false);
@@ -120,24 +126,16 @@ export function KioskGames({
                 <p role="alert">{t("games_unavailable")}</p>
               ) : (
                 <div className="min-h-96 flex-1">
-                  <GameFrame
-                    key={run.id}
-                    game={run.package}
-                    parentOrigin={run.parentOrigin}
-                    locale={locale}
-                    players={run.players}
-                    initialState={run.state}
-                    onExit={close}
-                    onSave={async (state) => {
-                      const saved = await parseResponse(
-                        endpoint.client.games.runs[":runId"].state.$put({
-                          param: { runId: run.id },
-                          json: { expectedVersion: revision.current, state },
-                        }),
-                      );
-                      revision.current = saved.revision;
-                    }}
-                  />
+                  {current.data && (
+                    <PlayingGame
+                      key={run.id}
+                      run={run}
+                      endpoint={endpoint}
+                      locale={locale}
+                      snapshot={current.data}
+                      onExit={close}
+                    />
+                  )}
                 </div>
               )
             ) : (
@@ -194,5 +192,42 @@ export function KioskGames({
         </Dialog.Portal>
       </Dialog.Root>
     </>
+  );
+}
+
+function PlayingGame({
+  run,
+  endpoint,
+  locale,
+  snapshot,
+  onExit,
+}: {
+  run: Run;
+  endpoint: TableEndpoint;
+  locale: Locale;
+  snapshot: { state: GameState; revision: number };
+  onExit: () => void;
+}) {
+  // poll中はframeを作り直さず、通信復旧で再mountした時だけ最新snapshotを採用する。
+  const [initialState] = useState(snapshot.state);
+  const revision = useRef(snapshot.revision);
+  return (
+    <GameFrame
+      game={run.package}
+      parentOrigin={run.parentOrigin}
+      locale={locale}
+      players={run.players}
+      initialState={initialState}
+      onExit={onExit}
+      onSave={async (state) => {
+        const saved = await parseResponse(
+          endpoint.client.games.runs[":runId"].state.$put({
+            param: { runId: run.id },
+            json: { expectedVersion: revision.current, state },
+          }),
+        );
+        revision.current = saved.revision;
+      }}
+    />
   );
 }
