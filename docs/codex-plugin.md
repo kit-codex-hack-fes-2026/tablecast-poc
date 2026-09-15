@@ -1,6 +1,8 @@
 # Codex プラグイン
 
-この文書は店舗メニュー・接客設定を操作する製品プラグインを扱う。TableCastを開発するagentのskills・Cloudflare・Grafana等の導入は[setup](setup.md#2c-agent開発環境)を参照する。
+卓上ゲームの制作依頼も同梱skillで扱う。実行基盤はTableCast側が所有し、Codexは`get_game_spec`・`register_game`・`validate_game`等のMCPを制作入口として使う。[ゲームプラグイン仕様](game-plugins.md)を参照する。stagingでは既存の`tablecast-staging`接続を使い、配備済みツール一覧にゲーム操作が含まれることを確認してから制作する。
+
+この文書は店舗メニュー・接客設定と卓上ゲームを操作する製品プラグインを扱う。TableCastを開発するagentのskills・Cloudflare・Grafana等の導入は[setup](setup.md#2c-agent開発環境)を参照する。
 
 ## 管理画面からの導入
 
@@ -19,7 +21,7 @@ codex plugin marketplace add kit-codex-hack-fes-2026/tablecast-poc
 codex plugin add tablecast@tablecast
 ```
 
-`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・提案・分析の3つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
+`.agents/plugins/marketplace.json`が`plugins/tablecast`のMCP接続と設定・ゲーム制作、提案、分析の3つのskillを配布する。配布元の`source: local`は同じリポジトリ内のplugin配置を示し、接続するMCPはCloudflare本番のHTTPS URLである。
 
 インストール時のOAuth画面でTableCastへログインし、対象の組織とscopeを確認して同意する。認証情報の保管はクライアントに任せる。新しいチャットを開始し、`get_configuration`が対象店舗のIDと名前を返すことを確認する。インストール成功だけで接続済みと判定しない。[公式のplugin導入ガイド](https://learn.chatgpt.com/docs/plugins)を参照する。
 

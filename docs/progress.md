@@ -1,5 +1,19 @@
 # TableCast 実装・検証記録
 
+## 2026-09-15: ゲームプラグイン基盤のローカル検証
+
+Issue #191、branch `codex/191-game-plugin-platform`、起点 `9c92644`。未コミットの基盤変更を検証した。今回のゲーム制作はモックに限定し、実ゲームの制作は別セッションへ引き継ぐ。
+
+既存OAuth付きMCPへゲーム仕様取得・下書き登録・検証を追加し、管理画面の試遊・明示承認・公開停止・旧版再公開と、卓上のsandbox実行・状態保存・終了を実装した。パッケージは既存R2、版・公開先・プレイ状態はD1へ保存する。migrationは`0019_tablecast_game_plugins.sql`。音声AI APIはゲームv1へ含めない。
+
+- API全体319件成功。その後追加した一覧・版履歴のページ送りを含むゲームAPI13件とMCP10件も成功。店舗・卓・state権限、人数・UTF-8容量、版固定・競合・停止、非空カート保持、デモリセットを確認した。
+- 公式MCP SDKと実OAuthによる仕様取得・登録・ソース再取得・検証が成功。公開・停止ツールが存在しないことを確認した。
+- Chromiumの隔離ブラウザー試験2件、日英のモックE2E2件が成功。E2Eは試遊・承認・公開・端末認可・交代・スキップ・結果表示・カート復帰を実D1/R2で確認した。
+- 独立監査ではCSP・origin確認・state権限・卓境界を除く4種類の変異を全てテストが検知した。
+- API/Webのlint・型検査、plugin manifestとskill検証に成功した。PR前の独立レビューで通信復旧時の進行維持、同じ版の試遊、開始中の終了、古い版への復帰を修正し、日英E2Eで通信復旧・公開停止・開始応答の後着も確認した。
+
+WebKitは本体の起動時にSIGSEGVとなり未検証。実iPad、実Codexクライアント接続、staging配備・プレイは未実施。API SDK試験を実Codex接続の証拠にしない。[次セッションの制作手順](game-plugins.md#別セッションから実ゲームを制作する)を参照する。
+
 ## 2026-09-14: hosted Agents API・Lunaの実音声検証
 
 Issue #100、Draft PR #104。GPT-Live 1のブラウザーWebRTCとhosted OpenAI Agents APIへ移行し、Mastra・LiveKit・Python音声プロセス・音声Containerを撤去した。業務モデルは利用者指定の`gpt-5.6-luna`、reasoning low。以降の過去記録は当時の構成の検証であり、現在の構成の証拠として扱わない。
