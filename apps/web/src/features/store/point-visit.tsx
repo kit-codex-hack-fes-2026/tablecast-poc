@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useHydrated } from "@tanstack/react-router";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -11,6 +12,7 @@ import { parseResponse, rpc } from "../../lib/api";
 import { pointVisitOptions } from "./point-query";
 export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId: string }) {
   const { t } = useI18n();
+  const hydrated = useHydrated();
   const visit = useQuery(pointVisitOptions(storeId, sessionId));
   const client = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
@@ -51,7 +53,7 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
                     <label className="flex items-center gap-3">
                       <Checkbox
                         checked={selectedIds.has(person.id)}
-                        disabled={!person.active || confirm.isPending}
+                        disabled={!hydrated || !person.active || confirm.isPending}
                         onCheckedChange={(checked) => {
                           setSelected((list) =>
                             checked ? [...list, person.id] : list.filter((id) => id !== person.id),
@@ -79,7 +81,7 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
             })}
           </ul>
           {visit.data.confirmedAt === null ? (
-            <Button disabled={confirm.isPending} onClick={() => confirm.mutate()}>
+            <Button disabled={!hydrated || confirm.isPending} onClick={() => confirm.mutate()}>
               {t(selected.length ? "customer_points_award" : "customer_points_confirm_zero")}
             </Button>
           ) : (
