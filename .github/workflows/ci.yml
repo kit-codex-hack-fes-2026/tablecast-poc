@@ -104,9 +104,10 @@ jobs:
       - uses: ./.github/actions/tablecast-setup
         with:
           turbo: "true"
+      # Webの生成ファイルを共有するWorkersとStorybookは同時にbuildしない。
+      - name: Workers
+        run: bun --no-env-file run build:deploy
       - parallel:
-          - name: Workers
-            run: bun --no-env-file run build:deploy
           - name: Storybook
             run: |
               bunx --no-install turbo run build:storybook
