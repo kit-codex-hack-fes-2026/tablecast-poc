@@ -15,7 +15,9 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
   loader: async ({ context, params, deps }) => {
     const [table] = await Promise.all([
       context.queryClient.ensureQueryData(tableDetailOptions(params.storeId, params.sessionId)),
-      context.queryClient.ensureQueryData(pointVisitOptions(params.storeId, params.sessionId)),
+      deps.view === "billing"
+        ? context.queryClient.ensureQueryData(pointVisitOptions(params.storeId, params.sessionId))
+        : undefined,
     ]);
     if (deps.view === "orders")
       await context.queryClient.ensureQueryData(

@@ -1,8 +1,13 @@
 import { Hono } from "hono";
 import type { ApiEnv } from "../../platform/context";
-import { validate } from "../../platform/validation";
+import { validate, validateQuery } from "../../platform/validation";
 import { staffIdentity } from "../auth/middleware";
-import { customerPreferencesSchema, customerRevisionSchema, enrolCustomerSchema } from "./model";
+import {
+  customerMembershipPageSchema,
+  customerPreferencesSchema,
+  customerRevisionSchema,
+  enrolCustomerSchema,
+} from "./model";
 import { getCustomerStore, listCustomerMemberships } from "./queries";
 import { enrolCustomer, leaveCustomerMembership, updateCustomerPreferences } from "./service";
 
@@ -12,10 +17,10 @@ export const customerRoutes = new Hono<ApiEnv>()
     await staffIdentity(c);
     await next();
   })
-  .get("/api/customer/memberships", async (c) => {
+  .get("/api/customer/memberships", validateQuery(customerMembershipPageSchema), async (c) => {
     const session = await staffIdentity(c);
     return c.json(
-      { memberships: await listCustomerMemberships(c.get("services"), session.user.id) },
+      await listCustomerMemberships(c.get("services"), session.user.id, c.req.valid("query")),
       200,
     );
   })

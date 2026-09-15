@@ -69,7 +69,7 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
                       {allocation ? ` · ¥${allocation.amount} · ${allocation.points} pt` : ""}
                     </p>
                   )}
-                  {allocation && (
+                  {visit.data.confirmedAt !== null && (
                     <PointCorrection
                       storeId={storeId}
                       membershipId={person.membershipId}

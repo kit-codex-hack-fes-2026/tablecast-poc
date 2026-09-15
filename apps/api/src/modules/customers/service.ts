@@ -1,5 +1,5 @@
 import { issueEligibleCoupons } from "../customer-coupons/issuance";
-import { and, eq, exists, sql } from "drizzle-orm";
+import { and, eq, exists, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { customerMemberships, customerVisitParticipants } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -87,7 +87,7 @@ export async function updateCustomerPreferences(
     ),
   ]);
   ensure(result[0].length === 1, "CUSTOMER_MEMBERSHIP_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return getCustomerStore(services, actor);
 }
 
@@ -131,6 +131,7 @@ export async function leaveCustomerMembership(
         and(
           eq(customerVisitParticipants.membershipId, membership.id),
           eq(customerVisitParticipants.storeId, actor.storeId),
+          isNull(customerVisitParticipants.leftAt),
           exists(
             services.db
               .select({ id: customerMemberships.id })
@@ -146,6 +147,6 @@ export async function leaveCustomerMembership(
       ),
   ]);
   ensure(result[0].length === 1, "CUSTOMER_MEMBERSHIP_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, token);
+  await finishCustomerContextChange(services, actor.storeId, result[1]);
   return { left: true };
 }

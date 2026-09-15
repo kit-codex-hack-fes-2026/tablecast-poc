@@ -118,7 +118,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
             </Link>
           </nav>
           <CustomerVisits storeId={storeId} />
-          <CustomerPreferences key={data.membership.revision} data={data} />
+          <CustomerPreferences key={data.membership.id} data={data} />
         </>
       ) : (
         <CustomerConsent storeId={storeId} />
@@ -146,8 +146,15 @@ function CustomerPreferences({ data }: { data: CustomerStoreData }) {
           json,
         }),
       ),
-    onSuccess: (result) =>
-      client.setQueryData(customerStoreOptions(data.store.id).queryKey, result),
+    onSuccess: (result) => {
+      client.setQueryData(customerStoreOptions(data.store.id).queryKey, result);
+      if (result.membership)
+        form.reset({
+          shareCompanions: result.membership.shareCompanions,
+          useMemories: result.membership.useMemories,
+          saveMemories: result.membership.saveMemories,
+        });
+    },
   });
   const leave = useMutation({
     mutationFn: () =>

@@ -272,19 +272,29 @@ function customerOrderRows(
   services: ApiServices,
   storeId: string,
   sessionId: string,
-  query: { beforeId?: string; limit: number },
+  query: { beforeCreatedAt?: number; beforeId?: string; limit: number },
 ) {
   return services.db
-    .select({ id: orders.id, status: orders.status, snapshot: orders.snapshot_json })
+    .select({
+      id: orders.id,
+      createdAt: orders.created_at,
+      status: orders.status,
+      snapshot: orders.snapshot_json,
+    })
     .from(orders)
     .where(
       and(
         eq(orders.store_id, storeId),
         eq(orders.table_session_id, sessionId),
-        query.beforeId ? lt(orders.id, query.beforeId) : undefined,
+        query.beforeCreatedAt !== undefined && query.beforeId
+          ? or(
+              lt(orders.created_at, query.beforeCreatedAt),
+              and(eq(orders.created_at, query.beforeCreatedAt), lt(orders.id, query.beforeId)),
+            )
+          : undefined,
       ),
     )
-    .orderBy(desc(orders.id))
+    .orderBy(desc(orders.created_at), desc(orders.id))
     .limit(query.limit + 1);
 }
 async function customerOrderValue(
@@ -295,6 +305,7 @@ async function customerOrderValue(
   limit: number,
 ) {
   const page = rows.slice(0, limit);
+  const last = page.at(-1);
   const records = await services.db
     .select({
       orderId: customerConsumption.orderId,
@@ -323,13 +334,17 @@ async function customerOrderValue(
       personalRecords: byOrder.get(order.id) ?? [],
     })),
     nextOrderId: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+    nextOrderCursor:
+      rows.length > limit && last
+        ? { beforeCreatedAt: String(last.createdAt), beforeId: last.id }
+        : null,
   };
 }
 export async function listCustomerOrders(
   services: ApiServices,
   actor: CustomerActor,
   sessionId: string,
-  query: { beforeId?: string; limit: number },
+  query: { beforeCreatedAt?: number; beforeId?: string; limit: number },
 ) {
   const { membership } = await requireCustomerVisit(services, actor, sessionId);
   return customerOrderValue(

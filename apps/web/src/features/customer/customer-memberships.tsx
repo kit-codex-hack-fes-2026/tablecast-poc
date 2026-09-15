@@ -1,21 +1,24 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, QrCode } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
 import { customerMembershipsOptions } from "./customer-query";
 
 export function CustomerMemberships() {
   const { t } = useI18n();
-  const { data } = useSuspenseQuery(customerMembershipsOptions);
+  const memberships = useSuspenseInfiniteQuery(customerMembershipsOptions);
+  const data = memberships.data.pages.flatMap((page) => page.memberships);
   return (
     <section className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-semibold">{t("customer_title")}</h1>
         <p className="text-muted-foreground">{t("customer_intro")}</p>
       </div>
-      {data.memberships.length ? (
+      {data.length ? (
         <ul className="space-y-4">
-          {data.memberships.map((membership) => (
+          {data.map((membership) => (
             <li key={membership.id}>
               <Link
                 to="/member/$storeId"
@@ -36,6 +39,16 @@ export function CustomerMemberships() {
           <QrCode aria-hidden className="mx-auto size-10 text-muted-foreground" />
           <p>{t("customer_empty")}</p>
         </div>
+      )}
+      <ErrorNotice error={memberships.error} onRetry={() => void memberships.refetch()} />
+      {memberships.hasNextPage && (
+        <Button
+          variant="outline"
+          disabled={memberships.isFetchingNextPage}
+          onClick={() => void memberships.fetchNextPage()}
+        >
+          {t("customer_more")}
+        </Button>
       )}
     </section>
   );

@@ -30,13 +30,13 @@ export const customerVisitsOptions = (storeId: string) =>
 export const customerOrdersOptions = (storeId: string, sessionId: string) =>
   infiniteQueryOptions({
     queryKey: ["tablecast-customer", storeId, "visits", sessionId, "orders"],
-    initialPageParam: undefined as string | undefined,
+    initialPageParam: undefined as { beforeCreatedAt: string; beforeId: string } | undefined,
     queryFn: ({ pageParam, signal }) =>
       parseResponse(
         rpc.api.customer.stores[":storeId"].visits[":sessionId"].orders.$get(
-          { param: { storeId, sessionId }, query: { beforeId: pageParam, limit: "20" } },
+          { param: { storeId, sessionId }, query: { ...pageParam, limit: "20" } },
           { init: { signal } },
         ),
       ),
-    getNextPageParam: (page) => page.nextOrderId ?? undefined,
+    getNextPageParam: (page) => page.nextOrderCursor ?? undefined,
   });

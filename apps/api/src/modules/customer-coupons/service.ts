@@ -581,7 +581,26 @@ export async function cancelCustomerCouponUse(
     invalidationStatement(services, actor, token),
     eventStatement(services, actor, token, "coupon.cancelled", {}),
   ]);
-  ensure(result[0].meta.changes === 1, "COUPON_CANCEL_CONFLICT", 409);
+  if (result[0].meta.changes !== 1) {
+    const committed = await services.db
+      .select()
+      .from(customerCouponUses)
+      .where(
+        and(
+          eq(customerCouponUses.id, use.id),
+          eq(customerCouponUses.storeId, actor.storeId),
+          eq(customerCouponUses.sessionId, table.id),
+        ),
+      )
+      .get();
+    ensure(
+      committed?.cancelledAt !== null &&
+        committed?.cancelKey === input.idempotencyKey &&
+        committed?.cancelReason === input.reason,
+      "COUPON_CANCEL_CONFLICT",
+      409,
+    );
+  }
   await issueConfirmedVisitCoupons(services, actor.storeId, table.id);
   await notifyStore(services, actor.storeId, table.id);
   return { cancelled: true };

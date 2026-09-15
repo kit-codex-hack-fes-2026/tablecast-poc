@@ -1,10 +1,10 @@
 import { env, exports } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
-import { expect, it } from "vitest";
-import { member } from "../src/db/auth-schema";
-import { customerMemberships } from "../src/db/business-schema";
+import { assert, expect, it } from "vitest";
+import { member, organization } from "../src/db/auth-schema";
+import { customerMemberships, stores } from "../src/db/business-schema";
 import { createApiServices } from "../src/platform/context";
-import { requireCustomer } from "../src/modules/customers/queries";
+import { listCustomerMemberships, requireCustomer } from "../src/modules/customers/queries";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 
@@ -111,4 +111,51 @@ it("本人と店舗の境界を保ち、退会後は会員操作を拒否する"
     saveMemories: false,
     revision: 2,
   });
+});
+
+it("同日時の101店舗を欠落と重複なくページ取得する", async () => {
+  const { staff } = await setupFixture();
+  const store = await fixtureDb.select().from(stores).where(eq(stores.id, staff.storeId)).get();
+  assert(store);
+  const ids = Array.from(
+    { length: 101 },
+    (_, index) => `tablecast-page-${String(index).padStart(3, "0")}`,
+  );
+  for (let offset = 0; offset < ids.length; offset += 5) {
+    const group = ids.slice(offset, offset + 5);
+    await fixtureDb.batch([
+      fixtureDb
+        .insert(organization)
+        .values(group.map((id) => ({ id, slug: id, name: id, createdAt: new Date() }))),
+      fixtureDb.insert(stores).values(group.map((id) => ({ ...store, id, organization_id: id }))),
+      fixtureDb.insert(customerMemberships).values(
+        group.map((id) => ({
+          id,
+          storeId: id,
+          userId: staff.userId,
+          active: true,
+          shareCompanions: true,
+          useMemories: true,
+          saveMemories: true,
+          consentVersion: 1,
+          joinedAt: 100,
+          updatedAt: 100,
+        })),
+      ),
+    ]);
+  }
+  const services = createApiServices(env);
+  const first = await listCustomerMemberships(services, staff.userId, { limit: 100 });
+  assert(first.nextCursor);
+  const next = await listCustomerMemberships(services, staff.userId, {
+    limit: 100,
+    beforeId: first.nextCursor.beforeId,
+    beforeJoinedAt: Number(first.nextCursor.beforeJoinedAt),
+  });
+  expect(first.memberships).toHaveLength(100);
+  expect(next.memberships).toHaveLength(1);
+  expect(next.nextCursor).toBeNull();
+  expect([...first.memberships, ...next.memberships].map((row) => row.id)).toEqual(
+    ids.toReversed(),
+  );
 });

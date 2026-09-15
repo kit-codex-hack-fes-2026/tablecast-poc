@@ -43,6 +43,7 @@ test("会員証の初回同意と設定変更をスマホで行い、再表示�
   );
   await page.getByRole("button", { name: ja.customer_save_preferences }).click();
   expect((await saved).ok()).toBe(true);
+  await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("checkbox", { name: ja.customer_save_memories, exact: true }),
