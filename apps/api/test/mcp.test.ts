@@ -17,12 +17,102 @@ import {
   configurationSchema,
   voicePageSchema,
   uploadedImageSchema,
+  gamePackageSchema,
 } from "../src/schema";
 import { addStatisticsSession, statisticsPeriod } from "./statistics-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("OAuth接続したMCPでゲーム仕様を取得し、登録・検証しても人間の承認までは公開されない", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const spec = toolData(
+    await client.callTool({ name: "get_game_spec", arguments: {} }),
+    z.object({
+      protocol: z.literal(1),
+      instructions: z.array(z.string()),
+      schema: z.object({
+        required: z.array(z.string()),
+        properties: z.record(z.string(), z.unknown()),
+      }),
+    }),
+  );
+  expect(spec.schema.required).toEqual(
+    expect.arrayContaining(["manifest", "html", "css", "javascript"]),
+  );
+  expect(Object.keys(spec.schema.properties)).toEqual(
+    expect.arrayContaining(["manifest", "html", "css", "javascript"]),
+  );
+  const tools = await client.listTools();
+  expect(
+    tools.tools
+      .filter((tool) => /game/.test(tool.name))
+      .map((tool) => tool.name)
+      .toSorted(),
+  ).toEqual([
+    "get_game",
+    "get_game_source",
+    "get_game_spec",
+    "list_games",
+    "register_game",
+    "validate_game",
+  ]);
+  const registered = toolData(
+    await client.callTool({
+      name: "register_game",
+      arguments: {
+        gameId: "tablecast-mcp-game",
+        package: {
+          manifest: {
+            apiVersion: 1,
+            name: { ja: "卓上対戦", en: "Table match" },
+            description: { ja: "交代で遊ぶ", en: "Take turns" },
+            rules: { ja: "結果を比べる", en: "Compare results" },
+            minPlayers: 2,
+            maxPlayers: 6,
+            capabilities: ["state"],
+          },
+          html: "<button>終了</button>",
+          css: "",
+          javascript: "tablecast.ready.then(() => tablecast.exit());",
+        },
+      },
+    }),
+    z.object({ gameId: z.string(), versionId: z.uuid(), status: z.literal("draft") }),
+  );
+  const source = toolData(
+    await client.callTool({
+      name: "get_game_source",
+      arguments: { gameId: registered.gameId, versionId: registered.versionId },
+    }),
+    z.object({ package: gamePackageSchema }),
+  );
+  expect(source.package).toMatchObject({
+    html: "<button>終了</button>",
+    css: "",
+    javascript: "tablecast.ready.then(() => tablecast.exit());",
+    manifest: { capabilities: ["state"], minPlayers: 2, maxPlayers: 6 },
+  });
+  const validated = toolData(
+    await client.callTool({
+      name: "validate_game",
+      arguments: { gameId: registered.gameId, versionId: registered.versionId },
+    }),
+    z.object({ valid: z.literal(true), requiresPreview: z.literal(true), reviewUrl: z.url() }),
+  );
+  expect(new URL(validated.reviewUrl).pathname).toBe("/admin/stores/tablecast-store/games");
+  const game = toolData(
+    await client.callTool({ name: "get_game", arguments: { gameId: registered.gameId } }),
+    z.object({
+      activeVersionId: z.null(),
+      versions: z.array(z.object({ status: z.literal("ready"), previewed: z.literal(false) })),
+    }),
+  );
+  expect(game.versions).toHaveLength(1);
+});
 
 it("2MiBを超える画像データをMCPから取り込み、JSON本文上限では拒否しない", async () => {
   const { cookie } = await setupFixture();
