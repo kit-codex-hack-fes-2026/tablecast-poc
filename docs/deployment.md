@@ -18,7 +18,7 @@ Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService Binding
 
 ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerが標準Responses delegationとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
 
-Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と全CI成功後の配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
+Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と配備を一か所で管理するため、GitHub Actionsから公式Wranglerを呼ぶ。PRプレビューの製品配備は静的解析・Workers/イメージ成果物の準備後に開始し、本番・staging配備は全必須検査の成功後に行う。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
 
 ## 最初に登録するもの
 

@@ -34,11 +34,15 @@ export const credentials = {
   profile: "demo" as const,
 };
 
-// templateはglobal setupで閉じた後は読み取り専用。各caseへstorageを複製する。
-export function createCaseRuntime() {
-  return { directory: mkdtempSync(join(runtime.directory, "tablecast-case-")) };
+// templateはglobal setupで閉じた後は読み取り専用。各workerへstorageを複製する。
+export function createWorkerRuntime(parallelIndex: number) {
+  return {
+    directory: mkdtempSync(
+      join(runtime.directory, `tablecast-worker-${parallelIndex}-`),
+    ),
+  };
 }
-export type CaseRuntime = ReturnType<typeof createCaseRuntime> & {
+export type CaseRuntime = ReturnType<typeof createWorkerRuntime> & {
   origin: string;
   mailpitUrl: string;
 };

@@ -26,5 +26,5 @@ runs:
       if: inputs.turbo == 'true'
       with:
         path: .turbo
-        key: tablecast-turbo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ github.sha }}
+        key: tablecast-turbo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}
         restore-keys: tablecast-turbo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-
