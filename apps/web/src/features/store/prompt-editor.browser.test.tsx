@@ -167,11 +167,11 @@ it("通常入力のUndoで旧文字列へ戻り、Redoと強調中の改行も�
   await render(<Harness initial={initial} />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
   await input.click();
-  await userEvent.keyboard("{Control>}{End}{/Control}追記");
+  await userEvent.keyboard("{Control>}{End}{/Control}追");
   await page.getByRole("button", { name: ja.prompt_undo, exact: true }).click();
   expect(changed).toHaveBeenLastCalledWith(initial);
   await page.getByRole("button", { name: ja.prompt_redo, exact: true }).click();
-  await expect.element(input).toHaveTextContent("追記");
+  await expect.element(input).toHaveTextContent("追");
   await page.getByRole("button", { name: ja.prompt_bold, exact: true }).click();
   await userEvent.keyboard("太字{Shift>}{Enter}{/Shift}続き");
   await page.getByRole("button", { name: "保存を再現" }).click();

@@ -1,4 +1,6 @@
+import { statisticsAdminRoutes } from "../statistics/routes";
 import { Hono } from "hono";
+import { gamesAdminRoutes } from "../games/admin-routes";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validateForm, validateQuery } from "../../platform/validation";
@@ -38,10 +40,12 @@ export const admin = new Hono<ApiEnv>()
       c.req.raw,
     );
   })
+  .route("/", statisticsAdminRoutes)
   .route("/", catalogAdminRoutes)
   .route("/", mediaAdminRoutes)
   .route("/", voiceAdminRoutes)
   .route("/", tablesAdminRoutes)
   .route("/", ordersAdminRoutes)
   .route("/", devicesAdminRoutes)
-  .route("/", configurationAdminRoutes);
+  .route("/", configurationAdminRoutes)
+  .route("/games", gamesAdminRoutes);

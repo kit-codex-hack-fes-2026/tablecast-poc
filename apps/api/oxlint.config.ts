@@ -175,7 +175,9 @@ export default defineConfig({
                   captured: {
                     module: [
                       "catalog",
+                      "statistics",
                       "configuration",
+                      "games",
                       "devices",
                       "media",
                       "orders",

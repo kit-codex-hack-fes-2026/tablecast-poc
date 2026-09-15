@@ -3,6 +3,8 @@ export function measuredDatabase(binding: D1Database) {
   const source = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
   const stats = { roundtrips: 0, statements: 0 };
   const timing = { bindingMs: 0 };
+  // raw()はmetaを返さないため、batchのSQL時間・読取行数を別に記録する。
+  const batches: { rowsRead: number; sqlMs: number }[][] = [];
   async function measure<T>(operation: () => Promise<T>) {
     const started = performance.now();
     try {
@@ -37,7 +39,13 @@ export function measuredDatabase(binding: D1Database) {
         return (items: D1PreparedStatement[]) => {
           stats.roundtrips++;
           stats.statements += items.length;
-          return measure(() => target.batch(items.map((item) => source.get(item) ?? item)));
+          return measure(async () => {
+            const results = await target.batch(items.map((item) => source.get(item) ?? item));
+            batches.push(
+              results.map(({ meta }) => ({ rowsRead: meta.rows_read, sqlMs: meta.duration })),
+            );
+            return results;
+          });
         };
       const value: unknown = Reflect.get(target, key);
       return typeof value === "function"
@@ -45,5 +53,5 @@ export function measuredDatabase(binding: D1Database) {
         : value;
     },
   });
-  return { database, stats, timing };
+  return { database, stats, timing, batches };
 }

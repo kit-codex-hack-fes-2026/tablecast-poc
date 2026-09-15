@@ -1,5 +1,12 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  gameManifestSchema,
+  gamePackageSchema,
+  gameMessageSchema,
+  gameStateSchema,
+} from "./modules/games/model";
+export type { GameManifest, GamePackage, GameState } from "./modules/games/model";
+export {
   maxImageBytes,
   imageMetadataSchema,
   imageSourceSchema,
@@ -57,6 +64,11 @@ export {
   eventsSchema,
   historyPageSchema,
   historyQuerySchema,
+  storeTimeZone,
+  storeDateSchema,
+  timelineQuerySchema,
+  timelineSessionSchema,
+  timelinePageSchema,
   sessionEventsPageSchema,
   sessionEventsQuerySchema,
   tableEventSchema,
@@ -69,6 +81,9 @@ export type {
   ClosedSessionSummary,
   HistoryPage,
   HistoryQuery,
+  TimelinePage,
+  TimelineQuery,
+  TimelineSession,
   SessionEventsPage,
   SessionEventsQuery,
   TableEvent,
@@ -106,3 +121,10 @@ export {
   type InstructionDocument,
   type InstructionBlock,
 } from "./modules/configuration/instruction-model";
+
+export {
+  statisticsQuerySchema,
+  statisticsResultSchema,
+  type StatisticsQuery,
+  type StatisticsResult,
+} from "./modules/statistics/model";

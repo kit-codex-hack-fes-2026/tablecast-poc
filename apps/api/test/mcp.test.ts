@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -10,16 +11,108 @@ import * as businessTables from "../src/db/business-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { priceCart } from "../src/modules/catalog/pricing";
 import {
+  statisticsResultSchema,
   catalogSchema,
   configDraftSchema,
   configurationSchema,
   voicePageSchema,
   uploadedImageSchema,
+  gamePackageSchema,
 } from "../src/schema";
-import { insertFixture } from "./database-fixture";
+import { addStatisticsSession, statisticsPeriod } from "./statistics-fixture";
+import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration as fixtureConfiguration, setupFixture, text } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
+
+it("OAuth接続したMCPでゲーム仕様を取得し、登録・検証しても人間の承認までは公開されない", async () => {
+  const { cookie } = await setupFixture();
+  const { token } = await authorise(cookie);
+  const client = await connect(token);
+  const spec = toolData(
+    await client.callTool({ name: "get_game_spec", arguments: {} }),
+    z.object({
+      protocol: z.literal(1),
+      instructions: z.array(z.string()),
+      schema: z.object({
+        required: z.array(z.string()),
+        properties: z.record(z.string(), z.unknown()),
+      }),
+    }),
+  );
+  expect(spec.schema.required).toEqual(
+    expect.arrayContaining(["manifest", "html", "css", "javascript"]),
+  );
+  expect(Object.keys(spec.schema.properties)).toEqual(
+    expect.arrayContaining(["manifest", "html", "css", "javascript"]),
+  );
+  const tools = await client.listTools();
+  expect(
+    tools.tools
+      .filter((tool) => /game/.test(tool.name))
+      .map((tool) => tool.name)
+      .toSorted(),
+  ).toEqual([
+    "get_game",
+    "get_game_source",
+    "get_game_spec",
+    "list_games",
+    "register_game",
+    "validate_game",
+  ]);
+  const registered = toolData(
+    await client.callTool({
+      name: "register_game",
+      arguments: {
+        gameId: "tablecast-mcp-game",
+        package: {
+          manifest: {
+            apiVersion: 1,
+            name: { ja: "卓上対戦", en: "Table match" },
+            description: { ja: "交代で遊ぶ", en: "Take turns" },
+            rules: { ja: "結果を比べる", en: "Compare results" },
+            minPlayers: 2,
+            maxPlayers: 6,
+            capabilities: ["state"],
+          },
+          html: "<button>終了</button>",
+          css: "",
+          javascript: "tablecast.ready.then(() => tablecast.exit());",
+        },
+      },
+    }),
+    z.object({ gameId: z.string(), versionId: z.uuid(), status: z.literal("draft") }),
+  );
+  const source = toolData(
+    await client.callTool({
+      name: "get_game_source",
+      arguments: { gameId: registered.gameId, versionId: registered.versionId },
+    }),
+    z.object({ package: gamePackageSchema }),
+  );
+  expect(source.package).toMatchObject({
+    html: "<button>終了</button>",
+    css: "",
+    javascript: "tablecast.ready.then(() => tablecast.exit());",
+    manifest: { capabilities: ["state"], minPlayers: 2, maxPlayers: 6 },
+  });
+  const validated = toolData(
+    await client.callTool({
+      name: "validate_game",
+      arguments: { gameId: registered.gameId, versionId: registered.versionId },
+    }),
+    z.object({ valid: z.literal(true), requiresPreview: z.literal(true), reviewUrl: z.url() }),
+  );
+  expect(new URL(validated.reviewUrl).pathname).toBe("/admin/stores/tablecast-store/games");
+  const game = toolData(
+    await client.callTool({ name: "get_game", arguments: { gameId: registered.gameId } }),
+    z.object({
+      activeVersionId: z.null(),
+      versions: z.array(z.object({ status: z.literal("ready"), previewed: z.literal(false) })),
+    }),
+  );
+  expect(game.versions).toHaveLength(1);
+});
 
 it("2MiBを超える画像データをMCPから取り込み、JSON本文上限では拒否しない", async () => {
   const { cookie } = await setupFixture();
@@ -804,4 +897,63 @@ it("アカウントのMCP連携一覧は承認scopeと日時を返し、取消�
   await expect(client.callTool({ name: "get_configuration", arguments: {} })).rejects.toMatchObject(
     { code: 401 },
   );
+});
+
+it("統計MCPは読取りscopeでHTTPと同じ集計を返し、権限変更と失効を検証する", async () => {
+  const { cookie, staff } = await setupFixture();
+  await addStatisticsSession(staff, {
+    id: "statistics-mcp",
+    closedAt: Date.parse(statisticsPeriod.from),
+    orders: [{ productId: "tea", quantity: 2 }],
+  });
+  const { token } = await authorise(cookie, "tablecast:read");
+  const client = await connect(token);
+  const response = toolData(
+    await client.callTool({
+      name: "get_statistics",
+      arguments: { ...statisticsPeriod, view: "products" },
+    }),
+    statisticsResultSchema,
+  );
+  const http = await exports.default.fetch(
+    new Request(
+      `${origin}/api/admin/stores/${staff.storeId}/statistics?${new URLSearchParams({ ...statisticsPeriod, view: "products" }).toString()}`,
+      { headers: { Cookie: cookie } },
+    ),
+  );
+  const data = statisticsResultSchema.parse(await http.json());
+  expect(response.summary).toEqual(data.summary);
+  expect(response.rows).toEqual(data.rows);
+  expect(response.rows[0]).toMatchObject({ quantity: 2, orderRate: 1 });
+  expect(
+    (await client.listTools()).tools.find((tool) => tool.name === "get_statistics")?.annotations
+      ?.readOnlyHint,
+  ).toBe(true);
+  toolError(await client.callTool({ name: "create_draft", arguments: {} }), "WRITE_SCOPE_REQUIRED");
+  await expect(connect(token, "other-store")).rejects.toBeDefined();
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "member" })
+    .where(eq(authTables.member.id, "tablecast-member"));
+  toolError(
+    await client.callTool({ name: "get_statistics", arguments: statisticsPeriod }),
+    "ADMIN_REQUIRED",
+  );
+  await fixtureDb
+    .update(authTables.member)
+    .set({ role: "owner" })
+    .where(eq(authTables.member.id, "tablecast-member"));
+  const sessions = await exports.default.fetch(
+    new Request(`${origin}/api/account/mcp-sessions`, { headers: { Cookie: cookie } }),
+  );
+  const session = z
+    .object({ sessions: z.array(z.object({ id: z.string() })) })
+    .parse(await sessions.json()).sessions[0];
+  if (!session) throw new Error("MCP接続がありません");
+  expect(
+    (await post(`/api/account/mcp-sessions/${session.id}/revoke`, {}, { Cookie: cookie })).status,
+  ).toBe(200);
+  await expect(
+    client.callTool({ name: "get_statistics", arguments: statisticsPeriod }),
+  ).rejects.toMatchObject({ code: 401 });
 });

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // 配備CLIが作成する運用テーブル。0=未着手、2=DB完了・画像待ち、1=全体完了。
@@ -72,6 +73,25 @@ export const tableSessions = sqliteTable("table_sessions", {
   plan_json: text("plan_json"),
   opened_at: integer("opened_at").notNull(),
   closed_at: integer("closed_at"),
+  timeline_start_day: integer("timeline_start_day").generatedAlwaysAs(
+    sql`((opened_at - ((opened_at + 32400000) % 86400000 + 86400000) % 86400000 + 32400000) / 86400000 + 2147483648)`,
+  ),
+  timeline_end_day: integer("timeline_end_day").generatedAlwaysAs(
+    sql`((max(opened_at, closed_at - 1) - ((max(opened_at, closed_at - 1) + 32400000) % 86400000 + 86400000) % 86400000 + 32400000) / 86400000 + 2147483648)`,
+  ),
+  timeline_fork: integer("timeline_fork").generatedAlwaysAs(
+    sql.raw(
+      [
+        "CASE WHEN closed_at IS NULL OR closed_at < opened_at THEN NULL",
+        "WHEN timeline_start_day=timeline_end_day THEN 2*timeline_start_day",
+        ...Array.from({ length: 32 }, (_, i) => {
+          const bit = 31 - i;
+          return `WHEN (timeline_start_day >> ${bit}) != (timeline_end_day >> ${bit}) THEN ((timeline_start_day >> ${bit + 1}) << ${bit + 2}) + ${2 ** (bit + 1)} - 1`;
+        }),
+        "END",
+      ].join("\n"),
+    ),
+  ),
 });
 
 export const confirmations = sqliteTable("confirmations", {
@@ -171,4 +191,41 @@ export const demoSessions = sqliteTable("demo_sessions", {
   source_version: integer("source_version").notNull(),
   config_version: integer("config_version").notNull().default(1),
   config_json: text("config_json").notNull(),
+});
+
+export const gamePlugins = sqliteTable(
+  "game_plugins",
+  {
+    store_id: text("store_id").notNull(),
+    id: text("id").notNull(),
+    active_version_id: text("active_version_id"),
+    revision: integer("revision").notNull().default(0),
+    mutation_id: text("mutation_id"),
+  },
+  (table) => [primaryKey({ columns: [table.store_id, table.id] })],
+);
+
+export const gameVersions = sqliteTable("game_versions", {
+  id: text("id").primaryKey().notNull(),
+  store_id: text("store_id").notNull(),
+  game_id: text("game_id").notNull(),
+  manifest_json: text("manifest_json").notNull(),
+  package_key: text("package_key").notNull(),
+  status: text("status", { enum: ["draft", "ready"] })
+    .notNull()
+    .default("draft"),
+  previewed_by: text("previewed_by"),
+  published_by: text("published_by"),
+  created_at: integer("created_at").notNull(),
+});
+
+export const gameRuns = sqliteTable("game_runs", {
+  id: text("id").primaryKey().notNull(),
+  store_id: text("store_id").notNull(),
+  table_session_id: text("table_session_id").notNull(),
+  game_id: text("game_id").notNull(),
+  version_id: text("version_id").notNull(),
+  state_json: text("state_json").notNull().default("{}"),
+  revision: integer("revision").notNull().default(0),
+  ended_at: integer("ended_at"),
 });

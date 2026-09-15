@@ -1,19 +1,19 @@
 {
   "name": "tablecast",
-  "version": "0.1.0+codex.20260914191814",
-  "description": "TableCast\u306e\u5e97\u8217\u30e1\u30cb\u30e5\u30fc\u3068\u63a5\u5ba2\u8a2d\u5b9a\u3092\u7ba1\u7406\u3057\u307e\u3059\u3002",
+  "version": "0.2.0",
+  "description": "店舗の資料からのメニュー設定、接客の改善提案、営業の統計分析と卓上ゲーム制作を支援します。",
   "author": {
     "name": "TableCast"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "TableCast",
-    "shortDescription": "\u5e97\u8217\u30e1\u30cb\u30e5\u30fc\u3068\u63a5\u5ba2\u8a2d\u5b9a\u3092\u7ba1\u7406",
-    "longDescription": "OAuth\u3067\u8a31\u53ef\u3057\u305f\u7d44\u7e54\u306e\u5e97\u8217\u8a2d\u5b9a\u3092\u78ba\u8a8d\u3057\u3001\u5909\u66f4\u3092\u4e0b\u66f8\u304d\u3068\u3057\u3066\u7ba1\u7406\u3057\u307e\u3059\u3002",
+    "shortDescription": "店舗設定・接客提案・営業分析・ゲーム制作",
+    "longDescription": "メニュー写真や資料から日英の下書きを作り、接客の改善提案と売上・注文の統計分析を行います。卓上ゲームを制作・登録・検証し、設定とゲームの公開は管理画面で人が承認します。",
     "developerName": "TableCast",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
-    "defaultPrompt": "TableCast\u306e\u30e1\u30cb\u30e5\u30fc\u8a2d\u5b9a\u3092\u78ba\u8a8d\u3057\u3066\u3002",
+    "defaultPrompt": "TableCastの現在のメニューと接客を確認して、改善できる点を具体的に提案して。設定はまだ変更しないで。",
     "composerIcon": "./assets/tablecast-composer.png",
     "logo": "./assets/tablecast-icon.png",
     "logoDark": "./assets/tablecast-symbol-white.png"
