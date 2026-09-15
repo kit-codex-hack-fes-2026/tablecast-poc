@@ -2,16 +2,18 @@ import { z } from "zod";
 
 export const instructionLimit = 5000;
 const markSchema = z.object({ type: z.enum(["bold", "italic"]) }).strict();
-const inlineSchema = z.discriminatedUnion("type", [
-  z
-    .object({
-      type: z.literal("text"),
-      text: z.string().min(1),
-      marks: z.array(markSchema).max(2).optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal("hardBreak") }).strict(),
-]);
+const inlineSchema = z
+  .discriminatedUnion("type", [
+    z
+      .object({
+        type: z.literal("text"),
+        text: z.string().min(1),
+        marks: z.array(markSchema).max(2).optional(),
+      })
+      .strict(),
+    z.object({ type: z.literal("hardBreak") }).strict(),
+  ])
+  .meta({ id: "tablecastInstructionInline" });
 type Inline = z.infer<typeof inlineSchema>;
 type TextBlock =
   | { type: "paragraph"; content?: Inline[] }
@@ -30,17 +32,20 @@ export type InstructionBlock = TextBlock | ListBlock<2>;
 export type InstructionDocument = { type: "doc"; content: InstructionBlock[] };
 const paragraphSchema = z
   .object({ type: z.literal("paragraph"), content: z.array(inlineSchema).optional() })
-  .strict();
-const textBlockSchema = z.discriminatedUnion("type", [
-  paragraphSchema,
-  z
-    .object({
-      type: z.literal("heading"),
-      attrs: z.object({ level: z.number().int().min(1).max(3) }).strict(),
-      content: z.array(inlineSchema).optional(),
-    })
-    .strict(),
-]);
+  .strict()
+  .meta({ id: "tablecastInstructionParagraph" });
+const textBlockSchema = z
+  .discriminatedUnion("type", [
+    paragraphSchema,
+    z
+      .object({
+        type: z.literal("heading"),
+        attrs: z.object({ level: z.number().int().min(1).max(3) }).strict(),
+        content: z.array(inlineSchema).optional(),
+      })
+      .strict(),
+  ])
+  .meta({ id: "tablecastInstructionTextBlock" });
 function listSchema<Child extends z.ZodType>(child: Child) {
   const items = z
     .array(
@@ -63,12 +68,14 @@ function listSchema<Child extends z.ZodType>(child: Child) {
       .strict(),
   ]);
 }
-const firstListSchema = listSchema(textBlockSchema);
-const secondListSchema = listSchema(z.union([textBlockSchema, firstListSchema]));
-const blockSchema: z.ZodType<InstructionBlock> = z.union([
-  textBlockSchema,
-  listSchema(z.union([textBlockSchema, secondListSchema])),
-]);
+// JSON Schemaでは同じ深さのリストを参照し、日英・入れ子ごとの展開を避ける。
+const firstListSchema = listSchema(textBlockSchema).meta({ id: "tablecastInstructionListDepth1" });
+const secondListSchema = listSchema(z.union([textBlockSchema, firstListSchema])).meta({
+  id: "tablecastInstructionListDepth2",
+});
+const blockSchema: z.ZodType<InstructionBlock> = z
+  .union([textBlockSchema, listSchema(z.union([textBlockSchema, secondListSchema]))])
+  .meta({ id: "tablecastInstructionBlock" });
 // 再帰schemaの評価前に、大量の空ノードと過度の入れ子を止める。
 const boundedDocument = z.unknown().superRefine((value, ctx) => {
   const pending = [{ value, depth: 0 }];
