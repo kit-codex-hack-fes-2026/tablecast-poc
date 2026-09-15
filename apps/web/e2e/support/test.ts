@@ -201,10 +201,8 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           await rm(join(runtime.directory, "client"), { recursive: true, force: true });
           await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
         }
-        const cleared = await fetch(`${mailpitUrl}/api/v1/messages`, { method: "DELETE" }).catch(
-          () => undefined,
-        );
-        if (cleared && !cleared.ok)
+        const cleared = await fetch(`${mailpitUrl}/api/v1/messages`, { method: "DELETE" });
+        if (!cleared.ok)
           throw new Error(`Mailpitのメッセージ削除に失敗しました: ${cleared.status}`);
         webProcess = startWeb();
         const replacement = z
