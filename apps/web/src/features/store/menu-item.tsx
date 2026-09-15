@@ -1,3 +1,4 @@
+import { instructionText, instructionLimit } from "@tablecast/api/schema";
 import type { ConfigDraft, Configuration } from "@tablecast/api/schema";
 import { useForm } from "@tanstack/react-form";
 import {
@@ -114,7 +115,14 @@ function ItemForm({
   const form = useForm({
     defaultValues: { configuration: initial },
     onSubmit: async ({ value }) => {
-      if (images.uploadingNow() || reload.isPending) return;
+      if (
+        images.uploadingNow() ||
+        reload.isPending ||
+        Object.values(value.configuration.cast.instructions).some(
+          (instruction) => instructionText(instruction).length > instructionLimit,
+        )
+      )
+        return;
       await save.mutateAsync(value.configuration).catch(() => undefined);
     },
   });
@@ -133,7 +141,7 @@ function ItemForm({
       return parseResponse(
         rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
           param: { storeId, id: draft.id },
-          json: { expectedVersion: version, configuration },
+          json: { expectedVersion: version, configuration, instructionFormatVersion: 1 },
         }),
       );
     },
@@ -257,16 +265,24 @@ function ItemForm({
                   selectedId={selectedId}
                   retainedVoice={initial.cast.voice}
                   onChange={(next) => form.setFieldValue("configuration", next)}
-                  disabled={!editable}
+                  disabled={!editable || pending}
                 />
               </fieldset>
             )}
           </form.Subscribe>
           {editable && (
             <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(dirty) => (
+              <form.Subscribe
+                selector={(state) => ({
+                  dirty: state.isDirty,
+                  invalid: Object.values(state.values.configuration.cast.instructions).some(
+                    (instruction) => instructionText(instruction).length > instructionLimit,
+                  ),
+                })}
+              >
+                {({ dirty, invalid }) => (
                   <ItemSaveAction
+                    invalid={invalid}
                     dirty={dirty}
                     pending={pending}
                     uploadingImages={images.uploading}
@@ -421,6 +437,7 @@ function useImageEdits(storeId: string) {
 }
 
 function ItemSaveAction({
+  invalid = false,
   dirty,
   pending,
   uploadingImages,
@@ -428,6 +445,7 @@ function ItemSaveAction({
   newUnsaved,
   isNew,
 }: {
+  invalid?: boolean;
   dirty: boolean;
   pending: boolean;
   uploadingImages: boolean;
@@ -441,7 +459,7 @@ function ItemSaveAction({
       <Button
         type="submit"
         data-pwa-blocked={dirty || pending || uploadingImages || stagedImages || newUnsaved}
-        disabled={pending || uploadingImages || (!dirty && !isNew)}
+        disabled={invalid || pending || uploadingImages || (!dirty && !isNew)}
       >
         <Save />
         {t("common_save")}

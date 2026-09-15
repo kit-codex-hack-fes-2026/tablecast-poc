@@ -1,4 +1,9 @@
-import type { Configuration, Locale } from "@tablecast/api/schema";
+import {
+  instructionText,
+  type CastInstruction,
+  type Configuration,
+  type Locale,
+} from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Maximize2, MessageSquareText, Mic, Sparkles } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
@@ -16,6 +21,7 @@ import {
 } from "../../components/ui/dialog";
 import type { CastTarget } from "./menu-model";
 import { ConfigurationSection } from "./configuration-fields";
+import { InstructionView } from "./instruction-view";
 import { standardVoicesOptions } from "./menu-query";
 
 export function CastOverview({
@@ -72,7 +78,7 @@ function InstructionOverview({
   action,
 }: {
   language: Locale;
-  value: string;
+  value: CastInstruction;
   action?: ReactNode;
 }) {
   const { t } = useI18n();
@@ -81,13 +87,13 @@ function InstructionOverview({
   return (
     <section className="min-w-0 space-y-3">
       <h3 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h3>
-      {value.trim() ? (
+      {instructionText(value).trim() ? (
         <>
           <p
             lang={language}
             className="line-clamp-4 whitespace-pre-wrap wrap-anywhere leading-relaxed"
           >
-            {value}
+            {instructionText(value)}
           </p>
           <Button
             type="button"
@@ -109,9 +115,9 @@ function InstructionOverview({
                 tabIndex={0}
                 className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <p lang={language} className="whitespace-pre-wrap wrap-anywhere leading-relaxed">
-                  {value}
-                </p>
+                <div lang={language}>
+                  <InstructionView value={value} />
+                </div>
               </DialogScroll>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setExpanded(false)}>

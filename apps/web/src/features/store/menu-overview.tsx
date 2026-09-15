@@ -1,3 +1,4 @@
+import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -172,9 +173,9 @@ export function MenuOverview({
                   </>
                 ) : (
                   <>
-                    <p className="whitespace-pre-wrap leading-relaxed">
-                      {configuration.cast.instructions[language] || "—"}
-                    </p>
+                    <div className="leading-relaxed">
+                      <InstructionView value={configuration.cast.instructions[language]} />
+                    </div>
                     <dl>
                       <dt className="text-sm text-muted-foreground">{t("editor_voice")}</dt>
                       <dd>{configuration.cast.voice[language] ?? t("editor_not_configured")}</dd>

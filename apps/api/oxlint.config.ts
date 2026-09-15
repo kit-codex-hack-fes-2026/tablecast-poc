@@ -30,6 +30,8 @@ const files = [
   ["provider", "src/modules/voice/catalog.ts"],
   ["pure", "src/modules/{catalog/pricing,auth/policy,voice/prompt,voice/diagnostics}.ts"],
   ["mutation", "src/modules/tables/mutations.ts"],
+  ["model", "src/modules/configuration/instruction-model.ts"],
+  ["pure", "src/modules/configuration/instruction-response.ts"],
   ["model", "src/modules/*/model.ts"],
   ["query", "src/modules/*/{queries,history}.ts"],
   ["service", "src/modules/*/service.ts"],

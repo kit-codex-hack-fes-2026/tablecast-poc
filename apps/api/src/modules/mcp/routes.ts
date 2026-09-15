@@ -185,12 +185,20 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
         draftId: z.string(),
         expectedVersion: z.number().int(),
         configuration: configurationSchema,
+        instructionFormatVersion: z
+          .literal(1)
+          .optional()
+          .describe("文書形式を保存・更新するときは1。旧文字列のみの下書きでは省略可。"),
       },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },
-    async ({ draftId, expectedVersion, configuration }) =>
+    async ({ draftId, expectedVersion, configuration, instructionFormatVersion }) =>
       result(
-        await updateDraft(c.get("services"), actor, draftId, { expectedVersion, configuration }),
+        await updateDraft(c.get("services"), actor, draftId, {
+          expectedVersion,
+          configuration,
+          instructionFormatVersion,
+        }),
       ),
   );
   server.registerTool(

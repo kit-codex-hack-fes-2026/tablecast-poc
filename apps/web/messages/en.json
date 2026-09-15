@@ -689,5 +689,22 @@
   "cast_edit_voice": "Edit {language} voice",
   "cast_edit_proactive": "Edit proactive service",
   "cast_overview_note": "Review your store’s service settings and choose what to edit.",
-  "games_players": "{min}–{max} players · {current} at your table"
+  "games_players": "{min}–{max} players · {current} at your table",
+  "prompt_loading": "Loading the editor…",
+  "prompt_paragraph": "Text",
+  "prompt_heading": "Heading",
+  "prompt_bullet": "Bulleted list",
+  "prompt_numbered": "Numbered list",
+  "prompt_toolbar": "Service instruction formatting",
+  "prompt_block": "Block type",
+  "prompt_bold": "Bold",
+  "prompt_italic": "Italic",
+  "prompt_undo": "Undo",
+  "prompt_redo": "Redo",
+  "prompt_hint": "Type / at the start of a line · Images are not supported",
+  "prompt_limit": "Shorten the instructions to 5,000 characters including formatting and line breaks before saving. Your text has been kept.",
+  "prompt_omitted": "Images, attachments and embeds are not supported. Only supported text has been pasted.",
+  "prompt_no_commands": "No matching blocks",
+  "prompt_load_error": "The editor could not be loaded. You can retry without losing your text.",
+  "prompt_structure": "This structure is not supported. Lists can be nested up to three levels."
 }

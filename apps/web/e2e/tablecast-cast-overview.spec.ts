@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import { catalogSchema, configDraftSchema, instructionText } from "@tablecast/api/schema";
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import ja from "../messages/ja.json" with { type: "json" };
@@ -21,11 +21,13 @@ for (const { locale, labels } of [
     const storeId = "tablecast-hanul";
     const api = `/api/admin/stores/${storeId}`;
     const menu = `/admin/stores/${storeId}/menu`;
-    const headers = { Origin: baseURL ?? "" };
+    const headers = { Origin: baseURL ?? "", "X-Tablecast-Instructions": "1" };
     expect(
       (await page.request.post("/api/auth/sign-in/email", { headers, data: credentials })).status(),
     ).toBe(200);
-    const original = catalogSchema.parse(await (await page.request.get(`${api}/catalog`)).json());
+    const original = catalogSchema.parse(
+      await (await page.request.get(`${api}/catalog`, { headers })).json(),
+    );
     const created = await page.request.post(`${api}/drafts`, { headers, data: {} });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
@@ -106,7 +108,7 @@ for (const { locale, labels } of [
     });
     await expect(instructions).toBeFocused();
     const nextInstructions =
-      "お客さまの質問に丁寧に答え、料理の特徴を簡潔に紹介してください。必要な場合はスタッフへ確認してください。\n".repeat(
+      "お客さまの質問に丁寧に答え、料理の特徴を簡潔に紹介してください。必要な場合はスタッフへ確認してください。".repeat(
         24,
       );
     await instructions.fill(nextInstructions);
@@ -125,16 +127,22 @@ for (const { locale, labels } of [
     const saved = await savedResponse;
     expect(saved.status()).toBe(200);
     const changedDraft = configDraftSchema.parse(await saved.json());
-    expect(changedDraft.configuration.cast.instructions.ja).toBe(nextInstructions);
+    expect(changedDraft.configuration.cast.instructions.ja).toMatchObject({
+      format: "tiptap-json",
+      version: 1,
+    });
+    expect(
+      instructionText(changedDraft.configuration.cast.instructions.ja).replace(/\s/g, ""),
+    ).toBe(nextInstructions.replace(/\s/g, ""));
     await expect(
       main.getByRole("link", { name: labels.workflow_review, exact: true }),
     ).toBeEnabled();
     await page.reload();
-    await expect(instructions).toHaveValue(nextInstructions);
+    await expect(instructions).toHaveText(nextInstructions);
     await main.getByRole("link", { name: labels.editor_cast, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${menu}/changes/${draft.id}/cast$`));
     const catalogBeforePublish = catalogSchema.parse(
-      await (await page.request.get(`${api}/catalog`)).json(),
+      await (await page.request.get(`${api}/catalog`, { headers })).json(),
     );
     expect(catalogBeforePublish).toEqual(original);
     await main.getByRole("button", { name: labels.cast_show_full, exact: true }).first().click();
@@ -142,7 +150,7 @@ for (const { locale, labels } of [
       name: labels.editor_cast_instructions,
       exact: true,
     });
-    await expect(fullText.locator("p[lang='ja']")).toHaveText(nextInstructions);
+    await expect(fullText.locator("div[lang='ja']")).toHaveText(nextInstructions);
     await page.keyboard.press("Escape");
     await expect(
       main.getByRole("button", { name: labels.cast_show_full, exact: true }).first(),
@@ -161,7 +169,9 @@ for (const { locale, labels } of [
     await main.getByRole("link", { name: labels.workflow_view_published, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${menu}/cast$`));
     await expect(main.getByText("Cedar", { exact: true })).toBeVisible();
-    const current = catalogSchema.parse(await (await page.request.get(`${api}/catalog`)).json());
+    const current = catalogSchema.parse(
+      await (await page.request.get(`${api}/catalog`, { headers })).json(),
+    );
     expect(current.version).toBe(original.version + 1);
     expect(current.configuration.cast).toEqual(changedDraft.configuration.cast);
     await main.screenshot({

@@ -18,7 +18,7 @@ const bindings = {
     setupFiles: ["./test/setup.ts"],
     name: "bindings",
     include: ["test/**/*.test.ts"],
-    exclude: ["test/pricing.test.ts"],
+    exclude: ["test/pricing.test.ts", "test/instructions.test.ts"],
     fileParallelism: true,
     testTimeout: 30000,
     hookTimeout: 30000,
@@ -29,7 +29,13 @@ export default defineConfig({
   test: {
     maxWorkers: 4,
     projects: [
-      { test: { name: "unit", include: ["test/pricing.test.ts"], environment: "node" } },
+      {
+        test: {
+          name: "unit",
+          include: ["test/pricing.test.ts", "test/instructions.test.ts"],
+          environment: "node",
+        },
+      },
       bindings,
     ],
   },
