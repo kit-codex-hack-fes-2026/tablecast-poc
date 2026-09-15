@@ -10,7 +10,10 @@ export const contentSchema = z
   })
   .strict();
 
-export const bilingualSchema = z.object({ ja: contentSchema, en: contentSchema }).strict();
+export const bilingualSchema = z
+  .object({ ja: contentSchema, en: contentSchema })
+  .strict()
+  .meta({ id: "tablecastBilingualContent" });
 
 const imageFields = {
   imageKey: z

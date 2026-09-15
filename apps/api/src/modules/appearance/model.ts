@@ -31,7 +31,8 @@ export const themeImageSchema = imageMetadataSchema
     imageKey: z.string().regex(/^tablecast\/uploads\/[a-f0-9]{64}\.webp$/),
     alt: text,
   })
-  .strict();
+  .strict()
+  .meta({ id: "tablecastThemeImage" });
 export type ThemeImage = z.infer<typeof themeImageSchema>;
 const colour = z.string().regex(/^#[a-fA-F0-9]{6}$/);
 const decoration = z
@@ -67,7 +68,8 @@ export const themePartSchema = z
     font: z.enum(["sans", "serif", "rounded"]).optional(),
     image: decoration.optional(),
   })
-  .strict();
+  .strict()
+  .meta({ id: "tablecastThemePart" });
 export type ThemePart = z.infer<typeof themePartSchema>;
 
 // 公開した単一部品だけを選択可能にし、DOM構造や親・兄弟の選択を契約へ含めない。
