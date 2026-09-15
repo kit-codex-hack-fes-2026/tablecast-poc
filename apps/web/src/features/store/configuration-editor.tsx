@@ -26,6 +26,7 @@ import {
 } from "./configuration-fields";
 import { ConfigurationImageField, type ImageStagedChange } from "./configuration-image-field";
 import { ModifiersEditor } from "./modifiers-editor";
+import { PromptEditor } from "./prompt-editor";
 import { StandardVoiceSelect } from "./standard-voice-select";
 
 const selectClass = "h-12 rounded-lg border border-input px-3 text-base";
@@ -418,22 +419,23 @@ export function CastEditor({
             <legend id={`${id}-${language}`} className="mb-3 font-semibold">
               {t(language === "ja" ? "common_ja" : "common_en")}
             </legend>
-            <label className="flex flex-col gap-2 text-sm">
+            <div className="flex flex-col gap-2 text-sm">
               <span id={`${id}-${language}-instructions`}>{t("editor_cast_instructions")}</span>
-              <textarea
+              <PromptEditor
                 id={`${id}-instructions-${language}`}
-                className="min-h-40 rounded-lg border border-input p-2 text-base"
-                aria-labelledby={`${id}-${language} ${id}-${language}-instructions`}
-                maxLength={5000}
+                labelledBy={`${id}-${language} ${id}-${language}-instructions`}
+                language={language}
                 value={value.instructions[language]}
-                onChange={(event) =>
+                disabled={disabled}
+                focusRequested={focusTarget === `instructions-${language}`}
+                onChange={(instructions) =>
                   onChange({
                     ...value,
-                    instructions: { ...value.instructions, [language]: event.target.value },
+                    instructions: { ...value.instructions, [language]: instructions },
                   })
                 }
               />
-            </label>
+            </div>
             <StandardVoiceSelect
               storeId={storeId}
               inputId={`${id}-voice-${language}`}

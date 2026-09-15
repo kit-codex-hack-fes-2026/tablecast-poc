@@ -96,3 +96,13 @@ export type { ApiError, Locale } from "./platform/model";
 export { showProductsSchema } from "./modules/voice/model";
 
 export { demoSchema, demoUpdateSchema, type Demo, type DemoUpdate } from "./modules/demo/model";
+
+export {
+  castInstructionSchema,
+  instructionDocumentSchema,
+  instructionText,
+  instructionLimit,
+  type CastInstruction,
+  type InstructionDocument,
+  type InstructionBlock,
+} from "./modules/configuration/instruction-model";

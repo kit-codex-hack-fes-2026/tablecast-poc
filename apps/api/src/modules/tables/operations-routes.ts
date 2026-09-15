@@ -1,3 +1,4 @@
+import { instructionResponse } from "../configuration/instruction-response";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
@@ -16,7 +17,13 @@ import { callStaff, changeLocale, requestBill, setUiSection } from "./service";
 export const tableOperations = new Hono<ApiEnv>()
   .get("/", async (c) => c.json(await getTableState(c.get("services"), c.get("actor")), 200))
   .get("/catalog", async (c) =>
-    c.json(await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId), 200),
+    c.json(
+      instructionResponse(
+        await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
   )
   .patch("/ui", validate(uiSectionInputSchema), async (c) =>
     c.json(await setUiSection(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
