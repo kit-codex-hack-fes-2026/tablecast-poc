@@ -125,11 +125,11 @@ hydration後は既存の分単位更新に合わせる。復帰時には現在�
 
 採用しなかった日付展開・trigger版はPR専用環境だけに適用され、staging/mainには未統合である。0017は番号を予約したno-opへ改め、新規環境に非互換なtriggerを作らない。0018_tablecast_timeline_interval_index.sqlは既存PR環境に残る派生表・triggerをIF EXISTSで回収してから、generated columnとindexを追加する。適用済みの0015・0016は維持する。0017の旧内容は移行試験のfixtureとして保存し、新規環境と旧PR環境の両方から同じschemaになることを確認する。
 
-migration後も旧APIと同じ閉卓UPDATEのmeta.changesは1であり、営業書込みを止めず、通常のmigration→Worker配備の順で更新できる。追加列・indexを残して旧アプリへ戻すこともできる。元の来店データ・secret・依存・設定の移行は不要である。
+migration後も旧APIと同じ閉卓UPDATEのmeta.changesは1であり、営業書込みを止めず、通常のmigration→Worker配備の順で更新できる。追加列・indexを残してstaging/mainの既存アプリへ戻すこともできる。旧PR版44aa10cは削除済みの日付表を読むためrollback対象にはできない。PR #221の専用環境は52a952aへの配備成功で切替済みであり、この一時的な旧PR構造を使う環境は残っていない。元の来店データ・secret・依存・設定の移行は不要である。
 
 実D1で前だけ・後だけ・前後双方に各100／10,000履歴を置いた空日・3来店日と、同じ大量履歴へ70日超の滞在を混ぜた1来店日・4来店日を各3標本測る。空日は38行、3来店日は41〜42行、長期滞在を混ぜた1来店日は43行・4来店日は47行で、履歴件数の増加によって変わらなかった。64読取行以内・4往復以内・1,000ms未満を返却内容と同じrequestで保証する。同日1万来店の深いcursorも10件取得で64読取行以内を確認する。通常の100卓・30件取得は4往復・4,576 bytesを維持する。
 
-二分木境界・1970年前後・未来日・safe integer全域を跨ぐ来店は、開始と終了の単純な重なり判定をoracleにして結果を照合する。generated columnを持たない既存DBと旧PRのtrigger版DBから移行し、元の履歴、旧APIの変更件数、閉卓・時刻更新・削除・外部キーを確認する。
+負の開卓時刻のcursorも応答と同じsafe integer範囲で受け付け、1970年以前の日を複数ページ取得するHTTP試験で確認する。二分木境界・1970年前後・未来日・safe integer全域を跨ぐ来店は、開始と終了の単純な重なり判定をoracleにして結果を照合する。generated columnを持たない既存DBと旧PRのtrigger版DBから移行し、元の履歴、旧APIの変更件数、閉卓・時刻更新・削除・外部キーを確認する。
 
 [D1のgenerated column](https://developers.cloudflare.com/d1/reference/generated-columns/)と[SQLiteのjson_each](https://www.sqlite.org/json1.html#jeach)を使う。select・条件・subquery・union・batchはDrizzleで構築し、SQL断片はgenerated式、table-valued function、行値cursorに限定する。[D1 meta](https://developers.cloudflare.com/d1/worker-api/return-object/)の期間SQL時間・読取件数を、認可込みのHTTP・binding時間と分ける。remote D1の本番規模のindex作成時間・実ネットワーク遅延は未測定である。
 

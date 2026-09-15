@@ -152,6 +152,31 @@ it("店舗所属・端末Cookie・demoを分離し、所属を失った後の取
   expect((await request(cookie)).status).toBe(403);
 });
 
+it("1970年以前の負の開卓時刻でも次ページを取得できる", async () => {
+  const { cookie } = await setupFixture();
+  const historicalDate = "1969-12-31";
+  const openedAt = Date.parse(`${historicalDate}T12:00:00+09:00`);
+  const ids = ["tablecast-negative-a", "tablecast-negative-b", "tablecast-negative-c"];
+  await fixtureDb
+    .insert(tableSessions)
+    .values(ids.map((id) => closed(id, openedAt, openedAt + 1000)));
+  const first = await page(cookie, `date=${historicalDate}&limit=2`);
+  expect(first.nextCursor).toEqual({ openedAt, id: ids[1] });
+  const second = await page(
+    cookie,
+    new URLSearchParams({
+      date: historicalDate,
+      limit: "2",
+      beforeOpenedAt: String(first.nextCursor?.openedAt),
+      beforeId: first.nextCursor?.id ?? "",
+    }).toString(),
+  );
+  expect([...first.sessions, ...second.sessions].map((session) => session.id)).toEqual(
+    ids.toReversed(),
+  );
+  expect(second.nextCursor).toBeNull();
+});
+
 it("不正な日付・片側cursor・不正limitをHTTP400として扱う", async () => {
   const { cookie } = await setupFixture();
   for (const query of [
@@ -161,7 +186,9 @@ it("不正な日付・片側cursor・不正limitをHTTP400として扱う", asyn
     "date=2026-09-01T00:00:00Z",
     `date=${date}&beforeId=x`,
     `date=${date}&beforeOpenedAt=1000`,
-    `date=${date}&beforeOpenedAt=-1&beforeId=x`,
+    ...["-1.5", "NaN", "9007199254740992", "-9007199254740992"].map(
+      (cursor) => `date=${date}&beforeOpenedAt=${cursor}&beforeId=x`,
+    ),
     `date=${date}&beforeOpenedAt=1000&beforeId=%20`,
     ...["0", "201", "1.5", "NaN", ""].map((limit) => `date=${date}&limit=${limit}`),
   ]) {

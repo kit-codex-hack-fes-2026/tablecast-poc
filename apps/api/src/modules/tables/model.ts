@@ -81,8 +81,11 @@ export const storeDateSchema = z.iso.date();
 export const timelineQuerySchema = z
   .object({
     date: storeDateSchema,
-    beforeOpenedAt: decimalQuerySchema
-      .pipe(z.number().int().nonnegative().max(8_640_000_000_000_000))
+    beforeOpenedAt: z
+      .string()
+      .regex(/^-?\d+$/)
+      .transform(Number)
+      .pipe(z.number().int())
       .optional(),
     beforeId: id.refine((value) => value.trim().length > 0).optional(),
     limit: decimalQuerySchema.pipe(z.number().int().min(1).max(200)).default(100),
