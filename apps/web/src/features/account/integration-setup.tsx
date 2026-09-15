@@ -1,5 +1,6 @@
 import {
   Blocks,
+  MessagesSquare,
   Download,
   ExternalLink,
   FolderGit2,
@@ -9,6 +10,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { integrationConnection } from "./integration-query";
+import advisorSkill from "../../../../../plugins/tablecast/skills/tablecast-advisor/SKILL.md?raw";
+import analyticsSkill from "../../../../../plugins/tablecast/skills/tablecast-analytics/SKILL.md?raw";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
 import { CopyValue } from "../../components/copy-value";
 import { Badge } from "../../components/ui/badge";
@@ -65,6 +68,14 @@ export function IntegrationSetup({
   const { endpoint, name, staging } = connection;
   return (
     <IntegrationsShell>
+      <Guide title={t("mcp_scenarios_title")} icon={<MessagesSquare className="size-5" />}>
+        <p className="text-sm text-muted-foreground">{t("mcp_scenarios_hint")}</p>
+        <div className="space-y-5">
+          <CopyValue label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
+          <CopyValue label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
+          <CopyValue label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
+        </div>
+      </Guide>
       {staging && <p>{t("mcp_staging_connection")}</p>}
       {mode === "plugins" ? (
         <>
@@ -123,20 +134,47 @@ export function IntegrationSetup({
           </Guide>
           <Guide title="Agent Skills" icon={<Download className="size-5" />}>
             <p>{t("mcp_skill_steps")}</p>
-            <Button
-              nativeButton={false}
-              role="link"
-              render={
-                <a
-                  aria-label={t("mcp_skill_download")}
-                  download="SKILL.md"
-                  href={`data:text/markdown;charset=utf-8,${encodeURIComponent(skill)}`}
-                />
-              }
-            >
-              <Download />
-              {t("mcp_skill_download")}
-            </Button>
+            <div className="space-y-4">
+              {[
+                {
+                  name: "tablecast",
+                  title: t("mcp_scenario_setup"),
+                  label: t("mcp_skill_download"),
+                  content: skill,
+                },
+                {
+                  name: "tablecast-advisor",
+                  title: t("mcp_scenario_advisor"),
+                  label: t("mcp_skill_advisor_download"),
+                  content: advisorSkill,
+                },
+                {
+                  name: "tablecast-analytics",
+                  title: t("mcp_scenario_analytics"),
+                  label: t("mcp_skill_analytics_download"),
+                  content: analyticsSkill,
+                },
+              ].map(({ name: skillName, title, label, content }) => (
+                <div key={skillName} className="space-y-2">
+                  <h3 className="font-medium">{title}</h3>
+                  <Button
+                    nativeButton={false}
+                    role="link"
+                    variant="outline"
+                    render={
+                      <a
+                        aria-label={label}
+                        download="SKILL.md"
+                        href={`data:text/markdown;charset=utf-8,${encodeURIComponent(content)}`}
+                      />
+                    }
+                  >
+                    <Download />
+                    {label}
+                  </Button>
+                </div>
+              ))}
+            </div>
             <p className="text-sm text-muted-foreground">{t("mcp_skill_requirement")}</p>
           </Guide>
         </>

@@ -71,9 +71,15 @@ test("導入手順の個別URL・公開接続URL・スキル配布とOAuth一覧
     // When: 手動導入へ移動し、スキルを保存する。
     await page.getByRole("link", { name: labels.mcp_manual_install, exact: true }).click();
     await expect(page).toHaveURL(/\/account\/integrations\/manual$/);
-    const downloaded = page.waitForEvent("download");
-    await page.getByRole("link", { name: labels.mcp_skill_download, exact: true }).click();
-    expect((await downloaded).suggestedFilename()).toBe("SKILL.md");
+    for (const label of [
+      labels.mcp_skill_download,
+      labels.mcp_skill_advisor_download,
+      labels.mcp_skill_analytics_download,
+    ]) {
+      const downloaded = page.waitForEvent("download");
+      await page.getByRole("link", { name: label, exact: true }).click();
+      expect((await downloaded).suggestedFilename()).toBe("SKILL.md");
+    }
     // Then: 対象環境と権限が表示され、OAuth一覧にも進める。
     expect(
       await page.getByRole("textbox", { name: "Codex CLI", exact: true }).inputValue(),
