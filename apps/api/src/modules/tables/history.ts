@@ -70,7 +70,21 @@ export async function getTimeline(
     lt(tableSessions.opened_at, endAt),
     cursor,
   );
-  // 閉卓日時の下限をindexへ渡し、空の日でも古い閉卓履歴を走査しない。
+  // 店舗の最長滞在を式indexの先頭から取り、開卓日時の両端を絞る。
+  // 固定の日数で切らないため、長期滞在や日跨ぎも欠落させない。
+  const duration = sql<number>`${tableSessions.closed_at} - ${tableSessions.opened_at}`;
+  const maximumDuration = db
+    .select({ duration })
+    .from(tableSessions)
+    .where(
+      and(
+        eq(tableSessions.store_id, actor.storeId),
+        eq(tableSessions.kind, "table"),
+        eq(tableSessions.status, "closed"),
+      ),
+    )
+    .orderBy(desc(duration))
+    .limit(1);
   const closed = db
     .select(fields)
     .from(tableSessions)
@@ -78,10 +92,13 @@ export async function getTimeline(
       and(
         scope,
         eq(tableSessions.status, "closed"),
-        gte(tableSessions.closed_at, startAt),
+        gte(tableSessions.opened_at, sql`${startAt} - max(coalesce((${maximumDuration}), 0), 0)`),
         or(
           gt(tableSessions.closed_at, startAt),
-          eq(tableSessions.closed_at, tableSessions.opened_at),
+          and(
+            eq(tableSessions.closed_at, tableSessions.opened_at),
+            gte(tableSessions.opened_at, startAt),
+          ),
         ),
       ),
     );
@@ -105,7 +122,10 @@ export async function getTimeline(
         and(
           scope,
           eq(tableSessions.status, "closed"),
-          or(isNull(tableSessions.closed_at), lt(tableSessions.closed_at, tableSessions.opened_at)),
+          eq(
+            sql<number>`${or(isNull(tableSessions.closed_at), lt(tableSessions.closed_at, tableSessions.opened_at))}`,
+            1,
+          ),
         ),
       )
       .limit(1),
