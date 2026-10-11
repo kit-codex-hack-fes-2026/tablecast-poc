@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { startGateway } from "./gateway";
 import { createWorkerRuntime, credentials, runtime as template, type CaseRuntime } from "./runtime";
@@ -15,12 +16,6 @@ declare const process: NodeJS.Process;
 const execute = promisify(execFile);
 const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
 const root = resolve(import.meta.dirname, "../../../..");
-const builtConfig = z
-  .object({
-    main: z.string(),
-    assets: z.object({ directory: z.string() }).optional(),
-  })
-  .catchall(z.json());
 
 function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
   if (!child.pid) return false;
@@ -140,6 +135,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
       let mailpitUrl = "";
       let ingress: Awaited<ReturnType<typeof startGateway>> | undefined;
       let webProcess: ChildProcess | undefined;
+      let apiProcess: ChildProcess | undefined;
       let testsPrepared = 0;
       let clientSource: string | undefined;
       let mailpitMode: "binary" | "docker" = "binary";
@@ -187,23 +183,55 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           ],
           { TABLECAST_E2E_CASE_DIRECTORY: runtime.directory },
         );
+      const startApi = () =>
+        start(
+          "node",
+          [
+            join(root, "apps/web/node_modules/.bin/vite"),
+            "preview",
+            "--config",
+            join(import.meta.dirname, "tablecast-preview.config.ts"),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "0",
+            "--logLevel",
+            "warn",
+          ],
+          {
+            TABLECAST_E2E_CASE_DIRECTORY: runtime.directory,
+            TABLECAST_E2E_API_DIRECTORY: join(runtime.directory, "api"),
+          },
+        );
       const resetRuntimeState = async () => {
         // writerを止めてから保存状態と配信ファイルを復元する。稼働中のSQLiteはコピーしない。
-        if (!ingress || !webProcess) throw new Error("worker runtimeが未起動です。");
+        if (!ingress || !webProcess || !apiProcess) throw new Error("worker runtimeが未起動です。");
         ingress.setOnline(false);
+        await stop(apiProcess);
+        const stoppedApi = children.indexOf(apiProcess);
+        if (stoppedApi >= 0) children.splice(stoppedApi, 1);
         await stop(webProcess);
         const stopped = children.indexOf(webProcess);
         if (stopped >= 0) children.splice(stopped, 1);
         await rm(join(runtime.directory, "web-ready.json"), { force: true });
         await rm(state, { recursive: true, force: true });
+        await rm(join(runtime.directory, "web-state"), { recursive: true, force: true });
         await cp(join(template.directory, "state"), state, { recursive: true });
         if (clientSource) {
-          await rm(join(runtime.directory, "client"), { recursive: true, force: true });
-          await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+          await rm(join(runtime.directory, ".cloudflare/output/v0/workers/default/assets"), {
+            recursive: true,
+            force: true,
+          });
+          await cp(
+            clientSource,
+            join(runtime.directory, ".cloudflare/output/v0/workers/default/assets"),
+            { recursive: true },
+          );
         }
         const cleared = await fetch(`${mailpitUrl}/api/v1/messages`, { method: "DELETE" });
         if (!cleared.ok)
           throw new Error(`Mailpitのメッセージ削除に失敗しました: ${cleared.status}`);
+        apiProcess = startApi();
         webProcess = startWeb();
         const replacement = z
           .object({ port: z.number().int().positive() })
@@ -324,52 +352,61 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           TABLECAST_MAILPIT_URL: mailpitUrl,
           TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
         };
+        const built = await readBuildOutput(join(template.directory, "build"));
+        await cp(
+          join(template.directory, "build/.cloudflare"),
+          join(runtime.directory, ".cloudflare"),
+          { recursive: true },
+        );
         for (const [directory, worker] of [
-          ["server", "web"],
+          ["default", "web"],
           ["tablecast_api", "api"],
         ] as const) {
-          const build = join(template.directory, "build", directory);
-          const config = builtConfig.parse(
-            JSON.parse(await readFile(join(build, "wrangler.json"), "utf8")),
-          );
-          if (config.assets) {
-            clientSource = resolve(build, config.assets.directory);
-            await cp(clientSource, join(runtime.directory, "client"), { recursive: true });
+          const config = built.workers[directory]?.config;
+          if (!config) throw new Error("E2EのWorker成果物がありません。");
+          if (worker === "web") {
+            clientSource = built.workers.default.assetsDir;
           }
+          const env =
+            worker === "web"
+              ? { ...config.env, TABLECAST_API: { type: "worker", worker: `${name}-api` } }
+              : {
+                  ...config.env,
+                  ...Object.fromEntries(
+                    Object.entries(vars).map(([key, value]) => [key, { type: "text", value }]),
+                  ),
+                  TABLECAST_EVENTS: {
+                    type: "durable-object",
+                    worker: `${name}-api`,
+                    exportName: "StoreEvents",
+                  },
+                  TABLECAST_EMULATE: {
+                    type: "durable-object",
+                    worker: `${name}-api`,
+                    exportName: "TablecastEmulate",
+                  },
+                };
           await writeFile(
-            join(runtime.directory, `${worker}.json`),
-            JSON.stringify({
-              ...config,
-              name: `${name}-${worker}`,
-              main: resolve(build, config.main),
-              ...(config.assets
-                ? { assets: { ...config.assets, directory: join(runtime.directory, "client") } }
-                : {}),
-              ...(worker === "web"
-                ? { services: [{ binding: "TABLECAST_API", service: `${name}-api` }] }
-                : {
-                    vars,
-                    d1_databases: [
-                      {
-                        binding: "TABLECAST_DB",
-                        database_name: "tablecast-e2e",
-                        database_id: "00000000-0000-0000-0000-000000000002",
-                      },
-                    ],
-                  }),
-              dev: { port: 0, inspector_port: 0 },
-            }),
+            join(
+              runtime.directory,
+              ".cloudflare/output/v0/workers",
+              directory,
+              "worker.config.json",
+            ),
+            JSON.stringify({ ...config, name: `${name}-${worker}`, env }),
           );
         }
-        const deploy = join(runtime.directory, ".wrangler/deploy");
-        await mkdir(deploy, { recursive: true });
-        await writeFile(
-          join(deploy, "config.json"),
-          JSON.stringify({
-            configPath: join(runtime.directory, "web.json"),
-            auxiliaryWorkers: [{ configPath: join(runtime.directory, "api.json") }],
-          }),
+        // betaのpreviewはdefault Workerだけを読むため、APIの公式成果物も別rootで起動する。
+        await cp(
+          join(runtime.directory, ".cloudflare/output/v0/workers/tablecast_api"),
+          join(runtime.directory, "api/.cloudflare/output/v0/workers/default"),
+          { recursive: true },
         );
+        await cp(
+          join(runtime.directory, ".cloudflare/output/v0/config.json"),
+          join(runtime.directory, "api/.cloudflare/output/v0/config.json"),
+        );
+        apiProcess = startApi();
         webProcess = startWeb();
         const web = z
           .object({ port: z.number().int().positive() })

@@ -10,8 +10,14 @@ test.describe("worker再利用時の配信ファイルの隔離", () => {
   const addedAsset = "tablecast-added-by-previous-test.txt";
 
   test("ケース内の再起動では配信ファイルの変更を維持する", async ({ runtime, request }) => {
-    await appendFile(join(runtime.directory, "client/sw.js"), `\n// ${marker}\n`);
-    await writeFile(join(runtime.directory, "client", addedAsset), marker);
+    await appendFile(
+      join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
+      `\n// ${marker}\n`,
+    );
+    await writeFile(
+      join(runtime.directory, ".cloudflare/output/v0/workers/default/assets", addedAsset),
+      marker,
+    );
     await runtime.restartWeb();
 
     expect(await (await request.get("/sw.js")).text()).toContain(marker);

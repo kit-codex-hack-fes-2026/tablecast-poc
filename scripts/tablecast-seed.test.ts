@@ -50,7 +50,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         {
           binding: "TABLECAST_DB",
           database_name: "tablecast-seed-test",
-          database_id: "00000000-0000-0000-0000-000000000001",
+          database_id: "00000000-0000-4000-8000-000000000001",
           migrations_dir: resolve("apps/api/migrations"),
         },
       ],
@@ -65,17 +65,17 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
     profile: "history",
   };
   try {
-    await execute(
+    const migrations = execute(
       process.execPath,
       [
-        resolve("node_modules/wrangler/bin/wrangler.js"),
+        resolve("scripts/tablecast-cf-local.ts"),
         "d1",
         "migrations",
         "apply",
-        "TABLECAST_DB",
+        "00000000-0000-4000-8000-000000000001",
+        "--dir",
+        resolve("apps/api/migrations"),
         "--local",
-        "--config",
-        configPath,
         "--persist-to",
         state,
       ],
@@ -87,6 +87,8 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
         },
       },
     );
+    migrations.child.stdin?.end();
+    await migrations;
     const platform = await getPlatformProxy<TablecastEnv>({
       configPath,
       envFiles: [],

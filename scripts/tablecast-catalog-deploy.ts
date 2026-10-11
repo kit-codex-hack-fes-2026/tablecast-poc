@@ -11,6 +11,10 @@ import {
   type CatalogKind,
 } from "./tablecast-catalog-config";
 import { deploymentTarget, tablecastAccountId } from "./tablecast-deploy-config";
+import { accessApplicationConfig, tablecastAccess } from "../infra/tablecast.config";
+import { assertAccessConfiguration } from "./tablecast-infra-access";
+import { InputWorkerSchema } from "@cloudflare/config";
+import { writeAssets, writeWorkerConfig, writeRootConfig } from "@cloudflare/build-output-utils";
 
 const root = resolve(import.meta.dirname, "..");
 const appSchema = z.object({
@@ -62,18 +66,14 @@ export function ownedCatalogApplication(
 async function protect(name: string, domain: string, workerId?: string) {
   const app = (await applications()).find((value) => value.name === name);
   if (app) ownedCatalogApplication(app, name, domain, workerId);
-  const policies = [
-    process.env.TABLECAST_PREVIEW_ACCESS_POLICY_ID,
-    process.env.TABLECAST_PREVIEW_SERVICE_POLICY_ID,
-  ].map((value) => z.string().min(1).parse(value));
+  await assertAccessConfiguration();
+  const policies = tablecastAccess.policies.map((value) => value.id);
   const created = appSchema.parse(
-    await cloudflare(`access/apps${app ? `/${app.id}` : ""}`, app ? "PUT" : "POST", {
-      name,
-      type: "self_hosted",
-      session_duration: "24h",
-      ...(workerId ? { destinations: [{ type: "worker", worker_id: workerId }] } : { domain }),
-      policies: policies.map((id, index) => ({ id, precedence: index + 1 })),
-    }),
+    await cloudflare(
+      `access/apps${app ? `/${app.id}` : ""}`,
+      app ? "PUT" : "POST",
+      accessApplicationConfig(name, domain, workerId),
+    ),
   );
   const checked = appSchema.parse(await cloudflare(`access/apps/${created.id}`));
   ownedCatalogApplication(checked, name, domain, workerId);
@@ -109,8 +109,21 @@ export async function cleanupCatalogs(pr: string) {
         new URL(origin).hostname,
         worker?.id ?? app.destinations?.find((value) => value.type === "worker")?.worker_id,
       );
+    if (exists && !app)
+      throw new Error(
+        "カタログWorkerの所有Access applicationがありません。自動削除せず照合してください。",
+      );
     await currentRevision(target, "", true);
-    if (exists) await cloudflare(`workers/scripts/${name}`, "DELETE", undefined, true);
+    if (exists)
+      execFileSync(
+        "node",
+        [resolve(root, "node_modules/cf/bin/cf"), "workers", "delete", name, "--force"],
+        {
+          cwd: root,
+          stdio: "inherit",
+          env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
+        },
+      );
     if (app) await cloudflare(`access/apps/${app.id}`, "DELETE", undefined, true);
   }
 }
@@ -196,22 +209,31 @@ async function main() {
       : undefined;
     await protect(name, new URL(origin).hostname, existing?.id);
     await currentRevision(target, sha);
-    const configPath = resolve(directory, `${kind}.json`);
-    await writeFile(
-      configPath,
-      JSON.stringify({
-        assets: { directory: artifact, not_found_handling: "none", html_handling: "none" },
+    const catalogRoot = resolve(directory, kind);
+    await writeAssets({ root: catalogRoot, sourceDirectory: artifact });
+    await writeWorkerConfig({
+      root: catalogRoot,
+      config: InputWorkerSchema.parse({
+        assets: { notFoundHandling: "none", htmlHandling: "none" },
         name,
-        account_id: tablecastAccountId,
-        compatibility_date: "2026-09-03",
-        workers_dev: false,
-        preview_urls: false,
+        compatibilityDate: "2026-09-03",
+        workersDev: false,
+        previewUrls: false,
       }),
+    });
+    await writeRootConfig(
+      catalogRoot,
+      { accountId: tablecastAccountId },
+      { mode: "preview", isPreview: false },
     );
     execFileSync(
-      resolve(root, "node_modules/.bin/wrangler"),
-      ["deploy", "--config", configPath, "--env-file", resolve(directory, "empty.env")],
-      { cwd: root, stdio: "inherit" },
+      "node",
+      [resolve(root, "node_modules/cf/bin/cf"), "deploy", "--prebuilt", "--mode", "preview"],
+      {
+        cwd: catalogRoot,
+        stdio: "inherit",
+        env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
+      },
     );
     const worker = workerSchema.parse(await cloudflare(`workers/workers/${name}`));
     if (worker.name !== name) throw new Error("Worker名が一致しません。");

@@ -10,12 +10,14 @@
     "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "bun --env-file=../../.local/.env exec 'cf dev --mode development --port \"$TABLECAST_API_PORT\"'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "cf:typegen": "wrangler types --env-file .dev.vars.example --strict-vars=false --include-runtime=false --env-interface TablecastEnv src/cloudflare-env.d.ts",
+    "cf:typegen": "cf workers types --mode development --include-runtime=false",
     "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
-    "build:email": "bun --no-env-file scripts/tablecast-email-build.ts"
+    "build:email": "bun --no-env-file scripts/tablecast-email-build.ts",
+    "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
+    "preview": "bun --env-file=../../.local/.env run ../web/node_modules/.bin/vite preview --config ../web/tablecast-api-preview.config.ts --port 0"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.2",
@@ -42,7 +44,8 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@cloudflare/vitest-plugin": "1.1.4",
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "@cloudflare/vitest-plugin": "1.4.0",
     "@cloudflare/workers-types": "5.20260903.1",
     "@types/css-tree": "^3.2.0",
     "@types/react": "19",
@@ -52,7 +55,8 @@
     "eslint-plugin-drizzle": "0.2.3",
     "eslint-plugin-hono": "1.0.6",
     "typescript": "6.0.3",
+    "vite": "8.1.5",
     "vitest": "4.1.11",
-    "wrangler": "4.129.0"
+    "wrangler": "4.149.0"
   }
 }

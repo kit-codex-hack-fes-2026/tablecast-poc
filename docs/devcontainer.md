@@ -8,7 +8,7 @@ Node 24.7.0、Bun 1.3.13を使用する。Mailpit・Caddyはイメージ内の�
 
 `tablecast-init.sh` はホストのGit共通ディレクトリとworktree実パスからCompose設定を生成する。メインcheckoutは `main`、追加worktreeはフォルダー名、Codexの同名repoフォルダーでは親のIDを使う。branch名やcommitには依存しない。Compose project・volumeと公開ポートを実パスごとに分離する。
 
-workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、`.local`、Webのbuild出力とWrangler状態はLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
+workspaceとGit共通ディレクトリをホストと同じ絶対パスへmountする。依存、`.local`、Web/APIの`.cloudflare`出力とlocal stateはLinux用のvolumeで覆い、ホストのmacOS用依存と分ける。Git共通ディレクトリは共有されるため、他worktreeのbranch・設定・indexを変更しない。
 
 コンテナ内のWeb入口はCaddyの3000、Viteは3001。模擬OAuthをCaddy経由の同一originへ集約する。音声はホストのブラウザーからGPT-Liveへ直接接続する。Storybookは6006の全interfaceで待ち受け、ホストにはloopbackだけで公開する。
 

@@ -38,7 +38,7 @@
 | 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie      |
 | 有料・実機   | 実LLM/STT/TTS、iPad                         | 読み、演技、騒音、エコー、barge-in、実遅延 |
 
-Cloudflareのテストは採用Wranglerと対応した公式runnerで行う。通常のSQLiteだけを使ってD1の挙動を検証済みにしない。[S12](sources.md#s12)
+Cloudflareのテストはcf設定・採用SDKと対応した公式Vitest runnerで行う。通常のSQLiteだけを使ってD1の挙動を検証済みにしない。[S12](sources.md#s12)
 Playwrightは実行ツールであって、全ケースをE2Eに分類する理由ではない。
 
 ## 各層で厚く検証するもの
@@ -115,7 +115,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 `bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.29.2`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。
 
-ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。ViteとSerwistの出力先は`TABLECAST_BUILD_DIRECTORY`で実行ごとの`build/`へ揃え、通常開発の`apps/web/dist`を上書きしない。seedに使った`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。ビルド成果物をtemplateとし、各workerのassets・deploy configから固有名のWeb/API WorkersをCloudflare Vite previewで起動する。Wranglerの`WRANGLER_REGISTRY_PATH`もworker内へ分け、別workerの登録・解除がruntime再構成を起こさないようにする。Cookie・メール・DO・認証もworker間で共有せず、ケース間はstate差し替えとMailpitクリアで初期化する。
+ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。APIのcf buildとWebのVite/Serwistで公式Build Outputを作り、`TABLECAST_BUILD_DIRECTORY`へ`.cloudflare`を複製する。通常buildの出力は一時生成するが、E2E終了後の実行資源は専用directoryへ隔離される。Webのdev・Storybook build・他のE2E buildを同じworktreeで同時実行しない。ローカル秘密値を含む成果物はTurbo cacheへ書き込まない。seedの`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。各workerはdefault Webと別rootのdefault APIを公式Vite previewで起動し、Service Bindingで接続する。業務D1/R2/DOのstateとWebの内部stateを分離し、registryもworker内へ分ける。Cookie・メール・DO・認証をworker間で共有せず、ケース間は両Workersを停止してstate・assetsを復元し、Mailpitをクリアする。
 
 `fullyParallel: true`、`workers: 4`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはworker専用の`baseURL`を使う。worker終了時に自分のプロセスとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント試験は、前ケースの登録状態で分岐せず、毎回新規登録から確認する。
 
@@ -205,3 +205,5 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 環境・secret分離、release本文の対象PR・取消・重複排除・編集保全・確認待ちは既存Vitestで検証する。全体リセットはAPI統合の実D1で全業務・OAuthデータ削除と所有台帳保持を確認する。実stagingでは通常再配備のデータ・画像・認可保持、リセット後の旧token拒否、Access資格なしでのWeb到達と未認証MCPのOAuth拒否、ChatGPT/CodexのOAuth・MCP読取・下書き更新を確認する。CI成功だけで実クライアント確認や本番公開を完了としない。対象SHAと未実施範囲をrelease PRへ記録する。
 
 PR本文の編集だけではCIを再実行しない。base変更後に新しい統合先の検査が必要な場合は、作業branchへ最新stagingを取り込んだheadをpushする。releaseは保護されたstagingのCI・配備SHAとmainとの合成treeを照合する。
+
+cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別環境・別SHA・別PRの拒否、D1の採用ID、Worker所有情報、Accessの再適用と既存token欠落時の拒否を確認する。local D1のID移行は実SDKでデータ・migration履歴・再実行を検証する。遠隔namespaceの保持・Access拒否と許可・再配備後のデータ保持は最新PR headの配備で別途確認する。

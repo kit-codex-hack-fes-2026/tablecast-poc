@@ -15,11 +15,15 @@ export default defineConfig(() => {
     import.meta.dirname,
     tablecastEnv.TABLECAST_BUILD_DIRECTORY ?? "dist",
   );
+  const assetsDirectory = resolve(
+    import.meta.dirname,
+    ".cloudflare/output/v0/workers/default/assets",
+  );
   const serviceWorkerContext = createContext(
     {
       swSrc: "src/sw.ts",
-      swDest: resolve(buildDirectory, "client/sw.js"),
-      globDirectory: resolve(buildDirectory, "client"),
+      swDest: resolve(assetsDirectory, "sw.js"),
+      globDirectory: assetsDirectory,
       globPatterns: [
         "assets/**/*.{js,css,woff2}",
         "flags/*.svg",
@@ -41,16 +45,10 @@ export default defineConfig(() => {
     plugins: [
       tailwindcss(),
       cloudflare({
-        configPath: tablecastEnv.TABLECAST_WEB_CONFIG,
+        experimental: { newConfig: { cfBuildOutput: true, types: { includeRuntime: false } } },
         viteEnvironment: { name: "ssr" },
-        auxiliaryWorkers: [
-          {
-            configPath: tablecastEnv.TABLECAST_API_CONFIG ?? "../api/wrangler.jsonc",
-            viteEnvironment: { name: "tablecast_api" },
-          },
-        ],
         ...(tablecastEnv.TABLECAST_STATE_PATH
-          ? { persistState: { path: tablecastEnv.TABLECAST_STATE_PATH } }
+          ? { persistState: { path: resolve(tablecastEnv.TABLECAST_STATE_PATH, "tablecast-web") } }
           : {}),
         ...(tablecastEnv.TABLECAST_INSPECTOR_PORT
           ? { inspectorPort: Number(tablecastEnv.TABLECAST_INSPECTOR_PORT) }

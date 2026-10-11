@@ -8,6 +8,12 @@ import { z } from "zod";
 import { seedDemoDatabase } from "../../../../scripts/tablecast-seed-data";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { credentials, runtime } from "./runtime";
+import {
+  apiSdkConfiguration,
+  sdkConfiguration,
+  webCloudflareConfig,
+} from "../../../../scripts/tablecast-cloudflare-config";
+import { buildTablecast } from "../../../../scripts/tablecast-build";
 const execute = promisify(execFile);
 const root = resolve(import.meta.dirname, "../../../..");
 export default async function setup() {
@@ -57,38 +63,19 @@ export default async function setup() {
       {
         binding: "TABLECAST_DB",
         database_name: "tablecast-e2e",
-        database_id: "00000000-0000-0000-0000-000000000002",
+        database_id: "00000000-0000-4000-8000-000000000002",
         migrations_dir: join(root, "apps/api/migrations"),
       },
     ];
     const r2 = [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-e2e-media" }];
-    const base = {
-      compatibility_date: "2026-09-03",
-      compatibility_flags: ["nodejs_compat", "nodejs_compat_do_not_populate_process_env"],
-    };
-    await writeFile(
-      apiConfig,
-      JSON.stringify({
-        ...base,
-        name: "tablecast-api",
-        main: join(root, "apps/api/src/worker.ts"),
-        vars,
-        d1_databases: d1,
-        r2_buckets: r2,
-        images: { binding: "TABLECAST_IMAGES" },
-        durable_objects: { bindings: [{ name: "TABLECAST_EVENTS", class_name: "StoreEvents" }] },
-        migrations: [{ tag: "tablecast-v1", new_sqlite_classes: ["StoreEvents"] }],
-      }),
-    );
-    await writeFile(
-      webConfig,
-      JSON.stringify({
-        ...base,
-        name: "tablecast-web",
-        main: join(root, "apps/web/src/server.ts"),
-        services: [{ binding: "TABLECAST_API", service: "tablecast-api" }],
-      }),
-    );
+    const base = apiSdkConfiguration({
+      name: "tablecast-api",
+      vars,
+      database: { name: "tablecast-e2e", id: "00000000-0000-4000-8000-000000000002" },
+      bucket: "tablecast-e2e-media",
+    });
+    await writeFile(apiConfig, JSON.stringify({ ...base, vars, d1_databases: d1, r2_buckets: r2 }));
+    await writeFile(webConfig, JSON.stringify(sdkConfiguration(webCloudflareConfig())));
     const seedConfig = join(runtime.directory, "seed.wrangler.json");
     await writeFile(
       seedConfig,
@@ -100,17 +87,17 @@ export default async function setup() {
         r2_buckets: r2,
       }),
     );
-    await execute(
+    const migrations = execute(
       "node",
       [
-        join(root, "node_modules/wrangler/bin/wrangler.js"),
+        join(root, "scripts/tablecast-cf-local.ts"),
         "d1",
         "migrations",
         "apply",
-        "TABLECAST_DB",
+        "00000000-0000-4000-8000-000000000002",
+        "--dir",
+        join(root, "apps/api/migrations"),
         "--local",
-        "--config",
-        seedConfig,
         "--persist-to",
         state,
       ],
@@ -123,6 +110,8 @@ export default async function setup() {
         },
       },
     );
+    migrations.child.stdin?.end();
+    await migrations;
     const platform = await getPlatformProxy<TablecastEnv>({
       configPath: seedConfig,
       envFiles: [],
@@ -145,12 +134,7 @@ export default async function setup() {
       TABLECAST_STATE_PATH: state,
       TABLECAST_PUBLIC_ORIGIN: runtime.origin,
     };
-    const vite = join(root, "apps/web/node_modules/.bin/vite");
-    await execute("node", [vite, "build"], {
-      cwd: join(root, "apps/web"),
-      env: webEnv,
-      maxBuffer: 5 * 1024 * 1024,
-    });
+    await buildTablecast(webEnv);
     await execute("docker", ["pull", "axllent/mailpit:v1.29.2"]);
     // CI/ローカルともDocker imageからMailpitバイナリを抽出し、ケースごとのcontainer起動を避ける。
     const extract = `tablecast-mailpit-extract-${basename(runtime.directory)}`;

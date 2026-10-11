@@ -119,7 +119,10 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   // 時刻の丸めや補正ではなく、Documentの読み込みを観測する。
   let documentLoads = 0;
   page.on("domcontentloaded", () => documentLoads++);
-  await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-live-table-update\n");
+  await appendFile(
+    join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
+    "\n// tablecast-live-table-update\n",
+  );
   await runtime.restartWeb();
 
   await page.evaluate(async () => {

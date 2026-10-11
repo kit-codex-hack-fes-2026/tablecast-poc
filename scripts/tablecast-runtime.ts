@@ -1,15 +1,19 @@
+import { migrateLocalDatabase } from "./tablecast-local-state";
 import process from "node:process";
 import { createHash, randomUUID } from "node:crypto";
 import { createSocket } from "node:dgram";
-import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rm, writeFile, symlink, readlink } from "node:fs/promises";
 import { createServer } from "node:net";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseEnv, promisify } from "node:util";
 import { execFile } from "node:child_process";
 import { z } from "zod";
-import { parse } from "jsonc-parser";
-import type { ParseError } from "jsonc-parser";
+import {
+  apiSdkConfiguration,
+  sdkConfiguration,
+  webCloudflareConfig,
+} from "./tablecast-cloudflare-config";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
@@ -22,6 +26,7 @@ export const tablecastLocal = join(tablecastRoot, ".local");
 const portSchema = z.number().int().min(1024).max(65535);
 const portsSchema = z.object({
   proxy: portSchema,
+  api: portSchema.optional(),
   web: portSchema,
   inspector: portSchema,
   // 旧worktreeの共有ポート台帳を読み書きしても予約を失わないように保持する。
@@ -160,6 +165,7 @@ export async function reserveRuntime() {
       root: tablecastRoot,
       ports: {
         proxy: 3000,
+        api: 3003,
         web: 3001,
         inspector: 3002,
         storybook: 6006,
@@ -212,7 +218,8 @@ export async function reserveRuntime() {
     for (let attempt = 0; attempt < 200; attempt++) {
       const candidate =
         attempt === 0 &&
-        existing?.oauth &&
+        existing?.api &&
+        existing.oauth &&
         existing.mailpit &&
         existing.smtp &&
         existing.grafana &&
@@ -232,6 +239,7 @@ export async function reserveRuntime() {
                   "grafana",
                   "otlp",
                   "tempo",
+                  "api",
                 ].map((key, index) => [
                   key,
                   20000 + ((base - 20000 + attempt * 8 + index) % 30000),
@@ -295,6 +303,9 @@ export function localEnvironment(runtime: TablecastRuntime) {
     PORTLESS_SYNC_HOSTS: "0",
     PORTLESS_HTTPS: "0",
     WRANGLER_SEND_METRICS: "false",
+    CLOUDFLARE_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
+    MINIFLARE_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
+    TABLECAST_API_PORT: String(runtime.ports.api),
     WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   };
@@ -314,17 +325,9 @@ export function developmentSecrets() {
 }
 
 export async function writeLocalConfigs(runtime: TablecastRuntime) {
-  const jsonRecord = z.record(z.string(), z.unknown());
-  async function readConfig(path: string) {
-    const errors: ParseError[] = [];
-    const value: unknown = parse(await readFile(path, "utf8"), errors, {
-      allowTrailingComma: true,
-    });
-    if (errors.length) throw new Error(`Wrangler設定のJSONCが不正です: ${path}`);
-    return jsonRecord.parse(value);
-  }
-  const api = await readConfig(join(tablecastRoot, "apps/api/wrangler.jsonc"));
-  const web = await readConfig(join(tablecastRoot, "apps/web/wrangler.jsonc"));
+  const external = developmentSecrets();
+  const api = apiSdkConfiguration();
+  const web = sdkConfiguration(webCloudflareConfig());
   const apiName = `tablecast-${runtime.id}-api`;
   const telemetryVars = {
     TABLECAST_ENV: "development",
@@ -342,6 +345,10 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         main: join(tablecastRoot, "apps/api/src/worker.ts"),
         vars: {
           ...telemetryVars,
+          TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
+            .every((key) => Boolean(external[key]))
+            .toString(),
+          TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
           TABLECAST_PUBLIC_ORIGIN: runtime.origin,
           TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
           ...(tablecastContainer
@@ -354,7 +361,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
           {
             binding: "TABLECAST_DB",
             database_name: `tablecast-${runtime.id}`,
-            database_id: "00000000-0000-0000-0000-000000000000",
+            database_id: "00000000-0000-4000-8000-000000000000",
             migrations_dir: join(tablecastRoot, "apps/api/migrations"),
           },
         ],
@@ -385,7 +392,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
-  const external = developmentSecrets();
   const values: Record<string, string> = {
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
     TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
@@ -409,6 +415,16 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       { mode: 0o600 },
     );
   await writeEnv(secretPath, values);
+  for (const workspace of ["api", "web"]) {
+    const link = join(tablecastRoot, "apps", workspace, ".dev.vars");
+    try {
+      await symlink(secretPath, link);
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+      if ((await readlink(link)) !== secretPath)
+        throw new Error("workspaceの.dev.varsが別の設定を参照しています。", { cause: error });
+    }
+  }
   await writeEnv(join(tablecastLocal, ".env"), {
     ...Object.fromEntries(
       Object.entries(localEnvironment(runtime)).filter(
@@ -445,7 +461,13 @@ if (import.meta.main) {
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
   }
-  const runtime = !tablecastContainer && previous ? previous : await reserveRuntime();
+  const runtime = !tablecastContainer && previous?.ports.api ? previous : await reserveRuntime();
+  if (!(await portAvailable(runtime.ports.api ?? 0)))
+    throw new Error("このworktreeのAPIを停止してから初期化してください。");
+  await migrateLocalDatabase(
+    runtime.state,
+    join(tablecastLocal, "tablecast-cf-state-migration.json"),
+  );
   await writeLocalConfigs(runtime);
   console.info(`TableCast: ${runtime.origin}`);
 }
