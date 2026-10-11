@@ -50,7 +50,7 @@ for (const config of [desired.api, desired.web]) {
   const actual = z
     .record(z.string(), z.unknown())
     .parse(await cloudflare(`workers/scripts/${name}/settings`));
-  assertWorkerOwner(actual, target, name === target.api, storage.database?.uuid);
+  assertWorkerOwner(actual, target, name === target.api, storage.database?.uuid, namespaces);
   const schedules = await cloudflare(`workers/scripts/${name}/schedules`);
   const fields = workerConfigurationDiff(config, actual, schedules);
   const subdomain = z

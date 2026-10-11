@@ -12,7 +12,7 @@ import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { sql } from "drizzle-orm";
 import { deploymentOwner } from "../apps/api/src/db/business-schema";
 import { spawn } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { buildTablecast } from "./tablecast-build";
@@ -117,7 +117,31 @@ const cf = (args: string[], cwd = root) =>
 async function deployTemporaryWorker(worker: object, kind: string) {
   const temporary = resolve(directory, kind);
   await mkdir(temporary, { recursive: true });
-  await writeFile(resolve(temporary, "package.json"), '{"type":"module"}');
+  const apiManifest = z
+    .object({ devDependencies: z.record(z.string(), z.string()) })
+    .parse(JSON.parse(await readFile(resolve(root, "apps/api/package.json"), "utf8")));
+  await writeFile(
+    resolve(temporary, "package.json"),
+    JSON.stringify({
+      type: "module",
+      devDependencies: {
+        "@cloudflare/vite-plugin": apiManifest.devDependencies["@cloudflare/vite-plugin"],
+        vite: apiManifest.devDependencies.vite,
+      },
+    }),
+  );
+  const modules = resolve(root, "apps/api/node_modules");
+  const link = resolve(temporary, "node_modules");
+  try {
+    await symlink(modules, link, "dir");
+  } catch (error) {
+    if (
+      !(error instanceof Error && "code" in error && error.code === "EEXIST") ||
+      (await readlink(link)) !== modules
+    )
+      throw error;
+  }
+  await copyFile(resolve(root, "apps/api/vite.config.ts"), resolve(temporary, "vite.config.ts"));
   await writeFile(
     resolve(temporary, "cloudflare.config.ts"),
     `export default ${JSON.stringify({ accountId: tablecastAccountId, worker })};`,
@@ -308,17 +332,23 @@ async function main(resetFinished = false) {
     );
   }
   const existingStorage = await resources(false);
+  const existingNamespaces = await verifyDurableNamespaces();
   const workers = z.array(z.object({ id: z.string() })).parse(await cloudflare("workers/scripts"));
   for (const name of [target.api, target.web]) {
     if (workers.some((worker) => worker.id === name)) {
       const actual = z
         .record(z.string(), z.unknown())
         .parse(await cloudflare(`workers/scripts/${name}/settings`));
-      assertWorkerOwner(actual, target, name === target.api, existingStorage.database?.uuid);
+      assertWorkerOwner(
+        actual,
+        target,
+        name === target.api,
+        existingStorage.database?.uuid,
+        existingNamespaces,
+      );
     }
   }
   // Accessが使えないPRを先に公開しない。
-  await verifyDurableNamespaces();
   const access = await accessApplication(!cleanup);
   const { database, bucketExists, bucketCreated } = await resources(!cleanup);
   if (reset && (!database || !bucketExists))

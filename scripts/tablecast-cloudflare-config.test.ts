@@ -194,6 +194,12 @@ describe("cfの環境解決と実資源の採用", () => {
         { name: "TABLECAST_ENV", type: "plain_text", text: "preview" },
         { name: "TABLECAST_PR_NUMBER", type: "plain_text", text: "267" },
         { name: "TABLECAST_DB", type: "d1", id: "owned-database" },
+        {
+          name: "TABLECAST_EVENTS",
+          type: "durable_object_namespace",
+          class_name: "StoreEvents",
+          namespace_id: "owned-namespace",
+        },
       ],
     };
     expect(() => assertWorkerOwner(actual, target, true, "owned-database")).not.toThrow();
@@ -202,5 +208,15 @@ describe("cfの環境解決と実資源の採用", () => {
       "対象外",
     );
     expect(() => assertWorkerOwner(actual, target, true, "other-database")).toThrow("別のD1");
+    expect(() =>
+      assertWorkerOwner(actual, target, true, "owned-database", [
+        { id: "owned-namespace", class: "StoreEvents" },
+      ]),
+    ).not.toThrow();
+    expect(() =>
+      assertWorkerOwner(actual, target, true, "owned-database", [
+        { id: "other-namespace", class: "StoreEvents" },
+      ]),
+    ).toThrow("別のDO");
   });
 });

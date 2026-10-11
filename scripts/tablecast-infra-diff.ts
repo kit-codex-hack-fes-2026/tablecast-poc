@@ -18,6 +18,7 @@ export function assertWorkerOwner(
   target: DeploymentTarget,
   api: boolean,
   databaseId?: string,
+  namespaces?: readonly { id: string; class: string }[],
 ) {
   const bindings = bindingSchema.parse(actual.bindings);
   const text = (name: string) => bindings.find((binding) => binding.name === name)?.text;
@@ -33,6 +34,19 @@ export function assertWorkerOwner(
     (!databaseId || bindings.find((binding) => binding.name === "TABLECAST_DB")?.id !== databaseId)
   )
     throw new Error("Workerが所有台帳とは別のD1を参照しています。");
+  if (
+    api &&
+    namespaces &&
+    bindings.some(
+      (binding) =>
+        binding.type === "durable_object_namespace" &&
+        !namespaces.some(
+          (namespace) =>
+            namespace.class === binding.class_name && namespace.id === binding.namespace_id,
+        ),
+    )
+  )
+    throw new Error("Workerが所有対象とは別のDO namespaceを参照しています。");
 }
 
 export function workerConfigurationDiff(
