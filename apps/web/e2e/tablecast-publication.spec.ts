@@ -25,6 +25,12 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   const adminPath = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
   let closedSockets = 0;
+  const pwaEvents: unknown[] = [];
+  page.on("console", (message) => {
+    const prefix = "tablecast-pwa-evidence:";
+    if (message.text().startsWith(prefix) && pwaEvents.length < 200)
+      pwaEvents.push(JSON.parse(message.text().slice(prefix.length)));
+  });
 
   async function prepare(configuration: Configuration, baseVersion: number) {
     const created = await staff.post(`${adminPath}/drafts`, { headers, data: {} });
@@ -114,7 +120,31 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await expect(detail.getByText(prices.original, { exact: true })).toContainText(prices.original);
 
   await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.ready;
+    const record = (phase: string, fields: Record<string, unknown> = {}) =>
+      console.info(
+        "tablecast-pwa-evidence:" +
+          JSON.stringify({
+            time: performance.now(),
+            phase,
+            waiting: registration.waiting?.state,
+            controller: navigator.serviceWorker.controller?.state,
+            inert: document.body.inert,
+            ...fields,
+          }),
+      );
+    navigator.serviceWorker.addEventListener("message", (event) =>
+      record("message", { type: event.data?.type }),
+    );
+    navigator.serviceWorker.addEventListener("controllerchange", () => record("controllerchange"));
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      installing?.addEventListener("statechange", () =>
+        record("statechange", { installing: installing.state }),
+      );
+      record("updatefound");
+    });
+    record("initial");
   });
   // 時刻の丸めや補正ではなく、Documentの読み込みを観測する。
   let documentLoads = 0;
@@ -197,18 +227,21 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
     await writeFile(
       testInfo.outputPath("pwa-update-state.json"),
       JSON.stringify(
-        await page.evaluate(async () => ({
-          visibility: document.visibilityState,
-          waiting: (await navigator.serviceWorker.getRegistration())?.waiting?.state,
-          controller: navigator.serviceWorker.controller?.state,
-          inert: document.body.inert,
-          blocked: [...document.querySelectorAll('[data-pwa-blocked="true"]')].map((node) =>
-            node.outerHTML.slice(0, 240),
-          ),
-          forms: [...document.forms].map((form) =>
-            Boolean(form.querySelector("[data-pwa-blocked]")),
-          ),
-        })),
+        {
+          events: pwaEvents,
+          state: await page.evaluate(async () => ({
+            visibility: document.visibilityState,
+            waiting: (await navigator.serviceWorker.getRegistration())?.waiting?.state,
+            controller: navigator.serviceWorker.controller?.state,
+            inert: document.body.inert,
+            blocked: [...document.querySelectorAll('[data-pwa-blocked="true"]')].map((node) =>
+              node.outerHTML.slice(0, 240),
+            ),
+            forms: [...document.forms].map((form) =>
+              Boolean(form.querySelector("[data-pwa-blocked]")),
+            ),
+          })),
+        },
         null,
         2,
       ),
