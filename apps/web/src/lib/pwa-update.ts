@@ -1,3 +1,26 @@
+// 操作ロックの期限と、承認したSW切替は別の状態として扱う。
+export function canReloadPwaClient({
+  preparedController,
+  controller,
+  locked,
+  ready,
+  reloading,
+}: {
+  preparedController: object | null | undefined;
+  controller: object | null;
+  locked: boolean;
+  ready: boolean;
+  reloading: boolean;
+}) {
+  return (
+    preparedController !== undefined &&
+    controller !== null &&
+    controller !== preparedController &&
+    !reloading &&
+    (locked || ready)
+  );
+}
+
 // 全画面の応答が揃うまで旧Service Workerを維持する。
 export async function preparePwaClients(
   clients: ReadonlyArray<{
