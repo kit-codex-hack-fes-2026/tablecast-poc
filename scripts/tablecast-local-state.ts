@@ -1,5 +1,4 @@
-import { getPlatformProxy } from "wrangler";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -16,6 +15,18 @@ export async function migrateLocalDatabase(state: string, marker: string) {
     throw new Error("local D1移行記録が別のDBを参照しています。");
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  // 新規worktreeには移すDBがない。設定生成だけでSDKのruntimeを起動しない。
+  try {
+    if (
+      !(await readdir(join(state, "v3/d1"), { recursive: true })).some((path) =>
+        path.endsWith(".sqlite"),
+      )
+    )
+      return;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    throw error;
   }
   const directory = await mkdtemp(join(tmpdir(), "tablecast-cf-state-"));
   const configPath = join(directory, "wrangler.json");
@@ -38,6 +49,7 @@ export async function migrateLocalDatabase(state: string, marker: string) {
       ],
     }),
   );
+  const { getPlatformProxy } = await import("wrangler");
   const platform = await getPlatformProxy<{
     TABLECAST_LEGACY_DB: D1Database;
     TABLECAST_DB: D1Database;

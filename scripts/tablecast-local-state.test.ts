@@ -1,9 +1,22 @@
 import { expect, test } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrateLocalDatabase, tablecastLocalDatabaseId } from "./tablecast-local-state";
+
+test("新規stateでは設定生成にDB runtimeや移行記録を作らない", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "tablecast-cf-empty-state-"));
+  try {
+    const state = join(directory, "state");
+    const marker = join(directory, "migration.json");
+    await migrateLocalDatabase(state, marker);
+    await expect(stat(state)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(stat(marker)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("旧local D1の参照・BLOB・migration履歴を保持し再実行で書込みを繰り返さない", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-cf-state-test-"));
