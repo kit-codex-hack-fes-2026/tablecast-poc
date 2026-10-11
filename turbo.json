@@ -1,6 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts", "patches/*.patch"],
+  "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
