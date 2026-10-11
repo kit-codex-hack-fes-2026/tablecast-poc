@@ -16,6 +16,8 @@ const { stdout: tablecastCommonPath } = await execute("git", ["rev-parse", "--gi
   cwd: tablecastRoot,
 });
 const tablecastCommon = await realpath(resolve(tablecastRoot, tablecastCommonPath.trim()));
+const tablecastId = worktreeId(tablecastRoot, tablecastCommon);
+const tablecastHost = `${tablecastId}.tablecast-poc`;
 export const tablecastContainer = process.env.TABLECAST_CONTAINER === "1";
 export const tablecastLocal = join(tablecastRoot, ".local");
 const portSchema = z.number().int().min(0).max(65535);
@@ -42,23 +44,10 @@ export function worktreeId(root: string, common: string) {
   return createHash("sha256").update(`${common}\0${root}`).digest("hex").slice(0, 10);
 }
 
-export function issueHost(branch: string, explicitIssue?: string) {
-  const issue = explicitIssue ?? /^codex\/([1-9]\d*)(?:[-/]|$)/.exec(branch)?.[1];
-  if (issue !== undefined && !/^[1-9]\d*$/.test(issue))
-    throw new Error("TABLECAST_ISSUEにはIssue番号を指定してください。");
-  if (!issue && !["main", "staging"].includes(branch))
-    throw new Error("Issue番号付きbranchかTABLECAST_ISSUEが必要です。");
-  return `${issue ?? branch}.tablecast-poc`;
-}
-
 async function serviceOrigin(service: string) {
-  const { stdout: branch } = await execute("git", ["branch", "--show-current"], {
-    cwd: tablecastRoot,
-  });
-  const host = issueHost(branch.trim(), process.env.TABLECAST_ISSUE);
   const { stdout } = await execute(
     "bunx",
-    ["--no-install", "portless", "get", `${service}.${host}`, "--no-worktree"],
+    ["--no-install", "portless", "get", `${service}.${tablecastHost}`, "--no-worktree"],
     {
       cwd: tablecastRoot,
       env: {
@@ -182,7 +171,7 @@ export async function prepareRuntime() {
     }
   }
   const runtime = runtimeSchema.parse({
-    id: worktreeId(tablecastRoot, tablecastCommon),
+    id: tablecastId,
     root: tablecastRoot,
     origin,
     ports,
@@ -290,9 +279,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         throw new Error("workspaceの.dev.varsが別の設定を参照しています。", { cause: error });
     }
   }
-  const { stdout: branch } = await execute("git", ["branch", "--show-current"], {
-    cwd: tablecastRoot,
-  });
   await writeEnv(join(tablecastLocal, ".env"), {
     TABLECAST_PUBLIC_ORIGIN: runtime.origin,
     TABLECAST_CONFIG: JSON.stringify(configuration)
@@ -307,7 +293,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     COMPOSE_PROJECT_NAME: `tablecast-${runtime.id}`,
     TABLECAST_HOST: tablecastContainer
       ? `${process.env.TABLECAST_WORKTREE_NAME}.${process.env.TABLECAST_REPO_NAME}.container`
-      : issueHost(branch.trim(), process.env.TABLECAST_ISSUE),
+      : tablecastHost,
     TABLECAST_GRAFANA_ORIGIN: tablecastContainer
       ? "http://tablecast-lgtm:3000"
       : await serviceOrigin("grafana"),

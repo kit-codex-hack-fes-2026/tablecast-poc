@@ -24,22 +24,22 @@ test("開発のlocalhostサブドメインで模擬Googleへの認証を開始�
   const auth = createAuth({
     ...env,
     TABLECAST_ENV: "development",
-    TABLECAST_PUBLIC_ORIGIN: "http://web.268.tablecast-poc.localhost",
-    TABLECAST_GOOGLE_EMULATOR_URL: "http://oauth.268.tablecast-poc.localhost",
+    TABLECAST_PUBLIC_ORIGIN: "http://web.0123456789.tablecast-poc.localhost",
+    TABLECAST_GOOGLE_EMULATOR_URL: "http://oauth.0123456789.tablecast-poc.localhost",
   });
   const result = await auth.api.signInSocial({ body: { provider: "google" } });
-  expect(new URL(result.url ?? "").origin).toBe("http://oauth.268.tablecast-poc.localhost");
+  expect(new URL(result.url ?? "").origin).toBe("http://oauth.0123456789.tablecast-poc.localhost");
 });
 
 test.each([
-  { environment: "development", host: "oauth.268.tablecast-poc.localhost.example.com" },
-  { environment: "production", host: "oauth.268.tablecast-poc.localhost" },
+  { environment: "development", host: "oauth.0123456789.tablecast-poc.localhost.example.com" },
+  { environment: "production", host: "oauth.0123456789.tablecast-poc.localhost" },
 ])("$environmentの模擬OAuthで$hostを拒否する", ({ environment, host }) => {
   expect(() =>
     createAuth({
       ...env,
       TABLECAST_ENV: environment,
-      TABLECAST_PUBLIC_ORIGIN: "http://web.268.tablecast-poc.localhost",
+      TABLECAST_PUBLIC_ORIGIN: "http://web.0123456789.tablecast-poc.localhost",
       TABLECAST_GOOGLE_EMULATOR_URL: `http://${host}`,
     }),
   ).toThrow("OAUTH_EMULATOR_LOCAL_ONLY");

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { issueHost, localReleaseSha, worktreeId } from "./tablecast-runtime";
+import { localReleaseSha, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -111,17 +111,6 @@ describe("開発資源の所有境界", () => {
       await rm(parent, { recursive: true, force: true });
     }
   }, 15_000);
-  it("Issue番号をbranchから取得しmainと明示指定を区別する", () => {
-    expect(issueHost("codex/268-portless-dev")).toBe("268.tablecast-poc");
-    expect(issueHost("codex/268")).toBe("268.tablecast-poc");
-    expect(issueHost("main")).toBe("main.tablecast-poc");
-    expect(issueHost("staging")).toBe("staging.tablecast-poc");
-    expect(issueHost("", "269")).toBe("269.tablecast-poc");
-    expect(() => issueHost("")).toThrow("Issue番号");
-    expect(() => issueHost("codex/unrelated")).toThrow("Issue番号");
-    expect(() => issueHost("main", "../269")).toThrow("TABLECAST_ISSUE");
-    expect(() => issueHost("main", "")).toThrow("TABLECAST_ISSUE");
-  });
   it("同じブランチでもworktree実パスが違う場合は識別子が分かれる", () => {
     expect(worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git")).not.toBe(
       worktreeId("/tmp/tablecast-two", "/tmp/tablecast/.git"),
@@ -131,7 +120,7 @@ describe("開発資源の所有境界", () => {
     );
   });
   it.each([
-    { label: "ホスト", container: "0", origin: "http://web.268.tablecast-poc.localhost" },
+    { label: "ホスト", container: "0", origin: "http://web.0123456789.tablecast-poc.localhost" },
     { label: "コンテナのlocalhost", container: "1", origin: "http://localhost:3000" },
     {
       label: "コンテナの専用ドメイン",

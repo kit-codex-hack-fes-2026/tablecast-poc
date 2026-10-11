@@ -95,7 +95,7 @@ bun run dev
 
 `dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。Web・OAuthのscriptがPortlessを呼び、空きポートとrouteの登録を任せる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
-起動ログの `http://web.<番号>.tablecast-poc.localhost` を開く。branch `codex/123-my-change` なら番号は123になる。detached HEAD等では `TABLECAST_ISSUE=123 bun run dev` と指定する。main・stagingはそれぞれ `web.main.tablecast-poc.localhost`・`web.staging.tablecast-poc.localhost` を使う。ポート・DB・Cookieホスト名は環境ごとに分離する。起動中はターミナルを開いたままにする。
+起動ログの `http://web.<worktree ID>.tablecast-poc.localhost` を開く。worktree IDはGit共通ディレクトリとworktreeの実パスから作る既存の10桁のhashで、branchやcommitが変わっても同じworktreeでは変わらない。Issue番号やホスト名の入力は不要で、detached HEADでも同じ方法で起動できる。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
 
 Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。既存のruntimeは自worktreeのWebを停止してから再生成する。既存D1・R2・DOの保存先とsecret、旧ポート台帳は保持し、旧台帳は参照・更新しない。
 

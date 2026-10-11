@@ -35,14 +35,14 @@ hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル�
 
 ## worktree識別子
 
-ホスト開発のURLは `<service>.<番号>.tablecast-poc.localhost`。branch `codex/268-portless-dev` ならWebは `http://web.268.tablecast-poc.localhost`、OAuthは `http://oauth.268.tablecast-poc.localhost` になる。Issue番号はbranchから取得し、detached HEADや別のbranch形式では `TABLECAST_ISSUE=268` を明示する。main・stagingは番号の位置にそれぞれ `main`・`staging` を使う。番号の抽出だけを約10行の処理にし、ホスト名の登録と衝突拒否はPortlessへ任せる。同一Issueの環境を重複起動しない。
+ホスト開発のURLは `<service>.<worktree ID>.tablecast-poc.localhost`。たとえばWebは `http://web.bc493b5742.tablecast-poc.localhost`、OAuthは `http://oauth.bc493b5742.tablecast-poc.localhost` になる。既存の10桁のworktree IDをそのまま使い、Issue番号・branch名・detached HEADを特別扱いしない。ホスト名の登録と衝突拒否はPortlessへ任せる。
 Dev Containerは引き続き `<worktree>.<repo>.container.localhost:<port>` とCaddyを使う。コンテナの命名と公開ポートは [Dev Containerの構成](devcontainer.md) を参照する。
 内部リソースの識別子は正規化したworktree実パスとrepository識別子から作る短いhashを維持し、ドメイン変更で保存済みD1・R2を失わない。Git commitが変わってもドメインは変わらない。
 独自リソース名には `tablecast` を含める。
 
 | 対象        | 例・分離内容                                         |
 | ----------- | ---------------------------------------------------- |
-| Webのホスト | `web.<番号>.tablecast-poc.localhost`                 |
+| Webのホスト | `web.<worktree ID>.tablecast-poc.localhost`          |
 | Worker      | `tablecast-<id>-web`、`tablecast-<id>-api`           |
 | 公開環境値  | `TABLECAST_PUBLIC_ORIGIN` 等                         |
 | 保存先      | `<worktree>/.local/state`、生成設定とログも `.local` |

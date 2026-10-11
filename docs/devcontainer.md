@@ -2,7 +2,7 @@
 
 cloneから起動までの手順は [セットアップ](setup.md#2a-dev-containerを使う) が正本である。
 
-ホスト開発はPortlessでIssue番号ごとのURLを使う。Dev ContainerはCompose・Caddyの構成を維持し、コンテナ内へPortlessやホストの共有proxy stateを持ち込まない。
+ホスト開発はPortlessでworktree IDごとのURLを使う。Dev ContainerはCompose・Caddyの構成を維持し、コンテナ内へPortlessやホストの共有proxy stateを持ち込まない。
 
 ## runtimeと分離
 
