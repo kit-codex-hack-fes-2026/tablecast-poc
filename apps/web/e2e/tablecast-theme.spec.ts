@@ -37,7 +37,7 @@ test("店舗ロゴとチラシを持つ下書きのテーマを編集し実際�
   const { url: _url, ...asset } = uploadedImageSchema.parse(await upload.json());
   const image = { ...asset, alt: { ja: "店舗のマーク", en: "Store mark" } };
   const draft = configDraftSchema.parse(
-    await (await page.request.post(`${endpoint}/drafts`, { headers, data: {} })).json(),
+    await (await page.request.post(`${endpoint}/drafts`, { headers })).json(),
   );
   const prepared = await page.request.put(`${endpoint}/drafts/${draft.id}`, {
     headers,

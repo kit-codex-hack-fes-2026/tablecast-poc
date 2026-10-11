@@ -25,7 +25,7 @@ for (const { language, labels, locale } of [
     const catalog = await staff.get(`${adminPath}/catalog`);
     expect(catalog.status()).toBe(200);
     const original = catalogSchema.parse(await catalog.json());
-    const created = await staff.post(`${adminPath}/drafts`, { headers, data: {} });
+    const created = await staff.post(`${adminPath}/drafts`, { headers });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
     const draftId = draft.id;

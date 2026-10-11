@@ -189,6 +189,12 @@ jobs:
             with:
               browsers: chromium webkit
       - run: bun run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: failure()
+        with:
+          name: tablecast-components-${{ github.event.pull_request.head.sha || github.sha }}
+          path: apps/web/test-results/browser/**/*.png
+          retention-days: 1
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"

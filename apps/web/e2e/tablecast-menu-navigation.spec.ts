@@ -33,7 +33,7 @@ for (const { locale, labels } of [
     const original = catalogSchema.parse(await initialResponse.json());
     const product = original.configuration.products.find((item) => item.available);
     if (!product) throw new Error("編集対象の販売中商品がありません");
-    const created = await page.request.post(`${api}/drafts`, { headers, data: {} });
+    const created = await page.request.post(`${api}/drafts`, { headers });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
 

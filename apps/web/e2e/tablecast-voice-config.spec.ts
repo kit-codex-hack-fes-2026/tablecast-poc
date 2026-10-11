@@ -20,7 +20,7 @@ for (const { locale, labels } of [
     ).toBe(200);
     const api = "/api/admin/stores/tablecast-hanul";
     const original = catalogSchema.parse(await (await page.request.get(`${api}/catalog`)).json());
-    const created = await page.request.post(`${api}/drafts`, { headers, data: {} });
+    const created = await page.request.post(`${api}/drafts`, { headers });
     const draft = configDraftSchema.parse(await created.json());
     try {
       await page.goto(`/admin/stores/tablecast-hanul/menu/changes/${draft.id}/cast/settings`);

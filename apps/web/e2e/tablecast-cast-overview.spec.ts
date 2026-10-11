@@ -28,7 +28,7 @@ for (const { locale, labels } of [
     const original = catalogSchema.parse(
       await (await page.request.get(`${api}/catalog`, { headers })).json(),
     );
-    const created = await page.request.post(`${api}/drafts`, { headers, data: {} });
+    const created = await page.request.post(`${api}/drafts`, { headers });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
 

@@ -40,7 +40,7 @@ test("商品と選択肢の画像を取り込み、下書き再読込と公開�
   if (!option?.imageKey) throw new Error("実画像を持つ選択肢が必要です。");
   const description = "バンズの形と色をイメージ画像で確認できます。";
   const draft = configDraftSchema.parse(
-    await (await staff.post(`${api}/drafts`, { headers, data: {} })).json(),
+    await (await staff.post(`${api}/drafts`, { headers })).json(),
   );
   const menu = `/admin/stores/${storeId}/menu/changes/${draft.id}`;
   await page.goto(`${menu}/products/${product.id}`);

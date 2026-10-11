@@ -45,7 +45,7 @@ for (const count of [24, 120]) {
       })),
     };
     let draft = configDraftSchema.parse(
-      await (await request.post(`${api}/drafts`, { headers, data: {} })).json(),
+      await (await request.post(`${api}/drafts`, { headers })).json(),
     );
     draft = configDraftSchema.parse(
       await (

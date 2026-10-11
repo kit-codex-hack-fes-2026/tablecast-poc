@@ -33,7 +33,7 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   });
 
   async function prepare(configuration: Configuration, baseVersion: number) {
-    const created = await staff.post(`${adminPath}/drafts`, { headers, data: {} });
+    const created = await staff.post(`${adminPath}/drafts`, { headers });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
     expect(draft.baseVersion, "試験中に別の設定公開が行われていない").toBe(baseVersion);

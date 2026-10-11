@@ -105,6 +105,8 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 
+Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。
+
 APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
 GitHub Actionsの`actions/cache`で静的解析と2種類のbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、Workersの`dist`・deploy configとStorybookの`storybook-static`を出力として復元する。テストtaskは`cache: false`で毎回実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メール、テスト結果は永続キャッシュへ入れない。
@@ -169,6 +171,8 @@ bun run test:e2e --project=tablecast-chromium
 ```
 
 E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。fixtureが起動した専用process groupと入口を終了し、Viteの子孫のworkerd、接続済みsocketも残さない。失敗時は資格を除去した最大65,536文字のruntimeログを`testInfo.outputPath()`へ保存して添付する。画像・計測値も同じcase別の保存先を使う。migrationログはruntime削除前に`apps/web/test-results/tablecast-runtime/<run>/`へ保存する。テスト結果には認証情報を含むtraceを追加しない。
+
+下書き作成のPOSTは本番Hono clientと同じくbodyなしで送る。入力を取らないAPIへ空のJSONを付けない。固定Miniflare `5.20261006.1-alpha`には、未読のstream bodyの次の要求が`ECONNRESET`になる[上流報告](https://github.com/cloudflare/workers-sdk/issues/16199)がある。previewのtransport errorはcauseもruntimeログへ渡す。bodyなしへの整合を上流の接続不具合全体の修正とは扱わず、認可で拒否するAPI等の試験も維持する。
 
 ### 型付きDB fixture
 
