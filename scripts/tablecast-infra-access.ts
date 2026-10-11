@@ -23,10 +23,22 @@ const canonical = (value: unknown): string => {
 
 export async function reconcileAccess(apply = false, request = cloudflare) {
   const policies = z.array(policySchema).parse(await request("access/policies?per_page=1000"));
-  const tokens = z.array(tokenSchema).parse(await request("access/service_tokens"));
+  const token = tokenSchema
+    .optional()
+    .parse(
+      await request(
+        `access/service_tokens/${tablecastAccess.serviceToken.id}`,
+        "GET",
+        undefined,
+        true,
+      ),
+    );
   if (policies.length >= 1000) throw new Error("Access policy一覧の上限に達しました。");
-  const token = tokens.find((value) => value.id === tablecastAccess.serviceToken.id);
-  if (!token || token.name !== tablecastAccess.serviceToken.name)
+  if (
+    !token ||
+    token.id !== tablecastAccess.serviceToken.id ||
+    token.name !== tablecastAccess.serviceToken.name
+  )
     throw new Error("採用済みservice tokenがありません。再生成せず外部入力を確認してください。");
   // durationの更新でも既存client secretを再発行しない。失効したtokenも勝手に置換しない。
   const changes: { resource: string; action: "update" | "unchanged" }[] = [];

@@ -82,7 +82,7 @@ describe("cfの環境解決と実資源の採用", () => {
     const request = async (path: string, method = "GET") => {
       calls.push(`${method} ${path}`);
       if (path.startsWith("access/policies")) return tablecastAccess.policies;
-      return [tablecastAccess.serviceToken];
+      return tablecastAccess.serviceToken;
     };
     for (let attempt = 0; attempt < 2; attempt++)
       expect(
@@ -97,7 +97,7 @@ describe("cfの環境解決と実資源の採用", () => {
   test("既存service tokenがない場合、秘密値を作り直さず採用を拒否する", async () => {
     await expect(
       reconcileAccess(true, async (path) =>
-        path.startsWith("access/policies") ? tablecastAccess.policies : [],
+        path.startsWith("access/policies") ? tablecastAccess.policies : undefined,
       ),
     ).rejects.toThrow("再生成せず");
   });
