@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
+import { issueHost, localReleaseSha, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -90,7 +90,6 @@ describe("開発資源の所有境界", () => {
       ] as const) {
         await mkdir(join(root, ".devcontainer"));
         await execute("sh", [".devcontainer/tablecast-init.sh", root]);
-        expect(worktreeHost(root, join(repository, ".git"))).toBe(`${name}.tablecast-poc`);
         const settings = parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"));
         expect(settings.TABLECAST_WORKTREE_NAME).toBe(name);
         expect(settings.TABLECAST_REPO_NAME).toBe("tablecast-poc");
@@ -112,16 +111,16 @@ describe("開発資源の所有境界", () => {
       await rm(parent, { recursive: true, force: true });
     }
   }, 15_000);
-  it("worktreeとrepoを別のDNSラベルにして不正な名前を拒否する", () => {
-    expect(worktreeHost("/workspace/tablecast-poc")).toBe("main.tablecast-poc");
-    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-poc/.git")).toBe(
-      "voice-ui.tablecast-poc",
-    );
-    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-other/.git")).toBe(
-      "voice-ui.tablecast-other",
-    );
-    expect(() => worktreeHost("/workspace/日本語")).toThrow("worktree名");
-    expect(() => worktreeHost(`/workspace/${"a".repeat(64)}`)).toThrow("worktree名");
+  it("Issue番号をbranchから取得しmainと明示指定を区別する", () => {
+    expect(issueHost("codex/268-portless-dev")).toBe("268.tablecast-poc");
+    expect(issueHost("codex/268")).toBe("268.tablecast-poc");
+    expect(issueHost("main")).toBe("main.tablecast-poc");
+    expect(issueHost("staging")).toBe("staging.tablecast-poc");
+    expect(issueHost("", "269")).toBe("269.tablecast-poc");
+    expect(() => issueHost("")).toThrow("Issue番号");
+    expect(() => issueHost("codex/unrelated")).toThrow("Issue番号");
+    expect(() => issueHost("main", "../269")).toThrow("TABLECAST_ISSUE");
+    expect(() => issueHost("main", "")).toThrow("TABLECAST_ISSUE");
   });
   it("同じブランチでもworktree実パスが違う場合は識別子が分かれる", () => {
     expect(worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git")).not.toBe(
@@ -132,7 +131,7 @@ describe("開発資源の所有境界", () => {
     );
   });
   it.each([
-    { label: "ホスト", container: "0", origin: "http://main.tablecast.localhost:3000" },
+    { label: "ホスト", container: "0", origin: "http://web.268.tablecast-poc.localhost" },
     { label: "コンテナのlocalhost", container: "1", origin: "http://localhost:3000" },
     {
       label: "コンテナの専用ドメイン",
@@ -152,44 +151,43 @@ describe("開発資源の所有境界", () => {
       root: "/tmp/tablecast",
       origin,
       ports: {
-        proxy: 3000,
         web: 3001,
         inspector: 3002,
-        signaling: 3003,
-        rtcTcp: 3004,
-        rtcUdp: 3005,
-        agent: 3006,
-        storybook: 3007,
+        oauth: 3008,
+        mailpit: 8025,
+        grafana: 3030,
+        otlp: 4318,
+        tempo: 3200,
       },
       state: "/tmp/tablecast/.local/state",
       apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
     };
-    expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow();
+    expect(() => assertLocalRuntime(runtime, runtime.root, origin)).not.toThrow();
     expect(() =>
       assertLocalRuntime(
         { ...runtime, origin: "http://tablecast-other.localhost:3000" },
         runtime.root,
+        origin,
       ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime({ ...runtime, origin: "https://tablecast.example.com" }, runtime.root),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime({ ...runtime, state: "/tmp/tablecast-other/.local/state" }, runtime.root),
     ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
     expect(() =>
       assertLocalRuntime(
-        { ...runtime, ports: { ...runtime.ports, signaling: 3001 } },
+        { ...runtime, origin: "https://tablecast.example.com" },
         runtime.root,
+        origin,
       ),
     ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
+    expect(() =>
+      assertLocalRuntime(
+        { ...runtime, state: "/tmp/tablecast-other/.local/state" },
+        runtime.root,
+        origin,
+      ),
+    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
+    expect(() =>
+      assertLocalRuntime({ ...runtime, root: "/tmp/tablecast-other" }, runtime.root, origin),
+    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
   });
-});
-
-it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメインを分離する", () => {
-  const common = "/workspace/tablecast-poc/.git";
-  expect(worktreeHost("/codex/worktrees/29f4/tablecast-poc", common)).toBe("29f4.tablecast-poc");
-  expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
 });
 
 it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async () => {

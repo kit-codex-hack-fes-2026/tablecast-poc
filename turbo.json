@@ -60,17 +60,12 @@
     },
     "//#dev:prepare": {
       "cache": false,
-      "passThroughEnv": ["TABLECAST_*"]
+      "passThroughEnv": ["TABLECAST_*", "PORTLESS_*"]
     },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
       "cache": false,
-      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"]
-    },
-    "//#dev:proxy": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
+      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "PORTLESS_*"]
     },
     "//#dev:caddy": {
       "cache": false,
@@ -83,6 +78,12 @@
       "dependsOn": ["//#dev:prepare"]
     },
     "@tablecast/emulate#dev": {
+      "passThroughEnv": ["PORTLESS_*"],
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "@tablecast/emulate#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]
@@ -91,23 +92,31 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy", "@tablecast/api#dev"]
+      "with": ["@tablecast/emulate#dev", "@tablecast/api#dev"],
+      "passThroughEnv": ["PORTLESS_*"]
     },
     "@tablecast/web#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"],
-      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit", "@tablecast/api#dev"]
+      "with": [
+        "@tablecast/emulate#dev:container",
+        "//#dev:caddy",
+        "//#dev:mailpit",
+        "@tablecast/api#dev:container"
+      ]
     },
     "@tablecast/web#build:local": {
-      "dependsOn": ["//#dev:prepare"],
+      "dependsOn": ["//#services:up"],
+      "passThroughEnv": ["PORTLESS_*"],
       "cache": false
     },
     "@tablecast/web#preview": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["build:local", "//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+      "with": ["@tablecast/emulate#dev"],
+      "passThroughEnv": ["PORTLESS_*"]
     },
     "@tablecast/web#i18n:compile": {
       "inputs": ["project.inlang/**", "messages/**", "package.json"],
@@ -140,6 +149,12 @@
       "env": ["TABLECAST_MODE", "TABLECAST_CONFIG"]
     },
     "@tablecast/api#dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"],
+      "passThroughEnv": ["PORTLESS_*"]
+    },
+    "@tablecast/api#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]

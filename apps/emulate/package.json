@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env src/index.ts",
+    "dev": "bun --env-file=../../.local/.env exec 'portless \"oauth.$TABLECAST_HOST\" bun src/index.ts'",
+    "dev:container": "bun --env-file=../../.local/.env src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

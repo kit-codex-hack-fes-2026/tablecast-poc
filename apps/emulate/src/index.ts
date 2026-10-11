@@ -4,7 +4,7 @@ import { tablecastDemoIdentities, tablecastDemoLinkIdentity } from "./tablecast-
 
 const preview = ["preview", "staging"].includes(process.env.TABLECAST_ENV ?? "");
 const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
-const port = Number(process.env.TABLECAST_OAUTH_PORT);
+const port = Number(process.env.TABLECAST_OAUTH_PORT ?? process.env.PORT);
 if (
   !origin ||
   !Number.isInteger(port) ||
@@ -35,7 +35,9 @@ if (
 const emulator = await createEmulator({
   service: "google",
   port,
-  baseUrl: preview ? `${origin}/_tablecast/oauth` : `http://127.0.0.1:${port}`,
+  baseUrl: preview
+    ? `${origin}/_tablecast/oauth`
+    : (process.env.PORTLESS_URL ?? `http://127.0.0.1:${port}`),
   seed: {
     google: {
       users: [...tablecastDemoIdentities, tablecastDemoLinkIdentity].map((person) => ({

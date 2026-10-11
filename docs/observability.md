@@ -60,7 +60,7 @@ prodは環境を`production`へ変えてPR条件を外す。ローカルは`deve
 
 ## ローカル起動とMCP
 
-`bun run dev`でworktree専用のLGTMも起動する。ポートは`.local/runtime.json`の`grafana`・`otlp`・`tempo`に記録する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、WebはTurboのターミナルでCtrl+C、Dockerサービスは `bun run services:down` で停止する。この操作は自worktreeのcontainerとnetworkを片付け、volumeを保持する。Dev ContainerはComposeの`tablecast-lgtm`を使う。
+`bun run dev`でworktree専用のLGTMも起動する。ホストでは `http://grafana.<番号>.tablecast-poc.localhost` と `http://tempo.<番号>.tablecast-poc.localhost` を使う。Dockerが公開ポートを割り当て、Web起動時に`.local/runtime.json`の`grafana`・`otlp`・`tempo`へ実ポートを記録する。Grafana MCPはこの実ポートを使うため、Webの起動後に接続する。Docker volume `tablecast-<worktree ID>-lgtm`にデータを保持し、WebはTurboのターミナルでCtrl+C、Dockerサービスは `bun run services:down` で停止する。この操作は自worktreeのalias・containerとnetworkを片付け、volumeを保持する。共有proxyは停止しない。Dev ContainerはComposeの`tablecast-lgtm`を使う。
 
 LGTMのサービス定義はルート `compose.yaml` を正本とし、Dev Containerからも参照する。`infra/grafana/tempo.yaml` はTempoの実行設定、`infra/grafana/dashboards/` はGrafanaへimportするJSONである。
 

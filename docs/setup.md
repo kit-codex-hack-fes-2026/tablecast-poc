@@ -17,11 +17,11 @@ Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew insta
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc
 git fetch origin
-git worktree add -b codex/my-change ../tablecast-my-change origin/staging
+git worktree add -b codex/123-my-change ../tablecast-my-change origin/staging
 cd ../tablecast-my-change
 ```
 
-`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/my-change` で開く。以降は作業先のworktreeルートで実行する。
+`123` は着手するIssue番号、`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/123-my-change` で開く。以降は作業先のworktreeルートで実行する。
 
 > [!IMPORTANT]
 > `node_modules`、`.local` はworktree間でコピーしない。Git標準のworktree作成では環境ファイルもコピーされない。Codexの `.worktreeinclude` は `.env.local` のみを対象にする。
@@ -86,14 +86,18 @@ bun --version
 node --version
 docker info
 bun run setup
+# 初回だけ共有proxyを起動する。必要に応じて管理者権限の認証が求められる。
+bunx --no-install portless proxy start --no-tls --port 80
 bun run dev
 ```
 
 [mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
-`dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthとproxyも起動する。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
+`dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。Web・OAuthのscriptがPortlessを呼び、空きポートとrouteの登録を任せる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
-起動ログの `http://<worktree>.<repo>.localhost:<port>` を開く。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+起動ログの `http://web.<番号>.tablecast-poc.localhost` を開く。branch `codex/123-my-change` なら番号は123になる。detached HEAD等では `TABLECAST_ISSUE=123 bun run dev` と指定する。main・stagingはそれぞれ `web.main.tablecast-poc.localhost`・`web.staging.tablecast-poc.localhost` を使う。ポート・DB・Cookieホスト名は環境ごとに分離する。起動中はターミナルを開いたままにする。
+
+Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。既存のruntimeは自worktreeのWebを停止してから再生成する。既存D1・R2・DOの保存先とsecret、旧ポート台帳は保持し、旧台帳は参照・更新しない。
 
 ## 2C. agent開発環境
 
@@ -178,7 +182,7 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 | ファイル                      | 用途                                          |
 | ----------------------------- | --------------------------------------------- |
 | `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない |
-| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス         |
+| `.local/.env`                 | Bun/Composeが読む生成済みorigin・パス         |
 | `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵            |
 | `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない   |
 | `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物           |
@@ -192,19 +196,19 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 ## 5. 日常の操作
 
-| コマンド                                | 用途                                                      |
-| --------------------------------------- | --------------------------------------------------------- |
-| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                       |
-| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                       |
-| `bun run services:status`               | ホスト開発のComposeサービスを確認する                     |
-| `bun run services:down`                 | ホスト開発のcontainer・networkを片付ける。volumeは保持    |
-| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                 |
-| `bun run check`                         | format・lint・typecheck・無課金テスト                     |
-| `bun run build`                         | 配備用Workersのbuild                                      |
-| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行   |
-| `bun run demo:play`                     | 背景卓を一段階進める                                      |
-| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否        |
-| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する |
+| コマンド                                | 用途                                                          |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                           |
+| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                           |
+| `bun run services:status`               | ホスト開発のComposeサービスを確認する                         |
+| `bun run services:down`                 | ホスト開発のalias・container・networkを片付ける。volumeは保持 |
+| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                     |
+| `bun run check`                         | format・lint・typecheck・無課金テスト                         |
+| `bun run build`                         | 配備用Workersのbuild                                          |
+| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行       |
+| `bun run demo:play`                     | 背景卓を一段階進める                                          |
+| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否            |
+| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
 
