@@ -66,7 +66,9 @@ export async function migrateLocalDatabase(state: string, marker: string) {
       throw new Error("旧・新local D1が両方存在します。自動上書きせず移行状態を照合してください。");
     const statements = [next.prepare("PRAGMA defer_foreign_keys = ON")];
     statements.push(
-      ...schema.filter((entry) => entry.type === "table").map((entry) => next.prepare(entry.sql)),
+      ...schema
+        .filter((entry) => entry.type === "table" || entry.type === "index")
+        .map((entry) => next.prepare(entry.sql)),
     );
     const counts: Record<string, number> = {};
     for (const table of schema.filter((entry) => entry.type === "table")) {
@@ -78,22 +80,28 @@ export async function migrateLocalDatabase(state: string, marker: string) {
       const values = (
         await previous
           .prepare(
-            `SELECT ${columns.map(({ name }) => `quote(${identifier(name)}) AS ${identifier(name)}`).join(",")} FROM ${identifier(table.name)}`,
+            `SELECT ${columns.map(({ name }) => identifier(name)).join(",")} FROM ${identifier(table.name)}`,
           )
           .all()
       ).results;
       counts[table.name] = values.length;
       for (const row of values) {
-        const literals = columns.map(({ name }) => z.string().parse(row[name]));
+        const parameters = columns.map(({ name }) =>
+          z.union([z.string(), z.number(), z.null(), z.array(z.number())]).parse(row[name]),
+        );
         statements.push(
-          next.prepare(
-            `INSERT INTO ${identifier(table.name)} (${columns.map(({ name }) => identifier(name)).join(",")}) VALUES (${literals.join(",")})`,
-          ),
+          next
+            .prepare(
+              `INSERT INTO ${identifier(table.name)} (${columns.map(({ name }) => identifier(name)).join(",")}) VALUES (${columns.map(() => "?").join(",")})`,
+            )
+            .bind(...parameters),
         );
       }
     }
     statements.push(
-      ...schema.filter((entry) => entry.type !== "table").map((entry) => next.prepare(entry.sql)),
+      ...schema
+        .filter((entry) => entry.type !== "table" && entry.type !== "index")
+        .map((entry) => next.prepare(entry.sql)),
     );
     await next.batch(statements);
     for (const [table, count] of Object.entries(counts)) {

@@ -18,7 +18,7 @@ test("新規stateでは設定生成にDB runtimeや移行記録を作らない",
   }
 });
 
-test("旧local D1の参照・BLOB・migration履歴を保持し再実行で書込みを繰り返さない", async () => {
+test("旧local D1の大きいTEXT・参照・BLOB・migration履歴を保持し再実行で書込みを繰り返さない", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-cf-state-test-"));
   const state = join(directory, "state");
   const marker = join(directory, "migration.json");
@@ -40,13 +40,17 @@ test("旧local D1の参照・BLOB・migration履歴を保持し再実行で書�
       remoteBindings: false,
     });
   };
+  const largeValue = "TableCast\0'".repeat(20_000);
   try {
     const previous = await open("00000000-0000-0000-0000-000000000000");
     try {
       // migration fixtureで、依存順が逆の参照とBLOBの保存を確認する。
       await previous.env.TABLECAST_DB.exec(
-        "CREATE TABLE z_parent(id INTEGER PRIMARY KEY, payload BLOB); CREATE TABLE a_child(id INTEGER REFERENCES z_parent(id), value TEXT); CREATE TABLE d1_migrations(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO z_parent VALUES(1,x'00ff'); INSERT INTO a_child VALUES(1,'TableCast'); INSERT INTO d1_migrations VALUES(1,'0001.sql');",
+        "CREATE TABLE z_parent(id INTEGER PRIMARY KEY, payload BLOB, code TEXT); CREATE UNIQUE INDEX z_parent_code ON z_parent(code); CREATE TABLE a_child(id INTEGER REFERENCES z_parent(id), value TEXT, parent_code TEXT REFERENCES z_parent(code)); CREATE TABLE d1_migrations(id INTEGER PRIMARY KEY, name TEXT); INSERT INTO z_parent VALUES(1,x'00ff','tablecast-parent'); INSERT INTO a_child VALUES(1,'TableCast','tablecast-parent'); INSERT INTO d1_migrations VALUES(1,'0001.sql');",
       );
+      await previous.env.TABLECAST_DB.prepare("UPDATE a_child SET value = ?")
+        .bind(largeValue)
+        .run();
     } finally {
       await previous.dispose();
     }
@@ -61,11 +65,11 @@ test("旧local D1の参照・BLOB・migration履歴を保持し再実行で書�
         await next.env.TABLECAST_DB.prepare(
           "SELECT a.value, hex(z.payload) AS payload FROM a_child a JOIN z_parent z ON z.id=a.id",
         ).first(),
-      ).toEqual({ value: "TableCast", payload: "00FF" });
+      ).toEqual({ value: largeValue, payload: "00FF" });
       expect(await next.env.TABLECAST_DB.prepare("SELECT name FROM d1_migrations").first()).toEqual(
         { name: "0001.sql" },
       );
-      await next.env.TABLECAST_DB.exec("INSERT INTO z_parent VALUES(2,x'0102')");
+      await next.env.TABLECAST_DB.exec("INSERT INTO z_parent VALUES(2,x'0102','tablecast-next')");
     } finally {
       await next.dispose();
     }
