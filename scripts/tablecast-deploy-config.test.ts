@@ -1,10 +1,24 @@
+import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config";
+import { z } from "zod";
 import { describe, expect, test } from "vitest";
 import {
-  deploymentArtifact,
-  deploymentConfigs,
+  bindDeploymentDatabase,
+  deploymentOptions,
+  optionsSchema,
   deploymentSecrets,
   deploymentTarget,
 } from "./tablecast-deploy-config";
+
+function deploymentConfigs(...args: Parameters<typeof deploymentOptions>) {
+  const options = deploymentOptions(...args);
+  const web = convertToWranglerConfig(InputConfigSchema.parse(webCloudflareConfig(options.web)));
+  return {
+    api: apiSdkConfiguration(options.api),
+    web: { ...web, vars: optionsSchema.shape.vars.parse(web.vars) },
+  };
+}
 
 const input = {
   TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
@@ -44,9 +58,6 @@ describe("本番とPRの配備境界", () => {
           deploymentTarget(),
           "a".repeat(40),
           "11111111-1111-4111-8111-111111111111",
-          "/tablecast",
-          {},
-          {},
         ),
       ),
     ).not.toContain(input.TABLECAST_BETTER_AUTH_API_KEY);
@@ -60,32 +71,31 @@ describe("本番とPRの配備境界", () => {
     expect(() => deploymentSecrets(deploymentTarget("75"), missing)).not.toThrow();
   });
 
-  test("同じPRとSHAの成果物へ実DBと検証済みイメージを設定し別の配備先を拒否する", () => {
+  test("実D1の補完は対象APIだけを変更しWorkerのmanifestを保持する", () => {
     const target = deploymentTarget("39");
-    const sha = "a".repeat(40);
-    const api = deploymentConfigs(
-      target,
-      sha,
-      "11111111-1111-4111-8111-111111111111",
-      "/tablecast",
-      {},
-      {},
-    ).api;
-    const artifact = { ...api, main: "index.js", no_bundle: true };
+    const artifact = {
+      name: target.api,
+      compatibilityDate: "2026-09-03",
+      manifest: {
+        type: "complete",
+        mainModule: "index.js",
+        modules: { "index.js": { type: "esm" } },
+      },
+      env: {
+        TABLECAST_DB: {
+          type: "d1",
+          name: target.database,
+          id: "11111111-1111-4111-8111-111111111111",
+        },
+      },
+    };
     const databaseId = "22222222-2222-4222-8222-222222222222";
-
-    const deployed = deploymentArtifact(artifact, target, sha, databaseId);
-
-    expect(deployed.main).toBe("index.js");
-    expect(deployed.no_bundle).toBe(true);
-    expect(deployed.d1_databases[0]?.database_id).toBe(databaseId);
-    expect(deployed.containers.map((container) => container.image)).toEqual([
-      `registry.cloudflare.com/dbbd52d7d690afceea41fe920ae19f91/tablecast-emulate:${sha}`,
-    ]);
-    expect(() => deploymentArtifact(artifact, target, "b".repeat(40), databaseId)).toThrow(
-      "TABLECAST_RELEASE_SHA",
+    const deployed = bindDeploymentDatabase(artifact, target, databaseId);
+    expect(deployed.manifest).toEqual(artifact.manifest);
+    expect(deployed.env?.TABLECAST_DB).toMatchObject({ id: databaseId });
+    expect(() => bindDeploymentDatabase(artifact, deploymentTarget(), databaseId)).toThrow(
+      "別Worker",
     );
-    expect(() => deploymentArtifact(artifact, deploymentTarget(), sha, databaseId)).toThrow("name");
   });
 
   test("本番を生成するとGoogleに登録した単一originと非公開APIになる", () => {
@@ -94,9 +104,6 @@ describe("本番とPRの配備境界", () => {
       target,
       "a".repeat(40),
       "11111111-1111-4111-8111-111111111111",
-      "/tablecast",
-      {},
-      {},
     );
     expect(target.origin).toBe("https://tablecast.kit-codex.workers.dev");
     expect(config.api.vars.TABLECAST_PUBLIC_ORIGIN + "/api/auth/callback/google").toBe(
@@ -133,19 +140,16 @@ describe("本番とPRの配備境界", () => {
       deploymentTarget("34"),
       "a".repeat(40),
       "11111111-1111-4111-8111-111111111111",
-      "/tablecast",
-      {},
-      {},
     );
     expect(config.api.vars.TABLECAST_ENV).toBe("preview");
     expect(config.api.vars.TABLECAST_GOOGLE_AUTHORIZE_URL).toBe(
       "https://tablecast-pr-34.kit-codex.workers.dev/_tablecast/oauth",
     );
     expect(config.api.containers).toHaveLength(1);
-    expect(config.api.triggers.crons).toEqual(["*/5 * * * *"]);
-    expect(JSON.parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)).toEqual([
-      "tablecast-api-pr-34-tablecastemulate",
-    ]);
+    expect(config.api.triggers?.crons).toEqual(["*/5 * * * *"]);
+    expect(
+      JSON.parse(z.string().parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)),
+    ).toEqual(["tablecast-api-pr-34-tablecastemulate"]);
     expect(config.web).not.toHaveProperty("triggers");
     expect(config.api.containers.every((value) => value.max_instances === 1)).toBe(true);
     expect(JSON.stringify(config)).not.toContain("tablecast-openai-secret");
@@ -170,9 +174,6 @@ test("previewのAPIとWebに同じPR番号を渡し送信資格を公開varsへ�
     deploymentTarget("123"),
     "a".repeat(40),
     "11111111-1111-4111-8111-111111111111",
-    "/tablecast",
-    {},
-    {},
   );
   expect(config.api.vars.TABLECAST_PR_NUMBER).toBe("123");
   expect(config.web.vars.TABLECAST_PR_NUMBER).toBe("123");
@@ -196,9 +197,6 @@ test("本文収集はprodとpreviewで既定有効にし、明示falseで両Work
       deploymentTarget(pr),
       "a".repeat(40),
       "11111111-1111-4111-8111-111111111111",
-      "/tablecast",
-      {},
-      {},
     ] as const;
     expect(deploymentConfigs(...args).api.vars.TABLECAST_OTEL_CAPTURE_CONTENT).toBe("true");
     const disabled = deploymentConfigs(...args, "false");
@@ -226,14 +224,7 @@ test.each([
 
 test("stagingは固定の資源と認証secretを保持しpreviewと同じ模擬認証を使う", () => {
   const target = deploymentTarget(undefined, "staging");
-  const config = deploymentConfigs(
-    target,
-    "a".repeat(40),
-    "11111111-1111-4111-8111-111111111111",
-    "/tablecast",
-    {},
-    {},
-  );
+  const config = deploymentConfigs(target, "a".repeat(40), "11111111-1111-4111-8111-111111111111");
   expect(target.origin).toBe("https://tablecast-staging.kit-codex.workers.dev");
   expect(config.api.vars.TABLECAST_ENV).toBe("staging");
   expect(config.api.vars.TABLECAST_GOOGLE_AUTHORIZE_URL).toBe(`${target.origin}/_tablecast/oauth`);

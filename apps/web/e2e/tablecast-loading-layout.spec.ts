@@ -186,6 +186,9 @@ test("アカウント取得の失敗でも枠を保って再試行し、再取�
     releaseSave.resolve();
     await requested.promise;
     await expect(page.getByRole("status")).toHaveText(ja.account_saved);
+    // session再取得の保存結果がプロフィールへ反映してから次の編集へ進む。
+    await expect(page.getByText("保存する名前", { exact: true }).first()).toBeVisible();
+    await expect(name).toBeEnabled();
     await name.fill("入力途中の名前");
     release.resolve();
     await expect(page.getByRole("alert").first()).toBeVisible();

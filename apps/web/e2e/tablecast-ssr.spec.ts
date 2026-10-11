@@ -10,6 +10,7 @@ test.use({ trace: "off", serviceWorkers: "block" });
 declare global {
   interface Window {
     tablecastLayoutShift: number;
+    tablecastLayoutShiftEntries: string[];
   }
 }
 
@@ -177,6 +178,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       interactive.on("pageerror", (error) => errors.push(error.message));
       await interactive.addInitScript(() => {
         window.tablecastLayoutShift = 0;
+        window.tablecastLayoutShiftEntries = [];
         if (PerformanceObserver.supportedEntryTypes.includes("layout-shift"))
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries())
@@ -185,8 +187,26 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
                 typeof entry.value === "number" &&
                 "hadRecentInput" in entry &&
                 !entry.hadRecentInput
-              )
+              ) {
                 window.tablecastLayoutShift += entry.value;
+                const sources =
+                  "sources" in entry && Array.isArray(entry.sources)
+                    ? entry.sources.map((source: unknown) => {
+                        if (!source || typeof source !== "object") return null;
+                        return {
+                          node:
+                            "node" in source && source.node instanceof Element
+                              ? source.node.outerHTML.slice(0, 240)
+                              : null,
+                          previousRect: "previousRect" in source ? source.previousRect : null,
+                          currentRect: "currentRect" in source ? source.currentRect : null,
+                        };
+                      })
+                    : [];
+                window.tablecastLayoutShiftEntries.push(
+                  JSON.stringify({ time: entry.startTime, value: entry.value, sources }),
+                );
+              }
           }).observe({ type: "layout-shift", buffered: true });
       });
       await interactive.goto("/");
@@ -199,16 +219,19 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
           ? window.tablecastLayoutShift
           : null,
         resources: performance.getEntriesByType("resource").map((entry) => entry.name),
+        layoutShiftEntries: window.tablecastLayoutShiftEntries,
+        fonts: document.fonts.status,
       }));
+      // 予算超過時にも実際に動いた要素と時刻を残す。
+      await writeFile(
+        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
+        JSON.stringify(metrics, null, 2),
+      );
       expect(metrics.resources.filter((url) => /audio-waveform|livekit-client/.test(url))).toEqual(
         [],
       );
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
-      await writeFile(
-        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
-        JSON.stringify(metrics, null, 2),
-      );
       await interactive.screenshot({
         path: testInfo.outputPath("kiosk-hydrated.png"),
         fullPage: true,

@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env run vite dev",
-    "build": "vite build",
+    "dev": "bun --env-file=../../.local/.env exec 'cf dev'",
+    "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
     "preview": "bun --env-file=../../.local/.env run vite preview",
     "typecheck": "tsc --noEmit",
     "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
@@ -17,8 +17,8 @@
     "storybook": "storybook dev --no-open --port 6006",
     "build:storybook": "storybook build",
     "format:check": "oxfmt --check .",
-    "dev:container": "bun --env-file=../../.local/.env run vite dev",
-    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run vite build"
+    "dev:container": "bun --env-file=../../.local/.env exec 'cf dev'",
+    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run ../../scripts/tablecast-build.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -60,7 +60,7 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.54.4",
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
     "@cloudflare/workers-types": "5.20260903.1",
     "@inlang/paraglide-js": "2.25.0",
     "@playwright/test": "1.63.0",
@@ -90,6 +90,6 @@
     "vite": "8.2.2",
     "vitest": "4.1.11",
     "vitest-browser-react": "2.3.0",
-    "wrangler": "4.129.0"
+    "wrangler": "4.149.0"
   }
 }

@@ -1,5 +1,6 @@
 import { createApi, createContext, main as serwist } from "@serwist/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { resolveAndParseConfig } from "@cloudflare/config";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -8,18 +9,33 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { z } from "zod";
+import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
+import { modeOptions } from "../../scripts/tablecast-deploy-config.ts";
 
-export default defineConfig(() => {
+export default defineConfig(async ({ command, mode, isPreview }) => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+  const api =
+    command === "serve" && !isPreview
+      ? await resolveAndParseConfig(apiCloudflareConfig(modeOptions("api", mode)), {
+          mode,
+          isPreview: false,
+        })
+      : undefined;
+  if (api && !api.success) throw api.error;
+  const apiWorker = api?.success ? api.data.worker : undefined;
   const buildDirectory = resolve(
     import.meta.dirname,
     tablecastEnv.TABLECAST_BUILD_DIRECTORY ?? "dist",
   );
+  const assetsDirectory = resolve(
+    import.meta.dirname,
+    ".cloudflare/output/v0/workers/default/assets",
+  );
   const serviceWorkerContext = createContext(
     {
       swSrc: "src/sw.ts",
-      swDest: resolve(buildDirectory, "client/sw.js"),
-      globDirectory: resolve(buildDirectory, "client"),
+      swDest: resolve(assetsDirectory, "sw.js"),
+      globDirectory: assetsDirectory,
       globPatterns: [
         "assets/**/*.{js,css,woff2}",
         "flags/*.svg",
@@ -41,14 +57,17 @@ export default defineConfig(() => {
     plugins: [
       tailwindcss(),
       cloudflare({
-        configPath: tablecastEnv.TABLECAST_WEB_CONFIG,
+        types: { includeRuntime: false },
         viteEnvironment: { name: "ssr" },
-        auxiliaryWorkers: [
-          {
-            configPath: tablecastEnv.TABLECAST_API_CONFIG ?? "../api/wrangler.jsonc",
-            viteEnvironment: { name: "tablecast_api" },
-          },
-        ],
+        auxiliaryWorkers: apiWorker
+          ? [
+              {
+                config: apiWorker,
+                devOnly: true,
+                viteEnvironment: { name: "tablecast_api" },
+              },
+            ]
+          : [],
         ...(tablecastEnv.TABLECAST_STATE_PATH
           ? { persistState: { path: tablecastEnv.TABLECAST_STATE_PATH } }
           : {}),

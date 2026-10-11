@@ -5,7 +5,7 @@
 ## 基本構成
 
 BunでJS依存とタスクを管理し、Turborepoでworkspace間の順序・キャッシュを扱う。
-Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Storybookの実行要件を勝手に変更しない。
+Bunを使っても本番Workersのruntimeはworkerdであり、cf/Vite/Storybookの実行要件を勝手に変更しない。
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono、D1、DO、R2、Imagesの対応範囲、MCP、Storybook。
@@ -14,14 +14,14 @@ Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Sto
 
 ## 通常開発と本番相当試験
 
-| モード   | 起動方式                                                       | 用途                                             |
-| -------- | -------------------------------------------------------------- | ------------------------------------------------ |
-| 通常     | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding                               |
-| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動               | Service Binding、build、stream、Cookieの接続確認 |
-| UI部品   | apps/web内のStorybook                                          | 固定状態とブラウザー操作検証                     |
-| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続                          | 字幕、取消、業務委任                             |
+| モード   | 起動方式                                         | 用途                                             |
+| -------- | ------------------------------------------------ | ------------------------------------------------ |
+| 通常     | cf dev + Cloudflare Vite PluginでWeb/APIを起動   | UIのHMRと実Binding                               |
+| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動 | Service Binding、build、stream、Cookieの接続確認 |
+| UI部品   | apps/web内のStorybook                            | 固定状態とブラウザー操作検証                     |
+| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続            | 字幕、取消、業務委任                             |
 
-Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、同じAPI WorkerをVite補助と独立Wranglerで二重起動しない。[S11](sources.md#s11)
+Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、WebのVite pluginがAPIをauxiliary Workerとして一度だけ起動し、Service Bindingでつなぐ。[S11](sources.md#s11)
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
 D1 migration・seedのCLIにも同じローカル保存先と同じ生成configを渡す。別ディレクトリの空DBへ投入する事故を防ぐ。
 
@@ -76,7 +76,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 小さなbootstrapでWeb、Inspector、OAuth、Mailpit、Grafanaをまとめて割り当てる。Storybookは上記の公式CLIでportを指定する。
 既存のポート割当て機能を先に使い、worktree間の予約だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
-一つのruntime manifestにホスト、port、state、生成configを記録する。ポートを複数package.jsonへ直書きしない。
+一つのruntime manifestにホスト、port、state、SDK接続用API configの参照を記録する。cfは各workspaceの`cloudflare.config.ts`を使い、`.local/.env`の`TABLECAST_CONFIG`から公開入力を解決する。SDK用JSONをcf設定へ読み戻さず、Web用JSONも生成しない。ポートを複数package.jsonへ直書きしない。
 同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。
 空き確認後にも競合し得るため、bind失敗時は別の予約で起動し直す。既存プロセスをkillしてポートを奪わない。
 フレームワークの自動port繰上げを無効にし、古いOAuth callbackや間違ったworktreeへ接続しないようにする。
@@ -84,9 +84,9 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
 共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
 
-Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。通常開発をCtrl+Cで停止してから `dev:parity` を実行し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
+cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
 
-公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時は[CI/CD手順](deployment.md)で生成した環境別configをbuildへ渡し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
+公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 
 ## Service BindingとCookie
 
@@ -103,7 +103,7 @@ PORT、PUBLIC_ORIGIN、state path、認証secret、Cloudflare本番資格、TLS�
 これらはworktree初期化で生成し `.local` に置く。envをshellとしてevalせず、標準env読込みで必要な値だけ各runtimeへ渡す。
 
 `.worktreeinclude` はCodexのローカルworktree機能であり、Git標準ではない。通常のgit worktreeでは自動コピーされない。[S15](sources.md#s15)
-.gitignoreで無視される同一ファイルだけを対象とし、node_modules、.wrangler、DB、ログ、証明書をコピーしない。
+.gitignoreで無視される同一ファイルだけを対象とし、node_modules、.cloudflare、.wrangler、DB、ログ、証明書をコピーしない。
 手動worktreeでは既存のsecret管理から同じファイルを安全に配置する。汎用glob同期やsymlink追跡の再実装はしない。
 Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保存する。
 
@@ -146,7 +146,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## メールカタログの検証
 
-既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`bunx --no-install wrangler dev --assets apps/api/email-static`で確認し、終了時はWranglerと子workerdを停止する。
+既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
 
 生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
 

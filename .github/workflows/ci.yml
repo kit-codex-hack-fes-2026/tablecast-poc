@@ -115,7 +115,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/dist/
+          path: apps/web/.cloudflare/output/
           include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
@@ -189,6 +189,12 @@ jobs:
             with:
               browsers: chromium webkit
       - run: bun run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: failure()
+        with:
+          name: tablecast-components-${{ github.event.pull_request.head.sha || github.sha }}
+          path: apps/web/test-results/browser/**/*.png
+          retention-days: 1
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
@@ -291,7 +297,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/dist/
+          path: apps/web/.cloudflare/output/
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
@@ -347,7 +353,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/dist/
+          path: apps/web/.cloudflare/output/
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}

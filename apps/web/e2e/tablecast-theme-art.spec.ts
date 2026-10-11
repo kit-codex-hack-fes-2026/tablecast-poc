@@ -86,7 +86,7 @@ test("生成した背景・透過ロゴ・チラシを実注文画面へ配置�
     },
   };
   const draft = configDraftSchema.parse(
-    await (await page.request.post(`${endpoint}/drafts`, { headers, data: {} })).json(),
+    await (await page.request.post(`${endpoint}/drafts`, { headers })).json(),
   );
   const prepared = await page.request.put(`${endpoint}/drafts/${draft.id}`, {
     headers,

@@ -3,9 +3,11 @@ import { defineConfig } from "vitest/config";
 const bindings = {
   plugins: [
     cloudflareTest({
-      wrangler: { configPath: "./wrangler.jsonc" },
+      experimental: { newConfig: { configPath: "./cloudflare.config.ts" } },
       remoteBindings: false,
       miniflare: {
+        // VitestはWorkerをrunner名へ変更するため、同じ実DOをself bindingとして起動する。
+        durableObjects: { TABLECAST_EVENTS: "StoreEvents", TABLECAST_EMULATE: "TablecastEmulate" },
         bindings: {
           TABLECAST_AUTH_SECRET: "tablecast-test-secret-that-is-long-enough-for-local-tests",
           TABLECAST_ENV: "test",

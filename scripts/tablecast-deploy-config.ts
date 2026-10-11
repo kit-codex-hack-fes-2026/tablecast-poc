@@ -1,9 +1,120 @@
 import { createHmac } from "node:crypto";
-import { resolve } from "node:path";
 import { z } from "zod";
+import { OutputWorkerSchema } from "@cloudflare/config";
+import type { BuildOutput } from "@cloudflare/build-output-utils";
 
 export const tablecastAccountId = "dbbd52d7d690afceea41fe920ae19f91";
 export const tablecastRepository = "kit-codex-hack-fes-2026/tablecast-poc";
+
+export const tablecastCompatibilityDate = "2026-09-03";
+export const optionsSchema = z.object({
+  name: z.string().default("tablecast-api"),
+  accountId: z.string().optional(),
+  vars: z.record(z.string(), z.string()).default({}),
+  database: z.object({ name: z.string(), id: z.uuid() }).default({
+    name: "tablecast-local",
+    id: "00000000-0000-4000-8000-000000000000",
+  }),
+  bucket: z.string().default("tablecast-media"),
+  api: z.string().default("tablecast-api"),
+  environment: z
+    .enum(["development", "test", "preview", "staging", "production"])
+    .default("development"),
+  containerImage: z.string().optional(),
+});
+export type TablecastConfigOptions = z.input<typeof optionsSchema>;
+
+export function modeOptions(
+  workspace: "api" | "web",
+  mode: string | undefined,
+  input = process.env.TABLECAST_CONFIG,
+) {
+  const options = input
+    ? z.object({ api: optionsSchema, web: optionsSchema }).parse(JSON.parse(input))[workspace]
+    : optionsSchema.parse({ name: `tablecast-${workspace}` });
+  const environment = optionsSchema.shape.environment.parse(mode ?? options.environment);
+  if (input && environment !== options.environment)
+    throw new Error("設定の環境とcf modeが一致しません。");
+  if (!input && ["preview", "staging", "production"].includes(environment))
+    throw new Error("配備設定をbuild:deployで生成してください。");
+  return { ...options, environment };
+}
+
+export function requiredApiSecrets(environment: string, voiceEnabled = false) {
+  const hosted = ["preview", "staging", "production"].includes(environment);
+  return [
+    "TABLECAST_AUTH_SECRET",
+    ...(hosted || voiceEnabled ? ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"] : []),
+    ...(hosted ? ["TABLECAST_OTEL_AUTHORIZATION"] : []),
+    ...(["preview", "staging"].includes(environment) ? ["TABLECAST_CONTAINER_METRICS_TOKEN"] : []),
+    ...(environment === "preview" ? ["CF_ACCESS_CLIENT_ID", "CF_ACCESS_CLIENT_SECRET"] : []),
+    ...(environment === "production"
+      ? [
+          "TABLECAST_GOOGLE_CLIENT_ID",
+          "TABLECAST_GOOGLE_CLIENT_SECRET",
+          "TABLECAST_BETTER_AUTH_API_KEY",
+        ]
+      : []),
+  ];
+}
+
+// 2026-10-11にD1一覧・DO一覧とSQLite storageを照合した常設資源。
+export const tablecastAdoptedResources = {
+  production: {
+    database: "6cc5c833-9c01-4172-92e7-18d713db9a8f",
+    namespaces: {
+      StoreEvents: "2d4e84834bfc4d41be6093d4e5242d8c",
+      TablecastEmulate: "4bb365dc1db448d9a38480381e06508f",
+    },
+  },
+  staging: {
+    database: "0af58c70-6818-4e94-a23d-976993d321c4",
+    namespaces: {
+      StoreEvents: "2c60391b44404f5280829a980bcaf795",
+      TablecastEmulate: "238f0efa5ad349a7bceffc8ab1cb158c",
+    },
+  },
+};
+
+// 2026-10-11に現物を照合した既存ID。service tokenの秘密値・期限を再生成しない。
+export const tablecastAccess = {
+  serviceToken: {
+    id: "7ac8f0a6-6fbe-45a0-b1e1-3c3b495e5e6d",
+    name: "tablecast-preview-service",
+    duration: "8760h",
+  },
+  policies: [
+    {
+      id: "7abce02a-37b7-43df-94e3-ba95360ea74f",
+      name: "tablecast-preview-members",
+      decision: "allow",
+      include: [{ cloudflare_account_member: { account_id: tablecastAccountId } }],
+      require: [],
+      exclude: [],
+    },
+    {
+      id: "53f813e1-8d09-4588-a513-fcc40856b3be",
+      name: "tablecast-preview-service",
+      decision: "non_identity",
+      include: [{ service_token: { token_id: "7ac8f0a6-6fbe-45a0-b1e1-3c3b495e5e6d" } }],
+      require: [],
+      exclude: [],
+    },
+  ],
+} as const;
+
+export function accessApplicationConfig(name: string, domain: string, workerId?: string) {
+  return {
+    name,
+    type: "self_hosted",
+    session_duration: "24h",
+    ...(workerId ? { destinations: [{ type: "worker", worker_id: workerId }] } : { domain }),
+    policies: tablecastAccess.policies.map((policy, index) => ({
+      id: policy.id,
+      precedence: index + 1,
+    })),
+  };
+}
 
 export function deploymentTarget(pr?: string, environment = pr ? "preview" : "production") {
   const mode = z.enum(["production", "staging", "preview"]).parse(environment);
@@ -25,60 +136,87 @@ export function deploymentTarget(pr?: string, environment = pr ? "preview" : "pr
 }
 export type DeploymentTarget = ReturnType<typeof deploymentTarget>;
 
+export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTarget, sha: string) {
+  if (output.rootConfig.buildContext.mode !== target.environment)
+    throw new Error("Build Outputのmodeが一致しません。");
+  const workers = Object.values(output.workers);
+  if (workers.length !== 2) throw new Error("Build OutputのWorker数が一致しません。");
+  for (const name of [target.api, target.web]) {
+    const worker = workers.find((candidate) => candidate.config.name === name);
+    if (!worker?.bundleDir) throw new Error(`Worker成果物がありません: ${name}`);
+    const secrets =
+      name === target.api
+        ? requiredApiSecrets(target.environment)
+        : ["TABLECAST_OTEL_AUTHORIZATION"];
+    for (const secret of secrets)
+      z.object({ type: z.literal("secret") }).parse(worker.config.env?.[secret]);
+    z.object({
+      TABLECAST_ENV: z.object({ type: z.literal("text"), value: z.literal(target.environment) }),
+      TABLECAST_RELEASE_SHA: z.object({ type: z.literal("text"), value: z.literal(sha) }),
+      TABLECAST_PR_NUMBER: z.object({ type: z.literal("text"), value: z.literal(target.pr ?? "") }),
+    }).parse(worker.config.env);
+    if (name === target.api) {
+      z.object({
+        TABLECAST_DB: z.object({
+          type: z.literal("d1"),
+          name: z.literal(target.database),
+          id: z.literal("11111111-1111-4111-8111-111111111111"),
+        }),
+        TABLECAST_MEDIA: z.object({ type: z.literal("r2"), name: z.literal(target.bucket) }),
+      }).parse(worker.config.env);
+      z.object({
+        StoreEvents: z.object({ type: z.literal("durable-object"), storage: z.literal("sqlite") }),
+        TablecastEmulate: z.object({
+          type: z.literal("durable-object"),
+          storage: z.literal("sqlite"),
+        }),
+      }).parse(worker.config.exports);
+    } else {
+      z.object({
+        TABLECAST_API: z.object({ type: z.literal("worker"), worker: z.literal(target.api) }),
+      }).parse(worker.config.env);
+    }
+  }
+  if (output.containers.length !== (target.emulate ? 1 : 0))
+    throw new Error("Build OutputのContainer数が一致しません。");
+  for (const container of output.containers)
+    z.object({
+      name: z.literal(`${target.api}-tablecastemulate`),
+      image: z.object({
+        reference: z.literal(
+          `registry.cloudflare.com/${tablecastAccountId}/tablecast-emulate:${sha}`,
+        ),
+      }),
+    }).parse(container.config);
+  return workers;
+}
+
+export function bindDeploymentDatabase(
+  input: unknown,
+  target: DeploymentTarget,
+  databaseId: string,
+) {
+  const config = OutputWorkerSchema.parse(input);
+  if (config.name !== target.api) throw new Error("実D1を別Workerへ設定できません。");
+  const database = z
+    .object({
+      type: z.literal("d1"),
+      name: z.literal(target.database),
+      id: z.literal("11111111-1111-4111-8111-111111111111"),
+    })
+    .parse(config.env?.TABLECAST_DB);
+  return {
+    ...config,
+    env: { ...config.env, TABLECAST_DB: { ...database, id: z.uuid().parse(databaseId) } },
+  };
+}
+
 // 公開stagingでOAuth discoveryの到達先を検査する。
 export const stagingDiscoveryPaths = [
   "/.well-known/oauth-protected-resource/mcp",
   "/.well-known/oauth-authorization-server/api/auth",
   "/.well-known/openid-configuration/api/auth",
 ];
-
-export function deploymentArtifact(
-  input: unknown,
-  target: DeploymentTarget,
-  sha: string,
-  databaseId: string,
-) {
-  // 同じCIの環境別成果物へ、配備時に確定したbindingだけを設定する。
-  const config = z
-    .looseObject({
-      name: z.literal(target.api),
-      main: z.string(),
-      no_bundle: z.literal(true),
-      vars: z.looseObject({
-        TABLECAST_RELEASE_SHA: z.literal(sha),
-        TABLECAST_ENV: z.literal(target.environment),
-      }),
-      d1_databases: z
-        .array(
-          z.looseObject({
-            binding: z.literal("TABLECAST_DB"),
-            database_name: z.literal(target.database),
-            database_id: z.literal("11111111-1111-4111-8111-111111111111"),
-          }),
-        )
-        .length(1),
-      containers: z
-        .array(
-          z.looseObject({
-            class_name: z.literal("TablecastEmulate"),
-          }),
-        )
-        .length(target.emulate ? 1 : 0)
-        .default([]),
-    })
-    .parse(input);
-  return {
-    ...config,
-    d1_databases: config.d1_databases.map((binding) => ({
-      ...binding,
-      database_id: z.uuid().parse(databaseId),
-    })),
-    containers: config.containers.map((container) => ({
-      ...container,
-      image: `registry.cloudflare.com/${tablecastAccountId}/tablecast-emulate:${sha}`,
-    })),
-  };
-}
 
 export function deploymentSecrets(
   target: DeploymentTarget,
@@ -132,13 +270,10 @@ export function deploymentSecrets(
   return secrets;
 }
 
-export function deploymentConfigs(
+export function deploymentOptions(
   target: DeploymentTarget,
   sha: string,
   databaseId: string,
-  root: string,
-  api: Record<string, unknown>,
-  web: Record<string, unknown>,
   captureContent = "true",
 ) {
   z.string()
@@ -154,62 +289,36 @@ export function deploymentConfigs(
     TABLECAST_OTEL_CAPTURE_CONTENT: z.enum(["true", "false"]).parse(captureContent),
     TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
   };
-  const apiConfig = {
-    ...api,
-    name: target.api,
-    account_id: tablecastAccountId,
-    main: resolve(root, "apps/api/src/worker.ts"),
-    workers_dev: false,
-    preview_urls: false,
-    triggers: { crons: target.emulate ? ["*/5 * * * *"] : [] },
-    vars: {
-      ...telemetryVars,
-      TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
-      TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([
-        ...(target.emulate ? [`${target.api}-tablecastemulate`] : []),
-      ]),
-      TABLECAST_PUBLIC_ORIGIN: target.origin,
-      TABLECAST_VOICE_ENABLED: "true",
-      ...(target.emulate
-        ? {
-            TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
-            TABLECAST_GOOGLE_AUTHORIZE_URL: `${target.origin}/_tablecast/oauth`,
-          }
-        : {}),
-    },
-    d1_databases: [
-      {
-        binding: "TABLECAST_DB",
-        database_name: target.database,
-        database_id: databaseId,
-        migrations_dir: resolve(root, "apps/api/migrations"),
-      },
-    ],
-    r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: target.bucket }],
-    containers: [
-      ...(target.emulate
-        ? [
-            {
-              class_name: "TablecastEmulate",
-              image: resolve(root, "apps/emulate/Dockerfile"),
-              image_build_context: root,
-              instance_type: "basic",
-              max_instances: 1,
-            },
-          ]
-        : []),
-    ],
+  const apiVars = {
+    ...telemetryVars,
+    TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
+    TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify(
+      target.emulate ? [`${target.api}-tablecastemulate`] : [],
+    ),
+    TABLECAST_PUBLIC_ORIGIN: target.origin,
+    TABLECAST_VOICE_ENABLED: "true",
+    ...(target.emulate
+      ? {
+          TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
+          TABLECAST_GOOGLE_AUTHORIZE_URL: `${target.origin}/_tablecast/oauth`,
+        }
+      : {}),
   };
   return {
-    api: apiConfig,
+    api: {
+      name: target.api,
+      accountId: tablecastAccountId,
+      environment: target.environment,
+      database: { name: target.database, id: databaseId },
+      bucket: target.bucket,
+      vars: apiVars,
+      containerImage: `registry.cloudflare.com/${tablecastAccountId}/tablecast-emulate:${sha}`,
+    },
     web: {
-      ...web,
       name: target.web,
-      account_id: tablecastAccountId,
-      main: resolve(root, "apps/web/src/server.ts"),
-      workers_dev: true,
-      preview_urls: false,
-      services: [{ binding: "TABLECAST_API", service: target.api }],
+      accountId: tablecastAccountId,
+      api: target.api,
+      environment: target.environment,
       vars: telemetryVars,
     },
   };

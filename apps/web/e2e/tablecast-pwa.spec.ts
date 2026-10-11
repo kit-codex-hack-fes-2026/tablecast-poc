@@ -265,7 +265,10 @@ test("別画面の未保存入力がある間は更新を待ち、背景GET中�
       return state;
     });
     // When: 配信済みService Workerの内容を更新する。
-    await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-update-test\n");
+    await appendFile(
+      join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
+      "\n// tablecast-update-test\n",
+    );
     await runtime.restartWeb();
 
     await page.evaluate(async () => {

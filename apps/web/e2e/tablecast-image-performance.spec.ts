@@ -45,7 +45,7 @@ for (const count of [24, 120]) {
       })),
     };
     let draft = configDraftSchema.parse(
-      await (await request.post(`${api}/drafts`, { headers, data: {} })).json(),
+      await (await request.post(`${api}/drafts`, { headers })).json(),
     );
     draft = configDraftSchema.parse(
       await (
@@ -127,6 +127,8 @@ for (const count of [24, 120]) {
     page.on("requestfinished", (imageRequest) => pendingImages.delete(imageRequest.url()));
     page.on("requestfailed", (imageRequest) => pendingImages.delete(imageRequest.url()));
     const samples = [];
+    const visitedImages = new Set<string>();
+    let coldTransferBytes = 0;
     for (let sample = 0; sample < 3; sample++) {
       await page.reload();
       const images = page.locator("#tablecast-order img");
@@ -158,6 +160,7 @@ for (const count of [24, 120]) {
               entry instanceof PerformanceResourceTiming && entry.name.includes("/media/"),
           )
           .map((entry) => ({
+            key: new URL(entry.name).pathname + new URL(entry.name).search,
             width: new URL(entry.name).searchParams.get("width"),
             transfer: entry.transferSize,
             body: entry.encodedBodySize,
@@ -179,7 +182,16 @@ for (const count of [24, 120]) {
         : null;
       expect(browserName !== "chromium" || transferred !== null).toBe(true);
       if (transferred !== null) {
-        expect(transferred).toBeLessThanOrEqual(sample === 0 ? 500_000 : 0);
+        // lazy画像は再読込時に初めて取得される場合がある。取得済みURLだけをwarmと判定する。
+        const warmTransfer = measured.resources
+          .filter((resource) => visitedImages.has(resource.key))
+          .reduce((total, resource) => total + resource.transfer, 0);
+        coldTransferBytes += measured.resources
+          .filter((resource) => !visitedImages.has(resource.key))
+          .reduce((total, resource) => total + resource.transfer, 0);
+        expect(warmTransfer).toBe(0);
+        expect(coldTransferBytes).toBeLessThanOrEqual(500_000);
+        for (const resource of measured.resources) visitedImages.add(resource.key);
       } else if (sample === 0) {
         testInfo.annotations.push({
           type: "計測制限",
@@ -188,7 +200,7 @@ for (const count of [24, 120]) {
       }
       for (const image of measured.images)
         expect(Math.abs(image.width - image.height)).toBeLessThan(1);
-      samples.push({ sample, transferBytes: transferred, ...measured });
+      samples.push({ sample, transferBytes: transferred, coldTransferBytes, ...measured });
     }
     await page.screenshot({ path: testInfo.outputPath(`tablecast-images-${count}.png`) });
     const source = await page

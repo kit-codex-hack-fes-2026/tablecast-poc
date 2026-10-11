@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "./support/test";
 import { expect } from "@playwright/test";
@@ -20,14 +20,20 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   request: staff,
   baseURL,
   runtime,
-}) => {
+}, testInfo) => {
   const storeId = "tablecast-hanul";
   const adminPath = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
   let closedSockets = 0;
+  const pwaEvents: unknown[] = [];
+  page.on("console", (message) => {
+    const prefix = "tablecast-pwa-evidence:";
+    if (message.text().startsWith(prefix) && pwaEvents.length < 200)
+      pwaEvents.push(JSON.parse(message.text().slice(prefix.length)));
+  });
 
   async function prepare(configuration: Configuration, baseVersion: number) {
-    const created = await staff.post(`${adminPath}/drafts`, { headers, data: {} });
+    const created = await staff.post(`${adminPath}/drafts`, { headers });
     expect(created.status()).toBe(200);
     const draft = configDraftSchema.parse(await created.json());
     expect(draft.baseVersion, "試験中に別の設定公開が行われていない").toBe(baseVersion);
@@ -114,12 +120,39 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await expect(detail.getByText(prices.original, { exact: true })).toContainText(prices.original);
 
   await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.ready;
+    const record = (phase: string, fields: Record<string, unknown> = {}) =>
+      console.info(
+        "tablecast-pwa-evidence:" +
+          JSON.stringify({
+            time: performance.now(),
+            phase,
+            waiting: registration.waiting?.state,
+            controller: navigator.serviceWorker.controller?.state,
+            inert: document.body.inert,
+            ...fields,
+          }),
+      );
+    navigator.serviceWorker.addEventListener("message", (event) =>
+      record("message", { type: event.data?.type }),
+    );
+    navigator.serviceWorker.addEventListener("controllerchange", () => record("controllerchange"));
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      installing?.addEventListener("statechange", () =>
+        record("statechange", { installing: installing.state }),
+      );
+      record("updatefound");
+    });
+    record("initial");
   });
   // 時刻の丸めや補正ではなく、Documentの読み込みを観測する。
   let documentLoads = 0;
   page.on("domcontentloaded", () => documentLoads++);
-  await appendFile(join(runtime.directory, "client/sw.js"), "\n// tablecast-live-table-update\n");
+  await appendFile(
+    join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
+    "\n// tablecast-live-table-update\n",
+  );
   await runtime.restartWeb();
 
   await page.evaluate(async () => {
@@ -182,10 +215,36 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await expect(detail.getByText(prices.changed, { exact: true })).toContainText(prices.changed);
   await detail.getByRole("button", { name: "おしながき", exact: true }).click();
   // 利用中は保留したアプリ更新を、卓の利用終了後に適用する。
-  const [, closed] = await Promise.all([
-    page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-    staff.post(`${adminPath}/tables/${table.id}/close`, { headers, data: {} }),
-  ]);
-  expect(closed.status()).toBe(200);
-  expect(documentLoads).toBe(1);
+  try {
+    const [, closed] = await Promise.all([
+      page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+      staff.post(`${adminPath}/tables/${table.id}/close`, { headers, data: {} }),
+    ]);
+    expect(closed.status()).toBe(200);
+    expect(documentLoads).toBe(1);
+  } finally {
+    // 更新が止まった場合も、可視性・待機中SW・画面側の保留条件を残す。
+    await writeFile(
+      testInfo.outputPath("pwa-update-state.json"),
+      JSON.stringify(
+        {
+          events: pwaEvents,
+          state: await page.evaluate(async () => ({
+            visibility: document.visibilityState,
+            waiting: (await navigator.serviceWorker.getRegistration())?.waiting?.state,
+            controller: navigator.serviceWorker.controller?.state,
+            inert: document.body.inert,
+            blocked: [...document.querySelectorAll('[data-pwa-blocked="true"]')].map((node) =>
+              node.outerHTML.slice(0, 240),
+            ),
+            forms: [...document.forms].map((form) =>
+              Boolean(form.querySelector("[data-pwa-blocked]")),
+            ),
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+  }
 });

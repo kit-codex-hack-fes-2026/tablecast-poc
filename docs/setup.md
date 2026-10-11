@@ -124,7 +124,7 @@ MCPはCodexが動くホストから接続する。Dev Container内でCLIを動�
 | Storybook       | `bun run storybook` を起動し、[開発環境のMCP手順](development.md#storybook-mcp)に従って実際のportを登録する。`docs-list`・`docs-show`で確認する                                    |
 | TableCast local | [ローカルMCP手順](codex-plugin.md#ローカル接続)でworktreeのURLを`tablecast-local`へ登録し、OAuth後に`get_configuration`とローカルfixtureを照合する。plugin生成は配布検証時だけ行う |
 
-Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。Wranglerのログインとは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
+Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。cfのCLI認証とは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
 
 Grafanaは公式 `grafana/mcp-grafana:1.3.0` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
 
@@ -164,10 +164,10 @@ cp -n .env.example .env.local
 chmod 600 .env.local
 ```
 
-JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。CLIラッパーや暗号化envの復号は使わない。
+JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。暗号化envの復号は使わない。
 
 > [!NOTE]
-> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・Wranglerなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の一覧照合・不足分の限定並列投入と件数ログ、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
+> 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・cfなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の一覧照合・不足分の限定並列投入と件数ログ、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
 `.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
@@ -175,13 +175,13 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
-| ファイル                      | 用途                                                  |
-| ----------------------------- | ----------------------------------------------------- |
-| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない         |
-| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス                 |
-| `.local/.dev.vars`            | Wrangler用の生成済み設定・鍵                          |
-| `apps/api/.dev.vars.example`  | Wranglerのbinding型生成用。起動設定としてコピーしない |
-| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                   |
+| ファイル                      | 用途                                          |
+| ----------------------------- | --------------------------------------------- |
+| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない |
+| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス         |
+| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵            |
+| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない   |
+| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物           |
 
 旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。開発用の外部キーは `TABLECAST_MODEL_API_KEY` だけにまとめる。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
 
@@ -268,3 +268,13 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 ### 店舗テーマの開発依存
 
 追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。
+
+## Cloudflare CLIと設定の移行
+
+`cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
+
+API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。生成した公開入力を`TABLECAST_CONFIG`で両workspaceへ渡し、cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
+
+初回移行は自worktreeのWeb・APIを停止して`bun run dev:prepare`を実行する。旧local D1の全データ・schema・適用済みmigrationを公式SDKのD1 batchでcf用UUIDv4へ移し、件数・外部キーを照合する。旧stateは削除しない。旧・新DBが両方あり移行記録がない場合は自動上書きせず停止する。R2と業務DOの保存先は既存`.local/state`を維持し、Webの内部stateだけその配下の`tablecast-web`へ分離する。
+
+beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了しないため、`cf:local`はcfの公開`main()`完了後にstdout/stderrをflushして終了する互換入口である。migration・試験だけが使い、遠隔操作は通常のcf CLIを使う。上流で終了処理が修正されたらこの入口を削除する。

@@ -1,7 +1,39 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { preparePwaClients } from "./pwa-update";
+import { canReloadPwaClient, preparePwaClients } from "./pwa-update";
 
 afterEach(() => vi.useRealTimers());
+
+it("承認したSWの切替がロック期限後でも、安全な画面へ一度だけ反映する", () => {
+  const previous = {};
+  const next = {};
+  const state = {
+    preparedController: previous,
+    controller: next,
+    locked: false,
+    ready: true,
+    reloading: false,
+  };
+  expect(canReloadPwaClient(state)).toBe(true);
+  // 期限後に未保存入力や送信が始まった画面は、その完了まで待つ。
+  expect(canReloadPwaClient({ ...state, ready: false })).toBe(false);
+  expect(canReloadPwaClient({ ...state, reloading: true })).toBe(false);
+});
+
+it("初回のcontroller取得・切替前・取消済みの更新ではreloadしない", () => {
+  const previous = {};
+  const state = {
+    preparedController: previous,
+    controller: previous,
+    locked: false,
+    ready: true,
+    reloading: false,
+  };
+  expect(canReloadPwaClient(state)).toBe(false);
+  expect(canReloadPwaClient({ ...state, preparedController: undefined, controller: {} })).toBe(
+    false,
+  );
+  expect(canReloadPwaClient({ ...state, controller: null })).toBe(false);
+});
 function client(id: string, answer: unknown) {
   return {
     id,

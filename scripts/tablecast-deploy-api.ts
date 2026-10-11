@@ -9,28 +9,41 @@ import {
 const execFileAsync = promisify(execFile);
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 
+async function cloudflareResponse(path: string, method = "GET", body?: unknown) {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  if (!token)
+    throw new Error("CLOUDFLARE_API_TOKENを環境変数またはActions secretへ登録してください。");
+  return fetch(`https://api.cloudflare.com/client/v4/accounts/${tablecastAccountId}/${path}`, {
+    method,
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
+  });
+}
+
 export async function cloudflare(
   path: string,
   method = "GET",
   body?: unknown,
   allowMissing = false,
 ) {
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token) throw new Error("CLOUDFLARE_API_TOKENをActions secretへ登録してください。");
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${tablecastAccountId}/${path}`,
-    {
-      method,
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
-  );
+  const response = await cloudflareResponse(path, method, body);
   if (allowMissing && response.status === 404) return undefined;
   if (!response.ok)
     throw new Error(`Cloudflare ${method} ${path.split("?")[0]}: HTTP ${response.status}`);
   const data = responseSchema.parse(await response.json());
   if (!data.success) throw new Error(`Cloudflare ${method} ${path.split("?")[0]}に失敗しました。`);
   return data.result;
+}
+
+export async function readBucketOwner(bucket: string) {
+  const response = await cloudflareResponse(
+    `r2/buckets/${bucket}/objects/${encodeURIComponent("tablecast/deployment-owner.json")}`,
+  );
+  if (!response.ok) throw new Error(`R2の所有情報を読み取れません: HTTP ${response.status}`);
+  return z
+    .object({ repository: z.string(), environment: z.string(), databaseId: z.uuid() })
+    .parse(await response.json());
 }
 
 export async function currentRevision(

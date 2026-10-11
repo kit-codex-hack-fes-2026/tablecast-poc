@@ -44,8 +44,8 @@ services:
       - tablecast-emulate-node:${TABLECAST_WORKSPACE_FOLDER}/apps/emulate/node_modules
       - tablecast-presentation-node:${TABLECAST_WORKSPACE_FOLDER}/apps/presentation/node_modules
       - tablecast-state:${TABLECAST_WORKSPACE_FOLDER}/.local
-      - tablecast-web-output:${TABLECAST_WORKSPACE_FOLDER}/apps/web/dist
-      - tablecast-web-vite:${TABLECAST_WORKSPACE_FOLDER}/apps/web/.wrangler
+      - tablecast-web-output:${TABLECAST_WORKSPACE_FOLDER}/apps/web/.cloudflare
+      - tablecast-api-output:${TABLECAST_WORKSPACE_FOLDER}/apps/api/.cloudflare
 volumes:
   tablecast-lgtm:
   tablecast-node:
@@ -55,4 +55,4 @@ volumes:
   tablecast-presentation-node:
   tablecast-state:
   tablecast-web-output:
-  tablecast-web-vite:
+  tablecast-api-output:

@@ -23,7 +23,7 @@ test("条件を画面で保存・再読込・公開し、客が未充足行を�
     (await admin.request.post("/api/auth/sign-in/email", { data: credentials, headers })).status(),
   ).toBe(200);
   let draft = configDraftSchema.parse(
-    await (await admin.request.post(`${api}/drafts`, { headers, data: {} })).json(),
+    await (await admin.request.post(`${api}/drafts`, { headers })).json(),
   );
   const configuration = structuredClone(draft.configuration);
   const product = configuration.products.find((item) => item.available);

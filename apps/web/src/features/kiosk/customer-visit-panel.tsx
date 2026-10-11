@@ -94,20 +94,27 @@ export function CustomerVisitPanel({
         <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
       </div>
       <div className="shrink-0">
-        {code.data && !code.error ? (
-          <QRCodeSVG
-            value={code.data.url}
-            size={112}
-            marginSize={2}
-            title={t("customer_join_visit")}
-            bgColor="#ffffff"
-            fgColor="#000000"
-          />
-        ) : (
-          <Button variant="outline" disabled={code.isPending} onClick={() => createCode()}>
-            {t("customer_show_qr")}
-          </Button>
-        )}
+        <div className="grid size-28 items-center">
+          {code.data && !code.error ? (
+            <QRCodeSVG
+              value={code.data.url}
+              size={112}
+              marginSize={2}
+              title={t("customer_join_visit")}
+              bgColor="#ffffff"
+              fgColor="#000000"
+            />
+          ) : (
+            <Button
+              className="h-auto min-h-12 whitespace-normal"
+              variant="outline"
+              disabled={code.isPending}
+              onClick={() => createCode()}
+            >
+              {t("customer_show_qr")}
+            </Button>
+          )}
+        </div>
         <ErrorNotice error={code.error} />
       </div>
     </section>
