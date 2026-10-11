@@ -18,15 +18,7 @@
         "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
-      "env": [
-        "TABLECAST_LOCAL_BUILD",
-        "TABLECAST_STATE_PATH",
-        "TABLECAST_INSPECTOR_PORT",
-        "TABLECAST_PUBLIC_ORIGIN",
-        "TABLECAST_VITE_CACHE_DIR",
-        "TABLECAST_MODE",
-        "TABLECAST_CONFIG"
-      ]
+      "env": ["TABLECAST_*"]
     },
     "dev": {
       "cache": false,
@@ -60,7 +52,7 @@
     },
     "//#dev:prepare": {
       "cache": false,
-      "passThroughEnv": ["TABLECAST_*", "PORTLESS_*"]
+      "passThroughEnv": ["TABLECAST_*", "PORTLESS_*", "PORT"]
     },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
@@ -93,7 +85,7 @@
       "persistent": true,
       "dependsOn": ["//#services:up"],
       "with": ["@tablecast/emulate#dev"],
-      "passThroughEnv": ["PORTLESS_*"]
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#dev:container": {
       "cache": false,
@@ -111,7 +103,7 @@
       "persistent": true,
       "dependsOn": ["build:local", "//#services:up"],
       "with": ["@tablecast/emulate#dev"],
-      "passThroughEnv": ["PORTLESS_*"]
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#i18n:compile": {
       "inputs": ["project.inlang/**", "messages/**", "package.json"],
@@ -141,7 +133,7 @@
         "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
-      "env": ["TABLECAST_MODE", "TABLECAST_CONFIG"]
+      "env": ["TABLECAST_*"]
     }
   }
 }

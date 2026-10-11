@@ -14,6 +14,7 @@ export async function buildTablecast(
     "api",
     environment.TABLECAST_MODE,
     environment.TABLECAST_CONFIG,
+    environment,
   ).environment;
   // cf beta.14はTanStack Startへ--modeを転送しないため、Webはpackage scriptでViteへ渡す。
   execFileSync(

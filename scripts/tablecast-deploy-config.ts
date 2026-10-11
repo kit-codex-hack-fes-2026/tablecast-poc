@@ -28,10 +28,43 @@ export function modeOptions(
   workspace: "api" | "web",
   mode: string | undefined,
   input = process.env.TABLECAST_CONFIG,
+  localEnv: Record<string, string | undefined> = process.env,
 ) {
   const options = input
     ? z.object({ api: optionsSchema, web: optionsSchema }).parse(JSON.parse(input))[workspace]
-    : optionsSchema.parse({ name: `tablecast-${workspace}` });
+    : optionsSchema.parse(
+        localEnv.TABLECAST_RESOURCE_NAME
+          ? {
+              name: `tablecast-${localEnv.TABLECAST_RESOURCE_NAME}-${workspace}`,
+              api: `tablecast-${localEnv.TABLECAST_RESOURCE_NAME}-api`,
+              database: {
+                name: `tablecast-${localEnv.TABLECAST_RESOURCE_NAME}`,
+                id: "00000000-0000-4000-8000-000000000000",
+              },
+              bucket: `tablecast-${localEnv.TABLECAST_RESOURCE_NAME}-media`,
+              vars: {
+                TABLECAST_ENV: "development",
+                ...Object.fromEntries(
+                  [
+                    "TABLECAST_RELEASE_SHA",
+                    "TABLECAST_OTEL_ENDPOINT",
+                    ...(workspace === "api"
+                      ? [
+                          "TABLECAST_PUBLIC_ORIGIN",
+                          "TABLECAST_GOOGLE_EMULATOR_URL",
+                          "TABLECAST_GOOGLE_AUTHORIZE_URL",
+                          "TABLECAST_MAILPIT_URL",
+                          "TABLECAST_EMAIL_FROM",
+                          "TABLECAST_VOICE_ENABLED",
+                          "TABLECAST_OTEL_CAPTURE_CONTENT",
+                        ]
+                      : []),
+                  ].flatMap((key) => (localEnv[key] === undefined ? [] : [[key, localEnv[key]]])),
+                ),
+              },
+            }
+          : { name: `tablecast-${workspace}` },
+      );
   const environment = optionsSchema.shape.environment.parse(mode ?? options.environment);
   if (input && environment !== options.environment)
     throw new Error("設定の環境とcf modeが一致しません。");
