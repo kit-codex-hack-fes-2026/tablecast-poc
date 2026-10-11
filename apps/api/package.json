@@ -16,8 +16,7 @@
     "cf:typegen": "cf workers types --mode development --include-runtime=false",
     "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
     "build:email": "bun --no-env-file scripts/tablecast-email-build.ts",
-    "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
-    "preview": "bun --env-file=../../.local/.env run ../web/node_modules/.bin/vite preview --config ../web/tablecast-api-preview.config.ts --port 0"
+    "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.2",

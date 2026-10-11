@@ -271,7 +271,7 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 ## Cloudflare CLIと設定の移行
 
-`cf@1.0.0-beta.14`を固定する。APIの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、WebはTanStack Startに対応する`1.63.1`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。
+`cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
 
 API・Webの正本は各workspaceの`cloudflare.config.ts`、共通factoryは`scripts/tablecast-cloudflare-config.ts`である。`.local/*.wrangler.json`はSDK接続用の生成物として残り、手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
 

@@ -112,7 +112,7 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["build:local", "//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy", "@tablecast/api#preview"]
+      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
     },
     "@tablecast/web#i18n:compile": {
       "inputs": ["project.inlang/**", "messages/**", "package.json"],
@@ -150,11 +150,6 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]
-    },
-    "@tablecast/api#preview": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["@tablecast/web#build:local"]
     }
   }
 }

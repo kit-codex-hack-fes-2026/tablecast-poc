@@ -8,18 +8,16 @@ import { z } from "zod";
 const env = z
   .object({
     TABLECAST_E2E_CASE_DIRECTORY: z.string(),
-    TABLECAST_E2E_API_DIRECTORY: z.string().optional(),
   })
   .parse(process.env);
 
 // build済みのWeb/APIをcase専用のrootとstorageでpreviewする。
 export default defineConfig({
-  root: env.TABLECAST_E2E_API_DIRECTORY ?? env.TABLECAST_E2E_CASE_DIRECTORY,
+  root: env.TABLECAST_E2E_CASE_DIRECTORY,
   plugins: [
     {
       name: "tablecast-e2e-ready",
       configurePreviewServer(server) {
-        if (env.TABLECAST_E2E_API_DIRECTORY) return;
         server.httpServer.once("listening", () => {
           const address = server.httpServer.address();
           if (!address || typeof address === "string")
@@ -31,13 +29,8 @@ export default defineConfig({
       },
     },
     cloudflare({
-      experimental: { newConfig: { cfBuildOutput: true, types: { generate: false } } },
-      persistState: {
-        path: join(
-          env.TABLECAST_E2E_CASE_DIRECTORY,
-          env.TABLECAST_E2E_API_DIRECTORY ? "state" : "web-state",
-        ),
-      },
+      types: { generate: false },
+      persistState: { path: join(env.TABLECAST_E2E_CASE_DIRECTORY, "state") },
       inspectorPort: false,
       remoteBindings: false,
     }),

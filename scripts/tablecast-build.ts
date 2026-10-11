@@ -6,7 +6,7 @@ import { configurationOptions } from "./tablecast-cloudflare-config";
 
 const root = resolve(import.meta.dirname, "..");
 
-// betaのVite新設定はauxiliary Workers未対応。各workspaceの公式buildを一つの成果物へ集める。
+// 各workspaceの公式buildを集め、previewと配備で同じWeb/APIの成果物を使う。
 export async function buildTablecast(
   environment: Record<string, string | undefined> = process.env,
 ) {

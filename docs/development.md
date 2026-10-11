@@ -14,14 +14,14 @@ Bunを使っても本番Workersのruntimeはworkerdであり、cf/Vite/Storybook
 
 ## 通常開発と本番相当試験
 
-| モード   | 起動方式                                             | 用途                                             |
-| -------- | ---------------------------------------------------- | ------------------------------------------------ |
-| 通常     | TanStack Start + Cloudflare Vite Plugin、APIはcf dev | UIのHMRと実Binding                               |
-| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動     | Service Binding、build、stream、Cookieの接続確認 |
-| UI部品   | apps/web内のStorybook                                | 固定状態とブラウザー操作検証                     |
-| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続                | 字幕、取消、業務委任                             |
+| モード   | 起動方式                                         | 用途                                             |
+| -------- | ------------------------------------------------ | ------------------------------------------------ |
+| 通常     | cf dev + Cloudflare Vite PluginでWeb/APIを起動   | UIのHMRと実Binding                               |
+| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動 | Service Binding、build、stream、Cookieの接続確認 |
+| UI部品   | apps/web内のStorybook                            | 固定状態とブラウザー操作検証                     |
+| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続            | 字幕、取消、業務委任                             |
 
-Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、WebとAPIをそれぞれ一度だけ起動し、公式のlocal Service Binding接続台帳でつなぐ。[S11](sources.md#s11)
+Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、WebのVite pluginがAPIをauxiliary Workerとして一度だけ起動し、Service Bindingでつなぐ。[S11](sources.md#s11)
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
 D1 migration・seedのCLIにも同じローカル保存先と同じ生成configを渡す。別ディレクトリの空DBへ投入する事故を防ぐ。
 
@@ -84,7 +84,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
 共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
 
-cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成する。現在のVite previewはdefault Workerだけを起動するため、API・Webを各workspaceのBuild Outputから別々に起動し、Service Bindingで接続する。APIをpreview時に再bundleしない。
+cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
 
 公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 

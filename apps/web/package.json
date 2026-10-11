@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env run vite dev",
+    "dev": "bun --env-file=../../.local/.env exec 'cf dev'",
     "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
     "preview": "bun --env-file=../../.local/.env run vite preview",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,7 @@
     "storybook": "storybook dev --no-open --port 6006",
     "build:storybook": "storybook build",
     "format:check": "oxfmt --check .",
-    "dev:container": "bun --env-file=../../.local/.env run vite dev",
+    "dev:container": "bun --env-file=../../.local/.env exec 'cf dev'",
     "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run ../../scripts/tablecast-build.ts"
   },
   "dependencies": {
@@ -60,7 +60,7 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.63.1",
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
     "@cloudflare/workers-types": "5.20260903.1",
     "@inlang/paraglide-js": "2.25.0",
     "@playwright/test": "1.63.0",

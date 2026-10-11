@@ -1,5 +1,6 @@
 import { createApi, createContext, main as serwist } from "@serwist/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { resolveAndParseConfig } from "@cloudflare/config";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -8,9 +9,19 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { z } from "zod";
+import { apiCloudflareConfig, modeOptions } from "../../scripts/tablecast-cloudflare-config.ts";
 
-export default defineConfig(() => {
+export default defineConfig(async ({ command, mode, isPreview }) => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+  const api =
+    command === "serve" && !isPreview
+      ? await resolveAndParseConfig(
+          apiCloudflareConfig(modeOptions(tablecastEnv.TABLECAST_API_CONFIG, mode)),
+          { mode, isPreview: false },
+        )
+      : undefined;
+  if (api && !api.success) throw api.error;
+  const apiWorker = api?.success ? api.data.worker : undefined;
   const buildDirectory = resolve(
     import.meta.dirname,
     tablecastEnv.TABLECAST_BUILD_DIRECTORY ?? "dist",
@@ -45,10 +56,19 @@ export default defineConfig(() => {
     plugins: [
       tailwindcss(),
       cloudflare({
-        experimental: { newConfig: { cfBuildOutput: true, types: { includeRuntime: false } } },
+        types: { includeRuntime: false },
         viteEnvironment: { name: "ssr" },
+        auxiliaryWorkers: apiWorker
+          ? [
+              {
+                config: apiWorker,
+                devOnly: true,
+                viteEnvironment: { name: "tablecast_api" },
+              },
+            ]
+          : [],
         ...(tablecastEnv.TABLECAST_STATE_PATH
-          ? { persistState: { path: resolve(tablecastEnv.TABLECAST_STATE_PATH, "tablecast-web") } }
+          ? { persistState: { path: tablecastEnv.TABLECAST_STATE_PATH } }
           : {}),
         ...(tablecastEnv.TABLECAST_INSPECTOR_PORT
           ? { inspectorPort: Number(tablecastEnv.TABLECAST_INSPECTOR_PORT) }
