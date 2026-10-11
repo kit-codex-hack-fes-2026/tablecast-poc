@@ -618,7 +618,7 @@ async function main(resetFinished = false) {
       if (cleanup || !target.emulate) return;
       console.time("検証済みイメージの送信");
       try {
-        await cf(["containers", "push", `tablecast-emulate:${sha}`]);
+        await cf(["containers", "push", "--tag", `tablecast-emulate:${sha}`]);
       } finally {
         console.timeEnd("検証済みイメージの送信");
       }
