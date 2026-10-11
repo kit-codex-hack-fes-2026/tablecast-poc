@@ -95,6 +95,8 @@ bun run dev
 
 `dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。Web・OAuthのscriptがPortlessを呼び、空きポートとrouteの登録を任せる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
+Workersのconfigとsecretは `dev:prepare` で一度生成する。Web起動時はPortlessの実ポートだけをreset拒否用に記録し、Dockerの実ポートや設定を再取得・再生成しない。Mailpit・OTLPもPortless aliasへ接続する。cfの設定をworkspaceの正本から解決し、SDK用API設定だけを生成する。seedの引数はNode標準の `parseArgs` で読む。
+
 起動ログの `http://web.<worktree ID>.tablecast-poc.localhost` を開く。worktree IDはGit共通ディレクトリとworktreeの実パスから作る既存の10桁のhashで、branchやcommitが変わっても同じworktreeでは変わらない。Issue番号やホスト名の入力は不要で、detached HEADでも同じ方法で起動できる。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
 
 Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。既存のruntimeは自worktreeのWebを停止してから再生成する。既存D1・R2・DOの保存先とsecret、旧ポート台帳は保持し、旧台帳は参照・更新しない。
@@ -183,6 +185,7 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 | ----------------------------- | --------------------------------------------- |
 | `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない |
 | `.local/.env`                 | Bun/Composeが読む生成済みorigin・パス         |
+| `.local/runtime.json`         | 稼働中resetを拒否するためのWebポート          |
 | `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵            |
 | `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない   |
 | `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物           |
@@ -279,6 +282,6 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。生成した公開入力を`TABLECAST_CONFIG`で両workspaceへ渡し、cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
 
-初回移行は自worktreeのWeb・APIを停止して`bun run dev:prepare`を実行する。旧local D1の全データ・schema・適用済みmigrationを公式SDKのD1 batchでcf用UUIDv4へ移し、件数・外部キーを照合する。旧stateは削除しない。旧・新DBが両方あり移行記録がない場合は自動上書きせず停止する。R2と業務DOの保存先は既存`.local/state`を維持し、Webの内部stateだけその配下の`tablecast-web`へ分離する。
+初回移行は自worktreeのWeb・APIを停止して`bun run dev:prepare`を実行する。旧local D1の全データ・schema・適用済みmigrationを公式SDKのD1 batchでcf用UUIDv4へ移し、件数・外部キーを照合する。データはbindで渡してSQL長制限を避け、外部キーが参照するUNIQUE indexを投入前に作る。旧stateは削除しない。旧・新DBが両方あり移行記録がない場合は自動上書きせず停止する。R2と業務DOの保存先は既存`.local/state`を維持し。
 
 beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了しないため、`cf:local`はcfの公開`main()`完了後にstdout/stderrをflushして終了する互換入口である。migration・試験だけが使い、遠隔操作は通常のcf CLIを使う。上流で終了処理が修正されたらこの入口を削除する。

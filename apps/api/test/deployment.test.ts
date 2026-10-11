@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, test } from "vitest";
 import { createAuth } from "../src/modules/auth/service";
+import { sendAccountEmail } from "../src/emails/send";
 
 test("PR以外でOAuth emulatorの公開経路を要求すると拒否する", async () => {
   const response = await exports.default.fetch(
@@ -65,4 +66,22 @@ test("stagingは固定originだけで模擬OAuthを許可する", async () => {
       TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
     }),
   ).toBe(false);
+});
+
+test.each([
+  { environment: "development", host: "mailpit.0123456789.tablecast-poc.localhost.example.com" },
+  { environment: "production", host: "mailpit.0123456789.tablecast-poc.localhost" },
+])("$environmentのメール送信で$hostを拒否する", async ({ environment, host }) => {
+  await expect(
+    sendAccountEmail(
+      {
+        ...env,
+        TABLECAST_ENV: environment,
+        TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
+        TABLECAST_MAILPIT_URL: `http://${host}`,
+      },
+      "tablecast@example.invalid",
+      { title: "確認", message: "開発境界の確認", action: "確認", url: "http://localhost:3000" },
+    ),
+  ).rejects.toThrow("MAILPIT_LOCAL_ONLY");
 });

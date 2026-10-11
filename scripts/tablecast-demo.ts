@@ -18,12 +18,11 @@ async function main() {
   const credentials = await demoCredentials();
   const origin = new URL(runtime.origin);
   async function request(path: string, cookie = "", body?: unknown, method = "POST") {
-    const response = await fetch(`http://127.0.0.1:${runtime.ports.web}${path}`, {
+    const response = await fetch(new URL(path, origin), {
       method: body === undefined ? "GET" : method,
       headers: {
         "Content-Type": "application/json",
         Origin: origin.origin,
-        Host: origin.host,
         Cookie: cookie,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),

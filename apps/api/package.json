@@ -10,15 +10,12 @@
     "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env exec 'portless \"api.$TABLECAST_HOST\" bun run dev:app'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cf:typegen": "cf workers types --mode development --include-runtime=false",
     "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
     "build:email": "bun --no-env-file scripts/tablecast-email-build.ts",
-    "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
-    "dev:app": "cf dev --mode development --port \"$PORT\"",
-    "dev:container": "bun --env-file=../../.local/.env exec 'cf dev --mode development --port \"$TABLECAST_API_PORT\"'"
+    "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.2",

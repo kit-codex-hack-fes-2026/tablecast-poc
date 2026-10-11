@@ -76,11 +76,11 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 ### 共通の割当て
 
 ホストのWeb・OAuthはpackage scriptsからPortlessの標準CLIで起動する。Portlessが `PORT` を割り当て、route登録と子プロセスの終了を所有する。共有proxyはHTTPの80番を使い、worktree固有のproxy・ポート台帳・予約ロックを作らない。WorkersのInspectorは0番を指定して実行時の割当てを使う。
-LGTM・Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せる。`services:aliases` が公式の `docker compose port` と `portless alias` でGrafana・Mailpit・Tempoの名前を登録する。Webの起動時に実ポートを取得し、APIからMailpit・OTLPへの通信にはloopbackを使う。設定生成・migration・seedは既存の `dev:prepare` に残す。
-`.local/runtime.json` のWebポートはPortlessから受け取った実ポートであり、起動中のreset拒否とデモ操作だけに使う。起動前の0は未起動を表す。D1・R2・DOの保存先、Worker名、secretの生成は製品固有の設定として `scripts/tablecast-runtime.ts` に残す。
+LGTM・Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せる。`services:aliases` が公式の `docker compose port` と `portless alias` でGrafana・Mailpit・Tempo・OTLPの名前を登録する。APIからMailpit・OTLPへの通信もこの名前を使い、実ポートを取得・保存しない。設定生成・migration・seedは既存の `dev:prepare` に残す。
+`.local/runtime.json` はreset拒否用のWebポートだけを記録する。Portlessから受け取った実ポートをWeb起動時に書き込み、起動前の0は未起動を表す。保存先・configパス・originは保存metadataから採用せず、実worktreeから決める。デモ操作は公開originへ接続する。D1・R2・DOの名前と保存先、secretの生成は製品固有の設定として `scripts/tablecast-runtime.ts` に残す。
 通常の起動前に [setupのPortless初期設定](setup.md) を済ませる。別のproxyを全消去・停止せず、停止時はこのworktreeのrouteだけを片付ける。[S19](sources.md#s19)
 
-cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
+cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。`dev:prepare`が生成した設定をbuildへ渡し、build・起動時に設定を再生成しない。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
 
 公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 

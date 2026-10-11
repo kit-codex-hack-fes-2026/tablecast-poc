@@ -28,7 +28,8 @@ export async function sendAccountEmail(
     const target = new URL(env.TABLECAST_MAILPIT_URL);
     ensure(
       env.TABLECAST_ENV === "development" &&
-        ["127.0.0.1", "localhost", "tablecast-mailpit"].includes(target.hostname),
+        (["127.0.0.1", "localhost", "tablecast-mailpit"].includes(target.hostname) ||
+          target.hostname.endsWith(".localhost")),
       "MAILPIT_LOCAL_ONLY",
       503,
     );

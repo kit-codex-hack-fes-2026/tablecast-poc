@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun --env-file=../../.local/.env exec 'portless \"web.$TABLECAST_HOST\" bun run dev:app'",
-    "dev:app": "NODE_ENV=development bun ../../scripts/tablecast-runtime.ts && cf dev",
+    "dev:app": "bun ../../scripts/tablecast-runtime.ts --web-port && cf dev",
     "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
     "preview": "bun --env-file=../../.local/.env exec 'portless \"web.$TABLECAST_HOST\" bun run preview:app'",
-    "preview:app": "NODE_ENV=development bun ../../scripts/tablecast-runtime.ts && vite preview",
+    "preview:app": "bun ../../scripts/tablecast-runtime.ts --web-port && vite preview",
     "typecheck": "tsc --noEmit",
     "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "lint": "oxlint src e2e .storybook vite.config.ts vitest.config.ts playwright.config.ts --deny-warnings",
@@ -20,7 +20,7 @@
     "build:storybook": "storybook build",
     "format:check": "oxfmt --check .",
     "dev:container": "bun --env-file=../../.local/.env exec 'cf dev'",
-    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun ../../scripts/tablecast-runtime.ts && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run ../../scripts/tablecast-build.ts"
+    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run ../../scripts/tablecast-build.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

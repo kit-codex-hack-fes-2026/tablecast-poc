@@ -92,22 +92,17 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#services:up"],
-      "with": ["@tablecast/emulate#dev", "@tablecast/api#dev"],
+      "with": ["@tablecast/emulate#dev"],
       "passThroughEnv": ["PORTLESS_*"]
     },
     "@tablecast/web#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"],
-      "with": [
-        "@tablecast/emulate#dev:container",
-        "//#dev:caddy",
-        "//#dev:mailpit",
-        "@tablecast/api#dev:container"
-      ]
+      "with": ["@tablecast/emulate#dev:container", "//#dev:caddy", "//#dev:mailpit"]
     },
     "@tablecast/web#build:local": {
-      "dependsOn": ["//#services:up"],
+      "dependsOn": ["//#dev:prepare"],
       "passThroughEnv": ["PORTLESS_*"],
       "cache": false
     },
@@ -147,17 +142,6 @@
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
       "env": ["TABLECAST_MODE", "TABLECAST_CONFIG"]
-    },
-    "@tablecast/api#dev": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"],
-      "passThroughEnv": ["PORTLESS_*"]
-    },
-    "@tablecast/api#dev:container": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
     }
   }
 }

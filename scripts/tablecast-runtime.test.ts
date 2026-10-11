@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { createServer } from "node:net";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
+import { z } from "zod";
 import { localReleaseSha, worktreeId } from "./tablecast-runtime";
 
 beforeEach(async () => {
@@ -119,64 +121,110 @@ describe("開発資源の所有境界", () => {
       worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git"),
     );
   });
-  it.each([
-    { label: "ホスト", container: "0", origin: "http://web.0123456789.tablecast-poc.localhost" },
-    { label: "コンテナのlocalhost", container: "1", origin: "http://localhost:3000" },
-    {
-      label: "コンテナの専用ドメイン",
-      container: "1",
-      origin: "http://main.tablecast.container.localhost:3000",
-    },
-    { label: "OrbStack", container: "1", origin: "https://main.tablecast.orb.local" },
-  ])("$labelで自分のoriginを許可し不整合なreset要求を拒否する", async ({ container, origin }) => {
-    vi.stubEnv("TABLECAST_CONTAINER", container);
-    vi.stubEnv("TABLECAST_WORKTREE_NAME", "main");
-    vi.stubEnv("TABLECAST_REPO_NAME", "tablecast");
-    // コンテナ判定はモジュール読込時に確定するため、指定した環境で読み直す。
-    vi.resetModules();
-    const { assertLocalRuntime } = await import("./tablecast-runtime");
-    const runtime = {
-      id: "0123456789",
-      root: "/tmp/tablecast",
-      origin,
-      ports: {
-        web: 3001,
-        inspector: 3002,
-        oauth: 3008,
-        mailpit: 8025,
-        grafana: 3030,
-        otlp: 4318,
-        tempo: 3200,
-      },
-      state: "/tmp/tablecast/.local/state",
-      apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
+  it("保存した他worktreeのパスを採用せず、secretを保持し稼働中の初期化を拒否する", async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "tablecast-runtime-")));
+    const execute = promisify(execFile);
+    const server = createServer();
+    const env = {
+      PATH: process.env.PATH,
+      HOME: root,
+      PORTLESS_STATE_DIR: join(root, ".portless"),
+      PORTLESS_PORT: "80",
+      PORTLESS_HTTPS: "0",
     };
-    expect(() => assertLocalRuntime(runtime, runtime.root, origin)).not.toThrow();
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, origin: "http://tablecast-other.localhost:3000" },
-        runtime.root,
-        origin,
-      ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, origin: "https://tablecast.example.com" },
-        runtime.root,
-        origin,
-      ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, state: "/tmp/tablecast-other/.local/state" },
-        runtime.root,
-        origin,
-      ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime({ ...runtime, root: "/tmp/tablecast-other" }, runtime.root, origin),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-  });
+    try {
+      await execute("git", ["init", "--quiet"], { cwd: root });
+      await execute(
+        "git",
+        [
+          "-c",
+          "user.name=TableCast Test",
+          "-c",
+          "user.email=tablecast@example.invalid",
+          "-c",
+          "commit.gpgSign=false",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "commit",
+          "--allow-empty",
+          "--quiet",
+          "-m",
+          "tablecast fixture",
+        ],
+        { cwd: root },
+      );
+      for (const path of ["scripts", "apps/api", "apps/web", ".local/state"])
+        await mkdir(join(root, path), { recursive: true });
+      await symlink(join(process.cwd(), "node_modules"), join(root, "node_modules"), "dir");
+      for (const path of [
+        "scripts/tablecast-runtime.ts",
+        "scripts/tablecast-local-state.ts",
+        "scripts/tablecast-deploy-config.ts",
+        "apps/api/cloudflare.config.ts",
+      ])
+        await cp(join(process.cwd(), path), join(root, path));
+      await writeFile(join(root, ".local/state/tablecast-keep"), "tablecast saved data");
+      await writeFile(
+        join(root, ".local/.dev.vars"),
+        "TABLECAST_AUTH_SECRET=tablecast-owned-auth\n",
+      );
+      await writeFile(
+        join(root, ".local/runtime.json"),
+        JSON.stringify({
+          root: "/tmp/tablecast-other",
+          state: "/tmp/tablecast-other/.local/state",
+          origin: "https://tablecast.example.com",
+          ports: { web: 0 },
+        }),
+      );
+      await execute("bun", ["--no-env-file", "scripts/tablecast-runtime.ts"], { cwd: root, env });
+      const apiValue: unknown = JSON.parse(
+        await readFile(join(root, ".local/api.wrangler.json"), "utf8"),
+      );
+      const api = z
+        .object({ main: z.string(), vars: z.object({ TABLECAST_PUBLIC_ORIGIN: z.string() }) })
+        .parse(apiValue);
+      expect(api.main).toBe(join(root, "apps/api/src/worker.ts"));
+      expect(api.vars.TABLECAST_PUBLIC_ORIGIN).toMatch(
+        /^http:\/\/web\.[a-f0-9]{10}\.tablecast-poc\.localhost$/,
+      );
+      expect(parseEnv(await readFile(join(root, ".local/.env"), "utf8")).TABLECAST_STATE_PATH).toBe(
+        join(root, ".local/state"),
+      );
+      expect(
+        parseEnv(await readFile(join(root, ".local/.dev.vars"), "utf8")).TABLECAST_AUTH_SECRET,
+      ).toBe("tablecast-owned-auth");
+      expect(await readFile(join(root, ".local/state/tablecast-keep"), "utf8")).toBe(
+        "tablecast saved data",
+      );
+      await expect(
+        execute("bun", ["--no-env-file", "scripts/tablecast-runtime.ts"], {
+          cwd: root,
+          env: {
+            ...env,
+            TABLECAST_CONTAINER: "1",
+            TABLECAST_CONTAINER_ORIGIN: "https://tablecast.example.com",
+          },
+        }),
+      ).rejects.toThrow("非ローカルの開発originは使用できません。");
+      await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("待受がありません。");
+      await writeFile(
+        join(root, ".local/runtime.json"),
+        JSON.stringify({ ports: { web: address.port } }),
+      );
+      await expect(
+        execute("bun", ["--no-env-file", "scripts/tablecast-runtime.ts"], { cwd: root, env }),
+      ).rejects.toThrow("開発プロセスをCtrl+Cで停止してから初期化してください。");
+      expect(await readFile(join(root, ".local/state/tablecast-keep"), "utf8")).toBe(
+        "tablecast saved data",
+      );
+    } finally {
+      server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 15_000);
 });
 
 it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async () => {

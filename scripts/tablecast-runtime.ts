@@ -1,9 +1,8 @@
 import process from "node:process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, realpath, writeFile, symlink, readlink } from "node:fs/promises";
+import { mkdir, realpath, writeFile, symlink, readlink } from "node:fs/promises";
 import { createServer } from "node:net";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 import { parseEnv, promisify } from "node:util";
 import { execFile } from "node:child_process";
 import { z } from "zod";
@@ -11,7 +10,7 @@ import { migrateLocalDatabase } from "./tablecast-local-state";
 import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
 
 const execute = promisify(execFile);
-export const tablecastRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
+export const tablecastRoot = await realpath(resolve(import.meta.dirname, ".."));
 const { stdout: tablecastCommonPath } = await execute("git", ["rev-parse", "--git-common-dir"], {
   cwd: tablecastRoot,
 });
@@ -20,29 +19,17 @@ const tablecastId = worktreeId(tablecastRoot, tablecastCommon);
 const tablecastHost = `${tablecastId}.tablecast-poc`;
 export const tablecastContainer = process.env.TABLECAST_CONTAINER === "1";
 export const tablecastLocal = join(tablecastRoot, ".local");
-const portSchema = z.number().int().min(0).max(65535);
-const portsSchema = z.object({
-  web: portSchema,
-  inspector: portSchema,
-  oauth: portSchema,
-  mailpit: portSchema,
-  grafana: portSchema,
-  otlp: portSchema,
-  tempo: portSchema,
-});
 const runtimeSchema = z.object({
-  id: z.string().regex(/^[a-f0-9]{10}$/),
-  root: z.string(),
-  origin: z.string().url(),
-  ports: portsSchema,
-  state: z.string(),
-  apiConfig: z.string(),
+  ports: z.object({ web: z.number().int().min(0).max(65535) }),
 });
-export type TablecastRuntime = z.infer<typeof runtimeSchema>;
+type TablecastRuntime = Awaited<ReturnType<typeof readRuntime>>;
 
 export function worktreeId(root: string, common: string) {
   return createHash("sha256").update(`${common}\0${root}`).digest("hex").slice(0, 10);
 }
+
+const writeJson = (path: string, value: unknown) =>
+  writeFile(path, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
 
 async function serviceOrigin(service: string) {
   const { stdout } = await execute(
@@ -74,32 +61,27 @@ export async function localReleaseSha(root: string) {
   return `${sha.trim()}${status ? "-dirty" : ""}`;
 }
 
-export function assertLocalRuntime(runtime: TablecastRuntime, root: string, origin: string) {
-  const local = join(root, ".local");
-  if (
-    runtime.root !== root ||
-    runtime.state !== join(local, "state") ||
-    runtime.apiConfig !== join(local, "api.wrangler.json") ||
-    runtime.origin !== origin ||
-    (!["localhost", "127.0.0.1"].includes(new URL(origin).hostname) &&
-      !new URL(origin).hostname.endsWith(".localhost") &&
-      !(tablecastContainer && new URL(origin).hostname.endsWith(".orb.local")))
-  ) {
-    throw new Error("別worktree・非ローカル・不整合の設定を操作できません。");
-  }
-}
-
 export async function readRuntime() {
-  const value: unknown = JSON.parse(await readFile(join(tablecastLocal, "runtime.json"), "utf8"));
-  const runtime = runtimeSchema.parse(value);
-  assertLocalRuntime(
-    runtime,
-    tablecastRoot,
-    tablecastContainer
-      ? process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000"
-      : await serviceOrigin("web"),
-  );
-  return runtime;
+  const file = Bun.file(join(tablecastLocal, "runtime.json"));
+  const origin = tablecastContainer
+    ? process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000"
+    : await serviceOrigin("web");
+  const hostname = new URL(origin).hostname;
+  if (
+    !["localhost", "127.0.0.1"].includes(hostname) &&
+    !hostname.endsWith(".localhost") &&
+    !(tablecastContainer && hostname.endsWith(".orb.local"))
+  )
+    throw new Error("非ローカルの開発originは使用できません。");
+  // 保存したパスやoriginは採用せず、操作対象をこのmoduleのworktree内へ固定する。
+  return {
+    id: tablecastId,
+    root: tablecastRoot,
+    state: join(tablecastLocal, "state"),
+    apiConfig: join(tablecastLocal, "api.wrangler.json"),
+    origin,
+    ports: (await file.exists()) ? runtimeSchema.parse(await file.json()).ports : { web: 0 },
+  };
 }
 
 export async function portAvailable(port: number): Promise<boolean> {
@@ -113,78 +95,6 @@ export async function portAvailable(port: number): Promise<boolean> {
   });
 }
 
-export async function prepareRuntime() {
-  await mkdir(tablecastLocal, { recursive: true, mode: 0o700 });
-  const origin = tablecastContainer
-    ? process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000"
-    : await serviceOrigin("web");
-  let previous: TablecastRuntime | undefined;
-  try {
-    previous = runtimeSchema.parse(
-      JSON.parse(await readFile(join(tablecastLocal, "runtime.json"), "utf8")),
-    );
-    // 旧originも保存先の所有を確認してから移行し、D1・R2とsecretは保持する。
-    assertLocalRuntime(previous, tablecastRoot, previous.origin);
-    if (!(await portAvailable(previous.ports.web)))
-      throw new Error("このworktreeの開発プロセスをCtrl+Cで停止してから初期化してください。");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
-  const ports = tablecastContainer
-    ? {
-        web: 3001,
-        inspector: 3002,
-        oauth: 3008,
-        mailpit: 8025,
-        grafana: 3030,
-        otlp: 4318,
-        tempo: 3200,
-      }
-    : {
-        web: Number(process.env.PORT ?? previous?.ports.web ?? 0),
-        inspector: 0,
-        oauth: 0,
-        mailpit: 0,
-        grafana: 0,
-        otlp: 0,
-        tempo: 0,
-      };
-  if (!tablecastContainer && (process.env.PORT || process.env.TABLECAST_LOCAL_BUILD === "1")) {
-    // Dockerが割り当てた公開ポートを参照し、予約と競合処理を再実装しない。
-    for (const [key, service, port] of [
-      ["mailpit", "tablecast-mailpit", 8025],
-      ["grafana", "tablecast-lgtm", 3000],
-      ["otlp", "tablecast-lgtm", 4318],
-      ["tempo", "tablecast-lgtm", 3200],
-    ] as const) {
-      const { stdout } = await execute(
-        "docker",
-        ["compose", "--env-file", join(tablecastLocal, ".env"), "port", service, String(port)],
-        { cwd: tablecastRoot },
-      );
-      ports[key] = z
-        .number()
-        .int()
-        .min(1)
-        .max(65535)
-        .parse(Number(stdout.trim().split(":").at(-1)));
-    }
-  }
-  const runtime = runtimeSchema.parse({
-    id: tablecastId,
-    root: tablecastRoot,
-    origin,
-    ports,
-    state: join(tablecastLocal, "state"),
-    apiConfig: join(tablecastLocal, "api.wrangler.json"),
-  });
-  assertLocalRuntime(runtime, tablecastRoot, origin);
-  await writeFile(join(tablecastLocal, "runtime.json"), JSON.stringify(runtime, null, 2) + "\n", {
-    mode: 0o600,
-  });
-  return runtime;
-}
-
 // Bunが読み込んだ開発設定のうち、起動所有者へ必要な値だけを渡す。
 export function developmentSecrets() {
   return Object.fromEntries(
@@ -194,7 +104,7 @@ export function developmentSecrets() {
   );
 }
 
-export async function writeLocalConfigs(runtime: TablecastRuntime) {
+async function writeLocalConfigs(runtime: TablecastRuntime) {
   const external = developmentSecrets();
   const apiName = `tablecast-${runtime.id}-api`;
   const telemetryVars = {
@@ -215,13 +125,13 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
         TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
         TABLECAST_PUBLIC_ORIGIN: runtime.origin,
         TABLECAST_GOOGLE_EMULATOR_URL: tablecastContainer
-          ? `http://127.0.0.1:${runtime.ports.oauth}`
+          ? "http://127.0.0.1:3008"
           : await serviceOrigin("oauth"),
         ...(tablecastContainer
           ? { TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth` }
           : {}),
         TABLECAST_MAILPIT_URL: tablecastContainer
-          ? `http://127.0.0.1:${runtime.ports.mailpit}`
+          ? "http://127.0.0.1:8025"
           : await serviceOrigin("mailpit"),
         TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
       },
@@ -231,31 +141,18 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     web: { name: `tablecast-${runtime.id}-web`, api: apiName, vars: telemetryVars },
   };
   // SDKが必要とするAPI設定だけを、workspaceの正本から一方向に変換する。
-  await writeFile(
-    runtime.apiConfig,
-    JSON.stringify(apiSdkConfiguration(configuration.api), null, 2) + "\n",
-  );
+  await writeJson(runtime.apiConfig, apiSdkConfiguration(configuration.api));
   const secretPath = join(tablecastLocal, ".dev.vars");
-  let previous: ReturnType<typeof parseEnv> = {};
-  try {
-    previous = parseEnv(await readFile(secretPath, "utf8"));
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
+  const secretFile = Bun.file(secretPath);
+  const previous = (await secretFile.exists()) ? parseEnv(await secretFile.text()) : {};
   const values: Record<string, string> = {
-    TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
+    TABLECAST_OTEL_CAPTURE_CONTENT: "false",
+    ...external,
     TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
       .every((key) => Boolean(external[key]))
       .toString(),
     TABLECAST_AUTH_SECRET: previous.TABLECAST_AUTH_SECRET ?? randomUUID().replaceAll("-", ""),
   };
-  for (const key of [
-    "TABLECAST_OTEL_CAPTURE_CONTENT",
-    "TABLECAST_MODEL",
-    "TABLECAST_MODEL_API_KEY",
-  ]) {
-    if (external[key]) values[key] = external[key];
-  }
   const writeEnv = (path: string, entries: Record<string, string>) =>
     writeFile(
       path,
@@ -285,10 +182,10 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       .replaceAll("'", "\\u0027")
       .replaceAll("$", "\\u0024"),
     TABLECAST_STATE_PATH: runtime.state,
-    TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
+    TABLECAST_INSPECTOR_PORT: tablecastContainer ? "3002" : "0",
     HOST: tablecastContainer ? "0.0.0.0" : "127.0.0.1",
     ...(tablecastContainer
-      ? { PORT: String(runtime.ports.web), TABLECAST_OAUTH_PORT: String(runtime.ports.oauth) }
+      ? { PORT: String(runtime.ports.web), TABLECAST_OAUTH_PORT: "3008" }
       : {}),
     COMPOSE_PROJECT_NAME: `tablecast-${runtime.id}`,
     TABLECAST_HOST: tablecastContainer
@@ -302,7 +199,6 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     WRANGLER_SEND_METRICS: "false",
     CLOUDFLARE_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     MINIFLARE_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
-    TABLECAST_API_PORT: "3003",
     WRANGLER_REGISTRY_PATH: join(tablecastLocal, "tablecast-wrangler-registry"),
     BUN_CONFIG_NO_CLEAR_TERMINAL: "true",
   });
@@ -310,11 +206,26 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
 
 if (import.meta.main) {
   process.umask(0o077);
-  const runtime = await prepareRuntime();
-  await migrateLocalDatabase(
-    runtime.state,
-    join(tablecastLocal, "tablecast-cf-state-migration.json"),
-  );
-  await writeLocalConfigs(runtime);
+  const webPortOnly = process.argv.includes("--web-port");
+  if (webPortOnly && !process.env.PORT)
+    throw new Error("Webの起動はPortlessから実行してください。");
+  const runtime = await readRuntime();
+  if (!(await portAvailable(runtime.ports.web)))
+    throw new Error("このworktreeの開発プロセスをCtrl+Cで停止してから初期化してください。");
+  runtime.ports.web = z
+    .number()
+    .int()
+    .min(0)
+    .max(65535)
+    .parse(Number(process.env.PORT ?? (tablecastContainer ? 3001 : 0)));
+  await mkdir(tablecastLocal, { recursive: true, mode: 0o700 });
+  await writeJson(join(tablecastLocal, "runtime.json"), { ports: runtime.ports });
+  if (!webPortOnly) {
+    await migrateLocalDatabase(
+      runtime.state,
+      join(tablecastLocal, "tablecast-cf-state-migration.json"),
+    );
+    await writeLocalConfigs(runtime);
+  }
   console.info(`TableCast: ${runtime.origin}`);
 }
