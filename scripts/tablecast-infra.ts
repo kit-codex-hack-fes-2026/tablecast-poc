@@ -1,9 +1,13 @@
+import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { cloudflare, currentRevision } from "./tablecast-deploy-api";
 import {
-  deploymentConfigs,
+  accessApplicationConfig,
+  deploymentOptions,
   deploymentTarget,
   deploymentBuildOutput,
   deploymentSecrets,
@@ -12,7 +16,6 @@ import { resources, accessApplication, verifyDurableNamespaces } from "./tableca
 import { reconcileAccess } from "./tablecast-infra-access";
 import { canonical, assertWorkerOwner, workerConfigurationDiff } from "./tablecast-infra-diff";
 import { catalogKinds, catalogTarget } from "./tablecast-catalog-config";
-import { accessApplicationConfig } from "../infra/tablecast.config";
 import { ownedCatalogApplication } from "./tablecast-catalog-deploy";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 
@@ -30,11 +33,15 @@ const accessChanges = await reconcileAccess();
 const storage = await resources(false);
 await accessApplication(false);
 const namespaces = await verifyDurableNamespaces();
-const desired = deploymentConfigs(
+const options = deploymentOptions(
   target,
   sha,
   storage.database?.uuid ?? "11111111-1111-4111-8111-111111111111",
 );
+const desired = {
+  api: apiSdkConfiguration(options.api),
+  web: convertToWranglerConfig(InputConfigSchema.parse(webCloudflareConfig(options.web))),
+};
 const workers = z.array(z.object({ id: z.string() })).parse(await cloudflare("workers/scripts"));
 const changes: { resource: string; action: string; fields?: string[] }[] = [
   ...accessChanges,

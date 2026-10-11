@@ -14,23 +14,18 @@
         "$TURBO_ROOT$/plugins/tablecast/skills/*/SKILL.md",
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/api/cloudflare.config.ts",
-        "$TURBO_ROOT$/.local/tablecast-deploy/api.json",
-        "$TURBO_ROOT$/.local/tablecast-deploy/web.json",
-        "$TURBO_ROOT$/scripts/tablecast-cloudflare-config.ts",
-        "$TURBO_ROOT$/.local/api.wrangler.json",
-        "$TURBO_ROOT$/.local/web.wrangler.json",
-        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts"
+        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts",
+        "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
       "env": [
         "TABLECAST_LOCAL_BUILD",
-        "TABLECAST_WEB_CONFIG",
-        "TABLECAST_API_CONFIG",
         "TABLECAST_STATE_PATH",
         "TABLECAST_INSPECTOR_PORT",
         "TABLECAST_PUBLIC_ORIGIN",
         "TABLECAST_VITE_CACHE_DIR",
-        "TABLECAST_MODE"
+        "TABLECAST_MODE",
+        "TABLECAST_CONFIG"
       ]
     },
     "dev": {
@@ -138,13 +133,11 @@
     "cf:build": {
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/scripts/tablecast-cloudflare-config.ts",
-        "$TURBO_ROOT$/.local/tablecast-deploy/api.json",
-        "$TURBO_ROOT$/.local/api.wrangler.json",
-        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts"
+        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts",
+        "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
-      "env": ["TABLECAST_MODE", "TABLECAST_API_CONFIG"]
+      "env": ["TABLECAST_MODE", "TABLECAST_CONFIG"]
     },
     "@tablecast/api#dev": {
       "cache": false,

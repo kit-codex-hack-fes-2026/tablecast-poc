@@ -8,11 +8,7 @@ import { z } from "zod";
 import { seedDemoDatabase } from "../../../../scripts/tablecast-seed-data";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { credentials, runtime } from "./runtime";
-import {
-  apiSdkConfiguration,
-  sdkConfiguration,
-  webCloudflareConfig,
-} from "../../../../scripts/tablecast-cloudflare-config";
+import { apiSdkConfiguration } from "../../../api/cloudflare.config";
 import { buildTablecast } from "../../../../scripts/tablecast-build";
 const execute = promisify(execFile);
 const root = resolve(import.meta.dirname, "../../../..");
@@ -45,9 +41,7 @@ export default async function setup() {
     if (errors.length) throw new AggregateError(errors, "E2E templateの後片付けに失敗しました。");
   };
   try {
-    const apiConfig = join(runtime.directory, "api.wrangler.json"),
-      webConfig = join(runtime.directory, "web.wrangler.json"),
-      state = join(runtime.directory, "state");
+    const state = join(runtime.directory, "state");
     const vars = {
       TABLECAST_ENV: "development",
       TABLECAST_PUBLIC_ORIGIN: runtime.origin,
@@ -59,33 +53,19 @@ export default async function setup() {
       TABLECAST_MAILPIT_URL: `${runtime.origin}/_tablecast/mailpit`,
       TABLECAST_EMAIL_FROM: "TableCast <tablecast@example.test>",
     };
-    const d1 = [
-      {
-        binding: "TABLECAST_DB",
-        database_name: "tablecast-e2e",
-        database_id: "00000000-0000-4000-8000-000000000002",
-        migrations_dir: join(root, "apps/api/migrations"),
+    const options = {
+      api: {
+        name: "tablecast-api",
+        vars,
+        database: { name: "tablecast-e2e", id: "00000000-0000-4000-8000-000000000002" },
+        bucket: "tablecast-e2e-media",
       },
-    ];
-    const r2 = [{ binding: "TABLECAST_MEDIA", bucket_name: "tablecast-e2e-media" }];
-    const base = apiSdkConfiguration({
-      name: "tablecast-api",
-      vars,
-      database: { name: "tablecast-e2e", id: "00000000-0000-4000-8000-000000000002" },
-      bucket: "tablecast-e2e-media",
-    });
-    await writeFile(apiConfig, JSON.stringify({ ...base, vars, d1_databases: d1, r2_buckets: r2 }));
-    await writeFile(webConfig, JSON.stringify(sdkConfiguration(webCloudflareConfig())));
+      web: { name: "tablecast-web", api: "tablecast-api" },
+    };
     const seedConfig = join(runtime.directory, "seed.wrangler.json");
     await writeFile(
       seedConfig,
-      JSON.stringify({
-        ...base,
-        name: "tablecast-e2e-seed",
-        vars,
-        d1_databases: d1,
-        r2_buckets: r2,
-      }),
+      JSON.stringify(apiSdkConfiguration({ ...options.api, name: "tablecast-e2e-seed" })),
     );
     const migrations = execute(
       "node",
@@ -129,8 +109,7 @@ export default async function setup() {
       TABLECAST_LOCAL_BUILD: "1",
       TABLECAST_BUILD_DIRECTORY: join(runtime.directory, "build"),
       TABLECAST_VITE_CACHE_DIR: join(runtime.directory, "vite"),
-      TABLECAST_WEB_CONFIG: webConfig,
-      TABLECAST_API_CONFIG: apiConfig,
+      TABLECAST_CONFIG: JSON.stringify(options),
       TABLECAST_STATE_PATH: state,
       TABLECAST_PUBLIC_ORIGIN: runtime.origin,
     };

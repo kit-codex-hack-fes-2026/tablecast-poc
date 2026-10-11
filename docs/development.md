@@ -76,7 +76,7 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 小さなbootstrapでWeb、Inspector、OAuth、Mailpit、Grafanaをまとめて割り当てる。Storybookは上記の公式CLIでportを指定する。
 既存のポート割当て機能を先に使い、worktree間の予約だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
-一つのruntime manifestにホスト、port、state、生成configを記録する。ポートを複数package.jsonへ直書きしない。
+一つのruntime manifestにホスト、port、state、SDK接続用API configの参照を記録する。cfは各workspaceの`cloudflare.config.ts`を使い、`.local/.env`の`TABLECAST_CONFIG`から公開入力を解決する。SDK用JSONをcf設定へ読み戻さず、Web用JSONも生成しない。ポートを複数package.jsonへ直書きしない。
 同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。
 空き確認後にも競合し得るため、bind失敗時は別の予約で起動し直す。既存プロセスをkillしてポートを奪わない。
 フレームワークの自動port繰上げを無効にし、古いOAuth callbackや間違ったworktreeへ接続しないようにする。

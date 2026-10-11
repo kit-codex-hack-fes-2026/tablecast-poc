@@ -10,21 +10,20 @@ import {
   writeRootConfig,
   getWorkerBundleDir,
 } from "@cloudflare/build-output-utils";
+import { apiCloudflareConfig } from "../apps/api/cloudflare.config";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config";
 import {
-  apiCloudflareConfig,
-  webCloudflareConfig,
-  modeOptions,
-} from "./tablecast-cloudflare-config";
-import {
+  tablecastAccess,
+  accessApplicationConfig,
   deploymentTarget,
-  deploymentConfigs,
+  deploymentOptions,
+  modeOptions,
   bindDeploymentDatabase,
   deploymentBuildOutput,
   tablecastAccountId,
 } from "./tablecast-deploy-config";
 import { assertWorkerOwner } from "./tablecast-infra-diff";
 import { reconcileAccess } from "./tablecast-infra-access";
-import { tablecastAccess, accessApplicationConfig } from "../infra/tablecast.config";
 
 describe("cfの環境解決と実資源の採用", () => {
   test.each(["production", "staging", "preview"] as const)(
@@ -32,10 +31,10 @@ describe("cfの環境解決と実資源の採用", () => {
     async (environment) => {
       const target = deploymentTarget(environment === "preview" ? "267" : undefined, environment);
       const sha = "a".repeat(40);
-      const generated = deploymentConfigs(target, sha, "11111111-1111-4111-8111-111111111111");
+      const generated = deploymentOptions(target, sha, "11111111-1111-4111-8111-111111111111");
       const config = apiCloudflareConfig({
         name: target.api,
-        accountId: generated.api.account_id,
+        accountId: generated.api.accountId,
         vars: generated.api.vars,
         environment,
         database: { name: target.database, id: "11111111-1111-4111-8111-111111111111" },
@@ -56,12 +55,12 @@ describe("cfの環境解決と実資源の採用", () => {
       );
       if (!web.success) throw web.error;
       expect(web.data.worker?.env?.TABLECAST_API).toEqual({ type: "worker", worker: target.api });
-      expect(() => modeOptions(undefined, environment)).toThrow("配備設定");
+      expect(() => modeOptions("api", environment)).toThrow("配備設定");
     },
   );
 
   test("未対応modeと別Workerの実D1指定を拒否する", () => {
-    expect(() => modeOptions(undefined, "prodution")).toThrow("Invalid option");
+    expect(() => modeOptions("api", "prodution")).toThrow("Invalid option");
     expect(() =>
       bindDeploymentDatabase(
         { name: "tablecast-other", compatibilityDate: "2026-09-03" },
@@ -75,6 +74,26 @@ describe("cfの環境解決と実資源の採用", () => {
     expect(
       apiCloudflareConfig({ environment: "development" }).worker.env.TABLECAST_VOICE_ENABLED.value,
     ).toBe("false");
+  });
+
+  test("一つの入力から両workspaceを解決し、SDK用JSONなしでmodeの取り違えを拒否する", () => {
+    const target = deploymentTarget("267");
+    const options = deploymentOptions(
+      target,
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const input = JSON.stringify(options);
+    expect(modeOptions("api", "preview", input).name).toBe(target.api);
+    expect(modeOptions("web", "preview", input).name).toBe(target.web);
+    expect(() => modeOptions("api", "staging", input)).toThrow("cf modeが一致しません");
+    expect(modeOptions("api", "test").environment).toBe("test");
+    const local = JSON.stringify({
+      api: { name: "tablecast-worktree-api", bucket: "tablecast-worktree-media" },
+      web: { name: "tablecast-worktree-web", api: "tablecast-worktree-api" },
+    });
+    expect(modeOptions("api", "development", local).bucket).toBe("tablecast-worktree-media");
+    expect(modeOptions("web", "development", local).api).toBe("tablecast-worktree-api");
   });
 
   test("同じAccess設定を再適用してもpolicy・tokenを再作成しない", async () => {
@@ -106,7 +125,7 @@ describe("cfの環境解決と実資源の採用", () => {
     const root = await mkdtemp(join(tmpdir(), "tablecast-build-output-test-"));
     const target = deploymentTarget("267");
     const sha = "a".repeat(40);
-    const generated = deploymentConfigs(target, sha, "11111111-1111-4111-8111-111111111111");
+    const generated = deploymentOptions(target, sha, "11111111-1111-4111-8111-111111111111");
     try {
       await writeRootConfig(
         root,

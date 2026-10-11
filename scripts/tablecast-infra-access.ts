@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { cloudflare } from "./tablecast-deploy-api";
-import { tablecastAccess } from "../infra/tablecast.config";
+import { tablecastAccess } from "./tablecast-deploy-config";
 
 const policySchema = z.object({
   id: z.string(),

@@ -273,7 +273,7 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 `cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
 
-API・Webの正本は各workspaceの`cloudflare.config.ts`、共通factoryは`scripts/tablecast-cloudflare-config.ts`である。`.local/*.wrangler.json`はSDK接続用の生成物として残り、手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
+API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。生成した公開入力を`TABLECAST_CONFIG`で両workspaceへ渡し、cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
 
 初回移行は自worktreeのWeb・APIを停止して`bun run dev:prepare`を実行する。旧local D1の全データ・schema・適用済みmigrationを公式SDKのD1 batchでcf用UUIDv4へ移し、件数・外部キーを照合する。旧stateは削除しない。旧・新DBが両方あり移行記録がない場合は自動上書きせず停止する。R2と業務DOの保存先は既存`.local/state`を維持し、Webの内部stateだけその配下の`tablecast-web`へ分離する。
 

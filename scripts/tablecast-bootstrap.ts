@@ -9,6 +9,12 @@ import { bootstrapDatabase, bootstrapInputSchema } from "../apps/api/src/bootstr
 import { DomainError } from "../apps/api/src/platform/errors";
 import { loadAndParseConfig, convertToWranglerConfig } from "@cloudflare/config";
 
+import {
+  deploymentOptions,
+  deploymentTarget,
+  tablecastAdoptedResources,
+} from "./tablecast-deploy-config";
+
 const environmentSchema = z.enum(["staging", "production"]);
 const originSchema = z
   .string()
@@ -114,6 +120,13 @@ async function main() {
   const options = bootstrapOptions(process.argv.slice(2));
   let configText = await readFile(options.config, "utf8");
   if (options.config.endsWith(".ts")) {
+    process.env.TABLECAST_CONFIG ??= JSON.stringify(
+      deploymentOptions(
+        deploymentTarget(undefined, options.environment),
+        process.env.TABLECAST_RELEASE_SHA ?? "",
+        tablecastAdoptedResources[options.environment].database,
+      ),
+    );
     const { result } = await loadAndParseConfig(options.config, {
       mode: options.environment,
       isPreview: false,

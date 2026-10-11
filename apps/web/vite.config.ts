@@ -9,16 +9,17 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { z } from "zod";
-import { apiCloudflareConfig, modeOptions } from "../../scripts/tablecast-cloudflare-config.ts";
+import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
+import { modeOptions } from "../../scripts/tablecast-deploy-config.ts";
 
 export default defineConfig(async ({ command, mode, isPreview }) => {
   const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
   const api =
     command === "serve" && !isPreview
-      ? await resolveAndParseConfig(
-          apiCloudflareConfig(modeOptions(tablecastEnv.TABLECAST_API_CONFIG, mode)),
-          { mode, isPreview: false },
-        )
+      ? await resolveAndParseConfig(apiCloudflareConfig(modeOptions("api", mode)), {
+          mode,
+          isPreview: false,
+        })
       : undefined;
   if (api && !api.success) throw api.error;
   const apiWorker = api?.success ? api.data.worker : undefined;

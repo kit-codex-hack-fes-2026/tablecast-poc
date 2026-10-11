@@ -163,7 +163,6 @@ describe("開発資源の所有境界", () => {
       },
       state: "/tmp/tablecast/.local/state",
       apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
-      webConfig: "/tmp/tablecast/.local/web.wrangler.json",
     };
     expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow();
     expect(() =>

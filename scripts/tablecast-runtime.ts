@@ -9,11 +9,8 @@ import { fileURLToPath } from "node:url";
 import { parseEnv, promisify } from "node:util";
 import { execFile } from "node:child_process";
 import { z } from "zod";
-import {
-  apiSdkConfiguration,
-  sdkConfiguration,
-  webCloudflareConfig,
-} from "./tablecast-cloudflare-config";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
+import type { TablecastConfigOptions } from "./tablecast-deploy-config";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
@@ -49,7 +46,6 @@ const runtimeSchema = z.object({
   ports: portsSchema,
   state: z.string(),
   apiConfig: z.string(),
-  webConfig: z.string(),
 });
 export type TablecastRuntime = z.infer<typeof runtimeSchema>;
 const ledgerSchema = z.record(z.string(), z.object({ root: z.string(), ports: portsSchema }));
@@ -105,7 +101,6 @@ export function assertLocalRuntime(
     runtime.root !== root ||
     runtime.state !== join(local, "state") ||
     runtime.apiConfig !== join(local, "api.wrangler.json") ||
-    runtime.webConfig !== join(local, "web.wrangler.json") ||
     !(
       runtime.origin === `http://${localHost(root, common)}.localhost:${runtime.ports.proxy}` ||
       (tablecastContainer &&
@@ -179,7 +174,6 @@ export async function reserveRuntime() {
       origin: process.env.TABLECAST_CONTAINER_ORIGIN || "http://localhost:3000",
       state: join(tablecastLocal, "state"),
       apiConfig: join(tablecastLocal, "api.wrangler.json"),
-      webConfig: join(tablecastLocal, "web.wrangler.json"),
     };
     await saveRuntime(runtime);
     return runtime;
@@ -268,7 +262,6 @@ export async function reserveRuntime() {
       origin: `http://${host}.localhost:${ports.proxy}`,
       state: join(tablecastLocal, "state"),
       apiConfig: join(tablecastLocal, "api.wrangler.json"),
-      webConfig: join(tablecastLocal, "web.wrangler.json"),
     };
     await saveRuntime(runtime);
     return runtime;
@@ -277,15 +270,19 @@ export async function reserveRuntime() {
   }
 }
 
-export function localEnvironment(runtime: TablecastRuntime) {
+export function localEnvironment(
+  runtime: TablecastRuntime,
+  configuration: { api: TablecastConfigOptions; web: TablecastConfigOptions },
+) {
   const env: Record<string, string> = {
     PATH: process.env.PATH ?? "",
     HOME: process.env.HOME ?? "",
     TMPDIR: process.env.TMPDIR ?? "/tmp",
     CI: process.env.CI ?? "",
     TABLECAST_PUBLIC_ORIGIN: runtime.origin,
-    TABLECAST_WEB_CONFIG: runtime.webConfig,
-    TABLECAST_API_CONFIG: runtime.apiConfig,
+    TABLECAST_CONFIG: JSON.stringify(configuration)
+      .replaceAll("'", "\\u0027")
+      .replaceAll("$", "\\u0024"),
     TABLECAST_STATE_PATH: runtime.state,
     TABLECAST_INSPECTOR_PORT: String(runtime.ports.inspector),
     PORT: String(runtime.ports.web),
@@ -326,8 +323,6 @@ export function developmentSecrets() {
 
 export async function writeLocalConfigs(runtime: TablecastRuntime) {
   const external = developmentSecrets();
-  const api = apiSdkConfiguration();
-  const web = sdkConfiguration(webCloudflareConfig());
   const apiName = `tablecast-${runtime.id}-api`;
   const telemetryVars = {
     TABLECAST_ENV: "development",
@@ -336,54 +331,32 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
       ? "http://tablecast-lgtm:4318"
       : `http://127.0.0.1:${runtime.ports.otlp}`,
   };
+  const configuration = {
+    api: {
+      name: apiName,
+      vars: {
+        ...telemetryVars,
+        TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
+          .every((key) => Boolean(external[key]))
+          .toString(),
+        TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
+        TABLECAST_PUBLIC_ORIGIN: runtime.origin,
+        TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
+        ...(tablecastContainer
+          ? { TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth` }
+          : {}),
+        TABLECAST_MAILPIT_URL: `http://127.0.0.1:${runtime.ports.mailpit}`,
+        TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
+      },
+      database: { name: `tablecast-${runtime.id}`, id: "00000000-0000-4000-8000-000000000000" },
+      bucket: `tablecast-${runtime.id}-media`,
+    },
+    web: { name: `tablecast-${runtime.id}-web`, api: apiName, vars: telemetryVars },
+  };
+  // SDKが必要とするAPI設定だけを、workspaceの正本から一方向に変換する。
   await writeFile(
     runtime.apiConfig,
-    JSON.stringify(
-      {
-        ...api,
-        name: apiName,
-        main: join(tablecastRoot, "apps/api/src/worker.ts"),
-        vars: {
-          ...telemetryVars,
-          TABLECAST_VOICE_ENABLED: ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
-            .every((key) => Boolean(external[key]))
-            .toString(),
-          TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
-          TABLECAST_PUBLIC_ORIGIN: runtime.origin,
-          TABLECAST_GOOGLE_EMULATOR_URL: `http://127.0.0.1:${runtime.ports.oauth}`,
-          ...(tablecastContainer
-            ? { TABLECAST_GOOGLE_AUTHORIZE_URL: `${runtime.origin}/_tablecast/oauth` }
-            : {}),
-          TABLECAST_MAILPIT_URL: `http://127.0.0.1:${runtime.ports.mailpit}`,
-          TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
-        },
-        d1_databases: [
-          {
-            binding: "TABLECAST_DB",
-            database_name: `tablecast-${runtime.id}`,
-            database_id: "00000000-0000-4000-8000-000000000000",
-            migrations_dir: join(tablecastRoot, "apps/api/migrations"),
-          },
-        ],
-        r2_buckets: [{ binding: "TABLECAST_MEDIA", bucket_name: `tablecast-${runtime.id}-media` }],
-      },
-      null,
-      2,
-    ) + "\n",
-  );
-  await writeFile(
-    runtime.webConfig,
-    JSON.stringify(
-      {
-        ...web,
-        name: `tablecast-${runtime.id}-web`,
-        main: join(tablecastRoot, "apps/web/src/server.ts"),
-        services: [{ binding: "TABLECAST_API", service: apiName }],
-        vars: telemetryVars,
-      },
-      null,
-      2,
-    ) + "\n",
+    JSON.stringify(apiSdkConfiguration(configuration.api), null, 2) + "\n",
   );
   const secretPath = join(tablecastLocal, ".dev.vars");
   let previous: ReturnType<typeof parseEnv> = {};
@@ -410,7 +383,11 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
     writeFile(
       path,
       Object.entries(entries)
-        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        // Bunのdotenvは二重引用符内の\"を展開しないため、JSONは一重引用符で渡す。
+        .map(
+          ([key, value]) =>
+            `${key}=${key === "TABLECAST_CONFIG" ? `'${value}'` : JSON.stringify(value)}`,
+        )
         .join("\n") + "\n",
       { mode: 0o600 },
     );
@@ -427,7 +404,7 @@ export async function writeLocalConfigs(runtime: TablecastRuntime) {
   }
   await writeEnv(join(tablecastLocal, ".env"), {
     ...Object.fromEntries(
-      Object.entries(localEnvironment(runtime)).filter(
+      Object.entries(localEnvironment(runtime, configuration)).filter(
         ([key]) =>
           ![
             "PATH",

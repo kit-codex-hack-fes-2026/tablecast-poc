@@ -1,4 +1,4 @@
-import { apiCloudflareConfig } from "./tablecast-cloudflare-config";
+import { apiCloudflareConfig, apiSdkConfiguration } from "../apps/api/cloudflare.config";
 import { resetStagingDatabase } from "./tablecast-staging-reset";
 import {
   cloudflare,
@@ -20,7 +20,9 @@ import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedPreviewDatabase } from "./tablecast-seed-data";
 import {
-  deploymentConfigs,
+  accessApplicationConfig,
+  tablecastAdoptedResources,
+  deploymentOptions,
   deploymentBuildOutput,
   bindDeploymentDatabase,
   deploymentSecrets,
@@ -29,7 +31,6 @@ import {
   tablecastRepository,
   stagingDiscoveryPaths,
 } from "./tablecast-deploy-config";
-import { accessApplicationConfig, tablecastAdoptedResources } from "../infra/tablecast.config";
 import { assertWorkerOwner } from "./tablecast-infra-diff";
 import { assertAccessConfiguration } from "./tablecast-infra-access";
 
@@ -303,19 +304,16 @@ async function main(resetFinished = false) {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await writeFile(resolve(directory, "empty.env"), "", { mode: 0o600 });
   if (plan || build) {
-    const configs = deploymentConfigs(
+    const options = deploymentOptions(
       target,
       sha,
       "11111111-1111-4111-8111-111111111111",
       process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
     );
-    await writeFile(resolve(directory, "api.json"), JSON.stringify(configs.api, null, 2));
-    await writeFile(resolve(directory, "web.json"), JSON.stringify(configs.web, null, 2));
     if (build)
       await buildTablecast({
         ...process.env,
-        TABLECAST_API_CONFIG: resolve(directory, "api.json"),
-        TABLECAST_WEB_CONFIG: resolve(directory, "web.json"),
+        TABLECAST_CONFIG: JSON.stringify(options),
       });
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
@@ -358,16 +356,13 @@ async function main(resetFinished = false) {
     return;
   }
   if (!database) throw new Error("D1の所有台帳がありません。残存R2を手動確認してください。");
-  const configs = deploymentConfigs(
+  const options = deploymentOptions(
     target,
     cleanup ? "0".repeat(40) : sha,
     database.uuid,
     process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
   );
-  const apiPath = resolve(directory, "api.json");
-  const webPath = resolve(directory, "web.json");
-  await writeFile(apiPath, JSON.stringify(configs.api, null, 2));
-  await writeFile(webPath, JSON.stringify(configs.web, null, 2));
+  const apiConfig = apiSdkConfiguration(options.api);
 
   if (!cleanup && secrets) {
     await writeFile(resolve(directory, "secrets.json"), JSON.stringify(secrets), { mode: 0o600 });
@@ -392,10 +387,10 @@ async function main(resetFinished = false) {
             name: `${target.web}-storage`,
             account_id: tablecastAccountId,
             compatibility_date: "2026-09-03",
-            d1_databases: configs.api.d1_databases.map((value) => ({ ...value, remote: true })),
+            d1_databases: apiConfig.d1_databases.map((value) => ({ ...value, remote: true })),
             r2_buckets:
               bucketExists || bucketCreated
-                ? configs.api.r2_buckets.map((value) => ({ ...value, remote: true }))
+                ? apiConfig.r2_buckets.map((value) => ({ ...value, remote: true }))
                 : [],
           }),
         );
@@ -505,14 +500,7 @@ async function main(resetFinished = false) {
                 maintenanceApi,
                 `export {StoreEvents, TablecastEmulate} from ${JSON.stringify(resolve(root, "apps/api/src/worker.ts"))}; export default {fetch(){return new Response("TableCast staging maintenance", {status:503})}};`,
               );
-              const configured = apiCloudflareConfig({
-                name: target.api,
-                accountId: tablecastAccountId,
-                environment: target.environment,
-                vars: configs.api.vars,
-                database: { name: target.database, id: database.uuid },
-                bucket: target.bucket,
-              });
+              const configured = apiCloudflareConfig(options.api);
               await deployTemporaryWorker(
                 {
                   ...configured.worker,
@@ -675,7 +663,7 @@ async function main(resetFinished = false) {
           ...artifact.env,
           TABLECAST_OTEL_CAPTURE_CONTENT: {
             type: "text",
-            value: configs.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
+            value: apiConfig.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
           },
         },
       }),

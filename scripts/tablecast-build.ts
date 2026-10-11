@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { cp, readdir, rm } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { configurationOptions } from "./tablecast-cloudflare-config";
+import { modeOptions } from "./tablecast-deploy-config";
 
 const root = resolve(import.meta.dirname, "..");
 
@@ -10,7 +10,11 @@ const root = resolve(import.meta.dirname, "..");
 export async function buildTablecast(
   environment: Record<string, string | undefined> = process.env,
 ) {
-  const mode = configurationOptions(environment.TABLECAST_API_CONFIG).environment;
+  const mode = modeOptions(
+    "api",
+    environment.TABLECAST_MODE,
+    environment.TABLECAST_CONFIG,
+  ).environment;
   // cf beta.14はTanStack Startへ--modeを転送しないため、Webはpackage scriptでViteへ渡す。
   execFileSync(
     "bun",

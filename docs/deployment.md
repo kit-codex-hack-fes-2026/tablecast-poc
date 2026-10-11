@@ -43,7 +43,7 @@ Better Auth Dashboardの鍵は `production` Environmentから本番API Worker se
 
 アプリのrollbackではnullableな `last_active_at` 列を残す。旧版でも既存ユーザーとセッションを使用でき、列を削除する破壊的なdown migrationは行わない。
 
-Access applicationはPRホスト名に対してWeb公開前に作成する。`infra/tablecast.config.ts`の採用済み2 policyを参照し、配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
+Access applicationはPRホスト名に対してWeb公開前に作成する。`scripts/tablecast-deploy-config.ts`の採用済み2 policyを参照し、配備疎通確認はservice tokenヘッダーを付ける。許可されたPR利用者はエミュレーター上の架空ユーザーを選べる。[WorkersのAccess保護](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
 
 ## Google Cloud Console
 
@@ -88,7 +88,7 @@ PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だ
 
 ### 本番bootstrap
 
-配備が生成した`.local/tablecast-deploy/api.json`には実D1 IDが必要である。`TABLECAST_API_CONFIG`へそのpathを渡し、正本の`apps/api/cloudflare.config.ts`を`--env production`で解決する。build前の検証用UUIDは使えない。bootstrap用に別の手編集configを作らない。
+正本の`apps/api/cloudflare.config.ts`を`--env production`で解決する。bootstrapは`scripts/tablecast-deploy-config.ts`の採用済み実D1 IDから公開入力を生成する。`TABLECAST_RELEASE_SHA`には確認対象のHEADを指定し、build前の検証用UUIDや別の手編集configを使わない。
 
 初回の管理者・組織・店舗・卓・公開カタログは、migration適用後に管理CLI `db:bootstrap` で作る。Better AuthのサーバーAPIを使い、公開HTTPへ管理用の認証回避経路は追加しない。開発seedは公開環境で使えないままにする。
 
@@ -109,8 +109,8 @@ TypeScript設定から解決したaccount ID・Worker名・`TABLECAST_ENV`・HTT
 次の一つ目は入力検査と対象表示だけで、DB接続や書込みを行わない。表示したaccount ID・DB ID・origin・店舗IDが配備対象と一致してから、同じ入力へ `--apply` を付ける。遠隔の接続にはWranglerの認証と公式remote D1 bindingを使用する。[Wrangler API](https://developers.cloudflare.com/workers/wrangler/api/)
 
 ```sh
-TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" bun --no-env-file run db:bootstrap --config apps/api/cloudflare.config.ts --env production --input .local/tablecast-production-bootstrap.json --remote
-TABLECAST_API_CONFIG="$PWD/.local/tablecast-deploy/api.json" bun --no-env-file run db:bootstrap --config apps/api/cloudflare.config.ts --env production --input .local/tablecast-production-bootstrap.json --remote --apply
+TABLECAST_RELEASE_SHA="$(git rev-parse HEAD)" bun --no-env-file run db:bootstrap --config apps/api/cloudflare.config.ts --env production --input .local/tablecast-production-bootstrap.json --remote
+TABLECAST_RELEASE_SHA="$(git rev-parse HEAD)" bun --no-env-file run db:bootstrap --config apps/api/cloudflare.config.ts --env production --input .local/tablecast-production-bootstrap.json --remote --apply
 ```
 
 ローカルでのリハーサルは `--remote` を `--local --persist-to /absolute/path/tablecast-bootstrap-state` へ置き換える。対象の実D1 UUIDを指定した`bun run cf:local d1 migrations apply <UUID> --dir apps/api/migrations --local --persist-to ...` を先に実施し、開発デモとは別の保存先を使う。CLIはD1だけの一時configを作り、周辺の `.dev.vars` や `.env.local` を読まない。入力ファイルやD1の内容は実行後も保存される。
@@ -144,7 +144,7 @@ productionは`TABLECAST_DEPLOY_ENV=production`、previewは`TABLECAST_DEPLOY_ENV
 
 ## Cloudflare設定のIaC
 
-API・Webの正本は各workspaceの`cloudflare.config.ts`、Access・常設資源の採用情報は`infra/tablecast.config.ts`である。Worker、binding、D1、R2、Images、Email、DO、Container、cron、placement、観測、PRカタログを同じ型付き設定から生成する。Accessの既存許可条件・policy ID・service token IDは2026-10-11の読取りで照合した。個人のメール・秘密値・取得したAPI応答はGitへ含めない。PR・カタログは保護し、stagingは公開を維持する。
+API・Webの正本は各workspaceの`cloudflare.config.ts`、Access・常設資源の採用情報は`scripts/tablecast-deploy-config.ts`である。Worker、binding、D1、R2、Images、Email、DO、Container、cron、placement、観測はworkspaceの設定から解決し、PRカタログは既存のカタログ配備処理で定義する。buildは配備環境・PR・SHAを検査して公開入力を`TABLECAST_CONFIG`へ渡し、中間JSONを作らない。Accessの既存許可条件・policy ID・service token IDは2026-10-11の読取りで照合した。個人のメール・秘密値・取得したAPI応答はGitへ含めない。PR・カタログは保護し、stagingは公開を維持する。
 
 ```sh
 TABLECAST_DEPLOY_ENV=staging TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run infra:plan

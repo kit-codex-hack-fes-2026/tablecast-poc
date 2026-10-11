@@ -1,10 +1,24 @@
+import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config";
+import { z } from "zod";
 import { describe, expect, test } from "vitest";
 import {
   bindDeploymentDatabase,
-  deploymentConfigs,
+  deploymentOptions,
+  optionsSchema,
   deploymentSecrets,
   deploymentTarget,
 } from "./tablecast-deploy-config";
+
+function deploymentConfigs(...args: Parameters<typeof deploymentOptions>) {
+  const options = deploymentOptions(...args);
+  const web = convertToWranglerConfig(InputConfigSchema.parse(webCloudflareConfig(options.web)));
+  return {
+    api: apiSdkConfiguration(options.api),
+    web: { ...web, vars: optionsSchema.shape.vars.parse(web.vars) },
+  };
+}
 
 const input = {
   TABLECAST_CONTAINER_METRICS_TOKEN: "tablecast-analytics-secret",
@@ -133,9 +147,9 @@ describe("本番とPRの配備境界", () => {
     );
     expect(config.api.containers).toHaveLength(1);
     expect(config.api.triggers?.crons).toEqual(["*/5 * * * *"]);
-    expect(JSON.parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)).toEqual([
-      "tablecast-api-pr-34-tablecastemulate",
-    ]);
+    expect(
+      JSON.parse(z.string().parse(config.api.vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS)),
+    ).toEqual(["tablecast-api-pr-34-tablecastemulate"]);
     expect(config.web).not.toHaveProperty("triggers");
     expect(config.api.containers.every((value) => value.max_instances === 1)).toBe(true);
     expect(JSON.stringify(config)).not.toContain("tablecast-openai-secret");

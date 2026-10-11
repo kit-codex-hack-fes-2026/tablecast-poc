@@ -116,6 +116,44 @@ describe("初期セットアップCLIの対象固定", () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+  it("workspaceのTypeScript設定から採用済みD1を解決し中間JSONなしで事前確認する", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "tablecast-bootstrap-native-"));
+    const inputPath = join(directory, "private.json");
+    try {
+      await writeFile(inputPath, JSON.stringify(input()), { mode: 0o600 });
+      const result = await execute(
+        "node",
+        [
+          "--import",
+          "tsx",
+          "scripts/tablecast-bootstrap.ts",
+          "--config",
+          "apps/api/cloudflare.config.ts",
+          "--env",
+          "production",
+          "--input",
+          inputPath,
+          "--remote",
+        ],
+        {
+          cwd: root,
+          env: {
+            ...process.env,
+            TABLECAST_CONFIG: undefined,
+            TABLECAST_RELEASE_SHA: "a".repeat(40),
+          },
+          timeout: 45000,
+        },
+      );
+      expect(result.stdout).toContain('"database_id": "6cc5c833-9c01-4172-92e7-18d713db9a8f"');
+      expect(result.stdout).toContain('"worker": "tablecast-api"');
+      expect(result.stdout).toContain('"apply": false');
+      expect(result.stdout + result.stderr).not.toContain(input().authSecret);
+      expect(result.stdout + result.stderr).not.toContain(input().admin.password);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   it("実CLIの事前確認はDBを作らず適用は移行済み専用D1だけを初期化する", async () => {
     const directory = await mkdtemp(join(tmpdir(), "tablecast-bootstrap-cli-"));
     const configPath = join(directory, "wrangler.json");

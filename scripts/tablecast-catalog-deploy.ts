@@ -10,8 +10,12 @@ import {
   catalogTarget,
   type CatalogKind,
 } from "./tablecast-catalog-config";
-import { deploymentTarget, tablecastAccountId } from "./tablecast-deploy-config";
-import { accessApplicationConfig, tablecastAccess } from "../infra/tablecast.config";
+import {
+  deploymentTarget,
+  tablecastAccountId,
+  accessApplicationConfig,
+  tablecastAccess,
+} from "./tablecast-deploy-config";
 import { assertAccessConfiguration } from "./tablecast-infra-access";
 import { InputWorkerSchema } from "@cloudflare/config";
 import { writeAssets, writeWorkerConfig, writeRootConfig } from "@cloudflare/build-output-utils";
