@@ -207,11 +207,12 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
         })
       ).ok(),
     ).toBe(true);
-    const codeResponse = tablet.waitForResponse(
-      (response) => response.url().endsWith("/customer-code") && response.ok(),
-    );
+    // 遷移中にbodyが破棄される前に、受信したQR応答を読む。
+    const codeResponse = tablet
+      .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
+      .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
     await tablet.goto("/");
-    const code = z.object({ url: z.url() }).parse(await (await codeResponse).json());
+    const code = await codeResponse;
     await expect(
       tablet
         .getByRole("region", { name: ja.customer_join_visit })
@@ -341,11 +342,11 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
       first.getByRole("status").filter({ hasText: ja.customer_disconnected }),
     ).toBeVisible();
     const next = await open();
-    const nextCodeResponse = tablet.waitForResponse(
-      (response) => response.url().endsWith("/customer-code") && response.ok(),
-    );
+    const nextCodeResponse = tablet
+      .waitForResponse((response) => response.url().endsWith("/customer-code") && response.ok())
+      .then(async (response) => z.object({ url: z.url() }).parse(await response.json()));
     await tablet.reload();
-    const nextCode = z.object({ url: z.url() }).parse(await (await nextCodeResponse).json());
+    const nextCode = await nextCodeResponse;
     for (const phone of [first, second]) {
       let enrolments = 0;
       phone.on("request", (request) => {

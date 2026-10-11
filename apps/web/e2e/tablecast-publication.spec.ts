@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "./support/test";
 import { expect } from "@playwright/test";
@@ -20,7 +20,7 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   request: staff,
   baseURL,
   runtime,
-}) => {
+}, testInfo) => {
   const storeId = "tablecast-hanul";
   const adminPath = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
@@ -185,10 +185,33 @@ test("通知切断中も設定公開を反映し、利用終了後にだけア�
   await expect(detail.getByText(prices.changed, { exact: true })).toContainText(prices.changed);
   await detail.getByRole("button", { name: "おしながき", exact: true }).click();
   // 利用中は保留したアプリ更新を、卓の利用終了後に適用する。
-  const [, closed] = await Promise.all([
-    page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-    staff.post(`${adminPath}/tables/${table.id}/close`, { headers, data: {} }),
-  ]);
-  expect(closed.status()).toBe(200);
-  expect(documentLoads).toBe(1);
+  try {
+    const [, closed] = await Promise.all([
+      page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+      staff.post(`${adminPath}/tables/${table.id}/close`, { headers, data: {} }),
+    ]);
+    expect(closed.status()).toBe(200);
+    expect(documentLoads).toBe(1);
+  } finally {
+    // 更新が止まった場合も、可視性・待機中SW・画面側の保留条件を残す。
+    await writeFile(
+      testInfo.outputPath("pwa-update-state.json"),
+      JSON.stringify(
+        await page.evaluate(async () => ({
+          visibility: document.visibilityState,
+          waiting: (await navigator.serviceWorker.getRegistration())?.waiting?.state,
+          controller: navigator.serviceWorker.controller?.state,
+          inert: document.body.inert,
+          blocked: [...document.querySelectorAll('[data-pwa-blocked="true"]')].map((node) =>
+            node.outerHTML.slice(0, 240),
+          ),
+          forms: [...document.forms].map((form) =>
+            Boolean(form.querySelector("[data-pwa-blocked]")),
+          ),
+        })),
+        null,
+        2,
+      ),
+    );
+  }
 });
