@@ -75,7 +75,7 @@ for (const { locale, labels, language, guestLocale, guestLanguage, guestLabels }
     await changedLanguage.click();
     await expect(changedLanguage).toBeEnabled();
     await expect(changedLanguage).toHaveAttribute("aria-pressed", "true");
-    const installHelp = frame.locator("[data-pwa-install]");
+    const installHelp = frame.locator("details[data-pwa-install]");
     await expect(installHelp).toHaveCount(1);
     await installHelp.locator("summary").click();
     await expect(installHelp.locator("summary")).toHaveText(guestLabels.pwa_install_title);
