@@ -2,6 +2,8 @@
 
 cloneから起動までの手順は [セットアップ](setup.md#2a-dev-containerを使う) が正本である。
 
+ホスト開発はPortlessでworktree名ごとのURLを使う。Dev ContainerはCompose・Caddyの構成を維持し、コンテナ内へPortlessやホストの共有proxy stateを持ち込まない。
+
 ## runtimeと分離
 
 Node 24.7.0、Bun 1.3.13を使用する。Mailpit・Caddyはイメージ内の実行ファイル、Grafana LGTMはComposeの別サービスとして起動する。Docker socketを渡さず、コンテナ内でDockerを必要とするE2EはホストまたはCIで行う。

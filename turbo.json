@@ -18,15 +18,7 @@
         "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
-      "env": [
-        "TABLECAST_LOCAL_BUILD",
-        "TABLECAST_STATE_PATH",
-        "TABLECAST_INSPECTOR_PORT",
-        "TABLECAST_PUBLIC_ORIGIN",
-        "TABLECAST_VITE_CACHE_DIR",
-        "TABLECAST_MODE",
-        "TABLECAST_CONFIG"
-      ]
+      "env": ["TABLECAST_*"]
     },
     "dev": {
       "cache": false,
@@ -60,17 +52,12 @@
     },
     "//#dev:prepare": {
       "cache": false,
-      "passThroughEnv": ["TABLECAST_*"]
+      "passThroughEnv": ["TABLECAST_*", "PORTLESS_*", "PORT"]
     },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
       "cache": false,
-      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"]
-    },
-    "//#dev:proxy": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
+      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "PORTLESS_*"]
     },
     "//#dev:caddy": {
       "cache": false,
@@ -83,6 +70,12 @@
       "dependsOn": ["//#dev:prepare"]
     },
     "@tablecast/emulate#dev": {
+      "passThroughEnv": ["PORTLESS_*"],
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "@tablecast/emulate#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]
@@ -91,23 +84,26 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy", "@tablecast/api#dev"]
+      "with": ["@tablecast/emulate#dev"],
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"],
-      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit", "@tablecast/api#dev"]
+      "with": ["@tablecast/emulate#dev:container", "//#dev:caddy", "//#dev:mailpit"]
     },
     "@tablecast/web#build:local": {
       "dependsOn": ["//#dev:prepare"],
+      "passThroughEnv": ["PORTLESS_*"],
       "cache": false
     },
     "@tablecast/web#preview": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["build:local", "//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+      "with": ["@tablecast/emulate#dev"],
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#i18n:compile": {
       "inputs": ["project.inlang/**", "messages/**", "package.json"],
@@ -137,12 +133,7 @@
         "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
-      "env": ["TABLECAST_MODE", "TABLECAST_CONFIG"]
-    },
-    "@tablecast/api#dev": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
+      "env": ["TABLECAST_*"]
     }
   }
 }

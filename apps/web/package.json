@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun --env-file=../../.local/.env exec 'cf dev'",
     "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
-    "preview": "bun --env-file=../../.local/.env run vite preview",
+    "preview": "bun --env-file=../../.local/.env exec 'vite preview'",
     "typecheck": "tsc --noEmit",
     "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
     "lint": "oxlint src e2e .storybook vite.config.ts vitest.config.ts playwright.config.ts --deny-warnings",

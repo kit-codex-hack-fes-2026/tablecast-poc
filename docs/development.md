@@ -35,18 +35,19 @@ hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル�
 
 ## worktree識別子
 
-ブラウザー用のドメインは `<worktree>.<repo>.localhost`。メインcheckoutは `main.tablecast-poc.localhost`、`voice-ui` という追加worktreeは `voice-ui.tablecast-poc.localhost` になる。repo名はGit共通ディレクトリの親フォルダー名から取得し、detached HEADでも変わらない。各ラベルを小文字化し、英数字・ハイフン以外をハイフンに置換する。名前の重複は起動時に拒否する。
-内部リソースの識別子は正規化したworktree実パスとrepository識別子から作る短いhashを維持し、ドメイン変更で保存済みD1・R2を失わない。Git commitが変わってもドメインは変わらない。
+ホスト開発のURLは `<service>.<worktree名>.tablecast-poc.localhost`。branch末尾を小文字・英数字・ハイフンへ正規化し、先頭47文字へ切り取り、末尾のハイフンを除く。branchがない場合は `git rev-parse --short=8 HEAD` を使う。たとえば `codex/268-portless-dev` のWebは `http://web.268-portless-dev.tablecast-poc.localhost`。名前の衝突はPortlessで拒否し、自動suffixや上書きを使わない。
+Dev Containerは引き続き `<worktree>.<repo>.container.localhost:<port>` とCaddyを使う。コンテナの命名と公開ポートは [Dev Containerの構成](devcontainer.md) を参照する。
+Worker・D1・R2・Composeもworktree名を使う。保存先は常にこのworktreeの `.local/state` とし、名前別ディレクトリを作らない。branch名の変更やdetachedのcommit更新で名前が変わった場合、通常起動は自動消去せず停止する。変更前に `bun run services:down` で旧Composeを停止し、変更後に `bun run demo:reset` で開発データを作り直す。認証secretとデモ資格情報は維持する。
 独自リソース名には `tablecast` を含める。
 
-| 対象        | 例・分離内容                                         |
-| ----------- | ---------------------------------------------------- |
-| Webのホスト | `<worktree>.<repo>.localhost`                        |
-| Worker      | `tablecast-<id>-web`、`tablecast-<id>-api`           |
-| 公開環境値  | `TABLECAST_PUBLIC_ORIGIN` 等                         |
-| 保存先      | `<worktree>/.local/state`、生成設定とログも `.local` |
-| JS依存      | worktree固有node_modules、Bunの不変cacheは共有可     |
-| 認証        | worktree固有secret、正確な公開origin                 |
+| 対象        | 例・分離内容                                               |
+| ----------- | ---------------------------------------------------------- |
+| Webのホスト | `web.<worktree名>.tablecast-poc.localhost`                 |
+| Worker      | `tablecast-<worktree名>-web`、`tablecast-<worktree名>-api` |
+| 公開環境値  | `TABLECAST_PUBLIC_ORIGIN` 等                               |
+| 保存先      | `<worktree>/.local/state`、生成設定とログも `.local`       |
+| JS依存      | worktree固有node_modules、Bunの不変cacheは共有可           |
+| 認証        | worktree固有secret、正確な公開origin                       |
 
 Cookieはポートでは分離されないため、worktreeごとにホスト名を分ける。同一worktreeのコンテナは `<worktree>.<repo>.container.localhost` とし、通常起動とのCookie共有を防ぐ。host-only Cookieを維持する。[S18](sources.md#s18)
 `.localhost` の解決・HTTPS・ブラウザー対応は環境ごとに起動診断する。iPadには到達可能なLANホスト名と信頼された証明書が別途必要。
@@ -74,17 +75,12 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 ### 共通の割当て
 
-小さなbootstrapでWeb、Inspector、OAuth、Mailpit、Grafanaをまとめて割り当てる。Storybookは上記の公式CLIでportを指定する。
-既存のポート割当て機能を先に使い、worktree間の予約だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
-一つのruntime manifestにホスト、port、state、SDK接続用API configの参照を記録する。cfは各workspaceの`cloudflare.config.ts`を使い、`.local/.env`の`TABLECAST_CONFIG`から公開入力を解決する。SDK用JSONをcf設定へ読み戻さず、Web用JSONも生成しない。ポートを複数package.jsonへ直書きしない。
-同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。
-空き確認後にも競合し得るため、bind失敗時は別の予約で起動し直す。既存プロセスをkillしてポートを奪わない。
-フレームワークの自動port繰上げを無効にし、古いOAuth callbackや間違ったworktreeへ接続しないようにする。
+ホストではrootのpackage scriptがPortlessからTurboを起動し、名前の衝突を設定生成・Compose起動前に拒否する。Portlessが `PORT` を割り当て、route登録とプロセスの終了を所有する。共有proxyはHTTPの80番を使い、worktree固有のproxy・ポート台帳・予約ロックを作らない。WorkersのInspectorは0番を指定して実行時の割当てを使う。
+LGTM・Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せる。`services:aliases` が公式の `docker compose port` と `portless alias` でGrafana・Mailpit・Tempo・OTLPの名前を登録する。APIからMailpit・OTLPへの通信もこの名前を使う。
+`.local/.env` に名前・origin・実Webポートを通常のenvとしてまとめる。Portlessが渡したWebポートを `dev:prepare` で保存し、起動前の0は未起動を表す。`runtime.json` とローカル用 `TABLECAST_CONFIG` は生成しない。保存先・configパスは実worktreeから決め、seed・demo・pluginは設定の名前と所属を確認する。Cloudflare設定はenvから直接読み、SDK用API設定だけを正本から生成する。
+通常の起動前に [setupのPortless初期設定](setup.md) を済ませる。別のproxyを全消去・停止せず、停止時はこのworktreeのrouteだけを片付ける。[S19](sources.md#s19)
 
-ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
-共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
-
-cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
+cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。`dev:prepare`が生成した設定をbuildへ渡し、build・起動時に設定を再生成しない。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cf beta.14のTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
 
 公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 
@@ -111,17 +107,17 @@ Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保
 
 以下のコマンドを実装済み。初回はDockerを起動して依存を導入する。外部音声設定が未登録でもGUI注文は起動する。
 
-| コマンド                                   | 役割                                                      |
-| ------------------------------------------ | --------------------------------------------------------- |
-| `bun install`                              | 固定方針に従ってJS依存を導入                              |
-| `bun run dev:prepare`                      | worktree ID・ports・config・local migration・初期seed     |
-| `bun run dev`                              | TurboでWeb/API・OAuth・proxy、Composeで周辺サービスを起動 |
-| `bun run dev:parity`                       | build済みWorkersのローカル疎通                            |
-| `bun run services:status`                  | Composeサービスの状態と公開port                           |
-| `bun run storybook`                        | Web内のStorybookだけを起動                                |
-| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                    |
-| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                  |
-| Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する               |
+| コマンド                                   | 役割                                                         |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `bun install`                              | 固定方針に従ってJS依存を導入                                 |
+| `bun run dev:prepare`                      | worktree名・env・DB migration・初期seed                      |
+| `bun run dev`                              | TurboとPortlessでWeb/API・OAuth、Composeで周辺サービスを起動 |
+| `bun run dev:parity`                       | build済みWorkersのローカル疎通                               |
+| `bun run services:status`                  | Composeサービスの状態と公開port                              |
+| `bun run storybook`                        | Web内のStorybookだけを起動                                   |
+| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                       |
+| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                     |
+| Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する                  |
 
 起動順は `turbo.json`、実行するCLIは各 `package.json` に定義する。 ホストの外部サービスはルート `compose.yaml`、Dev Container固有の構成は `.devcontainer/compose.yaml` に置く。worktree固有設定だけを `scripts/tablecast-runtime.ts` で生成する。
 
@@ -140,7 +136,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## タスクの所有者
 
-`package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthとproxyを併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
+`package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthを併走させる。WebはrootのPortlessから起動し、OAuthだけを別のPortlessで併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
 
 独自のdev daemonは持たない。WebはCtrl+C、ホストのDockerサービスは `bun run services:down` で終了する。具体的なコマンドは [setup.md](setup.md) にまとめる。
 

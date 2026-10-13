@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, test } from "vitest";
 import { createAuth } from "../src/modules/auth/service";
+import { sendAccountEmail } from "../src/emails/send";
 
 test("PR以外でOAuth emulatorの公開経路を要求すると拒否する", async () => {
   const response = await exports.default.fetch(
@@ -16,6 +17,31 @@ test("本番へemulator設定が混入すると実Googleへ黙って切り替え
       TABLECAST_ENV: "production",
       TABLECAST_PUBLIC_ORIGIN: "https://tablecast.kit-codex.workers.dev",
       TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-emulate",
+    }),
+  ).toThrow("OAUTH_EMULATOR_LOCAL_ONLY");
+});
+
+test("開発のlocalhostサブドメインで模擬Googleへの認証を開始できる", async () => {
+  const auth = createAuth({
+    ...env,
+    TABLECAST_ENV: "development",
+    TABLECAST_PUBLIC_ORIGIN: "http://web.0123456789.tablecast-poc.localhost",
+    TABLECAST_GOOGLE_EMULATOR_URL: "http://oauth.0123456789.tablecast-poc.localhost",
+  });
+  const result = await auth.api.signInSocial({ body: { provider: "google" } });
+  expect(new URL(result.url ?? "").origin).toBe("http://oauth.0123456789.tablecast-poc.localhost");
+});
+
+test.each([
+  { environment: "development", host: "oauth.0123456789.tablecast-poc.localhost.example.com" },
+  { environment: "production", host: "oauth.0123456789.tablecast-poc.localhost" },
+])("$environmentの模擬OAuthで$hostを拒否する", ({ environment, host }) => {
+  expect(() =>
+    createAuth({
+      ...env,
+      TABLECAST_ENV: environment,
+      TABLECAST_PUBLIC_ORIGIN: "http://web.0123456789.tablecast-poc.localhost",
+      TABLECAST_GOOGLE_EMULATOR_URL: `http://${host}`,
     }),
   ).toThrow("OAUTH_EMULATOR_LOCAL_ONLY");
 });
@@ -40,4 +66,22 @@ test("stagingは固定originだけで模擬OAuthを許可する", async () => {
       TABLECAST_PUBLIC_ORIGIN: "https://tablecast-staging.kit-codex.workers.dev",
     }),
   ).toBe(false);
+});
+
+test.each([
+  { environment: "development", host: "mailpit.0123456789.tablecast-poc.localhost.example.com" },
+  { environment: "production", host: "mailpit.0123456789.tablecast-poc.localhost" },
+])("$environmentのメール送信で$hostを拒否する", async ({ environment, host }) => {
+  await expect(
+    sendAccountEmail(
+      {
+        ...env,
+        TABLECAST_ENV: environment,
+        TABLECAST_EMAIL_FROM: "tablecast@localhost.test",
+        TABLECAST_MAILPIT_URL: `http://${host}`,
+      },
+      "tablecast@example.invalid",
+      { title: "確認", message: "開発境界の確認", action: "確認", url: "http://localhost:3000" },
+    ),
+  ).rejects.toThrow("MAILPIT_LOCAL_ONLY");
 });

@@ -2,12 +2,13 @@ import process from "node:process";
 import { randomUUID } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedDemoDatabase } from "./tablecast-seed-data";
 import { tablecastDemoEmail } from "../apps/emulate/src/tablecast-demo-identities";
 export { sampleLine } from "./tablecast-seed-data";
-import { portAvailable, readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
+import { assertPrepared, portAvailable, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
 
 const demoSchema = z.object({
   email: z.string().email(),
@@ -40,21 +41,14 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
 }
 
 async function seed() {
-  const args = z
-    .array(z.string())
-    .parse(process.argv)
-    .slice(2)
-    .filter((arg) => arg !== "--");
-  if (args.some((arg) => !["--reset", "--profile", "smoke", "demo", "history"].includes(arg)))
-    throw new Error(
-      "seedはlocal専用です。指定可能な引数は --reset と --profile smoke|demo|history です。",
-    );
-  const profileOption = args.indexOf("--profile");
-  const requestedProfile =
-    profileOption < 0
-      ? undefined
-      : z.enum(["smoke", "demo", "history"]).parse(args[profileOption + 1]);
-  const runtime = await readRuntime();
+  const { values } = parseArgs({
+    args: process.argv.slice(2).filter((arg: string) => arg !== "--"),
+    options: { reset: { type: "boolean" }, profile: { type: "string" } },
+  });
+  const requestedProfile = z.enum(["smoke", "demo", "history"]).optional().parse(values.profile);
+  await assertPrepared();
+  const state = join(tablecastLocal, "state");
+  const origin = process.env.TABLECAST_PUBLIC_ORIGIN;
   const previousCredentials = await demoCredentials(requestedProfile);
   const credentials = {
     ...previousCredentials,
@@ -62,10 +56,10 @@ async function seed() {
     otherEmail: tablecastDemoEmail(previousCredentials.otherEmail),
   };
   const profile = requestedProfile ?? credentials.profile;
-  if (args.includes("--reset")) {
-    if (!(await portAvailable(runtime.ports.web)))
+  if (values.reset) {
+    if (!(await portAvailable(Number(process.env.TABLECAST_WEB_PORT ?? 0))))
       throw new Error("開発サーバーをCtrl+Cで停止してからリセットしてください。");
-    await rm(runtime.state, { recursive: true, force: true });
+    await rm(state, { recursive: true, force: true });
     credentials.email = "haruka.sato@komorebi-shijo.com";
     credentials.otherEmail = "tsubasa.yamamoto@westward-burgers-kyoto.com";
     credentials.profile = profile;
@@ -85,39 +79,33 @@ async function seed() {
   if (credentials.profile !== profile)
     throw new Error("プロファイルを変更する前に bun run demo:reset を実行してください。");
   const generated = z
-    .object({
-      compatibility_date: z.string(),
-      compatibility_flags: z.array(z.string()),
-      vars: z.record(z.string(), z.unknown()),
-      d1_databases: z
-        .array(
-          z.object({
-            binding: z.literal("TABLECAST_DB"),
-            database_name: z.string(),
-            database_id: z.string(),
-            migrations_dir: z.string(),
-          }),
-        )
-        .length(1),
-      r2_buckets: z
-        .array(z.object({ binding: z.literal("TABLECAST_MEDIA"), bucket_name: z.string() }))
-        .length(1),
-    })
-    .parse(JSON.parse(await readFile(runtime.apiConfig, "utf8")));
+    .record(z.string(), z.unknown())
+    .parse(JSON.parse(await readFile(join(tablecastLocal, "api.wrangler.json"), "utf8")));
   const seedConfig = join(tablecastLocal, "seed.wrangler.json");
   await writeFile(
     seedConfig,
-    JSON.stringify({ name: `tablecast-${runtime.id}-seed`, ...generated }, null, 2) + "\n",
+    JSON.stringify(
+      {
+        name: `tablecast-${process.env.TABLECAST_RESOURCE_NAME}-seed`,
+        ...Object.fromEntries(
+          ["compatibility_date", "compatibility_flags", "vars", "d1_databases", "r2_buckets"].map(
+            (key) => [key, generated[key]],
+          ),
+        ),
+      },
+      null,
+      2,
+    ) + "\n",
   );
   const platform = await getPlatformProxy<TablecastEnv>({
     configPath: seedConfig,
     envFiles: [".dev.vars"],
-    persist: { path: join(runtime.state, "v3") },
+    persist: { path: join(state, "v3") },
     remoteBindings: false,
   });
   try {
     const env = platform.env;
-    if (env.TABLECAST_ENV !== "development" || env.TABLECAST_PUBLIC_ORIGIN !== runtime.origin)
+    if (env.TABLECAST_ENV !== "development" || env.TABLECAST_PUBLIC_ORIGIN !== origin)
       throw new Error("seed対象がこのworktreeの開発環境ではありません。");
     const counts = await seedDemoDatabase(env, credentials);
     if (
@@ -135,7 +123,7 @@ async function seed() {
           profile,
           counts,
           credentialsFile: join(tablecastLocal, "demo.json"),
-          origin: runtime.origin,
+          origin,
         },
         null,
         2,

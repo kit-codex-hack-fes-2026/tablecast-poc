@@ -8,22 +8,21 @@ import {
   orderSchema,
 } from "../apps/api/src/schema";
 import { demoCredentials, sampleLine } from "./tablecast-seed";
-import { readRuntime } from "./tablecast-runtime";
+import { assertPrepared } from "./tablecast-runtime";
 
 // 焦点のT01とブラウザー試験用T12には触れず、背景のT02だけで注文する。
 async function main() {
   if (process.argv.length > 2)
     throw new Error("demo:playは引数なしで、このworktreeの背景卓を一段階だけ進めます。");
-  const runtime = await readRuntime();
+  await assertPrepared();
   const credentials = await demoCredentials();
-  const origin = new URL(runtime.origin);
+  const origin = new URL(z.url().parse(process.env.TABLECAST_PUBLIC_ORIGIN));
   async function request(path: string, cookie = "", body?: unknown, method = "POST") {
-    const response = await fetch(`http://127.0.0.1:${runtime.ports.web}${path}`, {
+    const response = await fetch(new URL(path, origin), {
       method: body === undefined ? "GET" : method,
       headers: {
         "Content-Type": "application/json",
         Origin: origin.origin,
-        Host: origin.host,
         Cookie: cookie,
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),

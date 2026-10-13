@@ -4,7 +4,7 @@ Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider
 
 ## ローカル
 
-`bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。URL・ポートは `.local/runtime.json`、メール一覧はその `ports.mailpit` の `http://127.0.0.1:<port>`。既存データは保持する。
+`bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。ホスト開発は `http://oauth.<worktree名>.tablecast-poc.localhost` と `http://mailpit.<worktree名>.tablecast-poc.localhost` を使い、APIも同じ名前へ接続する。APIは開発環境に限り `.localhost` の模擬OAuthを許可する。Dockerの実ポートはPortless aliasへ渡し、runtimeへ保存しない。名前の変更時はdevと旧Composeを停止し、`bun run demo:reset` でこのworktreeの開発データを作り直す。
 
 Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedではパスワードと手動メールを維持し、既知の旧デモメールだけを移行する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
 

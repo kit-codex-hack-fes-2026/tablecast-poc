@@ -65,7 +65,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 1. [setup](setup.md)に従って対象worktreeの開発サーバーを起動する（ホストは`bun run dev`、Dev Containerは`bun run dev:container`）。別ターミナルを同じworktreeで開き、起動ログのURL、または次の読取でMCP URLを確認する。
 
    ```sh
-   bun --no-env-file -e 'import { readRuntime } from "./scripts/tablecast-runtime"; console.log(`${(await readRuntime()).origin}/mcp`)'
+   bun --env-file=.local/.env -e 'console.log(new URL("/mcp", process.env.TABLECAST_PUBLIC_ORIGIN).href)'
    ```
 
 2. Git管理外の`.codex/config.toml`へ次のテーブルだけを追加し、`<local-origin>`を確認したURLのoriginへ置き換える。既存のGrafana・Storybook・本番MCP設定は保持する。Dev Container利用時は[接続元ホストの選択](setup.md#mcp設定の配置と確認)も確認する。
@@ -91,7 +91,7 @@ pluginを導入済みなら同じMCPを手動で重複登録しない。ChatGPT 
 pluginの同梱MCP・skill・インストール時のOAuthを確認するときだけ、開発サーバー起動後に生成する。
 
 ```sh
-bun --no-env-file scripts/tablecast-plugin.ts
+bun run plugin:prepare
 codex plugin marketplace add "$PWD/.local/tablecast-plugin-marketplace"
 codex plugin add tablecast@tablecast
 ```

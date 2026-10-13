@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { readRuntime, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
+import { parseEnv } from "node:util";
+import { assertPrepared, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
 
 const syncOnly = process.argv.includes("--skills-only");
 await cp(
@@ -10,7 +11,12 @@ await cp(
 );
 const published = syncOnly ? undefined : process.argv[2];
 if (syncOnly) process.exit(0);
-const origin = published ? new URL(published).origin : (await readRuntime()).origin;
+if (!published) await assertPrepared();
+const origin = new URL(
+  published ??
+    parseEnv(await readFile(join(tablecastLocal, ".env"), "utf8")).TABLECAST_PUBLIC_ORIGIN ??
+    "",
+).origin;
 if (
   published &&
   (new URL(origin).protocol !== "https:" || /(?:localhost|\.local)$/.test(new URL(origin).hostname))

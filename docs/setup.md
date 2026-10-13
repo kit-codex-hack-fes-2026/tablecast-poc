@@ -17,11 +17,11 @@ Gitがなければ `brew install git`、GitHub CLIを使う場合は `brew insta
 git clone https://github.com/kit-codex-hack-fes-2026/tablecast-poc.git
 cd tablecast-poc
 git fetch origin
-git worktree add -b codex/my-change ../tablecast-my-change origin/staging
+git worktree add -b codex/123-my-change ../tablecast-my-change origin/staging
 cd ../tablecast-my-change
 ```
 
-`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/my-change` で開く。以降は作業先のworktreeルートで実行する。
+`123` は着手するIssue番号、`my-change` は作業内容に置き換える。既存branchは `git worktree add ../tablecast-my-change codex/123-my-change` で開く。以降は作業先のworktreeルートで実行する。
 
 > [!IMPORTANT]
 > `node_modules`、`.local` はworktree間でコピーしない。Git標準のworktree作成では環境ファイルもコピーされない。Codexの `.worktreeinclude` は `.env.local` のみを対象にする。
@@ -86,14 +86,20 @@ bun --version
 node --version
 docker info
 bun run setup
+# 初回だけ共有proxyを起動する。必要に応じて管理者権限の認証が求められる。
+bunx --no-install portless proxy start --no-tls --port 80
 bun run dev
 ```
 
 [mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
-`dev` は `turbo run dev --filter=@tablecast/web` を実行する。`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthとproxyも起動する。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
+`dev` はPortlessから `turbo run dev --filter=@tablecast/web` を実行する。Webの名前衝突を準備前に拒否し、`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。空きポートとrouteの登録はPortlessへ任せる。ローカルmigrationは `CI=1` で確認入力を省き、Turboから実行できる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
-起動ログの `http://<worktree>.<repo>.localhost:<port>` を開く。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+`dev:prepare` は認証secretを維持して通常のenvとSDK用API設定を生成する。rootのPortlessから渡された実Webポートを `.local/.env` に保存し、起動中の初期化・resetを拒否する。Cloudflare設定はenvから直接読み、ローカル用の `TABLECAST_CONFIG` JSONや `runtime.json` は作らない。Mailpit・OTLPはPortless aliasへ接続する。seedの引数はNode標準の `parseArgs` で読む。
+
+起動ログの `http://web.<worktree名>.tablecast-poc.localhost` を開く。branch末尾を正規化して先頭47文字へ切り取り、branchがない場合は短いcommit SHAを使う。Issue番号やホスト名の入力は不要。ポート・DB・Cookieホスト名はworktreeごとに分離する。起動中はターミナルを開いたままにする。
+
+Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` や `portless clean` を実行しない。80番が使用中の場合は `bunx --no-install portless doctor` と待受プロセスを確認する。初回のproxy起動はTurboの外で行い、非対話のdevタスクから管理者認証を要求しない。名前を変更する場合は自worktreeのWeb・Composeを停止し、`demo:reset`で設定と開発データを作り直す。
 
 ## 2C. agent開発環境
 
@@ -175,13 +181,13 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
-| ファイル                      | 用途                                          |
-| ----------------------------- | --------------------------------------------- |
-| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない |
-| `.local/.env`                 | Bun/Composeが読む生成済みポート・パス         |
-| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵            |
-| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない   |
-| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物           |
+| ファイル                      | 用途                                             |
+| ----------------------------- | ------------------------------------------------ |
+| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない    |
+| `.local/.env`                 | Bun/Composeが読む名前・origin・パス・実Webポート |
+| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵               |
+| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない      |
+| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物              |
 
 旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。開発用の外部キーは `TABLECAST_MODEL_API_KEY` だけにまとめる。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
 
@@ -192,26 +198,26 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 ## 5. 日常の操作
 
-| コマンド                                | 用途                                                      |
-| --------------------------------------- | --------------------------------------------------------- |
-| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                       |
-| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                       |
-| `bun run services:status`               | ホスト開発のComposeサービスを確認する                     |
-| `bun run services:down`                 | ホスト開発のcontainer・networkを片付ける。volumeは保持    |
-| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                 |
-| `bun run check`                         | format・lint・typecheck・無課金テスト                     |
-| `bun run build`                         | 配備用Workersのbuild                                      |
-| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行   |
-| `bun run demo:play`                     | 背景卓を一段階進める                                      |
-| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否        |
-| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する |
+| コマンド                                | 用途                                                          |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                           |
+| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                           |
+| `bun run services:status`               | ホスト開発のComposeサービスを確認する                         |
+| `bun run services:down`                 | ホスト開発のalias・container・networkを片付ける。volumeは保持 |
+| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                     |
+| `bun run check`                         | format・lint・typecheck・無課金テスト                         |
+| `bun run build`                         | 配備用Workersのbuild                                          |
+| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行       |
+| `bun run demo:play`                     | 背景卓を一段階進める                                          |
+| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否            |
+| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
 
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 
-Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。既存のproject名・volume名は変更しない。
+Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。Dev Containerのproject名・volume名は変更しない。
 
 GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
 
@@ -273,8 +279,8 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 `cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
 
-API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。生成した公開入力を`TABLECAST_CONFIG`で両workspaceへ渡し、cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
+API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。公開配備の入力は`TABLECAST_CONFIG`で両workspaceへ渡し、ローカルは通常のenvから直接読む。cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
 
-初回移行は自worktreeのWeb・APIを停止して`bun run dev:prepare`を実行する。旧local D1の全データ・schema・適用済みmigrationを公式SDKのD1 batchでcf用UUIDv4へ移し、件数・外部キーを照合する。旧stateは削除しない。旧・新DBが両方あり移行記録がない場合は自動上書きせず停止する。R2と業務DOの保存先は既存`.local/state`を維持し、Webの内部stateだけその配下の`tablecast-web`へ分離する。
+旧hash名からの切替やbranch名の変更時は、自worktreeのdevをCtrl+Cで停止し、旧設定のまま`bun run services:down`を実行する。その後`bun run demo:reset`でこのworktreeのD1・R2・DOを削除・再seedする。認証secretとデモ資格情報は保持する。旧資源名・旧D1形式の自動移行は行わず、通常起動で名前の変更を検知したらresetを案内して停止する。保存先は常に`.local/state`とし、名前別ディレクトリや移行履歴を作らない。
 
 beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了しないため、`cf:local`はcfの公開`main()`完了後にstdout/stderrをflushして終了する互換入口である。migration・試験だけが使い、遠隔操作は通常のcf CLIを使う。上流で終了処理が修正されたらこの入口を削除する。

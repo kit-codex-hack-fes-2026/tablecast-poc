@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { createServer } from "node:net";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { localReleaseSha, worktreeHost, worktreeId } from "./tablecast-runtime";
+import { z } from "zod";
+import { localReleaseSha } from "./tablecast-runtime";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -90,7 +92,6 @@ describe("開発資源の所有境界", () => {
       ] as const) {
         await mkdir(join(root, ".devcontainer"));
         await execute("sh", [".devcontainer/tablecast-init.sh", root]);
-        expect(worktreeHost(root, join(repository, ".git"))).toBe(`${name}.tablecast-poc`);
         const settings = parseEnv(await readFile(join(root, ".devcontainer/.env"), "utf8"));
         expect(settings.TABLECAST_WORKTREE_NAME).toBe(name);
         expect(settings.TABLECAST_REPO_NAME).toBe("tablecast-poc");
@@ -112,84 +113,175 @@ describe("開発資源の所有境界", () => {
       await rm(parent, { recursive: true, force: true });
     }
   }, 15_000);
-  it("worktreeとrepoを別のDNSラベルにして不正な名前を拒否する", () => {
-    expect(worktreeHost("/workspace/tablecast-poc")).toBe("main.tablecast-poc");
-    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-poc/.git")).toBe(
-      "voice-ui.tablecast-poc",
-    );
-    expect(worktreeHost("/workspace/Voice_UI", "/workspace/tablecast-other/.git")).toBe(
-      "voice-ui.tablecast-other",
-    );
-    expect(() => worktreeHost("/workspace/日本語")).toThrow("worktree名");
-    expect(() => worktreeHost(`/workspace/${"a".repeat(64)}`)).toThrow("worktree名");
+  it("branch末尾とdetachedのSHAを使い長い名前を切り取る", async () => {
+    const root = await mkdtemp(join(tmpdir(), "tablecast-name-"));
+    const execute = promisify(execFile);
+    const git = (...args: string[]) => execute("git", args, { cwd: root });
+    try {
+      await git("init", "--quiet");
+      await git(
+        "-c",
+        "user.name=TableCast Test",
+        "-c",
+        "user.email=tablecast@example.invalid",
+        "-c",
+        "commit.gpgSign=false",
+        "-c",
+        "core.hooksPath=/dev/null",
+        "commit",
+        "--allow-empty",
+        "--quiet",
+        "-m",
+        "tablecast fixture",
+      );
+      const name = async () =>
+        (
+          await execute(
+            "sh",
+            [
+              join(process.cwd(), "scripts/tablecast-env.sh"),
+              'printf "%s" "$TABLECAST_WORKTREE_NAME"',
+            ],
+            { cwd: root },
+          )
+        ).stdout;
+      await git("checkout", "-b", "codex/Voice_UI");
+      expect(await name()).toBe("voice-ui");
+      expect(
+        (
+          await execute(
+            "sh",
+            [
+              join(process.cwd(), "scripts/tablecast-env.sh"),
+              'printf "%s" "$TABLECAST_WORKTREE_NAME"',
+            ],
+            {
+              cwd: root,
+              env: { ...process.env, TABLECAST_CONTAINER: "1", TABLECAST_WORKTREE_NAME: "073d" },
+            },
+          )
+        ).stdout,
+      ).toBe("073d");
+      await git("checkout", "-b", `codex/${"a".repeat(46)}-${"b".repeat(30)}`);
+      expect(await name()).toBe("a".repeat(46));
+      await git("checkout", "--detach");
+      expect(await name()).toBe((await git("rev-parse", "--short=8", "HEAD")).stdout.trim());
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
-  it("同じブランチでもworktree実パスが違う場合は識別子が分かれる", () => {
-    expect(worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git")).not.toBe(
-      worktreeId("/tmp/tablecast-two", "/tmp/tablecast/.git"),
-    );
-    expect(worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git")).toBe(
-      worktreeId("/tmp/tablecast-one", "/tmp/tablecast/.git"),
-    );
-  });
-  it.each([
-    { label: "ホスト", container: "0", origin: "http://main.tablecast.localhost:3000" },
-    { label: "コンテナのlocalhost", container: "1", origin: "http://localhost:3000" },
-    {
-      label: "コンテナの専用ドメイン",
-      container: "1",
-      origin: "http://main.tablecast.container.localhost:3000",
-    },
-    { label: "OrbStack", container: "1", origin: "https://main.tablecast.orb.local" },
-  ])("$labelで自分のoriginを許可し不整合なreset要求を拒否する", async ({ container, origin }) => {
-    vi.stubEnv("TABLECAST_CONTAINER", container);
-    vi.stubEnv("TABLECAST_WORKTREE_NAME", "main");
-    vi.stubEnv("TABLECAST_REPO_NAME", "tablecast");
-    // コンテナ判定はモジュール読込時に確定するため、指定した環境で読み直す。
-    vi.resetModules();
-    const { assertLocalRuntime } = await import("./tablecast-runtime");
-    const runtime = {
-      id: "0123456789",
-      root: "/tmp/tablecast",
-      origin,
-      ports: {
-        proxy: 3000,
-        web: 3001,
-        inspector: 3002,
-        signaling: 3003,
-        rtcTcp: 3004,
-        rtcUdp: 3005,
-        agent: 3006,
-        storybook: 3007,
-      },
-      state: "/tmp/tablecast/.local/state",
-      apiConfig: "/tmp/tablecast/.local/api.wrangler.json",
+  it("envだけで資源を識別し名前の変更と稼働中の初期化を拒否する", async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), "tablecast-runtime-")));
+    const execute = promisify(execFile);
+    const server = createServer();
+    const env = {
+      PATH: process.env.PATH,
+      HOME: root,
+      PORTLESS_STATE_DIR: join(root, ".portless"),
+      PORTLESS_PORT: "80",
+      PORTLESS_HTTPS: "0",
     };
-    expect(() => assertLocalRuntime(runtime, runtime.root)).not.toThrow();
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, origin: "http://tablecast-other.localhost:3000" },
-        runtime.root,
-      ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime({ ...runtime, origin: "https://tablecast.example.com" }, runtime.root),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime({ ...runtime, state: "/tmp/tablecast-other/.local/state" }, runtime.root),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-    expect(() =>
-      assertLocalRuntime(
-        { ...runtime, ports: { ...runtime.ports, signaling: 3001 } },
-        runtime.root,
-      ),
-    ).toThrow("別worktree・非ローカル・不整合の設定を操作できません。");
-  });
-});
-
-it("同名repoのCodex worktreeは親ディレクトリのIDで開発ドメインを分離する", () => {
-  const common = "/workspace/tablecast-poc/.git";
-  expect(worktreeHost("/codex/worktrees/29f4/tablecast-poc", common)).toBe("29f4.tablecast-poc");
-  expect(worktreeHost("/codex/worktrees/3fad/tablecast-poc", common)).toBe("3fad.tablecast-poc");
+    const run = (args = "", overrides = {}) =>
+      execute(
+        "sh",
+        [
+          "scripts/tablecast-env.sh",
+          `NODE_ENV=development bun scripts/tablecast-runtime.ts ${args}`,
+        ],
+        { cwd: root, env: { ...env, ...overrides } },
+      );
+    try {
+      await execute("git", ["init", "--quiet"], { cwd: root });
+      await execute(
+        "git",
+        [
+          "-c",
+          "user.name=TableCast Test",
+          "-c",
+          "user.email=tablecast@example.invalid",
+          "-c",
+          "commit.gpgSign=false",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "commit",
+          "--allow-empty",
+          "--quiet",
+          "-m",
+          "tablecast fixture",
+        ],
+        { cwd: root },
+      );
+      await execute("git", ["checkout", "-b", "codex/voice-ui"], { cwd: root });
+      for (const path of ["scripts", "apps/api", "apps/web", ".local/state"])
+        await mkdir(join(root, path), { recursive: true });
+      await symlink(join(process.cwd(), "node_modules"), join(root, "node_modules"), "dir");
+      for (const path of [
+        "scripts/tablecast-runtime.ts",
+        "scripts/tablecast-env.sh",
+        "scripts/tablecast-deploy-config.ts",
+        "apps/api/cloudflare.config.ts",
+      ])
+        await cp(join(process.cwd(), path), join(root, path));
+      await writeFile(join(root, ".local/state/tablecast-keep"), "tablecast saved data");
+      await writeFile(
+        join(root, ".local/.dev.vars"),
+        "TABLECAST_AUTH_SECRET=tablecast-owned-auth\n",
+      );
+      await run();
+      const api = z
+        .object({
+          main: z.string(),
+          name: z.string(),
+          vars: z.object({ TABLECAST_PUBLIC_ORIGIN: z.string() }),
+        })
+        .parse(JSON.parse(await readFile(join(root, ".local/api.wrangler.json"), "utf8")));
+      expect(api.name).toBe("tablecast-voice-ui-api");
+      expect(api.main).toBe(join(root, "apps/api/src/worker.ts"));
+      expect(api.vars.TABLECAST_PUBLIC_ORIGIN).toBe("http://web.voice-ui.tablecast-poc.localhost");
+      const settings = parseEnv(await readFile(join(root, ".local/.env"), "utf8"));
+      expect(settings.TABLECAST_CONFIG).toBeUndefined();
+      expect(settings.TABLECAST_STATE_PATH).toBe(join(root, ".local/state"));
+      expect(settings.TABLECAST_WEB_PORT).toBe("0");
+      await expect(readFile(join(root, ".local/runtime.json"))).rejects.toThrow("ENOENT");
+      expect(
+        parseEnv(await readFile(join(root, ".local/.dev.vars"), "utf8")).TABLECAST_AUTH_SECRET,
+      ).toBe("tablecast-owned-auth");
+      await execute("git", ["checkout", "-b", "codex/other"], { cwd: root });
+      await expect(run()).rejects.toThrow("開発資源の名前が変わりました");
+      expect(await readFile(join(root, ".local/state/tablecast-keep"), "utf8")).toBe(
+        "tablecast saved data",
+      );
+      await run("--reset");
+      await expect(
+        run("--reset", {
+          TABLECAST_CONTAINER: "1",
+          TABLECAST_WORKTREE_NAME: "other",
+          TABLECAST_REPO_NAME: "tablecast-poc",
+          TABLECAST_CONTAINER_ORIGIN: "https://tablecast.example.com",
+        }),
+      ).rejects.toThrow("開発originが異なります");
+      await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("待受がありません。");
+      const settingsPath = join(root, ".local/.env");
+      await writeFile(
+        settingsPath,
+        (await readFile(settingsPath, "utf8")).replace(
+          'TABLECAST_WEB_PORT="0"',
+          `TABLECAST_WEB_PORT="${address.port}"`,
+        ),
+      );
+      await expect(run("--reset")).rejects.toThrow(
+        "開発プロセスをCtrl+Cで停止してから初期化してください",
+      );
+      expect(await readFile(join(root, ".local/state/tablecast-keep"), "utf8")).toBe(
+        "tablecast saved data",
+      );
+    } finally {
+      server.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  }, 15_000);
 });
 
 it("Bunの開発envからAPI設定に採用する項目だけを選ぶ", async () => {

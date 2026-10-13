@@ -10,7 +10,6 @@
     "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env exec 'cf dev --mode development --port \"$TABLECAST_API_PORT\"'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cf:typegen": "cf workers types --mode development --include-runtime=false",

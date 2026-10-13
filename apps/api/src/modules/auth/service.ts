@@ -46,7 +46,8 @@ export function createAuth(
   if (emulator)
     ensure(
       (env.TABLECAST_ENV === "development" &&
-        ["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname)) ||
+        (["127.0.0.1", "localhost", "tablecast-emulate"].includes(new URL(emulator).hostname) ||
+          new URL(emulator).hostname.endsWith(".localhost"))) ||
         (isHostedEmulator(env) &&
           Boolean(env.TABLECAST_EMULATE) &&
           emulator === "http://tablecast-emulate"),
