@@ -139,30 +139,34 @@ it.each([
   await page.getByRole("button", { name: labels.games_title, exact: true }).click();
   const response = Promise.withResolvers<Response>();
   delayed = response.promise;
-  await page.getByRole("button", { name: labels.games_start, exact: true }).click();
-  await expect.poll(() => starts).toBe(2);
-  await page.getByRole("button", { name: labels.games_return, exact: true }).click();
-  response.resolve(
-    Response.json({
-      id: "tablecast-delayed",
-      versionId: "tablecast-v1",
-      package: game,
-      parentOrigin: window.location.origin,
-      locale,
-      players: 2,
-      state: {},
-      revision: 0,
-    }),
-  );
-  await expect
-    .poll(() => ended)
-    .toEqual([
-      "/api/table/games/runs/tablecast-run/end",
-      "/api/table/games/runs/tablecast-delayed/end",
-    ]);
-  await page.getByRole("button", { name: labels.games_title, exact: true }).click();
-  await expect
-    .element(page.getByRole("button", { name: labels.games_start, exact: true }))
-    .toBeEnabled();
-  await expect.element(page.getByTitle(game.manifest.name[locale])).not.toBeInTheDocument();
+  const completed = Response.json({
+    id: "tablecast-delayed",
+    versionId: "tablecast-v1",
+    package: game,
+    parentOrigin: window.location.origin,
+    locale,
+    players: 2,
+    state: {},
+    revision: 0,
+  });
+  try {
+    await page.getByRole("button", { name: labels.games_start, exact: true }).click();
+    await expect.poll(() => starts).toBe(2);
+    await page.getByRole("button", { name: labels.games_return, exact: true }).click();
+    response.resolve(completed);
+    await expect
+      .poll(() => ended)
+      .toEqual([
+        "/api/table/games/runs/tablecast-run/end",
+        "/api/table/games/runs/tablecast-delayed/end",
+      ]);
+    await page.getByRole("button", { name: labels.games_title, exact: true }).click();
+    await expect
+      .element(page.getByRole("button", { name: labels.games_start, exact: true }))
+      .toBeEnabled();
+    await expect.element(page.getByTitle(game.manifest.name[locale])).not.toBeInTheDocument();
+  } finally {
+    response.resolve(completed);
+    await expect.poll(() => client.isMutating()).toBe(0);
+  }
 });
