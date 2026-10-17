@@ -4,6 +4,9 @@ inputs:
   turbo:
     description: 決定的な静的解析・ビルドのTurborepoキャッシュを復元する
     default: "false"
+  codegen:
+    description: Webの既定メッセージ構造でParaglideを生成する
+    default: "true"
 runs:
   using: composite
   steps:
@@ -34,4 +37,5 @@ runs:
         path: ~/.bun/install/cache
         key: ${{ steps.bun-cache.outputs.cache-primary-key }}
     - shell: bash
+      if: inputs.codegen == 'true'
       run: bun --no-env-file run codegen

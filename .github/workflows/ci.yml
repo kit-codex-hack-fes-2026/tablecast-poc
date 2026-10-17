@@ -122,6 +122,8 @@ jobs:
         id: plan
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.api != 'none'
+        with:
+          codegen: "false"
       - if: steps.plan.outputs.api != 'none'
         run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
 
@@ -173,6 +175,8 @@ jobs:
         id: plan
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.components != 'none'
+        with:
+          codegen: "false"
       - parallel:
           - if: steps.plan.outputs.components != 'none'
             uses: ./.github/actions/tablecast-browser

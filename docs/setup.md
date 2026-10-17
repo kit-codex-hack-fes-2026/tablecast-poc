@@ -95,7 +95,7 @@ bun run dev
 
 CIのNodeは`>=24.7.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.7.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
 
-CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
+CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。APIではWeb生成物を使わず、Componentは直前に専用形式を生成するため、この2jobでは共通setupのcodegenだけを省く。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
 
 PR初回投入用の固定JSONは`bunx --no-install turbo run seed:template`で生成し、`.local/tablecast-seed-template/seed.json`へ保存する。Turboはseedのscript・API schema・migration・共通名簿・デモ画像・依存設定を入力としてcacheを管理する。生成物には架空店舗・商品構成・スタッフ名簿だけを入れ、実DB・所有情報・認証account・パスワード・時刻・tokenを保存しない。buildで検証して`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、同じrunの既存Workers artifactへ同梱する。公開assetsやproduction成果物には含めず、seed専用の転送step・job・依存導入も増やさない。配備時も同梱JSONの`sourceHash`と`payloadHash`を検証する。手動検証は`bun --no-env-file run seed:template --verify`を使う。壊れたcacheはTurboのコマンドに`--force`を付けて一度再生成し、検証し直す。適用対象と再開時の境界は[初期データと再実行](deployment.md#初期データと再実行)を参照する。
 
