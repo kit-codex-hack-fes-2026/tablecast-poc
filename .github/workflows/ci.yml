@@ -122,13 +122,6 @@ jobs:
         id: plan
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.api != 'none'
-      # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        if: steps.plan.outputs.api != 'none'
-        with:
-          path: apps/api/node_modules/.vite/vitest/*/results.json
-          key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-${{ github.event.pull_request.head.sha || github.sha }}
-          restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-
       - if: steps.plan.outputs.api != 'none'
         run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
 
@@ -180,13 +173,6 @@ jobs:
         id: plan
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.components != 'none'
-      # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        if: steps.plan.outputs.components != 'none'
-        with:
-          path: apps/web/node_modules/.vite/vitest/*/results.json
-          key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-${{ github.event.pull_request.head.sha || github.sha }}
-          restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-
       - parallel:
           - if: steps.plan.outputs.components != 'none'
             uses: ./.github/actions/tablecast-browser
@@ -295,7 +281,8 @@ jobs:
 
   deploy-preview:
     name: PRプレビュー配備
-    needs: [static, build, images]
+    # PR専用資源は検証済み成果物から先行配備し、静的検査はマージgateに残す。
+    needs: [build, images]
     if: needs.build.outputs.build == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30

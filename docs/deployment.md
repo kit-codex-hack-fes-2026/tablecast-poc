@@ -18,7 +18,7 @@ Cloudflare accountは `dbbd52d7d690afceea41fe920ae19f91`。WebのService Binding
 
 ブラウザーはGPT-Liveへ直接WebRTC接続する。API Workerが標準Responses delegationとfunction実行をつなぎ、Mastra・Python Agent・音声Containerは配備しない。OpenAI session開始時のSDP交換と業務要求は既存の認証済みAPIを使う。生音声を既定保存しない。
 
-Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と配備を一か所で管理するため、GitHub Actionsから公式cfを呼ぶ。PRプレビューの製品配備は静的解析・Workers/イメージ成果物の準備後に開始し、本番・staging配備は全必須検査の成功後に行う。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
+Cloudflare GitHub連携の標準previewはContainerイメージを更新せず、DO付きWorkerのpreview URLも生成しない。PRごとの全資源作成・削除と配備を一か所で管理するため、GitHub Actionsから公式cfを呼ぶ。PRプレビューの製品配備はWorkers/イメージ成果物の準備後に開始する。静的検査・API・Browser・E2Eはマージ条件として維持し、本番・staging配備は全必須検査の成功後に行う。[Workers BuildsとContainers](https://developers.cloudflare.com/containers/guides/deploy/#deploy-with-workers-builds)
 
 ## 最初に登録するもの
 
@@ -62,7 +62,7 @@ Web applicationの設定を次と完全一致させる。
 1. format/lint/typecheck、単体・実Binding、Workers build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。PRの実行対象と全件へ戻す条件は[テスト戦略](testing.md#ciのジョブとキャッシュ)に従う。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。production以外は初回seedの固定JSONを既存のWorkers artifactへ同梱する。固定JSONはTurboで一度生成・検証し、壊れたcacheは一度だけ強制再生成してから検証し直す。buildジョブには配備secretを渡さない。Storybook・Emailの公開buildと配備は手動カタログworkflowが担当する。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。D1/R2が揃った通常配備では、同じ排他・呼出し内で所有確認した資源を再利用し、一覧と所有情報の4要求を重複取得しない。欠落時の作成・cleanup・resetは再確認する従来経路を維持し、Binding接続後のR2所有照合も残す。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. 製品の配備jobは自身の前提検査が成功してからartifactを取得する。PRでは静的検査・Workers build・Container検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。seedの固定JSONも形式・生成元・payloadのhashを検証し、不一致なら遠隔資源の変更前に停止する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
+4. 製品の配備jobは自身の前提検査が成功してからartifactを取得する。PRではWorkers build・Container検査を待ち、静的検査・API・Browser・E2Eはマージ条件で確認する。本番・staging配備は全必須検査の成功を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。seedの固定JSONも形式・生成元・payloadのhashを検証し、不一致なら遠隔資源の変更前に停止する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。cfはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。既存のDO namespace ID・クラス名・SQLite storageを前後で検査し、過去のDO migrationタグを再適用しない。未知のクラスを検出したら停止して照合する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行し、対象SHAと一致した場合だけ配備成功とする。製品の配備job自身がPRコメントとActions summaryへ通知し、失敗時も処理結果と取得できた現在の配備SHAを分けて表示する。手動カタログの生成や終了は待たない。
 
