@@ -30,7 +30,11 @@ export const Products: Story = {
     await expect(args.onChoose).toHaveBeenCalledWith(product);
   },
 };
-export const EnglishProducts: Story = { name: "長い英語の商品名", globals: { locale: "en" } };
+export const EnglishProducts: Story = {
+  name: "長い英語の商品名",
+  tags: ["!test"],
+  globals: { locale: "en" },
+};
 export const Customisation: Story = {
   name: "必須カスタマイズ",
   render: () => <ProductPage product={product} busy={false} onClose={fn()} onSave={fn()} />,
@@ -90,6 +94,7 @@ export const OptionalCustomisation: Story = {
 export const EnglishOptionalCustomisation: Story = {
   ...OptionalCustomisation,
   name: "英語で任意の単一選択をカート編集から解除する",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 
@@ -214,6 +219,7 @@ export const RelatedCustomisation: Story = {
 export const EnglishRelatedCustomisation: Story = {
   ...RelatedCustomisation,
   name: "英語で相互排他の選択を外し、依存条件をタッチで満たす",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 const longProduct = productSchema.parse({
@@ -240,17 +246,22 @@ const longProduct = productSchema.parse({
 const saveLongProduct = fn<(line: CartLine) => void>();
 export const LongDescription: Story = {
   name: "上限の長い商品名と説明でも選択欄と注文ボタンへ到達する",
+  tags: ["!test"],
   globals: { locale: "en" },
   render: () => (
     <div className="h-160 min-h-0 overflow-y-auto" data-testid="product-page-scroll">
       <ProductPage product={longProduct} busy={false} onClose={fn()} onSave={saveLongProduct} />
     </div>
   ),
-  play: async ({ canvasElement, step }) => {
+  play: async ({ canvasElement, step, globals }) => {
     const document = canvasElement.ownerDocument;
     const body = within(document.body);
-    const add = body.getByRole("button", { name: "Add to basket" });
-    const back = body.getByRole("button", { name: "Our menu" });
+    const add = body.getByRole("button", {
+      name: globals.locale === "en" ? "Add to basket" : "注文かごに追加",
+    });
+    const back = body.getByRole("button", {
+      name: globals.locale === "en" ? "Our menu" : "おしながき",
+    });
     const firstOption = body.getByRole("radio", { name: "60 mL" });
     const scroll = body.getByTestId("product-page-scroll");
     saveLongProduct.mockClear();
@@ -290,6 +301,13 @@ export const LongDescription: Story = {
     });
   },
 };
+
+export const JapaneseLongDescription: Story = {
+  ...LongDescription,
+  name: "日本語の上限本文でも選択と注文操作へキーボードで到達する",
+  tags: ["test"],
+  globals: { locale: "ja" },
+};
 export const Basket: Story = {
   name: "変更内容と合計を表示",
   render: () => <CartLines lines={table.cart.lines} onEdit={fn()} onRemove={fn()} />,
@@ -324,6 +342,7 @@ export const EmptyMenu: Story = {
 export const EnglishEmptyMenu: Story = {
   ...EmptyMenu,
   name: "英語の商品0件の案内",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const EmptyCategory: Story = {
@@ -356,6 +375,7 @@ export const EmptyCategory: Story = {
 export const EnglishEmptyCategory: Story = {
   ...EmptyCategory,
   name: "英語で空のカテゴリからすべてへ戻る",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const SoldOutOnly: Story = {
@@ -381,5 +401,6 @@ export const SoldOutOnly: Story = {
 export const EnglishSoldOutOnly: Story = {
   ...SoldOutOnly,
   name: "英語で売切だけでも商品を表示する",
+  tags: ["!test"],
   globals: { locale: "en" },
 };

@@ -67,7 +67,7 @@ it("卓にフォーカス中に通知接続が変わってもフォーカスと�
   });
   const screen = await render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initialLocale="ja">
+      <LocaleProvider initialLocale="ja" persist={false}>
         <RouterProvider router={router} />
       </LocaleProvider>
     </QueryClientProvider>,

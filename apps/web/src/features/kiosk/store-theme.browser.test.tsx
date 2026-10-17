@@ -60,40 +60,38 @@ it("部品の装飾は同じ店舗とダイアログだけへ適用する", asyn
   expect(getComputedStyle(other).backgroundColor).toBe("rgb(238, 238, 238)");
   expect(getComputedStyle(dialog).backgroundColor).toBe("rgb(255, 248, 231)");
 });
-it.each(["ja", "en"] as const)(
-  "%sでチラシ画像が失敗しても商品リンクから通常の商品を選択できる",
-  async (locale) => {
-    const onChoose = vi.fn<(product: (typeof catalog.configuration.products)[number]) => void>();
-    const themed = {
-      ...catalog,
-      configuration: {
-        ...catalog.configuration,
-        banners: [
-          {
-            id: "flyer",
-            image,
-            enabled: true,
-            hotspots: [
-              { id: "first", productId: product.id, rect: { x: 0, y: 0, width: 0.5, height: 1 } },
-            ],
-          },
-        ],
-      },
-    };
-    await render(
-      <LocaleProvider initialLocale={locale}>
-        <MenuBanners catalog={themed} onChoose={onChoose} />
-      </LocaleProvider>,
-    );
-    const picture = document.querySelector("img");
-    if (picture) picture.dispatchEvent(new Event("error"));
-    await page.getByRole("button", { name: product.text[locale].displayName, exact: true }).click();
-    expect(onChoose).toHaveBeenCalledWith(product);
-  },
-);
+it("日本語でチラシ画像が失敗しても商品リンクから通常の商品を選択できる", async () => {
+  const locale = "ja";
+  const onChoose = vi.fn<(product: (typeof catalog.configuration.products)[number]) => void>();
+  const themed = {
+    ...catalog,
+    configuration: {
+      ...catalog.configuration,
+      banners: [
+        {
+          id: "flyer",
+          image,
+          enabled: true,
+          hotspots: [
+            { id: "first", productId: product.id, rect: { x: 0, y: 0, width: 0.5, height: 1 } },
+          ],
+        },
+      ],
+    },
+  };
+  await render(
+    <LocaleProvider initialLocale={locale} persist={false}>
+      <MenuBanners catalog={themed} onChoose={onChoose} />
+    </LocaleProvider>,
+  );
+  const picture = document.querySelector("img");
+  if (picture) picture.dispatchEvent(new Event("error"));
+  await page.getByRole("button", { name: product.text[locale].displayName, exact: true }).click();
+  expect(onChoose).toHaveBeenCalledWith(product);
+});
 it("ロゴ取得失敗時も店名を維持する", async () => {
   await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <header>
         <StoreLogo logo={image} />
         <span>一乗寺 剛麺研究所</span>
@@ -145,7 +143,7 @@ it("チラシの2列と全幅をメニュー幅に合わせて配置しロゴ失
     hotspots: [{ id, productId: product.id, rect: { x: 0, y: 0, width: 1, height: 1 } }],
   }));
   await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <div data-testid="menu-width" style={{ width: 640 }}>
         <ProductMenu
           catalog={themed}

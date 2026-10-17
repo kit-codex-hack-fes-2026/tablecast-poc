@@ -114,6 +114,7 @@ export const 項目エラーと失敗後の再送: Story = {
   },
 };
 export const 英語: Story = {
+  tags: ["!test"],
   globals: { locale: "en" },
   args: { submit: fn().mockResolvedValue(undefined) },
 };

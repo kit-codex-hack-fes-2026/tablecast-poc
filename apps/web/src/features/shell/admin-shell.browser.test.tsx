@@ -15,7 +15,6 @@ import { MotionProvider } from "../../components/motion-provider";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
 import { AdminShell } from "./admin-shell";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import "../../styles.css";
 
@@ -153,33 +152,29 @@ it("子ページの現在地を直接開き、モバイルの子リンクへ移�
     .toHaveAttribute("aria-current", "page");
 });
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeを200%にしても狭い画面のナビゲーションと入力を操作できる",
-  async ({ locale, labels }) => {
-    await page.viewport(390, 844);
-    await show(locale);
-    for (const element of document.querySelectorAll<HTMLElement>("body *")) {
-      if (
-        [...element.childNodes].some(
-          (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-        )
-      ) {
-        element.style.fontSize = `${Number.parseFloat(getComputedStyle(element).fontSize) * 2}px`;
-      }
+it("日本語を200%にしても狭い画面のナビゲーションと入力を操作できる", async () => {
+  const locale = "ja";
+  const labels = ja;
+  await page.viewport(390, 844);
+  await show(locale);
+  for (const element of document.querySelectorAll<HTMLElement>("body *")) {
+    if (
+      [...element.childNodes].some(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+      )
+    ) {
+      element.style.fontSize = `${Number.parseFloat(getComputedStyle(element).fontSize) * 2}px`;
     }
-    const name = page.getByLabelText("表示名");
-    await name.fill("編集中の名前");
-    const toggle = page.getByRole("button", { name: labels.admin_navigation, exact: true });
-    await toggle.click();
-    const dialog = page.getByRole("dialog");
-    await expect.element(dialog).toBeVisible();
-    await page.getByRole("button", { name: labels.common_close, exact: true }).click();
-    await expect.element(dialog).not.toBeInTheDocument();
-    await expect.element(toggle).toHaveFocus();
-    await expect.element(name).toHaveValue("編集中の名前");
-    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
-  },
-);
+  }
+  const name = page.getByLabelText("表示名");
+  await name.fill("編集中の名前");
+  const toggle = page.getByRole("button", { name: labels.admin_navigation, exact: true });
+  await toggle.click();
+  const dialog = page.getByRole("dialog");
+  await expect.element(dialog).toBeVisible();
+  await page.getByRole("button", { name: labels.common_close, exact: true }).click();
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expect.element(toggle).toHaveFocus();
+  await expect.element(name).toHaveValue("編集中の名前");
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+});

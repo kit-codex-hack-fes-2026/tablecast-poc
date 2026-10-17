@@ -16,7 +16,7 @@ import type { authClient } from "../../lib/auth-client";
 import { storesOptions } from "../store/store-query";
 import { type loadMcpSessions } from "./account-query";
 import { McpSessions } from "./mcp-sessions";
-import en from "../../../messages/en.json";
+import ja from "../../../messages/ja.json";
 import "../../styles.css";
 
 let client: QueryClient;
@@ -54,7 +54,7 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
     },
   };
   client.setQueryData(sessionOptions.queryKey, login);
-  client.setQueryData(storesOptions.queryKey, { stores: [], locale: "en" });
+  client.setQueryData(storesOptions.queryKey, { stores: [], locale: "ja" });
   let data: Awaited<ReturnType<typeof loadMcpSessions>> = {
     sessions: [
       {
@@ -105,7 +105,7 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
   await router.load();
   await render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initialLocale="en" persist={false}>
+      <LocaleProvider initialLocale="ja" persist={false}>
         <MotionProvider>
           <RouterProvider router={router} />
         </MotionProvider>
@@ -115,23 +115,23 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
   const connection = page.getByRole("row").filter({ hasText: "TableCast browser acceptance" });
   await expect.element(connection).toHaveTextContent("tablecast:read");
   await expect.element(connection).toHaveTextContent("tablecast:write");
-  await expect.element(connection).toHaveTextContent(en.mcp_active);
+  await expect.element(connection).toHaveTextContent(ja.mcp_active);
   await expect
-    .element(page.getByRole("columnheader", { name: en.mcp_refresh_expires }))
+    .element(page.getByRole("columnheader", { name: ja.mcp_refresh_expires }))
     .toBeVisible();
   expect(connection.element().querySelectorAll("time")).toHaveLength(4);
-  await connection.getByRole("button", { name: en.mcp_revoke, exact: true }).click();
+  await connection.getByRole("button", { name: ja.mcp_revoke, exact: true }).click();
   expect(revocations).toBe(0);
   await page
     .getByRole("alertdialog")
-    .getByRole("button", { name: en.common_cancel, exact: true })
+    .getByRole("button", { name: ja.common_cancel, exact: true })
     .click();
   await expect.element(connection).toBeVisible();
   expect(revocations).toBe(0);
-  await connection.getByRole("button", { name: en.mcp_revoke, exact: true }).click();
+  await connection.getByRole("button", { name: ja.mcp_revoke, exact: true }).click();
   await page
     .getByRole("alertdialog")
-    .getByRole("button", { name: en.mcp_revoke, exact: true })
+    .getByRole("button", { name: ja.mcp_revoke, exact: true })
     .click();
   await expect.element(connection).not.toBeInTheDocument();
   expect(revocations).toBe(1);

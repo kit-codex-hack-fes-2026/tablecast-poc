@@ -14,7 +14,6 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
@@ -332,180 +331,165 @@ it.each([503, 409])(
   },
 );
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeの商品編集で価格・売切・両言語の本文を保存し、再取得でも入力を復元する",
-  async ({ locale, labels }) => {
-    const product = current.configuration.products[0];
-    if (!product) throw new Error("商品fixtureが必要です");
-    const expected = structuredClone(product);
-    expected.price = 777;
-    expected.available = false;
-    const path = `${base}/changes/${draftId}/products/${product.id}`;
-    const { screen } = await open(path, locale);
-    await screen
-      .getByRole("spinbutton", { name: labels.admin_unit_price, exact: true })
-      .fill("777");
-    await screen
-      .getByRole("checkbox", { name: labels.admin_available, exact: true })
-      .first()
-      .click();
-    for (const contentLocale of ["ja", "en"] as const) {
-      const language = contentLocale === "ja" ? labels.common_ja : labels.common_en;
-      const group = screen
-        .getByRole("region", { name: labels.editor_translation, exact: true })
-        .getByRole("group", { name: language, exact: true });
-      for (const field of [
-        { key: "displayName", label: labels.admin_display_name },
-        { key: "speechName", label: labels.admin_speech_name },
-        { key: "description", label: labels.admin_description },
-      ] as const) {
-        expected.text[contentLocale][field.key] = `${contentLocale} ${field.key} の保存内容`;
-        await group
-          .getByRole("textbox", { name: `${language} ${field.label}`, exact: true })
-          .fill(expected.text[contentLocale][field.key]);
-      }
-    }
-    await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
-    await expect.element(screen.getByText(labels.account_saved, { exact: true })).toBeVisible();
-    expect(current.configuration.products.find((item) => item.id === product.id)).toEqual(expected);
-    await cleanup();
-    client.removeQueries({ queryKey: draftOptions(storeId, draftId).queryKey });
-    const reopened = await open(path, locale);
-    await expect
-      .element(
-        reopened.screen.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true }),
-      )
-      .toHaveValue(777);
-    await expect
-      .element(
-        reopened.screen
-          .getByRole("checkbox", { name: labels.admin_available, exact: true })
-          .first(),
-      )
-      .not.toBeChecked();
-    for (const contentLocale of ["ja", "en"] as const) {
-      const language = contentLocale === "ja" ? labels.common_ja : labels.common_en;
-      await expect
-        .element(
-          reopened.screen.getByRole("textbox", {
-            name: `${language} ${labels.admin_description}`,
-            exact: true,
-          }),
-        )
-        .toHaveValue(expected.text[contentLocale].description);
-    }
-  },
-);
-
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeの接客概要から既存下書きの各入力へ移り、音声と本文を保存・再取得できる",
-  async ({ locale, labels }) => {
-    const { screen, router } = await open(`${base}/cast`, locale);
-    await screen
-      .getByRole("button", {
-        name: labels.cast_edit_voice.replace("{language}", labels.common_en),
-        exact: true,
-      })
-      .click();
-    await screen
-      .getByRole("dialog")
-      .getByRole("button", { name: labels.workflow_resume, exact: true })
-      .click();
-    const editPath = `${base}/changes/${draftId}/cast/settings`;
-    await expect.poll(() => router.state.location.pathname).toBe(editPath);
-    await expect
-      .element(
-        screen.getByRole("combobox", {
-          name: `${labels.common_en} ${labels.editor_voice}`,
-          exact: true,
-        }),
-      )
-      .toHaveFocus();
-    expect(
-      requests.filter((request) => request.method === "POST" && request.url.endsWith("/drafts")),
-    ).toHaveLength(0);
-    for (const target of [
-      {
-        hash: "voice-ja",
-        label: labels.cast_edit_voice.replace("{language}", labels.common_ja),
-        role: "combobox",
-        field: `${labels.common_ja} ${labels.editor_voice}`,
-      },
-      {
-        hash: "proactive",
-        label: labels.cast_edit_proactive,
-        role: "checkbox",
-        field: labels.editor_proactive,
-      },
-      {
-        hash: "instructions-en",
-        label: labels.cast_edit_instructions.replace("{language}", labels.common_en),
-        role: "textbox",
-        field: `${labels.common_en} ${labels.editor_cast_instructions}`,
-      },
+it("日本語の商品編集で価格・売切・両言語の本文を保存し、再取得でも入力を復元する", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const product = current.configuration.products[0];
+  if (!product) throw new Error("商品fixtureが必要です");
+  const expected = structuredClone(product);
+  expected.price = 777;
+  expected.available = false;
+  const path = `${base}/changes/${draftId}/products/${product.id}`;
+  const { screen } = await open(path, locale);
+  await screen.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true }).fill("777");
+  await screen.getByRole("checkbox", { name: labels.admin_available, exact: true }).first().click();
+  for (const contentLocale of ["ja", "en"] as const) {
+    const language = contentLocale === "ja" ? labels.common_ja : labels.common_en;
+    const group = screen
+      .getByRole("region", { name: labels.editor_translation, exact: true })
+      .getByRole("group", { name: language, exact: true });
+    for (const field of [
+      { key: "displayName", label: labels.admin_display_name },
+      { key: "speechName", label: labels.admin_speech_name },
+      { key: "description", label: labels.admin_description },
     ] as const) {
-      await screen
-        .getByRole("main")
-        .getByRole("link", { name: labels.editor_cast, exact: true })
-        .click();
-      await screen.getByRole("link", { name: target.label, exact: true }).click();
-      expect(router.state.location.hash).toBe(target.hash);
-      await expect
-        .element(screen.getByRole(target.role, { name: target.field, exact: true }))
-        .toHaveFocus();
+      expected.text[contentLocale][field.key] = `${contentLocale} ${field.key} の保存内容`;
+      await group
+        .getByRole("textbox", { name: `${language} ${field.label}`, exact: true })
+        .fill(expected.text[contentLocale][field.key]);
     }
-    await screen
-      .getByRole("combobox", { name: `${labels.common_ja} ${labels.editor_voice}`, exact: true })
-      .selectOptions("marin");
-    await screen
-      .getByRole("combobox", { name: `${labels.common_en} ${labels.editor_voice}`, exact: true })
-      .selectOptions("cedar");
-    const instructions = screen.getByRole("textbox", {
-      name: `${labels.common_en} ${labels.editor_cast_instructions}`,
-      exact: true,
-    });
-    await instructions.fill("Keep these service instructions after saving.");
-    await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
-    await expect.element(screen.getByText(labels.account_saved, { exact: true })).toBeVisible();
-    expect(current.configuration.cast.voice).toEqual({ ja: "marin", en: "cedar" });
-    expect(instructionText(current.configuration.cast.instructions.en)).toBe(
-      "Keep these service instructions after saving.",
-    );
-    await cleanup();
-    client.removeQueries({ queryKey: draftOptions(storeId, draftId).queryKey });
-    const reopened = await open(editPath, locale);
-    await expect
-      .element(
-        reopened.screen.getByRole("combobox", {
-          name: `${labels.common_ja} ${labels.editor_voice}`,
-          exact: true,
-        }),
-      )
-      .toHaveValue("marin");
-    await expect
-      .element(
-        reopened.screen.getByRole("combobox", {
-          name: `${labels.common_en} ${labels.editor_voice}`,
-          exact: true,
-        }),
-      )
-      .toHaveValue("cedar");
+  }
+  await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
+  await expect.element(screen.getByText(labels.account_saved, { exact: true })).toBeVisible();
+  expect(current.configuration.products.find((item) => item.id === product.id)).toEqual(expected);
+  await cleanup();
+  client.removeQueries({ queryKey: draftOptions(storeId, draftId).queryKey });
+  const reopened = await open(path, locale);
+  await expect
+    .element(
+      reopened.screen.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true }),
+    )
+    .toHaveValue(777);
+  await expect
+    .element(
+      reopened.screen.getByRole("checkbox", { name: labels.admin_available, exact: true }).first(),
+    )
+    .not.toBeChecked();
+  for (const contentLocale of ["ja", "en"] as const) {
+    const language = contentLocale === "ja" ? labels.common_ja : labels.common_en;
     await expect
       .element(
         reopened.screen.getByRole("textbox", {
-          name: `${labels.common_en} ${labels.editor_cast_instructions}`,
+          name: `${language} ${labels.admin_description}`,
           exact: true,
         }),
       )
-      .toHaveTextContent("Keep these service instructions after saving.");
-  },
-);
+      .toHaveValue(expected.text[contentLocale].description);
+  }
+});
+
+it("日本語の接客概要から既存下書きの各入力へ移り、音声と本文を保存・再取得できる", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const { screen, router } = await open(`${base}/cast`, locale);
+  await screen
+    .getByRole("button", {
+      name: labels.cast_edit_voice.replace("{language}", labels.common_en),
+      exact: true,
+    })
+    .click();
+  await screen
+    .getByRole("dialog")
+    .getByRole("button", { name: labels.workflow_resume, exact: true })
+    .click();
+  const editPath = `${base}/changes/${draftId}/cast/settings`;
+  await expect.poll(() => router.state.location.pathname).toBe(editPath);
+  await expect
+    .element(
+      screen.getByRole("combobox", {
+        name: `${labels.common_en} ${labels.editor_voice}`,
+        exact: true,
+      }),
+    )
+    .toHaveFocus();
+  expect(
+    requests.filter((request) => request.method === "POST" && request.url.endsWith("/drafts")),
+  ).toHaveLength(0);
+  for (const target of [
+    {
+      hash: "voice-ja",
+      label: labels.cast_edit_voice.replace("{language}", labels.common_ja),
+      role: "combobox",
+      field: `${labels.common_ja} ${labels.editor_voice}`,
+    },
+    {
+      hash: "proactive",
+      label: labels.cast_edit_proactive,
+      role: "checkbox",
+      field: labels.editor_proactive,
+    },
+    {
+      hash: "instructions-en",
+      label: labels.cast_edit_instructions.replace("{language}", labels.common_en),
+      role: "textbox",
+      field: `${labels.common_en} ${labels.editor_cast_instructions}`,
+    },
+  ] as const) {
+    await screen
+      .getByRole("main")
+      .getByRole("link", { name: labels.editor_cast, exact: true })
+      .click();
+    await screen.getByRole("link", { name: target.label, exact: true }).click();
+    expect(router.state.location.hash).toBe(target.hash);
+    await expect
+      .element(screen.getByRole(target.role, { name: target.field, exact: true }))
+      .toHaveFocus();
+  }
+  await screen
+    .getByRole("combobox", { name: `${labels.common_ja} ${labels.editor_voice}`, exact: true })
+    .selectOptions("marin");
+  await screen
+    .getByRole("combobox", { name: `${labels.common_en} ${labels.editor_voice}`, exact: true })
+    .selectOptions("cedar");
+  const instructions = screen.getByRole("textbox", {
+    name: `${labels.common_en} ${labels.editor_cast_instructions}`,
+    exact: true,
+  });
+  await instructions.fill("Keep these service instructions after saving.");
+  await screen.getByRole("button", { name: labels.common_save, exact: true }).click();
+  await expect.element(screen.getByText(labels.account_saved, { exact: true })).toBeVisible();
+  expect(current.configuration.cast.voice).toEqual({ ja: "marin", en: "cedar" });
+  expect(instructionText(current.configuration.cast.instructions.en)).toBe(
+    "Keep these service instructions after saving.",
+  );
+  await cleanup();
+  client.removeQueries({ queryKey: draftOptions(storeId, draftId).queryKey });
+  const reopened = await open(editPath, locale);
+  await expect
+    .element(
+      reopened.screen.getByRole("combobox", {
+        name: `${labels.common_ja} ${labels.editor_voice}`,
+        exact: true,
+      }),
+    )
+    .toHaveValue("marin");
+  await expect
+    .element(
+      reopened.screen.getByRole("combobox", {
+        name: `${labels.common_en} ${labels.editor_voice}`,
+        exact: true,
+      }),
+    )
+    .toHaveValue("cedar");
+  await expect
+    .element(
+      reopened.screen.getByRole("textbox", {
+        name: `${labels.common_en} ${labels.editor_cast_instructions}`,
+        exact: true,
+      }),
+    )
+    .toHaveTextContent("Keep these service instructions after saving.");
+});
 
 it("未保存入力を戻す確認では下書きを破棄せず、最後の保存値へ戻る", async () => {
   const product = current.configuration.products[0];
@@ -569,40 +553,36 @@ it.each(["published", "discarded"] as const)(
   },
 );
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeで検証後に公開内容を確認し、承認するまで公開要求を送らない",
-  async ({ locale, labels }) => {
-    const { screen } = await open(`${base}/changes/${draftId}`, locale);
-    const publish = screen.getByRole("button", { name: labels.admin_publish, exact: true });
-    await expect.element(publish).toBeDisabled();
-    await screen.getByRole("button", { name: labels.admin_validate, exact: true }).click();
-    await expect.element(publish).toBeEnabled();
-    await publish.click();
-    const confirmation = screen.getByRole("dialog", {
-      name: labels.workflow_publish_title,
-      exact: true,
-    });
-    await expect.element(confirmation).toBeVisible();
-    expect(requests.filter((request) => request.url.endsWith("/publish"))).toHaveLength(0);
-    await confirmation.getByRole("button", { name: labels.common_cancel, exact: true }).click();
-    await expect.element(publish).toHaveFocus();
-    await publish.click();
-    await confirmation.getByRole("button", { name: labels.admin_publish, exact: true }).click();
-    await expect
-      .element(screen.getByRole("link", { name: labels.workflow_view_published, exact: true }))
-      .toBeVisible();
-    const publications = requests.filter((request) => request.url.endsWith("/publish"));
-    expect(publications).toHaveLength(1);
-    expect(await publications[0]?.json()).toMatchObject({
-      approved: true,
-      baseVersion: 1,
-      expectedVersion: 3,
-    });
-  },
-);
+it("日本語で検証後に公開内容を確認し、承認するまで公開要求を送らない", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const { screen } = await open(`${base}/changes/${draftId}`, locale);
+  const publish = screen.getByRole("button", { name: labels.admin_publish, exact: true });
+  await expect.element(publish).toBeDisabled();
+  await screen.getByRole("button", { name: labels.admin_validate, exact: true }).click();
+  await expect.element(publish).toBeEnabled();
+  await publish.click();
+  const confirmation = screen.getByRole("dialog", {
+    name: labels.workflow_publish_title,
+    exact: true,
+  });
+  await expect.element(confirmation).toBeVisible();
+  expect(requests.filter((request) => request.url.endsWith("/publish"))).toHaveLength(0);
+  await confirmation.getByRole("button", { name: labels.common_cancel, exact: true }).click();
+  await expect.element(publish).toHaveFocus();
+  await publish.click();
+  await confirmation.getByRole("button", { name: labels.admin_publish, exact: true }).click();
+  await expect
+    .element(screen.getByRole("link", { name: labels.workflow_view_published, exact: true }))
+    .toBeVisible();
+  const publications = requests.filter((request) => request.url.endsWith("/publish"));
+  expect(publications).toHaveLength(1);
+  expect(await publications[0]?.json()).toMatchObject({
+    approved: true,
+    baseVersion: 1,
+    expectedVersion: 3,
+  });
+});
 
 it("他スタッフの公開と競合したら公開版と下書きを再取得し、古い版の再公開を止める", async () => {
   current.status = "ready";

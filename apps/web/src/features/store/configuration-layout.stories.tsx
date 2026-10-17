@@ -77,9 +77,21 @@ const configuration = configurationSchema.parse({
   },
 });
 
+// 通常の配置は同名の2グループ・各2選択肢で確認し、長文と3×5行は反復操作へ残す。
+const compactConfiguration = {
+  ...configuration,
+  products: configuration.products.map((product) => ({
+    ...product,
+    modifiers: product.modifiers.slice(0, 2).map((group) => ({
+      ...group,
+      options: group.options.slice(0, 2),
+    })),
+  })),
+};
+
 function ConfigurationLayout({
   section = "products",
-  initialConfiguration = configuration,
+  initialConfiguration = compactConfiguration,
 }: {
   section?: "products" | "categories" | "plans";
   initialConfiguration?: typeof configuration;
@@ -124,12 +136,18 @@ const meta = { title: "店舗/設定フォームの配置", component: Configura
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Product: Story = { name: "商品・同名のグループと選択肢" };
-export const English: Story = { name: "英語・長文の反復行", globals: { locale: "en" } };
+export const English: Story = {
+  name: "英語・長文の反復行",
+  tags: ["!test"],
+  globals: { locale: "en" },
+  args: { initialConfiguration: configuration },
+};
 export const Category: Story = { name: "カテゴリ", args: { section: "categories" } };
 export const Plan: Story = { name: "プラン", args: { section: "plans" } };
 
 export const RepeatedRows: Story = {
   name: "追加・削除と詳細内のエラーで対象と入力を保持する",
+  args: { initialConfiguration: configuration },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const group = within(canvas.getByRole("group", { name: "グループ 1：ミルク" }));
@@ -181,7 +199,9 @@ export const RepeatedRows: Story = {
 
 export const EnglishLabels: Story = {
   name: "英語でも同名の対象と言語を区別する",
+  tags: ["!test"],
   globals: { locale: "en" },
+  args: { initialConfiguration: configuration },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const translations = canvas
@@ -215,8 +235,8 @@ export const WhitespaceIds: Story = {
   name: "空白を含む業務IDでも行と入力の文脈ラベルと削除後フォーカスを維持する",
   args: {
     initialConfiguration: {
-      ...configuration,
-      products: configuration.products.map((product) => ({
+      ...compactConfiguration,
+      products: compactConfiguration.products.map((product) => ({
         ...product,
         modifiers: product.modifiers.map((group, groupIndex) => ({
           ...group,

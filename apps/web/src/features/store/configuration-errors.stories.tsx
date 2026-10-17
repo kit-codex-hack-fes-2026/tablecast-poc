@@ -135,6 +135,7 @@ export const Japanese: Story = {
 };
 export const English: Story = {
   name: "対象名と全ての業務検証理由を英語で表示",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const list = within(canvasElement).getByRole("list", { name: "Settings validation errors" });

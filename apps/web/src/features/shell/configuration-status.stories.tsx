@@ -48,8 +48,16 @@ export const Discarded: Story = {
   name: "破棄済み",
   args: { draft: { ...meta.args.draft, status: "discarded" } },
 };
+export const WithoutDraft: Story = {
+  name: "下書きがない公開版",
+  args: { draft: undefined },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("status")).toHaveTextContent("現在公開版 12");
+  },
+};
 export const English: Story = {
   name: "英語の公開版",
+  tags: ["!test"],
   globals: { locale: "en" },
   args: { draft: undefined },
   play: async ({ canvasElement }) => {

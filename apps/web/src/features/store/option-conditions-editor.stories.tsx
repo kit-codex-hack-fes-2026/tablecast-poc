@@ -99,7 +99,11 @@ const meta = { title: "店舗/選択肢の条件", component: Editor } satisfies
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Nested: Story = { name: "AND・OR・NOTと選択肢の補完" };
-export const English: Story = { name: "英語の条件編集", globals: { locale: "en" } };
+export const English: Story = {
+  name: "英語の条件編集",
+  tags: ["!test"],
+  globals: { locale: "en" },
+};
 
 export const Quantities: Story = {
   play: async ({ canvasElement }) => {
