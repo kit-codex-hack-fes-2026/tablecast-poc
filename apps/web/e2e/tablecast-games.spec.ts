@@ -14,7 +14,7 @@ test(`${language}でゲームを試遊・承認・公開し、卓で交代・結
   page,
   browser,
   baseURL,
-}, testInfo) => {
+}) => {
   const storeId = "tablecast-komorebi";
   const path = `/api/admin/stores/${storeId}`;
   const guestContext = await browser.newContext({
@@ -95,7 +95,6 @@ test(`${language}でゲームを試遊・承認・公開し、卓で交代・結
       .object({ activeVersionId: z.uuid() })
       .parse(await (await page.request.get(`${path}/games/tablecast-turns`)).json());
     expect(publication.activeVersionId).toBe(version.versionId);
-    await page.screenshot({ path: testInfo.outputPath(`tablecast-games-admin-${locale}.png`) });
 
     const store = adminStateSchema.parse(await (await page.request.get(path)).json());
     const table = store.vacantTables[0];
@@ -162,7 +161,6 @@ test(`${language}でゲームを試遊・承認・公開し、卓で交代・結
     await expect(
       playing.getByRole("heading", { name: locale === "ja" ? "結果発表" : "Results" }),
     ).toBeVisible();
-    await guest.screenshot({ path: testInfo.outputPath(`tablecast-games-guest-${locale}.png`) });
     await playing
       .getByRole("button", { name: locale === "ja" ? "終了" : "Finish", exact: true })
       .click();

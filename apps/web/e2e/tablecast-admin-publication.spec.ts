@@ -1,8 +1,8 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import { z } from "zod";
 import { test } from "./support/test";
 import { signInStaff } from "./support/session";
-import { credentials } from "./support/runtime";
 import ja from "../messages/ja.json" with { type: "json" };
 import { money } from "../src/i18n/format";
 
@@ -10,13 +10,14 @@ test.use({ trace: "off" });
 
 test("商品を保存・再読込し、明示公開した価格だけを実際の客画面へ届ける", async ({
   page,
-  request: staff,
   browser,
   baseURL,
 }) => {
   const storeId = "tablecast-hanul";
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
+  // 認証と端末承認の画面接続は注文journeyが所有し、ここでは公開結果を検証する。
+  const staff = page.request;
   await signInStaff(staff, baseURL);
   const catalog = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
   const product = catalog.configuration.products.find((item) => item.available);
@@ -37,19 +38,26 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
   ).toBe(true);
   const guest = await browser.newContext({ baseURL });
   try {
-    const kiosk = await guest.newPage();
-    await kiosk.goto("/");
-    await kiosk.getByRole("button", { name: "日本語", exact: true }).click();
-    await kiosk.getByRole("button", { name: ja.pair_begin, exact: true }).click();
-    const userCode = await kiosk.getByRole("status", { name: ja.admin_pair_code }).innerText();
+    const device = z
+      .object({ device_code: z.string(), user_code: z.string() })
+      .parse(await (await guest.request.post("/api/devices/request")).json());
     expect(
       (
         await staff.post(`${api}/devices/approve`, {
           headers,
-          data: { userCode, tableId: table.id },
+          data: { userCode: device.user_code, tableId: table.id },
         })
       ).ok(),
     ).toBe(true);
+    expect(
+      (
+        await guest.request.post("/api/devices/poll", {
+          data: { device_code: device.device_code },
+        })
+      ).ok(),
+    ).toBe(true);
+    const kiosk = await guest.newPage();
+    await kiosk.goto("/");
     const guestProduct = kiosk
       .locator("#tablecast-order button")
       .filter({ has: kiosk.getByText(product.text.ja.displayName, { exact: true }) });
@@ -58,9 +66,6 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     const reviewPath = `/admin/stores/${storeId}/menu/changes/${draft.id}`;
     await page.goto(`/admin/live?storeId=${storeId}&draftId=${draft.id}`);
     await page.getByRole("button", { name: "日本語", exact: true }).click();
-    await page.getByLabel(ja.auth_email).fill(credentials.email);
-    await page.getByLabel(ja.auth_password, { exact: true }).fill(credentials.password);
-    await page.getByRole("button", { name: ja.auth_sign_in, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
     await expect(page.getByRole("button", { name: ja.admin_validate, exact: true })).toBeEnabled();
     await page.goto(`${reviewPath}/products/${product.id}`);

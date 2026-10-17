@@ -14,7 +14,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
   page: staff,
   browser,
   baseURL,
-}, testInfo) => {
+}) => {
   const guestContext = await browser.newContext({
     baseURL,
     viewport: { width: 1024, height: 768 },
@@ -77,7 +77,6 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
       return product;
     });
     const chosen: Pick<CartLine, "productId" | "quantity" | "selections">[] = [];
-    await guest.screenshot({ path: testInfo.outputPath("tablecast-kiosk-normal-en.png") });
     // 全modifier・文字拡大・音声失敗の分岐は部品とWebアプリ統合で所有する。
     for (const product of products) {
       await test.step(`${product.text.en.displayName}をカスタマイズする`, async () => {

@@ -151,8 +151,6 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         "srcset",
         /width=\d+/,
       );
-      await guestPage.screenshot({ path: testInfo.outputPath("kiosk-ssr.png"), fullPage: true });
-      await staffPage.screenshot({ path: testInfo.outputPath("floor-ssr.png"), fullPage: true });
       const interactive = await guest.newPage();
       const errors: string[] = [];
       interactive.on("pageerror", (error) => errors.push(error.message));
@@ -212,10 +210,6 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       );
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
-      await interactive.screenshot({
-        path: testInfo.outputPath("kiosk-hydrated.png"),
-        fullPage: true,
-      });
     } finally {
       await guestSsr.close();
     }

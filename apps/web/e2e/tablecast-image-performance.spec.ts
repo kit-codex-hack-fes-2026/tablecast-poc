@@ -202,7 +202,6 @@ for (const count of [24, 120]) {
         expect(Math.abs(image.width - image.height)).toBeLessThan(1);
       samples.push({ sample, transferBytes: transferred, coldTransferBytes, ...measured });
     }
-    await page.screenshot({ path: testInfo.outputPath(`tablecast-images-${count}.png`) });
     const source = await page
       .locator("#tablecast-order img")
       .first()
@@ -232,7 +231,6 @@ for (const count of [24, 120]) {
       )
       .toBe(true);
     const detailBounds = await detailImage.boundingBox();
-    await page.screenshot({ path: testInfo.outputPath(`tablecast-image-detail-${count}.png`) });
     await detail.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
     await expect(detail).toHaveCount(0);
     await page.getByRole("tab", { name: /^注文かご/ }).click();
@@ -248,7 +246,6 @@ for (const count of [24, 120]) {
     const cartBounds = await cartImage.boundingBox();
     expect(cartBounds?.width).toBe(64);
     expect(cartBounds?.height).toBe(64);
-    await page.screenshot({ path: testInfo.outputPath(`tablecast-image-cart-${count}.png`) });
     await testInfo.attach("tablecast-image-metrics", {
       body: JSON.stringify({ count, samples, cache, detailBounds, cartBounds }, null, 2),
       contentType: "application/json",

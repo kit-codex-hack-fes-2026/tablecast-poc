@@ -11,16 +11,12 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
   page: staff,
   browser,
   baseURL,
-}, testInfo) => {
+}) => {
   const contexts = await Promise.all([
     browser.newContext({ baseURL, viewport: { width: 1024, height: 768 } }),
     browser.newContext({
       baseURL,
       viewport: { width: 390, height: 844 },
-      recordVideo: {
-        dir: testInfo.outputPath("tablecast-phone-video"),
-        size: { width: 390, height: 844 },
-      },
     }),
     browser.newContext({ baseURL, viewport: { width: 390, height: 844 } }),
   ]);
@@ -81,7 +77,6 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
         .locator("svg")
         .filter({ hasText: ja.customer_join_visit }),
     ).toBeVisible();
-    await tablet.screenshot({ path: testInfo.outputPath("tablecast-customer-qr-ipad.png") });
     // OSのカメラがQRのURLを開いた後から、実アプリの認証・同意・自動参加を検証する。
     await first.goto(code.url);
     await expect(first).toHaveURL(/\/login\?returnTo=/);
@@ -111,10 +106,6 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     await expect(
       first.getByRole("heading", { name: ja.customer_companions }).locator("..").locator("li"),
     ).toHaveCount(2);
-    await first.screenshot({
-      path: testInfo.outputPath("tablecast-customer-companions.png"),
-      fullPage: true,
-    });
     const privateVisit = await first.reload();
     expect(privateVisit?.headers()["cache-control"]).toBe("private, no-store");
     expect((await staff.request.post(`${adminBase}/tables/${visit.id}/close`)).ok()).toBe(true);

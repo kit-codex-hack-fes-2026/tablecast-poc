@@ -123,7 +123,6 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   await expect(page.getByRole("heading", { name: "Check your connection" })).toBeVisible();
   await expect(brand).toBeVisible();
   await expect(brand).toHaveJSProperty("naturalWidth", 500);
-  await page.screenshot({ path: join(testInfo.outputDir, "tablecast-pwa-offline.png") });
   await runtime.setOnline(true);
   await page.getByRole("link", { name: "店側アプリ / Staff app" }).click();
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
@@ -132,10 +131,6 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   );
   await page.getByText(ja.pwa_install_title, { exact: true }).click();
   await expect(page.getByText(ja.pwa_install_steps)).toBeVisible();
-  await page.screenshot({
-    path: join(testInfo.outputDir, "tablecast-pwa-install.png"),
-    fullPage: true,
-  });
   if (testInfo.project.name === "tablecast-chromium") {
     // 対象画像の保存だけを一度失敗させ、他の背景取得に失敗条件を消費させない。
     const worker = context.serviceWorkers()[0];

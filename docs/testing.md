@@ -164,7 +164,7 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 
-Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`を使い、pixel比較に使わない成功時のPNGは毎回生成しない。表示・focus・寸法・画像読込のassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像は必要な作業で別途取得する。
+Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`、E2Eは`screenshot: "only-on-failure"`を使う。pixel比較や観測に使わない成功時のPNG・動画を明示的に毎回生成せず、標準の失敗診断用の一時撮影は維持する。表示・focus・寸法・画像読込・転送量・CLSのassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像・動画は必要な作業で別途取得する。
 
 Playwrightのreport用git差分収集は`captureGitInfo.diff: false`とし、浅いcheckoutの不足baseをmetadataのために取得しない。コミット情報と試験本体の`--only-changed`用の履歴取得は維持する。CIが先行取得したMailpit imageはglobal setupの`docker create --pull=missing`で再利用し、同じtagを再度pullしない。ローカルでimageがない場合はcreateが取得する。
 
@@ -270,6 +270,8 @@ Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で
 viewport・文字倍率・media設定を変更するcaseは開始時の値を記録し、失敗時もfinallyで復元する。固定の既定値へ戻して後続caseの条件を変えない。同名の操作がsidebarと本文にある場合は、対象のlandmarkへlocatorを絞り、`first()`で曖昧さを隠さない。
 
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
+
+商品公開のE2Eでは、既存の実APIでスタッフ認証・端末request/approve/pollを準備し、独立したスタッフと客のCookieを使う。ログイン・端末登録画面と5秒pollを各journeyで反復せず、注文の代表journeyに残す。公開試験自身は`/admin/live`からの復帰、商品編集・再読込・明示承認・公開・実通知後の客画面の価格更新を観測する。
 
 通常のfile並列と、順序を変えた対象試験を別々に確認する。例えばAPIの対象fileを`--sequence.shuffle --sequence.seed=272`で実行し、seed・対象版・結果を残す。単回のshuffle成功を全順序の証明とは扱わず、資源所有と復元の設計で独立性を担保する。画像・trace・bounded logはcaseとengineで分け、同じ出力先へ書き込まない。ケース準備の失敗もruntimeログを添付し、worker起動の失敗は`test-results`のworkerログへ保存する。添付失敗で元のerrorを上書きしない。
 
