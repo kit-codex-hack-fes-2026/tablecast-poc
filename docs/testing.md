@@ -261,7 +261,7 @@ E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、�
 | Vitest Browserのfile/session | fileごとiframe/moduleを作り直すが、同じsessionのBrowserContextは再利用され得る             | `cleanup()`や`isolate=true`をCookie/storage初期化と扱わない。永続化を試さない`LocaleProvider`は`persist={false}`、永続化caseは自分のキーの初期値と復元を所有する |
 | E2Eのworker/case             | worker専用D1/R2/DO・registry・配信資産と、case単位の標準BrowserContext/Cookie jar          | writer停止後に閉じたtemplateからstate/assetsを復元し、Mailpitを消去する。追加contextはcaseがcloseし、自分のprocess/containerだけを停止する                       |
 
-Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitest 4.1.11では既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
+Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 3`で制限する。Chromium/WebKitへの展開後は3poolで最大9fileを並列実行し、全件を直列化しない。Vitest 4.1.11では枠がpoolごとに適用され、同時実行するproject間では同じ`maxWorkers`が必要である。CLIの値だけで全poolを制限できると仮定しない。枠や版を変えるときはCPU費用、実効scope、準備・実行・全必須チェックの時間を同じCI条件で比較する。ローカルの短縮だけで増枠を採用せず、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
 
 `tablecast-runtime-isolation.spec.ts`の2件だけは、前caseで実D1と配信ファイルを変更し、worker再利用後に復元されたことを観測するためserialとする。これはfixture自体の回帰検査であり、通常の注文・公開journeyの順序依存を許可する例ではない。APIの`storage-isolation.test.ts`も実bindingの初期化を検査する。
 

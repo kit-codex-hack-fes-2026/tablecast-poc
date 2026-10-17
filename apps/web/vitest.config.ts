@@ -47,7 +47,7 @@ export default defineConfig({
         ],
         test: {
           name: "browser",
-          maxWorkers: 2,
+          maxWorkers: 3,
           include: ["src/**/*.browser.test.tsx"],
           browser: {
             screenshotDirectory: "test-results/browser",
@@ -95,7 +95,7 @@ export default defineConfig({
         plugins: [tailwindcss(), storybookTest({ configDir: "./.storybook" })],
         test: {
           name: "storybook",
-          maxWorkers: 2,
+          maxWorkers: 3,
           browser: {
             screenshotDirectory: "test-results/browser",
             screenshotFailures: true,
