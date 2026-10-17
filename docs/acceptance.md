@@ -49,6 +49,15 @@
 
 PRのマージ前はChromium E2Eの2 shardを必須とする。WebKit E2Eはstaging/mainへのpushと手動CIで実行するため、WebKit固有の回帰はstaging統合後に検出される。PRのCI成功だけではWebKit・iPad実機の受入完了としない。releaseの受入判定では対象staging SHAのChromium・WebKit両方の成功を確認し、実機・実音声等の未実施項目は別途残す。配備gateと実行範囲は[テスト戦略](testing.md#ciのジョブとキャッシュ)に従う。以下の過去の両ブラウザー確認記録は、最新PRでの実施結果を意味しない。
 
+## 現在の保証の配置
+
+Issue #272でE2Eの表示分岐を下位へ移した。下記は試験の所有先であり、今回の全試験成功・実機受入・性能改善を表さない。実行結果は対象SHAと未実施範囲をIssue/PRへ記録する。後続の過去の件数・成功記録は当時の証拠として保持し、E2E参照は移行前baseline `cd15eb6dfbfa3f70cbc482aff46f4f69af15264d`へ固定する。
+
+- UIの設定・保存・日英・失敗/再試行・focusは[保証の所有層と移行対応](testing.md#保証の所有層とe2eへの昇格)にあるStorybook/Browserが担当する。メニュー編集/voice値/公開の版/価格/認可はfeature Browserと実D1のAPIで分担する。
+- 会員の設定・記憶・ポイント・クーポンUIは[会員Browser](../apps/web/src/features/customer/customer-features.browser.test.tsx)と[店舗特典Browser](../apps/web/src/features/store/rewards.browser.test.tsx)、実HTTP→D1の接続は[会員特典API](../apps/api/test/customer-rewards-http.test.ts)が担当する。実QR URL・login returnTo・二人のCookie・同意・卓の通知・再来店は[代表会員E2E](../apps/web/e2e/tablecast-customer.spec.ts)へ残す。
+- ゲームの公開前提・権限・版・カート不変は[実D1のAPI](../apps/api/test/games.test.ts)、日英/通信復旧/開始遅着は店側と客側のBrowser、実iframe・公開・SDK保存/終了は[代表ゲームE2E](../apps/web/e2e/tablecast-games.spec.ts)で確認する。
+- [画像性能](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品予算と[runtime隔離](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)、実Service Worker・Cookie・Service Bindingの保証は維持する。通常CI・cache・差分選択の設定は今回変更していない。
+
 ## ローカルUI受入の記録
 
 更新: 2026-09-06。外部Inworld・LLM・公開環境を接続せずに確認した範囲を記録する。部品試験、SDK境界の単体試験、実DBのブラウザー試験を区別し、この記録だけで音声・実機・公開環境を含む合格とは判定しない。
@@ -72,20 +81,20 @@ ADMIN-01の卓経過時間と会計待ちは、最新100件の表示ログから
 
 自発接客（PROACTIVE-01）は、実workerd/D1/Mastraで有効設定・204・180秒間隔・同時開始・参照専用ツール・最新状態の失効を検証した。Pythonの実AgentSessionでも一度だけの開始、204で履歴を作らないこと、客の発話・停止による取消、通常応答への復帰、503を再試行しないことを確認した。HTTP応答はfixtureであり、実マイク・STT/TTSによる無言検出と再生の受入は後続である。
 
-[外部カートの不足選択](../apps/web/e2e/tablecast-missing-choice.spec.ts)は、実DBから不足行を受け取り、編集中の入力保持、旧版保存の409、画面内エラー、同版の再表示抑止、同じ行の補完、次版での再表示をChromium/WebKitで確認した。任意単一選択の解除は日英Storybookで確認する。
+[外部カートの不足選択](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-missing-choice.spec.ts)は、実DBから不足行を受け取り、編集中の入力保持、旧版保存の409、画面内エラー、同版の再表示抑止、同じ行の補完、次版での再表示をChromium/WebKitで確認した。任意単一選択の解除は日英Storybookで確認する。
 
-閉卓履歴（ADMIN-01・AUTH-01）は、一覧とセッション別ログを既存staff認可で取得する。APIでは同時刻のページ送り・205件のログ・他店舗と端末の拒否・所属取消・会計不変を検証した。[来店履歴E2E](../apps/web/e2e/tablecast-history.spec.ts)は実APIのページサイズを2へ変更し、日英・両ブラウザーで追加取得、原文保持、変更操作非表示、店舗切替を確認した。試験は既存の閉卓済み合成データを読み取り、DBへ履歴を書き足さない。
+閉卓履歴（ADMIN-01・AUTH-01）は、一覧とセッション別ログを既存staff認可で取得する。APIでは同時刻のページ送り・205件のログ・他店舗と端末の拒否・所属取消・会計不変を検証した。[来店履歴E2E](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-history.spec.ts)は実APIのページサイズを2へ変更し、日英・両ブラウザーで追加取得、原文保持、変更操作非表示、店舗切替を確認した。試験は既存の閉卓済み合成データを読み取り、DBへ履歴を書き足さない。
 
 確認コマンドと所有する試験:
 
 - `bun run --cwd apps/web typecheck`、`bunx oxlint apps/web --deny-warnings`、Web対象のOxfmtは最新UIで成功。
 - `bun run --cwd apps/web test:browser`: 部品に隣接するStorybook 39件成功。実音声・実DBの代用にはしない。
-- `bun run --cwd apps/web test`: [音声接続の単体試験](../apps/web/src/features/kiosk/voice-connection.test.ts)6件成功。LiveKit SDKの通信・capture境界はテスト用に置き換えている。
+- `bun run --cwd apps/web test`: [当時の音声接続の単体試験](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/b6b533ec56590b213c32f93e593f73093bf4f165/apps/web/src/features/kiosk/voice-connection.test.ts)6件成功。LiveKit SDKの通信・capture境界はテスト用に置き換えている。
 - `bun --no-env-file run test:e2e`: 公式Vite previewと新居酒屋デモの実DBを使い、Chromium/WebKitの32件が成功。その後の縦画面の言語切替幅・長文ダイアログ修正では、影響する注文・文字拡大・不足選択・設定公開の12件を再実行して成功した。1024×768と768×1024、客・管理画面の日英200%文字の画像も確認した。
-- [注文フロー](../apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](../apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](../apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](../apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](../apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のハヌルT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のハヌルT12は変更しない。
-- 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](../apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](../apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。実Inworldの標準voice一覧と外部MCPクライアントの接続は後続である。
+- [注文フロー](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のハヌルT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のハヌルT12は変更しない。
+- 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。実Inworldの標準voice一覧と外部MCPクライアントの接続は後続である。
 
-管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
+管理通知の実画面試験は [管理画面の通知復旧](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
 
 ## 卓上ゲーム（Issue #191）
 
@@ -154,7 +163,7 @@ TTS自然さは人手試聴、タグ漏れ・数値欠落は機械検査、echo�
 - 本人の申請をスタッフが会計へ適用し、一会計一枚・期限・最低金額・割合上限をAPIで検証する。
 - 会計への適用取消を元の使用IDで行い、割引と会員別ポイント配分を差分訂正する。
 - 入会・スタッフ確認済みの累計条件から一ルール一会員一度だけ発行する。QR参加だけでは来店特典を確定しない。
-- 店舗の券面設定、スマホでの交換・利用申請、スタッフによる適用・取消を実D1/R2のWeb E2Eで確認する。実カメラ・実モデルの受入は別記する。
+- 店舗の券面設定、スマホでの交換・利用申請、スタッフによる適用・取消はfeature Browserでフォーム・送信・再取得を、実HTTP/D1/R2のAPI統合で永続化・金額・券状態を確認する。実カメラ・実モデルの受入は別記する。
 
 ### 会員の競合回帰
 

@@ -24,22 +24,60 @@
 
 問合せ数を固定するだけの回帰テストや、skillの語句を照合する独自validatorは追加しない。新規実装時の重複読取・標準機能の再実装は該当skillの設計判断で除く。指示変更の確認は代表依頼で行い、専用の常設評価runnerを増やさない。結果は確認したcommitとともにPRへ残し、未実施の範囲を成功扱いにしない。
 
-## 実行層
+## 保証の所有層とE2Eへの昇格
 
-動画基盤のVitestはCIの`unit-web`ジョブでWeb・seedと並列に実行する。保存音声やLFS素材を取得せずに、台本検証・時間計算・ズーム・収録の完了判定と、通常Git管理のOpenScreen project・収録ログへの個人パス再混入を検査する。動画全編の生成・再生、OpenScreen収録、有料音声の確認はこのジョブには含めず、[共有と復元](../apps/presentation/SHARING.md)に従って実施記録を残す。
+runner名ではなく、接続した実物と観測結果で分類する。純粋計算はunit、認可・金額・SQL・競合はAPIの実binding、フォーム・Query・再試行はWebの機能統合を主担当とする。Storybookは表示状態と部品操作のカタログであり、HTTPを差し替えた画面成功を実API・DBの成功として報告しない。
 
-| 層           | 対象・runtime                               | 主な検出対象                               |
-| ------------ | ------------------------------------------- | ------------------------------------------ |
-| 静的         | Oxlint・型・Oxfmt                           | 型、禁止import、asyncの取り扱い、設定      |
-| 純粋ロジック | Vitest                                      | 価格、数量、プラン、snapshot、読上げ表記   |
-| API統合      | Cloudflare公式Vitest連携、実local D1/DO     | 認証、SQL制約、原子性、失効、MCP、stream   |
-| UI統合       | Storybook addon / Vitest Browser + React    | 状態、操作、日英、focus、query・通知、a11y |
-| 音声接続     | Vitest + 公式SDKのHTTP境界                  | GPT-Live委任・字幕保存、取消、業務turn     |
-| 決定的E2E    | Playwright + 実Web/API/DB、外部AIのみ差替え | 音声・GUI・管理の配線、再読込、Cookie      |
-| 有料・実機   | 実LLM/STT/TTS、iPad                         | 読み、演技、騒音、エコー、barge-in、実遅延 |
+| 所有層            | 実物として接続するもの                                                                                   | 差し替え・固定する境界                  | 観測する結果                                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 純粋unit          | 本番の計算・schema・状態遷移。Vitest Node                                                                | 必要な時刻・乱数・ID                    | 価格・期限・数量の境界、入力と失敗分類                                                                 |
+| API統合           | 本番Hono/Worker HTTP入口・認可・service・Drizzle・実local D1/DO/R2。Cloudflare公式Vitest連携             | 外部モデル・IdP・メール配送等の外側だけ | status・本文・header、別店舗/卓/roleの拒否、永続状態、原子性・競合・通知からの回復                     |
+| UI部品・Storybook | 本番component・CSS・i18n・実ブラウザー、storyのplay/a11y                                                 | props・表示fixture・部品外のcallback    | loading/empty/error、日英、入力・focus・寸法・reduced motion                                           |
+| Web機能統合       | 本番feature・QueryClient・memory Router・provider・Hono client・必要なiframe/MediaStream。Vitest Browser | HTTP応答・通知接続先・外部media境界     | payload、送信中、失敗後の入力保持・再試行、cache再取得、URL状態、遅着、unmount後の保存値               |
+| 実StartのWeb統合  | 実TanStack Startのroute loader・SSR・hydration・ブラウザー履歴                                           | Web内に限定できる場合は下流API等        | documentとclientの接続、直接URL・戻る・pending/error境界。memory Routerだけでは証明しない              |
+| 全構成E2E         | 実browser→build済みStart→Service Binding→本番API→D1/DO/R2・Better Auth、必要なMailpit/OAuth emulator/SW  | 有料AIや外部providerのみ決定的な応答へ  | 代表操作の永続化・再読込、Cookie・外部redirect・メールURL、実WebSocket・Service Worker・配信資産の配線 |
+| runtime基盤       | rootのscripts-runtimeと隔離した実Git/ファイル/TCP/子プロセス、E2E専用fixture                             | 外部費用と本番資源                      | 起動/停止・待受保持・ケース隔離・異常終了・後片付け。業務規則とは分ける                                |
 
-Cloudflareのテストはcf設定・採用SDKと対応した公式Vitest runnerで行う。通常のSQLiteだけを使ってD1の挙動を検証済みにしない。[S12](sources.md#s12)
-Playwrightは実行ツールであって、全ケースをE2Eに分類する理由ではない。
+Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常のSQLiteやDB mockを実D1の代わりにしない。[S12](sources.md#s12) APIのservice直呼びは実DBの業務保証にはなるが、HTTP認可・validation・serializationまで通した証拠にはならない。独立したrole・tenant・HTTP認証の拒否を省かない。
+
+実Startの独立した試験環境は今回追加しない。現在は`api-fetch.test.ts`の実dev変換と代表SSR E2Eを使い、実loader・Cookie・Service Bindingの接続が必要な部分を残す。テストだけのための本番wrapper・controller/viewの一律分割・別workspaceを作らない。
+
+### 昇格の条件と移行の手順
+
+1. 守る規則と利用者から観測する結果を特定し、既存unit・API・story・Browserに同じ保証があれば再利用する。
+2. 不足する下位保証を本番の公開feature/HTTP入口へ追加し、実行成功を確認してから上位の重複を除く。移行前の観測結果・代替テスト・残す接続を対応付ける。
+3. 実SSR/loader・Cookie属性・Service Binding・外部redirect・メールURL・SW・実WebSocket・build資産など、下位で再現できない具体的な失敗リスクだけを実Startまたは全構成E2Eへ上げる。
+4. E2Eではその境界を一巡する最小の代表操作を残す。日英・viewport・失敗・retry・価格/権限の全分岐を全構成で反復しない。WebKit固有のfocus・media・iframe等は既存Browserの対象構成と代表E2Eへ残す。
+
+有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
+
+### Issue #272の移行対応
+
+移行前のspec名と所有先を示す。新旧の件数やこの表自体を実行成功の証拠にせず、対象SHA・実行範囲・未実施項目をIssue/PRへ記録する。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`に併置する。
+
+| 移行前のE2E                                                   | 既存・追加した下位保証                                                                                                                                                                 | 残す全構成の代表経路                                                                                                                      |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| accountの名前保存・送信中・メール/Google同一user              | `account.browser.test.tsx`、実auth handler+D1の`auth-linking.test.ts`。カタログ読込は既存MenuCollection/DataTable                                                                      | Google→SSR→店舗作成→招待メール→別userの参加、実WebAuthn登録/再ログイン                                                                    |
+| form・device-qr・loading-layout・accessibility・ssrの表示分岐 | `email-access.browser.test.tsx`、`devices.browser.test.tsx`、Account/Floor/VisitHistory/MenuCollection、既存Form/DataTable。実decoder・合成MediaStream・日英200%・keyboard/focusを確認 | ログイン復帰、端末Cookie発行、代表SSR/hydration。実生成routeと既定pending/error/retryの接続、reduced motionの実media/CSSだけ代表1件へ残す |
+| integrations・resizeの画面操作                                | `admin-shell.browser.test.tsx`、`store-profile.browser.test.tsx`、既存IntegrationSetup、`mcp-sessions.browser.test.tsx`、Kiosk                                                         | 店舗の代表SSR、OAuth同意、画像upload→保存→配信。Cookie保存/再表示とmobile操作はBrowser、管理sidebarの実window幅を跨ぐ復元は短いresize E2E |
+| customerの設定・記憶・ポイント・クーポン                      | `customer-features.browser.test.tsx`、`rewards.browser.test.tsx`、既存会員APIと実HTTP/D1の`customer-rewards-http.test.ts`                                                              | QR→login returnTo→同意→別Cookieの二人参加→卓への反映→閉卓/再来店の自動参加                                                                |
+| gamesの日英反復・poll失敗・開始遅着・停止                     | 店側/客側の`games.browser.test.tsx`、既存GameFrame BrowserとAPI games                                                                                                                  | 人の試遊確認/公開→卓の実iframe/SDK保存→終了→カート画面復帰を1言語                                                                         |
+| configuration・menu-navigation・cast-overview・voice-config   | 既存ConfigurationWorkflow/MenuCollection Browserを補完。CastOverview/ConfigurationChanges stories、API configuration/voices/mcp                                                        | `tablecast-admin-publication.spec.ts`の価格編集→保存/再読込→人の公開→別Cookieの客画面への反映                                             |
+| option-conditions・missing-choice                             | 既存OptionConditionsEditor/ProductPage/Kiosk Browser、API configuration/orders。Kioskへ同じ未完了行の409と入力保持を補完                                                               | modifier選択→版付き明示確認→注文→提供→会計→閉卓                                                                                           |
+| theme・theme-art                                              | `store-design.browser.test.tsx`、既存StoreTheme/Kiosk Browser、API appearance/media/image-upload                                                                                       | 画像の取込/配信と公開通知の代表接続を再利用                                                                                               |
+| option-imagesの多数の画像/選択肢/価格操作                     | 既存ConfigurationImageField/MenuItem/ProductPage Browser、API image-upload/configuration/media                                                                                         | 商品画像1枚を画面で取込→保存→再読込→実画像decode                                                                                          |
+| history・floor-timelineの操作                                 | `visit-history.browser.test.tsx`、既存FloorTimeline/TableDetail Browserを補完、API history/table-lifecycle                                                                             | フロアの代表SSRと、注文E2Eの来店/会計/閉卓                                                                                                |
+| demoの全設定組合せ                                            | `demo.browser.test.tsx`、既存DemoViewport、API demo                                                                                                                                    | 店側popup→実iframeで客言語だけ変更→再読込→別demo ID/Cookieの分離                                                                          |
+| realtime・publicationの期限/版分岐                            | Kiosk Browser、API orders/configurationと実DO                                                                                                                                          | 実WebSocket切断→HTTP回収→再接続、公開価格の反映とdocument非再読込                                                                         |
+| pwaの背景GET差替え・接客中の更新保護                          | Pwa Browserの実Queryと更新可否。実Kioskを接続し、接客中の拒否と閉卓後の許可をMessageChannelで確認                                                                                      | 実SWのcache/offline、複数clientの未保存入力/更新適用                                                                                      |
+| ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                            | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
+| image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                  | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
+
+画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。
+
+[`tablecast-runtime-isolation.spec.ts`](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)は、同じworkerでケース内の再起動がassets変更を保持し、次のケースで変更・追加ファイルを復元する保証を維持する。稼働中stateのcopyやfixture共有で業務テストを速くしない。
+
+動画基盤のVitestはCIの`unit-web`ジョブでWeb・seedと並列に実行する。保存音声やLFS素材を取得せず、台本・時間計算・ズーム・収録完了判定と保存素材への個人パス再混入を検査する。動画全編の生成・OpenScreen収録・有料音声は含めず、[共有と復元](../apps/presentation/SHARING.md)へ実施記録を残す。
 
 ## 各層で厚く検証するもの
 
@@ -99,6 +137,8 @@ Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日
 
 ## CIのジョブとキャッシュ
 
+Issue #272のテスト再配置ではworkflow・Turbo・package scripts・キャッシュ設定を変更しない。差分CIも導入しない。Vitest `related`/`--changed`の静的import graphだけでは、HTTP越しの実装、Worker binding、ファイル読取やspawnしたruntimeの変更をすべて拾えない。Playwrightの`--only-changed`も同じ制約があり、製品変更に対する全試験の代替としない。以下は現在のCI設定であり、テスト移行による時間短縮は準備・実行・後片付けと必須チェック全体を計測してから報告する。
+
 workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、API/D1/MCP、Component・a11y、Playwright E2Eを別jobで確認する。Web・seed・動画基盤・開発CLIのVitestはunit-webへ統合する。Workers・Storybook・Emailはbuildへ統合し、Workers完了後にStorybook・Emailを実行する。成果物は個別のartifactで保存し、失敗は各stepで確認する。
 
 全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixを使う。PRはChromiumを2分割の計2job、staging/mainへのpushと手動実行はChromium・WebKitを各2分割の計4jobで検査する。Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、イベントごとに選ばれた全shardの成功を集約チェックの条件とする。PRの製品プレビューは静的解析・build・images成功後に先行配備する。staging・本番配備は両browserを含む全必須検査の成功を待つ。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
@@ -119,7 +159,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。APIのcf buildとWebのVite/Serwistで公式Build Outputを作り、`TABLECAST_BUILD_DIRECTORY`へ`.cloudflare`を複製する。通常buildの出力は一時生成するが、E2E終了後の実行資源は専用directoryへ隔離される。Webのdev・Storybook build・他のE2E buildを同じworktreeで同時実行しない。ローカル秘密値を含む成果物はTurbo cacheへ書き込まない。seedの`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。各workerはAPI・WebをVite plugin v2の公式previewで一緒に起動し、Service Bindingで接続する。D1/R2/DOのstateとregistryをworker内へ分ける。Cookie・メール・DO・認証をworker間で共有せず、ケース間は両Workersを停止してstate・assetsを復元し、Mailpitをクリアする。
 
-`fullyParallel: true`、`workers: 4`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはworker専用の`baseURL`を使う。worker終了時に自分のプロセスとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント試験は、前ケースの登録状態で分岐せず、毎回新規登録から確認する。
+`fullyParallel: true`、`workers: 4`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはworker専用の`baseURL`を使う。worker終了時に自分のプロセスとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント連携はAPIの実auth handler/D1で毎回新規登録から確認し、メール・OAuthの実配線は代表E2Eで確認する。
 
 DBはケース開始時のtemplate差し替えで初期化するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
 
