@@ -34,17 +34,16 @@ export function Consent() {
     () => consentStoreColumns(t, selected, setOrganization, postLogin),
     [t, selected, postLogin],
   );
+  // SDKの成功処理がdocumentを転送するため、破棄される画面のQuery cacheは再取得しない。
+  // oxlint-disable-next-line react-doctor/query-mutation-missing-invalidation
   const consent = useMutation({
     mutationFn: async (accept: boolean) => {
       if (postLogin && accept) {
-        authResult(await authClient.organization.setActive({ organizationId: selected }));
-        return authResult(
-          await authClient.oauth2.continue({ postLogin: true, oauth_query: oauthQuery }),
-        );
+        // Cookie更新後のOAuth再開と転送は、採用SDKのprovider/redirect pluginが行う。
+        return authResult(await authClient.organization.setActive({ organizationId: selected }));
       }
       return authResult(await authClient.oauth2.consent({ accept, oauth_query: oauthQuery }));
     },
-    onSuccess: (result) => window.location.assign(result.url),
   });
   if (apiError(stores.error)?.status === 401)
     return (

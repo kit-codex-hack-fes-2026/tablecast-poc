@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { Pwa } from "./pwa";
+import { Pwa, PwaInstallHelp } from "./pwa";
 import type { ReactNode } from "react";
 import { catalog, table } from "../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../i18n/locale";
@@ -38,7 +38,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function mount(loader = async () => {}, content: ReactNode = <main />) {
+async function mount(loader = async () => {}, content: ReactNode = <main />, path = "/") {
   vi.stubEnv("PROD", true);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const root = createRootRoute({
@@ -49,11 +49,11 @@ async function mount(loader = async () => {}, content: ReactNode = <main />) {
       </>
     ),
   });
-  const home = createRoute({ getParentRoute: () => root, path: "/", component: () => content });
+  const home = createRoute({ getParentRoute: () => root, path, component: () => content });
   const next = createRoute({ getParentRoute: () => root, path: "/login", loader });
   const router = createRouter({
     routeTree: root.addChildren([home, next]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();
   await render(
@@ -234,4 +234,40 @@ it("オフラインでは更新を拒否し、通信復帰後に許可する", a
   expect(await decision("TABLECAST_PREPARE_UPDATE")).toBe(false);
   online.mockRestore();
   expect(await decision("TABLECAST_CHECK_UPDATE")).toBe(true);
+});
+
+it.each([
+  {
+    path: "/",
+    title: ja.pwa_install_title,
+    steps: ja.pwa_install_steps,
+    links: [
+      { text: ja.pwa_kiosk, href: "/" },
+      { text: ja.pwa_staff, href: "/admin/live" },
+    ],
+  },
+  {
+    path: "/member",
+    title: ja.customer_install_title,
+    steps: ja.customer_install_steps,
+    links: [],
+  },
+])("$pathのPWA案内は一度の操作で説明と入口を表示する", async ({ path, title, steps, links }) => {
+  await mount(
+    undefined,
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <PwaInstallHelp />
+    </LocaleProvider>,
+    path,
+  );
+  const instructions = page.getByText(steps, { exact: true });
+  await expect.element(instructions).not.toBeVisible();
+  await page.getByText(title, { exact: true }).click();
+  await expect.element(instructions).toBeVisible();
+  expect(
+    [...document.querySelectorAll("[data-pwa-install] a")].map((link) => ({
+      text: link.textContent,
+      href: link.getAttribute("href"),
+    })),
+  ).toEqual(links);
 });

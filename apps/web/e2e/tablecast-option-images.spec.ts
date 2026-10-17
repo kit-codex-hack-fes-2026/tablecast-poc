@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 import { expect } from "@playwright/test";
 import { catalogSchema, configDraftSchema, uploadedImageSchema } from "@tablecast/api/schema";
 import { test } from "./support/test";
-import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
 
-test.use({ trace: "off" });
+test.use({ trace: "off", serviceWorkers: "block" });
 
 test("画面で取り込んだ商品画像を保存し、開き直した下書きでも実画像を配信する", async ({
   page,
@@ -13,16 +13,16 @@ test("画面で取り込んだ商品画像を保存し、開き直した下書�
 }) => {
   const api = "/api/admin/stores/tablecast-komorebi";
   const headers = { Origin: baseURL ?? "" };
-  expect(
-    (await page.request.post("/api/auth/sign-in/email", { headers, data: credentials })).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const original = catalogSchema.parse(await (await page.request.get(`${api}/catalog`)).json());
   const product = original.configuration.products.find((item) => item.available);
   if (!product) throw new Error("画像設定の対象商品が必要です");
   const draft = configDraftSchema.parse(
     await (await page.request.post(`${api}/drafts`, { headers })).json(),
   );
-  const field = page.getByRole("group", { name: ja.editor_image_settings, exact: true }).first();
+  const field = page
+    .getByRole("region", { name: ja.editor_images, exact: true })
+    .getByRole("group", { name: ja.editor_image_settings, exact: true });
   const fileInput = field.getByLabel(ja.editor_image_replace);
   const scripts = /\/assets\/[^/]+\.js(?:\?|$)/;
   const hydration = Promise.withResolvers<void>();

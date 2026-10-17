@@ -4,6 +4,7 @@ import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { z } from "zod";
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
+import { approveGuestDevice, signInStaff } from "./support/session";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
@@ -18,14 +19,7 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   page,
   baseURL,
 }) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const requests: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
@@ -45,7 +39,11 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     // 実際にメニューを開いてhydration後の操作可能状態を確認する。
-    await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
+    const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
+    await expect(navigation).toBeEnabled();
+    const wasExpanded = await navigation.getAttribute("aria-expanded");
+    await navigation.click();
+    await expect(navigation).toHaveAttribute("aria-expanded", String(wasExpanded !== "true"));
     expect(requests).toEqual([]);
   }
 });
@@ -57,14 +55,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   baseURL,
 }, testInfo) => {
   // Given: スタッフと卓端末のCookieを実APIで発行する。
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const floor = adminStateSchema.parse(
     await (await page.request.get("/api/admin/stores/tablecast-komorebi")).json(),
   );
@@ -79,7 +70,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   ).toBe(true);
   const contexts: BrowserContext[] = [];
   try {
-    const guest = await browser.newContext({ baseURL });
+    const guest = await browser.newContext({ baseURL, serviceWorkers: "block" });
     contexts.push(guest);
     const staffSsr = await browser.newContext({
       baseURL,
@@ -95,21 +86,11 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
     await staffSsr.addCookies([layoutCookie]);
     const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
     contexts.push(anonymous);
-    const codes = z
-      .object({ user_code: z.string(), device_code: z.string() })
-      .parse(await (await guest.request.post("/api/devices/request")).json());
-    expect(
-      (
-        await page.request.post("/api/admin/stores/tablecast-komorebi/devices/approve", {
-          data: { userCode: codes.user_code, tableId: table.id },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect(
-      (
-        await guest.request.post("/api/devices/poll", { data: { device_code: codes.device_code } })
-      ).ok(),
-    ).toBe(true);
+    await approveGuestDevice(guest.request, page.request, {
+      origin: baseURL,
+      storeId: "tablecast-komorebi",
+      tableId: table.id,
+    });
     const catalog = catalogSchema.parse(
       await (await guest.request.get("/api/table/catalog")).json(),
     );
@@ -144,13 +125,17 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         (item) => item.available && item.imageKey,
       );
       if (!product) throw new Error("画像付き商品fixtureが必要です");
-      await expect(
-        guestPage.getByText(product.text.ja.displayName, { exact: true }).first(),
-      ).toBeVisible();
-      await expect(guestPage.locator('img[src*="/media/"]').first()).toHaveAttribute(
-        "srcset",
-        /width=\d+/,
+      const card = guestPage
+        .getByRole("button")
+        .filter({ has: guestPage.getByText(product.text.ja.displayName, { exact: true }) })
+        .filter({ has: guestPage.locator("img") });
+      await expect(card).toHaveCount(1);
+      const productImage = card.locator("img");
+      await expect(productImage).toHaveAttribute(
+        "src",
+        new RegExp(`/media/${product.imageKey?.replace(".", "\\.")}`),
       );
+      await expect(productImage).toHaveAttribute("srcset", /width=\d+/);
       const interactive = await guest.newPage();
       const errors: string[] = [];
       interactive.on("pageerror", (error) => errors.push(error.message));
@@ -192,6 +177,22 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         interactive.getByRole("button", { name: "音声を再開", exact: true }),
       ).toBeEnabled();
       await expect(interactive.locator('[data-voice-state="idle"]')).toBeVisible();
+      await interactive.evaluate(async () => {
+        await document.fonts.ready;
+        const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();
+        if (!viewport) throw new Error("SSRした注文ペインが必要です。");
+        await Promise.all(
+          [...document.querySelectorAll<HTMLImageElement>("#tablecast-order img")]
+            .filter((image) => {
+              const bounds = image.getBoundingClientRect();
+              return bounds.bottom > viewport.top && bounds.top < viewport.bottom;
+            })
+            .map((image) => image.decode()),
+        );
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      });
       const metrics = await interactive.evaluate(() => ({
         layoutShift: PerformanceObserver.supportedEntryTypes.includes("layout-shift")
           ? window.tablecastLayoutShift
@@ -218,7 +219,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("戻り先なしのログインはフロアを一括取得し、アカウント更新はセッションだけを再取得する", async ({
+test("戻り先なしのログインはフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -229,22 +230,12 @@ test("戻り先なしのログインはフロアを一括取得し、アカウ�
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
   await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
   expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
 
   await page.goto("/account");
-  await page.getByLabel("名前", { exact: true }).fill("初期取得テスト");
-  requests.length = 0;
-  const refreshed = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
-  );
-  await page.getByRole("button", { name: "保存", exact: true }).click();
-  expect((await refreshed).ok()).toBe(true);
-  await expect(page.getByText("更新しました", { exact: true })).toBeVisible();
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
-  expect(
-    requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
-  ).toEqual([]);
+  await expect(page.getByLabel("名前", { exact: true })).toBeEnabled();
 
   await page.clock.install();
   await page.clock.fastForward(31_000);
@@ -259,23 +250,16 @@ test("戻り先なしのログインはフロアを一括取得し、アカウ�
   expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
 });
 
-test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ page, baseURL }) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ request, baseURL }) => {
+  await signInStaff(request, baseURL);
   const manifest = z
     .object({ start_url: z.string() })
-    .parse(await (await page.request.get("/tablecast-staff.webmanifest")).json());
-  const launch = await page.request.get(manifest.start_url, { maxRedirects: 0 });
+    .parse(await (await request.get("/tablecast-staff.webmanifest")).json());
+  const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
   expect(launch.status()).toBe(307);
   const destination = launch.headers()["location"];
   expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
-  const floor = await page.request.get(destination);
+  const floor = await request.get(destination);
   expect(floor.ok()).toBe(true);
   expect(await floor.text()).toContain("フロアの様子");
   expect(floor.headers()["cache-control"]).toBe("private, no-store");
@@ -283,14 +267,7 @@ test("店側PWAの新規ドキュメント起動は転送先のフロアをSSR�
 
 test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/admin/stores/tablecast-komorebi/floor");

@@ -1,9 +1,9 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import { test } from "./support/test";
-import { signInStaff } from "./support/session";
+import { approveGuestDevice, signInStaff } from "./support/session";
 
-test.use({ trace: "off" });
+test.use({ trace: "off", serviceWorkers: "block" });
 
 test("通知が切断していても公開した価格をHTTP経由で注文画面へ反映する", async ({
   page,
@@ -30,17 +30,12 @@ test("通知が切断していても公開した価格をHTTP経由で注文画�
     disconnected += 1;
     await socket.close({ code: 1001 });
   });
+  await approveGuestDevice(page.request, staff, {
+    origin: baseURL,
+    storeId,
+    tableId: vacant.id,
+  });
   await page.goto("/");
-  await page.getByRole("button", { name: "端末を接続する", exact: true }).click();
-  const userCode = await page.getByLabel("端末に表示されたコード").textContent();
-  expect(
-    (
-      await staff.post(`${api}/devices/approve`, {
-        headers,
-        data: { userCode, tableId: vacant.id },
-      })
-    ).ok(),
-  ).toBe(true);
   await expect(page.getByRole("banner")).toContainText(vacant.name);
   await expect.poll(() => disconnected).toBeGreaterThan(0);
   const catalog = catalogSchema.parse(await (await page.request.get("/api/table/catalog")).json());
