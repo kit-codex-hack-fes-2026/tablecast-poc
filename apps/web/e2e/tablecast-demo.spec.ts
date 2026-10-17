@@ -1,24 +1,17 @@
 import { expect } from "@playwright/test";
 import { test } from "./support/test";
-import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
 
-test.use({ trace: "off" });
+test.use({ trace: "off", serviceWorkers: "block" });
 
 test("店側から開いたデモのiframeだけで客言語を変更し、再読込と別タブでも分離する", async ({
   page,
   baseURL,
 }) => {
   const storeId = "tablecast-komorebi";
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   await page.goto(`/admin/stores/${storeId}/floor`);
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   const opened = page.waitForEvent("popup");
@@ -35,7 +28,7 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
         })
       ).ok(),
     ).toBe(true);
-    const frame = demo.frameLocator("iframe");
+    const frame = demo.getByTitle(ja.demo_screen, { exact: true }).contentFrame();
     await expect(frame.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
     await frame.getByRole("button", { name: "English", exact: true }).click();
     await expect(frame.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
@@ -45,12 +38,13 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
     await expect(frame.locator("html")).toHaveAttribute("lang", "en");
     await expect(demo.locator("html")).toHaveAttribute("lang", "ja");
     await expect(page.locator("html")).toHaveAttribute("lang", "ja");
-    await demo.getByRole("button", { name: ja.demo_rotate }).click();
+    const rotate = demo.getByRole("button", { name: ja.demo_rotate, exact: true });
+    await rotate.click();
+    await expect(demo).toHaveURL((url) => url.searchParams.get("portrait") === "true");
+    await expect(rotate).toHaveAttribute("aria-pressed", "true");
+    // 実file routeが保存した向きを新しいdocumentでも復元する。
     await demo.reload();
-    await expect(demo.getByRole("button", { name: ja.demo_rotate })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(rotate).toHaveAttribute("aria-pressed", "true");
     await expect(frame.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("button", { name: "日本語", exact: true })).toHaveAttribute(
@@ -62,7 +56,26 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
     const independent = await reopened;
     try {
       await expect(independent).toHaveURL(/demo\?demoId=/);
-      expect(new URL(independent.url()).searchParams.get("demoId")).not.toBe(demoId);
+      const independentId = new URL(independent.url()).searchParams.get("demoId");
+      expect(independentId).toBeTruthy();
+      expect(independentId).not.toBe(demoId);
+      expect(
+        (
+          await page.request.patch(
+            `/api/admin/stores/${storeId}/demo/${independentId}/table/locale`,
+            {
+              data: { locale: "ja" },
+            },
+          )
+        ).ok(),
+      ).toBe(true);
+      const independentFrame = independent
+        .getByTitle(ja.demo_screen, { exact: true })
+        .contentFrame();
+      await expect(independentFrame.locator("html")).toHaveAttribute("lang", "ja");
+      await expect(frame.locator("html")).toHaveAttribute("lang", "en");
+      await expect(demo.locator("html")).toHaveAttribute("lang", "ja");
+      await expect(page.locator("html")).toHaveAttribute("lang", "ja");
     } finally {
       await independent.close();
     }

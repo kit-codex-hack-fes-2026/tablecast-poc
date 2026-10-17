@@ -1,8 +1,8 @@
-import { expect } from "@playwright/test";
+import { expect, type Request } from "@playwright/test";
 import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
-import { credentials } from "./support/runtime";
 import { test } from "./support/test";
+import { approveGuestDevice, signInStaff } from "./support/session";
 
 declare global {
   interface Window {
@@ -20,9 +20,7 @@ for (const count of [24, 120]) {
     browserName,
   }, testInfo) => {
     const headers = { Origin: baseURL ?? "" };
-    expect(
-      (await request.post("/api/auth/sign-in/email", { headers, data: credentials })).ok(),
-    ).toBe(true);
+    await signInStaff(request, baseURL);
     const api = "/api/admin/stores/tablecast-komorebi";
     const catalog = catalogSchema.parse(await (await request.get(`${api}/catalog`)).json());
     const originals = catalog.configuration.products.filter(
@@ -77,19 +75,14 @@ for (const count of [24, 120]) {
         })
       ).ok(),
     ).toBe(true);
-    // ペアリング中の画像取得を止め、最初の計測をcoldに揃える。
+    // 初回表示の画像取得を止め、最初の計測をcoldに揃える。
+    await approveGuestDevice(page.request, request, {
+      origin: baseURL,
+      storeId: "tablecast-komorebi",
+      tableId: "tablecast-komorebi-table-01",
+    });
     await page.route("**/media/**", (route) => route.abort());
     await page.goto("/");
-    await page.getByRole("button", { name: ja.pair_begin, exact: true }).click();
-    const userCode = await page.getByRole("status", { name: ja.admin_pair_code }).innerText();
-    expect(
-      (
-        await request.post(`${api}/devices/approve`, {
-          headers,
-          data: { userCode, tableId: "tablecast-komorebi-table-01" },
-        })
-      ).ok(),
-    ).toBe(true);
     await expect(page.getByRole("separator", { name: ja.kiosk_resize_panes })).toBeVisible();
 
     await page.unroute("**/media/**");
@@ -119,13 +112,13 @@ for (const count of [24, 120]) {
         }).observe({ type: "layout-shift", buffered: true });
       }
     });
-    const pendingImages = new Set<string>();
+    const pendingImages = new Set<Request>();
     page.on("request", (imageRequest) => {
       if (new URL(imageRequest.url()).pathname.startsWith("/media/"))
-        pendingImages.add(imageRequest.url());
+        pendingImages.add(imageRequest);
     });
-    page.on("requestfinished", (imageRequest) => pendingImages.delete(imageRequest.url()));
-    page.on("requestfailed", (imageRequest) => pendingImages.delete(imageRequest.url()));
+    page.on("requestfinished", (imageRequest) => pendingImages.delete(imageRequest));
+    page.on("requestfailed", (imageRequest) => pendingImages.delete(imageRequest));
     const samples = [];
     const visitedImages = new Set<string>();
     let coldTransferBytes = 0;
@@ -150,6 +143,25 @@ for (const count of [24, 120]) {
         );
       });
       await expect.poll(() => pendingImages.size).toBe(0);
+      await expect
+        .poll(() =>
+          images.evaluateAll((items) => {
+            const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();
+            if (!viewport) return false;
+            const visible = items.filter((image) => {
+              const bounds = image.getBoundingClientRect();
+              return bounds.bottom > viewport.top && bounds.top < viewport.bottom;
+            });
+            return (
+              visible.length > 0 &&
+              visible.every(
+                (image) =>
+                  image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+              )
+            );
+          }),
+        )
+        .toBe(true);
       const measured = await page.evaluate(() => ({
         ...window.tablecastImageMetrics,
         dpr: devicePixelRatio,
@@ -221,8 +233,14 @@ for (const count of [24, 120]) {
       .filter({ has: page.locator("img") })
       .first()
       .click();
-    const detail = page.getByRole("region", { name: originals[0].text.ja.displayName });
-    const detailImage = detail.locator("img").first();
+    const detail = page.getByRole("region", {
+      name: originals[0].text.ja.displayName,
+      exact: true,
+    });
+    const detailImage = detail.getByRole("img", {
+      name: originals[0].text.ja.displayName,
+      exact: true,
+    });
     await expect
       .poll(() =>
         detailImage.evaluate(
@@ -234,7 +252,8 @@ for (const count of [24, 120]) {
     await detail.getByRole("button", { name: ja.kiosk_add, exact: true }).click();
     await expect(detail).toHaveCount(0);
     await page.getByRole("tab", { name: /^注文かご/ }).click();
-    const cartImage = page.locator('[data-ui="cart-lines"] img').first();
+    const cartImage = page.locator('[data-ui="cart-lines"] img');
+    await expect(cartImage).toHaveCount(1);
     await expect(cartImage).toBeVisible();
     await expect
       .poll(() =>

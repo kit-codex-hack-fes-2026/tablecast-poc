@@ -2,9 +2,9 @@ import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, eventsSchema, tableStateSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
-import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
 
-test.use({ actionTimeout: 15_000 });
+test.use({ actionTimeout: 15_000, serviceWorkers: "block" });
 
 test("管理画面が実通知の切断中と再接続後の会計イベントを欠落・重複なく表示する", async ({
   page,
@@ -42,11 +42,7 @@ test("管理画面が実通知の切断中と再接続後の会計イベント�
     expect(response.status()).toBe(200);
     return tableStateSchema.parse(await response.json());
   }
-  const login = await page.request.post("/api/auth/sign-in/email", {
-    headers,
-    data: credentials,
-  });
-  expect(login.status()).toBe(200);
+  await signInStaff(page.request, baseURL);
   const initial = adminStateSchema.parse(await (await page.request.get(base)).json());
   const vacant = initial.vacantTables[0];
   if (!vacant) throw new Error("試験用の空卓が必要です。既存の利用卓は変更しません。");
@@ -73,14 +69,23 @@ test("管理画面が実通知の切断中と再接続後の会計イベント�
   // 実サーバーとの通知だけを切り、管理画面のHTTP event取得による回復を確認する。
   dropped = true;
   await Promise.all(sockets.map((socket) => socket.close({ code: 1001 })));
-  const payment = await record("payment", 100);
-  // スナップショットが先行した場合も、HTTP同期のカーソルが入金まで進むことを確認する。
-  await page.waitForResponse(
-    async (response) => {
-      if (new URL(response.url()).pathname !== `${base}/events` || !response.ok()) return false;
-      return eventsSchema.parse(await response.json()).cursor >= payment.cursor;
-    },
-    { timeout: 15_000 },
+  // 書込み前に待ち始め、最初のHTTP復旧応答を取り逃さない。
+  const [synchronised, payment] = await Promise.all([
+    page.waitForResponse(
+      async (response) => {
+        if (new URL(response.url()).pathname !== `${base}/events` || !response.ok()) return false;
+        return eventsSchema
+          .parse(await response.json())
+          .events.some(
+            (event) => event.kind === "billing.payment" && event.tableSessionId === sessionId,
+          );
+      },
+      { timeout: 15_000 },
+    ),
+    record("payment", 100),
+  ]);
+  expect(eventsSchema.parse(await synchronised.json()).cursor).toBeGreaterThanOrEqual(
+    payment.cursor,
   );
   await expect(detail.getByText(ja.event_payment_recorded, { exact: true })).toHaveCount(1);
 

@@ -401,6 +401,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
               .parse(await readReady("web-ready.json"));
             ingress.setWebPort(replacement.port);
             ingress.setOnline(true);
+            await waitUntilReady(ingress.origin);
           },
           setOnline: async (online) => {
             ingress?.setOnline(online);

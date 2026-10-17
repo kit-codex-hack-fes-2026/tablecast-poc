@@ -1,7 +1,9 @@
 import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
-import { signInStaff } from "./support/session";
+import { approveGuestDevice, signInStaff } from "./support/session";
+
+test.use({ serviceWorkers: "block" });
 
 test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更も画面へ反映する", async ({
   page,
@@ -41,14 +43,8 @@ test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更�
     data: { tableId, guestCount: 2, locale: "ja" },
   });
   expect(opened.status()).toBe(200);
+  await approveGuestDevice(page.request, staff, { origin: baseURL, storeId, tableId });
   await page.goto("/");
-  await page.getByRole("button", { name: "端末を接続する", exact: true }).click();
-  const userCode = await page.getByLabel("端末に表示されたコード").textContent();
-  const approved = await staff.post(`/api/admin/stores/${storeId}/devices/approve`, {
-    headers,
-    data: { userCode, tableId },
-  });
-  expect(approved.status()).toBe(200);
   await expect(page.getByRole("banner")).toContainText(vacant.name);
   await expect.poll(() => connected).toBeGreaterThan(0);
 

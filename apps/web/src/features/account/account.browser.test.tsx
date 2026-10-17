@@ -146,9 +146,11 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
   const refetchReached = Promise.withResolvers<void>();
   let saved = false;
   const payloads: unknown[] = [];
+  const requests: string[] = [];
   try {
     await show("ja", async (request) => {
       const path = new URL(request.url).pathname;
+      requests.push(path);
       if (path === "/api/auth/update-user") {
         payloads.push(await request.json());
         saveReached.resolve();
@@ -183,6 +185,10 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
     await expect.element(page.getByRole("alert")).toBeVisible();
     await expect.element(name).toHaveValue("入力途中の名前");
     expect(payloads).toEqual([{ name: "保存する名前" }]);
+    expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+    expect(
+      requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
+    ).toEqual([]);
     expect(client.getQueryData(["tablecast-session"])).toMatchObject({
       user: { name: "保存する名前" },
     });

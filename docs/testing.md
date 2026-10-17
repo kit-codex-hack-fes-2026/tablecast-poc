@@ -71,6 +71,37 @@ Component jobのBrowser統合とStorybook自動試験は日本語で実行する
 
 この変更前の日英試験と件数は過去の実施記録であり、現在のComponent実行対象を示すものではない。削減した件数そのものやローカルの成功だけでCIのtimeoutを解消済みと判断せず、対象SHAのcold/warm・通常順・shuffleを記録する。15秒のcase予算とretry 0を維持し、一時診断のtraceを恒久のComponent artifactへ追加しない。
 
+### 全E2Eの現在の責務（Issue #288）
+
+16 specの全ケースを下位保証と照合した。接続が異なるケースは件数を保ち、重複する準備・表示分岐・操作を削る。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`を起点とする。Issue #272の表は移行時の記録であり、現在の待機と対象はこの表と実specを参照する。
+
+| E2E spec（`tablecast-`を省略） | 下位へ置く保証・短縮する操作                                                                                                        | 残す接続と観測結果                                                                                                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `account`                      | CreateStore Browserの入力/保持、API auth-linking・store-membership。パスキーcaseのGoogleログインは実API Given                       | Google redirect/Cookie→実招待メールURL→別利用者の所属。実WebAuthn登録→旧session消失→同userの新session                                                                    |
+| `customer`                     | CustomerFeatures/Consistency BrowserとAPI customer-visits/membershipsの同意・競合・冪等性                                           | 会員QR→ログイン復帰→同意→別Cookieの二人参加→閉卓/再来店。対象visit・参加者数/別user・customer manifestを確認                                                             |
+| `order`                        | Kiosk/ProductDialog/PaymentForm Browser、API orders/table-lifecycleの入力・価格・版・原子性                                         | 店側日本語・客英語のUI端末承認→代表modifier→明示注文→提供→会計→対象sessionの閉卓                                                                                         |
+| `admin-publication`            | ConfigurationWorkflow Browserの下書き再開/保存競合/公開確認、API configurationの公開隔離                                            | 代表価格の編集→保存/再読込→明示公開→別Cookieの客画面/再読込へ新しいcatalog版を反映                                                                                       |
+| `option-images`                | ConfigurationImageField/MenuItem Browser、API image-upload/mediaの失敗・容量・cache                                                 | SSR file入力の無効→hydration→代表画像upload/保存/再読込→実画像decode                                                                                                     |
+| `games`                        | Store/Kiosk Games BrowserとAPI games。管理previewの反復を除き、GameFrame Browserで実iframe/SDKの遅延したsave応答二回→exit順序を検査 | preview ready→人の試遊確認→公開→客の配信iframeで代表save→runのrevision/状態→終了/カート保持                                                                              |
+| `demo`                         | Demo/Viewport Browserの回転UI・寸法・全設定、API demoの実営業/通知/認可分離                                                         | popup→実iframeの客言語→回転search付きreload。別demoの言語と元iframe/店側の言語が独立する結果                                                                             |
+| `oauth`                        | Nodeの翻訳契約、API authのPKCE/consent/token/MCP接続。表示言語の反復を除く                                                          | ログイン/同意→登録した外部callbackのorigin/path・state/code・errorなしを確認                                                                                             |
+| `resize`                       | AdminShell BrowserのCookie保存/remount・mobile開閉/focus/入力保持                                                                   | 実windowのdesktop→mobile→desktopでPanelを再登録し、保存幅を復元                                                                                                          |
+| `ssr`                          | Account Browserで保存後session再取得一回・floor/stores再取得なし。各feature Browserが表示分岐を所有                                 | 代表URL各一回のSSR/hydration、JSなし・匿名非漏出、実root/redirect・focus/stale、route pending/error/retry。対象商品の画像decode/font完了後に計測可能なCLS 0.01未満を検査 |
+| `realtime`                     | Kiosk Browserの古い通知/遅着/unmount、API realtimeの実DO                                                                            | 実WS切断→HTTP回収→再接続通知で同じカート行だけを更新                                                                                                                     |
+| `publication`                  | Kiosk Browserの通知後表示、API configurationの版/店舗分離                                                                           | WS拒否中の実公開→HTTP回復だけで価格更新、document再読込なし                                                                                                              |
+| `admin-realtime`               | TableDetail/Floor Browser、ActivityLog Story、API realtime                                                                          | 支払前に対象sessionのHTTP events待ちを登録し、payment cursorまで回収→実WS復帰、表示重複なし                                                                              |
+| `image-performance`            | ProductImage Browserの枠/失敗/hydration、API mediaのR2/Images/cache                                                                 | 24/120商品・3標本・DPR 2・cold 500,000byte以下・warm転送0・計測可能なCLS 0.1未満・cart 64pxを維持。viewport内の実画像成功を待つ                                          |
+| `pwa`                          | pwa-update unitで3manifestの静的値/実icon、Pwa Browserで通常/会員の案内開閉。Query/更新拒否分岐もBrowser                            | build資産のHTTP配信、実SW control/cache/offline/quota、二画面の未保存保護→controller交代→各一回reload                                                                    |
+| `runtime-isolation`            | root scriptsの実TCP/OAuth・APIのbinding reset                                                                                       | 意図したserial二ケースで、case内restartはD1/assetsを保持し、次caseで閉じたtemplateから復元                                                                               |
+
+`approveGuestDevice()`は実request→staff承認→guest pollとCookie発行だけを共通化し、pollのHTTP 200に加えて`ready: true`を要求する。注文journeyのUI端末承認、各specの公開・注文・保存とThenはhelperへ隠さない。
+
+OAuthの同意は採用Better Authのprovider/redirect pluginが所有する。店舗選択のCookie更新後の自動再開と、許可/拒否後の転送に独自の`continue`や`location.assign`を重ねない。E2Eは旧documentにも現れるボタンや転送後に破棄されるresponse本文を根拠にせず、client/state付きの転送先documentと外部callbackの読込を待つ。
+
+待機は対象の結果へ結び付ける。role/nameで領域を特定し、保存後はフォームreset・dialog消失・版/値の反映、メールは宛先、認証はuser/session、ゲームはrun版/状態を観測する。HTTP通知待ちは変更操作より先に登録し、要求counter/listenerは`finally`で解除する。固定sleep・`force`・操作retry・広い`.first()`で競合を隠さない。複数候補から合成fixtureの先頭を測る場合は、その意味と件数を明示する。
+
+runtime再起動はlisten markerだけで完了とせず、入口の実API・Mailpit・OAuth readinessまで待つ。下位テストの成功・E2Eの件数・過去の実行時間を現在SHAの接続成功や高速化の証拠にせず、全件/選択実行、engine、cold/warm、所要時間をPRへ残す。
+
 ### Issue #272の移行対応
 
 移行時点のspec名と所有先を示す。locale別Componentの現在の分担は上節を参照する。新旧の件数やこの表自体を実行成功の証拠にせず、対象SHA・実行範囲・未実施項目をIssue/PRへ記録する。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`に併置する。
@@ -216,7 +247,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。APIのcf buildとWebのVite/Serwistで公式Build Outputを作り、`TABLECAST_BUILD_DIRECTORY`へ`.cloudflare`を複製する。通常buildの出力は一時生成するが、E2E終了後の実行資源は専用directoryへ隔離される。Webのdev・Storybook build・他のE2E buildを同じworktreeで同時実行しない。ローカル秘密値を含む成果物はTurbo cacheへ書き込まない。seedの`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。各workerはAPI・WebをVite plugin v2の公式previewで一緒に起動し、Service Bindingで接続する。D1/R2/DOのstateとregistryをworker内へ分ける。Cookie・メール・DO・認証をworker間で共有せず、ケース間は両Workersを停止してstate・assetsを復元し、Mailpitをクリアする。
 
-`fullyParallel: true`、`workers: 4`、`retries: 0`で、同じspec内の言語違いも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはworker専用の`baseURL`を使う。worker終了時に自分のプロセスとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント連携はAPIの実auth handler/D1で毎回新規登録から確認し、メール・OAuthの実配線は代表E2Eで確認する。
+`fullyParallel: true`、`workers: 4`、`retries: 0`で、独立したcaseを同じspec内でも並列実行する。`support/test.ts`の`test`を全specで使用し、標準のpage/request/contextはworker専用の`baseURL`を使う。worker終了時に自分のプロセスとstorageを終了・削除し、最後にglobal setupのtemplateも削除する。他ケースの成功結果やcleanupの順番を前提にしない。メールとGoogleの同一アカウント連携はAPIの実auth handler/D1で毎回新規登録から確認し、メール・OAuthの実配線は代表E2Eで確認する。
 
 DBはケース開始時のtemplate差し替えで初期化するため、後処理でプロフィール・公開版・下書きをAPI経由で元へ戻さない。閉卓後の更新適用など製品の保証はケース本体で確認し、fixtureは取得したBrowserContext・プロセス群・storageの解放を担う。後処理の一つが失敗しても残りを実行し、元の失敗と後処理の失敗を区別する。
 
@@ -313,7 +344,7 @@ E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを
 
 ### PWAとHTTP差し替え
 
-PWA・メニュー公開・注文などの実動作試験はService Workerを有効にする。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する試験は、そのファイルの`test.use({ serviceWorkers: "block" })`でSW登録を止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
+実Service WorkerはPWA specで有効にし、制御・cache・offline・複数画面更新を検査する。runtime隔離の二ケースを除く他のspecは`test.use({ serviceWorkers: "block" })`でSW登録を止め、実API/Cookie/WS/配信の責務へ絞る。追加BrowserContextにも同じ設定を渡す。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する場合もSWを止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
 
 複数画面のSW更新は、2つの実ログイン画面で一方の未保存入力と他方の空フォームを用意し、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。Kioskの接客中・閉卓後の更新可否は実KioskとPwaのBrowser統合が所有する。定期取得のない画面を使い、入力保護の試験へ未接続Kioskの卓pollとnative Worker終了の競合を混ぜない。この実Kioskとの競合は[#274](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/274)で別に追跡し、フォーム試験の通過を製品側の解消とは扱わない。
 

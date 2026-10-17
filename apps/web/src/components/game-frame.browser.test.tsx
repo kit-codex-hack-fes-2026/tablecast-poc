@@ -113,3 +113,47 @@ it("別Window・偽の送信元・未許可の状態保存から本体を操作�
   expect(onExit).toHaveBeenCalledTimes(1);
   expect(onReady).toHaveBeenCalledTimes(1);
 });
+
+it("実SDKは保存応答を待って次の状態へ進み、二度目の保存後だけ終了する", async () => {
+  const first = Promise.withResolvers<void>();
+  const second = Promise.withResolvers<void>();
+  const onSave = vi
+    .fn<(state: GameState) => Promise<void>>()
+    .mockImplementationOnce(() => first.promise)
+    .mockImplementationOnce(() => second.promise);
+  const onExit = vi.fn<() => void>();
+  const game: GamePackage = {
+    manifest,
+    html: "<p>保存応答を待つ順番ゲーム</p>",
+    css: "",
+    javascript: `tablecast.ready.then(async () => {
+      // 次の人へ進む操作とスキップは、どちらも保存応答の後で次へ進む。
+      await tablecast.save({turn: 2});
+      await tablecast.save({turn: 3});
+      tablecast.exit();
+    });`,
+  };
+  try {
+    await render(
+      <GameFrame
+        game={game}
+        parentOrigin={parentOrigin}
+        locale="ja"
+        players={2}
+        initialState={initialState}
+        onSave={onSave}
+        onExit={onExit}
+      />,
+    );
+    await expect.poll(() => onSave.mock.calls).toEqual([[{ turn: 2 }]]);
+    expect(onExit).not.toHaveBeenCalled();
+    first.resolve();
+    await expect.poll(() => onSave.mock.calls).toEqual([[{ turn: 2 }], [{ turn: 3 }]]);
+    expect(onExit).not.toHaveBeenCalled();
+    second.resolve();
+    await expect.poll(() => onExit.mock.calls.length).toBe(1);
+  } finally {
+    first.resolve();
+    second.resolve();
+  }
+});

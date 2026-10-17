@@ -3,9 +3,9 @@ import { expect, type Page } from "@playwright/test";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "./support/test";
-import { credentials } from "./support/runtime";
 import { catalogSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
+import { signInStaff } from "./support/session";
 
 test("PWAの入口を分け、画像を再利用し、オフラインでは復帰案内を表示する", async ({
   page,
@@ -36,35 +36,19 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   await expect
     .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
     .toBe(true);
-  for (const [kind, start] of [
-    ["kiosk", "/"],
-    ["staff", "/admin/live"],
-  ]) {
-    const response = await api.get(`/tablecast-${kind}.webmanifest`);
-    const manifest = z
-      .object({
-        id: z.string(),
-        start_url: z.string(),
-        display: z.string(),
-        icons: z.array(z.object({ src: z.string() })),
-      })
-      .parse(await response.json());
-    for (const icon of manifest.icons) {
-      const image = await api.get(icon.src);
-      expect(image.ok()).toBe(true);
-      expect(image.headers()["content-type"]).toContain("image/png");
-    }
-    expect(manifest).toMatchObject({
-      id: `/tablecast-${kind}`,
-      start_url: start,
-      display: "standalone",
-    });
+  // manifestの静的な値はunitへ置き、ビルド済みassetの実HTTP配信だけを残す。
+  const manifestResponse = await api.get("/tablecast-kiosk.webmanifest");
+  expect(manifestResponse.ok()).toBe(true);
+  const manifest = z
+    .object({ icons: z.array(z.object({ src: z.string() })).min(1) })
+    .parse(await manifestResponse.json());
+  for (const icon of manifest.icons) {
+    const image = await api.get(icon.src);
+    expect(image.ok()).toBe(true);
+    expect(image.headers()["content-type"]).toContain("image/png");
   }
   expect((await api.get("/sw.js")).headers()["cache-control"]).toContain("no-cache");
-  await api.post("/api/auth/sign-in/email", {
-    data: credentials,
-    headers: { Origin: baseURL ?? "" },
-  });
+  await signInStaff(api, baseURL);
   const catalog = catalogSchema.parse(
     await (await api.get("/api/admin/stores/tablecast-komorebi/catalog")).json(),
   );
@@ -129,10 +113,8 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     "href",
     "/tablecast-staff.webmanifest",
   );
-  // manifestはSSRで読めるため、実Buttonの操作可能状態まで待ってから案内を開く。
+  // manifestのSSR表示だけで復帰完了とせず、実画面の操作可能状態も確認する。
   await expect(page.getByRole("button", { name: ja.auth_google, exact: true })).toBeEnabled();
-  await page.getByText(ja.pwa_install_title, { exact: true }).click();
-  await expect(page.getByText(ja.pwa_install_steps)).toBeVisible();
   if (testInfo.project.name === "tablecast-chromium") {
     // 対象画像の保存だけを一度失敗させ、他の背景取得に失敗条件を消費させない。
     const worker = context.serviceWorkers()[0];

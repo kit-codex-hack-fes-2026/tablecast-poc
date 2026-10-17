@@ -1,12 +1,11 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
-import { z } from "zod";
 import { test } from "./support/test";
-import { signInStaff } from "./support/session";
+import { approveGuestDevice, signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
 import { money } from "../src/i18n/format";
 
-test.use({ trace: "off" });
+test.use({ trace: "off", serviceWorkers: "block" });
 
 test("商品を保存・再読込し、明示公開した価格だけを実際の客画面へ届ける", async ({
   page,
@@ -36,30 +35,18 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
       })
     ).ok(),
   ).toBe(true);
-  const guest = await browser.newContext({ baseURL });
+  const guest = await browser.newContext({ baseURL, serviceWorkers: "block" });
   try {
-    const device = z
-      .object({ device_code: z.string(), user_code: z.string() })
-      .parse(await (await guest.request.post("/api/devices/request")).json());
-    expect(
-      (
-        await staff.post(`${api}/devices/approve`, {
-          headers,
-          data: { userCode: device.user_code, tableId: table.id },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect(
-      (
-        await guest.request.post("/api/devices/poll", {
-          data: { device_code: device.device_code },
-        })
-      ).ok(),
-    ).toBe(true);
+    await approveGuestDevice(guest.request, staff, {
+      origin: baseURL,
+      storeId,
+      tableId: table.id,
+    });
     const kiosk = await guest.newPage();
     await kiosk.goto("/");
     const guestProduct = kiosk
-      .locator("#tablecast-order button")
+      .getByRole("tabpanel")
+      .getByRole("button")
       .filter({ has: kiosk.getByText(product.text.ja.displayName, { exact: true }) });
     await expect(guestProduct).toContainText(money(product.price, "ja"));
 
@@ -86,7 +73,13 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(confirmation).toBeVisible();
     await expect(guestProduct).toContainText(money(product.price, "ja"));
     await confirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+    await expect(confirmation).toHaveCount(0);
     await expect(publish).toHaveCount(0);
+    const published = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
+    expect(published.version).toBe(catalog.version + 1);
+    expect(published.configuration.products.find((item) => item.id === product.id)?.price).toBe(
+      product.price + 100,
+    );
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
     await kiosk.reload();
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
