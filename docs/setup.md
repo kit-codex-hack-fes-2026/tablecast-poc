@@ -95,6 +95,8 @@ bun run dev
 
 CIのNodeは`>=24.7.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.7.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
 
+PR初回投入用の固定JSONは`bunx --no-install turbo run seed:template`で生成し、`.local/tablecast-seed-template/seed.json`へ保存する。Turboはseedのscript・API schema・migration・共通名簿・デモ画像・依存設定を入力としてcacheを管理する。生成物には架空店舗・商品構成・スタッフ名簿だけを入れ、実DB・所有情報・認証account・パスワード・時刻・tokenを保存しない。buildで検証して`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、同じrunの既存Workers artifactへ同梱する。公開assetsやproduction成果物には含めず、seed専用の転送step・job・依存導入も増やさない。配備時も同梱JSONの`sourceHash`と`payloadHash`を検証する。手動検証は`bun --no-env-file run seed:template --verify`を使う。壊れたcacheはTurboのコマンドに`--force`を付けて一度再生成し、検証し直す。適用対象と再開時の境界は[初期データと再実行](deployment.md#初期データと再実行)を参照する。
+
 `dev` はPortlessから `turbo run dev --filter=@tablecast/web` を実行する。Webの名前衝突を準備前に拒否し、`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。空きポートとrouteの登録はPortlessへ任せる。ローカルmigrationは `CI=1` で確認入力を省き、Turboから実行できる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
 
 `dev:prepare` は認証secretを維持して通常のenvとSDK用API設定を生成する。rootのPortlessから渡された実Webポートを `.local/.env` に保存し、起動中の初期化・resetを拒否する。Cloudflare設定はenvから直接読み、ローカル用の `TABLECAST_CONFIG` JSONや `runtime.json` は作らない。Mailpit・OTLPはPortless aliasへ接続する。seedの引数はNode標準の `parseArgs` で読む。
@@ -200,19 +202,20 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 ## 5. 日常の操作
 
-| コマンド                                | 用途                                                          |
-| --------------------------------------- | ------------------------------------------------------------- |
-| `bun run dev` / `bun run dev:container` | Turboで初期化・常駐タスクを起動する                           |
-| `bun run dev:prepare`                   | 設定・migration・seedのみを実行する                           |
-| `bun run services:status`               | ホスト開発のComposeサービスを確認する                         |
-| `bun run services:down`                 | ホスト開発のalias・container・networkを片付ける。volumeは保持 |
-| `bun run storybook`                     | Storybook公式CLI。DB・runtime初期化は不要                     |
-| `bun run check`                         | format・lint・typecheck・無課金テスト                         |
-| `bun run build`                         | 配備用Workersのbuild                                          |
-| `bun run dev:parity`                    | 通常開発を停止してから、local buildとVite previewを実行       |
-| `bun run demo:play`                     | 背景卓を一段階進める                                          |
-| `bun run demo:reset --profile demo`     | 停止済みworktreeのデモをリセットする。稼働中は拒否            |
-| `bun run demo:audio --verify`           | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
+| コマンド                                    | 用途                                                          |
+| ------------------------------------------- | ------------------------------------------------------------- |
+| `bun run dev` / `bun run dev:container`     | Turboで初期化・常駐タスクを起動する                           |
+| `bun run dev:prepare`                       | 設定・migration・seedのみを実行する                           |
+| `bun run services:status`                   | ホスト開発のComposeサービスを確認する                         |
+| `bun run services:down`                     | ホスト開発のalias・container・networkを片付ける。volumeは保持 |
+| `bun run storybook`                         | Storybook公式CLI。DB・runtime初期化は不要                     |
+| `bun run check`                             | format・lint・typecheck・無課金テスト                         |
+| `bun run build`                             | 配備用Workersのbuild                                          |
+| `bunx --no-install turbo run seed:template` | PR初回投入用の固定JSONを生成・cacheする                       |
+| `bun run dev:parity`                        | 通常開発を停止してから、local buildとVite previewを実行       |
+| `bun run demo:play`                         | 背景卓を一段階進める                                          |
+| `bun run demo:reset --profile demo`         | 停止済みworktreeのデモをリセットする。稼働中は拒否            |
+| `bun run demo:audio --verify`               | 保存済みデモ音声の台本・声・SHAと音声形式を無料で検査する     |
 
 デモ音声の作成にはホストの`ffmpeg`・`ffprobe`とInworldキーを使う。`bun run demo:audio`は生成予定の表示だけで、`bun --env-file=.env.local run demo:audio --generate`を明示した場合に有料TTSを呼ぶ。同じ台本・声・音声SHAの素材は再利用し、通常CIでは合成しない。台本、US/UK/India/Chinaを含む声の指定と実有料E2Eの判定方法は[合成音声素材](demo/audio.md)を参照する。
 

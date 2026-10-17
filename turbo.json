@@ -54,6 +54,19 @@
       "cache": false,
       "passThroughEnv": ["TABLECAST_*", "PORTLESS_*", "PORT"]
     },
+    "//#seed:template": {
+      "inputs": [
+        "scripts/**",
+        "apps/api/src/**",
+        "apps/api/migrations/**",
+        "apps/emulate/src/tablecast-demo-identities.ts",
+        "assets/demo/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "outputs": [".local/tablecast-seed-template/seed.json"]
+    },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
       "cache": false,

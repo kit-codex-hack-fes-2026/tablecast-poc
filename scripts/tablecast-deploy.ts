@@ -19,6 +19,7 @@ import { buildTablecast } from "./tablecast-build";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedPreviewDatabase } from "./tablecast-seed-data";
+import { readSeedTemplate } from "./tablecast-seed-template";
 import {
   accessApplicationConfig,
   tablecastAdoptedResources,
@@ -325,6 +326,11 @@ async function main(resetFinished = false) {
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
+  // 同じrunのSHA付き成果物を、資源の作成・resetより先に検証する。
+  const seedTemplate =
+    target.emulate && (!cleanup || reset)
+      ? await readSeedTemplate(resolve(root, "apps/web/.cloudflare/output/tablecast-seed.json"))
+      : undefined;
   await currentRevision(target, sha, cleanup && !reset);
   const secrets = cleanup && !reset ? undefined : deploymentSecrets(target, { ...process.env });
   // 資源変更前に、CI成果物が対象環境・SHAのものか確認する。
@@ -605,6 +611,7 @@ async function main(resetFinished = false) {
                   baseTime: Date.now(),
                   profile: "demo",
                 },
+                seedTemplate,
               );
               if (seeded) {
                 await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });

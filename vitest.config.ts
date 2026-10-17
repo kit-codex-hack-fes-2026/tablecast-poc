@@ -6,14 +6,22 @@ export default defineConfig({
       {
         test: {
           name: "scripts-unit",
-          include: ["scripts/tablecast-fixtures.test.ts", "scripts/tablecast-catalog*.test.ts"],
+          include: [
+            "scripts/tablecast-fixtures.test.ts",
+            "scripts/tablecast-catalog*.test.ts",
+            "scripts/tablecast-seed-template.test.ts",
+          ],
         },
       },
       {
         test: {
           name: "scripts-runtime",
           include: ["scripts/**/*.test.ts"],
-          exclude: ["scripts/tablecast-fixtures.test.ts", "scripts/tablecast-catalog*.test.ts"],
+          exclude: [
+            "scripts/tablecast-fixtures.test.ts",
+            "scripts/tablecast-catalog*.test.ts",
+            "scripts/tablecast-seed-template.test.ts",
+          ],
         },
       },
     ],

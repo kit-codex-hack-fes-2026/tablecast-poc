@@ -59,10 +59,10 @@ Web applicationの設定を次と完全一致させる。
 
 ## Actionsの処理
 
-1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
+1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。production以外は初回seedの固定JSONを既存のWorkers artifactへ同梱する。固定JSONはTurboで一度生成・検証し、壊れたcacheは一度だけ強制再生成してから検証し直す。buildジョブには配備secretを渡さない。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。D1/R2が揃った通常配備では、同じ排他・呼出し内で所有確認した資源を再利用し、一覧と所有情報の4要求を重複取得しない。欠落時の作成・cleanup・resetは再確認する従来経路を維持し、Binding接続後のR2所有照合も残す。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、製品の`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
+4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、製品の`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。seedの固定JSONも形式・生成元・payloadのhashを検証し、不一致なら遠隔資源の変更前に停止する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。cfはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。既存のDO namespace ID・クラス名・SQLite storageを前後で検査し、過去のDO migrationタグを再適用しない。未知のクラスを検出したら停止して照合する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
@@ -74,9 +74,19 @@ DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからli
 
 PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品と全カタログが利用可能になるまでを測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。job分割はrunnerと依存準備を増やし、製品とカタログのjob統合は前提検査の和集合を待って製品の先行配備を遅らせるため、単独区間の短縮だけで判断しない。CI全体へ配備の排他を広げる場合も、連続push時の古いCIとclose cleanupの待機増加を評価する。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
 
+2026-10-17の既存資源への配備では、`faac0c7`の製品jobが70秒、カタログjobが40秒だった。既存資源を使った比較実行の製品jobは変更前79秒・途中版77秒で、今回の差は7〜9秒である。カタログのscriptは従来34〜37秒から18秒になった。前提検査と排他の待機も異なる1標本ずつの結果であり、初回seedの改善や約1分の短縮を示す結果にはしない。[計測run](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/actions/runs/39037506882)
+
 ## 初期データと再実行
 
-PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。商品画像は4件ずつ並行し、条件付きput・内容照合・既存のretry上限を保つ。失敗した群の開始済みI/Oを回収してから失敗し、次の群へ進まない。ログの`商品画像の投入`、`DB・画像の配備準備`、`検証済みイメージの送信`で区間時間を確認する。投入済みフラグがある再配備では店舗設定・注文を再投入せず、追加された画像を補完する。プロフィール画像は空欄または旧seedのSVG URLだけを[生成WebP](demo/identities.md)へ更新し、手動設定した画像を保持する。 既知の旧デモメールと模擬Googleのsubjectも、ユーザーID・所属・資格情報を保ったまま人名@店舗名.comへ移行する。移行先に別ユーザーが存在する場合は停止する。`db:seed`のdevelopment制限は維持し、公開PR専用入口が対象originと所有情報を検査する。初期voiceは未設定で、管理画面で実在voiceを確認して明示公開するまで音声開始できない。
+PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。固定JSONは架空店舗・商品構成・スタッフ名簿を決定的に生成したfixtureで、rootのTurbo task `seed:template`が`.local/tablecast-seed-template/seed.json`へ出力する。cache入力は`scripts/**`、APIの`src/**`と`migrations/**`、emulateの共通名簿、`assets/demo/**`、依存lock・package・Turbo設定を明示する。認証account、パスワード・hash、実行時刻、token、所有marker、実DBはcacheへ含めない。`sourceHash`と`payloadHash`をbuild・配備で照合する。
+
+buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、既存の`tablecast-workers-<SHA>` artifactへ同梱する。`v0`内の公開assetsへは入れず、production buildではこのJSONを取り除く。配備は取得済みWorkers artifact内の同じpathを明示して検証する。seed専用のartifact転送step・job・依存導入は増やさない。
+
+固定JSONの適用は、所有確認済みで`seeded=0`の空DBへ標準demoを初回投入する場合に限定する。時刻とBetter Authのパスワードhashは配備時に生成し、認証・組織・所属・店舗・公開設定・卓の行を既存Drizzle schemaによる一つの`db.batch()`で投入する。営業中の卓の注文・イベントは続くbatchへ分け、D1の制限に合わせて分割する。固定JSONは任意SQLやDB dumpとして実行しない。
+
+商品画像は最大4件の処理枠を使い、完了した枠へ次を投入する。条件付きput・内容照合・既存のretry上限を保ち、失敗後は新規投入を止め、開始済みI/Oの終了を回収する。ログの`商品画像の投入`、`固定seedのDrizzle batch`、`営業中の卓のseed`、`DB・画像の配備準備`、`検証済みイメージの送信`で区間時間を確認する。旧経路での初回配備はDB・画像準備102.189秒、そのうち商品画像40.157秒だった。固定JSONの生成はローカル約200ms、cache hitは約22msであり、初回投入の主な短縮対象は認証API・DBとの直列往復をDrizzle batchへまとめる部分である。cacheだけで初回R2への31,068,514 Bの転送は省けない。新経路の遠隔初回配備はローカル資格のD1権限不足により未計測で、短縮量は確定していない。
+
+`seeded=1`の再配備では店舗設定・注文を再投入せず、追加された画像を補完する。プロフィール画像は空欄または旧seedのSVG URLだけを[生成WebP](demo/identities.md)へ更新し、手動設定した画像を保持する。既知の旧デモメールと模擬Googleのsubjectも、ユーザーID・所属・資格情報を保ったまま人名@店舗名.comへ移行する。移行先に別ユーザーが存在する場合は停止する。`db:seed`のdevelopment制限は維持し、公開PR専用入口が対象originと所有情報を検査する。初期voiceは未設定で、管理画面で実在voiceを確認して明示公開するまで音声開始できない。
 
 資源作成から所有情報記録、DB seed、画像登録の全体は原子的ではない。所有テーブルの`seeded`は`0`が未投入、`2`がDB投入済み・画像待ち、`1`が全投入完了を表す。DBはDrizzleの型付きschemaと`db.batch()`で投入する。`2`からの再配備は営業データを変更せず、未投入画像と上記プロフィール画像の更新だけを再開する。
 
