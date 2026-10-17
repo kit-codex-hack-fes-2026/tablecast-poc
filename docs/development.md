@@ -160,4 +160,4 @@ commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持�
 
 TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
 
-日本語のPRタイトルと英語のcommitを分けるため、標準の`prTitle`を指定する。Renovate 44.166.0のvalidatorはこの項目を非推奨として警告し、終了コード1を返す。schema errorとは区別して記録する。`commitMessage`の各部分は両方に共有されるため、推奨される置換だけでは二言語の規約を満たせない。設定の移行時は公式の対応状況を確認する。
+RenovateのPRタイトルは、推奨設定に従って英語のcommit件名から生成する。`prTitle`は個別指定せず、`commitMessageAction`や`commitMessageTopic`でcommitと共通の表現を設定する。自動更新PRは日本語タイトル規約の例外とし、本文は既存の日本語4項目を維持する。
