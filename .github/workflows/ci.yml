@@ -236,7 +236,7 @@ jobs:
               browsers: ${{ matrix.browser }}
           - name: Mailpit image
             if: steps.plan.outputs.e2e != 'none'
-            run: docker pull axllent/mailpit:v1.29.2
+            run: docker pull axllent/mailpit:v1.31.6
       - name: Isolated cases · 4 workers · no retries
         if: steps.plan.outputs.e2e != 'none'
         env:

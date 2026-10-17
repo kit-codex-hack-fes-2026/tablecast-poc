@@ -122,7 +122,7 @@ export default async function setup() {
       "--pull=missing",
       "--name",
       extract,
-      "axllent/mailpit:v1.29.2",
+      "axllent/mailpit:v1.31.6",
     ]);
     try {
       await execute("docker", ["cp", `${extract}:/mailpit`, join(runtime.directory, "mailpit")]);

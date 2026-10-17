@@ -247,7 +247,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ## E2Eの隔離
 
-`bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.29.2`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。
+`bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.31.6`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。APIのcf buildとWebのVite/Serwistで公式Build Outputを作り、`TABLECAST_BUILD_DIRECTORY`へ`.cloudflare`を複製する。通常buildの出力は一時生成するが、E2E終了後の実行資源は専用directoryへ隔離される。Webのdev・Storybook build・他のE2E buildを同じworktreeで同時実行しない。ローカル秘密値を含む成果物はTurbo cacheへ書き込まない。seedの`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。各workerはAPI・WebをVite plugin v2の公式previewで一緒に起動し、Service Bindingで接続する。D1/R2/DOのstateとregistryをworker内へ分ける。Cookie・メール・DO・認証をworker間で共有せず、ケース間は両Workersを停止してstate・assetsを復元し、Mailpitをクリアする。
 

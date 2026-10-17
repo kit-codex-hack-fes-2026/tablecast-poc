@@ -40,7 +40,7 @@ const flags = [
 for (const [key, value] of Object.entries(environment)) args.push("-e", `${key}=${value}`);
 const command = tablecastContainer
   ? ["mcp-grafana", ...flags]
-  : ["docker", ...args, "grafana/mcp-grafana:1.3.0", ...flags];
+  : ["docker", ...args, "grafana/mcp-grafana:2.0.2", ...flags];
 const child = Bun.spawn(command, {
   env: { ...process.env, ...environment },
   stdin: "inherit",
