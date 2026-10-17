@@ -177,7 +177,7 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   }
 });
 
-test("実Service Workerは別画面の未保存入力がある間は更新を待ち、入力を戻すと全画面へ適用する", async ({
+test("二つのログイン画面は未保存入力がある間はPWA更新を待ち、入力を戻すと両画面へ適用する", async ({
   page,
   context,
   browser,
@@ -192,7 +192,14 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
     const observe = (target: Page) =>
       target.on("console", (message) => {
         if (message.text().startsWith("tablecast-pwa-decision:"))
-          observations.push(message.text().slice("tablecast-pwa-decision:".length));
+          observations.push(
+            JSON.stringify({
+              client: target === page ? "editing" : "clean",
+              ...z
+                .record(z.string(), z.unknown())
+                .parse(JSON.parse(message.text().slice("tablecast-pwa-decision:".length))),
+            }),
+          );
       });
     observe(page);
     context.on("page", observe);
@@ -201,17 +208,14 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
       if (!("serviceWorker" in navigator)) return;
       navigator.serviceWorker.addEventListener(
         "message",
-        (event: MessageEvent<{ type?: string; phase?: string; requestId?: number }>) => {
+        (event: MessageEvent<{ type?: string }>) => {
           const port = event.ports[0];
           if (!port) {
-            if (
-              event.data?.type === "TABLECAST_CANCEL_UPDATE" ||
-              event.data?.type === "TABLECAST_TEST_UPDATE_PHASE"
-            )
+            if (event.data?.type === "TABLECAST_CANCEL_UPDATE")
               console.info(
                 "tablecast-pwa-decision:" +
                   JSON.stringify({
-                    ...event.data,
+                    type: event.data.type,
                     page: location.pathname,
                     time: Date.now(),
                   }),
@@ -238,7 +242,7 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
         },
       );
     });
-    // Given: 同じService Workerを共有する二画面と保存前のフォーム。
+    // Given: 同じService Workerを共有する、編集中と空の二つの実ログインフォーム。
     await page.goto("/login");
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
@@ -254,8 +258,11 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
     );
     const other = await context.newPage();
     try {
-      await other.goto(`${runtime.origin}/`);
-      await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
+      await other.goto("/login");
+      const cleanSubmit = other.getByRole("button", { name: ja.auth_sign_in, exact: true });
+      await expect(cleanSubmit).toBeEnabled();
+      await expect(cleanSubmit).toHaveAttribute("data-pwa-blocked", "false");
+      await expect(other.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
       // 二画面目の初回登録・制御が完了してから、次の版だけを更新対象にする。
       await expect
         .poll(() =>
@@ -287,56 +294,9 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
         return state;
       });
       // When: 配信済みService Workerの内容を更新する。
-      // nativeのPromiseをそのまま返し、更新の停滞箇所だけを依頼元画面へ記録する。
       await appendFile(
         join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
-        String.raw`
-// tablecast-update-test
-(() => {
-  let sequence = 0;
-  let request;
-  const report = (target, phase, detail = {}) => {
-    try {
-      target?.source?.postMessage({
-        type: "TABLECAST_TEST_UPDATE_PHASE",
-        requestId: target.id,
-        phase,
-        workerTime: Date.now(),
-        ...detail,
-      });
-    } catch {}
-  };
-  self.addEventListener("message", (event) => {
-    if (event.data?.type !== "TABLECAST_REQUEST_UPDATE") return;
-    request = { id: ++sequence, source: event.source };
-    report(request, "request-update");
-  }, { capture: true });
-  const matchAll = self.clients.matchAll.bind(self.clients);
-  self.clients.matchAll = (...args) => {
-    const target = request;
-    report(target, "matchAll-begin");
-    const result = matchAll(...args);
-    void result.then(
-      (clients) => report(target, "matchAll-end", {
-        clients: clients.map((client) => ({ id: client.id, url: client.url })),
-      }),
-      (error) => report(target, "matchAll-error", { error: String(error) }),
-    );
-    return result;
-  };
-  const skipWaiting = self.skipWaiting.bind(self);
-  self.skipWaiting = (...args) => {
-    const target = request;
-    report(target, "skipWaiting-begin");
-    const result = skipWaiting(...args);
-    void result.then(
-      () => report(target, "skipWaiting-end"),
-      (error) => report(target, "skipWaiting-error", { error: String(error) }),
-    );
-    return result;
-  };
-})();
-`,
+        "\n// tablecast-update-test\n",
       );
       await runtime.restartWeb();
 
@@ -359,6 +319,7 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
         "unsaved@example.test",
       );
       expect(reloads).toBe(0);
+      expect(otherReloads).toBe(0);
       // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
       try {
         await Promise.all([
@@ -376,8 +337,9 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
       } finally {
         for (const target of [page, other]) {
           observations.push(
-            JSON.stringify(
-              await target.evaluate(async () => {
+            JSON.stringify({
+              client: target === page ? "editing" : "clean",
+              ...(await target.evaluate(async () => {
                 const registration = await navigator.serviceWorker.getRegistration();
                 return {
                   page: location.pathname,
@@ -389,8 +351,8 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
                   blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
                   inert: document.body.inert,
                 };
-              }),
-            ),
+              })),
+            }),
           );
         }
         const path = testInfo.outputPath("tablecast-pwa-decisions.ndjson");
@@ -404,6 +366,7 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
       expect(reloads).toBe(1);
       expect(otherReloads).toBe(1);
       await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
+      await expect(other.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
       await expect
         .poll(() =>
           other.evaluate(async () => !(await navigator.serviceWorker.getRegistration())?.waiting),

@@ -251,7 +251,9 @@ E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを
 
 PWA・メニュー公開・注文などの実動作試験はService Workerを有効にする。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する試験は、そのファイルの`test.use({ serviceWorkers: "block" })`でSW登録を止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
 
-複数画面のSW更新は、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。Chromium内部の待機は、実ServiceWorkerの状態traceとnative matchAll/skipWaitingの到達点を照合する。診断を追加した後の単回成功を根因の修正と扱わない。
+複数画面のSW更新は、2つの実ログイン画面で一方の未保存入力と他方の空フォームを用意し、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。Kioskの接客中・閉卓後の更新可否は実KioskとPwaのBrowser統合が所有する。定期取得のない画面を使い、入力保護の試験へ未接続Kioskの卓pollとnative Worker終了の競合を混ぜない。この実Kioskとの競合は[#274](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/274)で別に追跡し、フォーム試験の通過を製品側の解消とは扱わない。
+
+更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。Chromium内部の待機はServiceWorkerの状態traceで、旧Workerの終了途中の再起動・通信・新旧版の遷移を照合する。診断を追加した後の単回成功を根因の修正と扱わない。
 
 ログイン後のSSR画面から次のdocument navigationへ進む場合は、見出しやURLだけでなく既存の操作部品が有効になるまで待つ。これによりhydrationとredirectの完了前に次の遷移を競合させない。
 
