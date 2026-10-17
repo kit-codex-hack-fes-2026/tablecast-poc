@@ -61,8 +61,8 @@ Web applicationの設定を次と完全一致させる。
 
 1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
-3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、製品の`docker load`、配備の順に進む。依存cacheとDockerの展開はdisk I/Oが競合するため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
+3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。D1/R2が揃った通常配備では、同じ排他・呼出し内で所有確認した資源を再利用し、一覧と所有情報の4要求を重複取得しない。欠落時の作成・cleanup・resetは再確認する従来経路を維持し、Binding接続後のR2所有照合も残す。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
+4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、製品の`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。cfはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。既存のDO namespace ID・クラス名・SQLite storageを前後で検査し、過去のDO migrationタグを再適用しない。未知のクラスを検出したら停止して照合する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
@@ -188,6 +188,8 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加し、両方をWorkers Static Assetsで配信する。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
 
 CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildがすべて成功した場合に配備jobを実行する。前提jobが失敗・skip・cancelされた場合は配備job自体もskipされ、統合通知でも成功扱いにしない。CI workflow全体も`cancel-in-progress: false`とし、PR更新で開始済みの移行・配備を中断しない。検査だけをキャンセル可能にするには、配備を別workflowへ分離する設計が必要となる。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
+
+カタログjobは依存準備を一度だけ行い、別Worker・別出力先を持つStorybookとメールを並行配備する。共有Access policy・service tokenは参照だけにし、各Workerの所有・公開前後のAccess・現在SHAをそれぞれ検証する。片方が失敗しても開始済みの子プロセスと検証の終了を回収してからjobを失敗にする。cleanupの削除順は維持する。
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 

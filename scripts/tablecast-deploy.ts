@@ -360,7 +360,11 @@ async function main(resetFinished = false) {
   );
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
-  const { database, bucketExists, bucketCreated } = await resources(!cleanup);
+  // 同じ配備内で所有確認済みの既存資源を使い、欠落時・削除・resetは従来の経路へ進む。
+  const { database, bucketExists, bucketCreated } =
+    !cleanup && !resetFinished && existingStorage.database && existingStorage.bucketExists
+      ? existingStorage
+      : await resources(!cleanup);
   if (reset && (!database || !bucketExists))
     throw new Error("stagingのD1・R2が揃っていません。所有資源を確認してください。");
   if (!database && !bucketExists) {

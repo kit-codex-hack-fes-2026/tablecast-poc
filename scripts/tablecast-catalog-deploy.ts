@@ -1,4 +1,5 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
@@ -193,77 +194,83 @@ async function main() {
   const directory = resolve(root, ".local/tablecast-catalog");
   await mkdir(directory, { recursive: true });
   await writeFile(resolve(directory, "empty.env"), "");
-  for (const kind of catalogKinds) {
-    const { name, origin } = catalogTarget(pr, kind);
-    const artifact =
-      kind === "email"
-        ? resolve(root, "apps/api/email-static")
-        : resolve(root, "apps/web/storybook-static");
-    const releasePath = "_tablecast/release.json";
-    const release = catalogReleaseSchema.parse(
-      JSON.parse(await readFile(resolve(artifact, releasePath), "utf8")),
-    );
-    if (release.pr !== pr || release.sha !== sha || release.kind !== kind)
-      throw new Error("成果物のPR・SHA・種別が一致しません。");
-    const workers = z
-      .array(z.object({ id: z.string() }))
-      .parse(await cloudflare("workers/scripts"));
-    const existing = workers.some((value) => value.id === name)
-      ? workerSchema.parse(await cloudflare(`workers/workers/${name}`))
-      : undefined;
-    await protect(name, new URL(origin).hostname, existing?.id);
-    await currentRevision(target, sha);
-    const catalogRoot = resolve(directory, kind);
-    await writeAssets({ root: catalogRoot, sourceDirectory: artifact });
-    await writeWorkerConfig({
-      root: catalogRoot,
-      config: InputWorkerSchema.parse({
-        assets: { notFoundHandling: "none", htmlHandling: "none" },
-        name,
-        compatibilityDate: "2026-09-03",
-        workersDev: false,
-        previewUrls: false,
-      }),
-    });
-    await writeRootConfig(
-      catalogRoot,
-      { accountId: tablecastAccountId },
-      { mode: "preview", isPreview: false },
-    );
-    execFileSync(
-      "node",
-      [resolve(root, "node_modules/cf/bin/cf"), "deploy", "--prebuilt", "--mode", "preview"],
-      {
-        cwd: catalogRoot,
-        stdio: "inherit",
-        env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
-      },
-    );
-    const worker = workerSchema.parse(await cloudflare(`workers/workers/${name}`));
-    if (worker.name !== name) throw new Error("Worker名が一致しません。");
-    await protect(name, new URL(origin).hostname, worker.id);
-    await currentRevision(target, sha);
-    await cloudflare(`workers/scripts/${name}/subdomain`, "POST", {
-      enabled: true,
-      previews_enabled: false,
-    });
-    let verified = false;
-    for (let attempt = 0; attempt < 12; attempt++) {
-      try {
-        verified = (await inspectCatalog(origin, pr, kind)).sha === sha;
-      } catch (error) {
-        console.info(
-          error instanceof Error && !error.message.includes("{")
-            ? error.message
-            : "カタログの応答を検証できません。",
-        );
+  const results = await Promise.allSettled(
+    catalogKinds.map(async (kind) => {
+      const { name, origin } = catalogTarget(pr, kind);
+      const artifact =
+        kind === "email"
+          ? resolve(root, "apps/api/email-static")
+          : resolve(root, "apps/web/storybook-static");
+      const releasePath = "_tablecast/release.json";
+      const release = catalogReleaseSchema.parse(
+        JSON.parse(await readFile(resolve(artifact, releasePath), "utf8")),
+      );
+      if (release.pr !== pr || release.sha !== sha || release.kind !== kind)
+        throw new Error("成果物のPR・SHA・種別が一致しません。");
+      const workers = z
+        .array(z.object({ id: z.string() }))
+        .parse(await cloudflare("workers/scripts"));
+      const existing = workers.some((value) => value.id === name)
+        ? workerSchema.parse(await cloudflare(`workers/workers/${name}`))
+        : undefined;
+      await protect(name, new URL(origin).hostname, existing?.id);
+      await currentRevision(target, sha);
+      const catalogRoot = resolve(directory, kind);
+      await writeAssets({ root: catalogRoot, sourceDirectory: artifact });
+      await writeWorkerConfig({
+        root: catalogRoot,
+        config: InputWorkerSchema.parse({
+          assets: { notFoundHandling: "none", htmlHandling: "none" },
+          name,
+          compatibilityDate: "2026-09-03",
+          workersDev: false,
+          previewUrls: false,
+        }),
+      });
+      await writeRootConfig(
+        catalogRoot,
+        { accountId: tablecastAccountId },
+        { mode: "preview", isPreview: false },
+      );
+      const child = spawn(
+        "node",
+        [resolve(root, "node_modules/cf/bin/cf"), "deploy", "--prebuilt", "--mode", "preview"],
+        {
+          cwd: catalogRoot,
+          stdio: "inherit",
+          env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
+        },
+      );
+      await once(child, "close");
+      if (child.exitCode !== 0) throw new Error(`${kind}の配備コマンドが失敗しました。`);
+      const worker = workerSchema.parse(await cloudflare(`workers/workers/${name}`));
+      if (worker.name !== name) throw new Error("Worker名が一致しません。");
+      await protect(name, new URL(origin).hostname, worker.id);
+      await currentRevision(target, sha);
+      await cloudflare(`workers/scripts/${name}/subdomain`, "POST", {
+        enabled: true,
+        previews_enabled: false,
+      });
+      let verified = false;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        try {
+          verified = (await inspectCatalog(origin, pr, kind)).sha === sha;
+        } catch (error) {
+          console.info(
+            error instanceof Error && !error.message.includes("{")
+              ? error.message
+              : "カタログの応答を検証できません。",
+          );
+        }
+        if (verified) break;
+        await new Promise((complete) => setTimeout(complete, 5000));
       }
-      if (verified) break;
-      await new Promise((complete) => setTimeout(complete, 5000));
-    }
-    if (!verified) throw new Error(`${kind}の公開SHA・Accessを確認できません。`);
-    console.info(`${kind}: ${origin} (${sha})`);
-  }
+      if (!verified) throw new Error(`${kind}の公開SHA・Accessを確認できません。`);
+      console.info(`${kind}: ${origin} (${sha})`);
+    }),
+  );
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) throw failure.reason;
 }
 
 if (import.meta.main) {
