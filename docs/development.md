@@ -156,7 +156,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 通常更新は日本時間の月曜6〜12時、非majorは一つのPR、majorはReact・Vitest・Storybook等の互換単位で分ける。lockfileも週次で更新する。セキュリティ更新は通常の時間帯制限から除外する。PRはstaging向けDraft、buildラベル、日本語の4項目の本文とし、自動マージしない。
 
-commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持する。標準テンプレートはDashboardの数値IDをcommitへ展開しないため、規約の根拠として導入Issue #292をRefsで参照する。更新の管理はDashboardが所有し、導入IssueとDashboardは自動更新PRで閉じない。commitlintの免除は追加しない。
+commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持する。標準テンプレートはDashboardの数値IDをcommitへ展開しないため、標準Appが作成した[Dependency Dashboard #302](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/302)をPR・commitのRefsで明示参照する。Dashboardを再作成した場合は、設定とこの参照番号を同期する。Dashboardは自動更新PRで閉じない。commitlintの免除は追加しない。
 
 TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
 
