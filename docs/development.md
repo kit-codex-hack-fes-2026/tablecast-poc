@@ -152,7 +152,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## Renovateによる依存更新
 
-設定は[Renovate設定](../.github/renovate.json5)で管理し、標準Mend Renovate GitHub Appをこのリポジトリへ接続する。botが作成・更新するDependency Dashboardに検出した依存、PR、保留・エラー・再実行を集約する。手動の追跡Issueや専用のIssue作成workflowは使わない。
+設定は[Renovate設定](../.github/renovate.json5)で管理し、標準Mend Renovate GitHub Appをこのリポジトリへ接続する。botが作成・更新するDependency Dashboardに検出した依存、PR、保留・エラー・再実行を集約する。手動の追跡Issueや専用のIssue作成workflowは使わない。`.agents/skills/**`は更新対象から除き、skill内の参考workflowを実際のCI依存として更新しない。
 
 通常更新は日本時間の月曜6〜12時、非majorは一つのPR、majorはReact・Vitest・Storybook等の互換単位で分ける。lockfileも週次で更新する。セキュリティ更新は通常の時間帯制限から除外する。PRはstaging向けDraft、buildラベル、日本語の4項目の本文とし、自動マージしない。
 

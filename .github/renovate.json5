@@ -6,6 +6,12 @@
     ":semanticCommitTypeAll(build)",
   ],
   enabledManagers: ["bun", "bun-version", "mise", "github-actions", "dockerfile", "docker-compose"],
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    ".agents/skills/**",
+  ],
   baseBranchPatterns: ["staging"],
   branchPrefix: "codex/renovate/",
   timezone: "Asia/Tokyo",
