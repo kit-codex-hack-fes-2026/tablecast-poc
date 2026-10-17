@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import {
@@ -25,10 +25,22 @@ import { CustomerCoupons } from "./customer-coupons";
 import "../../styles.css";
 
 let client: QueryClient;
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 async function show(view: ReactNode, locale: "ja" | "en" = "ja") {

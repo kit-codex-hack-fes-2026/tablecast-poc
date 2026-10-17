@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
 import { MotionProvider } from "../../components/motion-provider";
 import { Account } from "./account";
@@ -40,11 +40,23 @@ const session = {
 };
 let client: QueryClient;
 let unexpected: string[];
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 async function show(

@@ -9,7 +9,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { table } from "../../../.storybook/tablecast-fixtures";
@@ -45,10 +45,22 @@ const initial: TimelinePage = {
 };
 let client: QueryClient;
 vi.mock("./store-shell", () => ({ useStore: () => ({ id: "tablecast-komorebi" }) }));
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 it.each([

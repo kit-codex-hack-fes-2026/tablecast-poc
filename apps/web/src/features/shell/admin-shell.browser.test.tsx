@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
 import { MotionProvider } from "../../components/motion-provider";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
@@ -22,16 +22,28 @@ import "../../styles.css";
 let client: QueryClient;
 let unexpected: string[] = [];
 const sidebar = () => document.getElementById("tablecast-admin-sidebar");
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  for (const cookie of document.cookie.split(";")) {
-    const name = cookie.trim().split("=")[0];
-    if (name?.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    for (const cookie of document.cookie.split(";")) {
+      const name = cookie.trim().split("=")[0];
+      if (name?.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+    }
+    document.documentElement.style.fontSize = "";
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
   }
-  document.documentElement.style.fontSize = "";
-  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
 });
 
 async function show(locale: "ja" | "en" = "ja", initial = "/account") {

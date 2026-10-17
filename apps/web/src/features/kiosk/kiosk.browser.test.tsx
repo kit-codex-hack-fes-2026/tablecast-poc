@@ -39,7 +39,9 @@ let savedCart: TableState["cart"];
 let confirmationDuration: number;
 const cartWrites: CartUpdate[] = [];
 const requests: Request[] = [];
+let initialViewport: { width: number; height: number };
 beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
   vi.stubGlobal("WebSocket", TablecastSocket);
   TablecastSocket.instances = [];
   catalogResponse = Response.json(catalog);
@@ -127,16 +129,24 @@ beforeEach(() => {
   );
 });
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.useRealTimers();
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-  for (const cookie of document.cookie.split(";")) {
-    const name = cookie.trim().split("=")[0];
-    if (name.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+  try {
+    await cleanup();
+    client.clear();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    for (const cookie of document.cookie.split(";")) {
+      const name = cookie.trim().split("=")[0];
+      if (name.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+    }
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
   }
-  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
 });
 
 async function mountKiosk() {

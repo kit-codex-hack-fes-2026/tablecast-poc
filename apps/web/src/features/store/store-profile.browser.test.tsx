@@ -7,7 +7,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import ja from "../../../messages/ja.json";
@@ -18,11 +18,23 @@ import "../../styles.css";
 
 let client: QueryClient;
 let unexpected: string[];
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 it("店舗画像を送信すると設定とサイドバーを再取得し、再表示でも同じ保存画像を使う", async () => {

@@ -1,7 +1,7 @@
 import type { ClosedSessionSummary, TableEvent } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
@@ -13,11 +13,23 @@ import "../../styles.css";
 
 let client: QueryClient;
 let unexpected: string[];
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 const visit = (id: string): ClosedSessionSummary => ({
