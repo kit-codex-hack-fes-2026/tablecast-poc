@@ -214,6 +214,27 @@ E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、�
 
 下書き作成のPOSTは本番Hono clientと同じくbodyなしで送る。入力を取らないAPIへ空のJSONを付けない。固定Miniflare `5.20261006.1-alpha`には、未読のstream bodyの次の要求が`ECONNRESET`になる[上流報告](https://github.com/cloudflare/workers-sdk/issues/16199)がある。previewのtransport errorはcauseもruntimeログへ渡す。bodyなしへの整合を上流の接続不具合全体の修正とは扱わず、認可で拒否するAPI等の試験も維持する。
 
+### 並列実行と順番に依存しないfixture
+
+並列性は資源の所有範囲を分けて確保する。同じデータにUUIDを足すだけでDB独立とせず、他ケースの成功・作成済み行・Cookie・メール・前回の出力へ依存しない。通常のケースは単独でも全件内でも実行できるGivenを持ち、`beforeAll`へ可変の業務状態を持ち上げない。
+
+| 実行単位                     | 資源の所有と初期化                                                                         | 守る条件                                                                                                                                                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API bindingsのfile/case      | Cloudflare公式の隔離binding内で、各caseの`resetFixtureStorage()`→実migration→型付きfixture | file並列を使う。同じbindingをresetする同一fileの`it.concurrent`は使わない。競合は一つのcase内で明示barrierと`Promise.all`により作る                              |
+| Vitest Browserのcase         | 実feature/QueryClientとDOMをcaseで作り、unmount・query clear・mock/時計/通知を復元         | 同一fileのDOMとglobal clientを共有するcaseはconcurrent化しない。deferredは失敗時もfinallyで解放し、進行中mutationの終了を待つ                                    |
+| Vitest Browserのfile/session | fileごとiframe/moduleを作り直すが、同じsessionのBrowserContextは再利用され得る             | `cleanup()`や`isolate=true`をCookie/storage初期化と扱わない。永続化を試さない`LocaleProvider`は`persist={false}`、永続化caseは自分のキーの初期値と復元を所有する |
+| E2Eのworker/case             | worker専用D1/R2/DO・registry・配信資産と、case単位の標準BrowserContext/Cookie jar          | writer停止後に閉じたtemplateからstate/assetsを復元し、Mailpitを消去する。追加contextはcaseがcloseし、自分のprocess/containerだけを停止する                       |
+
+Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitest 4.1.11では既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
+
+`tablecast-runtime-isolation.spec.ts`の2件だけは、前caseで実D1と配信ファイルを変更し、worker再利用後に復元されたことを観測するためserialとする。これはfixture自体の回帰検査であり、通常の注文・公開journeyの順序依存を許可する例ではない。APIの`storage-isolation.test.ts`も実bindingの初期化を検査する。
+
+遅い応答はHTTP到達を確認してから途中状態を観測し、gateを解放して最終状態・入力・副作用を確認する。actionは一度だけ行い、assertionを待つ。APIの成功応答だけで画面反映完了とせず、Service Worker・hydration・保存・通知の対象状態を待つ。タイマー待ち・汎用networkidle・force click・timeout増加・retryで順序や準備不足を隠さない。
+
+既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
+
+通常のfile並列と、順序を変えた対象試験を別々に確認する。例えばAPIの対象fileを`--sequence.shuffle --sequence.seed=272`で実行し、seed・対象版・結果を残す。単回のshuffle成功を全順序の証明とは扱わず、資源所有と復元の設計で独立性を担保する。画像・trace・bounded logはcaseとengineで分け、同じ出力先へ書き込まない。fixture準備の失敗も業務assertionの失敗と同じくログを添付し、添付失敗で元のerrorを上書きしない。
+
 ### 型付きDB fixture
 
 APIの通常データ投入は`test/database-fixture.ts`の`insertFixture(table, values)`を使う。引数はDrizzleの`SQLiteInsertValue<T>`から列名・必須値・enum・日時型を推論し、単一行と複数行を扱う。SQL生成・値のencodeはDrizzleへ任せ、生成済みstatementを既存の実`D1.batch`へ渡してtransactionのまとまりを保つ。単独の参照・更新・削除には同じファイルの`fixtureDb`でDrizzleの標準queryを使う。
@@ -228,13 +249,15 @@ E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを
 
 PWA・メニュー公開・注文などの実動作試験はService Workerを有効にする。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する試験は、そのファイルの`test.use({ serviceWorkers: "block" })`でSW登録を止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
 
+複数画面のSW更新は、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。
+
 ログイン後のSSR画面から次のdocument navigationへ進む場合は、見出しやURLだけでなく既存の操作部品が有効になるまで待つ。これによりhydrationとredirectの完了前に次の遷移を競合させない。
 
 ### E2Eの通信停止とOAuthの動的ポート
 
 `runtime.setOnline(false)`は入口の待受を保持し、既存接続と新しい要求を切断する。`true`で同じoriginへ復帰する。ブラウザーのオフライン設定はWebKitのService Workerキャッシュ取得も止めるため使わない。通信障害の検証であり、Workerプロセスの再起動・DB復旧の証明とは区別する。Service Workerの更新試験はcase専用`client/sw.js`を書き換え、`runtime.restartWeb()`でWorker側のアセット情報を再読込してから`registration.update()`で配信を確認する。入口の待受は閉じず、再起動後のWorkerの実ポートへ転送先を更新する。最小の静的Workerでは再起動なしで本文が変わるが、実アプリの更新判定にはアセット情報の再構築が必要だった。
 
-`emulate@0.11.1`はpatchを適用せず、標準APIの指定ポートで起動する。E2Eは`TABLECAST_E2E_OAUTH_BASE_PORT`（既定24000）+ PlaywrightのparallelIndexを使う。同一worker内はケース終了時にOAuthを停止して次のケースへ進み、他worktreeと同時実行する場合は異なる基点ポートを指定する。OAuth起動のscripts試験は`TABLECAST_TEST_OAUTH_PORT`（既定23999）を使う。利用中ポートのbind失敗はそのまま失敗とし、再試行しない。dev・previewの明示ポートも維持し、port 0は使用しない。
+`emulate@0.11.1`はpatchを適用せず、標準APIの指定ポートで起動する。OAuth・Gateway・Mailpitはworker寿命で再利用し、case間はメールだけを消去する。同一invocation内はPlaywrightのparallelIndexをOAuth 24000、Linux Mailpit HTTP 25000、SMTP 26000へ加算して分離する。別worktreeでE2Eコマンドを同時に起動する場合は`TABLECAST_E2E_OAUTH_BASE_PORT`・`TABLECAST_E2E_MAILPIT_BASE_PORT`・`TABLECAST_E2E_SMTP_BASE_PORT`の3範囲すべてを分ける。CI matrixは別runnerで独立する。同一checkoutの複数buildは生成物も共有するため重ねない。OAuth起動のscripts試験は`TABLECAST_TEST_OAUTH_PORT`（既定23999）を使う。bind失敗は再試行せず所有者と設定を確認する。
 
 `scripts/tablecast-e2e-runtime.test.ts`は実TCPとOAuth子プロセスで、ケース分離、停止中のポート保持、復帰、discoveryのURL一致、bind失敗の拒否を確認する。HTTP・OAuth・メール・DB・PWAの最終配線は既存Chromium/WebKit E2Eが確認する。
 

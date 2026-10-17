@@ -14,6 +14,7 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 - 実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonはuvが所有する。workspace外から読む設定・素材も、実際にその内容へ依存するcached taskのinputsへ含める。標準機能を包むだけのrunner、envの二重解決、Composeの中継層を作らない。
 - テスト高速化は[保証の所有層](../../../docs/testing.md#保証の所有層とe2eへの昇格)を先に見直し、既存projectへ接続して上位の重複を除く。テスト件数や単独jobの短縮だけで判断せず、準備・実行・後片付けと必須チェック全体の時間を分ける。test成功結果の再利用を、当該runでの実行成功と扱わない。
 - 差分選択やcacheを変更する作業では、静的importに現れないHTTP・binding・ファイル・子プロセスの依存を確認する。比較失敗・設定変更・削除・動的依存の見落としを標準runnerだけで防げると仮定せず、全件へ戻す条件と入力・環境の寿命を決める。
+- 並列化では[fixtureの資源所有](../../../docs/testing.md#並列実行と順番に依存しないfixture)とworker枠の実効scopeを確認する。共有DB・Cookie・port・生成物・出力先を隔離し、caseの順序依存を通常journeyへ入れない。Browser poolの過剰生成、準備失敗、未解放gateをretryや全体の直列化で隠さず、原因と全体時間を確認する。
 - 自作skillの正本は`.agents/skills`へ置く。skillは選択・実行判断、docsは仕様・運用手順を所有し、別の編集元や同期用symlinkを増やさない。詳細参照は必要な作業から到達させ、全文読込を既定にしない。
 - 外部skillは`bunx skills add <source> --skill <name> --agent codex -y`と`skills-lock.json`で取得元を管理する。上流本文を整形・翻訳しない。plugin・MCP設定では利用者の既存設定を保ち、生成物と手動設定を分ける。
 
