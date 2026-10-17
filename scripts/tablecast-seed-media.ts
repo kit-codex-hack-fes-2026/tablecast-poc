@@ -146,12 +146,13 @@ export async function uploadPreviewImage(
       return "uploaded";
     } catch (error) {
       const code = error instanceof Error ? /\((\d+)\)$/.exec(error.message)?.[1] : undefined;
-      if (code !== "10001" || attempt === 3)
+      // code0はHTTP分類を失った応答なので、既存の上限内だけ保存結果を再確認する。
+      if ((code !== "10001" && code !== "0") || attempt === 3)
         throw new Error(
           `R2画像投入失敗: ${key} (code=${code ?? "整合性・接続"}, attempt=${attempt})`,
           { cause: error },
         );
-      console.warn(`R2一時障害: ${key} (code=${code}, attempt=${attempt}/3)`);
+      console.warn(`R2画像投入を再試行: ${key} (code=${code}, attempt=${attempt}/3)`);
       await new Promise((complete) => setTimeout(complete, 1_000 * 2 ** (attempt - 1)));
     }
   }
