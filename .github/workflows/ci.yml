@@ -161,6 +161,8 @@ jobs:
         with:
           ref: ${{ env.TABLECAST_RELEASE_SHA }}
       - uses: ./.github/actions/tablecast-setup
+        id: setup
+        background: true
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
@@ -169,6 +171,8 @@ jobs:
         with:
           name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
           path: apps/api/email-static/
+      - name: 依存の準備完了を待つ
+        wait: setup
       - name: Access保護・検証済みSHAの配備
         run: bun --no-env-file run deploy:catalog
 
@@ -294,6 +298,8 @@ jobs:
         with:
           ref: ${{ env.TABLECAST_RELEASE_SHA }}
       - uses: ./.github/actions/tablecast-setup
+        id: setup
+        background: true
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
@@ -304,6 +310,8 @@ jobs:
           path: .local/tablecast-deploy/
       - name: 検証済みContainerイメージを読み込む
         run: docker load --input .local/tablecast-deploy/tablecast-images.tar.gz
+      - name: 依存の準備完了を待つ
+        wait: setup
       - name: 配備先URL
         id: target
         run: bun --no-env-file -e 'import {deploymentTarget} from "./scripts/tablecast-deploy-config"; await Bun.write(process.env.GITHUB_OUTPUT, "url=" + deploymentTarget(process.env.TABLECAST_PR_NUMBER || undefined, process.env.TABLECAST_DEPLOY_ENV).origin + "\n")'

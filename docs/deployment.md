@@ -61,8 +61,8 @@ Web applicationの設定を次と完全一致させる。
 
 1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。buildジョブには配備secretを渡さない。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
-3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. 配備ジョブは全検証成功後にartifactを取得する。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
+3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
+4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifact取得と製品の`docker load`を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ってから配備する。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。cfはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。既存のDO namespace ID・クラス名・SQLite storageを前後で検査し、過去のDO migrationタグを再適用しない。未知のクラスを検出したら停止して照合する。
 6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
 
@@ -71,6 +71,8 @@ D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営�
 ビルドの入口は`bun --no-env-file run build:deploy`、配備・cleanupの入口は`bun --no-env-file run deploy`。実Bindingを使うseed・bootstrap・配備のSDK互換処理はWranglerを残し、既存tsx経由のNode.js 24.7.0で実行する。同じ遠隔D1接続がBun 1.3.13では45秒以内に完了せず、Nodeでは約4秒で成功した。Bun内部の原因までは未特定。Wranglerの公式サポートruntimeはNodeであり、独自の通信互換処理は追加しない。依存管理、config生成、build、公式CLIの起動はBunを維持する。[Wranglerの実行要件](https://developers.cloudflare.com/workers/wrangler/install-and-update/#install-wrangler)
 
 DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`cf containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`cf deploy --prebuilt`で配備する。cfのversion・image digest出力と対象SHAを同じrunで追跡する。OAuth emulatorの依存は既存Dockerfileのbuild段階で準備する。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
+
+PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品と全カタログが利用可能になるまでを測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。job分割はrunnerと依存準備を増やし、製品とカタログのjob統合は前提検査の和集合を待って製品の先行配備を遅らせるため、単独区間の短縮だけで判断しない。CI全体へ配備の排他を広げる場合も、連続push時の古いCIとclose cleanupの待機増加を評価する。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
 
 ## 初期データと再実行
 

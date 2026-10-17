@@ -121,6 +121,25 @@ describe("cfの環境解決と実資源の採用", () => {
     ).rejects.toThrow("再生成せず");
   });
 
+  test("service tokenの所有確認が未完了・不一致なら差分policyも更新しない", async () => {
+    const token = Promise.withResolvers<unknown>();
+    const writes: string[] = [];
+    const result = reconcileAccess(true, async (path, method = "GET") => {
+      if (method !== "GET") {
+        writes.push(path);
+        return undefined;
+      }
+      if (path.startsWith("access/policies"))
+        return tablecastAccess.policies.map((policy) => ({ ...policy, include: [] }));
+      return token.promise;
+    });
+    await Promise.resolve();
+    expect(writes).toEqual([]);
+    token.resolve({ ...tablecastAccess.serviceToken, name: "other-token" });
+    await expect(result).rejects.toThrow("採用済みservice tokenがありません");
+    expect(writes).toEqual([]);
+  });
+
   test("公式Build Outputを読み、別環境・別SHA・別PR・秘密値の混入を配備前に拒否する", async () => {
     const root = await mkdtemp(join(tmpdir(), "tablecast-build-output-test-"));
     const target = deploymentTarget("267");

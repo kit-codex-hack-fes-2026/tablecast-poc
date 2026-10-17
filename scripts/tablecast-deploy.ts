@@ -152,7 +152,14 @@ async function deployTemporaryWorker(worker: object, kind: string) {
 }
 
 export async function resources(create: boolean) {
-  const databases = z.array(databaseSchema).parse(await cloudflare("d1/database?per_page=1000"));
+  const [databaseList, bucketList] = await Promise.all([
+    cloudflare("d1/database?per_page=1000"),
+    cloudflare("r2/buckets"),
+  ]);
+  const databases = z.array(databaseSchema).parse(databaseList);
+  const { buckets } = z
+    .object({ buckets: z.array(z.object({ name: z.string() })) })
+    .parse(bucketList);
   if (databases.length >= 1000)
     throw new Error("D1一覧の上限に達しました。対象を再確認してください。");
   let databaseCreated = false;
@@ -204,9 +211,6 @@ export async function resources(create: boolean) {
     )
       throw new Error("D1の所有情報が一致しません。自動採用・削除は行いません。");
   }
-  const { buckets } = z
-    .object({ buckets: z.array(z.object({ name: z.string() })) })
-    .parse(await cloudflare("r2/buckets"));
   const bucketExists = buckets.some((value) => value.name === target.bucket);
   if (bucketExists) {
     const owner = await readBucketOwner(target.bucket);
@@ -224,7 +228,11 @@ export async function resources(create: boolean) {
 
 export async function accessApplication(create: boolean) {
   if (!target.emulate) return undefined;
-  const apps = z.array(accessSchema).parse(await cloudflare("access/apps?per_page=1000"));
+  const [applications] = await Promise.all([
+    cloudflare("access/apps?per_page=1000"),
+    create && target.environment !== "staging" ? assertAccessConfiguration() : undefined,
+  ]);
+  const apps = z.array(accessSchema).parse(applications);
   if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
   const domain = new URL(target.origin).hostname;
   if (target.environment === "staging") {
@@ -250,7 +258,6 @@ export async function accessApplication(create: boolean) {
   const app = apps.find((value) => value.name === target.web);
   if (app && app.domain !== domain) throw new Error("Accessの所有対象が一致しません。");
   if (create) {
-    await assertAccessConfiguration();
     await cloudflare(
       `access/apps${app ? `/${app.id}` : ""}`,
       app ? "PUT" : "POST",
@@ -329,23 +336,28 @@ async function main(resetFinished = false) {
       sha,
     );
   }
-  const existingStorage = await resources(false);
-  const existingNamespaces = await verifyDurableNamespaces();
-  const workers = z.array(z.object({ id: z.string() })).parse(await cloudflare("workers/scripts"));
-  for (const name of [target.api, target.web]) {
-    if (workers.some((worker) => worker.id === name)) {
-      const actual = z
-        .record(z.string(), z.unknown())
-        .parse(await cloudflare(`workers/scripts/${name}/settings`));
-      assertWorkerOwner(
-        actual,
-        target,
-        name === target.api,
-        existingStorage.database?.uuid,
-        existingNamespaces,
-      );
-    }
-  }
+  const [existingStorage, existingNamespaces, workerList] = await Promise.all([
+    resources(false),
+    verifyDurableNamespaces(),
+    cloudflare("workers/scripts"),
+  ]);
+  const workers = z.array(z.object({ id: z.string() })).parse(workerList);
+  await Promise.all(
+    [target.api, target.web]
+      .filter((name) => workers.some((worker) => worker.id === name))
+      .map(async (name) => {
+        const actual = z
+          .record(z.string(), z.unknown())
+          .parse(await cloudflare(`workers/scripts/${name}/settings`));
+        assertWorkerOwner(
+          actual,
+          target,
+          name === target.api,
+          existingStorage.database?.uuid,
+          existingNamespaces,
+        );
+      }),
+  );
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
   const { database, bucketExists, bucketCreated } = await resources(!cleanup);

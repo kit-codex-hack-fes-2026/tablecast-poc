@@ -68,9 +68,9 @@ export function ownedCatalogApplication(
 }
 
 async function protect(name: string, domain: string, workerId?: string) {
-  const app = (await applications()).find((value) => value.name === name);
+  const [apps] = await Promise.all([applications(), assertAccessConfiguration()]);
+  const app = apps.find((value) => value.name === name);
   if (app) ownedCatalogApplication(app, name, domain, workerId);
-  await assertAccessConfiguration();
   const policies = tablecastAccess.policies.map((value) => value.id);
   const created = appSchema.parse(
     await cloudflare(
