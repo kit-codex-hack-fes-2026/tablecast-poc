@@ -31,13 +31,7 @@ export function StandardVoiceSelect({
   const id = useId();
   const { t } = useI18n();
   const voices = useInfiniteQuery(standardVoicesOptions(storeId, language));
-  const choices = new Map<string, string>();
-  for (const voiceId of [...retained, value]) {
-    if (voiceId !== null) choices.set(voiceId, voiceId);
-  }
-  for (const page of voices.data?.pages ?? []) {
-    for (const voice of page.voices) choices.set(voice.voiceId, voice.displayName);
-  }
+  const choices = voiceChoices([...retained, value], voices.data?.pages ?? []);
   const code = apiError(voices.error)?.code;
   const catalogError =
     code === "VOICE_CATALOG_NOT_CONFIGURED" || code === "VOICE_CATALOG_UNAVAILABLE";
@@ -108,4 +102,18 @@ export function StandardVoiceSelect({
       )}
     </div>
   );
+}
+
+function voiceChoices(
+  retained: (string | null)[],
+  pages: { voices: { voiceId: string; displayName: string }[] }[],
+) {
+  const choices = new Map<string, string>();
+  for (const voiceId of retained) {
+    if (voiceId !== null) choices.set(voiceId, voiceId);
+  }
+  for (const page of pages) {
+    for (const voice of page.voices) choices.set(voice.voiceId, voice.displayName);
+  }
+  return choices;
 }

@@ -188,6 +188,8 @@ export default defineConfig({
     },
   ],
   settings: {
+    // React Doctor公式CLIと同じ診断意味論を使う。ruleのseverityは推奨のまま維持する。
+    "react-doctor": { portedRuleMode: "curated" },
     "boundaries/root-path": import.meta.dirname,
     "boundaries/include": ["src/**/*.{ts,tsx}"],
     "boundaries/files-single-match": true,

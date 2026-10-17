@@ -15,6 +15,8 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { readDeviceQrCode } from "./device-qr-code";
 
+type ScanNotice = "success" | "invalid" | "camera" | "image" | null;
+
 const scanMessage = tv({
   base: "flex items-start gap-2 rounded-lg p-3 text-base",
   variants: {
@@ -26,7 +28,7 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
   const { t } = useI18n();
   const hydrated = useHydrated();
   const [scanning, setScanning] = useState(false);
-  const [notice, setNotice] = useState<"success" | "invalid" | "camera" | "image" | null>(null);
+  const [notice, setNotice] = useState<ScanNotice>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const read = (value: string) => {
@@ -55,7 +57,6 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
       disposed = true;
     };
   }, [file]);
-  const hasError = notice !== null && notice !== "success";
   return (
     <div className="space-y-3" data-pwa-blocked={scanning || file !== null}>
       <div className="flex flex-wrap gap-2">
@@ -107,30 +108,7 @@ export function DeviceQrReader({ onRead }: { onRead: (code: string) => void }) {
           }}
         />
       )}
-      {(notice || file) && (
-        <div role={hasError ? "alert" : "status"} className={scanMessage({ error: hasError })}>
-          {file ? (
-            <LoaderCircle className="mt-0.5 size-5 shrink-0 animate-spin motion-reduce:animate-none" />
-          ) : hasError ? (
-            <TriangleAlert className="mt-0.5 size-5 shrink-0" />
-          ) : (
-            <CircleCheck className="mt-0.5 size-5 shrink-0" />
-          )}
-          <span>
-            {t(
-              file !== null
-                ? "common_loading"
-                : notice === "image"
-                  ? "device_scan_image_error"
-                  : notice === "camera"
-                    ? "device_scan_camera_error"
-                    : notice === "invalid"
-                      ? "device_scan_invalid"
-                      : "device_scan_success",
-            )}
-          </span>
-        </div>
-      )}
+      <ScanStatus notice={notice} reading={file !== null} />
     </div>
   );
 }
@@ -186,6 +164,31 @@ function CameraReader({
         <Camera className="size-4 shrink-0" />
         {t("device_scan_aim")}
       </p>
+    </div>
+  );
+}
+
+const scanNoticeMessages = {
+  image: "device_scan_image_error",
+  camera: "device_scan_camera_error",
+  invalid: "device_scan_invalid",
+  success: "device_scan_success",
+} as const;
+
+function ScanStatus({ notice, reading }: { notice: ScanNotice; reading: boolean }) {
+  const { t } = useI18n();
+  if (!notice && !reading) return null;
+  const hasError = notice !== null && notice !== "success";
+  return (
+    <div role={hasError ? "alert" : "status"} className={scanMessage({ error: hasError })}>
+      {reading ? (
+        <LoaderCircle className="mt-0.5 size-5 shrink-0 animate-spin motion-reduce:animate-none" />
+      ) : hasError ? (
+        <TriangleAlert className="mt-0.5 size-5 shrink-0" />
+      ) : (
+        <CircleCheck className="mt-0.5 size-5 shrink-0" />
+      )}
+      <span>{t(reading ? "common_loading" : scanNoticeMessages[notice ?? "success"])}</span>
     </div>
   );
 }

@@ -90,23 +90,11 @@ function ConditionNode({
       nextFocus.current = null;
     }
   });
-  const selected =
-    node.kind === "option" ? choices.find((choice) => choice.id === node.optionId) : undefined;
-  const missing = node.kind === "option" && !!node.optionId && !selected;
-  const items =
-    missing && node.kind === "option"
-      ? [
-          ...choices,
-          {
-            id: node.optionId,
-            label: `${node.optionId} · ${t("editor_missing_reference")}`,
-            search: node.optionId,
-            available: false,
-            invalid: true,
-            missing: true,
-          },
-        ]
-      : choices;
+  const { selected, missing, items } = conditionOptionChoices(
+    node,
+    choices,
+    t("editor_missing_reference"),
+  );
   return (
     <fieldset
       ref={root}
@@ -119,73 +107,16 @@ function ConditionNode({
       </legend>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         {node.kind === "option" ? (
-          <Combobox.Root
+          <OptionPicker
+            node={node}
             items={items}
-            value={
-              items.find((item) => item.id === (node.kind === "option" ? node.optionId : "")) ??
-              null
-            }
-            itemToStringLabel={(item) => item.label}
-            isItemEqualToValue={(a, b) => a.id === b.id}
-            filter={(item, query) =>
-              item.search.toLocaleLowerCase().includes(query.toLocaleLowerCase())
-            }
+            id={id}
+            invalid={invalid}
+            missing={missing}
+            selected={selected}
             disabled={disabled}
-            onValueChange={(item) => onChange({ kind: "option", optionId: item?.id ?? "" })}
-          >
-            <div className="relative min-w-0 flex-1 basis-48">
-              <Combobox.Input
-                data-node-control
-                aria-label={t("condition_choose")}
-                aria-invalid={invalid || missing || selected?.invalid || undefined}
-                aria-describedby={invalid || missing ? `${id}-error` : undefined}
-                placeholder={t("condition_search")}
-                className="h-11 w-full min-w-0 rounded-md border border-input bg-background pl-3 pr-10 text-base"
-              />
-              <Combobox.Trigger
-                aria-label={t("condition_candidates")}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center"
-              >
-                <ChevronDown className="size-4" />
-              </Combobox.Trigger>
-            </div>
-            <Combobox.Portal>
-              <Combobox.Positioner sideOffset={4} className="z-50 max-w-[calc(100vw-24px)]">
-                <Combobox.Popup className="max-h-72 w-(--anchor-width) overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
-                  <Combobox.Empty className="p-3 text-sm">
-                    {t("condition_no_candidates")}
-                  </Combobox.Empty>
-                  <Combobox.List>
-                    {(item: Choice) => (
-                      <Combobox.Item
-                        key={item.id}
-                        value={item}
-                        disabled={item.invalid}
-                        className="flex min-h-11 cursor-default items-center gap-2 rounded-md p-2 text-sm wrap-anywhere data-highlighted:bg-accent data-disabled:opacity-50"
-                      >
-                        <Combobox.ItemIndicator>
-                          <Check className="size-4" />
-                        </Combobox.ItemIndicator>
-                        <span>
-                          {item.label}
-                          <span className="block text-xs text-muted-foreground">
-                            {item.id}
-                            {item.missing
-                              ? ` · ${t("editor_missing_reference")}`
-                              : item.invalid
-                                ? ` · ${t("condition_self")}`
-                                : !item.available
-                                  ? ` · ${t("condition_sold_out")}`
-                                  : ""}
-                          </span>
-                        </span>
-                      </Combobox.Item>
-                    )}
-                  </Combobox.List>
-                </Combobox.Popup>
-              </Combobox.Positioner>
-            </Combobox.Portal>
-          </Combobox.Root>
+            onChange={onChange}
+          />
         ) : node.kind !== "not" ? (
           <NativeSelect
             data-node-control
@@ -205,54 +136,25 @@ function ConditionNode({
         ) : (
           <span className="py-3 text-sm">{t("condition_not_scope")}</span>
         )}
-        {node.kind !== "not" && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || depth >= conditionLimits.depth}
-            onClick={() => {
-              nextFocus.current = "node";
-              onChange({ kind: "not", child: node });
-            }}
-          >
-            {t("condition_negate")}
-          </Button>
-        )}
-        {node.kind === "not" && (
-          <Button
-            data-node-control
-            type="button"
-            variant="outline"
-            onClick={() => {
-              nextFocus.current = "node";
-              onChange(node.child);
-            }}
-          >
-            {t("condition_unwrap")}
-          </Button>
-        )}
-        {node.kind === "option" && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled || depth >= conditionLimits.depth}
-            onClick={() => {
-              nextFocus.current = "last";
-              onChange({ kind: "and", children: [node, emptyLeaf()] });
-            }}
-          >
-            {t("condition_group")}
-          </Button>
-        )}
+        <ConditionActions
+          node={node}
+          depth={depth}
+          disabled={disabled}
+          onChange={onChange}
+          onFocus={(target) => {
+            nextFocus.current = target;
+          }}
+        />
         <Button type="button" variant="ghost" onClick={onRemove} aria-label={t("condition_remove")}>
           <Trash2 className="size-4" />
         </Button>
       </div>
-      {(invalid || missing || selected?.invalid) && (
-        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
-          {missing ? t("editor_missing_reference") : t("condition_invalid")}
-        </p>
-      )}
+      <ConditionErrorNotice
+        id={id}
+        invalid={invalid}
+        missing={missing}
+        selectedInvalid={selected?.invalid}
+      />
       {node.kind === "not" && (
         <ConditionNode
           node={node.child}
@@ -567,5 +469,190 @@ export function OptionConditionsEditor({
         )}
       </details>
     </div>
+  );
+}
+
+function conditionOptionChoices(node: OptionCondition, choices: Choice[], missingLabel: string) {
+  const selected =
+    node.kind === "option" ? choices.find((choice) => choice.id === node.optionId) : undefined;
+  const missing = node.kind === "option" && !!node.optionId && !selected;
+  const items =
+    missing && node.kind === "option"
+      ? [
+          ...choices,
+          {
+            id: node.optionId,
+            label: `${node.optionId} · ${missingLabel}`,
+            search: node.optionId,
+            available: false,
+            invalid: true,
+            missing: true,
+          },
+        ]
+      : choices;
+  return { selected, missing, items };
+}
+
+function OptionPicker({
+  node,
+  items,
+  id,
+  invalid,
+  missing,
+  selected,
+  disabled,
+  onChange,
+}: {
+  node: Extract<OptionCondition, { kind: "option" }>;
+  items: Choice[];
+  id: string;
+  invalid: boolean;
+  missing: boolean;
+  selected?: Choice;
+  disabled: boolean;
+  onChange: NodeProps["onChange"];
+}) {
+  const { t } = useI18n();
+  return (
+    <Combobox.Root
+      items={items}
+      value={
+        items.find((item) => item.id === (node.kind === "option" ? node.optionId : "")) ?? null
+      }
+      itemToStringLabel={(item) => item.label}
+      isItemEqualToValue={(a, b) => a.id === b.id}
+      filter={(item, query) => item.search.toLocaleLowerCase().includes(query.toLocaleLowerCase())}
+      disabled={disabled}
+      onValueChange={(item) => onChange({ kind: "option", optionId: item?.id ?? "" })}
+    >
+      <div className="relative min-w-0 flex-1 basis-48">
+        <Combobox.Input
+          data-node-control
+          aria-label={t("condition_choose")}
+          aria-invalid={invalid || missing || selected?.invalid || undefined}
+          aria-describedby={invalid || missing ? `${id}-error` : undefined}
+          placeholder={t("condition_search")}
+          className="h-11 w-full min-w-0 rounded-md border border-input bg-background pl-3 pr-10 text-base"
+        />
+        <Combobox.Trigger
+          aria-label={t("condition_candidates")}
+          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center"
+        >
+          <ChevronDown className="size-4" />
+        </Combobox.Trigger>
+      </div>
+      <Combobox.Portal>
+        <Combobox.Positioner sideOffset={4} className="z-50 max-w-[calc(100vw-24px)]">
+          <Combobox.Popup className="max-h-72 w-(--anchor-width) overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+            <Combobox.Empty className="p-3 text-sm">{t("condition_no_candidates")}</Combobox.Empty>
+            <Combobox.List>
+              {(item: Choice) => (
+                <Combobox.Item
+                  key={item.id}
+                  value={item}
+                  disabled={item.invalid}
+                  className="flex min-h-11 cursor-default items-center gap-2 rounded-md p-2 text-sm wrap-anywhere data-highlighted:bg-accent data-disabled:opacity-50"
+                >
+                  <Combobox.ItemIndicator>
+                    <Check className="size-4" />
+                  </Combobox.ItemIndicator>
+                  <span>
+                    {item.label}
+                    <span className="block text-xs text-muted-foreground">
+                      {item.id}
+                      {item.missing
+                        ? ` · ${t("editor_missing_reference")}`
+                        : item.invalid
+                          ? ` · ${t("condition_self")}`
+                          : !item.available
+                            ? ` · ${t("condition_sold_out")}`
+                            : ""}
+                    </span>
+                  </span>
+                </Combobox.Item>
+              )}
+            </Combobox.List>
+          </Combobox.Popup>
+        </Combobox.Positioner>
+      </Combobox.Portal>
+    </Combobox.Root>
+  );
+}
+
+function ConditionErrorNotice({
+  id,
+  invalid,
+  missing,
+  selectedInvalid,
+}: {
+  id: string;
+  invalid: boolean;
+  missing: boolean;
+  selectedInvalid?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {(invalid || missing || selectedInvalid) && (
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+          {missing ? t("editor_missing_reference") : t("condition_invalid")}
+        </p>
+      )}
+    </>
+  );
+}
+
+function ConditionActions({
+  node,
+  depth,
+  disabled,
+  onChange,
+  onFocus,
+}: Pick<NodeProps, "node" | "depth" | "disabled" | "onChange"> & {
+  onFocus: (target: "node" | "last") => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {node.kind !== "not" && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || depth >= conditionLimits.depth}
+          onClick={() => {
+            onFocus("node");
+            onChange({ kind: "not", child: node });
+          }}
+        >
+          {t("condition_negate")}
+        </Button>
+      )}
+      {node.kind === "not" && (
+        <Button
+          data-node-control
+          type="button"
+          variant="outline"
+          onClick={() => {
+            onFocus("node");
+            onChange(node.child);
+          }}
+        >
+          {t("condition_unwrap")}
+        </Button>
+      )}
+      {node.kind === "option" && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || depth >= conditionLimits.depth}
+          onClick={() => {
+            onFocus("last");
+            onChange({ kind: "and", children: [node, emptyLeaf()] });
+          }}
+        >
+          {t("condition_group")}
+        </Button>
+      )}
+    </>
   );
 }

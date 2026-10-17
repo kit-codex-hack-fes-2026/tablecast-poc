@@ -71,9 +71,10 @@ function MenuListCollection({
     ...draftOptions(storeId, draftId ?? ""),
     queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,
   });
+  const error = catalog.error || draft.error;
   const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
-  const editable = !draftId || draft.data?.status === "draft" || draft.data?.status === "ready";
-  const manager = store.role === "owner" || store.role === "admin";
+  const editable = !draftId || ["draft", "ready"].includes(draft.data?.status ?? "");
+  const manager = ["owner", "admin"].includes(store.role);
   const columns = useMemo(
     () => menuCollectionColumns(t, locale, section, draftId, storeId, search),
     [t, locale, section, draftId, storeId, search],
@@ -92,20 +93,10 @@ function MenuListCollection({
           params: { storeId, section },
         }));
   }
-  const data = configuration
-    ? menuCollectionRows(configuration, section, locale).filter(
-        (row) =>
-          (!search.q || row.searchText.includes(search.q.trim().normalize("NFKC").toLowerCase())) &&
-          (section !== "products" || !search.category || row.categoryId === search.category) &&
-          (section !== "products" ||
-            !search.availability ||
-            row.available === (search.availability === "available")),
-      )
-    : [];
-  const pagination = {
-    pageIndex: Math.min((search.page ?? 1) - 1, Math.max(0, Math.ceil(data.length / 20) - 1)),
-    pageSize: 20,
-  };
+  const data = menuCollectionRows(configuration, section, locale).filter((row) =>
+    matchesMenuSearch(row, section, search),
+  );
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -151,74 +142,23 @@ function MenuListCollection({
       </div>
 
       <ErrorNotice
-        error={catalog.error || draft.error}
+        error={error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
       {section === "products" && configuration && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            {t("editor_category")}
-            <NativeSelect
-              value={search.category ?? ""}
-              onChange={(event) =>
-                updateSearch({ category: event.target.value || undefined, page: undefined })
-              }
-            >
-              <option value="">{t("menu_all_categories")}</option>
-              {configuration.categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.text[locale].displayName}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            {t("menu_availability")}
-            <NativeSelect
-              value={search.availability ?? ""}
-              onChange={(event) =>
-                updateSearch({
-                  availability:
-                    event.target.value === "available"
-                      ? "available"
-                      : event.target.value === "sold-out"
-                        ? "sold-out"
-                        : undefined,
-                  page: undefined,
-                })
-              }
-            >
-              <option value="">{t("menu_all_availability")}</option>
-              <option value="available">{t("editor_available")}</option>
-              <option value="sold-out">{t("kiosk_sold_out")}</option>
-            </NativeSelect>
-          </label>
-        </div>
+        <ProductFilters
+          categories={configuration.categories}
+          search={search}
+          onChange={updateSearch}
+        />
       )}
-      {(configuration || !(catalog.error || draft.error)) && (
-        <DataTable
+      {(configuration || !error) && (
+        <MenuResults
           data={data}
-          pending={!configuration}
           columns={columns}
-          getRowId={(row) => row.id}
-          searchLabel={t("menu_search")}
-          state={{ globalFilter: search.q ?? "", pagination }}
-          onGlobalFilterChange={(next) =>
-            updateSearch({
-              q: (typeof next === "function" ? next(search.q ?? "") : next) || undefined,
-              page: undefined,
-            })
-          }
-          onPaginationChange={(next) => {
-            const value = typeof next === "function" ? next(pagination) : next;
-            updateSearch({ page: value.pageIndex ? value.pageIndex + 1 : undefined });
-          }}
-          manualFiltering
-          empty={t(
-            search.q || search.category || search.availability
-              ? "common_no_results"
-              : "menu_no_items",
-          )}
+          search={search}
+          pending={!configuration}
+          onChange={updateSearch}
         />
       )}
     </>
@@ -359,10 +299,11 @@ function menuCollectionColumns(
 }
 
 function menuCollectionRows(
-  configuration: Configuration,
+  configuration: Configuration | undefined,
   section: Exclude<MenuSection, "cast">,
   locale: ReturnType<typeof useI18n>["locale"],
 ): ItemRow[] {
+  if (!configuration) return [];
   const categories = new Map(configuration.categories.map((category) => [category.id, category]));
   if (section === "products")
     return configuration.products.map((item) => {
@@ -416,3 +357,114 @@ const menuSearchText = (item: Configuration["categories"][number]) =>
     .flatMap((value) => [value.displayName, value.speechName, ...value.aliases])
     .join(" ");
 const normalise = (value: string) => value.normalize("NFKC").toLowerCase();
+
+function matchesMenuSearch(
+  row: ItemRow,
+  section: Exclude<MenuSection, "cast">,
+  search: MenuListSearch,
+) {
+  return (
+    (!search.q || row.searchText.includes(search.q.trim().normalize("NFKC").toLowerCase())) &&
+    (section !== "products" || !search.category || row.categoryId === search.category) &&
+    (section !== "products" ||
+      !search.availability ||
+      row.available === (search.availability === "available"))
+  );
+}
+
+function ProductFilters({
+  categories,
+  search,
+  onChange,
+}: {
+  categories: Configuration["categories"];
+  search: MenuListSearch;
+  onChange: (next: MenuListSearch) => void;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+      <label className="flex flex-col gap-2 text-sm font-medium">
+        {t("editor_category")}
+        <NativeSelect
+          value={search.category ?? ""}
+          onChange={(event) =>
+            onChange({ category: event.target.value || undefined, page: undefined })
+          }
+        >
+          <option value="">{t("menu_all_categories")}</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.text[locale].displayName}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
+      <label className="flex flex-col gap-2 text-sm font-medium">
+        {t("menu_availability")}
+        <NativeSelect
+          value={search.availability ?? ""}
+          onChange={(event) =>
+            onChange({
+              availability:
+                event.target.value === "available"
+                  ? "available"
+                  : event.target.value === "sold-out"
+                    ? "sold-out"
+                    : undefined,
+              page: undefined,
+            })
+          }
+        >
+          <option value="">{t("menu_all_availability")}</option>
+          <option value="available">{t("editor_available")}</option>
+          <option value="sold-out">{t("kiosk_sold_out")}</option>
+        </NativeSelect>
+      </label>
+    </div>
+  );
+}
+
+function MenuResults({
+  data,
+  columns,
+  search,
+  pending,
+  onChange,
+}: {
+  data: ItemRow[];
+  columns: DataTableColumn<ItemRow>[];
+  search: MenuListSearch;
+  pending: boolean;
+  onChange: (next: MenuListSearch) => void;
+}) {
+  const { t } = useI18n();
+  const pagination = {
+    pageIndex: Math.min((search.page ?? 1) - 1, Math.max(0, Math.ceil(data.length / 20) - 1)),
+    pageSize: 20,
+  };
+  return (
+    <DataTable
+      data={data}
+      pending={pending}
+      columns={columns}
+      getRowId={(row) => row.id}
+      searchLabel={t("menu_search")}
+      state={{ globalFilter: search.q ?? "", pagination }}
+      onGlobalFilterChange={(next) =>
+        onChange({
+          q: (typeof next === "function" ? next(search.q ?? "") : next) || undefined,
+          page: undefined,
+        })
+      }
+      onPaginationChange={(next) => {
+        const value = typeof next === "function" ? next(pagination) : next;
+        onChange({ page: value.pageIndex ? value.pageIndex + 1 : undefined });
+      }}
+      manualFiltering
+      empty={t(
+        search.q || search.category || search.availability ? "common_no_results" : "menu_no_items",
+      )}
+    />
+  );
+}
