@@ -182,6 +182,8 @@ GitHub Actionsの`actions/cache`で静的解析・Workers buildと手動カタ�
 
 Bunの取得cacheは全jobが`actions/cache/restore`で復元し、`static`だけがfrozen install成功後に標準の`actions/cache/save`で保存する。新しいlockの同じcacheを全jobが圧縮・保存し直す競合を避け、保存専用jobや共通の開始待ちを作らない。保存されなくても各jobは固定依存を導入してから検査する。Turboを使うjobはcodegenより先にcacheを復元し、生成済みParaglideを復元できる場合は再生成を避ける。lock更新時の取得・圧縮費用と、同じlockのwarm実行を区別して測る。
 
+共通setupの既定codegenは、Webの生成物を参照しないAPI jobでは実行しない。Component jobも既定形式の生成を省き、試験直前の`locale-modules`だけを生成する。他の呼出しは既定のcodegenを維持する。生成の省略は実際のimportと後続の生成経路で判断し、生成済みのローカルfileや前jobの出力に依存させない。
+
 Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試行し、短縮効果を確認できなかったためCIでは採用しない。保存される時間はsetup・import・Worker準備を含まず、この構成の準備負荷を表さない。標準shardのfile分配もdurationでは変わらない。Bun・Turbo・ブラウザー・seedの既存cacheは維持し、選択した試験は毎回実行する。対象SHA・環境・計測結果はPRへ残す。[Vitestの実行順](https://vitest.dev/config/sequence.html#sequence-sequencer)
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
@@ -290,6 +292,8 @@ PWA・メニュー公開・注文などの実動作試験はService Workerを有
 更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。Chromium内部の待機はServiceWorkerの状態traceで、旧Workerの終了途中の再起動・通信・新旧版の遷移を照合する。診断を追加した後の単回成功を根因の修正と扱わない。
 
 ログイン後のSSR画面から次のdocument navigationへ進む場合は、見出しやURLだけでなく既存の操作部品が有効になるまで待つ。これによりhydrationとredirectの完了前に次の遷移を競合させない。
+
+SSRのfile入力も、既存Button・NativeSelect等と同様に`useHydrated()`で操作開始を制御する。Playwrightの`setInputFiles`自体は有効化を待たないため、先に`toBeEnabled()`を確認し、選択後はfilenameと候補の表示を観測する。画像配信の代表E2Eではclient JSをgateで止め、SSRでは無効・解放後は有効になることを同じjourney内で検証する。gateは`finally`で解放し、入力前の固定sleepや失敗時の再試行へ置き換えない。
 
 ### E2Eの通信停止とOAuthの動的ポート
 

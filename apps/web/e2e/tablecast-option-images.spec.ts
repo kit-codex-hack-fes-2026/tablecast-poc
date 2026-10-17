@@ -22,14 +22,28 @@ test("画面で取り込んだ商品画像を保存し、開き直した下書�
   const draft = configDraftSchema.parse(
     await (await page.request.post(`${api}/drafts`, { headers })).json(),
   );
-  await page.goto(
-    `/admin/stores/tablecast-komorebi/menu/changes/${draft.id}/products/${product.id}`,
-  );
   const field = page.getByRole("group", { name: ja.editor_image_settings, exact: true }).first();
+  const fileInput = field.getByLabel(ja.editor_image_replace);
+  const scripts = /\/assets\/[^/]+\.js(?:\?|$)/;
+  const hydration = Promise.withResolvers<void>();
+  await page.route(scripts, async (route) => {
+    await hydration.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto(
+      `/admin/stores/tablecast-komorebi/menu/changes/${draft.id}/products/${product.id}`,
+      { waitUntil: "commit" },
+    );
+    await expect(fileInput).toBeDisabled();
+  } finally {
+    hydration.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+  await expect(fileInput).toBeEnabled();
   const buffer = await readFile(new URL("../public/brand/tablecast-logo.png", import.meta.url));
-  await field
-    .getByLabel(ja.editor_image_replace)
-    .setInputFiles({ name: "tablecast-logo.png", mimeType: "image/png", buffer });
+  await fileInput.setInputFiles({ name: "tablecast-logo.png", mimeType: "image/png", buffer });
+  await expect(field.getByText("tablecast-logo.png", { exact: true })).toBeVisible();
   await field.getByRole("combobox", { name: ja.editor_image_kind }).selectOption("illustration");
   await field
     .getByRole("textbox", { name: ja.editor_image_source, exact: true })

@@ -5,6 +5,7 @@ import {
   type Product,
 } from "@tablecast/api/schema";
 import { useMutation } from "@tanstack/react-query";
+import { useHydrated } from "@tanstack/react-router";
 import { ImageOff, ImagePlus, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -105,6 +106,7 @@ export function ConfigurationImageField({
   onStagedChange?: ImageStagedChange;
   disabled: boolean;
 }) {
+  const hydrated = useHydrated();
   const { t } = useI18n();
   const id = useId();
   const [mode, setMode] = useState("file");
@@ -185,7 +187,11 @@ export function ConfigurationImageField({
     }
   }
   return (
-    <fieldset className="grid min-w-0 gap-4" disabled={disabled} aria-describedby={`${id}-hint`}>
+    <fieldset
+      className="grid min-w-0 gap-4"
+      disabled={!hydrated || disabled}
+      aria-describedby={`${id}-hint`}
+    >
       <legend className="sr-only">{t("editor_image_settings")}</legend>
       <div className="flex flex-wrap gap-6">
         <ImagePreview
