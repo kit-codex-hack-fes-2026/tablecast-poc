@@ -195,15 +195,18 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
     if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.addEventListener(
       "message",
-      (event: MessageEvent<{ type?: string }>) => {
+      (event: MessageEvent<{ type?: string; phase?: string; requestId?: number }>) => {
         const port = event.ports[0];
         if (!port) {
-          if (event.data?.type === "TABLECAST_CANCEL_UPDATE")
+          if (
+            event.data?.type === "TABLECAST_CANCEL_UPDATE" ||
+            event.data?.type === "TABLECAST_TEST_UPDATE_PHASE"
+          )
             console.info(
               "tablecast-pwa-decision:" +
                 JSON.stringify({
+                  ...event.data,
                   page: location.pathname,
-                  type: event.data.type,
                   time: Date.now(),
                 }),
             );
@@ -278,9 +281,56 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
       return state;
     });
     // When: 配信済みService Workerの内容を更新する。
+    // nativeのPromiseをそのまま返し、更新の停滞箇所だけを依頼元画面へ記録する。
     await appendFile(
       join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
-      "\n// tablecast-update-test\n",
+      String.raw`
+// tablecast-update-test
+(() => {
+  let sequence = 0;
+  let request;
+  const report = (target, phase, detail = {}) => {
+    try {
+      target?.source?.postMessage({
+        type: "TABLECAST_TEST_UPDATE_PHASE",
+        requestId: target.id,
+        phase,
+        workerTime: Date.now(),
+        ...detail,
+      });
+    } catch {}
+  };
+  self.addEventListener("message", (event) => {
+    if (event.data?.type !== "TABLECAST_REQUEST_UPDATE") return;
+    request = { id: ++sequence, source: event.source };
+    report(request, "request-update");
+  }, { capture: true });
+  const matchAll = self.clients.matchAll.bind(self.clients);
+  self.clients.matchAll = (...args) => {
+    const target = request;
+    report(target, "matchAll-begin");
+    const result = matchAll(...args);
+    void result.then(
+      (clients) => report(target, "matchAll-end", {
+        clients: clients.map((client) => ({ id: client.id, url: client.url })),
+      }),
+      (error) => report(target, "matchAll-error", { error: String(error) }),
+    );
+    return result;
+  };
+  const skipWaiting = self.skipWaiting.bind(self);
+  self.skipWaiting = (...args) => {
+    const target = request;
+    report(target, "skipWaiting-begin");
+    const result = skipWaiting(...args);
+    void result.then(
+      () => report(target, "skipWaiting-end"),
+      (error) => report(target, "skipWaiting-error", { error: String(error) }),
+    );
+    return result;
+  };
+})();
+`,
     );
     await runtime.restartWeb();
 
