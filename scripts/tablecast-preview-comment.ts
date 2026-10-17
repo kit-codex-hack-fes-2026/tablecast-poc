@@ -4,21 +4,29 @@ type CatalogKind = (typeof catalogKinds)[number];
 type CatalogSelection = CatalogKind | "all";
 
 function requestLine(kind: CatalogKind, checked: boolean) {
-  const name = kind === "storybook" ? "Storybook" : "メール";
-  return `- [${checked ? "x" : " "}] ${name}を生成・配備する <!-- tablecast-catalog-request:${kind} -->`;
+  return `- [${checked ? "x" : " "}] 🚀 **実行** <!-- tablecast-catalog-request:${kind} -->`;
+}
+
+function checkedKind(line: string) {
+  return catalogKinds.find(
+    (kind) =>
+      line.startsWith("- [x] ") && line.endsWith(` <!-- tablecast-catalog-request:${kind} -->`),
+  );
 }
 
 export function pendingCatalogRequests(body: string): CatalogKind[] {
   const lines = body.split("\n");
-  return catalogKinds.filter((kind) => lines.includes(requestLine(kind, true)));
+  return catalogKinds.filter((kind) => lines.some((line) => checkedKind(line) === kind));
 }
 
 export function resetCatalogRequest(body: string, catalog: CatalogSelection) {
   return body
     .split("\n")
     .map((line) => {
-      const kind = catalogKinds.find((value) => line === requestLine(value, true));
-      return kind && (catalog === "all" || catalog === kind) ? requestLine(kind, false) : line;
+      const kind = checkedKind(line);
+      return kind && (catalog === "all" || catalog === kind)
+        ? line.replace("- [x] ", "- [ ] ")
+        : line;
     })
     .join("\n");
 }
@@ -29,12 +37,6 @@ export function parseCatalogRequest(input: {
   before?: string;
   authorLogin: string;
 }): { catalog: CatalogSelection; sha?: string } | null {
-  if (input.action === "created") {
-    if (input.authorLogin.endsWith("[bot]")) return null;
-    const match = /^\/tablecast catalog(?: (storybook|email|all))?$/.exec(input.body.trim());
-    const catalog = match?.[1] ?? (match ? "all" : undefined);
-    return catalog === "storybook" || catalog === "email" || catalog === "all" ? { catalog } : null;
-  }
   if (
     input.action !== "edited" ||
     input.authorLogin !== "github-actions[bot]" ||
@@ -55,38 +57,63 @@ export function parseCatalogRequest(input: {
 export function renderPreviewComment(input: {
   pr: number;
   sha: string;
-  product: { url: string; result: string; served: string };
-  catalogs: { kind: CatalogKind; url: string; served: string; result?: string }[];
+  product: { url: string; result: string; served: string; deployedAt?: string };
+  catalogs: {
+    kind: CatalogKind;
+    url: string;
+    served: string;
+    result?: string;
+    deployedAt?: string;
+  }[];
   runUrl: string;
   requested?: CatalogKind[];
 }) {
   if (!Number.isSafeInteger(input.pr) || input.pr < 1 || !/^[a-f0-9]{40}$/.test(input.sha))
     throw new Error("プレビュー通知のPR・SHAが不正です。");
-  const cell = (value: string) => value.replaceAll("|", "\\|").replaceAll(/\r?\n/g, " ");
+  const escape = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  const repositoryUrl = input.runUrl.split("/actions/runs/")[0] ?? "";
+  const version = (served: string) =>
+    /^[a-f0-9]{40}$/.test(served)
+      ? `${served === input.sha ? "🟢" : "🟡"} <a href="${escape(`${repositoryUrl}/commit/${served}`)}"><code>${served.slice(0, 7)}</code></a>`
+      : "—";
+  const deployedAt = (value?: string) => {
+    if (!value || !Number.isFinite(Date.parse(value))) return "—";
+    return new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date(value));
+  };
+  const result = (value: string) =>
+    ({ success: "✅ 完了", failure: "❌ 失敗", cancelled: "⚪ 中止", skipped: "⏭️ 省略" })[value] ??
+    "🔎 確認";
   const rows = [
-    `| 製品 | ${cell(input.product.url)} | ${cell(input.product.result)} | ${cell(input.product.served)} |`,
-    ...input.catalogs.map(
-      (catalog) =>
-        `| ${catalog.kind} | ${cell(catalog.url)} | ${cell(catalog.result ?? "手動配備")} | ${cell(catalog.served)} |`,
-    ),
+    `<tr><td>🍽️ <a href="${escape(input.product.url)}">TableCast</a><br><sub>${version(input.product.served)}</sub></td><td>${result(input.product.result)}</td><td>${deployedAt(input.product.deployedAt)}</td></tr>`,
+    ...input.catalogs.map((catalog) => {
+      const name = catalog.kind === "storybook" ? "📚 Storybook" : "✉️ React Email";
+      const outcome = catalog.result ? `\n\n${result(catalog.result)}` : "";
+      return `<tr><td><a href="${escape(catalog.url)}">${name}</a><br><sub>${version(catalog.served)}</sub></td><td>\n\n${requestLine(catalog.kind, input.requested?.includes(catalog.kind) ?? false)}${outcome}\n\n</td><td>${deployedAt(catalog.deployedAt)}</td></tr>`;
+    }),
   ];
   return [
     previewCommentMarker,
-    "PRプレビュー（Cloudflare Accessへのログインが必要）",
-    "",
+    "<!--",
     `対象SHA: ${input.sha}`,
+    "-->",
+    `🔒 **PR #${input.pr}** · [\`${input.sha.slice(0, 7)}\`](${repositoryUrl}/commit/${input.sha}) · [CI ↗](${input.runUrl})`,
     "",
-    "| 対象 | URL | 配備結果 | 通知時に確認できた配備SHA |",
-    "| --- | --- | --- | --- |",
+    "<table>",
+    "<tr><th>プレビュー</th><th>ビルド・デプロイ</th><th>デプロイ日時 (JST)</th></tr>",
     ...rows,
-    "",
-    "必要なカタログにチェックすると、対象SHAから生成・配備する。write権限が必要。",
-    ...catalogKinds.map((kind) => requestLine(kind, input.requested?.includes(kind) ?? false)),
-    "",
-    "コメントの `/tablecast catalog storybook`、`/tablecast catalog email`、`/tablecast catalog all` でも実行できる。",
-    "配備済みSHAが対象SHAと異なる場合、URLには前の版が表示される。",
-    "手動カタログは表示の確認用。必須CIの結果はPRのチェックを参照。",
-    "",
-    `[実行結果](${input.runUrl})`,
+    "</table>",
   ].join("\n");
 }

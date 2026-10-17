@@ -44,6 +44,23 @@ runs:
           ];
           const rows = await Promise.all(targets.map(async target => {
             const url = `https://${target.worker}.kit-codex.workers.dev`;
+            const deployment = (async () => {
+              try {
+                const token = process.env.CLOUDFLARE_API_TOKEN;
+                const account = process.env.CLOUDFLARE_ACCOUNT_ID;
+                if (!token || !/^[a-f0-9]{32}$/.test(account ?? '')) return;
+                const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/scripts/${target.worker}/deployments?per_page=1`, {
+                  headers: {Authorization: `Bearer ${token}`},
+                  redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(10000),
+                });
+                if (!response.ok) return;
+                const metadata = await response.json();
+                const value = metadata.success === true ? metadata.result?.deployments?.[0]?.created_on : undefined;
+                if (typeof value === 'string' && Number.isFinite(Date.parse(value))) return new Date(value).toISOString();
+              } catch {
+                // 配備日時を取得できない場合は、通知時刻や前回値で補わない。
+              }
+            })();
             let served = '未確認（現在版不明）';
             try {
               const response = await fetch(`${url}${target.path}`, {
@@ -60,7 +77,7 @@ runs:
               // 現在版を対象SHAや前回の通知から推測しない。
             }
             const selected = process.env.TABLECAST_CATALOG_KIND === 'all' || process.env.TABLECAST_CATALOG_KIND === target.kind;
-            return {...target, url, served, result: target.kind ? (selected ? process.env.TABLECAST_CATALOG_RESULT : '手動配備') : process.env.TABLECAST_PRODUCT_RESULT};
+            return {...target, url, served, deployedAt: await deployment, result: target.kind ? (selected ? process.env.TABLECAST_CATALOG_RESULT : undefined) : process.env.TABLECAST_PRODUCT_RESULT};
           }));
           const comments = (await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr}))
             .filter(comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(`${previewCommentMarker}\n`));

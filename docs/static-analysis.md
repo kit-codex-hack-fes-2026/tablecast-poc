@@ -103,7 +103,7 @@ Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複�
 
 ## CIの実行単位
 
-GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers build、UI部品試験、イベントに応じたChromium/WebKitのE2Eを独立ジョブで実行する。Storybookのinteraction・a11yはUI部品試験に残し、Storybook・Emailの公開buildと配備は[手動カタログ](deployment.md#prのstorybookメールカタログ)で要求された場合に実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
+GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers build、UI部品試験、イベントに応じたChromium/WebKitのE2Eを独立ジョブで実行する。Storybookのinteraction・a11yはUI部品試験に残し、Storybook・React Emailの公開ビルドとデプロイは[手動カタログ](deployment.md#prのstorybookメールカタログ)で要求された場合に実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
 
 共通actionはmanifestとworkflowで指定したNode/Bunを導入する。Bunの取得cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は1日間保持する。
 

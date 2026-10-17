@@ -458,6 +458,8 @@ jobs:
           sha: ${{ github.event.pull_request.head.sha }}
           product-result: 変更対象外のため再配備なし
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 
