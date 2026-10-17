@@ -1,4 +1,4 @@
-import type { Demo, DemoUpdate } from "@tablecast/api/schema";
+import type { Demo, DemoUpdate, ConfigDraft } from "@tablecast/api/schema";
 import { configurationIssueSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -160,19 +160,15 @@ function DemoSession({
       </main>
     );
   const pending = update.isPending || reset.isPending;
-  const sourceVersion = data.sourceDraftId
-    ? drafts.data?.drafts.find((draft) => draft.id === data.sourceDraftId)?.version
-    : published.data?.version;
   const sourceError = data.sourceDraftId ? drafts.error : published.error;
-  const hasUpdate =
-    !sourceError && sourceVersion !== undefined && sourceVersion > data.sourceVersion;
-  const draftItems =
-    drafts.data?.drafts.filter((draft) => draft.status === "draft" || draft.status === "ready") ??
-    [];
+  const { hasUpdate, draftItems, selectedConfiguration } = demoConfigurationState(
+    data,
+    drafts.data?.drafts,
+    published.data?.version,
+    sourceError,
+    update.variables?.sourceDraftId,
+  );
   const errors = configurationIssueSchema.array().safeParse(apiError(update.error)?.details);
-  const selectedConfiguration =
-    draftItems.find((draft) => draft.id === update.variables?.sourceDraftId)?.configuration ??
-    data.configuration;
   return (
     <main className="flex h-dvh flex-col bg-background">
       <header className="z-10 max-h-96 shrink-0 overflow-y-auto border-b border-border bg-card">
@@ -187,76 +183,21 @@ function DemoSession({
             </h1>
             <span className="sr-only">{t("demo_isolated")}</span>
           </div>
-          <DemoSelect
-            icon={device === "browser" ? <Monitor /> : <Tablet />}
-            label={t("demo_display")}
-            value={device}
-            items={[
-              { value: "browser", label: t("demo_browser") },
-              ...Object.entries(demoDevices).map(([value, item]) => ({ value, label: item.label })),
-            ]}
-            onChange={(value) => {
-              if (
-                value === "browser" ||
-                value === "ipad" ||
-                value === "ipad-air-11" ||
-                value === "ipad-air-13"
-              )
-                setDisplay(value, portrait);
-            }}
-          />
-          <Button
-            variant="ghost"
-            className="flex-col gap-1 px-2 text-xs"
-            aria-label={t("demo_rotate")}
-            aria-pressed={portrait}
-            title={portrait ? t("demo_landscape") : t("demo_portrait")}
-            disabled={device === "browser"}
-            onClick={() => setDisplay(device, !portrait)}
-          >
-            <RotateCw />
-            {t("demo_rotate")}
-          </Button>
+          <DemoDisplayControls device={device} portrait={portrait} onChange={setDisplay} />
           <span className="h-6 shrink-0 border-l border-border" />
-          <DemoSelect
-            icon={<FileStack />}
-            label={t("demo_configuration")}
-            value={data.sourceDraftId ?? "published"}
-            disabled={pending || drafts.isPending}
-            items={[
-              { value: "published", label: t("demo_published") },
-              ...draftItems.map((draft) => ({
-                value: draft.id,
-                label: `${t("demo_draft")} ${draft.id.slice(0, 8)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
-              })),
-              ...(data.sourceDraftId && !draftItems.some((draft) => draft.id === data.sourceDraftId)
-                ? [
-                    {
-                      value: data.sourceDraftId,
-                      label: `${t("demo_draft")} ${data.sourceDraftId.slice(0, 8)}`,
-                    },
-                  ]
-                : []),
-            ]}
+          <DemoConfigurationSelect
+            data={data}
+            draftItems={draftItems}
+            pending={pending || drafts.isPending}
             onChange={(value) =>
               update.mutate({ sourceDraftId: value === "published" ? null : value })
             }
           />
-          <span title={hasUpdate ? t("demo_update_available") : t("demo_up_to_date")}>
-            <Button
-              variant={hasUpdate ? "default" : "ghost"}
-              className="flex-col gap-1 px-2 text-xs"
-              aria-label={t("demo_reload")}
-              disabled={pending || !hasUpdate}
-              onClick={() => update.mutate({ reload: true })}
-            >
-              <RefreshCw />
-              {t("demo_reload")}
-            </Button>
-            <span role="status" className="sr-only">
-              {hasUpdate ? t("demo_update_available") : ""}
-            </span>
-          </span>
+          <DemoReloadButton
+            available={hasUpdate}
+            pending={pending}
+            onReload={() => update.mutate({ reload: true })}
+          />
           <span className="h-6 shrink-0 border-l border-border" />
           <DemoSelect
             icon={<Ticket />}
@@ -384,5 +325,139 @@ export function DemoSelect({
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+type DemoDraft = Pick<ConfigDraft, "id" | "status" | "version" | "configuration">;
+function demoConfigurationState(
+  data: Demo,
+  drafts: DemoDraft[] | undefined,
+  publishedVersion: number | undefined,
+  sourceError: unknown,
+  sourceDraftId?: string | null,
+) {
+  const sourceVersion = data.sourceDraftId
+    ? drafts?.find((draft) => draft.id === data.sourceDraftId)?.version
+    : publishedVersion;
+  const hasUpdate =
+    !sourceError && sourceVersion !== undefined && sourceVersion > data.sourceVersion;
+  const draftItems =
+    drafts?.filter((draft) => draft.status === "draft" || draft.status === "ready") ?? [];
+  const selectedConfiguration =
+    draftItems.find((draft) => draft.id === sourceDraftId)?.configuration ?? data.configuration;
+  return { hasUpdate, draftItems, selectedConfiguration };
+}
+
+function DemoConfigurationSelect({
+  data,
+  draftItems,
+  pending,
+  onChange,
+}: {
+  data: Demo;
+  draftItems: DemoDraft[];
+  pending: boolean;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <DemoSelect
+      icon={<FileStack />}
+      label={t("demo_configuration")}
+      value={data.sourceDraftId ?? "published"}
+      disabled={pending}
+      items={[
+        { value: "published", label: t("demo_published") },
+        ...draftItems.map((draft) => ({
+          value: draft.id,
+          label: `${t("demo_draft")} ${draft.id.slice(0, 8)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
+        })),
+        ...(data.sourceDraftId && !draftItems.some((draft) => draft.id === data.sourceDraftId)
+          ? [
+              {
+                value: data.sourceDraftId,
+                label: `${t("demo_draft")} ${data.sourceDraftId.slice(0, 8)}`,
+              },
+            ]
+          : []),
+      ]}
+      onChange={onChange}
+    />
+  );
+}
+
+function DemoReloadButton({
+  available,
+  pending,
+  onReload,
+}: {
+  available: boolean;
+  pending: boolean;
+  onReload: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <span title={available ? t("demo_update_available") : t("demo_up_to_date")}>
+      <Button
+        variant={available ? "default" : "ghost"}
+        className="flex-col gap-1 px-2 text-xs"
+        aria-label={t("demo_reload")}
+        disabled={pending || !available}
+        onClick={onReload}
+      >
+        <RefreshCw />
+        {t("demo_reload")}
+      </Button>
+      <span role="status" className="sr-only">
+        {available ? t("demo_update_available") : ""}
+      </span>
+    </span>
+  );
+}
+
+function DemoDisplayControls({
+  device,
+  portrait,
+  onChange,
+}: {
+  device: DemoDevice;
+  portrait: boolean;
+  onChange: (device: DemoDevice, portrait: boolean) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {" "}
+      <DemoSelect
+        icon={device === "browser" ? <Monitor /> : <Tablet />}
+        label={t("demo_display")}
+        value={device}
+        items={[
+          { value: "browser", label: t("demo_browser") },
+          ...Object.entries(demoDevices).map(([value, item]) => ({ value, label: item.label })),
+        ]}
+        onChange={(value) => {
+          if (
+            value === "browser" ||
+            value === "ipad" ||
+            value === "ipad-air-11" ||
+            value === "ipad-air-13"
+          )
+            onChange(value, portrait);
+        }}
+      />
+      <Button
+        variant="ghost"
+        className="flex-col gap-1 px-2 text-xs"
+        aria-label={t("demo_rotate")}
+        aria-pressed={portrait}
+        title={portrait ? t("demo_landscape") : t("demo_portrait")}
+        disabled={device === "browser"}
+        onClick={() => onChange(device, !portrait)}
+      >
+        <RotateCw />
+        {t("demo_rotate")}
+      </Button>
+    </>
   );
 }

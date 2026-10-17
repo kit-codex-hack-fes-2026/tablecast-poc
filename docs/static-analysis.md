@@ -101,6 +101,8 @@ Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複�
 
 `apps/web/oxlint.config.ts` でReact Doctor、jsx-a11y、TanStack Query/Router、Tailwindを有効にする。TailwindのCSS入口は設定ファイルから絶対パスへ解決し、ルートとworkspaceのどちらから実行しても同じ検査になる。`--deny-warnings` により警告も検証失敗にする。React Compilerを採用していないため、その導入を前提に手動memo化を禁止するルールは適用しない。
 
+React Doctor 0.9.18は[公式CLIの設定生成](https://github.com/millionco/react-doctor/blob/84ad0c8d0df7a3ab7d26946367fae3bc39c100d0/packages/core/src/runners/oxlint/config.ts#L294)と同じ`portedRuleMode: "curated"`を使う。推奨ルールのseverityは維持する。ported ruleはmemoされないnative要素・部品に一律memo化を要求せず、Fast Refreshは実際のVite・Start構成を認識する。missing keyとmemo部品へ渡す毎回新しいobjectは引き続き検出する。新しい複雑度の推奨には、表示部品と状態・イベント集計の責務を分けて対応し、予算値を緩和しない。
+
 ## CIの実行単位
 
 GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers build、UI部品試験、イベントに応じたChromium/WebKitのE2Eを独立ジョブで実行する。Storybookのinteraction・a11yはUI部品試験に残し、Storybook・React Emailの公開ビルドとデプロイは[手動カタログ](deployment.md#prのstorybookメールカタログ)で要求された場合に実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。

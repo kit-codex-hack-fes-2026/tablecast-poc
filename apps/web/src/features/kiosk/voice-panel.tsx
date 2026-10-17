@@ -96,11 +96,7 @@ function ConversationMessage({
           ) : (
             <Mic className="size-3.5" aria-hidden="true" />
           )}
-          {line.role === "assistant"
-            ? t("kiosk_assistant")
-            : line.speaker
-              ? `${t("kiosk_speaker")} ${line.streamId && line.speaker.startsWith(`${line.streamId}:`) ? line.speaker.slice(line.streamId.length + 1) : line.speaker}`
-              : t("kiosk_guest")}
+          {conversationSpeakerName(line, t)}
         </span>
         <span>{status || time(line.createdAt, locale)}</span>
       </div>
@@ -139,20 +135,7 @@ function ConversationMessage({
       {line.synthetic && (
         <p className="mt-1 text-xs text-muted-foreground">{t("common_synthetic")}</p>
       )}
-      {debug && line.rawText && (
-        <details className="mt-2 rounded-lg border border-dashed border-border p-3 text-xs">
-          <summary className="cursor-pointer">{t("kiosk_debug_raw_text")}</summary>
-          <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
-        </details>
-      )}
-      {debug && line.role === "user" && !line.speaker && (
-        <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
-      )}
-      {debug && line.streamId && (
-        <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-          STT {line.streamId}
-        </p>
-      )}
+      {debug && <ConversationDebug line={line} />}
     </article>
   );
 }
@@ -197,35 +180,7 @@ function useVoicePanel({
   const { locale, t } = useI18n();
   const [debug, setDebug] = useState(false);
   const merged = mergeConversation(lines, view, locale);
-  const tools = new Map<string, TableEvent>();
-  for (const event of events)
-    if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
-      tools.set(event.data.toolCallId, event);
-  const turns = new Map<string, TableEvent>();
-  for (const event of events)
-    if (event.kind === "voice.turn" && typeof event.data.turnId === "string")
-      turns.set(event.data.turnId, event);
-  const failedTurns = new Set(
-    events.flatMap((event) => (event.kind === "voice.failed" ? [event.data.turnId] : [])),
-  );
-  for (const event of turns.values())
-    if (event.data.status === "failed") failedTurns.add(event.data.turnId);
-  const latestBusinessTurn =
-    [...events]
-      .toReversed()
-      .find((event) => event.kind === "voice.turn" && event.data.status === "started")?.data
-      .turnId ??
-    [...events]
-      .toReversed()
-      .find((event) => event.kind === "voice.tool" || event.kind === "voice.failed")?.data.turnId;
-  const running = [...tools.values()].filter((event) => {
-    const turn = typeof event.data.turnId === "string" ? turns.get(event.data.turnId) : undefined;
-    return (
-      (event.data.state === "requested" || event.data.state === "running") &&
-      !failedTurns.has(event.data.turnId) &&
-      (!turn || turn.data.status === "started")
-    );
-  });
+  const { tools, turns, failedTurns, latestBusinessTurn, running } = voiceOperationState(events);
   const active = !["idle", "paused", "error", "stopping"].includes(view.status);
   const status = {
     idle: t("kiosk_voice_paused"),
@@ -325,26 +280,7 @@ function useVoicePanel({
         : [],
     );
   }
-  const timeline: { id: string; createdAt: number; line?: ConversationLine; turnId?: string }[] =
-    merged.map((line) => ({ id: line.id, createdAt: line.createdAt, line }));
-  // 字幕の表示IDと業務turnを結び付けず、操作と商品カードを一か所に並べる。
-  for (const turnId of new Set(
-    events.flatMap((event) =>
-      (event.kind === "voice.tool" || event.kind === "voice.products") &&
-      typeof event.data.turnId === "string"
-        ? [event.data.turnId]
-        : [],
-    ),
-  )) {
-    const first = events.find(
-      (event) =>
-        (event.kind === "voice.tool" || event.kind === "voice.products") &&
-        event.data.turnId === turnId,
-    );
-    if (first)
-      timeline.push({ id: `operation-${first.cursor}`, createdAt: first.createdAt, turnId });
-  }
-  timeline.sort((left, right) => left.createdAt - right.createdAt);
+  const timeline = conversationTimeline(merged, events);
   const liveRole: ConversationLine["role"] = view.status === "listening" ? "user" : "assistant";
   const speakingLine =
     view.status === "speaking"
@@ -538,95 +474,21 @@ export function VoicePanel({
           <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
         </output>
       )}
-      <footer
-        data-theme-part="voice-controls"
-        className="shrink-0 border-t border-white/80 bg-card/65 px-1 pb-2 pt-1 backdrop-blur-xl"
-      >
-        {active ? (
-          <Suspense
-            fallback={
-              <VoiceIdle
-                label={phase}
-                state={visualState}
-                toolLabel={usingTools && view.status === "speaking" ? toolPhase : undefined}
-              />
-            }
-          >
-            <AudioWaveform
-              state={visualState}
-              toolLabel={usingTools && view.status === "speaking" ? toolPhase : undefined}
-              track={
-                active
-                  ? view.status === "speaking"
-                    ? view.outputTrack
-                    : view.inputTrack
-                  : undefined
-              }
-              label={phase}
-            />
-          </Suspense>
-        ) : (
-          <VoiceIdle label={phase} state={visualState} />
-        )}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
-            <Button
-              className="h-11 rounded-[inherit]"
-              variant="voice"
-              onClick={onStart}
-              disabled={controlDisabled}
-            >
-              {active ? <MicOff /> : <Mic />}
-              {view.status === "stopping"
-                ? t("kiosk_voice_stopping")
-                : active
-                  ? t("kiosk_voice_stop")
-                  : view.status === "error"
-                    ? t("kiosk_voice_retry")
-                    : t("kiosk_voice_resume")}
-            </Button>
-          </span>
-          <div className="flex min-w-48 flex-1 items-center gap-2">
-            {onSpeedChange && (
-              <Slider.Root
-                className="flex min-w-32 flex-1 items-center gap-2"
-                key={speechSpeed}
-                defaultValue={speechSpeed}
-                min={0.5}
-                max={1.5}
-                step={0.1}
-                onValueCommitted={(value) => {
-                  if (typeof value === "number") onSpeedChange(value);
-                }}
-              >
-                <Turtle className="size-5 shrink-0" aria-hidden="true" />
-                <Slider.Control className="flex h-11 flex-1 touch-none items-center">
-                  <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
-                    <Slider.Indicator className="rounded-full bg-primary" />
-                    <Slider.Thumb
-                      aria-label={t("kiosk_speech_speed")}
-                      className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    />
-                  </Slider.Track>
-                </Slider.Control>
-                <Rabbit className="size-5 shrink-0" aria-hidden="true" />
-                <Slider.Value className="min-w-10 text-xs tabular-nums">
-                  {(value) => `${Number(value).toFixed(1)}×`}
-                </Slider.Value>
-              </Slider.Root>
-            )}
-            {onMicrophoneChange && onMicrophoneRefresh && (
-              <MicrophoneSettings
-                view={view}
-                onChange={onMicrophoneChange}
-                onRefresh={onMicrophoneRefresh}
-              />
-            )}
-          </div>
-        </div>
-        <MicrophoneNotice error={view.microphone?.error} />
-        {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
-      </footer>
+      <VoiceControls
+        view={view}
+        onStart={onStart}
+        controlDisabled={controlDisabled}
+        speechSpeed={speechSpeed}
+        onSpeedChange={onSpeedChange}
+        onMicrophoneChange={onMicrophoneChange}
+        onMicrophoneRefresh={onMicrophoneRefresh}
+        active={active}
+        phase={phase}
+        usingTools={usingTools}
+        visualState={visualState}
+        toolPhase={toolPhase}
+        debug={debug}
+      />
     </section>
   );
 }
@@ -663,4 +525,202 @@ function VoiceIdle({
       </div>
     </figure>
   );
+}
+
+function ConversationDebug({ line }: { line: ConversationLine }) {
+  const { t } = useI18n();
+  return (
+    <>
+      {line.rawText && (
+        <details className="mt-2 rounded-lg border border-dashed border-border p-3 text-xs">
+          <summary className="cursor-pointer">{t("kiosk_debug_raw_text")}</summary>
+          <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
+        </details>
+      )}
+      {line.role === "user" && !line.speaker && (
+        <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
+      )}
+      {line.streamId && (
+        <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+          STT {line.streamId}
+        </p>
+      )}
+    </>
+  );
+}
+
+function voiceOperationState(events: TableEvent[]) {
+  const tools = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
+      tools.set(event.data.toolCallId, event);
+  const turns = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.turn" && typeof event.data.turnId === "string")
+      turns.set(event.data.turnId, event);
+  const failedTurns = new Set(
+    events.flatMap((event) => (event.kind === "voice.failed" ? [event.data.turnId] : [])),
+  );
+  for (const event of turns.values())
+    if (event.data.status === "failed") failedTurns.add(event.data.turnId);
+  const latestBusinessTurn =
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.turn" && event.data.status === "started")?.data
+      .turnId ??
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.tool" || event.kind === "voice.failed")?.data.turnId;
+  const running = [...tools.values()].filter((event) => {
+    const turn = typeof event.data.turnId === "string" ? turns.get(event.data.turnId) : undefined;
+    return (
+      (event.data.state === "requested" || event.data.state === "running") &&
+      !failedTurns.has(event.data.turnId) &&
+      (!turn || turn.data.status === "started")
+    );
+  });
+  return { tools, turns, failedTurns, latestBusinessTurn, running };
+}
+
+function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) {
+  const timeline: { id: string; createdAt: number; line?: ConversationLine; turnId?: string }[] =
+    merged.map((line) => ({ id: line.id, createdAt: line.createdAt, line }));
+  // 字幕の表示IDと業務turnを結び付けず、操作と商品カードを一か所に並べる。
+  for (const turnId of new Set(
+    events.flatMap((event) =>
+      (event.kind === "voice.tool" || event.kind === "voice.products") &&
+      typeof event.data.turnId === "string"
+        ? [event.data.turnId]
+        : [],
+    ),
+  )) {
+    const first = events.find(
+      (event) =>
+        (event.kind === "voice.tool" || event.kind === "voice.products") &&
+        event.data.turnId === turnId,
+    );
+    if (first)
+      timeline.push({ id: `operation-${first.cursor}`, createdAt: first.createdAt, turnId });
+  }
+  timeline.sort((left, right) => left.createdAt - right.createdAt);
+  return timeline;
+}
+
+function VoiceControls({
+  view,
+  onStart,
+  controlDisabled,
+  speechSpeed,
+  onSpeedChange,
+  onMicrophoneChange,
+  onMicrophoneRefresh,
+  active,
+  phase,
+  usingTools,
+  visualState,
+  toolPhase,
+  debug,
+}: Pick<
+  VoicePanelProps,
+  | "view"
+  | "onStart"
+  | "controlDisabled"
+  | "speechSpeed"
+  | "onSpeedChange"
+  | "onMicrophoneChange"
+  | "onMicrophoneRefresh"
+> &
+  Pick<
+    ReturnType<typeof useVoicePanel>,
+    "active" | "phase" | "usingTools" | "visualState" | "toolPhase" | "debug"
+  >) {
+  const { t } = useI18n();
+  const toolLabel = usingTools && view.status === "speaking" ? toolPhase : undefined;
+  return (
+    <footer
+      data-theme-part="voice-controls"
+      className="shrink-0 border-t border-white/80 bg-card/65 px-1 pb-2 pt-1 backdrop-blur-xl"
+    >
+      {active ? (
+        <Suspense fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}>
+          <AudioWaveform
+            state={visualState}
+            toolLabel={toolLabel}
+            track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+            label={phase}
+          />
+        </Suspense>
+      ) : (
+        <VoiceIdle label={phase} state={visualState} />
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
+          <Button
+            className="h-11 rounded-[inherit]"
+            variant="voice"
+            onClick={onStart}
+            disabled={controlDisabled}
+          >
+            {active ? <MicOff /> : <Mic />}
+            {view.status === "stopping"
+              ? t("kiosk_voice_stopping")
+              : active
+                ? t("kiosk_voice_stop")
+                : view.status === "error"
+                  ? t("kiosk_voice_retry")
+                  : t("kiosk_voice_resume")}
+          </Button>
+        </span>
+        <div className="flex min-w-48 flex-1 items-center gap-2">
+          {onSpeedChange && (
+            <Slider.Root
+              className="flex min-w-32 flex-1 items-center gap-2"
+              key={speechSpeed}
+              defaultValue={speechSpeed}
+              min={0.5}
+              max={1.5}
+              step={0.1}
+              onValueCommitted={(value) => {
+                if (typeof value === "number") onSpeedChange(value);
+              }}
+            >
+              <Turtle className="size-5 shrink-0" aria-hidden="true" />
+              <Slider.Control className="flex h-11 flex-1 touch-none items-center">
+                <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
+                  <Slider.Indicator className="rounded-full bg-primary" />
+                  <Slider.Thumb
+                    aria-label={t("kiosk_speech_speed")}
+                    className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  />
+                </Slider.Track>
+              </Slider.Control>
+              <Rabbit className="size-5 shrink-0" aria-hidden="true" />
+              <Slider.Value className="min-w-10 text-xs tabular-nums">
+                {(value) => `${Number(value).toFixed(1)}×`}
+              </Slider.Value>
+            </Slider.Root>
+          )}
+          {onMicrophoneChange && onMicrophoneRefresh && (
+            <MicrophoneSettings
+              view={view}
+              onChange={onMicrophoneChange}
+              onRefresh={onMicrophoneRefresh}
+            />
+          )}
+        </div>
+      </div>
+      <MicrophoneNotice error={view.microphone?.error} />
+      {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
+    </footer>
+  );
+}
+
+function conversationSpeakerName(line: ConversationLine, t: ReturnType<typeof useI18n>["t"]) {
+  if (line.role === "assistant") return t("kiosk_assistant");
+  if (!line.speaker) return t("kiosk_guest");
+  const speaker =
+    line.streamId && line.speaker.startsWith(`${line.streamId}:`)
+      ? line.speaker.slice(line.streamId.length + 1)
+      : line.speaker;
+  return `${t("kiosk_speaker")} ${speaker}`;
 }

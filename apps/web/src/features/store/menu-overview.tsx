@@ -51,9 +51,6 @@ export function MenuOverview({
       : undefined;
   const plan =
     section === "plans" ? configuration.plans.find((value) => value.id === itemId) : undefined;
-  const planProducts = new Set(plan?.productIds);
-  const planCategories = new Set(plan?.categoryIds);
-  const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
   return (
     <section className="space-y-6">
       <Button
@@ -94,39 +91,7 @@ export function MenuOverview({
         <p>{t("menu_item_missing")}</p>
       ) : (
         <>
-          {product && (
-            <div className="flex flex-wrap items-center gap-5">
-              {product.imageKey && (
-                <ProductImage
-                  width={160}
-                  height={160}
-                  sizes="160px"
-                  className="size-40 rounded-xl object-cover"
-                  src={`/media/${product.imageKey}`}
-                  alt={product.text[locale].displayName}
-                />
-              )}
-              <div className="space-y-3">
-                <span className="block text-2xl font-semibold tabular-nums">
-                  {money(product.price, locale)}
-                </span>
-                <Badge variant={product.available ? "success" : "inactive"}>
-                  {product.available ? (
-                    <Check className="size-4" />
-                  ) : (
-                    <TriangleAlert className="size-4" />
-                  )}
-                  {t(product.available ? "editor_available" : "kiosk_sold_out")}
-                </Badge>
-                <p className="text-base text-muted-foreground">
-                  {
-                    configuration.categories.find((category) => category.id === product.categoryId)
-                      ?.text[locale].displayName
-                  }
-                </p>
-              </div>
-            </div>
-          )}
+          {product && <ProductSummary product={product} categories={configuration.categories} />}
           {plan && (
             <dl className="flex flex-wrap gap-8">
               <div>
@@ -147,116 +112,9 @@ export function MenuOverview({
               </div>
             </dl>
           )}
-          <div className="grid gap-6 sm:grid-cols-2">
-            {(["ja", "en"] as const).map((language) => (
-              <section key={language} className="space-y-3 rounded-xl border border-border p-5">
-                <h2 className="font-semibold">
-                  {t(language === "ja" ? "common_ja" : "common_en")}
-                </h2>
-                {item ? (
-                  <>
-                    <p className="font-medium">{item.text[language].displayName}</p>
-                    <p className="whitespace-pre-wrap text-base leading-relaxed">
-                      {item.text[language].description || "—"}
-                    </p>
-                    <dl className="space-y-3 border-t border-border pt-3">
-                      <div>
-                        <dt className="text-sm text-muted-foreground">{t("admin_speech_name")}</dt>
-                        <dd>{item.text[language].speechName}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm text-muted-foreground">{t("editor_aliases")}</dt>
-                        <dd>{item.text[language].aliases.join(" · ") || "—"}</dd>
-                      </div>
-                    </dl>
-                  </>
-                ) : (
-                  <>
-                    <div className="leading-relaxed">
-                      <InstructionView value={configuration.cast.instructions[language]} />
-                    </div>
-                    <dl>
-                      <dt className="text-sm text-muted-foreground">{t("editor_voice")}</dt>
-                      <dd>{configuration.cast.voice[language] ?? t("editor_not_configured")}</dd>
-                    </dl>
-                  </>
-                )}
-              </section>
-            ))}
-          </div>
-          {product && (
-            <>
-              <section className="space-y-4 rounded-xl border border-border p-5">
-                <h2 className="flex items-center gap-2 text-lg font-semibold">
-                  <TriangleAlert className="size-5" />
-                  {t("kiosk_allergens")}
-                </h2>
-                <dl className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t("editor_contains")}</dt>
-                    <dd>{product.allergens.contains.join(" · ") || t("common_empty")}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t("editor_evidence")}</dt>
-                    <dd>
-                      {t(
-                        product.allergens.evidence === "verified"
-                          ? "editor_verified"
-                          : "editor_unknown",
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t("editor_cross_contact")}</dt>
-                    <dd>
-                      {t(
-                        product.allergens.crossContact === "possible"
-                          ? "editor_possible"
-                          : product.allergens.crossContact === "controlled"
-                            ? "editor_controlled"
-                            : "editor_unknown",
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t("editor_vegan")}</dt>
-                    <dd>
-                      {t(
-                        product.allergens.vegan === "yes"
-                          ? "editor_yes"
-                          : product.allergens.vegan === "no"
-                            ? "editor_no"
-                            : "editor_unknown",
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {product.allergens.note[locale]}
-                </p>
-              </section>
-              <section className="space-y-4">
-                <h2 className="text-lg font-semibold">{t("editor_modifiers")}</h2>
-                <DataTable
-                  data={product.modifiers.flatMap((group) =>
-                    group.options.map((option) => ({
-                      id: option.id,
-                      group: group.text[locale].displayName,
-                      name: option.text[locale].displayName,
-                      description: option.text[locale].description,
-                      imageKey: option.imageKey,
-                      imageKind: option.imageKind,
-                      price: option.priceDelta,
-                      available: option.available,
-                    })),
-                  )}
-                  columns={columns}
-                  getRowId={(row) => row.id}
-                  pagination={false}
-                />
-              </section>
-            </>
-          )}
+          <MenuDescription item={item} cast={configuration.cast} />
+          {product && <ProductDetails product={product} />}
+
           {section === "categories" && (
             <section className="space-y-3">
               <h2 className="font-semibold">{t("menu_category_products")}</h2>
@@ -283,28 +141,7 @@ export function MenuOverview({
               )}
             </section>
           )}
-          {plan && (
-            <div className="space-y-3">
-              <h2 className="font-semibold">{t("editor_included_products")}</h2>
-              <p>
-                {configuration.products
-                  .flatMap((entry) =>
-                    planProducts.has(entry.id) ? [entry.text[locale].displayName] : [],
-                  )
-                  .join(" · ") || "—"}
-              </p>
-              <h2 className="font-semibold">{t("editor_included_categories")}</h2>
-              <p>
-                {configuration.categories
-                  .flatMap((category) =>
-                    planCategories.has(category.id) ? [category.text[locale].displayName] : [],
-                  )
-                  .join(" · ") || "—"}
-              </p>
-              <h2 className="font-semibold">{t("editor_tags")}</h2>
-              <p>{plan.tags.join(" · ") || "—"}</p>
-            </div>
-          )}
+          {plan && <PlanContents plan={plan} configuration={configuration} />}
         </>
       )}
     </section>
@@ -349,4 +186,196 @@ function menuOverviewColumns(
       ),
     },
   ];
+}
+
+function ProductDetails({ product }: { product: Configuration["products"][number] }) {
+  const { t, locale } = useI18n();
+  const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
+  return (
+    <>
+      <section className="space-y-4 rounded-xl border border-border p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <TriangleAlert className="size-5" />
+          {t("kiosk_allergens")}
+        </h2>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm text-muted-foreground">{t("editor_contains")}</dt>
+            <dd>{product.allergens.contains.join(" · ") || t("common_empty")}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted-foreground">{t("editor_evidence")}</dt>
+            <dd>
+              {t(product.allergens.evidence === "verified" ? "editor_verified" : "editor_unknown")}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted-foreground">{t("editor_cross_contact")}</dt>
+            <dd>
+              {t(
+                product.allergens.crossContact === "possible"
+                  ? "editor_possible"
+                  : product.allergens.crossContact === "controlled"
+                    ? "editor_controlled"
+                    : "editor_unknown",
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted-foreground">{t("editor_vegan")}</dt>
+            <dd>
+              {t(
+                product.allergens.vegan === "yes"
+                  ? "editor_yes"
+                  : product.allergens.vegan === "no"
+                    ? "editor_no"
+                    : "editor_unknown",
+              )}
+            </dd>
+          </div>
+        </dl>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {product.allergens.note[locale]}
+        </p>
+      </section>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold">{t("editor_modifiers")}</h2>
+        <DataTable
+          data={product.modifiers.flatMap((group) =>
+            group.options.map((option) => ({
+              id: option.id,
+              group: group.text[locale].displayName,
+              name: option.text[locale].displayName,
+              description: option.text[locale].description,
+              imageKey: option.imageKey,
+              imageKind: option.imageKind,
+              price: option.priceDelta,
+              available: option.available,
+            })),
+          )}
+          columns={columns}
+          getRowId={(row) => row.id}
+          pagination={false}
+        />
+      </section>
+    </>
+  );
+}
+
+function ProductSummary({
+  product,
+  categories,
+}: {
+  product: Configuration["products"][number];
+  categories: Configuration["categories"];
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="flex flex-wrap items-center gap-5">
+      {product.imageKey && (
+        <ProductImage
+          width={160}
+          height={160}
+          sizes="160px"
+          className="size-40 rounded-xl object-cover"
+          src={`/media/${product.imageKey}`}
+          alt={product.text[locale].displayName}
+        />
+      )}
+      <div className="space-y-3">
+        <span className="block text-2xl font-semibold tabular-nums">
+          {money(product.price, locale)}
+        </span>
+        <Badge variant={product.available ? "success" : "inactive"}>
+          {product.available ? <Check className="size-4" /> : <TriangleAlert className="size-4" />}
+          {t(product.available ? "editor_available" : "kiosk_sold_out")}
+        </Badge>
+        <p className="text-base text-muted-foreground">
+          {
+            categories.find((category) => category.id === product.categoryId)?.text[locale]
+              .displayName
+          }
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MenuDescription({
+  item,
+  cast,
+}: {
+  item: Configuration[Exclude<MenuSection, "cast">][number] | null | undefined;
+  cast: Configuration["cast"];
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="grid gap-6 sm:grid-cols-2">
+      {(["ja", "en"] as const).map((language) => (
+        <section key={language} className="space-y-3 rounded-xl border border-border p-5">
+          <h2 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h2>
+          {item ? (
+            <>
+              <p className="font-medium">{item.text[language].displayName}</p>
+              <p className="whitespace-pre-wrap text-base leading-relaxed">
+                {item.text[language].description || "—"}
+              </p>
+              <dl className="space-y-3 border-t border-border pt-3">
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t("admin_speech_name")}</dt>
+                  <dd>{item.text[language].speechName}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t("editor_aliases")}</dt>
+                  <dd>{item.text[language].aliases.join(" · ") || "—"}</dd>
+                </div>
+              </dl>
+            </>
+          ) : (
+            <>
+              <div className="leading-relaxed">
+                <InstructionView value={cast.instructions[language]} />
+              </div>
+              <dl>
+                <dt className="text-sm text-muted-foreground">{t("editor_voice")}</dt>
+                <dd>{cast.voice[language] ?? t("editor_not_configured")}</dd>
+              </dl>
+            </>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function PlanContents({
+  plan,
+  configuration,
+}: {
+  plan: Configuration["plans"][number];
+  configuration: Configuration;
+}) {
+  const { t, locale } = useI18n();
+  const planProducts = new Set(plan.productIds);
+  const planCategories = new Set(plan.categoryIds);
+  return (
+    <div className="space-y-3">
+      <h2 className="font-semibold">{t("editor_included_products")}</h2>
+      <p>
+        {configuration.products
+          .flatMap((entry) => (planProducts.has(entry.id) ? [entry.text[locale].displayName] : []))
+          .join(" · ") || "—"}
+      </p>
+      <h2 className="font-semibold">{t("editor_included_categories")}</h2>
+      <p>
+        {configuration.categories
+          .flatMap((category) =>
+            planCategories.has(category.id) ? [category.text[locale].displayName] : [],
+          )
+          .join(" · ") || "—"}
+      </p>
+      <h2 className="font-semibold">{t("editor_tags")}</h2>
+      <p>{plan.tags.join(" · ") || "—"}</p>
+    </div>
+  );
 }

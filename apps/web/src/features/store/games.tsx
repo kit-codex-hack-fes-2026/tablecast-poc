@@ -118,12 +118,13 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
       ),
     onSuccess: refresh,
   });
-  const pending =
-    validate.isPending ||
-    previewQuery.isFetching ||
-    publish.isPending ||
-    disable.isPending ||
-    confirmPreview.isPending;
+  const pending = [
+    validate.isPending,
+    previewQuery.isFetching,
+    publish.isPending,
+    disable.isPending,
+    confirmPreview.isPending,
+  ].some(Boolean);
   if (!game.data)
     return game.isPending ? (
       <p role="status">{t("common_loading")}</p>
@@ -148,14 +149,14 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
         )}
       </header>
       <ErrorNotice
-        error={
-          game.error ||
-          validate.error ||
-          previewQuery.error ||
-          confirmPreview.error ||
-          publish.error ||
-          disable.error
-        }
+        error={[
+          game.error,
+          validate.error,
+          previewQuery.error,
+          confirmPreview.error,
+          publish.error,
+          disable.error,
+        ].find(Boolean)}
         onRetry={() => void refresh()}
       />
       {preview && (

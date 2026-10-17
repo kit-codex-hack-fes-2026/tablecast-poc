@@ -193,47 +193,18 @@ export function ConfigurationImageField({
       aria-describedby={`${id}-hint`}
     >
       <legend className="sr-only">{t("editor_image_settings")}</legend>
-      <div className="flex flex-wrap gap-6">
-        <ImagePreview
-          key={value.imageKey ?? "none"}
-          src={value.imageKey ? `/media/${value.imageKey}` : null}
-          label={t("editor_image_current")}
-        />
-        {candidate && mode === "file" && (
-          <ImagePreview
-            key={candidate.url}
-            src={candidate.url}
-            label={t("editor_image_candidate")}
-          />
-        )}
-      </div>
-      {value.imageKey && (
-        <div className="grid gap-2 text-sm">
-          <p>
-            {t(value.imageKind === "illustration" ? "kiosk_illustration" : "editor_photograph")}
-            {value.imageSource?.generated && (
-              <span className="ml-2">{t("editor_generated_image")}</span>
-            )}
-          </p>
-          {value.imageSource && <p className="wrap-break-word">{value.imageSource.description}</p>}
-          <Button
-            variant="outline"
-            type="button"
-            className="justify-self-start"
-            disabled={busy}
-            onClick={() => {
-              onChange({ imageKey: null, imageKind: "illustration", imageSource: undefined });
-              updateInput(imageInput({ imageKey: null, imageKind: "illustration" }));
-              upload.reset();
-              if (fileInput.current) fileInput.current.value = "";
-              fileInput.current?.focus();
-            }}
-          >
-            <Trash2 aria-hidden />
-            {t("editor_image_remove")}
-          </Button>
-        </div>
-      )}
+      <ImagePreviews value={value} candidate={candidate} mode={mode} />
+      <CurrentImageDetails
+        value={value}
+        disabled={busy}
+        onRemove={() => {
+          onChange({ imageKey: null, imageKind: "illustration", imageSource: undefined });
+          updateInput(imageInput({ imageKey: null, imageKind: "illustration" }));
+          upload.reset();
+          if (fileInput.current) fileInput.current.value = "";
+          fileInput.current?.focus();
+        }}
+      />
       <p id={`${id}-hint`} className="text-sm text-muted-foreground">
         {t("editor_image_save_hint")}
       </p>
@@ -434,5 +405,63 @@ function ImageMetadataFields({
         </span>
       </label>
     </>
+  );
+}
+
+function CurrentImageDetails({
+  value,
+  disabled,
+  onRemove,
+}: {
+  value: ImageValue;
+  disabled: boolean;
+  onRemove: () => void;
+}) {
+  const { t } = useI18n();
+  if (!value.imageKey) return null;
+  return (
+    <div className="grid gap-2 text-sm">
+      <p>
+        {t(value.imageKind === "illustration" ? "kiosk_illustration" : "editor_photograph")}
+        {value.imageSource?.generated && (
+          <span className="ml-2">{t("editor_generated_image")}</span>
+        )}
+      </p>
+      {value.imageSource && <p className="wrap-break-word">{value.imageSource.description}</p>}
+      <Button
+        variant="outline"
+        type="button"
+        className="justify-self-start"
+        disabled={disabled}
+        onClick={onRemove}
+      >
+        <Trash2 aria-hidden />
+        {t("editor_image_remove")}
+      </Button>
+    </div>
+  );
+}
+
+function ImagePreviews({
+  value,
+  candidate,
+  mode,
+}: {
+  value: ImageValue;
+  candidate: ImageInput["candidate"];
+  mode: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="flex flex-wrap gap-6">
+      <ImagePreview
+        key={value.imageKey ?? "none"}
+        src={value.imageKey ? `/media/${value.imageKey}` : null}
+        label={t("editor_image_current")}
+      />
+      {candidate && mode === "file" && (
+        <ImagePreview key={candidate.url} src={candidate.url} label={t("editor_image_candidate")} />
+      )}
+    </div>
   );
 }

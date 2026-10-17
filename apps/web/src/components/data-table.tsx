@@ -16,6 +16,7 @@ import {
   tableFeatures,
   useTable,
   type ColumnDef,
+  type ReactTable,
   type PaginationState,
   type OnChangeFn,
   type RowData,
@@ -80,7 +81,7 @@ export function DataTable<T extends RowData>({
   onPaginationChange?: OnChangeFn<PaginationState>;
   manualFiltering?: boolean;
 }) {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const [filter, setFilter] = useState("");
   const table = useTable({
     features,
@@ -95,6 +96,7 @@ export function DataTable<T extends RowData>({
     manualPagination: !pagination,
     initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
+  const initialPending = pending && !data.length;
   if (error && !data.length && !pending)
     return (
       <div className="min-h-80">
@@ -117,7 +119,7 @@ export function DataTable<T extends RowData>({
           <span className="sr-only">{searchLabel}</span>
           <Input
             type="search"
-            disabled={pending && !data.length}
+            disabled={initialPending}
             className="pl-10"
             placeholder={searchLabel}
             value={state?.globalFilter ?? filter}
@@ -144,7 +146,7 @@ export function DataTable<T extends RowData>({
             ))}
           </thead>
           <tbody>
-            {pending && !data.length ? (
+            {initialPending ? (
               ["first", "second"].map((id) => (
                 <tr key={id} aria-hidden="true">
                   {table.getVisibleLeafColumns().map((column) => (
@@ -177,41 +179,49 @@ export function DataTable<T extends RowData>({
           </tbody>
         </Table>
       </div>
-      {pagination && (
-        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-          <span>
-            {pending
-              ? t("common_loading")
-              : m.common_result_count(
-                  { count: table.getFilteredRowModel().rows.length },
-                  { locale },
-                )}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_previous_page")}
-              disabled={pending || !table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              <ChevronLeft />
-            </Button>
-            <span className="min-w-16 text-center tabular-nums">
-              {table.state.pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-            </span>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_next_page")}
-              disabled={pending || !table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </div>
-      )}
+      {pagination && <TablePagination table={table} pending={pending} />}
+    </div>
+  );
+}
+
+function TablePagination<T extends RowData>({
+  table,
+  pending,
+}: {
+  table: ReactTable<typeof features, T>;
+  pending: boolean;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+      <span>
+        {pending
+          ? t("common_loading")
+          : m.common_result_count({ count: table.getFilteredRowModel().rows.length }, { locale })}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          size="icon"
+          variant="outline"
+          aria-label={t("common_previous_page")}
+          disabled={pending || !table.getCanPreviousPage()}
+          onClick={() => table.previousPage()}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="min-w-16 text-center tabular-nums">
+          {table.state.pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
+        </span>
+        <Button
+          size="icon"
+          variant="outline"
+          aria-label={t("common_next_page")}
+          disabled={pending || !table.getCanNextPage()}
+          onClick={() => table.nextPage()}
+        >
+          <ChevronRight />
+        </Button>
+      </div>
     </div>
   );
 }
