@@ -169,7 +169,7 @@ CIの統合buildジョブもWorkersの完了後にStorybook・Emailを実行す�
 
 同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。ケースの入口はVite標準proxyを`port: 0`で一度だけ起動し、終了まで待受を保持する。実originをOAuth callbackとAPI varsへ設定後、Cloudflare previewも`port: 0`で起動し、listen完了時の実ポートへ転送する。空き番号を取得して解放する処理は使わない。OAuthとWorkerのreadyファイルは一時ファイルからrenameして公開し、異常終了と起動期限を確認する。bind失敗の自動再試行はしない。
 
-通常操作は、保存済み表示・有効化・反映後の値を観測してから次の操作へ進む。HTTP応答の受信だけでフォームのresetやiframeへの反映を完了と扱わない。意図した競合は下位層の明示barrierで確認する。会話注文デモは客の初期言語を明示し、言語・表示の保持と設定・注文の保持を別ケースへ分ける。端末寸法の全組合せは既存の`demo-viewport.browser.test.tsx`が担当する。全specと共通環境の確認結果は[#116](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/116)に置く。
+通常操作は、保存済み表示・有効化・反映後の値を観測してから次の操作へ進む。HTTP応答の受信だけでフォームのresetやiframeへの反映を完了と扱わない。意図した競合は下位層の明示barrierで確認する。会話注文デモは客の初期言語を明示し、言語・表示の保持と設定・注文の保持を別ケースへ分ける。端末寸法の全組合せは既存の`demo-viewport.browser.test.tsx`が担当する。[#116](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/116)は当時のspecと対象SHAの実施記録であり、現在の保証は上記の移行対応と最新PRの検証結果を参照する。
 
 macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guide/safari/cpsh003/mac) に合わせ、リンクを含むキーボード移動をOption+Tabで検証する。OS設定やDOMのtabindexをテストだけの都合で変更しない。
 
@@ -179,15 +179,15 @@ macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guid
 
 [全件監査と残件](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/35) の判定に沿い、先に低い層へ契約を置いてから上位の重複を除く。テストのretry・反復実行をflakyの検出や対策に使わない。失敗時はコードと保存した証跡から原因を調べ、修正した契約を確認する。UIの再試行ボタンや製品の再接続そのものを検証するケースとは区別する。
 
-| 契約                                  | 主担当と入口                                                                 | 上位へ残す保証                               |
-| ------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
-| 価格・プランの期限と数量境界          | APIのVitest `unit`、純粋configuration fixture                                | `bindings`で価格正本・未承認・DB原子性を検証 |
-| 読取中の更新、前版からのmigration     | APIのVitest `bindings`、実D1と明示barrier                                    | 実HTTPの代表経路                             |
-| 文字2倍・縦横画面・音声失敗後のカート | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                               | 代表modifier→注文→提供→会計→閉卓のE2E        |
-| 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                              | 実WebSocketの切断・HTTP回復E2E               |
-| QR decodeと送像停止                   | `device-qr-reader.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | QR URL→卓保持→再読込→明示承認E2E             |
-| 音声turnの認可とspeech/tool関連付け   | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                  | APIの実認可と別枠の有料WebRTC音声            |
-| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                | 他workspaceのtestから独立したCI job          |
+| 契約                                  | 主担当と入口                                                                                             | 上位へ残す保証                               |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 価格・プランの期限と数量境界          | APIのVitest `unit`、純粋configuration fixture                                                            | `bindings`で価格正本・未承認・DB原子性を検証 |
+| 読取中の更新、前版からのmigration     | APIのVitest `bindings`、実D1と明示barrier                                                                | 実HTTPの代表経路                             |
+| 文字2倍・縦横画面・音声失敗後のカート | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                                                           | 代表modifier→注文→提供→会計→閉卓のE2E        |
+| 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                                                          | 実WebSocketの切断・HTTP回復E2E               |
+| QR decodeと送像停止、URL入力・卓保持  | `device-qr-reader.browser.test.tsx`と`devices.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | 端末の明示承認・Cookie→代表注文の実接続E2E   |
+| 音声turnの認可とspeech/tool関連付け   | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                                              | APIの実認可と別枠の有料WebRTC音声            |
+| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                                            | 他workspaceのtestから独立したCI job          |
 
 Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
 
@@ -235,7 +235,7 @@ viewport・文字倍率・media設定を変更するcaseは開始時の値を記
 
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
 
-通常のfile並列と、順序を変えた対象試験を別々に確認する。例えばAPIの対象fileを`--sequence.shuffle --sequence.seed=272`で実行し、seed・対象版・結果を残す。単回のshuffle成功を全順序の証明とは扱わず、資源所有と復元の設計で独立性を担保する。画像・trace・bounded logはcaseとengineで分け、同じ出力先へ書き込まない。fixture準備の失敗も業務assertionの失敗と同じくログを添付し、添付失敗で元のerrorを上書きしない。
+通常のfile並列と、順序を変えた対象試験を別々に確認する。例えばAPIの対象fileを`--sequence.shuffle --sequence.seed=272`で実行し、seed・対象版・結果を残す。単回のshuffle成功を全順序の証明とは扱わず、資源所有と復元の設計で独立性を担保する。画像・trace・bounded logはcaseとengineで分け、同じ出力先へ書き込まない。ケース準備の失敗もruntimeログを添付し、worker起動の失敗は`test-results`のworkerログへ保存する。添付失敗で元のerrorを上書きしない。
 
 ### 型付きDB fixture
 
@@ -251,7 +251,7 @@ E2EのpreviewはCloudflare Vite pluginの `inspectorPort: false` でInspectorを
 
 PWA・メニュー公開・注文などの実動作試験はService Workerを有効にする。`page.route()`で503応答・ページサイズ・OAuth callbackを制御する試験は、そのファイルの`test.use({ serviceWorkers: "block" })`でSW登録を止める。SWがあるとPlaywrightの通信差し替えや要求観測を迂回する場合があるためであり、アプリ側に試験専用の分岐は作らない。[Playwright公式の制約](https://playwright.dev/docs/network#missing-network-events-and-service-workers)
 
-複数画面のSW更新は、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。
+複数画面のSW更新は、追加画面のcontrollerと初回登録の完了を確認してから次版を配信する。更新の拒否・準備応答だけでactivationとreloadの完了を推測せず、CANCEL・waiting/active/controller・各画面の可視状態を区別して証跡へ残す。Chromium内部の待機は、実ServiceWorkerの状態traceとnative matchAll/skipWaitingの到達点を照合する。診断を追加した後の単回成功を根因の修正と扱わない。
 
 ログイン後のSSR画面から次のdocument navigationへ進む場合は、見出しやURLだけでなく既存の操作部品が有効になるまで待つ。これによりhydrationとredirectの完了前に次の遷移を競合させない。
 

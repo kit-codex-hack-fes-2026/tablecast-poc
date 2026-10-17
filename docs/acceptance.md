@@ -56,7 +56,7 @@ Issue #272でE2Eの表示分岐を下位へ移した。下記は試験の所有�
 - UIの設定・保存・日英・失敗/再試行・focusは[保証の所有層と移行対応](testing.md#保証の所有層とe2eへの昇格)にあるStorybook/Browserが担当する。メニュー編集/voice値/公開の版/価格/認可はfeature Browserと実D1のAPIで分担する。
 - 会員の設定・記憶・ポイント・クーポンUIは[会員Browser](../apps/web/src/features/customer/customer-features.browser.test.tsx)と[店舗特典Browser](../apps/web/src/features/store/rewards.browser.test.tsx)、実HTTP→D1の接続は[会員特典API](../apps/api/test/customer-rewards-http.test.ts)が担当する。実QR URL・login returnTo・二人のCookie・同意・卓の通知・再来店は[代表会員E2E](../apps/web/e2e/tablecast-customer.spec.ts)へ残す。
 - ゲームの公開前提・権限・版・カート不変は[実D1のAPI](../apps/api/test/games.test.ts)、日英/通信復旧/開始遅着は店側と客側のBrowser、実iframe・公開・SDK保存/終了は[代表ゲームE2E](../apps/web/e2e/tablecast-games.spec.ts)で確認する。
-- [画像性能](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品予算と[runtime隔離](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)、実Service Worker・Cookie・Service Bindingの保証は維持する。通常CI・cache・差分選択の設定は今回変更していない。
+- [画像性能](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品予算と[runtime隔離](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)、実Service Worker・Cookie・Service Bindingの保証は維持する。CI workflow・cache・差分選択・shard数は変更していない。Browser/Storybook projectのworker予算は各2へ設定した。
 
 ## ローカルUI受入の記録
 
