@@ -305,11 +305,11 @@ it("カメラ拒否と壊れた画像を説明し、コードを手入力して�
   );
   await show("ja");
   await page.getByRole("button", { name: ja.device_scan_start, exact: true }).click();
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.device_scan_camera_error);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.device_scan_camera_error);
   await page
     .getByLabelText(ja.device_scan_image, { exact: true })
     .upload(new File(["broken"], "tablecast-broken.png", { type: "image/png" }));
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.device_scan_image_error);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.device_scan_image_error);
   const code = page.getByLabelText(ja.admin_pair_code, { exact: true });
   await code.fill("manual-code");
   await expect.element(code).toHaveValue("MANUAL-CODE");

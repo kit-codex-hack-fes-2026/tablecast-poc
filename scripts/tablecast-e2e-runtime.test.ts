@@ -110,7 +110,7 @@ it("指定ポートのOAuth起動完了後にdiscoveryと公開URLが一致す�
 
 it("OAuthのbind失敗を起動成功にせず、既存の待受を保つ", async () => {
   const server = createServer((_request, response) => response.end("tablecast-existing"));
-  await new Promise<void>((done) => server.listen(0, done));
+  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("待受がありません。");
   const child = spawn("bun", ["--no-env-file", resolvePath("apps/emulate/src/index.ts")], {

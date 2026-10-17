@@ -56,7 +56,7 @@ test.each([
     );
     await expect
       .element(page.getByRole("heading", { level: 1 }))
-      .toHaveTextContent(labels.evaluation_title);
+      .toMatchTextContent(labels.evaluation_title);
     await expect
       .element(page.getByRole("link", { name: labels.evaluation_start }))
       .toHaveAttribute("href", "/login?returnTo=%2Fadmin%2Fstores%2Ftablecast-komorebi%2Fdemo");

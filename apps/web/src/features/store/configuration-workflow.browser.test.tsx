@@ -310,8 +310,8 @@ it.each([503, 409])(
     saveFailure = status;
     await screen.getByRole("button", { name: ja.common_save, exact: true }).click();
     await expect.element(screen.getByRole("alert")).toBeVisible();
-    await expect.element(japanese).toHaveTextContent("接客方針を保持");
-    await expect.element(english).toHaveTextContent("Keep English instructions");
+    await expect.element(japanese).toMatchTextContent("接客方針を保持");
+    await expect.element(english).toMatchTextContent("Keep English instructions");
     await expect
       .element(screen.getByRole("combobox", { name: ja.prompt_block }).first())
       .toHaveValue("heading-2");
@@ -488,7 +488,7 @@ it("日本語の接客概要から既存下書きの各入力へ移り、音声�
         exact: true,
       }),
     )
-    .toHaveTextContent("Keep these service instructions after saving.");
+    .toMatchTextContent("Keep these service instructions after saving.");
 });
 
 it("未保存入力を戻す確認では下書きを破棄せず、最後の保存値へ戻る", async () => {
@@ -530,7 +530,7 @@ it("接客入力を戻しても初回移動用のhashへfocusを移し直さな�
     .getByRole("button", { name: ja.workflow_revert, exact: true })
     .click();
   await expect.element(screen.getByRole("alertdialog")).not.toBeInTheDocument();
-  await expect.element(instructions).toHaveTextContent(initial);
+  await expect.element(instructions).toMatchTextContent(initial);
   await expect.element(instructions).not.toHaveFocus();
 });
 

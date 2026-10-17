@@ -61,10 +61,10 @@ it("旧本文を開くだけでdirtyにせず、書式変更と保存・再読�
   await page.getByRole("button", { name: "保存を再現" }).click();
   await expect
     .element(page.getByRole("status", { name: "保存本文" }))
-    .toHaveTextContent("## 接客方針");
+    .toMatchTextContent("## 接客方針");
   await input.fill("未保存の編集");
   await page.getByRole("button", { name: "再読込を再現" }).click();
-  await expect.element(input).toHaveTextContent("接客方針");
+  await expect.element(input).toMatchTextContent("接客方針");
   await expect
     .element(page.getByRole("button", { name: ja.prompt_undo, exact: true }))
     .toBeDisabled();
@@ -86,7 +86,7 @@ it("スラッシュ検索をキーボードで確定し、Escは入力を消さ�
   await userEvent.keyboard("/nothingmatches");
   await expect.element(page.getByText(ja.prompt_no_commands)).toBeVisible();
   await userEvent.keyboard("{Escape}");
-  await expect.element(input).toHaveTextContent("/nothingmatches");
+  await expect.element(input).toMatchTextContent("/nothingmatches");
 });
 
 it("IME確定中のEnterをスラッシュ候補が消費しない", async () => {
@@ -101,7 +101,7 @@ it("IME確定中のEnterをスラッシュ候補が消費しない", async () =>
     cancelable: true,
   });
   input.element().dispatchEvent(event);
-  await expect.element(input).toHaveTextContent("/heading");
+  await expect.element(input).toMatchTextContent("/heading");
   await expect.element(page.getByRole("listbox")).toBeVisible();
 });
 
@@ -119,13 +119,13 @@ it("画像付きHTMLから文章と強調だけを取り込み、除外を知ら
     .dispatchEvent(
       new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
     );
-  await expect.element(input).toHaveTextContent("前丁寧後");
+  await expect.element(input).toMatchTextContent("前丁寧後");
   expect(input.element().querySelectorAll("img,iframe")).toHaveLength(0);
   await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
   await page.getByRole("button", { name: "保存を再現" }).click();
   await expect
     .element(page.getByRole("status", { name: "保存本文" }))
-    .toHaveTextContent("前**丁寧**後");
+    .toMatchTextContent("前**丁寧**後");
 });
 
 it("ファイルdropとdisabled中の貼付けで本文を書き換えない", async () => {
@@ -137,7 +137,7 @@ it("ファイルdropとdisabled中の貼付けで本文を書き換えない", a
   input
     .element()
     .dispatchEvent(new DragEvent("drop", { dataTransfer: data, bubbles: true, cancelable: true }));
-  await expect.element(input).toHaveTextContent("保持する本文");
+  await expect.element(input).toMatchTextContent("保持する本文");
   await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
   await page.getByRole("button", { name: "編集可否を切替" }).click();
   await expect.element(input).toHaveAttribute("contenteditable", "false");
@@ -148,7 +148,7 @@ it("ファイルdropとdisabled中の貼付けで本文を書き換えない", a
     .dispatchEvent(
       new ClipboardEvent("paste", { clipboardData: clipboard, bubbles: true, cancelable: true }),
     );
-  await expect.element(input).toHaveTextContent("保持する本文");
+  await expect.element(input).toMatchTextContent("保持する本文");
   await expect.element(page.getByRole("button", { name: ja.prompt_bold })).toBeDisabled();
 });
 
@@ -157,7 +157,7 @@ it("上限超過を切り捨てず入力を保持する", async () => {
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
   const text = "あ".repeat(5001);
   await input.fill(text);
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.prompt_limit);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.prompt_limit);
   expect(input.element().textContent).toBe(text);
   await expect.element(input).toHaveAttribute("aria-invalid", "true");
 });
@@ -171,12 +171,12 @@ it("通常入力のUndoで旧文字列へ戻り、Redoと強調中の改行も�
   await page.getByRole("button", { name: ja.prompt_undo, exact: true }).click();
   expect(changed).toHaveBeenLastCalledWith(initial);
   await page.getByRole("button", { name: ja.prompt_redo, exact: true }).click();
-  await expect.element(input).toHaveTextContent("追");
+  await expect.element(input).toMatchTextContent("追");
   await page.getByRole("button", { name: ja.prompt_bold, exact: true }).click();
   await userEvent.keyboard("太字{Shift>}{Enter}{/Shift}続き");
   await page.getByRole("button", { name: "保存を再現" }).click();
-  await expect.element(page.getByRole("status", { name: "保存本文" })).toHaveTextContent("太字");
-  await expect.element(page.getByRole("status", { name: "保存本文" })).toHaveTextContent("続き");
+  await expect.element(page.getByRole("status", { name: "保存本文" })).toMatchTextContent("太字");
+  await expect.element(page.getByRole("status", { name: "保存本文" })).toMatchTextContent("続き");
 });
 
 it("画像のみのHTML貼付けは選択中の既存本文を消さない", async () => {
@@ -191,6 +191,6 @@ it("画像のみのHTML貼付けは選択中の既存本文を消さない", asy
     .dispatchEvent(
       new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
     );
-  await expect.element(input).toHaveTextContent("保持する本文");
+  await expect.element(input).toMatchTextContent("保持する本文");
   await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
 });

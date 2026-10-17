@@ -86,7 +86,7 @@ it("日本語で入力の上限とAPIの項目エラーを案内し、修正後�
   await page.getByRole("spinbutton", { name: labels.stores_table_count }).fill("101");
   await page.getByRole("button", { name: labels.stores_create }).click();
   // Then: 失敗項目に上限を表示し、APIを呼ばない。
-  await expect.element(page.getByRole("alert")).toHaveTextContent("100");
+  await expect.element(page.getByRole("alert")).toMatchTextContent("100");
   await expect.element(page.getByRole("spinbutton")).toHaveAttribute("aria-invalid", "true");
   expect(requests).toHaveLength(0);
   // When: 修正して送ると、APIから店舗名の検証エラーを受ける。
@@ -96,7 +96,7 @@ it("日本語で入力の上限とAPIの項目エラーを案内し、修正後�
   await expect
     .element(page.getByRole("textbox", { name: labels.org_name }))
     .toHaveAttribute("aria-invalid", "true");
-  await expect.element(page.getByRole("alert")).toHaveTextContent("3文字以下");
+  await expect.element(page.getByRole("alert")).toMatchTextContent("3文字以下");
   await expect
     .element(page.getByRole("textbox", { name: labels.org_slug }))
     .toHaveValue("tablecast-test");

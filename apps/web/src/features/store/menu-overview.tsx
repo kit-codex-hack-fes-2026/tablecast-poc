@@ -1,10 +1,9 @@
 import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, Check, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { Badge } from "../../components/ui/badge";
@@ -315,7 +314,7 @@ export function MenuOverview({
 function menuOverviewColumns(
   t: ReturnType<typeof useI18n>["t"],
   locale: ReturnType<typeof useI18n>["locale"],
-): ColumnDef<OptionRow>[] {
+): DataTableColumn<OptionRow>[] {
   return [
     { accessorKey: "group", header: t("editor_modifiers") },
     {

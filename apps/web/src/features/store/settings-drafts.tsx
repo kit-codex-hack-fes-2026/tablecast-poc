@@ -1,7 +1,6 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -14,7 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -310,7 +309,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
 function settingsDraftsColumns(
   t: ReturnType<typeof useI18n>["t"],
   storeId: string,
-): ColumnDef<ConfigDraft>[] {
+): DataTableColumn<ConfigDraft>[] {
   return [
     { accessorKey: "id", header: t("editor_id"), cell: ({ row }) => row.original.id.slice(0, 8) },
     { accessorKey: "version", header: t("admin_draft_version") },

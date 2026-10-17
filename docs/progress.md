@@ -71,7 +71,7 @@ Issue #100。通常音声をLiveKit公式GPTLiveModel 1.8.1へ置き換え、既
 
 ## 基盤の決定
 
-- Bun 1.3.13、Node 24.7以上、TypeScript 6.0.3。Cloudflare公式 `@cloudflare/vitest-plugin` 1.1.4とVitest 4.1.11を使用。
+- Bun 1.4.3、Node 24.22以上、TypeScript 6.0.3。Cloudflare公式 `@cloudflare/vitest-plugin` 1.4.4とVitest 5.0.5を使用。
 - 通常開発はCloudflare Vite Pluginの補助WorkerでAPIを起動し、Service BindingでWebと接続する。
 - 開発資源と秘密情報はworktreeの `.local` に分離する。既存 `.env.local` を自動読込みして有料サービスへ接続しない。
 - Web、API、Pythonを分担し、ルートlockfileとmigrationは統合担当が管理する。

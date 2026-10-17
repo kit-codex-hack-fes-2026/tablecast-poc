@@ -149,7 +149,7 @@ it("テーマの保存値は再表示で戻り、版競合時は確認するま�
   const local = '[data-theme-part="product-card"] { border-width:4px; }';
   await css.fill(local);
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.common_conflict);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.common_conflict);
   await expect.element(css).toHaveValue(local);
   await page.getByRole("button", { name: ja.workflow_conflict_reload, exact: true }).click();
   await page

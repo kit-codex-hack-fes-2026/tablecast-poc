@@ -13,7 +13,7 @@ runs:
         bun -e 'console.log("playwright=" + require("@playwright/test/package.json").version)' >> "$GITHUB_OUTPUT"
         echo "image=$ImageOS" >> "$GITHUB_OUTPUT"
         echo "revision=$ImageVersion" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /tmp/tablecast-apt/*.deb
         key: tablecast-apt-${{ runner.arch }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.playwright }}-${{ inputs.browsers }}-${{ steps.version.outputs.revision }}

@@ -1,9 +1,8 @@
 import { type ClosedSessionSummary } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpRight } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
@@ -82,7 +81,7 @@ function visitHistoryTableColumns(
   t: ReturnType<typeof useI18n>["t"],
   locale: ReturnType<typeof useI18n>["locale"],
   onSelect: (id: string) => void,
-): ColumnDef<ClosedSessionSummary>[] {
+): DataTableColumn<ClosedSessionSummary>[] {
   return [
     {
       accessorKey: "tableName",

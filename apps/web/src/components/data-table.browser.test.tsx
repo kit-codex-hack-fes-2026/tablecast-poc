@@ -40,3 +40,50 @@ test("日本語の表は初回読込で列と領域を保ち、再取得で検�
   await expect.element(page.getByRole("cell", { name: "卓上喫茶" })).toBeVisible();
   await expect.element(page.getByRole("searchbox")).toHaveValue("卓上");
 });
+
+test("表の検索・昇降順の並べ替え・ページ移動で対象行を保つ", async () => {
+  const data = Array.from({ length: 25 }, (_, index) => ({
+    id: String(index + 1),
+    name: `店舗${String(index + 1).padStart(3, "0")}`,
+  }));
+  await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <DataTable
+        columns={[
+          {
+            accessorKey: "name",
+            sortFn: "text",
+            header: ({ column }) => (
+              <button type="button" onClick={column.getToggleSortingHandler()}>
+                店舗名を並べ替え
+              </button>
+            ),
+          },
+        ]}
+        data={data}
+        getRowId={(row) => row.id}
+        searchLabel="店舗を検索"
+      />
+    </LocaleProvider>,
+  );
+  await expect.element(page.getByRole("cell", { name: "店舗001", exact: true })).toBeVisible();
+  await expect
+    .element(page.getByRole("cell", { name: "店舗025", exact: true }))
+    .not.toBeInTheDocument();
+  const next = page.getByRole("button", { name: "次のページ", exact: true });
+  const previous = page.getByRole("button", { name: "前のページ", exact: true });
+  await next.click();
+  await expect.element(page.getByRole("cell", { name: "店舗025", exact: true })).toBeVisible();
+  await expect.element(next).toBeDisabled();
+  await previous.click();
+  await page.getByRole("button", { name: "店舗名を並べ替え", exact: true }).click();
+  await page.getByRole("button", { name: "店舗名を並べ替え", exact: true }).click();
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
+  await page.getByRole("searchbox").fill("店舗003");
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗003");
+  await expect.element(next).toBeDisabled();
+  await expect.element(previous).toBeDisabled();
+  await page.getByRole("searchbox").fill("");
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
+  await expect.element(next).toBeEnabled();
+});

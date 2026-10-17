@@ -197,7 +197,7 @@ export default defineConfig({
       capture: ["feature"],
     })),
     "import/resolver": { typescript: { project: `${import.meta.dirname}/tsconfig.json` } },
-    react: { version: "19.2.8" },
+    react: { version: "19.3.1" },
     tailwindcss: {
       entryPoint: fileURLToPath(new URL("./src/styles.css", import.meta.url)),
       callees: ["cn", "tv"],

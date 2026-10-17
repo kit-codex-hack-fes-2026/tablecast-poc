@@ -2,11 +2,10 @@ import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, MailPlus, X } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -66,7 +65,7 @@ function invitationColumns(
   t: ReturnType<typeof useI18n>["t"],
   pending: boolean,
   cancel: (id: string) => void,
-): ColumnDef<Invitation>[] {
+): DataTableColumn<Invitation>[] {
   return [
     { accessorKey: "email", header: t("auth_email") },
     {

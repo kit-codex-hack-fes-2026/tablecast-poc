@@ -8,7 +8,7 @@ v13追記：OpenScreen CLIのカーソル設定の制約に対し、[実操作�
 
 ## 確認したこと
 
-- 動画workspaceの描画依存はHyperFrames 0.8.33とGSAP 3.14.2。manifest・ルートlock・インストール済みpackageの版は一致している。生成HTMLはローカルへコピーしたGSAPと `styles.css` を読む。React、Motion、Tailwind、Remotionを動画へ重ねて読み込んでいない。ルートlock内のMotion・TailwindはWebアプリの依存であり、動画用の競合依存ではない。
+- 動画workspaceの描画依存はHyperFrames 0.8.169とGSAP 3.15.0。manifestとルートlockで版を固定する。生成HTMLはローカルへコピーしたGSAPと `styles.css` を読む。React、Motion、Tailwind、Remotionを動画へ重ねて読み込んでいない。ルートlock内のMotion・TailwindはWebアプリの依存であり、動画用の競合依存ではない。
 - 現環境はNode.js 25.0.0、Bun 1.3.13。HyperFramesのNode.js要件は22以上。この組合せでv6の2本を描画済み。全環境・全機能の互換性を保証するものではない。
 - 9月12日の棚卸しでは、動画に直接関係するrepo skillは `openscreen-demo-video` だった。9月14日に下記のHyperFrames 3スキルを追加し、制作判断の参照元もGitで共有する。
 - `frontend-design@claude-plugins-official` はユーザー設定で `enabled = false`。ローカルキャッシュにSKILL.mdが残っている。v5文書の「適用した」は過去に参照した記録であり、現在の有効化やプロジェクト依存への固定を意味しない。
@@ -20,8 +20,8 @@ v13追記：OpenScreen CLIのカーソル設定の制約に対し、[実操作�
 | 対象                                                        | この基盤での扱い                                                                                                                 |
 | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | OpenScreen 1.11                                             | 実録・実操作へのズームと編集projectを担当。カーソルの表示条件はFFmpeg前処理、画像・先端定義はOpenScreen標準テーマを使う          |
-| HyperFrames 0.8.33                                          | 映像・音声の時間管理、場面の合成、書き出しを担当                                                                                 |
-| GSAP 3.14.2                                                 | HyperFramesが指定時刻へ移動できるアニメーションを担当。別のアニメーションエンジンを重ねない                                      |
+| HyperFrames 0.8.169                                         | 映像・音声の時間管理、場面の合成、書き出しを担当                                                                                 |
+| GSAP 3.15.0                                                 | HyperFramesが指定時刻へ移動できるアニメーションを担当。別のアニメーションエンジンを重ねない                                      |
 | HTML/CSS                                                    | 配置・文字・色を担当。既存 `styles.css` に集約。端末枠は採用技術の要件ではない                                                   |
 | FFmpeg / FFprobe                                            | 素材の比率調整、音声処理、復号・メディア情報検査を担当                                                                           |
 | Playwright / Chrome                                         | 実UIの操作収録と生成物の配置検査を担当。実機の検証とは区別する                                                                   |

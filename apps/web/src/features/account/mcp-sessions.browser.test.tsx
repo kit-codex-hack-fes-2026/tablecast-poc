@@ -113,9 +113,9 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
     </QueryClientProvider>,
   );
   const connection = page.getByRole("row").filter({ hasText: "TableCast browser acceptance" });
-  await expect.element(connection).toHaveTextContent("tablecast:read");
-  await expect.element(connection).toHaveTextContent("tablecast:write");
-  await expect.element(connection).toHaveTextContent(ja.mcp_active);
+  await expect.element(connection).toMatchTextContent("tablecast:read");
+  await expect.element(connection).toMatchTextContent("tablecast:write");
+  await expect.element(connection).toMatchTextContent(ja.mcp_active);
   await expect
     .element(page.getByRole("columnheader", { name: ja.mcp_refresh_expires }))
     .toBeVisible();

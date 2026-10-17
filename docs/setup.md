@@ -91,9 +91,9 @@ bunx --no-install portless proxy start --no-tls --port 80
 bun run dev
 ```
 
-[mise.toml](../mise.toml)がNode 24.7.0、Bun 1.3.13を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
+[mise.toml](../mise.toml)がNode 24.22.0、Bun 1.4.3を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
-CIのNodeは`>=24.7.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.7.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
+CIのNodeは`>=24.22.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.22.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
 
 CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。APIではWeb生成物を使わず、Componentは直前に専用形式を生成するため、この2jobでは共通setupのcodegenだけを省く。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
 
@@ -122,7 +122,7 @@ Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそ�
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
-動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。描画依存の0.8.33と同じ公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、最新版への一括更新は行わない。
+動画制作のHyperFrames Core・Animation・Creativeもrepo skillsとして共有する。導入時のHyperFrames 0.8.33の公開元コミットへ固定しており、通常はcloneだけで参照できる。[動画制作スキルの取得元・復元コマンド](../apps/presentation/TOOLS.md#制作スキルの固定と復元)に従い、描画ライブラリの更新とは分けて管理する。
 
 ### MCP設定の配置と確認
 
@@ -298,10 +298,16 @@ TanStack・Storybook等が利用するJavaScript APIには既存の`typescript@6
 
 ## Cloudflare CLIと設定の移行
 
-`cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
+`cf@1.0.0-beta.18`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.v.1`、Workers試験はVitest `5.0.5`とVitest plugin `1.4.4`、SDKはWrangler `4.151.1`を使う。APIのmodule cache互換設定は[テスト戦略](testing.md#vitest-5とworkersのmodule-cache)を参照する。Node.jsは24.22.0以上が必要である。遠隔proxyのローカルpatchは撤去済みで、SDKのMiniflareを使う。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。
 
 API・WebのWorkerとbindingは各workspaceの`cloudflare.config.ts`へ直接定義する。環境・資源名・採用済みID・Access設定は既存の`scripts/tablecast-deploy-config.ts`に置く。公開配備の入力は`TABLECAST_CONFIG`で両workspaceへ渡し、ローカルは通常のenvから直接読む。cf設定からSDK接続用の`.local/api.wrangler.json`だけを一方向に生成する。Web用・build用の中間JSONは作らず、生成物を手編集しない。`bun run dev:config`はworkspaceの`.dev.vars`を自worktreeの`.local/.dev.vars`へ接続する。既存の手編集ファイルや別worktreeへのリンクがある場合は上書きせず停止する。必要な値を自worktreeの入力へ移してから再開する。
 
 旧hash名からの切替やbranch名の変更時は、自worktreeのdevをCtrl+Cで停止し、旧設定のまま`bun run services:down`を実行する。その後`bun run demo:reset`でこのworktreeのD1・R2・DOを削除・再seedする。認証secretとデモ資格情報は保持する。旧資源名・旧D1形式の自動移行は行わず、通常起動で名前の変更を検知したらresetを案内して停止する。保存先は常に`.local/state`とし、名前別ディレクトリや移行履歴を作らない。
 
 beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了しないため、`cf:local`はcfの公開`main()`完了後にstdout/stderrをflushして終了する互換入口である。migration・試験だけが使い、遠隔操作は通常のcf CLIを使う。上流で終了処理が修正されたらこの入口を削除する。
+
+## 依存更新に伴う認証DBの移行
+
+Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecast_auth_account_compat.sql`は既存のissuer・資格情報を保持してNOT NULL制約と旧複合unique indexを外す。新しいAPIを配備する前に既存のmigration経路で適用する。共有環境へ適用する前に、`provider_id, account_id`が同じ行が複数存在しないことを確認する。異なるissuerで同じ識別子を使う行がある場合は、ユーザーを統合せずproviderの対応を整理してから移行する。[公式移行ガイド](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#account-identity-keeps-the-provider-key)
+
+`emulate@0.12.2`の標準待受はloopbackである。ローカルOAuthは`127.0.0.1`、preview/stagingのContainer内だけは`0.0.0.0`を明示してService Bindingから到達できるようにする。bind失敗の検査も同じIPv4 loopbackへ既存serverを置き、別address familyの同じport番号と区別する。

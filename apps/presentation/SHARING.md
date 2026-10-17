@@ -29,7 +29,7 @@ Linux amd64では[Dev Containerの導入手順](../../docs/setup.md#2a-dev-conta
 
 ## 新しいcheckoutで生成する
 
-WindowsでBun 1.3.13、Node.js 24.7以降、Git LFS、Chrome、FFmpeg/FFprobeを用意する。依存はルートの`bun.lock`とworkspace manifestで固定する。OpenScreen 1.11は再収録・再編集時だけ必要。
+WindowsでBun 1.4.3、Node.js 24.22以降、Git LFS、Chrome、FFmpeg/FFprobeを用意する。依存はルートの`bun.lock`とworkspace manifestで固定する。OpenScreen 1.11は再収録・再編集時だけ必要。
 
 リポジトリルートで実行し、各コマンドの成功を確認する。
 

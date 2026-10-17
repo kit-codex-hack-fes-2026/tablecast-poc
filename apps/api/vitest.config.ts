@@ -23,6 +23,9 @@ const bindings = {
   ],
   test: {
     setupFiles: ["./test/setup.ts"],
+    // Vitest 5のwarm module一括転送はworkerdのWebSocket上限を超える。上流: workers-sdk#16331。
+    fsModuleCache: false,
+    maxWorkers: 4,
     name: "bindings",
     include: ["test/**/*.test.ts"],
     exclude: unitTests,
@@ -58,6 +61,7 @@ export default defineConfig({
       {
         test: {
           name: "unit",
+          maxWorkers: 4,
           include: unitTests,
           environment: "node",
         },
