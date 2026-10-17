@@ -285,6 +285,8 @@ E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、�
 
 Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitest 4.1.11では既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
 
+Kioskのカート・通知統合では、起動時の`enumerateDevices()`も外部I/Oとして固定し、実端末のマイク列挙を業務caseへ持ち込まない。本番Kiosk・VoiceConnection・Query・HTTP clientは維持し、デバイス一覧・選択・切替の保証は`voice-connection-track.test.ts`が所有する。不要I/Oを除いた局所成功だけで、CIの描画・操作待ちが解消したとは判断しない。
+
 `tablecast-runtime-isolation.spec.ts`の2件だけは、前caseで実D1と配信ファイルを変更し、worker再利用後に復元されたことを観測するためserialとする。これはfixture自体の回帰検査であり、通常の注文・公開journeyの順序依存を許可する例ではない。APIの`storage-isolation.test.ts`も実bindingの初期化を検査する。
 
 遅い応答はHTTP到達を確認してから途中状態を観測し、gateを解放して最終状態・入力・副作用を確認する。actionは一度だけ行い、assertionを待つ。APIの成功応答だけで画面反映完了とせず、Service Worker・hydration・保存・通知の対象状態を待つ。タイマー待ち・汎用networkidle・force click・timeout増加・retryで順序や準備不足を隠さない。
