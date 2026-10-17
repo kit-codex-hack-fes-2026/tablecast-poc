@@ -242,31 +242,50 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
     .toBeEnabled();
 });
 
-it.each(["期限", "カート版", "公開版"] as const)(
-  "確認の%sが失効したら確定操作を閉じる",
-  async (reason) => {
-    await page.viewport(1280, 1000);
-    await mountKiosk();
-    if (reason === "期限") confirmationDuration = 2000;
-    await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+it("確認の期限が失効したら確定操作を閉じる", async () => {
+  await page.viewport(1280, 1000);
+  await mountKiosk();
+  const review = page.getByRole("button", { name: ja.kiosk_review, exact: true });
+  await expect.element(review).toBeEnabled();
+  confirmationDuration = 2000;
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+  vi.setSystemTime(new Date("2026-10-17T00:00:00Z"));
+  try {
+    await review.click();
+    await vi.advanceTimersByTimeAsync(0);
     const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
     await expect.element(confirmation).toBeVisible();
-    // 期限は確認APIが返した値を実タイマーで観測し、Reactや通信の時計は置き換えない。
-    if (reason !== "期限") {
-      if (reason === "カート版") current.cart.version += 1;
-      else {
-        current.configVersion += 1;
-        if (current.snapshot) current.snapshot.status = "invalid";
-        catalogResponse = Response.json({ ...catalog, version: current.configVersion });
-      }
-      notify(reason === "公開版" ? "configuration.published" : "cart.updated");
-    }
+    // APIの期限を本番effectで観測し、RAF・setInterval・MessageChannelは置き換えない。
+    await vi.advanceTimersByTimeAsync(confirmationDuration - 1);
+    await expect.element(confirmation).toBeVisible();
+    await vi.advanceTimersByTimeAsync(1);
     await expect.element(confirmation).not.toBeInTheDocument();
     expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
       false,
     );
-  },
-);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it.each(["カート版", "公開版"] as const)("確認の%sが失効したら確定操作を閉じる", async (reason) => {
+  await page.viewport(1280, 1000);
+  await mountKiosk();
+  await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+  const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
+  await expect.element(confirmation).toBeVisible();
+  if (reason === "カート版") current.cart.version += 1;
+  else {
+    current.configVersion += 1;
+    if (current.snapshot) current.snapshot.status = "invalid";
+    catalogResponse = Response.json({ ...catalog, version: current.configVersion });
+  }
+  notify(reason === "公開版" ? "configuration.published" : "cart.updated");
+  await expect.element(confirmation).not.toBeInTheDocument();
+  expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
+    false,
+  );
+});
 
 it("公開通知で開いた商品を閉じて新価格を取得し、同じ通知でもカート行を重複しない", async () => {
   await page.viewport(1280, 1000);

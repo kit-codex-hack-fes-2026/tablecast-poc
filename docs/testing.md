@@ -124,9 +124,15 @@ Webのtest名とUI翻訳を混同せず、英語UIのテストでも説明は日
 ## テストデータ・時刻・非同期
 
 時刻と乱数は必要なテスト境界で固定する。seed、再生シナリオ、通常アプリのclockを不用意に一つのグローバルmockへしない。
+Browser統合で期限そのものを検証するcaseは、実featureへAPIの期限を渡した後の待ちを局所的なclock制御へ置き換えられる。Kioskは`Date`・`setTimeout`・`clearTimeout`だけを固定し、Queryの0ms通知を解放した上で期限1ms前の表示と期限到達時の消失、注文未送信を観測する。`finally`で時計を戻し、RAF・`setInterval`・MessageChannelや実SW/WebSocketの接続検査は実ブラウザーへ残す。
 最低限必要な入力だけのfixtureを使う。大規模デモseedを全unit testへ読み込まない。
+上限の保証に必要な大きいデータは減らさず、検証する責務と編集対象を分ける。条件全体の上限は65商品・65,536ノードを保持して小さい商品を編集し、商品単位の上限は大きい条件DOMで検査する。削減後の保存では編集外のデータも含めてHTTP payloadを照合する。
 固定sleepで成功を待たず、状態、イベント、画面の役割と名称、promiseの完了を待つ。
 ライブラリ内のprivate stateやDOM構造へ過度に依存せず、公開APIと利用者に見える結果を観測する。
+
+Browserの速度は全件の準備・実行・終了を含む経過時間で比較し、Vitestの`setup`・`import`・`tests`は並列fileの集計として分ける。Storybookの自動setupや初回依存変換も含むため、同じ環境・cache条件・対象・worker枠を記録する。workspaceの本番sourceを事前bundleする案は、source変更時のcache失効とwatch時の再読込を確認してから採用する。
+
+`test:browser`はParaglide公式CLIの[`locale-modules`](https://paraglidejs.com/compiler-options#outputstructure)を先に生成する。1,024個のmessage moduleを日英2つのlocale moduleへまとめ、既存の`messages.js`・`m`・単一runtimeを使う。本番sourceや生成物を手編集せず、通常codegenと公開buildはtree shaking向けの`message-modules`を保つ。公開Storybookもbuild前にこの形式を生成し直す。生成先を共有するBrowser試験・codegen・dev/watch・buildは同じcheckoutで並走させない。
 
 ## 公開scriptとCI
 
