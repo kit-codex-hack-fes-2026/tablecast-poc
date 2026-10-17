@@ -1,0 +1,136 @@
+name: 手動カタログ配備
+
+on:
+  issue_comment:
+    types: [edited]
+  workflow_call:
+    inputs:
+      pr:
+        type: string
+        required: true
+      catalog:
+        type: string
+        default: all
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  request:
+    name: カタログ要求の認可
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pr: ${{ steps.request.outputs.pr }}
+      sha: ${{ steps.request.outputs.sha }}
+      catalog: ${{ steps.request.outputs.catalog }}
+    steps:
+      # issue_commentはdefault branch、workflow_callは明示起動したcallerと同じ版を使う。
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        id: request
+        env:
+          TABLECAST_REQUEST_PR: ${{ inputs.pr }}
+          TABLECAST_REQUEST_CATALOG: ${{ inputs.catalog }}
+        with:
+          script: |
+            const {parseCatalogRequest, previewCommentMarker, resetCatalogRequest} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-preview-comment.ts`);
+            const isComment = context.eventName === 'issue_comment';
+            let request;
+            let pr;
+            if (isComment) {
+              if (!context.payload.issue?.pull_request) return;
+              const comment = context.payload.comment;
+              request = parseCatalogRequest({action: context.payload.action, body: comment.body, before: context.payload.changes?.body?.from, authorLogin: comment.user.login});
+              if (!request) return;
+              pr = String(context.payload.issue.number);
+            } else {
+              pr = process.env.TABLECAST_REQUEST_PR;
+              request = {catalog: process.env.TABLECAST_REQUEST_CATALOG};
+            }
+            if (!/^[1-9]\d{0,8}$/.test(pr ?? '') || !['storybook', 'email', 'all'].includes(request.catalog)) throw new Error('PR・カタログ種別が不正です');
+            const actor = isComment ? context.payload.sender : {login: context.actor, type: 'User'};
+            if (actor?.type !== 'User') throw new Error('利用者による起動に限ります');
+            const {data: permission} = await github.rest.repos.getCollaboratorPermissionLevel({...context.repo, username: actor.login});
+            if (!['write', 'admin'].includes(permission.permission)) throw new Error('カタログ配備にはwrite権限が必要です');
+            const {data: current} = await github.rest.pulls.get({...context.repo, pull_number: Number(pr)});
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            if (current.state !== 'open' || current.head.repo?.full_name !== repository || current.head.ref === 'staging') throw new Error('同一repoの公開中の通常PRに限ります');
+            const sha = current.head.sha;
+            if (!/^[a-f0-9]{40}$/.test(sha) || (request.sha && request.sha !== sha)) throw new Error('対象SHAが更新されています。最新の通知から起動してください');
+            try {
+              const {data: action} = await github.rest.repos.getContent({...context.repo, ref: sha, path: '.github/actions/tablecast-preview-comment/action.yml'});
+              if (Array.isArray(action) || action.type !== 'file') throw new Error('対応actionがありません');
+            } catch {
+              throw new Error('対象PRに手動カタログ機能がありません。最新stagingを取り込んでから再要求してください');
+            }
+            if (isComment && context.payload.action === 'edited') {
+              const {data: comment} = await github.rest.issues.getComment({...context.repo, comment_id: context.payload.comment.id});
+              if (comment.user?.login !== 'github-actions[bot]' || !comment.body?.startsWith(`${previewCommentMarker}\n`) || comment.body.match(/^対象SHA: ([a-f0-9]{40})$/m)?.[1] !== sha) throw new Error('現在の通知と対象SHAが一致しません');
+              const body = resetCatalogRequest(comment.body, request.catalog);
+              if (body !== comment.body) await github.rest.issues.updateComment({...context.repo, comment_id: comment.id, body});
+            }
+            core.setOutput('pr', pr);
+            core.setOutput('sha', sha);
+            core.setOutput('catalog', request.catalog);
+
+  catalog:
+    name: カタログの生成・配備
+    needs: request
+    if: needs.request.outputs.pr != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: preview
+    concurrency:
+      group: tablecast-deploy-${{ needs.request.outputs.pr }}
+      queue: max
+      cancel-in-progress: false
+    env:
+      TABLECAST_PR_NUMBER: ${{ needs.request.outputs.pr }}
+      TABLECAST_RELEASE_SHA: ${{ needs.request.outputs.sha }}
+      TABLECAST_CATALOG_KIND: ${{ needs.request.outputs.catalog }}
+    steps:
+      # forkと権限を確認した後に、照合済みの同一repoのSHAだけを取得する。
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        id: checkout
+        with:
+          ref: ${{ needs.request.outputs.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/tablecast-setup
+        with:
+          turbo: "true"
+      - name: Storybookの生成
+        if: env.TABLECAST_CATALOG_KIND == 'storybook' || env.TABLECAST_CATALOG_KIND == 'all'
+        run: |
+          bunx --no-install turbo run build:storybook
+          bun --no-env-file run deploy:catalog --prepare-storybook
+      - name: メールの生成
+        if: env.TABLECAST_CATALOG_KIND == 'email' || env.TABLECAST_CATALOG_KIND == 'all'
+        run: bun --no-env-file run build:email
+      - name: Access保護・対象SHAの配備
+        id: deploy
+        run: bun --no-env-file run deploy:catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
+          TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
+      - name: 現在の配備SHAと結果を通知
+        if: always() && steps.checkout.outcome == 'success'
+        uses: ./.github/actions/tablecast-preview-comment
+        with:
+          pr: ${{ needs.request.outputs.pr }}
+          sha: ${{ needs.request.outputs.sha }}
+          catalog-kind: ${{ needs.request.outputs.catalog }}
+          catalog-result: ${{ job.status }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: dbbd52d7d690afceea41fe920ae19f91
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

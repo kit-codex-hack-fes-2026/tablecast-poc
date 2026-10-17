@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveSource, sourcePathSchema, repositoryPath } from "./tablecast-source.ts";
@@ -40,7 +40,9 @@ test("実在する内部ファイルは読み込み、ディレクトリ内か�
   await mkdir(join(directory, "private"));
   await writeFile(join(base, "docs", "source.md"), "根拠");
   await writeFile(join(directory, "private", "outside.md"), "合成の境界外ファイル");
-  expect(await resolveSource("docs/source.md", base)).toBe(join(base, "docs", "source.md"));
+  expect(await resolveSource("docs/source.md", base)).toBe(
+    await realpath(join(base, "docs", "source.md")),
+  );
   await expect(resolveSource("docs/missing.md", base)).rejects.toThrow(/ENOENT/);
   await symlink(
     join(directory, "private"),

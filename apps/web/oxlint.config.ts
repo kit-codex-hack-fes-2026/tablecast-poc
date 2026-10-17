@@ -26,6 +26,7 @@ const boundaryFiles = [
   ["model", "src/features/kiosk/table-cache.ts"],
   ["runtime", "src/features/kiosk/voice-connection.ts"],
   ["model", "src/features/store/device-qr-code.ts"],
+  ["runtime", "src/features/store/prompt-editor-extensions.ts"],
   ["feature", "src/features/*/*.tsx"],
 ];
 
@@ -89,7 +90,7 @@ export default defineConfig({
             from: { file: { categories: from } },
             allow: { to: { file: { categories: to } } },
           })),
-          ...["account", "store", "kiosk", "shell"].map((feature) => ({
+          ...["account", "store", "kiosk", "shell", "customer"].map((feature) => ({
             from: { file: { categories: "feature", captured: { feature } } },
             allow: {
               to: { file: { categories: "feature", captured: { feature: [feature, "shell"] } } },

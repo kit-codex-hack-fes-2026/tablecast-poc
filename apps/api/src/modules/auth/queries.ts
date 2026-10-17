@@ -4,7 +4,7 @@ import { devices, stores, tableSessions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 export async function findDeviceSession(services: ApiServices, tokenHash: string) {
   return services.db
-    .select({ store_id: devices.store_id, id: tableSessions.id })
+    .select({ store_id: devices.store_id, id: tableSessions.id, deviceId: devices.id })
     .from(devices)
     .innerJoin(
       tableSessions,

@@ -16,5 +16,12 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", ".storybook", "e2e", "*.ts", "../api/src/cloudflare-env.d.ts"]
+  "include": [
+    "src",
+    ".storybook",
+    "e2e",
+    "*.ts",
+    "../api/src/cloudflare-env.d.ts",
+    "../api/src/modules/appearance/css-tree.d.ts"
+  ]
 }

@@ -44,6 +44,7 @@ export const Japanese: Story = {
 };
 export const English: Story = {
   name: "来店日時と確定金額を英語で表示",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

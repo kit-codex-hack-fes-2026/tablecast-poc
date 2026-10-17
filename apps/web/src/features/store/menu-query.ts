@@ -1,9 +1,15 @@
-import type { Catalog, ConfigDraft } from "@tablecast/api/schema";
-import { queryOptions } from "@tanstack/react-query";
+import type { Catalog, ConfigDraft, Locale } from "@tablecast/api/schema";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
-export const catalogOptions = (storeId: string) =>
+export const configurationImageUploadKey = (storeId: string) =>
+  ["tablecast-configuration-image-upload", storeId] as const;
+export const catalogOptions = (storeId: string, configVersion?: number) =>
   queryOptions({
-    queryKey: ["tablecast-admin-catalog", storeId],
+    queryKey: [
+      "tablecast-admin-catalog",
+      storeId,
+      ...(configVersion === undefined ? [] : [configVersion]),
+    ],
     queryFn: ({ signal }): Promise<Catalog> =>
       parseResponse(
         rpc.api.admin.stores[":storeId"].catalog.$get({ param: { storeId } }, { init: { signal } }),
@@ -21,4 +27,23 @@ export const draftOptions = (storeId: string, id: string) =>
       ),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+  });
+
+export const standardVoicesOptions = (storeId: string, language: Locale) =>
+  infiniteQueryOptions({
+    queryKey: ["tablecast-standard-voices", storeId, language],
+    queryFn: ({ pageParam, signal }: { pageParam: string | null; signal: AbortSignal }) =>
+      parseResponse(
+        rpc.api.admin.stores[":storeId"].voices.$get(
+          {
+            param: { storeId },
+            query: { locale: language, ...(pageParam !== null ? { pageToken: pageParam } : {}) },
+          },
+          { init: { signal } },
+        ),
+      ),
+    initialPageParam: null,
+    getNextPageParam: (page) => page.nextPageToken,
+    retry: false,
+    staleTime: 60_000,
   });

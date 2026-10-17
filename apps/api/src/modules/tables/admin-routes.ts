@@ -4,12 +4,15 @@ import type { ApiEnv } from "../../platform/context";
 import { localeSchema } from "../../platform/model";
 import { validate, validateQuery } from "../../platform/validation";
 import type { Actor } from "../auth/model";
-import { getHistory, getSessionEvents } from "./history";
-import { historyQuerySchema, sessionEventsQuerySchema } from "./model";
+import { getHistory, getSessionEvents, getTimeline } from "./history";
+import { historyQuerySchema, sessionEventsQuerySchema, timelineQuerySchema } from "./model";
 import { getTableState } from "./queries";
 import { closeTable, openTable, resolveCall } from "./service";
 const scoped = (actor: Actor, id: string): Actor => ({ ...actor, tableSessionId: id });
 export const tablesAdminRoutes = new Hono<ApiEnv>()
+  .get("/timeline", validateQuery(timelineQuerySchema), async (c) =>
+    c.json(await getTimeline(c.get("services"), c.get("actor"), c.req.valid("query")), 200),
+  )
   .get("/history", validateQuery(historyQuerySchema), async (c) =>
     c.json(await getHistory(c.get("services"), c.get("actor"), c.req.valid("query")), 200),
   )

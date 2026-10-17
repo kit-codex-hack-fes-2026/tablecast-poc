@@ -4,21 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.local/.env run vite dev",
-    "build": "vite build",
-    "preview": "bun --env-file=../../.local/.env run vite preview",
-    "typecheck": "tsc --noEmit",
+    "dev": "bun --env-file=../../.local/.env exec 'cf dev'",
+    "build": "vite build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts",
+    "preview": "bun --env-file=../../.local/.env exec 'vite preview'",
+    "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
     "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
-    "lint": "oxlint src e2e .storybook vite.config.ts vitest.config.ts playwright.config.ts --deny-warnings",
+    "lint": "oxlint . --type-aware --deny-warnings",
     "format": "oxfmt --write .",
     "test": "vitest run --config vitest.config.ts --project unit",
-    "test:browser": "vitest run --config vitest.config.ts --project storybook --project browser",
+    "test:browser": "bun run i18n:compile --output-structure locale-modules && vitest run --config vitest.config.ts --project storybook --project browser",
     "test:e2e": "playwright test",
     "storybook": "storybook dev --no-open --port 6006",
-    "build:storybook": "storybook build",
+    "build:storybook": "bun run i18n:compile --output-structure message-modules && storybook build",
     "format:check": "oxfmt --check .",
-    "dev:container": "bun --env-file=../../.local/.env run vite dev",
-    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run vite build"
+    "dev:container": "bun --env-file=../../.local/.env exec 'cf dev'",
+    "build:local": "umask 077 && TABLECAST_LOCAL_BUILD=1 bun --env-file=../../.local/.env run ../../scripts/tablecast-build.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
@@ -35,6 +35,11 @@
     "@tanstack/react-router-ssr-query": "1.167.2",
     "@tanstack/react-start": "1.168.49",
     "@tanstack/react-table": "8.21.3",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
+    "@tiptap/suggestion": "3.31.3",
     "@unpic/react": "1.0.2",
     "better-auth": "1.7.2",
     "eventsource-parser": "3.1.1",
@@ -55,7 +60,7 @@
     "zod": "4.5.4"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.54.4",
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
     "@cloudflare/workers-types": "5.20260903.1",
     "@inlang/paraglide-js": "2.25.0",
     "@playwright/test": "1.63.0",
@@ -85,6 +90,6 @@
     "vite": "8.2.2",
     "vitest": "4.1.11",
     "vitest-browser-react": "2.3.0",
-    "wrangler": "4.129.0"
+    "wrangler": "4.149.0"
   }
 }

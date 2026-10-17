@@ -440,3 +440,40 @@ describe("字幕履歴の保存と参照", () => {
     ]);
   });
 });
+
+it("音声toolはORとNOTを保って返し、参照先全件を必須にせず注文かごへ反映する", async () => {
+  await setup();
+  const updated = structuredClone(configuration);
+  const owner = updated.products[1]?.modifiers[0]?.options[0];
+  if (!owner) throw new Error("条件fixtureがありません");
+  owner.conditions = {
+    version: 2,
+    requires: {
+      kind: "or",
+      children: [
+        { kind: "option", optionId: "oat" },
+        { kind: "not", child: { kind: "option", optionId: "oat" } },
+      ],
+    },
+    excludes: null,
+  };
+  await services()
+    .db.update(business.stores)
+    .set({ config_json: JSON.stringify(updated) })
+    .where(eq(business.stores.id, device.storeId));
+  const catalog = await tool("getCatalog", { query: "coffee" });
+  expect(JSON.stringify(catalog.result)).toContain(JSON.stringify(owner.conditions));
+  // 常に真のORでも参照を全件必須へ平坦化しない。
+  const result = await tool("updateCart", {
+    expectedVersion: 0,
+    lines: [
+      {
+        id: "tablecast-condition-line",
+        productId: "coffee",
+        quantity: 1,
+        selections: [{ optionId: owner.id, quantity: 1 }],
+      },
+    ],
+  });
+  expect(result.result).toMatchObject({ cart: { complete: true } });
+});

@@ -8,7 +8,15 @@
 TableCast内にOCR・翻訳Agent・別の設定チャットを作らない。管理画面には確認、差分、必要な手動修正と公開を用意する。
 UIそのものの翻訳はWebのメッセージファイル、商品・プラン・キャストはDBにある日英コンテンツを正本にする。
 
+### 選択肢の条件式
+
+`update_draft`のoptionには任意の`conditions: { version: 2, requires, excludes }`を渡せる。式は`{kind:"option", optionId}`、`{kind:"and"|"or", children}`、`{kind:"not", child}`で、条件なしは`null`とする。旧`requires` / `excludes`配列を持つ選択肢も混在できるが、一つの選択肢で新条件と空でない旧配列を併記しない。式は深さ8、各AND/ORは2〜8子、式64節、商品1,024節、設定65,536節まで。`get_configuration`のJSON Schemaは深さごとの参照を含む有限schemaを返し、節数合計はAPIが追加検証する。
+
+取得した`conditions`を省略して全体保存すると`CONFIGURATION_FORMAT_UNSUPPORTED`となる。条件を削除するときは`version:2`と両式の`null`を明示する。実際の選択肢・商品削除は可能。既存draft・releaseの一括移行やDB migrationは不要。新形式を保存した環境へ旧APIを戻す場合は、先に条件を互換形式へ戻す移行が必要となる。
+
 ## 管理できるもの
+
+卓上ゲームは`get_game_spec`で契約を取得し、`register_game`・`validate_game`で下書き登録と検証を行う。管理画面で人が試遊して承認する。ゲームの契約とツール一覧は[ゲームプラグイン仕様](game-plugins.md)を参照する。
 
 カテゴリ、商品、価格、説明、読上げ名、検索alias、画像参照、カスタマイズ、食べ飲み放題プラン、キャストの自由文指示を設定する。
 日英で商品ID、価格、在庫、ルールを複製しない。各言語のdisplayName・speechName・説明だけを分ける。
@@ -21,17 +29,18 @@ UIそのものの翻訳はWebのメッセージファイル、商品・プラン
 
 初期は次の程度で足りる。型を一つの万能JSONにして検証を失わず、同じ意味の細粒度ツールを大量に増やさない。
 
-| ツール群       | 用途                                           |
-| -------------- | ---------------------------------------------- |
-| 設定取得       | 公開schema、対応言語、現在の公開設定           |
-| 画像取込       | 商品画像を保存し、出所付きの画像参照を返す     |
-| 下書き作成     | 公開版を元に一つの変更セットを作る             |
-| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、日英テキスト     |
-| プラン更新     | 店舗依存ルールを登録する                       |
-| キャスト更新   | 日英の標準voice・会話指示・自由文の演技方針    |
-| 下書き検証     | 不足、参照不整合、価格、ルール、読上げ名を検査 |
-| 差分取得       | 現在の公開版との差分を説明可能な形で返す       |
-| 公開・破棄     | 承認後の公開または不要な下書きの破棄           |
+| ツール群       | 用途                                                       |
+| -------------- | ---------------------------------------------------------- |
+| 設定取得       | 公開schema、対応言語、現在の公開設定                       |
+| テーマ制作仕様 | 素材の生成要件・推奨寸法・配置schemaを返す                 |
+| 画像取込       | 商品・ロゴ・装飾・チラシを保存し、出所付きの画像参照を返す |
+| 下書き作成     | 公開版を元に一つの変更セットを作る                         |
+| 商品バッチ更新 | カテゴリ、商品、カスタマイズ、日英テキスト                 |
+| プラン更新     | 店舗依存ルールを登録する                                   |
+| キャスト更新   | 日英の標準voice・会話指示・自由文の演技方針                |
+| 下書き検証     | 不足、参照不整合、価格、ルール、読上げ名を検査             |
+| 差分取得       | 現在の公開版との差分を説明可能な形で返す                   |
+| 公開・破棄     | 承認後の公開または不要な下書きの破棄                       |
 
 API側の既存操作をMCPから呼ぶ。MCP専用の価格計算・別DB・認可系統を作らない。
 個別ツール名や最終schemaは、最初の実装で実際の操作単位に合わせて固定する。
@@ -87,4 +96,26 @@ voiceはGPT-Liveの標準voiceを選ぶ。Custom Voiceやreference uploadの項�
 
 ## stagingでの検証
 
-stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意はCloudflare Accessの対象で、機械通信のMCP・discovery・DCR・token・revokeだけAccessを除外する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。
+stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、クライアント名は`tablecast-staging`とする。Web・模擬ログイン・同意・MCPはCloudflare Access資格なしで公開する。OAuth・PKCE・scope・店舗認可とtoolの入出力は本番と同じ契約を使う。接続と再認可は[plugin手順](codex-plugin.md#stagingのremote-mcp確認)、保持・全体リセットと検証SHAは[配備手順](deployment.md#stagingとreleaseの運用)を参照する。
+
+### 接客方針の文書形式
+
+`cast.instructions.ja/en` は旧文字列と版1の制限されたTiptap文書のunion。文書を保存する `update_draft` 呼出しでは `instructionFormatVersion: 1` を付ける。省略した旧クライアントは文書を含む下書きを更新できず、競合として拒否される。schemaと本文投影・上限はGUIと共通。[保存契約と展開条件](prompt-editor-design.md)を参照する。
+
+## 店舗統計
+
+`get_statistics` はowner/admin向けの読取りtoolで、`tablecast:read` により概要・商品・カスタマイズの統計を取得する。from/toで指定した期間内に閉卓した通常来店を対象にする。詳細は[指標・期間・ページング](statistics.md)を参照する。分析だけの依頼で下書きを作らず、採用された設定変更に既存の下書きtoolを使う。
+
+## 会員特典の管理
+
+`get_point_policy` / `set_point_policy`で将来の来店向けポイント設定を扱う。`list_coupon_rules` / `save_coupon_rule`は券面画像と日英条件を含む発行ルール、`list_reward_members`は発行先の会員ID・表示名、`list_issued_coupons`は発行済み券の状態をページ取得する。`issue_coupon`は手動ルールから冪等キー付きで発行し、`revoke_coupon`は未使用券を理由付きで取り消す。
+
+券面は既存の`upload_image`で取り込み、返された画像キーと出所を保存する。書込みには既存の店舗管理権限を検証し、GUIと同じAPI serviceを通す。発行済み券の条件は後から変更しない。会員の個人記憶を一覧・検索するMCP操作は設けない。
+
+## テーマ・店舗ロゴ・チラシ
+
+`get_configuration`のschemaに`branding.logo`・`appearance`・`banners`を含む。画像は既存の`upload_image`で登録し、返されたキー・種別・出所に日英のaltを付けて設定する。店舗ロゴは組織共通ロゴとは別である。テーマ画像、ロゴ、チラシの画像所有と出所は下書き保存・公開時に検証する。
+
+`update_draft`で設定を保持しながら変更し、`validate_draft`・`get_draft_diff`・`request_publication`を使う。禁止CSSは行・列と理由を含む入力エラー、欠損商品は既存のPRODUCT_NOT_FOUNDを返す。領域IDとバナーIDは重複させない。詳しい制作例は製品pluginのtablecast-theme skillを参照する。テーマ文字列と画像を音声の業務tool結果へ複製しない。
+
+画像を使うテーマ制作では`get_configuration`と`get_theme_spec`を取得する。後者は接続先店舗、現行テーマschema、背景・ロゴ・チラシの生成要件と推奨寸法、公開部品、デザイン編集URLを返す読取り専用tool。画像生成はクライアントの生成・編集機能で行い、MCPは実素材の`upload_image`と共有下書きへ接続する。生成機能がない場合やファイルを渡せない場合は未生成・未登録と明示する。参考画像から一枚のUIを作って貼る方式にせず、素材別に生成・出所登録・配置・実UIプレビューを行う。

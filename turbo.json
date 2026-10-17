@@ -1,32 +1,24 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts", "patches/*.patch"],
+  "globalDependencies": ["tsconfig.json", "oxlint.config.ts", "oxfmt.config.ts"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".output/**"]
     },
     "@tablecast/web#build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^cf:build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
-        "$TURBO_ROOT$/plugins/tablecast/skills/tablecast/SKILL.md",
+        "$TURBO_ROOT$/plugins/tablecast/skills/*/SKILL.md",
         "$TURBO_ROOT$/apps/api/src/**",
-        "$TURBO_ROOT$/apps/api/wrangler.jsonc",
-        "$TURBO_ROOT$/.local/tablecast-deploy/api.json",
-        "$TURBO_ROOT$/.local/tablecast-deploy/web.json"
+        "$TURBO_ROOT$/apps/api/cloudflare.config.ts",
+        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts",
+        "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
       ],
-      "outputs": ["dist/**", ".wrangler/deploy/**"],
-      "env": [
-        "TABLECAST_LOCAL_BUILD",
-        "TABLECAST_WEB_CONFIG",
-        "TABLECAST_API_CONFIG",
-        "TABLECAST_STATE_PATH",
-        "TABLECAST_INSPECTOR_PORT",
-        "TABLECAST_PUBLIC_ORIGIN",
-        "TABLECAST_VITE_CACHE_DIR"
-      ]
+      "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
+      "env": ["TABLECAST_*"]
     },
     "dev": {
       "cache": false,
@@ -60,17 +52,25 @@
     },
     "//#dev:prepare": {
       "cache": false,
-      "passThroughEnv": ["TABLECAST_*"]
+      "passThroughEnv": ["TABLECAST_*", "PORTLESS_*", "PORT"]
+    },
+    "//#seed:template": {
+      "inputs": [
+        "scripts/**",
+        "apps/api/src/**",
+        "apps/api/migrations/**",
+        "apps/emulate/src/tablecast-demo-identities.ts",
+        "assets/demo/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "outputs": [".local/tablecast-seed-template/seed.json"]
     },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
       "cache": false,
-      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG"]
-    },
-    "//#dev:proxy": {
-      "cache": false,
-      "persistent": true,
-      "dependsOn": ["//#dev:prepare"]
+      "passThroughEnv": ["DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "PORTLESS_*"]
     },
     "//#dev:caddy": {
       "cache": false,
@@ -83,6 +83,12 @@
       "dependsOn": ["//#dev:prepare"]
     },
     "@tablecast/emulate#dev": {
+      "passThroughEnv": ["PORTLESS_*"],
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["//#dev:prepare"]
+    },
+    "@tablecast/emulate#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"]
@@ -91,23 +97,26 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+      "with": ["@tablecast/emulate#dev"],
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#dev:container": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["//#dev:prepare"],
-      "with": ["@tablecast/emulate#dev", "//#dev:caddy", "//#dev:mailpit"]
+      "with": ["@tablecast/emulate#dev:container", "//#dev:caddy", "//#dev:mailpit"]
     },
     "@tablecast/web#build:local": {
       "dependsOn": ["//#dev:prepare"],
+      "passThroughEnv": ["PORTLESS_*"],
       "cache": false
     },
     "@tablecast/web#preview": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["build:local", "//#services:up"],
-      "with": ["@tablecast/emulate#dev", "//#dev:proxy"]
+      "with": ["@tablecast/emulate#dev"],
+      "passThroughEnv": ["PORTLESS_*", "PORT", "HOST"]
     },
     "@tablecast/web#i18n:compile": {
       "inputs": ["project.inlang/**", "messages/**", "package.json"],
@@ -115,11 +124,22 @@
     },
     "@tablecast/web#typecheck": {
       "dependsOn": ["^typecheck", "i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/api/src/**",
+        "$TURBO_ROOT$/apps/api/cloudflare.config.ts",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/api#build:email": {
       "inputs": [
@@ -129,6 +149,18 @@
       ],
       "outputs": ["email-static/**"],
       "env": ["TABLECAST_RELEASE_SHA", "TABLECAST_PR_NUMBER"]
+    },
+    "cf:build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/scripts/tablecast-clean-build.ts",
+        "$TURBO_ROOT$/scripts/tablecast-deploy-config.ts"
+      ],
+      "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
+      "env": ["TABLECAST_*"]
+    },
+    "@tablecast/api#lint": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/**"]
     }
   }
 }

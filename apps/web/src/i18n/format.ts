@@ -1,4 +1,5 @@
 import type { Locale } from "@tablecast/api/schema";
+import { storeTimeZone } from "@tablecast/api/schema";
 const moneyFormat = {
   ja: new Intl.NumberFormat("ja-JP", {
     style: "currency",
@@ -15,24 +16,24 @@ const timeFormat = {
   ja: new Intl.DateTimeFormat("ja-JP", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Asia/Tokyo",
+    timeZone: storeTimeZone,
   }),
   en: new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Asia/Tokyo",
+    timeZone: storeTimeZone,
   }),
 };
 const dateFormat = {
   ja: new Intl.DateTimeFormat("ja-JP", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Asia/Tokyo",
+    timeZone: storeTimeZone,
   }),
   en: new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Asia/Tokyo",
+    timeZone: storeTimeZone,
   }),
 };
 // ICUの違いで全角円記号と半角円記号が入れ替わり、SSRの文字列が不一致になるのを防ぐ。

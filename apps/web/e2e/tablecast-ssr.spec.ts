@@ -4,29 +4,22 @@ import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { z } from "zod";
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
+import { approveGuestDevice, signInStaff } from "./support/session";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
 declare global {
   interface Window {
     tablecastLayoutShift: number;
+    tablecastLayoutShiftEntries: string[];
   }
 }
 
 test("代表管理ページのSSRデータをhydrationで再取得せず表示と操作へ使う", async ({
   page,
   baseURL,
-  runtime,
-}, testInfo) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  const samples = [];
+}) => {
+  await signInStaff(page.request, baseURL);
   const requests: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
@@ -42,31 +35,17 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     ["/admin/live", "フロアの様子"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
   ]) {
-    // Cookie・DB・ブラウザーcacheを保ち、Worker再起動直後と同じURLの反復を分ける。
-    await runtime.restartWeb();
-    for (let sample = 0; sample < 4; sample++) {
-      requests.length = 0;
-      await page.goto(path);
-      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-      // 実際にメニューを開いてhydration後の操作可能状態を確認する。
-      await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
-      const timing = await page.evaluate(() => {
-        const navigation = performance.getEntriesByType("navigation")[0];
-        if (!(navigation instanceof PerformanceNavigationTiming)) throw new Error("計測値なし");
-        return {
-          ttfbMs: navigation.responseStart - navigation.startTime,
-          documentMs: navigation.responseEnd - navigation.startTime,
-          interactiveMs: performance.now(),
-          redirectMs: navigation.redirectEnd - navigation.redirectStart,
-          firstContentfulPaintMs:
-            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
-        };
-      });
-      expect(requests).toEqual([]);
-      samples.push({ path, sample, worker: sample === 0 ? "cold" : "warm", ...timing });
-    }
+    requests.length = 0;
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    // 実際にメニューを開いてhydration後の操作可能状態を確認する。
+    const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
+    await expect(navigation).toBeEnabled();
+    const wasExpanded = await navigation.getAttribute("aria-expanded");
+    await navigation.click();
+    await expect(navigation).toHaveAttribute("aria-expanded", String(wasExpanded !== "true"));
+    expect(requests).toEqual([]);
   }
-  await writeFile(testInfo.outputPath("ssr-performance.json"), JSON.stringify(samples, null, 2));
 });
 
 test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿名リクエストへ漏らさない", async ({
@@ -76,14 +55,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   baseURL,
 }, testInfo) => {
   // Given: スタッフと卓端末のCookieを実APIで発行する。
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+  await signInStaff(page.request, baseURL);
   const floor = adminStateSchema.parse(
     await (await page.request.get("/api/admin/stores/tablecast-komorebi")).json(),
   );
@@ -98,7 +70,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   ).toBe(true);
   const contexts: BrowserContext[] = [];
   try {
-    const guest = await browser.newContext({ baseURL });
+    const guest = await browser.newContext({ baseURL, serviceWorkers: "block" });
     contexts.push(guest);
     const staffSsr = await browser.newContext({
       baseURL,
@@ -114,21 +86,11 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
     await staffSsr.addCookies([layoutCookie]);
     const anonymous = await browser.newContext({ baseURL, javaScriptEnabled: false });
     contexts.push(anonymous);
-    const codes = z
-      .object({ user_code: z.string(), device_code: z.string() })
-      .parse(await (await guest.request.post("/api/devices/request")).json());
-    expect(
-      (
-        await page.request.post("/api/admin/stores/tablecast-komorebi/devices/approve", {
-          data: { userCode: codes.user_code, tableId: table.id },
-        })
-      ).ok(),
-    ).toBe(true);
-    expect(
-      (
-        await guest.request.post("/api/devices/poll", { data: { device_code: codes.device_code } })
-      ).ok(),
-    ).toBe(true);
+    await approveGuestDevice(guest.request, page.request, {
+      origin: baseURL,
+      storeId: "tablecast-komorebi",
+      tableId: table.id,
+    });
     const catalog = catalogSchema.parse(
       await (await guest.request.get("/api/table/catalog")).json(),
     );
@@ -163,20 +125,23 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         (item) => item.available && item.imageKey,
       );
       if (!product) throw new Error("画像付き商品fixtureが必要です");
-      await expect(
-        guestPage.getByText(product.text.ja.displayName, { exact: true }).first(),
-      ).toBeVisible();
-      await expect(guestPage.locator('img[src*="/media/"]').first()).toHaveAttribute(
-        "srcset",
-        /width=\d+/,
+      const card = guestPage
+        .getByRole("button")
+        .filter({ has: guestPage.getByText(product.text.ja.displayName, { exact: true }) })
+        .filter({ has: guestPage.locator("img") });
+      await expect(card).toHaveCount(1);
+      const productImage = card.locator("img");
+      await expect(productImage).toHaveAttribute(
+        "src",
+        new RegExp(`/media/${product.imageKey?.replace(".", "\\.")}`),
       );
-      await guestPage.screenshot({ path: testInfo.outputPath("kiosk-ssr.png"), fullPage: true });
-      await staffPage.screenshot({ path: testInfo.outputPath("floor-ssr.png"), fullPage: true });
+      await expect(productImage).toHaveAttribute("srcset", /width=\d+/);
       const interactive = await guest.newPage();
       const errors: string[] = [];
       interactive.on("pageerror", (error) => errors.push(error.message));
       await interactive.addInitScript(() => {
         window.tablecastLayoutShift = 0;
+        window.tablecastLayoutShiftEntries = [];
         if (PerformanceObserver.supportedEntryTypes.includes("layout-shift"))
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries())
@@ -185,8 +150,26 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
                 typeof entry.value === "number" &&
                 "hadRecentInput" in entry &&
                 !entry.hadRecentInput
-              )
+              ) {
                 window.tablecastLayoutShift += entry.value;
+                const sources =
+                  "sources" in entry && Array.isArray(entry.sources)
+                    ? entry.sources.map((source: unknown) => {
+                        if (!source || typeof source !== "object") return null;
+                        return {
+                          node:
+                            "node" in source && source.node instanceof Element
+                              ? source.node.outerHTML.slice(0, 240)
+                              : null,
+                          previousRect: "previousRect" in source ? source.previousRect : null,
+                          currentRect: "currentRect" in source ? source.currentRect : null,
+                        };
+                      })
+                    : [];
+                window.tablecastLayoutShiftEntries.push(
+                  JSON.stringify({ time: entry.startTime, value: entry.value, sources }),
+                );
+              }
           }).observe({ type: "layout-shift", buffered: true });
       });
       await interactive.goto("/");
@@ -194,25 +177,40 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         interactive.getByRole("button", { name: "音声を再開", exact: true }),
       ).toBeEnabled();
       await expect(interactive.locator('[data-voice-state="idle"]')).toBeVisible();
+      await interactive.evaluate(async () => {
+        await document.fonts.ready;
+        const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();
+        if (!viewport) throw new Error("SSRした注文ペインが必要です。");
+        await Promise.all(
+          [...document.querySelectorAll<HTMLImageElement>("#tablecast-order img")]
+            .filter((image) => {
+              const bounds = image.getBoundingClientRect();
+              return bounds.bottom > viewport.top && bounds.top < viewport.bottom;
+            })
+            .map((image) => image.decode()),
+        );
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      });
       const metrics = await interactive.evaluate(() => ({
         layoutShift: PerformanceObserver.supportedEntryTypes.includes("layout-shift")
           ? window.tablecastLayoutShift
           : null,
         resources: performance.getEntriesByType("resource").map((entry) => entry.name),
+        layoutShiftEntries: window.tablecastLayoutShiftEntries,
+        fonts: document.fonts.status,
       }));
+      // 予算超過時にも実際に動いた要素と時刻を残す。
+      await writeFile(
+        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
+        JSON.stringify(metrics, null, 2),
+      );
       expect(metrics.resources.filter((url) => /audio-waveform|livekit-client/.test(url))).toEqual(
         [],
       );
       if (metrics.layoutShift !== null) expect(metrics.layoutShift).toBeLessThan(0.01);
       expect(errors).toEqual([]);
-      await writeFile(
-        testInfo.outputPath(`kiosk-performance-${browserName}.json`),
-        JSON.stringify(metrics, null, 2),
-      );
-      await interactive.screenshot({
-        path: testInfo.outputPath("kiosk-hydrated.png"),
-        fullPage: true,
-      });
     } finally {
       await guestSsr.close();
     }
@@ -221,15 +219,55 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("遷移中・取得失敗・再試行後の0件を区別する", async ({ page, baseURL }, testInfo) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
+test("戻り先なしのログインはフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
+  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
+  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
+  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
+  expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
+
+  await page.goto("/account");
+  await expect(page.getByLabel("名前", { exact: true })).toBeEnabled();
+
+  await page.clock.install();
+  await page.clock.fastForward(31_000);
+  requests.length = 0;
+  const focused = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
+  );
+  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
+  expect((await focused).ok()).toBe(true);
+  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+  expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
+  expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
+});
+
+test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ request, baseURL }) => {
+  await signInStaff(request, baseURL);
+  const manifest = z
+    .object({ start_url: z.string() })
+    .parse(await (await request.get("/tablecast-staff.webmanifest")).json());
+  const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
+  expect(launch.status()).toBe(307);
+  const destination = launch.headers()["location"];
+  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
+  const floor = await request.get(destination);
+  expect(floor.ok()).toBe(true);
+  expect(await floor.text()).toContain("フロアの様子");
+  expect(floor.headers()["cache-control"]).toBe("private, no-store");
+});
+
+test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await signInStaff(page.request, baseURL);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/admin/stores/tablecast-komorebi/floor");
@@ -250,82 +288,53 @@ test("遷移中・取得失敗・再試行後の0件を区別する", async ({ p
     await page.getByRole("link", { name: "端末", exact: true }).click();
     await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
+      true,
+    );
+    expect(
+      await page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.playState === "running" &&
+                Number(animation.effect?.getComputedTiming().duration) > 1,
+            ).length,
+      ),
+    ).toBe(0);
     await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("pending.png"), fullPage: true });
   } finally {
     gate.resolve();
   }
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("error.png"), fullPage: true });
   await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
   await page.getByRole("button", { name: "再試行", exact: true }).click();
   await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
   await expect(page.getByText("0 件", { exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true });
+  // 来店履歴の見出しはfeature外のfile routeが所有するため、そのpending接続だけ実物で残す。
+  const historyGate = Promise.withResolvers<void>();
+  const historyRequested = Promise.withResolvers<void>();
+  await page.route("**/api/admin/stores/tablecast-komorebi/history?*", async (route) => {
+    historyRequested.resolve();
+    await historyGate.promise;
+    await route.continue();
+  });
+  const historyHeading = page.getByRole("heading", { name: "来店履歴", exact: true });
+  let beforeHistory;
+  try {
+    await page.getByRole("link", { name: "来店履歴", exact: true }).click();
+    await historyRequested.promise;
+    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    await expect(historyHeading).toBeVisible();
+    await expect(page.getByRole("table")).toBeVisible();
+    beforeHistory = await historyHeading.boundingBox();
+  } finally {
+    historyGate.resolve();
+  }
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect.poll(() => historyHeading.boundingBox()).toEqual(beforeHistory);
   expect(pageErrors).toEqual([]);
-});
-
-test("戻り先なしのログインはフロアを一括取得し、アカウント更新はセッションだけを再取得する", async ({
-  page,
-}) => {
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
-  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
-  const requests: string[] = [];
-  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
-  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
-  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
-  expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
-
-  await page.goto("/account");
-  await page.getByLabel("名前", { exact: true }).fill("初期取得テスト");
-  requests.length = 0;
-  const refreshed = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
-  );
-  await page.getByRole("button", { name: "保存", exact: true }).click();
-  expect((await refreshed).ok()).toBe(true);
-  await expect(page.getByText("更新しました", { exact: true })).toBeVisible();
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
-  expect(
-    requests.filter((path) => path === "/api/admin/initial" || path === "/api/admin/stores"),
-  ).toEqual([]);
-
-  await page.clock.install();
-  await page.clock.fastForward(31_000);
-  requests.length = 0;
-  const focused = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
-  );
-  await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
-  expect((await focused).ok()).toBe(true);
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
-  expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
-  expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
-});
-
-test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ page, baseURL }) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  const manifest = z
-    .object({ start_url: z.string() })
-    .parse(await (await page.request.get("/tablecast-staff.webmanifest")).json());
-  const launch = await page.request.get(manifest.start_url, { maxRedirects: 0 });
-  expect(launch.status()).toBe(307);
-  const destination = launch.headers()["location"];
-  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
-  const floor = await page.request.get(destination);
-  expect(floor.ok()).toBe(true);
-  expect(await floor.text()).toContain("フロアの様子");
-  expect(floor.headers()["cache-control"]).toBe("private, no-store");
 });

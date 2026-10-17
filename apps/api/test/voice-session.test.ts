@@ -1,3 +1,4 @@
+import { instructionText, type Locale, type Configuration } from "../src/schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
@@ -171,10 +172,42 @@ it("同じ音声session・他卓・切替後の新turnを古い停止要求で�
   ).toEqual({ status: "started" });
 });
 
-it.each(["ja", "en"] as const)(
-  "認証した卓の%s接客設定を両モデルへ渡し、SDPだけを返す",
-  async (locale) => {
+it.each([
+  { locale: "ja", rich: false },
+  { locale: "en", rich: false },
+  { locale: "ja", rich: true },
+  { locale: "en", rich: true },
+] satisfies { locale: Locale; rich: boolean }[])(
+  "認証した卓の$locale接客設定（文書=$rich）を両モデルへ渡し、SDPだけを返す",
+  async ({ locale, rich }) => {
     await setupFixture();
+    const selected: Configuration = structuredClone(configuration);
+    if (rich) {
+      selected.cast.instructions[locale] = {
+        format: "tiptap-json",
+        version: 1,
+        document: {
+          type: "doc",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 2 },
+              content: [
+                { type: "text", text: locale === "ja" ? "接客方針" : "Service instructions" },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [{ type: "text", text: "Speak politely", marks: [{ type: "bold" }] }],
+            },
+          ],
+        },
+      };
+      await createApiServices(env)
+        .db.update(business.stores)
+        .set({ config_json: JSON.stringify(selected) })
+        .where(eq(business.stores.id, device.storeId));
+    }
     await changeLocale(createApiServices(env), device, locale);
     const provider = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
       expect(url instanceof Request ? url.url : url.toString()).toBe(
@@ -200,12 +233,14 @@ it.each(["ja", "en"] as const)(
       for (const path of ["session.instructions", "session.delegation.responses.instructions"]) {
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
-          expect.stringContaining(configuration.cast.instructions[locale]),
+          expect.stringContaining(
+            JSON.stringify(instructionText(selected.cast.instructions[locale])),
+          ),
         );
         expect(JSON.parse(init.body)).toHaveProperty(
           path,
           expect.not.stringContaining(
-            configuration.cast.instructions[locale === "ja" ? "en" : "ja"],
+            instructionText(selected.cast.instructions[locale === "ja" ? "en" : "ja"]),
           ),
         );
       }

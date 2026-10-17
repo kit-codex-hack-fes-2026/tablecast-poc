@@ -11,7 +11,7 @@ export async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   ensure(token, "DEVICE_REQUIRED", 401);
   const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
-  return { kind: "device", storeId: row.store_id, tableSessionId: row.id };
+  return { kind: "device", storeId: row.store_id, tableSessionId: row.id, deviceId: row.deviceId };
 }
 
 export async function staffIdentity(c: Context<ApiEnv>) {

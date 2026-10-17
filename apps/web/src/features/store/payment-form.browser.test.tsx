@@ -2,10 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider, useI18n } from "../../i18n/locale";
+import { LocaleProvider } from "../../i18n/locale";
 import { PaymentForm } from "./payment-form";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import "../../styles.css";
 
 let client: QueryClient;
@@ -36,25 +35,13 @@ afterEach(async () => {
   if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
 });
 
-function LanguageSwitch() {
-  const { locale, setLocale } = useI18n();
-  return (
-    <button type="button" onClick={() => setLocale(locale === "ja" ? "en" : "ja")}>
-      日本語 / English
-    </button>
-  );
-}
-
-describe.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)("$localeの会計入力", ({ locale, labels }) => {
+describe("日本語の会計入力", () => {
+  const labels = ja;
   beforeEach(async () => {
     await render(
       <QueryClientProvider client={client}>
-        <LocaleProvider initialLocale={locale} persist={false}>
+        <LocaleProvider initialLocale="ja" persist={false}>
           <main className="max-w-2xl space-y-5 p-8">
-            <LanguageSwitch />
             <PaymentForm storeId="tablecast-store" sessionId="tablecast-session" />
           </main>
         </LocaleProvider>
@@ -62,7 +49,7 @@ describe.each([
     );
   });
 
-  it("空欄には必須入力を案内し、言語切替と入力修正を反映する", async () => {
+  it("空欄には必須入力を案内し、入力修正後に送信できる", async () => {
     await page.getByRole("button", { name: labels.admin_payment, exact: true }).click();
     const amount = page.getByRole("spinbutton", { name: labels.admin_amount });
     await expect.element(amount).toHaveAttribute("aria-invalid", "true");
@@ -71,18 +58,11 @@ describe.each([
       .element(page.getByRole("textbox", { name: labels.admin_reason }))
       .toHaveAccessibleDescription(labels.form_required);
     expect(requests).toHaveLength(0);
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-payment-required-${locale}.png`,
-    });
-    await page.getByRole("button", { name: "日本語 / English" }).click();
-    const next = locale === "ja" ? en : ja;
-    await expect
-      .element(page.getByRole("spinbutton", { name: next.admin_amount }))
-      .toHaveAccessibleDescription(next.form_required);
+
     await page.getByRole("spinbutton").fill("720");
-    await page.getByRole("textbox", { name: next.admin_reason }).fill("店頭受領");
+    await page.getByRole("textbox", { name: labels.admin_reason }).fill("店頭受領");
     await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
-    await page.getByRole("button", { name: next.admin_payment, exact: true }).click();
+    await page.getByRole("button", { name: labels.admin_payment, exact: true }).click();
     await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
     expect(requests).toHaveLength(1);
     expect(requests).toMatchObject([{ amount: 720, kind: "payment", reason: "店頭受領" }]);

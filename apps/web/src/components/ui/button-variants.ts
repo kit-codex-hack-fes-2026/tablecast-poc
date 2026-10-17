@@ -7,7 +7,7 @@ export const buttonVariants = tv({
       voice:
         "border-white/10 bg-neutral-950 text-white shadow-lg shadow-black/20 inset-shadow-sm inset-shadow-white/20 hover:bg-neutral-800 active:shadow-xs",
       outline:
-        "border-border bg-white text-foreground shadow-xs hover:bg-secondary aria-expanded:bg-secondary",
+        "border-border bg-card text-foreground shadow-xs hover:bg-secondary aria-expanded:bg-secondary",
       secondary: "bg-secondary text-secondary-foreground hover:bg-muted aria-expanded:bg-muted",
       ghost:
         "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",

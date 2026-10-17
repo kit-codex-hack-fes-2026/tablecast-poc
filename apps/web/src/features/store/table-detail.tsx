@@ -1,3 +1,5 @@
+import { CouponVisit } from "./coupon-visit";
+import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Order } from "@tablecast/api/schema";
@@ -13,6 +15,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useRealtime } from "../../lib/use-realtime";
 import { CartLines } from "../../components/cart-lines";
+import { catalogOptions } from "./menu-query";
 import { tableDetailOptions } from "./store-query";
 import { ActivityLog } from "./events";
 import { SessionActivity } from "./session-activity";
@@ -210,7 +213,9 @@ export function TableDetail({
                 closed={table.status === "closed"}
               />
             </Tabs.Panel>
-            <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+            {view === "orders" && (
+              <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+            )}
             <Tabs.Panel value="billing">
               <div
                 data-ui="bill-summary"
@@ -239,7 +244,14 @@ export function TableDetail({
                   </div>
                 </dl>
               </div>
-              {table.status === "open" && <PaymentForm storeId={storeId} sessionId={table.id} />}
+              <CouponVisit storeId={storeId} sessionId={table.id} />
+              <PaymentForm
+                key={table.status}
+                storeId={storeId}
+                sessionId={table.id}
+                closed={table.status === "closed"}
+              />
+              <PointVisit storeId={storeId} sessionId={table.id} />
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">
               <dl className="">
@@ -280,10 +292,13 @@ function SessionOrders({
   orderStatus: NonNullable<ReturnType<typeof useTableDetail>["orderStatus"]>;
 }) {
   const { t, locale } = useI18n();
+  const catalog = useSuspenseQuery(catalogOptions(table.storeId, table.configVersion));
+  const products =
+    catalog.data.version === table.configVersion ? catalog.data.configuration.products : [];
   return (
     <Tabs.Panel value="orders">
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
-      <CartLines lines={table.cart.lines} />
+      <CartLines lines={table.cart.lines} products={products} />
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
       {table.orders.map((order) => (
         <article

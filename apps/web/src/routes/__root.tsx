@@ -86,8 +86,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: stylesheet },
       {
         rel: "manifest",
-        href:
-          matches.at(-1)?.pathname === "/"
+        href: matches.at(-1)?.pathname.startsWith("/member")
+          ? "/tablecast-customer.webmanifest"
+          : matches.at(-1)?.pathname === "/"
             ? "/tablecast-kiosk.webmanifest"
             : "/tablecast-staff.webmanifest",
       },

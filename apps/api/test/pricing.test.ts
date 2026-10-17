@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 import { configurationErrors, priceCart, type PlanContext } from "../src/modules/catalog/pricing";
-import { configurationIssueSchema } from "../src/schema";
+import { z } from "zod";
+import {
+  configurationSchema,
+  optionSchema,
+  optionConditionSchema,
+  type OptionCondition,
+  configurationIssueSchema,
+} from "../src/schema";
 import { configuration, text } from "./configuration-fixture";
 
 const now = 1_800_000_000_000;
@@ -262,4 +269,185 @@ it("選択肢IDで組合せ禁止と依存不足を検出し、重複した選�
     path: ["products", 1, "modifiers", 0, "options", 0, "requires", 0],
     params: { optionId: "dairy", referenceId: "not-registered", relation: "requires" },
   });
+});
+
+function conditionalProduct() {
+  const product = structuredClone(configuration.products[1]);
+  if (!product) throw new Error("商品fixtureがありません");
+  const group = product.modifiers[0];
+  const template = group?.options[0];
+  if (!group || !template) throw new Error("選択肢fixtureがありません");
+  group.kind = "multiple";
+  group.min = 0;
+  group.max = 4;
+  group.options = ["X", "A", "B", "C"].map((id) => ({
+    ...structuredClone(template),
+    id,
+    available: true,
+    priceDelta: 0,
+  }));
+  const owner = group.options[0];
+  if (!owner) throw new Error("条件の所有者がありません");
+  return { product, owner };
+}
+
+it.each(Array.from({ length: 8 }, (_, mask) => ({ mask })))(
+  "選択集合$maskでAND・OR・NOTを評価し、未充足を全候補必須に変えない",
+  ({ mask }) => {
+    const { product, owner } = conditionalProduct();
+    const expression: OptionCondition = {
+      kind: "and",
+      children: [
+        { kind: "option", optionId: "A" },
+        {
+          kind: "or",
+          children: [
+            { kind: "option", optionId: "B" },
+            { kind: "not", child: { kind: "option", optionId: "C" } },
+          ],
+        },
+      ],
+    };
+    owner.conditions = { version: 2, requires: expression, excludes: null };
+    const selected = ["X", ...["A", "B", "C"].filter((_id, index) => mask & (1 << index))];
+    const lines = [
+      {
+        id: "line",
+        productId: product.id,
+        quantity: 1,
+        selections: selected.map((optionId) => ({ optionId, quantity: 1 })),
+      },
+    ];
+    const cart = priceCart({ products: [product] }, lines, 0);
+    const matched = Boolean(mask & 1) && (Boolean(mask & 2) || !(mask & 4));
+    expect(cart.complete).toBe(matched);
+    expect(cart.lines[0]?.missing).toEqual([]);
+    expect(cart.lines[0]?.conditionIssues).toEqual(
+      matched ? undefined : [{ optionId: "X", relation: "requires" }],
+    );
+    owner.conditions = { version: 2, requires: null, excludes: expression };
+    let failure: string | null = null;
+    try {
+      priceCart({ products: [product] }, lines, 0);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      failure = error.message;
+    }
+    expect(failure).toBe(matched ? "OPTION_COMBINATION" : null);
+    expect(
+      priceCart(
+        { products: [product] },
+        [{ id: "line", productId: product.id, quantity: 1, selections: [] }],
+        0,
+      ).complete,
+    ).toBe(true);
+  },
+);
+
+it("旧requiresとexcludesの全選択集合で、新形式の可否と価格が同値になる", () => {
+  for (const relation of ["requires", "excludes"] as const)
+    for (let mask = 0; mask < 4; mask++) {
+      const { product, owner } = conditionalProduct();
+      owner[relation] = ["A", "B"];
+      const lines = [
+        {
+          id: "line",
+          productId: product.id,
+          quantity: 2,
+          selections: ["X", ...["A", "B"].filter((_id, index) => mask & (1 << index))].map(
+            (optionId) => ({ optionId, quantity: 1 }),
+          ),
+        },
+      ];
+      const result = () => {
+        try {
+          const cart = priceCart({ products: [product] }, lines, 0);
+          return { complete: cart.complete, total: cart.total };
+        } catch (error) {
+          if (!(error instanceof Error)) throw error;
+          return error.message;
+        }
+      };
+      const legacy = result();
+      owner[relation] = [];
+      owner.conditions = {
+        version: 2,
+        requires: null,
+        excludes: null,
+        [relation]: {
+          kind: relation === "requires" ? "and" : "or",
+          children: ["A", "B"].map((optionId) => ({ kind: "option", optionId })),
+        },
+      };
+      expect(result()).toEqual(legacy);
+    }
+});
+
+it("条件の空グループ・過剰な深さ・節数・形式併記をschemaで拒否し、MCP schemaを生成する", () => {
+  expect(optionConditionSchema.safeParse({ kind: "and", children: [] }).success).toBe(false);
+  expect(optionConditionSchema.safeParse({ kind: "not", children: [] }).success).toBe(false);
+  let expression: OptionCondition = { kind: "option", optionId: "A" };
+  for (let depth = 1; depth < 8; depth++) expression = { kind: "not", child: expression };
+  expect(optionConditionSchema.safeParse(expression).success).toBe(true);
+  for (let depth = 0; depth < 5000; depth++) expression = { kind: "not", child: expression };
+  expect(optionConditionSchema.safeParse(expression).success).toBe(false);
+  const wide: OptionCondition = {
+    kind: "and",
+    children: Array.from({ length: 8 }, () => ({
+      kind: "or",
+      children: Array.from({ length: 8 }, () => ({ kind: "option", optionId: "A" })),
+    })),
+  };
+  expect(optionConditionSchema.safeParse(wide).success).toBe(false);
+  const { owner } = conditionalProduct();
+  owner.requires = ["A"];
+  owner.conditions = { version: 2, requires: null, excludes: null };
+  expect(optionSchema.safeParse(owner).success).toBe(false);
+  const json = JSON.stringify(z.toJSONSchema(configurationSchema));
+  expect(json).toContain("tablecastConditionDepth8");
+  expect(json.length).toBeLessThan(25000);
+});
+
+it("参照切れと自己参照は正確な節を指し、相互参照は選択集合で有限に評価する", () => {
+  const { product, owner } = conditionalProduct();
+  owner.conditions = {
+    version: 2,
+    requires: { kind: "not", child: { kind: "option", optionId: "X" } },
+    excludes: null,
+  };
+  expect(configurationErrors({ ...configuration, products: [product] })).toContainEqual({
+    code: "OPTION_REFERENCE_INVALID",
+    path: [
+      "products",
+      0,
+      "modifiers",
+      0,
+      "options",
+      0,
+      "conditions",
+      "requires",
+      "child",
+      "optionId",
+    ],
+    params: { optionId: "X", referenceId: "X", relation: "requires" },
+  });
+  owner.conditions.requires = { kind: "option", optionId: "A" };
+  const other = product.modifiers[0]?.options[1];
+  if (!other) throw new Error("参照先がありません");
+  other.conditions = { version: 2, requires: { kind: "option", optionId: "X" }, excludes: null };
+  expect(configurationErrors({ ...configuration, products: [product] })).toEqual([]);
+  expect(
+    priceCart(
+      { products: [product] },
+      [
+        {
+          id: "line",
+          productId: product.id,
+          quantity: 1,
+          selections: ["X", "A"].map((optionId) => ({ optionId, quantity: 1 })),
+        },
+      ],
+      0,
+    ).complete,
+  ).toBe(true);
 });

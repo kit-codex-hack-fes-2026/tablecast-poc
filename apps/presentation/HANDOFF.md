@@ -7,6 +7,7 @@ Issue #1の再生成可能な動画制作ワークフロー。現行作例はmai
 - 素材取得・完成動画・再生成：[SHARING.md](SHARING.md)
 - 見た目の評価状態：[frame.md](frame.md)
 - アプリ変更試験の結果：[BRIEF.md](experiments/tablecast-mutation/BRIEF.md)
+- ChatGPTのMCP実演（#170、制作中）：[制作メモ](projects/tablecast-mcp-demo/BRIEF.md)と[撮影台本](projects/tablecast-mcp-demo/SCRIPT.md)。stagingへの接続と実MCP読取を確認済み。収録・公開・全編生成は未実施。
 
 既定の台本は `projects/tablecast-main-rerecord.json`。動画生成は `bun run build:videos`、検査・MP4化まで記録する通常入口は `bun run video --project ... --film ... --name ... --render`。ルートのアプリbuildには動画生成を含めない。
 

@@ -5,6 +5,7 @@ import { ensure } from "../../platform/errors";
 import { validateQuery } from "../../platform/validation";
 import { getAdminState, listMemberStores } from "./queries";
 import { getCatalog } from "../catalog/queries";
+import { instructionResponse } from "../configuration/instruction-response";
 
 export const initialRoutes = new Hono<ApiEnv>().get(
   "/api/admin/initial",
@@ -44,7 +45,12 @@ export const initialRoutes = new Hono<ApiEnv>().get(
           })
         : null;
     const catalog =
-      membership && view === "catalog" ? await getCatalog(services, membership.id) : null;
+      membership && view === "catalog"
+        ? instructionResponse(
+            await getCatalog(services, membership.id),
+            c.req.header("X-Tablecast-Instructions"),
+          )
+        : null;
     return c.json({ session, stores, floor, catalog }, 200);
   },
 );

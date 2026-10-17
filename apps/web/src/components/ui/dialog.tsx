@@ -1,3 +1,4 @@
+import { StyleScopeBoundary } from "./style-scope";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn, tv, type VariantProps } from "tailwind-variants";
 import type { ComponentProps } from "react";
@@ -47,16 +48,19 @@ export function DialogContent({
   const { viewport, popup } = dialogVariants({ side });
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Backdrop className="fixed inset-0 bg-foreground/35 backdrop-blur-xs z-40" />
-      <DialogPrimitive.Viewport className={viewport()}>
-        <DialogPrimitive.Popup
-          {...props}
-          data-slot="dialog-content"
-          className={(state) =>
-            popup({ className: typeof className === "function" ? className(state) : className })
-          }
-        />
-      </DialogPrimitive.Viewport>
+      <StyleScopeBoundary>
+        <DialogPrimitive.Backdrop className="fixed inset-0 bg-foreground/35 backdrop-blur-xs z-40" />
+        <DialogPrimitive.Viewport className={viewport()}>
+          <DialogPrimitive.Popup
+            {...props}
+            data-slot="dialog-content"
+            data-theme-part="dialog"
+            className={(state) =>
+              popup({ className: typeof className === "function" ? className(state) : className })
+            }
+          />
+        </DialogPrimitive.Viewport>
+      </StyleScopeBoundary>
     </DialogPrimitive.Portal>
   );
 }

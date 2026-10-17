@@ -1,3 +1,4 @@
+import { snapshotPointPolicy } from "../customer-points/service";
 import { observeOperation } from "../../platform/telemetry";
 import { and, eq, sql } from "drizzle-orm";
 import type { z } from "zod";
@@ -17,6 +18,7 @@ import {
   voiceCondition,
 } from "./mutations";
 import { getSession, getTableState } from "./queries";
+import { resetCustomerContextStatements } from "../customer-memory/service";
 import { stopVoiceRoom } from "../voice/runtime";
 export async function setUiSection(
   services: ApiServices,
@@ -234,6 +236,25 @@ export async function closeTable(services: ApiServices, actor: Actor) {
           .where(
             sql`id=${actor.tableSessionId} AND store_id=${actor.storeId} AND status='open' AND cart_version=${table.cart.version}`,
           ),
+        ...resetCustomerContextStatements(
+          services,
+          actor.storeId,
+          and(
+            eq(business.tableSessions.id, actor.tableSessionId ?? ""),
+            sql`EXISTS (SELECT 1 FROM customer_contexts WHERE session_id=${actor.tableSessionId})`,
+          ),
+          mutation,
+        ),
+        db
+          .update(business.customerVisitParticipants)
+          .set({ leftAt: Date.now() })
+          .where(
+            and(
+              eq(business.customerVisitParticipants.sessionId, actor.tableSessionId ?? ""),
+              eq(business.customerVisitParticipants.storeId, actor.storeId),
+              sql`EXISTS (SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation})`,
+            ),
+          ),
         invalidationStatement(services, actor, mutation),
         ...interruptVoiceTurns(services, actor, mutation),
         eventStatement(services, actor, mutation, "table.closed", {}),
@@ -282,6 +303,7 @@ export async function openTable(
           .select(
             sql`SELECT ${sessionId},${actor.storeId},${input.tableId},'table',${input.locale},'open',${input.guestCount},0,'[]',NULL,'stopped',NULL,0,NULL,'menu',NULL,1,0,${plan ? JSON.stringify({ id: plan.id, startedAt: now, rules: plan }) : null},${now},NULL WHERE NOT EXISTS(SELECT 1 FROM table_sessions WHERE table_id=${input.tableId} AND status='open')`,
           ),
+        snapshotPointPolicy(services, actor.storeId, sessionId),
         db
           .insert(business.tableEvents)
           .select(

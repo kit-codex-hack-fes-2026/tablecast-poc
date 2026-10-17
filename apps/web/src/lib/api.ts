@@ -6,7 +6,7 @@ import {
 import { apiFetch } from "./api-fetch";
 export { parseResponse };
 const origin = typeof window === "undefined" ? "" : window.location.origin;
-const options = { fetch: apiFetch };
+const options = { fetch: apiFetch, headers: { "X-Tablecast-Instructions": "1" } };
 export const rpc = createTablecastClient(origin || "/", options);
 export type TableClient = ReturnType<typeof createTableSessionClient>;
 export type TableEndpoint = { key: string; client: TableClient };

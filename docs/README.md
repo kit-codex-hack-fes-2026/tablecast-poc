@@ -16,30 +16,33 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 
 ## 文書一覧
 
-| 文書                                   | 所有する仕様                                         |
-| -------------------------------------- | ---------------------------------------------------- |
-| [セットアップ](setup.md)               | clone、worktree、Dev Container・mise、env、初回確認  |
-| [製品と業務](product.md)               | 対象、認証、注文、カスタマイズ、プラン、会計、安全性 |
-| [認証・アカウント](authentication.md)  | Google、パスキー、招待、プロフィール、メール         |
-| [Codexプラグイン](codex-plugin.md)     | OAuth接続、ローカル検証、GitHub配布                  |
-| [Dev Container](devcontainer.md)       | Docker Desktop・OrbStackの再現環境                   |
-| [画面と国際化](ui.md)                  | 大きな会話領域、停止再開、日英キオスク・管理画面     |
-| [構成とディレクトリ](architecture.md)  | 2 Workers、依存方向、最小のファイル配置、公開契約    |
-| [音声接続](voice/integration.md)       | GPT-Live・Hono・Agents API、履歴、中断               |
-| [発話と標準音声](voice/speech.md)      | ペルソナ、読み、つなぎ言葉、感情・非言語音・間       |
-| [上流パッチ](voice/upstream-patch.md)  | 公式plugin、fork、commit固定、PR、削除条件           |
-| [店舗ChatGPTとMCP](mcp.md)             | メニュー・翻訳・接客設定、下書きと公開               |
-| [ローカル・worktree](development.md)   | Bun、Wrangler、単一オリジン、ポート、秘密情報        |
-| [テスト戦略](testing.md)               | 最も小さい検証境界、Storybook、API、音声、E2E        |
-| [静的解析と設定](static-analysis.md)   | Oxlint、Oxfmt、型検査、Lefthook、依存管理            |
-| [Seedとデモ](demo.md)                  | 現実的な合成データ、録画、再現性、リセット           |
-| [実装の順序](implementation.md)        | Codexの開始プロンプト、段階、並列担当、検証ゲート    |
-| [受入条件](acceptance.md)              | 完成判定とリリース前の必須シナリオ                   |
-| [参照・採否](sources.md)               | 公式資料、スターターから残したものと外したもの       |
-| [梱包の検証](handoff-validation.md)    | このZIP自体の検査と未実施範囲                        |
-| [実装・検証記録](progress.md)          | 現行コードの実行結果、commit、外部受入の残件         |
-| [実現可能性と技術課題](feasibility.md) | 旧音声接続の検証記録と未実施範囲                     |
-| [公開環境への配備](deployment.md)      | 実在資源の設定、移行、release、rollbackの手順        |
+| 文書                                                 | 所有する仕様                                          |
+| ---------------------------------------------------- | ----------------------------------------------------- |
+| [セットアップ](setup.md)                             | clone、worktree、Dev Container・mise、env、初回確認   |
+| [製品と業務](product.md)                             | 対象、認証、注文、カスタマイズ、プラン、会計、安全性  |
+| [店舗会員・記憶・特典](membership.md)                | QR参加、同行履歴、個人記憶、ポイント、クーポン        |
+| [認証・アカウント](authentication.md)                | Google、パスキー、招待、プロフィール、メール          |
+| [Codexプラグイン](codex-plugin.md)                   | OAuth接続、ローカル検証、GitHub配布                   |
+| [ゲームプラグイン](game-plugins.md)                  | ゲーム制作・登録・試遊・承認・公開・隔離実行          |
+| [Dev Container](devcontainer.md)                     | Docker Desktop・OrbStackの再現環境                    |
+| [画面と国際化](ui.md)                                | 大きな会話領域、停止再開、日英キオスク・管理画面      |
+| [構成とディレクトリ](architecture.md)                | 2 Workers、依存方向、最小のファイル配置、公開契約     |
+| [音声接続](voice/integration.md)                     | GPT-Live・Hono・Agents API、履歴、中断                |
+| [発話と標準音声](voice/speech.md)                    | ペルソナ、読み、つなぎ言葉、感情・非言語音・間        |
+| [上流パッチ](voice/upstream-patch.md)                | 公式plugin、fork、commit固定、PR、削除条件            |
+| [店舗ChatGPTとMCP](mcp.md)                           | メニュー・翻訳・接客設定、下書きと公開                |
+| [ローカル・worktree](development.md)                 | Bun、Wrangler、単一オリジン、ポート、秘密情報         |
+| [テスト戦略](testing.md)                             | 保証の所有層、E2E昇格条件、移行対応、実行と隔離       |
+| [静的解析と設定](static-analysis.md)                 | Oxlint、Oxfmt、型検査、Lefthook、依存管理             |
+| [Seedとデモ](demo.md)                                | 現実的な合成データ、録画、再現性、リセット            |
+| [実装の順序](implementation.md)                      | Codexの開始プロンプト、段階、並列担当、検証ゲート     |
+| [受入条件](acceptance.md)                            | 完成判定とリリース前の必須シナリオ                    |
+| [参照構成の採否](enterprise-agentic-saas-starter.md) | 固定SHAのテスト戦略比較、採用する原則と移植しない構成 |
+| [参照・採否](sources.md)                             | 公式資料、スターターから残したものと外したもの        |
+| [梱包の検証](handoff-validation.md)                  | このZIP自体の検査と未実施範囲                         |
+| [実装・検証記録](progress.md)                        | 現行コードの実行結果、commit、外部受入の残件          |
+| [実現可能性と技術課題](feasibility.md)               | 旧音声接続の検証記録と未実施範囲                      |
+| [公開環境への配備](deployment.md)                    | 実在資源の設定、移行、release、rollbackの手順         |
 
 ## 0.2からの変更
 
@@ -59,5 +62,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 仕様、Web/API実装、lockfile、migration、デモ画像、開発スクリプト、CI定義を含む。DB・秘密情報・node_modulesはGit管理しない。旧Inworld patchとbundleは過去の検証資料として保持し、通常音声の実行時依存には含めない。
 
 旧ZIPの梱包記録は当時の記録として残す。実行結果は現行の進捗記録と受入条件の証拠を使い、ローカル実音声接続の成功を実iPad・実店舗・公開環境の受入成功とは扱わない。
+
+テストを追加・削除・移行するときは[保証の所有層とE2Eへの昇格](testing.md#保証の所有層とe2eへの昇格)から対象の実行境界へ進む。参照構成の採用は実行成功を意味せず、過去の受入件数は最新SHAの検証結果と区別する。
 
 ログ・traceの調査は[Observability](observability.md)を参照する。

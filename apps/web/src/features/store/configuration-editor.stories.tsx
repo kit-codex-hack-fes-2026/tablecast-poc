@@ -111,7 +111,9 @@ export const RestorePublishedVoice: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const group = within(canvas.getByRole("group", { name: "英語" }));
-    const voice = group.getByRole("combobox", { name: "音声設定" });
+    const voice = group.getByRole("combobox", { name: /音声設定/ });
+    await expect(canvas.getByRole("textbox", { name: "日本語 接客方針" })).toBeInTheDocument();
+    await expect(canvas.getByRole("textbox", { name: "英語 接客方針" })).toBeInTheDocument();
     await expect(await group.findByText("音声一覧は未設定です。")).toBeInTheDocument();
     await expect(voice).toHaveValue("Ashley");
     await expect(group.getByRole("option", { name: "Olivia" })).toBeInTheDocument();
@@ -135,6 +137,7 @@ export const RestorePublishedVoice: Story = {
 
 export const PagedVoices: Story = {
   name: "標準音声の次ページ失敗から再試行し、表示名で選んだIDと入力を保存する",
+  tags: ["!test"],
   globals: { locale: "en" },
   beforeEach: () => {
     let nextAttempts = 0;
@@ -161,35 +164,66 @@ export const PagedVoices: Story = {
       });
     });
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, globals }) => {
+    const labels =
+      globals.locale === "en"
+        ? {
+            english: "English",
+            japanese: "Japanese",
+            voice: "Voice setting",
+            instructions: "Service instructions",
+            empty: "No standard voices are available.",
+            more: "Show more voices",
+            unavailable: "The voice list could not be loaded.",
+            retry: "Try again",
+          }
+        : {
+            english: "英語",
+            japanese: "日本語",
+            voice: "音声設定",
+            instructions: "接客方針",
+            empty: "選択できる標準音声はありません。",
+            more: "音声をさらに表示",
+            unavailable: "音声一覧を取得できませんでした。",
+            retry: "再試行",
+          };
     const canvas = within(canvasElement);
-    const english = within(canvas.getByRole("group", { name: "English" }));
-    const japanese = within(canvas.getByRole("group", { name: "Japanese" }));
-    const voice = english.getByRole("combobox", { name: "Voice setting" });
-    const instructions = english.getByRole("textbox");
+    const english = within(canvas.getByRole("group", { name: labels.english }));
+    const japanese = within(canvas.getByRole("group", { name: labels.japanese }));
+    const voice = english.getByRole("combobox", { name: new RegExp(labels.voice) });
+    // 初回の遅延モジュール変換を含むため、Browserテストと同じ待機時間にする。
+    await waitFor(
+      () =>
+        expect(
+          english.getByRole("textbox", { name: `${labels.english} ${labels.instructions}` }),
+        ).toHaveAttribute("contenteditable", "true"),
+      { timeout: 5000 },
+    );
+    const instructions = english.getByRole("textbox", {
+      name: `${labels.english} ${labels.instructions}`,
+    });
     await expect(
-      await japanese.findByText("No standard voices are available."),
+      japanese.getByRole("textbox", { name: `${labels.japanese} ${labels.instructions}` }),
     ).toBeInTheDocument();
+    await expect(await japanese.findByText(labels.empty)).toBeInTheDocument();
     await expect(
       await english.findByRole("option", { name: "Ashley — English" }),
     ).toBeInTheDocument();
-    await userEvent.type(instructions, "Speak calmly.");
+    // ProseMirrorの貼付け処理で入力し、合成typeによるDOM直接変更を避ける。
+    await userEvent.click(instructions);
+    await userEvent.paste("Speak calmly.");
 
     // 次ページだけ失敗しても、既取得の候補と編集中の指示は保つ。
-    await userEvent.click(english.getByRole("button", { name: "Show more voices" }));
-    await expect(await english.findByRole("alert")).toHaveTextContent(
-      "The voice list could not be loaded.",
-    );
+    await userEvent.click(english.getByRole("button", { name: labels.more }));
+    await expect(await english.findByRole("alert")).toHaveTextContent(labels.unavailable);
     await expect(voice).toHaveValue("Ashley");
-    await userEvent.click(english.getByRole("button", { name: "Try again" }));
+    await userEvent.click(english.getByRole("button", { name: labels.retry }));
     await expect(
       await english.findByRole("option", { name: "Dennis — English" }),
     ).toBeInTheDocument();
     await expect(english.getAllByRole("option", { name: "Ashley — English" })).toHaveLength(1);
-    await expect(instructions).toHaveValue("Speak calmly.");
-    await expect(
-      english.queryByRole("button", { name: "Show more voices" }),
-    ).not.toBeInTheDocument();
+    await expect(instructions).toHaveTextContent("Speak calmly.");
+    await expect(english.queryByRole("button", { name: labels.more })).not.toBeInTheDocument();
     await userEvent.selectOptions(voice, "Dennis");
     await userEvent.click(canvas.getByRole("button", { name: "保存" }));
     await expect(canvas.getByRole("status", { name: "保存された音声" })).toHaveTextContent(
@@ -205,6 +239,13 @@ export const PagedVoices: Story = {
       ),
     ).toBe(true);
   },
+};
+
+export const JapanesePagedVoices: Story = {
+  ...PagedVoices,
+  name: "日本語画面で音声の次ページを再送し、英語の指示と音声IDを保存する",
+  tags: ["test"],
+  globals: { locale: "ja" },
 };
 
 export const CancelPreviousStore: Story = {
@@ -249,7 +290,7 @@ export const CancelPreviousStore: Story = {
     await waitFor(async () => {
       await expect(english.queryByRole("option", { name: /Ashley/ })).not.toBeInTheDocument();
       await expect(english.queryByRole("option", { name: "Olivia" })).not.toBeInTheDocument();
-      await expect(english.getByRole("combobox", { name: "音声設定" })).toHaveValue("");
+      await expect(english.getByRole("combobox", { name: /音声設定/ })).toHaveValue("");
     });
     await expect(
       requests.mock.calls

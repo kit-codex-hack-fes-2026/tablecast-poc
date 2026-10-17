@@ -12,7 +12,12 @@ import {
   tablecastDemoEmail,
   tablecastDemoStoreIcons,
 } from "../apps/emulate/src/tablecast-demo-identities";
-import { createAuth, tablecastGoogleMockIssuer } from "../apps/api/src/modules/auth/service";
+import {
+  createAuth,
+  tablecastCredentialIssuer,
+  tablecastGoogleMockIssuer,
+} from "../apps/api/src/modules/auth/service";
+import type { TablecastSeedTemplate } from "./tablecast-seed-template";
 import {
   configurationErrors,
   confirmationText,
@@ -71,7 +76,7 @@ function event(
     at,
   };
 }
-async function insertSession(
+function sessionQueries(
   db: DrizzleD1Database<typeof identity>,
   statements: (BatchItem<"sqlite"> | SeedEvent)[],
 ) {
@@ -95,7 +100,14 @@ async function insertSession(
       ),
     );
   }
-  const [first, ...rest] = queries;
+  return queries;
+}
+
+async function insertSession(
+  db: DrizzleD1Database<typeof identity>,
+  statements: (BatchItem<"sqlite"> | SeedEvent)[],
+) {
+  const [first, ...rest] = sessionQueries(db, statements);
   if (first) await db.batch([first, ...rest]);
 }
 
@@ -369,27 +381,45 @@ async function seedCurrentTables(
   owner: Owner,
   baseTime: number,
 ) {
+  const tableIds = Array.from(
+    { length: store.tableCount },
+    (_, index) => `${store.id}-table-${(index + 1).toString().padStart(2, "0")}`,
+  );
+  const existingIds = new Set<string>();
+  const occupiedTables = new Set<string>();
+  // IDと営業中の卓をまとめて照合し、卓数が増えても100 bindを超えない。
+  for (let offset = 0; offset < tableIds.length; offset += 32) {
+    const ids = tableIds.slice(offset, offset + 32);
+    const existing = await db
+      .select({
+        id: business.tableSessions.id,
+        tableId: business.tableSessions.table_id,
+        status: business.tableSessions.status,
+      })
+      .from(business.tableSessions)
+      .where(
+        or(
+          inArray(
+            business.tableSessions.id,
+            ids.map((id) => `${id}-session`),
+          ),
+          and(
+            inArray(business.tableSessions.table_id, ids),
+            eq(business.tableSessions.status, "open"),
+          ),
+        ),
+      );
+    for (const session of existing) {
+      existingIds.add(session.id);
+      if (session.status === "open" && session.tableId) occupiedTables.add(session.tableId);
+    }
+  }
+  const pending: BatchItem<"sqlite">[] = [];
   for (let number = 1; number <= store.tableCount; number++) {
     const tableId = `${store.id}-table-${number.toString().padStart(2, "0")}`;
     const sessionId = `${tableId}-session`;
     const state = number % 12;
-    if (
-      state === 10 ||
-      (await db
-        .select({ id: business.tableSessions.id })
-        .from(business.tableSessions)
-        .where(
-          or(
-            eq(business.tableSessions.id, sessionId),
-            and(
-              eq(business.tableSessions.table_id, tableId),
-              eq(business.tableSessions.status, "open"),
-            ),
-          ),
-        )
-        .get())
-    )
-      continue;
+    if (state === 10 || existingIds.has(sessionId) || occupiedTables.has(tableId)) continue;
     const at = baseTime - number * 3 * 60_000;
     const locale = number % 3 === 0 ? "en" : "ja";
     const guestCount = state === 2 ? 2 : 2 + (number % 3);
@@ -529,8 +559,17 @@ async function seedCurrentTables(
       statements.push(
         event(store.id, sessionId, "voice.error", { code: "VOICE_UNAVAILABLE" }, at + 1000),
       );
-    await insertSession(db, statements);
+    const queries = sessionQueries(db, statements);
+    // 一セッションを分割せず、32 SQL以内のbatchにして直列のbinding往復を減らす。
+    if (pending.length + queries.length > 32) {
+      const [first, ...rest] = pending;
+      if (first) await db.batch([first, ...rest]);
+      pending.length = 0;
+    }
+    pending.push(...queries);
   }
+  const [first, ...rest] = pending;
+  if (first) await db.batch([first, ...rest]);
 }
 
 export type SeedEnv = Pick<
@@ -709,7 +748,11 @@ async function refreshDemoIdentityIcons(env: SeedEnv, credentials: DemoCredentia
   if (first) await db.batch([first, ...rest]);
 }
 
-export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredentials) {
+export async function seedPreviewDatabase(
+  env: SeedEnv,
+  credentials: DemoCredentials,
+  template?: TablecastSeedTemplate,
+) {
   credentials = normaliseDemoCredentials(credentials);
   if (!isHostedEmulator(env)) throw new Error("検証環境の初期投入対象が不正です。");
   const db = drizzle(env.TABLECAST_DB);
@@ -757,9 +800,167 @@ export async function seedPreviewDatabase(env: SeedEnv, credentials: DemoCredent
     throw new Error(
       "PR初期投入の途中状態または既存データがあります。上書きせず手動確認してください。",
     );
-  await populateDemoDatabase(env, credentials);
+  if (template && owner.seeded === 0) await populateSeedTemplate(env, credentials, template);
+  else await populateDemoDatabase(env, credentials);
   await db.update(business.deploymentOwner).set({ seeded: 2 });
   return true;
+}
+
+async function populateSeedTemplate(
+  env: SeedEnv,
+  credentials: DemoCredentials,
+  template: TablecastSeedTemplate,
+) {
+  const { stores, staff } = template.payload;
+  const ownerEmails = staff
+    .filter((person) => person.role === "owner")
+    .map((person) => person.email);
+  if (
+    credentials.profile !== "demo" ||
+    !ownerEmails.includes(credentials.email) ||
+    !ownerEmails.includes(credentials.otherEmail)
+  )
+    throw new Error("固定seedは標準デモの初回投入に限ります。");
+  const db = drizzle(env.TABLECAST_DB, { schema: identity });
+  const auth = await createAuth({ ...env, TABLECAST_EMAIL_FROM: undefined }, undefined, db)
+    .$context;
+  const at = new Date(credentials.baseTime);
+  // 資格情報と時刻は成果物に保存せず、現行の認証設定で毎回生成する。
+  const users = await Promise.all(
+    staff.map(async (person) => ({
+      ...person,
+      id: `tablecast-seed-user-${person.email}`,
+      password: await auth.password.hash(
+        person.email === credentials.email
+          ? credentials.password
+          : person.email === credentials.otherEmail
+            ? credentials.otherPassword
+            : crypto.randomUUID(),
+      ),
+    })),
+  );
+  // 画像の失敗時はDBを変更しない。内容アドレス付きの同じ画像は再利用できる。
+  await seedMenuImages(
+    env.TABLECAST_MEDIA,
+    false,
+    stores.map((store) => store.configuration),
+  );
+  const images = new Map<string, string>();
+  const files = [
+    ...new Set([
+      ...staff.map((person) => person.imageFile),
+      ...Object.values(tablecastDemoStoreIcons),
+    ]),
+  ];
+  for (let offset = 0; offset < files.length; offset += 4) {
+    const results = await Promise.allSettled(
+      files.slice(offset, offset + 4).map(async (file) => {
+        images.set(file, await seedIdentityIcon(env, file));
+      }),
+    );
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+  }
+  const queries: BatchItem<"sqlite">[] = [
+    db.insert(identity.user).values(
+      users.map((person) => ({
+        id: person.id,
+        email: person.email,
+        name: person.name,
+        emailVerified: true,
+        image: images.get(person.imageFile),
+        createdAt: at,
+        updatedAt: at,
+      })),
+    ),
+    db.insert(identity.account).values(
+      users.map((person) => ({
+        id: `tablecast-seed-credential-${person.id}`,
+        userId: person.id,
+        accountId: person.id,
+        providerId: "credential",
+        issuer: tablecastCredentialIssuer,
+        password: person.password,
+        createdAt: at,
+        updatedAt: at,
+      })),
+    ),
+    db.insert(identity.organization).values(
+      stores.map((store) => ({
+        id: `tablecast-seed-organization-${store.id}`,
+        name: store.name,
+        slug: `tablecast-store-${store.id}`,
+        logo: images.get(tablecastDemoStoreIcons[store.id] ?? ""),
+        createdAt: at,
+      })),
+    ),
+  ];
+  for (const store of stores) {
+    const organizationId = `tablecast-seed-organization-${store.id}`;
+    const members = users.filter((person) => person.stores.includes(store.id));
+    const owner = members.find((person) => person.role === "owner");
+    if (!owner) throw new Error("店舗の管理者がありません。");
+    queries.push(
+      db.insert(identity.member).values(
+        members.map((person) => ({
+          id: `tablecast-member-${store.id}-${person.id}`,
+          organizationId,
+          userId: person.id,
+          role: person.role,
+          createdAt: at,
+        })),
+      ),
+      db.insert(business.stores).values({
+        id: store.id,
+        organization_id: organizationId,
+        name: store.name,
+        config_json: JSON.stringify(store.configuration),
+        updated_at: credentials.baseTime,
+      }),
+      db.insert(business.configReleases).values({
+        store_id: store.id,
+        version: 1,
+        config_json: JSON.stringify(store.configuration),
+        published_by: owner.id,
+        created_at: credentials.baseTime,
+      }),
+    );
+    // 3列×24行以内とし、D1の100 bind制限を守る。
+    const tables = Array.from({ length: store.tableCount }, (_, index) => ({
+      id: `${store.id}-table-${(index + 1).toString().padStart(2, "0")}`,
+      store_id: store.id,
+      name: `T${(index + 1).toString().padStart(2, "0")}`,
+    }));
+    for (let offset = 0; offset < tables.length; offset += 24)
+      queries.push(db.insert(business.restaurantTables).values(tables.slice(offset, offset + 24)));
+  }
+  const [first, ...rest] = queries;
+  if (!first) throw new Error("固定seedが空です。");
+  console.time("固定seedのDrizzle batch");
+  try {
+    // 親子行を1回の往復で原子的に投入し、途中状態を残さない。
+    await db.batch([first, ...rest]);
+  } finally {
+    console.timeEnd("固定seedのDrizzle batch");
+  }
+  console.time("営業中の卓のseed");
+  try {
+    for (const store of stores) {
+      const owner = users.find(
+        (person) => person.role === "owner" && person.stores.includes(store.id),
+      );
+      if (!owner) throw new Error("店舗の管理者がありません。");
+      await seedCurrentTables(
+        db,
+        store,
+        { id: `tablecast-seed-organization-${store.id}`, userId: owner.id },
+        credentials.baseTime,
+      );
+    }
+  } finally {
+    console.timeEnd("営業中の卓のseed");
+  }
+  return seedCounts(db);
 }
 
 async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) {
@@ -953,6 +1154,10 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
     await seedCurrentTables(db, store, owner, credentials.baseTime);
   }
   await refreshDemoIdentityIcons(env, credentials);
+  return seedCounts(db);
+}
+
+async function seedCounts(db: DrizzleD1Database<typeof identity>) {
   const violations = await db.all(sql`PRAGMA foreign_key_check`);
   if (violations.length) throw new Error("デモデータの外部キーが不整合です。");
   const [stores, tables, historicalSessions, orders, events] = await db.batch([

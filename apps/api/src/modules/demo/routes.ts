@@ -1,3 +1,4 @@
+import { instructionResponse } from "../configuration/instruction-response";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
@@ -17,9 +18,23 @@ const demoSessionRoutes = new Hono<ApiEnv>()
     await getSession(c.get("services"), c.get("actor"));
     await next();
   })
-  .get("/", async (c) => c.json(await getDemo(c.get("services"), c.get("actor")), 200))
+  .get("/", async (c) =>
+    c.json(
+      instructionResponse(
+        await getDemo(c.get("services"), c.get("actor")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
+  )
   .patch("/", validate(demoUpdateSchema), async (c) =>
-    c.json(await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
+    c.json(
+      instructionResponse(
+        await updateDemo(c.get("services"), c.get("actor"), c.req.valid("json")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
   )
   .post(
     "/reset",
@@ -30,7 +45,10 @@ const demoSessionRoutes = new Hono<ApiEnv>()
     ),
     async (c) =>
       c.json(
-        await resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+        instructionResponse(
+          await resetDemo(c.get("services"), c.get("actor"), c.req.valid("json").expectedVersion),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
         200,
       ),
   )
@@ -41,5 +59,13 @@ export const demoRoutes = new Hono<ApiEnv>()
     requireManager(c.get("actor"));
     await next();
   })
-  .post("/", async (c) => c.json(await createDemo(c.get("services"), c.get("actor")), 200))
+  .post("/", async (c) =>
+    c.json(
+      instructionResponse(
+        await createDemo(c.get("services"), c.get("actor")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
+  )
   .route("/:demoId", demoSessionRoutes);

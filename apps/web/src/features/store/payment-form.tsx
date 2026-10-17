@@ -1,14 +1,27 @@
 import { zodFieldValidator } from "../../lib/form-validation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useHydrated } from "@tanstack/react-router";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
-import { Input } from "../../components/ui/input";
+import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 
-export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId: string }) {
+export function PaymentForm({
+  storeId,
+  sessionId,
+  closed = false,
+}: {
+  storeId: string;
+  sessionId: string;
+  closed?: boolean;
+}) {
   const { t, locale } = useI18n();
+  const hydrated = useHydrated();
+  const [editing, setEditing] = useState(!closed);
+  const initialKind: "payment" | "adjustment" = closed ? "adjustment" : "payment";
   const client = useQueryClient();
   const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
   const payment = useMutation({
@@ -27,7 +40,7 @@ export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId
     },
   });
   const form = useAppForm({
-    defaultValues: { amount: Number.NaN, kind: "payment" as "payment" | "adjustment", reason: "" },
+    defaultValues: { amount: Number.NaN, kind: initialKind, reason: "" },
     listeners: { onChange: () => setPaymentKey(crypto.randomUUID()) },
     onSubmit: async ({ value }) => {
       try {
@@ -39,6 +52,12 @@ export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId
       }
     },
   });
+  if (!editing)
+    return (
+      <Button variant="outline" disabled={!hydrated} onClick={() => setEditing(true)}>
+        {t("admin_adjustment")}
+      </Button>
+    );
   return (
     <form
       noValidate
@@ -53,28 +72,24 @@ export function PaymentForm({ storeId, sessionId }: { storeId: string; sessionId
       <fieldset disabled={payment.isPending} className="space-y-4">
         <form.Field name="kind">
           {(field) => (
-            <div className="flex flex-wrap gap-5">
+            <RadioGroup
+              name="paymentKind"
+              value={field.state.value}
+              disabled={!hydrated || payment.isPending}
+              onValueChange={(value) => {
+                if (value === "payment" || value === "adjustment") field.handleChange(value);
+              }}
+              className="flex flex-wrap gap-5"
+            >
               <label className="flex min-h-11 items-center gap-2 text-base">
-                <Input
-                  type="radio"
-                  name="paymentKind"
-                  value="payment"
-                  checked={field.state.value === "payment"}
-                  onChange={() => field.handleChange("payment")}
-                />
+                <RadioGroupItem value="payment" />
                 {t("admin_payment")}
               </label>
               <label className="flex min-h-11 items-center gap-2 text-base">
-                <Input
-                  type="radio"
-                  name="paymentKind"
-                  value="adjustment"
-                  checked={field.state.value === "adjustment"}
-                  onChange={() => field.handleChange("adjustment")}
-                />
+                <RadioGroupItem value="adjustment" />
                 {t("admin_adjustment")}
               </label>
-            </div>
+            </RadioGroup>
           )}
         </form.Field>
         <form.AppField

@@ -1,11 +1,18 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
+const unitTests = [
+  "test/pricing.test.ts",
+  "test/instructions.test.ts",
+  "test/container-metrics.test.ts",
+];
 const bindings = {
   plugins: [
     cloudflareTest({
-      wrangler: { configPath: "./wrangler.jsonc" },
+      experimental: { newConfig: { configPath: "./cloudflare.config.ts" } },
       remoteBindings: false,
       miniflare: {
+        // VitestはWorkerをrunner名へ変更するため、同じ実DOをself bindingとして起動する。
+        durableObjects: { TABLECAST_EVENTS: "StoreEvents", TABLECAST_EMULATE: "TablecastEmulate" },
         bindings: {
           TABLECAST_AUTH_SECRET: "tablecast-test-secret-that-is-long-enough-for-local-tests",
           TABLECAST_ENV: "test",
@@ -18,7 +25,26 @@ const bindings = {
     setupFiles: ["./test/setup.ts"],
     name: "bindings",
     include: ["test/**/*.test.ts"],
-    exclude: ["test/pricing.test.ts"],
+    exclude: unitTests,
+    deps: {
+      optimizer: {
+        ssr: {
+          enabled: true,
+          include: [
+            "better-auth",
+            "better-auth/plugins",
+            "better-auth/api",
+            "better-auth/db",
+            "@better-auth/drizzle-adapter",
+            "@better-auth/oauth-provider",
+            "@better-auth/passkey",
+            "@better-auth/infra",
+          ],
+          // workerdのnative moduleを残し、依存の変換成果物を再利用する。
+          rolldownOptions: { external: [/^(node|cloudflare|workerd):/] },
+        },
+      },
+    },
     fileParallelism: true,
     testTimeout: 30000,
     hookTimeout: 30000,
@@ -29,7 +55,13 @@ export default defineConfig({
   test: {
     maxWorkers: 4,
     projects: [
-      { test: { name: "unit", include: ["test/pricing.test.ts"], environment: "node" } },
+      {
+        test: {
+          name: "unit",
+          include: unitTests,
+          environment: "node",
+        },
+      },
       bindings,
     ],
   },

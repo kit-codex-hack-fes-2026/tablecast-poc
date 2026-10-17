@@ -22,7 +22,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 ## 作業契約
 
-全ての作業はIssue起点とする。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
+全ての作業はIssue起点とする。Renovateの自動更新だけは標準のDependency Dashboardで継続管理し、個別の実装Issue作成と1 Issue対1 PRの例外とする。導入Issue #292をPR・commitから規約の根拠として参照し、Dashboardや導入Issueを自動更新PRで閉じない。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
 
 依頼範囲内の実装、検証、そこで見つかった不備の修正まで進める。既に許可された可逆的な作業や隔離されたローカル検証のたびに確認を挟まない。デプロイ・有料モデル・Draft解除・マージは許可された範囲で行う。
 
@@ -30,18 +30,18 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 通常の開発branchは`origin/staging`を起点とし、PRの統合先をstagingにする。mainへの通常のマージはstagingからのrelease PRに限定する。stagingへ統合したagentはrelease PRの関連PR・概要・変更内容・移行手順を現在の差分へ更新し、Draft解除・マージ前にも照合する。本文の自動領域と編集領域、集約PRのIssue例外は[release運用](.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)に従う。常設stagingの停止・全体リセットをローカル作業の終了処理に含めない。
 
-PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`chore(scope):`などのConventional Commits形式を使わない。コミットメッセージは[コミット規約](.agents/skills/conventional-commit/SKILL.md)に従う。
+PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`chore(scope):`などのConventional Commits形式を使わない。Renovateの自動更新PRは例外とし、標準の生成方法で英語commit件名と同じタイトルを使う。コミットメッセージは[コミット規約](.agents/skills/conventional-commit/SKILL.md)に従う。
 
 ## 製品とデータの不変条件
 
 - 価格・売切・プラン・権限・注文確定はAPIで判断する。LLM入力を権限や金額の根拠にしない。
 - GUI・音声・MCPで同じ業務操作を共有する。ブラウザーへ業務ツールや価格計算を複製しない。
 - 注文は版付きスナップショットと明示承認が必要。中断はDBのロールバックではない。
-- 音声停止は再生・送音・STT・応答生成を止め、明示再開まで再接続しない。GUI・カート・会計状態は維持し、客向けの自由文テキスト入力は作らない。
+- 音声停止は再生・送音・STT・応答生成を止め、明示再開まで再接続しない。GUI・カート・会計状態は維持し、客向けの接客チャット入力は作らない。会員本人による記憶CRUDの入力は[会員仕様](docs/membership.md)に従う。
 - 店舗・卓の境界を認可する。秘密情報をログへ出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaとDrizzleを使う。[API skill](.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)でSQL断片の根拠と呼出し経路全体のDB往復を確認する。直接の`prepare()`を新設せず、複数操作は`db.batch()`、生SQLはmigration・PRAGMA・query builderで不足する部分に限る。
 - GPT-Live 1の標準WebRTCとResponses delegation（gpt-5.6-luna）を使う。Mastra・LiveKit・hosted Agents APIを追加しない。独自STTクライアント、private monkeypatch、依存packageの直接編集をしない。
-- ゲーム、Custom Voice、別モデルへの自動切替、実決済、POS本接続、本人識別は対象外。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
+- ゲームの制作・登録・公開・実行は[ゲームプラグイン仕様](docs/game-plugins.md)に従う。生成コードへ注文権限・認証情報を渡さない。Custom Voice、別モデルへの自動切替、実決済、POS本接続、声や顔による本人識別は対象外。明示ログインによる店舗会員・長期記憶は[会員仕様](docs/membership.md)を参照する。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
 
 ## 配置と表現
 

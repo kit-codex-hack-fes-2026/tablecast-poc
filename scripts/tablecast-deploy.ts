@@ -1,27 +1,39 @@
+import { apiCloudflareConfig, apiSdkConfiguration } from "../apps/api/cloudflare.config";
 import { resetStagingDatabase } from "./tablecast-staging-reset";
-import { cloudflare, currentRevision, waitForRelease } from "./tablecast-deploy-api";
+import {
+  cloudflare,
+  currentRevision,
+  waitForRelease,
+  readBucketOwner,
+} from "./tablecast-deploy-api";
 import process from "node:process";
 import { drizzle } from "drizzle-orm/d1";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { sql } from "drizzle-orm";
 import { deploymentOwner } from "../apps/api/src/db/business-schema";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parse } from "jsonc-parser";
+import { readBuildOutput } from "@cloudflare/build-output-utils";
+import { buildTablecast } from "./tablecast-build";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedPreviewDatabase } from "./tablecast-seed-data";
+import { readSeedTemplate } from "./tablecast-seed-template";
 import {
-  deploymentConfigs,
-  deploymentArtifact,
+  accessApplicationConfig,
+  tablecastAdoptedResources,
+  deploymentOptions,
+  deploymentBuildOutput,
+  bindDeploymentDatabase,
   deploymentSecrets,
   deploymentTarget,
   tablecastAccountId,
   tablecastRepository,
-  stagingMcpPaths,
+  stagingDiscoveryPaths,
 } from "./tablecast-deploy-config";
+import { assertWorkerOwner } from "./tablecast-infra-diff";
+import { assertAccessConfiguration } from "./tablecast-infra-access";
 
 const root = resolve(import.meta.dirname, "..");
 const directory = resolve(root, ".local/tablecast-deploy");
@@ -31,10 +43,15 @@ const target = deploymentTarget(
 );
 const sha = process.env.TABLECAST_RELEASE_SHA ?? "";
 const databaseSchema = z.object({ uuid: z.uuid(), name: z.string() });
-const accessSchema = z.object({ id: z.string(), name: z.string(), domain: z.string().optional() });
+const accessSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  domain: z.string().optional(),
+  destinations: z.array(z.object({ type: z.string(), uri: z.string().optional() })).optional(),
+});
 
-async function verifyStagingMcp() {
-  // Access資格を送らず、機械通信はOAuthまで届きWebはAccessに留まることを検査する。
+async function verifyStaging() {
+  // Access資格なしでWeb・OAuthへ到達し、MCPのアプリ認可が維持されることを検査する。
   const request = (path: string, init?: RequestInit) =>
     fetch(`${target.origin}${path}`, {
       ...init,
@@ -42,7 +59,7 @@ async function verifyStagingMcp() {
       signal: AbortSignal.timeout(10000),
       cache: "no-store",
     });
-  for (const path of stagingMcpPaths.filter((value) => value.startsWith("/.well-known/"))) {
+  for (const path of stagingDiscoveryPaths) {
     const response = await request(path);
     if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
       throw new Error(`stagingのOAuth discoveryに到達できません: ${path}`);
@@ -70,18 +87,20 @@ async function verifyStagingMcp() {
   for (const path of ["/", "/_tablecast/oauth", "/api/auth/oauth2/authorize"]) {
     const response = await request(path);
     if (
-      response.status !== 302 ||
-      !response.headers.get("location")?.includes(".cloudflareaccess.com/")
+      response.status >= 500 ||
+      response.headers.get("location")?.includes(".cloudflareaccess.com/") ||
+      (path === "/" &&
+        (!response.ok || !response.headers.get("content-type")?.includes("text/html")))
     )
-      throw new Error(`stagingのブラウザー経路がAccessで保護されていません: ${path}`);
+      throw new Error(`stagingのブラウザー経路へ公開アクセスできません: ${path}`);
   }
-  console.info("stagingのAccess分離・OAuth discovery・未認証MCP拒否を確認しました。");
+  console.info("stagingのWeb公開・OAuth discovery・未認証MCP拒否を確認しました。");
 }
 
-async function run(args: [string, ...string[]], env: Record<string, string> = {}) {
+async function run(args: [string, ...string[]], env: Record<string, string> = {}, cwd = root) {
   const code = await new Promise<number | null>((complete, reject) => {
     const child = spawn(args[0], args.slice(1), {
-      cwd: root,
+      cwd,
       env: { ...process.env, ...env },
       stdio: "inherit",
     });
@@ -90,23 +109,67 @@ async function run(args: [string, ...string[]], env: Record<string, string> = {}
   });
   if (code !== 0) throw new Error(`配備コマンドが失敗しました: ${args.slice(0, 4).join(" ")}`);
 }
-const wrangler = (args: string[]) =>
-  run([
-    "bun",
-    "--no-env-file",
-    "x",
-    "wrangler",
-    ...args,
-    "--env-file",
-    resolve(directory, "empty.env"),
-  ]);
+const cf = (args: string[], cwd = root) =>
+  run(
+    ["node", resolve(root, "node_modules/cf/bin/cf"), ...args],
+    { CLOUDFLARE_ACCOUNT_ID: tablecastAccountId },
+    cwd,
+  );
 
-async function resources(create: boolean) {
-  const databases = z.array(databaseSchema).parse(await cloudflare("d1/database?per_page=1000"));
+async function deployTemporaryWorker(worker: object, kind: string) {
+  const temporary = resolve(directory, kind);
+  await mkdir(temporary, { recursive: true });
+  const apiManifest = z
+    .object({ devDependencies: z.record(z.string(), z.string()) })
+    .parse(JSON.parse(await readFile(resolve(root, "apps/api/package.json"), "utf8")));
+  await writeFile(
+    resolve(temporary, "package.json"),
+    JSON.stringify({
+      type: "module",
+      devDependencies: {
+        "@cloudflare/vite-plugin": apiManifest.devDependencies["@cloudflare/vite-plugin"],
+        vite: apiManifest.devDependencies.vite,
+      },
+    }),
+  );
+  const modules = resolve(root, "apps/api/node_modules");
+  const link = resolve(temporary, "node_modules");
+  try {
+    await symlink(modules, link, "dir");
+  } catch (error) {
+    if (
+      !(error instanceof Error && "code" in error && error.code === "EEXIST") ||
+      (await readlink(link)) !== modules
+    )
+      throw error;
+  }
+  await copyFile(resolve(root, "apps/api/vite.config.ts"), resolve(temporary, "vite.config.ts"));
+  await writeFile(
+    resolve(temporary, "cloudflare.config.ts"),
+    `export default ${JSON.stringify({ accountId: tablecastAccountId, worker })};`,
+  );
+  await cf(["build", "--mode", target.environment], temporary);
+  await cf(["deploy", "--prebuilt", "--mode", target.environment], temporary);
+}
+
+export async function resources(create: boolean) {
+  const [databaseList, bucketList] = await Promise.all([
+    cloudflare("d1/database?per_page=1000"),
+    cloudflare("r2/buckets"),
+  ]);
+  const databases = z.array(databaseSchema).parse(databaseList);
+  const { buckets } = z
+    .object({ buckets: z.array(z.object({ name: z.string() })) })
+    .parse(bucketList);
   if (databases.length >= 1000)
     throw new Error("D1一覧の上限に達しました。対象を再確認してください。");
   let databaseCreated = false;
   let database = databases.find((value) => value.name === target.database);
+  if (
+    target.environment !== "preview" &&
+    database?.uuid !== tablecastAdoptedResources[target.environment].database
+  )
+    throw new Error("常設D1の採用IDが一致しません。作り直さず現物を照合してください。");
   if (!database && create) {
     database = databaseSchema.parse(
       await cloudflare("d1/database", "POST", {
@@ -149,89 +212,87 @@ async function resources(create: boolean) {
     )
       throw new Error("D1の所有情報が一致しません。自動採用・削除は行いません。");
   }
-  const { buckets } = z
-    .object({ buckets: z.array(z.object({ name: z.string() })) })
-    .parse(await cloudflare("r2/buckets"));
   const bucketExists = buckets.some((value) => value.name === target.bucket);
+  if (bucketExists) {
+    const owner = await readBucketOwner(target.bucket);
+    if (
+      owner.repository !== tablecastRepository ||
+      owner.environment !== target.web ||
+      owner.databaseId !== database?.uuid
+    )
+      throw new Error("R2の所有情報が一致しません。対象外資源は変更・削除できません。");
+  }
   if (!bucketExists && create)
     await cloudflare("r2/buckets", "POST", { name: target.bucket, locationHint: "apac" });
   return { database, bucketExists, bucketCreated: create && !bucketExists };
 }
 
-async function accessApplication(create: boolean) {
+export async function accessApplication(create: boolean) {
   if (!target.emulate) return undefined;
-  const apps = z.array(accessSchema).parse(await cloudflare("access/apps?per_page=1000"));
+  const [applications] = await Promise.all([
+    cloudflare("access/apps?per_page=1000"),
+    create && target.environment !== "staging" ? assertAccessConfiguration() : undefined,
+  ]);
+  const apps = z.array(accessSchema).parse(applications);
   if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
-  const app = apps.find((value) => value.name === target.web);
   const domain = new URL(target.origin).hostname;
+  if (target.environment === "staging") {
+    // 公開運用への移行時に旧staging専用applicationだけを解除する。
+    const owned = apps.filter((value) => [target.web, `${target.web}-mcp`].includes(value.name));
+    for (const app of owned) {
+      const expected = app.name === target.web ? domain : `${domain}/mcp`;
+      if (
+        app.domain !== expected ||
+        app.destinations?.some(
+          (value) =>
+            value.type !== "public" ||
+            (value.uri !== domain && !value.uri?.startsWith(`${domain}/`)),
+        )
+      )
+        throw new Error("staging Accessの所有対象が一致しません。");
+    }
+    if (create) {
+      for (const app of owned) await cloudflare(`access/apps/${app.id}`, "DELETE");
+    }
+    return undefined;
+  }
+  const app = apps.find((value) => value.name === target.web);
   if (app && app.domain !== domain) throw new Error("Accessの所有対象が一致しません。");
   if (create) {
-    const policy = z.string().min(1).parse(process.env.TABLECAST_PREVIEW_ACCESS_POLICY_ID);
-    const servicePolicy = z.string().min(1).parse(process.env.TABLECAST_PREVIEW_SERVICE_POLICY_ID);
-    await cloudflare(`access/apps${app ? `/${app.id}` : ""}`, app ? "PUT" : "POST", {
-      name: target.web,
-      domain,
-      type: "self_hosted",
-      session_duration: "24h",
-      policies: [
-        { id: policy, precedence: 1 },
-        { id: servicePolicy, precedence: 2 },
-      ],
-    });
-    if (target.environment === "staging") {
-      const name = `${target.web}-mcp`;
-      const existing = apps.find((value) => value.name === name);
-      if (existing && existing.domain !== `${domain}/mcp`)
-        throw new Error("MCP Accessの所有対象が一致しません。");
-      await cloudflare(
-        `access/apps${existing ? `/${existing.id}` : ""}`,
-        existing ? "PUT" : "POST",
-        {
-          name,
-          domain: `${domain}/mcp`,
-          type: "self_hosted",
-          destinations: stagingMcpPaths.map((path) => ({
-            type: "public",
-            uri: `${domain}${path}`,
-          })),
-          app_launcher_visible: false,
-          policies: [
-            {
-              name: "TableCast MCP OAuth",
-              decision: "bypass",
-              include: [{ everyone: {} }],
-              precedence: 1,
-            },
-          ],
-        },
-      );
-    }
+    await cloudflare(
+      `access/apps${app ? `/${app.id}` : ""}`,
+      app ? "PUT" : "POST",
+      accessApplicationConfig(target.web, domain),
+    );
   }
   return app;
 }
 
-async function retireLegacyVoiceContainer() {
+export async function verifyDurableNamespaces() {
   const namespaces = z
-    .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
+    .array(
+      z.object({ id: z.string(), script: z.string(), class: z.string(), use_sqlite: z.boolean() }),
+    )
     .parse(await cloudflare("workers/durable_objects/namespaces?per_page=1000"));
   if (namespaces.length >= 1000) throw new Error("DO一覧の上限に達しました。");
-  const owned = namespaces.filter(
-    (value) => value.script === target.api && value.class === "TablecastVoice",
-  );
-  if (!owned.length) return;
-  const applications = z
-    .array(
-      z.object({
-        id: z.string(),
-        durable_objects: z.object({ namespace_id: z.string() }).optional(),
-      }),
+  const owned = namespaces.filter((namespace) => namespace.script === target.api);
+  if (
+    owned.some(
+      (namespace) =>
+        !["StoreEvents", "TablecastEmulate"].includes(namespace.class) || !namespace.use_sqlite,
     )
-    .parse(await cloudflare("containers/applications"));
-  // 名前だけでは削除せず、この配備先の旧音声DOに紐付くapplicationだけを退役させる。
-  for (const application of applications) {
-    if (owned.some((value) => value.id === application.durable_objects?.namespace_id))
-      await cloudflare(`containers/applications/${application.id}`, "DELETE");
+  )
+    throw new Error(
+      "既存DOのクラス・storageが採用設定と一致しません。移行履歴を再実行せず照合してください。",
+    );
+  if (target.environment !== "preview") {
+    for (const [className, id] of Object.entries(
+      tablecastAdoptedResources[target.environment].namespaces,
+    ))
+      if (!owned.some((namespace) => namespace.class === className && namespace.id === id))
+        throw new Error("常設DOの採用IDが一致しません。namespaceを作り直せません。");
   }
+  return owned;
 }
 
 async function main(resetFinished = false) {
@@ -251,66 +312,65 @@ async function main(resetFinished = false) {
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await writeFile(resolve(directory, "empty.env"), "", { mode: 0o600 });
   if (plan || build) {
-    const configs = deploymentConfigs(
+    const options = deploymentOptions(
       target,
       sha,
       "11111111-1111-4111-8111-111111111111",
-      root,
-      z
-        .record(z.string(), z.unknown())
-        .parse(parse(await readFile(resolve(root, "apps/api/wrangler.jsonc"), "utf8"))),
-      z
-        .record(z.string(), z.unknown())
-        .parse(parse(await readFile(resolve(root, "apps/web/wrangler.jsonc"), "utf8"))),
       process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
     );
-    await writeFile(resolve(directory, "api.json"), JSON.stringify(configs.api, null, 2));
-    await writeFile(resolve(directory, "web.json"), JSON.stringify(configs.web, null, 2));
     if (build)
-      await run(["bun", "--no-env-file", "run", "build"], {
-        TABLECAST_API_CONFIG: resolve(directory, "api.json"),
-        TABLECAST_WEB_CONFIG: resolve(directory, "web.json"),
+      await buildTablecast({
+        ...process.env,
+        TABLECAST_CONFIG: JSON.stringify(options),
       });
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
+  // 同じrunのSHA付き成果物を、資源の作成・resetより先に検証する。
+  const seedTemplate =
+    target.emulate && (!cleanup || reset)
+      ? await readSeedTemplate(resolve(root, "apps/web/.cloudflare/output/tablecast-seed.json"))
+      : undefined;
   await currentRevision(target, sha, cleanup && !reset);
   const secrets = cleanup && !reset ? undefined : deploymentSecrets(target, { ...process.env });
   // 資源変更前に、CI成果物が対象環境・SHAのものか確認する。
-  const outputConfigs: { name: string; path: string }[] = [];
+  let outputConfigs: Awaited<ReturnType<typeof readBuildOutput>>["workers"][string][] = [];
   if (!cleanup || reset) {
-    for (const folder of await readdir(resolve(root, "apps/web/dist"))) {
-      const path = resolve(root, "apps/web/dist", folder, "wrangler.json");
-      if (!existsSync(path)) continue;
-      const built = z
-        .looseObject({ name: z.string() })
-        .parse(JSON.parse(await readFile(path, "utf8")));
-      if (built.name === target.api)
-        deploymentArtifact(built, target, sha, "11111111-1111-4111-8111-111111111111");
-      else if (built.name === target.web)
-        z.object({
-          vars: z.object({
-            TABLECAST_RELEASE_SHA: z.literal(sha),
-            TABLECAST_ENV: z.literal(target.environment),
-          }),
-          services: z
-            .array(
-              z.object({ binding: z.literal("TABLECAST_API"), service: z.literal(target.api) }),
-            )
-            .length(1),
-        }).parse(built);
-      outputConfigs.push({ name: built.name, path });
-    }
-    if (
-      ![target.api, target.web].every((name) =>
-        outputConfigs.some((config) => config.name === name),
-      )
-    )
-      throw new Error("対象環境のCI成果物が揃っていません。");
+    outputConfigs = deploymentBuildOutput(
+      await readBuildOutput(resolve(root, "apps/web")),
+      target,
+      sha,
+    );
   }
+  const [existingStorage, existingNamespaces, workerList] = await Promise.all([
+    resources(false),
+    verifyDurableNamespaces(),
+    cloudflare("workers/scripts"),
+  ]);
+  const workers = z.array(z.object({ id: z.string() })).parse(workerList);
+  await Promise.all(
+    [target.api, target.web]
+      .filter((name) => workers.some((worker) => worker.id === name))
+      .map(async (name) => {
+        const actual = z
+          .record(z.string(), z.unknown())
+          .parse(await cloudflare(`workers/scripts/${name}/settings`));
+        assertWorkerOwner(
+          actual,
+          target,
+          name === target.api,
+          existingStorage.database?.uuid,
+          existingNamespaces,
+        );
+      }),
+  );
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
-  const { database, bucketExists, bucketCreated } = await resources(!cleanup);
+  // 同じ配備内で所有確認済みの既存資源を使い、欠落時・削除・resetは従来の経路へ進む。
+  const { database, bucketExists, bucketCreated } =
+    !cleanup && !resetFinished && existingStorage.database && existingStorage.bucketExists
+      ? existingStorage
+      : await resources(!cleanup);
   if (reset && (!database || !bucketExists))
     throw new Error("stagingのD1・R2が揃っていません。所有資源を確認してください。");
   if (!database && !bucketExists) {
@@ -318,31 +378,20 @@ async function main(resetFinished = false) {
     return;
   }
   if (!database) throw new Error("D1の所有台帳がありません。残存R2を手動確認してください。");
-  const configs = deploymentConfigs(
+  const options = deploymentOptions(
     target,
     cleanup ? "0".repeat(40) : sha,
     database.uuid,
-    root,
-    z
-      .record(z.string(), z.unknown())
-      .parse(parse(await readFile(resolve(root, "apps/api/wrangler.jsonc"), "utf8"))),
-    z
-      .record(z.string(), z.unknown())
-      .parse(parse(await readFile(resolve(root, "apps/web/wrangler.jsonc"), "utf8"))),
     process.env.TABLECAST_OTEL_CAPTURE_CONTENT ?? "true",
   );
-  const apiPath = resolve(directory, "api.json");
-  const webPath = resolve(directory, "web.json");
-  await writeFile(apiPath, JSON.stringify(configs.api, null, 2));
-  await writeFile(webPath, JSON.stringify(configs.web, null, 2));
+  const apiConfig = apiSdkConfiguration(options.api);
 
   if (!cleanup && secrets) {
     await writeFile(resolve(directory, "secrets.json"), JSON.stringify(secrets), { mode: 0o600 });
     await currentRevision(target, sha);
   }
   const headers = {
-    authorization: `Bearer ${secrets?.TABLECAST_VOICE_API_TOKEN ?? ""}`,
-    ...(target.emulate && secrets
+    ...(target.environment === "preview" && secrets
       ? {
           "CF-Access-Client-Id": secrets.CF_ACCESS_CLIENT_ID ?? "",
           "CF-Access-Client-Secret": secrets.CF_ACCESS_CLIENT_SECRET ?? "",
@@ -360,10 +409,10 @@ async function main(resetFinished = false) {
             name: `${target.web}-storage`,
             account_id: tablecastAccountId,
             compatibility_date: "2026-09-03",
-            d1_databases: configs.api.d1_databases.map((value) => ({ ...value, remote: true })),
+            d1_databases: apiConfig.d1_databases.map((value) => ({ ...value, remote: true })),
             r2_buckets:
               bucketExists || bucketCreated
-                ? configs.api.r2_buckets.map((value) => ({ ...value, remote: true }))
+                ? apiConfig.r2_buckets.map((value) => ({ ...value, remote: true }))
                 : [],
           }),
         );
@@ -427,7 +476,7 @@ async function main(resetFinished = false) {
           };
           if (cleanup) {
             // Webを先に止め、他のWorkerが参照するAPIをforceで消さない。
-            const workers = z
+            const registeredWorkers = z
               .array(z.object({ id: z.string() }))
               .parse(await cloudflare("workers/scripts"));
             if (reset) {
@@ -436,22 +485,19 @@ async function main(resetFinished = false) {
                 maintenance,
                 'export default {fetch(){return new Response("TableCast staging maintenance", {status:503, headers:{"Cache-Control":"no-store"}})}};',
               );
-              const maintenanceConfig = resolve(directory, "maintenance.json");
-              await writeFile(
-                maintenanceConfig,
-                JSON.stringify({
+              await deployTemporaryWorker(
+                {
                   name: target.web,
-                  account_id: tablecastAccountId,
-                  main: maintenance,
-                  compatibility_date: "2026-09-03",
-                  workers_dev: true,
-                  preview_urls: false,
-                }),
+                  entrypoint: maintenance,
+                  compatibilityDate: "2026-09-03",
+                  workersDev: true,
+                  previewUrls: false,
+                },
+                "maintenance",
               );
-              await wrangler(["deploy", "--config", maintenanceConfig]);
               await recordReset("maintenance");
-            } else if (workers.some((value) => value.id === target.web)) {
-              await cloudflare(`workers/scripts/${target.web}`, "DELETE");
+            } else if (registeredWorkers.some((value) => value.id === target.web)) {
+              await cf(["workers", "delete", target.web, "--force"]);
             }
             const namespaces = z
               .array(z.object({ id: z.string(), script: z.string(), class: z.string() }))
@@ -470,34 +516,50 @@ async function main(resetFinished = false) {
               if (owned.some((value) => value.id === application.durable_objects?.namespace_id))
                 await cloudflare(`containers/applications/${application.id}`, "DELETE");
             }
-            if (workers.some((value) => value.id === target.api)) {
+            if (reset) {
+              const maintenanceApi = resolve(directory, "maintenance-api.js");
+              await writeFile(
+                maintenanceApi,
+                `export {StoreEvents, TablecastEmulate} from ${JSON.stringify(resolve(root, "apps/api/src/worker.ts"))}; export default {fetch(){return new Response("TableCast staging maintenance", {status:503})}};`,
+              );
+              const configured = apiCloudflareConfig(options.api);
+              await deployTemporaryWorker(
+                {
+                  ...configured.worker,
+                  entrypoint: maintenanceApi,
+                  exports: {
+                    StoreEvents: { type: "durable-object", storage: "sqlite" },
+                    TablecastEmulate: { type: "durable-object", storage: "sqlite" },
+                  },
+                },
+                "maintenance-api",
+              );
+              await verifyDurableNamespaces();
+            } else if (registeredWorkers.some((value) => value.id === target.api)) {
               if (owned.length) {
                 const retired = resolve(directory, "retired.js");
                 await writeFile(
                   retired,
                   'export default { fetch() { return new Response("PR closed", { status: 410 }); } };',
                 );
-                const retiredConfig = resolve(directory, "retired.json");
-                await writeFile(
-                  retiredConfig,
-                  JSON.stringify({
+                await deployTemporaryWorker(
+                  {
                     name: target.api,
-                    account_id: tablecastAccountId,
-                    main: retired,
-                    compatibility_date: "2026-09-03",
-                    workers_dev: false,
-                    preview_urls: false,
+                    entrypoint: retired,
+                    compatibilityDate: "2026-09-03",
+                    workersDev: false,
+                    previewUrls: false,
                     exports: Object.fromEntries(
                       owned.map((value) => [
                         value.class,
                         { type: "durable-object", state: "deleted" },
                       ]),
                     ),
-                  }),
+                  },
+                  "retired",
                 );
-                await wrangler(["deploy", "--config", retiredConfig]);
               }
-              await cloudflare(`workers/scripts/${target.api}`, "DELETE");
+              await cf(["workers", "delete", target.api, "--force"]);
             }
             await recordReset("runtime-removed");
             if (bucketExists) {
@@ -525,14 +587,13 @@ async function main(resetFinished = false) {
             await recordReset("data-cleared");
           } else {
             await currentRevision(target, sha);
-            await wrangler([
+            await cf([
               "d1",
               "migrations",
               "apply",
-              "TABLECAST_DB",
-              "--remote",
-              "--config",
-              apiPath,
+              database.uuid,
+              "--dir",
+              resolve(root, "apps/api/migrations"),
             ]);
             if (target.emulate && secrets) {
               const seeded = await seedPreviewDatabase(
@@ -550,6 +611,7 @@ async function main(resetFinished = false) {
                   baseTime: Date.now(),
                   profile: "demo",
                 },
+                seedTemplate,
               );
               if (seeded) {
                 await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });
@@ -567,7 +629,7 @@ async function main(resetFinished = false) {
       if (cleanup || !target.emulate) return;
       console.time("検証済みイメージの送信");
       try {
-        await wrangler(["containers", "push", `tablecast-emulate:${sha}`]);
+        await cf(["containers", "push", "--tag", `tablecast-emulate:${sha}`]);
       } finally {
         console.timeEnd("検証済みイメージの送信");
       }
@@ -611,43 +673,60 @@ async function main(resetFinished = false) {
     { mode: 0o600 },
   );
   for (const name of [target.api, target.web]) {
-    const config = outputConfigs.find((value) => value.name === name);
+    const config = outputConfigs.find((value) => value.config.name === name);
     if (!config) throw new Error(`Viteの生成configがありません: ${name}`);
-    const built = z
-      .looseObject({ vars: z.record(z.string(), z.unknown()) })
-      .parse(JSON.parse(await readFile(config.path, "utf8")));
+    const built = config.config;
     const artifact =
-      name === target.api ? deploymentArtifact(built, target, sha, database.uuid) : built;
+      name === target.api ? bindDeploymentDatabase(built, target, database.uuid) : built;
     await writeFile(
-      config.path,
+      config.configPath,
       JSON.stringify({
         ...artifact,
-        vars: {
-          ...artifact.vars,
-          TABLECAST_OTEL_CAPTURE_CONTENT: configs.api.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
+        env: {
+          ...artifact.env,
+          TABLECAST_OTEL_CAPTURE_CONTENT: {
+            type: "text",
+            value: apiConfig.vars.TABLECAST_OTEL_CAPTURE_CONTENT,
+          },
         },
       }),
     );
     if (name === target.api) {
       await currentRevision(target, sha);
-      await retireLegacyVoiceContainer();
     }
-    await wrangler([
-      "deploy",
-      "--config",
-      config.path,
-      ...(name === target.api
-        ? [
-            "--secrets-file",
-            resolve(directory, "secrets.json"),
-            "--containers-rollout",
-            "immediate",
-          ]
-        : ["--secrets-file", webSecrets]),
-    ]);
+    const before = name === target.api ? await verifyDurableNamespaces() : [];
+    await cf(
+      [
+        "deploy",
+        "--prebuilt",
+        "--mode",
+        target.environment,
+        "--worker",
+        name,
+        ...(name === target.api
+          ? [
+              "--secrets-file",
+              resolve(directory, "secrets.json"),
+              "--containers-rollout",
+              "immediate",
+            ]
+          : ["--secrets-file", webSecrets]),
+      ],
+      resolve(root, "apps/web"),
+    );
+    if (name === target.api) {
+      const after = await verifyDurableNamespaces();
+      if (
+        before.some(
+          (namespace) =>
+            !after.some((value) => value.id === namespace.id && value.class === namespace.class),
+        )
+      )
+        throw new Error("再配備後に既存DO namespaceを確認できません。");
+    }
   }
   await waitForRelease(target.origin, headers, sha);
-  if (target.environment === "staging") await verifyStagingMcp();
+  if (target.environment === "staging") await verifyStaging();
   console.info(`配備確認済み: ${target.origin} (${sha})`);
   if (process.env.GITHUB_STEP_SUMMARY)
     await writeFile(process.env.GITHUB_STEP_SUMMARY, `配備URL: ${target.origin}\n\nSHA: ${sha}\n`, {

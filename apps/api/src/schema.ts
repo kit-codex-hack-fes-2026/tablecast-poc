@@ -1,5 +1,18 @@
 // Webと外部consumer向けの公開契約。定義は各業務moduleが所有する。
 export {
+  customerConsentVersion,
+  enrolCustomerSchema,
+  customerPreferencesSchema,
+} from "./modules/customers/model";
+export {
+  gameManifestSchema,
+  gamePackageSchema,
+  gameMessageSchema,
+  gameStateSchema,
+} from "./modules/games/model";
+export type { GameManifest, GamePackage, GameState } from "./modules/games/model";
+export {
+  maxImageBytes,
   imageMetadataSchema,
   imageSourceSchema,
   uploadedImageSchema,
@@ -12,13 +25,24 @@ export {
   optionSchema,
   planSchema,
   productSchema,
+  optionConditionSchema,
+  optionConditionsSchema,
+  conditionLimits,
 } from "./modules/catalog/model";
-export type { Modifier, Plan, Product } from "./modules/catalog/model";
+export type {
+  Modifier,
+  Plan,
+  Product,
+  OptionCondition,
+  OptionConditions,
+} from "./modules/catalog/model";
 export {
   catalogSchema,
   configDraftSchema,
   configurationIssueSchema,
   configurationSchema,
+  draftChoicesPageSchema,
+  conditionPreviewSchema,
 } from "./modules/configuration/model";
 export type {
   Catalog,
@@ -37,6 +61,7 @@ export {
   selectionSchema,
   snapshotSchema,
   submitSchema,
+  conditionIssueSchema,
 } from "./modules/orders/model";
 export type {
   Bill,
@@ -55,6 +80,11 @@ export {
   eventsSchema,
   historyPageSchema,
   historyQuerySchema,
+  storeTimeZone,
+  storeDateSchema,
+  timelineQuerySchema,
+  timelineSessionSchema,
+  timelinePageSchema,
   sessionEventsPageSchema,
   sessionEventsQuerySchema,
   tableEventSchema,
@@ -67,6 +97,9 @@ export type {
   ClosedSessionSummary,
   HistoryPage,
   HistoryQuery,
+  TimelinePage,
+  TimelineQuery,
+  TimelineSession,
   SessionEventsPage,
   SessionEventsQuery,
   TableEvent,
@@ -94,3 +127,52 @@ export type { ApiError, Locale } from "./platform/model";
 export { showProductsSchema } from "./modules/voice/model";
 
 export { demoSchema, demoUpdateSchema, type Demo, type DemoUpdate } from "./modules/demo/model";
+
+export {
+  castInstructionSchema,
+  instructionDocumentSchema,
+  instructionText,
+  instructionLimit,
+  type CastInstruction,
+  type InstructionDocument,
+  type InstructionBlock,
+} from "./modules/configuration/instruction-model";
+
+export {
+  statisticsQuerySchema,
+  statisticsResultSchema,
+  type StatisticsQuery,
+  type StatisticsResult,
+} from "./modules/statistics/model";
+
+export {
+  customerMemoryInputSchema,
+  customerConsumptionSchema,
+} from "./modules/customer-memory/model";
+
+export {
+  pointRulesSchema,
+  pointPolicySchema,
+  confirmPointsSchema,
+  pointCorrectionSchema,
+} from "./modules/customer-points/model";
+
+export {
+  couponRuleSchema,
+  couponDefinitionSchema,
+  issueCouponSchema,
+  applyCouponSchema,
+  cancelCouponUseSchema,
+} from "./modules/customer-coupons/model";
+
+export {
+  appearanceSchema,
+  bannerSchema,
+  brandingSchema,
+  themeImageSchema,
+  themePartSchema,
+  themeParts,
+  themeFonts,
+  themeCssRules,
+} from "./modules/appearance/model";
+export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";

@@ -20,6 +20,18 @@ export async function recordConversationItems(
     409,
   );
   const db = services.db;
+  // 会員参加後の字幕は接続中の端末内だけに置き、卓全体の通知へ保存しない。
+  const personal = await db
+    .select({ id: business.customerContexts.sessionId })
+    .from(business.customerContexts)
+    .where(
+      and(
+        eq(business.customerContexts.sessionId, session.id),
+        eq(business.customerContexts.storeId, actor.storeId),
+      ),
+    )
+    .get();
+  if (personal) return { ok: true };
   const current = and(
     eq(business.tableSessions.id, session.id),
     eq(business.tableSessions.store_id, actor.storeId),

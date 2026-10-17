@@ -4,6 +4,7 @@ import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { notifyStore, voiceTurnEvent } from "../tables/mutations";
+import { recordCustomerMemorySource } from "../customer-memory/service";
 import { getSession } from "../tables/queries";
 import type { VoiceDiagnostics } from "./diagnostics";
 import { logVoiceTurn } from "./diagnostics";
@@ -72,6 +73,20 @@ export async function finishVoiceTurn(
           sql`${status}<>'completed'`,
         ),
       ),
+    db
+      .delete(business.customerMemorySources)
+      .where(
+        and(
+          eq(business.customerMemorySources.voiceSessionId, voiceSessionId),
+          eq(business.customerMemorySources.turnId, turnId),
+          notExists(
+            db
+              .select({ id: business.customerMemories.id })
+              .from(business.customerMemories)
+              .where(eq(business.customerMemories.sourceId, business.customerMemorySources.id)),
+          ),
+        ),
+      ),
     voiceTurnEvent(
       services,
       and(
@@ -81,7 +96,7 @@ export async function finishVoiceTurn(
       ),
     ),
   ]);
-  if (result[1]?.meta.changes === 1 || result[4]?.meta.changes === 1) {
+  if (result[1]?.meta.changes === 1 || result[5]?.meta.changes === 1) {
     const source = await db
       .select({
         storeId: business.voiceTurns.store_id,
@@ -238,6 +253,11 @@ export async function startVoiceTurn(
     return { kind: "skipped" } as const;
   }
   ensure(result[0]?.meta.changes === 1, "VOICE_SESSION_STALE", 409);
+  if (!proactive) {
+    const last = input.messages.findLast((message) => message.role === "user");
+    if (last)
+      await recordCustomerMemorySource(services, { ...actor, turnId: input.turnId }, last.content);
+  }
   logVoiceTurn(diagnostics, "accepted");
   waitUntil(notifyStore(services, actor.storeId, actor.tableSessionId));
   return { kind: "accepted", turnId: input.turnId } as const;

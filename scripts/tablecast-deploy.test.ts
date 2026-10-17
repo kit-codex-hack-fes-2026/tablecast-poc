@@ -85,10 +85,14 @@ describe("PR商品画像の投入", () => {
     await expect(uploadPreviewImage(media, stored.key, bytes)).rejects.toThrow("R2画像投入失敗");
     expect(media.put).not.toHaveBeenCalled();
   });
-  test("10001の直後は存在を再確認し、未保存なら条件付きで再送する", async () => {
+  test.each([
+    { code: "10001", message: "put: Internal error (10001)" },
+    // CF-R2-ErrorのないHTTP500では、bindingからstatusのないcode0が返る。
+    { code: "0", message: "put: Unspecified error (0)" },
+  ])("R2 $codeの直後は存在を再確認し、未保存なら条件付きで再送する", async ({ message }) => {
     vi.useFakeTimers();
     const media = bucket();
-    media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
+    media.put.mockRejectedValueOnce(new Error(message));
     const result = uploadPreviewImage(media, stored.key, bytes);
     await vi.runAllTimersAsync();
     await result;
@@ -100,14 +104,14 @@ describe("PR商品画像の投入", () => {
       expect.objectContaining({ md5: stored.etag, onlyIf: { etagDoesNotMatch: "*" } }),
     );
   });
-  test.each([undefined, null])(
-    "応答だけ失われたputは保存内容を確認して再送しない（一覧結果%s）",
-    async (known) => {
+  test.each(["10001", "0"].flatMap((code) => [undefined, null].map((known) => ({ code, known }))))(
+    "R2 $codeで応答だけ失われたputは保存内容を確認して再送しない（一覧結果$known）",
+    async ({ code, known }) => {
       vi.useFakeTimers();
       const media = bucket();
       if (known === undefined) media.head.mockResolvedValueOnce(null);
       media.head.mockResolvedValueOnce(stored);
-      media.put.mockRejectedValueOnce(new Error("put: Internal error (10001)"));
+      media.put.mockRejectedValueOnce(new Error(`put: failure (${code})`));
       const result = uploadPreviewImage(media, stored.key, bytes, undefined, known);
       await vi.runAllTimersAsync();
       await result;
@@ -116,7 +120,10 @@ describe("PR商品画像の投入", () => {
   );
   test.each([
     { code: "10001", attempts: 3 },
+    { code: "0", attempts: 3 },
+    { code: "10002", attempts: 1 },
     { code: "10003", attempts: 1 },
+    { code: "10020", attempts: 1 },
   ])("R2 $codeは上限$attempts回で失敗しkeyとcodeを示す", async ({ code, attempts }) => {
     vi.useFakeTimers();
     const media = bucket();
@@ -139,7 +146,7 @@ describe("PR商品画像の投入", () => {
 });
 
 describe("商品画像群の投入", () => {
-  test("4件まで並行し、失敗後も開始済み処理を回収して次の画像群を投入しない", async () => {
+  test("4件まで並行し、失敗後は未開始の画像を送らず開始済み処理を回収する", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     const started = Promise.withResolvers<void>();
     const fail = Promise.withResolvers<void>();

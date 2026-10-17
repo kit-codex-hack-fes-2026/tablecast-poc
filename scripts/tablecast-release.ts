@@ -198,6 +198,23 @@ export function renderRelease(input: ReleaseInput, previous: string, template: s
   );
 }
 
+export function supplementMergedPulls(changes: ReleaseChange[], closed: Pull[]): ReleaseChange[] {
+  return changes.map((change) => {
+    const pulls = new Map(change.pulls.map((pull) => [pull.number, pull]));
+    for (const pull of closed) {
+      if (
+        pull.merged_at &&
+        pull.head.repo?.full_name === tablecastRepository &&
+        pull.head.ref !== "staging" &&
+        pull.merge_commit_sha === change.sha &&
+        !pulls.has(pull.number)
+      )
+        pulls.set(pull.number, pull);
+    }
+    return { ...change, pulls: [...pulls.values()] };
+  });
+}
+
 async function collect(base: string, head: string): Promise<ReleaseChange[]> {
   const commits = (await git("rev-list", "--reverse", `${base}..${head}`))
     .split("\n")
@@ -209,7 +226,11 @@ async function collect(base: string, head: string): Promise<ReleaseChange[]> {
       .parse(await github(`${prefix}/commits/${sha}/pulls?per_page=100`));
     changes.push({ sha, message: await git("show", "-s", "--format=%B", sha), pulls });
   }
-  return changes;
+  // Stackの全段が同じmerge SHAを持っても、commit関連PR APIは下段だけを返す場合がある。
+  const closed = z
+    .array(pullSchema)
+    .parse(await github(`${prefix}/pulls?state=closed&per_page=100`));
+  return supplementMergedPulls(changes, closed);
 }
 async function validation(head: string) {
   const runs = z
@@ -243,10 +264,6 @@ async function validation(head: string) {
   let served = "未確認";
   try {
     const response = await fetch(`${deploymentTarget(undefined, "staging").origin}/api/health`, {
-      headers: {
-        "CF-Access-Client-Id": process.env.CF_ACCESS_CLIENT_ID ?? "",
-        "CF-Access-Client-Secret": process.env.CF_ACCESS_CLIENT_SECRET ?? "",
-      },
       redirect: "manual",
       signal: AbortSignal.timeout(10000),
       cache: "no-store",

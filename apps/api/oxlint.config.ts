@@ -4,6 +4,8 @@ import rootConfig from "../../oxlint.config.ts";
 const root = import.meta.dirname;
 // ファイル単位で分類する。module配下への未分類ファイル追加も検査対象にする。
 const files = [
+  ["config-type", "src/cloudflare-env.d.ts"],
+  ["config", "cloudflare.config.ts"],
   ["app", "src/app.ts"],
   ["worker", "src/worker.ts"],
   ["client", "src/client.ts"],
@@ -28,8 +30,16 @@ const files = [
   ],
   ["service", "src/modules/voice/runtime.ts"],
   ["provider", "src/modules/voice/catalog.ts"],
-  ["pure", "src/modules/{catalog/pricing,auth/policy,voice/prompt,voice/diagnostics}.ts"],
-  ["mutation", "src/modules/tables/mutations.ts"],
+  [
+    "pure",
+    "src/modules/{catalog/pricing,catalog/conditions,auth/policy,voice/prompt,voice/diagnostics}.ts",
+  ],
+  ["mutation", "src/modules/{tables,customer-coupons}/mutations.ts"],
+  ["service", "src/modules/customer-coupons/issuance.ts"],
+  ["model", "src/modules/configuration/instruction-model.ts"],
+  ["pure", "src/modules/configuration/instruction-response.ts"],
+
+  ["model", "src/modules/appearance/css-tree.d.ts"],
   ["model", "src/modules/*/model.ts"],
   ["query", "src/modules/*/{queries,history}.ts"],
   ["service", "src/modules/*/service.ts"],
@@ -37,6 +47,7 @@ const files = [
 ];
 // 左がimport元、右が許可する依存先。外部packageとContextのtype-onlyは別に制限する。
 const dependencies = {
+  "config-type": ["config", "worker"],
   app: ["route", "store-routes", "http", "context"],
   worker: ["app", "runtime", "telemetry", "container-metrics"],
   "container-metrics": [],
@@ -173,7 +184,11 @@ export default defineConfig({
                   captured: {
                     module: [
                       "catalog",
+                      "statistics",
+                      "customer-points",
+                      "customer-coupons",
                       "configuration",
+                      "games",
                       "devices",
                       "media",
                       "orders",
@@ -190,6 +205,10 @@ export default defineConfig({
             disallow: { to: { module: { origin: ["external", "core"] } } },
           },
           { from: { file: { categories: "model" } }, allow: { to: { module: { source: "zod" } } } },
+          {
+            from: { file: { path: "src/modules/appearance/{model.ts,css-tree.d.ts}" } },
+            allow: { to: { module: { source: ["css-tree", "css-tree/*"] } } },
+          },
           {
             from: { file: { categories: "db" } },
             allow: { to: { module: { source: ["drizzle-orm", "drizzle-orm/*"] } } },

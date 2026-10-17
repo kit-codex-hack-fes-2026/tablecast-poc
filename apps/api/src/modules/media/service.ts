@@ -176,6 +176,13 @@ export async function requireConfigurationImages(
   configuration: Configuration,
 ) {
   const images = [
+    ...[
+      configuration.branding?.logo,
+      ...Object.values(configuration.appearance?.assets ?? {}),
+      ...(configuration.banners ?? []).map((banner) => banner.image),
+    ]
+      .filter((image) => image != null)
+      .map((image) => ({ ...image, verifySource: true })),
     ...configuration.products.map((product) => ({ ...product, verifySource: true })),
     ...configuration.products.flatMap((product) =>
       product.modifiers.flatMap((modifier) =>
@@ -187,6 +194,19 @@ export async function requireConfigurationImages(
       ),
     ),
   ].filter((image) => image.imageKey?.startsWith("tablecast/uploads/"));
+  return requireImageAssets(services, actor, images);
+}
+
+export async function requireImageAssets(
+  services: ApiServices,
+  actor: Actor,
+  images: {
+    imageKey?: string | null;
+    imageKind: z.infer<typeof imageMetadataSchema>["imageKind"];
+    imageSource?: z.infer<typeof imageMetadataSchema>["imageSource"] | null;
+    verifySource: boolean;
+  }[],
+) {
   const stored = new Map(
     await Promise.all(
       [...new Set(images.map((product) => product.imageKey))].map(async (key) => {

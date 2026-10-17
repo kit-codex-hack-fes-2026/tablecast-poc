@@ -4,6 +4,7 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useId, useState } from "react";
 import { tv } from "tailwind-variants";
 import { MenuOptionImage } from "../../components/menu-option-image";
+import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
@@ -12,9 +13,8 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
 
-const allergenLabels: Partial<Record<string, keyof typeof m>> = {
+const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
   crustaceans: "kiosk_allergen_crustaceans",
   molluscs: "kiosk_allergen_molluscs",
   buckwheat: "kiosk_allergen_buckwheat",
@@ -262,34 +262,34 @@ export function ProductPage({
             )}
           </fieldset>
         ))}
-        <div className="bg-surface-subtle rounded-md p-4 mt-1">
-          <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-          <p className="mb-2 text-sm font-semibold">
-            {product.allergens.contains
-              .map((item) => {
-                const key = allergenLabels[item];
-                return key ? t(key) : item;
-              })
-              .join(t("kiosk_allergen_separator")) ||
-              (product.allergens.evidence === "verified"
-                ? t("kiosk_allergens_none")
-                : t("kiosk_unknown"))}
-          </p>
-          <p className="block text-xs leading-loose text-muted-foreground">
-            {product.allergens.note[locale] || t("kiosk_unknown")}
-          </p>
-          {product.allergens.vegan === "yes" && (
-            <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
-          )}
-          {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-            <p className="block text-xs leading-loose text-muted-foreground">
-              {t("kiosk_cross_contact")}
-            </p>
-          )}
-        </div>
+        <ProductAllergens product={product} />
       </div>
+      {product.modifiers.flatMap((group) =>
+        group.options.map((option) =>
+          option.conditions && selections.some((selection) => selection.optionId === option.id) ? (
+            <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
+              <p className="font-semibold">{option.text[locale].displayName}</p>
+              {option.conditions?.requires && (
+                <p>
+                  {t("condition_requires")}：
+                  <ConditionSummary expression={option.conditions.requires} product={product} />
+                </p>
+              )}
+              {option.conditions?.excludes && (
+                <p>
+                  {t("condition_excludes")}：
+                  <ConditionSummary expression={option.conditions.excludes} product={product} />
+                </p>
+              )}
+            </div>
+          ) : null,
+        ),
+      )}
       <ErrorNotice error={error} />
-      <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3">
+      <div
+        data-theme-part="checkout"
+        className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3"
+      >
         <div
           data-ui="quantity-control"
           className="inline-flex items-center border border-border rounded-md shrink-0"
@@ -319,6 +319,7 @@ export function ProductPage({
           </Button>
         </div>
         <Button
+          data-theme-part="action-button"
           variant="default"
           size="lg"
           type="button"
@@ -338,5 +339,36 @@ export function ProductPage({
         </Button>
       </div>
     </section>
+  );
+}
+
+function ProductAllergens({ product }: { product: Product }) {
+  const { locale, t } = useI18n();
+  return (
+    <div className="bg-surface-subtle rounded-md p-4 mt-1">
+      <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
+      <p className="mb-2 text-sm font-semibold">
+        {product.allergens.contains
+          .map((item) => {
+            const key = allergenLabels[item];
+            return key ? t(key) : item;
+          })
+          .join(t("kiosk_allergen_separator")) ||
+          (product.allergens.evidence === "verified"
+            ? t("kiosk_allergens_none")
+            : t("kiosk_unknown"))}
+      </p>
+      <p className="block text-xs leading-loose text-muted-foreground">
+        {product.allergens.note[locale] || t("kiosk_unknown")}
+      </p>
+      {product.allergens.vegan === "yes" && (
+        <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
+      )}
+      {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
+        <p className="block text-xs leading-loose text-muted-foreground">
+          {t("kiosk_cross_contact")}
+        </p>
+      )}
+    </div>
   );
 }

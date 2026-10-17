@@ -23,4 +23,10 @@ runs:
       run: |
         mkdir -p /tmp/tablecast-apt
         echo 'Dir::Cache::archives "/tmp/tablecast-apt";' | sudo tee /etc/apt/apt.conf.d/99-tablecast-cache > /dev/null
+        if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then
+          # 破棄されるVMのOS依存展開だけに適用し、dpkg DBと試験中のI/Oは変更しない。
+          tablecast_apt_io_config=/etc/apt/apt.conf.d/99-tablecast-install-io
+          trap 'sudo rm -f "$tablecast_apt_io_config"' EXIT
+          echo 'DPkg::Options { "--force-unsafe-io"; };' | sudo tee "$tablecast_apt_io_config" > /dev/null
+        fi
         bunx --no-install playwright install-deps ${{ inputs.browsers }}

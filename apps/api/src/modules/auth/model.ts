@@ -2,6 +2,7 @@ export type Actor = {
   kind: "device" | "staff" | "voice" | "mcp";
   storeId: string;
   tableSessionId?: string;
+  deviceId?: string;
   demoId?: string;
   userId?: string;
   role?: string;

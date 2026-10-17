@@ -10,14 +10,12 @@ import { configuration, resetFixtureStorage } from "./fixture";
 it("デモ移行前に卓・注文・会話がある場合、移行しても値・外部キー・開卓制約を維持する", async () => {
   await resetFixtureStorage();
   const migrations = inject("tablecastMigrations");
-  const demoMigration = migrations.find((migration) =>
+  const demoIndex = migrations.findIndex((migration) =>
     migration.name.includes("0013_tablecast_demo"),
   );
-  if (!demoMigration) throw new Error("デモmigrationが必要です");
-  await applyD1Migrations(
-    env.TABLECAST_DB,
-    migrations.filter((migration) => migration !== demoMigration),
-  );
+  if (demoIndex < 0) throw new Error("デモmigrationが必要です");
+  // 旧schemaへ後続migrationを先行適用せず、本番と同じ順序で移行する。
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, demoIndex));
   await fixtureDb.insert(auth.organization).values({
     id: "tablecast-migration-org",
     name: "移行試験",
@@ -71,7 +69,7 @@ it("デモ移行前に卓・注文・会話がある場合、移行しても値�
   });
   const beforeOrders = await fixtureDb.select().from(business.orders);
   const beforeEvents = await fixtureDb.select().from(business.tableEvents);
-  await applyD1Migrations(env.TABLECAST_DB, [demoMigration]);
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(demoIndex));
   expect(await fixtureDb.select().from(business.orders)).toEqual(beforeOrders);
   expect(await fixtureDb.select().from(business.tableEvents)).toEqual(beforeEvents);
   expect(await fixtureDb.select().from(business.tableSessions)).toEqual([

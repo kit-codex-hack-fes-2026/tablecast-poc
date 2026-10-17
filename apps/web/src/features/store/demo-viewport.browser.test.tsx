@@ -7,7 +7,7 @@ import "../../styles.css";
 
 afterEach(cleanup);
 const view = (device: DemoDevice, portrait: boolean) => (
-  <LocaleProvider>
+  <LocaleProvider initialLocale="ja" persist={false}>
     <div style={{ width: 1000, height: 700, display: "flex" }}>
       <DemoViewport src="about:blank" device={device} portrait={portrait} />
     </div>
