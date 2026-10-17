@@ -164,15 +164,23 @@ workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツ
 
 PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰はstaging統合後のpush CIで検出する。stagingのWebKitが失敗した場合はstaging配備へ進めず、修正後の両browser成功を確認してからreleaseの受入判定を行う。PR CI成功をiPad実機やWebKitの確認済みと扱わない。
 
-Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。
+Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component Testは標準の`screenshotFailures: true`を使い、pixel比較に使わない成功時のPNGは毎回生成しない。表示・focus・寸法・画像読込のassertionは維持し、viewport変更後の寸法は撮影を暗黙の待機にせず`expect.poll`で確認する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。目視確認用の画像は必要な作業で別途取得する。
+
+Playwrightのreport用git差分収集は`captureGitInfo.diff: false`とし、浅いcheckoutの不足baseをmetadataのために取得しない。コミット情報と試験本体の`--only-changed`用の履歴取得は維持する。CIが先行取得したMailpit imageはglobal setupの`docker create --pull=missing`で再利用し、同じtagを再度pullしない。ローカルでimageがない場合はcreateが取得する。
 
 APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。Vitestの標準shardはfile単位であり、一つの長いcaseを分割しない。shardを増やす前に、最遅file、runnerとruntimeの準備、総runner時間、全必須jobの完了時刻を比較する。ファイル内は直列で、各caseのD1 reset・migrationを維持する。導入済みCloudflare pluginにはmigration済みbindingのsnapshot復元APIがないため、caseごとの初期化を`beforeAll`へ持ち上げない。
+
+共通setupはstorageのreset・migrationに必要な依存だけを読み込み、業務の認証fixtureを全fileへ持ち込まない。bindingを使わないHTTP応答の変換・入力検証は既存のNode unitへ置く。認証・メールの保証は本番handlerと実bindingで維持する。メール描画は実送信時に読み込み、メールを送らないAPI操作の初期化へ描画依存を含めない。setupからimportへ時間を移しただけで改善と扱わず、準備・case実行・終了のwall timeを確認する。
+
+APIのbindings projectはVitest標準の`deps.optimizer.ssr`で認証ライブラリの公開入口を事前変換する。`node:`・`cloudflare:`・`workerd:`はnative moduleのまま解決し、DB・DOやWorkerをNodeの代替実装へ置換しない。再利用するのは依存コードの変換成果物だけであり、テストの成否・storage・caseの実行は再利用しない。Viteの通常の失効規則を使い、独自のbundle同期や実装sourceの事前bundleは追加しない。
 
 rootのVitestは`maxWorkers: 2`とする。CIのunit-webではruntimeを2枠、scripts-unit・Web unit・動画の各CLIを1枠にし、同じrunner内のVitest fileを最大5件に制限する。枠はCLIごとに適用され、rootの値だけで別processの枠まで制限できるとは扱わない。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得にも使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
 GitHub Actionsの`actions/cache`で静的解析・Workers buildと手動カタログbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。静的検査のlintはrootとworkspaceへ重複なく分担し、workspaceのlint・typecheckをTurboでcacheする。root lintはCLIで`apps/**`を除外して毎回実行し、各workspaceは直下のconfigを含む`.`全体を型付き解析する。formatはrootから全体を一度だけ確認する。対象と設定の責務は[静的解析](static-analysis.md#検査範囲とキャッシュの分担)を参照する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、WorkersのBuild OutputとStorybookの`storybook-static`を出力として復元する。選択したテストtaskは`cache: false`で実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メールと個々のテスト成果物は永続キャッシュへ入れない。
 
 型検査は各manifestの`typecheck` scriptから明示したネイティブCLIを実行する。TanStack・Storybook用の既存TypeScript APIとの併存と実行版の解決は[型付き解析と型検査](static-analysis.md#型付き解析と型検査)に従う。
+
+Bunの取得cacheは全jobが`actions/cache/restore`で復元し、`static`だけがfrozen install成功後に標準の`actions/cache/save`で保存する。新しいlockの同じcacheを全jobが圧縮・保存し直す競合を避け、保存専用jobや共通の開始待ちを作らない。保存されなくても各jobは固定依存を導入してから検査する。Turboを使うjobはcodegenより先にcacheを復元し、生成済みParaglideを復元できる場合は再生成を避ける。lock更新時の取得・圧縮費用と、同じlockのwarm実行を区別して測る。
 
 Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試行し、短縮効果を確認できなかったためCIでは採用しない。保存される時間はsetup・import・Worker準備を含まず、この構成の準備負荷を表さない。標準shardのfile分配もdurationでは変わらない。Bun・Turbo・ブラウザー・seedの既存cacheは維持し、選択した試験は毎回実行する。対象SHA・環境・計測結果はPRへ残す。[Vitestの実行順](https://vitest.dev/config/sequence.html#sequence-sequencer)
 

@@ -258,9 +258,7 @@ it.each([
     await expect.element(choose).toHaveAttribute("aria-pressed", "true");
     expect(approvals).toEqual([]);
     await tabTo(approve);
-    await page.screenshot({
-      path: `test-results/browser/tablecast-device-text-200-${locale}-${server.browser}.png`,
-    });
+
     await userEvent.keyboard("{Enter}");
     await expect
       .element(page.getByRole("heading", { name: labels.device_title, exact: true }))

@@ -71,9 +71,7 @@ describe.each([
       .element(page.getByRole("textbox", { name: labels.admin_reason }))
       .toHaveAccessibleDescription(labels.form_required);
     expect(requests).toHaveLength(0);
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-payment-required-${locale}.png`,
-    });
+
     await page.getByRole("button", { name: "日本語 / English" }).click();
     const next = locale === "ja" ? en : ja;
     await expect

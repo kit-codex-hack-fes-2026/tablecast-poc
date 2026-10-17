@@ -125,9 +125,6 @@ it.each([
       .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
       .not.toBeInTheDocument();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-customer-preferences-${locale}.png`,
-    });
   },
 );
 

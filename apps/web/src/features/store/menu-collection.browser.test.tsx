@@ -228,23 +228,24 @@ for (const locale of ["ja", "en"] as const) {
         screen.getByText(labels.common_result_count.replace("{count}", "1"), { exact: true }),
       )
       .toBeVisible();
-    for (const [label, width, height] of [
-      ["desktop", 1280, 800],
-      ["ipad-portrait", 768, 1024],
-      ["ipad-landscape", 1024, 768],
-      ["ipad-content", 728, 768],
+    for (const [width, height] of [
+      [1280, 800],
+      [768, 1024],
+      [1024, 768],
+      [728, 768],
     ] as const) {
       await page.viewport(width, height);
-      await page.screenshot({
-        path: `../../test-results/browser/tablecast-menu-filters-${locale}-${label}.png`,
-      });
-      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-      expect(
-        screen
-          .getByRole("link", { name: labels.admin_details, exact: true })
-          .element()
-          .getBoundingClientRect().right,
-      ).toBeLessThanOrEqual(width);
+
+      await expect.poll(() => document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+      await expect
+        .poll(
+          () =>
+            screen
+              .getByRole("link", { name: labels.admin_details, exact: true })
+              .element()
+              .getBoundingClientRect().right,
+        )
+        .toBeLessThanOrEqual(width);
     }
     await page.viewport(1024, 768);
     const previousSize = document.documentElement.style.fontSize;
@@ -253,9 +254,6 @@ for (const locale of ["ja", "en"] as const) {
       await expect
         .element(screen.getByRole("combobox", { name: labels.menu_availability }))
         .toBeVisible();
-      await page.screenshot({
-        path: `../../test-results/browser/tablecast-menu-filters-${locale}-large-text.png`,
-      });
     } finally {
       document.documentElement.style.fontSize = previousSize;
     }
@@ -307,7 +305,7 @@ it("カテゴリに所属商品と件数を表示し、プランに価格・対�
     .element(screen.getByText("ラストオーダー 終了15分前", { exact: true }))
     .toBeVisible();
   await expect.element(screen.getByText(/日本酒 · seasonal/)).toBeVisible();
-  await page.screenshot({ path: "../../test-results/browser/tablecast-menu-plans-ja.png" });
+
   await screen.getByRole("link", { name: ja.admin_details, exact: true }).click();
   await expect
     .element(screen.getByRole("heading", { name: ja.editor_tags, exact: true }))

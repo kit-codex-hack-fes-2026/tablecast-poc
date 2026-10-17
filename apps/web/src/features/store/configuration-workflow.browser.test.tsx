@@ -601,9 +601,6 @@ it.each([
       baseVersion: 1,
       expectedVersion: 3,
     });
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-workflow-${locale}.png`,
-    });
   },
 );
 
@@ -744,9 +741,6 @@ it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻
     );
     expect(publishedLink.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-    await page.screenshot({
-      path: "../../../test-results/browser/tablecast-workflow-ipad-large-text.png",
-    });
   } finally {
     document.documentElement.style.fontSize = previousFontSize;
     await page.viewport(previousViewport.width, previousViewport.height);

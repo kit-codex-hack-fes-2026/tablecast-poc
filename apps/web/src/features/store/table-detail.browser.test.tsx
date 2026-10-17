@@ -176,9 +176,7 @@ it.each(["ja", "en"] as const)(
     await page
       .getByRole("tab", { name: locale === "ja" ? "カート・注文" : "Basket & orders", exact: true })
       .click();
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-staff-conditions-${locale}.png`,
-    });
+
     await expect
       .element(
         page.getByText(locale === "ja" ? "トッピング / チョコレート" : "Toppings / Chocolate", {

@@ -51,6 +51,7 @@ export default defineConfig({
           include: ["src/**/*.browser.test.tsx"],
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),
@@ -97,6 +98,7 @@ export default defineConfig({
           maxWorkers: 2,
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),

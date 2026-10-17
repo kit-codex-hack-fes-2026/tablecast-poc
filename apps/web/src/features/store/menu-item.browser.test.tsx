@@ -176,7 +176,7 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
     await expect.element(save).toBeDisabled();
     await expect.element(form.getByText(ja.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(768, 1024);
-    await page.screenshot({ path: "../../../test-results/browser/tablecast-image-pending-ja.png" });
+
     save.element().closest("form")?.requestSubmit();
     await form.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true }).fill("710");
     expect(saved).toEqual([]);
@@ -249,9 +249,7 @@ it("未変更フォームでも画像の選択候補と取込失敗後の入力�
     .getByRole("button", { name: ja.editor_image_reset })
     .element()
     .scrollIntoView({ block: "center" });
-  await page.screenshot({
-    path: "../../../test-results/browser/tablecast-image-staged-reset-ja.png",
-  });
+
   await image.getByRole("button", { name: ja.editor_image_reset, exact: true }).click();
   await expect.element(save).toHaveAttribute("data-pwa-blocked", "false");
   const clearedBeforeUnload = new Event("beforeunload", { cancelable: true });
@@ -324,7 +322,7 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     await expect.element(removeGroup).toBeDisabled();
     await expect.element(form.getByText(en.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(1024, 768);
-    await page.screenshot({ path: "../../../test-results/browser/tablecast-image-pending-en.png" });
+
     const beforeUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(beforeUnload);
     expect(beforeUnload.defaultPrevented).toBe(true);

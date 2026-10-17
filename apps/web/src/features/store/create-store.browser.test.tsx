@@ -108,9 +108,7 @@ it.each([
       .element(page.getByRole("alert"))
       .toHaveTextContent(locale === "ja" ? "Too big" : "大きすぎる値");
     await page.getByRole("button", { name: "日本語 / English" }).click();
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-zod-local-${locale}.png`,
-    });
+
     // When: 修正して送ると、APIから店舗名の検証エラーを受ける。
     await page.getByRole("spinbutton").fill("10");
     await page.getByRole("button", { name: labels.stores_create }).click();
@@ -124,9 +122,7 @@ it.each([
     await expect
       .element(page.getByRole("textbox", { name: labels.org_slug }))
       .toHaveValue("tablecast-test");
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-zod-server-${locale}.png`,
-    });
+
     // When / Then: 言語を切り替えても対象と入力を保ち、修正後は再送できる。
     await page.getByRole("button", { name: "日本語 / English" }).click();
     const next = locale === "ja" ? en : ja;

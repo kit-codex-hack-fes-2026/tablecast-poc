@@ -232,8 +232,5 @@ it.each([
     await expect.element(page.getByRole("alert")).toHaveTextContent(labels.auth_failed);
     await expect.element(email).toHaveValue("staff@example.test");
     await expect.element(password).toBeEnabled();
-    await page.screenshot({
-      path: `test-results/browser/tablecast-login-text-200-${locale}-${server.browser}.png`,
-    });
   },
 );

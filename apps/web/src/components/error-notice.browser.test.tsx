@@ -60,17 +60,12 @@ it.each([
       await expect.element(page.getByRole("alert")).toHaveTextContent(message);
       await expect.element(page.getByRole("alert")).not.toHaveTextContent("private server detail");
       await expect.element(page.getByRole("textbox")).toHaveValue("変更中の店舗名");
-      if (status === 422)
-        await page.screenshot({
-          path: `../../test-results/browser/tablecast-rpc-validation-${locale}.png`,
-          element: page.getByRole("alert"),
-        });
+
       await page.getByRole("button", { name: labels.common_retry }).click();
     }
     expect(retry).toHaveBeenCalledTimes(cases.length);
     await screen.rerender(view(new TypeError("network"), true));
     await expect.element(page.getByRole("alert")).toHaveTextContent(labels.common_connection_error);
     await expect.element(page.getByRole("button")).toBeDisabled();
-    await page.screenshot({ path: `../../test-results/browser/tablecast-rpc-error-${locale}.png` });
   },
 );

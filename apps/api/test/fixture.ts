@@ -1,4 +1,3 @@
-import { reset } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import * as authTables from "../src/db/auth-schema";
@@ -16,6 +15,7 @@ export const device = {
 } satisfies Actor;
 export const deviceToken = "tablecast-fixture-device-token";
 export { configuration, text } from "./configuration-fixture";
+export { resetFixtureStorage } from "./storage-fixture";
 
 // 実認証handlerが発行したCookieを、その後のHTTP要求へ渡す。
 export function responseCookies(response: Response) {
@@ -23,12 +23,6 @@ export function responseCookies(response: Response) {
     .getSetCookie()
     .map((value) => value.split(";")[0])
     .join("; ");
-}
-
-export async function resetFixtureStorage() {
-  // workerd 1.20260903.1は停止中のD1をreset対象から漏らすため、直前に起動する。
-  await env.TABLECAST_DB.prepare("SELECT 1").first();
-  await reset();
 }
 
 export async function setupFixture() {

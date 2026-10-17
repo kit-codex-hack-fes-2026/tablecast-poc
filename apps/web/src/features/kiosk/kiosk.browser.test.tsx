@@ -1,6 +1,6 @@
 import { cleanup, render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { page, server, userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cartUpdateSchema,
@@ -546,9 +546,7 @@ it.each([
     </LocaleProvider>,
   );
   await expect.element(page.getByText(labels.kiosk_menu_empty)).toBeVisible();
-  await page.screenshot({
-    path: `../../test-results/browser/tablecast-empty-menu-${server.browser}-${locale}.png`,
-  });
+
   await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
   await expect
     .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))

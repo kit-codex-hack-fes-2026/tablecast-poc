@@ -114,11 +114,16 @@ export default async function setup() {
       TABLECAST_PUBLIC_ORIGIN: runtime.origin,
     };
     await buildTablecast(webEnv);
-    await execute("docker", ["pull", "axllent/mailpit:v1.29.2"]);
     // CI/ローカルともDocker imageからMailpitバイナリを抽出し、ケースごとのcontainer起動を避ける。
     const extract = `tablecast-mailpit-extract-${basename(runtime.directory)}`;
     await execute("docker", ["rm", "--force", extract]).catch(() => undefined);
-    await execute("docker", ["create", "--name", extract, "axllent/mailpit:v1.29.2"]);
+    await execute("docker", [
+      "create",
+      "--pull=missing",
+      "--name",
+      extract,
+      "axllent/mailpit:v1.29.2",
+    ]);
     try {
       await execute("docker", ["cp", `${extract}:/mailpit`, join(runtime.directory, "mailpit")]);
       await execute("chmod", ["755", join(runtime.directory, "mailpit")]);
