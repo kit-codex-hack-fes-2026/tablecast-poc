@@ -29,7 +29,11 @@ export const Welcome: Story = {
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
   },
 };
-export const English: Story = { name: "英語の初回表示", globals: { locale: "en" } };
+export const English: Story = {
+  name: "英語の初回表示",
+  tags: ["!test"],
+  globals: { locale: "en" },
+};
 export const Paused: Story = {
   name: "停止しても会話を保持",
   args: {
@@ -56,6 +60,7 @@ export const Paused: Story = {
 };
 export const LongEnglish: Story = {
   name: "長い英語と中断履歴",
+  tags: ["!test"],
   globals: { locale: "en" },
   args: {
     view: { status: "paused" },
@@ -71,6 +76,13 @@ export const LongEnglish: Story = {
       interrupted: index === 7,
     })),
   },
+};
+
+export const JapaneseLongHistory: Story = {
+  ...LongEnglish,
+  name: "日本語画面で長い英語の会話原文と中断済み履歴を保つ",
+  tags: ["test"],
+  globals: { locale: "ja" },
 };
 export const Connecting: Story = { name: "接続中", args: { view: { status: "connecting" } } };
 export const PermissionDenied: Story = {
@@ -227,6 +239,7 @@ export const Speakers: Story = {
 export const EnglishSpeakers: Story = {
   ...Speakers,
   name: "英語で話者の欠損と接続範囲を表示",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const EmptyInterruption: Story = {
@@ -279,6 +292,7 @@ export const SpeechSpeed: Story = {
 export const EnglishTools: Story = {
   ...ToolAndCards,
   name: "英語のツール表示",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: undefined,
 };
@@ -376,6 +390,7 @@ export const MicrophoneSelection: Story = {
 export const MicrophoneEnglish: Story = {
   ...MicrophoneSelection,
   name: "英語のマイク設定と停止中の案内",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

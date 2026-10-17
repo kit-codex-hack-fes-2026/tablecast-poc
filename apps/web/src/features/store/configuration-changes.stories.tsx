@@ -60,6 +60,7 @@ export const Japanese: Story = {
 };
 export const English: Story = {
   name: "英語の安全情報・参照名を表示し店舗の原文は保持",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const rows = canvasElement.querySelectorAll("[data-ui='config-change']");

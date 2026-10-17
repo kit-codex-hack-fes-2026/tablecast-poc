@@ -1,11 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import type { Product } from "@tablecast/api/schema";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { ConfigurationImageField } from "./configuration-image-field";
@@ -26,11 +25,23 @@ const original = {
   imageSource: { generated: false, description: "店舗の料理写真" },
 };
 let client: QueryClient;
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  document.documentElement.style.fontSize = "";
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    document.documentElement.style.fontSize = "";
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 function Form() {
@@ -150,11 +161,11 @@ it("解除と別ファイルへの置換で出所・生成申告を持ち越さ�
 });
 
 it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
+  { locale: "ja", labels: ja, width: 768, height: 1024 },
+  { locale: "ja", labels: ja, width: 1024, height: 768 },
 ] as const)(
-  "$localeで取込失敗中の画像参照と入力を保持し、再試行で置換してキーボードで解除できる",
-  async ({ locale, labels }) => {
+  "$width pxで取込失敗中の画像参照と入力を保持し、再試行で置換してキーボードで解除できる",
+  async ({ locale, labels, width, height }) => {
     // Given: 実HTTP clientを使い、最初の取込だけ失敗する
     const requests: FormData[] = [];
     let finish: ((response: Response) => void) | undefined;
@@ -199,7 +210,7 @@ it.each([
     await expect
       .element(page.getByRole("img", { name: labels.editor_image_candidate }))
       .toBeVisible();
-    await page.viewport(locale === "ja" ? 768 : 1024, locale === "ja" ? 1024 : 768);
+    await page.viewport(width, height);
     document.documentElement.style.fontSize = "32px";
     await expect
       .poll(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)

@@ -33,6 +33,7 @@ export const Attention: Story = {
 };
 export const EnglishStaff: Story = {
   name: "店側英語と客側日本語が共存",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

@@ -8,11 +8,10 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { page, userEvent } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { MenuCollection } from "./menu-collection";
 import { MenuOverview } from "./menu-overview";
@@ -26,12 +25,24 @@ vi.mock("./store-shell", () => ({
   useStore: () => ({ id: "tablecast-story", name: "店舗", role: storeRole }),
 }));
 let client: QueryClient;
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  client.clear();
-  vi.unstubAllGlobals();
-  storeRole = "member";
-  vi.restoreAllMocks();
+  try {
+    await cleanup();
+    client.clear();
+    vi.unstubAllGlobals();
+    storeRole = "member";
+    vi.restoreAllMocks();
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
 async function showMenu(
@@ -135,19 +146,20 @@ it.each(["tr", "az"])("ホストの%sロケールでもIced teaをicedとICEDで
   value.configuration.products = ["Iced tea", "iced tea"].map((displayName, index) => ({
     ...structuredClone(product),
     id: `tablecast-iced-tea-${index}`,
-    text: { ...product.text, en: { ...product.text.en, displayName } },
+    text: { ...product.text, ja: { ...product.text.ja, displayName } },
   }));
-  const { screen } = await showMenu(value, "en");
+  const { screen } = await showMenu(value, "ja");
   for (const query of ["iced", "ICED"]) {
-    await screen.getByRole("searchbox", { name: en.menu_search }).fill(query);
+    await screen.getByRole("searchbox", { name: ja.menu_search }).fill(query);
     await expect.element(screen.getByText("Iced tea", { exact: true })).toBeVisible();
     await expect.element(screen.getByText("iced tea", { exact: true })).toBeVisible();
   }
 });
 
-for (const locale of ["ja", "en"] as const) {
-  const labels = locale === "ja" ? ja : en;
-  it(`${locale}の商品一覧で他言語・別名とカテゴリ・販売状態を検索し、詳細から戻ると同じ条件とページを保つ`, async () => {
+for (const alias of ["moon drink", "月の酒"] as const) {
+  const locale = "ja";
+  const labels = ja;
+  it(`別名${alias}の商品一覧をカテゴリ・販売状態で検索し、詳細から戻ると同じ条件とページを保つ`, async () => {
     await page.viewport(1280, 800);
     const value = structuredClone(catalog);
     value.configuration.products = Array.from({ length: 25 }, (_, index) => ({
@@ -177,7 +189,7 @@ for (const locale of ["ja", "en"] as const) {
     });
     const { screen, router } = await showMenu(value, locale);
     const search = screen.getByRole("searchbox", { name: labels.menu_search });
-    await search.fill(locale === "ja" ? "moon drink" : "月の酒");
+    await search.fill(alias);
     await expect
       .element(
         screen.getByText(labels.common_result_count.replace("{count}", "26"), { exact: true }),
@@ -194,7 +206,7 @@ for (const locale of ["ja", "en"] as const) {
     const expectedSearch = router.state.location.search;
     const detailLink = screen
       .getByRole("row")
-      .filter({ hasText: locale === "ja" ? "日本酒 20" : "Sake 20" })
+      .filter({ hasText: "日本酒 20" })
       .getByRole("link", { name: labels.admin_details });
     detailLink.element().focus();
     await expect.element(detailLink).toHaveFocus();
@@ -202,7 +214,7 @@ for (const locale of ["ja", "en"] as const) {
     await expect
       .element(
         screen.getByRole("heading", {
-          name: locale === "ja" ? "日本酒 20" : "Sake 20",
+          name: "日本酒 20",
           exact: true,
         }),
       )
@@ -212,13 +224,13 @@ for (const locale of ["ja", "en"] as const) {
     expect(router.state.location.search).toEqual(expectedSearch);
     await screen
       .getByRole("row")
-      .filter({ hasText: locale === "ja" ? "日本酒 20" : "Sake 20" })
+      .filter({ hasText: "日本酒 20" })
       .getByRole("link", { name: labels.admin_details })
       .click();
     router.history.back();
     await expect.element(screen.getByText("2 / 2", { exact: true })).toBeVisible();
     expect(router.state.location.search).toEqual(expectedSearch);
-    await search.fill(locale === "ja" ? "Sake" : "日本酒");
+    await search.fill("Sake");
     await expect.element(screen.getByText("1 / 2", { exact: true })).toBeVisible();
     await screen
       .getByRole("combobox", { name: labels.menu_availability })

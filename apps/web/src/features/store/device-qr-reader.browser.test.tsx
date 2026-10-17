@@ -15,7 +15,7 @@ afterEach(async () => {
 it("実QRをカメラ境界から読み取り、成功時にもトラックを終了する", async () => {
   const read = vi.fn<(code: string) => void>();
   const screen = await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <DeviceQrReader onRead={read} />
       <QRCodeSVG
         value={`${window.location.origin}/device?user_code=TABLECAST-QR`}
@@ -70,7 +70,7 @@ it.each(["中止", "unmount"])("カメラ取得後の%sで送像を終了する"
     return stream;
   });
   const screen = await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <DeviceQrReader onRead={read} />
     </LocaleProvider>,
   );
@@ -89,7 +89,7 @@ it("カメラ拒否を説明し、コード読取のcallbackを呼ばない", as
     new DOMException("拒否", "NotAllowedError"),
   );
   const screen = await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <DeviceQrReader onRead={read} />
     </LocaleProvider>,
   );

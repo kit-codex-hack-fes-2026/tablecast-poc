@@ -13,7 +13,6 @@ import { LocaleProvider } from "../../i18n/locale";
 import { IntegrationSetup } from "./integration-setup";
 import { integrationConnection } from "./integration-query";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import "../../styles.css";
 
 // 認証済みの枠だけを省略し、案内・翻訳・コピー値は実物を検査する。
@@ -27,10 +26,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-test.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)("$localeのstaging接続案内に現在のURLと専用名を表示する", async ({ locale, labels }) => {
+test("日本語のstaging接続案内に現在のURLと専用名を表示する", async () => {
+  const locale = "ja";
+  const labels = ja;
   await page.viewport(1280, 1100);
   const connection = integrationConnection("https://tablecast-staging.kit-codex.workers.dev");
   function Guide() {

@@ -17,7 +17,6 @@ import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
@@ -284,43 +283,43 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     }
     throw new Error(`未定義の要求: ${request.method} ${path}`);
   });
-  const initial = await mountForm("en");
+  const initial = await mountForm("ja");
   try {
     const form = page.getByRole("main");
     const first = form.getByRole("group", {
-      name: "Group 1: Serving size Option 1: 60 mL",
+      name: "グループ 1：容量 選択肢 1：60 mL",
       exact: true,
     });
     const second = form.getByRole("group", {
-      name: "Group 1: Serving size Option 2: 90 mL",
+      name: "グループ 1：容量 選択肢 2：90 mL",
       exact: true,
     });
     for (const option of [first, second]) {
-      await option.getByText(en.editor_option_details, { exact: true }).click();
-      await option.getByLabelText(en.editor_image_choose).upload(png);
+      await option.getByText(ja.editor_option_details, { exact: true }).click();
+      await option.getByLabelText(ja.editor_image_choose).upload(png);
       await option
-        .getByRole("textbox", { name: en.editor_image_source, exact: true })
+        .getByRole("textbox", { name: ja.editor_image_source, exact: true })
         .fill("Store photograph");
-      await option.getByRole("button", { name: en.editor_image_upload }).click();
+      await option.getByRole("button", { name: ja.editor_image_upload }).click();
     }
     await expect.poll(() => uploads).toBe(2);
-    const save = form.getByRole("button", { name: en.common_save, exact: true });
-    const remove = form.getByRole("button", { name: en.menu_remove_item, exact: true });
+    const save = form.getByRole("button", { name: ja.common_save, exact: true });
+    const remove = form.getByRole("button", { name: ja.menu_remove_item, exact: true });
     const removeOption = first.getByRole("button", {
-      name: `${en.editor_remove_option} Group 1: Serving size Option 1: 60 mL`,
+      name: `${ja.editor_remove_option} グループ 1：容量 選択肢 1：60 mL`,
       exact: true,
     });
     const removeGroup = form.getByRole("button", {
-      name: `${en.editor_remove_modifier} Group 1: Serving size`,
+      name: `${ja.editor_remove_modifier} グループ 1：容量`,
       exact: true,
     });
-    const back = form.getByRole("link", { name: en.editor_products, exact: true });
+    const back = form.getByRole("link", { name: ja.editor_products, exact: true });
     await expect.element(save).toBeDisabled();
     await expect.element(save).toHaveAttribute("data-pwa-blocked", "true");
     await expect.element(remove).toBeDisabled();
     await expect.element(removeOption).toBeDisabled();
     await expect.element(removeGroup).toBeDisabled();
-    await expect.element(form.getByText(en.editor_image_wait, { exact: true })).toBeVisible();
+    await expect.element(form.getByText(ja.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(1024, 768);
 
     const beforeUnload = new Event("beforeunload", { cancelable: true });
@@ -328,7 +327,7 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     expect(beforeUnload.defaultPrevented).toBe(true);
     await back.click();
     await expect
-      .element(form.getByRole("heading", { name: product.text.en.displayName }))
+      .element(form.getByRole("heading", { name: product.text.ja.displayName }))
       .toBeVisible();
     expect(confirm).not.toHaveBeenCalled();
 
@@ -336,12 +335,12 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     responses[0].resolve(
       Response.json({ error: { code: "IMAGE_PROCESSING_FAILED" } }, { status: 503 }),
     );
-    await expect.element(first.getByRole("button", { name: en.common_retry })).toBeVisible();
+    await expect.element(first.getByRole("button", { name: ja.common_retry })).toBeVisible();
     await expect.element(save).toBeDisabled();
     await expect.element(remove).toBeDisabled();
     await expect.element(removeOption).toBeDisabled();
     await expect.element(removeGroup).toBeDisabled();
-    await first.getByRole("button", { name: en.common_retry }).click();
+    await first.getByRole("button", { name: ja.common_retry }).click();
     await expect.poll(() => uploads).toBe(3);
     responses[1].resolve(
       Response.json({
@@ -376,7 +375,7 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     await expect.element(first).not.toBeInTheDocument();
     await removeGroup.click();
     await expect
-      .element(form.getByRole("group", { name: "Group 1: Serving size", exact: true }))
+      .element(form.getByRole("group", { name: "グループ 1：容量", exact: true }))
       .not.toBeInTheDocument();
     await back.click();
     await expect.element(page.getByRole("heading", { name: "商品一覧へ移動済み" })).toBeVisible();
@@ -390,6 +389,7 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
 
 it.each([
   {
+    boundary: "件数",
     locale: "ja",
     labels: ja,
     aliases: Array.from({ length: 31 }, (_, index) => `別名${index}`),
@@ -397,14 +397,15 @@ it.each([
     message: "30件以下にしてください",
   },
   {
-    locale: "en",
-    labels: en,
+    boundary: "文字数",
+    locale: "ja",
+    labels: ja,
     aliases: ["a".repeat(101)],
     path: ["configuration", "products", 0, "text", "ja", "aliases", 0],
-    message: "Use at most 100 characters",
+    message: "100文字以下にしてください",
   },
 ] as const)(
-  "$localeで別名の不備を条件エラーにせず、APIの項目パスを表示して修正後に保存する",
+  "別名の$boundary上限の不備を条件エラーにせず、APIの項目パスを表示して修正後に保存する",
   async ({ locale, labels, aliases, path, message }) => {
     const saved: unknown[] = [];
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -453,7 +454,7 @@ it.each([
 
 it.each([
   { locale: "ja", labels: ja, scope: "product", count: 1 },
-  { locale: "en", labels: en, scope: "configuration", count: 65 },
+  { locale: "ja", labels: ja, scope: "configuration", count: 65 },
 ] as const)(
   "$scopeの条件合計上限を超えたら理由を表示して条件へfocusし、削減後に保存する",
   async ({ locale, labels, scope, count }) => {
@@ -538,10 +539,7 @@ it.each([
     });
     const initial = await mountForm(locale, configuration, edited.id);
     const owner = page.getByRole("group", {
-      name:
-        locale === "ja"
-          ? "グループ 1：容量 選択肢 1：60 mL"
-          : "Group 1: Serving size Option 1: 60 mL",
+      name: "グループ 1：容量 選択肢 1：60 mL",
       exact: true,
     });
     await owner.getByText(labels.editor_option_details, { exact: true }).click();

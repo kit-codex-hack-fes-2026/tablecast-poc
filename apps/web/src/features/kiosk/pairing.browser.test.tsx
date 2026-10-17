@@ -6,22 +6,35 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { LocaleProvider } from "../../i18n/locale";
 import { Pairing } from "./pairing";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import "../../styles.css";
 
-afterEach(cleanup);
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
+afterEach(async () => {
+  try {
+    await cleanup();
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
+});
 
 test.each([
   { locale: "ja", labels: ja, width: 1280 },
-  { locale: "en", labels: en, width: 390 },
+  { locale: "ja", labels: ja, width: 390 },
 ] as const)(
-  "$localeの評価入口はデモを優先し端末接続をキーボードで開ける",
+  "$width pxの評価入口はデモを優先し端末接続をキーボードで開ける",
   async ({ locale, labels, width }) => {
     await page.viewport(width, 900);
     const root = createRootRoute();

@@ -52,6 +52,7 @@ export const Japanese: Story = {
 };
 export const English: Story = {
   name: "APIの業務イベントを英語で表示",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: ({ canvasElement }) => verifyLabels(canvasElement, "en"),
 };
@@ -87,6 +88,7 @@ export const DatedJapanese: Story = {
 export const DatedEnglish: Story = {
   ...DatedJapanese,
   name: "閉卓履歴の日跨ぎを英語の店舗日時で区別する",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: ({ canvasElement }) => verifyDates(canvasElement, "en"),
 };

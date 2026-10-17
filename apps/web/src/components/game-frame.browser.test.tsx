@@ -42,7 +42,7 @@ it("隔離した生成コードは親DOM・Cookie・外部通信へ到達でき�
     });`,
   };
   await render(
-    <LocaleProvider initialLocale="en" persist={false}>
+    <LocaleProvider initialLocale="ja" persist={false}>
       <GameFrame
         game={game}
         parentOrigin={parentOrigin}

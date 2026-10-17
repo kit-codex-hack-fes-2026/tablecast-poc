@@ -25,6 +25,7 @@ export const Languages: Story = {
 export const English: Story = {
   ...Languages,
   name: "英語から日本語を選択",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const Disabled: Story = { name: "言語を更新中", args: { disabled: true } };

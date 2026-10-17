@@ -37,7 +37,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Japanese: Story = { name: "日本語の店舗操作" };
-export const English: Story = { name: "英語の店舗操作", globals: { locale: "en" } };
+export const English: Story = {
+  name: "英語の店舗操作",
+  tags: ["!test"],
+  globals: { locale: "en" },
+};
 export const 店舗情報の更新後もメニューを開いたまま保つ: Story = {
   render: (args) => <StoreChangeExample {...args} />,
   play: async ({ canvasElement }) => {

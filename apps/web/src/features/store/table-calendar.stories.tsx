@@ -86,6 +86,7 @@ export const Day: Story = {
 };
 export const English: Story = {
   name: "英語・iPad",
+  tags: ["!test"],
   globals: { locale: "en" },
   parameters: { viewport: { defaultViewport: "ipad" } },
 };

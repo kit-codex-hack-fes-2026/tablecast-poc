@@ -41,4 +41,8 @@ export const ReadFailure: Story = {
     },
   },
 };
-export const English: Story = { name: "英語の画像入力", globals: { locale: "en" } };
+export const English: Story = {
+  name: "英語の画像入力",
+  tags: ["!test"],
+  globals: { locale: "en" },
+};

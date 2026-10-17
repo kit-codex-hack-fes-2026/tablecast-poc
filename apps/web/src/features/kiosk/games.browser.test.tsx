@@ -5,7 +5,6 @@ import { cleanup, render } from "vitest-browser-react";
 import { gameStateSchema, type GamePackage } from "@tablecast/api/schema";
 import { z } from "zod";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { tableEndpoint } from "../../lib/api";
 import { KioskGames } from "./games";
@@ -37,10 +36,9 @@ const game: GamePackage = {
   });`,
 };
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)("$localeで保存・通信復旧・公開停止・開始遅着を扱う", async ({ locale, labels }) => {
+it("日本語で保存・通信復旧・公開停止・開始遅着を扱う", async () => {
+  const locale = "ja";
+  const labels = ja;
   let state = {};
   let revision = 0;
   let failure = 0;

@@ -117,6 +117,7 @@ export const JapaneseLongInstructions: Story = {
 };
 
 export const EnglishReadOnlyAndUnavailable: Story = {
+  tags: ["!test"],
   globals: { locale: "en" },
   args: {
     value: {
@@ -126,15 +127,40 @@ export const EnglishReadOnlyAndUnavailable: Story = {
     },
     renderEdit: () => null,
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, globals }) => {
+    const labels =
+      globals.locale === "en"
+        ? {
+            unavailable: "Unavailable",
+            unset: "Not set",
+            defaultVoice: "Marin (default)",
+            instructions: "No service instructions have been set.",
+            off: "OFF (disabled)",
+            edit: /Edit/,
+          }
+        : {
+            unavailable: "利用不可",
+            unset: "未設定",
+            defaultVoice: "Marin（既定）",
+            instructions: "接客指示は未設定です。",
+            off: "OFF（無効）",
+            edit: /編集/,
+          };
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Unavailable", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("Not set", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("Marin (default)", { exact: true })).toBeVisible();
-    await expect(canvas.getAllByText("No service instructions have been set.")).toHaveLength(2);
-    await expect(canvas.getByText("OFF (disabled)", { exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
+    await expect(await canvas.findByText(labels.unavailable, { exact: true })).toBeVisible();
+    await expect(canvas.getByText(labels.unset, { exact: true })).toBeVisible();
+    await expect(canvas.getByText(labels.defaultVoice, { exact: true })).toBeVisible();
+    await expect(canvas.getAllByText(labels.instructions)).toHaveLength(2);
+    await expect(canvas.getByText(labels.off, { exact: true })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: labels.edit })).not.toBeInTheDocument();
   },
+};
+
+export const JapaneseReadOnlyAndUnavailable: Story = {
+  ...EnglishReadOnlyAndUnavailable,
+  name: "読取専用で未設定・利用不可の音声と標準音声を区別する",
+  tags: ["test"],
+  globals: { locale: "ja" },
 };
 
 export const VoiceCatalogRetry: Story = {

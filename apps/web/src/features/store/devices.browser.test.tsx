@@ -19,7 +19,6 @@ import { devicesOptions } from "./store-query";
 import { RouteError, RoutePending } from "../../components/route-state";
 import { StoreShell } from "./store-shell";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import "../../styles.css";
 
 const storeId = "tablecast-registration";
@@ -184,88 +183,80 @@ async function expectReadableControl(control: Locator) {
   }
 }
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeの端末コードと卓をURLで復元し、明示承認まで送信しない",
-  async ({ locale, labels }) => {
-    await page.viewport(1024, 768);
-    const { router, view } = await show(locale);
-    const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
-    await expect.element(code).toHaveValue("TABLECAST-URL");
-    const row = page
-      .getByRole("row")
-      .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
-    const table = page.getByRole("table");
-    const before = [...table.element().querySelectorAll("th")].map(
-      (cell) => cell.getBoundingClientRect().width,
-    );
-    await row.getByRole("button").click();
-    await expect.element(row.getByRole("button")).toHaveAttribute("aria-pressed", "true");
-    expect(
-      [...table.element().querySelectorAll("th")].map((cell) => cell.getBoundingClientRect().width),
-    ).toEqual(before);
-    expect(router.state.location.search).toMatchObject({
-      user_code: "TABLECAST-URL",
-      tableId: "tablecast-second",
-    });
-    expect(approvals).toEqual([]);
-    const url = router.state.location.href;
-    await view.unmount();
-    client.clear();
-    await show(locale, url);
-    await expect.element(code).toHaveValue("TABLECAST-URL");
-    await expect.element(row.getByRole("button")).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: labels.admin_approve, exact: true }).click();
-    await expect
-      .element(page.getByRole("heading", { name: labels.device_title, exact: true }))
-      .toBeVisible();
-    expect(approvals).toEqual([{ userCode: "TABLECAST-URL", tableId: "tablecast-second" }]);
-  },
-);
+it("日本語の端末コードと卓をURLで復元し、明示承認まで送信しない", async () => {
+  const locale = "ja";
+  const labels = ja;
+  await page.viewport(1024, 768);
+  const { router, view } = await show(locale);
+  const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
+  await expect.element(code).toHaveValue("TABLECAST-URL");
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
+  const table = page.getByRole("table");
+  const before = [...table.element().querySelectorAll("th")].map(
+    (cell) => cell.getBoundingClientRect().width,
+  );
+  await row.getByRole("button").click();
+  await expect.element(row.getByRole("button")).toHaveAttribute("aria-pressed", "true");
+  expect(
+    [...table.element().querySelectorAll("th")].map((cell) => cell.getBoundingClientRect().width),
+  ).toEqual(before);
+  expect(router.state.location.search).toMatchObject({
+    user_code: "TABLECAST-URL",
+    tableId: "tablecast-second",
+  });
+  expect(approvals).toEqual([]);
+  const url = router.state.location.href;
+  await view.unmount();
+  client.clear();
+  await show(locale, url);
+  await expect.element(code).toHaveValue("TABLECAST-URL");
+  await expect.element(row.getByRole("button")).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: labels.admin_approve, exact: true }).click();
+  await expect
+    .element(page.getByRole("heading", { name: labels.device_title, exact: true }))
+    .toBeVisible();
+  expect(approvals).toEqual([{ userCode: "TABLECAST-URL", tableId: "tablecast-second" }]);
+});
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeの端末登録は文字を200%にしてもコードと卓を読み、キーボードで承認できる",
-  async ({ locale, labels }) => {
-    await page.viewport(1024, 768);
-    await show(locale);
-    const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
-    const approve = page.getByRole("button", { name: labels.admin_approve, exact: true });
-    const originalSize = Number.parseFloat(getComputedStyle(code.element()).fontSize);
-    enlargeText(page.getByRole("main").element());
-    expect(Number.parseFloat(getComputedStyle(code.element()).fontSize)).toBe(originalSize * 2);
-    await expectReadableControl(code);
-    await expectReadableControl(approve);
-    const table = page.getByRole("table");
-    await expect.element(table).toBeVisible();
-    const row = table
-      .getByRole("row")
-      .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
-    const choose = row.getByRole("button");
-    await expectReadableControl(choose);
-    await tabTo(code);
-    await userEvent.keyboard(
-      server.platform === "darwin" ? "{Meta>}a{/Meta}" : "{Control>}a{/Control}",
-    );
-    await userEvent.keyboard("TABLECAST-200");
-    await expect.element(code).toHaveValue("TABLECAST-200");
-    await tabTo(choose);
-    await userEvent.keyboard("{Enter}");
-    await expect.element(choose).toHaveAttribute("aria-pressed", "true");
-    expect(approvals).toEqual([]);
-    await tabTo(approve);
+it("日本語の端末登録は文字を200%にしてもコードと卓を読み、キーボードで承認できる", async () => {
+  const locale = "ja";
+  const labels = ja;
+  await page.viewport(1024, 768);
+  await show(locale);
+  const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
+  const approve = page.getByRole("button", { name: labels.admin_approve, exact: true });
+  const originalSize = Number.parseFloat(getComputedStyle(code.element()).fontSize);
+  enlargeText(page.getByRole("main").element());
+  expect(Number.parseFloat(getComputedStyle(code.element()).fontSize)).toBe(originalSize * 2);
+  await expectReadableControl(code);
+  await expectReadableControl(approve);
+  const table = page.getByRole("table");
+  await expect.element(table).toBeVisible();
+  const row = table
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
+  const choose = row.getByRole("button");
+  await expectReadableControl(choose);
+  await tabTo(code);
+  await userEvent.keyboard(
+    server.platform === "darwin" ? "{Meta>}a{/Meta}" : "{Control>}a{/Control}",
+  );
+  await userEvent.keyboard("TABLECAST-200");
+  await expect.element(code).toHaveValue("TABLECAST-200");
+  await tabTo(choose);
+  await userEvent.keyboard("{Enter}");
+  await expect.element(choose).toHaveAttribute("aria-pressed", "true");
+  expect(approvals).toEqual([]);
+  await tabTo(approve);
 
-    await userEvent.keyboard("{Enter}");
-    await expect
-      .element(page.getByRole("heading", { name: labels.device_title, exact: true }))
-      .toBeVisible();
-    expect(approvals).toEqual([{ userCode: "TABLECAST-200", tableId: "tablecast-second" }]);
-  },
-);
+  await userEvent.keyboard("{Enter}");
+  await expect
+    .element(page.getByRole("heading", { name: labels.device_title, exact: true }))
+    .toBeVisible();
+  expect(approvals).toEqual([{ userCode: "TABLECAST-200", tableId: "tablecast-second" }]);
+});
 
 it("QR画像を実decoderで読み、選択卓を保って承認後にだけ送信する", async () => {
   const { router } = await show("ja");

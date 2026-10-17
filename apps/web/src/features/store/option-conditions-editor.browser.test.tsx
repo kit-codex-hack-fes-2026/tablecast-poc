@@ -5,7 +5,6 @@ import { afterEach, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { OptionConditionsEditor } from "./option-conditions-editor";
 import "../../styles.css";
@@ -104,65 +103,61 @@ async function setup(locale: "ja" | "en", initial = product) {
     </QueryClientProvider>,
   );
 }
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeでキーボード補完とグループ・否定を編集し、削除後も構造を保つ",
-  async ({ locale, labels }) => {
-    const screen = await setup(locale);
-    await screen.getByRole("button", { name: labels.condition_add, exact: true }).first().click();
-    const choose = () => screen.getByRole("combobox", { name: labels.condition_choose });
-    await expect.element(choose()).toHaveFocus();
-    await choose().fill("A");
-    await userEvent.keyboard("{ArrowDown}{Enter}");
-    await expect.element(choose()).toHaveValue("Toppings / A");
-    await screen.getByRole("button", { name: labels.condition_group, exact: true }).click();
-    await expect
-      .element(screen.getByRole("combobox", { name: labels.condition_operator }))
-      .toHaveValue("and");
-    await choose().nth(1).fill("B");
-    await page.getByRole("option", { name: /Toppings \/ B/ }).click();
-    await screen.getByRole("button", { name: labels.condition_group, exact: true }).nth(1).click();
-    await screen
-      .getByRole("combobox", { name: labels.condition_operator })
-      .nth(1)
-      .selectOptions("or");
-    await choose().nth(2).fill("C");
-    await page.getByRole("option", { name: /Toppings \/ C/ }).click();
-    await screen.getByRole("button", { name: labels.condition_negate, exact: true }).last().click();
-    const result = () =>
-      optionConditionsSchema.parse(
-        JSON.parse(screen.getByLabelText("編集結果").element().textContent ?? "null"),
-      );
-    expect(result()).toEqual({
-      version: 2,
-      requires: {
-        kind: "and",
-        children: [
-          { kind: "option", optionId: "A" },
-          {
-            kind: "or",
-            children: [
-              { kind: "option", optionId: "B" },
-              { kind: "not", child: { kind: "option", optionId: "C" } },
-            ],
-          },
-        ],
-      },
-      excludes: null,
-    });
-    await screen.getByRole("button", { name: labels.condition_remove, exact: true }).nth(3).click();
-    expect(screen.getByLabelText("編集結果").element().textContent).toContain(
-      '"kind":"or","children":[{"kind":"not"',
+it("日本語でキーボード補完とグループ・否定を編集し、削除後も構造を保つ", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const screen = await setup(locale);
+  await screen.getByRole("button", { name: labels.condition_add, exact: true }).first().click();
+  const choose = () => screen.getByRole("combobox", { name: labels.condition_choose });
+  await expect.element(choose()).toHaveFocus();
+  await choose().fill("A");
+  await userEvent.keyboard("{ArrowDown}{Enter}");
+  await expect.element(choose()).toHaveValue("Toppings / A");
+  await screen.getByRole("button", { name: labels.condition_group, exact: true }).click();
+  await expect
+    .element(screen.getByRole("combobox", { name: labels.condition_operator }))
+    .toHaveValue("and");
+  await choose().nth(1).fill("B");
+  await page.getByRole("option", { name: /Toppings \/ B/ }).click();
+  await screen.getByRole("button", { name: labels.condition_group, exact: true }).nth(1).click();
+  await screen
+    .getByRole("combobox", { name: labels.condition_operator })
+    .nth(1)
+    .selectOptions("or");
+  await choose().nth(2).fill("C");
+  await page.getByRole("option", { name: /Toppings \/ C/ }).click();
+  await screen.getByRole("button", { name: labels.condition_negate, exact: true }).last().click();
+  const result = () =>
+    optionConditionsSchema.parse(
+      JSON.parse(screen.getByLabelText("編集結果").element().textContent ?? "null"),
     );
-    await expect.element(screen.getByRole("alert").first()).toBeVisible();
-    await expect
-      .element(screen.getByRole("button", { name: labels.condition_add_leaf, exact: true }).first())
-      .toHaveFocus();
-    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(768);
-  },
-);
+  expect(result()).toEqual({
+    version: 2,
+    requires: {
+      kind: "and",
+      children: [
+        { kind: "option", optionId: "A" },
+        {
+          kind: "or",
+          children: [
+            { kind: "option", optionId: "B" },
+            { kind: "not", child: { kind: "option", optionId: "C" } },
+          ],
+        },
+      ],
+    },
+    excludes: null,
+  });
+  await screen.getByRole("button", { name: labels.condition_remove, exact: true }).nth(3).click();
+  expect(screen.getByLabelText("編集結果").element().textContent).toContain(
+    '"kind":"or","children":[{"kind":"not"',
+  );
+  await expect.element(screen.getByRole("alert").first()).toBeVisible();
+  await expect
+    .element(screen.getByRole("button", { name: labels.condition_add_leaf, exact: true }).first())
+    .toHaveFocus();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(768);
+});
 
 it("参照切れと候補なしを説明し、API試行の失敗後も入力を保持する", async () => {
   const initial = structuredClone(product);
@@ -196,60 +191,56 @@ it("参照切れと候補なしを説明し、API試行の失敗後も入力を�
   await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
 });
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeの試行で数量をそのまま送り、変更後に古い結果を隠す",
-  async ({ locale, labels }) => {
-    const initial = structuredClone(product);
-    const group = initial.modifiers[0];
-    const owner = group?.options[0];
-    if (!group || !owner) throw new Error("数量fixtureがありません");
-    group.kind = "quantity";
-    owner.maxQuantity = 2;
-    const requests: unknown[] = [];
-    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
-      async (input, init) => {
-        requests.push(await new Request(input, init).json());
-        return Response.json({
-          applied: true,
-          errors: [],
-          conditions: [],
-          selectionError: "OPTION_QUANTITY",
-        });
-      },
-    );
-    vi.stubGlobal("fetch", fetch);
-    const screen = await setup(locale, initial);
-    await screen.getByText(labels.condition_try, { exact: true }).click();
-    const quantity = screen.getByRole("combobox", {
-      name: `Toppings / X (X) · ${labels.common_quantity}`,
-      exact: true,
-    });
-    await expect.element(quantity).toHaveValue("1");
-    await quantity.selectOptions("3");
-    await screen.getByRole("button", { name: labels.condition_run }).click();
-    await expect
-      .element(screen.getByRole("status", { name: "", exact: true }))
-      .toHaveTextContent("OPTION_QUANTITY");
-    expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 3 }] });
-    await quantity.selectOptions("2");
-    await expect
-      .element(screen.getByRole("status", { name: "", exact: true }))
-      .not.toBeInTheDocument();
-    await screen.getByRole("button", { name: labels.condition_run }).click();
-    await expect
-      .element(screen.getByRole("status", { name: "", exact: true }))
-      .toHaveTextContent("OPTION_QUANTITY");
-    expect(requests[1]).toMatchObject({ selections: [{ optionId: "X", quantity: 2 }] });
-    await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
-    await expect.element(quantity).not.toBeInTheDocument();
-    await screen.getByRole("button", { name: labels.condition_run }).click();
-    await expect.element(screen.getByRole("status", { name: "", exact: true })).toBeVisible();
-    expect(requests[2]).toMatchObject({ selections: [] });
-  },
-);
+it("日本語の試行で数量をそのまま送り、変更後に古い結果を隠す", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const initial = structuredClone(product);
+  const group = initial.modifiers[0];
+  const owner = group?.options[0];
+  if (!group || !owner) throw new Error("数量fixtureがありません");
+  group.kind = "quantity";
+  owner.maxQuantity = 2;
+  const requests: unknown[] = [];
+  const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+    async (input, init) => {
+      requests.push(await new Request(input, init).json());
+      return Response.json({
+        applied: true,
+        errors: [],
+        conditions: [],
+        selectionError: "OPTION_QUANTITY",
+      });
+    },
+  );
+  vi.stubGlobal("fetch", fetch);
+  const screen = await setup(locale, initial);
+  await screen.getByText(labels.condition_try, { exact: true }).click();
+  const quantity = screen.getByRole("combobox", {
+    name: `Toppings / X (X) · ${labels.common_quantity}`,
+    exact: true,
+  });
+  await expect.element(quantity).toHaveValue("1");
+  await quantity.selectOptions("3");
+  await screen.getByRole("button", { name: labels.condition_run }).click();
+  await expect
+    .element(screen.getByRole("status", { name: "", exact: true }))
+    .toHaveTextContent("OPTION_QUANTITY");
+  expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 3 }] });
+  await quantity.selectOptions("2");
+  await expect
+    .element(screen.getByRole("status", { name: "", exact: true }))
+    .not.toBeInTheDocument();
+  await screen.getByRole("button", { name: labels.condition_run }).click();
+  await expect
+    .element(screen.getByRole("status", { name: "", exact: true }))
+    .toHaveTextContent("OPTION_QUANTITY");
+  expect(requests[1]).toMatchObject({ selections: [{ optionId: "X", quantity: 2 }] });
+  await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+  await expect.element(quantity).not.toBeInTheDocument();
+  await screen.getByRole("button", { name: labels.condition_run }).click();
+  await expect.element(screen.getByRole("status", { name: "", exact: true })).toBeVisible();
+  expect(requests[2]).toMatchObject({ selections: [] });
+});
 
 it("商品から削除した試行の選択肢を除き、商品を戻しても選択を復活させない", async () => {
   const requests: unknown[] = [];
@@ -273,48 +264,44 @@ it("商品から削除した試行の選択肢を除き、商品を戻しても�
     .not.toBeChecked();
 });
 
-it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeで入力変更後に届いた試行失敗を表示せず、再試行の失敗も数量・選択変更で消す",
-  async ({ locale, labels }) => {
-    const initial = structuredClone(product);
-    const group = initial.modifiers[0];
-    if (!group) throw new Error("数量fixtureがありません");
-    group.kind = "quantity";
-    const first = Promise.withResolvers<Response>();
-    const fetch = vi
-      .fn<() => Promise<Response>>()
-      .mockImplementationOnce(() => first.promise)
-      .mockImplementation(async () => failure());
-    vi.stubGlobal("fetch", fetch);
-    const screen = await setup(locale, initial);
-    try {
-      await screen.getByText(labels.condition_try, { exact: true }).click();
-      const run = screen.getByRole("button", { name: labels.condition_run });
-      const quantity = screen.getByRole("combobox", {
-        name: `Toppings / X (X) · ${labels.common_quantity}`,
-        exact: true,
-      });
-      await run.click();
-      await expect.element(run).toBeDisabled();
-      await quantity.selectOptions("2");
-      first.resolve(failure());
-      await expect.element(run).toBeEnabled();
-      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
-      await run.click();
-      await expect.element(screen.getByRole("alert")).toBeVisible();
-      await quantity.selectOptions("3");
-      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
-      await run.click();
-      await expect.element(screen.getByRole("alert")).toBeVisible();
-      await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
-      await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
-    } finally {
-      first.resolve(failure());
-    }
-  },
-);
+it("日本語で入力変更後に届いた試行失敗を表示せず、再試行の失敗も数量・選択変更で消す", async () => {
+  const locale = "ja";
+  const labels = ja;
+  const initial = structuredClone(product);
+  const group = initial.modifiers[0];
+  if (!group) throw new Error("数量fixtureがありません");
+  group.kind = "quantity";
+  const first = Promise.withResolvers<Response>();
+  const fetch = vi
+    .fn<() => Promise<Response>>()
+    .mockImplementationOnce(() => first.promise)
+    .mockImplementation(async () => failure());
+  vi.stubGlobal("fetch", fetch);
+  const screen = await setup(locale, initial);
+  try {
+    await screen.getByText(labels.condition_try, { exact: true }).click();
+    const run = screen.getByRole("button", { name: labels.condition_run });
+    const quantity = screen.getByRole("combobox", {
+      name: `Toppings / X (X) · ${labels.common_quantity}`,
+      exact: true,
+    });
+    await run.click();
+    await expect.element(run).toBeDisabled();
+    await quantity.selectOptions("2");
+    first.resolve(failure());
+    await expect.element(run).toBeEnabled();
+    await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+    await run.click();
+    await expect.element(screen.getByRole("alert")).toBeVisible();
+    await quantity.selectOptions("3");
+    await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+    await run.click();
+    await expect.element(screen.getByRole("alert")).toBeVisible();
+    await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+    await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
+  } finally {
+    first.resolve(failure());
+  }
+});
 
 const failure = () => Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });

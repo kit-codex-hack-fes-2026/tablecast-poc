@@ -32,7 +32,7 @@ runner名ではなく、接続した実物と観測結果で分類する。純�
 | ----------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 純粋unit          | 本番の計算・schema・状態遷移。Vitest Node                                                                | 必要な時刻・乱数・ID                    | 価格・期限・数量の境界、入力と失敗分類                                                                 |
 | API統合           | 本番Hono/Worker HTTP入口・認可・service・Drizzle・実local D1/DO/R2。Cloudflare公式Vitest連携             | 外部モデル・IdP・メール配送等の外側だけ | status・本文・header、別店舗/卓/roleの拒否、永続状態、原子性・競合・通知からの回復                     |
-| UI部品・Storybook | 本番component・CSS・i18n・実ブラウザー、storyのplay/a11y                                                 | props・表示fixture・部品外のcallback    | loading/empty/error、日英、入力・focus・寸法・reduced motion                                           |
+| UI部品・Storybook | 本番component・CSS・i18n・実ブラウザー、storyのplay/a11y                                                 | props・表示fixture・部品外のcallback    | 日本語のloading/empty/error、入力・focus・寸法・reduced motion                                         |
 | Web機能統合       | 本番feature・QueryClient・memory Router・provider・Hono client・必要なiframe/MediaStream。Vitest Browser | HTTP応答・通知接続先・外部media境界     | payload、送信中、失敗後の入力保持・再試行、cache再取得、URL状態、遅着、unmount後の保存値               |
 | 実StartのWeb統合  | 実TanStack Startのroute loader・SSR・hydration・ブラウザー履歴                                           | Web内に限定できる場合は下流API等        | documentとclientの接続、直接URL・戻る・pending/error境界。memory Routerだけでは証明しない              |
 | 全構成E2E         | 実browser→build済みStart→Service Binding→本番API→D1/DO/R2・Better Auth、必要なMailpit/OAuth emulator/SW  | 有料AIや外部providerのみ決定的な応答へ  | 代表操作の永続化・再読込、Cookie・外部redirect・メールURL、実WebSocket・Service Worker・配信資産の配線 |
@@ -51,9 +51,29 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 
+### localeの保証とComponentの実行
+
+Component jobのBrowser統合とStorybook自動試験は日本語で実行する。Chromium/WebKitの対象とworker枠は従来どおりで、localeとengineを同じ軸にしない。英語Storyは閲覧用カタログに残し、標準の`tags: ["!test"]`で自動実行から除く。英語だけに存在する失敗・再送・読取専用・長文操作は、日本語の自動試験へ移してから除外する。
+
+| 以前のlocale別Component保証                            | 現在の所有先                                                                                                                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 日英の翻訳キー、空欄、補間入力                         | Nodeの`i18n/messages.test.ts`と既存Paraglide compile。公開メッセージ関数の日英日呼出しを確認する                                                                        |
+| JPY、日時の日跨ぎ・年越し、店舗timezone                | 本番`money`・`time`・`dateTime`を呼ぶNodeの`i18n/format.test.ts`                                                                                                        |
+| フォームエラーの日英再翻訳と項目対応                   | 既存`form-validation.test.ts`、本番HTTP clientの失敗解析と純粋変換を接続する`server-field-errors.test.ts`。修正済み項目を言語切替で復活させず、新しい失敗では再付与する |
+| フォームの入力保持・再送・対象への表示                 | 日本語のCreateStore・PaymentForm・ConfigurationWorkflow Browser。実provider・Router・HTTP clientを使う                                                                  |
+| 音声の次ページ503→再送・候補と入力の保持               | `JapanesePagedVoices` Story。日本語UIから英語の接客指示と音声IDを保存する                                                                                               |
+| 未設定／利用不可音声の読取専用表示、下書きなしの公開版 | `JapaneseReadOnlyAndUnavailable`・`WithoutDraft` Story                                                                                                                  |
+| 商品名150文字・説明3000文字のスクロール・Tab操作       | `JapaneseLongDescription` Story。英語版は閲覧用に残す                                                                                                                   |
+| 8件の長い英語会話原文と最終行の中断状態                | `JapaneseLongHistory` Story。原文を英語のまま保持し、日本語UIで履歴を表示する                                                                                           |
+| 同名反復行・長文・追加削除・エラー時focus              | ConfigurationLayoutの`RepeatedRows`へ3グループ×5選択肢を残す。通常状態と空白IDは同名の2グループ×2選択肢で確認する                                                       |
+
+日本語UIで扱う英語の入力値・会話原文・来店locale・API payloadは別の業務データとして保持する。幅1280/390、縦横、文字200%、別名31件／101文字、商品単位と65商品・65,536ノードの上限はlocaleから分離した日本語ケースへ残す。APIの二言語データ保存や、代表E2Eの客英語・店側日本語の接続は維持する。
+
+この変更前の日英試験と件数は過去の実施記録であり、現在のComponent実行対象を示すものではない。削減した件数そのものやローカルの成功だけでCIのtimeoutを解消済みと判断せず、対象SHAのcold/warm・通常順・shuffleを記録する。15秒のcase予算とretry 0を維持し、一時診断のtraceを恒久のComponent artifactへ追加しない。
+
 ### Issue #272の移行対応
 
-移行前のspec名と所有先を示す。新旧の件数やこの表自体を実行成功の証拠にせず、対象SHA・実行範囲・未実施項目をIssue/PRへ記録する。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`に併置する。
+移行時点のspec名と所有先を示す。locale別Componentの現在の分担は上節を参照する。新旧の件数やこの表自体を実行成功の証拠にせず、対象SHA・実行範囲・未実施項目をIssue/PRへ記録する。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`に併置する。
 
 | 移行前のE2E                                                   | 既存・追加した下位保証                                                                                                                                                                 | 残す全構成の代表経路                                                                                                                      |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |

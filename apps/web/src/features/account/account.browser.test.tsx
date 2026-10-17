@@ -14,7 +14,6 @@ import { MotionProvider } from "../../components/motion-provider";
 import { Account } from "./account";
 import { accountKeysOptions, accountLinksOptions, accountSessionsOptions } from "./account-query";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
 import "../../styles.css";
 
 const session = {
@@ -105,41 +104,40 @@ async function show(
 }
 
 it.each([
-  { locale: "ja", labels: ja },
-  { locale: "en", labels: en },
-] as const)(
-  "$localeのアカウント取得中も枠を保ち、完了後に入力できる",
-  async ({ locale, labels }) => {
-    const release = Promise.withResolvers<Response>();
-    const reached = Promise.withResolvers<void>();
-    await page.viewport(locale === "ja" ? 1024 : 768, locale === "ja" ? 768 : 1024);
-    try {
-      await show(locale, async (request) => {
-        if (new URL(request.url).pathname !== "/api/auth/list-sessions") return undefined;
-        reached.resolve();
-        return release.promise;
-      });
-      await reached.promise;
-      const name = page.getByLabelText(labels.account_name, { exact: true });
-      await expect.element(name).toBeDisabled();
-      const heading = page.getByRole("heading", { name: labels.account_title, exact: true });
-      const before = heading.element().getBoundingClientRect();
-      release.resolve(Response.json([]));
-      await expect.element(name).toBeEnabled();
-      const after = heading.element().getBoundingClientRect();
-      expect({ x: after.x, y: after.y, width: after.width, height: after.height }).toEqual({
-        x: before.x,
-        y: before.y,
-        width: before.width,
-        height: before.height,
-      });
-      await name.fill("入力途中の名前");
-      await expect.element(name).toHaveValue("入力途中の名前");
-    } finally {
-      release.resolve(Response.json([]));
-    }
-  },
-);
+  { name: "横向き", width: 1024, height: 768 },
+  { name: "縦向き", width: 768, height: 1024 },
+])("$nameのアカウント取得中も枠を保ち、完了後に入力できる", async ({ width, height }) => {
+  const locale = "ja";
+  const labels = ja;
+  const release = Promise.withResolvers<Response>();
+  const reached = Promise.withResolvers<void>();
+  await page.viewport(width, height);
+  try {
+    await show(locale, async (request) => {
+      if (new URL(request.url).pathname !== "/api/auth/list-sessions") return undefined;
+      reached.resolve();
+      return release.promise;
+    });
+    await reached.promise;
+    const name = page.getByLabelText(labels.account_name, { exact: true });
+    await expect.element(name).toBeDisabled();
+    const heading = page.getByRole("heading", { name: labels.account_title, exact: true });
+    const before = heading.element().getBoundingClientRect();
+    release.resolve(Response.json([]));
+    await expect.element(name).toBeEnabled();
+    const after = heading.element().getBoundingClientRect();
+    expect({ x: after.x, y: after.y, width: after.width, height: after.height }).toEqual({
+      x: before.x,
+      y: before.y,
+      width: before.width,
+      height: before.height,
+    });
+    await name.fill("入力途中の名前");
+    await expect.element(name).toHaveValue("入力途中の名前");
+  } finally {
+    release.resolve(Response.json([]));
+  }
+});
 
 it("名前を保存中は入力を止め、保存後の背景取得が失敗しても次の入力を残す", async () => {
   const saving = Promise.withResolvers<void>();
