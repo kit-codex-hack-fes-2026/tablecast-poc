@@ -1,6 +1,6 @@
 import { cleanup, render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { page, userEvent } from "vitest/browser";
+import { page, server, userEvent } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cartUpdateSchema,
@@ -332,7 +332,7 @@ it.each([
     current.locale = locale;
     await page.viewport(1024, 768);
     const screen = await render(
-      <LocaleProvider initialLocale={locale}>
+      <LocaleProvider initialLocale={locale} persist={false}>
         <QueryClientProvider client={client}>
           <Kiosk />
         </QueryClientProvider>
@@ -403,7 +403,7 @@ it("音声開始が失敗しても実Queryのカートと画面操作を維持�
   try {
     vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
     await render(
-      <LocaleProvider initialLocale="ja">
+      <LocaleProvider initialLocale="ja" persist={false}>
         <QueryClientProvider client={client}>
           <Kiosk />
         </QueryClientProvider>
@@ -510,14 +510,16 @@ it.each([
   });
   await page.viewport(1280, 800);
   await render(
-    <LocaleProvider initialLocale={locale}>
+    <LocaleProvider initialLocale={locale} persist={false}>
       <QueryClientProvider client={client}>
         <Kiosk />
       </QueryClientProvider>
     </LocaleProvider>,
   );
   await expect.element(page.getByText(labels.kiosk_menu_empty)).toBeVisible();
-  await page.screenshot({ path: `../../test-results/browser/tablecast-empty-menu-${locale}.png` });
+  await page.screenshot({
+    path: `../../test-results/browser/tablecast-empty-menu-${server.browser}-${locale}.png`,
+  });
   await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
   await expect
     .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))
@@ -534,7 +536,7 @@ it.each([
   current.uiSection = "menu";
   catalogResponse = Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
   await render(
-    <LocaleProvider initialLocale={locale}>
+    <LocaleProvider initialLocale={locale} persist={false}>
       <QueryClientProvider client={client}>
         <Kiosk />
       </QueryClientProvider>
@@ -579,7 +581,7 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
   });
   await page.viewport(1180, 820);
   await render(
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <QueryClientProvider client={client}>
         <Kiosk />
       </QueryClientProvider>

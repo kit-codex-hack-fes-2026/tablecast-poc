@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import { test } from "./support/test";
+import { signInStaff } from "./support/session";
 import { credentials } from "./support/runtime";
 import ja from "../messages/ja.json" with { type: "json" };
 import { money } from "../src/i18n/format";
@@ -16,9 +17,7 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
   const storeId = "tablecast-hanul";
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
-  expect((await staff.post("/api/auth/sign-in/email", { data: credentials, headers })).ok()).toBe(
-    true,
-  );
+  await signInStaff(staff, baseURL);
   const catalog = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
   const product = catalog.configuration.products.find((item) => item.available);
   if (!product) throw new Error("公開確認用の商品が必要です。");

@@ -154,62 +154,75 @@ it.each([
         initialEntries: [`/admin/stores/${storeId}/demo?demoId=${demoId}`],
       }),
     });
-    const screen = await render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initialLocale={locale} persist={false}>
-          <RouterProvider router={router} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-    const iframe = document.querySelector("iframe");
-    await expect
-      .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
-      .toBeDisabled();
-    client.setQueryData(catalogOptions(storeId).queryKey, { ...catalog, version: 2 });
-    await expect
-      .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
-      .toBeEnabled();
-    expect(updates).toEqual([]);
-    await screen.getByRole("button", { name: labels.demo_reload, exact: true }).click();
-    await expect
-      .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
-      .toBeDisabled();
-    expect(updates).toEqual([{ expectedVersion: 1, reload: true }]);
-    await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
-    await screen.getByRole("option", { name: new RegExp(invalid.id.slice(0, 8)) }).click();
-    await expect
-      .element(screen.getByRole("list", { name: labels.config_error_list }))
-      .toHaveTextContent(labels.config_error_category_missing);
-    await expect
-      .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
-      .toHaveTextContent(labels.demo_published);
-    await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
-    await screen.getByRole("option", { name: new RegExp(draft.id.slice(0, 8)) }).click();
-    await expect
-      .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
-      .toHaveTextContent(draft.id.slice(0, 8));
-    await screen.getByRole("combobox", { name: labels.demo_guests }).click();
-    await screen.getByRole("option", { name: "3", exact: true }).click();
-    await expect.element(screen.getByRole("combobox", { name: labels.demo_guests })).toBeDisabled();
-    pending.resolve();
-    await expect.element(screen.getByRole("combobox", { name: labels.demo_guests })).toBeEnabled();
-    await expect
-      .element(screen.getByRole("combobox", { name: labels.demo_guests }))
-      .toHaveTextContent("3");
-    await screen.getByRole("button", { name: labels.demo_rotate, exact: true }).click();
-    await expect
-      .element(screen.getByRole("button", { name: labels.demo_rotate, exact: true }))
-      .toHaveAttribute("aria-pressed", "true");
-    expect(document.querySelector("iframe")).toBe(iframe);
-    expect(router.state.location.search).toMatchObject({ demoId, device: "ipad", portrait: true });
-    await screen.getByRole("button", { name: labels.demo_reset, exact: true }).click();
-    expect(resets).toBe(0);
-    const resetVersion = current.version;
-    await screen
-      .getByRole("alertdialog")
-      .getByRole("button", { name: labels.demo_reset, exact: true })
-      .click();
-    await expect.poll(() => resets).toBe(1);
-    expect(resetInputs).toEqual([{ expectedVersion: resetVersion, approved: true }]);
+    try {
+      const screen = await render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initialLocale={locale} persist={false}>
+            <RouterProvider router={router} />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      const iframe = document.querySelector("iframe");
+      await expect
+        .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
+        .toBeDisabled();
+      client.setQueryData(catalogOptions(storeId).queryKey, { ...catalog, version: 2 });
+      await expect
+        .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
+        .toBeEnabled();
+      expect(updates).toEqual([]);
+      await screen.getByRole("button", { name: labels.demo_reload, exact: true }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.demo_reload, exact: true }))
+        .toBeDisabled();
+      expect(updates).toEqual([{ expectedVersion: 1, reload: true }]);
+      await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
+      await screen.getByRole("option", { name: new RegExp(invalid.id.slice(0, 8)) }).click();
+      await expect
+        .element(screen.getByRole("list", { name: labels.config_error_list }))
+        .toHaveTextContent(labels.config_error_category_missing);
+      await expect
+        .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
+        .toHaveTextContent(labels.demo_published);
+      await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
+      await screen.getByRole("option", { name: new RegExp(draft.id.slice(0, 8)) }).click();
+      await expect
+        .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
+        .toHaveTextContent(draft.id.slice(0, 8));
+      await screen.getByRole("combobox", { name: labels.demo_guests }).click();
+      await screen.getByRole("option", { name: "3", exact: true }).click();
+      await expect
+        .element(screen.getByRole("combobox", { name: labels.demo_guests }))
+        .toBeDisabled();
+      pending.resolve();
+      await expect
+        .element(screen.getByRole("combobox", { name: labels.demo_guests }))
+        .toBeEnabled();
+      await expect
+        .element(screen.getByRole("combobox", { name: labels.demo_guests }))
+        .toHaveTextContent("3");
+      await screen.getByRole("button", { name: labels.demo_rotate, exact: true }).click();
+      await expect
+        .element(screen.getByRole("button", { name: labels.demo_rotate, exact: true }))
+        .toHaveAttribute("aria-pressed", "true");
+      expect(document.querySelector("iframe")).toBe(iframe);
+      expect(router.state.location.search).toMatchObject({
+        demoId,
+        device: "ipad",
+        portrait: true,
+      });
+      await screen.getByRole("button", { name: labels.demo_reset, exact: true }).click();
+      expect(resets).toBe(0);
+      const resetVersion = current.version;
+      await screen
+        .getByRole("alertdialog")
+        .getByRole("button", { name: labels.demo_reset, exact: true })
+        .click();
+      await expect.poll(() => resets).toBe(1);
+      expect(resetInputs).toEqual([{ expectedVersion: resetVersion, approved: true }]);
+    } finally {
+      pending.resolve();
+      await expect.poll(() => client.isMutating()).toBe(0);
+    }
   },
 );

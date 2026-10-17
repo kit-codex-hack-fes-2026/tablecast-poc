@@ -5,13 +5,9 @@ import { z } from "zod";
 import { account, user } from "../src/db/auth-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
+import { responseCookies } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
-const cookies = (response: Response) =>
-  response.headers
-    .getSetCookie()
-    .map((value) => value.split(";")[0])
-    .join("; ");
 
 it("実認証の確認メールとGoogle往復は同じユーザーへ接続し、providerを重複させない", async () => {
   const origin = "http://localhost:3000";
@@ -65,7 +61,7 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
     callbackURL: "/account",
   });
   expect(signup.status).toBe(200);
-  expect(cookies(signup)).not.toContain("session_token");
+  expect(responseCookies(signup)).not.toContain("session_token");
   expect((await post("/api/auth/sign-in/email", { email, password })).status).toBe(403);
   const verification = mails[0];
   expect(verification).toBeDefined();
@@ -85,12 +81,14 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
   const passwordSession = session.parse(
     await (
       await auth.handler(
-        new Request(`${origin}/api/auth/get-session`, { headers: { Cookie: cookies(login) } }),
+        new Request(`${origin}/api/auth/get-session`, {
+          headers: { Cookie: responseCookies(login) },
+        }),
       )
     ).json(),
   );
   expect(passwordSession.user.emailVerified).toBe(true);
-  expect((await post("/api/auth/sign-out", {}, cookies(login))).status).toBe(200);
+  expect((await post("/api/auth/sign-out", {}, responseCookies(login))).status).toBe(200);
   for (let attempt = 0; attempt < 2; attempt++) {
     const social = await post("/api/auth/sign-in/social", {
       provider: "google",
@@ -102,7 +100,7 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
     callback.searchParams.set("state", destination.searchParams.get("state") ?? "");
     callback.searchParams.set("code", `tablecast-code-${attempt}`);
     const returned = await auth.handler(
-      new Request(callback, { headers: { Cookie: cookies(social) } }),
+      new Request(callback, { headers: { Cookie: responseCookies(social) } }),
     );
     expect(returned.status).toBe(302);
     expect(new URL(returned.headers.get("location") ?? "", origin).href).toBe(
@@ -111,7 +109,9 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
     const googleSession = session.parse(
       await (
         await auth.handler(
-          new Request(`${origin}/api/auth/get-session`, { headers: { Cookie: cookies(returned) } }),
+          new Request(`${origin}/api/auth/get-session`, {
+            headers: { Cookie: responseCookies(returned) },
+          }),
         )
       ).json(),
     );

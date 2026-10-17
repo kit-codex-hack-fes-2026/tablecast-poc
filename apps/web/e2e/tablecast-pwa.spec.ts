@@ -192,11 +192,23 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
   context.on("page", observe);
   // アプリ登録より前に監視を開始し、応答の値だけを保存する
   await context.addInitScript(() => {
+    if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.addEventListener(
       "message",
       (event: MessageEvent<{ type?: string }>) => {
         const port = event.ports[0];
-        if (!port) return;
+        if (!port) {
+          if (event.data?.type === "TABLECAST_CANCEL_UPDATE")
+            console.info(
+              "tablecast-pwa-decision:" +
+                JSON.stringify({
+                  page: location.pathname,
+                  type: event.data.type,
+                  time: Date.now(),
+                }),
+            );
+          return;
+        }
         const original = port.postMessage.bind(port);
         port.postMessage = (ready: unknown) => {
           console.info(
@@ -206,6 +218,10 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
                 type: event.data?.type,
                 ready,
                 blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+                time: Date.now(),
+                visibility: document.visibilityState,
+                controller: navigator.serviceWorker.controller?.state,
+                source: event.source instanceof ServiceWorker ? event.source.state : null,
               }),
           );
           original(ready);
@@ -231,6 +247,20 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
   try {
     await other.goto(`${runtime.origin}/`);
     await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
+    // 二画面目の初回登録・制御が完了してから、次の版だけを更新対象にする。
+    await expect
+      .poll(() =>
+        other.evaluate(async () => {
+          const registration = await navigator.serviceWorker.ready;
+          return (
+            Boolean(navigator.serviceWorker.controller) &&
+            registration.active?.state === "activated" &&
+            !registration.installing &&
+            !registration.waiting
+          );
+        }),
+      )
+      .toBe(true);
     let reloads = 0;
     let otherReloads = 0;
     page.on("domcontentloaded", () => {
@@ -278,18 +308,32 @@ test("実Service Workerは別画面の未保存入力がある間は更新を待
       await Promise.all([
         page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
         other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-        page.getByLabel(ja.auth_email, { exact: true }).fill(""),
+        (async () => {
+          await page.bringToFront();
+          await expect.poll(() => page.evaluate(() => document.visibilityState)).toBe("visible");
+          await page.getByLabel(ja.auth_email, { exact: true }).fill("");
+          await expect(
+            page.getByRole("button", { name: ja.auth_sign_in, exact: true }),
+          ).toHaveAttribute("data-pwa-blocked", "false");
+        })(),
       ]);
     } finally {
       for (const target of [page, other]) {
         observations.push(
           JSON.stringify(
-            await target.evaluate(async () => ({
-              page: location.pathname,
-              waiting: Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
-              blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
-              inert: document.body.inert,
-            })),
+            await target.evaluate(async () => {
+              const registration = await navigator.serviceWorker.getRegistration();
+              return {
+                page: location.pathname,
+                waiting: Boolean(registration?.waiting),
+                waitingState: registration?.waiting?.state,
+                activeState: registration?.active?.state,
+                controller: navigator.serviceWorker.controller?.state,
+                visibility: document.visibilityState,
+                blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+                inert: document.body.inert,
+              };
+            }),
           ),
         );
       }

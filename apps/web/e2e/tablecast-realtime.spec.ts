@@ -1,7 +1,7 @@
 import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
-import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
 
 test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更も画面へ反映する", async ({
   page,
@@ -10,8 +10,7 @@ test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更�
 }) => {
   const storeId = "tablecast-komorebi";
   const headers = { Origin: baseURL ?? "" };
-  const login = await staff.post("/api/auth/sign-in/email", { data: credentials, headers });
-  expect(login.status()).toBe(200);
+  await signInStaff(staff, baseURL);
   const stateResponse = await staff.get(`/api/admin/stores/${storeId}`);
   expect(stateResponse.status()).toBe(200);
   const vacant = adminStateSchema.parse(await stateResponse.json()).vacantTables[0];

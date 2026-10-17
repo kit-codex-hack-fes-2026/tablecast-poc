@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import { test } from "./support/test";
-import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
 
 test.use({ trace: "off" });
 
@@ -13,9 +13,7 @@ test("通知が切断していても公開した価格をHTTP経由で注文画�
   const storeId = "tablecast-hanul";
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
-  expect((await staff.post("/api/auth/sign-in/email", { data: credentials, headers })).ok()).toBe(
-    true,
-  );
+  await signInStaff(staff, baseURL);
   const state = adminStateSchema.parse(await (await staff.get(api)).json());
   const vacant = state.vacantTables[0];
   if (!vacant) throw new Error("試験用の空卓が必要です");
