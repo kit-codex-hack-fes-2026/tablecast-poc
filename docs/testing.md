@@ -188,6 +188,8 @@ Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試�
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
 
+`RUNNER_ENVIRONMENT=github-hosted`の使い捨てVMでは、公式CLIのOS依存導入中だけAPTに`--force-unsafe-io`を渡す。展開ファイルのfsyncを省き、dpkg DBの同期・依存解決・署名確認は維持する。専用の一時configは`EXIT` trapで除去し、試験中のD1やアプリのI/Oへ適用しない。クラッシュしたVMは失敗として破棄し、そのOS状態を復元しない。self-hostedではこの設定を使わない。[Debianのdpkg FAQ](https://wiki.debian.org/Teams/Dpkg/FAQ)の範囲に限定し、展開・設定の時間と全必須チェックを実CIで比較する。
+
 ## E2Eの隔離
 
 `bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.29.2`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。

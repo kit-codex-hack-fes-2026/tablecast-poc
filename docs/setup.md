@@ -97,6 +97,8 @@ CIのNodeは`>=24.7.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから
 
 CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。APIではWeb生成物を使わず、Componentは直前に専用形式を生成するため、この2jobでは共通setupのcodegenだけを省く。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
 
+ブラウザーのOS依存導入は公式Playwright CLIを使う。GitHub-hostedの使い捨てVMだけ、導入中のdpkgの展開ファイル同期を省き、終了時に専用設定を除去する。self-hostedやローカルの設定には適用しない。境界と計測は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)に従う。
+
 PR初回投入用の固定JSONは`bunx --no-install turbo run seed:template`で生成し、`.local/tablecast-seed-template/seed.json`へ保存する。Turboはseedのscript・API schema・migration・共通名簿・デモ画像・依存設定を入力としてcacheを管理する。生成物には架空店舗・商品構成・スタッフ名簿だけを入れ、実DB・所有情報・認証account・パスワード・時刻・tokenを保存しない。buildで検証して`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、同じrunの既存Workers artifactへ同梱する。公開assetsやproduction成果物には含めず、seed専用の転送step・job・依存導入も増やさない。配備時も同梱JSONの`sourceHash`と`payloadHash`を検証する。手動検証は`bun --no-env-file run seed:template --verify`を使う。壊れたcacheはTurboのコマンドに`--force`を付けて一度再生成し、検証し直す。適用対象と再開時の境界は[初期データと再実行](deployment.md#初期データと再実行)を参照する。
 
 `dev` はPortlessから `turbo run dev --filter=@tablecast/web` を実行する。Webの名前衝突を準備前に拒否し、`dependsOn` で設定・migration・seed・Compose起動を先に済ませ、`with` でOAuthも起動する。空きポートとrouteの登録はPortlessへ任せる。ローカルmigrationは `CI=1` で確認入力を省き、Turboから実行できる。WebとAPI WorkerはViteのmultiworkerを使い、APIを二重起動しない。
