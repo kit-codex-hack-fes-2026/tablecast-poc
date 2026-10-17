@@ -291,6 +291,8 @@ Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で
 
 viewport・文字倍率・media設定を変更するcaseは開始時の値を記録し、失敗時もfinallyで復元する。固定の既定値へ戻して後続caseの条件を変えない。同名の操作がsidebarと本文にある場合は、対象のlandmarkへlocatorを絞り、`first()`で曖昧さを隠さない。
 
+実SSRの文言・manifestの表示だけをhydration完了と扱わない。document遷移後の操作は、その画面で既存のButtonがenabledになる等の利用者から観測できる条件を待つ。PWA案内は店側のログインButtonが操作可能になってからsummaryを一度クリックし、手順の可視状態を確認する。任意のsleep・クリック反復・timeout延長で同期しない。
+
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
 
 商品公開のE2Eでは、既存の実APIでスタッフ認証・端末request/approve/pollを準備し、独立したスタッフと客のCookieを使う。ログイン・端末登録画面と5秒pollを各journeyで反復せず、注文の代表journeyに残す。公開試験自身は`/admin/live`からの復帰、商品編集・再読込・明示承認・公開・実通知後の客画面の価格更新を観測する。
