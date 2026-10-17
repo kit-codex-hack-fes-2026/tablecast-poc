@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    maxWorkers: 2,
     projects: [
       {
         test: {
@@ -10,6 +11,8 @@ export default defineConfig({
             "scripts/tablecast-fixtures.test.ts",
             "scripts/tablecast-catalog*.test.ts",
             "scripts/tablecast-seed-template.test.ts",
+            "scripts/tablecast-preview-comment.test.ts",
+            "scripts/tablecast-test-selection.test.ts",
           ],
         },
       },
@@ -21,6 +24,8 @@ export default defineConfig({
             "scripts/tablecast-fixtures.test.ts",
             "scripts/tablecast-catalog*.test.ts",
             "scripts/tablecast-seed-template.test.ts",
+            "scripts/tablecast-preview-comment.test.ts",
+            "scripts/tablecast-test-selection.test.ts",
           ],
         },
       },

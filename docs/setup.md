@@ -222,6 +222,8 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 Storybookは標準の6006番を使う。他worktreeが使用中なら `bun run storybook --port 6007` と指定する。コンテナ内では公開済みの6006番を使う。
 Storybookは公式の`@storybook/tanstack-react`でStart・Routerを扱い、WorkersやDBを起動せずに利用する。環境分岐とテストの責務は [テスト戦略](testing.md) を参照する。
 
+PRの公開カタログは通常のpushでは生成しない。配備通知のチェック項目かPRコメントの`/tablecast catalog storybook`・`/tablecast catalog email`・`/tablecast catalog all`で最新headを要求する。write/admin権限を持つ利用者だけが起動できる。workflowの統合前は、Actionsの`CI`からRun workflowを開き、通常PRの作業branchと`catalog_pr`・`catalog`を指定する。main/stagingからのカタログ専用起動は拒否する。対象SHAの照合・再配備・削除は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+
 Composeの正本はルートの [compose.yaml](../compose.yaml) で、ホストのLGTM・Mailpitを定義する。[.devcontainer/compose.yaml](../.devcontainer/compose.yaml) はLGTMだけを `extends` し、開発コンテナとホスト公開ポートを定義する。ホストの `services:*` は `.local/.env`、Dev Containerは `.devcontainer/.env` の `COMPOSE_PROJECT_NAME` を使う。Dev Containerのproject名・volume名は変更しない。
 
 GrafanaのTempo設定とダッシュボードは `infra/grafana/`、Codex設定例は [.codex/config.toml.example](../.codex/config.toml.example) に置く。接続とダッシュボードの使い方は [観測手順](observability.md) を参照する。
@@ -235,6 +237,8 @@ bun run test:e2e
 ```
 
 `test:browser`は実行前にParaglideの`locale-modules`を公式CLIで生成し、翻訳のmodule数を減らす。通常のcodegenと公開buildは`message-modules`を使い、`build:storybook`も自身でこの形式へ戻してからbuildする。同じ`src/paraglide`を共有するため、Browser試験・codegen・dev/watch・buildを同じcheckoutで重ねない。テストだけを直接`vitest`で起動する場合は、先に`bun run --cwd apps/web i18n:compile --output-structure locale-modules`で準備する。
+
+ローカルの`check`と各`test`コマンドは通常どおり全件を実行する。PRのCIはGitHub Compare APIで検証した差分から対象を選び、通常のWeb変更にはVitest標準の`related --run`を使う。共有入口や不明な差分、選択結果が0件のソース変更は全件へ戻す。選択範囲と実行しないjobの扱いは[CIの実行対象](testing.md#ciのジョブとキャッシュ)を参照する。
 
 E2Eはworkerごとに専用環境を作り、ケース間でWebを停止してD1・R2・DOの状態をtemplateから復元する。通常のdevは不要。入口とWorkerのTCPポートは実起動時にOSが割り当てる。LinuxのMailpitはDocker imageから抽出したバイナリをworker単位で起動し、macOSはworker単位のDockerコンテナと動的ポート公開を使う。`bun install --frozen-lockfile`でOAuth emulatorの管理パッチも適用される。E2E専用の`TABLECAST_OAUTH_READY_FILE`はfixtureが設定し、手動設定は不要。global setupが`TABLECAST_BUILD_DIRECTORY`で実行ごとのbuild出力を指定する。この変数を省略した通常buildは`apps/web/dist`を使う。同じworktree内ではcodegenやdeploy metadataを共有する別buildと重ねない。失敗したケースの診断ログと画像は`apps/web/test-results/`へ残り、fixtureが専用プロセス群・container・storageを片付ける。テストの選び方と隔離の範囲は [テスト戦略](testing.md#e2eの隔離)を正本とする。
 

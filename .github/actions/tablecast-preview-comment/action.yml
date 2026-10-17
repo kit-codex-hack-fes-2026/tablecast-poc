@@ -1,0 +1,77 @@
+name: PRプレビューの統合通知
+description: 現在の配備SHAを照合して手動カタログの操作を一つのコメントへまとめる
+inputs:
+  pr:
+    description: 対象PR番号
+    required: true
+  sha:
+    description: 照合済みの対象SHA
+    required: true
+  product-result:
+    description: 製品の配備結果
+    default: 現在版を照合
+  catalog-kind:
+    description: 今回要求したカタログ
+    default: none
+  catalog-result:
+    description: 要求したカタログの配備結果
+    default: 手動配備
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      env:
+        TABLECAST_COMMENT_PR: ${{ inputs.pr }}
+        TABLECAST_COMMENT_SHA: ${{ inputs.sha }}
+        TABLECAST_PRODUCT_RESULT: ${{ inputs.product-result }}
+        TABLECAST_CATALOG_KIND: ${{ inputs.catalog-kind }}
+        TABLECAST_CATALOG_RESULT: ${{ inputs.catalog-result }}
+      with:
+        script: |
+          const {renderPreviewComment, previewCommentMarker, pendingCatalogRequests} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-preview-comment.ts`);
+          const pr = Number(process.env.TABLECAST_COMMENT_PR);
+          const sha = process.env.TABLECAST_COMMENT_SHA;
+          if (!Number.isSafeInteger(pr) || pr < 1 || !/^[a-f0-9]{40}$/.test(sha ?? '')) throw new Error('PR・SHAが不正です');
+          const repository = `${context.repo.owner}/${context.repo.repo}`;
+          const current = async () => {
+            const {data} = await github.rest.pulls.get({...context.repo, pull_number: pr});
+            return data.state === 'open' && data.head.sha === sha && data.head.repo?.full_name === repository;
+          };
+          if (!await current()) return;
+          const targets = [
+            {kind: undefined, worker: `tablecast-pr-${pr}`, path: '/api/health'},
+            ...['storybook', 'email'].map(kind => ({kind, worker: `tablecast-${kind}-pr-${pr}`, path: '/_tablecast/release.json'})),
+          ];
+          const rows = await Promise.all(targets.map(async target => {
+            const url = `https://${target.worker}.kit-codex.workers.dev`;
+            let served = '未確認（現在版不明）';
+            try {
+              const response = await fetch(`${url}${target.path}`, {
+                headers: {'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET},
+                redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(10000),
+              });
+              if (!response.ok) throw new Error('配備情報を取得できません');
+              const release = await response.json();
+              if (target.kind && (release.repository !== repository || release.pr !== String(pr) || release.kind !== target.kind)) throw new Error('対象が一致しません');
+              const value = target.kind ? release.sha : release.releaseSha;
+              if (!/^[a-f0-9]{40}$/.test(value ?? '')) throw new Error('SHAが不正です');
+              served = value;
+            } catch {
+              // 現在版を対象SHAや前回の通知から推測しない。
+            }
+            const selected = process.env.TABLECAST_CATALOG_KIND === 'all' || process.env.TABLECAST_CATALOG_KIND === target.kind;
+            return {...target, url, served, result: target.kind ? (selected ? process.env.TABLECAST_CATALOG_RESULT : '手動配備') : process.env.TABLECAST_PRODUCT_RESULT};
+          }));
+          const comments = (await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr}))
+            .filter(comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(`${previewCommentMarker}\n`));
+          if (comments.length > 1) throw new Error('統合通知が重複しています');
+          const previous = comments[0]?.body ?? '';
+          const requested = previous.match(/^対象SHA: ([a-f0-9]{40})$/m)?.[1] === sha ? pendingCatalogRequests(previous) : [];
+          const [product, ...catalogs] = rows;
+          const body = renderPreviewComment({pr, sha, product, catalogs,
+            runUrl: `https://github.com/${repository}/actions/runs/${context.runId}`, requested,
+          });
+          if (!await current()) return;
+          if (comments.length) await github.rest.issues.updateComment({...context.repo, comment_id: comments[0].id, body});
+          else await github.rest.issues.createComment({...context.repo, issue_number: pr, body});
+          await core.summary.addRaw(body).write();

@@ -143,9 +143,22 @@ Browserの速度は全件の準備・実行・終了を含む経過時間で比�
 
 ## CIのジョブとキャッシュ
 
-Issue #272のテスト再配置ではworkflow・Turbo・package scripts・キャッシュ設定を変更しない。差分CIも導入しない。Vitest `related`/`--changed`の静的import graphだけでは、HTTP越しの実装、Worker binding、ファイル読取やspawnしたruntimeの変更をすべて拾えない。Playwrightの`--only-changed`も同じ制約があり、製品変更に対する全試験の代替としない。以下は現在のCI設定であり、テスト移行による時間短縮は準備・実行・後片付けと必須チェック全体を計測してから報告する。
+Issue #272のテスト再配置ではworkflow・差分CIを変更しなかった。Issue #275では、通常PRの既知の変更だけを選択実行する。選択はGitHub Compare APIが返すmerge-baseから最新headまでの差分を使い、実行前の計画と対象外の理由をActions summaryへ記録する。staging/mainへのpushとカタログ以外の手動CIは全件実行する。
 
-workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、API/D1/MCP、Component・a11y、Playwright E2Eを別jobで確認する。Web・seed・動画基盤・開発CLIのVitestはunit-webへ統合する。Workers・Storybook・Emailはbuildへ統合し、Workers完了後にStorybook・Emailを実行する。成果物は個別のartifactで保存し、失敗は各stepで確認する。
+Webの通常のTS/TSX変更はVitestの`related --run`で本番feature・provider・clientへの静的importを辿り、Web unitとBrowser/Storybookの関連fileを選ぶ。テストだけの差分は既存projectのincludeに従い、対象層へ絞る。
+
+| Web内の変更                               | Web unit        | Component Test  |
+| ----------------------------------------- | --------------- | --------------- |
+| 通常の製品TS/TSX                          | `related --run` | `related --run` |
+| `*.test.ts`のみ                           | `related --run` | 対象外          |
+| `*.browser.test.tsx`・`*.stories.tsx`のみ | 対象外          | `related --run` |
+| route・SSR・CSS・翻訳等の共有入口         | 全件            | 全件            |
+
+例えば`api-fetch.test.ts`だけの変更はWeb unit、`kiosk.browser.test.tsx`やKioskのStoryだけの変更はComponent Testを選ぶ。いずれも、ファイルを複製して別プロセスのresolverを起動するrootのimport規則検査を残す。Web製品コードの変更ではWorkers buildとE2Eを全件実行する。E2E specだけの変更、動画制作の変更、文書だけの変更は、それぞれが所有する試験へ絞る。対象のないjobも実行理由を記録して成功で終了し、集約チェックは全jobの成功を引き続き要求する。対象外の記録を試験の実行成功と扱わない。
+
+静的importに載らないHTTP・binding・ファイル読取・spawnを推測で選別しない。API・migration・binding・開発script・環境・依存・実行設定・未分類path、削除・rename、比較取得の失敗は全件へ戻す。Web内でもroute・SSR・Service Worker・CSS・翻訳と生成入力・public・Storybook設定はWeb全件へ戻す。差分を選べる場合でも、関連テストが合計0件になった場合は、そのCLIに指定したprojectを全件実行する。選択した試験が失敗した場合の再試行ではなく、実行前の対象判定に対するfallbackである。[Vitestの関連試験](https://vitest.dev/guide/cli.html#vitest-related)
+
+workflow名は`CI`。job名は`検証の種類: 何を確かめるか (使用ツール)`に揃え、テストには必ず`Test`を付ける。例えば`Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)`、`E2E Test: 注文・ログイン・会計 (Playwright)`とする。種類・目的・ツールをslashや中点で連結しない。静的解析、API/D1/MCP、Component・a11y、Playwright E2Eを別jobで確認する。Web・seed・動画基盤・開発CLIのVitestはunit-webへ統合する。通常CIのbuildはWorkersを担当し、Storybook・Emailの公開buildと配備は[手動カタログ](deployment.md#prのstorybookメールカタログ)へ分ける。Storybookのinteraction・a11y試験はComponent Testへ残す。
 
 全体の完了時間は3〜4分を目標とする。E2EはActionsのbrowser・shard matrixを使う。PRはChromiumを2分割の計2job、staging/mainへのpushと手動実行はChromium・WebKitを各2分割の計4jobで検査する。Playwrightの`--project`と`--shard=1/2`・`--shard=2/2`で対象を選び、各jobで4workersを使う。既存の`fullyParallel: true`によりケース単位で分配し、イベントごとに選ばれた全shardの成功を集約チェックの条件とする。PRの製品プレビューは静的解析・build・images成功後に先行配備する。staging・本番配備は両browserを含む全必須検査の成功を待つ。失敗時のtrace・画像artifact名にはbrowserとshard番号を含める。公開リポジトリで無料の標準Linux runnerを使い、ブラウザー本体・OS依存も対象browserだけ準備する。build・migration・seedは各jobで一度ずつ実行するため、待ち時間と総runner時間の両方を確認する。分割は[Playwright標準のsharding](https://playwright.dev/docs/test-sharding)を使い、ローカルで分配だけを確認する場合は`bun run test:e2e --project=tablecast-chromium --shard=1/2 --list`を実行する。ケースの隔離と`retries: 0`を維持し、ローカルの`bun run test:e2e`は従来どおり両browserを実行する。
 
@@ -153,9 +166,13 @@ PRのマージ前に保証するE2EはChromiumであり、WebKit固有の回帰�
 
 Component Testの失敗PNGは`tablecast-components-<SHA>`、E2Eの失敗資料は`tablecast-e2e-<browser>-<shard>`へ1日保存する。Component TestのartifactへCookieを含む可能性のあるtraceは追加しない。
 
-APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。ファイル内は直列で、各caseのD1 reset・migrationを維持する。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得、Webとseedのunitに使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
+APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を使い、`fileParallelism: true`・`maxWorkers: 4`とする。Vitestの標準shardはfile単位であり、一つの長いcaseを分割しない。shardを増やす前に、最遅file、runnerとruntimeの準備、総runner時間、全必須jobの完了時刻を比較する。ファイル内は直列で、各caseのD1 reset・migrationを維持する。導入済みCloudflare pluginにはmigration済みbindingのsnapshot復元APIがないため、caseごとの初期化を`beforeAll`へ持ち上げない。
 
-GitHub Actionsの`actions/cache`で静的解析と2種類のbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、Workersの`dist`・deploy configとStorybookの`storybook-static`を出力として復元する。テストtaskは`cache: false`で毎回実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メール、テスト結果は永続キャッシュへ入れない。
+rootのVitestは`maxWorkers: 2`とする。CIのunit-webではruntimeを2枠、scripts-unit・Web unit・動画の各CLIを1枠にし、同じrunner内のVitest fileを最大5件に制限する。枠はCLIごとに適用され、rootの値だけで別processの枠まで制限できるとは扱わない。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得にも使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
+
+GitHub Actionsの`actions/cache`で静的解析・Workers buildと手動カタログbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、WorkersのBuild OutputとStorybookの`storybook-static`を出力として復元する。選択したテストtaskは`cache: false`で実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メールと個々のテスト成果物は永続キャッシュへ入れない。
+
+APIとComponent Testでは、各workspaceの`node_modules/.vite/vitest/*/results.json`だけを実行順のmetadataとして保存する。job・API shardごとに分離し、OS・architecture・lockfile・対象SHAをkeyにする。標準sequencerが前回失敗したfileと時間の長いfileを先に実行するために使い、成功した試験を省く根拠にはしない。unit-webの各試験はこのcacheの対象外とする。rootのscripts-unitとruntimeは同じmetadataを並列更新し、Web unitと動画の所要時間も短いため、cacheや独自の統合処理を増やさない。標準shardのfile分配とdurationによる実行順は別で、過去の時間だけでshardが均等になるとは扱わない。[Vitestの実行順](https://vitest.dev/config/sequence.html#sequence-sequencer)
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
 
@@ -171,7 +188,7 @@ DBはケース開始時のtemplate差し替えで初期化するため、後処�
 
 ケース間では配信clientディレクトリもビルド成果物から復元し、PWA試験が変更したService Workerや追加ファイルを持ち越さない。ケース内の`restartWeb()`は変更を維持する。
 
-CIの統合buildジョブもWorkersの完了後にStorybook・Emailを実行する。TurboキャッシュはSHA付きのキーで保存し、共通prefixで以前の成果物を復元する。
+通常CIはWorkersだけをbuildし、手動カタログworkflowでStorybook・Emailを生成する。TurboキャッシュはSHA付きのキーで保存し、共通prefixで以前の成果物を復元する。
 
 同じworktree内の別buildは、Paraglide・route生成とCloudflareのdeploy metadataの書込み先を共有するため同時に開始しない。CIのbrowser matrixは別runnerであり、ケース間の並列実行とは区別する。ケースの入口はVite標準proxyを`port: 0`で一度だけ起動し、終了まで待受を保持する。実originをOAuth callbackとAPI varsへ設定後、Cloudflare previewも`port: 0`で起動し、listen完了時の実ポートへ転送する。空き番号を取得して解放する処理は使わない。OAuthとWorkerのreadyファイルは一時ファイルからrenameして公開し、異常終了と起動期限を確認する。bind失敗の自動再試行はしない。
 
@@ -193,7 +210,7 @@ macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guid
 | 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                                                          | 実WebSocketの切断・HTTP回復E2E               |
 | QR decodeと送像停止、URL入力・卓保持  | `device-qr-reader.browser.test.tsx`と`devices.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | 端末の明示承認・Cookie→代表注文の実接続E2E   |
 | 音声turnの認可とspeech/tool関連付け   | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                                              | APIの実認可と別枠の有料WebRTC音声            |
-| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                                            | 他workspaceのtestから独立したCI job          |
+| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                                            | unit-web内で他workspaceと別CLIを実行         |
 
 Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
 
@@ -212,6 +229,7 @@ bunx --no-install vitest run --project bindings
 # リポジトリルート
 bunx --no-install vitest run --project scripts-unit
 bunx --no-install vitest run --project scripts-runtime
+bun run --cwd apps/web test
 bun run test:browser
 bun run test:e2e --project=tablecast-chromium
 ```

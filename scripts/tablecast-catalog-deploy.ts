@@ -191,11 +191,15 @@ async function main() {
     .parse(process.env.TABLECAST_RELEASE_SHA);
   const target = deploymentTarget(pr);
   await currentRevision(target, sha);
+  const requestedKind = z
+    .enum(["all", ...catalogKinds])
+    .parse(process.env.TABLECAST_CATALOG_KIND ?? "all");
+  const selectedKinds = requestedKind === "all" ? catalogKinds : [requestedKind];
   const directory = resolve(root, ".local/tablecast-catalog");
   await mkdir(directory, { recursive: true });
   await writeFile(resolve(directory, "empty.env"), "");
   const results = await Promise.allSettled(
-    catalogKinds.map(async (kind) => {
+    selectedKinds.map(async (kind) => {
       const { name, origin } = catalogTarget(pr, kind);
       const artifact =
         kind === "email"

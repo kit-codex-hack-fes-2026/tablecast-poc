@@ -8,6 +8,15 @@ on:
     branches: [main, staging]
   workflow_dispatch:
     inputs:
+      catalog_pr:
+        description: 手動配備する通常PR番号（空欄なら全検査）
+        type: string
+        default: ""
+      catalog:
+        description: 手動配備するカタログ
+        type: choice
+        options: [all, storybook, email]
+        default: all
       staging_reset:
         description: staging全体をリセットする場合はtablecast-stagingを入力
         type: string
@@ -27,8 +36,64 @@ env:
   TABLECAST_DEPLOY_ENV: ${{ github.event_name != 'pull_request' && (github.ref_name == 'staging' && 'staging' || 'production') || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'staging' && 'production' || 'preview') }}
 
 jobs:
+  test-plan:
+    name: Test Selection（変更範囲と全件への復帰）
+    if: ${{ !inputs.catalog_pr || github.ref_name == 'staging' || github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.plan.outputs.web }}
+      components: ${{ steps.plan.outputs.components }}
+      api: ${{ steps.plan.outputs.api }}
+      runtime: ${{ steps.plan.outputs.runtime }}
+      fixtures: ${{ steps.plan.outputs.fixtures }}
+      presentation: ${{ steps.plan.outputs.presentation }}
+      e2e: ${{ steps.plan.outputs.e2e }}
+      build: ${{ steps.plan.outputs.build }}
+      images: ${{ steps.plan.outputs.images }}
+      base: ${{ steps.plan.outputs.base }}
+      files: ${{ steps.plan.outputs.files }}
+    steps:
+      - name: 常設環境のCI履歴へ手動カタログを混在させない
+        if: inputs.catalog_pr != ''
+        run: |
+          echo 'カタログは通常PRの作業branchを選択して起動してください。main/stagingからは起動できません。' >&2
+          exit 1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        id: plan
+        with:
+          script: |
+            const {selectTablecastTests} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-test-selection.ts`);
+            let files = [];
+            let base = '';
+            const pr = context.payload.pull_request;
+            const eligible = context.eventName === 'pull_request' && pr.head.ref !== 'staging';
+            if (eligible) {
+              try {
+                const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: `${pr.base.sha}...${pr.head.sha}`});
+                if (!/^[a-f0-9]{40}$/.test(data.merge_base_commit.sha) || !data.files?.length || data.files.length >= 300) throw new Error('差分を完全に取得できません');
+                files = data.files.map(({filename, status, previous_filename}) => ({filename, status, previous_filename}));
+                base = data.merge_base_commit.sha;
+              } catch {
+                core.notice('比較に失敗したため全件を実行します');
+              }
+            }
+            const selection = selectTablecastTests(files, eligible ? 'pull_request' : 'full');
+            for (const [key, value] of Object.entries(selection)) core.setOutput(key, String(value));
+            core.setOutput('base', base);
+            core.setOutput('files', JSON.stringify(files.map(file => file.filename)));
+            await core.summary.addHeading('テストの選択').addRaw(selection.reason).addCodeBlock(JSON.stringify(selection, null, 2), 'json').write();
+
   static:
     name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,6 +118,7 @@ jobs:
 
   unit-web:
     name: "Unit/Integration: Web・seed・dev-runtime (Vitest)"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -60,18 +126,36 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
+        if: needs.test-plan.outputs.web != 'none' || needs.test-plan.outputs.runtime != 'none' || needs.test-plan.outputs.fixtures != 'none' || needs.test-plan.outputs.presentation != 'none'
+      # 個別CLIの既定枠を合算せず、重いruntimeは2、軽い3組は各1へ制限する。
       - parallel:
           - name: Seed fixtures
-            run: bunx --no-install vitest run --project scripts-unit
+            if: needs.test-plan.outputs.fixtures != 'none'
+            run: bunx --no-install vitest run --project scripts-unit --maxWorkers=1
           - name: Web
-            run: bun run --cwd apps/web test
+            if: needs.test-plan.outputs.web != 'none'
+            working-directory: apps/web
+            env:
+              TABLECAST_TEST_MODE: ${{ needs.test-plan.outputs.web }}
+              TABLECAST_TEST_FILES: ${{ needs.test-plan.outputs.files }}
+            run: bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project unit --maxWorkers=1
           - name: Presentation
-            run: bun run --cwd apps/presentation test
+            if: needs.test-plan.outputs.presentation != 'none'
+            run: bun run --cwd apps/presentation test -- --maxWorkers=1
           - name: Dev runtime
-            run: bunx --no-install vitest run --project scripts-runtime
+            if: needs.test-plan.outputs.runtime != 'none'
+            env:
+              TABLECAST_RUNTIME_SCOPE: ${{ needs.test-plan.outputs.runtime }}
+            run: |
+              if [ "$TABLECAST_RUNTIME_SCOPE" = imports ]; then
+                bunx --no-install vitest run --project scripts-runtime scripts/tablecast-import-rules.test.ts
+              else
+                bunx --no-install vitest run --project scripts-runtime
+              fi
 
   api:
     name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1, shard ${{ matrix.shard }}/2)"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -83,10 +167,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
-      - run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
+        if: needs.test-plan.outputs.api != 'none'
+      # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        if: needs.test-plan.outputs.api != 'none'
+        with:
+          path: apps/api/node_modules/.vite/vitest/*/results.json
+          key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-${{ github.event.pull_request.head.sha || github.sha }}
+          restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-
+      - if: needs.test-plan.outputs.api != 'none'
+        run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
 
   build:
-    name: "Build: Workers・Storybook・Email"
+    name: "Build: Workers"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -100,84 +194,24 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
+        if: needs.test-plan.outputs.build == 'true'
         with:
           turbo: "true"
-      # Webの生成ファイルを共有するWorkersとStorybookは同時にbuildしない。
       - name: Workers
+        if: needs.test-plan.outputs.build == 'true'
         run: bun --no-env-file run build:deploy
-      - parallel:
-          - name: Storybook
-            run: |
-              bunx --no-install turbo run build:storybook
-              bun --no-env-file run deploy:catalog --prepare-storybook
-          - name: Email
-            run: bun --no-env-file run build:email
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - if: needs.test-plan.outputs.build == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
           path: apps/web/.cloudflare/output/
           include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/storybook-static/
-          include-hidden-files: true
-          retention-days: 1
-          if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/api/email-static/
-          retention-days: 1
-          if-no-files-found: error
-
-  catalog-deploy:
-    name: PRカタログの配備
-    needs: [static, unit-web, build, components]
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: preview
-    permissions:
-      contents: read
-      pull-requests: read
-    concurrency:
-      group: tablecast-deploy-${{ github.event.pull_request.number }}
-      queue: max
-      cancel-in-progress: false
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TABLECAST_PR_NUMBER: ${{ github.event.pull_request.head.ref != 'staging' && github.event.pull_request.number || '' }}
-      TABLECAST_RELEASE_SHA: ${{ github.event.pull_request.head.sha }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-      TABLECAST_PREVIEW_ACCESS_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_ACCESS_POLICY_ID }}
-      TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ env.TABLECAST_RELEASE_SHA }}
-      - uses: ./.github/actions/tablecast-setup
-        id: setup
-        background: true
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: tablecast-storybook-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/web/storybook-static/
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: tablecast-email-${{ env.TABLECAST_RELEASE_SHA }}
-          path: apps/api/email-static/
-      - name: 依存の準備完了を待つ
-        wait: setup
-      - name: Access保護・検証済みSHAの配備
-        run: bun --no-env-file run deploy:catalog
 
   components:
     name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -185,14 +219,31 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: ./.github/actions/tablecast-setup
+        if: needs.test-plan.outputs.components != 'none'
+      # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        if: needs.test-plan.outputs.components != 'none'
+        with:
+          path: apps/web/node_modules/.vite/vitest/*/results.json
+          key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-${{ github.event.pull_request.head.sha || github.sha }}
+          restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-
       - parallel:
-          - uses: ./.github/actions/tablecast-browser
+          - if: needs.test-plan.outputs.components != 'none'
+            uses: ./.github/actions/tablecast-browser
             with:
               browsers: chromium webkit
-          - uses: ./.github/actions/tablecast-browser-deps
+          - if: needs.test-plan.outputs.components != 'none'
+            uses: ./.github/actions/tablecast-browser-deps
             with:
               browsers: chromium webkit
-      - run: bun run test:browser
+      - if: needs.test-plan.outputs.components != 'none'
+        working-directory: apps/web
+        env:
+          TABLECAST_TEST_MODE: ${{ needs.test-plan.outputs.components }}
+          TABLECAST_TEST_FILES: ${{ needs.test-plan.outputs.files }}
+        run: |
+          bun run i18n:compile --output-structure locale-modules
+          bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
@@ -202,6 +253,7 @@ jobs:
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -213,18 +265,32 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: ${{ needs.test-plan.outputs.e2e == 'changed' && '0' || '1' }}
       - uses: ./.github/actions/tablecast-setup
+        if: needs.test-plan.outputs.e2e != 'none'
       - parallel:
-          - uses: ./.github/actions/tablecast-browser
+          - if: needs.test-plan.outputs.e2e != 'none'
+            uses: ./.github/actions/tablecast-browser
             with:
               browsers: ${{ matrix.browser }}
-          - uses: ./.github/actions/tablecast-browser-deps
+          - if: needs.test-plan.outputs.e2e != 'none'
+            uses: ./.github/actions/tablecast-browser-deps
             with:
               browsers: ${{ matrix.browser }}
           - name: Mailpit image
+            if: needs.test-plan.outputs.e2e != 'none'
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
-        run: bun run test:e2e --project=tablecast-${{ matrix.browser }} --shard=${{ matrix.shard }}/2
+        if: needs.test-plan.outputs.e2e != 'none'
+        env:
+          TABLECAST_E2E_MODE: ${{ needs.test-plan.outputs.e2e }}
+          TABLECAST_DIFF_BASE: ${{ needs.test-plan.outputs.base }}
+        run: |
+          if [ "$TABLECAST_E2E_MODE" = changed ] && git diff --name-only "$TABLECAST_DIFF_BASE...HEAD" > /dev/null; then
+            bun run test:e2e --only-changed="$TABLECAST_DIFF_BASE" --project=tablecast-${{ matrix.browser }} --shard=${{ matrix.shard }}/2
+          else
+            bun run test:e2e --project=tablecast-${{ matrix.browser }} --shard=${{ matrix.shard }}/2
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
@@ -235,6 +301,7 @@ jobs:
 
   images:
     name: 配備用Containerイメージ
+    needs: test-plan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -244,13 +311,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: PR用OAuthをlinux/amd64で検証
+        if: needs.test-plan.outputs.images == 'true'
         run: |
           docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag "tablecast-emulate:$TABLECAST_RELEASE_SHA" .
           trap 'docker rm --force tablecast-oauth-check' EXIT
           docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev "tablecast-emulate:$TABLECAST_RELEASE_SHA"
           curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
           docker save "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - if: needs.test-plan.outputs.images == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
           path: tablecast-images.tar.gz
@@ -260,8 +329,8 @@ jobs:
 
   deploy-preview:
     name: PRプレビュー配備
-    needs: [static, build, images]
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: [test-plan, static, build, images]
+    if: needs.test-plan.outputs.build == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -269,7 +338,7 @@ jobs:
       url: ${{ steps.target.outputs.url }}
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number }}
       queue: max
@@ -295,6 +364,7 @@ jobs:
       TABLECAST_PREVIEW_SERVICE_POLICY_ID: ${{ vars.TABLECAST_PREVIEW_SERVICE_POLICY_ID }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        id: checkout
         with:
           ref: ${{ env.TABLECAST_RELEASE_SHA }}
       - uses: ./.github/actions/tablecast-setup
@@ -318,10 +388,21 @@ jobs:
       - name: 資源作成・移行・検証済み成果物の配備・SHA確認
         run: bun --no-env-file run deploy
 
+      - name: 製品と手動カタログの通知
+        if: always() && steps.checkout.outcome == 'success'
+        uses: ./.github/actions/tablecast-preview-comment
+        with:
+          pr: ${{ github.event.pull_request.number }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          product-result: ${{ job.status }}
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
   deploy:
     name: 本番・staging配備
-    needs: [static, unit-web, api, build, components, e2e, images]
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')
+    needs: [test-plan, static, unit-web, api, build, components, e2e, images]
+    if: ${{ !inputs.catalog_pr && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -383,8 +464,8 @@ jobs:
 
   required:
     name: TableCast CI
-    if: always()
-    needs: [static, unit-web, api, build, components, e2e, images]
+    if: ${{ always() && !inputs.catalog_pr }}
+    needs: [test-plan, static, unit-web, api, build, components, e2e, images]
     runs-on: ubuntu-latest
     steps:
       - name: 全検査の成功確認
@@ -393,73 +474,44 @@ jobs:
         run: node -e 'if (Object.values(JSON.parse(process.env.TABLECAST_RESULTS)).some(job => job.result !== "success")) process.exit(1)'
 
   preview-report:
-    name: PRプレビューの統合通知
-    needs: [deploy-preview, catalog-deploy]
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
+    name: 変更対象外の製品と手動カタログの通知
+    needs: [test-plan, static, build, images]
+    if: always() && needs.test-plan.result == 'success' && needs.test-plan.outputs.build != 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: preview
     permissions:
+      contents: read
       pull-requests: write
     concurrency:
       group: tablecast-deploy-${{ github.event.pull_request.number }}
       queue: max
       cancel-in-progress: false
     steps:
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        id: checkout
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: 製品と手動カタログの通知
+        if: always() && steps.checkout.outcome == 'success'
+        uses: ./.github/actions/tablecast-preview-comment
+        with:
+          pr: ${{ github.event.pull_request.number }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          product-result: 変更対象外のため再配備なし
         env:
-          TABLECAST_PREVIEW_RESULTS: ${{ toJSON(needs) }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        with:
-          script: |
-            const pr = context.payload.pull_request.number;
-            const sha = context.payload.pull_request.head.sha;
-            const repository = `${context.repo.owner}/${context.repo.repo}`;
-            const current = async () => {
-              const {data} = await github.rest.pulls.get({...context.repo, pull_number: pr});
-              return data.state === 'open' && data.head.sha === sha && data.head.repo?.full_name === repository;
-            };
-            if (!await current()) return;
-            const results = JSON.parse(process.env.TABLECAST_PREVIEW_RESULTS);
-            const targets = [
-              {name: '製品', worker: `tablecast-pr-${pr}`, path: '/api/health', result: results['deploy-preview'].result},
-              ...['storybook', 'email'].map(kind => ({name: kind, kind, worker: `tablecast-${kind}-pr-${pr}`, path: '/_tablecast/release.json', result: results['catalog-deploy'].result})),
-            ];
-            const rows = await Promise.all(targets.map(async target => {
-              const origin = `https://${target.worker}.kit-codex.workers.dev`;
-              let served = '未確認（現在版不明）';
-              try {
-                const response = await fetch(`${origin}${target.path}`, {
-                  headers: {'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID, 'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET},
-                  redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(10000),
-                });
-                if (!response.ok) throw new Error('配備情報を取得できません');
-                const release = await response.json();
-                if (target.kind && (release.repository !== repository || release.pr !== String(pr) || release.kind !== target.kind)) throw new Error('対象が一致しません');
-                const value = target.kind ? release.sha : release.releaseSha;
-                if (!/^[a-f0-9]{40}$/.test(value ?? '')) throw new Error('SHAが不正です');
-                served = value;
-              } catch {
-                // 取得できない現在版を、前回のコメントや今回の対象SHAで推測しない。
-              }
-              return `| ${target.name} | ${origin} | ${target.result} | ${served} |`;
-            }));
-            // 既存カタログコメントをそのまま統合コメントとして更新する。
-            const marker = '<!-- tablecast-catalog-preview -->';
-            const body = [marker, 'PRプレビュー（Cloudflare Accessへのログインが必要）', '',
-              `対象SHA: ${sha}`, '',
-              '| 対象 | URL | 配備jobの結果 | 通知時に確認できた配備SHA |',
-              '| --- | --- | --- | --- |', ...rows, '',
-              'Storybook・メールの結果は共通のカタログ配備jobの結果。詳細は実行結果を参照。', '',
-              `[実行結果](https://github.com/${repository}/actions/runs/${context.runId})`,
-            ].join('\n');
-            const comments = (await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number: pr}))
-              .filter(comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker));
-            if (comments.length > 1) throw new Error('統合通知が重複しています');
-            if (!await current()) return;
-            if (comments.length) {
-              await github.rest.issues.updateComment({...context.repo, comment_id: comments[0].id, body});
-            } else {
-              await github.rest.issues.createComment({...context.repo, issue_number: pr, body});
-            }
-            await core.summary.addRaw(body).write();
+
+  catalog-manual:
+    name: 明示要求したカタログだけを配備
+    if: github.event_name == 'workflow_dispatch' && inputs.catalog_pr != '' && github.ref_name != 'staging' && github.ref_name != 'main'
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/catalog-preview.yml
+    with:
+      pr: ${{ inputs.catalog_pr }}
+      catalog: ${{ inputs.catalog }}
+    secrets: inherit

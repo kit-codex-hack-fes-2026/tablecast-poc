@@ -59,12 +59,12 @@ Web applicationの設定を次と完全一致させる。
 
 ## Actionsの処理
 
-1. format/lint/typecheck、単体・実Binding、Workers/Storybook build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。production以外は初回seedの固定JSONを既存のWorkers artifactへ同梱する。固定JSONはTurboで一度生成・検証し、壊れたcacheは一度だけ強制再生成してから検証し直す。buildジョブには配備secretを渡さない。
+1. format/lint/typecheck、単体・実Binding、Workers build、UI部品、Chromium/WebKit E2E、OAuth Dockerイメージを確認する。PRの実行対象と全件へ戻す条件は[テスト戦略](testing.md#ciのジョブとキャッシュ)に従う。検証と配備は同じPR head SHAまたはmain SHAを使う。環境別Workers buildと検証済みDockerイメージを同じrunのSHA付きartifactに保存し、1日で削除する。production以外は初回seedの固定JSONを既存のWorkers artifactへ同梱する。固定JSONはTurboで一度生成・検証し、壊れたcacheは一度だけ強制再生成してから検証し直す。buildジョブには配備secretを渡さない。Storybook・Emailの公開buildと配備は手動カタログworkflowが担当する。
 2. 同一repoのPRだけにsecretを渡す。fork PRは通常の検証のみ。配備とclose cleanupは環境単位の同じconcurrency groupで直列化し、実行途中の配備を新しいpushでキャンセルしない。
 3. 現在のmain/PR SHA・PR状態・repoをGitHub APIで照合する。独立したD1・R2・DO・Worker一覧、既存Workerの設定、Accessのapplication・policy・tokenを並行取得し、必要な所有情報・設定の検証が揃ってから変更へ進む。D1/R2が揃った通常配備では、同じ排他・呼出し内で所有確認した資源を再利用し、一覧と所有情報の4要求を重複取得しない。欠落時の作成・cleanup・resetは再確認する従来経路を維持し、Binding接続後のR2所有照合も残す。Access、D1、R2を作成し、所有情報を記録する。名前だけが一致する既存DB/R2は自動採用しない。
-4. 配備jobは自身の前提検査が成功してからartifactを取得する。PRでは製品が静的検査・Workers build・Container検査、カタログが静的検査・unit-web・build・部品検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、製品の`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。seedの固定JSONも形式・生成元・payloadのhashを検証し、不一致なら遠隔資源の変更前に停止する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
+4. 製品の配備jobは自身の前提検査が成功してからartifactを取得する。PRでは静的検査・Workers build・Container検査を待つ。同じjob内で依存準備を`background`実行し、artifactのネットワーク取得を重ねる。`wait: setup`で依存準備の成功とPATHの反映を待ち、`docker load`、配備の順に進む。依存cacheとDockerの同時展開は計測で遅くなったため重ねない。WorkersはbuildジョブのVite成果物をそのまま使い、生成configの環境・SHAを照合して実D1 IDとRegistryのイメージ参照だけを補完する。seedの固定JSONも形式・生成元・payloadのhashを検証し、不一致なら遠隔資源の変更前に停止する。Turborepoの入力には生成configの内容も含める。`--env`をbuild後に付けて別環境へ転用せず、配備ジョブではViteとDockerを再buildしない。
 5. DB準備・migration・初回seedと検証済みContainerイメージのRegistry送信を並行する。どちらかが失敗しても開始済み処理の終了を待ち、両方成功した場合だけ最新SHAを再確認してWorker配備へ進む。cfはDocker認証設定を共有するためimage同士の送信は直列にする。D1 migration、初回PR seed、APIとPRのOAuth Container、Webの順で配備する。既存のDO namespace ID・クラス名・SQLite storageを前後で検査し、過去のDO migrationタグを再適用しない。未知のクラスを検出したら停止して照合する。
-6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行する。正しいSHAを確認した場合だけPRコメントとActions summaryへURL・SHAを記録する。
+6. Web経由の`/api/health`が返すrelease SHAを照合する。配備直後の反映遅延は5秒間隔で最大12回、各HTTP要求は5秒まで再試行し、対象SHAと一致した場合だけ配備成功とする。製品の配備job自身がPRコメントとActions summaryへ通知し、失敗時も処理結果と取得できた現在の配備SHAを分けて表示する。手動カタログの生成や終了は待たない。
 
 D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
@@ -72,9 +72,7 @@ D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営�
 
 DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`cf containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`cf deploy --prebuilt`で配備する。cfのversion・image digest出力と対象SHAを同じrunで追跡する。OAuth emulatorの依存は既存Dockerfileのbuild段階で準備する。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
-PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品と全カタログが利用可能になるまでを測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。job分割はrunnerと依存準備を増やし、製品とカタログのjob統合は前提検査の和集合を待って製品の先行配備を遅らせるため、単独区間の短縮だけで判断しない。CI全体へ配備の排他を広げる場合も、連続push時の古いCIとclose cleanupの待機増加を評価する。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
-
-2026-10-17の既存資源への配備では、`faac0c7`の製品jobが70秒、カタログjobが40秒だった。既存資源を使った比較実行の製品jobは変更前79秒・途中版77秒で、今回の差は7〜9秒である。カタログのscriptは従来34〜37秒から18秒になった。前提検査と排他の待機も異なる1標本ずつの結果であり、初回seedの改善や約1分の短縮を示す結果にはしない。[計測run](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/actions/runs/39037506882)
+PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品URLとSHAの通知までを測る。カタログは手動要求から対象URLのSHA確認・通知までを別に測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。手動カタログが同じPRの排他を先に取得した場合も、製品の待機時間へ含める。単独区間の短縮だけで判断せず、計測のSHA・run・標本数はPRへ残す。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
 
 ## 初期データと再実行
 
@@ -195,21 +193,25 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 ## PRのStorybook・メールカタログ
 
-同一repositoryのPRには`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`を追加し、両方をWorkers Static Assetsで配信する。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
+同一repositoryのPRでは、要求されたカタログを`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`へWorkers Static Assetsで配信する。通常のPR更新では生成・再配備しない。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
 
-CIはhead SHAで両成果物を生成し、同じrunのartifactを配備する。音声・Containerの検査を待たず、静的検査・部品検査・カタログbuildがすべて成功した場合に配備jobを実行する。前提jobが失敗・skip・cancelされた場合は配備job自体もskipされ、統合通知でも成功扱いにしない。CI workflow全体も`cancel-in-progress: false`とし、PR更新で開始済みの移行・配備を中断しない。検査だけをキャンセル可能にするには、配備を別workflowへ分離する設計が必要となる。製品配備・カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、製品配備・カタログ配備・cleanupの待機同士を取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
+製品の配備通知にあるStorybook・メールのチェック項目を選ぶか、PRへ`/tablecast catalog storybook`、`/tablecast catalog email`、`/tablecast catalog all`をコメントすると、`catalog-preview.yml`が選択した種別だけを生成・配備する。種別を省いた`/tablecast catalog`は両方を選ぶ。起動した利用者のwrite/admin権限、同一repositoryのopenな通常PR、最新head SHAを確認する。チェック操作はgithub-actionsの固定通知と対象SHAが一致する場合だけ受け付け、受付後に選択を戻す。古い通知からの要求は拒否する。
 
-カタログjobは依存準備を一度だけ行い、別Worker・別出力先を持つStorybookとメールを並行配備する。共有Access policy・service tokenは参照だけにし、各Workerの所有・公開前後のAccess・現在SHAをそれぞれ検証する。片方が失敗しても開始済みの子プロセスと検証の終了を回収してからjobを失敗にする。cleanupの削除順は維持する。
+`issue_comment`はdefault branchのworkflowを使うため、チェック項目とコメントからの起動はこのworkflowがstagingへ統合された後に有効になる。対象PRのheadにも手動カタログ機能が必要であり、共通通知actionがない古いPRは最新stagingを取り込んでから再要求する。統合前の検証や手動復旧は、Actionsの`CI`からRun workflowを開き、通常PRの作業branch、`catalog_pr`にPR番号、`catalog`に`all`・`storybook`・`email`を指定する。main/stagingを選んだカタログ専用起動は拒否する。同じ再利用workflowが認可・最新headの照合を行う。手動カタログは全CIの終了を待たず、明示要求したheadから生成する。必須検査の代わりにはせず、製品の本番・staging配備条件も変更しない。
+
+製品配備・手動カタログ配備・cleanupは同じ`tablecast-deploy-PR番号`のconcurrencyで直列化する。`queue: max`で最大100件の待機を保持し、開始済み処理と待機中の別配備を新しいpushで取り消さない。上限を超えたrunはキャンセルされるため再実行が必要となる。排他取得後と公開直前にPRのopen状態・head SHA・同一repositoryを再確認する。再確認と外部API操作は原子的ではなく、その間の更新は後続runが収束させる。
+
+カタログjobは依存準備を一度だけ行い、要求されたStorybookとメールの公開成果物を生成する。Storybookと製品のParaglide生成先は共有するため、同じcheckout内でbuildを重ねない。両方を要求した場合の配備は、別Worker・別出力先を使って並行する。共有Access policy・service tokenは参照だけにし、各Workerの所有・公開前後のAccess・現在SHAをそれぞれ検証する。片方が失敗しても開始済みの子プロセスと検証の終了を回収してからjobを失敗にする。
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
 両カタログは`html_handling: none`でHTMLパスをそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
 
-`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品・カタログの配備jobが終了した後、GHAの通知jobが公式`actions/github-script`で固定コメント1件を更新する。製品・Storybook・メールを同じ表にまとめ、失敗・skip時も対象SHA・配備jobの結果・通知時に取得できた配備SHAを表示する。通知jobはcheckoutやBunの導入を行わない。共有の配備排他と投稿直前のPR/head照合で古い実行からの更新を防ぐ。現在版を確認できなければ旧版が残ったと推測しない。forkはsecretなしbuildだけを実施し、配備・コメントは対象外とsummaryへ記録する。
+`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品と手動カタログの各配備jobが、公式`actions/github-script`を使う共通actionで同じ固定コメント1件を更新する。製品buildを必要としない文書・テストだけのPR更新は軽量の通知jobから同じactionを使い、最新headの要求欄と確認できた現在版を表示する。いずれも手動カタログの終了は待たない。製品・Storybook・メールを同じ表にまとめ、対象SHA・処理結果・通知時に取得できた配備SHAを表示する。未生成・前のSHAのカタログは最新の配備成功と扱わず、現在版を確認できないときも推測で補わない。投稿直前にPR/headを照合し、古い実行からの更新を防ぐ。forkはsecretなしの検証だけを実施し、配備・コメント要求の対象外とする。
 
-再配備は最新headに対するCI runを再実行する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。カタログ削除が失敗しても、セットアップが成功しworkflowがキャンセルされていなければ製品側の削除を試行する。カタログ側の失敗はjob結果に残す。削除後の再実行は安全に終了し、reopenは通常のCIで再作成する。手動復旧はセットアップ済みのホスト環境で行い、GitHub CLI `gh` と対象repositoryを読める認証（`gh auth status`）、配備用のCloudflare tokenを用意する。Dev Containerには `gh` を同梱しない。対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
+製品の再配備は最新headのCI runを再実行し、カタログはチェック項目・コメント・Run workflowから再要求する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。カタログ削除が失敗しても、セットアップが成功しworkflowがキャンセルされていなければ製品側の削除を試行する。カタログ側の失敗はjob結果に残す。削除後の再実行は安全に終了する。reopen後は製品を通常CIで、カタログを手動要求で再作成する。手動復旧はセットアップ済みのホスト環境で行い、GitHub CLI `gh` と対象repositoryを読める認証（`gh auth status`）、配備用のCloudflare tokenを用意する。Dev Containerには `gh` を同梱しない。対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
 
-追加資源はPRごとに2 Workersと専用Access applicationで、メール用D1/R2/KV/DO/Containerは作らない。既存Workers Paidの契約を共有するため、Workerごとの追加基本料はない。両カタログの静的配信は無料で、メール用のWorker実行課金は発生しない。含有枠とAccessの人数・application数、accountのWorker数、Actions artifact容量を監視する。含有枠内なら追加費用0を想定できるが、超過料金まで0とは保証しない。標準GitHub hosted runnerは公開repositoryでは無料で、artifact等は別枠となる。[Workers料金](https://developers.cloudflare.com/workers/platform/pricing/)・[Static Assets料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)・[Worker上限](https://developers.cloudflare.com/workers/platform/limits/)を契約時点で確認する。
+追加資源は要求した種別ごとのWorkerと専用Access applicationで、両方を生成したPRは2 Workersを使う。メール用D1/R2/KV/DO/Containerは作らない。既存Workers Paidの契約を共有するため、Workerごとの追加基本料はない。両カタログの静的配信は無料で、メール用のWorker実行課金は発生しない。含有枠とAccessの人数・application数、accountのWorker数、Actions artifact容量を監視する。含有枠内なら追加費用0を想定できるが、超過料金まで0とは保証しない。標準GitHub hosted runnerは公開repositoryでは無料で、artifact等は別枠となる。[Workers料金](https://developers.cloudflare.com/workers/platform/pricing/)・[Static Assets料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)・[Worker上限](https://developers.cloudflare.com/workers/platform/limits/)を契約時点で確認する。
 
 ## stagingとreleaseの運用
 
