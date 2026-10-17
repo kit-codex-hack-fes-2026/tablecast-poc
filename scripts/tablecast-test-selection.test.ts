@@ -11,7 +11,6 @@ const all = {
   presentation: "full",
   e2e: "full",
   build: true,
-  images: true,
 };
 const none = {
   web: "none",
@@ -22,7 +21,6 @@ const none = {
   presentation: "none",
   e2e: "none",
   build: false,
-  images: false,
 };
 
 describe("差分実行の前提", () => {
@@ -101,7 +99,6 @@ describe("import graphで追えない境界", () => {
       runtime: "imports",
       e2e: "full",
       build: true,
-      images: true,
     });
   });
 });
@@ -169,7 +166,6 @@ describe("安全に絞れる変更", () => {
         runtime: "imports",
         e2e: "full",
         build: true,
-        images: true,
       });
     },
   );
@@ -212,7 +208,6 @@ describe("安全に絞れる変更", () => {
       presentation: "full",
       e2e: "full",
       build: true,
-      images: true,
     });
     expect(selectTablecastTests(files.toReversed(), "pull_request")).toEqual(selection);
     expect(

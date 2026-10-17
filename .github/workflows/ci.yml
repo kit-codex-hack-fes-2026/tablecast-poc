@@ -36,67 +36,17 @@ env:
   TABLECAST_DEPLOY_ENV: ${{ github.event_name != 'pull_request' && (github.ref_name == 'staging' && 'staging' || 'production') || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'staging' && 'production' || 'preview') }}
 
 jobs:
-  test-plan:
-    name: Test Selection（変更範囲と全件への復帰）
+  static:
+    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
     if: ${{ !inputs.catalog_pr || github.ref_name == 'staging' || github.ref_name == 'main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      web: ${{ steps.plan.outputs.web }}
-      components: ${{ steps.plan.outputs.components }}
-      api: ${{ steps.plan.outputs.api }}
-      runtime: ${{ steps.plan.outputs.runtime }}
-      fixtures: ${{ steps.plan.outputs.fixtures }}
-      presentation: ${{ steps.plan.outputs.presentation }}
-      e2e: ${{ steps.plan.outputs.e2e }}
-      build: ${{ steps.plan.outputs.build }}
-      images: ${{ steps.plan.outputs.images }}
-      base: ${{ steps.plan.outputs.base }}
-      files: ${{ steps.plan.outputs.files }}
+    timeout-minutes: 15
     steps:
       - name: 常設環境のCI履歴へ手動カタログを混在させない
         if: inputs.catalog_pr != ''
         run: |
           echo 'カタログは通常PRの作業branchを選択して起動してください。main/stagingからは起動できません。' >&2
           exit 1
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
-        id: plan
-        with:
-          script: |
-            const {selectTablecastTests} = await import(`${process.env.GITHUB_WORKSPACE}/scripts/tablecast-test-selection.ts`);
-            let files = [];
-            let base = '';
-            const pr = context.payload.pull_request;
-            const eligible = context.eventName === 'pull_request' && pr.head.ref !== 'staging';
-            if (eligible) {
-              try {
-                const {data} = await github.rest.repos.compareCommitsWithBasehead({...context.repo, basehead: `${pr.base.sha}...${pr.head.sha}`});
-                if (!/^[a-f0-9]{40}$/.test(data.merge_base_commit.sha) || !data.files?.length || data.files.length >= 300) throw new Error('差分を完全に取得できません');
-                files = data.files.map(({filename, status, previous_filename}) => ({filename, status, previous_filename}));
-                base = data.merge_base_commit.sha;
-              } catch {
-                core.notice('比較に失敗したため全件を実行します');
-              }
-            }
-            const selection = selectTablecastTests(files, eligible ? 'pull_request' : 'full');
-            for (const [key, value] of Object.entries(selection)) core.setOutput(key, String(value));
-            core.setOutput('base', base);
-            core.setOutput('files', JSON.stringify(files.map(file => file.filename)));
-            await core.summary.addHeading('テストの選択').addRaw(selection.reason).addCodeBlock(JSON.stringify(selection, null, 2), 'json').write();
-
-  static:
-    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
-    needs: test-plan
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -118,34 +68,36 @@ jobs:
 
   unit-web:
     name: "Unit/Integration: Web・seed・dev-runtime (Vitest)"
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-test-selection
+        id: plan
       - uses: ./.github/actions/tablecast-setup
-        if: needs.test-plan.outputs.web != 'none' || needs.test-plan.outputs.runtime != 'none' || needs.test-plan.outputs.fixtures != 'none' || needs.test-plan.outputs.presentation != 'none'
+        if: steps.plan.outputs.web != 'none' || steps.plan.outputs.runtime != 'none' || steps.plan.outputs.fixtures != 'none' || steps.plan.outputs.presentation != 'none'
       # 個別CLIの既定枠を合算せず、重いruntimeは2、軽い3組は各1へ制限する。
       - parallel:
           - name: Seed fixtures
-            if: needs.test-plan.outputs.fixtures != 'none'
+            if: steps.plan.outputs.fixtures != 'none'
             run: bunx --no-install vitest run --project scripts-unit --maxWorkers=1
           - name: Web
-            if: needs.test-plan.outputs.web != 'none'
+            if: steps.plan.outputs.web != 'none'
             working-directory: apps/web
             env:
-              TABLECAST_TEST_MODE: ${{ needs.test-plan.outputs.web }}
-              TABLECAST_TEST_FILES: ${{ needs.test-plan.outputs.files }}
+              TABLECAST_TEST_MODE: ${{ steps.plan.outputs.web }}
+              TABLECAST_TEST_FILES: ${{ steps.plan.outputs.files }}
             run: bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project unit --maxWorkers=1
           - name: Presentation
-            if: needs.test-plan.outputs.presentation != 'none'
+            if: steps.plan.outputs.presentation != 'none'
             run: bun run --cwd apps/presentation test -- --maxWorkers=1
           - name: Dev runtime
-            if: needs.test-plan.outputs.runtime != 'none'
+            if: steps.plan.outputs.runtime != 'none'
             env:
-              TABLECAST_RUNTIME_SCOPE: ${{ needs.test-plan.outputs.runtime }}
+              TABLECAST_RUNTIME_SCOPE: ${{ steps.plan.outputs.runtime }}
             run: |
               if [ "$TABLECAST_RUNTIME_SCOPE" = imports ]; then
                 bunx --no-install vitest run --project scripts-runtime scripts/tablecast-import-rules.test.ts
@@ -155,7 +107,7 @@ jobs:
 
   api:
     name: "Unit and Integration Test: APIの認可・注文・MCPツール (Vitest, D1, shard ${{ matrix.shard }}/2)"
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -166,21 +118,25 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-test-selection
+        id: plan
       - uses: ./.github/actions/tablecast-setup
-        if: needs.test-plan.outputs.api != 'none'
+        if: steps.plan.outputs.api != 'none'
       # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        if: needs.test-plan.outputs.api != 'none'
+        if: steps.plan.outputs.api != 'none'
         with:
           path: apps/api/node_modules/.vite/vitest/*/results.json
           key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-${{ github.event.pull_request.head.sha || github.sha }}
           restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-${{ matrix.shard }}-
-      - if: needs.test-plan.outputs.api != 'none'
+      - if: steps.plan.outputs.api != 'none'
         run: bun run --cwd apps/api test -- --shard=${{ matrix.shard }}/2
 
   build:
     name: "Build: Workers"
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -193,14 +149,16 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-test-selection
+        id: plan
       - uses: ./.github/actions/tablecast-setup
-        if: needs.test-plan.outputs.build == 'true'
+        if: steps.plan.outputs.build == 'true'
         with:
           turbo: "true"
       - name: Workers
-        if: needs.test-plan.outputs.build == 'true'
+        if: steps.plan.outputs.build == 'true'
         run: bun --no-env-file run build:deploy
-      - if: needs.test-plan.outputs.build == 'true'
+      - if: steps.plan.outputs.build == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-workers-${{ env.TABLECAST_RELEASE_SHA }}
@@ -211,36 +169,38 @@ jobs:
 
   components:
     name: "Component Test: UI操作とアクセシビリティ (Vitest Browser, Storybook)"
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/tablecast-test-selection
+        id: plan
       - uses: ./.github/actions/tablecast-setup
-        if: needs.test-plan.outputs.components != 'none'
+        if: steps.plan.outputs.components != 'none'
       # 実行時間と失敗fileの順序だけを復元し、成功したテストを省略しない。
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        if: needs.test-plan.outputs.components != 'none'
+        if: steps.plan.outputs.components != 'none'
         with:
           path: apps/web/node_modules/.vite/vitest/*/results.json
           key: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-${{ github.event.pull_request.head.sha || github.sha }}
           restore-keys: tablecast-vitest-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}-${{ github.job }}-single-
       - parallel:
-          - if: needs.test-plan.outputs.components != 'none'
+          - if: steps.plan.outputs.components != 'none'
             uses: ./.github/actions/tablecast-browser
             with:
               browsers: chromium webkit
-          - if: needs.test-plan.outputs.components != 'none'
+          - if: steps.plan.outputs.components != 'none'
             uses: ./.github/actions/tablecast-browser-deps
             with:
               browsers: chromium webkit
-      - if: needs.test-plan.outputs.components != 'none'
+      - if: steps.plan.outputs.components != 'none'
         working-directory: apps/web
         env:
-          TABLECAST_TEST_MODE: ${{ needs.test-plan.outputs.components }}
-          TABLECAST_TEST_FILES: ${{ needs.test-plan.outputs.files }}
+          TABLECAST_TEST_MODE: ${{ steps.plan.outputs.components }}
+          TABLECAST_TEST_FILES: ${{ steps.plan.outputs.files }}
         run: |
           bun run i18n:compile --output-structure locale-modules
           bun --no-env-file ../../scripts/tablecast-changed-vitest.ts --project browser --project storybook
@@ -253,7 +213,7 @@ jobs:
 
   e2e:
     name: "E2E Test: 注文・ログイン・会計 (Playwright, ${{ matrix.browser }}, shard ${{ matrix.shard }}/2)"
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -265,26 +225,33 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: ${{ needs.test-plan.outputs.e2e == 'changed' && '0' || '1' }}
+      - uses: ./.github/actions/tablecast-test-selection
+        id: plan
+      - name: 差分E2Eだけに必要な履歴を取得
+        if: steps.plan.outputs.e2e == 'changed'
+        run: |
+          if ! git fetch --no-tags --unshallow origin; then
+            echo '履歴を取得できない場合は、比較確認後に全E2Eへ戻します。' >&2
+          fi
       - uses: ./.github/actions/tablecast-setup
-        if: needs.test-plan.outputs.e2e != 'none'
+        if: steps.plan.outputs.e2e != 'none'
       - parallel:
-          - if: needs.test-plan.outputs.e2e != 'none'
+          - if: steps.plan.outputs.e2e != 'none'
             uses: ./.github/actions/tablecast-browser
             with:
               browsers: ${{ matrix.browser }}
-          - if: needs.test-plan.outputs.e2e != 'none'
+          - if: steps.plan.outputs.e2e != 'none'
             uses: ./.github/actions/tablecast-browser-deps
             with:
               browsers: ${{ matrix.browser }}
           - name: Mailpit image
-            if: needs.test-plan.outputs.e2e != 'none'
+            if: steps.plan.outputs.e2e != 'none'
             run: docker pull axllent/mailpit:v1.29.2
       - name: Isolated cases · 4 workers · no retries
-        if: needs.test-plan.outputs.e2e != 'none'
+        if: steps.plan.outputs.e2e != 'none'
         env:
-          TABLECAST_E2E_MODE: ${{ needs.test-plan.outputs.e2e }}
-          TABLECAST_DIFF_BASE: ${{ needs.test-plan.outputs.base }}
+          TABLECAST_E2E_MODE: ${{ steps.plan.outputs.e2e }}
+          TABLECAST_DIFF_BASE: ${{ steps.plan.outputs.base }}
         run: |
           if [ "$TABLECAST_E2E_MODE" = changed ] && git diff --name-only "$TABLECAST_DIFF_BASE...HEAD" > /dev/null; then
             bun run test:e2e --only-changed="$TABLECAST_DIFF_BASE" --project=tablecast-${{ matrix.browser }} --shard=${{ matrix.shard }}/2
@@ -300,8 +267,9 @@ jobs:
           retention-days: 1
 
   images:
+    # 分散した比較の成否にかかわらず、Workersと同SHAのartifactを確保する。
     name: 配備用Containerイメージ
-    needs: test-plan
+    if: ${{ !inputs.catalog_pr }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -311,15 +279,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: PR用OAuthをlinux/amd64で検証
-        if: needs.test-plan.outputs.images == 'true'
         run: |
           docker build --platform linux/amd64 --file apps/emulate/Dockerfile --tag "tablecast-emulate:$TABLECAST_RELEASE_SHA" .
           trap 'docker rm --force tablecast-oauth-check' EXIT
           docker run --detach --name tablecast-oauth-check --publish 127.0.0.1:8080:8080 --env TABLECAST_ENV=preview --env TABLECAST_PUBLIC_ORIGIN=https://tablecast-pr-1.kit-codex.workers.dev "tablecast-emulate:$TABLECAST_RELEASE_SHA"
           curl --fail --retry 20 --retry-all-errors --retry-delay 1 --retry-max-time 30 --max-time 5 http://127.0.0.1:8080/.well-known/openid-configuration > /dev/null
           docker save "tablecast-emulate:$TABLECAST_RELEASE_SHA" | gzip > tablecast-images.tar.gz
-      - if: needs.test-plan.outputs.images == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: tablecast-images-${{ env.TABLECAST_RELEASE_SHA }}
           path: tablecast-images.tar.gz
@@ -329,8 +295,8 @@ jobs:
 
   deploy-preview:
     name: PRプレビュー配備
-    needs: [test-plan, static, build, images]
-    if: needs.test-plan.outputs.build == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: [static, build, images]
+    if: needs.build.outputs.build == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -401,7 +367,7 @@ jobs:
 
   deploy:
     name: 本番・staging配備
-    needs: [test-plan, static, unit-web, api, build, components, e2e, images]
+    needs: [static, unit-web, api, build, components, e2e, images]
     if: ${{ !inputs.catalog_pr && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref_name == 'staging' && inputs.staging_reset == 'tablecast-staging')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -465,7 +431,7 @@ jobs:
   required:
     name: TableCast CI
     if: ${{ always() && !inputs.catalog_pr }}
-    needs: [test-plan, static, unit-web, api, build, components, e2e, images]
+    needs: [static, unit-web, api, build, components, e2e, images]
     runs-on: ubuntu-latest
     steps:
       - name: 全検査の成功確認
@@ -475,8 +441,8 @@ jobs:
 
   preview-report:
     name: 変更対象外の製品と手動カタログの通知
-    needs: [test-plan, static, build, images]
-    if: always() && needs.test-plan.result == 'success' && needs.test-plan.outputs.build != 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: [static, build, images]
+    if: always() && needs.build.result == 'success' && needs.build.outputs.build != 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.ref != 'staging' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: preview

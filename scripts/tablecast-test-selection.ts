@@ -16,7 +16,6 @@ export type TablecastTestSelection = {
   presentation: "full" | "none";
   e2e: TestScope;
   build: boolean;
-  images: boolean;
   reason: string;
 };
 
@@ -30,7 +29,6 @@ function fullSelection(reason: string): TablecastTestSelection {
     presentation: "full",
     e2e: "full",
     build: true,
-    images: true,
     reason,
   };
 }
@@ -52,7 +50,6 @@ export function selectTablecastTests(
     presentation: "none",
     e2e: "none",
     build: false,
-    images: false,
     reason: "実行に影響しない文書のみ",
   };
   const reasons = new Set<string>();
@@ -131,8 +128,6 @@ export function selectTablecastTests(
       // import規則の実検査はWeb srcを複製し、別プロセスでresolverを起動する。
       selection.runtime = "imports";
       selection.build = true;
-      // 配備は同じSHAのContainer artifactも必要とし、別SHAからは再利用しない。
-      selection.images = true;
       reasons.add(sharedWeb ? "Web全体・生成入力の変更" : "Web製品コードの変更");
       continue;
     }

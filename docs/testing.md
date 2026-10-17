@@ -143,7 +143,7 @@ Browserの速度は全件の準備・実行・終了を含む経過時間で比�
 
 ## CIのジョブとキャッシュ
 
-Issue #272のテスト再配置ではworkflow・差分CIを変更しなかった。Issue #275では、通常PRの既知の変更だけを選択実行する。選択はGitHub Compare APIが返すmerge-baseから最新headまでの差分を使い、実行前の計画と対象外の理由をActions summaryへ記録する。staging/mainへのpushとカタログ以外の手動CIは全件実行する。
+Issue #272のテスト再配置ではworkflow・差分CIを変更しなかった。Issue #275では、通常PRの既知の変更だけを選択実行する。対象のjobはcheckout直後の共通actionでGitHub Compare APIが返すmerge-baseから最新headまでの差分を調べ、実行計画と対象外の理由を各jobのActions summaryへ記録する。静的検査は分類せず開始する。Containerイメージの検査・artifact生成も差分選択の対象外とし、通常CIで常に実行する。jobごとの比較結果が異なりWorkers buildだけが全件へ戻っても、同じSHAのContainer artifactを取得できるようにする。比較APIの呼出しは重複するが、分類専用のrunner・jobと全job共通の開始待ちを増やさない。集約チェックは従来の各必須jobの成功を要求する。staging/mainへのpushとカタログ以外の手動CIは全件実行する。
 
 Webの通常のTS/TSX変更はVitestの`related --run`で本番feature・provider・clientへの静的importを辿り、Web unitとBrowser/Storybookの関連fileを選ぶ。テストだけの差分は既存projectのincludeに従い、対象層へ絞る。
 
