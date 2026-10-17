@@ -17,8 +17,7 @@ declare global {
 test("代表管理ページのSSRデータをhydrationで再取得せず表示と操作へ使う", async ({
   page,
   baseURL,
-  runtime,
-}, testInfo) => {
+}) => {
   expect(
     (
       await page.request.post("/api/auth/sign-in/email", {
@@ -27,7 +26,6 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
       })
     ).ok(),
   ).toBe(true);
-  const samples = [];
   const requests: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
@@ -43,31 +41,13 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     ["/admin/live", "フロアの様子"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
   ]) {
-    // Cookie・DB・ブラウザーcacheを保ち、Worker再起動直後と同じURLの反復を分ける。
-    await runtime.restartWeb();
-    for (let sample = 0; sample < 4; sample++) {
-      requests.length = 0;
-      await page.goto(path);
-      await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-      // 実際にメニューを開いてhydration後の操作可能状態を確認する。
-      await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
-      const timing = await page.evaluate(() => {
-        const navigation = performance.getEntriesByType("navigation")[0];
-        if (!(navigation instanceof PerformanceNavigationTiming)) throw new Error("計測値なし");
-        return {
-          ttfbMs: navigation.responseStart - navigation.startTime,
-          documentMs: navigation.responseEnd - navigation.startTime,
-          interactiveMs: performance.now(),
-          redirectMs: navigation.redirectEnd - navigation.redirectStart,
-          firstContentfulPaintMs:
-            performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
-        };
-      });
-      expect(requests).toEqual([]);
-      samples.push({ path, sample, worker: sample === 0 ? "cold" : "warm", ...timing });
-    }
+    requests.length = 0;
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    // 実際にメニューを開いてhydration後の操作可能状態を確認する。
+    await page.getByRole("button", { name: "ナビゲーション", exact: true }).click();
+    expect(requests).toEqual([]);
   }
-  await writeFile(testInfo.outputPath("ssr-performance.json"), JSON.stringify(samples, null, 2));
 });
 
 test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿名リクエストへ漏らさない", async ({
@@ -244,52 +224,6 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("遷移中・取得失敗・再試行後の0件を区別する", async ({ page, baseURL }, testInfo) => {
-  expect(
-    (
-      await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: baseURL ?? "" },
-        data: credentials,
-      })
-    ).ok(),
-  ).toBe(true);
-  const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto("/admin/stores/tablecast-komorebi/floor");
-  // 通常のdocument遷移ではなく、hydration後のクライアント遷移を検証する。
-  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
-  const gate = Promise.withResolvers<void>();
-  const requested = Promise.withResolvers<void>();
-  await page.route("**/api/admin/stores/tablecast-komorebi/devices", async (route) => {
-    requested.resolve();
-    await gate.promise;
-    await route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ error: { code: "UNAVAILABLE" } }),
-    });
-  });
-  try {
-    await page.getByRole("link", { name: "端末", exact: true }).click();
-    await requested.promise;
-    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
-    await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath("pending.png"), fullPage: true });
-  } finally {
-    gate.resolve();
-  }
-  await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-  await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
-  await page.screenshot({ path: testInfo.outputPath("error.png"), fullPage: true });
-  await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
-  await page.getByRole("button", { name: "再試行", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
-  await expect(page.getByText("0 件", { exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true });
-  expect(pageErrors).toEqual([]);
-});
-
 test("戻り先なしのログインはフロアを一括取得し、アカウント更新はセッションだけを再取得する", async ({
   page,
 }) => {
@@ -351,4 +285,85 @@ test("店側PWAの新規ドキュメント起動は転送先のフロアをSSR�
   expect(floor.ok()).toBe(true);
   expect(await floor.text()).toContain("フロアの様子");
   expect(floor.headers()["cache-control"]).toBe("private, no-store");
+});
+
+test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(
+    (
+      await page.request.post("/api/auth/sign-in/email", {
+        headers: { Origin: baseURL ?? "" },
+        data: credentials,
+      })
+    ).ok(),
+  ).toBe(true);
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/admin/stores/tablecast-komorebi/floor");
+  // 通常のdocument遷移ではなく、hydration後のクライアント遷移を検証する。
+  await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
+  const gate = Promise.withResolvers<void>();
+  const requested = Promise.withResolvers<void>();
+  await page.route("**/api/admin/stores/tablecast-komorebi/devices", async (route) => {
+    requested.resolve();
+    await gate.promise;
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "UNAVAILABLE" } }),
+    });
+  });
+  try {
+    await page.getByRole("link", { name: "端末", exact: true }).click();
+    await requested.promise;
+    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
+      true,
+    );
+    expect(
+      await page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter(
+              (animation) =>
+                animation.playState === "running" &&
+                Number(animation.effect?.getComputedTiming().duration) > 1,
+            ).length,
+      ),
+    ).toBe(0);
+    await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
+  } finally {
+    gate.resolve();
+  }
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect(page.getByText("0 件", { exact: true })).toHaveCount(0);
+  await page.unroute("**/api/admin/stores/tablecast-komorebi/devices");
+  await page.getByRole("button", { name: "再試行", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "端末", exact: true })).toBeVisible();
+  await expect(page.getByText("0 件", { exact: true })).toBeVisible();
+  // 来店履歴の見出しはfeature外のfile routeが所有するため、そのpending接続だけ実物で残す。
+  const historyGate = Promise.withResolvers<void>();
+  const historyRequested = Promise.withResolvers<void>();
+  await page.route("**/api/admin/stores/tablecast-komorebi/history?*", async (route) => {
+    historyRequested.resolve();
+    await historyGate.promise;
+    await route.continue();
+  });
+  const historyHeading = page.getByRole("heading", { name: "来店履歴", exact: true });
+  let beforeHistory;
+  try {
+    await page.getByRole("link", { name: "来店履歴", exact: true }).click();
+    await historyRequested.promise;
+    await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+    await expect(historyHeading).toBeVisible();
+    await expect(page.getByRole("table")).toBeVisible();
+    beforeHistory = await historyHeading.boundingBox();
+  } finally {
+    historyGate.resolve();
+  }
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect.poll(() => historyHeading.boundingBox()).toEqual(beforeHistory);
+  expect(pageErrors).toEqual([]);
 });

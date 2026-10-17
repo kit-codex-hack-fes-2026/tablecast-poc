@@ -59,6 +59,9 @@ export default defineConfig({
                 browser: "webkit",
                 include: [
                   "src/features/store/device-qr-reader.browser.test.tsx",
+                  "src/features/store/devices.browser.test.tsx",
+                  "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",

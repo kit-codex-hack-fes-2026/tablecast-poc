@@ -331,6 +331,10 @@ it("初回読込・通信失敗・登録なしを区別し、再取得失敗で�
   await expect
     .element(screen.getByRole("status").filter({ hasText: ja.common_loading }))
     .toBeVisible();
+  const heading = screen.getByRole("heading", { name: ja.editor_products, exact: true });
+  await expect.element(heading).toBeVisible();
+  const pendingHeading = heading.element().getBoundingClientRect();
+  await expect.element(screen.getByRole("table")).toBeVisible();
   await expect.element(screen.getByText(ja.menu_no_items, { exact: true })).not.toBeInTheDocument();
   initial.resolve(Response.json({ error: { code: "SERVICE_UNAVAILABLE" } }, { status: 503 }));
   await expect.element(screen.getByRole("alert")).toBeVisible();
@@ -340,6 +344,14 @@ it("初回読込・通信失敗・登録なしを区別し、再取得失敗で�
   await expect
     .element(screen.getByText(product.text.ja.displayName, { exact: true }))
     .toBeVisible();
+  const loadedHeading = heading.element().getBoundingClientRect();
+  expect([loadedHeading.x, loadedHeading.y, loadedHeading.width, loadedHeading.height]).toEqual([
+    pendingHeading.x,
+    pendingHeading.y,
+    pendingHeading.width,
+    pendingHeading.height,
+  ]);
+  await expect.element(screen.getByRole("table")).toBeVisible();
   await screen.getByRole("searchbox", { name: ja.menu_search }).fill("Sake");
   void client.refetchQueries({ queryKey: catalogOptions(catalog.storeId).queryKey });
   refresh.resolve(Response.json({ error: { code: "SERVICE_UNAVAILABLE" } }, { status: 503 }));

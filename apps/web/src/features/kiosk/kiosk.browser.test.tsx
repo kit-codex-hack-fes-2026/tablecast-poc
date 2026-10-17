@@ -1,8 +1,13 @@
 import { cleanup, render } from "vitest-browser-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { uiSectionInputSchema, type TableState } from "@tablecast/api/schema";
+import {
+  cartUpdateSchema,
+  uiSectionInputSchema,
+  type CartUpdate,
+  type TableState,
+} from "@tablecast/api/schema";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../../i18n/locale";
 import { useRealtime } from "../../lib/use-realtime";
@@ -29,6 +34,10 @@ let catalogResponse: Response;
 let client: QueryClient;
 let current: TableState;
 let unexpected: string[];
+let cartFailure: number;
+let savedCart: TableState["cart"];
+let confirmationDuration: number;
+const cartWrites: CartUpdate[] = [];
 const requests: Request[] = [];
 beforeEach(() => {
   vi.stubGlobal("WebSocket", TablecastSocket);
@@ -40,6 +49,10 @@ beforeEach(() => {
   current.voiceSessionId = null;
   unexpected = [];
   requests.length = 0;
+  cartWrites.length = 0;
+  cartFailure = 0;
+  confirmationDuration = 60_000;
+  savedCart = structuredClone(table.cart);
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   vi.stubGlobal(
     "fetch",
@@ -58,7 +71,18 @@ beforeEach(() => {
       if (request.method === "GET" && path === "/api/table") return Response.json(current);
       if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {
-        return Response.json({ cursor: current.cursor, events: [] });
+        const after = Number(new URL(request.url).searchParams.get("after"));
+        return Response.json({
+          cursor: current.cursor,
+          events: current.events.filter((event) => event.cursor > after),
+        });
+      }
+      if (request.method === "PUT" && path === "/api/table/cart") {
+        cartWrites.push(cartUpdateSchema.parse(await request.json()));
+        if (cartFailure)
+          return Response.json({ error: { code: "CART_CONFLICT" } }, { status: cartFailure });
+        current = { ...current, cursor: current.cursor + 1, cart: savedCart, snapshot: null };
+        return Response.json(current);
       }
       if (request.method === "POST" && path === "/api/table/call") {
         current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
@@ -74,7 +98,7 @@ beforeEach(() => {
           total: current.cart.total,
           locale: current.locale,
           text: "注文内容",
-          expiresAt: Date.now() + 60000,
+          expiresAt: Date.now() + confirmationDuration,
           channel: "gui",
           status: "pending",
           createdTurnId: null,
@@ -108,7 +132,195 @@ afterEach(async () => {
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  for (const cookie of document.cookie.split(";")) {
+    const name = cookie.trim().split("=")[0];
+    if (name.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+  }
   if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+});
+
+async function mountKiosk() {
+  return render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <QueryClientProvider client={client}>
+        <Kiosk />
+      </QueryClientProvider>
+    </LocaleProvider>,
+  );
+}
+
+function notify(kind: "cart.updated" | "configuration.published") {
+  current.cursor += 1;
+  current.events.push({
+    cursor: current.cursor,
+    storeId: current.storeId,
+    tableSessionId: kind === "configuration.published" ? null : current.id,
+    kind,
+    data: {},
+    createdAt: Date.now(),
+  });
+  const socket = TablecastSocket.instances.at(-1);
+  if (!socket) throw new Error("卓の通知接続がありません");
+  socket.dispatchEvent(new MessageEvent("message", { data: "changed" }));
+}
+
+it("未充足行の修正は競合後も選択を保持し、再送でも同じ行だけを更新する", async () => {
+  await page.viewport(1280, 1000);
+  const conditional = structuredClone(product);
+  conditional.modifiers[0].kind = "multiple";
+  conditional.modifiers[0].min = 0;
+  conditional.modifiers[0].max = 2;
+  const [first, required] = conditional.modifiers[0].options;
+  if (!first || !required) throw new Error("条件付き選択肢が必要です");
+  first.conditions = {
+    version: 2,
+    requires: { kind: "option", optionId: required.id },
+    excludes: null,
+  };
+  catalogResponse = Response.json({
+    ...catalog,
+    configuration: { ...catalog.configuration, products: [conditional] },
+  });
+  const line = current.cart.lines[0];
+  if (!line) throw new Error("未充足行が必要です");
+  line.selections = [{ optionId: first.id, quantity: 1 }];
+  line.conditionIssues = [{ optionId: first.id, relation: "requires" }];
+  current.cart.complete = false;
+  savedCart = {
+    ...structuredClone(current.cart),
+    version: current.cart.version + 1,
+    complete: true,
+    lines: [
+      {
+        ...line,
+        conditionIssues: [],
+        selections: [...line.selections, { optionId: required.id, quantity: 1 }],
+      },
+    ],
+  };
+  await mountKiosk();
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
+    .toBeDisabled();
+  await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).click();
+  const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
+  const choice = detail.getByRole("checkbox", { name: required.text.ja.displayName, exact: true });
+  await choice.click();
+  cartFailure = 409;
+  await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
+  await expect.element(detail.getByRole("alert")).toBeVisible();
+  await expect.element(choice).toBeChecked();
+  expect(current.cart.complete).toBe(false);
+  cartFailure = 0;
+  await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
+  await expect.element(detail).not.toBeInTheDocument();
+  expect(cartWrites).toEqual(
+    [1, 2].map(() => ({
+      expectedVersion: table.cart.version,
+      lines: [
+        {
+          id: line.id,
+          productId: product.id,
+          quantity: 1,
+          selections: savedCart.lines[0].selections,
+        },
+      ],
+    })),
+  );
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
+    .toBeEnabled();
+});
+
+it.each(["期限", "カート版", "公開版"] as const)(
+  "確認の%sが失効したら確定操作を閉じる",
+  async (reason) => {
+    await page.viewport(1280, 1000);
+    await mountKiosk();
+    if (reason === "期限") confirmationDuration = 2000;
+    await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+    const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
+    await expect.element(confirmation).toBeVisible();
+    // 期限は確認APIが返した値を実タイマーで観測し、Reactや通信の時計は置き換えない。
+    if (reason !== "期限") {
+      if (reason === "カート版") current.cart.version += 1;
+      else {
+        current.configVersion += 1;
+        if (current.snapshot) current.snapshot.status = "invalid";
+        catalogResponse = Response.json({ ...catalog, version: current.configVersion });
+      }
+      notify(reason === "公開版" ? "configuration.published" : "cart.updated");
+    }
+    await expect.element(confirmation).not.toBeInTheDocument();
+    expect(requests.some((request) => new URL(request.url).pathname === "/api/table/orders")).toBe(
+      false,
+    );
+  },
+);
+
+it("公開通知で開いた商品を閉じて新価格を取得し、同じ通知でもカート行を重複しない", async () => {
+  await page.viewport(1280, 1000);
+  current.uiSection = "menu";
+  await mountKiosk();
+  await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
+  const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
+  await expect.element(detail).toBeVisible();
+  current.configVersion += 1;
+  catalogResponse = Response.json({
+    ...catalog,
+    version: current.configVersion,
+    configuration: { ...catalog.configuration, products: [{ ...product, price: 980 }] },
+  });
+  notify("configuration.published");
+  await expect.element(detail).not.toBeInTheDocument();
+  const card = page.getByRole("button", { name: new RegExp(product.text.ja.displayName) });
+  await expect.element(card).toHaveTextContent("980");
+  await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
+  const socket = TablecastSocket.instances.at(-1);
+  if (!socket) throw new Error("卓の通知接続がありません");
+  socket.dispatchEvent(new MessageEvent("message", { data: "changed" }));
+  await expect
+    .element(page.getByRole("tabpanel").getByText(current.cart.lines[0].name.ja, { exact: true }))
+    .toBeVisible();
+  expect(client.getQueryData<TableState>(["tablecast-table"])?.cart.lines).toHaveLength(1);
+});
+
+const orderPanel = () => document.getElementById("tablecast-order");
+it("注文ペインの比率をCookieから復元し、縦横の切替でもタブと音声停止を保持する", async () => {
+  await page.viewport(1024, 768);
+  const screen = await mountKiosk();
+  const handle = page.getByRole("separator", { name: ja.kiosk_resize_panes });
+  await expect.element(handle).toBeVisible();
+  const initial = orderPanel()?.getBoundingClientRect().width ?? 0;
+  handle.element().focus();
+  await userEvent.keyboard("{ArrowLeft}");
+  await expect
+    .poll(() => orderPanel()?.getBoundingClientRect().width ?? 0)
+    .toBeGreaterThan(initial + 10);
+  const adjusted = orderPanel()?.getBoundingClientRect().width ?? 0;
+  await expect.poll(() => document.cookie).toContain("tablecast-layout-");
+  await page.viewport(390, 844);
+  await expect.element(handle).toHaveAttribute("aria-orientation", "horizontal");
+  const initialHeight = orderPanel()?.getBoundingClientRect().height ?? 0;
+  handle.element().focus();
+  await userEvent.keyboard("{ArrowUp}");
+  await expect
+    .poll(() => orderPanel()?.getBoundingClientRect().height ?? 0)
+    .toBeGreaterThan(initialHeight + 10);
+  await expect
+    .element(page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }))
+    .toHaveAttribute("aria-selected", "true");
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }))
+    .toBeVisible();
+  await page.viewport(1024, 768);
+  await expect.element(handle).toHaveAttribute("aria-orientation", "vertical");
+  const desktop = orderPanel()?.getBoundingClientRect().width ?? adjusted;
+  await screen.unmount();
+  await mountKiosk();
+  await expect
+    .poll(() => Math.abs((orderPanel()?.getBoundingClientRect().width ?? 0) - desktop))
+    .toBeLessThan(2);
 });
 
 it.each([

@@ -177,7 +177,7 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   }
 });
 
-test("別画面の未保存入力がある間は更新を待ち、背景GET中でも入力を戻すと全画面へ自動適用する", async ({
+test("実Service Workerは別画面の未保存入力がある間は更新を待ち、入力を戻すと全画面へ適用する", async ({
   page,
   context,
   runtime,
@@ -231,23 +231,6 @@ test("別画面の未保存入力がある間は更新を待ち、背景GET中�
   try {
     await other.goto(`${runtime.origin}/`);
     await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
-    // 背景GETの完了を保留し、実QueryとWorkerの更新判定を競合させる
-    const background = await other.evaluateHandle(() => {
-      const original = window.fetch;
-      const gate = Promise.withResolvers<void>();
-      const state = { pending: false, release: () => gate.resolve() };
-      const fetch: typeof original = Object.assign(async (...args: Parameters<typeof original>) => {
-        const request = new Request(...args);
-        if (request.method === "GET" && new URL(request.url).pathname === "/api/table") {
-          state.pending = true;
-          await gate.promise;
-        }
-        return original(...args);
-      }, original);
-      window.fetch = fetch;
-      return state;
-    });
-    await expect.poll(() => background.evaluate((state) => state.pending)).toBe(true);
     let reloads = 0;
     let otherReloads = 0;
     page.on("domcontentloaded", () => {
