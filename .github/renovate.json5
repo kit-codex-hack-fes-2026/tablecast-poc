@@ -30,8 +30,8 @@
   semanticCommitType: "build",
   semanticCommitScope: null,
   commitMessageAction: "⬆️ update",
-  commitBody: "Update the dependency declarations and generated lockfiles to the proposed versions.\n\nRefs #292",
-  prBodyTemplate: "## 変更内容\n\n依存関係を更新し、宣言された版とlockfile・実行環境の指定を揃える。対象と更新前後の版は次の表に示す。\n\n{{{table}}}{{{warnings}}}{{{notes}}}{{{changelogs}}}\n\n## 意思決定と最小実装\n\n標準Renovate managerと既存のpackage scripts・CIを使う。非major更新をまとめ、major更新は互換性が必要な単位で分ける。独自の更新runnerは追加しない。\n\n## テスト戦略と確認結果\n\n対象headのCIでformat・lint・型・変更範囲に応じた既存試験とbuildを確認する。結果は最新headのチェックを参照する。手動の動作確認とカタログの配備・確認は未実施。移行手順が必要な場合はレビューで追記する。\n\n## 関連Issue\n\nRefs #292\n\n更新・再実行・保留の管理は[Dependency Dashboard](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues?q=is%3Aissue%20is%3Aopen%20%22Dependency%20Dashboard%22%20in%3Atitle)を使う。導入Issueは規約の根拠として参照し、自動更新PRで閉じない。\n\n{{{controls}}}{{{footer}}}",
+  commitBody: "Update the dependency declarations and generated lockfiles to the proposed versions.\n\nRefs #302",
+  prBodyTemplate: "## 変更内容\n\n依存関係を更新し、宣言された版とlockfile・実行環境の指定を揃える。対象と更新前後の版は次の表に示す。\n\n{{{table}}}{{{warnings}}}{{{notes}}}{{{changelogs}}}\n\n## 意思決定と最小実装\n\n標準Renovate managerと既存のpackage scripts・CIを使う。非major更新をまとめ、major更新は互換性が必要な単位で分ける。独自の更新runnerは追加しない。\n\n## テスト戦略と確認結果\n\n対象headのCIでformat・lint・型・変更範囲に応じた既存試験とbuildを確認する。結果は最新headのチェックを参照する。手動の動作確認とカタログの配備・確認は未実施。移行手順が必要な場合はレビューで追記する。\n\n## 関連Issue\n\nRefs #302\n\n更新・再実行・保留の管理は[Dependency Dashboard](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/302)を使う。このDashboardをPR・commitから参照し、自動更新PRで閉じない。\n\n{{{controls}}}{{{footer}}}",
   lockFileMaintenance: {
     enabled: true,
     schedule: ["* 6-11 * * 1"],
