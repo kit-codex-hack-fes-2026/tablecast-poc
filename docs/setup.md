@@ -286,6 +286,12 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。
 
+## 型検査の実行版
+
+`bun install --frozen-lockfile`で、型検査用の`@tablecast/typescript-native`をTypeScript 7.0.2のnpm aliasとして導入する。`bun run typecheck`と各workspaceの同scriptは、root相対の公開CLI `node_modules/@tablecast/typescript-native/bin/tsc`を`node`で明示実行する。追加の手動導入や環境変数は不要。
+
+TanStack・Storybook等が利用するJavaScript APIには既存の`typescript@6.0.3`を残す。CLIのbin名が重なるため、裸の`tsc`や`bunx tsc`の版から実行版を判断せず、各manifestのscriptを使う。lintの対象分担と互換性の理由は[静的解析](static-analysis.md)を参照する。
+
 ## Cloudflare CLIと設定の移行
 
 `cf@1.0.0-beta.14`を固定する。API・Webの開発はcfが対応する公式Vite plugin `2.0.0-beta.sha-91c870c02`、Workers試験はVitest plugin `1.4.0`、SDKはWrangler `4.149.0`を使う。Node.jsは24.7.0以上が必要である。Miniflare `5.20261006.1-alpha`に取り込まれた遠隔proxyの修正を実Binding試験で確認し、ローカルpatchを削除した。Vite plugin v2はTypeScript設定とBuild Outputを標準で読み込み、通常開発ではAPIをauxiliary Workerとして、previewではbuild済みAPI・Webを一緒に起動する。

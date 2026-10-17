@@ -124,11 +124,22 @@
     },
     "@tablecast/web#typecheck": {
       "dependsOn": ["^typecheck", "i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/api/src/**",
+        "$TURBO_ROOT$/apps/api/cloudflare.config.ts",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/api#build:email": {
       "inputs": [
@@ -147,6 +158,9 @@
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
       "env": ["TABLECAST_*"]
+    },
+    "@tablecast/api#lint": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/**"]
     }
   }
 }

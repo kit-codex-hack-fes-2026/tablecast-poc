@@ -10,10 +10,10 @@
     "./telemetry": "./src/platform/telemetry.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
     "test": "vitest run",
     "cf:typegen": "cf workers types --mode development --include-runtime=false",
-    "lint": "oxlint src test scripts oxlint.config.ts --type-aware --deny-warnings",
+    "lint": "oxlint . --type-aware --deny-warnings",
     "build:email": "bun --no-env-file scripts/tablecast-email-build.ts",
     "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts"
   },

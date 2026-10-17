@@ -170,7 +170,9 @@ APIは2 shardのjob・Cloudflare Vitestのファイル単位のstorage隔離を�
 
 rootのVitestは`maxWorkers: 2`とする。CIのunit-webではruntimeを2枠、scripts-unit・Web unit・動画の各CLIを1枠にし、同じrunner内のVitest fileを最大5件に制限する。枠はCLIごとに適用され、rootの値だけで別processの枠まで制限できるとは扱わない。`parallel` stepは独立したブラウザー本体・OS依存・Mailpit取得にも使用する。各stepの失敗を通常のjob失敗へ伝え、codegenなど書込み先を共有する処理は直列に保つ。
 
-GitHub Actionsの`actions/cache`で静的解析・Workers buildと手動カタログbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、WorkersのBuild OutputとStorybookの`storybook-static`を出力として復元する。選択したテストtaskは`cache: false`で実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メールと個々のテスト成果物は永続キャッシュへ入れない。
+GitHub Actionsの`actions/cache`で静的解析・Workers buildと手動カタログbuildの`.turbo`を復元する。OS・architecture・lockfile・jobごとに分離し、コミット単位で保存する。静的検査のlintはrootとworkspaceへ重複なく分担し、workspaceのlint・typecheckをTurboでcacheする。root lintはCLIで`apps/**`を除外して毎回実行し、各workspaceは直下のconfigを含む`.`全体を型付き解析する。formatはrootから全体を一度だけ確認する。対象と設定の責務は[静的解析](static-analysis.md#検査範囲とキャッシュの分担)を参照する。Turbo側ではAPIソース・共有fixture・build環境変数もtask入力へ含め、WorkersのBuild OutputとStorybookの`storybook-static`を出力として復元する。選択したテストtaskは`cache: false`で実行する。E2E専用のorigin・資格情報を含むbuild、D1/R2/DO、メールと個々のテスト成果物は永続キャッシュへ入れない。
+
+型検査は各manifestの`typecheck` scriptから明示したネイティブCLIを実行する。TanStack・Storybook用の既存TypeScript APIとの併存と実行版の解決は[型付き解析と型検査](static-analysis.md#型付き解析と型検査)に従う。
 
 Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試行し、短縮効果を確認できなかったためCIでは採用しない。保存される時間はsetup・import・Worker準備を含まず、この構成の準備負荷を表さない。標準shardのfile分配もdurationでは変わらない。Bun・Turbo・ブラウザー・seedの既存cacheは維持し、選択した試験は毎回実行する。対象SHA・環境・計測結果はPRへ残す。[Vitestの実行順](https://vitest.dev/config/sequence.html#sequence-sequencer)
 
