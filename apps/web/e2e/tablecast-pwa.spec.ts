@@ -129,6 +129,8 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     "href",
     "/tablecast-staff.webmanifest",
   );
+  // manifestはSSRで読めるため、実Buttonの操作可能状態まで待ってから案内を開く。
+  await expect(page.getByRole("button", { name: ja.auth_google, exact: true })).toBeEnabled();
   await page.getByText(ja.pwa_install_title, { exact: true }).click();
   await expect(page.getByText(ja.pwa_install_steps)).toBeVisible();
   if (testInfo.project.name === "tablecast-chromium") {
