@@ -94,6 +94,17 @@ async function protect(name: string, domain: string, workerId?: string) {
     throw new Error("Access policyを確認できません。");
 }
 
+async function assertCatalogSubdomain(name: string, kind: CatalogKind) {
+  const subdomain = z
+    .object({ enabled: z.boolean(), previews_enabled: z.boolean() })
+    .parse(await cloudflare(`workers/scripts/${name}/subdomain`));
+  console.info(
+    `${kind}: workers.dev enabled=${subdomain.enabled}, previews_enabled=${subdomain.previews_enabled}`,
+  );
+  if (!subdomain.enabled || subdomain.previews_enabled)
+    throw new Error(`${kind}のworkers.dev公開設定が一致しません。`);
+}
+
 export async function cleanupCatalogs(pr: string) {
   const target = deploymentTarget(pr);
   await currentRevision(target, "", true);
@@ -144,7 +155,16 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
     signal: AbortSignal.timeout(10000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`カタログのreleaseを取得できません: HTTP ${response.status}`);
+  if (!response.ok) {
+    const errorCode =
+      response.status === 404
+        ? (await response.text()).match(/\berror code:\s*(\d+)\b/i)?.[1]
+        : undefined;
+    if (!response.bodyUsed) await response.body?.cancel();
+    throw new Error(
+      `カタログのreleaseを取得できません: HTTP ${response.status}${errorCode ? ` (Cloudflare error code: ${errorCode})` : ""}`,
+    );
+  }
   const release = catalogReleaseSchema.parse(await response.json());
   if (release.pr !== pr || release.kind !== kind)
     throw new Error("カタログの所有情報が一致しません。");
@@ -227,7 +247,8 @@ async function main() {
           assets: { notFoundHandling: "none", htmlHandling: "none" },
           name,
           compatibilityDate: "2026-09-03",
-          workersDev: false,
+          // 既存Workerは事前にWorker単位のAccess保護を照合済みなので公開経路を維持する。
+          workersDev: Boolean(existing),
           previewUrls: false,
         }),
       });
@@ -251,25 +272,30 @@ async function main() {
       if (worker.name !== name) throw new Error("Worker名が一致しません。");
       await protect(name, new URL(origin).hostname, worker.id);
       await currentRevision(target, sha);
-      await cloudflare(`workers/scripts/${name}/subdomain`, "POST", {
-        enabled: true,
-        previews_enabled: false,
-      });
+      if (!existing)
+        await cloudflare(`workers/scripts/${name}/subdomain`, "POST", {
+          enabled: true,
+          previews_enabled: false,
+        });
+      await assertCatalogSubdomain(name, kind);
       let verified = false;
       for (let attempt = 0; attempt < 12; attempt++) {
         try {
           verified = (await inspectCatalog(origin, pr, kind)).sha === sha;
         } catch (error) {
-          console.info(
+          const message =
             error instanceof Error && !error.message.includes("{")
               ? error.message
-              : "カタログの応答を検証できません。",
-          );
+              : "カタログの応答を検証できません。";
+          console.info(`${kind}: ${message}`);
         }
         if (verified) break;
         await new Promise((complete) => setTimeout(complete, 5000));
       }
-      if (!verified) throw new Error(`${kind}の公開SHA・Accessを確認できません。`);
+      if (!verified) {
+        await assertCatalogSubdomain(name, kind);
+        throw new Error(`${kind}の公開SHA・Accessを確認できません。`);
+      }
       console.info(`${kind}: ${origin} (${sha})`);
     }),
   );

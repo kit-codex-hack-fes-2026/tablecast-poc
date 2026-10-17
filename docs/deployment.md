@@ -203,7 +203,7 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 カタログjobは依存準備を一度だけ行い、要求されたStorybookとメールの公開成果物を生成する。Storybookと製品のParaglide生成先は共有するため、同じcheckout内でbuildを重ねない。両方を要求した場合の配備は、別Worker・別出力先を使って並行する。共有Access policy・service tokenは参照だけにし、各Workerの所有・公開前後のAccess・現在SHAをそれぞれ検証する。片方が失敗しても開始済みの子プロセスと検証の終了を回収してからjobを失敗にする。
 
-既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
+既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。既存Workerの更新は、配備前に同じWorker IDのAccess保護を確認し、workers.devを無効化せず維持する。配備後は管理APIから公開有効・preview URL無効を読み戻し、実HTTPのSHA・Accessと併せて検証する。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
 両カタログは`html_handling: none`でHTMLパスをそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
 
