@@ -241,6 +241,6 @@ R2の`tablecast/staging-reset.json`へ対象SHAとメンテナンス・runtime�
 
 ### release PR
 
-pushとCI完了時に現在のmainとの差分を集約し、Draft release PRを1本作成・更新する。差分がない場合は開いた集約PRを閉じ、新規作成しない。関連PR・元PR冒頭の要約・SHA・CI・配備状況は自動領域へ書き、概要・主な変更・移行手順・実クライアント検証はagentが編集する。[本文・確認手順](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)を使う。
+pushとCI完了時に現在のmainとの差分を集約し、Draft release PRを1本作成・更新する。差分がない場合は開いた集約PRを閉じ、新規作成しない。関連PRは各commitの関連付けを保ち、差分内のmerge SHAを持つマージ済みPRで補完する。同じmerge SHAで統合されたStackも、元commitを未関連扱いに変えず全段を集約する。関連PR・元PR冒頭の要約・SHA・CI・配備状況は自動領域へ書き、概要・主な変更・移行手順・実クライアント検証はagentが編集する。[本文・確認手順](../.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)を使う。
 
 mainへの通常マージには同一repoの最新staging、stagingの最新pushまたは手動リセットCIの成功、同SHAの疎通、mainとの合成treeとstaging treeの一致が必要。mainに緊急修正がある場合はstagingへ戻して再検証する。集約はmerge commitを使い、stagingを削除・rebaseしない。本番の配備確認はmain pushのCIとhealthで別に行う。
