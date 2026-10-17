@@ -68,7 +68,7 @@ Web applicationの設定を次と完全一致させる。
 
 D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営業書込みを止めない。破壊的なDB変更は別の計画移行が必要。main更新・PR closeと配備APIの間には分散トランザクションがないため、直前の再確認後にGitHubが更新された場合は次の直列run/cleanupが最終状態を反映する。
 
-ビルドの入口は`bun --no-env-file run build:deploy`、配備・cleanupの入口は`bun --no-env-file run deploy`。実Bindingを使うseed・bootstrap・配備のSDK互換処理はWranglerを残し、既存tsx経由のNode.js 24.7.0で実行する。同じ遠隔D1接続がBun 1.3.13では45秒以内に完了せず、Nodeでは約4秒で成功した。Bun内部の原因までは未特定。Wranglerの公式サポートruntimeはNodeであり、独自の通信互換処理は追加しない。依存管理、config生成、build、公式CLIの起動はBunを維持する。[Wranglerの実行要件](https://developers.cloudflare.com/workers/wrangler/install-and-update/#install-wrangler)
+ビルドの入口は`bun --no-env-file run build:deploy`、配備・cleanupの入口は`bun --no-env-file run deploy`。実Bindingを使うseed・bootstrap・配備のSDK互換処理はWranglerを残し、既存tsx経由のNode.js 24系で実行する。ローカルは24.7.0固定、CIは最低要件とmajor上限を`>=24.7.0 <25`で指定し、runnerに収録された適合版を優先して毎jobのNode取得を省く。性能比較にはログの実行版とrunner imageも残す。同じ遠隔D1接続がBun 1.3.13では45秒以内に完了せず、Node 24.7.0では約4秒で成功した。Bun内部の原因までは未特定。Wranglerの公式サポートruntimeはNodeであり、独自の通信互換処理は追加しない。依存管理、config生成、build、公式CLIの起動はBunを維持する。[Wranglerの実行要件](https://developers.cloudflare.com/workers/wrangler/install-and-update/#install-wrangler)
 
 DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`cf containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`cf deploy --prebuilt`で配備する。cfのversion・image digest出力と対象SHAを同じrunで追跡する。OAuth emulatorの依存は既存Dockerfileのbuild段階で準備する。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
