@@ -22,7 +22,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 ## 作業契約
 
-全ての作業はIssue起点とする。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
+全ての作業はIssue起点とする。Renovateの自動更新だけは標準のDependency Dashboardで継続管理し、個別の実装Issue作成と1 Issue対1 PRの例外とする。導入Issue #292をPR・commitから規約の根拠として参照し、Dashboardや導入Issueを自動更新PRで閉じない。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
 
 依頼範囲内の実装、検証、そこで見つかった不備の修正まで進める。既に許可された可逆的な作業や隔離されたローカル検証のたびに確認を挟まない。デプロイ・有料モデル・Draft解除・マージは許可された範囲で行う。
 
@@ -30,7 +30,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 通常の開発branchは`origin/staging`を起点とし、PRの統合先をstagingにする。mainへの通常のマージはstagingからのrelease PRに限定する。stagingへ統合したagentはrelease PRの関連PR・概要・変更内容・移行手順を現在の差分へ更新し、Draft解除・マージ前にも照合する。本文の自動領域と編集領域、集約PRのIssue例外は[release運用](.agents/skills/github-issue-pr-ops/references/pr-and-merge.md#stagingとrelease-pr)に従う。常設stagingの停止・全体リセットをローカル作業の終了処理に含めない。
 
-PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`chore(scope):`などのConventional Commits形式を使わない。コミットメッセージは[コミット規約](.agents/skills/conventional-commit/SKILL.md)に従う。
+PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`chore(scope):`などのConventional Commits形式を使わない。Renovateの自動更新PRは例外とし、標準の生成方法で英語commit件名と同じタイトルを使う。コミットメッセージは[コミット規約](.agents/skills/conventional-commit/SKILL.md)に従う。
 
 ## 製品とデータの不変条件
 

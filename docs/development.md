@@ -149,3 +149,15 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 ## 統合先とrelease
 
 作業branchは`origin/staging`から作成し、stagingへPRを出す。共用stagingは[配備手順](deployment.md#stagingとreleaseの運用)に従って利用し、ローカル終了処理で停止・リセットしない。実装Issueの開発完了とmainへの本番releaseを区別する。
+
+## Renovateによる依存更新
+
+設定は[Renovate設定](../.github/renovate.json5)で管理し、標準Mend Renovate GitHub Appをこのリポジトリへ接続する。botが作成・更新するDependency Dashboardに検出した依存、PR、保留・エラー・再実行を集約する。手動の追跡Issueや専用のIssue作成workflowは使わない。`.agents/skills/**`は更新対象から除き、skill内の参考workflowを実際のCI依存として更新しない。
+
+通常更新は日本時間の月曜6〜12時、非majorは一つのPR、majorはReact・Vitest・Storybook等の互換単位で分ける。lockfileも週次で更新する。セキュリティ更新は通常の時間帯制限から除外する。PRはstaging向けDraft、buildラベル、日本語の4項目の本文とし、自動マージしない。
+
+commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持する。標準テンプレートはDashboardの数値IDをcommitへ展開しないため、規約の根拠として導入Issue #292をRefsで参照する。更新の管理はDashboardが所有し、導入IssueとDashboardは自動更新PRで閉じない。commitlintの免除は追加しない。
+
+TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
+
+RenovateのPRタイトルは、推奨設定に従って英語のcommit件名から生成する。`prTitle`は個別指定せず、`commitMessageAction`や`commitMessageTopic`でcommitと共通の表現を設定する。自動更新PRは日本語タイトル規約の例外とし、本文は既存の日本語4項目を維持する。
