@@ -15,58 +15,16 @@ import { useStore } from "./store-shell";
 
 export function CastOverviewPage({ draftId }: { draftId?: string }) {
   const { id: storeId, role } = useStore();
-  const { locale, t } = useI18n();
-  const navigate = useNavigate();
+  const { t } = useI18n();
   const catalog = useQuery({ ...catalogOptions(storeId), enabled: !draftId });
   const draft = useQuery({
     ...draftOptions(storeId, draftId ?? ""),
     queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,
   });
   const configuration = draftId ? draft.data?.configuration : catalog.data?.configuration;
-  const editable = !draftId || draft.data?.status === "draft" || draft.data?.status === "ready";
-  const manager = role === "owner" || role === "admin";
-  function editAction(target: CastTarget) {
-    const language = t(target.endsWith("ja") ? "common_ja" : "common_en");
-    const label =
-      target === "proactive"
-        ? t("cast_edit_proactive")
-        : target.startsWith("instructions")
-          ? m.cast_edit_instructions({ language }, { locale })
-          : m.cast_edit_voice({ language }, { locale });
-    return draftId ? (
-      <Button
-        nativeButton={false}
-        role="link"
-        variant="outline"
-        render={
-          <Link
-            to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
-            params={{ storeId, draftId, section: "cast", itemId: "settings" }}
-            search={emptyMenuListSearch}
-            hash={target}
-          />
-        }
-      >
-        <Pencil />
-        {label}
-      </Button>
-    ) : (
-      <StartConfigurationEditing
-        key={`${storeId}:${target}`}
-        section="cast"
-        itemId="settings"
-        label={label}
-        onSelect={(nextDraftId) =>
-          void navigate({
-            to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
-            params: { storeId, draftId: nextDraftId, section: "cast", itemId: "settings" },
-            search: emptyMenuListSearch,
-            hash: target,
-          })
-        }
-      />
-    );
-  }
+  const editable = !draftId || ["draft", "ready"].includes(draft.data?.status ?? "");
+  const manager = ["owner", "admin"].includes(role);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -102,11 +60,68 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
           key={`${storeId}:${draftId ?? "published"}`}
           storeId={storeId}
           value={configuration.cast}
-          renderEdit={manager && editable ? editAction : undefined}
+          renderEdit={
+            manager && editable
+              ? (target) => <CastEditAction target={target} storeId={storeId} draftId={draftId} />
+              : undefined
+          }
         />
       ) : (
         !(catalog.error || draft.error) && <LoadingState />
       )}
     </div>
+  );
+}
+
+function CastEditAction({
+  target,
+  storeId,
+  draftId,
+}: {
+  target: CastTarget;
+  storeId: string;
+  draftId?: string;
+}) {
+  const { locale, t } = useI18n();
+  const navigate = useNavigate();
+  const language = t(target.endsWith("ja") ? "common_ja" : "common_en");
+  const label =
+    target === "proactive"
+      ? t("cast_edit_proactive")
+      : target.startsWith("instructions")
+        ? m.cast_edit_instructions({ language }, { locale })
+        : m.cast_edit_voice({ language }, { locale });
+  return draftId ? (
+    <Button
+      nativeButton={false}
+      role="link"
+      variant="outline"
+      render={
+        <Link
+          to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
+          params={{ storeId, draftId, section: "cast", itemId: "settings" }}
+          search={emptyMenuListSearch}
+          hash={target}
+        />
+      }
+    >
+      <Pencil />
+      {label}
+    </Button>
+  ) : (
+    <StartConfigurationEditing
+      key={`${storeId}:${target}`}
+      section="cast"
+      itemId="settings"
+      label={label}
+      onSelect={(nextDraftId) =>
+        void navigate({
+          to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+          params: { storeId, draftId: nextDraftId, section: "cast", itemId: "settings" },
+          search: emptyMenuListSearch,
+          hash: target,
+        })
+      }
+    />
   );
 }
