@@ -450,7 +450,10 @@ it.each([
         field: `${labels.common_en} ${labels.editor_cast_instructions}`,
       },
     ] as const) {
-      await screen.getByRole("link", { name: labels.editor_cast, exact: true }).click();
+      await screen
+        .getByRole("main")
+        .getByRole("link", { name: labels.editor_cast, exact: true })
+        .click();
       await screen.getByRole("link", { name: target.label, exact: true }).click();
       expect(router.state.location.hash).toBe(target.hash);
       await expect
@@ -714,6 +717,7 @@ it("未保存で別設定へ移動しようとすると入力を保護し、取�
 });
 
 it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻り先が見える", async () => {
+  const previousViewport = { width: window.innerWidth, height: window.innerHeight };
   await page.viewport(768, 1024);
   const previousFontSize = document.documentElement.style.fontSize;
   document.documentElement.style.fontSize = "32px";
@@ -745,7 +749,7 @@ it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻
     });
   } finally {
     document.documentElement.style.fontSize = previousFontSize;
-    await page.viewport(1024, 768);
+    await page.viewport(previousViewport.width, previousViewport.height);
   }
 });
 

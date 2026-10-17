@@ -231,6 +231,8 @@ Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で
 
 遅い応答はHTTP到達を確認してから途中状態を観測し、gateを解放して最終状態・入力・副作用を確認する。actionは一度だけ行い、assertionを待つ。APIの成功応答だけで画面反映完了とせず、Service Worker・hydration・保存・通知の対象状態を待つ。タイマー待ち・汎用networkidle・force click・timeout増加・retryで順序や準備不足を隠さない。
 
+viewport・文字倍率・media設定を変更するcaseは開始時の値を記録し、失敗時もfinallyで復元する。固定の既定値へ戻して後続caseの条件を変えない。同名の操作がsidebarと本文にある場合は、対象のlandmarkへlocatorを絞り、`first()`で曖昧さを隠さない。
+
 既存の`fixtureDb`/`insertFixture`とCloudflareのreset/migrationを使い、DB wrapperや汎用test frameworkを足さない。E2Eのスタッフ認証Givenは`e2e/support/session.ts`の`signInStaff()`を再利用する。helperは型付きの小さな準備と失敗検出を所有し、検証対象のHTTP・注文確定・明示公開とThenはspecに残す。直接DB更新で認可や公開操作の代わりを作らない。
 
 通常のfile並列と、順序を変えた対象試験を別々に確認する。例えばAPIの対象fileを`--sequence.shuffle --sequence.seed=272`で実行し、seed・対象版・結果を残す。単回のshuffle成功を全順序の証明とは扱わず、資源所有と復元の設計で独立性を担保する。画像・trace・bounded logはcaseとengineで分け、同じ出力先へ書き込まない。fixture準備の失敗も業務assertionの失敗と同じくログを添付し、添付失敗で元のerrorを上書きしない。
