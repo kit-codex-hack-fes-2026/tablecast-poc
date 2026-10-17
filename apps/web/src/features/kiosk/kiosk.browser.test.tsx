@@ -42,6 +42,8 @@ let initialViewport: { width: number; height: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
   vi.stubGlobal("WebSocket", TablecastSocket);
+  // カートと通知の統合では実端末のマイク列挙を避ける。
+  vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
   TablecastSocket.instances = [];
   catalogResponse = Response.json(catalog);
   current = structuredClone(table);
@@ -551,7 +553,6 @@ it("日本語の商品0件でも店員を呼べる", async () => {
 it("日本語の商品取得失敗は空状態にせず再試行できる", async () => {
   const locale = "ja";
   const labels = ja;
-  vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
   current.locale = locale;
   current.uiSection = "menu";
   catalogResponse = Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
