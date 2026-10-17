@@ -23,6 +23,10 @@ description: TableCastのAPI・認可・DB処理と、GUI・音声・MCPが共�
 
 ## 変更範囲に応じた確認
 
+純粋な計算・入力境界はVitest `unit`、価格・版・認可・競合・冪等性・原子性は本番serviceと実D1/DOの`bindings`で所有する。HTTPのmiddleware・schema・Cookie・serializerを保証する場合は本番Hono入口まで接続する。service直呼びだけをHTTPの保証にせず、DBの保証をquery builderのmockへ置換しない。
+
+既存の[所有層と代表経路](../../../docs/testing.md#保証の所有層とe2eへの昇格)を照合し、GUI・音声・MCPごとに同じ業務規則をE2Eで反復しない。socket・stream・Service Bindingなどのruntime差だけを上位の代表接続へ残し、削除する試験の観測結果と代替保証を対応付ける。
+
 API実装ではworkspaceの`lint`・`typecheck`と関連する既存テストを実行する。DB・認可・競合は[テスト戦略](../../../docs/testing.md)の実Bindingを使い、mockで保証した扱いにしない。公開RPCを変えたらWebの型検査、SSR・認証・注文の接続を変えたら代表経路まで確認する。
 
 配置・依存の変更はOxlintのboundaries設定と照合する。route→DB、service→HTTP、query→更新、model→実行コードを許可するignoreを足さず、必要な新規境界は構成文書と設定へ明示する。

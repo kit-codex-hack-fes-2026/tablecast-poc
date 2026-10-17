@@ -22,6 +22,10 @@ description: TableCastのWeb画面・SSR・データ取得・フォーム・日�
 
 ## 変更範囲に応じた確認
 
+表示・入力・保存失敗・409・再試行・query更新は、既存Storybookか実feature・QueryClient・メモリーRouterを接続するVitest Browserで確認する。HTTP・通知など外部境界だけを固定し、本番のhook・client・状態遷移を外さない。focus・layout・日英・viewportの分岐を全構成E2Eで反復しない。
+
+E2Eの追加・移行では[所有層と代表経路](../../../docs/testing.md#保証の所有層とe2eへの昇格)を先に照合し、実SSR・Cookie・Service Binding・SW・外部redirect等でしか観測できない結果を示す。下位で保証済みなら追加せず、不足を補ってから上位の重複を除く。APIを差し替えたブラウザー成功を実DBの保証とせず、実routeのloader・hydrationをメモリーRouterで保証したとしない。
+
 Web実装ではworkspaceの`lint`・`typecheck`と関連テストを実行する。操作・focus・layoutは`test:browser`等の実ブラウザー、SSR・認証・注文の最終配線は代表E2Eで確認する。部品のみの変更に全E2Eを一律に要求しない。保証の分担は[テスト戦略](../../../docs/testing.md)、PRの実動作証拠は[Issue・PR skill](../github-issue-pr-ops/SKILL.md)を使う。
 
 stagingのMCP導入案内は現在環境のURLとtablecast-staging名を表示し、本番pluginとの接続先の違いを日英で説明する。

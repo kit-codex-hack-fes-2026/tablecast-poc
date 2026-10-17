@@ -12,6 +12,8 @@ description: TableCastの静的検査・hooks・開発script・repo skillsとage
 - 共通lintルールはroot、API/Web固有pluginはworkspace設定へ置く。導入版のruleとOxlint互換性を確認し、変更したruleは小さい失敗例で実効性を確認する。広いignoreや存在しないruleで通さない。
 - 既存の標準lint・commitlint・CIへ責務を割り当てる。意味の判断を模倣する独自validatorや重いpre-push全体試験を増やさない。
 - 実CLIはpackage scripts、順序・並列・cacheはTurbo、資源はCompose、Pythonはuvが所有する。workspace外から読む設定・素材も、実際にその内容へ依存するcached taskのinputsへ含める。標準機能を包むだけのrunner、envの二重解決、Composeの中継層を作らない。
+- テスト高速化は[保証の所有層](../../../docs/testing.md#保証の所有層とe2eへの昇格)を先に見直し、既存projectへ接続して上位の重複を除く。テスト件数や単独jobの短縮だけで判断せず、準備・実行・後片付けと必須チェック全体の時間を分ける。test成功結果の再利用を、当該runでの実行成功と扱わない。
+- 差分選択やcacheを変更する作業では、静的importに現れないHTTP・binding・ファイル・子プロセスの依存を確認する。比較失敗・設定変更・削除・動的依存の見落としを標準runnerだけで防げると仮定せず、全件へ戻す条件と入力・環境の寿命を決める。
 - 自作skillの正本は`.agents/skills`へ置く。skillは選択・実行判断、docsは仕様・運用手順を所有し、別の編集元や同期用symlinkを増やさない。詳細参照は必要な作業から到達させ、全文読込を既定にしない。
 - 外部skillは`bunx skills add <source> --skill <name> --agent codex -y`と`skills-lock.json`で取得元を管理する。上流本文を整形・翻訳しない。plugin・MCP設定では利用者の既存設定を保ち、生成物と手動設定を分ける。
 
