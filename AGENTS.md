@@ -22,7 +22,7 @@ TableCastは飲食店の卓上iPad向け音声接客・注文システム。客�
 
 ## 作業契約
 
-全ての作業はIssue起点とする。Renovateの自動更新だけは標準のDependency Dashboardで継続管理し、個別の実装Issue作成と1 Issue対1 PRの例外とする。導入Issue #292をPR・commitから規約の根拠として参照し、Dashboardや導入Issueを自動更新PRで閉じない。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
+全ての作業はIssue起点とする。Renovateの自動更新だけは標準のDependency Dashboardで継続管理し、個別の実装Issue作成と1 Issue対1 PRの例外とする。PR・commitから標準のDependency Dashboard #302をRefsで参照し、Dashboardを自動更新PRで閉じない。既存Issue・Assignee・branch・PRを確認し、なければ起票する。新しく見つけた問題もIssueへ記録し、依頼範囲に含まれるか判断する。分割・担当・ラベル・Projects・Draft・本文・添付・マージの運用は上記GitHub skillsへ集約する。
 
 依頼範囲内の実装、検証、そこで見つかった不備の修正まで進める。既に許可された可逆的な作業や隔離されたローカル検証のたびに確認を挟まない。デプロイ・有料モデル・Draft解除・マージは許可された範囲で行う。
 
