@@ -49,7 +49,7 @@ it("実QRをカメラ境界から読み取り、成功時にもトラックを�
     return stream;
   });
   await screen.getByRole("button", { name: ja.device_scan_start, exact: true }).click();
-  await expect.element(screen.getByRole("status")).toHaveTextContent(ja.device_scan_success);
+  await expect.element(screen.getByRole("status")).toMatchTextContent(ja.device_scan_success);
   // decoderはフレームごとに通知できる。契約は正しいコードとカメラ解放で、承認は別操作。
   expect(read).toHaveBeenCalledWith("TABLECAST-QR");
   expect(new Set(read.mock.calls.map(([code]) => code))).toEqual(new Set(["TABLECAST-QR"]));
@@ -94,6 +94,6 @@ it("カメラ拒否を説明し、コード読取のcallbackを呼ばない", as
     </LocaleProvider>,
   );
   await screen.getByRole("button", { name: ja.device_scan_start, exact: true }).click();
-  await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.device_scan_camera_error);
+  await expect.element(screen.getByRole("alert")).toMatchTextContent(ja.device_scan_camera_error);
   expect(read).not.toHaveBeenCalled();
 });

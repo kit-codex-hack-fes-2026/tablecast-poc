@@ -1,14 +1,24 @@
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
   type ColumnDef,
-  type TableOptions,
   type PaginationState,
   type OnChangeFn,
+  type RowData,
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
@@ -21,7 +31,27 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Table, TableCell, TableHead } from "./ui/table";
 
-export function DataTable<T>({
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+});
+
+export type DataTableColumn<T extends RowData> = ColumnDef<typeof features, T>;
+
+export function DataTable<T extends RowData>({
   data,
   columns,
   getRowId,
@@ -37,7 +67,7 @@ export function DataTable<T>({
   manualFiltering,
 }: {
   data: T[];
-  columns: ColumnDef<T>[];
+  columns: DataTableColumn<T>[];
   getRowId: (row: T) => string;
   searchLabel?: string;
   empty?: string;
@@ -47,12 +77,13 @@ export function DataTable<T>({
   onRetry?: () => void;
   state?: { globalFilter?: string; pagination?: PaginationState };
   onGlobalFilterChange?: OnChangeFn<string>;
-  onPaginationChange?: TableOptions<T>["onPaginationChange"];
+  onPaginationChange?: OnChangeFn<PaginationState>;
   manualFiltering?: boolean;
 }) {
   const { locale, t } = useI18n();
   const [filter, setFilter] = useState("");
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     getRowId,
@@ -60,11 +91,9 @@ export function DataTable<T>({
     onGlobalFilterChange: onGlobalFilterChange ?? setFilter,
     ...(onPaginationChange ? { onPaginationChange, autoResetPageIndex: false } : {}),
     manualFiltering,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
-    initialState: { pagination: { pageSize: 20 } },
+    globalFilterFn: "includesString",
+    manualPagination: !pagination,
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
   if (error && !data.length && !pending)
     return (
@@ -169,7 +198,7 @@ export function DataTable<T>({
               <ChevronLeft />
             </Button>
             <span className="min-w-16 text-center tabular-nums">
-              {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
+              {table.state.pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
             </span>
             <Button
               size="icon"

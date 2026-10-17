@@ -1,9 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpRight, Plus, Settings2 } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
@@ -37,7 +36,7 @@ export function Organisations() {
     </SettingsShell>
   );
 }
-function storeColumns(t: ReturnType<typeof useI18n>["t"]): ColumnDef<StoreRow>[] {
+function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<StoreRow>[] {
   return [
     {
       accessorKey: "name",

@@ -112,12 +112,13 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account") {
   );
 }
 
+const width = () => sidebar()?.getBoundingClientRect().width ?? 0;
+
 it("サイドバーの幅をCookieへ保存し、再表示と折りたたみでも復元する", async () => {
   await page.viewport(1024, 768);
   const view = await show();
   const handle = page.getByRole("separator", { name: ja.admin_resize_sidebar, exact: true });
   await expect.element(handle).toBeEnabled();
-  const width = () => sidebar()?.getBoundingClientRect().width ?? 0;
   const initial = width();
   handle.element().focus();
   await userEvent.keyboard("{ArrowRight}");

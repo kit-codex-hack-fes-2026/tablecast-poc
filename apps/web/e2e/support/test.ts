@@ -285,7 +285,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
             "MP_DISABLE_VERSION_CHECK=true",
             "-p",
             "127.0.0.1::8025",
-            "axllent/mailpit:v1.29.2",
+            "axllent/mailpit:v1.31.6",
           ]);
           const mailpitPort = await waitFor(async () => {
             const result = await execute(

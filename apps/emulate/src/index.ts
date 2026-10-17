@@ -35,6 +35,7 @@ if (
 const emulator = await createEmulator({
   service: "google",
   port,
+  hostname: preview ? "0.0.0.0" : "127.0.0.1",
   baseUrl: preview
     ? `${origin}/_tablecast/oauth`
     : (process.env.PORTLESS_URL ?? `http://127.0.0.1:${port}`),

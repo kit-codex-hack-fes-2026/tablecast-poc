@@ -1,10 +1,9 @@
 import { Brand } from "../../components/brand";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
@@ -127,7 +126,7 @@ function consentStoreColumns(
   selected: string | undefined,
   select: (id: string) => void,
   selectable: boolean,
-): ColumnDef<ConsentStore>[] {
+): DataTableColumn<ConsentStore>[] {
   return [
     { accessorKey: "name", header: t("admin_store") },
     {

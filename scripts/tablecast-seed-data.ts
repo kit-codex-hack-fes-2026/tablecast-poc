@@ -988,7 +988,7 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   const repairs: BatchItem<"sqlite">[] = [];
   const canonical: BatchItem<"sqlite">[] = [];
   for (const account of mockAccounts) {
-    if (!URL.canParse(account.issuer)) continue;
+    if (!account.issuer || !URL.canParse(account.issuer)) continue;
     const issuer = new URL(account.issuer);
     if (
       account.issuer !== tablecastGoogleMockIssuer &&

@@ -2,7 +2,7 @@ import { context, propagation } from "@opentelemetry/api";
 
 // Cookieと応答ヘッダーは現在のSSRリクエストだけに結び付ける。
 export async function serverApiFetch(input: RequestInfo | URL, init?: RequestInit) {
-  const [{ env }, { getRequest, getResponseHeaders }] = await Promise.all([
+  const [{ env }, { getRequest, appendResponseHeader }] = await Promise.all([
     import("cloudflare:workers"),
     import("@tanstack/react-start/server"),
   ]);
@@ -21,7 +21,7 @@ export async function serverApiFetch(input: RequestInfo | URL, init?: RequestIni
     new Request(request, { headers, redirect: "manual" }),
   );
   for (const responseCookie of response.headers.getSetCookie())
-    getResponseHeaders().append("set-cookie", responseCookie);
+    appendResponseHeader("set-cookie", responseCookie);
   return response;
 }
 

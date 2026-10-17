@@ -1,9 +1,8 @@
 import { tv } from "tailwind-variants";
 import type { TableState } from "@tablecast/api/schema";
-import type { ColumnDef } from "@tanstack/react-table";
 import { Bell, ChevronRight, CirclePause, Mic, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -85,7 +84,7 @@ function tableTimelineColumns(
   now: number,
   onSelect: (id: string) => void,
   onOpen: ((table: { id: string; name: string }) => void) | undefined,
-): ColumnDef<FloorRow>[] {
+): DataTableColumn<FloorRow>[] {
   return [
     {
       accessorKey: "name",

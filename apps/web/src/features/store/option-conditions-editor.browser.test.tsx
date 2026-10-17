@@ -224,7 +224,7 @@ it("日本語の試行で数量をそのまま送り、変更後に古い結果�
   await screen.getByRole("button", { name: labels.condition_run }).click();
   await expect
     .element(screen.getByRole("status", { name: "", exact: true }))
-    .toHaveTextContent("OPTION_QUANTITY");
+    .toMatchTextContent("OPTION_QUANTITY");
   expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 3 }] });
   await quantity.selectOptions("2");
   await expect
@@ -233,7 +233,7 @@ it("日本語の試行で数量をそのまま送り、変更後に古い結果�
   await screen.getByRole("button", { name: labels.condition_run }).click();
   await expect
     .element(screen.getByRole("status", { name: "", exact: true }))
-    .toHaveTextContent("OPTION_QUANTITY");
+    .toMatchTextContent("OPTION_QUANTITY");
   expect(requests[1]).toMatchObject({ selections: [{ optionId: "X", quantity: 2 }] });
   await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
   await expect.element(quantity).not.toBeInTheDocument();

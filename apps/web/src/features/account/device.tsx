@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowRight } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -41,7 +40,7 @@ export function DeviceApproval() {
 function deviceApprovalColumns(
   t: ReturnType<typeof useI18n>["t"],
   userCode: string,
-): ColumnDef<Store>[] {
+): DataTableColumn<Store>[] {
   return [
     { accessorKey: "name", header: t("admin_store") },
     {

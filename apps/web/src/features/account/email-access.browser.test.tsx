@@ -147,7 +147,7 @@ it("日本語の登録は項目エラーでは送信せず、503後も入力を�
   } finally {
     release.resolve();
   }
-  await expect.element(page.getByRole("alert")).toHaveTextContent(labels.account_failed);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(labels.account_failed);
   await expect.element(email).toHaveValue("form@example.test");
   await expect.element(submit).toBeEnabled();
   await expect
@@ -216,7 +216,7 @@ it("日本語のログインは文字を200%にしてもキーボードで送信
     email: "staff@example.test",
     password: "tablecast-login-password",
   });
-  await expect.element(page.getByRole("alert")).toHaveTextContent(labels.auth_failed);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(labels.auth_failed);
   await expect.element(email).toHaveValue("staff@example.test");
   await expect.element(password).toBeEnabled();
 });

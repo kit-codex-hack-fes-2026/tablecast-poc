@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
   Check,
   ImagePlus,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { GoogleIcon } from "../../components/google-icon";
 import { Badge } from "../../components/ui/badge";
@@ -233,7 +232,7 @@ function connectionColumns(
   email: string | undefined,
   pending: boolean,
   change: (action: () => Promise<void>) => void,
-): ColumnDef<Connection>[] {
+): DataTableColumn<Connection>[] {
   return [
     {
       accessorKey: "providerId",
@@ -343,7 +342,7 @@ function passkeyColumns(
   t: AccountController["t"],
   pending: boolean,
   change: (action: () => Promise<void>) => void,
-): ColumnDef<Passkey>[] {
+): DataTableColumn<Passkey>[] {
   return [
     {
       accessorKey: "name",
@@ -424,7 +423,7 @@ function loginSessionColumns(
   currentId: string | undefined,
   pending: boolean,
   change: (action: () => Promise<void>) => void,
-): ColumnDef<Session>[] {
+): DataTableColumn<Session>[] {
   return [
     {
       accessorKey: "userAgent",

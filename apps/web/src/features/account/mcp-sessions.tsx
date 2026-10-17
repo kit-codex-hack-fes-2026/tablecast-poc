@@ -1,9 +1,8 @@
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Clock, Eye, FilePenLine, Plug, ShieldOff } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -44,7 +43,7 @@ function sessionColumns(
   t: ReturnType<typeof useI18n>["t"],
   pending: boolean,
   revoke: (id: string) => void,
-): ColumnDef<Session>[] {
+): DataTableColumn<Session>[] {
   return [
     {
       id: "client",

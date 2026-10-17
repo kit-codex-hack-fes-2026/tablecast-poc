@@ -27,11 +27,11 @@ jobs:
       catalog: ${{ steps.request.outputs.catalog }}
     steps:
       # issue_commentはdefault branch、workflow_callは明示起動したcallerと同じ版を使う。
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: request
         env:
           TABLECAST_REQUEST_PR: ${{ inputs.pr }}
@@ -95,7 +95,7 @@ jobs:
       TABLECAST_CATALOG_KIND: ${{ needs.request.outputs.catalog }}
     steps:
       # forkと権限を確認した後に、照合済みの同一repoのSHAだけを取得する。
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         id: checkout
         with:
           ref: ${{ needs.request.outputs.sha }}

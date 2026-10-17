@@ -1,10 +1,9 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpRight, ImageOff, Plus } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
@@ -233,7 +232,7 @@ function menuCollectionColumns(
   draftId: string | undefined,
   storeId: string,
   search: MenuListSearch,
-): ColumnDef<ItemRow>[] {
+): DataTableColumn<ItemRow>[] {
   return [
     {
       accessorKey: "name",
@@ -293,7 +292,7 @@ function menuCollectionColumns(
                 {money(row.original.price ?? 0, locale)}
               </span>
             ),
-          } satisfies ColumnDef<ItemRow>,
+          } satisfies DataTableColumn<ItemRow>,
         ]
       : []),
     ...(section === "products"
@@ -306,7 +305,7 @@ function menuCollectionColumns(
                 {t(row.original.available ? "editor_available" : "kiosk_sold_out")}
               </Badge>
             ),
-          } satisfies ColumnDef<ItemRow>,
+          } satisfies DataTableColumn<ItemRow>,
         ]
       : []),
     ...(section === "categories" || section === "plans"
@@ -324,7 +323,7 @@ function menuCollectionColumns(
                 </p>
               </div>
             ),
-          } satisfies ColumnDef<ItemRow>,
+          } satisfies DataTableColumn<ItemRow>,
         ]
       : []),
     {

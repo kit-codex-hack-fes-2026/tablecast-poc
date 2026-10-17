@@ -7,11 +7,10 @@ import { FieldErrors } from "../../components/ui/field-errors";
 import { tv } from "tailwind-variants";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, Check, MonitorSmartphone, Plus, ShieldOff } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -215,7 +214,7 @@ function deviceColumns(
   t: ReturnType<typeof useI18n>["t"],
   pending: boolean,
   revoke: (id: string) => void,
-): ColumnDef<Device>[] {
+): DataTableColumn<Device>[] {
   return [
     {
       accessorKey: "tableName",
@@ -282,7 +281,7 @@ function registrationColumns(
   t: ReturnType<typeof useI18n>["t"],
   tableId: string | undefined,
   onSelect: (tableId: string) => void,
-): ColumnDef<{ id: string; name: string }>[] {
+): DataTableColumn<{ id: string; name: string }>[] {
   return [
     { accessorKey: "name", header: t("admin_table") },
     {
