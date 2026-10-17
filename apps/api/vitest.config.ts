@@ -1,5 +1,10 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
+const unitTests = [
+  "test/pricing.test.ts",
+  "test/instructions.test.ts",
+  "test/container-metrics.test.ts",
+];
 const bindings = {
   plugins: [
     cloudflareTest({
@@ -20,7 +25,26 @@ const bindings = {
     setupFiles: ["./test/setup.ts"],
     name: "bindings",
     include: ["test/**/*.test.ts"],
-    exclude: ["test/pricing.test.ts", "test/instructions.test.ts"],
+    exclude: unitTests,
+    deps: {
+      optimizer: {
+        ssr: {
+          enabled: true,
+          include: [
+            "better-auth",
+            "better-auth/plugins",
+            "better-auth/api",
+            "better-auth/db",
+            "@better-auth/drizzle-adapter",
+            "@better-auth/oauth-provider",
+            "@better-auth/passkey",
+            "@better-auth/infra",
+          ],
+          // workerdのnative moduleを残し、依存の変換成果物を再利用する。
+          rolldownOptions: { external: [/^(node|cloudflare|workerd):/] },
+        },
+      },
+    },
     fileParallelism: true,
     testTimeout: 30000,
     hookTimeout: 30000,
@@ -34,7 +58,7 @@ export default defineConfig({
       {
         test: {
           name: "unit",
-          include: ["test/pricing.test.ts", "test/instructions.test.ts"],
+          include: unitTests,
           environment: "node",
         },
       },

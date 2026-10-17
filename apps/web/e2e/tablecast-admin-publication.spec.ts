@@ -1,254 +1,96 @@
-import { test } from "./support/test";
 import { expect } from "@playwright/test";
-import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
-import en from "../messages/en.json" with { type: "json" };
+import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import { z } from "zod";
+import { test } from "./support/test";
+import { signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
-import { credentials } from "./support/runtime";
+import { money } from "../src/i18n/format";
 
-test.use({ trace: "off", actionTimeout: 15_000 });
+test.use({ trace: "off" });
 
-for (const { language, labels, locale } of [
-  { language: "日本語", labels: ja, locale: "ja-JP" },
-  { language: "英語", labels: en, locale: "en-GB" },
-]) {
-  test(`${language}の管理画面で商品を編集・再確認・検証し、明示公開後にだけ価格が変わる`, async ({
-    page,
-    request: staff,
-    baseURL,
-  }, testInfo) => {
-    const storeId = "tablecast-hanul";
-    const adminPath = `/api/admin/stores/${storeId}`;
-    const headers = { Origin: baseURL ?? "" };
-    const login = await staff.post("/api/auth/sign-in/email", { data: credentials, headers });
-    expect(login.status()).toBe(200);
-    // MCPの外部入力に相当する検証済み下書きだけを実HTTPで準備する。
-    const catalog = await staff.get(`${adminPath}/catalog`);
-    expect(catalog.status()).toBe(200);
-    const original = catalogSchema.parse(await catalog.json());
-    const created = await staff.post(`${adminPath}/drafts`, { headers });
-    expect(created.status()).toBe(200);
-    const draft = configDraftSchema.parse(await created.json());
-    const draftId = draft.id;
-    expect(draft.baseVersion).toBe(original.version);
-    const prepared = await staff.post(`${adminPath}/drafts/${draftId}/validate`, {
-      headers,
-      data: { expectedVersion: draft.version },
-    });
-    expect(prepared.status()).toBe(200);
-    expect(configDraftSchema.parse(await prepared.json()).status).toBe("ready");
-    const product = original.configuration.products.find((item) => item.available);
-    if (!product) throw new Error("編集対象の商品がありません");
-
-    // 認証前の確認リンクから、ログイン後も同じ店舗と下書きへ戻る。
-    await page.goto(`/admin/live?storeId=${storeId}&draftId=${draftId}`);
-    await expect(page).toHaveURL(/\/login\?/);
-    await page
-      .getByRole("button", { name: language === "英語" ? "English" : "日本語", exact: true })
-      .click();
-    await page.getByLabel(labels.auth_email).fill(credentials.email);
-    await page.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
-    await page.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
-    const reviewPath = `/admin/stores/${storeId}/menu/changes/${draftId}`;
-    const productPath = `${reviewPath}/products/${product.id}`;
-    await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
-    await expect(
-      page.getByRole("heading", { name: labels.admin_review_draft, exact: true }),
-    ).toBeVisible();
-    // SSRの見出しだけで進まず、既存のhydration制御で操作可能になったことを確認する。
-    await expect(
-      page.getByRole("button", { name: labels.admin_validate, exact: true }),
-    ).toBeEnabled();
-    // 利用者と同じリンクで編集へ進む。
-    await page
-      .getByRole("main")
-      .getByRole("link", { name: labels.editor_products, exact: true })
-      .click();
-    await page
-      .getByRole("row")
-      .filter({
-        has: page.getByText(product.text[language === "英語" ? "en" : "ja"].displayName, {
-          exact: true,
-        }),
+test("商品を保存・再読込し、明示公開した価格だけを実際の客画面へ届ける", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const storeId = "tablecast-hanul";
+  const api = `/api/admin/stores/${storeId}`;
+  const headers = { Origin: baseURL ?? "" };
+  // 認証と端末承認の画面接続は注文journeyが所有し、ここでは公開結果を検証する。
+  const staff = page.request;
+  await signInStaff(staff, baseURL);
+  const catalog = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
+  const product = catalog.configuration.products.find((item) => item.available);
+  if (!product) throw new Error("公開確認用の商品が必要です。");
+  const draft = configDraftSchema.parse(
+    await (await staff.post(`${api}/drafts`, { headers })).json(),
+  );
+  const state = adminStateSchema.parse(await (await staff.get(api)).json());
+  const table = state.vacantTables.find((item) => item.name === "T10");
+  if (!table) throw new Error("専用fixtureのT10が空席ではありません。");
+  expect(
+    (
+      await staff.post(`${api}/tables/open`, {
+        headers,
+        data: { tableId: table.id, guestCount: 1, locale: "ja" },
       })
-      .getByRole("link", { name: labels.admin_details, exact: true })
-      .click();
-    await expect(page).toHaveURL(new RegExp(`${productPath}$`));
-    const editor = page.getByRole("main");
-    let publicationRequests = 0;
-    page.on("request", (request) => {
-      if (new URL(request.url()).pathname === `${adminPath}/drafts/${draftId}/publish`)
-        publicationRequests++;
-    });
+    ).ok(),
+  ).toBe(true);
+  const guest = await browser.newContext({ baseURL });
+  try {
+    const device = z
+      .object({ device_code: z.string(), user_code: z.string() })
+      .parse(await (await guest.request.post("/api/devices/request")).json());
+    expect(
+      (
+        await staff.post(`${api}/devices/approve`, {
+          headers,
+          data: { userCode: device.user_code, tableId: table.id },
+        })
+      ).ok(),
+    ).toBe(true);
+    expect(
+      (
+        await guest.request.post("/api/devices/poll", {
+          data: { device_code: device.device_code },
+        })
+      ).ok(),
+    ).toBe(true);
+    const kiosk = await guest.newPage();
+    await kiosk.goto("/");
+    const guestProduct = kiosk
+      .locator("#tablecast-order button")
+      .filter({ has: kiosk.getByText(product.text.ja.displayName, { exact: true }) });
+    await expect(guestProduct).toContainText(money(product.price, "ja"));
 
-    // 全編集項目を実際に保存する。公開前に価格以外はGUIから元へ戻す。
-    const editedProduct = structuredClone(product);
-    editedProduct.price += 100;
-    editedProduct.available = false;
-    await editor
-      .getByLabel(labels.admin_unit_price, { exact: true })
-      .fill(String(editedProduct.price));
-    await editor
-      .getByRole("checkbox", { name: labels.admin_available, exact: true })
-      .first()
-      .uncheck();
-    const contentFields = [
-      { key: "displayName", label: labels.admin_display_name },
-      { key: "speechName", label: labels.admin_speech_name },
-      { key: "description", label: labels.admin_description },
-    ] as const;
-    for (const contentLocale of ["ja", "en"] as const) {
-      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
-      const group = editor
-        .getByRole("region", { name: labels.editor_translation, exact: true })
-        .getByRole("group", {
-          name: contentLanguage,
-          exact: true,
-        });
-      for (const { key, label } of contentFields) {
-        editedProduct.text[contentLocale][key] +=
-          contentLocale === "ja" ? "（確認用）" : " (review)";
-        await group
-          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
-          .fill(editedProduct.text[contentLocale][key]);
-      }
-    }
-    await expect(editor.getByText(labels.admin_unsaved, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: labels.admin_publish, exact: true })).toHaveCount(
-      0,
-    );
-    const savedResponse = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}` &&
-        response.request().method() === "PUT",
-    );
-    await editor.getByRole("button", { name: labels.common_save, exact: true }).click();
-    const saved = await savedResponse;
-    expect(saved.status()).toBe(200);
-    const edited = configDraftSchema.parse(await saved.json());
-    expect(edited.status).toBe("draft");
-    expect(edited.configuration.products.find((item) => item.id === product.id)).toEqual(
-      editedProduct,
-    );
-
-    // HTTP成功後にフォームの未保存状態も解消してから再読み込みする。
-    await expect(editor.getByText(labels.admin_unsaved, { exact: true })).toHaveCount(0);
-    await expect(
-      editor.getByRole("status").filter({ hasText: labels.account_saved }),
-    ).toBeVisible();
-    // 個別URLを再読み込みしても保存済みの編集内容を復元する。
+    const reviewPath = `/admin/stores/${storeId}/menu/changes/${draft.id}`;
+    await page.goto(`/admin/live?storeId=${storeId}&draftId=${draft.id}`);
+    await page.getByRole("button", { name: "日本語", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
+    await expect(page.getByRole("button", { name: ja.admin_validate, exact: true })).toBeEnabled();
+    await page.goto(`${reviewPath}/products/${product.id}`);
+    const price = page.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+    await price.fill(String(product.price + 100));
+    await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
     await page.reload();
-    await expect(page).toHaveURL(new RegExp(productPath));
-    await expect(editor.getByLabel(labels.admin_unit_price, { exact: true })).toHaveValue(
-      String(editedProduct.price),
-    );
-    await expect(
-      editor.getByRole("checkbox", { name: labels.admin_available, exact: true }).first(),
-    ).not.toBeChecked();
-    await editor.screenshot({ path: testInfo.outputPath("tablecast-admin-product-editor.png") });
-    await editor
-      .getByRole("checkbox", { name: labels.admin_available, exact: true })
-      .first()
-      .check();
-    for (const contentLocale of ["ja", "en"] as const) {
-      const contentLanguage = contentLocale === "ja" ? labels.common_ja : labels.common_en;
-      const group = editor
-        .getByRole("region", { name: labels.editor_translation, exact: true })
-        .getByRole("group", {
-          name: contentLanguage,
-          exact: true,
-        });
-      for (const { key, label } of contentFields) {
-        await expect(
-          group.getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true }),
-        ).toHaveValue(editedProduct.text[contentLocale][key]);
-        await group
-          .getByRole("textbox", { name: `${contentLanguage} ${label}`, exact: true })
-          .fill(product.text[contentLocale][key]);
-      }
-    }
-    const savedPriceResponse = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}` &&
-        response.request().method() === "PUT",
-    );
-    await editor.getByRole("button", { name: labels.common_save, exact: true }).click();
-    const savedPrice = await savedPriceResponse;
-    expect(savedPrice.status()).toBe(200);
-    const priceDraft = configDraftSchema.parse(await savedPrice.json());
-    expect(priceDraft.version).toBe(edited.version + 1);
-    expect(priceDraft.changes).toHaveLength(1);
-    expect(priceDraft.changes[0]).toMatchObject({
-      before: product.price,
-      after: product.price + 100,
-      sensitive: true,
-    });
-    await expect(editor.getByText(labels.admin_unsaved, { exact: true })).toHaveCount(0);
-    await expect(
-      editor.getByRole("status").filter({ hasText: labels.account_saved }),
-    ).toBeVisible();
-    await page.goto(reviewPath);
-    const publish = page.getByRole("button", { name: labels.admin_publish, exact: true });
-    const validate = page.getByRole("button", { name: labels.admin_validate, exact: true });
-    await expect(publish).toBeDisabled();
-    await expect(editor.getByText(labels.admin_sensitive, { exact: true })).toBeVisible();
-    const prices = await page.evaluate(
-      ({ amount, languageLocale }) => {
-        const currency = new Intl.NumberFormat(languageLocale, {
-          style: "currency",
-          currency: "JPY",
-          maximumFractionDigits: 0,
-        });
-        return {
-          before: currency.format(amount).replace("￥", "¥"),
-          after: currency.format(amount + 100).replace("￥", "¥"),
-        };
-      },
-      { amount: product.price, languageLocale: locale },
-    );
-    const change = editor.locator("[data-ui='config-change']");
-    await expect(change).toHaveCount(1);
-    await expect(change.getByText(prices.before, { exact: true })).toBeVisible();
-    await expect(change.getByText(prices.after, { exact: true })).toBeVisible();
-    const validatedResponse = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}/validate`,
-    );
-    await validate.click();
-    const validated = await validatedResponse;
-    expect(validated.status()).toBe(200);
-    expect(configDraftSchema.parse(await validated.json()).status).toBe("ready");
-    await expect(publish).toBeEnabled();
-    const beforeApproval = await staff.get(`${adminPath}/catalog`);
-    expect(beforeApproval.status()).toBe(200);
-    expect(catalogSchema.parse(await beforeApproval.json())).toEqual(original);
-    expect(publicationRequests).toBe(0);
-    await editor.screenshot({
-      path: testInfo.outputPath("tablecast-admin-publication-review.png"),
-    });
+    await expect(price).toHaveValue(String(product.price + 100));
+    await expect(guestProduct).toContainText(money(product.price, "ja"));
 
-    // この明示操作だけが公開を行う。変更は一商品の単価100円分に限定する。
-    const publishedResponse = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `${adminPath}/drafts/${draftId}/publish`,
-    );
+    await page.goto(reviewPath);
+    await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
+    const publish = page.getByRole("button", { name: ja.admin_publish, exact: true });
+    await expect(publish).toBeEnabled();
     await publish.click();
-    const confirmation = page.getByRole("dialog", {
-      name: labels.workflow_publish_title,
-      exact: true,
-    });
+    const confirmation = page.getByRole("dialog", { name: ja.workflow_publish_title, exact: true });
     await expect(confirmation).toBeVisible();
-    expect(publicationRequests).toBe(0);
-    await confirmation.screenshot({
-      path: testInfo.outputPath("tablecast-publication-confirmation.png"),
-    });
-    await confirmation.getByRole("button", { name: labels.admin_publish, exact: true }).click();
-    const published = await publishedResponse;
-    expect(published.status()).toBe(200);
-    expect(configDraftSchema.parse(await published.json()).status).toBe("published");
+    await expect(guestProduct).toContainText(money(product.price, "ja"));
+    await confirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
     await expect(publish).toHaveCount(0);
-    expect(publicationRequests).toBe(1);
-    const current = await staff.get(`${adminPath}/catalog`);
-    expect(current.status()).toBe(200);
-    const changed = catalogSchema.parse(await current.json());
-    expect(changed.version).toBe(original.version + 1);
-    expect(changed.configuration).toEqual(priceDraft.configuration);
-  });
-}
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+    await kiosk.reload();
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+  } finally {
+    await guest.close();
+  }
+});

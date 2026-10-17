@@ -50,10 +50,7 @@ test.each([
     await expect.element(page.getByText(labels.pair_begin, { exact: true })).not.toBeVisible();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
     await page.viewport(width, document.body.scrollHeight);
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-evaluation-${locale}.png`,
-      fullPage: false,
-    });
+
     const disclosure = page.getByText(labels.evaluation_device);
     disclosure.element().focus();
     await userEvent.keyboard("{Enter}");

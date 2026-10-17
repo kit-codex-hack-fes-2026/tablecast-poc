@@ -204,9 +204,7 @@ it.each([
     await expect
       .poll(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
       .toBe(true);
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-image-retry-${locale}.png`,
-    });
+
     // When: 同じファイルを再試行する
     await page.getByRole("button", { name: labels.common_retry, exact: true }).click();
     await expect.poll(() => requests.length).toBe(2);

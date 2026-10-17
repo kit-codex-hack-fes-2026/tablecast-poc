@@ -168,7 +168,4 @@ it("対象者ゼロで付与確定しても参加者の付与漏れを理由付�
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.account_saved }))
     .toBeVisible();
-  await page.screenshot({
-    path: "../../../test-results/browser/tablecast-point-omission-correction.png",
-  });
 });

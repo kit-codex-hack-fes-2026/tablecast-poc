@@ -8,7 +8,9 @@
 | logo.png       | 1832×859、alphaあり | 生成案の筆文字。店舗ロゴの独立した画像枠へ配置 |
 | banner.png     | 1536×1024           | 商品チラシ。全体を商品詳細へリンク             |
 
-`apps/web/e2e/tablecast-theme-art.spec.ts`が実R2アップロード、出所登録、下書き保存、デザイン編集、実注文プレビューを通す。公開済み設定は変更しない。商品名・店名・出所は日本語と英語のHTMLにも残す。素材はskillの完成例を確認する開発用データで、利用者がこのリポジトリをcloneする必要はない。
+当時の実R2アップロード、出所登録、下書き保存、デザイン編集、実注文プレビューは[固定SHAのE2E](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-theme-art.spec.ts)で検証した。公開済み設定を変更せず、商品名・店名・出所を日本語と英語のHTMLにも残す試験だった。
+
+現在は[デザイン編集のBrowser統合](../../../../apps/web/src/features/store/store-design.browser.test.tsx)、店舗テーマ・KioskのBrowser統合、APIのappearance・media・image-uploadテストへ保証を分け、実画像のアップロードと配信は[選択肢画像の代表E2E](../../../../apps/web/e2e/tablecast-option-images.spec.ts)で確認する。素材はskillの完成例を確認する開発用データで、利用者がこのリポジトリをcloneする必要はない。
 
 ## 生成プロンプト
 

@@ -123,7 +123,6 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   await expect(page.getByRole("heading", { name: "Check your connection" })).toBeVisible();
   await expect(brand).toBeVisible();
   await expect(brand).toHaveJSProperty("naturalWidth", 500);
-  await page.screenshot({ path: join(testInfo.outputDir, "tablecast-pwa-offline.png") });
   await runtime.setOnline(true);
   await page.getByRole("link", { name: "店側アプリ / Staff app" }).click();
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
@@ -132,10 +131,6 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   );
   await page.getByText(ja.pwa_install_title, { exact: true }).click();
   await expect(page.getByText(ja.pwa_install_steps)).toBeVisible();
-  await page.screenshot({
-    path: join(testInfo.outputDir, "tablecast-pwa-install.png"),
-    fullPage: true,
-  });
   if (testInfo.project.name === "tablecast-chromium") {
     // 対象画像の保存だけを一度失敗させ、他の背景取得に失敗条件を消費させない。
     const worker = context.serviceWorkers()[0];
@@ -177,156 +172,213 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
   }
 });
 
-test("別画面の未保存入力がある間は更新を待ち、背景GET中でも入力を戻すと全画面へ自動適用する", async ({
+test("二つのログイン画面は未保存入力がある間はPWA更新を待ち、入力を戻すと両画面へ適用する", async ({
   page,
   context,
+  browser,
+  browserName,
   runtime,
 }, testInfo) => {
-  const observations: string[] = [];
-  const observe = (target: Page) =>
-    target.on("console", (message) => {
-      if (message.text().startsWith("tablecast-pwa-decision:"))
-        observations.push(message.text().slice("tablecast-pwa-decision:".length));
-    });
-  observe(page);
-  context.on("page", observe);
-  // アプリ登録より前に監視を開始し、応答の値だけを保存する
-  await context.addInitScript(() => {
-    navigator.serviceWorker.addEventListener(
-      "message",
-      (event: MessageEvent<{ type?: string }>) => {
-        const port = event.ports[0];
-        if (!port) return;
-        const original = port.postMessage.bind(port);
-        port.postMessage = (ready: unknown) => {
-          console.info(
-            "tablecast-pwa-decision:" +
-              JSON.stringify({
-                page: location.pathname,
-                type: event.data?.type,
-                ready,
-                blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
-              }),
-          );
-          original(ready);
-        };
-      },
-    );
-  });
-  // Given: 同じService Workerを共有する二画面と保存前のフォーム。
-  await page.goto("/login");
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-  });
-  await expect
-    .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
-    .toBe(true);
-  await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toBeEnabled();
-  await page.getByLabel(ja.auth_email, { exact: true }).fill("unsaved@example.test");
-  await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toHaveAttribute(
-    "data-pwa-blocked",
-    "true",
-  );
-  const other = await context.newPage();
+  // Chromium本体の旧Worker終了判定を、Playwrightの操作traceとは別に記録する。
+  const traceChromium = browserName === "chromium";
+  if (traceChromium) await browser.startTracing(undefined, { categories: ["ServiceWorker"] });
   try {
-    await other.goto(`${runtime.origin}/`);
-    await expect(other.getByRole("button", { name: ja.pair_begin, exact: true })).toBeEnabled();
-    // 背景GETの完了を保留し、実QueryとWorkerの更新判定を競合させる
-    const background = await other.evaluateHandle(() => {
-      const original = window.fetch;
-      const gate = Promise.withResolvers<void>();
-      const state = { pending: false, release: () => gate.resolve() };
-      const fetch: typeof original = Object.assign(async (...args: Parameters<typeof original>) => {
-        const request = new Request(...args);
-        if (request.method === "GET" && new URL(request.url).pathname === "/api/table") {
-          state.pending = true;
-          await gate.promise;
-        }
-        return original(...args);
-      }, original);
-      window.fetch = fetch;
-      return state;
-    });
-    await expect.poll(() => background.evaluate((state) => state.pending)).toBe(true);
-    let reloads = 0;
-    let otherReloads = 0;
-    page.on("domcontentloaded", () => {
-      reloads += 1;
-    });
-    other.on("domcontentloaded", () => {
-      otherReloads += 1;
-    });
-    // 自動更新の確認に対するキャンセルを、入力を戻す前に観測する。
-    const decision = await page.evaluateHandle(() => {
-      const state = { cancellations: 0 };
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data?.type === "TABLECAST_CANCEL_UPDATE") state.cancellations++;
+    const observations: string[] = [];
+    const observe = (target: Page) =>
+      target.on("console", (message) => {
+        if (message.text().startsWith("tablecast-pwa-decision:"))
+          observations.push(
+            JSON.stringify({
+              client: target === page ? "editing" : "clean",
+              ...z
+                .record(z.string(), z.unknown())
+                .parse(JSON.parse(message.text().slice("tablecast-pwa-decision:".length))),
+            }),
+          );
       });
-      return state;
+    observe(page);
+    context.on("page", observe);
+    // アプリ登録より前に監視を開始し、応答の値だけを保存する
+    await context.addInitScript(() => {
+      if (!("serviceWorker" in navigator)) return;
+      navigator.serviceWorker.addEventListener(
+        "message",
+        (event: MessageEvent<{ type?: string }>) => {
+          const port = event.ports[0];
+          if (!port) {
+            if (event.data?.type === "TABLECAST_CANCEL_UPDATE")
+              console.info(
+                "tablecast-pwa-decision:" +
+                  JSON.stringify({
+                    type: event.data.type,
+                    page: location.pathname,
+                    time: Date.now(),
+                  }),
+              );
+            return;
+          }
+          const original = port.postMessage.bind(port);
+          port.postMessage = (ready: unknown) => {
+            console.info(
+              "tablecast-pwa-decision:" +
+                JSON.stringify({
+                  page: location.pathname,
+                  type: event.data?.type,
+                  ready,
+                  blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+                  time: Date.now(),
+                  visibility: document.visibilityState,
+                  controller: navigator.serviceWorker.controller?.state,
+                  source: event.source instanceof ServiceWorker ? event.source.state : null,
+                }),
+            );
+            original(ready);
+          };
+        },
+      );
     });
-    // When: 配信済みService Workerの内容を更新する。
-    await appendFile(
-      join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
-      "\n// tablecast-update-test\n",
-    );
-    await runtime.restartWeb();
-
+    // Given: 同じService Workerを共有する、編集中と空の二つの実ログインフォーム。
+    await page.goto("/login");
     await page.evaluate(async () => {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) throw new Error("登録済みService Workerが必要です");
-      await registration.update();
+      await navigator.serviceWorker.ready;
     });
     await expect
-      .poll(async () =>
-        page.evaluate(async () => {
-          const registration = await navigator.serviceWorker.getRegistration();
-          return Boolean(registration?.waiting);
-        }),
-      )
+      .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
       .toBe(true);
-    await expect.poll(() => decision.evaluate((state) => state.cancellations)).toBeGreaterThan(0);
-    await decision.dispose();
-    await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue(
-      "unsaved@example.test",
+    await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toBeEnabled();
+    await page.getByLabel(ja.auth_email, { exact: true }).fill("unsaved@example.test");
+    await expect(page.getByRole("button", { name: ja.auth_sign_in, exact: true })).toHaveAttribute(
+      "data-pwa-blocked",
+      "true",
     );
-    expect(reloads).toBe(0);
-    // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
+    const other = await context.newPage();
     try {
-      await Promise.all([
-        page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-        other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
-        page.getByLabel(ja.auth_email, { exact: true }).fill(""),
-      ]);
-    } finally {
-      for (const target of [page, other]) {
-        observations.push(
-          JSON.stringify(
-            await target.evaluate(async () => ({
-              page: location.pathname,
-              waiting: Boolean((await navigator.serviceWorker.getRegistration())?.waiting),
-              blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
-              inert: document.body.inert,
-            })),
-          ),
-        );
+      await other.goto("/login");
+      const cleanSubmit = other.getByRole("button", { name: ja.auth_sign_in, exact: true });
+      await expect(cleanSubmit).toBeEnabled();
+      await expect(cleanSubmit).toHaveAttribute("data-pwa-blocked", "false");
+      await expect(other.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
+      // 二画面目の初回登録・制御が完了してから、次の版だけを更新対象にする。
+      await expect
+        .poll(() =>
+          other.evaluate(async () => {
+            const registration = await navigator.serviceWorker.ready;
+            return (
+              Boolean(navigator.serviceWorker.controller) &&
+              registration.active?.state === "activated" &&
+              !registration.installing &&
+              !registration.waiting
+            );
+          }),
+        )
+        .toBe(true);
+      let reloads = 0;
+      let otherReloads = 0;
+      page.on("domcontentloaded", () => {
+        reloads += 1;
+      });
+      other.on("domcontentloaded", () => {
+        otherReloads += 1;
+      });
+      // 自動更新の確認に対するキャンセルを、入力を戻す前に観測する。
+      const decision = await page.evaluateHandle(() => {
+        const state = { cancellations: 0 };
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data?.type === "TABLECAST_CANCEL_UPDATE") state.cancellations++;
+        });
+        return state;
+      });
+      // When: 配信済みService Workerの内容を更新する。
+      await appendFile(
+        join(runtime.directory, ".cloudflare/output/v0/workers/default/assets/sw.js"),
+        "\n// tablecast-update-test\n",
+      );
+      await runtime.restartWeb();
+
+      await page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) throw new Error("登録済みService Workerが必要です");
+        await registration.update();
+      });
+      await expect
+        .poll(async () =>
+          page.evaluate(async () => {
+            const registration = await navigator.serviceWorker.getRegistration();
+            return Boolean(registration?.waiting);
+          }),
+        )
+        .toBe(true);
+      await expect.poll(() => decision.evaluate((state) => state.cancellations)).toBeGreaterThan(0);
+      await decision.dispose();
+      await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue(
+        "unsaved@example.test",
+      );
+      expect(reloads).toBe(0);
+      expect(otherReloads).toBe(0);
+      // Then: 未保存入力を元へ戻すと、利用者の更新操作なしで新版を適用する。
+      try {
+        await Promise.all([
+          page.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+          other.waitForEvent("domcontentloaded", { timeout: 20_000 }),
+          (async () => {
+            await page.bringToFront();
+            await expect.poll(() => page.evaluate(() => document.visibilityState)).toBe("visible");
+            await page.getByLabel(ja.auth_email, { exact: true }).fill("");
+            await expect(
+              page.getByRole("button", { name: ja.auth_sign_in, exact: true }),
+            ).toHaveAttribute("data-pwa-blocked", "false");
+          })(),
+        ]);
+      } finally {
+        for (const target of [page, other]) {
+          observations.push(
+            JSON.stringify({
+              client: target === page ? "editing" : "clean",
+              ...(await target.evaluate(async () => {
+                const registration = await navigator.serviceWorker.getRegistration();
+                return {
+                  page: location.pathname,
+                  waiting: Boolean(registration?.waiting),
+                  waitingState: registration?.waiting?.state,
+                  activeState: registration?.active?.state,
+                  controller: navigator.serviceWorker.controller?.state,
+                  visibility: document.visibilityState,
+                  blocked: Boolean(document.querySelector('[data-pwa-blocked="true"]')),
+                  inert: document.body.inert,
+                };
+              })),
+            }),
+          );
+        }
+        const path = testInfo.outputPath("tablecast-pwa-decisions.ndjson");
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, observations.join("\n"));
+        await testInfo.attach("全画面の更新判定", {
+          path,
+          contentType: "application/x-ndjson",
+        });
       }
-      const path = testInfo.outputPath("tablecast-pwa-decisions.ndjson");
-      await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, observations.join("\n"));
-      await testInfo.attach("全画面の更新判定", {
+      expect(reloads).toBe(1);
+      expect(otherReloads).toBe(1);
+      await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
+      await expect(other.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
+      await expect
+        .poll(() =>
+          other.evaluate(async () => !(await navigator.serviceWorker.getRegistration())?.waiting),
+        )
+        .toBe(true);
+    } finally {
+      await other.close();
+    }
+  } finally {
+    if (traceChromium) {
+      const path = testInfo.outputPath("tablecast-service-worker-chromium.json");
+      const trace = await browser.stopTracing();
+      await writeFile(path, trace);
+      await testInfo.attach("ChromiumのService Worker状態遷移", {
         path,
-        contentType: "application/x-ndjson",
+        contentType: "application/json",
       });
     }
-    expect(reloads).toBe(1);
-    expect(otherReloads).toBe(1);
-    await expect(page.getByLabel(ja.auth_email, { exact: true })).toHaveValue("");
-    await expect
-      .poll(() =>
-        other.evaluate(async () => !(await navigator.serviceWorker.getRegistration())?.waiting),
-      )
-      .toBe(true);
-  } finally {
-    await other.close();
   }
 });

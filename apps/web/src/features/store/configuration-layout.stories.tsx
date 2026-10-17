@@ -140,7 +140,7 @@ export const RepeatedRows: Story = {
       name: "グループ 1：ミルク 選択肢 1：ミルク 追加料金（税込・円）",
     });
     await userEvent.clear(price);
-    await userEvent.type(price, "275");
+    await userEvent.paste("275");
     await expect(price).toHaveFocus();
     await userEvent.tab();
     await expect(option.getByRole("spinbutton", { name: /選択肢ごとの最大数量/ })).toHaveFocus();
@@ -173,7 +173,7 @@ export const RepeatedRows: Story = {
     await expect(speechName).toHaveFocus();
     await expect(speechName).toBeInvalid();
     await expect(price).toHaveValue(275);
-    await userEvent.type(speechName, "ミルク");
+    await userEvent.paste("ミルク");
     await userEvent.click(canvas.getByRole("button", { name: "保存する" }));
     await expect(canvas.getByRole("status")).toHaveTextContent("更新しました");
   },
@@ -202,7 +202,7 @@ export const EnglishLabels: Story = {
       name: "Group 2: Milk Option 3: Milk English Spoken name",
     });
     await userEvent.clear(field);
-    await userEvent.type(field, "Oat milk");
+    await userEvent.paste("Oat milk");
     await expect(field).toHaveFocus();
     await expect(field).toHaveValue("Oat milk");
     await expect(
@@ -242,7 +242,7 @@ export const WhitespaceIds: Story = {
       name: "グループ 1：ミルク 選択肢 1：ミルク 追加料金（税込・円）",
     });
     await userEvent.clear(price);
-    await userEvent.type(price, "125");
+    await userEvent.paste("125");
     await expect(price).toHaveFocus();
     await userEvent.click(option.getByText("名称・説明・画像・組合せ条件", { exact: true }));
     await expect(

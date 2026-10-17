@@ -22,6 +22,14 @@
 
 採用版と実行内容は各manifestと設定ファイルを正本とする。標準ルールを追加・変更するときは導入版の対応と実効性を確認し、config共有packageは実際に必要になるまで作らない。
 
+## 検査範囲とキャッシュの分担
+
+`bun run lint`はrootとworkspaceで対象を分け、同じファイルを二度lintしない。rootはCLIの`--ignore-pattern 'apps/**'`で開発script・root設定等を検査し、`apps/api`・`apps/web`・`apps/presentation`・`apps/emulate`はTurboから各workspaceの`oxlint . --type-aware --deny-warnings`を実行する。workspace直下の設定ファイルも含め、従来のroot全体検査と同じ対象を保つ。共通configへ`apps/**`のignoreを置くと子へ継承されるため、除外はroot CLIだけに指定する。
+
+Oxlintのnested configと各workspaceの既存ルールを維持する。範囲を変えるときは、導入済みCLIの`--debug files`で変更前後の対象集合を照合し、欠落・重複がないことを確認する。ルールの無効化や型付き解析の省略で時間を短くしない。
+
+root側のlintとformatは毎回実行し、workspaceのlint・typecheckはTurboの決定的なtask cacheを使う。rootと各workspaceのtsconfig、APIの公開型、共有script等の実依存をcache入力から外さない。WebのtypecheckはAPIのtypecheckとParaglide生成を前提とする。cache hit時に再生される過去のCLI時間を、今回の所要時間へ加算しない。CIのcacheと検証境界は[テスト戦略](testing.md#ciのジョブとキャッシュ)を参照する。
+
 ## Oxlintの必須方針
 
 全ルールを一括有効化せず、correctness・suspiciousを基礎に必要なものを明示する。各rule名・option・対応状況は導入版のschemaで確認する。[S20](sources.md#s20)
@@ -61,12 +69,15 @@ APIからWebのfeature・UIをimportしない。モデルはAPIの公式SDKを�
 TypeScriptはstrictを基本に、noUncheckedIndexedAccess、exactOptionalPropertyTypes、noImplicitOverride等を実ライブラリと合わせて確認する。
 unsafeな外部境界は実行時schemaで検証する。型検査だけでは認可やJSON入力の安全性を証明できない。
 Oxlintの型付き解析は必要なエンジンとTypeScriptの互換条件がある。参照スターターの古いTypeScript pinと現行Oxlintを無検証で混ぜない。[S20](sources.md#s20)
-型付きルールが実際に実行されることを小さい失敗例で確認する。`tsc --noEmit` を初期の型ゲートに残し、Oxlintだけで完全代替できると仮定しない。
+型付きルールが実際に実行されることを小さい失敗例で確認する。型ゲートは各manifestの`typecheck` scriptを正本とし、Oxlintだけで完全代替できると仮定しない。
 ルールのためだけに本番とテストで異なる型契約を作らない。
+
+型検査CLIはrootの`@tablecast/typescript-native`へaliasしたTypeScript 7.0.2のネイティブ版を使う。各scriptはroot相対の`node_modules/@tablecast/typescript-native/bin/tsc`を`node`で明示実行し、同名binの解決順に依存しない。単独の`tsc`コマンドで使用版を判断せず、`bun run typecheck`または対象workspaceのscriptを使う。TanStack・Storybookが参照する既存のTypeScript JavaScript APIには`typescript` 6.0.3を維持する。CLIとライブラリAPIの用途を分け、互換aliasで既存APIを置き換えない。
 
 ## Oxfmt
 
 Oxfmtは追跡対象のコード・Markdown・設定に使用し、生成物・node_modules等の適切な対象外を設定する。
+rootの`format`・`format:check`はリポジトリ全体を一度だけ処理し、その後にworkspaceの同じ処理を重ねない。workspace単独のformat scriptは部分作業の入口として残す。
 日本語文書やコメントを英語へ変換しない。文書の折返しを目的に説明を省略しない。
 第三者pluginの既存文体は無関係に書き換えない。patchに必要な自作の説明・テストは日本語で書き、上流へ提出する際の規約調整は別の差分として明示する。
 
@@ -92,9 +103,9 @@ Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複�
 
 ## CIの実行単位
 
-GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers・Storybookビルド、UI部品試験、Chromium/WebKitのE2Eを独立ジョブで実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
+GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト、Workers build、UI部品試験、イベントに応じたChromium/WebKitのE2Eを独立ジョブで実行する。Storybookのinteraction・a11yはUI部品試験に残し、Storybook・React Emailの公開ビルドとデプロイは[手動カタログ](deployment.md#prのstorybookメールカタログ)で要求された場合に実行する。matrixは失敗時にも他の検証を継続する。ブラウザーごとのrunnerとfixtureでDB・プロセスを分離する。通常CIは外部の有料モデルを呼ばない。
 
-共通actionは固定版のNode/Bunを導入する。Bunの取得cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は7日間保持する。
+共通actionはmanifestとworkflowで指定したNode/Bunを導入する。Bunの取得cacheをlockfileで更新し、node_modulesやDBは共有しない。Playwrightはジョブに必要なブラウザーだけ導入する。Paraglideは型付きlintの前に生成し、ローカルの生成済みファイルに依存しない。失敗したE2Eのtraceと画像は1日間保持する。
 
 ## skillsと追加pluginの所有
 

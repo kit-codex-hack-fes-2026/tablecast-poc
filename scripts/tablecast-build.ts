@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { cp, readdir, rm } from "node:fs/promises";
+import { copyFile, cp, readdir, rm } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { modeOptions } from "./tablecast-deploy-config";
+import { readSeedTemplate } from "./tablecast-seed-template";
 
 const root = resolve(import.meta.dirname, "..");
 
@@ -16,6 +17,33 @@ export async function buildTablecast(
     environment.TABLECAST_CONFIG,
     environment,
   ).environment;
+  if (mode !== "production") {
+    const prepareSeed = (force = false) =>
+      execFileSync(
+        "bun",
+        [
+          "--no-env-file",
+          "x",
+          "--no-install",
+          "turbo",
+          "run",
+          "seed:template",
+          ...(force ? ["--force"] : []),
+        ],
+        {
+          cwd: root,
+          stdio: "inherit",
+        },
+      );
+    prepareSeed();
+    try {
+      await readSeedTemplate();
+    } catch {
+      console.warn("固定seedのcacheが不正なため、一度だけ再生成します。");
+      prepareSeed(true);
+      await readSeedTemplate();
+    }
+  }
   // cf beta.14はTanStack Startへ--modeを転送しないため、Webはpackage scriptでViteへ渡す。
   execFileSync(
     "bun",
@@ -66,6 +94,10 @@ export async function buildTablecast(
   }
   // SerwistはViteの全environment終了後に生成するため、Build Outputのassetsにも反映する。
   if (!web.workers.default.assetsDir) throw new Error("Webの静的assetsがありません。");
+  // 同じSHAのWorkers成果物へ同梱し、seed専用の取得stepを増やさない。
+  const seedArtifact = resolve(webRoot, ".cloudflare/output/tablecast-seed.json");
+  if (mode === "production") await rm(seedArtifact, { force: true });
+  else await copyFile(resolve(root, ".local/tablecast-seed-template/seed.json"), seedArtifact);
   if (environment.TABLECAST_BUILD_DIRECTORY)
     await cp(
       resolve(webRoot, ".cloudflare"),

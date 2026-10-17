@@ -90,18 +90,10 @@ test.each([
     .element()
     .closest("section");
   if (!scenarios || !downloads) throw new Error("案内の領域がありません");
-  await page
-    .elementLocator(scenarios)
-    .screenshot({ path: `../../../test-results/browser/tablecast-staging-mcp-${locale}.png` });
-  await page
-    .elementLocator(downloads)
-    .screenshot({ path: `../../../test-results/browser/tablecast-plugin-downloads-${locale}.png` });
+
   await page.viewport(390, 844);
   await expect
     .element(page.getByRole("textbox", { name: labels.mcp_scenario_setup, exact: true }))
     .toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
-  await page
-    .elementLocator(scenarios)
-    .screenshot({ path: `../../../test-results/browser/tablecast-plugin-mobile-${locale}.png` });
 });

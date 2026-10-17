@@ -11,6 +11,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, table } from "../../../.storybook/tablecast-fixtures";
+import ja from "../../../messages/ja.json";
+import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { catalogOptions } from "./menu-query";
 import { tableDetailOptions } from "./store-query";
@@ -27,6 +29,7 @@ afterEach(async () => {
 it.each(["ja", "en"] as const)(
   "店側の%sカートで卓と同じ版のカタログから未充足条件の名前を表示する",
   async (locale) => {
+    const labels = locale === "ja" ? ja : en;
     const current: Catalog = structuredClone(catalog);
     current.version = 2;
     const product = current.configuration.products[0];
@@ -49,6 +52,35 @@ it.each(["ja", "en"] as const)(
     const state: TableState = structuredClone(table);
     state.status = "closed";
     state.configVersion = current.version;
+    const orderedLine = structuredClone(state.cart.lines[0]);
+    if (!orderedLine) throw new Error("注文済みの商品fixtureがありません");
+    orderedLine.name = { ja: "当時の注文名", en: "Original ordered name" };
+    state.orders = [
+      {
+        id: "tablecast-historical-order",
+        tableSessionId: state.id,
+        snapshotId: "tablecast-historical-snapshot",
+        idempotencyKey: "tablecast-historical-order",
+        status: "submitted",
+        total: orderedLine.total,
+        createdAt: state.openedAt,
+        snapshot: {
+          id: "tablecast-historical-snapshot",
+          tableSessionId: state.id,
+          cartVersion: 1,
+          configVersion: 1,
+          lines: [orderedLine],
+          total: orderedLine.total,
+          locale: "ja",
+          text: "当時の注文原文",
+          expiresAt: state.openedAt,
+          channel: "gui",
+          status: "submitted",
+          createdTurnId: null,
+          plan: null,
+        },
+      },
+    ];
     state.cart.complete = false;
     const line = state.cart.lines[0];
     if (!line) throw new Error("カートfixtureがありません");
@@ -129,17 +161,22 @@ it.each(["ja", "en"] as const)(
     await expect
       .element(page.getByRole("heading", { name: state.tableName, exact: true }))
       .toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: labels.admin_close_session, exact: true }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("button", { name: labels.admin_acknowledge, exact: true }))
+      .not.toBeInTheDocument();
     expect(requests).toEqual([]);
     await page
       .getByRole("tab", { name: locale === "ja" ? "会計" : "Bill & payments", exact: true })
       .click();
     expect(requests).toEqual([]);
+    expect(document.querySelectorAll("form").length).toBe(0);
     await page
       .getByRole("tab", { name: locale === "ja" ? "カート・注文" : "Basket & orders", exact: true })
       .click();
-    await page.screenshot({
-      path: `../../../test-results/browser/tablecast-staff-conditions-${locale}.png`,
-    });
+
     await expect
       .element(
         page.getByText(locale === "ja" ? "トッピング / チョコレート" : "Toppings / Chocolate", {
@@ -148,6 +185,10 @@ it.each(["ja", "en"] as const)(
       )
       .toBeVisible();
     await expect.element(page.getByText(target.id, { exact: true })).not.toBeInTheDocument();
+    await expect.element(page.getByText(orderedLine.name[locale], { exact: true })).toBeVisible();
+    expect(
+      document.querySelector("[data-ui='order-card']")?.querySelectorAll("button").length,
+    ).toBe(0);
     expect(requests).toEqual([`/api/admin/stores/${state.storeId}/catalog`]);
   },
 );

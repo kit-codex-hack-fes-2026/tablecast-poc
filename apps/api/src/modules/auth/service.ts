@@ -6,6 +6,7 @@ import {
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { createLocalAccountIssuer } from "better-auth/db";
 import { genericOAuth } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
@@ -17,6 +18,7 @@ import { ensure } from "../../platform/errors";
 import { authOptions } from "./options";
 import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./preview";
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
+export const tablecastCredentialIssuer = createLocalAccountIssuer("credential");
 export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],

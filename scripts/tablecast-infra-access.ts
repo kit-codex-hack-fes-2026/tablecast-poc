@@ -22,17 +22,12 @@ const canonical = (value: unknown): string => {
 };
 
 export async function reconcileAccess(apply = false, request = cloudflare) {
-  const policies = z.array(policySchema).parse(await request("access/policies?per_page=1000"));
-  const token = tokenSchema
-    .optional()
-    .parse(
-      await request(
-        `access/service_tokens/${tablecastAccess.serviceToken.id}`,
-        "GET",
-        undefined,
-        true,
-      ),
-    );
+  const [policyList, serviceToken] = await Promise.all([
+    request("access/policies?per_page=1000"),
+    request(`access/service_tokens/${tablecastAccess.serviceToken.id}`, "GET", undefined, true),
+  ]);
+  const policies = z.array(policySchema).parse(policyList);
+  const token = tokenSchema.optional().parse(serviceToken);
   if (policies.length >= 1000) throw new Error("Access policy一覧の上限に達しました。");
   if (
     !token ||

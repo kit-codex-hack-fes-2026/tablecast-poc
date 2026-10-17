@@ -47,9 +47,11 @@ export default defineConfig({
         ],
         test: {
           name: "browser",
+          maxWorkers: 2,
           include: ["src/**/*.browser.test.tsx"],
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),
@@ -59,6 +61,9 @@ export default defineConfig({
                 browser: "webkit",
                 include: [
                   "src/features/store/device-qr-reader.browser.test.tsx",
+                  "src/features/store/devices.browser.test.tsx",
+                  "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
@@ -90,8 +95,10 @@ export default defineConfig({
         plugins: [tailwindcss(), storybookTest({ configDir: "./.storybook" })],
         test: {
           name: "storybook",
+          maxWorkers: 2,
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),

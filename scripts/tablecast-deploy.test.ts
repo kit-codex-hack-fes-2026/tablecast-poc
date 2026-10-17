@@ -139,7 +139,7 @@ describe("PR商品画像の投入", () => {
 });
 
 describe("商品画像群の投入", () => {
-  test("4件まで並行し、失敗後も開始済み処理を回収して次の画像群を投入しない", async () => {
+  test("4件まで並行し、失敗後は未開始の画像を送らず開始済み処理を回収する", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     const started = Promise.withResolvers<void>();
     const fail = Promise.withResolvers<void>();

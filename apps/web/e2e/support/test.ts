@@ -459,13 +459,16 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
   ],
   runtime: [
     async ({ workerRuntime }, use, testInfo) => {
-      await workerRuntime.prepareForTest();
+      let prepared = false;
       try {
+        await workerRuntime.prepareForTest();
+        prepared = true;
         await use(workerRuntime);
       } finally {
-        if (testInfo.status !== testInfo.expectedStatus) {
-          const path = testInfo.outputPath("tablecast-runtime.log");
+        // setup中の例外はtestInfo.statusへ反映される前にここへ入る。
+        if (!prepared || testInfo.status !== testInfo.expectedStatus) {
           try {
+            const path = testInfo.outputPath("tablecast-runtime.log");
             await workerRuntime.flushLog(path);
             await testInfo.attach("TableCast実行環境", { path, contentType: "text/plain" });
           } catch {

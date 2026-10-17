@@ -19,6 +19,7 @@ import { buildTablecast } from "./tablecast-build";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
 import { seedPreviewDatabase } from "./tablecast-seed-data";
+import { readSeedTemplate } from "./tablecast-seed-template";
 import {
   accessApplicationConfig,
   tablecastAdoptedResources,
@@ -152,7 +153,14 @@ async function deployTemporaryWorker(worker: object, kind: string) {
 }
 
 export async function resources(create: boolean) {
-  const databases = z.array(databaseSchema).parse(await cloudflare("d1/database?per_page=1000"));
+  const [databaseList, bucketList] = await Promise.all([
+    cloudflare("d1/database?per_page=1000"),
+    cloudflare("r2/buckets"),
+  ]);
+  const databases = z.array(databaseSchema).parse(databaseList);
+  const { buckets } = z
+    .object({ buckets: z.array(z.object({ name: z.string() })) })
+    .parse(bucketList);
   if (databases.length >= 1000)
     throw new Error("D1一覧の上限に達しました。対象を再確認してください。");
   let databaseCreated = false;
@@ -204,9 +212,6 @@ export async function resources(create: boolean) {
     )
       throw new Error("D1の所有情報が一致しません。自動採用・削除は行いません。");
   }
-  const { buckets } = z
-    .object({ buckets: z.array(z.object({ name: z.string() })) })
-    .parse(await cloudflare("r2/buckets"));
   const bucketExists = buckets.some((value) => value.name === target.bucket);
   if (bucketExists) {
     const owner = await readBucketOwner(target.bucket);
@@ -224,7 +229,11 @@ export async function resources(create: boolean) {
 
 export async function accessApplication(create: boolean) {
   if (!target.emulate) return undefined;
-  const apps = z.array(accessSchema).parse(await cloudflare("access/apps?per_page=1000"));
+  const [applications] = await Promise.all([
+    cloudflare("access/apps?per_page=1000"),
+    create && target.environment !== "staging" ? assertAccessConfiguration() : undefined,
+  ]);
+  const apps = z.array(accessSchema).parse(applications);
   if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
   const domain = new URL(target.origin).hostname;
   if (target.environment === "staging") {
@@ -250,7 +259,6 @@ export async function accessApplication(create: boolean) {
   const app = apps.find((value) => value.name === target.web);
   if (app && app.domain !== domain) throw new Error("Accessの所有対象が一致しません。");
   if (create) {
-    await assertAccessConfiguration();
     await cloudflare(
       `access/apps${app ? `/${app.id}` : ""}`,
       app ? "PUT" : "POST",
@@ -318,6 +326,11 @@ async function main(resetFinished = false) {
     console.info(JSON.stringify({ mode: build ? "build" : "plan", ...target }));
     return;
   }
+  // 同じrunのSHA付き成果物を、資源の作成・resetより先に検証する。
+  const seedTemplate =
+    target.emulate && (!cleanup || reset)
+      ? await readSeedTemplate(resolve(root, "apps/web/.cloudflare/output/tablecast-seed.json"))
+      : undefined;
   await currentRevision(target, sha, cleanup && !reset);
   const secrets = cleanup && !reset ? undefined : deploymentSecrets(target, { ...process.env });
   // 資源変更前に、CI成果物が対象環境・SHAのものか確認する。
@@ -329,26 +342,35 @@ async function main(resetFinished = false) {
       sha,
     );
   }
-  const existingStorage = await resources(false);
-  const existingNamespaces = await verifyDurableNamespaces();
-  const workers = z.array(z.object({ id: z.string() })).parse(await cloudflare("workers/scripts"));
-  for (const name of [target.api, target.web]) {
-    if (workers.some((worker) => worker.id === name)) {
-      const actual = z
-        .record(z.string(), z.unknown())
-        .parse(await cloudflare(`workers/scripts/${name}/settings`));
-      assertWorkerOwner(
-        actual,
-        target,
-        name === target.api,
-        existingStorage.database?.uuid,
-        existingNamespaces,
-      );
-    }
-  }
+  const [existingStorage, existingNamespaces, workerList] = await Promise.all([
+    resources(false),
+    verifyDurableNamespaces(),
+    cloudflare("workers/scripts"),
+  ]);
+  const workers = z.array(z.object({ id: z.string() })).parse(workerList);
+  await Promise.all(
+    [target.api, target.web]
+      .filter((name) => workers.some((worker) => worker.id === name))
+      .map(async (name) => {
+        const actual = z
+          .record(z.string(), z.unknown())
+          .parse(await cloudflare(`workers/scripts/${name}/settings`));
+        assertWorkerOwner(
+          actual,
+          target,
+          name === target.api,
+          existingStorage.database?.uuid,
+          existingNamespaces,
+        );
+      }),
+  );
   // Accessが使えないPRを先に公開しない。
   const access = await accessApplication(!cleanup);
-  const { database, bucketExists, bucketCreated } = await resources(!cleanup);
+  // 同じ配備内で所有確認済みの既存資源を使い、欠落時・削除・resetは従来の経路へ進む。
+  const { database, bucketExists, bucketCreated } =
+    !cleanup && !resetFinished && existingStorage.database && existingStorage.bucketExists
+      ? existingStorage
+      : await resources(!cleanup);
   if (reset && (!database || !bucketExists))
     throw new Error("stagingのD1・R2が揃っていません。所有資源を確認してください。");
   if (!database && !bucketExists) {
@@ -589,6 +611,7 @@ async function main(resetFinished = false) {
                   baseTime: Date.now(),
                   profile: "demo",
                 },
+                seedTemplate,
               );
               if (seeded) {
                 await drizzle(platform.env.TABLECAST_DB).update(deploymentOwner).set({ seeded: 1 });

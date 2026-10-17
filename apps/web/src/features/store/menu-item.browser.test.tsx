@@ -12,7 +12,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
@@ -40,15 +40,31 @@ const png = new File(
 );
 let client: QueryClient;
 let restoreHistory: (() => void) | undefined;
+let initialViewport: { width: number; height: number };
+beforeEach(() => {
+  initialViewport = { width: window.innerWidth, height: window.innerHeight };
+});
 afterEach(async () => {
-  await cleanup();
-  restoreHistory?.();
-  client.clear();
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
+  try {
+    await cleanup();
+    restoreHistory?.();
+    client.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  } finally {
+    if (
+      window.innerWidth !== initialViewport.width ||
+      window.innerHeight !== initialViewport.height
+    )
+      await page.viewport(initialViewport.width, initialViewport.height);
+  }
 });
 
-async function mountForm(locale: "ja" | "en" = "ja", configuration = catalog.configuration) {
+async function mountForm(
+  locale: "ja" | "en" = "ja",
+  configuration = catalog.configuration,
+  itemId = product.id,
+) {
   const initial: ConfigDraft = {
     id: draftId,
     storeId,
@@ -87,7 +103,7 @@ async function mountForm(locale: "ja" | "en" = "ja", configuration = catalog.con
   const edit = createRoute({
     getParentRoute: () => storeRoute,
     path: "menu/changes/$draftId/products/$itemId",
-    component: () => <MenuItem section="products" itemId={product.id} draftId={draftId} />,
+    component: () => <MenuItem section="products" itemId={itemId} draftId={draftId} />,
   });
   const list = createRoute({
     getParentRoute: () => storeRoute,
@@ -99,7 +115,7 @@ async function mountForm(locale: "ja" | "en" = "ja", configuration = catalog.con
   window.history.replaceState(
     null,
     "",
-    `/admin/stores/${storeId}/menu/changes/${draftId}/products/${product.id}`,
+    `/admin/stores/${storeId}/menu/changes/${draftId}/products/${itemId}`,
   );
   const history = createBrowserHistory();
   restoreHistory = () => {
@@ -160,7 +176,7 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
     await expect.element(save).toBeDisabled();
     await expect.element(form.getByText(ja.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(768, 1024);
-    await page.screenshot({ path: "../../../test-results/browser/tablecast-image-pending-ja.png" });
+
     save.element().closest("form")?.requestSubmit();
     await form.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true }).fill("710");
     expect(saved).toEqual([]);
@@ -233,9 +249,7 @@ it("未変更フォームでも画像の選択候補と取込失敗後の入力�
     .getByRole("button", { name: ja.editor_image_reset })
     .element()
     .scrollIntoView({ block: "center" });
-  await page.screenshot({
-    path: "../../../test-results/browser/tablecast-image-staged-reset-ja.png",
-  });
+
   await image.getByRole("button", { name: ja.editor_image_reset, exact: true }).click();
   await expect.element(save).toHaveAttribute("data-pwa-blocked", "false");
   const clearedBeforeUnload = new Event("beforeunload", { cancelable: true });
@@ -308,7 +322,7 @@ it("複数選択肢の取込中は削除・離脱・PWA更新を止め、再試�
     await expect.element(removeGroup).toBeDisabled();
     await expect.element(form.getByText(en.editor_image_wait, { exact: true })).toBeVisible();
     await page.viewport(1024, 768);
-    await page.screenshot({ path: "../../../test-results/browser/tablecast-image-pending-en.png" });
+
     const beforeUnload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(beforeUnload);
     expect(beforeUnload.defaultPrevented).toBe(true);
@@ -497,7 +511,11 @@ it.each([
       };
     });
     expect(configurationSchema.safeParse(configuration).success).toBe(true);
+    // 全体上限の65商品・65,536ノードを保ち、編集対象だけ末尾の小さな商品にする。
+    const edited = scope === "configuration" ? configuration.products.at(-1) : source;
+    if (!edited) throw new Error("条件上限の編集対象がありません");
     let saves = 0;
+    let saved: Configuration | undefined;
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
       const path = new URL(request.url).pathname;
@@ -509,15 +527,16 @@ it.each([
       if (path === `/api/admin/stores/${storeId}/drafts/${draftId}` && request.method === "PUT") {
         const body: { configuration: unknown } = await request.json();
         saves++;
+        saved = configurationSchema.parse(body.configuration);
         return Response.json({
           ...initial,
           version: 2,
-          configuration: configurationSchema.parse(body.configuration),
+          configuration: saved,
         });
       }
       throw new Error(`未定義の要求: ${request.method} ${path}`);
     });
-    const initial = await mountForm(locale, configuration);
+    const initial = await mountForm(locale, configuration, edited.id);
     const owner = page.getByRole("group", {
       name:
         locale === "ja"
@@ -543,11 +562,18 @@ it.each([
       .toBeVisible();
     expect(saves).toBe(0);
     await expect
-      .element(owner.getByRole("combobox", { name: labels.condition_operator }).first())
+      .element(
+        owner
+          .getByRole("combobox", {
+            name: scope === "configuration" ? labels.condition_choose : labels.condition_operator,
+          })
+          .first(),
+      )
       .toHaveFocus();
     await owner.getByRole("button", { name: labels.condition_remove, exact: true }).last().click();
     await page.getByRole("button", { name: labels.common_save, exact: true }).click();
     await expect.poll(() => saves).toBe(1);
+    expect(saved).toEqual(configuration);
     await expect
       .element(page.getByRole("status").filter({ hasText: labels.account_saved }))
       .toBeVisible();

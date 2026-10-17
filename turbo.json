@@ -54,6 +54,19 @@
       "cache": false,
       "passThroughEnv": ["TABLECAST_*", "PORTLESS_*", "PORT"]
     },
+    "//#seed:template": {
+      "inputs": [
+        "scripts/**",
+        "apps/api/src/**",
+        "apps/api/migrations/**",
+        "apps/emulate/src/tablecast-demo-identities.ts",
+        "assets/demo/**",
+        "package.json",
+        "bun.lock",
+        "turbo.json"
+      ],
+      "outputs": [".local/tablecast-seed-template/seed.json"]
+    },
     "//#services:up": {
       "dependsOn": ["//#dev:prepare"],
       "cache": false,
@@ -111,11 +124,22 @@
     },
     "@tablecast/web#typecheck": {
       "dependsOn": ["^typecheck", "i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/web#lint": {
       "dependsOn": ["i18n:compile"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/plugins/tablecast/.mcp.json"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/plugins/tablecast/.mcp.json",
+        "$TURBO_ROOT$/apps/api/src/**",
+        "$TURBO_ROOT$/apps/api/cloudflare.config.ts",
+        "$TURBO_ROOT$/scripts/**",
+        "$TURBO_ROOT$/apps/emulate/src/**"
+      ]
     },
     "@tablecast/api#build:email": {
       "inputs": [
@@ -134,6 +158,9 @@
       ],
       "outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
       "env": ["TABLECAST_*"]
+    },
+    "@tablecast/api#lint": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/scripts/**"]
     }
   }
 }

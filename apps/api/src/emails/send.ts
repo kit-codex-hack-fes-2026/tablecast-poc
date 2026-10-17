@@ -1,7 +1,6 @@
-import { render, toPlainText } from "@react-email/render";
 import { createElement, type ComponentProps } from "react";
 import { ensure } from "../platform/errors";
-import { AccountEmail } from "./account-email";
+import type { AccountEmail } from "./account-email";
 
 export type MailEnv = Partial<
   Pick<
@@ -17,6 +16,11 @@ export async function sendAccountEmail(
 ) {
   const { title } = content;
   ensure(env.TABLECAST_EMAIL_FROM, "EMAIL_NOT_CONFIGURED", 503);
+  // 認証・業務操作の初期化では描画せず、実際に送信する場合にだけ読み込む。
+  const [{ render, toPlainText }, { AccountEmail }] = await Promise.all([
+    import("@react-email/render"),
+    import("./account-email"),
+  ]);
   const html = await render(
     createElement(AccountEmail, {
       ...content,
