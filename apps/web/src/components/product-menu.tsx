@@ -105,8 +105,8 @@ export function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            {product.imageKey ? (
-              <span className="flex aspect-square w-full max-w-64 self-center items-center justify-center overflow-hidden rounded-md bg-muted">
+            <span className="flex aspect-square w-full max-w-64 self-center items-center justify-center overflow-hidden rounded-md bg-muted">
+              {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"
                   width={384}
@@ -115,13 +115,13 @@ export function ProductMenu({
                   src={`/media/${product.imageKey}`}
                   alt=""
                 />
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <ImageOff size={16} strokeWidth={1.5} aria-hidden="true" />
-                {t("kiosk_no_image")}
-              </span>
-            )}
+              ) : (
+                <span className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
+                  <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
+                  {t("kiosk_no_image")}
+                </span>
+              )}
+            </span>
             <span className="flex flex-1 flex-col pt-3">
               {(!product.available ||
                 (product.imageKey && product.imageKind === "illustration")) && (

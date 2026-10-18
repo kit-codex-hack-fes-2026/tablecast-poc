@@ -4,10 +4,53 @@ import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import "../styles.css";
 import { ProductImage } from "./product-image";
+import { ProductMenu } from "./product-menu";
+import { catalog, product } from "../../.storybook/tablecast-fixtures";
+import { LocaleProvider } from "../i18n/locale";
 import transparent from "../../.storybook/tablecast-transparent.svg?url&no-inline";
 
 const blurDataURL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23d4a574'/%3E%3C/svg%3E";
+
+const menu = (imageKey: string | null) => (
+  <LocaleProvider initialLocale="ja" persist={false}>
+    <div className="w-64">
+      <ProductMenu
+        catalog={{
+          ...catalog,
+          configuration: {
+            ...catalog.configuration,
+            products: catalog.configuration.products.map((item) => ({
+              ...item,
+              imageKey: item.id === product.id ? imageKey : null,
+              imageKind: "photograph",
+            })),
+          },
+        }}
+        onChoose={() => undefined}
+      />
+    </div>
+  </LocaleProvider>
+);
+
+it("商品画像の未登録・取得待ち・失敗で商品名と次の行の位置を変えない", async () => {
+  const view = await render(menu(null));
+  const title = () => view.getByText(product.text.ja.displayName, { exact: true }).element();
+  const next = () => view.getByRole("button", { name: /こもれび 白霞 にごり酒/ }).element();
+  const titleTop = title().getBoundingClientRect().top;
+  const nextTop = next().getBoundingClientRect().top;
+  await view.rerender(menu("tablecast-missing-menu-image.webp"));
+  expect(title().getBoundingClientRect().top).toBe(titleTop);
+  expect(next().getBoundingClientRect().top).toBe(nextTop);
+  const image = view.container.querySelector("img");
+  if (!image) throw new Error("商品画像がありません");
+  await expect.poll(() => image.complete && image.naturalWidth === 0).toBe(true);
+  expect(title().getBoundingClientRect().top).toBe(titleTop);
+  expect(next().getBoundingClientRect().top).toBe(nextTop);
+  await view.rerender(menu(null));
+  expect(title().getBoundingClientRect().top).toBe(titleTop);
+  expect(next().getBoundingClientRect().top).toBe(nextTop);
+});
 
 it("読込待ちの背景と寸法を保ち、透過画像の成功後に背景を消す", async () => {
   const view = await render(
