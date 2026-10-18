@@ -318,3 +318,5 @@ Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecas
 React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実行手順やReact Compiler導入は不要で、診断モードと対象は[静的解析](static-analysis.md#webの追加ルール)を参照する。
 
 組織課金を開発する場合は [課金・請求の導入手順](billing.md#開発と導入) を参照する。`bun run dev:config` はAPI用の `.local/.dev.vars` とWeb用の `.local/.dev.vars.web` を分け、従来のWeb symlinkが同じworktreeのAPI設定を指す場合だけ生成先を更新する。
+
+Viteの開発起動ではAPIを補助Workerとして同時実行するため、`envDir`を自worktreeの`.local`に揃える。Cloudflare Viteプラグインは同じローカル設定を全Workerで参照し、各Workerが宣言したbindingだけを渡す。APIの認証・決済のsecretをWebのbindingへ追加しない。build・previewはこの開発用envDir切替の対象外とし、配備用のsecret管理を維持する。

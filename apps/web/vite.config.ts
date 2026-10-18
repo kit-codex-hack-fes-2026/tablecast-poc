@@ -51,6 +51,8 @@ export default defineConfig(async ({ command, mode, isPreview }) => {
   );
   const serviceWorkerApi = createApi(serviceWorkerContext);
   return {
+    // 補助API Workerも同じenvDirを読む。各Workerへ渡る値は宣言済みbindingに限定される。
+    ...(apiWorker ? { envDir: resolve(import.meta.dirname, "../../.local") } : {}),
     build: { minify: true, outDir: buildDirectory },
     cacheDir: tablecastEnv.TABLECAST_VITE_CACHE_DIR,
     resolve: { dedupe: ["react", "react-dom"] },
