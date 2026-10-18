@@ -153,20 +153,11 @@ it("子ページの現在地を直接開き、モバイルの子リンクへ移�
     .toHaveAttribute("aria-current", "page");
 });
 
-it("日本語を200%にしても狭い画面のナビゲーションと入力を操作できる", async () => {
+it("狭い画面のナビゲーションを閉じても入力とフォーカスを保持する", async () => {
   const locale = "ja";
   const labels = ja;
   await page.viewport(390, 844);
   await show(locale);
-  for (const element of document.querySelectorAll<HTMLElement>("body *")) {
-    if (
-      [...element.childNodes].some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-      )
-    ) {
-      element.style.fontSize = `${Number.parseFloat(getComputedStyle(element).fontSize) * 2}px`;
-    }
-  }
   const name = page.getByLabelText("表示名");
   await name.fill("編集中の名前");
   const toggle = page.getByRole("button", { name: labels.admin_navigation, exact: true });

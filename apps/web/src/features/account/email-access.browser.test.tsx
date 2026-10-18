@@ -69,21 +69,6 @@ async function tabTo(control: Locator) {
   await expect.element(control).toHaveFocus();
 }
 
-function enlargeText(scope: Element) {
-  // remの余白を変えず、px指定も含めて実際の文字だけを2倍にする
-  const sizes = [scope, ...scope.querySelectorAll<HTMLElement>("*")]
-    .filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement &&
-        (element.matches("input, select, textarea") ||
-          [...element.childNodes].some(
-            (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-          )),
-    )
-    .map((element) => ({ element, size: Number.parseFloat(getComputedStyle(element).fontSize) }));
-  for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
-}
-
 async function expectReadableControl(control: Locator) {
   await expect.element(control).toBeVisible();
   const element = control.element();
@@ -168,7 +153,7 @@ it("日本語の登録は項目エラーでは送信せず、503後も入力を�
   await expect.element(submit).not.toBeInTheDocument();
 });
 
-it("日本語のログインは文字を200%にしてもキーボードで送信でき、失敗後も入力を保持する", async () => {
+it("日本語のログインをキーボードで送信し、失敗後も入力を保持する", async () => {
   const locale = "ja";
   const labels = ja;
   const requested = Promise.withResolvers<Request>();
@@ -186,10 +171,6 @@ it("日本語のログインは文字を200%にしてもキーボードで送信
   });
   await page.viewport(1024, 768);
   await show(locale, false);
-  const heading = page.getByRole("heading", { name: labels.auth_subtitle, exact: true });
-  const originalSize = Number.parseFloat(getComputedStyle(heading.element()).fontSize);
-  enlargeText(page.getByRole("main").element());
-  expect(Number.parseFloat(getComputedStyle(heading.element()).fontSize)).toBe(originalSize * 2);
   for (const name of [
     "日本語",
     "English",

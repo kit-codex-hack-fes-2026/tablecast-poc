@@ -22,7 +22,7 @@ export function ConfigurationSection({
     <section
       id={sectionId}
       aria-labelledby={id}
-      className="@container min-w-0 scroll-mt-28 space-y-5 border-t border-border pt-6 first:border-t-0 first:pt-0"
+      className="@container min-w-0 scroll-mt-28 space-y-5"
     >
       <h2 id={id} className="flex items-start gap-2 text-lg font-semibold">
         <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />

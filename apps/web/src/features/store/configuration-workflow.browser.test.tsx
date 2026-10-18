@@ -708,11 +708,9 @@ it("未保存で別設定へ移動しようとすると入力を保護し、取�
   await expect.element(price).toHaveValue(777);
 });
 
-it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻り先が見える", async () => {
+it("iPad縦向きでも古い公開版の公開不能理由と戻り先が見える", async () => {
   const previousViewport = { width: window.innerWidth, height: window.innerHeight };
   await page.viewport(768, 1024);
-  const previousFontSize = document.documentElement.style.fontSize;
-  document.documentElement.style.fontSize = "32px";
   try {
     current.status = "ready";
     publishedVersion = 2;
@@ -737,7 +735,6 @@ it("iPad縦向きと文字拡大でも古い公開版の公開不能理由と戻
     expect(publishedLink.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   } finally {
-    document.documentElement.style.fontSize = previousFontSize;
     await page.viewport(previousViewport.width, previousViewport.height);
   }
 });

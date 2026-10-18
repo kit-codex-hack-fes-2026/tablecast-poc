@@ -50,7 +50,7 @@ function useAccount(pending: boolean) {
       void session.refetch();
     },
   });
-  const section = "min-w-0 scroll-mt-24 space-y-5 border-b border-border pb-8 last:border-b-0";
+  const section = "min-w-0 scroll-mt-24 space-y-5 pb-8";
   return {
     t,
     session,

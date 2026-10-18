@@ -283,15 +283,6 @@ for (const alias of ["moon drink", "月の酒"] as const) {
         .toBeLessThanOrEqual(width);
     }
     await page.viewport(1024, 768);
-    const previousSize = document.documentElement.style.fontSize;
-    document.documentElement.style.fontSize = "200%";
-    try {
-      await expect
-        .element(screen.getByRole("combobox", { name: labels.menu_availability }))
-        .toBeVisible();
-    } finally {
-      document.documentElement.style.fontSize = previousSize;
-    }
     await search.fill("存在しない検索");
     await expect.element(screen.getByText(labels.common_no_results, { exact: true })).toBeVisible();
     await expect

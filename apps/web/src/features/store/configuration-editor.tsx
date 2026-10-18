@@ -60,7 +60,7 @@ export function ProductsEditor({
       {product && (
         <>
           <nav
-            className="flex flex-wrap gap-2 border-b border-border pb-4 text-sm"
+            className="flex flex-wrap gap-2 rounded-xl bg-secondary/60 p-2 text-sm"
             aria-label={t("editor_product_identity")}
           >
             {(
@@ -140,7 +140,7 @@ export function ProductsEditor({
                 </NativeSelect>
               </label>
             </div>
-            <details className="border-t border-border pt-3">
+            <details className="rounded-xl bg-secondary/40 px-4 py-2">
               <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
                 {t("editor_reference_details")}
               </summary>
