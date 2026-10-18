@@ -23,9 +23,8 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-it("日本語で検証・実iframeの準備完了・人の試遊確認後に公開し停止できる", async () => {
+async function openGame({ initialFailure = false, initialReady = false } = {}) {
   const locale = "ja";
-  const labels = ja;
   const manifest = {
     apiVersion: 1,
     name: { ja: "順番ゲーム", en: "Taking turns" },
@@ -35,7 +34,8 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     maxPlayers: 4,
     capabilities: ["state"],
   };
-  let ready = false;
+  let previewRequests = 0;
+  let ready = initialReady;
   let previewed = false;
   let activeVersionId: string | null = null;
   let revision = 0;
@@ -60,12 +60,16 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
         ],
         nextBefore: null,
       });
-    if (path.endsWith("/preview"))
+    if (path.endsWith("/preview")) {
+      previewRequests++;
+      if (initialFailure && previewRequests === 1)
+        return Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
       return Response.json({
         versionId: "tablecast-v1",
         parentOrigin: window.location.origin,
         package: { manifest, html: "<p>試遊</p>", css: "", javascript: "void tablecast.ready;" },
       });
+    }
     if (request.method === "POST") {
       writes.push({
         path,
@@ -90,7 +94,9 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
   const root = createRootRoute({
     component: () => (
       <Suspense fallback={<p>読込中</p>}>
-        <Games />
+        <main className="p-6">
+          <Games />
+        </main>
       </Suspense>
     ),
   });
@@ -106,6 +112,19 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     </QueryClientProvider>,
   );
   await page.getByRole("button", { name: "tablecast-turns", exact: true }).click();
+  return {
+    manifest,
+    writes,
+    get previewRequests() {
+      return previewRequests;
+    },
+  };
+}
+it("日本語で検証・実iframeの準備完了・人の試遊確認後に公開し停止できる", async () => {
+  const fixture = await openGame();
+  const { manifest, writes } = fixture;
+  const locale = "ja";
+  const labels = ja;
   await expect
     .element(page.getByRole("button", { name: labels.games_preview, exact: true }))
     .toBeDisabled();
@@ -118,6 +137,11 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     .toBeEnabled();
   await page.getByRole("button", { name: labels.games_preview, exact: true }).click();
   await expect.element(page.getByTitle(manifest.name[locale])).toBeVisible();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: labels.games_preview_confirm, exact: true }))
+    .toBeEnabled();
+  expect(fixture.previewRequests).toBe(1);
   await expect
     .element(page.getByRole("button", { name: labels.games_preview, exact: true }))
     .toBeDisabled();
@@ -146,5 +170,45 @@ it("日本語で検証・実iframeの準備完了・人の試遊確認後に公�
     .not.toBeInTheDocument();
   expect(writes.find(({ path }) => path.endsWith("/disable"))?.value).toEqual({
     expectedRevision: 1,
+  });
+});
+
+it("1版だけの試遊取得が503でも同じ画面で再試行し、iframe準備と人の確認後に公開できる", async () => {
+  const fixture = await openGame({ initialFailure: true, initialReady: true });
+  const preview = page.getByRole("button", { name: ja.games_preview, exact: true });
+  const confirm = page.getByRole("button", { name: ja.games_preview_confirm, exact: true });
+  const publish = page.getByRole("button", { name: ja.games_publish, exact: true });
+  await preview.click();
+  await expect.element(page.getByRole("alert")).toBeVisible();
+  await expect.element(page.getByTitle(fixture.manifest.name.ja)).not.toBeInTheDocument();
+  await expect.element(confirm).not.toBeInTheDocument();
+  await expect.element(preview).toBeDisabled();
+  await expect.element(publish).toBeDisabled();
+  expect(fixture.previewRequests).toBe(1);
+  await page.getByRole("button", { name: ja.common_retry, exact: true }).click();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  await expect.element(page.getByTitle(fixture.manifest.name.ja)).toBeVisible();
+  await expect.element(confirm).toBeEnabled();
+  await expect.element(publish).toBeDisabled();
+  expect(fixture.previewRequests).toBe(2);
+  await confirm.click();
+  await expect.element(page.getByTitle(fixture.manifest.name.ja)).not.toBeInTheDocument();
+  await publish.click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: ja.games_publish, exact: true })
+    .click();
+  await expect
+    .element(page.getByRole("button", { name: ja.games_disable, exact: true }))
+    .toBeVisible();
+  expect(
+    fixture.writes.filter(({ path }) => path.endsWith("/previewed")).map(({ path }) => path),
+  ).toEqual([
+    "/api/admin/stores/tablecast-store/games/tablecast-turns/versions/tablecast-v1/previewed",
+  ]);
+  expect(fixture.writes.find(({ path }) => path.endsWith("/publish"))?.value).toEqual({
+    versionId: "tablecast-v1",
+    expectedRevision: 0,
+    approved: true,
   });
 });

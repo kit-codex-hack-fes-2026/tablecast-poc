@@ -152,12 +152,16 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
         error={[
           game.error,
           validate.error,
-          previewQuery.error,
           confirmPreview.error,
           publish.error,
           disable.error,
         ].find(Boolean)}
         onRetry={() => void refresh()}
+      />
+      <ErrorNotice
+        error={previewQuery.error}
+        onRetry={() => void previewQuery.refetch()}
+        retrying={previewQuery.isFetching}
       />
       {preview && (
         <div className="space-y-4">
