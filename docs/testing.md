@@ -389,3 +389,13 @@ PR本文の編集だけではCIを再実行しない。base変更後に新しい
 cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別環境・別SHA・別PRの拒否、D1の採用ID、Worker所有情報、Accessの再適用と既存token欠落時の拒否を確認する。local D1のID移行は実SDKでデータ・migration履歴・再実行を検証する。遠隔namespaceの保持・Access拒否と許可・再配備後のデータ保持は最新PR headの配備で別途確認する。
 
 文字サイズを200%へ書き換える試験は利用者の指定により廃止した。日英・縦横・狭幅・長文・keyboard/focus・通常の主要操作を検証し、CSSによる文字拡大を受入条件や画像証拠へ含めない。
+
+## 組織課金
+
+`billing-pricing.test.ts`で秒数・cached token・実際のtier・料金精度・期間境界を確認する。`billing*.test.ts`は実D1/DOと本番HTTPを使い、組織作成、発行の競合・回収、暗号化、同じ鍵での停止、利用量再送、Costsの全ページ・置換・失敗、署名済みStripe Webhook、Metersの送信不明期限、role認可を確認する。OpenAI/Stripeの外部I/Oだけ固定し、DBやDOは差し替えない。
+
+通常のAPIテストでは実接続用のローカルenvを継承せず、Vitestのbindingで課金・組織キー・音声の有効化と外部secretを初期化する。必要なケースだけfixture内で有効化する。
+
+Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無料GUIと有料AIの区別・申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・縦横・狭幅・長文・keyboard/focusを確認する。通常時のAI準備完了通知と無料プランの管理者向けAI設定通知がなく、準備中・準備失敗では音声利用不可とGUI継続を説明することも確認する。日英の翻訳・日時・通貨の保証と英語Storyの扱いは、前述の共通戦略に従う。
+
+`billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで現在の契約期間とUTC暦月集計の分離・期間境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。

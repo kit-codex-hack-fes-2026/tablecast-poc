@@ -6,6 +6,28 @@ import type { BuildOutput } from "@cloudflare/build-output-utils";
 export const tablecastAccountId = "dbbd52d7d690afceea41fe920ae19f91";
 export const tablecastRepository = "kit-codex-hack-fes-2026/tablecast-poc";
 
+export const tablecastBillingVars = [
+  "TABLECAST_ORGANIZATION_AI_ENABLED",
+  "TABLECAST_OPENAI_PROJECT_ID",
+  "TABLECAST_BILLING_ENABLED",
+  "TABLECAST_BILLING_RATES",
+  "TABLECAST_BILLING_OPERATOR_USER_IDS",
+];
+export const tablecastBillingSecrets = [
+  "TABLECAST_OPENAI_ADMIN_API_KEY",
+  "TABLECAST_OPENAI_KEY_ENCRYPTION_SECRET",
+  "TABLECAST_STRIPE_SECRET_KEY",
+  "TABLECAST_STRIPE_WEBHOOK_SECRET",
+];
+function billingDeploymentVars(environment: string) {
+  const values =
+    z
+      .record(z.string(), z.record(z.string(), z.string()))
+      .parse(JSON.parse(process.env.TABLECAST_BILLING_CONFIG || "{}"))[environment] ?? {};
+  return Object.fromEntries(
+    tablecastBillingVars.flatMap((key) => (values[key] === undefined ? [] : [[key, values[key]]])),
+  );
+}
 export const tablecastCompatibilityDate = "2026-09-03";
 export const optionsSchema = z.object({
   name: z.string().default("tablecast-api"),
@@ -56,6 +78,7 @@ export function modeOptions(
                           "TABLECAST_MAILPIT_URL",
                           "TABLECAST_EMAIL_FROM",
                           "TABLECAST_VOICE_ENABLED",
+                          ...tablecastBillingVars,
                           "TABLECAST_OTEL_CAPTURE_CONTENT",
                         ]
                       : []),
@@ -73,10 +96,16 @@ export function modeOptions(
   return { ...options, environment };
 }
 
-export function requiredApiSecrets(environment: string, voiceEnabled = false) {
+export function requiredApiSecrets(
+  environment: string,
+  voiceEnabled = false,
+  vars: Record<string, string> = {},
+) {
   const hosted = ["preview", "staging", "production"].includes(environment);
   return [
     "TABLECAST_AUTH_SECRET",
+    ...(vars.TABLECAST_OPENAI_PROJECT_ID ? tablecastBillingSecrets.slice(0, 2) : []),
+    ...(vars.TABLECAST_BILLING_ENABLED === "true" ? tablecastBillingSecrets.slice(2) : []),
     ...(hosted || voiceEnabled ? ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"] : []),
     ...(hosted ? ["TABLECAST_OTEL_AUTHORIZATION"] : []),
     ...(["preview", "staging"].includes(environment) ? ["TABLECAST_CONTAINER_METRICS_TOKEN"] : []),
@@ -179,7 +208,7 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
     if (!worker?.bundleDir) throw new Error(`Worker成果物がありません: ${name}`);
     const secrets =
       name === target.api
-        ? requiredApiSecrets(target.environment)
+        ? requiredApiSecrets(target.environment, true, billingDeploymentVars(target.environment))
         : ["TABLECAST_OTEL_AUTHORIZATION"];
     for (const secret of secrets)
       z.object({ type: z.literal("secret") }).parse(worker.config.env?.[secret]);
@@ -189,6 +218,14 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
       TABLECAST_PR_NUMBER: z.object({ type: z.literal("text"), value: z.literal(target.pr ?? "") }),
     }).parse(worker.config.env);
     if (name === target.api) {
+      for (const key of tablecastBillingVars) {
+        const expected =
+          billingDeploymentVars(target.environment)[key] ??
+          (key.endsWith("_ENABLED") ? "false" : "");
+        const binding = worker.config.env?.[key];
+        if (binding?.type !== "text" || binding.value !== expected)
+          throw new Error("課金設定がbuild成果物と異なります。設定を揃えて再buildしてください。");
+      }
       z.object({
         TABLECAST_DB: z.object({
           type: z.literal("d1"),
@@ -198,6 +235,10 @@ export function deploymentBuildOutput(output: BuildOutput, target: DeploymentTar
         TABLECAST_MEDIA: z.object({ type: z.literal("r2"), name: z.literal(target.bucket) }),
       }).parse(worker.config.env);
       z.object({
+        TablecastVoiceUsage: z.object({
+          type: z.literal("durable-object"),
+          storage: z.literal("sqlite"),
+        }),
         StoreEvents: z.object({ type: z.literal("durable-object"), storage: z.literal("sqlite") }),
         TablecastEmulate: z.object({
           type: z.literal("durable-object"),
@@ -274,6 +315,13 @@ export function deploymentSecrets(
     TABLECAST_MODEL_API_KEY: required(runtime.TABLECAST_MODEL_API_KEY, "TABLECAST_MODEL_API_KEY"),
     TABLECAST_MODEL: required(input.TABLECAST_MODEL || runtime.TABLECAST_MODEL, "TABLECAST_MODEL"),
   };
+  const enabledSecrets = requiredApiSecrets(
+    target.environment,
+    true,
+    billingDeploymentVars(target.environment),
+  );
+  for (const key of tablecastBillingSecrets)
+    if (enabledSecrets.includes(key)) secrets[key] = required(runtime[key], key);
   if (target.emulate) {
     secrets.TABLECAST_CONTAINER_METRICS_TOKEN = required(
       input.TABLECAST_CONTAINER_METRICS_TOKEN,
@@ -322,7 +370,13 @@ export function deploymentOptions(
     TABLECAST_OTEL_CAPTURE_CONTENT: z.enum(["true", "false"]).parse(captureContent),
     TABLECAST_OTEL_ENDPOINT: "https://otlp-gateway-prod-ap-northeast-0.grafana.net/otlp",
   };
+  const billingVars = billingDeploymentVars(target.environment);
   const apiVars = {
+    ...Object.fromEntries(
+      tablecastBillingVars.flatMap((key) =>
+        billingVars[key] === undefined ? [] : [[key, billingVars[key]]],
+      ),
+    ),
     ...telemetryVars,
     TABLECAST_CLOUDFLARE_ACCOUNT_ID: tablecastAccountId,
     TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify(

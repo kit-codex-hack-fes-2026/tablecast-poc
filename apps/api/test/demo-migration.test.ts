@@ -2,7 +2,6 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
-import * as auth from "../src/db/auth-schema";
 import * as business from "../src/db/business-schema";
 import { fixtureDb } from "./database-fixture";
 import { configuration, resetFixtureStorage } from "./fixture";
@@ -16,12 +15,10 @@ it("デモ移行前に卓・注文・会話がある場合、移行しても値�
   if (demoIndex < 0) throw new Error("デモmigrationが必要です");
   // 旧schemaへ後続migrationを先行適用せず、本番と同じ順序で移行する。
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, demoIndex));
-  await fixtureDb.insert(auth.organization).values({
-    id: "tablecast-migration-org",
-    name: "移行試験",
-    slug: "tablecast-migration",
-    createdAt: new Date(),
-  });
+  // 0026適用前のorganizationにはstripe_customer_id列がない。
+  await fixtureDb.run(
+    sql`INSERT INTO organization(id,name,slug,created_at) VALUES ('tablecast-migration-org','移行試験','tablecast-migration',1)`,
+  );
   await fixtureDb.insert(business.stores).values({
     id: "tablecast-migration-store",
     organization_id: "tablecast-migration-org",

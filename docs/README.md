@@ -14,6 +14,8 @@ clone・worktree・起動方法は [セットアップ](setup.md)、実施した
 Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接接続する。Bun + Turborepoを使い、業務・契約・UIを名目だけの共有packageに切り出さない。
 音声はGPT-Live 1の標準WebRTCを使い、client delegationをHono経由でhosted Agents APIへ接続する。既定ペルソナは親しみと丁寧さ、愛嬌を持つ若い成人女性の飲食店スタッフとする。
 
+組織のキー発行・サブスク・利用料金・運営収支は [課金・請求](billing.md) を参照する。
+
 ## 文書一覧
 
 | 文書                                                 | 所有する仕様                                          |

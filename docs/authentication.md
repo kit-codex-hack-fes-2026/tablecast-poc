@@ -77,3 +77,7 @@ stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する
 ## 客向け会員
 
 `/member`は共通のBetter Authログインから利用する。`customer_memberships`の店舗別会員はスタッフの組織所属と別で、入会で管理権限を付与しない。初回同意の版と各許可・更新版を保存する。入会の再送は既存の同意撤回を変更しない。設定の更新・退会は会員本人と店舗・更新版を確認する。会員APIとSSRはprivate/no-storeで応答する。[会員仕様](membership.md)を参照する。
+
+## 組織課金の認可
+
+Better Auth公式Stripe pluginは組織をreferenceにする。店舗作成serviceのD1 batchが組織・owner・店舗とAIキー発行待ちを保存する。memberは利用量だけ、owner/adminは契約操作と請求を利用する。pluginの`authorizeReference`もowner/adminに限定し、ユーザー個人の契約要求は拒否する。Stripe顧客IDはuserとorganizationの追加fieldで入力不可・公開応答へ非返却とする。運営収支は別のユーザーID allowlistで認可する。詳細は [課金・請求](billing.md) を参照する。

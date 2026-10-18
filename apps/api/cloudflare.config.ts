@@ -36,9 +36,10 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
       previewUrls: false,
       placement: { mode: "smart" },
       observability: { enabled: true, headSamplingRate: 1 },
-      triggers: emulate ? [triggers.scheduled({ schedule: "*/5 * * * *" })] : [],
+      triggers: [triggers.scheduled({ schedule: "*/5 * * * *" })],
       exports: {
         StoreEvents: exports.durableObject({ storage: "sqlite" }),
+        TablecastVoiceUsage: exports.durableObject({ storage: "sqlite" }),
         TablecastEmulate: exports.durableObject({
           storage: "sqlite",
           ...(container ? { container } : {}),
@@ -51,6 +52,11 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
         TABLECAST_ENV: bindings.text(options.environment),
         TABLECAST_RELEASE_SHA: bindings.text(options.vars.TABLECAST_RELEASE_SHA ?? "local"),
         TABLECAST_VOICE_ENABLED: bindings.text(hosted ? "true" : "false"),
+        TABLECAST_ORGANIZATION_AI_ENABLED: bindings.text("false"),
+        TABLECAST_OPENAI_PROJECT_ID: bindings.text(""),
+        TABLECAST_BILLING_ENABLED: bindings.text("false"),
+        TABLECAST_BILLING_RATES: bindings.text(""),
+        TABLECAST_BILLING_OPERATOR_USER_IDS: bindings.text(""),
         ...Object.fromEntries(
           Object.entries(options.vars).map(([key, value]) => [key, bindings.text(value)]),
         ),
@@ -58,6 +64,10 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
         TABLECAST_MEDIA: bindings.r2({ name: options.bucket }),
         TABLECAST_IMAGES: bindings.images(),
         TABLECAST_EMAIL: bindings.sendEmail(),
+        TABLECAST_VOICE_USAGE: bindings.durableObject({
+          worker: options.name,
+          exportName: "TablecastVoiceUsage",
+        }),
         TABLECAST_EVENTS: bindings.durableObject({
           worker: options.name,
           exportName: "StoreEvents",
@@ -70,6 +80,7 @@ export function apiCloudflareConfig(input: TablecastConfigOptions = {}) {
           requiredApiSecrets(
             options.environment,
             options.vars.TABLECAST_VOICE_ENABLED === "true",
+            options.vars,
           ).map((name) => [name, bindings.secret()]),
         ),
       },

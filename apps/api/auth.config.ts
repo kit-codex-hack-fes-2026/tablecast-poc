@@ -1,3 +1,5 @@
+import { stripe } from "@better-auth/stripe";
+import { Stripe } from "stripe";
 import { dash } from "@better-auth/infra";
 import { betterAuth } from "better-auth";
 import { authOptions } from "./src/modules/auth/options";
@@ -9,5 +11,14 @@ const options = authOptions(
 );
 export const auth = betterAuth({
   ...options,
-  plugins: [...options.plugins, dash({ activityTracking: { enabled: true } })],
+  plugins: [
+    stripe({
+      stripeClient: new Stripe("sk_test_tablecast_schema_only"),
+      stripeWebhookSecret: "whsec_tablecast_schema_only",
+      organization: { enabled: true },
+      subscription: { enabled: true, plans: [] },
+    }),
+    ...options.plugins,
+    dash({ activityTracking: { enabled: true } }),
+  ],
 });

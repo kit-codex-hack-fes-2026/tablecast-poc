@@ -6,6 +6,7 @@ import { Link, useHydrated } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
+  CreditCard,
   ChevronRight,
   ChevronsUpDown,
   History,
@@ -41,8 +42,9 @@ import { authClient } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
 export type AdminSidebarProps = {
-  tab: Tab | "account" | "organisations" | "mcp";
+  tab: Tab | "account" | "organisations" | "mcp" | "billing";
   storeId?: string;
+  organizationId?: string;
   onSignOut?: () => void;
   signingOut?: boolean;
 };
@@ -51,6 +53,7 @@ const sidebarItemClass =
 export function AdminSidebar({
   tab,
   storeId,
+  organizationId,
   onSignOut,
   signingOut,
   collapsed = false,
@@ -61,7 +64,11 @@ export function AdminSidebar({
   const { active: inMenu, draftId } = useConfigurationRoute();
   const stores = useQuery({ ...storesOptions, enabled: !!session.data });
   const availableStores = stores.data?.stores ?? [];
-  const selectedStore = storeId;
+  const selectedStore =
+    storeId ??
+    (organizationId
+      ? availableStores.find((store) => store.organizationId === organizationId)?.id
+      : undefined);
 
   return (
     <>
@@ -75,6 +82,10 @@ export function AdminSidebar({
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
+        selectedOrganization={
+          organizationId ??
+          availableStores.find((store) => store.id === selectedStore)?.organizationId
+        }
         collapsed={collapsed}
         onNavigate={onNavigate}
         inMenu={inMenu}
@@ -147,12 +158,14 @@ function DemoLink({
 function SidebarNavigation({
   tab,
   selectedStore,
+  selectedOrganization,
   collapsed,
   onNavigate,
   inMenu,
   draftId,
 }: Pick<AdminSidebarProps, "tab"> & {
   selectedStore?: string;
+  selectedOrganization?: string;
   collapsed: boolean;
   onNavigate?: () => void;
   inMenu: boolean;
@@ -305,6 +318,12 @@ function SidebarNavigation({
         <Building2 className="size-5 shrink-0" />
         {!collapsed && t("stores_title")}
       </Link>
+      <BillingNavigation
+        organizationId={selectedOrganization}
+        tab={tab}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
       <Link
         className={sidebarItemClass}
         to="/account/mcp-sessions"
@@ -328,6 +347,35 @@ function SidebarNavigation({
         {!collapsed && t("account_title")}
       </Link>
     </nav>
+  );
+}
+
+function BillingNavigation({
+  organizationId: selectedOrganization,
+  tab,
+  collapsed,
+  onNavigate,
+}: {
+  organizationId?: string;
+  tab: AdminSidebarProps["tab"];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const { t } = useI18n();
+  if (!selectedOrganization) return null;
+  return (
+    <Link
+      className={sidebarItemClass}
+      to="/billing/$organizationId"
+      params={{ organizationId: selectedOrganization }}
+      title={t("billing_title")}
+      aria-label={t("billing_title")}
+      aria-current={tab === "billing" ? "page" : undefined}
+      onClick={onNavigate}
+    >
+      <CreditCard className="size-5 shrink-0" />
+      {!collapsed && t("billing_title")}
+    </Link>
   );
 }
 

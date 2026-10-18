@@ -1,3 +1,4 @@
+import { billingRoutes, operatingBillingRoutes } from "./modules/billing/routes";
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { accountRoutes } from "./modules/account/routes";
@@ -17,6 +18,7 @@ import { requestServices } from "./platform/context";
 import { handleError, handleRpcError, requestSecurity, requestTelemetry } from "./platform/http";
 const rpcRoutes = new Hono<ApiEnv>()
   .onError(handleRpcError)
+  .route("/", billingRoutes)
   .route("/", accountRoutes)
   .route("/api/customer", customerRoutes)
   .route("/", devicesRoutes)
@@ -46,6 +48,7 @@ const app = new Hono<ApiEnv>()
     })(c, next),
   )
   .onError(handleError)
+  .route("/", operatingBillingRoutes)
   .route("/", systemRoutes)
   .route("/", authRoutes)
   .route("/", rpcRoutes)
