@@ -7,6 +7,7 @@ import {
   createRouter,
   RouterProvider,
   useSearch,
+  useParams,
 } from "@tanstack/react-router";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
@@ -16,6 +17,7 @@ import { catalog } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
+import { MenuOverview } from "./menu-overview";
 import { StoreDesign } from "./store-design";
 import { StoreShell } from "./store-shell";
 import { menuListSearchSchema, menuReviewSearchSchema } from "./menu-model";
@@ -139,8 +141,31 @@ async function openDesign(initial = `/admin/stores/${storeId}/design?draftId=${d
     path: "demo",
     component: () => <h1>保存済みのテーマをプレビュー中</h1>,
   });
+  const product = createRoute({
+    getParentRoute: () => store,
+    path: "menu/$section/$itemId",
+    validateSearch: menuListSearchSchema,
+    component: function ProductPage() {
+      const { itemId } = useParams({ strict: false });
+      if (!itemId) throw new Error("商品IDがありません");
+      return (
+        <MenuOverview
+          configuration={published}
+          section="products"
+          itemId={itemId}
+          search={product.useSearch()}
+        />
+      );
+    },
+  });
+  const list = createRoute({
+    getParentRoute: () => store,
+    path: "menu/$section",
+    validateSearch: menuListSearchSchema,
+    component: () => <h1>公開商品の一覧</h1>,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([store.addChildren([design, menu, review, demo])]),
+    routeTree: root.addChildren([store.addChildren([design, menu, review, demo, product, list])]),
     history: createMemoryHistory({ initialEntries: [initial] }),
   });
   await router.load();
@@ -167,7 +192,8 @@ it("下書きメニューと店舗デザインを往復しても同じ下書き�
     .poll(() => router.state.location.search)
     .toMatchObject({ draftId, q: "tea", page: 2, returnSection: "products" });
   await expect.element(page.getByLabelText(ja.theme_css, { exact: true })).toBeVisible();
-  await expect.element(navigation.getByRole("status")).toMatchTextContent(draftId.slice(0, 8));
+  await expect.element(navigation.getByRole("status")).not.toBeInTheDocument();
+  await expect.element(page.getByText(new RegExp(draftId))).toBeVisible();
   await expect
     .element(navigation.getByRole("link", { name: ja.editor_products, exact: true }))
     .toHaveAttribute(
@@ -237,4 +263,60 @@ it("未保存のテーマをプレビューすると先に保存し、その下�
     demoId: "tablecast-design-demo",
     device: "ipad",
   });
+});
+
+it("公開中のデザインは編集フォームを出さず、商品表示と構成の概要を示す", async () => {
+  await page.viewport(1440, 1000);
+  const { router } = await openDesign(
+    `/admin/stores/${storeId}/design?q=酒&category=tablecast-sake-category&availability=available&page=2`,
+  );
+  await expect
+    .element(page.getByRole("heading", { name: ja.theme_published_overview, exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("heading", { name: ja.theme_configuration_summary, exact: true }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("textbox", { name: ja.theme_css, exact: true }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(
+      page.getByRole("button", {
+        name: new RegExp(catalog.configuration.products[0].text.ja.displayName),
+      }),
+    )
+    .toBeVisible();
+  await page
+    .getByRole("button", {
+      name: new RegExp(catalog.configuration.products[0].text.ja.displayName),
+    })
+    .click();
+  await expect
+    .element(
+      page.getByRole("heading", {
+        name: catalog.configuration.products[0].text.ja.displayName,
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({
+      q: "酒",
+      category: "tablecast-sake-category",
+      availability: "available",
+      page: 2,
+    });
+  await page.getByRole("main").getByRole("link", { name: ja.editor_products, exact: true }).click();
+  await expect
+    .element(page.getByRole("heading", { name: "公開商品の一覧", exact: true }))
+    .toBeVisible();
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({
+      q: "酒",
+      category: "tablecast-sake-category",
+      availability: "available",
+      page: 2,
+    });
 });

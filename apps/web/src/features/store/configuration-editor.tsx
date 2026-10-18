@@ -1,6 +1,5 @@
 import { productSchema, type Configuration, type Plan, type Product } from "@tablecast/api/schema";
 import {
-  BadgeJapaneseYen,
   Clock,
   Image,
   Info,
@@ -60,16 +59,71 @@ export function ProductsEditor({
     <>
       {product && (
         <>
-          <ConfigurationSection title={t("editor_basic_information")} icon={Info}>
+          <nav
+            className="flex flex-wrap gap-2 border-b border-border pb-4 text-sm"
+            aria-label={t("editor_product_identity")}
+          >
+            {(
+              [
+                ["product-basics", "editor_basic_information"],
+                ["product-customisation", "editor_modifiers"],
+                ["product-content", "editor_product_content"],
+              ] as const
+            ).map(([id, label]) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="inline-flex min-h-11 items-center rounded-lg px-3 font-medium hover:bg-secondary"
+              >
+                {t(label)}
+              </a>
+            ))}
+          </nav>
+          <ConfigurationSection id="product-basics" title={t("editor_product_basics")} icon={Info}>
             <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
-              <label className="flex flex-col gap-2 text-sm">
-                {t("editor_id")}
-                <Input value={product.id} readOnly />
-              </label>
-              <label className="flex flex-col gap-2 text-sm">
+              {(["ja", "en"] as const).map((language) => (
+                <label key={language} className="grid gap-2 text-sm">
+                  <span>
+                    {t(language === "ja" ? "common_ja" : "common_en")} {t("admin_display_name")}
+                  </span>
+                  <Input
+                    required
+                    maxLength={150}
+                    disabled={disabled}
+                    value={product.text[language].displayName}
+                    onChange={(event) =>
+                      update({
+                        text: {
+                          ...product.text,
+                          [language]: {
+                            ...product.text[language],
+                            displayName: event.target.value,
+                          },
+                        },
+                      })
+                    }
+                  />
+                </label>
+              ))}
+              <NumericField
+                label={t("admin_unit_price")}
+                value={product.price}
+                min={0}
+                max={10_000_000}
+                disabled={disabled}
+                onChange={(price) => update({ price })}
+              />
+              <BooleanField
+                label={t("admin_available")}
+                value={product.available}
+                disabled={disabled}
+                onChange={(available) => update({ available })}
+              />
+              <label className="grid gap-2 text-sm">
                 {t("editor_category")}
                 <NativeSelect
                   className={selectClass}
+                  disabled={disabled}
                   value={product.categoryId}
                   onChange={(event) => update({ categoryId: event.target.value })}
                 >
@@ -85,38 +139,24 @@ export function ProductsEditor({
                   ))}
                 </NativeSelect>
               </label>
-              <StringListField
-                label={t("editor_tags")}
-                value={product.tags}
-                disabled={disabled}
-                onChange={(tags) => update({ tags })}
-              />
             </div>
-          </ConfigurationSection>
-          <ConfigurationSection title={t("editor_pricing_availability")} icon={BadgeJapaneseYen}>
-            <div className="grid min-w-0 items-end gap-4 @xl:grid-cols-2">
-              <NumericField
-                label={t("admin_unit_price")}
-                value={product.price}
-                min={0}
-                max={10_000_000}
-                disabled={disabled}
-                onChange={(price) => update({ price })}
-              />
-              <BooleanField
-                label={t("admin_available")}
-                value={product.available}
-                disabled={disabled}
-                onChange={(available) => update({ available })}
-              />
-            </div>
-          </ConfigurationSection>
-          <ConfigurationSection title={t("editor_translation")} icon={Languages}>
-            <BilingualFields
-              value={product.text}
-              disabled={disabled}
-              onChange={(text) => update({ text })}
-            />
+            <details className="border-t border-border pt-3">
+              <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
+                {t("editor_reference_details")}
+              </summary>
+              <div className="grid gap-4 pt-3 @xl:grid-cols-2">
+                <label className="grid content-start gap-2 text-sm">
+                  {t("editor_id")}
+                  <Input value={product.id} readOnly />
+                </label>
+                <StringListField
+                  label={t("editor_tags")}
+                  value={product.tags}
+                  disabled={disabled}
+                  onChange={(tags) => update({ tags })}
+                />
+              </div>
+            </details>
           </ConfigurationSection>
           <ConfigurationSection title={t("editor_images")} icon={Image}>
             <ConfigurationImageField
@@ -126,6 +166,33 @@ export function ProductsEditor({
               onChange={update}
               onStagedChange={onImageStagedChange}
               disabled={disabled}
+            />
+          </ConfigurationSection>
+          <ConfigurationSection
+            id="product-customisation"
+            title={t("editor_modifiers")}
+            icon={SlidersHorizontal}
+          >
+            <ModifiersEditor
+              onImageStagedChange={onImageStagedChange}
+              storeId={storeId}
+              key={product.id}
+              product={product}
+              disabled={disabled}
+              onChange={(modifiers) =>
+                onChange((current) => ({
+                  ...current,
+                  products: current.products.map((item) =>
+                    item.id === selectedId
+                      ? {
+                          ...item,
+                          modifiers:
+                            typeof modifiers === "function" ? modifiers(item.modifiers) : modifiers,
+                        }
+                      : item,
+                  ),
+                }))
+              }
             />
           </ConfigurationSection>
           <ConfigurationSection title={t("kiosk_allergens")} icon={ShieldCheck}>
@@ -215,27 +282,16 @@ export function ProductsEditor({
               ))}
             </div>
           </ConfigurationSection>
-          <ConfigurationSection title={t("editor_modifiers")} icon={SlidersHorizontal}>
-            <ModifiersEditor
-              onImageStagedChange={onImageStagedChange}
-              storeId={storeId}
-              key={product.id}
-              product={product}
+          <ConfigurationSection
+            id="product-content"
+            title={t("editor_product_content")}
+            icon={Languages}
+          >
+            <BilingualFields
+              includeName={false}
+              value={product.text}
               disabled={disabled}
-              onChange={(modifiers) =>
-                onChange((current) => ({
-                  ...current,
-                  products: current.products.map((item) =>
-                    item.id === selectedId
-                      ? {
-                          ...item,
-                          modifiers:
-                            typeof modifiers === "function" ? modifiers(item.modifiers) : modifiers,
-                        }
-                      : item,
-                  ),
-                }))
-              }
+              onChange={(text) => update({ text })}
             />
           </ConfigurationSection>
         </>
@@ -251,12 +307,6 @@ export function CategoriesEditor({ value, onChange, disabled, selectedId }: Edit
     <>
       {category && (
         <>
-          <ConfigurationSection title={t("editor_basic_information")} icon={Info}>
-            <label className="grid gap-2 text-sm">
-              {t("editor_id")}
-              <Input readOnly value={category.id} />
-            </label>
-          </ConfigurationSection>
           <ConfigurationSection title={t("editor_translation")} icon={Languages}>
             <BilingualFields
               value={category.text}
@@ -271,6 +321,15 @@ export function CategoriesEditor({ value, onChange, disabled, selectedId }: Edit
               }
             />
           </ConfigurationSection>
+          <details className="border-t border-border pt-4">
+            <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
+              {t("editor_reference_details")}
+            </summary>
+            <label className="grid gap-2 pt-3 text-sm">
+              {t("editor_id")}
+              <Input readOnly value={category.id} />
+            </label>
+          </details>
         </>
       )}
     </>
@@ -290,12 +349,6 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
     <>
       {plan && (
         <>
-          <ConfigurationSection title={t("editor_basic_information")} icon={Info}>
-            <label className="grid gap-2 text-sm">
-              {t("editor_id")}
-              <Input readOnly value={plan.id} />
-            </label>
-          </ConfigurationSection>
           <ConfigurationSection title={t("editor_translation")} icon={Languages}>
             <BilingualFields
               value={plan.text}
@@ -398,6 +451,15 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
               onChange={(includedOptionSurcharge) => update({ includedOptionSurcharge })}
             />
           </ConfigurationSection>
+          <details className="border-t border-border pt-4">
+            <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
+              {t("editor_reference_details")}
+            </summary>
+            <label className="grid gap-2 pt-3 text-sm">
+              {t("editor_id")}
+              <Input readOnly value={plan.id} />
+            </label>
+          </details>
         </>
       )}
     </>

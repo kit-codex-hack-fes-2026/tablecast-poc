@@ -90,16 +90,11 @@ export function AdminShell({
               >
                 <PanelLeft />
               </Button>
-              <div className="order-last min-w-0 basis-full border-l border-border py-2 pl-3 text-base font-medium @3xl:order-0 @3xl:basis-64 @3xl:grow">
-                {header ??
-                  t(
-                    sidebar.tab === "organisations"
-                      ? "stores_title"
-                      : sidebar.tab === "mcp"
-                        ? "mcp_sessions"
-                        : "account_title",
-                  )}
-              </div>
+              {header && (
+                <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
+                  {header}
+                </div>
+              )}
               <div className="ml-auto">
                 <LanguageSwitch onChange={setLocale} />
               </div>

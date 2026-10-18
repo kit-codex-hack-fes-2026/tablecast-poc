@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { pointRulesSchema } from "@tablecast/api/schema";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -13,15 +14,16 @@ export function PointPolicy() {
   const query = useSuspenseQuery(pointPolicyOptions(store.id));
   const { t } = useI18n();
   return (
-    <section className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t("customer_points_policy")}</h1>
-      <p>{t("customer_points_future")}</p>
-      <PointPolicyForm
-        key={query.data.version}
-        storeId={store.id}
-        policy={query.data}
-        canEdit={["owner", "admin"].includes(store.role)}
-      />
+    <section className="space-y-6">
+      <PageHeader title={t("customer_points_policy")} description={t("customer_points_future")} />
+      <div className="max-w-2xl">
+        <PointPolicyForm
+          key={query.data.version}
+          storeId={store.id}
+          policy={query.data}
+          canEdit={["owner", "admin"].includes(store.role)}
+        />
+      </div>
     </section>
   );
 }

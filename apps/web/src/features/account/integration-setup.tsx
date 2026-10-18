@@ -69,17 +69,21 @@ export function IntegrationSetup({
   const { endpoint, name, staging } = connection;
   return (
     <IntegrationsShell>
-      <Guide title={t("mcp_scenarios_title")} icon={<MessagesSquare className="size-5" />}>
-        <p className="text-sm text-muted-foreground">{t("mcp_scenarios_hint")}</p>
-        <div className="space-y-5">
-          <CopyValue label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
-          <CopyValue label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
-          <CopyValue label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
-        </div>
-      </Guide>
       {staging && <p>{t("mcp_staging_connection")}</p>}
       {mode === "plugins" ? (
         <>
+          <Guide
+            title={t("mcp_remote_connection")}
+            icon={<Globe className="size-5" />}
+            source={connectionDocs}
+          >
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>{t("mcp_remote_add")}</li>
+              <li>{t("mcp_remote_sign_in")}</li>
+              <li>{t("mcp_remote_approve")}</li>
+            </ol>
+            <CopyValue label={t("mcp_endpoint")} value={endpoint} />
+          </Guide>
           <Guide
             title="Marketplace · Codex"
             icon={<Blocks className="size-5" />}
@@ -101,18 +105,6 @@ export function IntegrationSetup({
               <FolderGit2 className="size-5" />
               GitHub
             </a>
-          </Guide>
-          <Guide
-            title={t("mcp_remote_connection")}
-            icon={<Globe className="size-5" />}
-            source={connectionDocs}
-          >
-            <ol className="list-decimal space-y-2 pl-5">
-              <li>{t("mcp_remote_add")}</li>
-              <li>{t("mcp_remote_sign_in")}</li>
-              <li>{t("mcp_remote_approve")}</li>
-            </ol>
-            <CopyValue label={t("mcp_endpoint")} value={endpoint} />
           </Guide>
         </>
       ) : (
@@ -186,6 +178,14 @@ export function IntegrationSetup({
           </Guide>
         </>
       )}
+      <Guide title={t("mcp_scenarios_title")} icon={<MessagesSquare className="size-5" />}>
+        <p className="text-sm text-muted-foreground">{t("mcp_scenarios_hint")}</p>
+        <div className="space-y-5">
+          <CopyValue label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
+          <CopyValue label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
+          <CopyValue label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
+        </div>
+      </Guide>
       <Guide title={t("mcp_scopes")} icon={<ShieldCheck className="size-5" />}>
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <dt>

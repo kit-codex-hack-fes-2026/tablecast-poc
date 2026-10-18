@@ -177,12 +177,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
         }
       />
 
-      <ConfigurationStatus
-        storeName={store.name}
-        publishedVersion={catalog.data.version}
-        draft={draft}
-        error={error}
-      />
+      <ConfigurationStatus publishedVersion={catalog.data.version} draft={draft} error={error} />
       <ErrorNotice error={query.error || catalog.error || error} />
       <p
         role="status"

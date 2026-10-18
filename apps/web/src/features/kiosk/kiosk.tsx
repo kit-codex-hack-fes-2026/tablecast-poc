@@ -1,7 +1,7 @@
 import { CustomerOrderAttribution } from "./customer-order-attribution";
 import { CustomerVisitPanel } from "./customer-visit-panel";
 import { StoreTheme } from "../../components/store-theme";
-import { StoreLogo } from "./store-logo";
+import { StoreLogo } from "../../components/store-logo";
 import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
@@ -37,7 +37,7 @@ import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
 import { CartLines } from "../../components/cart-lines";
 import { conversationLines } from "./conversation-model";
-import { ProductMenu } from "./menu";
+import { ProductMenu } from "../../components/product-menu";
 import { Pairing } from "./pairing";
 import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";

@@ -4,8 +4,12 @@ import { z } from "zod";
 import { TableDetail } from "../features/store/table-detail";
 import { catalogOptions } from "../features/store/menu-query";
 import { tableDetailOptions } from "../features/store/store-query";
+import { floorSearchSchema } from "../features/store/floor-model";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
   validateSearch: z.object({
+    floorView: floorSearchSchema.shape.view,
+    floorDate: floorSearchSchema.shape.date,
+    floorFilter: floorSearchSchema.shape.filter,
     view: z
       .enum(["overview", "logs", "orders", "billing", "diagnostics"])
       .default("overview")
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
 });
 function Page() {
   const { storeId, sessionId } = Route.useParams();
-  const { view } = Route.useSearch();
+  const { view, floorView, floorDate, floorFilter } = Route.useSearch();
   const navigate = useNavigate();
   return (
     <TableDetail
@@ -36,7 +40,18 @@ function Page() {
       storeId={storeId}
       tableId={sessionId}
       view={view}
-      onViewChange={(next) => void navigate({ to: ".", search: { view: next }, replace: true })}
+      floorSearch={
+        floorView || floorDate || floorFilter
+          ? { view: floorView, date: floorDate, filter: floorFilter }
+          : undefined
+      }
+      onViewChange={(next) =>
+        void navigate({
+          to: ".",
+          search: (previous) => ({ ...previous, view: next }),
+          replace: true,
+        })
+      }
     />
   );
 }

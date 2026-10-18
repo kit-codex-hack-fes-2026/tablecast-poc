@@ -10,7 +10,9 @@ export function ConfigurationSection({
   title,
   icon: Icon,
   children,
+  id: sectionId,
 }: {
+  id?: string;
   title: string;
   icon: LucideIcon;
   children: ReactNode;
@@ -18,8 +20,9 @@ export function ConfigurationSection({
   const id = useId();
   return (
     <section
+      id={sectionId}
       aria-labelledby={id}
-      className="@container min-w-0 space-y-5 border-t border-border pt-6 first:border-t-0 first:pt-0"
+      className="@container min-w-0 scroll-mt-28 space-y-5 border-t border-border pt-6 first:border-t-0 first:pt-0"
     >
       <h2 id={id} className="flex items-start gap-2 text-lg font-semibold">
         <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
@@ -184,11 +187,13 @@ export function BilingualFields({
   onChange,
   disabled,
   labelledBy,
+  includeName = true,
 }: {
   value: Product["text"];
   onChange: (value: Product["text"]) => void;
   disabled?: boolean;
   labelledBy?: string;
+  includeName?: boolean;
 }) {
   const id = useId();
   const { t } = useI18n();
@@ -204,38 +209,40 @@ export function BilingualFields({
           <legend id={`${id}-${language}`} className="mb-3 font-semibold">
             {t(language === "ja" ? "common_ja" : "common_en")}
           </legend>
-          {fields.map(({ key, label }) => (
-            <label className="flex flex-col gap-2 text-sm" key={key}>
-              <span id={`${id}-${language}-${key}`}>{label}</span>
-              {key === "description" ? (
-                <textarea
-                  aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
-                  className="min-h-24 w-full rounded-lg border border-input p-2 text-base"
-                  maxLength={3000}
-                  value={value[language][key]}
-                  onChange={(event) =>
-                    onChange({
-                      ...value,
-                      [language]: { ...value[language], [key]: event.target.value },
-                    })
-                  }
-                />
-              ) : (
-                <Input
-                  aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
-                  required
-                  maxLength={150}
-                  value={value[language][key]}
-                  onChange={(event) =>
-                    onChange({
-                      ...value,
-                      [language]: { ...value[language], [key]: event.target.value },
-                    })
-                  }
-                />
-              )}
-            </label>
-          ))}
+          {fields
+            .filter(({ key }) => includeName || key !== "displayName")
+            .map(({ key, label }) => (
+              <label className="flex flex-col gap-2 text-sm" key={key}>
+                <span id={`${id}-${language}-${key}`}>{label}</span>
+                {key === "description" ? (
+                  <textarea
+                    aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
+                    className="min-h-24 w-full rounded-lg border border-input p-2 text-base"
+                    maxLength={3000}
+                    value={value[language][key]}
+                    onChange={(event) =>
+                      onChange({
+                        ...value,
+                        [language]: { ...value[language], [key]: event.target.value },
+                      })
+                    }
+                  />
+                ) : (
+                  <Input
+                    aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
+                    required
+                    maxLength={150}
+                    value={value[language][key]}
+                    onChange={(event) =>
+                      onChange({
+                        ...value,
+                        [language]: { ...value[language], [key]: event.target.value },
+                      })
+                    }
+                  />
+                )}
+              </label>
+            ))}
           <StringListField
             labelledBy={`${labelledBy ?? ""} ${id}-${language}`}
             label={t("editor_aliases")}

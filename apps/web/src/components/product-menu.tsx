@@ -4,10 +4,10 @@ import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { useState } from "react";
-import { ProductImage } from "../../components/product-image";
-import { Button } from "../../components/ui/button";
-import { money } from "../../i18n/format";
-import { useI18n } from "../../i18n/locale";
+import { ProductImage } from "./product-image";
+import { Button } from "./ui/button";
+import { money } from "../i18n/format";
+import { useI18n } from "../i18n/locale";
 
 const productGrid = tv({
   base: "grid grid-cols-1 @xs/tablecast-menu:grid-cols-2 @2xl/tablecast-menu:grid-cols-3",
@@ -105,8 +105,8 @@ export function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-square overflow-hidden rounded-md bg-muted flex items-center justify-center">
-              {product.imageKey ? (
+            {product.imageKey ? (
+              <span className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-md bg-muted">
                 <ProductImage
                   className="size-full object-contain"
                   width={384}
@@ -115,13 +115,13 @@ export function ProductMenu({
                   src={`/media/${product.imageKey}`}
                   alt=""
                 />
-              ) : (
-                <span className="text-muted-foreground flex flex-col items-center gap-1.5">
-                  <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
-                  <small className="text-sm">{t("kiosk_no_image")}</small>
-                </span>
-              )}
-            </span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <ImageOff size={16} strokeWidth={1.5} aria-hidden="true" />
+                {t("kiosk_no_image")}
+              </span>
+            )}
             <span className="flex flex-1 flex-col pt-3">
               {(!product.available ||
                 (product.imageKey && product.imageKind === "illustration")) && (

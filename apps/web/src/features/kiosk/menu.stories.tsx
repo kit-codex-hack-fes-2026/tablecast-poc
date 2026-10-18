@@ -3,7 +3,7 @@ import { productSchema, type CartLine, type Product } from "@tablecast/api/schem
 import { expect, fn, userEvent, within } from "storybook/test";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
 import { CartLines } from "../../components/cart-lines";
-import { ProductMenu } from "./menu";
+import { ProductMenu } from "../../components/product-menu";
 import { ProductPage } from "./product-dialog";
 
 const meta = {

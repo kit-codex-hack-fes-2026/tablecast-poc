@@ -6,9 +6,9 @@ import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../../i18n/locale";
 import { StoreTheme } from "../../components/store-theme";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
-import { StoreLogo } from "./store-logo";
-import { MenuBanners } from "./menu-banners";
-import { ProductMenu } from "./menu";
+import { StoreLogo } from "../../components/store-logo";
+import { MenuBanners } from "../../components/menu-banners";
+import { ProductMenu } from "../../components/product-menu";
 import { Button } from "../../components/ui/button";
 import "../../styles.css";
 const image: ThemeImage = {

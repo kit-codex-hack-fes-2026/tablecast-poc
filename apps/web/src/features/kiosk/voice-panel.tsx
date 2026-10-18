@@ -26,7 +26,7 @@ import { Button } from "../../components/ui/button";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
-import { ProductMenu } from "./menu";
+import { ProductMenu } from "../../components/product-menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
 import type { VoiceView } from "./voice-connection";
 

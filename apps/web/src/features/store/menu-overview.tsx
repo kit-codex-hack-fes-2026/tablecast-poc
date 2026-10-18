@@ -1,7 +1,7 @@
 import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, ImageOff, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ProductImage } from "../../components/product-image";
@@ -263,7 +263,7 @@ function ProductDetails({ product }: { product: Configuration["products"][number
   );
 }
 
-function ProductSummary({
+export function ProductSummary({
   product,
   categories,
 }: {
@@ -272,8 +272,8 @@ function ProductSummary({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div className="flex flex-wrap items-center gap-5">
-      {product.imageKey && (
+    <div className="flex flex-wrap items-center gap-5 rounded-xl bg-secondary/50 p-5">
+      {product.imageKey ? (
         <ProductImage
           width={160}
           height={160}
@@ -282,8 +282,16 @@ function ProductSummary({
           src={`/media/${product.imageKey}`}
           alt={product.text[locale].displayName}
         />
+      ) : (
+        <div
+          className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+          role="img"
+          aria-label={t("editor_image_empty")}
+        >
+          <ImageOff className="size-5" aria-hidden="true" />
+        </div>
       )}
-      <div className="space-y-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
         <span className="block text-2xl font-semibold tabular-nums">
           {money(product.price, locale)}
         </span>

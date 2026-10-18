@@ -342,11 +342,22 @@ it("日本語の商品編集で価格・売切・両言語の本文を保存し�
   const path = `${base}/changes/${draftId}/products/${product.id}`;
   const { screen } = await open(path, locale);
   await screen.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true }).fill("777");
+  const leave = vi.spyOn(window, "confirm").mockReturnValue(false);
+  await screen
+    .getByRole("navigation", { name: labels.editor_product_identity, exact: true })
+    .getByRole("link", { name: labels.editor_modifiers, exact: true })
+    .click();
+  expect(leave).not.toHaveBeenCalled();
+  await expect
+    .element(screen.getByRole("spinbutton", { name: labels.admin_unit_price, exact: true }))
+    .toHaveValue(777);
+  leave.mockRestore();
+
   await screen.getByRole("checkbox", { name: labels.admin_available, exact: true }).first().click();
   for (const contentLocale of ["ja", "en"] as const) {
     const language = contentLocale === "ja" ? labels.common_ja : labels.common_en;
     const group = screen
-      .getByRole("region", { name: labels.editor_translation, exact: true })
+      .getByRole("region", { name: labels.editor_product_content, exact: true })
       .getByRole("group", { name: language, exact: true });
     for (const field of [
       { key: "displayName", label: labels.admin_display_name },
@@ -354,7 +365,11 @@ it("日本語の商品編集で価格・売切・両言語の本文を保存し�
       { key: "description", label: labels.admin_description },
     ] as const) {
       expected.text[contentLocale][field.key] = `${contentLocale} ${field.key} の保存内容`;
-      await group
+      const target =
+        field.key === "displayName"
+          ? screen.getByRole("region", { name: labels.editor_product_basics, exact: true })
+          : group;
+      await target
         .getByRole("textbox", { name: `${language} ${field.label}`, exact: true })
         .fill(expected.text[contentLocale][field.key]);
     }
