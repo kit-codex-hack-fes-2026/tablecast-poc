@@ -1,68 +1,75 @@
 import type { TableState } from "@tablecast/api/schema";
 import { Bell, CircleDollarSign, Radio, Users } from "lucide-react";
+import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useI18n } from "../../i18n/locale";
+import type { FloorFilter } from "./floor-model";
 
 export function TableMetrics({
   tables,
   vacantCount,
   pending = false,
+  filter = "all",
+  onFilterChange,
 }: {
   pending?: boolean;
   tables: TableState[];
   vacantCount: number;
+  filter?: FloorFilter;
+  onFilterChange?: (filter: FloorFilter) => void;
 }) {
   const { t } = useI18n();
   const metrics = [
     {
+      filter: "active",
       label: t("admin_active"),
       value: tables.filter((table) => table.status === "open").length,
       total: tables.length + vacantCount,
       icon: Users,
-      attention: false,
     },
     {
-      label: t("admin_attention"),
+      filter: "called",
+      label: t("floor_filter_called"),
       value: tables.filter((table) => table.staffCalled).length,
       icon: Bell,
-      attention: true,
     },
     {
+      filter: "billing",
       label: t("admin_billing"),
       value: tables.filter((table) => table.billRequested && table.bill.due > 0).length,
       icon: CircleDollarSign,
-      attention: false,
     },
     {
+      filter: "voice",
       label: t("admin_voice_errors"),
       value: tables.filter((table) => table.voiceState === "error").length,
       icon: Radio,
-      attention: false,
     },
-  ];
+  ] as const;
   return (
-    <div className="mb-8 grid grid-cols-4 gap-4 max-lg:grid-cols-2">
-      {metrics.map(({ label, value, total, icon: Icon, attention }) => (
-        <div
-          key={label}
-          data-slot="metric"
-          data-attention={attention || undefined}
-          className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 data-attention:border-accent/30 data-attention:bg-accent-soft"
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {metrics.map(({ label, value, icon: Icon, filter: target, ...metric }) => (
+        <Button
+          key={target}
+          variant="outline"
+          disabled={pending || !onFilterChange}
+          aria-pressed={filter === target}
+          onClick={() => onFilterChange?.(target)}
+          className="h-auto min-h-16 items-center justify-between gap-3 rounded-xl p-3 text-left aria-pressed:border-primary aria-pressed:bg-secondary disabled:opacity-100"
         >
-          <div className="flex items-start justify-between gap-3">
-            <span className="text-sm text-muted-foreground">{label}</span>
-            <Icon
-              className="size-5 shrink-0 text-muted-foreground group-data-attention:text-accent-foreground"
-              aria-hidden="true"
-            />
-          </div>
-          <strong className="text-3xl font-medium tracking-tight group-data-attention:text-accent-foreground">
-            {pending ? <Skeleton className="h-9 w-16" /> : value}
-            {!pending && total !== undefined && (
-              <small className="ml-2 text-base text-muted-foreground">/ {total}</small>
+          <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            {label}
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+          </span>
+          <strong className="shrink-0 text-2xl font-semibold tabular-nums">
+            {pending ? <Skeleton className="h-8 w-16" /> : value}
+            {!pending && "total" in metric && (
+              <small className="ml-2 text-sm font-normal text-muted-foreground">
+                / {metric.total}
+              </small>
             )}
           </strong>
-        </div>
+        </Button>
       ))}
     </div>
   );

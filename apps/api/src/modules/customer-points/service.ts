@@ -1,5 +1,16 @@
 import { issueEligibleCoupons } from "../customer-coupons/issuance";
-import { and, eq, exists, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  exists,
+  inArray,
+  isNotNull,
+  isNull,
+  notInArray,
+  sql,
+  sum,
+  type SQL,
+} from "drizzle-orm";
 import type { z } from "zod";
 import {
   customerMemberships,
@@ -7,6 +18,8 @@ import {
   customerPointEntries,
   customerPointPolicies,
   customerPointVisits,
+  orders,
+  payments,
   stores,
   tableSessions,
 } from "../../db/business-schema";
@@ -15,7 +28,8 @@ import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import { requireManager } from "../auth/policy";
 import { eventStatement, notifyStore } from "../tables/mutations";
-import { getTableState } from "../tables/queries";
+import { billValue, getTableState } from "../tables/queries";
+import { tablePlanSchema } from "../tables/model";
 import { getPointPolicy, getPointVisit } from "./queries";
 import {
   noPointRules,
@@ -351,18 +365,54 @@ export async function confirmCustomerPoints(
 export async function pointBillingCorrectionStatements(
   services: ApiServices,
   actor: Actor,
-  amount: number,
+  amountDelta: number,
   reference: string,
   mutation: string,
 ) {
+  // 配分の合計ではなく会計原本を読み、呼出し元の会計版で成立する差額だけを反映する。
+  const orderedTotal = services.db
+    .select({ total: sum(orders.total) })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.store_id, actor.storeId),
+        eq(orders.table_session_id, actor.tableSessionId ?? ""),
+        notInArray(orders.status, ["cancelled", "rejected"]),
+      ),
+    );
+  const adjustmentTotal = services.db
+    .select({ total: sum(payments.amount) })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.store_id, actor.storeId),
+        eq(payments.table_session_id, actor.tableSessionId ?? ""),
+        eq(payments.kind, "adjustment"),
+      ),
+    );
   const [visits, allocations] = await services.db.batch([
     services.db
-      .select()
+      .select({
+        sessionId: customerPointVisits.sessionId,
+        rulesJson: customerPointVisits.rulesJson,
+        planJson: tableSessions.plan_json,
+        guestCount: tableSessions.guest_count,
+        orderedTotal: sql<number>`coalesce((${orderedTotal}),0)`.mapWith(Number),
+        adjustmentTotal: sql<number>`coalesce((${adjustmentTotal}),0)`.mapWith(Number),
+      })
       .from(customerPointVisits)
+      .innerJoin(
+        tableSessions,
+        and(
+          eq(tableSessions.id, customerPointVisits.sessionId),
+          eq(tableSessions.store_id, customerPointVisits.storeId),
+        ),
+      )
       .where(
         and(
           eq(customerPointVisits.sessionId, actor.tableSessionId ?? ""),
           eq(customerPointVisits.storeId, actor.storeId),
+          isNotNull(customerPointVisits.confirmedAt),
         ),
       ),
     services.db
@@ -376,8 +426,19 @@ export async function pointBillingCorrectionStatements(
       ),
   ]);
   const visit = visits[0];
-  if (!visit?.confirmedAt) return [];
+  if (!visit) return [];
   const rules = pointRulesSchema.parse(JSON.parse(visit.rulesJson));
+  const amount =
+    billValue(
+      {
+        orderedTotal: visit.orderedTotal,
+        adjustmentTotal: visit.adjustmentTotal,
+        paidTotal: 0,
+        cartTotal: 0,
+      },
+      visit.planJson ? tablePlanSchema.parse(JSON.parse(visit.planJson)) : null,
+      visit.guestCount,
+    ).due + amountDelta;
   const gate = exists(
     services.db
       .select({ id: tableSessions.id })

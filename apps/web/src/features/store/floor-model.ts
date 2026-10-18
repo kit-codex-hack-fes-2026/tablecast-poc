@@ -4,8 +4,13 @@ import { z } from "zod";
 export const floorSearchSchema = z.object({
   view: z.enum(["list", "timeline"]).optional().catch(undefined),
   date: storeDateSchema.optional().catch(undefined),
+  filter: z
+    .enum(["all", "attention", "active", "called", "billing", "voice", "vacant"])
+    .optional()
+    .catch(undefined),
 });
 export type FloorSearch = z.infer<typeof floorSearchSchema>;
+export type FloorFilter = NonNullable<FloorSearch["filter"]>;
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: storeTimeZone,
   year: "numeric",

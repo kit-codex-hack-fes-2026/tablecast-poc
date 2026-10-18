@@ -1,22 +1,16 @@
-import { Brand } from "../../components/brand";
+import { AuthLayout } from "./auth-layout";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect } from "react";
 import { GoogleIcon } from "../../components/google-icon";
-import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
-import { buttonVariants } from "../../components/ui/button-variants";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { useI18n } from "../../i18n/locale";
 
 import { authClient, authResult } from "../../lib/auth-client";
-
-function safeReturn() {
-  const requested = new URLSearchParams(window.location.search).get("returnTo");
-  return requested?.startsWith("/") && !requested.startsWith("//") ? requested : undefined;
-}
+import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
@@ -25,18 +19,15 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
   const social = useMutation({
     mutationFn: async (method: "google" | "passkey") => {
-      const query = new URLSearchParams(searchStr);
-      const requested = query.get("returnTo");
-      const callbackURL =
-        requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/organisations";
+      const callbackURL = loginReturnUrl(searchStr, window.location.origin) ?? "/organisations";
       if (method === "passkey") {
         authResult(await authClient.signIn.passkey());
-        window.location.assign(query.has("sig") ? `/consent${searchStr}` : callbackURL);
+        window.location.assign(callbackURL);
       } else
         authResult(
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: query.has("sig") ? `/consent${searchStr}` : callbackURL,
+            callbackURL,
           }),
         );
     },
@@ -49,8 +40,8 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
     mutationFn: async (value: { email: string; password: string }) =>
       authResult(await authClient.signIn.email(value)),
     onSuccess: () => {
-      if (new URLSearchParams(searchStr).has("sig")) window.location.assign(`/consent${searchStr}`);
-      else if (safeReturn()) window.location.assign(safeReturn() ?? "/organisations");
+      const returnUrl = loginReturnUrl(searchStr, window.location.origin);
+      if (returnUrl) window.location.assign(returnUrl);
       else
         void navigate({
           to: "/admin/live",
@@ -65,118 +56,110 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
     },
   });
   return (
-    <main className="min-h-dvh flex grid-cols-2 justify-center items-center p-6 max-sm:flex max-sm:flex-col">
-      <section className="p-7 flex flex-col items-stretch w-full max-w-144 [&_h2]:text-2xl [&_h2]:-mt-3 [&_h2]:mx-0 [&_h2]:mb-2.5 [&_[data-slot=button][data-size=text]]:justify-center [&_[data-slot=button][data-size=text]]:text-muted-foreground max-sm:py-5 max-sm:px-6">
-        <header className="flex flex-wrap items-center justify-between gap-6">
-          <Link data-ui="brand" className="inline-flex shrink-0 items-center" to="/">
-            <Brand />
-          </Link>
-          <LanguageSwitch
-            onChange={(next) => {
-              setLocale(next);
-              localStorage.setItem("tablecast_staff_locale", next);
-            }}
-          />
-        </header>
-        <form
-          noValidate
-          className="m-auto w-full max-w-96 flex flex-col gap-6 pt-14 px-0 pb-6 max-sm:pt-9"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <h1 className="text-2xl mb-3">
-            {evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
-          </h1>
-          {evaluation && (
-            <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
-              <p>{t("evaluation_login_note")}</p>
-              <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
-              <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
-              <p>{t("evaluation_shared")}</p>
-            </aside>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={social.isPending}
-            onClick={() => social.mutate("google")}
+    <AuthLayout
+      title={evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
+      onLocaleChange={(next) => {
+        setLocale(next);
+        localStorage.setItem("tablecast_staff_locale", next);
+      }}
+      footer={
+        <>
+          <a
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+            href={`/register${searchStr}`}
           >
-            <GoogleIcon className="size-5" />
-            {evaluation ? t("evaluation_login_button") : t("auth_google")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={social.isPending}
-            onClick={() => social.mutate("passkey")}
-          >
-            {t("auth_passkey")}
-          </Button>
-          {social.error && (
-            <p role="alert" className="text-destructive">
-              {t("auth_failed")}
-            </p>
-          )}
-          <form.AppField
-            name="email"
-            validators={{ onChange: z.email({ error: t("form_email") }) }}
-          >
-            {(field) => (
-              <field.TextField
-                label={t("auth_email")}
-                type="email"
-                autoComplete="username"
-                required
-                disabled={login.isPending}
-              />
-            )}
-          </form.AppField>
-          <form.AppField
-            name="password"
-            validators={{ onChange: z.string().min(1, t("form_required")) }}
-          >
-            {(field) => (
-              <field.TextField
-                label={t("auth_password")}
-                type="password"
-                autoComplete="current-password"
-                required
-                disabled={login.isPending}
-              />
-            )}
-          </form.AppField>
-          {login.error && (
-            <p
-              className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
-              role="alert"
-            >
-              {t("auth_failed")}
-            </p>
-          )}
-          <form.AppForm>
-            <form.SubmitButton size="lg" disabled={social.isPending}>
-              {t("auth_sign_in")}
-              <ArrowRight size={20} aria-hidden="true" />
-            </form.SubmitButton>
-          </form.AppForm>
-          <a className="text-base underline" href={`/register${searchStr}`}>
             {t("auth_register")}
           </a>
-          <a className="text-base underline" href="/reset-password">
+          <a
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+            href="/reset-password"
+          >
             {t("auth_reset")}
           </a>
-          <Link
-            to="/"
-            data-slot="button"
-            data-size="text"
-            className={buttonVariants({ variant: "link", size: "text" })}
-          >
+          <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
             {t("auth_guest")}
           </Link>
-        </form>
-      </section>
-    </main>
+        </>
+      }
+    >
+      <form
+        noValidate
+        className="flex min-w-0 flex-col gap-5 [&_[type=submit]]:w-full"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
+        {evaluation && (
+          <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
+            <p>{t("evaluation_login_note")}</p>
+            <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
+            <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
+            <p>{t("evaluation_shared")}</p>
+          </aside>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={social.isPending}
+          onClick={() => social.mutate("google")}
+        >
+          <GoogleIcon className="size-5" />
+          {evaluation ? t("evaluation_login_button") : t("auth_google")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={social.isPending}
+          onClick={() => social.mutate("passkey")}
+        >
+          {t("auth_passkey")}
+        </Button>
+        {social.error && (
+          <p role="alert" className="text-destructive">
+            {t("auth_failed")}
+          </p>
+        )}
+        <form.AppField name="email" validators={{ onChange: z.email({ error: t("form_email") }) }}>
+          {(field) => (
+            <field.TextField
+              label={t("auth_email")}
+              type="email"
+              autoComplete="username"
+              required
+              disabled={login.isPending}
+            />
+          )}
+        </form.AppField>
+        <form.AppField
+          name="password"
+          validators={{ onChange: z.string().min(1, t("form_required")) }}
+        >
+          {(field) => (
+            <field.TextField
+              label={t("auth_password")}
+              type="password"
+              autoComplete="current-password"
+              required
+              disabled={login.isPending}
+            />
+          )}
+        </form.AppField>
+        {login.error && (
+          <p
+            className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
+            role="alert"
+          >
+            {t("auth_failed")}
+          </p>
+        )}
+        <form.AppForm>
+          <form.SubmitButton size="lg" disabled={social.isPending}>
+            {t("auth_sign_in")}
+            <ArrowRight size={20} aria-hidden="true" />
+          </form.SubmitButton>
+        </form.AppForm>
+      </form>
+    </AuthLayout>
   );
 }

@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "../../components/page-header";
 import { useState } from "react";
 import { useAppForm } from "../../components/form";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -15,58 +16,77 @@ export function CouponManagement() {
   const store = useStore();
   const { t, locale } = useI18n();
   const query = useInfiniteQuery(couponRulesOptions(store.id));
-  const [editing, setEditing] = useState<string | null>(null);
+  type CouponRule = NonNullable<typeof query.data>["pages"][number]["rules"][number];
+  const [editing, setEditing] = useState<"new" | CouponRule | null>(null);
   const rules = query.data?.pages.flatMap((page) => page.rules) ?? [];
+  const current =
+    editing && editing !== "new"
+      ? (rules.find((rule) => rule.id === editing.id) ?? editing)
+      : undefined;
   const canEdit = ["owner", "admin"].includes(store.role);
   return (
-    <section className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t("coupon_rules")}</h1>
-      <p>{t("coupon_version_note")}</p>
-      <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
-      {canEdit && <Button onClick={() => setEditing("new")}>{t("coupon_new")}</Button>}
-      {editing === "new" && <CouponRuleForm storeId={store.id} onSaved={() => setEditing(null)} />}
-      <ul className="space-y-4">
-        {rules.map((rule) => (
-          <li key={rule.id} className="space-y-3">
-            <Button
-              variant="outline"
-              disabled={!canEdit}
-              onClick={() => setEditing(editing === rule.id ? null : rule.id)}
-            >
-              {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
-            </Button>
-            {editing === rule.id && (
-              <CouponRuleForm
-                key={rule.version}
-                storeId={store.id}
-                initial={{
-                  id: rule.id,
-                  expectedVersion: rule.version,
-                  active: rule.active,
-                  rules: rule.rules,
-                }}
-                onSaved={() => setEditing(null)}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-      {query.hasNextPage && (
-        <Button disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-          {t("customer_more")}
-        </Button>
-      )}
-      {canEdit && (
-        <ManualCouponIssue
-          storeId={store.id}
-          rules={rules.flatMap((rule) =>
-            rule.active && rule.rules.trigger === "manual"
-              ? [{ id: rule.id, title: rule.rules.title[locale] }]
-              : [],
-          )}
+    <section className="space-y-6">
+      <PageHeader
+        title={t("coupon_rules")}
+        description={t("coupon_version_note")}
+        actions={canEdit && <Button onClick={() => setEditing("new")}>{t("coupon_new")}</Button>}
+      />
+      <div className="max-w-3xl space-y-6">
+        <ErrorNotice
+          error={!editing ? query.error : undefined}
+          onRetry={() => void query.refetch()}
+          retrying={query.isFetching}
         />
-      )}
-      <IssuedCoupons storeId={store.id} canEdit={canEdit} />
+        {editing && (
+          <CouponRuleForm
+            key={current?.id ?? "new"}
+            storeId={store.id}
+            initial={
+              current
+                ? {
+                    id: current.id,
+                    expectedVersion: current.version,
+                    active: current.active,
+                    rules: current.rules,
+                  }
+                : undefined
+            }
+            onSaved={() => setEditing(null)}
+          />
+        )}
+        <ul className="space-y-4">
+          {rules.map((rule) => (
+            <li key={rule.id} className="space-y-3">
+              <Button
+                variant="outline"
+                disabled={!canEdit}
+                aria-pressed={editing !== "new" && editing?.id === rule.id}
+                onClick={() =>
+                  setEditing(editing !== "new" && editing?.id === rule.id ? null : rule)
+                }
+              >
+                {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        {query.hasNextPage && (
+          <Button disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
+            {t("customer_more")}
+          </Button>
+        )}
+        {canEdit && (
+          <ManualCouponIssue
+            storeId={store.id}
+            rules={rules.flatMap((rule) =>
+              rule.active && rule.rules.trigger === "manual"
+                ? [{ id: rule.id, title: rule.rules.title[locale] }]
+                : [],
+            )}
+          />
+        )}
+        <IssuedCoupons storeId={store.id} canEdit={canEdit} />
+      </div>
     </section>
   );
 }
@@ -189,7 +209,11 @@ function IssuedCoupons({ storeId, canEdit }: { storeId: string; canEdit: boolean
     <section className="space-y-4">
       <h2 className="text-xl font-semibold">{t("coupon_issued")}</h2>
       <p>{t("coupon_revoke_note")}</p>
-      <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
+      <ErrorNotice
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
       {query.data?.pages.flatMap((page) =>
         page.coupons.map((coupon) => (
           <article key={coupon.id} className="space-y-3 rounded-xl border p-4">

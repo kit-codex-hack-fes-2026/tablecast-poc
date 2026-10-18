@@ -8,7 +8,8 @@ import { setVoiceSession } from "../src/modules/voice/service";
 import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
 import type { voiceToolNameSchema } from "../src/modules/voice/model";
-import type { z } from "zod";
+import { z } from "zod";
+import { configurationSchema } from "../src/modules/configuration/model";
 import type { Product } from "../src/schema";
 import { configuration, device, setupFixture, text as configurationText } from "./fixture";
 
@@ -334,6 +335,74 @@ describe("Responses functionと共通業務の認可", () => {
     await setVoiceSession(services(), device, null);
     await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
     expect((await getTableState(services(), device)).staffCalled).toBe(false);
+  });
+  it("有効な2000商品を8件ずつ重複や欠落なく取得し、終端と個別詳細の価格・必須選択を保つ", async () => {
+    await setup();
+    const base = configuration.products[1];
+    if (!base) throw new Error("商品fixtureがありません");
+    const products = Array.from({ length: 2000 }, (_, index) => ({
+      ...base,
+      id: `tablecast-paged-${index}`,
+      price: 100 + index,
+    }));
+    const expanded = configurationSchema.parse({ ...configuration, products });
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify(expanded) })
+      .where(eq(business.stores.id, device.storeId));
+    const pageSchema = z.object({
+      total: z.number(),
+      more: z.boolean(),
+      version: z.number(),
+      detail: z.boolean(),
+      products: z.array(z.object({ id: z.string(), price: z.number() })),
+    });
+    const received: string[] = [];
+    for (let offset = 0; offset < 2000; offset += 8) {
+      const result = await tool("getCatalog", { offset, limit: 8 });
+      const page = pageSchema.parse(result.result);
+      expect(page).toMatchObject({ total: 2000, more: offset < 1992, version: 1, detail: false });
+      expect(page.products).toHaveLength(8);
+      expect(new TextEncoder().encode(JSON.stringify(result)).byteLength).toBeLessThan(6000);
+      received.push(...page.products.map((product) => product.id));
+    }
+    expect(received).toEqual(products.map((product) => product.id));
+    expect(new Set(received).size).toBe(2000);
+    expect((await tool("getCatalog", { offset: 1999 })).result).toMatchObject({
+      total: 2000,
+      more: false,
+      products: [{ id: "tablecast-paged-1999", price: 2099 }],
+    });
+    expect((await tool("getCatalog", { offset: 2000 })).result).toMatchObject({
+      total: 2000,
+      more: false,
+      products: [],
+    });
+    expect((await tool("getCatalog", { query: "tablecast-paged-1999" })).result).toMatchObject({
+      detail: true,
+      version: 1,
+      products: [
+        {
+          id: "tablecast-paged-1999",
+          price: 2099,
+          allergens: base.allergens,
+          modifiers: [
+            {
+              min: 1,
+              options: [
+                { id: "dairy", priceDelta: 0 },
+                { id: "oat", priceDelta: 100 },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    for (const offset of [-1, 2001, 1.5])
+      await expect(tool("getCatalog", { offset })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(tool("getCatalog", { offset: 1008, limit: 9 })).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+    });
   });
   it("同じcall IDの同時実行を一回だけ許可する", async () => {
     await setup();

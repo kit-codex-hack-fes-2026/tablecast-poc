@@ -34,7 +34,6 @@ afterEach(async () => {
     await cleanup();
     client.clear();
     vi.unstubAllGlobals();
-    document.documentElement.style.fontSize = "";
   } finally {
     if (
       window.innerWidth !== initialViewport.width ||
@@ -211,7 +210,6 @@ it.each([
       .element(page.getByRole("img", { name: labels.editor_image_candidate }))
       .toBeVisible();
     await page.viewport(width, height);
-    document.documentElement.style.fontSize = "32px";
     await expect
       .poll(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
       .toBe(true);

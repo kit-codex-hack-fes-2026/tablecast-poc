@@ -37,7 +37,7 @@ afterEach(async () => {
   }
 });
 
-it("店舗画像を送信すると設定とサイドバーを再取得し、再表示でも同じ保存画像を使う", async () => {
+it("店舗画像を送信すると設定と店舗選択を再取得し、再表示でも同じ保存画像を使う", async () => {
   await page.viewport(1280, 900);
   const storeId = "tablecast-profile-store";
   let logo = "/icons/tablecast-180.png";
@@ -101,7 +101,7 @@ it("店舗画像を送信すると設定とサイドバーを再取得し、再�
   await expect.element(screen.getByRole("status")).toMatchTextContent(ja.account_saved);
   expect(uploaded?.name).toBe("tablecast-icon.png");
   expect(uploaded?.type).toBe("image/png");
-  await expect.poll(() => document.querySelectorAll(`aside img[src='${logo}']`).length).toBe(1);
+  await expect.poll(() => document.querySelectorAll(`header img[src='${logo}']`).length).toBe(1);
   const region = screen.getByRole("region", { name: ja.editor_images, exact: true });
   await expect.poll(() => region.element().querySelector("img")?.getAttribute("src")).toBe(logo);
   await expect

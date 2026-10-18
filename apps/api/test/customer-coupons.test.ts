@@ -27,7 +27,13 @@ import {
   confirmCustomerPoints,
 } from "../src/modules/customer-points/service";
 import { getTableState } from "../src/modules/tables/queries";
-import { recordPayment } from "../src/modules/orders/service";
+import {
+  changeOrderStatus,
+  prepareConfirmation,
+  recordPayment,
+  submitOrder,
+  updateCart,
+} from "../src/modules/orders/service";
 import { device, setupFixture } from "./fixture";
 import { fixtureDb } from "./database-fixture";
 async function setup(trigger: "manual" | "enrol" | "visits" | "spend" | "exchange" = "manual") {
@@ -83,6 +89,44 @@ it("入会券は一度だけ発行し、設定変更後も発行時の画像と�
   await revokeCustomerCoupon(services, actor, after.coupons[0].id, "誤発行");
   expect((await listCustomerCoupons(services, customer, { limit: 20 })).coupons[0]?.state).toBe(
     "revoked",
+  );
+});
+it("ポイント確定後の追加注文で累計条件に達すると通常入金とその再送で特典を一枚だけ発行する", async () => {
+  const { services, actor, customer } = await setup("spend");
+  const visit = await getPointVisit(services, actor);
+  await confirmCustomerPoints(services, actor, {
+    expectedVersion: visit.expectedVersion,
+    participantIds: visit.participants.map((p) => p.id),
+    idempotencyKey: crypto.randomUUID(),
+  });
+  expect((await listCustomerCoupons(services, customer, { limit: 20 })).coupons).toEqual([]);
+  const before = await getTableState(services, device);
+  const cart = await updateCart(services, device, {
+    expectedVersion: before.cart.version,
+    lines: [{ id: "reward-tea", productId: "tea", quantity: 1, selections: [] }],
+  });
+  const snapshot = await prepareConfirmation(services, device, {
+    expectedVersion: cart.cart.version,
+    channel: "gui",
+  });
+  const order = await submitOrder(services, device, {
+    snapshotId: snapshot.id,
+    idempotencyKey: "reward-order",
+    approved: true,
+  });
+  await changeOrderStatus(services, actor, order.id, "accepted");
+  await changeOrderStatus(services, actor, order.id, "served");
+  const input = {
+    amount: 400,
+    kind: "payment" as const,
+    reason: "追加分の会計",
+    idempotencyKey: "reward-payment",
+  };
+  await recordPayment(services, actor, input);
+  await recordPayment(services, actor, input);
+  expect((await listCustomerCoupons(services, customer, { limit: 20 })).coupons).toHaveLength(1);
+  expect((await getCustomerPoints(services, customer, { limit: 20 })).totals.allocatedYen).toBe(
+    400,
   );
 });
 it("同時交換は残高を超えず、再送はルール失効後も同じ発行を返す", async () => {

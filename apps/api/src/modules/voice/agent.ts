@@ -6,6 +6,7 @@ import { ensure } from "../../platform/errors";
 import { localeSchema, type Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
 import { getCatalog } from "../catalog/queries";
+import { maxConfigurationProducts } from "../configuration/model";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
 import { uiSectionInputSchema } from "../tables/model";
@@ -90,7 +91,7 @@ export function createCastTools(
       inputSchema: z
         .object({
           query: z.string().max(100).optional(),
-          offset: z.number().int().min(0).max(1000).optional(),
+          offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
           limit: z.number().int().min(1).max(8).optional(),
           show: z.boolean().optional(),
           includePlans: z

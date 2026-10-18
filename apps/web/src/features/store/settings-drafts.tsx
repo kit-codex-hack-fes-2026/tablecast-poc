@@ -1,21 +1,13 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Check,
-  Plus,
-  Trash2,
-  TriangleAlert,
-  X,
-  Upload,
-} from "lucide-react";
+import { ArrowLeft, Check, Plus, Trash2, TriangleAlert, X, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import {
   Dialog,
@@ -61,15 +53,17 @@ export function SettingsDrafts() {
   const columns = useMemo(() => settingsDraftsColumns(t, storeId), [t, storeId]);
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_drafts")}</h1>
-        {(role === "owner" || role === "admin") && (
-          <Button disabled={create.isPending} onClick={() => create.mutate()}>
-            <Plus />
-            {t("editor_create_draft")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("admin_drafts")}
+        actions={
+          (role === "owner" || role === "admin") && (
+            <Button disabled={create.isPending} onClick={() => create.mutate()}>
+              <Plus />
+              {t("editor_create_draft")}
+            </Button>
+          )
+        }
+      />
 
       <ErrorNotice error={drafts.error || create.error} onRetry={() => void drafts.refetch()} />
       <DataTable
@@ -168,23 +162,22 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
         <ArrowLeft />
         {t("admin_drafts")}
       </Button>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_review_draft")}</h1>
-        <DraftStatus status={draft.status} />
-        {draft.changes.some((change) => change.sensitive) && (
-          <Badge variant="outline" className="bg-secondary text-foreground">
-            <TriangleAlert className="size-4" />
-            {t("admin_sensitive")}
-          </Badge>
-        )}
-      </div>
-
-      <ConfigurationStatus
-        storeName={store.name}
-        publishedVersion={catalog.data.version}
-        draft={draft}
-        error={error}
+      <PageHeader
+        title={t("admin_review_draft")}
+        status={
+          <>
+            <DraftStatus status={draft.status} />
+            {draft.changes.some((change) => change.sensitive) && (
+              <Badge variant="outline" className="bg-secondary text-foreground">
+                <TriangleAlert className="size-4" />
+                {t("admin_sensitive")}
+              </Badge>
+            )}
+          </>
+        }
       />
+
+      <ConfigurationStatus publishedVersion={catalog.data.version} draft={draft} error={error} />
       <ErrorNotice error={query.error || catalog.error || error} />
       <p
         role="status"
@@ -298,7 +291,19 @@ function settingsDraftsColumns(
   storeId: string,
 ): DataTableColumn<ConfigDraft>[] {
   return [
-    { accessorKey: "id", header: t("editor_id"), cell: ({ row }) => row.original.id.slice(0, 8) },
+    {
+      accessorKey: "id",
+      header: t("editor_id"),
+      cell: ({ row }) => (
+        <Link
+          className="inline-flex min-h-11 max-w-56 items-center font-mono text-sm font-medium break-all underline decoration-border underline-offset-4 hover:decoration-current whitespace-normal"
+          to="/admin/stores/$storeId/menu/changes/$draftId"
+          params={{ storeId, draftId: row.original.id }}
+        >
+          {row.original.id}
+        </Link>
+      ),
+    },
     { accessorKey: "version", header: t("admin_draft_version") },
     {
       accessorKey: "baseVersion",
@@ -320,26 +325,6 @@ function settingsDraftsColumns(
       accessorKey: "updatedAt",
       header: t("common_updated_at"),
       cell: ({ row }) => <DateTime value={row.original.updatedAt} />,
-    },
-    {
-      id: "actions",
-      header: () => <span className="sr-only">{t("admin_details")}</span>,
-      cell: ({ row }) => (
-        <Button
-          nativeButton={false}
-          role="link"
-          variant="ghost"
-          render={
-            <Link
-              to="/admin/stores/$storeId/menu/changes/$draftId"
-              params={{ storeId, draftId: row.original.id }}
-            />
-          }
-        >
-          {t("admin_review_draft")}
-          <ArrowUpRight className="size-4" />
-        </Button>
-      ),
     },
   ];
 }
