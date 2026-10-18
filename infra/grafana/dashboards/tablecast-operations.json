@@ -24,7 +24,7 @@
         "name": "environment",
         "label": "環境",
         "type": "custom",
-        "query": "development,preview,production",
+        "query": "development,preview,staging,production",
         "current": {
           "text": "preview",
           "value": "preview"
