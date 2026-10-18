@@ -864,6 +864,9 @@
   "customer_point_entry_exchange": "クーポン交換",
   "customer_point_entry_billing": "会計訂正による差分",
   "coupons": "クーポン",
+  "customer_coupons_owned": "保有クーポン",
+  "customer_coupons_empty": "保有しているクーポンはありません。",
+  "customer_exchanges_empty": "現在交換できるクーポンはありません。",
   "coupon_rules": "クーポンの発行ルール",
   "coupon_new": "新しいルール",
   "coupon_terms": "一会計一枚。併用・譲渡・換金はできません。",
@@ -1022,5 +1025,9 @@
   "evaluation_device": "店舗の卓上端末として接続する場合",
   "evaluation_login_title": "デモアカウントで始める",
   "evaluation_login_note": "下のボタンから模擬ログイン画面を開き、佐藤 晴香を選んでください。個人のGoogleアカウント・メール入力・パスワードは不要です。",
-  "evaluation_login_button": "デモ用アカウントを選ぶ"
+  "evaluation_login_button": "デモ用アカウントを選ぶ",
+  "reward_editor_version": "編集中の基準版 {version}",
+  "reward_editor_conflict": "保存済みの設定が更新されています。編集中の入力は保持しています。",
+  "reward_editor_reload": "保存済みの設定を再読込",
+  "reward_editor_reload_note": "未保存の入力と選択中の画像を取り消し、最新の設定を読み込みます。必要な入力は先に控えてください。"
 }

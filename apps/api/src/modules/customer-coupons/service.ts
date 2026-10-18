@@ -374,7 +374,7 @@ export async function applyCustomerCoupon(
   const corrections = await pointBillingCorrectionStatements(
     services,
     actor,
-    total - discount,
+    -discount,
     `coupon:${useId}`,
     token,
   );
@@ -533,7 +533,7 @@ export async function cancelCustomerCouponUse(
   const corrections = await pointBillingCorrectionStatements(
     services,
     actor,
-    table.bill.orderedTotal + table.bill.adjustmentTotal + table.bill.planTotal + use.discount,
+    use.discount,
     `coupon-cancel:${use.id}`,
     token,
   );
