@@ -66,15 +66,18 @@ function useAccount(pending: boolean) {
 export function Account({ pending = false }: { pending?: boolean }) {
   const controller = useAccount(pending);
   const { t, change, sessions, accounts, keys } = controller;
+  const error = change.error || sessions.error || accounts.error || keys.error;
   return (
     <SettingsShell>
       <PageHeader title={t("account_title")} />
-      <ActionFeedback
-        pending={change.isPending}
-        error={change.error || sessions.error || accounts.error || keys.error}
-        success={change.isSuccess}
-        successMessage={t("account_saved")}
-      />
+      {(change.isPending || change.isSuccess || error) && (
+        <ActionFeedback
+          pending={change.isPending}
+          error={error}
+          success={change.isSuccess}
+          successMessage={t("account_saved")}
+        />
+      )}
       <div className="@container">
         <div className="grid min-w-0 gap-7 @4xl:grid-cols-[11rem_minmax(0,1fr)]">
           <nav
