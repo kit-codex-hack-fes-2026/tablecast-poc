@@ -103,7 +103,7 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
     path: "../../../test-results/tablecast-billing-overview.png",
     fullPage: false,
   });
-  await userEvent.click(page.getByRole("slider", { name: "AI音声接客の時間", exact: true }));
+  await userEvent.click(page.getByRole("img", { name: "AI音声接客の時間", exact: true }));
   await userEvent.keyboard("{Home}");
   await page.screenshot({
     path: "../../../test-results/tablecast-billing-daily.png",

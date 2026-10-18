@@ -52,7 +52,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
     },
     onSuccess: async (nextStoreId) => {
       await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
-      await navigate({ to: "/admin/stores/$storeId/floor", params: { storeId: nextStoreId } });
+      await navigate({ to: "/admin/stores/$storeId", params: { storeId: nextStoreId } });
     },
   });
   const store = stores.data?.stores.find((item) => item.id === storeId);

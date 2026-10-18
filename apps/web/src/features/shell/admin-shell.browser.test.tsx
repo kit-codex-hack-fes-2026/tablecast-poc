@@ -1,3 +1,4 @@
+import { detectPlatform } from "@tanstack/react-hotkeys";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -239,4 +240,20 @@ it("店舗選択をサイドバーに一つだけ表示し、折りたたみと�
   await expect.element(picker).not.toBeInTheDocument();
   await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await expect.element(name).toHaveValue("編集中の名前");
+});
+
+it("サイドバーのショートカットは編集入力を奪わず、通常ボタンと同じ状態を切り替える", async () => {
+  await page.viewport(1024, 768);
+  await show();
+  const trigger = page.getByRole("button", { name: "ナビゲーション", exact: true });
+  const shortcut = detectPlatform() === "mac" ? "{Meta>}b{/Meta}" : "{Control>}b{/Control}";
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  trigger.element().focus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(page.getByRole("textbox", { name: "表示名" }));
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(trigger);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
 });

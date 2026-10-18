@@ -30,6 +30,7 @@
     "@opentelemetry/api": "1.9.1",
     "@paper-design/shaders-react": "0.0.81",
     "@tablecast/api": "workspace:*",
+    "@tanstack/charts": "1.1.0",
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-hotkeys": "0.15.0",
     "@tanstack/react-query": "5.104.4",

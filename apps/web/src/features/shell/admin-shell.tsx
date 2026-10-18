@@ -1,3 +1,4 @@
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { PanelLeft, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { usePanelRef } from "react-resizable-panels";
@@ -25,6 +26,11 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
+  const toggleSidebar = () => {
+    if (panel.current?.isCollapsed()) panel.current.expand();
+    else panel.current?.collapse();
+  };
+  useHotkey("Mod+B", toggleSidebar, { enabled: desktop, ignoreInputs: true });
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
     id: "tablecast-admin-layout",
     panelIds: desktop
@@ -65,7 +71,11 @@ export function AdminShell({
           key="tablecast-admin-content"
           minSize={desktop ? "20rem" : 0}
         >
-          <main className="h-full min-w-0 overflow-y-auto bg-white md:rounded-2xl md:border md:border-border">
+          <main
+            id="tablecast-admin-main"
+            data-scroll-restoration-id="tablecast-admin-main"
+            className="h-full min-w-0 overflow-y-auto bg-white md:rounded-2xl md:border md:border-border"
+          >
             <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-white/95 px-4 py-2 backdrop-blur-sm @container md:rounded-t-2xl">
               <Button
                 size="icon"
@@ -73,10 +83,9 @@ export function AdminShell({
                 className="hidden md:inline-flex"
                 aria-label={t("admin_navigation")}
                 aria-expanded={!collapsed}
-                onClick={() => {
-                  if (panel.current?.isCollapsed()) panel.current.expand();
-                  else panel.current?.collapse();
-                }}
+                title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
+                aria-keyshortcuts="Control+B Meta+B"
+                onClick={toggleSidebar}
               >
                 <PanelLeft />
               </Button>

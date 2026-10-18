@@ -34,7 +34,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
-        const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
+        const floorMatch = /^\/admin\/stores\/([^/]+)\/(?:floor\/?)?$/.exec(location.pathname);
         const menuMatch = /^\/admin\/stores\/([^/]+)\/menu\/([^/]+)\/?$/.exec(location.pathname);
         const catalogStoreId =
           menuMatch && menuSectionSchema.safeParse(menuMatch[2]).success
@@ -42,7 +42,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             : undefined;
         const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : catalogStoreId;
         const search = new URLSearchParams(location.searchStr);
-        // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
+        // SSRの転送先は別のQueryClientになるため、ホームでも使うフロアの先読みはクライアントだけで行う。
         const defaultFloor =
           typeof window !== "undefined" &&
           location.pathname === "/admin/live" &&

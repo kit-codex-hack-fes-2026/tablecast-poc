@@ -295,6 +295,10 @@ Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-
 
 追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。
 
+### グラフとショートカットの依存
+
+Webは`@tanstack/charts@1.1.0`のReact adapterと`@tanstack/react-hotkeys@0.15.0`を使う。通常の`bun install --frozen-lockfile`で導入し、追加env・外部サービス・ライセンスキーは不要。ChartsのSVG・scale・tooltipは公開entrypointから必要なものだけ読み込む。新しいルートと翻訳は既存のVite plugin・`bun run codegen`で生成する。
+
 ## 型検査の実行版
 
 `bun install --frozen-lockfile`で、型検査用の`@tablecast/typescript-native`をTypeScript 7.0.2のnpm aliasとして導入する。`bun run typecheck`と各workspaceの同scriptは、root相対の公開CLI `node_modules/@tablecast/typescript-native/bin/tsc`を`node`で明示実行する。追加の手動導入や環境変数は不要。

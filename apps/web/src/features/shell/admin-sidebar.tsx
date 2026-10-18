@@ -12,6 +12,8 @@ import {
   ChevronsUpDown,
   CircleAlert,
   History,
+  House,
+  ChartNoAxesCombined,
   Gamepad2,
   Gift,
   LayoutDashboard,
@@ -89,6 +91,9 @@ export function AdminSidebar({
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
+        manager={["owner", "admin"].includes(
+          availableStores.find((store) => store.id === selectedStore)?.role ?? "",
+        )}
         selectedOrganization={
           organizationId ??
           availableStores.find((store) => store.id === selectedStore)?.organizationId
@@ -164,6 +169,7 @@ function DemoLink({
 
 function SidebarNavigation({
   tab,
+  manager,
   selectedStore,
   selectedOrganization,
   collapsed,
@@ -172,6 +178,7 @@ function SidebarNavigation({
   draftId,
 }: Pick<AdminSidebarProps, "tab"> & {
   selectedStore?: string;
+  manager: boolean;
   selectedOrganization?: string;
   collapsed: boolean;
   onNavigate?: () => void;
@@ -192,6 +199,12 @@ function SidebarNavigation({
               {t("nav_operations")}
             </h2>
           )}
+          <OverviewNavigation
+            storeId={selectedStore}
+            manager={manager}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
           <Link
             className={sidebarItemClass}
             to="/admin/stores/$storeId/floor"
@@ -512,5 +525,49 @@ function SidebarUserMenu({
         </Menu.Positioner>
       </Menu.Portal>
     </Menu.Root>
+  );
+}
+
+function OverviewNavigation({
+  storeId,
+  manager,
+  collapsed,
+  onNavigate,
+}: {
+  storeId: string;
+  manager: boolean;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <Link
+        className={sidebarItemClass}
+        to="/admin/stores/$storeId"
+        params={{ storeId: storeId }}
+        activeOptions={{ exact: true }}
+        onClick={onNavigate}
+        title={t("home_title")}
+        aria-label={t("home_title")}
+      >
+        <House className="size-5 shrink-0" />
+        {!collapsed && t("home_title")}
+      </Link>
+      {manager && (
+        <Link
+          className={sidebarItemClass}
+          to="/admin/stores/$storeId/statistics"
+          params={{ storeId: storeId }}
+          search={{ period: "today", view: "summary" }}
+          onClick={onNavigate}
+          title={t("statistics_title")}
+          aria-label={t("statistics_title")}
+        >
+          <ChartNoAxesCombined className="size-5 shrink-0" />
+          {!collapsed && t("statistics_title")}
+        </Link>
+      )}
+    </>
   );
 }

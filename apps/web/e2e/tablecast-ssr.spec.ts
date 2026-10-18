@@ -25,7 +25,7 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
     if (
-      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/catalog)?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
+      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/(?:catalog|statistics|devices))?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
         path,
       )
     )
@@ -33,7 +33,8 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   });
   for (const [path, heading] of [
     ["/account", "アカウント"],
-    ["/admin/live", "フロアの様子"],
+    ["/admin/live", "ホーム"],
+    ["/admin/stores/tablecast-komorebi/statistics", "統計"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
   ]) {
     requests.length = 0;
@@ -222,7 +223,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("戻り先なしのログインはフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
+test("戻り先なしのログインはホームで使うフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -231,11 +232,24 @@ test("戻り先なしのログインはフロアを一括取得し、フォー�
   const requests: string[] = [];
   page.on("request", (request) => requests.push(new URL(request.url()).pathname));
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
-  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/?$/);
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
   expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
+
+  const main = page.locator("#tablecast-admin-main");
+  await page
+    .getByRole("heading", { name: "ChatGPTから、お店の運営をもっと身近に" })
+    .scrollIntoViewIfNeeded();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
+  const previousScroll = await main.evaluate((element) => element.scrollTop);
+  await page.getByRole("link", { name: "統計", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "統計", exact: true })).toBeVisible();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(0);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeAttached();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(previousScroll);
 
   await page.goto("/account");
   await expect(page.getByLabel("名前", { exact: true })).toBeEnabled();
@@ -253,7 +267,7 @@ test("戻り先なしのログインはフロアを一括取得し、フォー�
   expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
 });
 
-test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ request, baseURL }) => {
+test("店側PWAの新規ドキュメント起動は転送先のホームをSSRする", async ({ request, baseURL }) => {
   await signInStaff(request, baseURL);
   const manifest = z
     .object({ start_url: z.string() })
@@ -261,11 +275,11 @@ test("店側PWAの新規ドキュメント起動は転送先のフロアをSSR�
   const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
   expect(launch.status()).toBe(307);
   const destination = launch.headers()["location"];
-  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
-  const floor = await request.get(destination);
-  expect(floor.ok()).toBe(true);
-  expect(await floor.text()).toContain("フロアの様子");
-  expect(floor.headers()["cache-control"]).toBe("private, no-store");
+  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/?$/);
+  const home = await request.get(destination);
+  expect(home.ok()).toBe(true);
+  expect(await home.text()).toContain("ホーム");
+  expect(home.headers()["cache-control"]).toBe("private, no-store");
 });
 
 test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {

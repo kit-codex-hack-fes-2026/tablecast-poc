@@ -31,7 +31,9 @@ export const Route = createFileRoute("/admin/live")({
       });
     if (deps.section === "history")
       throw redirect({ to: "/admin/stores/$storeId/visits", params: { storeId: store.id } });
-    throw redirect({ to: "/admin/stores/$storeId/floor", params: { storeId: store.id } });
+    if (deps.section === "live")
+      throw redirect({ to: "/admin/stores/$storeId/floor", params: { storeId: store.id } });
+    throw redirect({ to: "/admin/stores/$storeId", params: { storeId: store.id } });
   },
   component: AdminRoute,
 });

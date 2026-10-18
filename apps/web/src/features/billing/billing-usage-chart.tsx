@@ -1,10 +1,13 @@
-import { useId, useState, type PointerEvent } from "react";
+import { barY, defineChart } from "@tanstack/charts";
+import { Chart } from "@tanstack/charts/react";
+import { scaleBand } from "@tanstack/charts/scales/band";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
+import { useId, useMemo, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import type { Billing } from "./billing-query";
 
-const width = 760;
-const height = 180;
 const formats = {
   ja: {
     number: new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 2 }),
@@ -93,7 +96,14 @@ export function BillingUsageChart({ data }: { data: Billing }) {
         </p>
         <p className="text-2xl font-semibold tabular-nums">{format(total)}</p>
       </div>
-      <DailyPlot daily={data.daily} values={values} label={label} format={format} charge={charge} />
+      <DailyPlot
+        key={String(charge)}
+        daily={data.daily}
+        values={values}
+        label={label}
+        format={format}
+        charge={charge}
+      />
       {!values.some((amount) => amount !== 0) && (
         <p className="mt-2 text-sm text-muted-foreground">{t("billing_empty")}</p>
       )}
@@ -148,146 +158,58 @@ function DailyPlot({
   charge: boolean;
 }) {
   const { t, locale } = useI18n();
-  const id = useId();
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [inspecting, setInspecting] = useState(false);
-  const maximum = Math.max(...values.map(Math.abs), 1);
-  const magnitude = 10 ** Math.floor(Math.log10(maximum));
-  const ceiling = ([1, 2, 5, 10].find((step) => step * magnitude >= maximum) ?? 10) * magnitude;
-  const minimum = values.some((amount) => amount < 0) ? -ceiling : 0;
-  const y = (amount: number) => (height * (ceiling - amount)) / (ceiling - minimum);
-  const baseline = y(0);
-  const dayWidth = width / Math.max(daily.length, 1);
-  const index = Math.min(
-    selectedDay ??
-      Math.max(
-        values.findLastIndex((amount) => amount > 0),
-        0,
-      ),
-    Math.max(daily.length - 1, 0),
-  );
-  const selected = daily[index];
-  const select = (next: number) => {
-    setSelectedDay(Math.max(0, Math.min(next, daily.length - 1)));
-    setInspecting(true);
-  };
-  const selectPointerDay = (event: PointerEvent<HTMLDivElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    select(Math.floor(((event.clientX - bounds.left) / bounds.width) * daily.length));
-  };
-  const selectedLabel = selected
-    ? `${formats[locale].date.format(selected.day)} · ${format(values[index] ?? 0)}`
-    : t("billing_empty");
-
+  const [focused, setFocused] = useState<string | null>(null);
+  const definition = useMemo(() => {
+    const rows = daily.map((row, index) => ({
+      day: formats[locale].date.format(row.day),
+      amount: values[index] ?? 0,
+      tick:
+        index === 0 || index === daily.length - 1 || (index + 1) % 7 === 0
+          ? String(new Date(row.day).getUTCDate())
+          : "",
+    }));
+    return defineChart({
+      marks: [barY(rows, { x: "day", y: "amount", fill: "var(--color-primary)" })],
+      scales: {
+        x: {
+          scale: () => scaleBand().padding(0.25),
+          axis: {
+            ticks: {
+              format: (value) => rows.find((row) => row.day === value)?.tick ?? "",
+            },
+          },
+        },
+        y: {
+          scale: scaleLinear,
+          nice: true,
+          grid: true,
+          axis: {
+            ticks: { format: (value) => formats[locale].number.format(value) },
+          },
+        },
+      },
+      svgAnimation: false,
+      tooltip: {
+        use: tooltip,
+        format: (point) => `${point.datum.day} · ${format(point.datum.amount)}`,
+      },
+    });
+  }, [daily, values, locale, format]);
   return (
     <figure className="mt-3">
       <figcaption className="mb-2 min-h-6 text-sm tabular-nums">
-        {inspecting ? selectedLabel : `${label} (${charge ? "JPY" : t("billing_minutes")})`}
+        {focused ?? `${label} (${charge ? "JPY" : t("billing_minutes")})`}
       </figcaption>
-      <div className="flex gap-2">
-        <div
-          aria-hidden="true"
-          className="flex h-44 w-12 shrink-0 flex-col justify-between text-right text-xs text-muted-foreground tabular-nums"
-        >
-          {[1, 0.75, 0.5, 0.25, 0].map((fraction) => (
-            <span key={fraction}>
-              {formats[locale].number.format(minimum + (ceiling - minimum) * fraction)}
-            </span>
-          ))}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div
-            role="slider"
-            tabIndex={0}
-            aria-label={label}
-            aria-describedby={`${id}-keyboard`}
-            aria-orientation="horizontal"
-            aria-valuemin={1}
-            aria-valuemax={Math.max(daily.length, 1)}
-            aria-valuenow={index + 1}
-            aria-valuetext={selectedLabel}
-            className="relative rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            onFocus={() => setInspecting(true)}
-            onBlur={() => setInspecting(false)}
-            onPointerLeave={() => setInspecting(false)}
-            onPointerMove={selectPointerDay}
-            onPointerDown={selectPointerDay}
-            onKeyDown={(event) => {
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-              event.preventDefault();
-              select(
-                event.key === "Home"
-                  ? 0
-                  : event.key === "End"
-                    ? daily.length - 1
-                    : index + (event.key === "ArrowRight" ? 1 : -1),
-              );
-            }}
-          >
-            <svg
-              viewBox={`0 0 ${width} ${height}`}
-              preserveAspectRatio="none"
-              className="block h-44 w-full overflow-visible"
-              aria-hidden="true"
-            >
-              {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
-                <line
-                  key={fraction}
-                  x1="0"
-                  x2={width}
-                  y1={height * fraction}
-                  y2={height * fraction}
-                  stroke="currentColor"
-                  className="text-border"
-                  strokeDasharray={height * fraction === baseline ? undefined : "3 4"}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-              {values.map((amount, day) => (
-                <rect
-                  key={daily[day]?.day}
-                  x={day * dayWidth + dayWidth * 0.2}
-                  y={Math.min(y(amount), baseline)}
-                  width={dayWidth * 0.6}
-                  height={Math.abs(y(amount) - baseline)}
-                  rx="2"
-                  className={inspecting && day === index ? "fill-primary" : "fill-primary/60"}
-                />
-              ))}
-              {inspecting && selected && (
-                <line
-                  x1={(index + 0.5) * dayWidth}
-                  x2={(index + 0.5) * dayWidth}
-                  y1="0"
-                  y2={height}
-                  stroke="currentColor"
-                  className="text-primary/35"
-                  strokeDasharray="3 4"
-                  vectorEffect="non-scaling-stroke"
-                />
-              )}
-            </svg>
-          </div>
-          <div
-            aria-hidden="true"
-            className="mt-2 grid text-center text-xs text-muted-foreground tabular-nums"
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(daily.length, 1)}, minmax(0, 1fr))`,
-            }}
-          >
-            {daily.map((row, day) => (
-              <span key={row.day}>
-                {day === 0 || day === daily.length - 1 || (day + 1) % 7 === 0
-                  ? new Date(row.day).getUTCDate()
-                  : ""}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-      <p id={`${id}-keyboard`} className="sr-only">
-        {t("billing_daily_keyboard")}
-      </p>
+      <Chart
+        definition={definition}
+        height={220}
+        ariaLabel={label}
+        ariaDescription={t("billing_daily_keyboard")}
+        onFocusChange={(point) =>
+          setFocused(point ? `${point.datum.day} · ${format(point.datum.amount)}` : null)
+        }
+        className="[&_svg:focus-visible]:outline-2 [&_svg:focus-visible]:outline-ring [&_svg:focus-visible]:outline-offset-2"
+      />
     </figure>
   );
 }

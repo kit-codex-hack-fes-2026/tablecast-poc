@@ -19,6 +19,7 @@ export function getRouter() {
     defaultErrorComponent: RouteError,
     routeTree,
     scrollRestoration: true,
+    scrollToTopSelectors: ["#tablecast-admin-main"],
     parseSearch: parseFlatSearch,
     stringifySearch: stringifyFlatSearch,
   });

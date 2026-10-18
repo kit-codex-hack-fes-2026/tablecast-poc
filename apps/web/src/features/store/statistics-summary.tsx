@@ -1,0 +1,61 @@
+import type { StatisticsResult } from "@tablecast/api/schema";
+import { money } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
+
+export function StatisticsSummary({
+  summary,
+  detailed = false,
+}: {
+  summary: StatisticsResult["summary"];
+  detailed?: boolean;
+}) {
+  const { t, locale } = useI18n();
+  const number = (value: number) => value.toLocaleString(locale);
+  return (
+    <>
+      <dl className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+        {(
+          [
+            ["paidAmount", money(summary.paidAmount, locale)],
+            ["sessions", number(summary.sessions)],
+            ["guests", number(summary.guests)],
+            ["orders", number(summary.orders)],
+          ] as const
+        ).map(([key, value]) => (
+          <div key={key} className="min-w-0 space-y-2 border-l-2 border-border pl-4">
+            <dt className="text-sm text-muted-foreground">{t(`statistics_${key}`)}</dt>
+            <dd className="text-2xl font-semibold tracking-tight tabular-nums wrap-break-word">
+              {value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {detailed && (
+        <dl className="mt-6 grid gap-x-8 sm:grid-cols-2">
+          {(
+            [
+              ["orderedAmount", money(summary.orderedAmount, locale)],
+              ["planSessions", number(summary.planSessions)],
+              ["planSessionPaidAmount", money(summary.planSessionPaidAmount, locale)],
+              ["positivePayments", money(summary.positivePayments, locale)],
+              ["negativePayments", money(summary.negativePayments, locale)],
+              ["adjustments", money(summary.adjustments, locale)],
+              ["staffCalls", number(summary.staffCalls)],
+              ["billCalls", number(summary.billCalls)],
+              ["excludedOrders", number(summary.excludedOrders)],
+              ["incompleteSnapshots", number(summary.incompleteSnapshots)],
+            ] as const
+          ).map(([key, value]) => (
+            <div
+              key={key}
+              className="flex items-baseline justify-between gap-4 border-b border-border/60 py-3"
+            >
+              <dt className="text-sm text-muted-foreground">{t(`statistics_${key}`)}</dt>
+              <dd className="text-right font-medium tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </>
+  );
+}

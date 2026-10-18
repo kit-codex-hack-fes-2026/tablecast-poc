@@ -1,4 +1,4 @@
-import type { Catalog, Product, TableState } from "@tablecast/api/schema";
+import type { Catalog, Product, TableState, StatisticsResult } from "@tablecast/api/schema";
 
 const text = (ja: string, en: string) => ({
   ja: {
@@ -164,3 +164,36 @@ export const table: TableState = {
   staffCalled: true,
   snapshot: null,
 };
+
+export const statisticsFixture = {
+  storeId: "tablecast-statistics-store",
+  from: "2026-10-19T00:00:00+09:00",
+  to: "2026-10-20T00:00:00+09:00",
+  timeZone: "Asia/Tokyo",
+  view: "summary",
+  locale: "ja",
+  currency: "JPY",
+  basis: "closed_sessions",
+  asOf: 1792368000000,
+  generatedAt: 1792368000000,
+  summary: {
+    sessions: 18,
+    guests: 42,
+    planSessions: 3,
+    orders: 64,
+    excludedOrders: 2,
+    incompleteSnapshots: 0,
+    orderedAmount: 58200,
+    paidAmount: 61200,
+    planSessionPaidAmount: 9800,
+    positivePayments: 61700,
+    negativePayments: -500,
+    adjustments: -200,
+    staffCalls: 7,
+    billCalls: 18,
+  },
+  rows: [],
+  nextCursor: null,
+  definitions: {},
+  limitations: [],
+} satisfies StatisticsResult;
