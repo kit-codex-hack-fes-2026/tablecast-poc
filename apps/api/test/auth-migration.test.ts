@@ -49,3 +49,38 @@ it("認証のissuer必須制約を外しても既存の資格情報とログイ�
   expect(response.status).toBe(200);
   expect(response.headers.getSetCookie().join(";")).toContain("session_token");
 });
+
+it("異なるissuerで識別子が重複する場合は既存行と必須制約を保持して移行を拒否する", async () => {
+  await resetFixtureStorage();
+  const migrations = inject("tablecastMigrations");
+  const index = migrations.findIndex((migration) =>
+    migration.name.includes("0025_tablecast_auth_account_compat"),
+  );
+  if (index < 1) throw new Error("認証互換migrationが必要です");
+  await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
+  await fixtureDb.insert(user).values({
+    id: "tablecast-auth-duplicate-user",
+    email: "tablecast-auth-duplicate@example.test",
+    name: "識別子重複会員",
+  });
+  await fixtureDb.insert(account).values(
+    ["https://first.example.test", "https://second.example.test"].map((issuer, position) => ({
+      id: `tablecast-auth-duplicate-account-${position}`,
+      userId: "tablecast-auth-duplicate-user",
+      issuer,
+      providerId: "google",
+      accountId: "tablecast-auth-duplicate-identity",
+    })),
+  );
+  const before = await fixtureDb.select().from(account);
+
+  await expect(applyD1Migrations(env.TABLECAST_DB, migrations.slice(index))).rejects.toThrow(
+    /UNIQUE constraint failed: account.provider_id, account.account_id/,
+  );
+
+  expect(await fixtureDb.select().from(account)).toEqual(before);
+  expect(await fixtureDb.all(sql`PRAGMA table_info(account)`)).toContainEqual(
+    expect.objectContaining({ name: "issuer", notnull: 1 }),
+  );
+  expect(await fixtureDb.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
+});

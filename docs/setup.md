@@ -308,6 +308,6 @@ beta.14のlocal D1 CLIは処理・dispose後もregistry監視が残って終了�
 
 ## 依存更新に伴う認証DBの移行
 
-Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecast_auth_account_compat.sql`は既存のissuer・資格情報を保持してNOT NULL制約と旧複合unique indexを外す。新しいAPIを配備する前に既存のmigration経路で適用する。共有環境へ適用する前に、`provider_id, account_id`が同じ行が複数存在しないことを確認する。異なるissuerで同じ識別子を使う行がある場合は、ユーザーを統合せずproviderの対応を整理してから移行する。[公式移行ガイド](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#account-identity-keeps-the-provider-key)
+Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecast_auth_account_compat.sql`は既存のissuer・資格情報を保持してNOT NULL制約と旧複合unique indexを外す。新しいAPIを配備する前に既存のmigration経路で適用する。migrationの冒頭で一時的なunique indexを作成し、`provider_id, account_id`が重複すれば既存行・制約を変更する前に停止する。正常時は検査用indexを削除して移行する。異なるissuerで同じ識別子を使う行がある場合は、ユーザーを統合せずproviderの対応を整理してから再実行する。[公式移行ガイド](https://www.better-auth.com/docs/guides/1-7-upgrade-guide#account-identity-keeps-the-provider-key)
 
 `emulate@0.12.2`の標準待受はloopbackである。ローカルOAuthは`127.0.0.1`、preview/stagingのContainer内だけは`0.0.0.0`を明示してService Bindingから到達できるようにする。bind失敗の検査も同じIPv4 loopbackへ既存serverを置き、別address familyの同じport番号と区別する。
