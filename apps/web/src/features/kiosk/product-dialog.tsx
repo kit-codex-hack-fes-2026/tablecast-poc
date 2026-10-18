@@ -232,7 +232,7 @@ export function ProductPage({
                         className="inline-flex items-center border border-border rounded-md shrink-0"
                       >
                         <Button
-                          className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+                          className="flex items-center justify-center w-11 min-h-14"
                           variant="ghost"
                           type="button"
                           aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -244,7 +244,7 @@ export function ProductPage({
                         </Button>
                         <output className="text-center text-base min-w-7">{amount}</output>
                         <Button
-                          className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+                          className="flex items-center justify-center w-11 min-h-14"
                           variant="ghost"
                           type="button"
                           aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -295,7 +295,7 @@ export function ProductPage({
           className="inline-flex items-center border border-border rounded-md shrink-0"
         >
           <Button
-            className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+            className="flex items-center justify-center w-11 min-h-14"
             variant="ghost"
             type="button"
             aria-label={t("common_decrease")}
@@ -308,7 +308,7 @@ export function ProductPage({
             {quantity}
           </output>
           <Button
-            className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+            className="flex items-center justify-center w-11 min-h-14"
             variant="ghost"
             type="button"
             aria-label={t("common_increase")}
@@ -320,6 +320,7 @@ export function ProductPage({
         </div>
         <Button
           data-theme-part="action-button"
+          className="h-auto min-h-14 min-w-0 flex-1 shrink whitespace-normal px-3 py-2"
           variant="default"
           size="lg"
           type="button"

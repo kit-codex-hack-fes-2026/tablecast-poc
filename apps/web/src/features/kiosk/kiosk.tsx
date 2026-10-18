@@ -43,7 +43,7 @@ import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
 import { tableCatalogOptions, tableQueryKey, tableOptions } from "./table-query";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
-import { VoicePanel } from "./voice-panel";
+import { VoicePanel, VoiceToggle } from "./voice-panel";
 import { KioskGames } from "./games";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
@@ -331,7 +331,7 @@ function TableSession({
   refresh: () => void;
   endpoint: TableEndpoint;
 }) {
-  const horizontal = useMediaQuery("(min-width: 40rem)");
+  const horizontal = useMediaQuery("(min-width: 56rem)");
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
     id: "tablecast-kiosk-layout",
     panelIds: ["tablecast-conversation", "tablecast-order"],
@@ -356,6 +356,10 @@ function TableSession({
     language,
     voiceActive,
   } = model;
+  const toggleVoice = () => {
+    if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
+    else void voice.start(locale, data.speechSpeed);
+  };
   return (
     <StoreTheme appearance={catalog.data?.configuration.appearance}>
       <div
@@ -369,121 +373,99 @@ function TableSession({
           data={data}
           language={language}
           call={call}
+          view={view}
+          onToggleVoice={toggleVoice}
+          voiceDisabled={view.status === "stopping" || language.isPending}
         />
-        <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
-        <ResizablePanelGroup
-          orientation={horizontal ? "horizontal" : "vertical"}
-          className="flex-1 max-sm:flex-col!"
-          defaultLayout={defaultLayout}
-          onLayoutChanged={onLayoutChanged}
-        >
-          <ResizablePanel
-            id="tablecast-conversation"
-            defaultSize="50%"
-            minSize="30%"
-            className="h-full"
+        <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
+          <ResizablePanelGroup
+            orientation={horizontal ? "horizontal" : "vertical"}
+            className="min-h-144 flex-1 max-sm:flex-col!"
+            defaultLayout={defaultLayout}
+            onLayoutChanged={onLayoutChanged}
           >
-            <VoicePanel
-              view={view}
-              lines={conversationLines(data.events)}
-              events={data.events}
-              catalog={catalog.data}
-              snapshot={data.snapshot}
-              onReview={() => prepare.mutate()}
-              reviewPending={prepare.isPending}
-              onChoose={choose}
-              onStart={() => {
-                if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
-                else void voice.start(locale, data.speechSpeed);
-              }}
-              controlDisabled={view.status === "stopping" || language.isPending}
-              speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
-              onSpeedChange={(value) => speed.mutate(value)}
-              onMicrophoneChange={(deviceId) => {
-                void voice.selectMicrophone(deviceId);
-              }}
-              onMicrophoneRefresh={() => {
-                void voice.refreshMicrophones();
-              }}
-            />
-          </ResizablePanel>
-          <ResizableHandle aria-label={t("kiosk_resize_panes")} />
-          <ResizablePanel id="tablecast-order" defaultSize="50%" minSize="30%" className="h-full">
-            <aside
-              data-theme-part="menu"
-              className="isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
+            <ResizablePanel
+              id="tablecast-conversation"
+              defaultSize="40%"
+              minSize="30%"
+              maxSize="70%"
+              className="h-full"
             >
-              <KioskPlanSummary plan={data.plan} />
-              <ErrorNotice error={screen.error} />
-              <Tabs.Root
-                className="flex flex-col min-h-0 flex-1"
-                value={section}
-                onValueChange={(value) => {
-                  if (
-                    value === "menu" ||
-                    value === "cart" ||
-                    value === "orders" ||
-                    value === "bill"
-                  )
-                    setSection(value);
-                }}
-              >
-                <KioskMenuTabs data={data} />
-                <div
-                  key={`${section}:${selectedProductId ?? ""}`}
-                  className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
-                >
-                  <KioskMenu model={model} />
-                  <KioskCart data={data} model={model} />
-                  <KioskOrders data={data} catalog={catalog} endpoint={endpoint} />
-                  <KioskBilling data={data} call={call} />
-                </div>
-              </Tabs.Root>
-              <ErrorNotice
-                error={
-                  updateCart.error || prepare.error || call.error || language.error || speed.error
+              <VoicePanel
+                view={view}
+                lines={conversationLines(data.events)}
+                events={data.events}
+                catalog={catalog.data}
+                snapshot={data.snapshot}
+                onReview={
+                  data.snapshot?.channel === "gui" || (snapshot && section === "cart")
+                    ? undefined
+                    : () => (snapshot ? setSection("cart") : prepare.mutate())
                 }
+                reviewPending={prepare.isPending}
+                onChoose={choose}
+                onStart={toggleVoice}
+                compactControls
+                controlDisabled={view.status === "stopping" || language.isPending}
+                speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
+                onSpeedChange={(value) => speed.mutate(value)}
+                onMicrophoneChange={(deviceId) => {
+                  void voice.selectMicrophone(deviceId);
+                }}
+                onMicrophoneRefresh={() => {
+                  void voice.refreshMicrophones();
+                }}
               />
-              <div
-                data-theme-part="checkout"
-                className="border-t border-t-border bg-card px-3 py-2 grid grid-cols-5 gap-2 items-center max-lg:grid-cols-1"
+            </ResizablePanel>
+            <ResizableHandle aria-label={t("kiosk_resize_panes")} />
+            <ResizablePanel
+              id="tablecast-order"
+              defaultSize="60%"
+              minSize="30%"
+              maxSize="70%"
+              className="h-full"
+            >
+              <aside
+                data-theme-part="menu"
+                className="isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
               >
-                <Button
-                  variant="ghost"
-                  type="button"
-                  data-ui="basket-total"
-                  className="col-span-2 max-lg:col-span-1 flex min-w-0 items-center gap-2 p-0 text-left h-auto min-h-11 whitespace-normal"
-                  onClick={() => setSection("cart")}
+                <KioskPlanSummary plan={data.plan} />
+                <ErrorNotice error={screen.error} />
+                <Tabs.Root
+                  className="flex flex-col min-h-0 flex-1"
+                  value={section}
+                  onValueChange={(value) => {
+                    if (
+                      value === "menu" ||
+                      value === "cart" ||
+                      value === "orders" ||
+                      value === "bill"
+                    )
+                      setSection(value);
+                  }}
                 >
-                  <ShoppingBag size={20} aria-hidden="true" />
-                  <span className="min-w-0 text-xs leading-normal text-muted-foreground">
-                    {t("kiosk_cart")}
-                    <strong className="block wrap-break-word text-lg leading-normal tracking-tight text-foreground font-semibold">
-                      {money(data.cart.total, locale)}
-                    </strong>
-                  </span>
-                </Button>
-                <Button
-                  variant="default"
-                  size="lg"
-                  type="button"
-                  className="col-span-3 max-lg:col-span-1 min-w-0 justify-between h-11 px-3 whitespace-normal"
-                  disabled={
-                    !!snapshot ||
-                    !data.cart.complete ||
-                    data.cart.lines.length === 0 ||
-                    prepare.isPending ||
-                    updateCart.isPending
+                  <KioskMenuTabs data={data} />
+                  <div
+                    key={`${section}:${selectedProductId ?? ""}`}
+                    className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
+                  >
+                    <KioskMenu model={model} />
+                    <KioskCart data={data} model={model} />
+                    <KioskOrders data={data} catalog={catalog} endpoint={endpoint} />
+                    <KioskBilling data={data} call={call} />
+                  </div>
+                </Tabs.Root>
+                <ErrorNotice
+                  error={
+                    updateCart.error || prepare.error || call.error || language.error || speed.error
                   }
-                  onClick={() => prepare.mutate()}
-                >
-                  {t("kiosk_review")}
-                  <ChevronRight size={20} aria-hidden="true" />
-                </Button>
-              </div>
-            </aside>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+                />
+                <KioskCheckout data={data} model={model} />
+              </aside>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
       </div>
     </StoreTheme>
   );
@@ -493,8 +475,8 @@ function KioskPlanSummary({ plan }: { plan: TableState["plan"] }) {
   const { t, locale } = useI18n();
   if (!plan) return null;
   return (
-    <div className="pt-5 px-5 pb-4 [&_h2]:text-xl [&_h2]:tracking-tight [&_h2]:mt-1 max-lg:px-6">
-      <div className="mt-3 flex justify-between gap-2 text-xs border border-border py-1.5 px-2.5 rounded-sm">
+    <div className="border-b border-border px-4 py-2">
+      <div className="flex flex-wrap justify-between gap-2 text-sm">
         <span>{plan.rules.text[locale].displayName}</span>
         <small className="text-xs text-muted-foreground whitespace-nowrap">
           {t("kiosk_last_order")}{" "}
@@ -594,6 +576,7 @@ function KioskBilling({
           variant="default"
           size="lg"
           type="button"
+          className="h-auto min-h-14 whitespace-normal py-2"
 
           onClick={() => call.mutate(true)}
           disabled={call.isPending}
@@ -611,20 +594,29 @@ function KioskHeader({
   data,
   language,
   call,
+  view,
+  onToggleVoice,
+  voiceDisabled,
 }: {
   logo?: ThemeImage | null;
   storeName?: string;
   data: TableState;
   language: ReturnType<typeof useTableSession>["language"];
   call: ReturnType<typeof useTableSession>["call"];
+  view: VoiceView;
+  onToggleVoice: () => void;
+  voiceDisabled: boolean;
 }) {
   const { t } = useI18n();
   return (
     <header
       data-theme-part="header"
-      className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/80 bg-card/75 shadow-sm shadow-black/5 backdrop-blur-xl px-4 py-2"
+      className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-sm:px-3"
     >
-      <a className="text-xl font-bold tracking-tight" href={data.kind === "demo" ? "#" : "/"}>
+      <a
+        className="text-xl font-bold tracking-tight max-lg:hidden"
+        href={data.kind === "demo" ? "#" : "/"}
+      >
         <Brand />
       </a>
       <StoreLogo logo={logo} />
@@ -632,15 +624,19 @@ function KioskHeader({
         <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
         <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
       </div>
-      <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
       <Button
         variant="outline"
+        className="h-auto min-h-11 whitespace-normal py-2"
         onClick={() => call.mutate(false)}
         disabled={call.isPending || data.staffCalled}
       >
         <Bell />
         {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
       </Button>
+      <div className="[&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-14">
+        <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
+      </div>
+      <VoiceToggle view={view} onStart={onToggleVoice} controlDisabled={voiceDisabled} />
     </header>
   );
 }
@@ -682,7 +678,7 @@ function KioskVisitTools({
   stopVoice: () => Promise<void>;
 }) {
   return (
-    <>
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border bg-card px-4 py-1">
       {data.kind === "table" && (
         <CustomerVisitPanel
           key={data.id}
@@ -697,7 +693,77 @@ function KioskVisitTools({
         players={data.guestCount}
         stopVoice={stopVoice}
       />
-    </>
+    </div>
+  );
+}
+
+function KioskCheckout({
+  data,
+  model,
+}: {
+  data: TableState;
+  model: ReturnType<typeof useTableSession>;
+}) {
+  const { t, locale, snapshot, section, setSection, setSnapshot, prepare, updateCart, submit } =
+    model;
+  const reviewing = snapshot && section === "cart";
+  return (
+    <footer data-theme-part="checkout" className="shrink-0 border-t border-border bg-card p-3">
+      <ErrorNotice error={submit.error} />
+      {reviewing ? (
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            variant="outline"
+            className="h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
+            disabled={submit.isPending}
+            onClick={() => setSnapshot(undefined)}
+          >
+            {t("kiosk_edit")}
+          </Button>
+          <Button
+            className="col-span-2 h-auto min-h-14 min-w-0 whitespace-normal px-3 py-2"
+            disabled={submit.isPending}
+            onClick={() => submit.mutate(snapshot)}
+          >
+            {t("kiosk_confirm")}
+            <Check />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="ghost"
+            type="button"
+            data-ui="basket-total"
+            className="h-auto min-h-14 min-w-0 flex-1 justify-start gap-2 whitespace-normal px-1 py-2 text-left"
+            onClick={() => setSection("cart")}
+          >
+            <ShoppingBag size={20} aria-hidden="true" />
+            <span className="min-w-0 text-sm leading-normal text-muted-foreground">
+              {t("kiosk_cart")}
+              <strong className="block wrap-break-word text-lg font-semibold tracking-tight text-foreground">
+                {money(data.cart.total, locale)}
+              </strong>
+            </span>
+          </Button>
+          <Button
+            type="button"
+            className="h-auto min-h-14 min-w-0 flex-1 justify-between whitespace-normal px-3 py-2"
+            disabled={
+              !snapshot &&
+              (!data.cart.complete ||
+                data.cart.lines.length === 0 ||
+                prepare.isPending ||
+                updateCart.isPending)
+            }
+            onClick={() => (snapshot ? setSection("cart") : prepare.mutate())}
+          >
+            {t("kiosk_review")}
+            <ChevronRight size={20} aria-hidden="true" />
+          </Button>
+        </div>
+      )}
+    </footer>
   );
 }
 
@@ -714,13 +780,11 @@ function KioskCart({
     ordered,
     setOrdered,
     snapshot,
-    setSnapshot,
     confirmationHeading,
     catalog,
     updateCart,
     currentLines,
     edit,
-    submit,
   } = model;
   return (
     <Tabs.Panel value="cart">
@@ -752,25 +816,6 @@ function KioskCart({
           <div className="my-3 flex justify-between text-lg font-semibold">
             <span>{t("common_total")}</span>
             <strong>{money(snapshot.total, locale)}</strong>
-          </div>
-          <ErrorNotice error={submit.error} />
-          <div className="sticky bottom-0 grid grid-cols-3 gap-2 bg-card py-3">
-            <Button
-              variant="outline"
-              className="min-w-0 h-auto min-h-12 whitespace-normal py-2"
-              disabled={submit.isPending}
-              onClick={() => setSnapshot(undefined)}
-            >
-              {t("kiosk_edit")}
-            </Button>
-            <Button
-              className="col-span-2 min-w-0 h-auto min-h-12 whitespace-normal py-2"
-              disabled={submit.isPending}
-              onClick={() => submit.mutate(snapshot)}
-            >
-              {t("kiosk_confirm")}
-              <Check />
-            </Button>
           </div>
         </section>
       ) : (

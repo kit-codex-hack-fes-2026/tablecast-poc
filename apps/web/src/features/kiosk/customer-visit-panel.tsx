@@ -1,7 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { QrCode } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
@@ -52,71 +62,103 @@ export function CustomerVisitPanel({
   const target =
     participants.data?.context?.selectedParticipantId ??
     (participants.data?.participants.length === 1 ? participants.data.participants[0]?.id : null);
+  const selectedPerson = participants.data?.participants.find(
+    (participant) => participant.id === target,
+  );
   return (
-    <section
-      aria-label={t("customer_join_visit")}
-      className="flex shrink-0 items-center justify-between gap-5 border-b bg-card px-5 py-3"
-    >
-      <div className="min-w-0 space-y-2">
-        <p className="font-semibold">{t("customer_scan_phone")}</p>
-        <p className="text-sm text-muted-foreground">{t("customer_scan_hint")}</p>
-        <ul className="flex flex-wrap gap-2">
-          {participants.data?.participants.map((person) => (
-            <li key={person.id}>
-              <Button
-                size="sm"
-                variant={target === person.id ? "default" : "outline"}
-                aria-pressed={target === person.id}
-                disabled={selectTarget.isPending}
-                onClick={() => selectTarget.mutate(person.id)}
-              >
-                {person.name ?? t("customer_anonymous")}
-              </Button>
-            </li>
-          ))}
-        </ul>
-        {!!participants.data?.participants.length && (
-          <div className="flex items-center gap-3 text-sm">
-            <span>{t("customer_target_hint")}</span>
-            {participants.data.participants.length > 1 && (
-              <Button
-                size="sm"
-                variant={!target ? "default" : "outline"}
-                disabled={selectTarget.isPending}
-                onClick={() => selectTarget.mutate(null)}
-              >
-                {t("customer_shared_service")}
-              </Button>
+    <Dialog>
+      <DialogPrimitive.Trigger
+        render={
+          <Button
+            variant="ghost"
+            className="h-auto min-h-11 min-w-0 max-w-full shrink flex-wrap justify-start gap-x-2 gap-y-0 px-1 py-2 text-left whitespace-normal"
+          />
+        }
+      >
+        <QrCode aria-hidden="true" />
+        <span>{t("kiosk_visit_tools")}</span>
+        <span className="text-sm text-muted-foreground">
+          {t("kiosk_service_target")}{" "}
+          <strong className="font-medium text-foreground">
+            {participants.isPending || participants.isError
+              ? t("kiosk_service_unknown")
+              : selectedPerson
+                ? (selectedPerson.name ?? t("customer_anonymous"))
+                : t("kiosk_service_group")}
+          </strong>
+        </span>
+      </DialogPrimitive.Trigger>
+      <DialogContent className="overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{t("kiosk_visit_tools")}</DialogTitle>
+          <DialogClose aria-label={t("common_close")}>×</DialogClose>
+        </DialogHeader>
+        <DialogDescription>{t("customer_scan_hint")}</DialogDescription>
+        <section aria-label={t("customer_join_visit")} className="mt-4 flex flex-col gap-5">
+          <div className="min-w-0 space-y-2">
+            <p className="font-semibold">{t("customer_scan_phone")}</p>
+            <p className="text-sm text-muted-foreground">{t("customer_scan_hint")}</p>
+            <ul className="flex flex-wrap gap-2">
+              {participants.data?.participants.map((person) => (
+                <li key={person.id}>
+                  <Button
+                    size="sm"
+                    className="h-auto min-h-11 whitespace-normal px-3 py-2 text-sm"
+                    variant={target === person.id ? "default" : "outline"}
+                    aria-pressed={target === person.id}
+                    disabled={selectTarget.isPending}
+                    onClick={() => selectTarget.mutate(person.id)}
+                  >
+                    {person.name ?? t("customer_anonymous")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            {!!participants.data?.participants.length && (
+              <div className="flex items-center gap-3 text-sm">
+                <span>{t("customer_target_hint")}</span>
+                {participants.data.participants.length > 1 && (
+                  <Button
+                    size="sm"
+                    className="h-auto min-h-11 whitespace-normal px-3 py-2 text-sm"
+                    variant={!target ? "default" : "outline"}
+                    disabled={selectTarget.isPending}
+                    onClick={() => selectTarget.mutate(null)}
+                  >
+                    {t("customer_shared_service")}
+                  </Button>
+                )}
+              </div>
             )}
+            <ErrorNotice error={selectTarget.error} />
+            <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
           </div>
-        )}
-        <ErrorNotice error={selectTarget.error} />
-        <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
-      </div>
-      <div className="shrink-0">
-        <div className="grid size-28 items-center">
-          {code.data && !code.error ? (
-            <QRCodeSVG
-              value={code.data.url}
-              size={112}
-              marginSize={2}
-              title={t("customer_join_visit")}
-              bgColor="#ffffff"
-              fgColor="#000000"
-            />
-          ) : (
-            <Button
-              className="h-auto min-h-12 whitespace-normal"
-              variant="outline"
-              disabled={code.isPending}
-              onClick={() => createCode()}
-            >
-              {t("customer_show_qr")}
-            </Button>
-          )}
-        </div>
-        <ErrorNotice error={code.error} />
-      </div>
-    </section>
+          <div className="self-center">
+            <div className="grid min-h-48 w-48 items-center justify-center">
+              {code.data && !code.error ? (
+                <QRCodeSVG
+                  value={code.data.url}
+                  size={192}
+                  marginSize={2}
+                  title={t("customer_join_visit")}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
+              ) : (
+                <Button
+                  className="h-auto min-h-12 whitespace-normal"
+                  variant="outline"
+                  disabled={code.isPending}
+                  onClick={() => createCode()}
+                >
+                  {t("customer_show_qr")}
+                </Button>
+              )}
+            </div>
+            <ErrorNotice error={code.error} />
+          </div>
+        </section>
+      </DialogContent>
+    </Dialog>
   );
 }
