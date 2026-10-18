@@ -10,6 +10,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { page, server, userEvent, type Locator } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
 import { EmailAccess } from "./email-access";
 import { Login } from "./login";
 import ja from "../../../messages/ja.json";
@@ -37,7 +38,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en", register = true) {
+async function show(locale: "ja" | "en", register = true, search = "") {
   unexpected = [];
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -50,7 +51,11 @@ async function show(locale: "ja" | "en", register = true) {
   });
   const router = createRouter({
     routeTree: root.addChildren([route]),
-    history: createMemoryHistory({ initialEntries: [register ? "/register" : "/login"] }),
+    parseSearch: parseFlatSearch,
+    stringifySearch: stringifyFlatSearch,
+    history: createMemoryHistory({
+      initialEntries: [`${register ? "/register" : "/login"}${search}`],
+    }),
   });
   await render(
     <QueryClientProvider client={client}>
@@ -60,6 +65,41 @@ async function show(locale: "ja" | "en", register = true) {
     </QueryClientProvider>,
   );
 }
+
+it.each([
+  {
+    label: "内部path・query・hash",
+    search: `?${new URLSearchParams({ returnTo: "/member/tablecast-komorebi?sessionId=visit-1#orders" })}`,
+    destination: `${window.location.origin}/member/tablecast-komorebi?sessionId=visit-1#orders`,
+  },
+  {
+    label: "外部originとして解決される戻り先",
+    search: `?${new URLSearchParams({ returnTo: "/\\external.example.test/path" })}`,
+    destination: "/organisations",
+  },
+  {
+    label: "署名付き同意の繰返しquery",
+    search: "?sig=signed%2Bvalue&ba_param=first&ba_param=second&state=a+b%2Bc",
+    destination: "/consent?sig=signed%2Bvalue&ba_param=first&ba_param=second&state=a+b%2Bc",
+  },
+])("$label: Googleログインは共通の復帰先判定へ渡す", async ({ search, destination }) => {
+  const bodies: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (new URL(request.url).pathname !== "/api/auth/sign-in/social") {
+      unexpected.push(request.url);
+      return Response.json({}, { status: 500 });
+    }
+    bodies.push(await request.json());
+    return Response.json({ url: "", redirect: false });
+  });
+  await show("ja", false, search);
+  await page.getByRole("button", { name: ja.auth_google, exact: true }).click();
+  await expect.poll(() => bodies).toEqual([{ provider: "google", callbackURL: destination }]);
+  await expect
+    .element(page.getByRole("button", { name: ja.auth_google, exact: true }))
+    .toBeEnabled();
+});
 
 async function tabTo(control: Locator) {
   const key =

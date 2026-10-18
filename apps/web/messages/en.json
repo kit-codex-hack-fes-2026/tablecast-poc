@@ -1025,5 +1025,9 @@
   "evaluation_device": "Pair a restaurant table device",
   "evaluation_login_title": "Start with the demo account",
   "evaluation_login_note": "Open the simulated sign-in screen below and select 佐藤 晴香 (Haruka Sato). You do not need a personal Google account, email entry or password.",
-  "evaluation_login_button": "Choose a demo account"
+  "evaluation_login_button": "Choose a demo account",
+  "reward_editor_version": "Editing from revision {version}",
+  "reward_editor_conflict": "The saved settings have changed. Your input has been preserved.",
+  "reward_editor_reload": "Reload saved settings",
+  "reward_editor_reload_note": "Discard unsaved input and selected images, then load the latest settings. Copy any input you need to keep first."
 }
