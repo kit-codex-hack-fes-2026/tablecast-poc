@@ -55,6 +55,12 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 
+### 大量データと背景取得失敗の境界
+
+`voice-realtime.test.ts`は実D1に2,000商品を保存し、公開toolの先頭・隣接ページ・1,000件を超えるoffset・末尾・終端でID、価格、版、続きを示す値、6,000byteの応答上限を確認する。個別詳細の必須選択と不正入力の拒否も残す。ページングはoffsetからの切り出しで状態を持たないため、全250ページで認可・イベント記録・catalog parseを繰り返す負荷試験にはしない。HTTP認証・tenant境界とDB往復予算は既存のAPI試験が所有する。
+
+Accountの保存後再取得失敗は、実QueryClientとHTTP gateを接続したBrowser試験で、保存中の入力停止、保存後の次の入力、既存cacheの保持を確認する。エラー通知は失敗した取得領域の名前付きregionで観測する。ページ全体の通知数やアニメーションの切替時刻を保存成功の条件にしない。
+
 ### localeの保証とComponentの実行
 
 Component jobのBrowser統合とStorybook自動試験は日本語で実行する。Chromium/WebKitの対象とworker枠は従来どおりで、localeとengineを同じ軸にしない。英語Storyは閲覧用カタログに残し、標準の`tags: ["!test"]`で自動実行から除く。英語だけに存在する失敗・再送・読取専用・長文操作は、日本語の自動試験へ移してから除外する。

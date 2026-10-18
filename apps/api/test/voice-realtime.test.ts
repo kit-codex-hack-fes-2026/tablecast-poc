@@ -336,7 +336,7 @@ describe("Responses functionと共通業務の認可", () => {
     await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
     expect((await getTableState(services(), device)).staffCalled).toBe(false);
   });
-  it("有効な2000商品を8件ずつ重複や欠落なく取得し、終端と個別詳細の価格・必須選択を保つ", async () => {
+  it("有効な2000商品の代表ページ境界と終端で価格・出力上限を守り、個別詳細の必須選択を保つ", async () => {
     await setup();
     const base = configuration.products[1];
     if (!base) throw new Error("商品fixtureがありません");
@@ -357,28 +357,31 @@ describe("Responses functionと共通業務の認可", () => {
       detail: z.boolean(),
       products: z.array(z.object({ id: z.string(), price: z.number() })),
     });
-    const received: string[] = [];
-    for (let offset = 0; offset < 2000; offset += 8) {
+    const pages = [
+      { offset: 0, indices: [0, 1, 2, 3, 4, 5, 6, 7], more: true },
+      { offset: 8, indices: [8, 9, 10, 11, 12, 13, 14, 15], more: true },
+      { offset: 1000, indices: [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007], more: true },
+      { offset: 1008, indices: [1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015], more: true },
+      { offset: 1992, indices: [1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999], more: false },
+      { offset: 1999, indices: [1999], more: false },
+      { offset: 2000, indices: [], more: false },
+    ];
+    for (const { offset, indices, more } of pages) {
       const result = await tool("getCatalog", { offset, limit: 8 });
       const page = pageSchema.parse(result.result);
-      expect(page).toMatchObject({ total: 2000, more: offset < 1992, version: 1, detail: false });
-      expect(page.products).toHaveLength(8);
+      expect(page).toEqual({
+        total: 2000,
+        more,
+        version: 1,
+        detail: false,
+        products: indices.map((index) => ({ id: `tablecast-paged-${index}`, price: 100 + index })),
+      });
       expect(new TextEncoder().encode(JSON.stringify(result)).byteLength).toBeLessThan(6000);
-      received.push(...page.products.map((product) => product.id));
     }
-    expect(received).toEqual(products.map((product) => product.id));
-    expect(new Set(received).size).toBe(2000);
-    expect((await tool("getCatalog", { offset: 1999 })).result).toMatchObject({
-      total: 2000,
+    const selected = await tool("getCatalog", { query: "tablecast-paged-1999" });
+    expect(selected.result).toMatchObject({
+      total: 1,
       more: false,
-      products: [{ id: "tablecast-paged-1999", price: 2099 }],
-    });
-    expect((await tool("getCatalog", { offset: 2000 })).result).toMatchObject({
-      total: 2000,
-      more: false,
-      products: [],
-    });
-    expect((await tool("getCatalog", { query: "tablecast-paged-1999" })).result).toMatchObject({
       detail: true,
       version: 1,
       products: [
@@ -398,6 +401,7 @@ describe("Responses functionと共通業務の認可", () => {
         },
       ],
     });
+    expect(new TextEncoder().encode(JSON.stringify(selected)).byteLength).toBeLessThan(6000);
     for (const offset of [-1, 2001, 1.5])
       await expect(tool("getCatalog", { offset })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await expect(tool("getCatalog", { offset: 1008, limit: 9 })).rejects.toMatchObject({
