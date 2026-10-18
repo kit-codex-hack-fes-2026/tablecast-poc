@@ -144,7 +144,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await expect(review).toBeVisible();
     await expect(guest.getByRole("dialog")).toHaveCount(0);
     for (const product of products) await expect(review).toContainText(product.text.en.displayName);
-    await review.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
+    await guest.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
     const orderNotice = guest.getByRole("status").filter({ hasText: en.kiosk_ordered });
     await expect(orderNotice).toBeVisible();
     await orderNotice.getByRole("button", { name: en.common_close, exact: true }).click();

@@ -168,6 +168,7 @@ type VoicePanelProps = {
   onSpeedChange?: (value: number) => void;
   onMicrophoneChange?: (deviceId: string) => void;
   onMicrophoneRefresh?: () => void;
+  compactControls?: boolean;
 };
 
 function useVoicePanel({
@@ -324,6 +325,7 @@ export function VoicePanel({
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
+  compactControls = false,
 }: VoicePanelProps) {
   const {
     locale,
@@ -438,7 +440,11 @@ export function VoicePanel({
                 {t("kiosk_review")}
               </div>
               <p className="whitespace-pre-wrap text-sm">{snapshot.text}</p>
-              <Button className="mt-4 w-full" onClick={onReview} disabled={reviewPending}>
+              <Button
+                className="mt-4 h-auto min-h-14 w-full whitespace-normal py-2"
+                onClick={onReview}
+                disabled={reviewPending}
+              >
                 {t("kiosk_review")}
               </Button>
             </div>
@@ -458,22 +464,23 @@ export function VoicePanel({
                 {debug && typeof event.data.code === "string" && <code>{event.data.code}</code>}
               </output>
             ))}
+          {view.status === "error" && (
+            <output className="rounded-lg bg-destructive/5 p-3 text-sm">
+              <MicOff className="mr-2 inline size-4" />
+              {view.error === "active"
+                ? t("kiosk_voice_already_active")
+                : view.error === "permission"
+                  ? t("kiosk_voice_permission")
+                  : view.error === "unconfigured"
+                    ? t("kiosk_voice_setup")
+                    : t("kiosk_voice_error")}
+              <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
+            </output>
+          )}
+          <MicrophoneNotice error={view.microphone?.error} />
         </ConversationContent>
         <ConversationScrollButton label={t("kiosk_latest")} followLabel={t("kiosk_following")} />
       </Conversation>
-      {view.status === "error" && (
-        <output className="rounded-lg bg-destructive/5 p-3 text-sm">
-          <MicOff className="mr-2 inline size-4" />
-          {view.error === "active"
-            ? t("kiosk_voice_already_active")
-            : view.error === "permission"
-              ? t("kiosk_voice_permission")
-              : view.error === "unconfigured"
-                ? t("kiosk_voice_setup")
-                : t("kiosk_voice_error")}
-          <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
-        </output>
-      )}
       <VoiceControls
         view={view}
         onStart={onStart}
@@ -482,6 +489,7 @@ export function VoicePanel({
         onSpeedChange={onSpeedChange}
         onMicrophoneChange={onMicrophoneChange}
         onMicrophoneRefresh={onMicrophoneRefresh}
+        compactControls={compactControls}
         active={active}
         phase={phase}
         usingTools={usingTools}
@@ -620,6 +628,7 @@ function VoiceControls({
   visualState,
   toolPhase,
   debug,
+  compactControls,
 }: Pick<
   VoicePanelProps,
   | "view"
@@ -629,6 +638,7 @@ function VoiceControls({
   | "onSpeedChange"
   | "onMicrophoneChange"
   | "onMicrophoneRefresh"
+  | "compactControls"
 > &
   Pick<
     ReturnType<typeof useVoicePanel>,
@@ -641,38 +651,39 @@ function VoiceControls({
       data-theme-part="voice-controls"
       className="shrink-0 border-t border-white/80 bg-card/65 px-1 pb-2 pt-1 backdrop-blur-xl"
     >
-      {active ? (
-        <Suspense fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}>
-          <AudioWaveform
-            state={visualState}
-            toolLabel={toolLabel}
-            track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-            label={phase}
-          />
-        </Suspense>
-      ) : (
-        <VoiceIdle label={phase} state={visualState} />
+      {!compactControls &&
+        (active ? (
+          <Suspense
+            fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}
+          >
+            <AudioWaveform
+              state={visualState}
+              toolLabel={toolLabel}
+              track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+              label={phase}
+            />
+          </Suspense>
+        ) : (
+          <VoiceIdle label={phase} state={visualState} />
+        ))}
+      {compactControls && (
+        <div className="flex h-7 items-center">
+          {active && (
+            <Suspense fallback={null}>
+              <AudioWaveform
+                compact
+                state={visualState}
+                toolLabel={toolPhase}
+                track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+                label={phase}
+              />
+            </Suspense>
+          )}
+        </div>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
-          <Button
-            size="lg"
-            className="rounded-[inherit]"
-            variant="voice"
-            onClick={onStart}
-            disabled={controlDisabled}
-          >
-            {active ? <MicOff /> : <Mic />}
-            {view.status === "stopping"
-              ? t("kiosk_voice_stopping")
-              : active
-                ? t("kiosk_voice_stop")
-                : view.status === "error"
-                  ? t("kiosk_voice_retry")
-                  : t("kiosk_voice_resume")}
-          </Button>
-        </span>
-        <div className="flex min-w-48 flex-1 items-center gap-2">
+        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
+        <div className="flex min-w-44 flex-1 items-center gap-2">
           {onSpeedChange && (
             <Slider.Root
               className="flex min-w-32 flex-1 items-center gap-2"
@@ -710,9 +721,37 @@ function VoiceControls({
           )}
         </div>
       </div>
-      <MicrophoneNotice error={view.microphone?.error} />
       {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
     </footer>
+  );
+}
+
+function VoiceToggle({
+  view,
+  onStart,
+  controlDisabled,
+}: Pick<VoicePanelProps, "view" | "onStart" | "controlDisabled">) {
+  const { t } = useI18n();
+  const active =
+    view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
+  return (
+    <span className="inline-flex min-w-0 rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
+      <Button
+        className="h-auto min-h-14 min-w-0 whitespace-normal rounded-[inherit] px-4 py-2 text-left"
+        variant="voice"
+        onClick={onStart}
+        disabled={controlDisabled}
+      >
+        {active ? <MicOff /> : <Mic />}
+        {view.status === "stopping"
+          ? t("kiosk_voice_stopping")
+          : active
+            ? t("kiosk_voice_stop")
+            : view.status === "error"
+              ? t("kiosk_voice_retry")
+              : t("kiosk_voice_resume")}
+      </Button>
+    </span>
   );
 }
 

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cartUpdateSchema,
   uiSectionInputSchema,
+  submitSchema,
   type CartUpdate,
   type TableState,
 } from "@tablecast/api/schema";
@@ -13,6 +14,9 @@ import { LocaleProvider } from "../../i18n/locale";
 import { useRealtime } from "../../lib/use-realtime";
 import { Kiosk } from "./kiosk";
 import ja from "../../../messages/ja.json";
+import en from "../../../messages/en.json";
+import { VoiceConnection } from "./voice-connection";
+import { VoicePanel } from "./voice-panel";
 import "../../styles.css";
 
 // 接続先だけを差し替える。hook、QueryClient、HTTP client、画面は本番実装を使う。
@@ -36,7 +40,11 @@ let unexpected: string[];
 let cartFailure: number;
 let savedCart: TableState["cart"];
 let confirmationDuration: number;
+let selectedParticipant: string | null;
+let participantNames: string[];
 const cartWrites: CartUpdate[] = [];
+const targetWrites: unknown[] = [];
+const orderWrites: ReturnType<typeof submitSchema.parse>[] = [];
 const requests: Request[] = [];
 let initialViewport: { width: number; height: number };
 beforeEach(() => {
@@ -53,8 +61,12 @@ beforeEach(() => {
   unexpected = [];
   requests.length = 0;
   cartWrites.length = 0;
+  targetWrites.length = 0;
+  orderWrites.length = 0;
   cartFailure = 0;
   confirmationDuration = 60_000;
+  selectedParticipant = null;
+  participantNames = [];
   savedCart = structuredClone(table.cart);
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   vi.stubGlobal(
@@ -64,7 +76,21 @@ beforeEach(() => {
       requests.push(request);
       const path = new URL(request.url).pathname;
       if (request.method === "GET" && path === "/api/table/participants")
-        return Response.json({ participants: [], context: null });
+        return Response.json({
+          participants: participantNames.map((name, index) => ({
+            id: `11111111-1111-4111-8111-11111111111${index}`,
+            name,
+          })),
+          context: {
+            selectedParticipantId: selectedParticipant,
+            token: "22222222-2222-4222-8222-222222222222",
+          },
+        });
+      if (request.method === "POST" && path === "/api/table/customer-target") {
+        targetWrites.push(await request.json());
+        selectedParticipant = "11111111-1111-4111-8111-111111111111";
+        return Response.json({ selected: true });
+      }
       if (request.method === "POST" && path === "/api/table/customer-code")
         return Response.json({
           code: "a".repeat(64),
@@ -109,6 +135,16 @@ beforeEach(() => {
         };
         return Response.json(current.snapshot);
       }
+      if (request.method === "POST" && path === "/api/table/orders") {
+        orderWrites.push(submitSchema.parse(await request.json()));
+        current = {
+          ...current,
+          cursor: current.cursor + 1,
+          cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
+          snapshot: null,
+        };
+        return Response.json({ orderId: "tablecast-confirmed-order" });
+      }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
         current = {
@@ -152,7 +188,7 @@ afterEach(async () => {
 
 async function mountKiosk() {
   return render(
-    <LocaleProvider initialLocale="ja" persist={false}>
+    <LocaleProvider initialLocale={current.locale} persist={false}>
       <QueryClientProvider client={client}>
         <Kiosk />
       </QueryClientProvider>
@@ -316,6 +352,221 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
 });
 
 const orderPanel = () => document.getElementById("tablecast-order");
+it.each(["listening", "speaking"] as const)(
+  "%sでは実音声の小さな波形を音声操作バーへ表示し、停止でも操作位置を保つ",
+  async (status) => {
+    await page.viewport(390, 844);
+    const audio = new AudioContext();
+    const oscillator = audio.createOscillator();
+    const destination = audio.createMediaStreamDestination();
+    oscillator.connect(destination);
+    oscillator.start();
+    try {
+      const screen = await render(
+        <button onClick={() => void audio.resume()}>音声入力を開始</button>,
+      );
+      await screen.getByRole("button", { name: "音声入力を開始" }).click();
+      await expect.poll(() => audio.state).toBe("running");
+      const track = destination.stream.getAudioTracks()[0];
+      if (!track) throw new Error("実音声trackが必要です");
+      await screen.rerender(
+        <LocaleProvider initialLocale="ja" persist={false}>
+          <VoicePanel
+            compactControls
+            view={
+              status === "listening"
+                ? { status, inputTrack: track }
+                : { status, outputTrack: track }
+            }
+            lines={[]}
+            onStart={() => {}}
+            speechSpeed={1}
+            onSpeedChange={() => {}}
+            onMicrophoneChange={() => {}}
+            onMicrophoneRefresh={() => {}}
+          />
+        </LocaleProvider>,
+      );
+      const figure = page.getByRole("figure");
+      await expect.element(figure).toBeVisible();
+      expect(figure.element().getBoundingClientRect().width).toBeLessThanOrEqual(80);
+      expect(figure.element().getBoundingClientRect().height).toBeLessThanOrEqual(28);
+      await expect.element(page.getByRole("slider", { name: ja.kiosk_speech_speed })).toBeVisible();
+      const microphone = page.getByRole("button", { name: ja.kiosk_microphone_settings });
+      await expect.element(microphone).toBeVisible();
+      const waveBounds = figure.element().getBoundingClientRect();
+      const stop = page.getByRole("button", { name: ja.kiosk_voice_stop, exact: true });
+      await expect.element(stop).toBeVisible();
+      const controls = stop.element().closest("[data-theme-part=voice-controls]");
+      if (!(controls instanceof HTMLElement)) throw new Error("音声操作バーが必要です");
+      const controlHeight = controls.getBoundingClientRect().height;
+      expect(controls.contains(figure.element())).toBe(true);
+      expect(waveBounds.bottom).toBeLessThanOrEqual(stop.element().getBoundingClientRect().top);
+      expect(stop.element().getBoundingClientRect().left).toBeLessThan(
+        microphone.element().getBoundingClientRect().left,
+      );
+      const canvas = figure.element().querySelector("canvas");
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error("波形canvasが必要です");
+      await expect
+        .poll(() => {
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("波形の描画contextが必要です");
+          return context
+            .getImageData(0, 0, canvas.width, 18)
+            .data.some((value, index) => index % 4 === 3 && value > 0);
+        })
+        .toBe(true);
+      await screen.rerender(
+        <LocaleProvider initialLocale="ja" persist={false}>
+          <VoicePanel
+            compactControls
+            view={{ status: "paused" }}
+            lines={[]}
+            onStart={() => {}}
+            speechSpeed={1}
+            onSpeedChange={() => {}}
+            onMicrophoneChange={() => {}}
+            onMicrophoneRefresh={() => {}}
+          />
+        </LocaleProvider>,
+      );
+      await expect.element(figure).not.toBeInTheDocument();
+      const resume = page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true });
+      await expect.element(resume).toBeVisible();
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBe(controls);
+      expect(controls.getBoundingClientRect().height).toBe(controlHeight);
+    } finally {
+      oscillator.stop();
+      oscillator.disconnect();
+      for (const track of destination.stream.getTracks()) track.stop();
+      await audio.close();
+    }
+  },
+);
+
+it.each(["ja", "en"] as const)(
+  "%sの補助入口と縦横の切替は接客対象・会話・カートを保持する",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    current.locale = locale;
+    current.uiSection = "menu";
+    participantNames = ["Reo", "Alex"];
+    vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
+      {
+        deviceId: "default",
+        groupId: "tablecast-ipad",
+        kind: "audioinput",
+        label: "iPad microphone",
+        toJSON: () => ({}),
+      },
+    ]);
+    const observe = vi.spyOn(VoiceConnection.prototype, "observeMicrophones");
+    await page.viewport(1024, 768);
+    await mountKiosk();
+    const tools = page.getByRole("button", { name: new RegExp(`^${labels.kiosk_visit_tools}`) });
+    await expect.element(tools).toMatchTextContent(labels.kiosk_service_group);
+    const conversation = page
+      .getByRole("region", { name: labels.kiosk_conversation, exact: true })
+      .element();
+    const socket = TablecastSocket.instances[0];
+    const cart = structuredClone(current.cart);
+    const paneWidth = orderPanel()?.getBoundingClientRect().width ?? 0;
+    expect(paneWidth / 1024).toBeGreaterThan(0.58);
+    expect(paneWidth / 1024).toBeLessThan(0.62);
+    await expect
+      .element(page.getByRole("region", { name: labels.customer_join_visit }))
+      .not.toBeInTheDocument();
+    tools.element().focus();
+    await userEvent.keyboard("{Enter}");
+    const dialog = page.getByRole("dialog", { name: labels.kiosk_visit_tools, exact: true });
+    await expect.element(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Alex", exact: true }).click();
+    await expect
+      .element(dialog.getByRole("button", { name: "Alex", exact: true }))
+      .toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("{Escape}");
+    await expect.element(dialog).not.toBeInTheDocument();
+    await expect.element(tools).toHaveFocus();
+    await expect.element(tools).toMatchTextContent("Alex");
+    for (const [width, height] of [
+      [1024, 768],
+      [768, 1024],
+      [390, 844],
+    ]) {
+      await page.viewport(width, height);
+      await expect
+        .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
+        .toHaveAttribute("aria-orientation", width === 1024 ? "vertical" : "horizontal");
+      const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
+      const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
+      expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
+        false,
+      );
+      for (const control of [resume, review]) {
+        await expect.element(control).toBeVisible();
+        const bounds = control.element().getBoundingClientRect();
+        expect(bounds.height).toBeGreaterThanOrEqual(56);
+        expect(bounds.left).toBeGreaterThanOrEqual(0);
+        expect(bounds.right).toBeLessThanOrEqual(width);
+        expect(bounds.bottom).toBeLessThanOrEqual(height);
+      }
+      expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+      await expect
+        .poll(() => {
+          const conversationBounds = conversation.getBoundingClientRect();
+          const orderBounds = orderPanel()?.getBoundingClientRect();
+          if (!orderBounds) throw new Error("注文ペインが必要です");
+          return width === 1024
+            ? conversationBounds.right - orderBounds.left
+            : conversationBounds.bottom - orderBounds.top;
+        })
+        .toBeLessThanOrEqual(2);
+      expect(
+        page.getByRole("region", { name: labels.kiosk_conversation, exact: true }).element(),
+      ).toBe(conversation);
+    }
+    expect(observe).toHaveBeenCalledTimes(1);
+    expect(TablecastSocket.instances).toEqual([socket]);
+    expect(socket.closed).toBe(false);
+    expect(current.cart).toEqual(cart);
+    expect(targetWrites).toEqual([
+      {
+        participantId: "11111111-1111-4111-8111-111111111111",
+        token: "22222222-2222-4222-8222-222222222222",
+      },
+    ]);
+    expect(requests.filter((request) => /\/voice\/(start|stop)$/.test(request.url))).toHaveLength(
+      0,
+    );
+  },
+);
+
+it("注文操作は確認から修正・明示確定へ一箇所で切り替わる", async () => {
+  await page.viewport(1024, 768);
+  await mountKiosk();
+  await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+  await expect.element(page.getByRole("region", { name: ja.kiosk_review_title })).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_review, exact: true }))
+    .not.toBeInTheDocument();
+  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(0);
+  await page.getByRole("button", { name: ja.kiosk_edit, exact: true }).click();
+  await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+  const confirm = page.getByRole("button", { name: ja.kiosk_confirm, exact: true });
+  await expect.element(confirm).toBeEnabled();
+  confirm.element().focus();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(page.getByText(ja.kiosk_ordered, { exact: true })).toBeVisible();
+  expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(1);
+  expect(current.cart.lines).toHaveLength(0);
+  expect(orderWrites).toHaveLength(1);
+  expect(orderWrites[0]?.snapshotId).toBe("tablecast-confirmation");
+  expect(orderWrites[0]?.approved).toBe(true);
+  expect(orderWrites[0]?.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
+});
+
 it("注文ペインの比率をCookieから復元し、縦横の切替でもタブと音声停止を保持する", async () => {
   await page.viewport(1024, 768);
   const screen = await mountKiosk();

@@ -2,6 +2,7 @@ import { expect, type BrowserContext } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { z } from "zod";
+import ja from "../messages/ja.json" with { type: "json" };
 import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import { approveGuestDevice, signInStaff } from "./support/session";
@@ -176,7 +177,9 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       await expect(
         interactive.getByRole("button", { name: "音声を再開", exact: true }),
       ).toBeEnabled();
-      await expect(interactive.locator('[data-voice-state="idle"]')).toBeVisible();
+      await expect(
+        interactive.getByRole("status").filter({ hasText: ja.kiosk_voice_paused }),
+      ).toBeVisible();
       await interactive.evaluate(async () => {
         await document.fonts.ready;
         const viewport = document.getElementById("tablecast-order")?.getBoundingClientRect();
