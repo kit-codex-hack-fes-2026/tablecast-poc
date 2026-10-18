@@ -2,7 +2,7 @@ import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
 import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
 import { webCloudflareConfig } from "../apps/web/cloudflare.config";
 import { z } from "zod";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   bindDeploymentDatabase,
   deploymentOptions,
@@ -34,8 +34,34 @@ const input = {
   CF_ACCESS_CLIENT_ID: "tablecast-access-id",
   CF_ACCESS_CLIENT_SECRET: "tablecast-access-secret",
 };
+afterEach(() => vi.unstubAllEnvs());
 
 describe("本番とPRの配備境界", () => {
+  test.each([undefined, ""])("課金設定が未設定または空文字%sなら両機能を無効にする", (value) => {
+    vi.stubEnv("TABLECAST_BILLING_CONFIG", value);
+    const target = deploymentTarget("338");
+    const config = deploymentConfigs(
+      target,
+      "a".repeat(40),
+      "11111111-1111-4111-8111-111111111111",
+    );
+    expect(config.api.vars.TABLECAST_BILLING_ENABLED).toBe("false");
+    expect(config.api.vars.TABLECAST_ORGANIZATION_AI_ENABLED).toBe("false");
+    expect(deploymentSecrets(target, input)).not.toHaveProperty("TABLECAST_STRIPE_SECRET_KEY");
+    expect(deploymentSecrets(target, input)).not.toHaveProperty("TABLECAST_OPENAI_ADMIN_API_KEY");
+  });
+
+  test("空文字でない不正な課金設定は配備を拒否する", () => {
+    vi.stubEnv("TABLECAST_BILLING_CONFIG", "{");
+    expect(() =>
+      deploymentOptions(
+        deploymentTarget("338"),
+        "a".repeat(40),
+        "11111111-1111-4111-8111-111111111111",
+      ),
+    ).toThrow(SyntaxError);
+  });
+
   test("配備時に指定した業務モデルを優先し既存のAPIキーを維持する", () => {
     const secrets = deploymentSecrets(deploymentTarget("104"), {
       ...input,

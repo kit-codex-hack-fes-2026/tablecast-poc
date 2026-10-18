@@ -23,7 +23,7 @@ function billingDeploymentVars(environment: string) {
   const values =
     z
       .record(z.string(), z.record(z.string(), z.string()))
-      .parse(JSON.parse(process.env.TABLECAST_BILLING_CONFIG ?? "{}"))[environment] ?? {};
+      .parse(JSON.parse(process.env.TABLECAST_BILLING_CONFIG || "{}"))[environment] ?? {};
   return Object.fromEntries(
     tablecastBillingVars.flatMap((key) => (values[key] === undefined ? [] : [[key, values[key]]])),
   );
