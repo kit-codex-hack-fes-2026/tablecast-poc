@@ -106,7 +106,7 @@ export function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="w-full aspect-square overflow-hidden rounded-md bg-muted flex items-center justify-center">
+            <span className="w-full max-w-64 self-center aspect-square overflow-hidden rounded-md bg-muted flex items-center justify-center">
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"

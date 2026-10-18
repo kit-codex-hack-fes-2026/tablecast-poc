@@ -381,7 +381,7 @@ function TableSession({
           <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
           <ResizablePanelGroup
             orientation={horizontal ? "horizontal" : "vertical"}
-            className="min-h-144 flex-1 max-sm:flex-col!"
+            className="min-h-128 flex-1 max-sm:flex-col!"
             defaultLayout={defaultLayout}
             onLayoutChanged={onLayoutChanged}
           >
