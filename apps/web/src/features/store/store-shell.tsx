@@ -81,7 +81,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
       header={
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{t(group)}</span>
-          {inMenu && (
+          {inMenu && !pathname.endsWith("/menu/history") && (
             <Badge variant="outline">{t(draftId ? "demo_draft" : "demo_published")}</Badge>
           )}
         </div>

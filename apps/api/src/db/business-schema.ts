@@ -79,6 +79,7 @@ export const configReleases = sqliteTable(
     version: integer("version").notNull(),
     config_json: text("config_json").notNull(),
     published_by: text("published_by").notNull(),
+    source_draft_id: text("source_draft_id"),
     created_at: integer("created_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.store_id, table.version] })],
@@ -232,6 +233,7 @@ export const configDrafts = sqliteTable("config_drafts", {
   errors_json: text("errors_json").notNull().default("[]"),
   created_by: text("created_by").notNull(),
   publish_key: text("publish_key"),
+  restored_from_version: integer("restored_from_version"),
   created_at: integer("created_at").notNull(),
   updated_at: integer("updated_at").notNull(),
 });

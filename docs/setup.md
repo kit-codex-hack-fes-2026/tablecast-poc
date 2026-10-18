@@ -326,3 +326,5 @@ React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実
 組織課金を開発する場合は [課金・請求の導入手順](billing.md#開発と導入) を参照する。`bun run dev:config` はAPI用の `.local/.dev.vars` とWeb用の `.local/.dev.vars.web` を分け、従来のWeb symlinkが同じworktreeのAPI設定を指す場合だけ生成先を更新する。
 
 Viteの開発起動ではAPIを補助Workerとして同時実行するため、`envDir`を自worktreeの`.local`に揃える。Cloudflare Viteプラグインは同じローカル設定を全Workerで参照し、各Workerが宣言したbindingだけを渡す。APIの認証・決済のsecretをWebのbindingへ追加しない。build・previewはこの開発用envDir切替の対象外とし、配備用のsecret管理を維持する。
+
+`0027_tablecast_configuration_history.sql`は公開版の作成元下書き、下書きの復元元公開版を保存するnullable列と履歴読取用indexを追加する。既存の設定・注文・履歴は書き換えず、過去の由来はNULLのまま保持する。APIの更新前に既存のmigration経路で適用する。追加列はNULLを許容し、旧版で作られた行に由来を推測して補完しない。

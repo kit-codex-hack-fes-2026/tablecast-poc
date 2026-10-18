@@ -1,4 +1,10 @@
-import type { Catalog, Product, TableState, StatisticsResult } from "@tablecast/api/schema";
+import type {
+  Catalog,
+  Product,
+  TableState,
+  StatisticsResult,
+  ConfigurationHistoryPage,
+} from "@tablecast/api/schema";
 
 const text = (ja: string, en: string) => ({
   ja: {
@@ -197,3 +203,58 @@ export const statisticsFixture = {
   definitions: {},
   limitations: [],
 } satisfies StatisticsResult;
+
+export const configurationHistoryFixture = {
+  publishedVersion: 2,
+  nextCursor: null,
+  entries: [
+    {
+      kind: "release",
+      id: "2",
+      version: 2,
+      baseVersion: null,
+      sourceDraftId: "tablecast-published-draft",
+      restoredFromVersion: null,
+      status: "published",
+      at: 1792357200000,
+      actorId: "tablecast-staff",
+      actorName: "佐藤 晴香",
+    },
+    {
+      kind: "draft",
+      id: "tablecast-published-draft",
+      version: 3,
+      baseVersion: 1,
+      sourceDraftId: null,
+      restoredFromVersion: null,
+      status: "published",
+      at: 1792357200000,
+      actorId: "tablecast-staff",
+      actorName: "佐藤 晴香",
+    },
+    {
+      kind: "draft",
+      id: "tablecast-discarded-draft",
+      version: 2,
+      baseVersion: 1,
+      sourceDraftId: null,
+      restoredFromVersion: null,
+      status: "discarded",
+      at: 1792357100000,
+      actorId: "tablecast-staff",
+      actorName: "佐藤 晴香",
+    },
+    {
+      kind: "release",
+      id: "1",
+      version: 1,
+      baseVersion: null,
+      sourceDraftId: null,
+      restoredFromVersion: null,
+      status: "published",
+      at: 1792270800000,
+      actorId: "tablecast-staff",
+      actorName: "佐藤 晴香",
+    },
+  ],
+} satisfies ConfigurationHistoryPage;

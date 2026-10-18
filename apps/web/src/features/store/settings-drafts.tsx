@@ -93,6 +93,8 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
     client.setQueryData(draftOptions(storeId, draftId).queryKey, next);
     void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
     void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
+    void client.invalidateQueries({ queryKey: ["tablecast-configuration-history", storeId] });
+    void client.invalidateQueries({ queryKey: ["tablecast-configuration-release", storeId] });
   }
   const validate = useMutation({
     mutationFn: () => {

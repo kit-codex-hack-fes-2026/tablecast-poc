@@ -43,12 +43,17 @@ export {
   configurationSchema,
   draftChoicesPageSchema,
   conditionPreviewSchema,
+  configurationHistoryPageSchema,
+  configurationReleaseSchema,
 } from "./modules/configuration/model";
 export type {
   Catalog,
   ConfigDraft,
   Configuration,
   ConfigurationIssue,
+  ConfigurationHistoryEntry,
+  ConfigurationHistoryPage,
+  ConfigurationRelease,
 } from "./modules/configuration/model";
 export {
   billSchema,

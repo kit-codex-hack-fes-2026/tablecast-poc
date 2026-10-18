@@ -1,5 +1,5 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { FileClock, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
+import { FileClock, History, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
 
 import { menuLabels, menuReviewSearchSchema } from "../store/menu-model";
@@ -12,10 +12,12 @@ const items = [
 export function MenuNavigation({
   storeId,
   draftId,
+  manager,
   onNavigate,
 }: {
   storeId: string;
   draftId?: string;
+  manager: boolean;
   onNavigate?: () => void;
 }) {
   const { t } = useI18n();
@@ -79,6 +81,17 @@ export function MenuNavigation({
         <FileClock className="size-4" />
         {t("admin_drafts")}
       </Link>
+      {manager && (
+        <Link
+          to="/admin/stores/$storeId/menu/history"
+          params={{ storeId }}
+          className={className}
+          onClick={onNavigate}
+        >
+          <History className="size-4" />
+          {t("configuration_history_title")}
+        </Link>
+      )}
     </nav>
   );
 }

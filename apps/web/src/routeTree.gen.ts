@@ -50,6 +50,7 @@ import { Route as AdminStoresStoreIdDevicesNewRouteImport } from './routes/admin
 import { Route as AdminStoresStoreIdInvitationsIndexRouteImport } from './routes/admin.stores.$storeId.invitations.index'
 import { Route as AdminStoresStoreIdInvitationsNewRouteImport } from './routes/admin.stores.$storeId.invitations.new'
 import { Route as AdminStoresStoreIdMenuSectionRouteImport } from './routes/admin.stores.$storeId.menu.$section'
+import { Route as AdminStoresStoreIdMenuHistoryRouteImport } from './routes/admin.stores.$storeId.menu.history'
 import { Route as AdminStoresStoreIdVisitsIndexRouteImport } from './routes/admin.stores.$storeId.visits.index'
 import { Route as AdminStoresStoreIdVisitsSessionIdRouteImport } from './routes/admin.stores.$storeId.visits.$sessionId'
 import { Route as AdminStoresStoreIdDemoDemoIdRouteImport } from './routes/admin.stores.$storeId_.demo_.$demoId'
@@ -280,6 +281,12 @@ const AdminStoresStoreIdMenuSectionRoute =
     path: '/menu/$section',
     getParentRoute: () => AdminStoresStoreIdRoute,
   } as any)
+const AdminStoresStoreIdMenuHistoryRoute =
+  AdminStoresStoreIdMenuHistoryRouteImport.update({
+    id: '/menu/history',
+    path: '/menu/history',
+    getParentRoute: () => AdminStoresStoreIdRoute,
+  } as any)
 const AdminStoresStoreIdVisitsIndexRoute =
   AdminStoresStoreIdVisitsIndexRouteImport.update({
     id: '/visits/',
@@ -375,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -424,6 +432,7 @@ export interface FileRoutesByTo {
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId/demo/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -477,6 +486,7 @@ export interface FileRoutesById {
   '/admin/stores/$storeId/devices/new': typeof AdminStoresStoreIdDevicesNewRoute
   '/admin/stores/$storeId/invitations/new': typeof AdminStoresStoreIdInvitationsNewRoute
   '/admin/stores/$storeId/menu/$section': typeof AdminStoresStoreIdMenuSectionRoute
+  '/admin/stores/$storeId/menu/history': typeof AdminStoresStoreIdMenuHistoryRoute
   '/admin/stores/$storeId/visits/$sessionId': typeof AdminStoresStoreIdVisitsSessionIdRoute
   '/admin/stores/$storeId_/demo_/$demoId': typeof AdminStoresStoreIdDemoDemoIdRoute
   '/admin/stores/$storeId/devices/': typeof AdminStoresStoreIdDevicesIndexRoute
@@ -531,6 +541,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices/'
@@ -580,6 +591,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId/demo/$demoId'
     | '/admin/stores/$storeId/devices'
@@ -632,6 +644,7 @@ export interface FileRouteTypes {
     | '/admin/stores/$storeId/devices/new'
     | '/admin/stores/$storeId/invitations/new'
     | '/admin/stores/$storeId/menu/$section'
+    | '/admin/stores/$storeId/menu/history'
     | '/admin/stores/$storeId/visits/$sessionId'
     | '/admin/stores/$storeId_/demo_/$demoId'
     | '/admin/stores/$storeId/devices/'
@@ -956,6 +969,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStoresStoreIdMenuSectionRouteImport
       parentRoute: typeof AdminStoresStoreIdRoute
     }
+    '/admin/stores/$storeId/menu/history': {
+      id: '/admin/stores/$storeId/menu/history'
+      path: '/menu/history'
+      fullPath: '/admin/stores/$storeId/menu/history'
+      preLoaderRoute: typeof AdminStoresStoreIdMenuHistoryRouteImport
+      parentRoute: typeof AdminStoresStoreIdRoute
+    }
     '/admin/stores/$storeId/visits/': {
       id: '/admin/stores/$storeId/visits/'
       path: '/visits'
@@ -1072,6 +1092,7 @@ interface AdminStoresStoreIdRouteChildren {
   AdminStoresStoreIdDevicesNewRoute: typeof AdminStoresStoreIdDevicesNewRoute
   AdminStoresStoreIdInvitationsNewRoute: typeof AdminStoresStoreIdInvitationsNewRoute
   AdminStoresStoreIdMenuSectionRoute: typeof AdminStoresStoreIdMenuSectionRoute
+  AdminStoresStoreIdMenuHistoryRoute: typeof AdminStoresStoreIdMenuHistoryRoute
   AdminStoresStoreIdVisitsSessionIdRoute: typeof AdminStoresStoreIdVisitsSessionIdRoute
   AdminStoresStoreIdDevicesIndexRoute: typeof AdminStoresStoreIdDevicesIndexRoute
   AdminStoresStoreIdInvitationsIndexRoute: typeof AdminStoresStoreIdInvitationsIndexRoute
@@ -1097,6 +1118,7 @@ const AdminStoresStoreIdRouteChildren: AdminStoresStoreIdRouteChildren = {
   AdminStoresStoreIdDevicesNewRoute: AdminStoresStoreIdDevicesNewRoute,
   AdminStoresStoreIdInvitationsNewRoute: AdminStoresStoreIdInvitationsNewRoute,
   AdminStoresStoreIdMenuSectionRoute: AdminStoresStoreIdMenuSectionRoute,
+  AdminStoresStoreIdMenuHistoryRoute: AdminStoresStoreIdMenuHistoryRoute,
   AdminStoresStoreIdVisitsSessionIdRoute:
     AdminStoresStoreIdVisitsSessionIdRoute,
   AdminStoresStoreIdDevicesIndexRoute: AdminStoresStoreIdDevicesIndexRoute,

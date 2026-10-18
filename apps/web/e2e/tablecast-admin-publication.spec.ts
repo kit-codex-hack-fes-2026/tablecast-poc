@@ -1,5 +1,10 @@
 import { expect } from "@playwright/test";
-import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import {
+  adminStateSchema,
+  catalogSchema,
+  configDraftSchema,
+  configurationReleaseSchema,
+} from "@tablecast/api/schema";
 import { test } from "./support/test";
 import { approveGuestDevice, signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
@@ -83,6 +88,41 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
     await kiosk.reload();
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+
+    const original = configurationReleaseSchema.parse(
+      await (await staff.get(`${api}/configuration/releases/${catalog.version}`)).json(),
+    );
+    await page.goto(`/admin/stores/${storeId}/menu/history`);
+    await page
+      .getByRole("button", {
+        name: ja.configuration_history_release.replace("{version}", String(catalog.version)),
+        exact: true,
+      })
+      .click();
+    await page.getByRole("button", { name: ja.configuration_history_use, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: ja.configuration_history_confirm, exact: true }),
+    ).toBeVisible();
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+    await page.getByRole("button", { name: ja.configuration_history_create, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/stores/${storeId}/menu/changes/[^/]+$`));
+    await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
+    await page.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+    const restoreConfirmation = page.getByRole("dialog", {
+      name: ja.workflow_publish_title,
+      exact: true,
+    });
+    await expect(restoreConfirmation).toBeVisible();
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+    await restoreConfirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+    await expect(restoreConfirmation).toHaveCount(0);
+    await expect(guestProduct).toContainText(money(product.price, "ja"));
+    const restoredCatalog = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
+    expect(restoredCatalog.version).toBe(catalog.version + 2);
+    const savedOriginal = configurationReleaseSchema.parse(
+      await (await staff.get(`${api}/configuration/releases/${catalog.version}`)).json(),
+    );
+    expect(savedOriginal.configuration).toEqual(original.configuration);
   } finally {
     await guest.close();
   }

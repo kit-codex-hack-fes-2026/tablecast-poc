@@ -245,6 +245,7 @@ function SidebarNavigation({
                 </Collapsible.Trigger>
                 <Collapsible.Panel>
                   <MenuNavigation
+                    manager={manager}
                     storeId={selectedStore}
                     draftId={draftId}
                     onNavigate={onNavigate}

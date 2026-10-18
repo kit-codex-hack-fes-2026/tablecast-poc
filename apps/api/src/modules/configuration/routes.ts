@@ -3,9 +3,18 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate, validateQuery } from "../../platform/validation";
-import { configurationSchema, draftChoicesQuerySchema, conditionPreviewSchema } from "./model";
+import {
+  configurationSchema,
+  draftChoicesQuerySchema,
+  conditionPreviewSchema,
+  configurationHistoryQuerySchema,
+  configurationRestoreSchema,
+} from "./model";
 import {
   createDraft,
+  getConfigurationHistory,
+  getConfigurationRelease,
+  restoreConfigurationRelease,
   discardDraft,
   getDraft,
   listDrafts,
@@ -18,6 +27,32 @@ import {
 const versionSchema = z.object({ expectedVersion: z.number().int().nonnegative() }).strict();
 
 export const configurationAdminRoutes = new Hono<ApiEnv>()
+  .get("/configuration/history", validateQuery(configurationHistoryQuerySchema), async (c) =>
+    c.json(await getConfigurationHistory(c.var.services, c.var.actor, c.req.valid("query")), 200),
+  )
+  .get("/configuration/releases/:version", async (c) =>
+    c.json(
+      await getConfigurationRelease(c.var.services, c.var.actor, Number(c.req.param("version"))),
+      200,
+    ),
+  )
+  .post(
+    "/configuration/releases/:version/restore",
+    validate(configurationRestoreSchema),
+    async (c) =>
+      c.json(
+        instructionResponse(
+          await restoreConfigurationRelease(
+            c.var.services,
+            c.var.actor,
+            Number(c.req.param("version")),
+            c.req.valid("json"),
+          ),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
+        200,
+      ),
+  )
   .post("/conditions/preview", validate(conditionPreviewSchema), (c) =>
     c.json(previewConditions(c.get("actor"), c.req.valid("json")), 200),
   )
