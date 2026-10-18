@@ -1,6 +1,11 @@
 import type { Locale } from "@tablecast/api/schema";
-import { Button } from "../components/ui/button";
+import { Button } from "./ui/button";
 import { useI18n } from "../i18n/locale";
+
+const languages = [
+  { locale: "ja", flag: "jp", label: "common_language_native_ja" },
+  { locale: "en", flag: "gb", label: "common_language_native_en" },
+] as const;
 
 export function LanguageSwitch({
   onChange,
@@ -13,43 +18,30 @@ export function LanguageSwitch({
   return (
     <fieldset
       data-ui="language-switch"
-      className="flex p-1 bg-muted border border-border rounded-lg shrink-0"
+      className="flex shrink-0 rounded-lg border border-border bg-muted p-1"
       aria-label={t("common_language")}
     >
-      <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
-        variant="ghost"
-        type="button"
-        lang="ja"
-        aria-pressed={locale === "ja"}
-        disabled={disabled}
-        onClick={() => onChange("ja")}
-      >
-        <img
-          className="w-5 h-3.5 object-cover rounded-sm border border-border"
-          src="/flags/jp.svg"
-          alt=""
-          aria-hidden="true"
-        />
-        {t("common_language_native_ja")}
-      </Button>
-      <Button
-        className="min-h-11 py-2 px-2.5 rounded-md text-sm font-semibold inline-flex items-center gap-2 [&[aria-pressed='true']]:bg-card [&[aria-pressed='true']]:shadow-sm max-xl:px-2 max-lg:flex-1 max-sm:text-sm max-sm:px-1.5"
-        variant="ghost"
-        type="button"
-        lang="en"
-        aria-pressed={locale === "en"}
-        disabled={disabled}
-        onClick={() => onChange("en")}
-      >
-        <img
-          className="w-5 h-3.5 object-cover rounded-sm border border-border"
-          src="/flags/gb.svg"
-          alt=""
-          aria-hidden="true"
-        />
-        {t("common_language_native_en")}
-      </Button>
+      {languages.map((language) => (
+        <Button
+          key={language.locale}
+          className="whitespace-nowrap font-semibold aria-pressed:bg-card aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
+          size="sm"
+          variant="ghost"
+          type="button"
+          lang={language.locale}
+          aria-pressed={locale === language.locale}
+          disabled={disabled}
+          onClick={() => onChange(language.locale)}
+        >
+          <img
+            className="h-3.5 w-5 rounded-sm border border-border object-cover"
+            src={`/flags/${language.flag}.svg`}
+            alt=""
+            aria-hidden="true"
+          />
+          {t(language.label)}
+        </Button>
+      ))}
     </fieldset>
   );
 }

@@ -51,7 +51,7 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
               void navigate({
                 to: "/admin/stores/$storeId/design",
                 params: { storeId: store.id },
-                search: { draftId: id },
+                search: (previous) => ({ ...previous, draftId: id }),
               })
             }
           />

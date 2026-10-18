@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { createContext, useContext, useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -10,6 +10,7 @@ import { storesOptions } from "./store-query";
 import { apiError } from "../../lib/api-error";
 import { ConfigurationRouteStatus } from "../shell/configuration-status";
 import { AdminShell } from "../shell/admin-shell";
+import { useConfigurationRoute } from "../shell/configuration-route";
 
 const StoreContext = createContext<{
   id: string;
@@ -26,7 +27,7 @@ export function useStore() {
 export function StoreShell({ storeId }: { storeId: string }) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const inMenu = useRouterState({ select: (state) => state.location.pathname.includes("/menu/") });
+  const { active: inMenu, draftId } = useConfigurationRoute();
   const stores = useQuery(storesOptions);
   const store = stores.data?.stores.find((item) => item.id === storeId);
   useEffect(() => {
@@ -42,7 +43,12 @@ export function StoreShell({ storeId }: { storeId: string }) {
       storeId={storeId}
       header={
         store && inMenu ? (
-          <ConfigurationRouteStatus key={storeId} storeId={storeId} storeName={store.name} />
+          <ConfigurationRouteStatus
+            key={storeId}
+            storeId={storeId}
+            storeName={store.name}
+            draftId={draftId}
+          />
         ) : (
           (store?.name ?? t("admin_store"))
         )

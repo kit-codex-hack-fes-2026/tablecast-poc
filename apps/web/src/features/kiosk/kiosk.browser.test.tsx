@@ -367,6 +367,15 @@ it("日本語の文字を2倍にしても縦横画面で音声操作と注文確
   );
   const review = screen.getByRole("button", { name: labels.kiosk_review, exact: true });
   await expect.element(review).toBeEnabled();
+  for (const button of [
+    review,
+    screen.getByRole("button", { name: labels.kiosk_voice_resume, exact: true }),
+  ])
+    expect(button.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(56);
+  for (const name of [labels.kiosk_edit, labels.common_remove])
+    expect(
+      screen.getByRole("button", { name, exact: true }).element().getBoundingClientRect().height,
+    ).toBeGreaterThanOrEqual(44);
   // 実機zoomとは区別し、固定pxを含む各テキストのcomputed sizeを2倍にする。
   const sizes = [...document.querySelectorAll<HTMLElement>("body *")]
     .filter((element) =>
@@ -408,6 +417,11 @@ it("日本語の文字を2倍にしても縦横画面で音声操作と注文確
       }
     }
   }
+  for (const name of ["日本語", "English"]) {
+    const language = screen.getByRole("button", { name, exact: true }).element();
+    expect(language.scrollWidth).toBeLessThanOrEqual(language.clientWidth + 2);
+    expect(getComputedStyle(language).whiteSpace).toBe("nowrap");
+  }
   await review.click();
   await expect
     .element(screen.getByRole("region", { name: labels.kiosk_review_title, exact: true }))
@@ -417,6 +431,7 @@ it("日本語の文字を2倍にしても縦横画面で音声操作と注文確
   if (!(control instanceof HTMLElement)) throw new Error("確認操作がHTML要素ではありません");
   control.style.fontSize = `${Number.parseFloat(getComputedStyle(control).fontSize) * 2}px`;
   await expect.element(confirm).toBeEnabled();
+  expect(control.getBoundingClientRect().height).toBeGreaterThanOrEqual(56);
   expect(control.scrollWidth).toBeLessThanOrEqual(control.clientWidth + 2);
   expect(control.scrollHeight).toBeLessThanOrEqual(control.clientHeight + 2);
   await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();

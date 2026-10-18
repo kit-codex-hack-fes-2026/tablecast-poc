@@ -1,6 +1,5 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { skipToken, useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 import { Check, FilePenLine, LoaderCircle, TriangleAlert } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
@@ -80,11 +79,12 @@ export function ConfigurationStatus({
 export function ConfigurationRouteStatus({
   storeId,
   storeName,
+  draftId,
 }: {
   storeId: string;
   storeName: string;
+  draftId?: string;
 }) {
-  const { draftId } = useParams({ strict: false });
   const catalog = useQuery(catalogOptions(storeId));
   const draft = useQuery({
     ...draftOptions(storeId, draftId ?? ""),

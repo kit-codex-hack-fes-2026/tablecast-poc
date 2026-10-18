@@ -758,14 +758,16 @@ function KioskCart({
           <div className="sticky bottom-0 grid grid-cols-3 gap-2 bg-card py-3">
             <Button
               variant="outline"
-              className="min-w-0 h-auto min-h-12 whitespace-normal py-2"
+              size="lg"
+              className="min-w-0"
               disabled={submit.isPending}
               onClick={() => setSnapshot(undefined)}
             >
               {t("kiosk_edit")}
             </Button>
             <Button
-              className="col-span-2 min-w-0 h-auto min-h-12 whitespace-normal py-2"
+              size="lg"
+              className="col-span-2 min-w-0"
               disabled={submit.isPending}
               onClick={() => submit.mutate(snapshot)}
             >

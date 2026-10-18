@@ -30,7 +30,7 @@ export function MenuNavigation({
   return (
     <nav className="ml-4 space-y-1 border-l border-border pl-3" aria-label={t("admin_config")}>
       <div className="py-2">
-        <ConfigurationRouteStatus storeId={storeId} storeName="" />
+        <ConfigurationRouteStatus storeId={storeId} storeName="" draftId={draftId} />
       </div>
       {items.map(({ section, Icon }) =>
         draftId ? (
@@ -62,7 +62,7 @@ export function MenuNavigation({
       <Link
         to="/admin/stores/$storeId/design"
         params={{ storeId }}
-        search={{ draftId }}
+        search={{ ...listSearch, returnSection: currentSection, draftId }}
         className={className}
         onClick={onNavigate}
       >

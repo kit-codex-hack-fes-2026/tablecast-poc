@@ -656,7 +656,8 @@ function VoiceControls({
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
           <Button
-            className="h-11 rounded-[inherit]"
+            size="lg"
+            className="rounded-[inherit]"
             variant="voice"
             onClick={onStart}
             disabled={controlDisabled}

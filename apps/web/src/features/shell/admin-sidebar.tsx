@@ -2,7 +2,7 @@ import { Brand } from "../../components/brand";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useHydrated, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { Link, useHydrated, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
@@ -34,6 +34,7 @@ import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
 import { MenuNavigation } from "./menu-navigation";
+import { useConfigurationRoute } from "./configuration-route";
 import { storesOptions, type loadStores } from "../store/store-query";
 
 import { authClient, authResult } from "../../lib/auth-client";
@@ -57,9 +58,7 @@ export function AdminSidebar({
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
   const session = useQuery(sessionOptions);
-  const path = useRouterState({ select: (state) => state.location.pathname });
-  const { draftId } = useParams({ strict: false });
-  const inMenu = path.includes("/menu/") || path.endsWith("/design");
+  const { active: inMenu, draftId } = useConfigurationRoute();
   const navigate = useNavigate();
   const client = useQueryClient();
   const active = authClient.useActiveOrganization();
