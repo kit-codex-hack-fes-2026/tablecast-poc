@@ -35,6 +35,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .wrangler/
 .cloudflare/
 .turbo/
+.fallow/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

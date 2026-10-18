@@ -37,7 +37,7 @@ env:
 
 jobs:
   static:
-    name: "Static Analysis: コード整形・lint・型検査 (Oxfmt, Oxlint, TypeScript)"
+    name: "Static Analysis: コード整形・lint・型検査・fallow (Oxfmt, Oxlint, TypeScript, Fallow)"
     if: ${{ !inputs.catalog_pr || github.ref_name == 'staging' || github.ref_name == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -65,6 +65,10 @@ jobs:
         run: bunx --no-install commitlint --last --verbose
       # lint/typecheckのTurbo依存が共有のi18n出力を復元するため、直列に実行する。
       - run: bun run format:check && bun run lint && bun run typecheck
+      - name: fallowの新規エラー
+        env:
+          TABLECAST_FALLOW_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || 'HEAD^' }}
+        run: bun run fallow:audit --base "$TABLECAST_FALLOW_BASE"
 
   unit-web:
     name: "Unit/Integration: Web・seed・dev-runtime (Vitest)"

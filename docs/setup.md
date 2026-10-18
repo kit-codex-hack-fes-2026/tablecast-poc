@@ -117,12 +117,12 @@ Portlessの共有stateを利用し、個別worktreeから `portless proxy stop` 
 
 Codex Desktopでは作業するworktreeをprojectとして開き、CLIではそのルートから `codex` を起動する。以下は開発者が必要な接続だけを選ぶ手順である。`bun run setup` はアプリ依存・生成物・Git hooksを準備し、agent pluginの導入や外部サービスへのログインは行わない。
 
-| 構成                     | 役割と正本                                                                                                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AGENTS.md`・repo skills | 作業契約と用途別の手順。cloneした [.agents/skills](../.agents/skills) を使う。外部skillの取得元は [skills-lock.json](../skills-lock.json) に記録する             |
-| Agent plugins            | Cloudflare等が配布するskills・MCPのまとまり。CodexのPlugins画面または `codex plugin` で必要なものを導入する                                                      |
-| MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                             |
-| Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
+| 構成                     | 役割と正本                                                                                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`・repo skills | 作業契約と用途別の手順。cloneした [.agents/skills](../.agents/skills) を使う。外部skillの取得元は [skills-lock.json](../skills-lock.json) に記録する                                |
+| Agent plugins            | Cloudflare等が配布するskills・MCPのまとまり。CodexのPlugins画面または `codex plugin` で必要なものを導入する                                                                         |
+| MCP                      | 外部サービスやローカルツールへの接続。plugin同梱設定、または利用者の `.codex/config.toml` で管理する                                                                                |
+| Git hooks                | [lefthook.yml](../lefthook.yml) のcommit時format/lint・fallow検査。`bun run setup` が導入し、修復は `bun run hooks:install`。検証の分担は [静的解析](static-analysis.md) を参照する |
 
 repo skillsは個人のglobal skillsへコピーしない。同じ外部skillをpluginとglobal配置の両方から導入済みなら、取得元と適用対象を確認して一方を選ぶ。各タスクでは `AGENTS.md` の入口から必要なskill本文と参照先を読む。skillsの所有・更新は [静的解析](static-analysis.md#skillsと追加pluginの所有) に従う。
 
@@ -140,11 +140,14 @@ MCPはCodexが動くホストから接続する。Dev Container内でCLIを動�
 | Grafana local   | LGTM起動後に設定例の `tablecast-grafana-local` を追加する。ホストはDocker、Dev Container内は同梱binaryを使う                                                                       |
 | Grafana Cloud   | `tablecast-grafana-cloud` を追加する。Viewer service account tokenを `.local/tablecast-grafana-read-token` に保存し、権限を `600` にする。送信用tokenは流用しない                  |
 | Storybook       | `bun run storybook` を起動し、[開発環境のMCP手順](development.md#storybook-mcp)に従って実際のportを登録する。`docs-list`・`docs-show`で確認する                                    |
+| fallow          | `bun run setup`後に`tablecast-fallow`を追加し、設定例の`cwd`をCodexが動くホストのworktree絶対パスへ置き換える。`project_info`で対象workspaceと入口を確認する。OAuthは不要          |
 | TableCast local | [ローカルMCP手順](codex-plugin.md#ローカル接続)でworktreeのURLを`tablecast-local`へ登録し、OAuth後に`get_configuration`とローカルfixtureを照合する。plugin生成は配布検証時だけ行う |
 
 Cloudflare pluginはskillsと `https://mcp.cloudflare.com/mcp` のStreamable HTTP接続を同梱する。同じserverを手動で二重登録しない。pluginが利用できずMCPだけを登録する場合は設定例のコメントを参照し、`codex mcp login tablecast-cloudflare` で認可する。cfのCLI認証とは別である。CLIでpluginを導入する場合は `codex plugin list` で現在のMarketplace識別子を確認してから `codex plugin add <plugin>@<marketplace>` を使う。[Cloudflare公式手順](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)を参照する。
 
 Grafanaは公式 `grafana/mcp-grafana:2.0.2` をstdio・`--disable-write`で起動し、Cloud資格は `GRAFANA_SERVICE_ACCOUNT_TOKEN_FILE` から読む。設定例はホスト開発ならホスト上、Dev Container開発ならコンテナ内のCodexから使う。接続先解決とtokenの渡し方は既存の `scripts/tablecast-grafana-mcp.ts` が担う。初回のtool一覧・Loki読取と接続の詳細は [観測手順](observability.md#ローカル起動とmcp)へ進む。Cloud用資格がない場合はlocalだけを設定する。
+
+fallow MCPは`bun --no-env-file x --no-install --package fallow fallow-mcp`で、worktreeへ導入した固定版をstdio起動する。ネットワークから別版を自動取得せず、`.env.local`の秘密値を解析へ読み込まない。CLI・CIと同じ`.fallowrc.json`を使い、アプリ・Docker・有料モデルを起動せずに解析する。登録後はtools/listと`project_info`を実際に呼び、対象rootを照合する。全体解析の`bun run fallow`と差分検査の`bun run fallow:audit`、commit前の判定は[静的解析](static-analysis.md#fallow)を参照する。
 
 ### Codex CloudのPRレビュー
 

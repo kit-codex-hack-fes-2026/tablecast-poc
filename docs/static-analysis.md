@@ -17,6 +17,7 @@
 | oxlint.config.ts                                 | 小さな共通ルールとWeb/API/testのoverride                 |
 | oxfmt.config.ts                                  | TS/JSON/Markdown等の統一した整形                         |
 | lefthook.yml                                     | 段階的な検証、部分stageの保全                            |
+| .fallowrc.json                                   | 未使用コード・依存・複雑度・重複の解析と差分gate         |
 | apps/webのtsconfig / Vite / Storybook            | クライアントとSSR、部品試験                              |
 | apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration                            |
 
@@ -83,18 +84,41 @@ rootの`format`・`format:check`はリポジトリ全体を一度だけ処理し
 
 ## Lefthook
 
-pre-commitは変更ファイルへのformat/lint、commit-msgはコミット規約を検査する。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
+pre-commitは変更ファイルへのformat/lintとfallowの差分検査、commit-msgはコミット規約を検査する。formatと解析のgroupを並列実行し、解析はcodegenを一度完了してからlintとfallowを並列実行する。生成中のParaglideを読まず、codegenの失敗もcommitを止める。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
 部分stageを壊さない。`git add .` や無関係な差分の自動stageは禁止。formatterの自動stageを使う場合は部分stageを保全できる挙動を先に検証する。
 pre-pushは設定せず、push時に全体検証を繰り返さない。無課金の全体検証はCIで実行し、ローカルで必要な場合は `bun run check` を使う。
 commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文・Issue参照必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
 失敗時の `--no-verify`、skip、全ignoreを通常手順にしない。起動した別worktreeのGit設定を変更しない。
+
+## fallow
+
+rootの開発依存へ固定したfallowを、CLI・Lefthook・CI・Codex MCPで共有する。解析設定の正本は[.fallowrc.json](../.fallowrc.json)とする。Oxfmt・Oxlint・型検査を維持し、fallowはリポジトリ全体のimport graphから未使用コード・依存・循環参照を検出する。型付き解析、有料のruntime解析、モデルを使う類似コード検出は初期導入では有効化しない。
+
+```sh
+# 全体の指摘を調べる。commit・CIの成否はauditで判定する。
+bun run fallow
+# branchの変更と現在の作業ツリーを統合先と比較する。
+bun run fallow:audit --base origin/staging
+# 今回のcommit前の変更を検査する。pre-commitもこの比較を使う。
+bun run fallow:audit --base HEAD --quiet
+```
+
+auditは`gate: new-only`で比較元にも同じ解析を行い、新規のerrorだけを失敗させる。既存の指摘は文脈として残す。複雑度のcyclomatic・cognitive・CRAPは`warn`、重複は標準の報告のみとし、予算超過による失敗閾値を設定しない。他のruleは導入版の標準severityを使う。終了コード0はpass/warn、1は新規エラー、2等は設定・実行の不備であり、`|| true`で解析失敗を隠さない。[audit](https://fallow.tools/docs/cli/audit/)と[severity](https://fallow.tools/docs/configuration/rules/)を参照する。
+
+fallowを直接実行すると作業ツリーを解析するため、未stage差分も判定へ影響する。Lefthookは部分stageされたファイルの未stage差分を標準機能で一時退避して復元するが、stage対象外のファイルの未stage変更はauditへ影響する。pre-commit全体がindexだけのsnapshot検査になるわけではない。自動修正・baselineの自動更新・自動stageは行わず、実行後のindexと未stage差分を維持する。CIはcheckoutしたcommitを対象とし、PRはbase SHA、pushは変更前SHA、手動実行は`HEAD^`を比較元にする。比較元が存在しない場合も検査を失敗させる。
+
+TanStack Router・Storybook・Vitest等の入口は標準pluginに任せる。静的importに現れないService Worker、CLI設定、shell経由の開発CLI、コピーして使う動画CSS、ローカルMCPの入口だけを`entry`へ補う。WorkersのDurable Object RPCで使う`start`・`notify`は、呼出し元を確認したうえで`DurableObject`継承に限定した`usedClassMembers`に登録する。生成型・route tree・Paraglideは解析対象から除き、第三者skillsは標準の隠しディレクトリ除外に従う。`.fallow/`のcacheはGit管理しない。
+
+設定の名前から動的にロードする`eslint-import-resolver-typescript`、実ファイルパスで呼ぶ`@tablecast/typescript-native`、shellへ渡すコマンド文字列の`portless`は、実際の設定・package scriptsに使用があるため`ignoreDependencies`へ限定登録する。名前を消すときは使用側も確認し、他の未使用依存を一括除外しない。
+
+削除・依存整理の前に`bunx --no-install fallow list --format json`でworkspaceと入口を確認し、`dead-code --trace`やMCPのtrace系toolで利用元を追う。誤検知は実入口や具体的なframework呼出しを補い、手書きのsrc全体をentryやignoreへ追加して通さない。既存の指摘はIssueへ記録して別途判断する。Codexからの起動は[セットアップ](setup.md#mcp設定の配置と確認)へ進む。
 
 ## 依存・CI
 
 Bun/Nodeの必要バージョン、lockfile、Wrangler/Vite/Cloudflare Vitestの互換組合せを最初の接続ゲートで固定する。
 CIはbun.lockの存在を検査し、frozen指定で導入する。未知の最新バージョンを毎回bunxで取得して検査を変えない。
 通常はroot scriptからローカル導入済みCLIを起動する。workspace同士はworkspace依存を使い、同じ依存の不要な二重pinを増やさない。
-Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複数の同種静的ツールを一括必須化しない。
+未使用コード・重複の解析はfallowへ集約し、同じ目的でKnipやjscpdを重ねない。
 生成型・migrationの差分を確認する。デプロイ、seed、reset、外部モデルの実行はTurbo cacheの再利用対象にしない。
 
 ## Webの追加ルール
