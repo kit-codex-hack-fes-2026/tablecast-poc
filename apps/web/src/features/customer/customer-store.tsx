@@ -1,15 +1,25 @@
 import { CustomerVisits } from "./customer-visits";
 import { customerConsentVersion } from "@tablecast/api/schema";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
+import { ErrorNotice } from "../../components/error-notice";
+import { LoadingState } from "../../components/loading-state";
 import { useAppForm } from "../../components/form";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { customerStoreOptions } from "./customer-query";
+import { customerPointsOptions } from "./customer-points-query";
+import { customerCouponsOptions } from "./customer-coupons-query";
 
 const membershipDate = {
   ja: new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo" }),
@@ -44,7 +54,7 @@ export function CustomerConsent({
     },
   });
   return (
-    <section className="space-y-5 rounded-2xl border p-6">
+    <section className="space-y-5 border-t pt-6">
       <h2 className="text-xl font-semibold">{t("customer_consent_title")}</h2>
       <p className="leading-relaxed text-muted-foreground">{t("customer_consent_intro")}</p>
       <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed">
@@ -75,54 +85,127 @@ export function CustomerStore({ storeId }: { storeId: string }) {
   const { data } = useSuspenseQuery(customerStoreOptions(storeId));
   const { t, locale } = useI18n();
   return (
-    <div className="space-y-8">
-      <section className="space-y-5 rounded-2xl bg-primary p-7 text-primary-foreground">
-        <p className="text-sm">{t("customer_card")}</p>
-        <h1 className="text-3xl font-semibold">{data.store.name}</h1>
+    <div key={storeId} className="space-y-9">
+      <header className="space-y-3 border-b pb-6">
+        <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
+        <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere">{data.store.name}</h1>
         {data.membership?.active && (
-          <p className="text-sm">
-            {t("customer_since")} {membershipDate[locale].format(data.membership.joinedAt)}
-          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="font-medium text-success">{t("customer_membership_active")}</span>
+            <span className="text-muted-foreground">
+              {t("customer_since")} {membershipDate[locale].format(data.membership.joinedAt)}
+            </span>
+          </div>
         )}
-      </section>
+      </header>
       {data.membership?.active ? (
         <>
-          <nav className="grid grid-cols-2 gap-3">
+          <CustomerBenefits key={storeId} storeId={storeId} />
+          <CustomerVisits storeId={storeId} />
+          <nav aria-label={t("customer_personal_records")} className="divide-y border-y">
             <Link
-              className="rounded-xl border p-4 font-medium"
+              className="flex min-h-14 items-center justify-between gap-4 py-3 font-medium hover:text-primary"
               to="/member/$storeId/memories"
               params={{ storeId }}
             >
               {t("customer_memories")}
+              <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
             <Link
-              className="rounded-xl border p-4 font-medium"
+              className="flex min-h-14 items-center justify-between gap-4 py-3 font-medium hover:text-primary"
               to="/member/$storeId/consumption"
               params={{ storeId }}
             >
               {t("customer_consumption")}
-            </Link>
-            <Link
-              className="rounded-xl border p-4 font-medium"
-              to="/member/$storeId/points"
-              params={{ storeId }}
-            >
-              {t("customer_points")}
-            </Link>
-            <Link
-              to="/member/$storeId/coupons"
-              params={{ storeId }}
-              className="rounded-lg border px-4 py-3 font-medium"
-            >
-              {t("coupons")}
+              <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
           </nav>
-          <CustomerVisits storeId={storeId} />
-          <CustomerPreferences key={data.membership.id} data={data} />
+          <details className="group">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+              {t("customer_preferences")}
+              <ChevronDown aria-hidden className="size-4 group-open:rotate-180" />
+            </summary>
+            <CustomerPreferences key={data.membership.id} data={data} />
+          </details>
         </>
       ) : (
         <CustomerConsent storeId={storeId} />
       )}
+    </div>
+  );
+}
+
+function CustomerBenefits({ storeId }: { storeId: string }) {
+  const { t, locale } = useI18n();
+  const points = useInfiniteQuery(customerPointsOptions(storeId));
+  const coupons = useInfiniteQuery(customerCouponsOptions(storeId));
+  const recentCoupons = coupons.data?.pages.flatMap((page) => page.coupons).slice(0, 2);
+  return (
+    <div className="grid gap-8 sm:grid-cols-2">
+      <section aria-labelledby="customer-balance-title" className="space-y-3">
+        <h2 id="customer-balance-title" className="text-sm font-medium text-muted-foreground">
+          {t("customer_points_balance")}
+        </h2>
+        {points.isPending ? (
+          <LoadingState />
+        ) : (
+          points.data && (
+            <p className="text-4xl font-semibold tracking-tight tabular-nums">
+              {points.data.pages[0]?.balance.toLocaleString(locale)}{" "}
+              <span className="text-base font-medium">pt</span>
+            </p>
+          )
+        )}
+        <ErrorNotice
+          error={points.error}
+          onRetry={() => void points.refetch()}
+          retrying={points.isFetching}
+        />
+        <Link
+          to="/member/$storeId/points"
+          params={{ storeId }}
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
+        >
+          {t("customer_points_history")}
+          <ArrowRight aria-hidden className="size-4 shrink-0" />
+        </Link>
+      </section>
+      <section aria-labelledby="customer-coupons-title" className="space-y-3">
+        <h2 id="customer-coupons-title" className="text-sm font-medium text-muted-foreground">
+          {t("customer_owned_coupons")}
+        </h2>
+        {coupons.isPending ? (
+          <LoadingState />
+        ) : (
+          <ul className="space-y-3">
+            {recentCoupons?.map((coupon) => (
+              <li key={coupon.id} className="space-y-1">
+                <p className="font-medium wrap-anywhere">{coupon.rules.title[locale]}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t(`coupon_${coupon.state}`)}
+                  {!coupon.inDate && ` · ${t("coupon_expired")}`}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        {recentCoupons?.length === 0 && !coupons.error && (
+          <p className="text-sm text-muted-foreground">{t("customer_owned_coupons_empty")}</p>
+        )}
+        <ErrorNotice
+          error={coupons.error}
+          onRetry={() => void coupons.refetch()}
+          retrying={coupons.isFetching}
+        />
+        <Link
+          to="/member/$storeId/coupons"
+          params={{ storeId }}
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:text-primary"
+        >
+          {t("customer_coupons_and_rewards")}
+          <ArrowRight aria-hidden className="size-4 shrink-0" />
+        </Link>
+      </section>
     </div>
   );
 }
@@ -183,8 +266,7 @@ function CustomerPreferences({ data }: { data: CustomerStoreData }) {
     },
   });
   return (
-    <section className="space-y-6">
-      <h2 className="text-xl font-semibold">{t("customer_preferences")}</h2>
+    <section className="space-y-6 pt-4">
       <form
         className="space-y-4"
         onSubmit={(event) => {

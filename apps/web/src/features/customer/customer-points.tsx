@@ -13,21 +13,29 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
   const data = query.data.pages[0];
   return (
     <article className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t("customer_points")}</h1>
-      <p className="text-4xl font-semibold">
-        {data?.balance ?? 0} <span className="text-lg">pt</span>
-      </p>
-      <p>{t("customer_points_no_expiry")}</p>
+      <header className="space-y-4 border-b pb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("customer_points")}</h1>
+        <p className="text-sm text-muted-foreground">{t("customer_points_balance")}</p>
+        <p className="text-4xl font-semibold tracking-tight tabular-nums">
+          {(data?.balance ?? 0).toLocaleString(locale)}{" "}
+          <span className="text-base font-medium">pt</span>
+        </p>
+        <p className="text-sm text-muted-foreground">{t("customer_points_no_expiry")}</p>
+      </header>
       {(data?.balance ?? 0) < 0 && <p>{t("customer_points_negative")}</p>}
       <p className="text-sm text-muted-foreground">{t("customer_points_allocation_note")}</p>
-      <dl className="space-y-2">
-        <div className="flex justify-between">
+      <dl className="space-y-3 text-sm">
+        <div className="flex justify-between gap-4">
           <dt>{t("customer_points_visits")}</dt>
-          <dd>{data?.totals.visits ?? 0}</dd>
+          <dd className="shrink-0 tabular-nums">
+            {(data?.totals.visits ?? 0).toLocaleString(locale)}
+          </dd>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-4">
           <dt>{t("customer_points_purchase")}</dt>
-          <dd>¥{data?.totals.allocatedYen ?? 0}</dd>
+          <dd className="shrink-0 tabular-nums">
+            ¥{(data?.totals.allocatedYen ?? 0).toLocaleString(locale)}
+          </dd>
         </div>
       </dl>
       <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
@@ -43,7 +51,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
                   {dates[locale].format(entry.createdAt)}
                 </small>
               </span>
-              <strong>
+              <strong className="shrink-0 tabular-nums">
                 {entry.delta > 0 ? "+" : ""}
                 {entry.delta} pt
               </strong>

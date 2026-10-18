@@ -33,8 +33,12 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
   });
   return (
     <article className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t("customer_memories")}</h1>
-      <p className="text-muted-foreground">{t("customer_memories_note")}</p>
+      <header className="space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("customer_memories")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t("customer_memories_note")}
+        </p>
+      </header>
       <Button onClick={() => setEditing(null)}>{t("customer_memory_add")}</Button>
       {editing !== undefined && (
         <MemoryEditor
@@ -45,11 +49,11 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
         />
       )}
       <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
-      <ul className="space-y-4">
+      <ul className="divide-y border-y">
         {records.data.pages.flatMap((page) =>
           page.memories.map((memory) => (
-            <li key={memory.id} className="space-y-3 rounded-xl border p-4">
-              <p className="whitespace-pre-wrap">{memory.content}</p>
+            <li key={memory.id} className="space-y-3 py-5">
+              <p className="whitespace-pre-wrap wrap-anywhere">{memory.content}</p>
               <p className="text-sm text-muted-foreground">
                 {t(
                   memory.sourceKind === "voice"
@@ -58,7 +62,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
                 )}{" "}
                 · {memoryDates[locale].format(memory.createdAt)}
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setEditing(memory)}>
                   {t("customer_edit")}
                 </Button>
@@ -75,12 +79,14 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
         )}
       </ul>
       {!records.data.pages[0]?.memories.length && <p>{t("common_empty")}</p>}
-      <ActionFeedback
-        pending={remove.isPending}
-        error={remove.error}
-        success={remove.isSuccess}
-        successMessage={t("account_saved")}
-      />
+      {!remove.isIdle && (
+        <ActionFeedback
+          pending={remove.isPending}
+          error={remove.error}
+          success={remove.isSuccess}
+          successMessage={t("account_saved")}
+        />
+      )}
       {records.hasNextPage && (
         <Button
           variant="outline"

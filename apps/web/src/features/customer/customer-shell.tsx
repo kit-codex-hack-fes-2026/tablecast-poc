@@ -7,18 +7,29 @@ import { useI18n } from "../../i18n/locale";
 export function CustomerShell({ children }: { children: ReactNode }) {
   const { t, setLocale } = useI18n();
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-2xl space-y-8 px-5 py-6 sm:px-8">
-      <header className="flex items-center justify-between gap-4">
-        <Link to="/member">
-          <Brand />
+    <main className="mx-auto min-h-dvh w-full max-w-2xl space-y-6 px-5 pb-12 pt-5 sm:px-8 sm:pt-8">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <Link to="/member" className="inline-flex min-h-11 items-center">
+          <Brand variant="symbol" />
         </Link>
         <LanguageSwitch onChange={setLocale} />
       </header>
-      <nav aria-label={t("customer_navigation")} className="flex items-center gap-5 text-sm">
-        <Link to="/member" className="underline underline-offset-4">
+      <nav
+        aria-label={t("customer_navigation")}
+        className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 border-b pb-2 text-sm"
+      >
+        <Link
+          to="/member"
+          className="inline-flex min-h-11 items-center font-medium hover:text-primary"
+          activeOptions={{ exact: true }}
+          activeProps={{ className: "text-primary" }}
+        >
           {t("customer_title")}
         </Link>
-        <Link to="/account" className="text-muted-foreground underline underline-offset-4">
+        <Link
+          to="/account"
+          className="inline-flex min-h-11 items-center text-muted-foreground hover:text-foreground"
+        >
           {t("customer_account")}
         </Link>
       </nav>

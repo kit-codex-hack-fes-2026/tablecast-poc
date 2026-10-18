@@ -5,9 +5,13 @@ import { Button } from "../../components/ui/button";
 import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
 import { customerMembershipsOptions } from "./customer-query";
+const dates = {
+  ja: new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo" }),
+  en: new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo" }),
+};
 
 export function CustomerMemberships() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const memberships = useSuspenseInfiniteQuery(customerMembershipsOptions);
   const data = memberships.data.pages.flatMap((page) => page.memberships);
   return (
@@ -17,19 +21,21 @@ export function CustomerMemberships() {
         <p className="text-muted-foreground">{t("customer_intro")}</p>
       </div>
       {data.length ? (
-        <ul className="space-y-4">
+        <ul className="divide-y border-y">
           {data.map((membership) => (
             <li key={membership.id}>
               <Link
                 to="/member/$storeId"
                 params={{ storeId: membership.storeId }}
-                className="flex min-h-28 items-center justify-between gap-4 rounded-2xl border bg-card p-6 text-card-foreground shadow-sm"
+                className="flex min-h-24 items-center justify-between gap-4 py-5 hover:text-primary"
               >
-                <div>
-                  <p className="text-lg font-semibold">{membership.name}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{t("customer_card")}</p>
+                <div className="min-w-0">
+                  <p className="text-lg font-semibold wrap-anywhere">{membership.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t("customer_since")} {dates[locale].format(membership.joinedAt)}
+                  </p>
                 </div>
-                <ArrowUpRight aria-hidden className="size-5" />
+                <ArrowUpRight aria-hidden className="size-5 shrink-0" />
               </Link>
             </li>
           ))}
