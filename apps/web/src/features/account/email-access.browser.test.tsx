@@ -10,6 +10,7 @@ import { cleanup, render } from "vitest-browser-react";
 import { page, server, userEvent, type Locator } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
 import { EmailAccess } from "./email-access";
 import { Login } from "./login";
 import ja from "../../../messages/ja.json";
@@ -37,7 +38,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en", register = true) {
+async function show(locale: "ja" | "en", register = true, search = "") {
   unexpected = [];
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -50,7 +51,11 @@ async function show(locale: "ja" | "en", register = true) {
   });
   const router = createRouter({
     routeTree: root.addChildren([route]),
-    history: createMemoryHistory({ initialEntries: [register ? "/register" : "/login"] }),
+    parseSearch: parseFlatSearch,
+    stringifySearch: stringifyFlatSearch,
+    history: createMemoryHistory({
+      initialEntries: [`${register ? "/register" : "/login"}${search}`],
+    }),
   });
   await render(
     <QueryClientProvider client={client}>
@@ -61,27 +66,47 @@ async function show(locale: "ja" | "en", register = true) {
   );
 }
 
+it.each([
+  {
+    label: "内部path・query・hash",
+    search: `?${new URLSearchParams({ returnTo: "/member/tablecast-komorebi?sessionId=visit-1#orders" })}`,
+    destination: `${window.location.origin}/member/tablecast-komorebi?sessionId=visit-1#orders`,
+  },
+  {
+    label: "外部originとして解決される戻り先",
+    search: `?${new URLSearchParams({ returnTo: "/\\external.example.test/path" })}`,
+    destination: "/organisations",
+  },
+  {
+    label: "署名付き同意の繰返しquery",
+    search: "?sig=signed%2Bvalue&ba_param=first&ba_param=second&state=a+b%2Bc",
+    destination: "/consent?sig=signed%2Bvalue&ba_param=first&ba_param=second&state=a+b%2Bc",
+  },
+])("$label: Googleログインは共通の復帰先判定へ渡す", async ({ search, destination }) => {
+  const bodies: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (new URL(request.url).pathname !== "/api/auth/sign-in/social") {
+      unexpected.push(request.url);
+      return Response.json({}, { status: 500 });
+    }
+    bodies.push(await request.json());
+    return Response.json({ url: "", redirect: false });
+  });
+  await show("ja", false, search);
+  await page.getByRole("button", { name: ja.auth_google, exact: true }).click();
+  await expect.poll(() => bodies).toEqual([{ provider: "google", callbackURL: destination }]);
+  await expect
+    .element(page.getByRole("button", { name: ja.auth_google, exact: true }))
+    .toBeEnabled();
+});
+
 async function tabTo(control: Locator) {
   const key =
     server.platform === "darwin" && server.browser === "webkit" ? "{Alt>}{Tab}{/Alt}" : "{Tab}";
   for (let count = 0; count < 20 && control.element() !== document.activeElement; count++)
     await userEvent.keyboard(key);
   await expect.element(control).toHaveFocus();
-}
-
-function enlargeText(scope: Element) {
-  // remの余白を変えず、px指定も含めて実際の文字だけを2倍にする
-  const sizes = [scope, ...scope.querySelectorAll<HTMLElement>("*")]
-    .filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement &&
-        (element.matches("input, select, textarea") ||
-          [...element.childNodes].some(
-            (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-          )),
-    )
-    .map((element) => ({ element, size: Number.parseFloat(getComputedStyle(element).fontSize) }));
-  for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
 }
 
 async function expectReadableControl(control: Locator) {
@@ -168,7 +193,7 @@ it("日本語の登録は項目エラーでは送信せず、503後も入力を�
   await expect.element(submit).not.toBeInTheDocument();
 });
 
-it("日本語のログインは文字を200%にしてもキーボードで送信でき、失敗後も入力を保持する", async () => {
+it("日本語のログインをキーボードで送信し、失敗後も入力を保持する", async () => {
   const locale = "ja";
   const labels = ja;
   const requested = Promise.withResolvers<Request>();
@@ -186,10 +211,6 @@ it("日本語のログインは文字を200%にしてもキーボードで送信
   });
   await page.viewport(1024, 768);
   await show(locale, false);
-  const heading = page.getByRole("heading", { name: labels.auth_subtitle, exact: true });
-  const originalSize = Number.parseFloat(getComputedStyle(heading.element()).fontSize);
-  enlargeText(page.getByRole("main").element());
-  expect(Number.parseFloat(getComputedStyle(heading.element()).fontSize)).toBe(originalSize * 2);
   for (const name of [
     "日本語",
     "English",

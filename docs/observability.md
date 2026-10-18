@@ -124,6 +124,12 @@ quantile_over_time(0.95,
 
 PR #63の基盤に続く集計は#64、音声とLiveKit hostedは#65、Mastra hostedは#66、Containersインフラ指標は#67で管理する。
 
+## Container指標の環境選択
+
+PR previewとstagingのAPIは5分ごとにContainer指標を収集する。配備設定が生成する対象は `tablecast-api-pr-<PR番号>-tablecastemulate` と `tablecast-api-staging-tablecastemulate` で、収集処理はこの命名規約だけを受け付ける。従来のproduction名とvoice名の検証も維持する。現在のproduction設定はContainerと収集Cronを生成しない。
+
+`tablecast-containers.json` と `tablecast-operations.json` の環境選択から `staging` を選ぶ。更新したJSONはGrafanaへ再importする。stagingのPR番号属性は `prod` なので、PR番号の絞り込みは既定の `.*` または `prod` を使い、環境属性でproductionと区別する。
+
 ## 顧客情報・会話本文の収集切替
 
 `TABLECAST_OTEL_CAPTURE_CONTENT=true`で業務操作の入出力、顧客情報、会話、SQLと例外の詳細を収集する。`false`または未設定では従来の許可した運用属性だけを送る。認証資格・Cookie・APIキー・bindingの秘密値は常に除去する。previewとprodはユーザー指定により有効とし、prodの設定は暫定運用である。

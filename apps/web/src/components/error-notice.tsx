@@ -49,11 +49,11 @@ export function ErrorNotice({
       : undefined;
   return (
     <div
-      className="flex items-start gap-2.5 py-3 px-3.5 rounded-md text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0 text-destructive bg-destructive/10"
+      className="flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
       role="alert"
     >
-      <AlertCircle size={20} aria-hidden="true" />
-      <div>
+      <AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" />
+      <div className="min-w-0 flex-1 wrap-anywhere">
         <span>{message}</span>
         {validation?.success && validation.data.length > 0 && (
           <ul className="mt-2 list-disc pl-5">
@@ -68,6 +68,7 @@ export function ErrorNotice({
       </div>
       {onRetry && (
         <Button
+          className="ml-auto"
           size="text"
           variant="link"
           type="button"

@@ -3,15 +3,16 @@ import { BookOpen, Blocks, KeyRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "../../i18n/locale";
 import { SettingsShell } from "../shell/settings-shell";
+import { PageHeader } from "../../components/page-header";
 
 export function IntegrationsShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   return (
     <SettingsShell>
-      <h1 className="text-2xl font-semibold">{t("mcp_sessions")}</h1>
+      <PageHeader title={t("mcp_sessions")} />
       <nav
         aria-label={t("mcp_sessions")}
-        className="flex gap-2 overflow-x-auto border-b border-border"
+        className="flex flex-wrap gap-x-4 gap-y-1 border-b border-border"
       >
         {[
           {
@@ -29,7 +30,7 @@ export function IntegrationsShell({ children }: { children: ReactNode }) {
           <Link
             key={to}
             to={to}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 border-transparent px-3 text-base data-[status=active]:border-primary data-[status=active]:font-semibold"
+            className="inline-flex min-h-11 min-w-0 items-center gap-2 border-b-2 border-transparent py-2 text-sm data-[status=active]:border-primary data-[status=active]:font-semibold [&_svg]:shrink-0"
           >
             <Icon className="size-5" />
             {t(label)}

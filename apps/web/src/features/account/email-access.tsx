@@ -1,9 +1,8 @@
-import { Brand } from "../../components/brand";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
-import { LanguageSwitch } from "../../components/language-switch";
+import { AuthLayout } from "./auth-layout";
 import { useI18n } from "../../i18n/locale";
 
 import { authClient, authResult } from "../../lib/auth-client";
@@ -42,20 +41,24 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
     },
   });
   return (
-    <main className="mx-auto max-w-md space-y-6 px-6 py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <a href="/" className="text-2xl font-semibold">
-          <Brand />
+    <AuthLayout
+      title={t(register ? "auth_register" : "auth_reset")}
+      onLocaleChange={setLocale}
+      footer={
+        <a
+          className="inline-flex min-h-11 items-center underline underline-offset-4"
+          href={callbackURL}
+        >
+          {t("auth_sign_in")}
         </a>
-        <LanguageSwitch onChange={setLocale} />
-      </header>
-      <h1 className="text-2xl font-semibold">{t(register ? "auth_register" : "auth_reset")}</h1>
+      }
+    >
       {submit.isSuccess ? (
         <output>{t(token ? "account_saved" : "auth_check_email")}</output>
       ) : (
         <form
           noValidate
-          className="space-y-4"
+          className="space-y-5 [&_[type=submit]]:w-full"
           onSubmit={(event) => {
             event.preventDefault();
             void form.handleSubmit();
@@ -112,9 +115,6 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
           )}
         </form>
       )}
-      <a className="block text-base underline" href={callbackURL}>
-        {t("auth_sign_in")}
-      </a>
-    </main>
+    </AuthLayout>
   );
 }

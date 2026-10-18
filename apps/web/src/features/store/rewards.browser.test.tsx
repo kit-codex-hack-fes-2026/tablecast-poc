@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { couponDefinitionSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -60,8 +61,10 @@ it("券面をアップロードして出所と二言語の交換ルールをフ�
       });
     }
     if (path === `${api}/coupons/rules`) {
-      rules.push(await request.json());
-      return Response.json({ saved: true });
+      const value = await request.json();
+      rules.push(value);
+      const saved = couponDefinitionSchema.pick({ id: true, expectedVersion: true }).parse(value);
+      return Response.json({ id: saved.id, version: saved.expectedVersion + 1 });
     }
     throw new Error(`未定義の要求: ${path}`);
   });

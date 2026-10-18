@@ -274,7 +274,7 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   router.history.back();
   await screen.getByRole("tab", { name: labels.floor_list, exact: true }).click();
   await expect
-    .element(screen.getByRole("columnheader", { name: labels.admin_elapsed, exact: true }))
+    .element(screen.getByRole("columnheader", { name: labels.common_status, exact: true }))
     .toBeVisible();
   await screen.getByRole("tab", { name: labels.floor_timeline, exact: true }).click();
   await screen.getByRole("button", { name: labels.floor_previous, exact: true }).click();

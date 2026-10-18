@@ -1,11 +1,12 @@
 import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Check, ImageOff, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
+import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -68,25 +69,25 @@ export function MenuOverview({
         <ArrowLeft />
         {t(menuLabels[section])}
       </Button>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {item?.text[locale].displayName ?? t(menuLabels[section])}
-        </h1>
-        {(role === "owner" || role === "admin") && (
-          <StartConfigurationEditing
-            key={storeId}
-            section={section}
-            itemId={itemId}
-            onSelect={(draftId) =>
-              void navigate({
-                to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
-                params: { storeId, draftId, section, itemId },
-                search,
-              })
-            }
-          />
-        )}
-      </div>
+      <PageHeader
+        title={item?.text[locale].displayName ?? t(menuLabels[section])}
+        actions={
+          (role === "owner" || role === "admin") && (
+            <StartConfigurationEditing
+              key={storeId}
+              section={section}
+              itemId={itemId}
+              onSelect={(draftId) =>
+                void navigate({
+                  to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+                  params: { storeId, draftId, section, itemId },
+                  search,
+                })
+              }
+            />
+          )
+        }
+      />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
@@ -262,7 +263,7 @@ function ProductDetails({ product }: { product: Configuration["products"][number
   );
 }
 
-function ProductSummary({
+export function ProductSummary({
   product,
   categories,
 }: {
@@ -271,8 +272,8 @@ function ProductSummary({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div className="flex flex-wrap items-center gap-5">
-      {product.imageKey && (
+    <div className="flex flex-wrap items-center gap-5 rounded-xl bg-secondary/50 p-5">
+      {product.imageKey ? (
         <ProductImage
           width={160}
           height={160}
@@ -281,8 +282,16 @@ function ProductSummary({
           src={`/media/${product.imageKey}`}
           alt={product.text[locale].displayName}
         />
+      ) : (
+        <div
+          className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"
+          role="img"
+          aria-label={t("editor_image_empty")}
+        >
+          <ImageOff className="size-5" aria-hidden="true" />
+        </div>
       )}
-      <div className="space-y-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
         <span className="block text-2xl font-semibold tabular-nums">
           {money(product.price, locale)}
         </span>

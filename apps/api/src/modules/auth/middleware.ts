@@ -14,10 +14,11 @@ export async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   return { kind: "device", storeId: row.store_id, tableSessionId: row.id, deviceId: row.deviceId };
 }
 
-export async function staffIdentity(c: Context<ApiEnv>) {
-  let pending = c.get("session");
+export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
+  let pending: ApiEnv["Variables"]["session"] = c.get("session");
   if (!pending) {
-    pending = c.get("services").auth.api.getSession({ headers: c.req.raw.headers });
+    const services: ApiEnv["Variables"]["services"] = c.get("services");
+    pending = services.auth.api.getSession({ headers: c.req.raw.headers });
     c.set("session", pending);
   }
   const session = await pending;

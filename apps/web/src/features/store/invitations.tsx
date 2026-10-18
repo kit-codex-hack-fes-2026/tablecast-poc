@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,19 +37,21 @@ export function Invitations() {
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("invitations_title")}</h1>
-        <Button
-          nativeButton={false}
-          role="link"
-          render={
-            <Link to="/admin/stores/$storeId/invitations/new" params={{ storeId: store.id }} />
-          }
-        >
-          <MailPlus />
-          {t("org_invite")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("invitations_title")}
+        actions={
+          <Button
+            nativeButton={false}
+            role="link"
+            render={
+              <Link to="/admin/stores/$storeId/invitations/new" params={{ storeId: store.id }} />
+            }
+          >
+            <MailPlus />
+            {t("org_invite")}
+          </Button>
+        }
+      />
       <ErrorNotice error={query.error || cancel.error} onRetry={() => void query.refetch()} />
       <DataTable
         data={query.data.invitations}
@@ -146,7 +149,7 @@ export function InviteMember() {
         <ArrowLeft />
         {t("invitations_title")}
       </Button>
-      <h1 className="text-2xl font-semibold">{t("org_invite")}</h1>
+      <PageHeader title={t("org_invite")} />
       <form
         noValidate
         className="max-w-xl space-y-5"

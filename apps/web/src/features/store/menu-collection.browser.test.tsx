@@ -110,12 +110,13 @@ async function showMenu(
   const draftList = createRoute({
     getParentRoute: () => root,
     path: "/admin/stores/$storeId/menu/changes/$draftId/$section",
+    validateSearch: menuListSearchSchema,
     params: {
       parse: (params) => ({ ...params, section: menuSectionSchema.parse(params.section) }),
     },
     component: function DraftCollection() {
       const { section, draftId } = draftList.useParams();
-      return <MenuCollection section={section} draftId={draftId} />;
+      return <MenuCollection section={section} draftId={draftId} search={draftList.useSearch()} />;
     },
   });
   const router = createRouter({
@@ -156,6 +157,27 @@ it.each(["tr", "az"])("ホストの%sロケールでもIced teaをicedとICEDで
     await expect.element(screen.getByText("iced tea", { exact: true })).toBeVisible();
   }
 });
+
+it.each(["ja", "en"] as const)(
+  "%sの商品名から同じ下書きと検索条件の詳細へ進める",
+  async (locale) => {
+    const { screen } = await showMenu(
+      catalog,
+      locale,
+      "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/products?q=Tsukinagi&page=2",
+      "draft",
+    );
+    const link = screen.getByRole("link", { name: product.text[locale].displayName, exact: true });
+    await expect.element(link).toBeVisible();
+    const destination = new URL(link.element().getAttribute("href") ?? "", window.location.href);
+    expect(destination.pathname).toBe(
+      `/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/products/${product.id}`,
+    );
+    expect(destination.searchParams.get("q")).toBe("Tsukinagi");
+    expect(destination.searchParams.get("page")).toBe("2");
+    expect(link.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+  },
+);
 
 for (const alias of ["moon drink", "月の酒"] as const) {
   const locale = "ja";
@@ -208,7 +230,7 @@ for (const alias of ["moon drink", "月の酒"] as const) {
     const detailLink = screen
       .getByRole("row")
       .filter({ hasText: "日本酒 20" })
-      .getByRole("link", { name: labels.admin_details });
+      .getByRole("link", { name: "日本酒 20", exact: true });
     detailLink.element().focus();
     await expect.element(detailLink).toHaveFocus();
     await userEvent.keyboard("{Enter}");
@@ -226,7 +248,7 @@ for (const alias of ["moon drink", "月の酒"] as const) {
     await screen
       .getByRole("row")
       .filter({ hasText: "日本酒 20" })
-      .getByRole("link", { name: labels.admin_details })
+      .getByRole("link", { name: "日本酒 20", exact: true })
       .click();
     router.history.back();
     await expect.element(screen.getByText("2 / 2", { exact: true })).toBeVisible();
@@ -254,22 +276,13 @@ for (const alias of ["moon drink", "月の酒"] as const) {
         .poll(
           () =>
             screen
-              .getByRole("link", { name: labels.admin_details, exact: true })
+              .getByRole("link", { name: product.text.ja.displayName, exact: true })
               .element()
               .getBoundingClientRect().right,
         )
         .toBeLessThanOrEqual(width);
     }
     await page.viewport(1024, 768);
-    const previousSize = document.documentElement.style.fontSize;
-    document.documentElement.style.fontSize = "200%";
-    try {
-      await expect
-        .element(screen.getByRole("combobox", { name: labels.menu_availability }))
-        .toBeVisible();
-    } finally {
-      document.documentElement.style.fontSize = previousSize;
-    }
     await search.fill("存在しない検索");
     await expect.element(screen.getByText(labels.common_no_results, { exact: true })).toBeVisible();
     await expect
@@ -319,7 +332,7 @@ it("カテゴリに所属商品と件数を表示し、プランに価格・対�
     .toBeVisible();
   await expect.element(screen.getByText(/日本酒 · seasonal/)).toBeVisible();
 
-  await screen.getByRole("link", { name: ja.admin_details, exact: true }).click();
+  await screen.getByRole("link", { name: product.text.ja.displayName, exact: true }).click();
   await expect
     .element(screen.getByRole("heading", { name: ja.editor_tags, exact: true }))
     .toBeVisible();

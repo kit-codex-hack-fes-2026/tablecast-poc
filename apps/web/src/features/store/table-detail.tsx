@@ -1,8 +1,9 @@
+import { PageHeader } from "../../components/page-header";
 import { CouponVisit } from "./coupon-visit";
 import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
-import type { Order } from "@tablecast/api/schema";
+import type { Order, TableState } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { DateTime } from "../../components/date-time";
@@ -19,6 +20,7 @@ import { catalogOptions } from "./menu-query";
 import { tableDetailOptions } from "./store-query";
 import { ActivityLog } from "./events";
 import { SessionActivity } from "./session-activity";
+import type { FloorSearch } from "./floor-model";
 
 function useTableDetail({
   storeId,
@@ -78,11 +80,13 @@ export function TableDetail({
   tableId,
   view,
   onViewChange,
+  floorSearch,
 }: {
   storeId: string;
   tableId: string;
   view: "overview" | "logs" | "orders" | "billing" | "diagnostics";
   onViewChange: (view: "overview" | "logs" | "orders" | "billing" | "diagnostics") => void;
+  floorSearch?: FloorSearch;
 }) {
   const hydrated = useHydrated();
   const { t, locale, detail, action, orderStatus, table } = useTableDetail({
@@ -93,23 +97,7 @@ export function TableDetail({
   });
   return (
     <section className="space-y-5">
-      <Button
-        nativeButton={false}
-        role="link"
-        variant="ghost"
-        render={<Link to="/admin/stores/$storeId/visits" params={{ storeId }} />}
-      >
-        <ArrowLeft />
-        {t("admin_history")}
-      </Button>
-      <h1 className="text-2xl font-semibold">{table?.tableName ?? t("common_loading")}</h1>
-      {table && (
-        <p className="text-base text-muted-foreground">
-          {table.guestCount} {t("admin_guests")} ·{" "}
-          {t(table.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} ·{" "}
-          <DateTime value={table.openedAt} />
-        </p>
-      )}
+      <TableDetailHeader table={table} storeId={storeId} floorSearch={floorSearch} />
       <ErrorNotice error={detail.error || action.error} />
       {table && (
         <Tabs.Root
@@ -279,6 +267,52 @@ export function TableDetail({
         </Tabs.Root>
       )}
     </section>
+  );
+}
+
+function TableDetailHeader({
+  table,
+  storeId,
+  floorSearch,
+}: {
+  table: TableState;
+  storeId: string;
+  floorSearch?: FloorSearch;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <Button
+        nativeButton={false}
+        role="link"
+        variant="ghost"
+        render={
+          floorSearch ? (
+            <Link to="/admin/stores/$storeId/floor" params={{ storeId }} search={floorSearch} />
+          ) : (
+            <Link to="/admin/stores/$storeId/visits" params={{ storeId }} />
+          )
+        }
+      >
+        <ArrowLeft />
+        {t(floorSearch ? "admin_live" : "admin_history")}
+      </Button>
+      <PageHeader
+        title={table.tableName}
+        status={
+          <Badge variant={table.status === "open" ? "success" : "inactive"}>
+            {t(table.status === "open" ? "admin_open" : "admin_visit_closed")}
+          </Badge>
+        }
+        description={
+          <>
+            {table.guestCount} {t("admin_guests")} ·{" "}
+            {t(table.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} ·{" "}
+            <DateTime value={table.openedAt} />
+          </>
+        }
+      />
+    </>
   );
 }
 

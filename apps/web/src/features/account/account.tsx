@@ -23,6 +23,7 @@ import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { ActionFeedback } from "../../components/action-feedback";
 import { UserIdentity } from "../../components/user-identity";
+import { PageHeader } from "../../components/page-header";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
 import {
@@ -49,7 +50,7 @@ function useAccount(pending: boolean) {
       void session.refetch();
     },
   });
-  const section = "space-y-5 rounded-2xl border border-border bg-white p-4 sm:p-5";
+  const section = "min-w-0 scroll-mt-24 space-y-5 pb-8";
   return {
     t,
     session,
@@ -65,21 +66,49 @@ function useAccount(pending: boolean) {
 export function Account({ pending = false }: { pending?: boolean }) {
   const controller = useAccount(pending);
   const { t, change, sessions, accounts, keys } = controller;
+  const error = change.error || sessions.error || accounts.error || keys.error;
   return (
     <SettingsShell>
-      <div className="flex min-h-9 flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("account_title")}</h1>
+      <PageHeader title={t("account_title")} />
+      {(change.isPending || change.isSuccess || error) && (
+        <ActionFeedback
+          pending={change.isPending}
+          error={error}
+          success={change.isSuccess}
+          successMessage={t("account_saved")}
+        />
+      )}
+      <div className="@container">
+        <div className="grid min-w-0 gap-7 @4xl:grid-cols-[11rem_minmax(0,1fr)]">
+          <nav
+            aria-label={t("account_title")}
+            className="flex h-fit flex-wrap gap-1 @4xl:sticky @4xl:top-20 @4xl:flex-col"
+          >
+            {(
+              [
+                ["profile", "account_profile"],
+                ["connections", "account_connections"],
+                ["passkeys", "account_passkeys"],
+                ["sessions", "account_sessions"],
+              ] as const
+            ).map(([id, label]) => (
+              <a
+                key={id}
+                href={`#account-${id}`}
+                className="inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-secondary"
+              >
+                {t(label)}
+              </a>
+            ))}
+          </nav>
+          <div className="min-w-0 space-y-8">
+            <AccountProfile controller={controller} />
+            <AccountConnections controller={controller} />
+            <AccountPasskeys controller={controller} />
+            <AccountSessions controller={controller} />
+          </div>
+        </div>
       </div>
-      <ActionFeedback
-        pending={change.isPending}
-        error={change.error || sessions.error || accounts.error || keys.error}
-        success={change.isSuccess}
-        successMessage={t("account_saved")}
-      />
-      <AccountProfile controller={controller} />
-      <AccountConnections controller={controller} />
-      <AccountPasskeys controller={controller} />
-      <AccountSessions controller={controller} />
     </SettingsShell>
   );
 }
@@ -98,8 +127,8 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
     },
   });
   return (
-    <section className={section}>
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
+    <section id="account-profile" aria-labelledby="account-profile-title" className={section}>
+      <h2 id="account-profile-title" className="flex items-center gap-2 text-lg font-semibold">
         <UserRound className="size-5" />
         {t("account_profile")}
       </h2>
@@ -193,8 +222,12 @@ function AccountConnections({ controller }: { controller: AccountController }) {
     [t, session.data?.user.email, change.isPending, controller.loading, change.mutate],
   );
   return (
-    <section className={section}>
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
+    <section
+      id="account-connections"
+      aria-labelledby="account-connections-title"
+      className={section}
+    >
+      <h2 id="account-connections-title" className="flex items-center gap-2 text-lg font-semibold">
         <Link2 />
         {t("account_connections")}
       </h2>
@@ -295,8 +328,8 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
     },
   });
   return (
-    <section className={section}>
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
+    <section id="account-passkeys" aria-labelledby="account-passkeys-title" className={section}>
+      <h2 id="account-passkeys-title" className="flex items-center gap-2 text-lg font-semibold">
         <KeyRound />
         {t("account_passkeys")}
       </h2>
@@ -391,8 +424,8 @@ function AccountSessions({ controller }: { controller: AccountController }) {
     [t, session.data?.session.id, change.isPending, controller.loading, change.mutate],
   );
   return (
-    <section className={section}>
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
+    <section id="account-sessions" aria-labelledby="account-sessions-title" className={section}>
+      <h2 id="account-sessions-title" className="flex items-center gap-2 text-lg font-semibold">
         <Monitor />
         {t("account_sessions")}
       </h2>

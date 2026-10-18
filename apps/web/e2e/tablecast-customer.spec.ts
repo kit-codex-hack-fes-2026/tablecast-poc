@@ -3,10 +3,46 @@ import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import { approveGuestDevice, signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
-import { adminStateSchema, tableStateSchema } from "@tablecast/api/schema";
+import { adminStateSchema, customerConsentVersion, tableStateSchema } from "@tablecast/api/schema";
 import { z } from "zod";
 
 test.use({ viewport: { width: 390, height: 844 }, trace: "off", serviceWorkers: "block" });
+
+test("会員の券と交換候補の0件をJavaScriptなしの初期HTMLから表示する", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const storeId = "tablecast-komorebi";
+  await signInStaff(page.request, baseURL);
+  const enrolled = await page.request.post(`/api/customer/stores/${storeId}/enrol`, {
+    headers: { Origin: baseURL ?? "" },
+    data: { consentVersion: customerConsentVersion },
+  });
+  expect(enrolled.ok()).toBe(true);
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 844 },
+    javaScriptEnabled: false,
+    storageState: await page.context().storageState(),
+  });
+  try {
+    const phone = await context.newPage();
+    await phone.goto(`/member/${storeId}/coupons`);
+    await expect(
+      phone
+        .getByRole("region", { name: ja.customer_coupons_owned })
+        .getByText(ja.customer_coupons_empty),
+    ).toBeVisible();
+    await expect(
+      phone
+        .getByRole("region", { name: ja.coupon_exchange })
+        .getByText(ja.customer_exchanges_empty),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
 
 test("二人がスマホで来店QRを開き、初回同意後の再来店では追加操作なしで参加する", async ({
   page: staff,

@@ -13,6 +13,8 @@ import { Undo2 } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
+import { StoreDesignOverview } from "./store-design-overview";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -35,7 +37,26 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
   const configuration = draftId ? draft.data?.configuration : published.data?.configuration;
   return (
     <div className="space-y-5">
-      <h1>{t("theme_title")}</h1>
+      <PageHeader
+        title={t("theme_title")}
+        description={t(draftId ? "theme_editing_note" : "theme_published_note")}
+        actions={
+          !draftId &&
+          configuration &&
+          ["owner", "admin"].includes(store.role) && (
+            <StartConfigurationEditing
+              section="products"
+              onSelect={(id) =>
+                void navigate({
+                  to: "/admin/stores/$storeId/design",
+                  params: { storeId: store.id },
+                  search: (previous) => ({ ...previous, draftId: id }),
+                })
+              }
+            />
+          )
+        }
+      />
       <ErrorNotice error={published.error || draft.error} />
       {!configuration ? (
         published.error || draft.error ? null : (
@@ -44,26 +65,7 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
       ) : draftId && draft.data ? (
         <DesignForm key={`${store.id}:${draftId}`} initial={configuration} draft={draft.data} />
       ) : (
-        <>
-          <StartConfigurationEditing
-            section="products"
-            onSelect={(id) =>
-              void navigate({
-                to: "/admin/stores/$storeId/design",
-                params: { storeId: store.id },
-                search: { draftId: id },
-              })
-            }
-          />
-          <DesignEditor
-            organisationLogo={store.logo}
-            storeId={store.id}
-            value={configuration}
-            disabled
-            onChange={() => undefined}
-            onStagedChange={() => undefined}
-          />
-        </>
+        published.data && <StoreDesignOverview catalog={published.data} />
       )}
     </div>
   );
@@ -178,7 +180,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
       <p>
         {t("theme_draft_hint")} · {draft.id} · v{version}
       </p>
-      <div className="flex flex-wrap gap-3">
+      <div className="sticky top-16 z-10 flex flex-wrap gap-3 border-b border-border bg-background/95 py-3 backdrop-blur-sm">
         <Button type="submit" disabled={blocked}>
           {t("common_save")}
         </Button>

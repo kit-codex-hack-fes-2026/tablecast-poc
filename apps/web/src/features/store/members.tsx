@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { MailPlus, Trash2 } from "lucide-react";
@@ -53,19 +54,23 @@ export function Members() {
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("org_members")}</h1>
-        {store.role !== "member" && (
-          <Button
-            nativeButton={false}
-            role="link"
-            render={<Link to="/admin/stores/$storeId/invitations" params={{ storeId: store.id }} />}
-          >
-            <MailPlus />
-            {t("invitations_title")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("org_members")}
+        actions={
+          store.role !== "member" && (
+            <Button
+              nativeButton={false}
+              role="link"
+              render={
+                <Link to="/admin/stores/$storeId/invitations" params={{ storeId: store.id }} />
+              }
+            >
+              <MailPlus />
+              {t("invitations_title")}
+            </Button>
+          )
+        }
+      />
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
 
       <DataTable
