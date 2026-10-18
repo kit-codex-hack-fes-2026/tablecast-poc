@@ -165,6 +165,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
     },
   });
   const pending = save.isPending || preview.isPending || reload.isPending;
+  const blocked = !editable || pending || hasStaged || !!uploads;
   return (
     <form
       onSubmit={(event) => {
@@ -178,14 +179,10 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
         {t("theme_draft_hint")} · {draft.id} · v{version}
       </p>
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={!editable || pending || hasStaged || !!uploads}>
+        <Button type="submit" disabled={blocked}>
           {t("common_save")}
         </Button>
-        <Button
-          variant="outline"
-          disabled={!editable || pending || hasStaged || !!uploads}
-          onClick={() => preview.mutate()}
-        >
+        <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
           {t("theme_preview")}
         </Button>
         <Button

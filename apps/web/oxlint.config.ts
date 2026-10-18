@@ -188,6 +188,8 @@ export default defineConfig({
     },
   ],
   settings: {
+    // React Doctor公式CLIと同じ診断意味論を使う。ruleのseverityは推奨のまま維持する。
+    "react-doctor": { portedRuleMode: "curated" },
     "boundaries/root-path": import.meta.dirname,
     "boundaries/include": ["src/**/*.{ts,tsx}"],
     "boundaries/files-single-match": true,
@@ -197,7 +199,7 @@ export default defineConfig({
       capture: ["feature"],
     })),
     "import/resolver": { typescript: { project: `${import.meta.dirname}/tsconfig.json` } },
-    react: { version: "19.2.8" },
+    react: { version: "19.3.1" },
     tailwindcss: {
       entryPoint: fileURLToPath(new URL("./src/styles.css", import.meta.url)),
       callees: ["cn", "tv"],

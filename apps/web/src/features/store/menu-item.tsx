@@ -106,7 +106,7 @@ function conditionValidationMessage(configuration: Configuration): ConditionErro
   return issues.some((issue) => issue.path.includes("conditions")) ? "condition_invalid" : null;
 }
 
-function ItemForm({
+function useItemEditing({
   section,
   itemId,
   initialConfiguration,
@@ -240,6 +240,62 @@ function ItemForm({
   });
   const item =
     section === "cast" ? null : initial[section].find((value) => value.id === selectedId);
+  return {
+    store,
+    storeId,
+    locale,
+    t,
+    selectedId,
+    editable,
+    catalog,
+    initial,
+    configuration,
+    version,
+    newSaved,
+    conditionError,
+    setEditor,
+    setConfiguration,
+    dirty,
+    invalidInstructions,
+    submitConfiguration,
+    save,
+    reload,
+    pending,
+    remove,
+    images,
+    item,
+  };
+}
+
+function ItemForm({
+  section,
+  itemId,
+  initialConfiguration,
+  draft,
+  search,
+}: {
+  section: MenuSection;
+  itemId: string;
+  initialConfiguration: Configuration;
+  draft: ConfigDraft;
+  search: MenuListSearch;
+}) {
+  const model = useItemEditing({ section, itemId, initialConfiguration, draft, search });
+  const {
+    storeId,
+    locale,
+    t,
+    selectedId,
+    editable,
+    initial,
+    configuration,
+    conditionError,
+    setConfiguration,
+    submitConfiguration,
+    pending,
+    images,
+    item,
+  } = model;
   return (
     <section className="space-y-6">
       {conditionError && (
@@ -269,20 +325,7 @@ function ItemForm({
             : (item?.text[locale].displayName ?? t(menuLabels[section]))}
         </h1>
       </div>
-      {catalog.data && (
-        <ConfigurationStatus
-          storeName={store.name}
-          publishedVersion={catalog.data.version}
-          draft={{ id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }}
-          dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
-          pending={save.isPending}
-          error={save.error || reload.error}
-        />
-      )}
-      {catalog.data && editable && catalog.data.version !== draft.baseVersion && (
-        <p className="text-destructive">{t("workflow_stale")}</p>
-      )}
-      {!editable && <p className="text-muted-foreground">{t("workflow_terminal_note")}</p>}
+      <ItemEditingStatus model={model} itemId={itemId} draft={draft} />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
@@ -311,93 +354,17 @@ function ItemForm({
           </fieldset>
 
           {editable && (
-            <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
-              <ItemSaveAction
-                invalid={invalidInstructions}
-                dirty={dirty}
-                pending={pending}
-                uploadingImages={images.uploading}
-                stagedImages={images.hasStaged}
-                newUnsaved={itemId === "new" && !newSaved}
-                isNew={itemId === "new"}
-              />
-
-              {itemId !== "new" && section !== "cast" && (
-                <ConfirmAction
-                  label={t("menu_remove_item")}
-                  subject={t("menu_remove_note")}
-                  disabled={remove.isPending || pending || images.uploading}
-                  onConfirm={() => {
-                    if (!images.uploadingNow()) remove.mutate();
-                  }}
-                  icon={<Trash2 />}
-                />
-              )}
-
-              <>
-                {(dirty || images.hasStaged) && (
-                  <ConfirmAction
-                    label={t("workflow_revert")}
-                    subject={t("workflow_revert_note")}
-                    disabled={pending || images.uploading}
-                    onConfirm={() => {
-                      if (images.uploadingNow()) return;
-                      setConfiguration(initial);
-                      setEditor((current) => ({ ...current, conditionError: null }));
-                      images.reset();
-                      save.reset();
-                    }}
-                    icon={<Undo2 />}
-                  />
-                )}
-                <Button
-                  nativeButton={false}
-                  role="link"
-                  variant="outline"
-                  disabled={
-                    dirty ||
-                    pending ||
-                    images.uploading ||
-                    images.hasStaged ||
-                    (itemId === "new" && !newSaved)
-                  }
-                  render={
-                    <Link
-                      to="/admin/stores/$storeId/menu/changes/$draftId"
-                      params={{ storeId, draftId: draft.id }}
-                      search={{ ...search, returnSection: section }}
-                      onClick={(event) => {
-                        if (images.uploadingNow() || images.staged.current.size > 0)
-                          event.preventDefault();
-                      }}
-                    />
-                  }
-                >
-                  {t("workflow_review")}
-                </Button>
-              </>
-            </div>
+            <ItemEditorActions
+              model={model}
+              section={section}
+              itemId={itemId}
+              draft={draft}
+              search={search}
+            />
           )}
         </form>
       )}
-      <ActionFeedback
-        pending={save.isPending}
-        error={save.error || remove.error || reload.error}
-        success={save.isSuccess}
-        successMessage={t("account_saved")}
-      />
-      {editable && apiError(save.error)?.status === 409 && (
-        <ConfirmAction
-          label={t("workflow_conflict_reload")}
-          subject={t("workflow_conflict_reload_note")}
-          disabled={pending || images.uploading}
-          onConfirm={() => {
-            if (!images.uploadingNow() && !save.isPending) reload.mutate();
-          }}
-          icon={<Undo2 />}
-        />
-      )}
-      {editable && <p className="text-sm text-muted-foreground">{t("workflow_save_first")}</p>}
+      <ItemSaveFeedback model={model} />
     </section>
   );
 }
@@ -519,4 +486,156 @@ function focusInvalidCondition(form: HTMLFormElement, aggregate: boolean) {
     parent = parent.parentElement;
   }
   invalid?.focus();
+}
+
+function ItemEditorActions({
+  model,
+  section,
+  itemId,
+  draft,
+  search,
+}: {
+  model: ReturnType<typeof useItemEditing>;
+  section: MenuSection;
+  itemId: string;
+  draft: ConfigDraft;
+  search: MenuListSearch;
+}) {
+  const {
+    t,
+    storeId,
+    dirty,
+    pending,
+    images,
+    newSaved,
+    invalidInstructions,
+    remove,
+    setConfiguration,
+    initial,
+    setEditor,
+    save,
+  } = model;
+  return (
+    <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
+      <ItemSaveAction
+        invalid={invalidInstructions}
+        dirty={dirty}
+        pending={pending}
+        uploadingImages={images.uploading}
+        stagedImages={images.hasStaged}
+        newUnsaved={itemId === "new" && !newSaved}
+        isNew={itemId === "new"}
+      />
+
+      {itemId !== "new" && section !== "cast" && (
+        <ConfirmAction
+          label={t("menu_remove_item")}
+          subject={t("menu_remove_note")}
+          disabled={remove.isPending || pending || images.uploading}
+          onConfirm={() => {
+            if (!images.uploadingNow()) remove.mutate();
+          }}
+          icon={<Trash2 />}
+        />
+      )}
+
+      <>
+        {(dirty || images.hasStaged) && (
+          <ConfirmAction
+            label={t("workflow_revert")}
+            subject={t("workflow_revert_note")}
+            disabled={pending || images.uploading}
+            onConfirm={() => {
+              if (images.uploadingNow()) return;
+              setConfiguration(initial);
+              setEditor((current) => ({ ...current, conditionError: null }));
+              images.reset();
+              save.reset();
+            }}
+            icon={<Undo2 />}
+          />
+        )}
+        <Button
+          nativeButton={false}
+          role="link"
+          variant="outline"
+          disabled={
+            dirty ||
+            pending ||
+            images.uploading ||
+            images.hasStaged ||
+            (itemId === "new" && !newSaved)
+          }
+          render={
+            <Link
+              to="/admin/stores/$storeId/menu/changes/$draftId"
+              params={{ storeId, draftId: draft.id }}
+              search={{ ...search, returnSection: section }}
+              onClick={(event) => {
+                if (images.uploadingNow() || images.staged.current.size > 0) event.preventDefault();
+              }}
+            />
+          }
+        >
+          {t("workflow_review")}
+        </Button>
+      </>
+    </div>
+  );
+}
+
+function ItemEditingStatus({
+  model,
+  itemId,
+  draft,
+}: {
+  model: ReturnType<typeof useItemEditing>;
+  itemId: string;
+  draft: ConfigDraft;
+}) {
+  const { store, catalog, version, dirty, images, newSaved, save, reload, editable, t } = model;
+  return (
+    <>
+      {catalog.data && (
+        <ConfigurationStatus
+          storeName={store.name}
+          publishedVersion={catalog.data.version}
+          draft={{ id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }}
+          dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
+          pending={save.isPending}
+          error={save.error || reload.error}
+        />
+      )}
+      {catalog.data && editable && catalog.data.version !== draft.baseVersion && (
+        <p className="text-destructive">{t("workflow_stale")}</p>
+      )}
+      {!editable && <p className="text-muted-foreground">{t("workflow_terminal_note")}</p>}
+    </>
+  );
+}
+
+function ItemSaveFeedback({ model }: { model: ReturnType<typeof useItemEditing> }) {
+  const { save, remove, reload, editable, images, pending, t } = model;
+  return (
+    <>
+      <ActionFeedback
+        pending={save.isPending}
+        error={save.error || remove.error || reload.error}
+        success={save.isSuccess}
+        successMessage={t("account_saved")}
+      />
+      {editable && apiError(save.error)?.status === 409 && (
+        <ConfirmAction
+          label={t("workflow_conflict_reload")}
+          subject={t("workflow_conflict_reload_note")}
+          disabled={pending || images.uploading}
+          onConfirm={() => {
+            if (!images.uploadingNow() && !save.isPending) reload.mutate();
+          }}
+          icon={<Undo2 />}
+        />
+      )}
+      {editable && <p className="text-sm text-muted-foreground">{t("workflow_save_first")}</p>}
+    </>
+  );
 }

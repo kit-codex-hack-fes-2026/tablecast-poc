@@ -130,7 +130,7 @@ it("解除と別ファイルへの置換で出所・生成申告を持ち越さ�
   await page.getByRole("button", { name: ja.common_retry }).click();
   await expect
     .element(page.getByRole("status", { name: "編集した参照" }))
-    .toHaveTextContent("tablecast/uploads/generated.webp");
+    .toMatchTextContent("tablecast/uploads/generated.webp");
   expect(requests.map((request) => request.get("metadata"))).toEqual([
     JSON.stringify({
       imageKind: "illustration",
@@ -156,7 +156,7 @@ it("解除と別ファイルへの置換で出所・生成申告を持ち越さ�
     .element(page.getByRole("textbox", { name: ja.editor_image_source, exact: true }))
     .toHaveValue("");
   await page.getByRole("button", { name: ja.editor_image_upload }).click();
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.editor_image_source_required);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.editor_image_source_required);
   expect(requests).toHaveLength(2);
 });
 
@@ -200,10 +200,10 @@ it.each([
       .toBeVisible();
     await page.getByRole("textbox", { name: "商品名", exact: true }).fill("取込中に編集した料理名");
     finish?.(Response.json({ error: { code: "IMAGE_PROCESSING_FAILED" } }, { status: 503 }));
-    await expect.element(page.getByRole("alert")).toHaveTextContent(labels.common_unavailable);
+    await expect.element(page.getByRole("alert")).toMatchTextContent(labels.common_unavailable);
     await expect
       .element(page.getByRole("status", { name: "編集した参照" }))
-      .toHaveTextContent(original.imageKey);
+      .toMatchTextContent(original.imageKey);
     await expect
       .element(page.getByRole("textbox", { name: labels.editor_image_source, exact: true }))
       .toHaveValue("店舗が利用を許可した生成イメージ");
@@ -231,13 +231,13 @@ it.each([
     // Then: 成功結果だけを編集値へ反映し、同時編集とfocusを保つ
     await expect
       .element(page.getByRole("status", { name: "編集した参照" }))
-      .toHaveTextContent("tablecast/uploads/replacement.webp");
+      .toMatchTextContent("tablecast/uploads/replacement.webp");
     await expect
       .element(page.getByRole("textbox", { name: "商品名", exact: true }))
       .toHaveValue("再試行中の料理名");
     await expect
       .element(page.getByRole("status", { name: "編集した出所" }))
-      .toHaveTextContent('"generated":true');
+      .toMatchTextContent('"generated":true');
     await expect.element(page.getByRole("textbox", { name: "商品名", exact: true })).toHaveFocus();
     expect(requests.map((request) => request.get("metadata"))).toEqual([
       JSON.stringify({
@@ -254,7 +254,7 @@ it.each([
     await userEvent.keyboard("{Enter}");
     await expect
       .element(page.getByRole("status", { name: "編集した参照" }))
-      .toHaveTextContent("none");
+      .toMatchTextContent("none");
     await expect.element(page.getByText(labels.editor_image_empty, { exact: true })).toBeVisible();
     await expect.element(page.getByLabelText(labels.editor_image_choose)).toHaveFocus();
   },
@@ -270,31 +270,31 @@ it("形式・容量・出所・既存参照の不備を示し、現在の参照�
     new File(["svg"], "tablecast.svg", { type: "image/svg+xml" }),
   ]) {
     await page.getByLabelText(ja.editor_image_replace).upload(file);
-    await expect.element(page.getByRole("alert")).toHaveTextContent(ja.editor_image_invalid_file);
+    await expect.element(page.getByRole("alert")).toMatchTextContent(ja.editor_image_invalid_file);
     await expect
       .element(page.getByRole("status", { name: "編集した参照" }))
-      .toHaveTextContent(original.imageKey);
+      .toMatchTextContent(original.imageKey);
   }
   await page.getByLabelText(ja.editor_image_replace).upload(png);
   await page.getByRole("textbox", { name: ja.editor_image_source, exact: true }).fill("");
   await page.getByRole("button", { name: ja.editor_image_upload }).click();
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.editor_image_source_required);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.editor_image_source_required);
   await page.getByRole("combobox", { name: ja.editor_image_method }).selectOptions("existing");
   await page
     .getByRole("textbox", { name: ja.editor_image, exact: true })
     .fill("/Users/tablecast/photo.png");
   await page.getByRole("button", { name: ja.editor_image_apply }).click();
-  await expect.element(page.getByRole("alert")).toHaveTextContent(ja.editor_image_invalid_key);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.editor_image_invalid_key);
   await expect
     .element(page.getByRole("status", { name: "編集した参照" }))
-    .toHaveTextContent(original.imageKey);
+    .toMatchTextContent(original.imageKey);
   await page
     .getByRole("textbox", { name: ja.editor_image, exact: true })
     .fill("tablecast/menu/new.webp");
   await page.getByRole("button", { name: ja.editor_image_apply }).click();
   await expect
     .element(page.getByRole("status", { name: "編集した参照" }))
-    .toHaveTextContent("tablecast/menu/new.webp");
+    .toMatchTextContent("tablecast/menu/new.webp");
   await expect.element(page.getByText(ja.editor_image_load_error, { exact: true })).toBeVisible();
   expect(fetch).not.toHaveBeenCalled();
 });
@@ -327,7 +327,7 @@ it("移動前の遅い取込結果で別の商品を変更しない", async () =
   await expect.poll(() => client.isMutating()).toBe(0);
   await expect
     .element(page.getByRole("status", { name: "編集した参照" }))
-    .toHaveTextContent(original.imageKey);
+    .toMatchTextContent(original.imageKey);
   await expect
     .element(page.getByRole("textbox", { name: "商品名", exact: true }))
     .toHaveValue("別の商品");

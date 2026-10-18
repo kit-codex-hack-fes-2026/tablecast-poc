@@ -100,7 +100,7 @@ export function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="flex rounded-md min-w-0 [&:disabled]:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            className="flex rounded-md min-w-0 disabled:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}

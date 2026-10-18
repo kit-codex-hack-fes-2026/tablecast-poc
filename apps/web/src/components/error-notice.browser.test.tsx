@@ -53,14 +53,14 @@ it("日本語のRPC失敗は原因別に案内し、再試行操作と入力を�
     );
     await screen.rerender(view(error));
     // Then: 内部メッセージを出さず、原因に合う文言と入力を保つ。
-    await expect.element(page.getByRole("alert")).toHaveTextContent(message);
-    await expect.element(page.getByRole("alert")).not.toHaveTextContent("private server detail");
+    await expect.element(page.getByRole("alert")).toMatchTextContent(message);
+    await expect.element(page.getByRole("alert")).not.toMatchTextContent("private server detail");
     await expect.element(page.getByRole("textbox")).toHaveValue("変更中の店舗名");
 
     await page.getByRole("button", { name: labels.common_retry }).click();
   }
   expect(retry).toHaveBeenCalledTimes(cases.length);
   await screen.rerender(view(new TypeError("network"), true));
-  await expect.element(page.getByRole("alert")).toHaveTextContent(labels.common_connection_error);
+  await expect.element(page.getByRole("alert")).toMatchTextContent(labels.common_connection_error);
   await expect.element(page.getByRole("button")).toBeDisabled();
 });

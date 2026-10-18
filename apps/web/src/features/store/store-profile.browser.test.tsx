@@ -98,7 +98,7 @@ it("店舗画像を送信すると設定とサイドバーを再取得し、再�
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
   );
   await input.upload(new File([image], "tablecast-icon.png", { type: "image/png" }));
-  await expect.element(screen.getByRole("status")).toHaveTextContent(ja.account_saved);
+  await expect.element(screen.getByRole("status")).toMatchTextContent(ja.account_saved);
   expect(uploaded?.name).toBe("tablecast-icon.png");
   expect(uploaded?.type).toBe("image/png");
   await expect.poll(() => document.querySelectorAll(`aside img[src='${logo}']`).length).toBe(1);

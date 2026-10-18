@@ -20,6 +20,12 @@ it.for([false, true])(
     const reserved = migrations[index];
     if (!reserved || index < 1) throw new Error("日付索引の移行記録が必要です");
     await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
+    // 現行の認証fixtureを使い、履歴schemaと独立した認証互換migrationだけ先行する。
+    const authCompatibility = migrations.find((migration) =>
+      migration.name.includes("0025_tablecast_auth_account_compat"),
+    );
+    if (!authCompatibility) throw new Error("認証互換migrationが必要です");
+    await applyD1Migrations(env.TABLECAST_DB, [authCompatibility]);
     const { staff } = await setupFixture();
     const day = 86_400_000;
     const start = Date.parse("2026-09-01T00:00:00+09:00");

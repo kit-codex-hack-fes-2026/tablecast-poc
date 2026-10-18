@@ -137,11 +137,12 @@ async function showMenu(
 it.each(["tr", "az"])("ホストの%sロケールでもIced teaをicedとICEDで検索できる", async (locale) => {
   // oxlint-disable-next-line typescript/unbound-method -- 保存したメソッドはcallで明示的なthisを渡して使う。
   const lowerCase = String.prototype.toLocaleLowerCase;
-  vi.spyOn(String.prototype, "toLocaleLowerCase").mockImplementation(
-    function (this: string, locales) {
-      return lowerCase.call(this, locales ?? locale);
-    },
-  );
+  vi.spyOn(String.prototype, "toLocaleLowerCase").mockImplementation(function (
+    this: string,
+    locales,
+  ) {
+    return lowerCase.call(this, locales ?? locale);
+  });
   const value = structuredClone(catalog);
   value.configuration.products = ["Iced tea", "iced tea"].map((displayName, index) => ({
     ...structuredClone(product),

@@ -304,7 +304,7 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
   notify("configuration.published");
   await expect.element(detail).not.toBeInTheDocument();
   const card = page.getByRole("button", { name: new RegExp(product.text.ja.displayName) });
-  await expect.element(card).toHaveTextContent("980");
+  await expect.element(card).toMatchTextContent("980");
   await page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }).click();
   const socket = TablecastSocket.instances.at(-1);
   if (!socket) throw new Error("卓の通知接続がありません");
@@ -441,7 +441,7 @@ it("音声開始が失敗しても実Queryのカートと画面操作を維持�
     const before = structuredClone(current.cart);
     await page.getByRole("button", { name: "音声を再開", exact: true }).click();
     await expect
-      .element(page.getByText("音声サービスの準備が整い次第ご利用いただけます。"))
+      .element(page.getByText(/音声サービスの準備が整い次第ご利用いただけます。/))
       .toBeVisible();
     await page.getByRole("tab", { name: "おしながき", exact: true }).click();
     await expect
@@ -493,7 +493,7 @@ it("店舗切替で旧取得を中断し、遅い旧店舗の通知を新店舗�
     latest.dispatchEvent(new Event("open"));
     await expect
       .element(page.getByRole("status", { name: "接続状態" }))
-      .toHaveTextContent("接続済み");
+      .toMatchTextContent("接続済み");
     const lastRequest = requests.at(-1);
     if (!lastRequest) throw new Error("新店舗の要求がありません");
     expect(new URL(lastRequest.url).searchParams.get("after")).toBe("10");

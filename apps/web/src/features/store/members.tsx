@@ -1,10 +1,9 @@
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { MailPlus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
@@ -84,7 +83,7 @@ function memberColumns(
   userId: string | undefined,
   pending: boolean,
   change: (action: Action) => void,
-): ColumnDef<Member>[] {
+): DataTableColumn<Member>[] {
   return [
     {
       id: "user",

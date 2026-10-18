@@ -6,6 +6,10 @@
 
 ケース設計と層の選択は[fullstack-web-testing](../.agents/skills/fullstack-web-testing/SKILL.md)、この文書はTableCastの実行環境と保証の配置を扱う。既存の認可・競合・データ保全を維持し、設定値の転記や標準機能の内部を試験するだけのケースは追加しない。
 
+## Vitest 5とWorkersのmodule cache
+
+全workspaceのrunnerをVitest 5.0.5へ揃える。APIのbindings projectだけ`fsModuleCache: false`を指定する。5系のwarm module一括転送は大きなWorkerのmodule graphでWebSocket上限を超え、先頭の試験が成功しても後続Workerが終了する。[上流Issue #16331](https://github.com/cloudflare/workers-sdk/issues/16331)を参照する。公開設定で転送方法を戻し、setupのmigration・storage reset、各fileのisolation、4 workerでの並列実行を維持する。単独の認証試験だけでは再現しないため、解除時には実D1・DO・R2を使うAPI全件を確認する。
+
 ## 変更に応じた検証
 
 変更した契約と実行境界から確認対象を選ぶ。使える全コマンドを毎回実行する手順にはしない。
@@ -243,7 +247,7 @@ Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザ�
 
 ## E2Eの隔離
 
-`bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.29.2`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。
+`bun run test:e2e` はPlaywrightの`worker-scoped fixture`でworkerごとにGateway・OAuth・Mailpit・Web/APIを一度起動し、ケース開始時にtemplateのD1/R2/DO stateを差し替えて隔離する。各workerは専用のlocalhostポートと`.local/tablecast-e2e-*/tablecast-worker-*`を使い、開発サーバーのDB・Cookie・`.local/demo.json`を参照しない。Linux（CI含む）ではglobal setupでDocker image `axllent/mailpit:v1.31.6`から抽出したバイナリを直接起動する。macOS等では同imageのLinuxバイナリを実行できないため、Mailpit containerをworker寿命で1回だけ起動する。送信はHTTP API（`/api/v1/send`）のみを使う。ケース間ではWeb/APIを止めてからstateを`cp`し、MailpitのメッセージをDELETEしてから再起動する。稼働中のSQLiteはコピーしない。
 
 ビルド・migration・合成seed・画像投入はglobal setupで一度だけ実行する。APIのcf buildとWebのVite/Serwistで公式Build Outputを作り、`TABLECAST_BUILD_DIRECTORY`へ`.cloudflare`を複製する。通常buildの出力は一時生成するが、E2E終了後の実行資源は専用directoryへ隔離される。Webのdev・Storybook build・他のE2E buildを同じworktreeで同時実行しない。ローカル秘密値を含む成果物はTurbo cacheへ書き込まない。seedの`getPlatformProxy`をdisposeし、全writerを終了したstorageを各workerへ複製する。SQLite内部を直接編集せず、稼働中のDBをコピーしない。各workerはAPI・WebをVite plugin v2の公式previewで一緒に起動し、Service Bindingで接続する。D1/R2/DOのstateとregistryをworker内へ分ける。Cookie・メール・DO・認証をworker間で共有せず、ケース間は両Workersを停止してstate・assetsを復元し、Mailpitをクリアする。
 
@@ -301,7 +305,7 @@ bun run test:e2e --project=tablecast-chromium
 
 E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、子プロセスの異常終了、自分のDocker containerの削除を確認する。fixtureが起動した専用process groupと入口を終了し、Viteの子孫のworkerd、接続済みsocketも残さない。失敗時は資格を除去した最大65,536文字のruntimeログを`testInfo.outputPath()`へ保存して添付する。画像・計測値も同じcase別の保存先を使う。migrationログはruntime削除前に`apps/web/test-results/tablecast-runtime/<run>/`へ保存する。テスト結果には認証情報を含むtraceを追加しない。
 
-下書き作成のPOSTは本番Hono clientと同じくbodyなしで送る。入力を取らないAPIへ空のJSONを付けない。固定Miniflare `5.20261006.1-alpha`には、未読のstream bodyの次の要求が`ECONNRESET`になる[上流報告](https://github.com/cloudflare/workers-sdk/issues/16199)がある。previewのtransport errorはcauseもruntimeログへ渡す。bodyなしへの整合を上流の接続不具合全体の修正とは扱わず、認可で拒否するAPI等の試験も維持する。
+下書き作成のPOSTは本番Hono clientと同じくbodyなしで送る。入力を取らないAPIへ空のJSONを付けない。以前のMiniflare `5.20261006.1-alpha`には、未読のstream bodyの次の要求が`ECONNRESET`になる[上流報告](https://github.com/cloudflare/workers-sdk/issues/16199)がある。previewのtransport errorはcauseもruntimeログへ渡す。bodyなしへの整合を上流の接続不具合全体の修正とは扱わず、認可で拒否するAPI等の試験も維持する。
 
 ### 並列実行と順番に依存しないfixture
 
@@ -314,7 +318,7 @@ E2Eのready条件はWeb/API、Mailpit、OAuth discovery。各要求の期限、�
 | Vitest Browserのfile/session | fileごとiframe/moduleを作り直すが、同じsessionのBrowserContextは再利用され得る             | `cleanup()`や`isolate=true`をCookie/storage初期化と扱わない。永続化を試さない`LocaleProvider`は`persist={false}`、永続化caseは自分のキーの初期値と復元を所有する |
 | E2Eのworker/case             | worker専用D1/R2/DO・registry・配信資産と、case単位の標準BrowserContext/Cookie jar          | writer停止後に閉じたtemplateからstate/assetsを復元し、Mailpitを消去する。追加contextはcaseがcloseし、自分のprocess/containerだけを停止する                       |
 
-Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitest 4.1.11では既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
+Browserの同時file数は`browser`・`storybook`各projectの`maxWorkers: 2`で制限する。Chromium/WebKitへの展開後は3poolで最大6fileを並列実行し、全件を直列化しない。Vitestの版によっては既定のCPU由来の枠がpoolごとに適用されるため、CLIの値だけで全poolを制限できると仮定しない。版更新時は実効scopeと準備・実行・全体時間を確認し、contextの過剰生成による操作待ちをtimeoutやretryで隠さない。
 
 Kioskのカート・通知統合では、起動時の`enumerateDevices()`も外部I/Oとして固定し、実端末のマイク列挙を業務caseへ持ち込まない。本番Kiosk・VoiceConnection・Query・HTTP clientは維持し、デバイス一覧・選択・切替の保証は`voice-connection-track.test.ts`が所有する。不要I/Oを除いた局所成功だけで、CIの描画・操作待ちが解消したとは判断しない。
 

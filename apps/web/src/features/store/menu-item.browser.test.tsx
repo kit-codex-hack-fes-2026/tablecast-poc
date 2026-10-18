@@ -438,7 +438,7 @@ it.each([
     await page.getByRole("button", { name: labels.common_save, exact: true }).click();
     await expect
       .element(page.getByRole("alert").filter({ hasText: message }))
-      .toHaveTextContent(path.join(" · "));
+      .toMatchTextContent(path.join(" · "));
     await expect
       .element(page.getByText(labels.condition_invalid, { exact: true }))
       .not.toBeInTheDocument();

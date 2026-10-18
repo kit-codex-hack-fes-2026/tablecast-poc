@@ -48,10 +48,10 @@ test("日本語のstaging接続案内に現在のURLと専用名を表示する"
   await expect.element(page.getByText(labels.mcp_staging_connection)).toBeVisible();
   await expect
     .element(page.getByText("codex mcp add tablecast-staging", { exact: false }))
-    .toHaveTextContent("https://tablecast-staging.kit-codex.workers.dev/mcp");
+    .toMatchTextContent("https://tablecast-staging.kit-codex.workers.dev/mcp");
   await expect
     .element(page.getByText("codex mcp login tablecast-staging", { exact: false }))
-    .toHaveTextContent("tablecast:read,tablecast:write");
+    .toMatchTextContent("tablecast:read,tablecast:write");
   const copy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
   for (const [label, prompt] of [
     [labels.mcp_scenario_setup, labels.mcp_prompt_setup],

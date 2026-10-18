@@ -175,15 +175,15 @@ it("日本語で設定更新を明示反映し、不正下書き・人数変更�
     await screen.getByRole("option", { name: new RegExp(invalid.id.slice(0, 8)) }).click();
     await expect
       .element(screen.getByRole("list", { name: labels.config_error_list }))
-      .toHaveTextContent(labels.config_error_category_missing);
+      .toMatchTextContent(labels.config_error_category_missing);
     await expect
       .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
-      .toHaveTextContent(labels.demo_published);
+      .toMatchTextContent(labels.demo_published);
     await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
     await screen.getByRole("option", { name: new RegExp(draft.id.slice(0, 8)) }).click();
     await expect
       .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
-      .toHaveTextContent(draft.id.slice(0, 8));
+      .toMatchTextContent(draft.id.slice(0, 8));
     await screen.getByRole("combobox", { name: labels.demo_guests }).click();
     await screen.getByRole("option", { name: "3", exact: true }).click();
     await expect.element(screen.getByRole("combobox", { name: labels.demo_guests })).toBeDisabled();
@@ -191,7 +191,7 @@ it("日本語で設定更新を明示反映し、不正下書き・人数変更�
     await expect.element(screen.getByRole("combobox", { name: labels.demo_guests })).toBeEnabled();
     await expect
       .element(screen.getByRole("combobox", { name: labels.demo_guests }))
-      .toHaveTextContent("3");
+      .toMatchTextContent("3");
     await screen.getByRole("button", { name: labels.demo_rotate, exact: true }).click();
     await expect
       .element(screen.getByRole("button", { name: labels.demo_rotate, exact: true }))

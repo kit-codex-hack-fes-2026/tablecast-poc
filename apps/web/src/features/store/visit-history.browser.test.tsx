@@ -63,6 +63,7 @@ function History() {
   return (
     <>
       <button
+        type="button"
         onClick={() => {
           setStoreId("tablecast-second");
           setSelected(undefined);

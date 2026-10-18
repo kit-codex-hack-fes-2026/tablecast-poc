@@ -1,14 +1,25 @@
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createPaginatedRowModel,
+  createSortedRowModel,
+  filterFn_includesString,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
   type ColumnDef,
-  type TableOptions,
+  type ReactTable,
   type PaginationState,
   type OnChangeFn,
+  type RowData,
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useState } from "react";
@@ -21,7 +32,27 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Table, TableCell, TableHead } from "./ui/table";
 
-export function DataTable<T>({
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  rowPaginationFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  filterFns: { includesString: filterFn_includesString },
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+});
+
+export type DataTableColumn<T extends RowData> = ColumnDef<typeof features, T>;
+
+export function DataTable<T extends RowData>({
   data,
   columns,
   getRowId,
@@ -37,7 +68,7 @@ export function DataTable<T>({
   manualFiltering,
 }: {
   data: T[];
-  columns: ColumnDef<T>[];
+  columns: DataTableColumn<T>[];
   getRowId: (row: T) => string;
   searchLabel?: string;
   empty?: string;
@@ -47,12 +78,13 @@ export function DataTable<T>({
   onRetry?: () => void;
   state?: { globalFilter?: string; pagination?: PaginationState };
   onGlobalFilterChange?: OnChangeFn<string>;
-  onPaginationChange?: TableOptions<T>["onPaginationChange"];
+  onPaginationChange?: OnChangeFn<PaginationState>;
   manualFiltering?: boolean;
 }) {
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const [filter, setFilter] = useState("");
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     getRowId,
@@ -60,12 +92,11 @@ export function DataTable<T>({
     onGlobalFilterChange: onGlobalFilterChange ?? setFilter,
     ...(onPaginationChange ? { onPaginationChange, autoResetPageIndex: false } : {}),
     manualFiltering,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
-    initialState: { pagination: { pageSize: 20 } },
+    globalFilterFn: "includesString",
+    manualPagination: !pagination,
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
+  const initialPending = pending && !data.length;
   if (error && !data.length && !pending)
     return (
       <div className="min-h-80">
@@ -88,7 +119,7 @@ export function DataTable<T>({
           <span className="sr-only">{searchLabel}</span>
           <Input
             type="search"
-            disabled={pending && !data.length}
+            disabled={initialPending}
             className="pl-10"
             placeholder={searchLabel}
             value={state?.globalFilter ?? filter}
@@ -115,7 +146,7 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {pending && !data.length ? (
+            {initialPending ? (
               ["first", "second"].map((id) => (
                 <tr key={id} aria-hidden="true">
                   {table.getVisibleLeafColumns().map((column) => (
@@ -148,41 +179,49 @@ export function DataTable<T>({
           </tbody>
         </Table>
       </div>
-      {pagination && (
-        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-          <span>
-            {pending
-              ? t("common_loading")
-              : m.common_result_count(
-                  { count: table.getFilteredRowModel().rows.length },
-                  { locale },
-                )}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_previous_page")}
-              disabled={pending || !table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              <ChevronLeft />
-            </Button>
-            <span className="min-w-16 text-center tabular-nums">
-              {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-            </span>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_next_page")}
-              disabled={pending || !table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </div>
-      )}
+      {pagination && <TablePagination table={table} pending={pending} />}
+    </div>
+  );
+}
+
+function TablePagination<T extends RowData>({
+  table,
+  pending,
+}: {
+  table: ReactTable<typeof features, T>;
+  pending: boolean;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+      <span>
+        {pending
+          ? t("common_loading")
+          : m.common_result_count({ count: table.getFilteredRowModel().rows.length }, { locale })}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          size="icon"
+          variant="outline"
+          aria-label={t("common_previous_page")}
+          disabled={pending || !table.getCanPreviousPage()}
+          onClick={() => table.previousPage()}
+        >
+          <ChevronLeft />
+        </Button>
+        <span className="min-w-16 text-center tabular-nums">
+          {table.state.pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
+        </span>
+        <Button
+          size="icon"
+          variant="outline"
+          aria-label={t("common_next_page")}
+          disabled={pending || !table.getCanNextPage()}
+          onClick={() => table.nextPage()}
+        >
+          <ChevronRight />
+        </Button>
+      </div>
     </div>
   );
 }

@@ -28,7 +28,7 @@ jobs:
       actions: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: staging
           fetch-depth: 0
@@ -49,7 +49,7 @@ jobs:
       statuses: write
     steps:
       # headのコード・artifactを実行しない。保護されたstagingの検査だけを使う。
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: staging
           fetch-depth: 0

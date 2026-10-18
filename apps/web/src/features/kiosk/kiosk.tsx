@@ -336,33 +336,26 @@ function TableSession({
     id: "tablecast-kiosk-layout",
     panelIds: ["tablecast-conversation", "tablecast-order"],
   });
+  const model = useTableSession({ data, refresh, endpoint });
   const {
+    snapshot,
     locale,
     t,
     catalog,
     view,
     voice,
-    setSnapshot,
-    confirmationHeading,
-    ordered,
-    setOrdered,
     screen,
     section,
     selectedProductId,
     setSection,
     choose,
-    selection,
     speed,
-    snapshot,
     updateCart,
     prepare,
-    submit,
     call,
     language,
-    currentLines,
-    edit,
     voiceActive,
-  } = useTableSession({ data, refresh, endpoint });
+  } = model;
   return (
     <StoreTheme appearance={catalog.data?.configuration.appearance}>
       <div
@@ -440,118 +433,8 @@ function TableSession({
                   key={`${section}:${selectedProductId ?? ""}`}
                   className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
                 >
-                  <Tabs.Panel value="menu">
-                    {selection ? (
-                      <ProductPage
-                        key={selection.line?.id ?? selection.product.id}
-                        product={selection.product}
-                        initial={selection.line}
-                        busy={updateCart.isPending}
-                        error={updateCart.error}
-                        onClose={() => setSection("menu")}
-                        onSave={(line) =>
-                          updateCart.mutate({
-                            lines: [...currentLines().filter((item) => item.id !== line.id), line],
-                            expectedVersion: selection.cartVersion,
-                          })
-                        }
-                      />
-                    ) : catalog.data ? (
-                      <ProductMenu catalog={catalog.data} onChoose={choose} />
-                    ) : catalog.isPending ? (
-                      <div className="p-4">
-                        <LoadingState cards />
-                      </div>
-                    ) : null}
-                    <ErrorNotice
-                      error={catalog.error}
-                      onRetry={() => {
-                        void catalog.refetch();
-                      }}
-                    />
-                  </Tabs.Panel>
-                  <Tabs.Panel value="cart">
-                    {ordered && (
-                      <output className="m-3 flex items-center gap-3 rounded-xl border border-primary bg-secondary p-3">
-                        <Check />
-                        <strong className="flex-1">{t("kiosk_ordered")}</strong>
-                        <Button variant="ghost" onClick={() => setOrdered(false)}>
-                          {t("common_close")}
-                        </Button>
-                      </output>
-                    )}
-                    {snapshot ? (
-                      <section className="p-4" aria-label={t("kiosk_review_title")}>
-                        <h2
-                          ref={confirmationHeading}
-                          tabIndex={-1}
-                          className="text-lg font-semibold outline-none"
-                        >
-                          {t("kiosk_review_title")}
-                        </h2>
-                        <p className="mt-2 text-sm">{t("kiosk_review_note")}</p>
-                        <CartLines
-                          lines={snapshot.lines}
-                          products={catalog.data?.configuration.products}
-                        />
-                        {snapshot.plan && (
-                          <p>
-                            {t("kiosk_plan")}: {snapshot.plan.name[locale]}
-                          </p>
-                        )}
-                        <div className="my-3 flex justify-between text-lg font-semibold">
-                          <span>{t("common_total")}</span>
-                          <strong>{money(snapshot.total, locale)}</strong>
-                        </div>
-                        <ErrorNotice error={submit.error} />
-                        <div className="sticky bottom-0 grid grid-cols-3 gap-2 bg-card py-3">
-                          <Button
-                            variant="outline"
-                            className="min-w-0 h-auto min-h-12 whitespace-normal py-2"
-                            disabled={submit.isPending}
-                            onClick={() => setSnapshot(undefined)}
-                          >
-                            {t("kiosk_edit")}
-                          </Button>
-                          <Button
-                            className="col-span-2 min-w-0 h-auto min-h-12 whitespace-normal py-2"
-                            disabled={submit.isPending}
-                            onClick={() => submit.mutate(snapshot)}
-                          >
-                            {t("kiosk_confirm")}
-                            <Check />
-                          </Button>
-                        </div>
-                      </section>
-                    ) : (
-                      <>
-                        <CartLines
-                          lines={data.cart.lines}
-                          products={
-                            catalog.data?.version === data.configVersion
-                              ? catalog.data.configuration.products
-                              : undefined
-                          }
-                          onQuantity={(line, quantity) =>
-                            updateCart.mutate({
-                              lines: currentLines().map((item) =>
-                                item.id === line.id ? { ...item, quantity } : item,
-                              ),
-                              expectedVersion: data.cart.version,
-                            })
-                          }
-                          onEdit={edit}
-                          onRemove={(line) =>
-                            updateCart.mutate({
-                              lines: currentLines().filter((item) => item.id !== line.id),
-                              expectedVersion: data.cart.version,
-                            })
-                          }
-                          disabled={updateCart.isPending}
-                        />
-                      </>
-                    )}
-                  </Tabs.Panel>
+                  <KioskMenu model={model} />
+                  <KioskCart data={data} model={model} />
                   <KioskOrders data={data} catalog={catalog} endpoint={endpoint} />
                   <KioskBilling data={data} call={call} />
                 </div>
@@ -815,5 +698,145 @@ function KioskVisitTools({
         stopVoice={stopVoice}
       />
     </>
+  );
+}
+
+function KioskCart({
+  data,
+  model,
+}: {
+  data: TableState;
+  model: ReturnType<typeof useTableSession>;
+}) {
+  const {
+    t,
+    locale,
+    ordered,
+    setOrdered,
+    snapshot,
+    setSnapshot,
+    confirmationHeading,
+    catalog,
+    updateCart,
+    currentLines,
+    edit,
+    submit,
+  } = model;
+  return (
+    <Tabs.Panel value="cart">
+      {ordered && (
+        <output className="m-3 flex items-center gap-3 rounded-xl border border-primary bg-secondary p-3">
+          <Check />
+          <strong className="flex-1">{t("kiosk_ordered")}</strong>
+          <Button variant="ghost" onClick={() => setOrdered(false)}>
+            {t("common_close")}
+          </Button>
+        </output>
+      )}
+      {snapshot ? (
+        <section className="p-4" aria-label={t("kiosk_review_title")}>
+          <h2
+            ref={confirmationHeading}
+            tabIndex={-1}
+            className="text-lg font-semibold outline-none"
+          >
+            {t("kiosk_review_title")}
+          </h2>
+          <p className="mt-2 text-sm">{t("kiosk_review_note")}</p>
+          <CartLines lines={snapshot.lines} products={catalog.data?.configuration.products} />
+          {snapshot.plan && (
+            <p>
+              {t("kiosk_plan")}: {snapshot.plan.name[locale]}
+            </p>
+          )}
+          <div className="my-3 flex justify-between text-lg font-semibold">
+            <span>{t("common_total")}</span>
+            <strong>{money(snapshot.total, locale)}</strong>
+          </div>
+          <ErrorNotice error={submit.error} />
+          <div className="sticky bottom-0 grid grid-cols-3 gap-2 bg-card py-3">
+            <Button
+              variant="outline"
+              className="min-w-0 h-auto min-h-12 whitespace-normal py-2"
+              disabled={submit.isPending}
+              onClick={() => setSnapshot(undefined)}
+            >
+              {t("kiosk_edit")}
+            </Button>
+            <Button
+              className="col-span-2 min-w-0 h-auto min-h-12 whitespace-normal py-2"
+              disabled={submit.isPending}
+              onClick={() => submit.mutate(snapshot)}
+            >
+              {t("kiosk_confirm")}
+              <Check />
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <>
+          <CartLines
+            lines={data.cart.lines}
+            products={
+              catalog.data?.version === data.configVersion
+                ? catalog.data.configuration.products
+                : undefined
+            }
+            onQuantity={(line, quantity) =>
+              updateCart.mutate({
+                lines: currentLines().map((item) =>
+                  item.id === line.id ? { ...item, quantity } : item,
+                ),
+                expectedVersion: data.cart.version,
+              })
+            }
+            onEdit={edit}
+            onRemove={(line) =>
+              updateCart.mutate({
+                lines: currentLines().filter((item) => item.id !== line.id),
+                expectedVersion: data.cart.version,
+              })
+            }
+            disabled={updateCart.isPending}
+          />
+        </>
+      )}
+    </Tabs.Panel>
+  );
+}
+
+function KioskMenu({ model }: { model: ReturnType<typeof useTableSession> }) {
+  const { selection, updateCart, currentLines, catalog, choose, setSection } = model;
+  return (
+    <Tabs.Panel value="menu">
+      {selection ? (
+        <ProductPage
+          key={selection.line?.id ?? selection.product.id}
+          product={selection.product}
+          initial={selection.line}
+          busy={updateCart.isPending}
+          error={updateCart.error}
+          onClose={() => setSection("menu")}
+          onSave={(line) =>
+            updateCart.mutate({
+              lines: [...currentLines().filter((item) => item.id !== line.id), line],
+              expectedVersion: selection.cartVersion,
+            })
+          }
+        />
+      ) : catalog.data ? (
+        <ProductMenu catalog={catalog.data} onChoose={choose} />
+      ) : catalog.isPending ? (
+        <div className="p-4">
+          <LoadingState cards />
+        </div>
+      ) : null}
+      <ErrorNotice
+        error={catalog.error}
+        onRetry={() => {
+          void catalog.refetch();
+        }}
+      />
+    </Tabs.Panel>
   );
 }

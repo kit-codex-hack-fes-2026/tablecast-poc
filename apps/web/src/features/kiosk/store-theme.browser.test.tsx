@@ -36,7 +36,9 @@ it("部品の装飾は同じ店舗とダイアログだけへ適用する", asyn
         <header data-theme-part="header" data-testid="store">
           店舗
         </header>
-        <button data-theme-part="product-card">商品</button>
+        <button type="button" data-theme-part="product-card">
+          商品
+        </button>
         <Dialog open>
           <DialogContent>
             <DialogTitle>商品詳細</DialogTitle>

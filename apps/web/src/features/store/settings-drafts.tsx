@@ -1,7 +1,6 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -14,7 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable } from "../../components/data-table";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -149,27 +148,14 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
       void navigate({ to: "/admin/stores/$storeId/menu/changes", params: { storeId } });
     },
   });
-  const busy = validate.isPending || publish.isPending || discard.isPending;
-  const editable =
-    (draft.status === "draft" || draft.status === "ready") &&
-    (role === "owner" || role === "admin");
-  const stale = editable && catalog.data.version !== draft.baseVersion;
-  const cannotPublish =
-    !editable ||
-    stale ||
-    draft.status !== "ready" ||
-    draft.errors.length > 0 ||
-    !draft.changes.length;
+  const busy = [validate.isPending, publish.isPending, discard.isPending].some(Boolean);
+  const { editable, stale, cannotPublish, guidance } = draftPublicationState(
+    draft,
+    role,
+    catalog.data.version,
+  );
   const error = validate.error || publish.error || discard.error;
-  const guidance = stale
-    ? "workflow_stale"
-    : draft.errors.length
-      ? "workflow_fix_errors"
-      : !draft.changes.length
-        ? "workflow_no_changes"
-        : draft.status !== "ready"
-          ? "workflow_validate_first"
-          : "workflow_publish_ready";
+
   return (
     <>
       <Button
@@ -310,7 +296,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
 function settingsDraftsColumns(
   t: ReturnType<typeof useI18n>["t"],
   storeId: string,
-): ColumnDef<ConfigDraft>[] {
+): DataTableColumn<ConfigDraft>[] {
   return [
     { accessorKey: "id", header: t("editor_id"), cell: ({ row }) => row.original.id.slice(0, 8) },
     { accessorKey: "version", header: t("admin_draft_version") },
@@ -356,4 +342,27 @@ function settingsDraftsColumns(
       ),
     },
   ];
+}
+
+function draftPublicationState(draft: ConfigDraft, role: string, publishedVersion: number) {
+  const editable =
+    (draft.status === "draft" || draft.status === "ready") &&
+    (role === "owner" || role === "admin");
+  const stale = editable && publishedVersion !== draft.baseVersion;
+  const cannotPublish =
+    !editable ||
+    stale ||
+    draft.status !== "ready" ||
+    draft.errors.length > 0 ||
+    !draft.changes.length;
+  const guidance = stale
+    ? "workflow_stale"
+    : draft.errors.length
+      ? "workflow_fix_errors"
+      : !draft.changes.length
+        ? "workflow_no_changes"
+        : draft.status !== "ready"
+          ? "workflow_validate_first"
+          : "workflow_publish_ready";
+  return { editable, stale, cannotPublish, guidance } as const;
 }

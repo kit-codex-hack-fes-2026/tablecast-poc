@@ -44,7 +44,7 @@ export async function buildTablecast(
       await readSeedTemplate();
     }
   }
-  // cf beta.14はTanStack Startへ--modeを転送しないため、Webはpackage scriptでViteへ渡す。
+  // cfはTanStack Startへ--modeを転送しないため、Webはpackage scriptでViteへ渡す。
   execFileSync(
     "bun",
     [
