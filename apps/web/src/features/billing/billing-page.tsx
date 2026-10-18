@@ -145,7 +145,7 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
   const monthTitle = months[locale].format(data.period.start);
   return (
     <>
-      {state !== "ready" && (
+      {state !== "ready" && !data.financial?.checkoutRequired && (
         <div role="status" className="rounded-xl border border-border bg-secondary/40 p-4">
           <p className="font-medium">
             {t(state === "failed" ? "billing_ai_failed" : "billing_ai_pending")}

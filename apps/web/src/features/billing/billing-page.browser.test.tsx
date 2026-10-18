@@ -91,6 +91,7 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
   await expect.element(page.getByText("¥420.25", { exact: true })).toBeVisible();
   await expect.element(page.getByText("今回の請求期間（日本時間）")).toBeVisible();
   await expect.element(page.getByText("次回の更新・請求予定日")).toBeVisible();
+  expect(document.body.textContent).not.toContain("AIの準備が完了しています");
   await expect.element(page.getByText("請求書はまだありません")).toBeVisible();
   await page.viewport(1366, 1100);
   await page.screenshot({
@@ -130,6 +131,7 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
 it("無料プランは定期請求なしと示し、AIプランだけCheckoutへ進める", async () => {
   const { fetch } = await show({
     ...billingFixture,
+    usage: { ...billingFixture.usage, aiState: "pending" },
     financial: {
       ...billingFixture.financial,
       subscription: null,
@@ -143,6 +145,7 @@ it("無料プランは定期請求なしと示し、AIプランだけCheckoutへ
     .element(page.getByText("AI音声接客は有料プランで利用できます。", { exact: true }))
     .toBeVisible();
   expect(document.body.textContent).not.toContain("次回の更新・請求予定日");
+  expect(document.body.textContent).not.toContain("AI音声接客を設定しています");
   await userEvent.click(page.getByRole("button", { name: "スタンダードを申し込む" }));
   await expect
     .poll(() =>
@@ -226,7 +229,7 @@ it("取得失敗から再試行し、狭い英語画面と文字拡大でも操�
   await page.viewport(390, 844);
   document.documentElement.style.fontSize = "20px";
   await userEvent.click(page.getByRole("button", { name: "Try again" }));
-  await expect.element(page.getByText("AI preparation failed")).toBeVisible();
+  await expect.element(page.getByText("AI voice assistance is unavailable")).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   await page.screenshot({
     path: "../../../test-results/tablecast-billing-narrow-en.png",

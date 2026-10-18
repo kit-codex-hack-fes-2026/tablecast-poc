@@ -44,7 +44,7 @@ export const Preparing: Story = {
   args: { data: { ...billingFixture, usage: { ...billingFixture.usage, aiState: "pending" } } },
 };
 export const Failed: Story = {
-  name: "AI準備失敗と未契約",
+  name: "無料プランではAI設定状態を表示しない",
   args: {
     data: {
       ...billingFixture,
