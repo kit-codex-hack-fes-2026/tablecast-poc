@@ -10,11 +10,7 @@ import { useAppForm } from "../../components/form";
 import { useI18n } from "../../i18n/locale";
 
 import { authClient, authResult } from "../../lib/auth-client";
-
-function safeReturn() {
-  const requested = new URLSearchParams(window.location.search).get("returnTo");
-  return requested?.startsWith("/") && !requested.startsWith("//") ? requested : undefined;
-}
+import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
@@ -23,18 +19,15 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
   const social = useMutation({
     mutationFn: async (method: "google" | "passkey") => {
-      const query = new URLSearchParams(searchStr);
-      const requested = query.get("returnTo");
-      const callbackURL =
-        requested?.startsWith("/") && !requested.startsWith("//") ? requested : "/organisations";
+      const callbackURL = loginReturnUrl(searchStr, window.location.origin) ?? "/organisations";
       if (method === "passkey") {
         authResult(await authClient.signIn.passkey());
-        window.location.assign(query.has("sig") ? `/consent${searchStr}` : callbackURL);
+        window.location.assign(callbackURL);
       } else
         authResult(
           await authClient.signIn.social({
             provider: "google",
-            callbackURL: query.has("sig") ? `/consent${searchStr}` : callbackURL,
+            callbackURL,
           }),
         );
     },
@@ -47,8 +40,8 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
     mutationFn: async (value: { email: string; password: string }) =>
       authResult(await authClient.signIn.email(value)),
     onSuccess: () => {
-      if (new URLSearchParams(searchStr).has("sig")) window.location.assign(`/consent${searchStr}`);
-      else if (safeReturn()) window.location.assign(safeReturn() ?? "/organisations");
+      const returnUrl = loginReturnUrl(searchStr, window.location.origin);
+      if (returnUrl) window.location.assign(returnUrl);
       else
         void navigate({
           to: "/admin/live",
