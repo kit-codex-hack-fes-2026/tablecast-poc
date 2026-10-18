@@ -935,7 +935,6 @@
   "theme_sans": "ゴシック",
   "theme_serif": "明朝",
   "theme_rounded": "丸ゴシック",
-  "theme_ramen_preset": "ラーメン店の配色と枠を適用",
   "theme_assets": "装飾画像",
   "theme_assets_hint": "透過画像や紙の質感を登録し、各部品へ配置できます。",
   "theme_add_asset": "装飾画像を追加",

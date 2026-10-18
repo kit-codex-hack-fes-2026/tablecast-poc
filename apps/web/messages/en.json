@@ -935,7 +935,6 @@
   "theme_sans": "Sans serif",
   "theme_serif": "Serif",
   "theme_rounded": "Rounded",
-  "theme_ramen_preset": "Apply ramen colours and borders",
   "theme_assets": "Decorative images",
   "theme_assets_hint": "Register transparent artwork and textures for use on components.",
   "theme_add_asset": "Add decorative image",

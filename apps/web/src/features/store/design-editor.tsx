@@ -188,30 +188,6 @@ export function DesignEditor({
             </label>
           ))}
         </div>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          onClick={() =>
-            updateAppearance({
-              colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
-              fonts: { heading: "serif", body: "sans" },
-              parts: {
-                ...appearance.parts,
-                "product-card": {
-                  background: "#fff8e7",
-                  foreground: "#201a16",
-                  borderColor: "#201a16",
-                  borderWidth: 3,
-                  radius: 4,
-                  shadow: "offset",
-                },
-                "category-button": { borderColor: "#201a16", borderWidth: 2, radius: 4 },
-              },
-            })
-          }
-        >
-          {t("theme_ramen_preset")}
-        </Button>
       </details>
       <details className="space-y-4 rounded-xl border border-border bg-card p-4">
         <summary className="cursor-pointer rounded-lg py-2 font-semibold focus-visible:outline-2 focus-visible:outline-ring">
