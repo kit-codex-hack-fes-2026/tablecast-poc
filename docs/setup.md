@@ -328,3 +328,9 @@ React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実
 Viteの開発起動ではAPIを補助Workerとして同時実行するため、`envDir`を自worktreeの`.local`に揃える。Cloudflare Viteプラグインは同じローカル設定を全Workerで参照し、各Workerが宣言したbindingだけを渡す。APIの認証・決済のsecretをWebのbindingへ追加しない。build・previewはこの開発用envDir切替の対象外とし、配備用のsecret管理を維持する。
 
 `0027_tablecast_configuration_history.sql`は公開版の作成元下書き、下書きの復元元公開版を保存するnullable列と履歴読取用indexを追加する。既存の設定・注文・履歴は書き換えず、過去の由来はNULLのまま保持する。APIの更新前に既存のmigration経路で適用する。追加列はNULLを許容し、旧版で作られた行に由来を推測して補完しない。
+
+### Storybook Docsの依存
+
+部品の用途・props・使用例はWeb内の公式 `@storybook/addon-docs@10.6.2` によるDocs/Autodocsで確認する。通常の `bun install --frozen-lockfile` と `bun run storybook` で利用できる。MCP登録は [開発環境](development.md#storybook-mcp) に従い、起動したworktreeの実URLを既存のGit管理外 `.codex/config.toml` へ統合する。ユーザー共通設定、API、DB、秘密情報の追加は不要。
+
+Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。

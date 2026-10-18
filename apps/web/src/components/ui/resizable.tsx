@@ -9,6 +9,13 @@ import {
   type SeparatorProps,
 } from "react-resizable-panels";
 
+/**
+ * react-resizable-panelsのGroup/Panel/Separatorを利用した分割。
+ * Groupのorientation、PanelのdefaultSize/minSize、Handleのaria-labelを指定する。
+ * キーボード操作と最小幅を保ち、狭い画面では呼出し元が縦並びにする。
+ * hydration前のHandleは無効。
+ * 独自drag実装を作らない。
+ */
 export function ResizablePanelGroup({ className, ...props }: GroupProps) {
   return <Group className={cn("flex w-full min-h-0 min-w-0", className)} {...props} />;
 }

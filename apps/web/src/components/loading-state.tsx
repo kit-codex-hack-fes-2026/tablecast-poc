@@ -1,6 +1,12 @@
 import { useI18n } from "../i18n/locale";
 import { Skeleton } from "./ui/skeleton";
 
+/**
+ * 初回読込の領域を確保し、翻訳済みのstatusを伝える。
+ * cards=trueでカード型、falseで一覧型。
+ * 再取得では既存結果を消さず、既存画面のaria-busyや進行表示を使う。
+ * Skeletonはこの部品の形状を作る低水準部品。
+ */
 export function LoadingState({ cards = false }: { cards?: boolean }) {
   const { t } = useI18n();
   return (

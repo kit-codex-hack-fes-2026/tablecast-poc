@@ -16,6 +16,13 @@ const productGrid = tv({
   },
 });
 
+/**
+ * カテゴリと商品を選ぶ既存メニュー。
+ * catalogとonChoose(product)が必須。
+ * 任意のproductIdsで提示対象を絞る。
+ * 商品名・価格・売切をAPIから表示し、選んだ商品はfeatureのカスタマイズへ進める。
+ * 店舗の自由な画像案内はMenuBannersで補う。
+ */
 export function ProductMenu({
   catalog,
   onChoose,

@@ -3,6 +3,13 @@ import { Check, Copy } from "lucide-react";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 
+/**
+ * 設定値等をコピーする。
+ * labelは名前、valueは文字列。
+ * 読み取り専用textareaから手動選択もでき、成功・失敗をstatusで伝える。
+ * 秘密を固定Storyへ埋め込まない。
+ * Clipboard APIが使える安全なcontextで使用する。
+ */
 export function CopyValue({ label, value }: { label: string; value: string }) {
   const { t } = useI18n();
   const [status, setStatus] = useState<"idle" | "copied" | "error">("idle");

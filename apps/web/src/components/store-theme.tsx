@@ -59,6 +59,13 @@ function themeStyles(value: Appearance, id: string) {
     .map((item) => rule(item.part, item.declarations, item.suffix))
     .join("")}`;
 }
+/**
+ * 既存店舗のappearanceを検証し、childrenとDialog Portalへテーマを適用する。
+ * appearance未指定は標準テーマ。
+ * 色・書体・部品装飾のデータ形式はAPI schemaを正本にする。
+ * 新しいテーマ設定や別のカスタマイズUIは追加しない。
+ * Standard Storyは店舗指定なしでも使える表示。
+ */
 export function StoreTheme({
   appearance,
   children,

@@ -6,6 +6,12 @@ const userAvatar = tv({
   variants: { compact: { true: "size-9 text-sm", false: "size-11 text-base" } },
 });
 
+/**
+ * 人の名前・任意のemail/imageを表示する。
+ * userが必須、compactは小さいavatar。
+ * 画像なしは名前の頭文字になる。
+ * クリック対象は呼出し元がリンクやメニューで包み、表示だけのidentityをボタン風にしない。
+ */
 export function UserIdentity({
   user,
   compact = false,

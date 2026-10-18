@@ -5,7 +5,19 @@ import { z } from "zod";
 import { useI18n } from "../i18n/locale";
 import { ActionFeedback } from "./action-feedback";
 import { useAppForm } from "./form";
+import { TextField } from "./form/text-field";
+import { NumberField } from "./form/number-field";
+import { SubmitButton } from "./form/submit-button";
+import { FormErrors } from "./form/errors";
 
+/**
+ * useAppFormがTanStack FormとBase UI Fieldを組み合わせる。
+ * defaultValues・validators・onSubmitを渡し、AppField内のTextField/NumberField、AppForm内のSubmitButton/FormErrorsを使う。
+ * TextFieldはlabel、description、required、type、autoComplete等、NumberFieldはlabel、min、max、step等を受け取る。
+ * 入力とエラーの関連は共通部品が担当し、API権限・金額・版競合はfeatureが担当する。
+ * 保存失敗時にフォームを作り直さない。
+ * 以下のSourceが実行可能な組合せ例。
+ */
 function FormExample({
   submit,
 }: {
@@ -77,8 +89,11 @@ function FormExample({
 
 const submit = fn<(value: { email: string; count: number }) => Promise<void>>();
 const meta = {
+  tags: ["autodocs"],
+
   title: "デザインシステム/フォーム",
   component: FormExample,
+  subcomponents: { TextField, NumberField, SubmitButton, FormErrors },
   args: { submit },
 } satisfies Meta<typeof FormExample>;
 export default meta;

@@ -4,6 +4,12 @@ import * as m from "motion/react-m";
 import { useI18n } from "../i18n/locale";
 import { ErrorNotice } from "./error-notice";
 
+/**
+ * 操作の進行・失敗・完了を同じ領域で示す。
+ * pending、error、success、successMessageを渡し、優先順位は処理中→失敗→成功。
+ * 最小高さで配置の揺れを抑え、MotionProviderとreduced motionを尊重する。
+ * 音声Agentによる状態の読み上げを追加しない。
+ */
 export function ActionFeedback({
   pending,
   error,

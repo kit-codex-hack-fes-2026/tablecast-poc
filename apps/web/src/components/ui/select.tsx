@@ -3,6 +3,13 @@ import { cn } from "tailwind-variants";
 import { Check, ChevronsUpDown } from "lucide-react";
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
+/**
+ * 装飾した候補を同じ見た目で選ぶ場合に使う。
+ * Selectがvalue/defaultValue/onValueChange/itemsを所有し、SelectTrigger+SelectValueで現在値、SelectContent+SelectItem(value)で候補を組み立てる。
+ * triggerに名前を付ける。
+ * 単純な文字候補はNativeSelectを優先する。
+ * Portal内のスタイルは標準テーマを使う。
+ */
 export function SelectTrigger({ className, children, ...props }: SelectPrimitive.Trigger.Props) {
   return (
     <SelectPrimitive.Trigger

@@ -6,6 +6,8 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "デザインシステム/ページ見出し",
   component: PageHeader,
   decorators: [

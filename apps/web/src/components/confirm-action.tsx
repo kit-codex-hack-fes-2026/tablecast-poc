@@ -4,6 +4,13 @@ import { useI18n } from "../i18n/locale";
 
 import { Button } from "./ui/button";
 
+/**
+ * 取り消せない操作の直前確認。
+ * labelは具体的な動詞、subjectは対象と影響、iconは装飾、disabledは処理状態、onConfirmは確定時だけ実行する。
+ * triggerClassNameは配置調整用。
+ * 確認後の非同期結果・失敗・再試行は呼出し元のActionFeedbackで扱う。
+ * 注文や公開の専用承認フローを置き換えない。
+ */
 export function ConfirmAction({
   label,
   subject,

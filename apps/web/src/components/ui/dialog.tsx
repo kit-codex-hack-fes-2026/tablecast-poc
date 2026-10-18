@@ -40,6 +40,15 @@ export function DialogDescription({ className, ...props }: DialogPrimitive.Descr
   );
 }
 
+/**
+ * 短い確認や詳細を重ねて表示する。
+ * Dialogにopen/onOpenChange、DialogContentにside(center/right/left)とinitialFocus/finalFocusを渡す。
+ * Header内のTitle、Description、Close、Scroll、Footerを組み合わせる。
+ * 閉じるアイコンにはaria-labelが必須。
+ * 長い内容はScrollへ置き、操作を隠さない。
+ * 破壊操作にはConfirmActionを使う。
+ * Portalのテーマは内部で引き継ぐ。
+ */
 export function DialogContent({
   className,
   side = "center",

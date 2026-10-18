@@ -3,6 +3,13 @@ import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cn } from "tailwind-variants";
 import * as React from "react";
 
+/**
+ * 低水準の入力。
+ * HTML inputのprops、classNameを受け取る。
+ * idとlabelを必ず関連付ける。
+ * placeholderをラベルにしない。
+ * 業務フォームではuseAppFormのTextField/NumberFieldを優先し、errorsはFieldErrorsへ接続する。
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   const hydrated = useHydrated();
   return (

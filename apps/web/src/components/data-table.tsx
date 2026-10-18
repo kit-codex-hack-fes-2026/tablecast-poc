@@ -52,6 +52,15 @@ const features = tableFeatures({
 
 export type DataTableColumn<T extends RowData> = ColumnDef<typeof features, T>;
 
+/**
+ * 検索・ページ分割を備えた一覧。
+ * data、columns、getRowIdが必須。
+ * searchLabelで検索名、emptyで0件文、pending/error/onRetryで取得状態を指定する。
+ * stateとonGlobalFilterChange/onPaginationChangeでURL等へ同期できる。
+ * 部分取得ではpagination=false、manualFilteringを実際のAPIに合わせる。
+ * 取得した一部だけを全件集計と呼ばない。
+ * 行全体をクリック領域にせず、対象名へリンクを置く。
+ */
 export function DataTable<T extends RowData>({
   data,
   columns,

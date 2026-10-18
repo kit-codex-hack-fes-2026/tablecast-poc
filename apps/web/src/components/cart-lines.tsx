@@ -7,6 +7,13 @@ import { Button } from "./ui/button";
 import { money } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 
+/**
+ * 注文かごの行。
+ * API計算済みlinesを必須とし、productsで写真・条件名を補う。
+ * onEdit/onRemove/onQuantityを渡す時だけ対応操作が出る。
+ * disabledで更新中の操作を防ぐ。
+ * 表示側で価格や必須条件を再計算せず、明示注文確定はfeatureの確認フローへ残す。
+ */
 export function CartLines({
   lines,
   onEdit,

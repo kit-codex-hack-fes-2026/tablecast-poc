@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 
+/**
+ * 対象名を先頭で示す。
+ * titleは必須、descriptionは説明、statusは状態、actionsは次の操作。
+ * 戻り先リンクは呼出し元に置く。
+ * リンクと権限は呼出し元が決める。
+ * 対象名を曖昧な操作名に置き換えず、画面内のh1を重複させない。
+ */
 export function PageHeader({
   title,
   description,

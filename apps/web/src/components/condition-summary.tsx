@@ -1,6 +1,12 @@
 import type { OptionCondition, Product } from "@tablecast/api/schema";
 import { useI18n } from "../i18n/locale";
 
+/**
+ * 選択条件を読み取る短い説明。
+ * expressionはAPIのOptionCondition、productがあるとIDを日英の商品選択肢名へ解決する。
+ * 条件の編集・判定の正本はAPI。
+ * 演算子だけをアイコンにせず、文字で関係を伝える。
+ */
 export function ConditionSummary({
   expression,
   product,

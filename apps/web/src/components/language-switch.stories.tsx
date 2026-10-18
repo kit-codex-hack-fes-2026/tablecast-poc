@@ -3,9 +3,13 @@ import { expect, fn, userEvent, within } from "storybook/test";
 import { LanguageSwitch } from "./language-switch";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "共通/言語切替",
   component: LanguageSwitch,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+  },
   args: { onChange: fn() },
 } satisfies Meta<typeof LanguageSwitch>;
 export default meta;

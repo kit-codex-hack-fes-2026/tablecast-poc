@@ -3,6 +3,13 @@ import { cn } from "tailwind-variants";
 
 export { RadioGroup } from "@base-ui/react/radio-group";
 
+/**
+ * 同時に一つだけ選ぶ短い候補。
+ * RadioGroupへvalue/defaultValue/onValueChange、各RadioGroupItemへvalueを渡す。
+ * fieldset/legendで集合を命名し、labelを44px以上にする。
+ * 矢印キーで移動できる。
+ * 複数選択はCheckboxを使う。
+ */
 export function RadioGroupItem({ className, ...props }: Radio.Root.Props) {
   return (
     <Radio.Root

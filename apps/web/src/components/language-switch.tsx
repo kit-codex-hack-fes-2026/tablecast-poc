@@ -7,6 +7,12 @@ const languages = [
   { locale: "en", flag: "gb", label: "common_language_native_en" },
 ] as const;
 
+/**
+ * 日英を直接選ぶ操作。
+ * onChange(locale)で選択を通知し、disabledで更新中の二重操作を防ぐ。
+ * 現在言語はLocaleProviderから読みaria-pressedで示す。
+ * 翻訳データと永続化は呼出し元が所有する。
+ */
 export function LanguageSwitch({
   onChange,
   disabled = false,

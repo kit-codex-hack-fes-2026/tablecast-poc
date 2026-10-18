@@ -1,13 +1,26 @@
+import remarkGfm from "remark-gfm";
 import type { StorybookConfig } from "@storybook/tanstack-react";
 
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.tsx"],
+  stories: ["../src/**/*.mdx", "../src/**/*.stories.tsx"],
   framework: {
     name: "@storybook/tanstack-react",
     options: { builder: { viteConfigPath: ".storybook/vite.config.ts" } },
   },
-  addons: ["@storybook/addon-a11y", "@storybook/addon-vitest", "@storybook/addon-mcp"],
+  addons: [
+    {
+      name: "@storybook/addon-docs",
+      options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } },
+    },
+    "@storybook/addon-a11y",
+    "@storybook/addon-vitest",
+    "@storybook/addon-mcp",
+  ],
   features: { componentsManifest: true },
+  typescript: {
+    reactDocgen: "react-docgen-typescript",
+    reactDocgenTypescriptOptions: { shouldExtractLiteralValuesFromEnum: true },
+  },
   viteFinal(viteConfig) {
     return { ...viteConfig, server: { ...viteConfig.server, host: "127.0.0.1" } };
   },

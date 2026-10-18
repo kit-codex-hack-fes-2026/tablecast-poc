@@ -30,6 +30,13 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
   }
 }
 
+/**
+ * 通信・認可・競合など画面全体の失敗を表示する。
+ * errorはunknownで受けAPIエラーを翻訳し、生の内部エラーを表示しない。
+ * onRetryを渡す場合は呼出し元が再取得し、retryingで二重操作を防ぐ。
+ * 入力エラーにはFieldErrorsを使う。
+ * 取得済み情報を消さず隣接して配置する。
+ */
 export function ErrorNotice({
   error,
   onRetry,

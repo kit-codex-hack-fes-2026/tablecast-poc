@@ -1,0 +1,54 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="デザインシステム/はじめに" />
+
+# TableCastのデザインシステム
+
+店舗や商品を見つけ、状態を読み、次の操作へ進める構造にする。客向けは従来の会話とメニューの分割、店舗向けは対象の概要と次の操作を先に示す。テーマ編集や注文の構造を、このカタログだけで別の仕組みに置き換えない。
+
+## 色は役割で選ぶ
+
+値の正本は `src/styles.css` の `@theme inline` と `:root`。ここでは値を複製せず、utilityの用途を説明する。
+
+| 意味           | utilityの組合せ                          | 用途                             |
+| -------------- | ---------------------------------------- | -------------------------------- |
+| 画面           | `bg-background text-foreground`          | 通常の本文                       |
+| 内容の面       | `bg-card text-card-foreground`           | 商品・詳細・金額・表             |
+| 主操作         | `bg-primary text-primary-foreground`     | Button default                   |
+| 補助・選択領域 | `bg-secondary text-secondary-foreground` | 強調し過ぎない内容               |
+| 補足           | `text-muted-foreground`                  | 日時・説明。重要な価格を弱めない |
+| 正常           | `text-success bg-success-soft`           | 確認済み等。状態名も併記         |
+| 失敗・破壊操作 | `text-destructive`                       | ErrorNotice、破棄確認            |
+| 輪郭・入力     | `border-border` / `border-input`         | 内容区切りと入力を区別           |
+| フォーカス     | `ring-ring` と全体の `focus-visible`     | キーボードの現在位置             |
+
+ブランドのアクセントと業務の成否を同じ意味にしない。赤・緑だけで状態を説明しない。透明な面を使っても文字・金額・表には十分な下地を確保する。
+
+## 文字・余白・角丸
+
+本文は標準 `text-base`、補足は `text-sm`。見出しにはPageHeaderを使い、長い日本語・英語で折り返せる `min-w-0` と幅を確保する。重要な文字を画像だけに埋め込まない。
+
+Tailwindの標準スケールを使う。項目内は `gap-2`、同じ対象のまとまりは `gap-4` / `space-y-4`、対象間は `gap-6` / `space-y-6` を基本に、密度に応じて選ぶ。これらは新しいトークンではなく配置上の目安。角丸は `rounded-lg` / `rounded-xl` を使い、値を別の表に転記しない。
+
+通常のButtonは48px以上、コンパクトなButtonも44px以上、卓上の主操作は `size="lg"` で56px以上。長いラベルは高さを伸ばす。Checkbox/Radioはラベル全体を44px以上にする。状態表示のBadgeをボタンの代わりに使わない。
+
+## 動きと操作
+
+押下・色変化はCSSの150ms程度、状態の入退場は既存MotionProviderとActionFeedbackを利用する。操作を待たせない。表の数値や行を装飾目的で動かさない。`prefers-reduced-motion` はCSSの `motion-reduce` とMotionの `reducedMotion="user"` で尊重する。MotionProviderはアプリとStorybookの入口に置き、featureごとに増やさない。
+
+音声の停止・接続状態は既存の視覚表示と操作で伝える。状態をAgentに読み上げさせる処理は追加しない。スクリーンリーダー向けのラベル・statusは別のアクセシビリティ上の責務として維持する。
+
+## 初見・キーボード・日英
+
+- 商品名・店舗名・来店など、対象名を詳細への主リンクにする。行全体のクリックやリンク内ボタンを避ける。
+- inputにはlabel、アイコンだけのボタンにはaria-labelを付ける。placeholderをラベルにしない。
+- DialogにはTitleとDescription、閉じる操作、開いた元へのフォーカス復帰を用意する。
+- 失敗時に入力や取得済み内容を消さず、ErrorNoticeで原因と再試行を示す。0件、読込中、失敗を区別する。
+- ツールバーの言語切替で日英を確認する。英語はイギリス英語。390px、iPad縦横、200%拡大、Tab・Shift+Tab・Enter・Escape・矢印キーで操作する。
+- a11y自動検査の成功と、スクリーンリーダーや実端末の確認は別に報告する。
+
+## 部品の境界
+
+`components/ui` は業務非依存の操作・表示、`components` はフォーム・翻訳・状態等の共通表示、`features` は業務の状態と操作を所有する。金額・権限・注文確定はAPIの判断を使う。
+
+各部品のDocsで用途・props・StoryのSourceを確認する。NativeSelectとSelect、TableとDataTable、FieldErrorsとErrorNoticeなど、似ていても責務が違うものを置き換えない。

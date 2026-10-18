@@ -1,6 +1,12 @@
 import { dateTime } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 
+/**
+ * 日時をLocaleProviderの言語で表示し、time要素とUTCのtitleを付ける。
+ * valueは有効なnumber/string/Date、null/undefinedは未取得の横線。
+ * 無効な日時文字列を直接渡さない。
+ * 業務の日付集計と表示タイムゾーンを混同しない。
+ */
 export function DateTime({ value }: { value: number | string | Date | null | undefined }) {
   const { locale } = useI18n();
   if (value === null || value === undefined) return <span>—</span>;
