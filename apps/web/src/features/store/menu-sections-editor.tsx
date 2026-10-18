@@ -20,11 +20,13 @@ const kinds = {
 
 export function MenuSectionsEditor({
   storeId,
+  storeName,
   value,
   disabled,
   onChange,
 }: {
   storeId: string;
+  storeName: string;
   value: Configuration;
   disabled: boolean;
   onChange: (change: Partial<Appearance>) => void;
@@ -239,14 +241,14 @@ export function MenuSectionsEditor({
                         logo={value.branding?.logo}
                         width={value.appearance?.header?.logoWidth ?? 144}
                         height={value.appearance?.header?.logoHeight ?? 40}
-                        fallback={value.storeName}
+                        fallback={value.storeName ?? storeName}
                       />
                     </header>
                     <div inert>
                       <ProductMenu
                         catalog={{
                           storeId,
-                          storeName: value.storeName ?? "",
+                          storeName: value.storeName ?? storeName,
                           version: 0,
                           configuration: value,
                         }}

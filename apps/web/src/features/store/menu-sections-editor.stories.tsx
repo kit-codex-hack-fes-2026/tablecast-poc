@@ -7,7 +7,13 @@ const meta = {
   title: "店舗/メニューの組版",
   component: MenuSectionsEditor,
   parameters: { layout: "padded" },
-  args: { storeId: catalog.storeId, value: catalog.configuration, disabled: false, onChange: fn() },
+  args: {
+    storeId: catalog.storeId,
+    storeName: catalog.storeName,
+    value: catalog.configuration,
+    disabled: false,
+    onChange: fn(),
+  },
   render: (args) => {
     const [value, setValue] = useState(args.value);
     return (

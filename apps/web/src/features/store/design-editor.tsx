@@ -44,6 +44,7 @@ const emptyImage: ThemeImage = {
 };
 export function DesignEditor({
   storeId,
+  storeName,
   organisationLogo,
   value,
   onChange,
@@ -51,6 +52,7 @@ export function DesignEditor({
   onStagedChange,
 }: {
   storeId: string;
+  storeName: string;
   organisationLogo?: string | null;
   value: Configuration;
   onChange: (configuration: Configuration) => void;
@@ -101,6 +103,7 @@ export function DesignEditor({
     <fieldset disabled={disabled || importIcon.isPending} className="min-w-0 space-y-6">
       <MenuSectionsEditor
         storeId={storeId}
+        storeName={storeName}
         value={value}
         disabled={disabled}
         onChange={updateAppearance}

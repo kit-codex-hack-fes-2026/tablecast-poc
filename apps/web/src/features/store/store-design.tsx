@@ -256,6 +256,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
             key={editorRevision}
             organisationLogo={store.logo}
             storeId={store.id}
+            storeName={store.name}
             value={{ ...initial, ...configuration }}
             onChange={(value) => {
               form.setFieldValue("branding", value.branding);
