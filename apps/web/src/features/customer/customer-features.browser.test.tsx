@@ -182,7 +182,7 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   expect(writes[2]).toEqual({ revision: 2 });
 });
 
-it("ポイント履歴を表示し、交換した券を来店へ申請して再取得する", async () => {
+it("ポイント交換の失敗は同じキーで再試行し、交換した券を来店へ申請する", async () => {
   const rules = {
     title: { ja: "会員の100円割引", en: "Member discount" },
     description: { ja: "100円引き", en: "JPY 100 off" },
@@ -229,8 +229,10 @@ it("ポイント履歴を表示し、交換した券を来店へ申請して再�
     if (path === `${base}/coupons/exchanges`)
       return Response.json({ rules: [{ id: "rule", rules }], nextCursor: null });
     writes.push({ path, value: await request.json() });
-    if (path === `${base}/coupons/exchange`) exchanged = true;
-    else if (path === `${base}/coupons/coupon/request`) requested = true;
+    if (path === `${base}/coupons/exchange`) {
+      if (writes.length === 1) return Response.json({}, { status: 503 });
+      exchanged = true;
+    } else if (path === `${base}/coupons/coupon/request`) requested = true;
     else throw new Error(`未定義の要求: ${path}`);
     return Response.json({ saved: true });
   });
@@ -242,6 +244,8 @@ it("ポイント履歴を表示し、交換した券を来店へ申請して再�
   );
   await expect.element(page.getByText("+4 pt", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.common_unavailable);
+  await page.getByRole("button", { name: `${ja.coupon_exchange} · 3 pt`, exact: true }).click();
   await expect.element(page.getByText(ja.coupon_available, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: ja.coupon_request, exact: true }).click();
   await expect
@@ -252,6 +256,12 @@ it("ポイント履歴を表示し、交換した券を来店へ申請して再�
       path: `${base}/coupons/exchange`,
       value: { ruleId: "rule" },
     },
+    {
+      path: `${base}/coupons/exchange`,
+      value: { ruleId: "rule" },
+    },
     { path: `${base}/coupons/coupon/request`, value: { sessionId: "tablecast-visit" } },
   ]);
+  expect(writes[0]?.value).toHaveProperty("idempotencyKey", expect.any(String));
+  expect(writes[1]?.value).toEqual(writes[0]?.value);
 });
