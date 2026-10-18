@@ -55,6 +55,12 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 
+### 大量データと背景取得失敗の境界
+
+`voice-realtime.test.ts`は実D1に2,000商品を保存し、公開toolの先頭・隣接ページ・1,000件を超えるoffset・末尾・終端でID、価格、版、続きを示す値、6,000byteの応答上限を確認する。個別詳細の必須選択と不正入力の拒否も残す。ページングはoffsetからの切り出しで状態を持たないため、全250ページで認可・イベント記録・catalog parseを繰り返す負荷試験にはしない。HTTP認証・tenant境界とDB往復予算は既存のAPI試験が所有する。
+
+Accountの保存後再取得失敗は、実QueryClientとHTTP gateを接続したBrowser試験で、保存中の入力停止、保存後の次の入力、既存cacheの保持を確認する。エラー通知は失敗した取得領域の名前付きregionで観測する。ページ全体の通知数やアニメーションの切替時刻を保存成功の条件にしない。
+
 ### localeの保証とComponentの実行
 
 Component jobのBrowser統合とStorybook自動試験は日本語で実行する。Chromium/WebKitの対象とworker枠は従来どおりで、localeとengineを同じ軸にしない。英語Storyは閲覧用カタログに残し、標準の`tags: ["!test"]`で自動実行から除く。英語だけに存在する失敗・再送・読取専用・長文操作は、日本語の自動試験へ移してから除外する。
@@ -242,6 +248,8 @@ Bunの取得cacheは全jobが`actions/cache/restore`で復元し、`static`だ�
 Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試行し、短縮効果を確認できなかったためCIでは採用しない。保存される時間はsetup・import・Worker準備を含まず、この構成の準備負荷を表さない。標準shardのfile分配もdurationでは変わらない。Bun・Turbo・ブラウザー・seedの既存cacheは維持し、選択した試験は毎回実行する。対象SHA・環境・計測結果はPRへ残す。[Vitestの実行順](https://vitest.dev/config/sequence.html#sequence-sequencer)
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
+
+ComponentとE2Eのbrowser取得・OS依存導入は、通常の連続stepで実行する。runner 2.337.0では並列compositeの後処理で非並行collectionの破損を観測したため、cache等のpost actionを登録するcomposite同士を同時実行しない。失敗ログにstackはなくrunner内部の特定箇所までは断定しない。試験job・shard・workerの並列実行、取得cache、case予算とretry 0は維持する。テスト成功と準備・後処理の成功は別に確認する。
 
 `RUNNER_ENVIRONMENT=github-hosted`の使い捨てVMでは、公式CLIのOS依存導入中だけAPTに`--force-unsafe-io`を渡す。展開ファイルのfsyncを省き、dpkg DBの同期・依存解決・署名確認は維持する。専用の一時configは`EXIT` trapで除去し、試験中のD1やアプリのI/Oへ適用しない。クラッシュしたVMは失敗として破棄し、そのOS状態を復元しない。self-hostedではこの設定を使わない。[Debianのdpkg FAQ](https://wiki.debian.org/Teams/Dpkg/FAQ)の範囲に限定し、展開・設定の時間と全必須チェックを実CIで比較する。
 
