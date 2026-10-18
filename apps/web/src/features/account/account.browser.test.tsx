@@ -182,7 +182,12 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
     refetch.resolve(
       Response.json({ code: "UNAVAILABLE", message: "Unavailable" }, { status: 503 }),
     );
-    await expect.element(page.getByRole("alert")).toBeVisible();
+    const loginSessions = page.getByRole("region", { name: ja.account_sessions, exact: true });
+    await expect.element(loginSessions.getByRole("alert")).toBeVisible();
+    await expect
+      .element(loginSessions.getByRole("button", { name: ja.common_retry, exact: true }))
+      .toBeEnabled();
+    await expect.element(name).toBeEnabled();
     await expect.element(name).toHaveValue("入力途中の名前");
     expect(payloads).toEqual([{ name: "保存する名前" }]);
     expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
