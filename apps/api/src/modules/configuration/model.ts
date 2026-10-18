@@ -11,6 +11,7 @@ import {
   productConditionNodeCount,
 } from "../catalog/model";
 import { selectionSchema } from "../orders/model";
+export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
     branding: brandingSchema.optional(),
@@ -20,7 +21,7 @@ export const configurationSchema = z
     categories: z.array(z.object({ id, text: bilingualSchema }).strict()).max(100),
     products: z
       .array(productSchema)
-      .max(2000)
+      .max(maxConfigurationProducts)
       .refine(
         (products) =>
           products.reduce((sum, product) => sum + productConditionNodeCount(product), 0) <=
