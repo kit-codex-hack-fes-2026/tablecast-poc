@@ -67,24 +67,22 @@ export function StoreShell({ storeId }: { storeId: string }) {
     <AdminShell
       tab="live"
       storeId={storeId}
+      storeName={store?.name}
+      renderStorePicker={({ collapsed, onNavigate }) => (
+        <StorePicker
+          stores={stores.data?.stores ?? []}
+          selectedStore={storeId}
+          pending={changeOrganisation.isPending}
+          error={changeOrganisation.error}
+          collapsed={collapsed}
+          onChange={(id) => changeOrganisation.mutate(id, { onSuccess: () => onNavigate?.() })}
+        />
+      )}
       header={
-        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
-          <StorePicker
-            stores={stores.data?.stores ?? []}
-            selectedStore={storeId}
-            pending={changeOrganisation.isPending}
-            onChange={(id) => changeOrganisation.mutate(id)}
-          />
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>{t(group)}</span>
-            {inMenu && (
-              <Badge variant="outline">{t(draftId ? "demo_draft" : "demo_published")}</Badge>
-            )}
-          </div>
-          {changeOrganisation.error && (
-            <span role="alert" className="text-sm text-destructive">
-              {t("account_failed")}
-            </span>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>{t(group)}</span>
+          {inMenu && (
+            <Badge variant="outline">{t(draftId ? "demo_draft" : "demo_published")}</Badge>
           )}
         </div>
       }

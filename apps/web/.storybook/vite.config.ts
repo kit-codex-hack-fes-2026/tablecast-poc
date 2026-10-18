@@ -9,6 +9,8 @@ export default defineConfig({
     exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
     include: [
       "@base-ui/react/slider",
+      "@better-auth/infra/client",
+      "@better-auth/stripe/client",
       "react",
       "react-dom",
       "react-dom/client",

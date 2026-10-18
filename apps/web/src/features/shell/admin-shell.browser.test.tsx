@@ -10,10 +10,12 @@ import {
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { LocaleProvider } from "../../i18n/locale";
 import { MotionProvider } from "../../components/motion-provider";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
 import { AdminShell } from "./admin-shell";
+import { StorePicker } from "./admin-sidebar";
 import ja from "../../../messages/ja.json";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
 import "../../styles.css";
@@ -58,23 +60,48 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account") {
   });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(["tablecast-session"], null);
-  client.setQueryData(["tablecast-stores"], {
-    stores: [
-      {
-        id: "tablecast-shell",
-        name: "試験店舗",
-        logo: null,
-        role: "owner",
-        organizationId: "tablecast-org",
-      },
-    ],
-  });
+  const stores: Parameters<typeof StorePicker>[0]["stores"] = [
+    {
+      id: "tablecast-shell",
+      name: "試験店舗",
+      logo: null,
+      role: "owner",
+      organizationId: "tablecast-org",
+    },
+    {
+      id: "tablecast-shell-second",
+      name: "二号店舗",
+      logo: null,
+      role: "owner",
+      organizationId: "tablecast-org-second",
+    },
+  ];
+  client.setQueryData(["tablecast-stores"], { stores });
   const root = createRootRoute({
-    component: () => (
-      <AdminShell tab={initial === "/account" ? "account" : "live"} storeId="tablecast-shell">
-        <Outlet />
-      </AdminShell>
-    ),
+    component: function ShellPage() {
+      const [selectedStore, setSelectedStore] = useState("tablecast-shell");
+      return (
+        <AdminShell
+          tab={initial === "/account" ? "account" : "live"}
+          storeId={selectedStore}
+          storeName={stores.find((store) => store.id === selectedStore)?.name}
+          renderStorePicker={({ collapsed, onNavigate }) => (
+            <StorePicker
+              stores={stores}
+              selectedStore={selectedStore}
+              pending={false}
+              collapsed={collapsed}
+              onChange={(id) => {
+                setSelectedStore(id);
+                onNavigate?.();
+              }}
+            />
+          )}
+        >
+          <Outlet />
+        </AdminShell>
+      );
+    },
   });
   const account = createRoute({
     getParentRoute: () => root,
@@ -153,20 +180,63 @@ it("子ページの現在地を直接開き、モバイルの子リンクへ移�
     .toHaveAttribute("aria-current", "page");
 });
 
-it("狭い画面のナビゲーションを閉じても入力とフォーカスを保持する", async () => {
-  const locale = "ja";
-  const labels = ja;
-  await page.viewport(390, 844);
-  await show(locale);
+it("店舗選択をサイドバーに一つだけ表示し、折りたたみと画面幅の変更でも入力を保持する", async () => {
+  await page.viewport(1024, 768);
+  await show();
   const name = page.getByLabelText("表示名");
   await name.fill("編集中の名前");
-  const toggle = page.getByRole("button", { name: labels.admin_navigation, exact: true });
+  const picker = page.getByRole("combobox", { name: ja.stores_title, exact: true });
+  await expect.element(picker).toBeVisible();
+  expect(picker.elements()).toHaveLength(1);
+  await expect
+    .element(page.getByRole("main").getByRole("combobox", { name: ja.stores_title, exact: true }))
+    .not.toBeInTheDocument();
+  picker.element().focus();
+  await userEvent.keyboard("{ArrowDown}");
+  const choices = page.getByRole("listbox");
+  await expect.element(choices).toBeVisible();
+  await expect.element(choices.getByRole("option", { name: /試験店舗$/ })).toHaveFocus();
+  await userEvent.keyboard("{End}");
+  await expect.element(choices.getByRole("option", { name: /二号店舗$/ })).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(picker).toMatchTextContent("二号店舗");
+
+  const toggle = page.getByRole("button", { name: ja.admin_navigation, exact: true });
+  await toggle.click();
+  await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect.element(picker).toBeVisible();
+  expect(picker.elements()).toHaveLength(1);
+  await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
+  await expect.element(name).toHaveValue("編集中の名前");
+  await toggle.click();
+
+  await page.viewport(390, 844);
+  await expect.element(picker).not.toBeInTheDocument();
+  await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await toggle.click();
   const dialog = page.getByRole("dialog");
-  await expect.element(dialog).toBeVisible();
-  await page.getByRole("button", { name: labels.common_close, exact: true }).click();
+  await expect
+    .element(dialog.getByRole("combobox", { name: ja.stores_title, exact: true }))
+    .toBeVisible();
+  expect(picker.elements()).toHaveLength(1);
+  await page.getByRole("button", { name: ja.common_close, exact: true }).click();
   await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(toggle).toHaveFocus();
   await expect.element(name).toHaveValue("編集中の名前");
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+
+  await toggle.click();
+  await expect.element(dialog).toBeVisible();
+  await page.viewport(1024, 768);
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expect.element(picker).toBeVisible();
+  expect(picker.elements()).toHaveLength(1);
+  await expect.element(picker).toMatchTextContent("二号店舗");
+  await expect.element(name).toHaveValue("編集中の名前");
+
+  await page.viewport(390, 844);
+  await expect.element(dialog).not.toBeInTheDocument();
+  await expect.element(picker).not.toBeInTheDocument();
+  await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
+  await expect.element(name).toHaveValue("編集中の名前");
 });

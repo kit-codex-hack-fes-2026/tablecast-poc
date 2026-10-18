@@ -37,6 +37,28 @@ const billingMoney = (value: number, locale: ReturnType<typeof useI18n>["locale"
 
 export function BillingPage({ organizationId }: { organizationId: string }) {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const stores = useQuery(storesOptions);
+  const availableStores = stores.data?.stores ?? [];
+  const selectedStore = availableStores.find((store) => store.organizationId === organizationId);
+  const changeOrganisation = useMutation({
+    mutationFn: async (nextStoreId: string) => {
+      const selected = availableStores.find((store) => store.id === nextStoreId);
+      if (!selected) throw new Error("STORE_NOT_FOUND");
+      authResult(
+        await authClient.organization.setActive({ organizationId: selected.organizationId }),
+      );
+      return selected.organizationId;
+    },
+    onSuccess: async (nextOrganizationId) => {
+      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
+      await navigate({
+        to: "/billing/$organizationId",
+        params: { organizationId: nextOrganizationId },
+      });
+    },
+  });
   const [month, setMonth] = useState("");
   const [search, setSearch] = useState("");
   const billing = useInfiniteQuery(
@@ -47,14 +69,21 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
     <AdminShell
       tab="billing"
       storeId={data?.storeId}
+      storeName={selectedStore?.name ?? data?.organization.name}
       organizationId={organizationId}
-      header={<BillingStorePicker organizationId={organizationId} />}
+      renderStorePicker={({ collapsed, onNavigate }) => (
+        <StorePicker
+          stores={availableStores}
+          selectedStore={selectedStore?.id}
+          pending={changeOrganisation.isPending}
+          error={changeOrganisation.error}
+          collapsed={collapsed}
+          onChange={(id) => changeOrganisation.mutate(id, { onSuccess: () => onNavigate?.() })}
+        />
+      )}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t("billing_title")}</h1>
-          <p className="mt-1 text-muted-foreground">{data?.organization.name}</p>
-        </div>
+        <h1 className="text-2xl font-semibold">{t("billing_title")}</h1>
         <Button
           variant="outline"
           aria-label={t("billing_refresh")}
@@ -122,48 +151,6 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
         )
       )}
     </AdminShell>
-  );
-}
-
-function BillingStorePicker({ organizationId }: { organizationId: string }) {
-  const { t } = useI18n();
-  const navigate = useNavigate();
-  const client = useQueryClient();
-  const stores = useQuery(storesOptions);
-  const availableStores = stores.data?.stores ?? [];
-  const selectedStore = availableStores.find((store) => store.organizationId === organizationId);
-  const changeOrganisation = useMutation({
-    mutationFn: async (nextStoreId: string) => {
-      const selected = availableStores.find((store) => store.id === nextStoreId);
-      if (!selected) throw new Error("STORE_NOT_FOUND");
-      authResult(
-        await authClient.organization.setActive({ organizationId: selected.organizationId }),
-      );
-      return selected.organizationId;
-    },
-    onSuccess: async (nextOrganizationId) => {
-      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
-      await navigate({
-        to: "/billing/$organizationId",
-        params: { organizationId: nextOrganizationId },
-      });
-    },
-  });
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
-      <StorePicker
-        stores={availableStores}
-        selectedStore={selectedStore?.id}
-        pending={changeOrganisation.isPending}
-        onChange={(id) => changeOrganisation.mutate(id)}
-      />
-      <span className="text-sm text-muted-foreground">{t("billing_title")}</span>
-      {changeOrganisation.error && (
-        <span role="alert" className="text-sm text-destructive">
-          {t("account_failed")}
-        </span>
-      )}
-    </div>
   );
 }
 
