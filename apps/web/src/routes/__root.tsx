@@ -25,7 +25,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   beforeLoad: async ({ context, location }) => {
     const panelCookies = await readPanelCookies();
     if (
-      /^\/(admin|account|organisations|stores|device|consent|invitations)(\/|$)/.test(
+      /^\/(admin|account|billing|organisations|stores|device|consent|invitations)(\/|$)/.test(
         location.pathname,
       )
     ) {

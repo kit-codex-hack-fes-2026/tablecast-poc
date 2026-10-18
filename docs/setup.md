@@ -180,6 +180,8 @@ chmod 600 .env.local
 
 JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/environment-variables)を使う。環境変数が優先され、ファイルは `.env` → `.env.development` → `.env.local` → `.env.development.local` の順に上書きされる。開発入口は `NODE_ENV=development` を指定する。暗号化envの復号は使わない。
 
+料金設定のJSONは一重引用符で囲んで入力する。生成するdotenvも引用符をエスケープせず、Bun・Node・Wranglerで同じ値を読む。Bunは引用符内でも変数を展開するため、生成対象の設定値に`$`は使用できない。
+
 > [!NOTE]
 > 通常の開発・setup・seedはBunの標準env読み込みを使う。`--no-env-file` はCI・配備や外部資格を必要としない独立した試験の入口で、自動読み込みを止めるために使う。既に親プロセスから継承した環境変数を消す指定ではなく、Vite・cfなど別ツールの読み込みも制御しない。ローカルから配備する場合の入口は [配備手順](deployment.md) に従う。商品画像の一覧照合・不足分の限定並列投入と件数ログ、DB準備とイメージ送信の並行処理、区間時間の確認は [CDの処理](deployment.md#actionsの処理) を参照する。
 
@@ -189,15 +191,16 @@ OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
-| ファイル                      | 用途                                             |
-| ----------------------------- | ------------------------------------------------ |
-| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない    |
-| `.local/.env`                 | Bun/Composeが読む名前・origin・パス・実Webポート |
-| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵               |
-| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない      |
-| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物              |
+| ファイル                      | 用途                                                |
+| ----------------------------- | --------------------------------------------------- |
+| `.env.example` → `.env.local` | 人が入力する開発専用設定。実値はGit管理しない       |
+| `.local/.dev.vars.web`        | Web専用の生成設定。OpenAI・Stripeの秘密値を含めない |
+| `.local/.env`                 | Bun/Composeが読む名前・origin・パス・実Webポート    |
+| `.local/.dev.vars`            | cf/ViteとSDKが読む生成済み設定・鍵                  |
+| `apps/api/.dev.vars.example`  | SDK互換の型参照。起動設定としてコピーしない         |
+| `.devcontainer/.env`          | Composeのパス・公開ポート用の生成物                 |
 
-旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。開発用の外部キーは `TABLECAST_MODEL_API_KEY` だけにまとめる。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
+旧 `OPENAI_API_KEY` の別名、LiveKitの鍵、`TABLECAST_VOICE_API_TOKEN`、Mastra Observabilityの設定は不要になった。共有キーの開発は `TABLECAST_MODEL_API_KEY` を使う。組織キー発行とStripe Sandboxは [課金・請求](billing.md#開発と導入) のAPI専用設定を使う。標準音声Marin・Cedarは管理画面から日英それぞれ選び、旧Voice IDは起動時にMarinへ対応付ける。Inworld TTSのキーは任意の有料試験で入力音声を作るときだけ使用し、製品の設定には入れない。
 
 旧 `.env.secrets.local` は雛形に残る項目を `.env.local` へ移して削除する。ローカルGoogle認証は模擬サービスなので旧Google資格は不要。本番資格は [配備手順](deployment.md)で管理する。envの変更後は各ターミナルをCtrl+Cで止めて再起動する。
 
@@ -313,3 +316,5 @@ Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecas
 `emulate@0.12.2`の標準待受はloopbackである。ローカルOAuthは`127.0.0.1`、preview/stagingのContainer内だけは`0.0.0.0`を明示してService Bindingから到達できるようにする。bind失敗の検査も同じIPv4 loopbackへ既存serverを置き、別address familyの同じport番号と区別する。
 
 React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実行手順やReact Compiler導入は不要で、診断モードと対象は[静的解析](static-analysis.md#webの追加ルール)を参照する。
+
+組織課金を開発する場合は [課金・請求の導入手順](billing.md#開発と導入) を参照する。`bun run dev:config` はAPI用の `.local/.dev.vars` とWeb用の `.local/.dev.vars.web` を分け、従来のWeb symlinkが同じworktreeのAPI設定を指す場合だけ生成先を更新する。

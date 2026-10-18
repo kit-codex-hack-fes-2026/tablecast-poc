@@ -1,3 +1,4 @@
+import { billingRoutes, operatingBillingRoutes } from "./modules/billing/routes";
 import { customerCouponRoutes } from "./modules/customer-coupons/routes";
 import { customerPointsRoutes } from "./modules/customer-points/routes";
 import { Hono, type Context } from "hono";
@@ -21,6 +22,7 @@ import { requestServices } from "./platform/context";
 import { handleError, handleRpcError, requestSecurity, requestTelemetry } from "./platform/http";
 const rpcRoutes = new Hono<ApiEnv>()
   .onError(handleRpcError)
+  .route("/", billingRoutes)
   .route("/", accountRoutes)
   .route("/", customerRoutes)
   .route("/api/customer", customerVisitRoutes)
@@ -54,6 +56,7 @@ const app = new Hono<ApiEnv>()
     })(c, next),
   )
   .onError(handleError)
+  .route("/", operatingBillingRoutes)
   .route("/", systemRoutes)
   .route("/", authRoutes)
   .route("/", rpcRoutes)

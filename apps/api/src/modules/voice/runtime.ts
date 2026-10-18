@@ -1,17 +1,38 @@
+import { eq } from "drizzle-orm";
+import { voiceUsageSessions } from "../../db/business-schema";
+import { sessionCredential } from "../billing/credentials";
+import { recordVoiceUsage } from "../billing/usage";
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
 import { DomainError, ensure } from "../../platform/errors";
 
 const liveControlEvent = z.object({ type: z.string() });
 
-export async function closeLiveSession(services: ApiServices, voiceSessionId: string) {
+export async function closeLiveSession(
+  services: ApiServices,
+  voiceSessionId: string,
+  apiKey?: string,
+) {
+  const usage = await services.db
+    .select({ credentialId: voiceUsageSessions.credentialId })
+    .from(voiceUsageSessions)
+    .where(eq(voiceUsageSessions.id, voiceSessionId))
+    .get();
+  if (
+    !usage &&
+    !apiKey &&
+    !services.env.TABLECAST_MODEL_API_KEY &&
+    services.env.TABLECAST_ORGANIZATION_AI_ENABLED !== "true"
+  )
+    return;
+  const key = apiKey ?? (await sessionCredential(services, usage?.credentialId ?? null));
   // Workersの標準WebSocket接続を使う。Node専用wsや常駐中継は不要。
   const response = await fetch(
     `https://api.openai.com/v1/live/sessions/${encodeURIComponent(voiceSessionId)}/attach`,
     {
       headers: {
         Upgrade: "websocket",
-        Authorization: `Bearer ${services.env.TABLECAST_MODEL_API_KEY}`,
+        Authorization: `Bearer ${key}`,
       },
       signal: AbortSignal.timeout(10_000),
       redirect: "manual",
@@ -38,8 +59,21 @@ export async function closeLiveSession(services: ApiServices, voiceSessionId: st
         try {
           const parsed = liveControlEvent.safeParse(JSON.parse(event.data));
           if (!parsed.success) return;
-          if (parsed.data.type === "session.closed") finish();
-          else if (parsed.data.type === "error")
+          if (parsed.data.type === "session.closed") {
+            if (usage)
+              void recordVoiceUsage(services, voiceSessionId, JSON.parse(event.data)).then(
+                () => finish(),
+                () =>
+                  finish(
+                    new DomainError(
+                      "VOICE_USAGE_RECORDING_FAILED",
+                      503,
+                      "VOICE_USAGE_RECORDING_FAILED",
+                    ),
+                  ),
+              );
+            else finish();
+          } else if (parsed.data.type === "error")
             finish(new DomainError("VOICE_SESSION_STOP_FAILED", 503, "VOICE_SESSION_STOP_FAILED"));
         } catch {
           /* 不正な通知は期限付きの停止確認へ任せる。 */
@@ -60,6 +94,6 @@ export async function closeLiveSession(services: ApiServices, voiceSessionId: st
 }
 
 export async function stopVoiceRoom(services: ApiServices, voiceSessionId: string) {
-  if (services.env.TABLECAST_MODEL_API_KEY) await closeLiveSession(services, voiceSessionId);
+  await closeLiveSession(services, voiceSessionId);
   return true;
 }

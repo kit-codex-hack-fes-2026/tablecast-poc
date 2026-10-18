@@ -379,3 +379,11 @@ SSRのfile入力も、既存Button・NativeSelect等と同様に`useHydrated()`�
 PR本文の編集だけではCIを再実行しない。base変更後に新しい統合先の検査が必要な場合は、作業branchへ最新stagingを取り込んだheadをpushする。releaseは保護されたstagingのCI・配備SHAとmainとの合成treeを照合する。
 
 cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別環境・別SHA・別PRの拒否、D1の採用ID、Worker所有情報、Accessの再適用と既存token欠落時の拒否を確認する。local D1のID移行は実SDKでデータ・migration履歴・再実行を検証する。遠隔namespaceの保持・Access拒否と許可・再配備後のデータ保持は最新PR headの配備で別途確認する。
+
+## 組織課金
+
+`billing-pricing.test.ts`で秒数・cached token・実際のtier・料金精度・期間境界を確認する。`billing*.test.ts`は実D1/DOと本番HTTPを使い、組織作成、発行の競合・回収、暗号化、同じ鍵での停止、利用量再送、Costsの全ページ・置換・失敗、署名済みStripe Webhook、Metersの送信不明期限、role認可を確認する。OpenAI/Stripeの外部I/Oだけ固定し、DBやDOは差し替えない。
+
+通常のAPIテストでは実接続用のローカルenvを継承せず、Vitestのbindingで課金・組織キー・音声の有効化と外部secretを初期化する。必要なケースだけfixture内で有効化する。
+
+Webの`billing-page.browser.test.tsx`と隣接Storyはrole・失敗再試行・組織切替の遅い応答・日英・狭い画面と文字拡大を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。

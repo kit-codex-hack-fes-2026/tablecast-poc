@@ -1,12 +1,16 @@
+import {
+  tablecastBillingVars,
+  tablecastBillingSecrets,
+  modeOptions,
+} from "./tablecast-deploy-config";
 import process from "node:process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, realpath, writeFile, symlink, readlink } from "node:fs/promises";
+import { mkdir, realpath, writeFile, symlink, readlink, unlink } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import { parseEnv, promisify } from "node:util";
 import { execFile } from "node:child_process";
 import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
-import { modeOptions } from "./tablecast-deploy-config";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(import.meta.dirname, ".."));
@@ -49,9 +53,13 @@ export async function localReleaseSha(root: string) {
 
 export function developmentSecrets() {
   return Object.fromEntries(
-    ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL", "TABLECAST_OTEL_CAPTURE_CONTENT"].flatMap(
-      (key) => (process.env[key] ? [[key, process.env[key]]] : []),
-    ),
+    [
+      "TABLECAST_MODEL_API_KEY",
+      "TABLECAST_MODEL",
+      "TABLECAST_OTEL_CAPTURE_CONTENT",
+      ...tablecastBillingVars,
+      ...tablecastBillingSecrets,
+    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])),
   );
 }
 
@@ -104,10 +112,16 @@ if (import.meta.main) {
     return url.origin;
   };
   const external = developmentSecrets();
-  const voice = ["TABLECAST_MODEL_API_KEY", "TABLECAST_MODEL"]
-    .every((key) => Boolean(external[key]))
-    .toString();
+  const voice = Boolean(
+    external.TABLECAST_MODEL &&
+    (external.TABLECAST_MODEL_API_KEY || external.TABLECAST_ORGANIZATION_AI_ENABLED === "true"),
+  ).toString();
   const values: Record<string, string> = {
+    ...Object.fromEntries(
+      tablecastBillingVars.flatMap((key) =>
+        external[key] === undefined ? [] : [[key, external[key]]],
+      ),
+    ),
     TABLECAST_WORKTREE_NAME: name,
     TABLECAST_RESOURCE_NAME: resource,
     TABLECAST_HOST: tablecastContainer
@@ -153,7 +167,17 @@ if (import.meta.main) {
     writeFile(
       path,
       Object.entries(entries)
-        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .map(([key, value]) => {
+          if (value.includes("$"))
+            throw new Error(`${key}はBunの変数展開を避けるため$を含められません。`);
+          // dotenvはJSONの引用符エスケープを復元しないため、値に含まれない区切りを使う。
+          const quote = ["'", "`", '"'].find(
+            (candidate) =>
+              !value.includes(candidate) && (candidate !== '"' || !/\\[nr]/.test(value)),
+          );
+          if (!quote) throw new Error(`${key}をdotenvへ保存できる引用形式がありません。`);
+          return `${key}=${quote}${value}${quote}`;
+        })
         .join("\n") + "\n",
       { mode: 0o600 },
     );
@@ -165,14 +189,23 @@ if (import.meta.main) {
     TABLECAST_VOICE_ENABLED: voice,
     TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
   });
+  const webSecretPath = join(tablecastLocal, ".dev.vars.web");
+  await writeEnv(webSecretPath, {
+    TABLECAST_OTEL_CAPTURE_CONTENT: external.TABLECAST_OTEL_CAPTURE_CONTENT ?? "false",
+  });
   for (const workspace of ["api", "web"]) {
+    const workspaceSecretPath = workspace === "api" ? secretPath : webSecretPath;
     const link = join(tablecastRoot, "apps", workspace, ".dev.vars");
     try {
-      await symlink(secretPath, link);
+      await symlink(workspaceSecretPath, link);
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-      if ((await readlink(link)) !== secretPath)
-        throw new Error("workspaceの.dev.varsが別の設定を参照しています。", { cause: error });
+      const current = await readlink(link);
+      if (current === workspaceSecretPath) continue;
+      if (workspace === "web" && current === secretPath) {
+        await unlink(link);
+        await symlink(workspaceSecretPath, link);
+      } else throw new Error("workspaceの.dev.varsが別の設定を参照しています。", { cause: error });
     }
   }
   await writeFile(

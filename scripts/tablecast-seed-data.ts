@@ -901,6 +901,10 @@ async function populateSeedTemplate(
     const owner = members.find((person) => person.role === "owner");
     if (!owner) throw new Error("店舗の管理者がありません。");
     queries.push(
+      db
+        .insert(business.organizationAi)
+        .values({ organizationId, updatedAt: credentials.baseTime })
+        .onConflictDoNothing(),
       db.insert(identity.member).values(
         members.map((person) => ({
           id: `tablecast-member-${store.id}-${person.id}`,
@@ -1081,6 +1085,10 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
       }));
     if (!organization) throw new Error("デモ店舗を作成できませんでした。");
     const owner: Owner = { id: organization.id, userId };
+    await db
+      .insert(business.organizationAi)
+      .values({ organizationId: organization.id, updatedAt: credentials.baseTime })
+      .onConflictDoNothing();
     const existing = await db
       .select()
       .from(business.stores)

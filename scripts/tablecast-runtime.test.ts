@@ -6,6 +6,7 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
 import { z } from "zod";
+import { getPlatformProxy } from "wrangler";
 import { localReleaseSha } from "./tablecast-runtime";
 
 beforeEach(async () => {
@@ -227,7 +228,14 @@ describe("開発資源の所有境界", () => {
         join(root, ".local/.dev.vars"),
         "TABLECAST_AUTH_SECRET=tablecast-owned-auth\n",
       );
-      await run();
+      const rates = JSON.stringify({
+        version: "tablecast-test-v1",
+        markupBps: 15000,
+        basePriceId: "price_tablecast_base",
+        meterPriceId: "price_tablecast_usage",
+        eventName: "tablecast_ai_usage",
+      });
+      await run("", { TABLECAST_BILLING_RATES: rates });
       const api = z
         .object({
           main: z.string(),
@@ -239,6 +247,28 @@ describe("開発資源の所有境界", () => {
       expect(api.main).toBe(join(root, "apps/api/src/worker.ts"));
       expect(api.vars.TABLECAST_PUBLIC_ORIGIN).toBe("http://web.voice-ui.tablecast-poc.localhost");
       const settings = parseEnv(await readFile(join(root, ".local/.env"), "utf8"));
+      expect(settings.TABLECAST_BILLING_RATES).toBe(rates);
+      const loaded = await execute(
+        "bun",
+        ["--env-file=.local/.env", "-e", "console.log(process.env.TABLECAST_BILLING_RATES)"],
+        { cwd: root, env },
+      );
+      expect(loaded.stdout.trim()).toBe(rates);
+      const dotenvConfig = join(root, ".local/tablecast-dotenv.wrangler.json");
+      await writeFile(
+        dotenvConfig,
+        JSON.stringify({ name: "tablecast-dotenv-test", compatibility_date: "2026-10-01" }),
+      );
+      const platform = await getPlatformProxy<{ TABLECAST_BILLING_RATES: string }>({
+        configPath: dotenvConfig,
+        envFiles: [".dev.vars"],
+        persist: false,
+      });
+      try {
+        expect(platform.env.TABLECAST_BILLING_RATES).toBe(rates);
+      } finally {
+        await platform.dispose();
+      }
       expect(settings.TABLECAST_CONFIG).toBeUndefined();
       expect(settings.TABLECAST_STATE_PATH).toBe(join(root, ".local/state"));
       expect(settings.TABLECAST_WEB_PORT).toBe("0");
@@ -267,7 +297,7 @@ describe("開発資源の所有境界", () => {
       await writeFile(
         settingsPath,
         (await readFile(settingsPath, "utf8")).replace(
-          'TABLECAST_WEB_PORT="0"',
+          /^TABLECAST_WEB_PORT=.*$/m,
           `TABLECAST_WEB_PORT="${address.port}"`,
         ),
       );

@@ -1,3 +1,5 @@
+import { billingPlugin } from "../billing/stripe";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import {
   invitationEmail,
   verificationEmail,
@@ -65,6 +67,7 @@ export function createAuth(
       backgroundTasks: dashboardApiKey ? backgroundTasks : undefined,
     },
     plugins: [
+      ...billingPlugin(env, db),
       ...options.plugins,
       ...(dashboardApiKey
         ? [
@@ -132,6 +135,15 @@ export function createAuth(
       sendResetPassword: async ({ user, url }) =>
         sendAccountEmail(env, user.email, resetPasswordEmail(url)),
     },
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path.startsWith("/subscription/") && ctx.path !== "/subscription/success") {
+          const customerType: unknown = ctx.body?.customerType ?? ctx.query?.customerType;
+          if (customerType !== "organization")
+            throw new APIError("BAD_REQUEST", { message: "ORGANIZATION_BILLING_REQUIRED" });
+        }
+      }),
+    },
     logger,
     database: drizzleAdapter(db, { provider: "sqlite", schema }),
     socialProviders:
@@ -150,10 +162,16 @@ export async function hashDeviceToken(token: string) {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export type AuthEnv = Pick<
-  TablecastEnv,
-  "TABLECAST_DB" | "TABLECAST_AUTH_SECRET" | "TABLECAST_PUBLIC_ORIGIN"
+export type AuthEnv = Partial<
+  Pick<
+    TablecastEnv,
+    | "TABLECAST_BILLING_ENABLED"
+    | "TABLECAST_BILLING_RATES"
+    | "TABLECAST_STRIPE_SECRET_KEY"
+    | "TABLECAST_STRIPE_WEBHOOK_SECRET"
+  >
 > &
+  Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_AUTH_SECRET" | "TABLECAST_PUBLIC_ORIGIN"> &
   Partial<
     Pick<
       TablecastEnv,

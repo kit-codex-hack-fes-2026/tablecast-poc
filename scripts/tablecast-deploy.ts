@@ -279,7 +279,8 @@ export async function verifyDurableNamespaces() {
   if (
     owned.some(
       (namespace) =>
-        !["StoreEvents", "TablecastEmulate"].includes(namespace.class) || !namespace.use_sqlite,
+        !["StoreEvents", "TablecastEmulate", "TablecastVoiceUsage"].includes(namespace.class) ||
+        !namespace.use_sqlite,
     )
   )
     throw new Error(
@@ -520,7 +521,7 @@ async function main(resetFinished = false) {
               const maintenanceApi = resolve(directory, "maintenance-api.js");
               await writeFile(
                 maintenanceApi,
-                `export {StoreEvents, TablecastEmulate} from ${JSON.stringify(resolve(root, "apps/api/src/worker.ts"))}; export default {fetch(){return new Response("TableCast staging maintenance", {status:503})}};`,
+                `export {StoreEvents, TablecastEmulate, TablecastVoiceUsage} from ${JSON.stringify(resolve(root, "apps/api/src/worker.ts"))}; export default {fetch(){return new Response("TableCast staging maintenance", {status:503})}};`,
               );
               const configured = apiCloudflareConfig(options.api);
               await deployTemporaryWorker(
@@ -528,6 +529,7 @@ async function main(resetFinished = false) {
                   ...configured.worker,
                   entrypoint: maintenanceApi,
                   exports: {
+                    TablecastVoiceUsage: { type: "durable-object", storage: "sqlite" },
                     StoreEvents: { type: "durable-object", storage: "sqlite" },
                     TablecastEmulate: { type: "durable-object", storage: "sqlite" },
                   },

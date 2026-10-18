@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { hashPassword } from "better-auth/crypto";
 import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
-import { account, user } from "../src/db/auth-schema";
+import { account } from "../src/db/auth-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
 import { resetFixtureStorage } from "./fixture";
@@ -18,12 +18,10 @@ it("認証のissuer必須制約を外しても既存の資格情報とログイ�
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
   const email = "tablecast-auth-migration@example.test";
   const password = "tablecast-auth-migration-password";
-  await fixtureDb.insert(user).values({
-    id: "tablecast-auth-migration-user",
-    email,
-    emailVerified: true,
-    name: "移行会員",
-  });
+  // 0026のStripe列がない旧userの実物を再現する。
+  await fixtureDb.run(
+    sql`INSERT INTO user(id,email,email_verified,name,created_at,updated_at) VALUES ('tablecast-auth-migration-user',${email},1,'移行会員',1,1)`,
+  );
   await fixtureDb.insert(account).values({
     id: "tablecast-auth-migration-account",
     userId: "tablecast-auth-migration-user",
@@ -58,11 +56,10 @@ it("異なるissuerで識別子が重複する場合は既存行と必須制約�
   );
   if (index < 1) throw new Error("認証互換migrationが必要です");
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
-  await fixtureDb.insert(user).values({
-    id: "tablecast-auth-duplicate-user",
-    email: "tablecast-auth-duplicate@example.test",
-    name: "識別子重複会員",
-  });
+  // 0026適用前の列だけを使い、旧認証schemaを再現する。
+  await fixtureDb.run(
+    sql`INSERT INTO user(id,email,email_verified,name,created_at,updated_at) VALUES ('tablecast-auth-duplicate-user','tablecast-auth-duplicate@example.test',0,'識別子重複会員',1,1)`,
+  );
   await fixtureDb.insert(account).values(
     ["https://first.example.test", "https://second.example.test"].map((issuer, position) => ({
       id: `tablecast-auth-duplicate-account-${position}`,

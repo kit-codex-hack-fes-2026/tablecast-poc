@@ -25,7 +25,11 @@ it.for([false, true])(
       migration.name.includes("0025_tablecast_auth_account_compat"),
     );
     if (!authCompatibility) throw new Error("認証互換migrationが必要です");
-    await applyD1Migrations(env.TABLECAST_DB, [authCompatibility]);
+    const billingCompatibility = migrations.find((migration) =>
+      migration.name.includes("0026_tablecast_organization_billing"),
+    );
+    if (!billingCompatibility) throw new Error("課金の認証列migrationが必要です");
+    await applyD1Migrations(env.TABLECAST_DB, [authCompatibility, billingCompatibility]);
     const { staff } = await setupFixture();
     const day = 86_400_000;
     const start = Date.parse("2026-09-01T00:00:00+09:00");

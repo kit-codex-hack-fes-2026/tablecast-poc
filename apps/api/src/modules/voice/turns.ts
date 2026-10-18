@@ -155,11 +155,7 @@ export async function startVoiceTurn(
     logVoiceTurn(diagnostics, "skipped");
     return { kind: "skipped" } as const;
   }
-  ensure(
-    services.env.TABLECAST_MODEL_API_KEY && services.env.TABLECAST_MODEL,
-    "VOICE_NOT_CONFIGURED",
-    503,
-  );
+  ensure(services.env.TABLECAST_MODEL, "VOICE_NOT_CONFIGURED", 503);
   const conversationEvent = { turnId: input.turnId, trigger: "proactive", locale: input.locale };
   const result = await db.batch([
     db

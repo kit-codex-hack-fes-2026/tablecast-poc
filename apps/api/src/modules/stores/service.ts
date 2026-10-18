@@ -1,3 +1,4 @@
+import { pendingOrganizationKey, provisionOrganizationKey } from "../billing/credentials";
 import { eq } from "drizzle-orm";
 import * as authTables from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
@@ -35,6 +36,7 @@ export async function createStore(services: ApiServices, userId: string, input: 
       slug: input.slug,
       createdAt: new Date(now),
     }),
+    pendingOrganizationKey(services, id),
     db.insert(authTables.member).values({
       id: crypto.randomUUID(),
       organizationId: id,
@@ -64,6 +66,7 @@ export async function createStore(services: ApiServices, userId: string, input: 
       }),
     ),
   ]);
+  await provisionOrganizationKey(services, id);
   return { id, organizationId: id };
 }
 export async function updateStoreIcon(

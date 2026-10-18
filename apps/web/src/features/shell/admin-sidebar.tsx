@@ -6,6 +6,7 @@ import { Link, useHydrated, useNavigate, useParams, useRouterState } from "@tans
 import {
   ArrowUpRight,
   Building2,
+  CreditCard,
   ChevronRight,
   ChevronsUpDown,
   History,
@@ -40,8 +41,9 @@ import { authClient, authResult } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
 export type AdminSidebarProps = {
-  tab: Tab | "account" | "organisations" | "mcp";
+  tab: Tab | "account" | "organisations" | "mcp" | "billing";
   storeId?: string;
+  organizationId?: string;
   onSignOut?: () => void;
   signingOut?: boolean;
 };
@@ -50,6 +52,7 @@ const sidebarItemClass =
 export function AdminSidebar({
   tab,
   storeId,
+  organizationId,
   onSignOut,
   signingOut,
   collapsed = false,
@@ -67,18 +70,25 @@ export function AdminSidebar({
   const availableStores = stores.data?.stores ?? [];
   const selectedStore =
     storeId ??
-    availableStores.find((store) => store.organizationId === active.data?.id)?.id ??
-    availableStores[0]?.id;
+    (organizationId
+      ? availableStores.find((store) => store.organizationId === organizationId)?.id
+      : (availableStores.find((store) => store.organizationId === active.data?.id)?.id ??
+        availableStores[0]?.id));
   const changeOrganisation = useMutation({
     mutationFn: async (nextStoreId: string) => {
       const store = availableStores.find((item) => item.id === nextStoreId);
       if (!store) throw new Error("STORE_NOT_FOUND");
       authResult(await authClient.organization.setActive({ organizationId: store.organizationId }));
-      return nextStoreId;
+      return store;
     },
-    onSuccess: async (nextStoreId) => {
+    onSuccess: async (store) => {
       await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
-      await navigate({ to: "/admin/stores/$storeId/floor", params: { storeId: nextStoreId } });
+      if (tab === "billing")
+        await navigate({
+          to: "/billing/$organizationId",
+          params: { organizationId: store.organizationId },
+        });
+      else await navigate({ to: "/admin/stores/$storeId/floor", params: { storeId: store.id } });
     },
   });
 
@@ -107,6 +117,10 @@ export function AdminSidebar({
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
+        selectedOrganization={
+          organizationId ??
+          availableStores.find((store) => store.id === selectedStore)?.organizationId
+        }
         collapsed={collapsed}
         onNavigate={onNavigate}
         inMenu={inMenu}
@@ -179,12 +193,14 @@ function DemoLink({
 function SidebarNavigation({
   tab,
   selectedStore,
+  selectedOrganization,
   collapsed,
   onNavigate,
   inMenu,
   draftId,
 }: Pick<AdminSidebarProps, "tab"> & {
   selectedStore?: string;
+  selectedOrganization?: string;
   collapsed: boolean;
   onNavigate?: () => void;
   inMenu: boolean;
@@ -296,6 +312,12 @@ function SidebarNavigation({
         <Building2 className="size-5 shrink-0" />
         {!collapsed && t("stores_title")}
       </Link>
+      <BillingNavigation
+        organizationId={selectedOrganization}
+        tab={tab}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
       <Link
         className={sidebarItemClass}
         to="/account/mcp-sessions"
@@ -319,6 +341,35 @@ function SidebarNavigation({
         {!collapsed && t("account_title")}
       </Link>
     </nav>
+  );
+}
+
+function BillingNavigation({
+  organizationId: selectedOrganization,
+  tab,
+  collapsed,
+  onNavigate,
+}: {
+  organizationId?: string;
+  tab: AdminSidebarProps["tab"];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const { t } = useI18n();
+  if (!selectedOrganization) return null;
+  return (
+    <Link
+      className={sidebarItemClass}
+      to="/billing/$organizationId"
+      params={{ organizationId: selectedOrganization }}
+      title={t("billing_title")}
+      aria-label={t("billing_title")}
+      aria-current={tab === "billing" ? "page" : undefined}
+      onClick={onNavigate}
+    >
+      <CreditCard className="size-5 shrink-0" />
+      {!collapsed && t("billing_title")}
+    </Link>
   );
 }
 

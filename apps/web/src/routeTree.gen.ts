@@ -20,6 +20,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
 import { Route as AdminLiveRouteImport } from './routes/admin.live'
+import { Route as BillingOrganizationIdRouteImport } from './routes/billing.$organizationId'
 import { Route as InvitationsInvitationIdRouteImport } from './routes/invitations.$invitationId'
 import { Route as MemberIndexRouteImport } from './routes/member.index'
 import { Route as MemberStoreIdRouteImport } from './routes/member.$storeId'
@@ -110,6 +111,11 @@ const AccountMcpSessionsRoute = AccountMcpSessionsRouteImport.update({
 const AdminLiveRoute = AdminLiveRouteImport.update({
   id: '/admin/live',
   path: '/admin/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingOrganizationIdRoute = BillingOrganizationIdRouteImport.update({
+  id: '/billing/$organizationId',
+  path: '/billing/$organizationId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InvitationsInvitationIdRoute = InvitationsInvitationIdRouteImport.update({
@@ -328,6 +334,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
@@ -376,6 +383,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/join': typeof MemberJoinRoute
   '/stores/new': typeof StoresNewRoute
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
   '/admin/live': typeof AdminLiveRoute
+  '/billing/$organizationId': typeof BillingOrganizationIdRoute
   '/invitations/$invitationId': typeof InvitationsInvitationIdRoute
   '/member/$storeId': typeof MemberStoreIdRouteWithChildren
   '/member/join': typeof MemberJoinRoute
@@ -476,6 +485,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/account/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
     | '/invitations/$invitationId'
     | '/member/$storeId'
     | '/member/join'
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/account/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
     | '/invitations/$invitationId'
     | '/member/join'
     | '/stores/new'
@@ -572,6 +583,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/account_/mcp-sessions'
     | '/admin/live'
+    | '/billing/$organizationId'
     | '/invitations/$invitationId'
     | '/member/$storeId'
     | '/member/join'
@@ -622,6 +634,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   AccountMcpSessionsRoute: typeof AccountMcpSessionsRoute
   AdminLiveRoute: typeof AdminLiveRoute
+  BillingOrganizationIdRoute: typeof BillingOrganizationIdRoute
   InvitationsInvitationIdRoute: typeof InvitationsInvitationIdRoute
   StoresNewRoute: typeof StoresNewRoute
   AccountIntegrationsManualRoute: typeof AccountIntegrationsManualRoute
@@ -708,6 +721,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/live'
       fullPath: '/admin/live'
       preLoaderRoute: typeof AdminLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing/$organizationId': {
+      id: '/billing/$organizationId'
+      path: '/billing/$organizationId'
+      fullPath: '/billing/$organizationId'
+      preLoaderRoute: typeof BillingOrganizationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invitations/$invitationId': {
@@ -1071,6 +1091,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   AccountMcpSessionsRoute: AccountMcpSessionsRoute,
   AdminLiveRoute: AdminLiveRoute,
+  BillingOrganizationIdRoute: BillingOrganizationIdRoute,
   InvitationsInvitationIdRoute: InvitationsInvitationIdRoute,
   StoresNewRoute: StoresNewRoute,
   AccountIntegrationsManualRoute: AccountIntegrationsManualRoute,

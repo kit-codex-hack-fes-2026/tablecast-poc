@@ -1,7 +1,7 @@
 import type { InferEnv, UnwrapConfig } from "cf/config";
 import type config from "../cloudflare.config";
 import type * as workerModule from "./worker";
-import type { StoreEvents, TablecastEmulate } from "./worker";
+import type { StoreEvents, TablecastEmulate, TablecastVoiceUsage } from "./worker";
 
 // Bindingの型はTypeScript設定から推論し、実行時に与える追加varsとDOクラスを具体化する。
 type TablecastConfiguredEnv = InferEnv<UnwrapConfig<typeof config>["worker"]>;
@@ -21,6 +21,16 @@ interface __BaseEnv_TablecastEnv extends TablecastConfiguredEnv {
 	TABLECAST_GOOGLE_CLIENT_ID: string;
 	TABLECAST_GOOGLE_CLIENT_SECRET: string;
 	TABLECAST_MODEL_API_KEY: string;
+	TABLECAST_ORGANIZATION_AI_ENABLED: string;
+	TABLECAST_OPENAI_ADMIN_API_KEY: string;
+	TABLECAST_OPENAI_PROJECT_ID: string;
+	TABLECAST_OPENAI_KEY_ENCRYPTION_SECRET: string;
+	TABLECAST_BILLING_ENABLED: string;
+	TABLECAST_BILLING_RATES: string;
+ TABLECAST_BILLING_OPERATOR_USER_IDS: string;
+	TABLECAST_STRIPE_SECRET_KEY: string;
+	TABLECAST_STRIPE_WEBHOOK_SECRET: string;
+	TABLECAST_VOICE_USAGE: DurableObjectNamespace<TablecastVoiceUsage>;
 	TABLECAST_MODEL: string;
 	TABLECAST_GOOGLE_EMULATOR_URL: string;
 	TABLECAST_EMAIL_FROM: string;
@@ -41,7 +51,7 @@ interface __BaseEnv_TablecastEnv extends TablecastConfiguredEnv {
 namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof workerModule;
-		durableNamespaces: "StoreEvents" | "TablecastEmulate";
+		durableNamespaces: "StoreEvents" | "TablecastEmulate" | "TablecastVoiceUsage";
 	}
 	interface Env extends __BaseEnv_TablecastEnv {}
 }

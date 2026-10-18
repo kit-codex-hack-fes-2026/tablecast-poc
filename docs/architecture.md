@@ -21,7 +21,9 @@ flowchart LR
 ```
 
 Web/APIの2 Workersをアプリの実行単位にする。DOのclassはAPI Workerに置き、PRのOAuth emulatorだけをContainerに置く。音声サーバーやPython runtimeは運用しない。
-業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、LunaはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知を担当する。
+業務の正本はD1。GPT-Liveは音声理解・会話・音声生成、LunaはGPT-Liveの標準Responses delegationによる業務判断、Honoは共通業務ツールの認可・実行、DOは通知とサーバー側の音声利用量収集を担当する。
+
+組織ごとのOpenAI Service Account・暗号化鍵・利用量台帳・Costs snapshotはAPIの`modules/billing`が所有する。サブスク・Checkout・Portal・Webhook同期はBetter Auth公式Stripe pluginを使い、顧客料金の送信はStripe Metersへ任せる。原価を卓へ配賦しない。[課金・請求仕様](billing.md)を参照する。
 
 ## ディレクトリ
 

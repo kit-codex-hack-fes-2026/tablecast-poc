@@ -6,6 +6,7 @@ import rootConfig from "../../oxlint.config.ts";
 // 実ファイルの役割を分類し、未知の配置と依存方向を検査する。
 const boundaryFiles = [
   ["test", "src/**/*.{test,stories}.{ts,tsx}"],
+  ["test", "src/features/billing/billing-fixture.ts"],
   ["route", "src/routes/*.tsx"],
   ["router", "src/router.tsx"],
   ["server", "src/{server,lib/api-fetch.server}.ts"],
@@ -90,7 +91,7 @@ export default defineConfig({
             from: { file: { categories: from } },
             allow: { to: { file: { categories: to } } },
           })),
-          ...["account", "store", "kiosk", "shell", "customer"].map((feature) => ({
+          ...["account", "store", "kiosk", "shell", "customer", "billing"].map((feature) => ({
             from: { file: { categories: "feature", captured: { feature } } },
             allow: {
               to: { file: { categories: "feature", captured: { feature: [feature, "shell"] } } },
