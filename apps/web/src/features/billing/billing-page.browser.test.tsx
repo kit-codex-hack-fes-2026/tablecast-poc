@@ -243,6 +243,13 @@ it("取得失敗から再試行し、狭い日本語画面でも操作できる"
 it("組織切替で期間・検索・ページを初期化し、旧組織の遅い応答を表示しない", async () => {
   const { fetch } = await show();
   await expect.element(page.getByRole("heading", { name: "利用明細" })).toBeVisible();
+  const billingLink = page
+    .getByRole("complementary")
+    .getByRole("region", { name: "店舗管理", exact: true })
+    .getByRole("link", { name: "課金／請求", exact: true });
+  await expect
+    .element(billingLink)
+    .toHaveAttribute("href", `/billing/${billingFixture.organization.id}`);
   await userEvent.fill(page.getByLabelText("利用状況の対象月（UTC）"), "2026-09");
   await expect
     .poll(() =>
@@ -286,7 +293,9 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
       });
     throw new Error(`未定義の要求: ${pathname}`);
   });
-  await userEvent.click(page.getByRole("combobox", { name: "店舗", exact: true }));
+  await userEvent.click(
+    page.getByRole("complementary").getByRole("combobox", { name: "店舗", exact: true }),
+  );
   await userEvent.click(page.getByRole("option", { name: /新組織/ }));
   await expect
     .poll(() =>
@@ -310,6 +319,7 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
     )
     .toBe(true);
   await expect.element(page.getByLabelText("利用状況の対象月（UTC）")).toHaveValue("2026-10");
+  await expect.element(billingLink).toHaveAttribute("href", "/billing/tablecast-new-org");
   oldResponse.resolve(
     Response.json({
       ...billingFixture,
@@ -318,4 +328,60 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
   );
   await expect.element(page.getByText("この期間のAI利用はありません")).toBeVisible();
   expect(document.body.textContent).not.toContain("古い応答");
+});
+it("狭い画面の店舗切替は送信中と失敗をナビ内に示し、入力を保って再試行できる", async () => {
+  const { fetch, router } = await show();
+  await page.viewport(390, 844);
+  const filter = page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" });
+  await userEvent.fill(filter, "old-table");
+  await expect.poll(() => client.isFetching()).toBe(0);
+  const originalFetch = fetch.getMockImplementation();
+  if (!originalFetch) throw new Error("HTTP fixtureがありません");
+  const failedSwitch = Promise.withResolvers<Response>();
+  let fail = true;
+  fetch.mockImplementation(async (input, init) => {
+    const pathname = new URL(new Request(input, init).url).pathname;
+    if (pathname === "/api/auth/organization/set-active")
+      return fail ? failedSwitch.promise : Response.json({ id: "tablecast-new-org" });
+    if (pathname === "/api/admin/organizations/tablecast-new-org/billing")
+      return Response.json({
+        ...billingFixture,
+        organization: { id: "tablecast-new-org", name: "新組織" },
+        storeId: "tablecast-new-store",
+        canManage: false,
+        visits: [],
+        financial: null,
+      });
+    return originalFetch(input, init);
+  });
+  try {
+    await expect.element(page.getByRole("combobox")).not.toBeInTheDocument();
+    await userEvent.click(page.getByRole("button", { name: "ナビゲーション", exact: true }));
+    const navigation = page.getByRole("dialog", { name: "ナビゲーション", exact: true });
+    const picker = navigation.getByRole("combobox", { name: "店舗", exact: true });
+    await userEvent.click(picker);
+    await userEvent.click(page.getByRole("option", { name: /新組織/ }));
+    await expect.element(picker).toBeDisabled();
+    await expect.element(navigation).toBeVisible();
+    failedSwitch.resolve(Response.json({ message: "tablecast-test-unavailable" }, { status: 503 }));
+    await expect.element(navigation.getByRole("alert")).toMatchTextContent("操作できませんでした");
+    await expect.element(picker).toBeEnabled();
+    await expect.element(picker).toMatchTextContent(billingFixture.organization.name);
+    expect(router.state.location.pathname).toBe(`/billing/${billingFixture.organization.id}`);
+    await userEvent.click(navigation.getByRole("button", { name: "閉じる", exact: true }));
+    await expect.element(filter).toHaveValue("old-table");
+    fail = false;
+    await userEvent.click(page.getByRole("button", { name: "ナビゲーション", exact: true }));
+    await expect.element(navigation.getByRole("alert")).toMatchTextContent("操作できませんでした");
+    await userEvent.click(picker);
+    await userEvent.click(page.getByRole("option", { name: /新組織/ }));
+    await expect.poll(() => router.state.location.pathname).toBe("/billing/tablecast-new-org");
+    await expect.element(navigation).not.toBeInTheDocument();
+    await expect.element(filter).toHaveValue("");
+    await expect.element(page.getByLabelText("利用状況の対象月（UTC）")).toHaveValue("2026-10");
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  } finally {
+    failedSwitch.resolve(Response.json({}, { status: 503 }));
+    await expect.poll(() => client.isMutating()).toBe(0);
+  }
 });

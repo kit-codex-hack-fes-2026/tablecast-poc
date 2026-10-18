@@ -101,7 +101,15 @@ it("店舗画像を送信すると設定と店舗選択を再取得し、再表�
   await expect.element(screen.getByRole("status")).toMatchTextContent(ja.account_saved);
   expect(uploaded?.name).toBe("tablecast-icon.png");
   expect(uploaded?.type).toBe("image/png");
-  await expect.poll(() => document.querySelectorAll(`header img[src='${logo}']`).length).toBe(1);
+  await expect
+    .poll(() =>
+      screen
+        .getByRole("combobox", { name: ja.stores_title, exact: true })
+        .element()
+        .querySelector("img")
+        ?.getAttribute("src"),
+    )
+    .toBe(logo);
   const region = screen.getByRole("region", { name: ja.editor_images, exact: true });
   await expect.poll(() => region.element().querySelector("img")?.getAttribute("src")).toBe(logo);
   await expect

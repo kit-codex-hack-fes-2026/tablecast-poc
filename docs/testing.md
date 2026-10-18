@@ -6,6 +6,8 @@
 
 ケース設計と層の選択は[fullstack-web-testing](../.agents/skills/fullstack-web-testing/SKILL.md)、この文書はTableCastの実行環境と保証の配置を扱う。既存の認可・競合・データ保全を維持し、設定値の転記や標準機能の内部を試験するだけのケースは追加しない。
 
+Browserの仮想entryから後で読み込む外部依存は、既存の`optimizeDeps.include`に明示する。実行中の依存再最適化でtest iframeがreloadした結果を、操作の失敗や成功と混同しない。認証clientのentry追加時もBrowserとStorybookの対象設定を揃え、共有cacheを消さず隔離した`cacheDir`の初回で確認する。warm再実行だけで準備不成立を解消済みとは扱わない。
+
 ## Vitest 5とWorkersのmodule cache
 
 全workspaceのrunnerをVitest 5.0.5へ揃える。APIのbindings projectだけ`fsModuleCache: false`を指定する。5系のwarm module一括転送は大きなWorkerのmodule graphでWebSocket上限を超え、先頭の試験が成功しても後続Workerが終了する。[上流Issue #16331](https://github.com/cloudflare/workers-sdk/issues/16331)を参照する。公開設定で転送方法を戻し、setupのmigration・storage reset、各fileのisolation、4 workerでの並列実行を維持する。単独の認証試験だけでは再現しないため、解除時には実D1・DO・R2を使うAPI全件を確認する。

@@ -243,12 +243,16 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   await expect.element(screen.getByRole("button", { name: /^T04/ })).toBeVisible();
   await expect.element(screen.getByRole("button", { name: /^T05/ })).not.toBeInTheDocument();
   await page.viewport(390, 844);
+  await screen.getByRole("button", { name: ja.admin_navigation, exact: true }).click();
+  const dialog = page.getByRole("dialog");
   await expect
-    .element(screen.getByRole("combobox", { name: ja.stores_title, exact: true }))
+    .element(dialog.getByRole("combobox", { name: ja.stores_title, exact: true }))
     .toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
     document.documentElement.clientWidth,
   );
+  await page.getByRole("button", { name: ja.common_close, exact: true }).click();
+  await expect.element(dialog).not.toBeInTheDocument();
   await page.viewport(1440, 900);
   await screen.getByRole("button", { name: new RegExp(`^${ja.admin_billing}`) }).click();
   await expect

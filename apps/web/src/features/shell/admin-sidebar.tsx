@@ -2,6 +2,7 @@ import { Brand } from "../../components/brand";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { Link, useHydrated } from "@tanstack/react-router";
 import {
   ArrowUpRight,
@@ -9,6 +10,7 @@ import {
   CreditCard,
   ChevronRight,
   ChevronsUpDown,
+  CircleAlert,
   History,
   Gamepad2,
   Gift,
@@ -47,6 +49,7 @@ export type AdminSidebarProps = {
   organizationId?: string;
   onSignOut?: () => void;
   signingOut?: boolean;
+  renderStorePicker?: (options: { collapsed: boolean; onNavigate?: () => void }) => ReactNode;
 };
 const sidebarItemClass =
   "flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium data-[status=active]:bg-secondary data-[status=active]:font-medium";
@@ -56,6 +59,7 @@ export function AdminSidebar({
   organizationId,
   onSignOut,
   signingOut,
+  renderStorePicker,
   collapsed = false,
   onNavigate,
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
@@ -79,6 +83,9 @@ export function AdminSidebar({
       >
         <Brand variant={collapsed ? "symbol" : "logo"} />
       </Link>
+      {renderStorePicker && (
+        <div className="shrink-0 pb-3">{renderStorePicker({ collapsed, onNavigate })}</div>
+      )}
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
@@ -299,6 +306,14 @@ function SidebarNavigation({
                   {!collapsed && t(label)}
                 </Link>
               ))}
+              {group.label === "nav_store_management" && (
+                <BillingNavigation
+                  organizationId={selectedOrganization}
+                  tab={tab}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              )}
             </section>
           ))}
         </>
@@ -318,12 +333,6 @@ function SidebarNavigation({
         <Building2 className="size-5 shrink-0" />
         {!collapsed && t("stores_title")}
       </Link>
-      <BillingNavigation
-        organizationId={selectedOrganization}
-        tab={tab}
-        collapsed={collapsed}
-        onNavigate={onNavigate}
-      />
       <Link
         className={sidebarItemClass}
         to="/account/mcp-sessions"
@@ -384,21 +393,22 @@ export function StorePicker({
   selectedStore,
   pending,
   onChange,
+  collapsed = false,
+  error,
 }: {
   stores: Awaited<ReturnType<typeof loadStores>>["stores"];
   selectedStore?: string;
   pending: boolean;
   onChange: (id: string) => void;
+  collapsed?: boolean;
+  error?: unknown;
 }) {
   const { t } = useI18n();
+  const selected = stores.find((item) => item.id === selectedStore);
   return (
-    <div className="flex w-full min-w-0 max-w-72 items-center gap-2">
-      <StoreIcon
-        name={stores.find((store) => store.id === selectedStore)?.name ?? t("admin_store")}
-        logo={stores.find((store) => store.id === selectedStore)?.logo}
-      />
+    <div className="min-w-0 space-y-2">
       <Select
-        items={stores.map((store) => ({ value: store.id, label: store.name })) ?? []}
+        items={stores.map((store) => ({ value: store.id, label: store.name }))}
         value={selectedStore ?? null}
         disabled={pending}
         onValueChange={(value) => {
@@ -406,10 +416,19 @@ export function StorePicker({
         }}
       >
         <SelectTrigger
-          className="min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none"
+          className={`min-w-0 justify-start border-0 bg-transparent shadow-none hover:bg-secondary ${collapsed ? "gap-1 px-1" : "px-2"}`}
           aria-label={t("stores_title")}
+          title={selected?.name}
         >
-          <SelectValue className="min-w-0 truncate text-left" placeholder={t("stores_title")} />
+          <StoreIcon
+            name={selected?.name ?? t("admin_store")}
+            logo={selected?.logo}
+            className={collapsed ? "size-7" : undefined}
+          />
+          <SelectValue
+            className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate text-left"}
+            placeholder={t("stores_title")}
+          />
         </SelectTrigger>
         <SelectContent>
           {stores.map((store) => (
@@ -422,6 +441,16 @@ export function StorePicker({
           ))}
         </SelectContent>
       </Select>
+      {!!error && (
+        <p
+          role="alert"
+          className="flex items-center gap-2 px-2 text-sm text-destructive"
+          title={t("account_failed")}
+        >
+          <CircleAlert className="size-5 shrink-0" aria-hidden="true" />
+          <span className={collapsed ? "sr-only" : undefined}>{t("account_failed")}</span>
+        </p>
+      )}
     </div>
   );
 }

@@ -18,11 +18,11 @@ import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
 export function AdminShell({
   children,
   header,
+  storeName,
   ...sidebar
-}: AdminSidebarProps & { children: ReactNode; header?: ReactNode }) {
+}: AdminSidebarProps & { children: ReactNode; header?: ReactNode; storeName?: string }) {
   const { t, setLocale } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
@@ -80,16 +80,10 @@ export function AdminShell({
               >
                 <PanelLeft />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="md:hidden"
-                aria-label={t("admin_navigation")}
-                aria-expanded={mobileOpen}
-                onClick={() => setMobileOpen(true)}
-              >
-                <PanelLeft />
-              </Button>
+              <MobileNavigation key={desktop ? "desktop" : "mobile"} {...sidebar} />
+              {storeName && (!desktop || collapsed) && (
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{storeName}</span>
+              )}
               {header && (
                 <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
                   {header}
@@ -105,7 +99,26 @@ export function AdminShell({
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>
-      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
+    </>
+  );
+}
+
+function MobileNavigation(sidebar: AdminSidebarProps) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="md:hidden"
+        aria-label={t("admin_navigation")}
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <PanelLeft />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent side="left" className="max-w-72 p-3">
           <DialogTitle className="sr-only">{t("admin_navigation")}</DialogTitle>
           <Button
@@ -113,11 +126,11 @@ export function AdminShell({
             size="icon"
             variant="ghost"
             aria-label={t("common_close")}
-            onClick={() => setMobileOpen(false)}
+            onClick={() => setOpen(false)}
           >
             <X />
           </Button>
-          <AdminSidebar {...sidebar} onNavigate={() => setMobileOpen(false)} />
+          <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </>
