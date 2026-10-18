@@ -217,14 +217,8 @@ export async function updateDraft(
     )
     .get();
   ensure(previous, "DRAFT_CONFLICT");
-  const previousConfiguration = configurationSchema.parse(JSON.parse(previous.configuration));
   ensure(
-    previousConfiguration.appearance?.version !== 2 || configuration.appearance?.version === 2,
-    "CONFIGURATION_FORMAT_UNSUPPORTED",
-    422,
-  );
-  ensure(
-    !losesConditions(previousConfiguration, configuration),
+    !losesConditions(configurationSchema.parse(JSON.parse(previous.configuration)), configuration),
     "CONFIGURATION_FORMAT_UNSUPPORTED",
     422,
   );

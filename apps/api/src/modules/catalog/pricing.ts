@@ -24,31 +24,6 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
   unique(config.banners ?? [], ["banners"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
-  const banners = new Set((config.banners ?? []).map((banner) => banner.id));
-  for (const [index, section] of (config.appearance?.sections ?? []).entries()) {
-    const path = ["appearance", "sections", index];
-    if (section.kind === "artwork" && !banners.has(section.bannerId))
-      errors.push({
-        code: "BANNER_NOT_FOUND",
-        path: [...path, "bannerId"],
-        params: { bannerId: section.bannerId },
-      });
-    if (section.kind !== "products") continue;
-    if (section.source.kind === "category" && !categories.has(section.source.categoryId))
-      errors.push({
-        code: "CATEGORY_NOT_FOUND",
-        path: [...path, "source", "categoryId"],
-        params: { categoryId: section.source.categoryId },
-      });
-    if (section.source.kind === "selection")
-      for (const [productIndex, productId] of section.source.productIds.entries())
-        if (!products.has(productId))
-          errors.push({
-            code: "PRODUCT_NOT_FOUND",
-            path: [...path, "source", "productIds", productIndex],
-            params: { productId },
-          });
-  }
   for (const [bannerIndex, banner] of (config.banners ?? []).entries()) {
     unique(banner.hotspots, ["banners", bannerIndex, "hotspots"]);
     for (const [spotIndex, spot] of banner.hotspots.entries()) {

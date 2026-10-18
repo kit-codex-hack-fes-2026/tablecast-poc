@@ -5,19 +5,14 @@ export function StoreLogo({
   logo,
   width = 96,
   height = 40,
-  fallback,
 }: {
   logo?: ThemeImage | null;
   width?: number;
   height?: number;
-  fallback?: string;
 }) {
   const { locale } = useI18n();
   const [failed, setFailed] = useState<string>();
-  if (!logo || failed === logo.imageKey)
-    return fallback ? (
-      <span className="block max-w-full text-sm font-semibold wrap-anywhere">{fallback}</span>
-    ) : null;
+  if (!logo || failed === logo.imageKey) return null;
   return (
     <img
       src={`/media/${logo.imageKey}?width=768`}

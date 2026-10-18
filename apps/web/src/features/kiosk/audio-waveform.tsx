@@ -28,7 +28,6 @@ const waveformLayout = tv({
   },
   variants: {
     compact: { true: { root: "w-20 shrink-0 py-0", caption: "sr-only" } },
-    orbOnly: { true: { root: "size-14 p-0", caption: "sr-only" } },
   },
 });
 
@@ -57,11 +56,6 @@ const pearlColors = ["#a5c8ff", "#c4b5fd", "#f9b8db", "#ffd1b8", "#fbcfe8", "#a5
 const monochrome = ["#a1a1aa", "#71717a", "#d4d4d8"];
 const errorColors = ["#ad3429", "#f87171", "#71717a"];
 
-function stateColors(state: VoiceVisualState) {
-  if (state === "error") return errorColors;
-  return states[state].speed ? pearlColors : monochrome;
-}
-
 function subscribeMotion(callback: () => void) {
   const media = matchMedia("(prefers-reduced-motion: reduce)");
   media.addEventListener("change", callback);
@@ -80,17 +74,15 @@ export function AudioWaveform({
   state,
   toolLabel,
   compact = false,
-  orbOnly = false,
 }: {
   track?: MediaStreamTrack;
   label: string;
   state: VoiceVisualState;
   toolLabel?: string;
   compact?: boolean;
-  orbOnly?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const layout = waveformLayout({ compact, orbOnly });
+  const layout = waveformLayout({ compact });
   const [audio, setAudio] = useState({ volume: 0, brightness: 0 });
   const still = useSyncExternalStore(subscribeMotion, motionPaused, () => true);
   const preset = states[state];
@@ -113,7 +105,7 @@ export function AudioWaveform({
     };
     const interpolate = mix(shapeRef.current, target);
     const animation = animate(0, 1, {
-      duration: still || !preset.speed ? 0 : 0.2,
+      duration: still || !preset.speed ? 0 : 0.45,
       ease: "easeInOut",
       onUpdate: (progress) => {
         shapeRef.current = interpolate(progress);
@@ -198,28 +190,22 @@ export function AudioWaveform({
       void activeContext.close();
     };
   }, [track, reactive]);
-  const colours = stateColors(state);
-  const moving = !still && Boolean(preset.speed);
   return (
     <figure
       className={layout.root()}
       data-voice-state={state}
-      data-motion={moving ? "animated" : "still"}
+      data-motion={still || !preset.speed ? "still" : "animated"}
     >
       {!compact && (
         <div
           aria-hidden="true"
-          className={
-            orbOnly
-              ? "relative size-14 shrink-0 rounded-full bg-card"
-              : "relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
-          }
+          className="relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
         >
           <SmokeRing
             className="absolute inset-0 rounded-full blur-xs"
-            colors={colours}
+            colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
             colorBack="#00000000"
-            speed={moving ? shape.speed : 0}
+            speed={still || !preset.speed ? 0 : shape.speed}
             frame={12000}
             radius={shape.radius + volume * 0.07}
             thickness={shape.thickness + volume * 0.12}
@@ -243,7 +229,7 @@ export function AudioWaveform({
           )}
         </div>
       )}
-      <div className={orbOnly ? "sr-only" : "min-w-0 flex-1"}>
+      <div className="min-w-0 flex-1">
         <figcaption className={layout.caption()}>
           {label}
           {toolLabel && (

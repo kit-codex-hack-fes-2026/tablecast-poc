@@ -1,8 +1,50 @@
-import { Camera, CameraOff, LoaderCircle } from "lucide-react";
+import { Camera, CameraOff, LoaderCircle, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { useI18n } from "../../i18n/locale";
+
+export function LocalCameraDialog() {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const camera = useLocalCamera();
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) camera.stop();
+        setOpen(next);
+      }}
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={t("kiosk_camera_mirror")}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <Camera aria-hidden="true" />
+      </Button>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("kiosk_camera_mirror")}</DialogTitle>
+          <DialogClose aria-label={t("common_close")}>
+            <X />
+          </DialogClose>
+        </DialogHeader>
+        <LocalCamera camera={camera} />
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // 鏡専用。VoiceConnectionへ渡さず、映像の送信・保存・フレーム取得を行わない。
 export function useLocalCamera() {

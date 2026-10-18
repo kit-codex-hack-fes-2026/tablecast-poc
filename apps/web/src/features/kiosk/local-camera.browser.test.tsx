@@ -1,8 +1,10 @@
 import { cleanup, render } from "vitest-browser-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useState } from "react";
+import { page, userEvent } from "vitest/browser";
 import { LocaleProvider } from "../../i18n/locale";
-import { LocalCamera, useLocalCamera } from "./local-camera";
+import { LocalCamera, LocalCameraDialog, useLocalCamera } from "./local-camera";
+import "../../styles.css";
 import ja from "../../../messages/ja.json";
 
 const streams: MediaStream[] = [];
@@ -33,6 +35,29 @@ afterEach(async () => {
   await cleanup();
   streams.splice(0).forEach((stream) => stream.getTracks().forEach((track) => track.stop()));
   vi.restoreAllMocks();
+});
+it("鏡表示を開くだけでは撮影せず、Escapeで停止して入口へ戻る", async () => {
+  const stream = cameraStream();
+  const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+  await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <LocalCameraDialog />
+    </LocaleProvider>,
+  );
+  const trigger = page.getByRole("button", { name: ja.kiosk_camera_mirror, exact: true });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: ja.kiosk_camera_mirror });
+  await expect.element(dialog).toBeVisible();
+  expect(capture).not.toHaveBeenCalled();
+  await dialog.getByRole("button", { name: ja.kiosk_camera_start }).click();
+  await expect.poll(() => document.querySelector("video")?.srcObject).toBe(stream);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(dialog).not.toBeInTheDocument();
+  expect(stream.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
+  await expect.element(trigger).toHaveFocus();
+  await trigger.click();
+  await expect.element(dialog.getByRole("button", { name: ja.kiosk_camera_start })).toBeVisible();
+  expect(capture).toHaveBeenCalledTimes(1);
 });
 it("明示開始だけで映像を取得し、表示切替では保持し音声を取得しない", async () => {
   const stream = cameraStream();

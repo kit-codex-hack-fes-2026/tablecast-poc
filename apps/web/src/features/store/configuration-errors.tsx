@@ -3,7 +3,6 @@ import { useI18n } from "../../i18n/locale";
 
 const messages = {
   DUPLICATE_ID: "config_error_duplicate_id",
-  BANNER_NOT_FOUND: "config_error_banner_missing",
   CATEGORY_NOT_FOUND: "config_error_category_missing",
   MODIFIER_SELECTION_RANGE: "config_error_selection_range",
   MODIFIER_CAPACITY: "config_error_capacity",
@@ -41,8 +40,6 @@ function reference(issue: ConfigurationIssue) {
   switch (issue.code) {
     case "DUPLICATE_ID":
       return issue.params.id;
-    case "BANNER_NOT_FOUND":
-      return issue.params.bannerId;
     case "CATEGORY_NOT_FOUND":
       return issue.params.categoryId;
     case "PRODUCT_NOT_FOUND":

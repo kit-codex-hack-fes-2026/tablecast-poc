@@ -3,7 +3,6 @@ import {
   themeCssRules,
   themeFonts,
   type Appearance,
-  type ThemePart,
 } from "@tablecast/api/schema";
 import { useId, useMemo, type ReactNode } from "react";
 
@@ -16,28 +15,6 @@ function contrastingInk(hex: string) {
   const [red = 0, green = 0, blue = 0] = channels;
   return red * 0.2126 + green * 0.7152 + blue * 0.0722 > 0.179 ? "#000000" : "#ffffff";
 }
-function partStyle(style: ThemePart) {
-  const css = [
-    style.background ? `background-color:${style.background}` : "",
-    style.foreground
-      ? `color:${style.foreground};--foreground:${style.foreground};--card-foreground:${style.foreground};--muted-foreground:${style.foreground}`
-      : "",
-    style.borderColor ? `border-color:${style.borderColor}` : "",
-    style.radius !== undefined ? `border-radius:${style.radius}px` : "",
-    style.borderWidth !== undefined ? `border-width:${style.borderWidth}px;border-style:solid` : "",
-    style.font ? `font-family:${themeFonts[style.font]}` : "",
-    style.shadow
-      ? `box-shadow:${style.shadow === "offset" ? "4px 4px 0 var(--tablecast-theme-ink, #18181b)" : style.shadow === "soft" ? "0 2px 8px #00000022" : "none"}`
-      : "",
-    style.image
-      ? `background-image:linear-gradient(color-mix(in srgb,${(style.background === "transparent" ? "var(--background)" : style.background) ?? "var(--background)"} ${(1 - style.image.opacity) * 100}%,transparent),color-mix(in srgb,${(style.background === "transparent" ? "var(--background)" : style.background) ?? "var(--background)"} ${(1 - style.image.opacity) * 100}%,transparent)),var(--tablecast-image-${style.image.asset});background-size:auto,${style.image.fit === "repeat" ? (style.image.tileSize ? `${style.image.tileSize}px auto` : "auto") : style.image.widthPercent ? `${style.image.widthPercent}% auto` : style.image.fit};background-repeat:no-repeat,${style.image.fit === "repeat" ? "repeat" : "no-repeat"};background-position:center,${style.image.x}% ${style.image.y}%`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(";");
-  return css;
-}
-
 function themeStyles(value: Appearance, id: string) {
   const scope = `[data-tablecast-theme="${id}"]`;
   const rule = (part: string, css: string, suffix = "") =>
@@ -52,20 +29,30 @@ function themeStyles(value: Appearance, id: string) {
       ([name, image]) => `--tablecast-image-${name}:url("/media/${image.imageKey}?width=1600")`,
     ),
   ].join(";");
-  const parts = Object.entries(value.parts ?? {}).map(([part, style]) =>
-    rule(part, partStyle(style)),
-  );
-  const sections = (value.sections ?? []).map((section) =>
-    section.style
-      ? rule(
-          section.kind === "intro" ? "menu-masthead" : "menu-section",
-          partStyle(section.style),
-          `[data-theme-section="${section.id}"]`,
-        )
-      : "",
-  );
-
-  return `${scope}{${variables};color:var(--foreground);font-family:var(--tablecast-font-body)}${scope} :where(h1,h2,h3){font-family:var(--tablecast-font-heading)}${rule("screen", "font-family:var(--tablecast-font-body);background-color:var(--background);color:var(--foreground)")}${rule("product-card", "font-family:var(--tablecast-font-heading)")}${parts.join("")}${sections.join("")}${themeCssRules(
+  const parts = Object.entries(value.parts ?? {}).map(([part, style]) => {
+    const css = [
+      style.background ? `background-color:${style.background}` : "",
+      style.foreground
+        ? `color:${style.foreground};--foreground:${style.foreground};--card-foreground:${style.foreground};--muted-foreground:${style.foreground}`
+        : "",
+      style.borderColor ? `border-color:${style.borderColor}` : "",
+      style.radius !== undefined ? `border-radius:${style.radius}px` : "",
+      style.borderWidth !== undefined
+        ? `border-width:${style.borderWidth}px;border-style:solid`
+        : "",
+      style.font ? `font-family:${themeFonts[style.font]}` : "",
+      style.shadow
+        ? `box-shadow:${style.shadow === "offset" ? "4px 4px 0 var(--tablecast-theme-ink, #18181b)" : style.shadow === "soft" ? "0 2px 8px #00000022" : "none"}`
+        : "",
+      style.image
+        ? `background-image:linear-gradient(color-mix(in srgb,${(style.background === "transparent" ? "var(--background)" : style.background) ?? "var(--background)"} ${(1 - style.image.opacity) * 100}%,transparent),color-mix(in srgb,${(style.background === "transparent" ? "var(--background)" : style.background) ?? "var(--background)"} ${(1 - style.image.opacity) * 100}%,transparent)),var(--tablecast-image-${style.image.asset});background-size:auto,${style.image.fit === "repeat" ? (style.image.tileSize ? `${style.image.tileSize}px auto` : "auto") : style.image.widthPercent ? `${style.image.widthPercent}% auto` : style.image.fit};background-repeat:no-repeat,${style.image.fit === "repeat" ? "repeat" : "no-repeat"};background-position:center,${style.image.x}% ${style.image.y}%`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(";");
+    return rule(part, css);
+  });
+  return `${scope}{${variables};color:var(--foreground);font-family:var(--tablecast-font-body)}${scope} :where(h1,h2,h3){font-family:var(--tablecast-font-heading)}${rule("screen", "font-family:var(--tablecast-font-body);background-color:var(--background);color:var(--foreground)")}${rule("product-card", "font-family:var(--tablecast-font-heading)")}${parts.join("")}${themeCssRules(
     value.customCss ?? "",
     Object.keys(value.assets ?? {}),
   )

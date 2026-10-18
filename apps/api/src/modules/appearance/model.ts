@@ -10,7 +10,6 @@ export const themeParts = [
   "voice-controls",
   "menu",
   "menu-masthead",
-  "menu-section",
   "banner",
   "product-card",
   "category-button",
@@ -73,41 +72,6 @@ export const themePartSchema = z
   .meta({ id: "tablecastThemePart" });
 export type ThemePart = z.infer<typeof themePartSchema>;
 
-const sectionText = z
-  .object({ ja: z.string().trim().max(3000), en: z.string().trim().max(3000) })
-  .strict();
-const assetName = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/);
-const sectionBase = z.object({
-  id: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
-  title: sectionText.optional(),
-  body: sectionText.optional(),
-  align: z.enum(["start", "center"]).optional(),
-  spacing: z.enum(["compact", "comfortable"]).optional(),
-  style: themePartSchema.optional(),
-});
-export const menuSectionSchema = z.discriminatedUnion("kind", [
-  sectionBase.extend({ kind: z.literal("intro"), imageAsset: assetName.optional() }).strict(),
-  sectionBase.extend({ kind: z.literal("story"), imageAsset: assetName.optional() }).strict(),
-  sectionBase
-    .extend({
-      kind: z.literal("products"),
-      source: z.discriminatedUnion("kind", [
-        z.object({ kind: z.literal("all") }).strict(),
-        z.object({ kind: z.literal("category"), categoryId: z.string().min(1).max(100) }).strict(),
-        z
-          .object({
-            kind: z.literal("selection"),
-            productIds: z.array(z.string().min(1).max(100)).min(1).max(100),
-          })
-          .strict(),
-      ]),
-      layout: z.enum(["list", "gallery", "feature"]),
-    })
-    .strict(),
-  sectionBase.extend({ kind: z.literal("artwork"), bannerId: z.string().min(1).max(100) }).strict(),
-]);
-export type MenuSection = z.infer<typeof menuSectionSchema>;
-
 // 公開した単一部品だけを選択可能にし、DOM構造や親・兄弟の選択を契約へ含めない。
 export function themeCssRules(css: string, assets: string[] = []) {
   const ast = parse(css, {
@@ -163,26 +127,6 @@ export function themeCssRules(css: string, assets: string[] = []) {
 
 export const appearanceSchema = z
   .object({
-    version: z.literal(2).optional(),
-    sections: z.array(menuSectionSchema).max(40).optional(),
-    header: z
-      .object({
-        logoWidth: z.number().int().min(64).max(320),
-        logoHeight: z.number().int().min(24).max(64),
-        gap: z.number().int().min(8).max(24),
-      })
-      .strict()
-      .optional(),
-    voice: z
-      .object({
-        mode: z.enum(["orb", "face", "character"]),
-        character: assetName.optional(),
-        states: z
-          .partialRecord(z.enum(["idle", "listening", "thinking", "speaking", "error"]), assetName)
-          .optional(),
-      })
-      .strict()
-      .optional(),
     composition: z
       .object({
         masthead: z
@@ -222,47 +166,6 @@ export const appearanceSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.version !== 2 && (value.sections || value.header || value.voice))
-      ctx.addIssue({
-        code: "custom",
-        path: ["version"],
-        message: "新しいテーマ設定にはversion: 2が必要です",
-      });
-    const requireAsset = (name: string | undefined, path: (string | number)[]) => {
-      if (name && !value.assets?.[name])
-        ctx.addIssue({ code: "custom", path, message: "登録済み画像を選択してください" });
-    };
-    requireAsset(value.voice?.character, ["voice", "character"]);
-    if (value.voice?.mode === "character" && !value.voice.character)
-      ctx.addIssue({
-        code: "custom",
-        path: ["voice", "character"],
-        message: "キャラクターの基本画像を選択してください",
-      });
-    for (const [state, asset] of Object.entries(value.voice?.states ?? {}))
-      requireAsset(asset, ["voice", "states", state]);
-    const ids = new Set<string>();
-    for (const [index, section] of (value.sections ?? []).entries()) {
-      if (ids.has(section.id))
-        ctx.addIssue({
-          code: "custom",
-          path: ["sections", index, "id"],
-          message: "セクションIDが重複しています",
-        });
-      ids.add(section.id);
-      if (section.kind === "intro" || section.kind === "story")
-        requireAsset(section.imageAsset, ["sections", index, "imageAsset"]);
-      requireAsset(section.style?.image?.asset, ["sections", index, "style", "image", "asset"]);
-      for (const field of ["title", "body"] as const) {
-        const content = section[field];
-        if (content && Boolean(content.ja) !== Boolean(content.en))
-          ctx.addIssue({
-            code: "custom",
-            path: ["sections", index, field],
-            message: "日本語と英語を両方入力してください",
-          });
-      }
-    }
     for (const [part, style] of Object.entries(value.parts ?? {})) {
       if (style.image && !value.assets?.[style.image.asset])
         ctx.addIssue({

@@ -1,5 +1,4 @@
-import { MenuSectionsEditor } from "./menu-sections-editor";
-import { ThemeIdentityEditor } from "./theme-identity-editor";
+import { ThemeCompositionEditor } from "./theme-composition-editor";
 import { useMutation } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
 import { configurationImageUploadKey } from "./menu-query";
@@ -27,7 +26,6 @@ const partNames = {
   "voice-controls": "theme_voice_controls",
   menu: "theme_menu",
   "menu-masthead": "theme_masthead",
-  "menu-section": "theme_section",
   banner: "theme_banner",
   "product-card": "theme_product_card",
   "category-button": "theme_category_button",
@@ -44,7 +42,6 @@ const emptyImage: ThemeImage = {
 };
 export function DesignEditor({
   storeId,
-  storeName,
   organisationLogo,
   value,
   onChange,
@@ -52,7 +49,6 @@ export function DesignEditor({
   onStagedChange,
 }: {
   storeId: string;
-  storeName: string;
   organisationLogo?: string | null;
   value: Configuration;
   onChange: (configuration: Configuration) => void;
@@ -96,22 +92,13 @@ export function DesignEditor({
   });
   const appearance = value.appearance ?? {};
   const updateAppearance = (change: Partial<NonNullable<Configuration["appearance"]>>) =>
-    onChange({ ...value, appearance: { ...appearance, ...change, version: 2 } });
+    onChange({ ...value, appearance: { ...appearance, ...change } });
 
   const assets = appearance.assets ?? {};
   return (
     <fieldset disabled={disabled || importIcon.isPending} className="min-w-0 space-y-6">
-      <MenuSectionsEditor
-        storeId={storeId}
-        storeName={storeName}
-        value={value}
-        disabled={disabled}
-        onChange={updateAppearance}
-      />
-      <details className="space-y-4 rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer rounded-lg py-2 font-semibold focus-visible:outline-2 focus-visible:outline-ring">
-          {t("theme_logo")}
-        </summary>
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <h2>{t("theme_logo")}</h2>
         <p>{t("theme_logo_hint")}</p>
         {organisationLogo && (
           <Button
@@ -135,11 +122,9 @@ export function DesignEditor({
           onStagedChange={onStagedChange}
           onChange={(logo) => onChange({ ...value, branding: { logo } })}
         />
-      </details>
-      <details className="space-y-4 rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer rounded-lg py-2 font-semibold focus-visible:outline-2 focus-visible:outline-ring">
-          {t("theme_basics")}
-        </summary>
+      </section>
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <h2>{t("theme_basics")}</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {(["ink", "paper", "accent"] as const).map((name) => (
             <label key={name}>
@@ -188,11 +173,9 @@ export function DesignEditor({
             </label>
           ))}
         </div>
-      </details>
-      <details className="space-y-4 rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer rounded-lg py-2 font-semibold focus-visible:outline-2 focus-visible:outline-ring">
-          {t("theme_assets")}
-        </summary>
+      </section>
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <h2>{t("theme_assets")}</h2>
         <p>{t("theme_assets_hint")}</p>
         {Object.entries(assets).map(([name, image]) => (
           <details key={name} className="rounded border border-border p-3">
@@ -227,8 +210,8 @@ export function DesignEditor({
         >
           {t("theme_add_asset")}
         </Button>
-      </details>
-      <ThemeIdentityEditor
+      </section>
+      <ThemeCompositionEditor
         appearance={appearance}
         disabled={disabled}
         onChange={updateAppearance}
@@ -238,10 +221,8 @@ export function DesignEditor({
         disabled={disabled}
         updateAppearance={updateAppearance}
       />
-      <details className="space-y-4 rounded-xl border border-border bg-card p-4">
-        <summary className="cursor-pointer rounded-lg py-2 font-semibold focus-visible:outline-2 focus-visible:outline-ring">
-          {t("theme_css")}
-        </summary>
+      <section className="space-y-3 rounded-lg border border-border p-4">
+        <h2>{t("theme_css")}</h2>
         <p>{t("theme_css_hint")}</p>
         <textarea
           aria-label={t("theme_css")}
@@ -250,7 +231,7 @@ export function DesignEditor({
           disabled={disabled}
           onChange={(event) => updateAppearance({ customCss: event.target.value })}
         />
-      </details>
+      </section>
       <BannersEditor
         storeId={storeId}
         value={value}

@@ -86,12 +86,6 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   useEffect(() => {
     if (!issues.length) return;
     const summary = issueSummary.current;
-    summary
-      ?.closest("form")
-      ?.querySelectorAll("details")
-      .forEach((details) => {
-        details.open = true;
-      });
     summary?.focus();
   }, [issues]);
   const [editorRevision, setEditorRevision] = useState(0);
@@ -120,13 +114,8 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   });
   const save = useMutation({
     mutationFn: async (configuration: Configuration) => {
-      const parsed = configurationSchema.safeParse({
-        ...configuration,
-        appearance: { ...configuration.appearance, version: 2 },
-      });
-      setIssues(
-        parsed.success ? [] : designValidationIssues(parsed.error.issues, configuration, locale, t),
-      );
+      const parsed = configurationSchema.safeParse(configuration);
+      setIssues(parsed.success ? [] : designValidationIssues(parsed.error.issues, locale, t));
       if (!parsed.success) throw parsed.error;
       return parseResponse(
         rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
@@ -256,7 +245,6 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
             key={editorRevision}
             organisationLogo={store.logo}
             storeId={store.id}
-            storeName={store.name}
             value={{ ...initial, ...configuration }}
             onChange={(value) => {
               form.setFieldValue("branding", value.branding);

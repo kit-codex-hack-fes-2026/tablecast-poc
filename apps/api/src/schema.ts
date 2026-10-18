@@ -174,12 +174,5 @@ export {
   themeParts,
   themeFonts,
   themeCssRules,
-  menuSectionSchema,
 } from "./modules/appearance/model";
-export type {
-  Appearance,
-  Banner,
-  ThemeImage,
-  ThemePart,
-  MenuSection,
-} from "./modules/appearance/model";
+export type { Appearance, Banner, ThemeImage, ThemePart } from "./modules/appearance/model";

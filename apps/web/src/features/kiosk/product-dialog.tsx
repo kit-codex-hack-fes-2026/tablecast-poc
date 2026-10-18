@@ -108,8 +108,8 @@ export function ProductPage({
             priority
             width={640}
             height={640}
-            sizes="(min-width: 1024px) 440px, 100vw"
-            className="mb-3 aspect-4/3 max-h-64 w-full rounded-xl object-contain"
+            sizes="(min-width: 640px) 70vw, 100vw"
+            className="mb-3 aspect-square w-full rounded-xl object-contain"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />
