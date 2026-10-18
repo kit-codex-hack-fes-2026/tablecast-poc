@@ -36,13 +36,13 @@ export const Composition: Story = {
     );
     const list = canvas.getByRole("list", { name: "セクションの順番" });
     const before = within(list).getAllByRole("listitem").length;
-    await userEvent.click(within(list).getAllByRole("button", { name: "上へ移動" })[before - 1]);
+    await userEvent.click(within(list).getByRole("button", { name: "上へ移動" }));
     await expect(within(list).getAllByRole("listitem")[before - 2]).toHaveTextContent(
       "季節を味わう",
     );
-    await userEvent.click(within(list).getAllByRole("button", { name: "複製" })[before - 2]);
+    await userEvent.click(within(list).getByRole("button", { name: "複製" }));
     await expect(within(list).getAllByRole("listitem")).toHaveLength(before + 1);
-    await userEvent.click(within(list).getAllByRole("button", { name: "削除" })[before - 1]);
+    await userEvent.click(within(list).getByRole("button", { name: "削除" }));
     await userEvent.click(canvas.getByRole("button", { name: "削除したセクションを戻す" }));
     await expect(within(list).getAllByRole("listitem")).toHaveLength(before + 1);
     await userEvent.selectOptions(canvas.getByRole("combobox", { name: "プレビュー言語" }), "en");

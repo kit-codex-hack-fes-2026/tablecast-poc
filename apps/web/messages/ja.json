@@ -1228,5 +1228,7 @@
   "theme_voice_states": "状態ごとの画像（任意）",
   "theme_bilingual_required": "見出しと説明は、日本語と英語を両方入力するか、両方を空にしてください。",
   "theme_css_invalid": "追加CSSを確認してください。使用できる部品・宣言と登録済み画像だけを指定できます。",
-  "theme_reference_invalid": "画像や対象を選び直してください。登録済みの画像を参照し、キャラクターには基本画像が必要です。"
+  "theme_reference_invalid": "画像や対象を選び直してください。登録済みの画像を参照し、キャラクターには基本画像が必要です。",
+  "theme_menu_composition": "メニューの構成",
+  "theme_section_spacing": "セクションの余白"
 }

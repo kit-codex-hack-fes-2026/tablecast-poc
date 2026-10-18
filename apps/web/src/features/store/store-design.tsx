@@ -200,7 +200,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
       className="space-y-5"
     >
       <p>
-        {t("theme_draft_hint")} · {draft.id} · v{version}
+        {t("theme_draft_hint")} · v{version}
       </p>
       <div className="sticky top-16 z-10 flex flex-wrap gap-3 border-b border-border bg-background/95 py-3 backdrop-blur-sm">
         <Button type="submit" disabled={blocked} aria-keyshortcuts="Control+s Meta+s">

@@ -195,7 +195,9 @@ it("下書きメニューと店舗デザインを往復しても同じ下書き�
   await page.getByText(ja.theme_css, { exact: true }).click();
   await expect.element(page.getByLabelText(ja.theme_css, { exact: true })).toBeVisible();
   await expect.element(navigation.getByRole("status")).not.toBeInTheDocument();
-  await expect.element(page.getByText(new RegExp(draftId))).toBeVisible();
+  await expect
+    .element(page.getByText(ja.theme_draft_hint, { exact: false }))
+    .toMatchTextContent("v1");
   await expect
     .element(navigation.getByRole("link", { name: ja.editor_products, exact: true }))
     .toHaveAttribute(

@@ -36,6 +36,14 @@ export function MenuSectionsEditor({
   const [width, setWidth] = useState("768");
   const [previewLocale, setPreviewLocale] = useState(locale);
   const current = sections.find((section) => section.id === selected);
+  function sectionName(section: MenuSection) {
+    const source = section.kind === "products" ? section.source : undefined;
+    const category =
+      source?.kind === "category"
+        ? value.categories.find((item) => item.id === source.categoryId)
+        : undefined;
+    return section.title?.[locale] || category?.text[locale].displayName || t(kinds[section.kind]);
+  }
   const update = (section: MenuSection) =>
     onChange({ sections: sections.map((item) => (item.id === section.id ? section : item)) });
   function add(kind: MenuSection["kind"]) {
@@ -59,12 +67,15 @@ export function MenuSectionsEditor({
   return (
     <section className="space-y-4">
       <header>
-        <h2 className="text-lg font-semibold">{t("theme_composition")}</h2>
+        <h2 className="text-lg font-semibold">{t("theme_menu_composition")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{t("theme_sections_hint")}</p>
       </header>
-      <div className="grid min-w-0 items-start gap-5 2xl:grid-cols-[20rem_minmax(0,1fr)]">
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <div className="min-w-0 space-y-4">
-          <ol className="space-y-2" aria-label={t("theme_sections")}>
+          <ol
+            className="max-h-80 space-y-1 overflow-y-auto rounded-xl p-1"
+            aria-label={t("theme_sections")}
+          >
             {sections.map((section, index) => (
               <li
                 key={section.id}
@@ -81,11 +92,12 @@ export function MenuSectionsEditor({
                   <span className="w-5 text-xs text-muted-foreground tabular-nums">
                     {index + 1}
                   </span>
-                  <span className="min-w-0 truncate">
-                    {section.title?.[locale] || t(kinds[section.kind])}
-                  </span>
+                  <span className="min-w-0 truncate">{sectionName(section)}</span>
                 </Button>
-                <div className="flex justify-end gap-1">
+                <div
+                  className="flex justify-end gap-1 [&[hidden]]:hidden"
+                  hidden={section.id !== selected}
+                >
                   <Button
                     variant="ghost"
                     size="icon"
@@ -178,7 +190,7 @@ export function MenuSectionsEditor({
             <SectionSettings current={current} value={value} update={update} disabled={disabled} />
           )}
         </div>
-        <div className="min-w-0 space-y-3 2xl:sticky 2xl:top-40">
+        <div className="min-w-0 space-y-3 lg:sticky lg:top-40">
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="mr-auto font-semibold">{t("theme_live_preview")}</h3>
             <NativeSelect
@@ -328,7 +340,7 @@ function SectionSettings({
           </NativeSelect>
         </label>
         <label className="grid gap-1 text-sm">
-          {t("theme_spacing")}
+          {t("theme_section_spacing")}
           <NativeSelect
             value={current.spacing ?? "comfortable"}
             onChange={(event) =>

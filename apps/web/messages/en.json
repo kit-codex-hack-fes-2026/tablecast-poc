@@ -1228,5 +1228,7 @@
   "theme_voice_states": "Images for each state (optional)",
   "theme_bilingual_required": "Enter both Japanese and English, or leave both languages blank.",
   "theme_css_invalid": "Check the additional CSS. Use supported components, properties and registered images only.",
-  "theme_reference_invalid": "Check the selected image or item. References must exist, and a character needs a default image."
+  "theme_reference_invalid": "Check the selected image or item. References must exist, and a character needs a default image.",
+  "theme_menu_composition": "Menu composition",
+  "theme_section_spacing": "Section spacing"
 }
