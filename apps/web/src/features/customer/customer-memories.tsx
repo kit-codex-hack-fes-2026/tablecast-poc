@@ -49,10 +49,10 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
         />
       )}
       <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
-      <ul className="divide-y border-y">
+      <ul className="space-y-4">
         {records.data.pages.flatMap((page) =>
           page.memories.map((memory) => (
-            <li key={memory.id} className="space-y-3 py-5">
+            <li key={memory.id} className="space-y-3 rounded-xl bg-card p-5">
               <p className="whitespace-pre-wrap wrap-anywhere">{memory.content}</p>
               <p className="text-sm text-muted-foreground">
                 {t(
@@ -132,7 +132,7 @@ function MemoryEditor({
   });
   return (
     <form
-      className="space-y-4 rounded-xl border p-4"
+      className="space-y-4 rounded-xl bg-secondary/60 p-4"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();

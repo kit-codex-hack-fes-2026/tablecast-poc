@@ -23,7 +23,10 @@ export function CustomerConsumption({ storeId }: { storeId: string }) {
       {!records.data.pages[0]?.records.length && <p>{t("common_empty")}</p>}
       {records.data.pages.flatMap((page) =>
         page.records.map((record) => (
-          <section key={`${record.id}:${record.revision}`} className="space-y-3 border-t pt-5">
+          <section
+            key={`${record.id}:${record.revision}`}
+            className="space-y-3 rounded-xl bg-card p-5"
+          >
             <h2 className="font-medium wrap-anywhere">
               {record.name?.[locale] ?? record.productId}
             </h2>

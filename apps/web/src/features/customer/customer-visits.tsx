@@ -50,11 +50,11 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
                   <h3 className="text-sm text-muted-foreground">
                     {t(connected ? "customer_current_visit" : "customer_previous_visits")}
                   </h3>
-                  <ul className="divide-y border-y">
+                  <ul className="space-y-2">
                     {group.map((visit) => (
                       <li key={visit.sessionId}>
                         <Link
-                          className="flex min-h-20 items-center justify-between gap-4 py-4 hover:text-primary"
+                          className="flex min-h-20 items-center justify-between gap-4 rounded-xl bg-secondary/60 p-4 hover:bg-secondary"
                           to="/member/$storeId/visits/$sessionId"
                           params={{ storeId, sessionId: visit.sessionId }}
                         >
@@ -174,7 +174,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         to="/member/$storeId/coupons"
         params={{ storeId }}
         search={{ sessionId }}
-        className="flex min-h-14 items-center justify-between gap-4 border-y py-3 font-medium hover:text-primary"
+        className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-secondary/60 px-4 py-3 font-medium hover:text-primary"
       >
         {t("customer_owned_coupons")}
         <ArrowRight aria-hidden className="size-4 shrink-0" />
@@ -203,7 +203,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         {!data.orders.length && <p className="text-muted-foreground">{t("common_empty")}</p>}
         {orderPages.data?.pages.flatMap((page) =>
           page.orders.map((order) => (
-            <section key={order.id} className="space-y-2 border-t py-4">
+            <section key={order.id} className="space-y-2 rounded-xl bg-card p-4">
               <p className="text-sm text-muted-foreground">{t(`order_${order.status}`)}</p>
               <ul className="space-y-2">
                 {order.snapshot.lines.map((line) => (

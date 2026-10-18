@@ -29,7 +29,7 @@ function Page() {
         <Link
           to="/member/$storeId"
           params={{ storeId }}
-          className="mb-6 flex min-h-11 items-center gap-3 border-b pb-4 text-sm font-medium hover:text-primary"
+          className="mb-6 flex min-h-11 items-center gap-3 pb-2 text-sm font-medium hover:text-primary"
         >
           <ArrowLeft aria-hidden className="size-4 shrink-0" />
           <span className="min-w-0">

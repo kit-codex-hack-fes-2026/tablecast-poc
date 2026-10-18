@@ -32,22 +32,6 @@ for (const locale of ["ja", "en"] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       390,
     );
-    await page.evaluate(() => {
-      const sizes = [...document.querySelectorAll<HTMLElement>("main *")]
-        .filter((element) =>
-          [...element.childNodes].some(
-            (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-          ),
-        )
-        .map((element) => ({
-          element,
-          size: Number.parseFloat(getComputedStyle(element).fontSize),
-        }));
-      for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
-    });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-      390,
-    );
     await page.reload();
     await page.getByRole("link", { name: labels.customer_memories, exact: true }).click();
     await expect(

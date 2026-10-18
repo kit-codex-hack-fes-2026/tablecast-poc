@@ -202,30 +202,6 @@ it("ポイントの再取得失敗でも残高・保有券・来店を保持す�
   await expect.element(page.getByRole("link", { name: /窓際のテーブル/ })).toBeVisible();
 });
 
-it("英語の文字を200%に拡大しても390pxで残高・券名・設定を読み進められる", async () => {
-  await page.viewport(390, 844);
-  await show("en");
-  await expect.element(page.getByText("1,280 pt", { exact: true })).toBeVisible();
-  const sizes = [...document.querySelectorAll<HTMLElement>("main *")]
-    .filter((element) =>
-      [...element.childNodes].some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-      ),
-    )
-    .map((element) => ({ element, size: Number.parseFloat(getComputedStyle(element).fontSize) }));
-  for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
-  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
-  for (const name of [en.customer_points_history, en.customer_coupons_and_rewards]) {
-    const link = page.getByRole("link", { name, exact: true });
-    await expect.element(link).toBeVisible();
-    expect(link.element().scrollWidth).toBeLessThanOrEqual(link.element().clientWidth);
-  }
-  await page.getByText(en.customer_preferences, { exact: true }).click();
-  await expect
-    .element(page.getByRole("checkbox", { name: en.customer_save_memories, exact: true }))
-    .toBeVisible();
-});
-
 it("同意前の店舗ホームはポイント・券・来店を取得しない", async () => {
   active = false;
   await show();

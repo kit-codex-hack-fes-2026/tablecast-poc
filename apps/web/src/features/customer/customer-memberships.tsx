@@ -21,13 +21,13 @@ export function CustomerMemberships() {
         <p className="text-muted-foreground">{t("customer_intro")}</p>
       </div>
       {data.length ? (
-        <ul className="divide-y border-y">
+        <ul className="space-y-3">
           {data.map((membership) => (
             <li key={membership.id}>
               <Link
                 to="/member/$storeId"
                 params={{ storeId: membership.storeId }}
-                className="flex min-h-24 items-center justify-between gap-4 py-5 hover:text-primary"
+                className="flex min-h-24 items-center justify-between gap-4 rounded-xl bg-card p-5 hover:bg-secondary"
               >
                 <div className="min-w-0">
                   <p className="text-lg font-semibold wrap-anywhere">{membership.name}</p>
@@ -41,7 +41,7 @@ export function CustomerMemberships() {
           ))}
         </ul>
       ) : (
-        <div className="space-y-4 rounded-2xl border border-dashed p-8 text-center">
+        <div className="space-y-4 rounded-2xl border border-border border-dashed p-8 text-center">
           <QrCode aria-hidden className="mx-auto size-10 text-muted-foreground" />
           <p>{t("customer_empty")}</p>
         </div>

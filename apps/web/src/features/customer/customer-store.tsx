@@ -54,7 +54,7 @@ export function CustomerConsent({
     },
   });
   return (
-    <section className="space-y-5 border-t pt-6">
+    <section className="space-y-5 pt-6">
       <h2 className="text-xl font-semibold">{t("customer_consent_title")}</h2>
       <p className="leading-relaxed text-muted-foreground">{t("customer_consent_intro")}</p>
       <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed">
@@ -86,7 +86,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
   const { t, locale } = useI18n();
   return (
     <div key={storeId} className="space-y-9">
-      <header className="space-y-3 border-b pb-6">
+      <header className="space-y-3 pb-2">
         <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
         <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere">{data.store.name}</h1>
         {data.membership?.active && (
@@ -102,9 +102,9 @@ export function CustomerStore({ storeId }: { storeId: string }) {
         <>
           <CustomerBenefits key={storeId} storeId={storeId} />
           <CustomerVisits storeId={storeId} />
-          <nav aria-label={t("customer_personal_records")} className="divide-y border-y">
+          <nav aria-label={t("customer_personal_records")} className="space-y-1">
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 py-3 font-medium hover:text-primary"
+              className="flex min-h-14 items-center justify-between gap-4 rounded-lg px-2 py-3 font-medium hover:bg-secondary"
               to="/member/$storeId/memories"
               params={{ storeId }}
             >
@@ -112,7 +112,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 py-3 font-medium hover:text-primary"
+              className="flex min-h-14 items-center justify-between gap-4 rounded-lg px-2 py-3 font-medium hover:bg-secondary"
               to="/member/$storeId/consumption"
               params={{ storeId }}
             >
@@ -120,7 +120,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
           </nav>
-          <details className="group">
+          <details className="group rounded-xl bg-secondary/60 px-4">
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
               {t("customer_preferences")}
               <ChevronDown aria-hidden className="size-4 group-open:rotate-180" />
@@ -141,7 +141,7 @@ function CustomerBenefits({ storeId }: { storeId: string }) {
   const coupons = useInfiniteQuery(customerCouponsOptions(storeId));
   const recentCoupons = coupons.data?.pages.flatMap((page) => page.coupons).slice(0, 2);
   return (
-    <div className="grid gap-8 sm:grid-cols-2">
+    <div className="grid gap-7 rounded-2xl bg-card p-5 shadow-xs sm:grid-cols-2 sm:p-6">
       <section aria-labelledby="customer-balance-title" className="space-y-3">
         <h2 id="customer-balance-title" className="text-sm font-medium text-muted-foreground">
           {t("customer_points_balance")}
@@ -306,7 +306,7 @@ function CustomerPreferences({ data }: { data: CustomerStoreData }) {
           successMessage={t("account_saved")}
         />
       </form>
-      <div className="space-y-3 border-t pt-6">
+      <div className="space-y-3 border-t border-border pt-6">
         <Button variant="ghost" onClick={() => setConfirmLeave((value) => !value)}>
           {t("customer_leave")}
         </Button>

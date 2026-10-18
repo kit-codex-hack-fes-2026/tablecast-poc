@@ -13,7 +13,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
   const data = query.data.pages[0];
   return (
     <article className="space-y-6">
-      <header className="space-y-4 border-b pb-6">
+      <header className="space-y-4 pb-2">
         <h1 className="text-2xl font-semibold tracking-tight">{t("customer_points")}</h1>
         <p className="text-sm text-muted-foreground">{t("customer_points_balance")}</p>
         <p className="text-4xl font-semibold tracking-tight tabular-nums">
@@ -39,7 +39,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
         </div>
       </dl>
       <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
-      <ul className="divide-y">
+      <ul className="divide-y divide-border">
         {query.data.pages.flatMap((page) =>
           page.entries.map((entry) => (
             <li key={entry.id} className="flex justify-between gap-4 py-4">

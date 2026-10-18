@@ -16,7 +16,7 @@ export function CustomerShell({ children }: { children: ReactNode }) {
       </header>
       <nav
         aria-label={t("customer_navigation")}
-        className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 border-b pb-2 text-sm"
+        className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 pb-2 text-sm"
       >
         <Link
           to="/member"
