@@ -2,16 +2,47 @@ import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import { z } from "zod";
 import { signInStaff } from "./support/session";
+import { credentials } from "./support/runtime";
 
 // 認証・招待・メールの実HTTP接続を確認する。
 test.use({ trace: "off", serviceWorkers: "block" });
+
+test("メールログインは外部として解釈される戻り先を使わず指定店舗の下書きへ復帰する", async ({
+  page,
+  baseURL,
+}) => {
+  const storeId = "tablecast-hanul";
+  await signInStaff(page.request, baseURL);
+  const created = await page.request.post(`/api/admin/stores/${storeId}/drafts`, {
+    headers: { Origin: baseURL ?? "" },
+  });
+  expect(created.ok()).toBe(true);
+  const draft = z.object({ id: z.string() }).parse(await created.json());
+  const signedOut = await page.request.post("/api/auth/sign-out", {
+    headers: { Origin: baseURL ?? "" },
+    data: {},
+  });
+  expect(signedOut.ok()).toBe(true);
+  await page.route("https://external.example.test/**", (route) => route.abort());
+  const query = new URLSearchParams({
+    returnTo: "/\\external.example.test/path",
+    returnStoreId: storeId,
+    returnDraftId: draft.id,
+  });
+  await page.goto(`/login?${query}`);
+  await page.getByLabel("メールアドレス").fill(credentials.email);
+  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(`${baseURL}/admin/stores/${storeId}/menu/changes/${draft.id}`);
+  await expect(page.getByRole("heading", { name: "変更内容を確認", exact: true })).toBeVisible();
+});
 
 test("Googleログインから店舗作成・招待メールの参加まで接続する", async ({
   page,
   baseURL,
   runtime,
 }) => {
-  await page.goto("/login");
+  await page.goto(`/login?${new URLSearchParams({ returnTo: "/organisations" })}`);
   await page.getByRole("button", { name: "Googleでログイン" }).click();
   await page.getByRole("button", { name: /haruka.sato@komorebi-shijo.com/ }).click();
   await expect(page).toHaveURL(/\/organisations$/);
