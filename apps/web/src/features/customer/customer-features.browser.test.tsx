@@ -75,6 +75,14 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
     if (path === `${base}/visits`) return Response.json({ visits: [], nextCursor: null });
+    if (path === `${base}/points`)
+      return Response.json({
+        balance: 0,
+        totals: { visits: 0, allocatedYen: 0 },
+        entries: [],
+        nextCursor: null,
+      });
+    if (path === `${base}/coupons`) return Response.json({ coupons: [], nextCursor: null });
     if (path === base) return Response.json(response());
     const value = await request.json();
     writes.push({ path, value });
@@ -96,9 +104,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await page.viewport(390, 844);
   await show(<CustomerStore storeId="tablecast-store" />, locale);
   await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
-  await expect
-    .element(page.getByRole("heading", { name: labels.customer_preferences }))
-    .toBeVisible();
+  await page.getByText(labels.customer_preferences, { exact: true }).click();
   await page.getByRole("checkbox", { name: labels.customer_save_memories, exact: true }).click();
   await page.getByRole("button", { name: labels.customer_save_preferences }).click();
   await expect
@@ -114,6 +120,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await cleanup();
   client.clear();
   await show(<CustomerStore storeId="tablecast-store" />, locale);
+  await page.getByText(labels.customer_preferences, { exact: true }).click();
   await expect
     .element(page.getByRole("checkbox", { name: labels.customer_save_memories, exact: true }))
     .not.toBeChecked();

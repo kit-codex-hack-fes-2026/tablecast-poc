@@ -13,18 +13,24 @@ export function CustomerConsumption({ storeId }: { storeId: string }) {
   const records = useSuspenseInfiniteQuery(customerConsumptionOptions(storeId));
   return (
     <article className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t("customer_consumption")}</h1>
-      <p className="text-muted-foreground">{t("customer_consumption_note")}</p>
+      <header className="space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("customer_consumption")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {t("customer_consumption_note")}
+        </p>
+      </header>
       <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
       {!records.data.pages[0]?.records.length && <p>{t("common_empty")}</p>}
       {records.data.pages.flatMap((page) =>
         page.records.map((record) => (
           <section
             key={`${record.id}:${record.revision}`}
-            className="space-y-3 rounded-xl border p-4"
+            className="space-y-3 rounded-xl bg-card p-5"
           >
-            <h2 className="font-medium">{record.name?.[locale] ?? record.productId}</h2>
-            <p>{t(`order_${record.orderStatus}`)}</p>
+            <h2 className="font-medium wrap-anywhere">
+              {record.name?.[locale] ?? record.productId}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t(`order_${record.orderStatus}`)}</p>
             <ConsumptionEditor
               storeId={storeId}
               orderId={record.orderId}
@@ -111,7 +117,7 @@ export function ConsumptionEditor({
           </form.AppField>
           <form.Field name="shared">
             {(field) => (
-              <label className="flex items-center gap-3">
+              <label className="flex min-h-11 items-center gap-3">
                 <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
                 {t("customer_consumption_shared")}
               </label>
@@ -122,12 +128,14 @@ export function ConsumptionEditor({
           </form.AppForm>
         </form>
       )}
-      <ActionFeedback
-        pending={save.isPending}
-        error={save.error}
-        success={save.isSuccess}
-        successMessage={t("account_saved")}
-      />
+      {!save.isIdle && (
+        <ActionFeedback
+          pending={save.isPending}
+          error={save.error}
+          success={save.isSuccess}
+          successMessage={t("account_saved")}
+        />
+      )}
     </div>
   );
 }

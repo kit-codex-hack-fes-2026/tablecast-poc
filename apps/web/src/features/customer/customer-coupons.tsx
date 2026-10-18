@@ -15,9 +15,15 @@ export function CustomerCoupons({ storeId, sessionId }: { storeId: string; sessi
   const refresh = () => client.invalidateQueries({ queryKey: ["tablecast-customer", storeId] });
   return (
     <article key={storeId} className="space-y-6">
-      <h1 className="text-2xl font-semibold">{t("coupons")}</h1>
-      <p>{t("coupon_terms")}</p>
-      {!sessionId && <p>{t("coupon_request_hint")}</p>}
+      <header className="space-y-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("coupons")}</h1>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t("coupon_terms")}</p>
+        {!sessionId && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("coupon_request_hint")}
+          </p>
+        )}
+      </header>
       <OwnedCoupons storeId={storeId} sessionId={sessionId} onChanged={refresh} />
       <ExchangeCoupons storeId={storeId} onChanged={refresh} />
     </article>
