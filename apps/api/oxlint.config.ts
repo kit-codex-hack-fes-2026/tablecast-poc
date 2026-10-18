@@ -26,7 +26,7 @@ const files = [
   ["email", "src/emails/*.{ts,tsx}"],
   ["runtime", "src/{containers,realtime/store-events}.ts"],
   ["store-routes", "src/modules/stores/routes.ts"],
-  ["auth-middleware", "src/modules/auth/middleware.ts"],
+  ["auth-middleware", "src/modules/{auth,customers}/middleware.ts"],
   ["auth-factory", "src/modules/auth/{service,options,preview}.ts"],
   [
     "voice-operation",
@@ -77,7 +77,7 @@ const dependencies = {
   email: ["email", "error"],
   runtime: ["telemetry"],
   "auth-factory": ["auth-factory", "model", "db", "email", "error"],
-  "auth-middleware": ["query", "model", "auth-factory", "error"],
+  "auth-middleware": ["auth-middleware", "query", "model", "auth-factory", "error"],
   pure: ["model", "pure", "error"],
   provider: ["model", "pure", "error"],
   query: ["query", "db", "model", "pure", "error", "telemetry"],

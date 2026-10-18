@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { Field } from "@base-ui/react/field";
 import { zodFieldValidator } from "../../lib/form-validation";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,9 +60,7 @@ export function OpenTable({
   });
   return (
     <section className="max-w-2xl space-y-5">
-      <h1 className="text-2xl font-semibold">
-        {table.name} · {t("admin_open_table")}
-      </h1>
+      <PageHeader title={table.name} description={t("admin_open_table")} />
       <form
         noValidate
         className="flex flex-col gap-4 pt-6"

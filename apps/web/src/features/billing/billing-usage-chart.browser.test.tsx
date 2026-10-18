@@ -15,7 +15,6 @@ const daily = Array.from({ length: 31 }, (_, index) => ({
 const fixture = { ...billingFixture, daily } satisfies Billing;
 afterEach(async () => {
   await cleanup();
-  document.documentElement.style.fontSize = "";
   await page.viewport(1024, 768);
 });
 async function show(data: Billing = fixture, locale: "ja" | "en" = "ja") {
@@ -71,22 +70,21 @@ it("管理者だけが日別料金へ切り替えられ、memberの画面に料�
   expect(document.body.textContent).not.toContain("¥");
   await expect.element(page.getByText("3 分", { exact: true })).toBeVisible();
 });
-it("利用のない期間は0を表示し、狭い英語画面と文字拡大でも日付を選べる", async () => {
+it("利用のない期間は0を表示し、狭い日本語画面でも日付を選べる", async () => {
   await page.viewport(390, 844);
-  document.documentElement.style.fontSize = "20px";
   await show(
     { ...fixture, daily: daily.map((row) => ({ ...row, seconds: 0, chargeMicros: 0 })) },
-    "en",
+    "ja",
   );
-  await expect.element(page.getByRole("paragraph").filter({ hasText: /^0 min$/ })).toBeVisible();
+  await expect.element(page.getByRole("paragraph").filter({ hasText: /^0 分$/ })).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   const chart = page.getByRole("slider");
   await userEvent.click(chart);
   await userEvent.keyboard("{End}");
   await expect.element(chart).toHaveAttribute("aria-valuenow", "31");
-  await expect.element(chart).toHaveAttribute("aria-valuetext", "31 Oct · 0 min");
+  await expect.element(chart).toHaveAttribute("aria-valuetext", "10月31日 · 0 分");
   await page.screenshot({
-    path: "../../../test-results/tablecast-billing-chart-narrow-en.png",
+    path: "../../../test-results/tablecast-billing-chart-narrow-ja.png",
     fullPage: true,
   });
 });

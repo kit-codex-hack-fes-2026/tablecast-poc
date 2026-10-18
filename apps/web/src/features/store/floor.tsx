@@ -4,6 +4,8 @@ import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { floorOptions } from "./store-query";
 
@@ -21,6 +23,7 @@ const connectionDot = tv({
 
 export function Floor({
   view = "list",
+  filter = "all",
   date,
   initialNow,
   onNavigate,
@@ -43,8 +46,9 @@ export function Floor({
       void navigate({
         to: "/admin/stores/$storeId/visits/$sessionId",
         params: { storeId: store.id, sessionId },
+        search: { floorView: view, floorDate: selectedDate, floorFilter: filter },
       }),
-    [navigate, store.id],
+    [navigate, store.id, view, selectedDate, filter],
   );
   const openTable = useCallback(
     (table: { id: string }) =>
@@ -56,24 +60,33 @@ export function Floor({
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_live")}</h1>
-        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className={connectionDot({ connected })} />
-          {t(connected ? "admin_live_connected" : "admin_live_reconnecting")}
-        </span>
-      </div>
+      <PageHeader
+        title={t("admin_live")}
+        status={
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className={connectionDot({ connected })} />
+            {t(connected ? "admin_live_connected" : "admin_live_reconnecting")}
+          </span>
+        }
+      />
       <ErrorNotice error={state.error} onRetry={() => void state.refetch()} />
 
       <section aria-label={t("floor_current")}>
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">{t("floor_current")}</h2>
-        <TableMetrics tables={state.data.tables} vacantCount={state.data.vacantTables.length} />
+        <TableMetrics
+          tables={state.data.tables}
+          vacantCount={state.data.vacantTables.length}
+          filter={filter}
+          onFilterChange={(next) =>
+            onNavigate?.({ view: "list", date: selectedDate, filter: next })
+          }
+        />
       </section>
       <Tabs.Root
         value={view}
         onValueChange={(next: unknown) => {
           if (next === "list" || next === "timeline")
-            onNavigate?.({ view: next, date: selectedDate });
+            onNavigate?.({ view: next, date: selectedDate, filter });
         }}
       >
         <Tabs.List className="mb-5 flex gap-1 border-b border-border [&_button]:min-h-12 [&_button]:border-b-2 [&_button]:border-transparent [&_button]:px-4 [&_button[data-active]]:border-primary [&_button[data-active]]:font-semibold">
@@ -85,7 +98,23 @@ export function Floor({
           </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="list">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">{t(`floor_filter_${filter}`)}</h2>
+            <div className="flex flex-wrap gap-2" aria-label={t("floor_filters")} role="group">
+              {(["all", "attention", "vacant"] as const).map((next) => (
+                <Button
+                  key={next}
+                  variant={filter === next ? "secondary" : "ghost"}
+                  aria-pressed={filter === next}
+                  onClick={() => onNavigate?.({ view: "list", date: selectedDate, filter: next })}
+                >
+                  {t(`floor_filter_${next}`)}
+                </Button>
+              ))}
+            </div>
+          </div>
           <TableTimeline
+            filter={filter}
             initialNow={state.dataUpdatedAt}
             tables={state.data.tables}
             vacantTables={state.data.vacantTables}
@@ -103,7 +132,7 @@ export function Floor({
               vacantTables={state.data.vacantTables}
               onSelect={selectVisit}
               onOpen={openTable}
-              onDateChange={(next) => onNavigate?.({ view: "timeline", date: next })}
+              onDateChange={(next) => onNavigate?.({ view: "timeline", date: next, filter })}
             />
           )}
         </Tabs.Panel>
@@ -116,12 +145,14 @@ export function FloorPending() {
   const { t } = useI18n();
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_live")}</h1>
-        <span role="status" className="text-sm text-muted-foreground">
-          {t("common_loading")}
-        </span>
-      </div>
+      <PageHeader
+        title={t("admin_live")}
+        status={
+          <span role="status" className="text-sm text-muted-foreground">
+            {t("common_loading")}
+          </span>
+        }
+      />
       <TableMetrics tables={[]} vacantCount={0} pending />
       <TableTimeline tables={[]} pending onSelect={() => undefined} />
     </>

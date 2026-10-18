@@ -1,6 +1,6 @@
 import type { ThemeImage } from "@tablecast/api/schema";
 import { useState } from "react";
-import { useI18n } from "../../i18n/locale";
+import { useI18n } from "../i18n/locale";
 export function StoreLogo({
   logo,
   width = 96,

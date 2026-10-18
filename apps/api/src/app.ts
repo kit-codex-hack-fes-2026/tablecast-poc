@@ -1,12 +1,8 @@
 import { billingRoutes, operatingBillingRoutes } from "./modules/billing/routes";
-import { customerCouponRoutes } from "./modules/customer-coupons/routes";
-import { customerPointsRoutes } from "./modules/customer-points/routes";
 import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { accountRoutes } from "./modules/account/routes";
 import { customerRoutes } from "./modules/customers/routes";
-import { customerMemoryRoutes } from "./modules/customer-memory/routes";
-import { customerVisitRoutes } from "./modules/customer-visits/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { devicesRoutes } from "./modules/devices/routes";
 import { mcpRoutes } from "./modules/mcp/routes";
@@ -24,11 +20,7 @@ const rpcRoutes = new Hono<ApiEnv>()
   .onError(handleRpcError)
   .route("/", billingRoutes)
   .route("/", accountRoutes)
-  .route("/", customerRoutes)
-  .route("/api/customer", customerVisitRoutes)
-  .route("/api/customer", customerMemoryRoutes)
-  .route("/api/customer", customerPointsRoutes)
-  .route("/api/customer", customerCouponRoutes)
+  .route("/api/customer", customerRoutes)
   .route("/", devicesRoutes)
   .route("/", storesRoutes)
   .route("/", initialRoutes)

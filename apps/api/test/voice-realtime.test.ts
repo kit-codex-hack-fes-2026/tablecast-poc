@@ -8,7 +8,8 @@ import { setVoiceSession } from "../src/modules/voice/service";
 import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
 import type { voiceToolNameSchema } from "../src/modules/voice/model";
-import type { z } from "zod";
+import { z } from "zod";
+import { configurationSchema } from "../src/modules/configuration/model";
 import type { Product } from "../src/schema";
 import { configuration, device, setupFixture, text as configurationText } from "./fixture";
 
@@ -334,6 +335,78 @@ describe("Responses functionと共通業務の認可", () => {
     await setVoiceSession(services(), device, null);
     await expect(tool("callStaff")).rejects.toMatchObject({ code: "VOICE_SESSION_STALE" });
     expect((await getTableState(services(), device)).staffCalled).toBe(false);
+  });
+  it("有効な2000商品の代表ページ境界と終端で価格・出力上限を守り、個別詳細の必須選択を保つ", async () => {
+    await setup();
+    const base = configuration.products[1];
+    if (!base) throw new Error("商品fixtureがありません");
+    const products = Array.from({ length: 2000 }, (_, index) => ({
+      ...base,
+      id: `tablecast-paged-${index}`,
+      price: 100 + index,
+    }));
+    const expanded = configurationSchema.parse({ ...configuration, products });
+    await services()
+      .db.update(business.stores)
+      .set({ config_json: JSON.stringify(expanded) })
+      .where(eq(business.stores.id, device.storeId));
+    const pageSchema = z.object({
+      total: z.number(),
+      more: z.boolean(),
+      version: z.number(),
+      detail: z.boolean(),
+      products: z.array(z.object({ id: z.string(), price: z.number() })),
+    });
+    const pages = [
+      { offset: 0, indices: [0, 1, 2, 3, 4, 5, 6, 7], more: true },
+      { offset: 8, indices: [8, 9, 10, 11, 12, 13, 14, 15], more: true },
+      { offset: 1000, indices: [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007], more: true },
+      { offset: 1008, indices: [1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015], more: true },
+      { offset: 1992, indices: [1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999], more: false },
+      { offset: 1999, indices: [1999], more: false },
+      { offset: 2000, indices: [], more: false },
+    ];
+    for (const { offset, indices, more } of pages) {
+      const result = await tool("getCatalog", { offset, limit: 8 });
+      const page = pageSchema.parse(result.result);
+      expect(page).toEqual({
+        total: 2000,
+        more,
+        version: 1,
+        detail: false,
+        products: indices.map((index) => ({ id: `tablecast-paged-${index}`, price: 100 + index })),
+      });
+      expect(new TextEncoder().encode(JSON.stringify(result)).byteLength).toBeLessThan(6000);
+    }
+    const selected = await tool("getCatalog", { query: "tablecast-paged-1999" });
+    expect(selected.result).toMatchObject({
+      total: 1,
+      more: false,
+      detail: true,
+      version: 1,
+      products: [
+        {
+          id: "tablecast-paged-1999",
+          price: 2099,
+          allergens: base.allergens,
+          modifiers: [
+            {
+              min: 1,
+              options: [
+                { id: "dairy", priceDelta: 0 },
+                { id: "oat", priceDelta: 100 },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(new TextEncoder().encode(JSON.stringify(selected)).byteLength).toBeLessThan(6000);
+    for (const offset of [-1, 2001, 1.5])
+      await expect(tool("getCatalog", { offset })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(tool("getCatalog", { offset: 1008, limit: 9 })).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+    });
   });
   it("同じcall IDの同時実行を一回だけ許可する", async () => {
     await setup();

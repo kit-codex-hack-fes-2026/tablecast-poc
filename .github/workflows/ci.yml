@@ -178,15 +178,15 @@ jobs:
         if: steps.plan.outputs.components != 'none'
         with:
           codegen: "false"
-      - parallel:
-          - if: steps.plan.outputs.components != 'none'
-            uses: ./.github/actions/tablecast-browser
-            with:
-              browsers: chromium webkit
-          - if: steps.plan.outputs.components != 'none'
-            uses: ./.github/actions/tablecast-browser-deps
-            with:
-              browsers: chromium webkit
+      # composite内のpost action登録を並行させず、runnerの共有状態を順番に更新する。
+      - if: steps.plan.outputs.components != 'none'
+        uses: ./.github/actions/tablecast-browser
+        with:
+          browsers: chromium webkit
+      - if: steps.plan.outputs.components != 'none'
+        uses: ./.github/actions/tablecast-browser-deps
+        with:
+          browsers: chromium webkit
       - if: steps.plan.outputs.components != 'none'
         working-directory: apps/web
         env:
@@ -226,18 +226,17 @@ jobs:
           fi
       - uses: ./.github/actions/tablecast-setup
         if: steps.plan.outputs.e2e != 'none'
-      - parallel:
-          - if: steps.plan.outputs.e2e != 'none'
-            uses: ./.github/actions/tablecast-browser
-            with:
-              browsers: ${{ matrix.browser }}
-          - if: steps.plan.outputs.e2e != 'none'
-            uses: ./.github/actions/tablecast-browser-deps
-            with:
-              browsers: ${{ matrix.browser }}
-          - name: Mailpit image
-            if: steps.plan.outputs.e2e != 'none'
-            run: docker pull axllent/mailpit:v1.31.6
+      - if: steps.plan.outputs.e2e != 'none'
+        uses: ./.github/actions/tablecast-browser
+        with:
+          browsers: ${{ matrix.browser }}
+      - if: steps.plan.outputs.e2e != 'none'
+        uses: ./.github/actions/tablecast-browser-deps
+        with:
+          browsers: ${{ matrix.browser }}
+      - name: Mailpit image
+        if: steps.plan.outputs.e2e != 'none'
+        run: docker pull axllent/mailpit:v1.31.6
       - name: Isolated cases · 4 workers · no retries
         if: steps.plan.outputs.e2e != 'none'
         env:

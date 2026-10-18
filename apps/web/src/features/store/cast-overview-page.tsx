@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileCheck2, Pencil } from "lucide-react";
@@ -27,30 +28,30 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold">
-          {t("editor_cast")}
-          {draft.data && <DraftStatus status={draft.data.status} />}
-        </h1>
-        {draftId && (
-          <Button
-            nativeButton={false}
-            role="link"
-            variant="outline"
-            render={
-              <Link
-                to="/admin/stores/$storeId/menu/changes/$draftId"
-                params={{ storeId, draftId }}
-                search={{ ...emptyMenuListSearch, returnSection: "cast" }}
-              />
-            }
-          >
-            <FileCheck2 />
-            {t("workflow_review")}
-          </Button>
-        )}
-      </div>
-      <p className="text-sm text-muted-foreground">{t("cast_overview_note")}</p>
+      <PageHeader
+        title={t("editor_cast")}
+        description={t("cast_overview_note")}
+        status={draft.data && <DraftStatus status={draft.data.status} />}
+        actions={
+          draftId && (
+            <Button
+              nativeButton={false}
+              role="link"
+              variant="outline"
+              render={
+                <Link
+                  to="/admin/stores/$storeId/menu/changes/$draftId"
+                  params={{ storeId, draftId }}
+                  search={{ ...emptyMenuListSearch, returnSection: "cast" }}
+                />
+              }
+            >
+              <FileCheck2 />
+              {t("workflow_review")}
+            </Button>
+          )
+        }
+      />
       <ErrorNotice
         error={catalog.error || draft.error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}

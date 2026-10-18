@@ -1,4 +1,5 @@
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowUpRight, Check, RefreshCw } from "lucide-react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -10,6 +11,8 @@ import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { AdminShell } from "../shell/admin-shell";
+import { StorePicker } from "../shell/admin-sidebar";
+import { storesOptions } from "../store/store-query";
 import { BillingUsageChart } from "./billing-usage-chart";
 import { billingOptions, invoiceOptions, type Billing, type Invoice } from "./billing-query";
 
@@ -45,7 +48,7 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
       tab="billing"
       storeId={data?.storeId}
       organizationId={organizationId}
-      header={t("billing_title")}
+      header={<BillingStorePicker organizationId={organizationId} />}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -119,6 +122,48 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
         )
       )}
     </AdminShell>
+  );
+}
+
+function BillingStorePicker({ organizationId }: { organizationId: string }) {
+  const { t } = useI18n();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const stores = useQuery(storesOptions);
+  const availableStores = stores.data?.stores ?? [];
+  const selectedStore = availableStores.find((store) => store.organizationId === organizationId);
+  const changeOrganisation = useMutation({
+    mutationFn: async (nextStoreId: string) => {
+      const selected = availableStores.find((store) => store.id === nextStoreId);
+      if (!selected) throw new Error("STORE_NOT_FOUND");
+      authResult(
+        await authClient.organization.setActive({ organizationId: selected.organizationId }),
+      );
+      return selected.organizationId;
+    },
+    onSuccess: async (nextOrganizationId) => {
+      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
+      await navigate({
+        to: "/billing/$organizationId",
+        params: { organizationId: nextOrganizationId },
+      });
+    },
+  });
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+      <StorePicker
+        stores={availableStores}
+        selectedStore={selectedStore?.id}
+        pending={changeOrganisation.isPending}
+        onChange={(id) => changeOrganisation.mutate(id)}
+      />
+      <span className="text-sm text-muted-foreground">{t("billing_title")}</span>
+      {changeOrganisation.error && (
+        <span role="alert" className="text-sm text-destructive">
+          {t("account_failed")}
+        </span>
+      )}
+    </div>
   );
 }
 

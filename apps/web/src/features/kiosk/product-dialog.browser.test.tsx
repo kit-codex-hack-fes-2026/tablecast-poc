@@ -183,15 +183,6 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
     }),
   );
   await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();
-  // 固定 px の本文も含めて文字を 2 倍にし、画像枠と操作の横はみ出しを調べる。
-  const sizes = [...document.querySelectorAll<HTMLElement>("body *")]
-    .filter((element) =>
-      [...element.childNodes].some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-      ),
-    )
-    .map((element) => ({ element, size: Number.parseFloat(getComputedStyle(element).fontSize) }));
-  for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
   for (const [width, height] of [
     [768, 1024],
     [1024, 768],

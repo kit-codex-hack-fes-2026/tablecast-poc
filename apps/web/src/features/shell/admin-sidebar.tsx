@@ -1,8 +1,8 @@
 import { Brand } from "../../components/brand";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useHydrated, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Link, useHydrated } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Building2,
@@ -35,9 +35,10 @@ import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
 import { MenuNavigation } from "./menu-navigation";
+import { useConfigurationRoute } from "./configuration-route";
 import { storesOptions, type loadStores } from "../store/store-query";
 
-import { authClient, authResult } from "../../lib/auth-client";
+import { authClient } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
 export type AdminSidebarProps = {
@@ -60,37 +61,14 @@ export function AdminSidebar({
 }: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
   const { t } = useI18n();
   const session = useQuery(sessionOptions);
-  const path = useRouterState({ select: (state) => state.location.pathname });
-  const { draftId } = useParams({ strict: false });
-  const inMenu = path.includes("/menu/") || path.endsWith("/design");
-  const navigate = useNavigate();
-  const client = useQueryClient();
-  const active = authClient.useActiveOrganization();
+  const { active: inMenu, draftId } = useConfigurationRoute();
   const stores = useQuery({ ...storesOptions, enabled: !!session.data });
   const availableStores = stores.data?.stores ?? [];
   const selectedStore =
     storeId ??
     (organizationId
       ? availableStores.find((store) => store.organizationId === organizationId)?.id
-      : (availableStores.find((store) => store.organizationId === active.data?.id)?.id ??
-        availableStores[0]?.id));
-  const changeOrganisation = useMutation({
-    mutationFn: async (nextStoreId: string) => {
-      const store = availableStores.find((item) => item.id === nextStoreId);
-      if (!store) throw new Error("STORE_NOT_FOUND");
-      authResult(await authClient.organization.setActive({ organizationId: store.organizationId }));
-      return store;
-    },
-    onSuccess: async (store) => {
-      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
-      if (tab === "billing")
-        await navigate({
-          to: "/billing/$organizationId",
-          params: { organizationId: store.organizationId },
-        });
-      else await navigate({ to: "/admin/stores/$storeId/floor", params: { storeId: store.id } });
-    },
-  });
+      : undefined);
 
   return (
     <>
@@ -101,19 +79,6 @@ export function AdminSidebar({
       >
         <Brand variant={collapsed ? "symbol" : "logo"} />
       </Link>
-      {!collapsed && (
-        <StorePicker
-          stores={availableStores}
-          selectedStore={selectedStore}
-          pending={changeOrganisation.isPending}
-          onChange={(value) => changeOrganisation.mutate(value)}
-        />
-      )}
-      {changeOrganisation.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {t("account_failed")}
-        </p>
-      )}
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
@@ -213,11 +178,13 @@ function SidebarNavigation({
       className="flex-1 space-y-1 overflow-y-auto border-t border-border py-3"
       aria-label={t("admin_navigation")}
     >
-      {!collapsed && (
-        <p className="px-2 pb-2 text-sm font-medium text-muted-foreground">{t("admin_store")}</p>
-      )}
-      {selectedStore ? (
+      {selectedStore && (
         <>
+          {!collapsed && (
+            <h2 className="px-2 pb-2 text-xs font-semibold text-muted-foreground">
+              {t("nav_operations")}
+            </h2>
+          )}
           <Link
             className={sidebarItemClass}
             to="/admin/stores/$storeId/floor"
@@ -238,64 +205,103 @@ function SidebarNavigation({
             <History className="size-5 shrink-0" />
             {!collapsed && t("admin_history")}
           </Link>
-          {collapsed ? (
+          <div className="pt-4">
+            {collapsed ? (
+              <Link
+                className={sidebarItemClass}
+                to="/admin/stores/$storeId/menu/$section"
+                params={{ storeId: selectedStore, section: "products" }}
+                title={t("admin_config")}
+                onClick={onNavigate}
+              >
+                <Settings2 className="size-5 shrink-0" />
+              </Link>
+            ) : (
+              <Collapsible.Root key={String(inMenu)} defaultOpen={inMenu}>
+                <Collapsible.Trigger disabled={!hydrated} className={`${sidebarItemClass} group`}>
+                  <Settings2 className="size-5 shrink-0" />
+                  {t("admin_config")}
+                  <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />
+                </Collapsible.Trigger>
+                <Collapsible.Panel>
+                  <MenuNavigation
+                    storeId={selectedStore}
+                    draftId={draftId}
+                    onNavigate={onNavigate}
+                  />
+                  <Link
+                    className={`${sidebarItemClass} ml-4 w-auto`}
+                    to="/admin/stores/$storeId/games"
+                    params={{ storeId: selectedStore }}
+                    onClick={onNavigate}
+                  >
+                    <Gamepad2 className="size-4 shrink-0" />
+                    {t("games_title")}
+                  </Link>
+                </Collapsible.Panel>
+              </Collapsible.Root>
+            )}
+          </div>
+          {collapsed && (
             <Link
               className={sidebarItemClass}
-              to="/admin/stores/$storeId/menu/$section"
-              params={{ storeId: selectedStore, section: "products" }}
-              title={t("admin_config")}
+              to="/admin/stores/$storeId/games"
+              params={{ storeId: selectedStore }}
+              title={t("games_title")}
               onClick={onNavigate}
             >
-              <Settings2 className="size-5 shrink-0" />
+              <Gamepad2 className="size-5 shrink-0" />
             </Link>
-          ) : (
-            <Collapsible.Root key={String(inMenu)} defaultOpen={inMenu}>
-              <Collapsible.Trigger disabled={!hydrated} className={`${sidebarItemClass} group`}>
-                <Settings2 className="size-5 shrink-0" />
-                {t("admin_config")}
-                <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />
-              </Collapsible.Trigger>
-              <Collapsible.Panel>
-                <MenuNavigation storeId={selectedStore} draftId={draftId} onNavigate={onNavigate} />
-              </Collapsible.Panel>
-            </Collapsible.Root>
           )}
           {(
             [
-              { to: "/admin/stores/$storeId/coupons", label: "coupons", Icon: Gift },
               {
-                to: "/admin/stores/$storeId/points",
-                label: "customer_points_policy",
-                Icon: Gift,
+                label: "nav_rewards",
+                items: [
+                  {
+                    to: "/admin/stores/$storeId/points",
+                    label: "customer_points_policy",
+                    Icon: Gift,
+                  },
+                  { to: "/admin/stores/$storeId/coupons", label: "coupons", Icon: Gift },
+                ],
               },
-              { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
               {
-                to: "/admin/stores/$storeId/devices",
-                label: "device_title",
-                Icon: MonitorSmartphone,
+                label: "nav_store_management",
+                items: [
+                  { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
+                  {
+                    to: "/admin/stores/$storeId/devices",
+                    label: "device_title",
+                    Icon: MonitorSmartphone,
+                  },
+                  { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
+                ],
               },
-              { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
-              { to: "/admin/stores/$storeId/games", label: "games_title", Icon: Gamepad2 },
             ] as const
-          ).map(({ to, label, Icon }) => (
-            <Link
-              key={to}
-              className={sidebarItemClass}
-              to={to}
-              params={{ storeId: selectedStore }}
-              title={t(label)}
-              onClick={onNavigate}
-            >
-              <Icon className="size-5 shrink-0" />
-              {!collapsed && t(label)}
-            </Link>
+          ).map((group) => (
+            <section key={group.label} className="space-y-1 pt-4" aria-label={t(group.label)}>
+              {!collapsed && (
+                <h2 className="px-2 pb-1 text-xs font-semibold text-muted-foreground">
+                  {t(group.label)}
+                </h2>
+              )}
+              {group.items.map(({ to, label, Icon }) => (
+                <Link
+                  key={to}
+                  className={sidebarItemClass}
+                  to={to}
+                  params={{ storeId: selectedStore }}
+                  title={t(label)}
+                  onClick={onNavigate}
+                >
+                  <Icon className="size-5 shrink-0" />
+                  {!collapsed && t(label)}
+                </Link>
+              ))}
+            </section>
           ))}
         </>
-      ) : (
-        <Link className={sidebarItemClass} to="/organisations" onClick={onNavigate}>
-          <Building2 className="size-5 shrink-0" />
-          {!collapsed && t("org_manage")}
-        </Link>
       )}
       <div className="h-4" />
       {!collapsed && (
@@ -373,7 +379,7 @@ function BillingNavigation({
   );
 }
 
-function StorePicker({
+export function StorePicker({
   stores,
   selectedStore,
   pending,
@@ -386,7 +392,7 @@ function StorePicker({
 }) {
   const { t } = useI18n();
   return (
-    <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-white p-2">
+    <div className="flex w-full min-w-0 max-w-72 items-center gap-2">
       <StoreIcon
         name={stores.find((store) => store.id === selectedStore)?.name ?? t("admin_store")}
         logo={stores.find((store) => store.id === selectedStore)?.logo}
@@ -403,7 +409,7 @@ function StorePicker({
           className="min-w-0 flex-1 border-0 bg-transparent px-0 shadow-none"
           aria-label={t("stores_title")}
         >
-          <SelectValue placeholder={t("stores_title")} />
+          <SelectValue className="min-w-0 truncate text-left" placeholder={t("stores_title")} />
         </SelectTrigger>
         <SelectContent>
           {stores.map((store) => (

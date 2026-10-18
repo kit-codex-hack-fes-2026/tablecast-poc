@@ -75,6 +75,11 @@
 }
 
 @layer base {
+  *,
+  ::before,
+  ::after {
+    @apply border-border;
+  }
   body {
     @apply min-w-0 bg-background font-sans leading-relaxed text-foreground antialiased;
     font-synthesis: none;

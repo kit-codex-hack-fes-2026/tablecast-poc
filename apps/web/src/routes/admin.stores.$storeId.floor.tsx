@@ -29,6 +29,7 @@ function FloorRoute() {
   return (
     <Floor
       view={search.view}
+      filter={search.filter}
       date={data.date}
       initialNow={data.initialNow}
       onNavigate={(next) => void navigate({ search: next, resetScroll: false })}

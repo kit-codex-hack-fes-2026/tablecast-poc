@@ -3,11 +3,19 @@ import { eq } from "drizzle-orm";
 import { assert, expect, it } from "vitest";
 import { user } from "../src/db/auth-schema";
 import { customerPointEntries, tableSessions } from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
+import { createApiServices, type ApiServices } from "../src/platform/context";
+import { DomainError } from "../src/platform/errors";
+import type { Actor } from "../src/modules/auth/model";
 import { enrolCustomer } from "../src/modules/customers/service";
 import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
 import { closeTable, openTable } from "../src/modules/tables/service";
-import { recordPayment } from "../src/modules/orders/service";
+import {
+  changeOrderStatus,
+  prepareConfirmation,
+  recordPayment,
+  submitOrder,
+  updateCart,
+} from "../src/modules/orders/service";
 import { getTableState } from "../src/modules/tables/queries";
 import {
   confirmCustomerPoints,
@@ -56,6 +64,17 @@ async function setup(kind: "spend" | "visit" = "spend") {
   await joinCustomerVisit(services, customer.userId, code.code);
   await joinCustomerVisit(services, other.userId, code.code);
   return { services, actor, customer, other, tablet };
+}
+async function prepareTea(services: ApiServices, tablet: Actor, lineId: string) {
+  const before = await getTableState(services, tablet);
+  const cart = await updateCart(services, tablet, {
+    expectedVersion: before.cart.version,
+    lines: [{ id: lineId, productId: "tea", quantity: 1, selections: [] }],
+  });
+  return prepareConfirmation(services, tablet, {
+    expectedVersion: cart.cart.version,
+    channel: "gui",
+  });
 }
 it("均等配分の円端数は参加順とし、同時確認でも一度だけ付与する", async () => {
   const { services, actor, customer, other } = await setup();
@@ -149,8 +168,8 @@ it("会計訂正を配分とポイントへ差分反映し、不足残高を将�
   expect((await getPointVisit(services, actor)).allocations.map((a) => a.amount)).toEqual([50, 50]);
   expect((await getTableState(services, actor)).bill.due).toBe(100);
 });
-it("付与対象ゼロを明示確定でき、会員APIからスタッフ操作は実行できない", async () => {
-  const { services, actor, customer } = await setup();
+it("付与対象ゼロを明示確定すると追加注文でも付与せず、会員APIからスタッフ操作は実行できない", async () => {
+  const { services, actor, customer, tablet } = await setup();
   const visit = await getPointVisit(services, actor);
   const result = await confirmCustomerPoints(services, actor, {
     expectedVersion: visit.expectedVersion,
@@ -158,6 +177,13 @@ it("付与対象ゼロを明示確定でき、会員APIからスタッフ操作�
     idempotencyKey: crypto.randomUUID(),
   });
   expect(result.allocations).toEqual([]);
+  const snapshot = await prepareTea(services, tablet, "no-recipient");
+  await submitOrder(services, tablet, {
+    snapshotId: snapshot.id,
+    idempotencyKey: "no-recipient",
+    approved: true,
+  });
+  expect((await getPointVisit(services, actor)).allocations).toEqual([]);
   expect((await getCustomerPoints(services, customer, { limit: 20 })).balance).toBe(0);
   await expect(
     setPointPolicy(
@@ -211,4 +237,180 @@ it("別来店で同じ会計訂正キーを使っても配分と残高を両方�
       await joinCustomerVisit(services, other.userId, code.code);
     }
   }
+});
+
+it.each([
+  { label: "0円", initialOrder: false, total: 400, points: 4 },
+  { label: "400円", initialOrder: true, total: 800, points: 8 },
+])(
+  "$labelで確定した後の通常追加注文を固定対象へ配分し、精算・閉卓後も残高を保つ",
+  async ({ initialOrder, total, points }) => {
+    const { services, actor, customer, other, tablet } = await setup();
+    if (initialOrder) {
+      const snapshot = await prepareTea(services, tablet, "before");
+      const order = await submitOrder(services, tablet, {
+        snapshotId: snapshot.id,
+        idempotencyKey: "before",
+        approved: true,
+      });
+      await changeOrderStatus(services, actor, order.id, "accepted");
+      await changeOrderStatus(services, actor, order.id, "served");
+      await recordPayment(services, actor, {
+        amount: 400,
+        kind: "payment",
+        reason: "会計",
+        idempotencyKey: "before",
+      });
+    }
+    const visit = await getPointVisit(services, actor);
+    const recipient = visit.participants.find((p) => p.name !== "同行者");
+    assert(recipient);
+    const confirmation = {
+      expectedVersion: visit.expectedVersion,
+      participantIds: [recipient.id],
+      idempotencyKey: crypto.randomUUID(),
+    };
+    await confirmCustomerPoints(services, actor, confirmation);
+
+    const snapshot = await prepareTea(services, tablet, "after");
+    const input = { snapshotId: snapshot.id, idempotencyKey: "after", approved: true as const };
+    const results = await Promise.all([
+      submitOrder(services, tablet, input),
+      submitOrder(services, tablet, input),
+    ]);
+    assert(results[0]);
+    expect(results[0].id).toBe(results[1]?.id);
+    await changeOrderStatus(services, actor, results[0].id, "accepted");
+    await changeOrderStatus(services, actor, results[0].id, "served");
+    await recordPayment(services, actor, {
+      amount: 400,
+      kind: "payment",
+      reason: "追加分の会計",
+      idempotencyKey: "after",
+    });
+    expect((await confirmCustomerPoints(services, actor, confirmation)).allocations).toMatchObject([
+      { membershipId: recipient.membershipId, amount: total, points },
+    ]);
+    const closed = await closeTable(services, actor);
+    expect(closed.status).toBe("closed");
+    expect(closed.bill).toMatchObject({ orderedTotal: total, due: 0 });
+    expect(await getCustomerPoints(services, customer, { limit: 20 })).toMatchObject({
+      balance: points,
+      totals: { visits: 1, allocatedYen: total },
+    });
+    expect((await getCustomerPoints(services, other, { limit: 20 })).balance).toBe(0);
+    const entries = await fixtureDb.select().from(customerPointEntries);
+    expect(entries.filter((entry) => entry.kind === "correction")).toHaveLength(1);
+  },
+);
+
+it.each([
+  { label: "未受注の取消", accepted: false, status: "cancelled" as const },
+  { label: "受注後の取消", accepted: true, status: "cancelled" as const },
+  { label: "注文の拒否", accepted: false, status: "rejected" as const },
+])(
+  "確定後の追加注文を$labelすると複数会員の購入額とポイントを一度だけ戻す",
+  async ({ accepted, status }) => {
+    const { services, actor, customer, other, tablet } = await setup();
+    const visit = await getPointVisit(services, actor);
+    await confirmCustomerPoints(services, actor, {
+      expectedVersion: visit.expectedVersion,
+      participantIds: visit.participants.map((p) => p.id),
+      idempotencyKey: crypto.randomUUID(),
+    });
+    const snapshot = await prepareTea(services, tablet, "cancel");
+    const order = await submitOrder(services, tablet, {
+      snapshotId: snapshot.id,
+      idempotencyKey: "cancel",
+      approved: true,
+    });
+    expect((await getPointVisit(services, actor)).allocations.map((a) => a.amount)).toEqual([
+      200, 200,
+    ]);
+    if (accepted) await changeOrderStatus(services, actor, order.id, "accepted");
+    await changeOrderStatus(services, actor, order.id, status);
+    await changeOrderStatus(services, actor, order.id, status);
+    expect((await getPointVisit(services, actor)).allocations.map((a) => a.amount)).toEqual([0, 0]);
+    expect((await getCustomerPoints(services, customer, { limit: 20 })).balance).toBe(0);
+    expect((await getCustomerPoints(services, other, { limit: 20 })).balance).toBe(0);
+    const entries = await fixtureDb.select().from(customerPointEntries);
+    expect(
+      entries
+        .filter((entry) => entry.kind === "correction")
+        .map((entry) => entry.delta)
+        .toSorted((left, right) => left - right),
+    ).toEqual([-2, -2, 2, 2]);
+    expect((await closeTable(services, actor)).bill).toMatchObject({ orderedTotal: 0, due: 0 });
+  },
+);
+
+it("追加注文と会計調整が競合しても成立した会計だけを複数会員へ配分する", async () => {
+  const { services, actor, customer, other, tablet } = await setup();
+  const visit = await getPointVisit(services, actor);
+  await confirmCustomerPoints(services, actor, {
+    expectedVersion: visit.expectedVersion,
+    participantIds: visit.participants.map((p) => p.id),
+    idempotencyKey: crypto.randomUUID(),
+  });
+  const snapshot = await prepareTea(services, tablet, "concurrent");
+  const results = await Promise.allSettled([
+    submitOrder(services, tablet, {
+      snapshotId: snapshot.id,
+      idempotencyKey: "concurrent",
+      approved: true,
+    }),
+    recordPayment(services, actor, {
+      amount: 101,
+      kind: "adjustment",
+      reason: "会計訂正",
+      idempotencyKey: "concurrent",
+    }),
+  ]);
+  expect(results.some((result) => result.status === "fulfilled")).toBe(true);
+  for (const failure of results.filter((result) => result.status === "rejected")) {
+    const reason: unknown = failure.reason;
+    assert(reason instanceof DomainError);
+    expect(reason.code).toBeOneOf(["CONFIRMATION_STALE", "BILLING_CONFLICT"]);
+  }
+  const table = await getTableState(services, actor);
+  const amount = table.bill.orderedTotal + table.bill.adjustmentTotal;
+  const expected = new Map([
+    [101, { amounts: [51, 50], points: 0 }],
+    [400, { amounts: [200, 200], points: 2 }],
+    [501, { amounts: [251, 250], points: 2 }],
+  ]).get(amount);
+  assert(expected);
+  expect((await getPointVisit(services, actor)).allocations.map((a) => a.amount)).toEqual(
+    expected.amounts,
+  );
+  expect((await getCustomerPoints(services, customer, { limit: 20 })).balance).toBe(
+    expected.points,
+  );
+  expect((await getCustomerPoints(services, other, { limit: 20 })).balance).toBe(expected.points);
+});
+
+it("ポイント訂正の保存が失敗すると追加注文・カート消去・台帳をまとめて戻す", async () => {
+  const { services, actor, tablet } = await setup();
+  const visit = await getPointVisit(services, actor);
+  await confirmCustomerPoints(services, actor, {
+    expectedVersion: visit.expectedVersion,
+    participantIds: visit.participants.map((p) => p.id),
+    idempotencyKey: crypto.randomUUID(),
+  });
+  const snapshot = await prepareTea(services, tablet, "failure");
+  const before = await getTableState(services, tablet);
+  const entries = await fixtureDb.select().from(customerPointEntries);
+  await env.TABLECAST_DB.exec(
+    "CREATE TRIGGER tablecast_fail_point_correction BEFORE INSERT ON customer_point_entries WHEN NEW.kind='correction' BEGIN SELECT RAISE(ABORT,'tablecast-point-failure'); END",
+  );
+  await expect(
+    submitOrder(services, tablet, {
+      snapshotId: snapshot.id,
+      idempotencyKey: "failure",
+      approved: true,
+    }),
+  ).rejects.toThrow("tablecast-point-failure");
+  expect(await getTableState(services, tablet)).toEqual(before);
+  expect(await fixtureDb.select().from(customerPointEntries)).toEqual(entries);
+  expect((await getPointVisit(services, actor)).allocations.map((a) => a.amount)).toEqual([0, 0]);
 });

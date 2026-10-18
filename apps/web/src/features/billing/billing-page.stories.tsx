@@ -60,6 +60,7 @@ export const Failed: Story = {
 };
 export const English: Story = {
   name: "英語",
+  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     await expect(

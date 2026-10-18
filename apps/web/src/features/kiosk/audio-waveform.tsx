@@ -21,6 +21,15 @@ const waveformIcon = tv({
     connecting: { true: "motion-safe:animate-spin" },
   },
 });
+const waveformLayout = tv({
+  slots: {
+    root: "flex items-center gap-3 py-1 text-foreground",
+    caption: "flex items-center gap-2 text-xs font-semibold",
+  },
+  variants: {
+    compact: { true: { root: "w-20 shrink-0 py-0", caption: "sr-only" } },
+  },
+});
 
 export type VoiceVisualState = VoiceStatus | "tool";
 
@@ -64,13 +73,16 @@ export function AudioWaveform({
   label,
   state,
   toolLabel,
+  compact = false,
 }: {
   track?: MediaStreamTrack;
   label: string;
   state: VoiceVisualState;
   toolLabel?: string;
+  compact?: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const layout = waveformLayout({ compact });
   const [audio, setAudio] = useState({ volume: 0, brightness: 0 });
   const still = useSyncExternalStore(subscribeMotion, motionPaused, () => true);
   const preset = states[state];
@@ -83,6 +95,7 @@ export function AudioWaveform({
   });
   const shapeRef = useRef(shape);
   useEffect(() => {
+    if (compact) return undefined;
     const target = {
       speed: preset.speed,
       radius: preset.radius,
@@ -100,7 +113,7 @@ export function AudioWaveform({
       },
     });
     return () => animation.stop();
-  }, [preset, still]);
+  }, [compact, preset, still]);
   const reactive = !still && (state === "listening" || state === "speaking");
   const volume = reactive ? audio.volume : 0;
   const brightness = reactive ? audio.brightness : 0;
@@ -179,43 +192,45 @@ export function AudioWaveform({
   }, [track, reactive]);
   return (
     <figure
-      className="flex items-center gap-3 py-1 text-foreground"
+      className={layout.root()}
       data-voice-state={state}
       data-motion={still || !preset.speed ? "still" : "animated"}
     >
-      <div
-        aria-hidden="true"
-        className="relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
-      >
-        <SmokeRing
-          className="absolute inset-0 rounded-full blur-xs"
-          colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
-          colorBack="#00000000"
-          speed={still || !preset.speed ? 0 : shape.speed}
-          frame={12000}
-          radius={shape.radius + volume * 0.07}
-          thickness={shape.thickness + volume * 0.12}
-          innerShape={shape.inner}
-          noiseScale={shape.noise + brightness}
-          noiseIterations={3}
-          scale={1}
-          minPixelRatio={1}
-          maxPixelCount={65536}
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Icon
-            className={waveformIcon({
-              error: state === "error",
-              connecting: state === "connecting",
-            })}
+      {!compact && (
+        <div
+          aria-hidden="true"
+          className="relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
+        >
+          <SmokeRing
+            className="absolute inset-0 rounded-full blur-xs"
+            colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
+            colorBack="#00000000"
+            speed={still || !preset.speed ? 0 : shape.speed}
+            frame={12000}
+            radius={shape.radius + volume * 0.07}
+            thickness={shape.thickness + volume * 0.12}
+            innerShape={shape.inner}
+            noiseScale={shape.noise + brightness}
+            noiseIterations={3}
+            scale={1}
+            minPixelRatio={1}
+            maxPixelCount={65536}
           />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Icon
+              className={waveformIcon({
+                error: state === "error",
+                connecting: state === "connecting",
+              })}
+            />
+          </div>
+          {state === "tool" && (
+            <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:animation-duration-[6s]" />
+          )}
         </div>
-        {state === "tool" && (
-          <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:animation-duration-[6s]" />
-        )}
-      </div>
+      )}
       <div className="min-w-0 flex-1">
-        <figcaption className="flex items-center gap-2 text-xs font-semibold">
+        <figcaption className={layout.caption()}>
           {label}
           {toolLabel && (
             <span className="flex items-center gap-1 font-normal">

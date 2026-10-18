@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { StoreDesign } from "../features/store/store-design";
 import { catalogOptions, draftOptions } from "../features/store/menu-query";
+import { menuReviewSearchSchema } from "../features/store/menu-model";
 export const Route = createFileRoute("/admin/stores/$storeId/design")({
-  validateSearch: z.object({ draftId: z.string().optional() }),
+  validateSearch: menuReviewSearchSchema.extend({ draftId: z.string().optional() }),
   loaderDeps: ({ search }) => ({ draftId: search.draftId }),
   loader: ({ context, params, deps }) =>
     deps.draftId

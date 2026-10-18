@@ -55,6 +55,12 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 
+### 大量データと背景取得失敗の境界
+
+`voice-realtime.test.ts`は実D1に2,000商品を保存し、公開toolの先頭・隣接ページ・1,000件を超えるoffset・末尾・終端でID、価格、版、続きを示す値、6,000byteの応答上限を確認する。個別詳細の必須選択と不正入力の拒否も残す。ページングはoffsetからの切り出しで状態を持たないため、全250ページで認可・イベント記録・catalog parseを繰り返す負荷試験にはしない。HTTP認証・tenant境界とDB往復予算は既存のAPI試験が所有する。
+
+Accountの保存後再取得失敗は、実QueryClientとHTTP gateを接続したBrowser試験で、保存中の入力停止、保存後の次の入力、既存cacheの保持を確認する。エラー通知は失敗した取得領域の名前付きregionで観測する。ページ全体の通知数やアニメーションの切替時刻を保存成功の条件にしない。
+
 ### localeの保証とComponentの実行
 
 Component jobのBrowser統合とStorybook自動試験は日本語で実行する。Chromium/WebKitの対象とworker枠は従来どおりで、localeとengineを同じ軸にしない。英語Storyは閲覧用カタログに残し、標準の`tags: ["!test"]`で自動実行から除く。英語だけに存在する失敗・再送・読取専用・長文操作は、日本語の自動試験へ移してから除外する。
@@ -71,7 +77,7 @@ Component jobのBrowser統合とStorybook自動試験は日本語で実行する
 | 8件の長い英語会話原文と最終行の中断状態                | `JapaneseLongHistory` Story。原文を英語のまま保持し、日本語UIで履歴を表示する                                                                                           |
 | 同名反復行・長文・追加削除・エラー時focus              | ConfigurationLayoutの`RepeatedRows`へ3グループ×5選択肢を残す。通常状態と空白IDは同名の2グループ×2選択肢で確認する                                                       |
 
-日本語UIで扱う英語の入力値・会話原文・来店locale・API payloadは別の業務データとして保持する。幅1280/390、縦横、文字200%、別名31件／101文字、商品単位と65商品・65,536ノードの上限はlocaleから分離した日本語ケースへ残す。APIの二言語データ保存や、代表E2Eの客英語・店側日本語の接続は維持する。
+日本語UIで扱う英語の入力値・会話原文・来店locale・API payloadは別の業務データとして保持する。幅1280/390、縦横、別名31件／101文字、商品単位と65商品・65,536ノードの上限はlocaleから分離した日本語ケースへ残す。APIの二言語データ保存や、代表E2Eの客英語・店側日本語の接続は維持する。
 
 この変更前の日英試験と件数は過去の実施記録であり、現在のComponent実行対象を示すものではない。削減した件数そのものやローカルの成功だけでCIのtimeoutを解消済みと判断せず、対象SHAのcold/warm・通常順・shuffleを記録する。15秒のcase予算とretry 0を維持し、一時診断のtraceを恒久のComponent artifactへ追加しない。
 
@@ -110,23 +116,23 @@ runtime再起動はlisten markerだけで完了とせず、入口の実API・Mai
 
 移行時点のspec名と所有先を示す。locale別Componentの現在の分担は上節を参照する。新旧の件数やこの表自体を実行成功の証拠にせず、対象SHA・実行範囲・未実施項目をIssue/PRへ記録する。以下のBrowserは`apps/web/src/`、APIは`apps/api/test/`に併置する。
 
-| 移行前のE2E                                                   | 既存・追加した下位保証                                                                                                                                                                 | 残す全構成の代表経路                                                                                                                      |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| accountの名前保存・送信中・メール/Google同一user              | `account.browser.test.tsx`、実auth handler+D1の`auth-linking.test.ts`。カタログ読込は既存MenuCollection/DataTable                                                                      | Google→SSR→店舗作成→招待メール→別userの参加、実WebAuthn登録/再ログイン                                                                    |
-| form・device-qr・loading-layout・accessibility・ssrの表示分岐 | `email-access.browser.test.tsx`、`devices.browser.test.tsx`、Account/Floor/VisitHistory/MenuCollection、既存Form/DataTable。実decoder・合成MediaStream・日英200%・keyboard/focusを確認 | ログイン復帰、端末Cookie発行、代表SSR/hydration。実生成routeと既定pending/error/retryの接続、reduced motionの実media/CSSだけ代表1件へ残す |
-| integrations・resizeの画面操作                                | `admin-shell.browser.test.tsx`、`store-profile.browser.test.tsx`、既存IntegrationSetup、`mcp-sessions.browser.test.tsx`、Kiosk                                                         | 店舗の代表SSR、OAuth同意、画像upload→保存→配信。Cookie保存/再表示とmobile操作はBrowser、管理sidebarの実window幅を跨ぐ復元は短いresize E2E |
-| customerの設定・記憶・ポイント・クーポン                      | `customer-features.browser.test.tsx`、`rewards.browser.test.tsx`、既存会員APIと実HTTP/D1の`customer-rewards-http.test.ts`                                                              | QR→login returnTo→同意→別Cookieの二人参加→卓への反映→閉卓/再来店の自動参加                                                                |
-| gamesの日英反復・poll失敗・開始遅着・停止                     | 店側/客側の`games.browser.test.tsx`、既存GameFrame BrowserとAPI games                                                                                                                  | 人の試遊確認/公開→卓の実iframe/SDK保存→終了→カート画面復帰を1言語                                                                         |
-| configuration・menu-navigation・cast-overview・voice-config   | 既存ConfigurationWorkflow/MenuCollection Browserを補完。CastOverview/ConfigurationChanges stories、API configuration/voices/mcp                                                        | `tablecast-admin-publication.spec.ts`の価格編集→保存/再読込→人の公開→別Cookieの客画面への反映                                             |
-| option-conditions・missing-choice                             | 既存OptionConditionsEditor/ProductPage/Kiosk Browser、API configuration/orders。Kioskへ同じ未完了行の409と入力保持を補完                                                               | modifier選択→版付き明示確認→注文→提供→会計→閉卓                                                                                           |
-| theme・theme-art                                              | `store-design.browser.test.tsx`、既存StoreTheme/Kiosk Browser、API appearance/media/image-upload                                                                                       | 画像の取込/配信と公開通知の代表接続を再利用                                                                                               |
-| option-imagesの多数の画像/選択肢/価格操作                     | 既存ConfigurationImageField/MenuItem/ProductPage Browser、API image-upload/configuration/media                                                                                         | 商品画像1枚を画面で取込→保存→再読込→実画像decode                                                                                          |
-| history・floor-timelineの操作                                 | `visit-history.browser.test.tsx`、既存FloorTimeline/TableDetail Browserを補完、API history/table-lifecycle                                                                             | フロアの代表SSRと、注文E2Eの来店/会計/閉卓                                                                                                |
-| demoの全設定組合せ                                            | `demo.browser.test.tsx`、既存DemoViewport、API demo                                                                                                                                    | 店側popup→実iframeで客言語だけ変更→再読込→別demo ID/Cookieの分離                                                                          |
-| realtime・publicationの期限/版分岐                            | Kiosk Browser、API orders/configurationと実DO                                                                                                                                          | 実WebSocket切断→HTTP回収→再接続、公開価格の反映とdocument非再読込                                                                         |
-| pwaの背景GET差替え・接客中の更新保護                          | Pwa Browserの実Queryと更新可否。実Kioskを接続し、接客中の拒否と閉卓後の許可をMessageChannelで確認                                                                                      | 実SWのcache/offline、複数clientの未保存入力/更新適用                                                                                      |
-| ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                            | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
-| image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                  | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
+| 移行前のE2E                                                   | 既存・追加した下位保証                                                                                                                                                                       | 残す全構成の代表経路                                                                                                                      |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| accountの名前保存・送信中・メール/Google同一user              | `account.browser.test.tsx`、実auth handler+D1の`auth-linking.test.ts`。カタログ読込は既存MenuCollection/DataTable                                                                            | Google→SSR→店舗作成→招待メール→別userの参加、実WebAuthn登録/再ログイン                                                                    |
+| form・device-qr・loading-layout・accessibility・ssrの表示分岐 | `email-access.browser.test.tsx`、`devices.browser.test.tsx`、Account/Floor/VisitHistory/MenuCollection、既存Form/DataTable。実decoder・合成MediaStream・日英の通常表示・keyboard/focusを確認 | ログイン復帰、端末Cookie発行、代表SSR/hydration。実生成routeと既定pending/error/retryの接続、reduced motionの実media/CSSだけ代表1件へ残す |
+| integrations・resizeの画面操作                                | `admin-shell.browser.test.tsx`、`store-profile.browser.test.tsx`、既存IntegrationSetup、`mcp-sessions.browser.test.tsx`、Kiosk                                                               | 店舗の代表SSR、OAuth同意、画像upload→保存→配信。Cookie保存/再表示とmobile操作はBrowser、管理sidebarの実window幅を跨ぐ復元は短いresize E2E |
+| customerの設定・記憶・ポイント・クーポン                      | `customer-features.browser.test.tsx`、`rewards.browser.test.tsx`、既存会員APIと実HTTP/D1の`customer-rewards-http.test.ts`                                                                    | QR→login returnTo→同意→別Cookieの二人参加→卓への反映→閉卓/再来店の自動参加                                                                |
+| gamesの日英反復・poll失敗・開始遅着・停止                     | 店側/客側の`games.browser.test.tsx`、既存GameFrame BrowserとAPI games                                                                                                                        | 人の試遊確認/公開→卓の実iframe/SDK保存→終了→カート画面復帰を1言語                                                                         |
+| configuration・menu-navigation・cast-overview・voice-config   | 既存ConfigurationWorkflow/MenuCollection Browserを補完。CastOverview/ConfigurationChanges stories、API configuration/voices/mcp                                                              | `tablecast-admin-publication.spec.ts`の価格編集→保存/再読込→人の公開→別Cookieの客画面への反映                                             |
+| option-conditions・missing-choice                             | 既存OptionConditionsEditor/ProductPage/Kiosk Browser、API configuration/orders。Kioskへ同じ未完了行の409と入力保持を補完                                                                     | modifier選択→版付き明示確認→注文→提供→会計→閉卓                                                                                           |
+| theme・theme-art                                              | `store-design.browser.test.tsx`、既存StoreTheme/Kiosk Browser、API appearance/media/image-upload                                                                                             | 画像の取込/配信と公開通知の代表接続を再利用                                                                                               |
+| option-imagesの多数の画像/選択肢/価格操作                     | 既存ConfigurationImageField/MenuItem/ProductPage Browser、API image-upload/configuration/media                                                                                               | 商品画像1枚を画面で取込→保存→再読込→実画像decode                                                                                          |
+| history・floor-timelineの操作                                 | `visit-history.browser.test.tsx`、既存FloorTimeline/TableDetail Browserを補完、API history/table-lifecycle                                                                                   | フロアの代表SSRと、注文E2Eの来店/会計/閉卓                                                                                                |
+| demoの全設定組合せ                                            | `demo.browser.test.tsx`、既存DemoViewport、API demo                                                                                                                                          | 店側popup→実iframeで客言語だけ変更→再読込→別demo ID/Cookieの分離                                                                          |
+| realtime・publicationの期限/版分岐                            | Kiosk Browser、API orders/configurationと実DO                                                                                                                                                | 実WebSocket切断→HTTP回収→再接続、公開価格の反映とdocument非再読込                                                                         |
+| pwaの背景GET差替え・接客中の更新保護                          | Pwa Browserの実Queryと更新可否。実Kioskを接続し、接客中の拒否と閉卓後の許可をMessageChannelで確認                                                                                            | 実SWのcache/offline、複数clientの未保存入力/更新適用                                                                                      |
+| ssrの無予算の4標本反復・Worker restart                        | 各featureの取得/操作はBrowserへ。計測回数自体は保証にしない                                                                                                                                  | 代表URLを各1回のSSR/hydration、JS無効・匿名隔離・session/PWA redirect                                                                     |
+| image-performance・runtime-isolation                          | 既存予算とruntime fixtureの実物を維持                                                                                                                                                        | 下記の画像予算とケース間の配信資産隔離を引き続き実E2Eで検証                                                                               |
 
 画像性能は[`tablecast-image-performance.spec.ts`](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品で、取得済みURLの再訪転送0、cold画像転送合計500,000byte以下、計測可能なCLS 0.1未満、実画像の縦横比・カート画像64pxを保つ。WebKitでbyte値が取得できない場合は制限を記録し、Chromiumの予算検証で補う。件数の多いfixtureや上限を緩和して高速化済みにはしない。
 
@@ -243,6 +249,8 @@ Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試�
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
 
+ComponentとE2Eのbrowser取得・OS依存導入は、通常の連続stepで実行する。runner 2.337.0では並列compositeの後処理で非並行collectionの破損を観測したため、cache等のpost actionを登録するcomposite同士を同時実行しない。失敗ログにstackはなくrunner内部の特定箇所までは断定しない。試験job・shard・workerの並列実行、取得cache、case予算とretry 0は維持する。テスト成功と準備・後処理の成功は別に確認する。
+
 `RUNNER_ENVIRONMENT=github-hosted`の使い捨てVMでは、公式CLIのOS依存導入中だけAPTに`--force-unsafe-io`を渡す。展開ファイルのfsyncを省き、dpkg DBの同期・依存解決・署名確認は維持する。専用の一時configは`EXIT` trapで除去し、試験中のD1やアプリのI/Oへ適用しない。クラッシュしたVMは失敗として破棄し、そのOS状態を復元しない。self-hostedではこの設定を使わない。[Debianのdpkg FAQ](https://wiki.debian.org/Teams/Dpkg/FAQ)の範囲に限定し、展開・設定の時間と全必須チェックを実CIで比較する。
 
 ## E2Eの隔離
@@ -271,15 +279,15 @@ macOSのWebKitでは [Appleの標準操作](https://support.apple.com/en-gb/guid
 
 [全件監査と残件](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/35) の判定に沿い、先に低い層へ契約を置いてから上位の重複を除く。テストのretry・反復実行をflakyの検出や対策に使わない。失敗時はコードと保存した証跡から原因を調べ、修正した契約を確認する。UIの再試行ボタンや製品の再接続そのものを検証するケースとは区別する。
 
-| 契約                                  | 主担当と入口                                                                                             | 上位へ残す保証                               |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 価格・プランの期限と数量境界          | APIのVitest `unit`、純粋configuration fixture                                                            | `bindings`で価格正本・未承認・DB原子性を検証 |
-| 読取中の更新、前版からのmigration     | APIのVitest `bindings`、実D1と明示barrier                                                                | 実HTTPの代表経路                             |
-| 文字2倍・縦横画面・音声失敗後のカート | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                                                           | 代表modifier→注文→提供→会計→閉卓のE2E        |
-| 店舗切替の古いHTTP・通知とunmount     | 同Browser test、実useRealtime、通知境界だけ固定                                                          | 実WebSocketの切断・HTTP回復E2E               |
-| QR decodeと送像停止、URL入力・卓保持  | `device-qr-reader.browser.test.tsx`と`devices.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | 端末の明示承認・Cookie→代表注文の実接続E2E   |
-| 音声turnの認可とspeech/tool関連付け   | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                                              | APIの実認可と別枠の有料WebRTC音声            |
-| Git/ファイル/CLI/seed                 | root Vitest `scripts-runtime`                                                                            | unit-web内で他workspaceと別CLIを実行         |
+| 契約                                 | 主担当と入口                                                                                             | 上位へ残す保証                               |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 価格・プランの期限と数量境界         | APIのVitest `unit`、純粋configuration fixture                                                            | `bindings`で価格正本・未承認・DB原子性を検証 |
+| 読取中の更新、前版からのmigration    | APIのVitest `bindings`、実D1と明示barrier                                                                | 実HTTPの代表経路                             |
+| 縦横画面・音声失敗後のカート         | `kiosk.browser.test.tsx`、実Kiosk・QueryClient                                                           | 代表modifier→注文→提供→会計→閉卓のE2E        |
+| 店舗切替の古いHTTP・通知とunmount    | 同Browser test、実useRealtime、通知境界だけ固定                                                          | 実WebSocketの切断・HTTP回復E2E               |
+| QR decodeと送像停止、URL入力・卓保持 | `device-qr-reader.browser.test.tsx`と`devices.browser.test.tsx`、実decoder・MediaStream、Chromium/WebKit | 端末の明示承認・Cookie→代表注文の実接続E2E   |
+| 音声turnの認可とspeech/tool関連付け  | APIの実D1・公式SDK HTTP境界とWebのmedia境界                                                              | APIの実認可と別枠の有料WebRTC音声            |
+| Git/ファイル/CLI/seed                | root Vitest `scripts-runtime`                                                                            | unit-web内で他workspaceと別CLIを実行         |
 
 Webの`browser` projectは `vitest-browser-react` のrender・rerender・cleanupを使用する。外部HTTPと通知を固定しても、feature、QueryClient、Hono clientを本番実装から外さない。想定外の要求は記録し、SUTのcatchの外で失敗させる。カメラはcanvasの合成映像を実MediaStreamへ流す。decoderの各フレームの通知回数を業務の承認回数と同一視しない。
 
@@ -380,10 +388,14 @@ PR本文の編集だけではCIを再実行しない。base変更後に新しい
 
 cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別環境・別SHA・別PRの拒否、D1の採用ID、Worker所有情報、Accessの再適用と既存token欠落時の拒否を確認する。local D1のID移行は実SDKでデータ・migration履歴・再実行を検証する。遠隔namespaceの保持・Access拒否と許可・再配備後のデータ保持は最新PR headの配備で別途確認する。
 
+文字サイズを200%へ書き換える試験は利用者の指定により廃止した。日英・縦横・狭幅・長文・keyboard/focus・通常の主要操作を検証し、CSSによる文字拡大を受入条件や画像証拠へ含めない。
+
 ## 組織課金
 
 `billing-pricing.test.ts`で秒数・cached token・実際のtier・料金精度・期間境界を確認する。`billing*.test.ts`は実D1/DOと本番HTTPを使い、組織作成、発行の競合・回収、暗号化、同じ鍵での停止、利用量再送、Costsの全ページ・置換・失敗、署名済みStripe Webhook、Metersの送信不明期限、role認可を確認する。OpenAI/Stripeの外部I/Oだけ固定し、DBやDOは差し替えない。
 
 通常のAPIテストでは実接続用のローカルenvを継承せず、Vitestのbindingで課金・組織キー・音声の有効化と外部secretを初期化する。必要なケースだけfixture内で有効化する。
 
-Webの`billing-page.browser.test.tsx`と隣接Storyはrole・無料プランと申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・日英・狭い画面と文字拡大を確認する。`billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで契約期間と暦月の境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。
+Webの`billing-page.browser.test.tsx`と隣接Storyは、日本語でrole・無料GUIと有料AIの区別・申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・縦横・狭幅・長文・keyboard/focusを確認する。通常時のAI準備完了通知と無料プランの管理者向けAI設定通知がなく、準備中・準備失敗では音声利用不可とGUI継続を説明することも確認する。日英の翻訳・日時・通貨の保証と英語Storyの扱いは、前述の共通戦略に従う。
+
+`billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで現在の契約期間とUTC暦月集計の分離・期間境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。

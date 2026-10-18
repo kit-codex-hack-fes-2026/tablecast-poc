@@ -275,6 +275,13 @@ export async function submitOrder(
         ...snapshotSchema.parse(JSON.parse(confirmation.snapshot_json)),
         status: "submitted",
       };
+      const pointCorrections = await pointBillingCorrectionStatements(
+        services,
+        actor,
+        snapshot.total,
+        `order:${orderId}`,
+        mutation,
+      );
       const result = await measured("tablecast.order.commit", () =>
         db.batch([
           db
@@ -298,6 +305,7 @@ export async function submitOrder(
             .where(
               sql`id=${confirmation.id} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${actor.tableSessionId} AND mutation_id=${mutation})`,
             ),
+          ...pointCorrections,
           eventStatement(services, actor, mutation, "order.submitted", {
             orderId,
             total: snapshot.total,
@@ -374,6 +382,16 @@ export async function changeOrderStatus(
       }
       const mutation = crypto.randomUUID();
       const now = Date.now();
+      const pointCorrections =
+        status === "cancelled" || status === "rejected"
+          ? await pointBillingCorrectionStatements(
+              services,
+              scoped,
+              -row.total,
+              `order:${orderId}:${status}`,
+              mutation,
+            )
+          : [];
       const result = await db.batch([
         db
           .update(business.tableSessions)
@@ -387,6 +405,7 @@ export async function changeOrderStatus(
           .where(
             sql`id=${orderId} AND EXISTS(SELECT 1 FROM table_sessions WHERE id=${row.table_session_id} AND mutation_id=${mutation})`,
           ),
+        ...pointCorrections,
         invalidationStatement(services, scoped, mutation),
         eventStatement(services, scoped, mutation, "order.status", { orderId, status }),
       ]);
@@ -430,8 +449,7 @@ export async function recordPayment(
             existing.reason === input.reason,
           "IDEMPOTENCY_CONFLICT",
         );
-        if (input.kind === "adjustment")
-          await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
+        await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
         return getTableState(services, actor);
       }
       const table = await getTableState(services, actor);
@@ -451,11 +469,8 @@ export async function recordPayment(
           ? await pointBillingCorrectionStatements(
               services,
               actor,
-              table.bill.orderedTotal +
-                table.bill.adjustmentTotal +
-                table.bill.planTotal +
-                input.amount,
-              input.idempotencyKey,
+              input.amount,
+              `adjustment:${input.idempotencyKey}`,
               mutation,
             )
           : [];
@@ -501,8 +516,7 @@ export async function recordPayment(
           "BILLING_CONFLICT",
         );
       }
-      if (input.kind === "adjustment")
-        await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
+      await issueConfirmedVisitCoupons(services, actor.storeId, actor.tableSessionId ?? "");
       await notifyStore(services, actor.storeId, actor.tableSessionId);
       return getTableState(services, actor);
     },

@@ -1,11 +1,12 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, ImageOff, Plus } from "lucide-react";
+import { ImageOff, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
+import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -99,16 +100,11 @@ function MenuListCollection({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {t(menuLabels[section])}
-          {draft.data && (
-            <span className="ml-3">
-              <DraftStatus status={draft.data.status} />
-            </span>
-          )}
-        </h1>
-        {manager &&
+      <PageHeader
+        title={t(menuLabels[section])}
+        status={draft.data && <DraftStatus status={draft.data.status} />}
+        actions={
+          manager &&
           editable &&
           (draftId ? (
             <Button
@@ -138,8 +134,9 @@ function MenuListCollection({
                 })
               }
             />
-          ))}
-      </div>
+          ))
+        }
+      />
 
       <ErrorNotice
         error={error}
@@ -205,9 +202,25 @@ function menuCollectionColumns(
               </span>
             ))}
           <div className="min-w-0 max-w-sm">
-            <span className="font-medium whitespace-normal wrap-break-word">
-              {row.original.name}
-            </span>
+            {draftId ? (
+              <Link
+                className="inline-flex min-h-11 items-center font-medium whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current wrap-anywhere"
+                to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
+                params={{ storeId, draftId, section, itemId: row.original.id }}
+                search={search}
+              >
+                {row.original.name}
+              </Link>
+            ) : (
+              <Link
+                className="inline-flex min-h-11 items-center font-medium whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current wrap-anywhere"
+                to="/admin/stores/$storeId/menu/$section/$itemId"
+                params={{ storeId, section, itemId: row.original.id }}
+                search={search}
+              >
+                {row.original.name}
+              </Link>
+            )}
             <span className="block whitespace-normal text-sm text-muted-foreground">
               {row.original.secondary}
             </span>
@@ -266,35 +279,6 @@ function menuCollectionColumns(
           } satisfies DataTableColumn<ItemRow>,
         ]
       : []),
-    {
-      id: "actions",
-      header: () => <span className="sr-only">{t("admin_details")}</span>,
-      cell: ({ row }) => (
-        <Button
-          nativeButton={false}
-          role="link"
-          variant="ghost"
-          render={
-            draftId ? (
-              <Link
-                to="/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId"
-                params={{ storeId, draftId, section, itemId: row.original.id }}
-                search={search}
-              />
-            ) : (
-              <Link
-                to="/admin/stores/$storeId/menu/$section/$itemId"
-                params={{ storeId, section, itemId: row.original.id }}
-                search={search}
-              />
-            )
-          }
-        >
-          {t("admin_details")}
-          <ArrowUpRight className="size-4" />
-        </Button>
-      ),
-    },
   ];
 }
 

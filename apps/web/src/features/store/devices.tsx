@@ -13,6 +13,7 @@ import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -48,17 +49,19 @@ export function Devices() {
   );
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("device_title")}</h1>
-        <Button
-          nativeButton={false}
-          role="link"
-          render={<Link to="/admin/stores/$storeId/devices/new" params={{ storeId }} />}
-        >
-          <Plus />
-          {t("admin_pair")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("device_title")}
+        actions={
+          <Button
+            nativeButton={false}
+            role="link"
+            render={<Link to="/admin/stores/$storeId/devices/new" params={{ storeId }} />}
+          >
+            <Plus />
+            {t("admin_pair")}
+          </Button>
+        }
+      />
       <ErrorNotice error={devices.error || revoke.error} onRetry={() => void devices.refetch()} />
       <DataTable
         data={devices.data.devices}
@@ -130,8 +133,7 @@ export function RegisterDevice({
         <ArrowLeft />
         {t("device_title")}
       </Button>
-      <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
-      <p className="text-base text-muted-foreground">{t("device_register_note")}</p>
+      <PageHeader title={t("admin_pair")} description={t("device_register_note")} />
       <DeviceQrReader
         onRead={(code) => {
           form.setFieldValue("userCode", code);

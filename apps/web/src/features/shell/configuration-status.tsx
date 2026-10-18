@@ -1,12 +1,9 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
-import { skipToken, useQuery } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
 import { Check, FilePenLine, LoaderCircle, TriangleAlert } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
 import { apiError } from "../../lib/api-error";
 import { m } from "../../paraglide/messages";
-import { catalogOptions, draftOptions } from "../store/menu-query";
 
 export function DraftStatus({ status }: { status: ConfigDraft["status"] }) {
   const { t } = useI18n();
@@ -30,7 +27,7 @@ export function ConfigurationStatus({
   pending = false,
   error,
 }: {
-  storeName: string;
+  storeName?: string;
   publishedVersion: number;
   draft?: Pick<ConfigDraft, "id" | "baseVersion" | "version" | "status">;
   dirty?: boolean;
@@ -49,7 +46,9 @@ export function ConfigurationStatus({
         : undefined;
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm" role="status">
-      <span className="min-w-0 wrap-anywhere font-semibold">{storeName}</span>
+      <span hidden={!storeName} className="min-w-0 wrap-anywhere font-semibold">
+        {storeName}
+      </span>
       <span>{m.workflow_published_version({ version: publishedVersion }, { locale })}</span>
       {draft && (
         <>
@@ -74,29 +73,5 @@ export function ConfigurationStatus({
         </Badge>
       )}
     </div>
-  );
-}
-
-export function ConfigurationRouteStatus({
-  storeId,
-  storeName,
-}: {
-  storeId: string;
-  storeName: string;
-}) {
-  const { draftId } = useParams({ strict: false });
-  const catalog = useQuery(catalogOptions(storeId));
-  const draft = useQuery({
-    ...draftOptions(storeId, draftId ?? ""),
-    queryFn: draftId ? draftOptions(storeId, draftId).queryFn : skipToken,
-  });
-  return catalog.data ? (
-    <ConfigurationStatus
-      storeName={storeName || catalog.data.storeName}
-      publishedVersion={catalog.data.version}
-      draft={draft.data}
-    />
-  ) : (
-    <span className="block text-sm font-semibold">{storeName}</span>
   );
 }

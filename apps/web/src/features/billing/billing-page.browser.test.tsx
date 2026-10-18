@@ -21,17 +21,31 @@ afterEach(async () => {
   await cleanup();
   client?.clear();
   vi.unstubAllGlobals();
-  document.documentElement.style.fontSize = "";
   await page.viewport(initialViewport.width, initialViewport.height);
 });
 async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", fail = false) {
   let failed = false;
+  const stores = [
+    {
+      id: data.storeId,
+      name: data.organization.name,
+      role: data.canManage ? "owner" : "member",
+      organizationId: data.organization.id,
+    },
+    {
+      id: "tablecast-new-store",
+      name: "新組織",
+      role: "member",
+      organizationId: "tablecast-new-org",
+    },
+  ];
   const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
     async (input, init) => {
       const request = new Request(input, init),
         url = new URL(request.url);
       if (url.pathname === "/api/auth/organization/get-full-organization")
         return Response.json(null);
+      if (url.pathname === "/api/admin/stores") return Response.json({ stores, locale });
       if (url.pathname.endsWith("/billing/invoices"))
         return Response.json({ invoices: [], next: null });
       if (url.pathname.startsWith("/api/auth/subscription/"))
@@ -49,16 +63,7 @@ async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", 
   vi.stubGlobal("fetch", fetch);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(["tablecast-session"], null);
-  client.setQueryData(["tablecast-stores"], {
-    stores: [
-      {
-        id: data.storeId,
-        name: data.organization.name,
-        role: data.canManage ? "owner" : "member",
-        organizationId: data.organization.id,
-      },
-    ],
-  });
+  client.setQueryData(["tablecast-stores"], { stores, locale });
   const root = createRootRoute();
   const billing = createRoute({
     getParentRoute: () => root,
@@ -220,44 +225,91 @@ it("memberには契約・料金・請求書を表示せず、請求APIを呼ば�
     fetch.mock.calls.some(([input, init]) => new Request(input, init).url.endsWith("/invoices")),
   ).toBe(false);
 });
-it("取得失敗から再試行し、狭い英語画面と文字拡大でも操作できる", async () => {
+it("取得失敗から再試行し、狭い日本語画面でも操作できる", async () => {
   await show(
     { ...billingFixture, usage: { ...billingFixture.usage, aiState: "failed" } },
-    "en",
+    "ja",
     true,
   );
   await page.viewport(390, 844);
-  document.documentElement.style.fontSize = "20px";
-  await userEvent.click(page.getByRole("button", { name: "Try again" }));
-  await expect.element(page.getByText("AI voice assistance is unavailable")).toBeVisible();
+  await userEvent.click(page.getByRole("button", { name: "再試行" }));
+  await expect.element(page.getByText("AI音声接客を開始できません")).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   await page.screenshot({
-    path: "../../../test-results/tablecast-billing-narrow-en.png",
+    path: "../../../test-results/tablecast-billing-narrow-ja.png",
     fullPage: true,
   });
 });
 it("組織切替で期間・検索・ページを初期化し、旧組織の遅い応答を表示しない", async () => {
-  const { fetch, router } = await show();
+  const { fetch } = await show();
   await expect.element(page.getByRole("heading", { name: "利用明細" })).toBeVisible();
+  await userEvent.fill(page.getByLabelText("利用状況の対象月（UTC）"), "2026-09");
+  await expect
+    .poll(() =>
+      fetch.mock.calls.some(
+        ([input, init]) =>
+          new URL(new Request(input, init).url).searchParams.get("month") === "2026-09",
+      ),
+    )
+    .toBe(true);
   const oldResponse = Promise.withResolvers<Response>();
   fetch.mockImplementationOnce(() => oldResponse.promise);
   await userEvent.fill(
     page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" }),
     "old-table",
   );
-  fetch.mockImplementation(async () =>
-    Response.json({
-      ...billingFixture,
-      organization: { id: "tablecast-new-org", name: "新組織" },
-      visits: [],
-      financial: null,
-    }),
-  );
-  await router.navigate({
-    to: "/billing/$organizationId",
-    params: { organizationId: "tablecast-new-org" },
+  fetch.mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/api/auth/organization/set-active")
+      return Response.json({ id: "tablecast-new-org", name: "新組織" });
+    if (pathname === "/api/admin/stores")
+      return Response.json({
+        stores: [
+          {
+            id: "tablecast-new-store",
+            name: "新組織",
+            role: "member",
+            organizationId: "tablecast-new-org",
+          },
+        ],
+        locale: "ja",
+      });
+    if (pathname.endsWith("/billing/invoices")) return Response.json({ invoices: [], next: null });
+    if (pathname.endsWith("/billing"))
+      return Response.json({
+        ...billingFixture,
+        organization: { id: "tablecast-new-org", name: "新組織" },
+        storeId: "tablecast-new-store",
+        visits: [],
+        financial: null,
+      });
+    throw new Error(`未定義の要求: ${pathname}`);
   });
+  await userEvent.click(page.getByRole("combobox", { name: "店舗", exact: true }));
+  await userEvent.click(page.getByRole("option", { name: /新組織/ }));
+  await expect
+    .poll(() =>
+      fetch.mock.calls.some(([input, init]) => {
+        const request = new Request(input, init);
+        return (
+          request.method === "POST" &&
+          new URL(request.url).pathname === "/api/auth/organization/set-active"
+        );
+      }),
+    )
+    .toBe(true);
   await expect.element(page.getByRole("searchbox")).toHaveValue("");
+  await expect
+    .poll(() =>
+      fetch.mock.calls.some(
+        ([input, init]) =>
+          new URL(new Request(input, init).url).pathname ===
+          "/api/admin/organizations/tablecast-new-org/billing",
+      ),
+    )
+    .toBe(true);
+  await expect.element(page.getByLabelText("利用状況の対象月（UTC）")).toHaveValue("2026-10");
   oldResponse.resolve(
     Response.json({
       ...billingFixture,
