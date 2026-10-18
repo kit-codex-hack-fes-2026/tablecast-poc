@@ -46,12 +46,14 @@ test("課金ページをSSRし、memberと匿名の応答へ金融情報を含�
     const memberResponse = await memberPage.goto(path);
     expect(memberResponse?.status()).toBe(200);
     await expect(memberPage.getByRole("heading", { name: "利用明細", exact: true })).toBeVisible();
-    await expect(memberPage.getByRole("heading", { name: "契約と料金", exact: true })).toHaveCount(
-      0,
-    );
+    await expect(
+      memberPage.getByRole("heading", { name: "プラン一覧・変更", exact: true }),
+    ).toHaveCount(0);
     const html = await memberResponse?.text();
     for (const forbidden of [
       "chargeMicros",
+      "currentCycle",
+      "monthlyBase",
       "stripeCustomerId",
       "amountUsd",
       "markupBps",

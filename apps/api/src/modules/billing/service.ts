@@ -25,7 +25,7 @@ export async function organizationBilling(
     billingSummary(services, organizationId, range.start, range.end),
     billingVisits(services, organizationId, range.start, range.end, before, search),
   ]);
-  const { chargeMicros, subscription, ...usage } = summary;
+  const { chargeMicros, subscription, daily, currentCycle, ...usage } = summary;
   const rows = visits
     .slice(0, 20)
     .map(({ chargeMicros: charge, ...row }) =>
@@ -38,6 +38,9 @@ export async function organizationBilling(
     month: selected,
     period: range,
     usage,
+    daily: daily.map(({ chargeMicros: charge, ...day }) =>
+      access.canManage ? { ...day, chargeMicros: charge } : day,
+    ),
     visits: rows,
     next: visits.length > 20 ? `${rows.at(-1)?.startedAt}|${rows.at(-1)?.id}` : null,
     updatedAt: Date.now(),
@@ -63,6 +66,7 @@ export async function organizationBilling(
     ...common,
     financial: {
       chargeMicros,
+      currentCycle,
       monthlyBase,
       priceUnavailable,
       checkoutRequired,

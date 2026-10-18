@@ -386,4 +386,4 @@ cf設定・IaCの試験はmode解決、秘密値の宣言、Build Outputの別�
 
 通常のAPIテストでは実接続用のローカルenvを継承せず、Vitestのbindingで課金・組織キー・音声の有効化と外部secretを初期化する。必要なケースだけfixture内で有効化する。
 
-Webの`billing-page.browser.test.tsx`と隣接Storyはrole・失敗再試行・組織切替の遅い応答・日英・狭い画面と文字拡大を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。
+Webの`billing-page.browser.test.tsx`と隣接Storyはrole・無料プランと申込み/解約の入口・解約予約・失敗再試行・組織切替の遅い応答・日英・狭い画面と文字拡大を確認する。`billing-usage-chart.browser.test.tsx`は日別のキーボード操作・数値表・料金の権限・ゼロと負数調整を確認する。`billing-overview.test.ts`は実D1/HTTPで契約期間と暦月の境界・完全なUTC日別系列・memberの金融情報非漏出を確認する。`tablecast-billing.spec.ts`は実Web/API/D1、Google emulatorのmemberログイン、JSなしSSRと匿名分離を確認する。実Service Account発行とStripe SandboxのCheckout/Meters/請求書/Portalは [課金の接続確認](billing.md#外部接続の確認) として別に行う。

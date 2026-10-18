@@ -10,7 +10,7 @@
 
 キーはAES-GCMで暗号化し、組織IDとキーIDを追加認証データにする。暗号化鍵はAPI Workerのsecretから導出する。`organization_ai_keys`はProject・Service Account・APIキーIDと暗号文の履歴を保持する。平文を返すAPI・鍵の表示UIは作らない。暗号化鍵を失うと復号できないため、バックアップを保持し、値だけを置換しない。鍵の失効・外部削除は稼働sessionを終了してから行う。
 
-AI利用権はキーの準備と分ける。組織キーへの切替後、課金有効時には有効期間内のactive契約を必要とする。未契約でもキーは準備する。無料体験の日数・枠はまだ持たない。デモの実AI接続も契約・利用料金の対象とし、架空の注文・会計と区別する。
+AI利用権はキーの準備と分ける。無料プランはメニュー・画面からの注文・店舗や卓の管理を月額0円で利用でき、Stripeの0円契約を作らない。AI音声接客はスタンダードの対象とし、組織キーへの切替後、課金有効時には有効期間内のactive契約を必要とする。無料プランでもキーは準備するが、AI無料枠・無料体験の日数は設けない。デモの実AI接続も契約・利用料金の対象とし、架空の注文・会計と区別する。
 
 ## 利用量と顧客料金
 
@@ -36,7 +36,11 @@ Costsの再取得で顧客の利用台帳・確定請求書を変更しない。
 
 ## 課金画面
 
-`/billing/$organizationId`をURLの組織へ固定する。memberは利用状況・卓/来店の明細、owner/adminは契約・基本料・料金見込み・20件ずつの請求履歴を利用する。請求書・PDF・契約管理はStripeを開く。Stripeから戻っただけで支払済みとせず、DBのWebhook同期とStripeの請求情報を表示する。
+`/billing/$organizationId`をURLの組織へ固定する。owner/adminには現在の無料/スタンダードプラン、Stripe契約の請求期間、次回更新・請求予定日、当期に使ったAI利用料を先に示す。当期の金額は暦月の金額を流用せず、契約の開始以上・終了未満で集計する。基本料は契約時と更新時、AI利用料は期間末に精算し、概算と確定請求書を区別する。
+
+月別の利用状況は請求期間と分けて表示する。日別の音声接客時間と、owner/adminだけが切り替えられるAI利用料金のチャート・数値表を置く。初期秒数の差額調整による負数も表示する。AI処理はメニュー確認や注文整理などの情報処理の回数と説明し、会話の往復数と区別する。入出力tokenはAIが読み込み・生成した文章量として、単位の説明とともに詳細へ置く。
+
+無料とスタンダードの機能・料金・利用中表示を比較でき、無料への変更・解約ボタンはStripe Portalを開く。Portalでは期間末の解約を設定する。期間末まではAIを利用でき、利用済みAI料金を最終精算し、その後もGUIを無料で継続できる。解約予約はWebhook同期した状態と終了日時を表示し、戻りだけで完了と判定しない。memberは利用状況・卓/来店明細だけを利用し、当期・日別の金額をAPIやSSRへ含めない。owner/adminは20件ずつの請求履歴を確認し、請求書・PDFをStripeで開く。
 
 組織切替で月・検索・ページを初期化し、別組織のQuery cacheや遅い応答を表示しない。対象月はUTCを明示し、日付の表示は店舗の既存タイムゾーンを使う。日英・iPad縦横・狭い画面・文字拡大に対応する。
 
@@ -45,7 +49,7 @@ Costsの再取得で顧客の利用台帳・確定請求書を変更しない。
 1. 0026 migrationを適用する。旧組織には発行待ちが追加される。
 2. 開発専用OpenAI Projectを作り、GPT-LiveとResponsesの実行権限を用意する。API Workerに`TABLECAST_OPENAI_PROJECT_ID`、管理APIを呼べる`TABLECAST_OPENAI_ADMIN_API_KEY`、32文字以上の`TABLECAST_OPENAI_KEY_ENCRYPTION_SECRET`を設定する。Projectを設定した環境で組織作成とCronが発行する。切替フラグはまだfalse。
 3. 既存組織の`organization_ai.state`がreadyであることを、運営用のD1管理手順で確認する。旧sessionを停止してから`TABLECAST_ORGANIZATION_AI_ENABLED=true`へ切り替える。旧共有キーは移行中sessionの停止用に保持する。過去費用を新組織の実績とみなさない。
-4. Stripe SandboxでJPY月額Price、sum Meter、JPY 0.000001の従量Priceを作る。Portalを有効化する。Webhookの送信先は`/api/auth/stripe/webhook`とし、公式pluginが使う`checkout.session.completed`、`customer.subscription.created/updated/deleted`を購読する。
+4. Stripe SandboxでJPY月額Price、sum Meter、JPY 0.000001の従量Priceを作る。Portalで請求書・支払方法・期間末の解約を有効化し、任意のPriceへの変更は無効にする。無料への移行に0円のPriceや契約は作らない。Webhookの送信先は`/api/auth/stripe/webhook`とし、公式pluginが使う`checkout.session.completed`、`customer.subscription.created/updated/deleted`を購読する。
 5. APIへStripe secretと料金設定を入れ、`TABLECAST_BILLING_ENABLED=true`にする。Checkout直前に両Priceの通貨・月次・課金方式とMeterを検査する。Portalで請求通貨・基本料・従量Priceを任意変更できる構成にしない。
 
 ローカルは`.env.example`を`.env.local`へコピーし、`bun run dev:config`でAPI専用secretを生成する。GUIとStorybookは外部キーなしで動く。通常CIは外部HTTP/モデルイベントだけを固定し、実D1/DOを使う。現行の`emulate`はGoogle認証に使用する。Subscriptions・Portal・Metersの検証をemulateやstatelessなstripe-mockで代替しない。

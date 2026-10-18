@@ -1,10 +1,18 @@
 import type { Billing } from "./billing-query";
+const dailySeconds = [
+  60, 120, 90, 150, 180, 240, 300, 180, 360, 120, 300, 420, 240, 480, 600, 420, 360, 780,
+];
 export const billingFixture = {
   organization: { id: "tablecast-billing-org", name: "卓上喫茶" },
   storeId: "tablecast-billing-store",
   canManage: true,
   month: "2026-10",
   period: { start: Date.UTC(2026, 9, 1), end: Date.UTC(2026, 10, 1) },
+  daily: Array.from({ length: 31 }, (_, index) => ({
+    day: Date.UTC(2026, 9, index + 1),
+    seconds: dailySeconds[index] ?? 0,
+    chargeMicros: index < 17 ? (dailySeconds[index] ?? 0) * 230000 : index === 17 ? 187900000 : 0,
+  })),
   usage: {
     seconds: 5400,
     responses: 120,
@@ -39,11 +47,17 @@ export const billingFixture = {
     priceUnavailable: false,
     checkoutRequired: false,
     checkoutPlan: "tablecast-standard-v1",
+    currentCycle: {
+      start: Date.UTC(2026, 9, 15),
+      end: Date.UTC(2026, 10, 15),
+      chargeMicros: 420250000,
+      unconfirmed: 1,
+    },
     subscription: {
       plan: "tablecast-standard-v1",
       status: "active",
-      periodStart: Date.UTC(2026, 9, 1),
-      periodEnd: Date.UTC(2026, 10, 1),
+      periodStart: Date.UTC(2026, 9, 15),
+      periodEnd: Date.UTC(2026, 10, 15),
       cancelAtPeriodEnd: false,
     },
   },

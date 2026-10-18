@@ -34,6 +34,8 @@ async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", 
         return Response.json(null);
       if (url.pathname.endsWith("/billing/invoices"))
         return Response.json({ invoices: [], next: null });
+      if (url.pathname.startsWith("/api/auth/subscription/"))
+        return Response.json({ message: "tablecast-test-payment-unavailable" }, { status: 503 });
       if (url.pathname.endsWith("/billing")) {
         if (fail && !failed) {
           failed = true;
@@ -85,11 +87,26 @@ async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", 
 }
 it("ownerの利用明細・空の請求履歴を表示し、キーボードで絞り込める", async () => {
   const { fetch } = await show();
-  await expect.element(page.getByRole("heading", { name: "契約と料金" })).toBeVisible();
+  await expect.element(page.getByRole("heading", { name: "スタンダード", level: 2 })).toBeVisible();
+  await expect.element(page.getByText("¥420.25", { exact: true })).toBeVisible();
+  await expect.element(page.getByText("今回の請求期間（日本時間）")).toBeVisible();
+  await expect.element(page.getByText("次回の更新・請求予定日")).toBeVisible();
   await expect.element(page.getByText("請求書はまだありません")).toBeVisible();
   await page.viewport(1366, 1100);
   await page.screenshot({
     path: "../../../test-results/tablecast-billing-overview.png",
+    fullPage: false,
+  });
+  await userEvent.click(page.getByRole("slider", { name: "AI音声接客の時間", exact: true }));
+  await userEvent.keyboard("{Home}");
+  await page.screenshot({
+    path: "../../../test-results/tablecast-billing-daily.png",
+    fullPage: false,
+  });
+  await userEvent.click(page.getByRole("link", { name: "プランを比較・変更" }));
+  await expect.element(page.getByRole("heading", { name: "プラン一覧・変更" })).toBeVisible();
+  await page.screenshot({
+    path: "../../../test-results/tablecast-billing-plans.png",
     fullPage: false,
   });
   const filter = page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" });
@@ -110,11 +127,75 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
     fullPage: false,
   });
 });
+it("無料プランは定期請求なしと示し、AIプランだけCheckoutへ進める", async () => {
+  const { fetch } = await show({
+    ...billingFixture,
+    financial: {
+      ...billingFixture.financial,
+      subscription: null,
+      currentCycle: null,
+      checkoutRequired: true,
+    },
+  });
+  await expect.element(page.getByRole("heading", { name: "無料プラン", level: 2 })).toBeVisible();
+  await expect.element(page.getByText("月額0円・定期請求なし")).toBeVisible();
+  await expect
+    .element(page.getByText("AI音声接客は有料プランで利用できます。", { exact: true }))
+    .toBeVisible();
+  expect(document.body.textContent).not.toContain("次回の更新・請求予定日");
+  await userEvent.click(page.getByRole("button", { name: "スタンダードを申し込む" }));
+  await expect
+    .poll(() =>
+      fetch.mock.calls.some(([input, init]) => {
+        const request = new Request(input, init);
+        return (
+          request.method === "POST" &&
+          new URL(request.url).pathname === "/api/auth/subscription/upgrade"
+        );
+      }),
+    )
+    .toBe(true);
+  await expect.element(page.getByRole("heading", { name: "無料プラン", level: 2 })).toBeVisible();
+});
+it("無料への変更はStripeの契約管理へ進み、期間末と最終利用料を説明する", async () => {
+  const { fetch } = await show();
+  await expect.element(page.getByText("無料への変更・解約の方法", { exact: true })).toBeVisible();
+  await userEvent.click(page.getByRole("button", { name: "無料へ変更・有料契約を解約" }));
+  await expect
+    .poll(() =>
+      fetch.mock.calls.some(([input, init]) => {
+        const request = new Request(input, init);
+        return (
+          request.method === "POST" &&
+          new URL(request.url).pathname === "/api/auth/subscription/billing-portal"
+        );
+      }),
+    )
+    .toBe(true);
+  expect(document.body.textContent).toContain("Stripeの契約画面でキャンセルを確定");
+  expect(document.body.textContent).toContain("期間末にAI利用料を精算");
+});
+it("解約予約の終了日を示し、二重の無料変更を無効にする", async () => {
+  await show({
+    ...billingFixture,
+    financial: {
+      ...billingFixture.financial,
+      subscription: { ...billingFixture.financial.subscription, cancelAtPeriodEnd: true },
+    },
+  });
+  await expect
+    .element(page.getByText("無料プランへの変更を予約済み", { exact: false }))
+    .toBeVisible();
+  await expect.element(page.getByText("有料プラン終了・最終精算予定日")).toBeVisible();
+  await expect.element(page.getByRole("button", { name: "期間末に無料へ変更予定" })).toBeDisabled();
+  await expect.element(page.getByRole("button", { name: "支払い・契約を管理" })).toBeEnabled();
+});
 it("memberには契約・料金・請求書を表示せず、請求APIを呼ばない", async () => {
   const { fetch } = await show({
     ...billingFixture,
     canManage: false,
     financial: null,
+    daily: billingFixture.daily.map(({ day, seconds }) => ({ day, seconds })),
     visits: billingFixture.visits.map((row) => ({
       id: row.id,
       sessionId: row.sessionId,
@@ -130,8 +211,8 @@ it("memberには契約・料金・請求書を表示せず、請求APIを呼ば�
     })),
   });
   await expect.element(page.getByRole("heading", { name: "利用明細" })).toBeVisible();
-  expect(document.body.textContent).not.toContain("AI利用料金見込み");
-  expect(document.body.textContent).not.toContain("契約と料金");
+  expect(document.body.textContent).not.toContain("今回の期間で使ったAI利用料");
+  expect(document.body.textContent).not.toContain("現在のプラン");
   expect(
     fetch.mock.calls.some(([input, init]) => new Request(input, init).url.endsWith("/invoices")),
   ).toBe(false);
