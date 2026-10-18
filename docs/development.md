@@ -171,3 +171,9 @@ RenovateのPRタイトルは、推奨設定に従って英語のcommit件名か�
 MCPの接続確認では `initialize`、`tools/list` の成功を先に確認する。続いて返されたschemaに従い `docs-list`、`docs-show`、`docs-show-story` または `stories-preview` を呼ぶ。サーバー名・接続URL・対象SHA・成功したtoolとStory IDをPRへ記録する。Git管理外の設定を追加しただけでは接続成功としない。Codexの既存チャットが設定を再読込しない場合は、その状態と標準MCP clientでの直接疎通結果を分けて報告する。
 
 Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。
+
+### ページ遷移・HMR時の計測
+
+`@inference-net/otel-cf-workers`は設定のcontext keyをmodule内に持つ。Viteの依存再最適化などでWorker全体を再評価する際は、共有telemetryの`vite:beforeFullReload`でOpenTelemetryのtrace・context・propagation登録を解除し、新しいSDK評価に合わせて登録し直す。通常のリクエストで計測を停止したり、例外後に業務処理を再実行したりしない。production buildにはこの開発用hookを含めない。
+
+回帰確認はWebの`src/server/telemetry-hmr.test.ts`で実ViteとCloudflare Workerを起動し、複数回の全再評価後にもHTTP 200、要求ごとのtrace分離、親子spanの相関を確認する。デモDBや稼働中の開発サーバーは使わない。
