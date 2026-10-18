@@ -10,9 +10,11 @@ const bannerGrid = tv({
 export function MenuBanners({
   catalog,
   onChoose,
+  bannerId,
 }: {
   catalog: Catalog;
   onChoose: (product: Product) => void;
+  bannerId?: string;
 }) {
   const { locale, t } = useI18n();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -25,14 +27,18 @@ export function MenuBanners({
         style={{ gap: layout?.gap ?? 12 }}
       >
         {catalog.configuration.banners?.map((banner) =>
-          banner.enabled ? (
+          banner.enabled && (!bannerId || banner.id === bannerId) ? (
             <figure
               key={banner.id}
               data-theme-part="banner"
               className="min-w-0 overflow-hidden"
               style={{ gridColumn: banner.span === "full" ? "1 / -1" : undefined }}
             >
-              {!failed.has(banner.image.imageKey) && (
+              {failed.has(banner.image.imageKey) ? (
+                <p className="rounded-lg bg-muted p-6 text-sm text-muted-foreground">
+                  {t("kiosk_menu_image_failed")}
+                </p>
+              ) : (
                 <div className="relative w-full">
                   <img
                     src={`/media/${banner.image.imageKey}?width=1600`}
@@ -52,7 +58,7 @@ export function MenuBanners({
                         aria-label={product.text[locale].displayName}
                         disabled={!product.available}
                         onClick={() => onChoose(product)}
-                        className="group absolute rounded-sm border-2 border-transparent hover:border-primary focus-visible:border-primary focus-visible:bg-card/30"
+                        className="group absolute rounded-sm border-2 border-primary/30 bg-card/5 hover:border-primary focus-visible:border-primary focus-visible:bg-card/30 disabled:border-dashed"
                         style={{
                           left: `${spot.rect.x * 100}%`,
                           top: `${spot.rect.y * 100}%`,

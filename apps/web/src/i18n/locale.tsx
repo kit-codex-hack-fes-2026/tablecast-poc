@@ -20,15 +20,17 @@ export function LocaleProvider({
   children,
   initialLocale,
   persist = true,
+  updateDocument = true,
 }: {
   children: ReactNode;
   initialLocale?: Locale;
   persist?: boolean;
+  updateDocument?: boolean;
 }) {
   const [locale, updateLocale] = useState<Locale>(initialLocale ?? getLocale());
   useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
+    if (updateDocument) document.documentElement.lang = locale;
+  }, [locale, updateDocument]);
   const setLocale = useCallback(
     (next: Locale) => {
       updateLocale(next);

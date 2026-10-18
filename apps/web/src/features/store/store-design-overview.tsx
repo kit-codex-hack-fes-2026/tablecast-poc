@@ -4,6 +4,7 @@ import { StoreTheme } from "../../components/store-theme";
 import { useI18n } from "../../i18n/locale";
 import { ProductMenu } from "../../components/product-menu";
 import { StoreLogo } from "../../components/store-logo";
+import { Brand } from "../../components/brand";
 import { menuListSearchSchema } from "./menu-model";
 
 export function StoreDesignOverview({ catalog }: { catalog: Catalog }) {
@@ -28,10 +29,15 @@ export function StoreDesignOverview({ catalog }: { catalog: Catalog }) {
                 data-theme-part="header"
                 className="flex min-h-16 items-center gap-3 border-b border-border bg-card px-4 py-3"
               >
-                <StoreLogo logo={configuration.branding?.logo} />
-                <span className="font-semibold">
-                  {configuration.storeName ?? catalog.storeName}
+                <span className="shrink-0 [&_img]:w-28">
+                  <Brand />
                 </span>
+                <StoreLogo
+                  logo={configuration.branding?.logo}
+                  width={configuration.appearance?.header?.logoWidth ?? 144}
+                  height={configuration.appearance?.header?.logoHeight ?? 40}
+                  fallback={configuration.storeName ?? catalog.storeName}
+                />
               </header>
               <div data-theme-part="menu" className="max-h-[44rem] overflow-y-auto bg-card">
                 <ProductMenu

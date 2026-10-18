@@ -83,6 +83,7 @@ export default defineConfig({
                   "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
+                  "src/features/kiosk/local-camera.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
                   "src/components/game-frame.browser.test.tsx",
                   "src/components/menu-option-image.browser.test.tsx",

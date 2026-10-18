@@ -10,7 +10,8 @@ import {
   useParams,
 } from "@tanstack/react-router";
 import { cleanup, render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
+import { detectPlatform } from "@tanstack/react-hotkeys";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
@@ -191,6 +192,7 @@ it("下書きメニューと店舗デザインを往復しても同じ下書き�
   await expect
     .poll(() => router.state.location.search)
     .toMatchObject({ draftId, q: "tea", page: 2, returnSection: "products" });
+  await page.getByText(ja.theme_css, { exact: true }).click();
   await expect.element(page.getByLabelText(ja.theme_css, { exact: true })).toBeVisible();
   await expect.element(navigation.getByRole("status")).not.toBeInTheDocument();
   await expect.element(page.getByText(new RegExp(draftId))).toBeVisible();
@@ -216,6 +218,7 @@ it("下書きメニューと店舗デザインを往復しても同じ下書き�
 
 it("テーマの保存値は再表示で戻り、版競合時は確認するまで編集中のCSSを保持する", async () => {
   const { screen } = await openDesign();
+  await page.getByText(ja.theme_css, { exact: true }).click();
   const css = page.getByRole("textbox", { name: ja.theme_css, exact: true });
   await css.fill(savedCss);
   await page.getByRole("button", { name: ja.common_save, exact: true }).click();
@@ -225,6 +228,7 @@ it("テーマの保存値は再表示で戻り、版競合時は確認するま�
   await screen.unmount();
   client.clear();
   await openDesign();
+  await page.getByText(ja.theme_css, { exact: true }).click();
   await expect.element(css).toHaveValue(savedCss);
   expect(savedVersions).toEqual([1]);
   draft.version += 1;
@@ -245,6 +249,7 @@ it("テーマの保存値は再表示で戻り、版競合時は確認するま�
     .getByRole("alertdialog")
     .getByRole("button", { name: ja.workflow_conflict_reload, exact: true })
     .click();
+  await page.getByText(ja.theme_css, { exact: true }).click();
   await expect.element(css).toHaveValue(savedCss);
   expect(draft.configuration.appearance?.customCss).toBe(savedCss);
 });
@@ -256,7 +261,7 @@ it("未保存のテーマをプレビューすると先に保存し、その下�
   await expect
     .element(page.getByRole("heading", { name: "保存済みのテーマをプレビュー中" }))
     .toBeVisible();
-  expect(draft.configuration.appearance?.composition?.masthead?.logoWidth).toBe(300);
+  expect(draft.configuration.appearance?.header?.logoWidth).toBe(300);
   expect(previewSource).toEqual({ expectedVersion: 1, sourceDraftId: draftId });
   expect(savedVersions).toEqual([1]);
   expect(router.state.location.search).toMatchObject({
@@ -319,4 +324,31 @@ it("公開中のデザインは編集フォームを出さず、商品表示と�
       availability: "available",
       page: 2,
     });
+});
+
+it("保存ショートカットは入力中にも版2の下書きへ保存し、公開はしない", async () => {
+  await openDesign();
+  const width = page.getByLabelText(ja.theme_logo_width, { exact: true });
+  await width.fill("240");
+  await userEvent.keyboard(
+    detectPlatform() === "mac" ? "{Meta>}s{/Meta}" : "{Control>}s{/Control}",
+  );
+  await expect.poll(() => savedVersions).toEqual([1]);
+  expect(draft.configuration.appearance?.version).toBe(2);
+  expect(draft.configuration.appearance?.header?.logoWidth).toBe(240);
+  expect(draft.status).toBe("draft");
+});
+
+it("日英の片方だけの文章は保存せず、入力を残して編集箇所を示す", async () => {
+  await openDesign();
+  await page.getByRole("button", { name: ja.theme_story, exact: true }).click();
+  const heading = page.getByRole("textbox", {
+    name: `${ja.theme_section_title} · ${ja.common_ja}`,
+    exact: true,
+  });
+  await heading.fill("季節のおすすめ");
+  await page.getByRole("button", { name: ja.common_save, exact: true }).click();
+  await expect.element(page.getByRole("alert")).toMatchTextContent(ja.theme_bilingual_required);
+  await expect.element(heading).toHaveValue("季節のおすすめ");
+  expect(savedVersions).toEqual([]);
 });

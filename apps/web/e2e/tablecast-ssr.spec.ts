@@ -178,7 +178,9 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         interactive.getByRole("button", { name: "音声を再開", exact: true }),
       ).toBeEnabled();
       await expect(
-        interactive.getByRole("status").filter({ hasText: ja.kiosk_voice_paused }),
+        interactive
+          .getByRole("region", { name: ja.kiosk_voice_companion })
+          .getByText(ja.kiosk_voice_paused, { exact: true }),
       ).toBeVisible();
       await interactive.evaluate(async () => {
         await document.fonts.ready;

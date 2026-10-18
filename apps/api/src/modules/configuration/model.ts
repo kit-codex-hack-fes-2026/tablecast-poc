@@ -66,6 +66,10 @@ export const configurationIssueSchema = z.discriminatedUnion("code", [
     params: z.object({ categoryId: z.string() }).strict(),
   }),
   configurationIssueBase.extend({
+    code: z.literal("BANNER_NOT_FOUND"),
+    params: z.object({ bannerId: z.string() }).strict(),
+  }),
+  configurationIssueBase.extend({
     code: z.literal("MODIFIER_SELECTION_RANGE"),
     params: z
       .object({ min: z.number(), max: z.number(), kind: modifierSchema.shape.kind })

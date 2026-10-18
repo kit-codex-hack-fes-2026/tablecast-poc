@@ -14,8 +14,14 @@ import {
   Rabbit,
   ShoppingBag,
   Turtle,
+  MessageCircle,
+  X,
+  Maximize2,
+  Minimize2,
+  Camera,
 } from "lucide-react";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { AnimatePresence, m } from "motion/react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { Streamdown } from "streamdown";
 import {
   Conversation,
@@ -23,11 +29,19 @@ import {
   ConversationScrollButton,
 } from "../../components/ai-elements/conversation";
 import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "../../components/product-menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
+import { LocalCamera, useLocalCamera } from "./local-camera";
 import type { VoiceView } from "./voice-connection";
 
 const AudioWaveform = lazy(() =>
@@ -170,6 +184,319 @@ type VoicePanelProps = {
   onMicrophoneRefresh?: () => void;
   compactControls?: boolean;
 };
+
+function useCurrentSubtitle(
+  active: boolean,
+  merged: ConversationLine[],
+  status: VoiceView["status"],
+) {
+  const latest = active ? merged.at(-1) : undefined;
+  const [expired, setExpired] = useState<string>();
+  const subtitleKey = latest ? `${latest.id}:${latest.text}` : undefined;
+  const speaking = latest?.live || status === "speaking";
+  useEffect(() => {
+    if (!subtitleKey || speaking) return undefined;
+    const timer = setTimeout(() => setExpired(subtitleKey), 5000);
+    return () => clearTimeout(timer);
+  }, [subtitleKey, speaking]);
+  return latest?.text && (speaking || expired !== subtitleKey) ? latest : undefined;
+}
+
+// 接続とカメラの寿命は表示モードから独立させる。
+export function VoiceCompanion(
+  props: VoicePanelProps & { expanded: boolean; onExpand: () => void },
+) {
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const camera = useLocalCamera();
+  const { t, phase, visualState, merged, latestBusinessTurn, active } = useVoicePanel(props);
+  const { view, snapshot, onReview, expanded } = props;
+  const subtitle = useCurrentSubtitle(active, merged, view.status);
+  const suggestion = props.events?.findLast((event) => event.kind === "voice.products");
+  const needsReview = snapshot && ["pending", "read"].includes(snapshot.status) && onReview;
+  return (
+    <section
+      data-theme-part="voice-controls"
+      aria-label={t("kiosk_voice_companion")}
+      data-expanded={expanded}
+      className="relative z-10 flex shrink-0 flex-col border-t border-border/70 bg-card/95 p-3 shadow-lg shadow-foreground/5 backdrop-blur-xl data-[expanded=true]:min-h-0 data-[expanded=true]:flex-1 data-[expanded=true]:overflow-y-auto sm:px-6"
+    >
+      <div
+        className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 data-[expanded=true]:min-h-0 data-[expanded=true]:flex-1 data-[expanded=true]:content-center"
+        data-expanded={expanded}
+      >
+        <div
+          className="flex min-w-0 flex-1 basis-48 items-center gap-3 data-[expanded=true]:basis-full data-[expanded=true]:flex-col data-[expanded=true]:py-8"
+          data-expanded={expanded}
+        >
+          <div
+            className="size-14 shrink-0 data-[expanded=true]:mb-5 data-[expanded=true]:size-40 [&_figure]:size-full [&_figure>div:first-child]:size-full"
+            data-expanded={expanded}
+            aria-hidden="true"
+          >
+            <VoicePresence view={view} state={visualState} label={phase} catalog={props.catalog} />
+          </div>
+          <div className="min-w-0 flex-1 data-[expanded=true]:text-center" data-expanded={expanded}>
+            <p className="text-sm font-semibold">{phase}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(active ? "kiosk_voice_invitation" : "kiosk_voice_not_listening")}
+            </p>
+          </div>
+          {active && (
+            <div className="w-20 shrink-0" aria-label={t("kiosk_microphone_input")}>
+              <Suspense>
+                <AudioWaveform
+                  compact
+                  state="listening"
+                  label={t("kiosk_microphone_input")}
+                  track={view.inputTrack}
+                />
+              </Suspense>
+            </div>
+          )}
+        </div>
+        <div
+          className="relative flex flex-wrap items-center gap-2 max-sm:w-full max-sm:justify-center"
+          data-ui="voice-toolbar"
+        >
+          <VoiceToggle
+            view={view}
+            onStart={props.onStart}
+            controlDisabled={props.controlDisabled}
+          />
+          <Button variant="outline" size="lg" onClick={props.onExpand} aria-pressed={expanded}>
+            {expanded ? <Minimize2 /> : <Maximize2 />}
+            <span className="max-sm:sr-only">
+              {t(expanded ? "kiosk_return_menu" : "kiosk_conversation_view")}
+            </span>
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            aria-expanded={cameraOpen}
+            aria-label={t("kiosk_camera_mirror")}
+            onClick={() => setCameraOpen(!cameraOpen)}
+          >
+            <Camera />
+            <span className="max-sm:sr-only">{t("kiosk_camera_mirror")}</span>
+            {camera.stream && (
+              <span className="size-2 rounded-full bg-success" aria-label={t("kiosk_camera_on")} />
+            )}
+          </Button>
+          <CompanionHistory
+            props={props}
+            suggestion={Boolean(suggestion && suggestion.data.turnId === latestBusinessTurn)}
+          />
+          {needsReview && (
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={props.reviewPending}
+              onClick={() => {
+                onReview();
+                if (expanded) props.onExpand();
+              }}
+            >
+              <ShoppingBag />
+              {t("kiosk_review")}
+            </Button>
+          )}
+        </div>
+        {(cameraOpen || camera.stream) && (
+          <aside
+            aria-label={t("kiosk_camera_mirror")}
+            data-expanded={expanded}
+            className="absolute right-3 bottom-full mb-3 w-72 max-w-[calc(100%-24px)] rounded-2xl border border-border bg-card p-3 shadow-lg data-[expanded=true]:static data-[expanded=true]:mx-auto data-[expanded=true]:mb-4 data-[expanded=true]:w-80"
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">{t("kiosk_camera_mirror")}</h2>
+              {!camera.stream && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("common_close")}
+                  onClick={() => {
+                    camera.stop();
+                    setCameraOpen(false);
+                  }}
+                >
+                  <X />
+                </Button>
+              )}
+            </div>
+            <LocalCamera camera={camera} />
+          </aside>
+        )}
+      </div>
+      <AnimatePresence initial={false}>
+        {subtitle && (
+          <m.div
+            key="subtitle"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none absolute inset-x-3 bottom-full mb-3 flex justify-center data-[camera=true]:static data-[camera=true]:mt-3 data-[camera=true]:mb-0"
+            data-camera={Boolean(cameraOpen || camera.stream)}
+            data-ui="current-subtitle"
+          >
+            <p
+              className="max-w-2xl rounded-xl border border-border bg-card/95 px-4 py-3 text-sm leading-relaxed shadow-sm backdrop-blur-lg"
+              lang={subtitle.locale}
+            >
+              {subtitle.text}
+            </p>
+          </m.div>
+        )}
+      </AnimatePresence>
+      <CompanionError view={view} />
+      <MicrophoneNotice error={view.microphone?.error} />
+    </section>
+  );
+}
+
+function CompanionError({ view }: { view: VoiceView }) {
+  const { t } = useI18n();
+  if (view.status !== "error") return null;
+  return (
+    <p className="mt-2 text-sm text-destructive">
+      {t(
+        view.error === "permission"
+          ? "kiosk_voice_permission"
+          : view.error === "active"
+            ? "kiosk_voice_already_active"
+            : view.error === "unconfigured"
+              ? "kiosk_voice_setup"
+              : "kiosk_voice_fallback",
+      )}
+    </p>
+  );
+}
+
+function CompanionHistory({
+  props,
+  suggestion,
+}: {
+  props: VoicePanelProps & { expanded: boolean; onExpand: () => void };
+  suggestion: boolean;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const { expanded, onReview } = props;
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <Button
+        variant="outline"
+        size="lg"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <MessageCircle />
+        <span className="max-sm:sr-only">
+          {t(suggestion ? "kiosk_voice_suggestions" : "kiosk_voice_history")}
+        </span>
+      </Button>
+      <DialogContent side="right" className="max-w-xl pb-3">
+        <DialogHeader>
+          <DialogTitle>{t("kiosk_voice_history")}</DialogTitle>
+          <DialogClose aria-label={t("common_close")}>
+            <X />
+          </DialogClose>
+        </DialogHeader>
+        <div className="min-h-0 flex-1">
+          <VoicePanel
+            {...props}
+            compactControls
+            onChoose={(product) => {
+              props.onChoose?.(product);
+              setOpen(false);
+              if (expanded) props.onExpand();
+            }}
+            onReview={
+              onReview
+                ? () => {
+                    onReview();
+                    setOpen(false);
+                    if (expanded) props.onExpand();
+                  }
+                : undefined
+            }
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function VoicePresence({
+  view,
+  state,
+  label,
+  catalog,
+}: {
+  view: VoiceView;
+  state: VoiceView["status"] | "tool";
+  label: string;
+  catalog?: Catalog;
+}) {
+  const [failed, setFailed] = useState<string>();
+  const appearance = catalog?.configuration.appearance;
+  const voice = appearance?.voice;
+  const characterState =
+    state === "tool" || state === "connecting"
+      ? "thinking"
+      : state === "paused" || state === "stopping"
+        ? "idle"
+        : state;
+  const assetName = voice?.states?.[characterState] ?? voice?.character;
+  const asset = assetName ? appearance?.assets?.[assetName] : undefined;
+  if (voice?.mode === "character" && asset && failed !== asset.imageKey)
+    return (
+      <img
+        src={`/media/${asset.imageKey}?width=384`}
+        alt=""
+        className="size-full object-contain"
+        onError={() => setFailed(asset.imageKey)}
+      />
+    );
+  if (voice?.mode === "face") return <AssistantFace state={state} />;
+  if (["idle", "paused", "stopping", "error"].includes(state))
+    return (
+      <div className="flex size-full items-center justify-center rounded-full border border-border bg-linear-to-br from-card via-secondary to-muted shadow-inner">
+        {state === "error" ? (
+          <CircleAlert className="size-1/3 text-destructive" />
+        ) : (
+          <MicOff className="size-1/3 text-muted-foreground" />
+        )}
+      </div>
+    );
+  return (
+    <Suspense fallback={<AudioLines className="size-full p-4" />}>
+      <AudioWaveform orbOnly state={state} label={label} track={view.outputTrack} />
+    </Suspense>
+  );
+}
+
+function AssistantFace({ state }: { state: VoiceView["status"] | "tool" }) {
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      className="size-full rounded-full bg-secondary text-foreground"
+      aria-hidden="true"
+    >
+      <circle cx="60" cy="60" r="56" fill="none" stroke="currentColor" strokeOpacity=".15" />
+      <ellipse cx="43" cy="49" rx="4" ry={state === "thinking" ? 2 : 6} fill="currentColor" />
+      <ellipse cx="77" cy="49" rx="4" ry={state === "thinking" ? 2 : 6} fill="currentColor" />
+      <path
+        d={state === "speaking" ? "M45 71 Q60 95 75 71 Z" : "M45 71 Q60 84 75 71"}
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill={state === "speaking" ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+}
 
 function useVoicePanel({
   view,
@@ -354,13 +681,10 @@ export function VoicePanel({
     >
       <header className="flex items-center justify-between gap-2 border-b border-border py-1">
         <h2 className="text-sm font-semibold">{t("kiosk_conversation")}</h2>
-        <output
-          className="ml-auto flex items-center gap-2 text-xs font-medium text-foreground"
-          aria-live="polite"
-        >
+        <span className="ml-auto flex items-center gap-2 text-xs font-medium text-foreground">
           <span className={activityDot({ active })} />
           {phase}
-        </output>
+        </span>
         <Button
           variant="ghost"
           size="icon"
@@ -659,7 +983,7 @@ function VoiceControls({
             <AudioWaveform
               state={visualState}
               toolLabel={toolLabel}
-              track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+              track={view.inputTrack}
               label={phase}
             />
           </Suspense>
@@ -674,7 +998,7 @@ function VoiceControls({
                 compact
                 state={visualState}
                 toolLabel={toolPhase}
-                track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+                track={view.inputTrack}
                 label={phase}
               />
             </Suspense>

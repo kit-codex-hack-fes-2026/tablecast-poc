@@ -47,7 +47,9 @@ const targetWrites: unknown[] = [];
 const orderWrites: ReturnType<typeof submitSchema.parse>[] = [];
 const requests: Request[] = [];
 let initialViewport: { width: number; height: number };
+let pendingScreen: Promise<void> | undefined;
 beforeEach(() => {
+  pendingScreen = undefined;
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
   vi.stubGlobal("WebSocket", TablecastSocket);
   // カートと通知の統合では実端末のマイク列挙を避ける。
@@ -147,6 +149,7 @@ beforeEach(() => {
       }
       if (request.method === "PATCH" && path === "/api/table/ui") {
         const screenInput = uiSectionInputSchema.parse(await request.json());
+        await pendingScreen;
         current = {
           ...current,
           uiSection: screenInput.section,
@@ -351,9 +354,9 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
   expect(client.getQueryData<TableState>(["tablecast-table"])?.cart.lines).toHaveLength(1);
 });
 
-const orderPanel = () => document.getElementById("tablecast-order");
+const orderPanel = () => document.querySelector("main[data-theme-part=menu]");
 it.each(["listening", "speaking"] as const)(
-  "%sでは実音声の小さな波形を音声操作バーへ表示し、停止でも操作位置を保つ",
+  "%sでも入力マイクの小さな波形を表示し、停止でも操作位置を保つ",
   async (status) => {
     await page.viewport(390, 844);
     const audio = new AudioContext();
@@ -373,11 +376,7 @@ it.each(["listening", "speaking"] as const)(
         <LocaleProvider initialLocale="ja" persist={false}>
           <VoicePanel
             compactControls
-            view={
-              status === "listening"
-                ? { status, inputTrack: track }
-                : { status, outputTrack: track }
-            }
+            view={{ status, inputTrack: track }}
             lines={[]}
             onStart={() => {}}
             speechSpeed={1}
@@ -466,13 +465,11 @@ it.each(["ja", "en"] as const)(
     const tools = page.getByRole("button", { name: new RegExp(`^${labels.kiosk_visit_tools}`) });
     await expect.element(tools).toMatchTextContent(labels.kiosk_service_group);
     const conversation = page
-      .getByRole("region", { name: labels.kiosk_conversation, exact: true })
+      .getByRole("region", { name: labels.kiosk_voice_companion, exact: true })
       .element();
     const socket = TablecastSocket.instances[0];
     const cart = structuredClone(current.cart);
-    const paneWidth = orderPanel()?.getBoundingClientRect().width ?? 0;
-    expect(paneWidth / 1024).toBeGreaterThan(0.58);
-    expect(paneWidth / 1024).toBeLessThan(0.62);
+    expect(orderPanel()?.getBoundingClientRect().width).toBe(1024);
     await expect
       .element(page.getByRole("region", { name: labels.customer_join_visit }))
       .not.toBeInTheDocument();
@@ -494,9 +491,6 @@ it.each(["ja", "en"] as const)(
       [390, 844],
     ]) {
       await page.viewport(width, height);
-      await expect
-        .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
-        .toHaveAttribute("aria-orientation", width === 1024 ? "vertical" : "horizontal");
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
       expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
@@ -518,13 +512,11 @@ it.each(["ja", "en"] as const)(
           const conversationBounds = conversation.getBoundingClientRect();
           const orderBounds = orderPanel()?.getBoundingClientRect();
           if (!orderBounds) throw new Error("注文ペインが必要です");
-          return width === 1024
-            ? conversationBounds.right - orderBounds.left
-            : conversationBounds.bottom - orderBounds.top;
+          return orderBounds.bottom - conversationBounds.top;
         })
         .toBeLessThanOrEqual(2);
       expect(
-        page.getByRole("region", { name: labels.kiosk_conversation, exact: true }).element(),
+        page.getByRole("region", { name: labels.kiosk_voice_companion, exact: true }).element(),
       ).toBe(conversation);
     }
     expect(observe).toHaveBeenCalledTimes(1);
@@ -567,41 +559,63 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   expect(orderWrites[0]?.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-it("注文ペインの比率をCookieから復元し、縦横の切替でもタブと音声停止を保持する", async () => {
+it("会話表示と履歴の開閉・縦横変更で商品入力と音声停止を保持する", async () => {
   await page.viewport(1024, 768);
-  const screen = await mountKiosk();
-  const handle = page.getByRole("separator", { name: ja.kiosk_resize_panes });
-  await expect.element(handle).toBeVisible();
-  const initial = orderPanel()?.getBoundingClientRect().width ?? 0;
-  handle.element().focus();
-  await userEvent.keyboard("{ArrowLeft}");
-  await expect
-    .poll(() => orderPanel()?.getBoundingClientRect().width ?? 0)
-    .toBeGreaterThan(initial + 10);
-  const adjusted = orderPanel()?.getBoundingClientRect().width ?? 0;
-  await expect.poll(() => document.cookie).toContain("tablecast-layout-");
-  await page.viewport(390, 844);
-  await expect.element(handle).toHaveAttribute("aria-orientation", "horizontal");
-  const initialHeight = orderPanel()?.getBoundingClientRect().height ?? 0;
-  handle.element().focus();
-  await userEvent.keyboard("{ArrowUp}");
-  await expect
-    .poll(() => orderPanel()?.getBoundingClientRect().height ?? 0)
-    .toBeGreaterThan(initialHeight + 10);
-  await expect
-    .element(page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }))
-    .toHaveAttribute("aria-selected", "true");
+  current.uiSection = "menu";
+  await mountKiosk();
+  await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
+  const quantity = page.getByRole("button", { name: ja.common_increase, exact: true });
+  await quantity.click();
+  const selection = page
+    .getByRole("region", { name: product.text.ja.displayName, exact: true })
+    .element();
+  const socket = TablecastSocket.instances[0];
+  const writes = requests.filter((request) => request.url.endsWith("/table/ui")).length;
+  const main = page.getByRole("main").element();
+  await page.getByRole("button", { name: ja.kiosk_conversation_view, exact: true }).click();
+  await expect.element(main).not.toBeVisible();
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }))
     .toBeVisible();
-  await page.viewport(1024, 768);
-  await expect.element(handle).toHaveAttribute("aria-orientation", "vertical");
-  const desktop = orderPanel()?.getBoundingClientRect().width ?? adjusted;
-  await screen.unmount();
-  await mountKiosk();
+  await page.viewport(390, 844);
+  await page.getByRole("button", { name: ja.kiosk_return_menu, exact: true }).click();
+  expect(
+    page.getByRole("region", { name: product.text.ja.displayName, exact: true }).element(),
+  ).toBe(selection);
+  await page.getByRole("button", { name: ja.kiosk_voice_history, exact: true }).click();
+  await expect.element(page.getByRole("dialog", { name: ja.kiosk_voice_history })).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  expect(
+    page.getByRole("region", { name: product.text.ja.displayName, exact: true }).element(),
+  ).toBe(selection);
   await expect
-    .poll(() => Math.abs((orderPanel()?.getBoundingClientRect().width ?? 0) - desktop))
-    .toBeLessThan(2);
+    .element(page.getByRole("status", { name: ja.common_quantity, exact: true }))
+    .toHaveTextContent("2");
+  expect(TablecastSocket.instances).toEqual([socket]);
+  expect(requests.filter((request) => request.url.endsWith("/table/ui"))).toHaveLength(writes);
+  expect(requests.filter((request) => /\/voice\/(start|stop)$/.test(request.url))).toHaveLength(0);
+});
+
+it("商品の表示更新が遅れても先に入力した数量を保持する", async () => {
+  current.uiSection = "menu";
+  const response = Promise.withResolvers<void>();
+  pendingScreen = response.promise;
+  await mountKiosk();
+  try {
+    await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
+    await page.getByRole("button", { name: ja.common_increase, exact: true }).click();
+    const quantity = page.getByRole("status", { name: ja.common_quantity, exact: true });
+    await expect.element(quantity).toHaveTextContent("2");
+    const input = quantity.element();
+    response.resolve();
+    await expect.poll(() => current.selectedProductId).toBe(product.id);
+    await page.getByRole("button", { name: ja.kiosk_conversation_view, exact: true }).click();
+    await page.getByRole("button", { name: ja.kiosk_return_menu, exact: true }).click();
+    expect(quantity.element()).toBe(input);
+    await expect.element(quantity).toHaveTextContent("2");
+  } finally {
+    response.resolve();
+  }
 });
 
 it("音声開始が失敗しても実Queryのカートと画面操作を維持する", async () => {
