@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { PageHeader } from "../../components/page-header";
 import { pointRulesSchema } from "@tablecast/api/schema";
 import { useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -55,11 +56,10 @@ export function PointPolicy() {
     },
   });
   return (
-    <section className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t("customer_points_policy")}</h1>
-      <p>{t("customer_points_future")}</p>
+    <section className="space-y-6">
+      <PageHeader title={t("customer_points_policy")} description={t("customer_points_future")} />
       <form
-        className="space-y-5"
+        className="max-w-2xl space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
           void form.handleSubmit();

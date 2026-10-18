@@ -179,7 +179,7 @@ it("日本語で履歴と古いログをcursorで辿り、店舗切替後へ前�
   await screen
     .getByRole("row")
     .filter({ hasText: "tablecast-visit" })
-    .getByRole("button", { name: labels.admin_details })
+    .getByRole("button", { name: "tablecast-visit", exact: true })
     .click();
   await expect.element(screen.getByText("Original order 4", { exact: false })).toBeVisible();
   await screen.getByRole("button", { name: labels.admin_older_events, exact: true }).click();

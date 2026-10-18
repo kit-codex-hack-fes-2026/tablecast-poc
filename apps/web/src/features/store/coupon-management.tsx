@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "../../components/page-header";
 import { useState } from "react";
 import { useAppForm } from "../../components/form";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -24,62 +25,68 @@ export function CouponManagement() {
       : undefined;
   const canEdit = ["owner", "admin"].includes(store.role);
   return (
-    <section className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t("coupon_rules")}</h1>
-      <p>{t("coupon_version_note")}</p>
-      <ErrorNotice
-        error={!editing ? query.error : undefined}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
+    <section className="space-y-6">
+      <PageHeader
+        title={t("coupon_rules")}
+        description={t("coupon_version_note")}
+        actions={canEdit && <Button onClick={() => setEditing("new")}>{t("coupon_new")}</Button>}
       />
-      {canEdit && <Button onClick={() => setEditing("new")}>{t("coupon_new")}</Button>}
-      {editing && (
-        <CouponRuleForm
-          key={current?.id ?? "new"}
-          storeId={store.id}
-          initial={
-            current
-              ? {
-                  id: current.id,
-                  expectedVersion: current.version,
-                  active: current.active,
-                  rules: current.rules,
+      <div className="max-w-3xl space-y-6">
+        <ErrorNotice
+          error={!editing ? query.error : undefined}
+          onRetry={() => void query.refetch()}
+          retrying={query.isFetching}
+        />
+        {editing && (
+          <CouponRuleForm
+            key={current?.id ?? "new"}
+            storeId={store.id}
+            initial={
+              current
+                ? {
+                    id: current.id,
+                    expectedVersion: current.version,
+                    active: current.active,
+                    rules: current.rules,
+                  }
+                : undefined
+            }
+            onSaved={() => setEditing(null)}
+          />
+        )}
+        <ul className="space-y-4">
+          {rules.map((rule) => (
+            <li key={rule.id} className="space-y-3">
+              <Button
+                variant="outline"
+                disabled={!canEdit}
+                aria-pressed={editing !== "new" && editing?.id === rule.id}
+                onClick={() =>
+                  setEditing(editing !== "new" && editing?.id === rule.id ? null : rule)
                 }
-              : undefined
-          }
-          onSaved={() => setEditing(null)}
-        />
-      )}
-      <ul className="space-y-4">
-        {rules.map((rule) => (
-          <li key={rule.id} className="space-y-3">
-            <Button
-              variant="outline"
-              disabled={!canEdit}
-              aria-pressed={editing !== "new" && editing?.id === rule.id}
-              onClick={() => setEditing(editing !== "new" && editing?.id === rule.id ? null : rule)}
-            >
-              {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
-            </Button>
-          </li>
-        ))}
-      </ul>
-      {query.hasNextPage && (
-        <Button disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
-          {t("customer_more")}
-        </Button>
-      )}
-      {canEdit && (
-        <ManualCouponIssue
-          storeId={store.id}
-          rules={rules.flatMap((rule) =>
-            rule.active && rule.rules.trigger === "manual"
-              ? [{ id: rule.id, title: rule.rules.title[locale] }]
-              : [],
-          )}
-        />
-      )}
-      <IssuedCoupons storeId={store.id} canEdit={canEdit} />
+              >
+                {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
+              </Button>
+            </li>
+          ))}
+        </ul>
+        {query.hasNextPage && (
+          <Button disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
+            {t("customer_more")}
+          </Button>
+        )}
+        {canEdit && (
+          <ManualCouponIssue
+            storeId={store.id}
+            rules={rules.flatMap((rule) =>
+              rule.active && rule.rules.trigger === "manual"
+                ? [{ id: rule.id, title: rule.rules.title[locale] }]
+                : [],
+            )}
+          />
+        )}
+        <IssuedCoupons storeId={store.id} canEdit={canEdit} />
+      </div>
     </section>
   );
 }

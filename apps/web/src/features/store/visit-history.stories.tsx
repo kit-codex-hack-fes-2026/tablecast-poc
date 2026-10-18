@@ -38,7 +38,7 @@ export const Japanese: Story = {
     await expect(canvas.getByRole("table")).toHaveTextContent("2,900");
     await expect(canvasElement.querySelectorAll("time")[0]).toHaveTextContent("2026/09/05");
     await expect(canvasElement.querySelectorAll("time")[1]).toHaveTextContent("2026/09/06");
-    await userEvent.click(canvas.getByRole("button", { name: "詳細" }));
+    await userEvent.click(canvas.getByRole("button", { name: /^T01$/ }));
     await expect(args.onSelect).toHaveBeenCalledWith("tablecast-closed-visit");
   },
 };

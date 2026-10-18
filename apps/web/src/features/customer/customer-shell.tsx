@@ -8,7 +8,7 @@ export function CustomerShell({ children }: { children: ReactNode }) {
   const { t, setLocale } = useI18n();
   return (
     <main className="mx-auto min-h-dvh w-full max-w-2xl space-y-8 px-5 py-6 sm:px-8">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <Link to="/member">
           <Brand />
         </Link>

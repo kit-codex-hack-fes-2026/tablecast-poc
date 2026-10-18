@@ -21,9 +21,10 @@ import { apiError } from "../../lib/api-error";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { MenuOverview } from "./menu-overview";
+import { MenuOverview, ProductSummary } from "./menu-overview";
 
 import { parseResponse, rpc } from "../../lib/api";
 import { CastEditor, CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
@@ -318,14 +319,25 @@ function ItemForm({
         <ArrowLeft />
         {t(menuLabels[section])}
       </Button>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {itemId === "new"
+      <PageHeader
+        description={section === "products" ? t("editor_product_description") : undefined}
+        title={
+          itemId === "new"
             ? t("common_add")
-            : (item?.text[locale].displayName ?? t(menuLabels[section]))}
-        </h1>
-      </div>
+            : (item?.text[locale].displayName ?? t(menuLabels[section]))
+        }
+      />
       <ItemEditingStatus model={model} itemId={itemId} draft={draft} />
+      {section === "products" &&
+        configuration.products
+          .filter((product) => product.id === selectedId)
+          .map((product) => (
+            <ProductSummary
+              key={product.id}
+              product={product}
+              categories={configuration.categories}
+            />
+          ))}
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
@@ -593,12 +605,11 @@ function ItemEditingStatus({
   itemId: string;
   draft: ConfigDraft;
 }) {
-  const { store, catalog, version, dirty, images, newSaved, save, reload, editable, t } = model;
+  const { catalog, version, dirty, images, newSaved, save, reload, editable, t } = model;
   return (
     <>
       {catalog.data && (
         <ConfigurationStatus
-          storeName={store.name}
           publishedVersion={catalog.data.version}
           draft={{ id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }}
           dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}

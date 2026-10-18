@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { zodFieldValidator } from "../../lib/form-validation";
 import { createStoreSchema } from "@tablecast/api/schema";
 import { useAppForm } from "../../components/form";
@@ -41,7 +42,7 @@ export function CreateStore() {
         <ArrowLeft />
         {t("stores_title")}
       </Button>
-      <h1 className="text-2xl font-semibold">{t("stores_create")}</h1>
+      <PageHeader title={t("stores_create")} />
       <form
         noValidate
         className="max-w-xl space-y-5"

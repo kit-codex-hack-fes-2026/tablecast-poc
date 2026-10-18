@@ -1,3 +1,4 @@
+import { PageHeader } from "../../components/page-header";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -21,13 +22,15 @@ export function Games() {
   const games = useSuspenseQuery(gamesOptions(storeId, after));
   return (
     <section className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">{t("games_title")}</h1>
-        <p className="text-muted-foreground">{t("games_intro")}</p>
-        <Link className="underline" to="/account/integrations/manual">
-          {t("games_connect")}
-        </Link>
-      </header>
+      <PageHeader
+        title={t("games_title")}
+        description={t("games_intro")}
+        actions={
+          <Link className="underline" to="/account/integrations/manual">
+            {t("games_connect")}
+          </Link>
+        }
+      />
       <ErrorNotice error={games.error} onRetry={() => void games.refetch()} />
       {games.data.games.length === 0 && <p>{t("games_empty")}</p>}
       <div className="flex flex-wrap gap-2">

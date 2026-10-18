@@ -21,7 +21,7 @@ import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
 import { MenuItem } from "./menu-item";
-import { draftOptions } from "./menu-query";
+import { catalogOptions, draftOptions } from "./menu-query";
 import { StoreShell } from "./store-shell";
 import { storesOptions } from "./store-query";
 import "../../styles.css";
@@ -79,6 +79,7 @@ async function mountForm(
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
   });
+  client.setQueryData(catalogOptions(storeId).queryKey, { ...catalog, storeId });
   client.setQueryData(draftOptions(storeId, draftId).queryKey, initial);
   client.setQueryData(storesOptions.queryKey, {
     locale,

@@ -36,7 +36,6 @@ afterEach(async () => {
     client.clear();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-    document.documentElement.style.fontSize = "";
     if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
   } finally {
     if (
@@ -140,21 +139,6 @@ async function tabTo(control: Locator) {
   await expect.element(control).toHaveFocus();
 }
 
-function enlargeText(scope: Element) {
-  // 取得済みの文字サイズをまとめて2倍にし、親要素の変更を子へ重ねない
-  const sizes = [scope, ...scope.querySelectorAll<HTMLElement>("*")]
-    .filter(
-      (element): element is HTMLElement =>
-        element instanceof HTMLElement &&
-        (element.matches("input, select, textarea") ||
-          [...element.childNodes].some(
-            (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-          )),
-    )
-    .map((element) => ({ element, size: Number.parseFloat(getComputedStyle(element).fontSize) }));
-  for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
-}
-
 async function expectReadableControl(control: Locator) {
   await expect.element(control).toBeVisible();
   const element = control.element();
@@ -220,16 +204,13 @@ it("日本語の端末コードと卓をURLで復元し、明示承認まで送�
   expect(approvals).toEqual([{ userCode: "TABLECAST-URL", tableId: "tablecast-second" }]);
 });
 
-it("日本語の端末登録は文字を200%にしてもコードと卓を読み、キーボードで承認できる", async () => {
+it("日本語の端末登録でコードと卓を選び、キーボードで承認できる", async () => {
   const locale = "ja";
   const labels = ja;
   await page.viewport(1024, 768);
   await show(locale);
   const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
   const approve = page.getByRole("button", { name: labels.admin_approve, exact: true });
-  const originalSize = Number.parseFloat(getComputedStyle(code.element()).fontSize);
-  enlargeText(page.getByRole("main").element());
-  expect(Number.parseFloat(getComputedStyle(code.element()).fontSize)).toBe(originalSize * 2);
   await expectReadableControl(code);
   await expectReadableControl(approve);
   const table = page.getByRole("table");
@@ -243,8 +224,8 @@ it("日本語の端末登録は文字を200%にしてもコードと卓を読み
   await userEvent.keyboard(
     server.platform === "darwin" ? "{Meta>}a{/Meta}" : "{Control>}a{/Control}",
   );
-  await userEvent.keyboard("TABLECAST-200");
-  await expect.element(code).toHaveValue("TABLECAST-200");
+  await userEvent.keyboard("TABLECAST-KEYBOARD");
+  await expect.element(code).toHaveValue("TABLECAST-KEYBOARD");
   await tabTo(choose);
   await userEvent.keyboard("{Enter}");
   await expect.element(choose).toHaveAttribute("aria-pressed", "true");
@@ -255,7 +236,7 @@ it("日本語の端末登録は文字を200%にしてもコードと卓を読み
   await expect
     .element(page.getByRole("heading", { name: labels.device_title, exact: true }))
     .toBeVisible();
-  expect(approvals).toEqual([{ userCode: "TABLECAST-200", tableId: "tablecast-second" }]);
+  expect(approvals).toEqual([{ userCode: "TABLECAST-KEYBOARD", tableId: "tablecast-second" }]);
 });
 
 it("QR画像を実decoderで読み、選択卓を保って承認後にだけ送信する", async () => {

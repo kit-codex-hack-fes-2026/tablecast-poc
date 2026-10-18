@@ -37,7 +37,7 @@ export const EnglishStaff: Story = {
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("columnheader", { name: "Guest language" })).toBeInTheDocument();
+    await expect(canvas.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
     await expect(canvas.getByText("日本語")).toBeInTheDocument();
   },
 };
@@ -87,7 +87,7 @@ export const BeyondRecentEvents: Story = {
     const canvas = within(canvasElement);
     await step("結果: 2分前の表示ログではなく90分前の開卓から数える", async () => {
       const pending = within(canvas.getByRole("row", { name: /T02/ }));
-      await expect(pending.getByRole("cell", { name: "90 分" })).toBeInTheDocument();
+      await expect(pending.getByText("90 分", { exact: true })).toBeInTheDocument();
     });
     await step("結果: 要対応・未精算の会計依頼・音声異常・精算済みの順に並ぶ", async () => {
       await expect(

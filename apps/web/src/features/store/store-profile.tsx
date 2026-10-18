@@ -1,5 +1,6 @@
+import { PageHeader } from "../../components/page-header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Store } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { StoreIcon } from "../../components/store-icon";
 import { useI18n } from "../../i18n/locale";
@@ -27,10 +28,7 @@ export function StoreProfile() {
   });
   return (
     <>
-      <h1 className="flex items-center gap-2 text-2xl font-semibold">
-        <Store aria-hidden="true" />
-        {t("store_profile")}
-      </h1>
+      <PageHeader title={t("store_profile")} />
       <ConfigurationSection title={t("editor_images")} icon={ImagePlus}>
         <div className="flex flex-wrap items-center gap-4">
           <StoreIcon name={store.name} logo={store.logo} className="size-20 rounded-2xl text-2xl" />

@@ -57,7 +57,9 @@ it("日本語のRPC失敗は原因別に案内し、再試行操作と入力を�
     await expect.element(page.getByRole("alert")).not.toMatchTextContent("private server detail");
     await expect.element(page.getByRole("textbox")).toHaveValue("変更中の店舗名");
 
-    await page.getByRole("button", { name: labels.common_retry }).click();
+    const button = page.getByRole("button", { name: labels.common_retry });
+    expect(button.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await button.click();
   }
   expect(retry).toHaveBeenCalledTimes(cases.length);
   await screen.rerender(view(new TypeError("network"), true));
