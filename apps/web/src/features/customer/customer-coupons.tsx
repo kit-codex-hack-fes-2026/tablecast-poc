@@ -14,12 +14,12 @@ export function CustomerCoupons({ storeId, sessionId }: { storeId: string; sessi
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ["tablecast-customer", storeId] });
   return (
-    <article className="space-y-6">
+    <article key={storeId} className="space-y-6">
       <h1 className="text-2xl font-semibold">{t("coupons")}</h1>
       <p>{t("coupon_terms")}</p>
       {!sessionId && <p>{t("coupon_request_hint")}</p>}
-      <OwnedCoupons key={storeId} storeId={storeId} sessionId={sessionId} onChanged={refresh} />
-      <ExchangeCoupons key={storeId} storeId={storeId} onChanged={refresh} />
+      <OwnedCoupons storeId={storeId} sessionId={sessionId} onChanged={refresh} />
+      <ExchangeCoupons storeId={storeId} onChanged={refresh} />
     </article>
   );
 }
