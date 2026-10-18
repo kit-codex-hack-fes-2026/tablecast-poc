@@ -161,3 +161,9 @@ commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持�
 TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
 
 RenovateのPRタイトルは、推奨設定に従って英語のcommit件名から生成する。`prTitle`は個別指定せず、`commitMessageAction`や`commitMessageTopic`でcommitと共通の表現を設定する。自動更新PRは日本語タイトル規約の例外とし、本文は既存の日本語4項目を維持する。
+
+### ページ遷移・HMR時の計測
+
+`@inference-net/otel-cf-workers`は設定のcontext keyをmodule内に持つ。Viteの依存再最適化などでWorker全体を再評価する際は、共有telemetryの`vite:beforeFullReload`でOpenTelemetryのtrace・context・propagation登録を解除し、新しいSDK評価に合わせて登録し直す。通常のリクエストで計測を停止したり、例外後に業務処理を再実行したりしない。production buildにはこの開発用hookを含めない。
+
+回帰確認はWebの`src/server/telemetry-hmr.test.ts`で実ViteとCloudflare Workerを起動し、複数回の全再評価後にもHTTP 200、要求ごとのtrace分離、親子spanの相関を確認する。デモDBや稼働中の開発サーバーは使わない。

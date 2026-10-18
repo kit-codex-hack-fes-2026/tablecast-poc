@@ -8,6 +8,7 @@ import {
 import {
   context,
   createContextKey,
+  propagation,
   SpanStatusCode,
   trace,
   type Attributes,
@@ -20,6 +21,15 @@ import {
   type ReadableSpan,
   type SpanExporter,
 } from "@opentelemetry/sdk-trace-base";
+
+if (import.meta.hot) {
+  // Viteの全再評価と同じ寿命で登録を解放し、古いSDKの設定キーを持ち越さない。
+  import.meta.hot.on("vite:beforeFullReload", () => {
+    trace.disable();
+    context.disable();
+    propagation.disable();
+  });
+}
 
 export interface TelemetryEnv {
   TABLECAST_ENV?: string;
