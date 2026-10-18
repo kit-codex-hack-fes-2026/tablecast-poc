@@ -77,7 +77,9 @@ export async function collectContainerMetrics(env: MetricsEnv, scheduledTime: nu
       .parse(env.TABLECAST_CLOUDFLARE_ACCOUNT_ID);
     const token = z.string().min(1).parse(env.TABLECAST_CONTAINER_METRICS_TOKEN);
     const names = z
-      .array(z.string().regex(/^tablecast-api(?:-pr-[1-9][0-9]*)?-tablecast(?:voice|emulate)$/))
+      .array(
+        z.string().regex(/^tablecast-api(?:-staging|-pr-[1-9][0-9]*)?-tablecast(?:voice|emulate)$/),
+      )
       .min(1)
       .max(2)
       .parse(JSON.parse(env.TABLECAST_CONTAINER_METRICS_APPLICATIONS ?? "[]"));
