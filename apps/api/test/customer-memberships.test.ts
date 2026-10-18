@@ -6,7 +6,7 @@ import { customerMemberships, stores } from "../src/db/business-schema";
 import { createApiServices } from "../src/platform/context";
 import { listCustomerMemberships, requireCustomer } from "../src/modules/customers/queries";
 import { fixtureDb } from "./database-fixture";
-import { setupFixture } from "./fixture";
+import { deviceToken, setupFixture } from "./fixture";
 
 const origin = "http://localhost:3000";
 const path = "/api/customer/stores/tablecast-store";
@@ -23,6 +23,59 @@ function request(url: string, cookie?: string, body?: object, requestOrigin = or
     }),
   );
 }
+
+it("会員の各HTTP入口は入力検証より先にログインを要求し、認証後の検証失敗も共有cacheへ保存させない", async () => {
+  const { cookie } = await setupFixture();
+  const endpoints = [
+    { url: "/api/customer/memberships?limit=0", invalidStatus: 400 },
+    { url: "/api/customer/visits/resolve", body: {}, invalidStatus: 422 },
+    { url: `${path}/memories`, body: {}, invalidStatus: 422 },
+    { url: `${path}/points?limit=0`, invalidStatus: 400 },
+    { url: `${path}/coupons/exchange`, body: {}, invalidStatus: 422 },
+  ];
+  for (const { url, body, invalidStatus } of endpoints) {
+    const anonymous = await request(url, undefined, body);
+    expect({ url, status: anonymous.status }).toEqual({ url, status: 401 });
+    expect(await anonymous.json()).toMatchObject({ error: { code: "LOGIN_REQUIRED" } });
+    expect(anonymous.headers.get("Cache-Control")).toBe("private, no-store");
+    const authenticated = await request(url, cookie, body);
+    expect({ url, status: authenticated.status }).toEqual({ url, status: invalidStatus });
+    expect(await authenticated.json()).toMatchObject({ error: { code: "INVALID_INPUT" } });
+    expect(authenticated.headers.get("Cache-Control")).toBe("private, no-store");
+  }
+  expect((await request("/api/admin/stores")).headers.get("Cache-Control")).toBe("no-store");
+});
+
+it("入会前も本人の会員一覧・店舗情報・来店QRを取得できる", async () => {
+  const { cookie } = await setupFixture();
+  const memberships = await request("/api/customer/memberships", cookie);
+  expect(memberships.status).toBe(200);
+  expect(await memberships.json()).toMatchObject({ memberships: [], nextCursor: null });
+  const store = await request(path, cookie);
+  expect(store.status).toBe(200);
+  expect(await store.json()).toMatchObject({
+    store: { id: "tablecast-store" },
+    membership: null,
+  });
+  const codeResponse = await request(
+    "/api/table/customer-code",
+    `tablecast.device=${deviceToken}`,
+    {},
+  );
+  expect(codeResponse.status).toBe(200);
+  const code = await codeResponse.json<{ code: string }>();
+  const resolved = await request("/api/customer/visits/resolve", cookie, { code: code.code });
+  expect(resolved.status).toBe(200);
+  expect(await resolved.json()).toMatchObject({
+    storeId: "tablecast-store",
+    sessionId: "tablecast-session",
+    membership: null,
+  });
+  expect(resolved.headers.get("Cache-Control")).toBe("private, no-store");
+  const points = await request(`${path}/points`, cookie);
+  expect(points.status).toBe(403);
+  expect(await points.json()).toMatchObject({ error: { code: "CUSTOMER_MEMBERSHIP_REQUIRED" } });
+});
 
 it("会員登録はログインと同意版を要求し、スタッフ所属を付与しない", async () => {
   const { cookie, staff } = await setupFixture();
