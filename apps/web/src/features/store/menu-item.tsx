@@ -21,6 +21,7 @@ import { apiError } from "../../lib/api-error";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
+import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MenuOverview } from "./menu-overview";
@@ -318,13 +319,13 @@ function ItemForm({
         <ArrowLeft />
         {t(menuLabels[section])}
       </Button>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {itemId === "new"
+      <PageHeader
+        title={
+          itemId === "new"
             ? t("common_add")
-            : (item?.text[locale].displayName ?? t(menuLabels[section]))}
-        </h1>
-      </div>
+            : (item?.text[locale].displayName ?? t(menuLabels[section]))
+        }
+      />
       <ItemEditingStatus model={model} itemId={itemId} draft={draft} />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>

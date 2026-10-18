@@ -1,10 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { StoreIcon } from "../../components/store-icon";
+import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { RoleBadge } from "../../components/role-badge";
@@ -18,13 +19,15 @@ export function Organisations() {
   const columns = useMemo(() => storeColumns(t), [t]);
   return (
     <SettingsShell>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("stores_title")}</h1>
-        <Button nativeButton={false} role="link" render={<Link to="/stores/new" />}>
-          <Plus />
-          {t("stores_create")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("stores_title")}
+        actions={
+          <Button nativeButton={false} role="link" render={<Link to="/stores/new" />}>
+            <Plus />
+            {t("stores_create")}
+          </Button>
+        }
+      />
       <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
       <DataTable
         data={stores.data.stores}
@@ -42,10 +45,16 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
       accessorKey: "name",
       header: t("admin_store"),
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <StoreIcon name={row.original.name} logo={row.original.logo} />
+        <Link
+          className="inline-flex min-h-11 max-w-sm items-center gap-3 font-medium whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current wrap-anywhere"
+          to="/admin/stores/$storeId/floor"
+          params={{ storeId: row.original.id }}
+        >
+          <span aria-hidden="true">
+            <StoreIcon name={row.original.name} logo={row.original.logo} />
+          </span>
           {row.original.name}
-        </div>
+        </Link>
       ),
     },
     {
@@ -55,20 +64,9 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
     },
     {
       id: "actions",
-      header: t("admin_details"),
+      header: t("common_actions"),
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            nativeButton={false}
-            role="link"
-            render={
-              <Link to="/admin/stores/$storeId/floor" params={{ storeId: row.original.id }} />
-            }
-          >
-            {t("admin_live")}
-            <ArrowUpRight />
-          </Button>
           <Button
             variant="ghost"
             nativeButton={false}

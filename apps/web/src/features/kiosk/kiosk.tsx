@@ -452,11 +452,11 @@ function TableSession({
                   variant="ghost"
                   type="button"
                   data-ui="basket-total"
-                  className="col-span-2 max-lg:col-span-1 flex min-w-0 items-center gap-2 p-0 text-left h-auto min-h-11 whitespace-normal"
+                  className="col-span-2 max-lg:col-span-1 flex min-w-0 items-center gap-2 p-0 text-left h-auto min-h-14"
                   onClick={() => setSection("cart")}
                 >
                   <ShoppingBag size={20} aria-hidden="true" />
-                  <span className="min-w-0 text-xs leading-normal text-muted-foreground">
+                  <span className="min-w-0 text-sm leading-normal text-muted-foreground">
                     {t("kiosk_cart")}
                     <strong className="block wrap-break-word text-lg leading-normal tracking-tight text-foreground font-semibold">
                       {money(data.cart.total, locale)}
@@ -467,7 +467,7 @@ function TableSession({
                   variant="default"
                   size="lg"
                   type="button"
-                  className="col-span-3 max-lg:col-span-1 min-w-0 justify-between h-11 px-3 whitespace-normal"
+                  className="col-span-3 max-lg:col-span-1 min-w-0 justify-between px-3"
                   disabled={
                     !!snapshot ||
                     !data.cart.complete ||
@@ -628,13 +628,14 @@ function KioskHeader({
         <Brand />
       </a>
       <StoreLogo logo={logo} />
-      <div className="mr-auto flex min-w-0 items-center gap-2 text-xs">
+      <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2 text-sm">
         <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
         <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
       </div>
       <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
       <Button
         variant="outline"
+        size="lg"
         onClick={() => call.mutate(false)}
         disabled={call.isPending || data.staffCalled}
       >
@@ -651,7 +652,7 @@ function KioskMenuTabs({ data }: { data: TableState }) {
   return (
     <Tabs.List
       data-ui="menu-tabs"
-      className="flex border-b border-b-border py-0 px-3.5 gap-0 [&_button]:flex-1 [&_button]:text-xs [&_button]:min-h-12 [&_button]:py-2 [&_button]:px-1.5 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button[data-active]]:border-b-primary [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold max-lg:[&_button]:min-h-14 max-lg:[&_button]:text-xs"
+      className="flex gap-0 border-b border-border px-3 [&_button]:flex [&_button]:min-h-14 [&_button]:min-w-0 [&_button]:flex-1 [&_button]:flex-wrap [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:px-1.5 [&_button]:py-2 [&_button]:text-base [&_button]:text-muted-foreground [&_button[data-active]]:border-b-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:text-primary"
     >
       <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="menu">
         {t("kiosk_menu")}

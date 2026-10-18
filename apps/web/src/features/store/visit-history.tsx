@@ -1,6 +1,5 @@
 import { type ClosedSessionSummary } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
@@ -87,8 +86,14 @@ function visitHistoryTableColumns(
       accessorKey: "tableName",
       header: t("admin_table"),
       cell: ({ row }) => (
-        <div className="min-w-24 font-medium">
-          {row.original.tableName}
+        <div className="min-w-24">
+          <Button
+            variant="link"
+            className="h-auto min-h-11 justify-start px-0 text-left whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current"
+            onClick={() => onSelect(row.original.id)}
+          >
+            {row.original.tableName}
+          </Button>
           <span className="block text-sm font-normal text-muted-foreground">
             {row.original.guestCount} {t("admin_guests")}
           </span>
@@ -117,16 +122,6 @@ function visitHistoryTableColumns(
             locale,
           )}
         </span>
-      ),
-    },
-    {
-      id: "actions",
-      header: () => <span className="sr-only">{t("admin_details")}</span>,
-      cell: ({ row }) => (
-        <Button variant="ghost" onClick={() => onSelect(row.original.id)}>
-          {t("admin_details")}
-          <ArrowUpRight className="size-4" />
-        </Button>
       ),
     },
   ];

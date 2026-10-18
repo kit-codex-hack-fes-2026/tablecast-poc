@@ -4,6 +4,7 @@ import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
 import { useI18n } from "../../i18n/locale";
 import { floorOptions } from "./store-query";
 
@@ -56,13 +57,15 @@ export function Floor({
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_live")}</h1>
-        <span className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className={connectionDot({ connected })} />
-          {t(connected ? "admin_live_connected" : "admin_live_reconnecting")}
-        </span>
-      </div>
+      <PageHeader
+        title={t("admin_live")}
+        status={
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className={connectionDot({ connected })} />
+            {t(connected ? "admin_live_connected" : "admin_live_reconnecting")}
+          </span>
+        }
+      />
       <ErrorNotice error={state.error} onRetry={() => void state.refetch()} />
 
       <section aria-label={t("floor_current")}>
@@ -116,12 +119,14 @@ export function FloorPending() {
   const { t } = useI18n();
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("admin_live")}</h1>
-        <span role="status" className="text-sm text-muted-foreground">
-          {t("common_loading")}
-        </span>
-      </div>
+      <PageHeader
+        title={t("admin_live")}
+        status={
+          <span role="status" className="text-sm text-muted-foreground">
+            {t("common_loading")}
+          </span>
+        }
+      />
       <TableMetrics tables={[]} vacantCount={0} pending />
       <TableTimeline tables={[]} pending onSelect={() => undefined} />
     </>

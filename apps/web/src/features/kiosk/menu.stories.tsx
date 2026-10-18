@@ -32,8 +32,39 @@ export const Products: Story = {
 };
 export const EnglishProducts: Story = {
   name: "長い英語の商品名",
-  tags: ["!test"],
   globals: { locale: "en" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const name = product.text.en.displayName;
+    const card = canvas.getByRole("button", { name: new RegExp(name) });
+    await expect(card).toBeVisible();
+    await expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    await expect(canvas.getByRole("button", { name: /Shiragasumi/ })).toBeDisabled();
+  },
+};
+export const NarrowProducts: Story = {
+  name: "狭いペイン・長い英語・売切",
+  globals: { locale: "en" },
+  decorators: [
+    (Story) => (
+      <div className="w-64 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const available = canvas.getByRole("button", { name: /Tsukinagi/ });
+    const soldOut = canvas.getByRole("button", { name: /Shiragasumi/ });
+    await expect(soldOut).toBeDisabled();
+    await expect(soldOut.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      available.getBoundingClientRect().bottom,
+    );
+    await expect(available.scrollWidth).toBeLessThanOrEqual(available.clientWidth);
+    await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
+    await userEvent.click(available);
+    await expect(args.onChoose).toHaveBeenCalledWith(product);
+  },
 };
 export const Customisation: Story = {
   name: "必須カスタマイズ",

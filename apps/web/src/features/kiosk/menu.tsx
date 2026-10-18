@@ -10,9 +10,9 @@ import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
 const productGrid = tv({
-  base: "grid grid-cols-2",
+  base: "grid grid-cols-1 @xs/tablecast-menu:grid-cols-2 @2xl/tablecast-menu:grid-cols-3",
   variants: {
-    recommended: { true: "gap-3", false: "gap-y-4 gap-x-3 pt-0 px-4 pb-5 2xl:grid-cols-3" },
+    recommended: { true: "gap-3", false: "gap-y-5 gap-x-4 px-4 pb-5" },
   },
 });
 
@@ -35,7 +35,7 @@ export function ProductMenu({
       : category === "all" || product.categoryId === category,
   );
   return (
-    <>
+    <div className="@container/tablecast-menu min-w-0">
       {!productIds && masthead?.visible && (
         <div
           data-theme-part="menu-masthead"
@@ -50,20 +50,18 @@ export function ProductMenu({
             width={masthead.logoWidth}
             height={masthead.logoHeight}
           />
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-base font-semibold">
             {catalog.configuration.storeName ?? catalog.storeName}
           </h2>
         </div>
       )}
       {!productIds && <MenuBanners catalog={catalog} onChoose={onChoose} />}
       {!productIds && (
-        <fieldset
-          className="flex gap-1.5 overflow-x-auto pt-3.5 px-4 pb-3 scrollbar-none"
-          aria-label={t("kiosk_menu")}
-        >
+        <fieldset className="flex gap-2 overflow-x-auto p-4" aria-label={t("kiosk_menu")}>
           <Button
-            className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
+            className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
             variant="ghost"
+            size="lg"
             type="button"
             data-theme-part="category-button"
             aria-pressed={category === "all"}
@@ -73,8 +71,9 @@ export function ProductMenu({
           </Button>
           {catalog.configuration.categories.map((item) => (
             <Button
-              className="shrink-0 min-h-10 py-2 px-3 border border-border rounded-md text-xs whitespace-nowrap [&[aria-pressed='true']]:border-primary [&[aria-pressed='true']]:bg-primary [&[aria-pressed='true']]:text-card"
+              className="max-w-full shrink-0 border-border px-4 aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
               variant="ghost"
+              size="lg"
               type="button"
               key={item.id}
               data-theme-part="category-button"
@@ -100,7 +99,7 @@ export function ProductMenu({
           <Button
             variant="ghost"
             type="button"
-            className="flex rounded-md min-w-0 disabled:opacity-65 h-auto flex-col items-stretch justify-start whitespace-normal p-0 text-left"
+            className="h-full min-w-0 flex-col items-stretch justify-start gap-0 rounded-xl p-2 text-left disabled:opacity-70"
             data-theme-part="product-card"
             key={product.id}
             onClick={() => onChoose(product)}
@@ -119,14 +118,14 @@ export function ProductMenu({
               ) : (
                 <span className="text-muted-foreground flex flex-col items-center gap-1.5">
                   <ImageOff size={26} strokeWidth={1} aria-hidden="true" />
-                  <small className="text-xs">{t("kiosk_no_image")}</small>
+                  <small className="text-sm">{t("kiosk_no_image")}</small>
                 </span>
               )}
             </span>
-            <span className="flex flex-col flex-1 pt-2.5 px-0 pb-0">
+            <span className="flex flex-1 flex-col pt-3">
               {(!product.available ||
                 (product.imageKey && product.imageKind === "illustration")) && (
-                <span className="mb-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="mb-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                   {!product.available && (
                     <span className="rounded-sm bg-muted px-1.5 py-1 font-medium text-foreground">
                       {t("kiosk_sold_out")}
@@ -137,10 +136,10 @@ export function ProductMenu({
                   )}
                 </span>
               )}
-              <strong className="block text-xs leading-relaxed font-medium flex-1 2xl:text-sm">
+              <strong className="block flex-1 text-base leading-snug font-semibold wrap-anywhere">
                 {product.text[locale].displayName}
               </strong>
-              <span className="flex items-center justify-between gap-1 text-xs font-semibold mt-1">
+              <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">
                 {money(product.price, locale)}
                 <span
                   className="flex items-center justify-center rounded-full bg-muted size-7"
@@ -153,6 +152,6 @@ export function ProductMenu({
           </Button>
         ))}
       </div>
-    </>
+    </div>
   );
 }

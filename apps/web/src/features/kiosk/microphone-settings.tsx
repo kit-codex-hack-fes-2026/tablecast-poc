@@ -91,7 +91,7 @@ export function MicrophoneSettings({
       }}
     >
       <DialogPrimitive.Trigger
-        render={<Button variant="outline" size="icon" className="size-11" />}
+        render={<Button variant="outline" size="icon" className="size-11 min-h-11" />}
         aria-label={t("kiosk_microphone_settings")}
       >
         <Mic className="size-5" aria-hidden="true" />

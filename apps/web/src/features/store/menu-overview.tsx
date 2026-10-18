@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
+import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -68,25 +69,25 @@ export function MenuOverview({
         <ArrowLeft />
         {t(menuLabels[section])}
       </Button>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">
-          {item?.text[locale].displayName ?? t(menuLabels[section])}
-        </h1>
-        {(role === "owner" || role === "admin") && (
-          <StartConfigurationEditing
-            key={storeId}
-            section={section}
-            itemId={itemId}
-            onSelect={(draftId) =>
-              void navigate({
-                to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
-                params: { storeId, draftId, section, itemId },
-                search,
-              })
-            }
-          />
-        )}
-      </div>
+      <PageHeader
+        title={item?.text[locale].displayName ?? t(menuLabels[section])}
+        actions={
+          (role === "owner" || role === "admin") && (
+            <StartConfigurationEditing
+              key={storeId}
+              section={section}
+              itemId={itemId}
+              onSelect={(draftId) =>
+                void navigate({
+                  to: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+                  params: { storeId, draftId, section, itemId },
+                  search,
+                })
+              }
+            />
+          )
+        }
+      />
       {section !== "cast" && !item ? (
         <p>{t("menu_item_missing")}</p>
       ) : (
