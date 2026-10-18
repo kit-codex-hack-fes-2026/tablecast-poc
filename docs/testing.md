@@ -249,6 +249,8 @@ Vitestの`results.json`によるduration metadata cacheはAPI・Componentで試�
 
 Playwright本体のcache keyはOS・architecture・Playwright版・ブラウザー構成を含む。Chromiumは`--only-shell`でheadless shellだけを取得する。OS依存は別の共通actionでAPT取得済みの`.deb`をcacheする。keyはrunner imageのOS/版・architecture・Playwright版・ブラウザー構成を含み、同じOS・architecture・Playwright・ブラウザー構成ならimageの更新前のarchivesも復元する。`playwright install-deps`はcache hit時も実行し、APTの最新indexによる依存解決と整合性確認、展開・設定を省略しない。追加・更新パッケージだけを取得し、インストール済みの`/usr`やdpkg状態は復元しない。cache復元・未命中時のdownload・OS依存の所要時間をActionsで個別に確認する。cache展開にも時間がかかるため、高速化を未計測のまま保証しない。[PlaywrightのCI資料](https://playwright.dev/docs/ci#caching-browsers) と[Actionsのparallel step](https://github.blog/changelog/2026-06-25-actions-steps-can-now-be-run-in-parallel/)を参照する。
 
+ComponentとE2Eのbrowser取得・OS依存導入は、通常の連続stepで実行する。runner 2.337.0では並列compositeの後処理で非並行collectionの破損を観測したため、cache等のpost actionを登録するcomposite同士を同時実行しない。失敗ログにstackはなくrunner内部の特定箇所までは断定しない。試験job・shard・workerの並列実行、取得cache、case予算とretry 0は維持する。テスト成功と準備・後処理の成功は別に確認する。
+
 `RUNNER_ENVIRONMENT=github-hosted`の使い捨てVMでは、公式CLIのOS依存導入中だけAPTに`--force-unsafe-io`を渡す。展開ファイルのfsyncを省き、dpkg DBの同期・依存解決・署名確認は維持する。専用の一時configは`EXIT` trapで除去し、試験中のD1やアプリのI/Oへ適用しない。クラッシュしたVMは失敗として破棄し、そのOS状態を復元しない。self-hostedではこの設定を使わない。[Debianのdpkg FAQ](https://wiki.debian.org/Teams/Dpkg/FAQ)の範囲に限定し、展開・設定の時間と全必須チェックを実CIで比較する。
 
 ## E2Eの隔離
