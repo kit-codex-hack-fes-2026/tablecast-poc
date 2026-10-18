@@ -666,21 +666,23 @@ function VoiceControls({
         ) : (
           <VoiceIdle label={phase} state={visualState} />
         ))}
+      {compactControls && (
+        <div className="flex h-7 items-center">
+          {active && (
+            <Suspense fallback={null}>
+              <AudioWaveform
+                compact
+                state={visualState}
+                toolLabel={toolPhase}
+                track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+                label={phase}
+              />
+            </Suspense>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3">
-        {compactControls && active && (
-          <Suspense fallback={null}>
-            <AudioWaveform
-              compact
-              state={visualState}
-              toolLabel={toolPhase}
-              track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-              label={phase}
-            />
-          </Suspense>
-        )}
-        {!compactControls && (
-          <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
-        )}
+        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
         <div className="flex min-w-44 flex-1 items-center gap-2">
           {onSpeedChange && (
             <Slider.Root
@@ -724,7 +726,7 @@ function VoiceControls({
   );
 }
 
-export function VoiceToggle({
+function VoiceToggle({
   view,
   onStart,
   controlDisabled,

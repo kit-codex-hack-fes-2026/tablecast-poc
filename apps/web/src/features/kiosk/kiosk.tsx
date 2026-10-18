@@ -43,7 +43,7 @@ import { ProductPage } from "./product-dialog";
 import { latestTable } from "./table-cache";
 import { tableCatalogOptions, tableQueryKey, tableOptions } from "./table-query";
 import { VoiceConnection, type VoiceView } from "./voice-connection";
-import { VoicePanel, VoiceToggle } from "./voice-panel";
+import { VoicePanel } from "./voice-panel";
 import { KioskGames } from "./games";
 
 // 遅い応答が新しい画面操作・カート状態を巻き戻さない。
@@ -373,9 +373,6 @@ function TableSession({
           data={data}
           language={language}
           call={call}
-          view={view}
-          onToggleVoice={toggleVoice}
-          voiceDisabled={view.status === "stopping" || language.isPending}
         />
         <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
@@ -594,18 +591,12 @@ function KioskHeader({
   data,
   language,
   call,
-  view,
-  onToggleVoice,
-  voiceDisabled,
 }: {
   logo?: ThemeImage | null;
   storeName?: string;
   data: TableState;
   language: ReturnType<typeof useTableSession>["language"];
   call: ReturnType<typeof useTableSession>["call"];
-  view: VoiceView;
-  onToggleVoice: () => void;
-  voiceDisabled: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -636,7 +627,6 @@ function KioskHeader({
       <div className="[&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-14">
         <LanguageSwitch onChange={(next) => language.mutate(next)} disabled={language.isPending} />
       </div>
-      <VoiceToggle view={view} onStart={onToggleVoice} controlDisabled={voiceDisabled} />
     </header>
   );
 }

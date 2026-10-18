@@ -353,7 +353,7 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
 
 const orderPanel = () => document.getElementById("tablecast-order");
 it.each(["listening", "speaking"] as const)(
-  "%sでは実音声の小さな波形を速度行へ表示し、停止で解析を外す",
+  "%sでは実音声の小さな波形を音声操作バーへ表示し、停止でも操作位置を保つ",
   async (status) => {
     await page.viewport(390, 844);
     const audio = new AudioContext();
@@ -395,15 +395,16 @@ it.each(["listening", "speaking"] as const)(
       const microphone = page.getByRole("button", { name: ja.kiosk_microphone_settings });
       await expect.element(microphone).toBeVisible();
       const waveBounds = figure.element().getBoundingClientRect();
-      const microphoneBounds = microphone.element().getBoundingClientRect();
-      expect(
-        Math.abs(
-          waveBounds.top +
-            waveBounds.height / 2 -
-            microphoneBounds.top -
-            microphoneBounds.height / 2,
-        ),
-      ).toBeLessThan(2);
+      const stop = page.getByRole("button", { name: ja.kiosk_voice_stop, exact: true });
+      await expect.element(stop).toBeVisible();
+      const controls = stop.element().closest("[data-theme-part=voice-controls]");
+      if (!(controls instanceof HTMLElement)) throw new Error("音声操作バーが必要です");
+      const controlHeight = controls.getBoundingClientRect().height;
+      expect(controls.contains(figure.element())).toBe(true);
+      expect(waveBounds.bottom).toBeLessThanOrEqual(stop.element().getBoundingClientRect().top);
+      expect(stop.element().getBoundingClientRect().left).toBeLessThan(
+        microphone.element().getBoundingClientRect().left,
+      );
       const canvas = figure.element().querySelector("canvas");
       if (!(canvas instanceof HTMLCanvasElement)) throw new Error("波形canvasが必要です");
       await expect
@@ -417,10 +418,23 @@ it.each(["listening", "speaking"] as const)(
         .toBe(true);
       await screen.rerender(
         <LocaleProvider initialLocale="ja" persist={false}>
-          <VoicePanel compactControls view={{ status: "paused" }} lines={[]} onStart={() => {}} />
+          <VoicePanel
+            compactControls
+            view={{ status: "paused" }}
+            lines={[]}
+            onStart={() => {}}
+            speechSpeed={1}
+            onSpeedChange={() => {}}
+            onMicrophoneChange={() => {}}
+            onMicrophoneRefresh={() => {}}
+          />
         </LocaleProvider>,
       );
       await expect.element(figure).not.toBeInTheDocument();
+      const resume = page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true });
+      await expect.element(resume).toBeVisible();
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBe(controls);
+      expect(controls.getBoundingClientRect().height).toBe(controlHeight);
     } finally {
       oscillator.stop();
       oscillator.disconnect();
@@ -485,6 +499,10 @@ it.each(["ja", "en"] as const)(
         .toHaveAttribute("aria-orientation", width === 1024 ? "vertical" : "horizontal");
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
+      expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
+      expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
+        false,
+      );
       for (const control of [resume, review]) {
         await expect.element(control).toBeVisible();
         const bounds = control.element().getBoundingClientRect();
