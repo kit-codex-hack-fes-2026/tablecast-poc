@@ -239,9 +239,7 @@ test("戻り先なしのログインはホームで使うフロアを一括取�
   expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
 
   const main = page.locator("#tablecast-admin-main");
-  await page
-    .getByRole("heading", { name: "ChatGPTから、お店の運営をもっと身近に" })
-    .scrollIntoViewIfNeeded();
+  await page.getByRole("heading", { name: "ChatGPTとつなぐ" }).scrollIntoViewIfNeeded();
   await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
   const previousScroll = await main.evaluate((element) => element.scrollTop);
   await page.getByRole("link", { name: "統計", exact: true }).click();
@@ -302,6 +300,7 @@ test("実Routerの遷移と既定エラー画面を接続し、再試行で復�
     });
   });
   try {
+    await page.getByRole("button", { name: "店舗管理", exact: true }).click();
     await page.getByRole("link", { name: "端末", exact: true }).click();
     await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();

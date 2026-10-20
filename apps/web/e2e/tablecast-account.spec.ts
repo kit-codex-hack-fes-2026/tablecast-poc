@@ -67,6 +67,7 @@ test("Googleログインから店舗作成・招待メールの参加まで接�
   await expect(
     page.getByRole("main").locator("[aria-busy]").filter({ has: productTable }),
   ).toHaveAttribute("aria-busy", "false");
+  await page.getByRole("button", { name: "店舗管理", exact: true }).click();
   await page.getByRole("link", { name: "メンバー", exact: true }).click();
   await expect(page).toHaveURL(/\/members$/);
   await expect(
