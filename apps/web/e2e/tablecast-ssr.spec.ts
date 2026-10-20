@@ -40,11 +40,11 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     requests.length = 0;
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-    // 実際にメニューを開いてhydration後の操作可能状態を確認する。
+    // ポインターが移動後のロゴへ重なって先読みするのを避け、hydration後の操作をキーボードで確認する。
     const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
     await expect(navigation).toBeEnabled();
     const wasExpanded = await navigation.getAttribute("aria-expanded");
-    await navigation.click();
+    await navigation.press("Enter");
     await expect(navigation).toHaveAttribute("aria-expanded", String(wasExpanded !== "true"));
     expect(requests).toEqual([]);
   }

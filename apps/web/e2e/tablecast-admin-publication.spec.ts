@@ -16,7 +16,7 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
   page,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   const storeId = "tablecast-hanul";
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
@@ -61,7 +61,38 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
     await expect(page.getByRole("button", { name: ja.admin_validate, exact: true })).toBeEnabled();
     await page.goto(`${reviewPath}/products/${product.id}`);
+    await page.getByRole("link", { name: ja.editor_basic_information, exact: true }).click();
     const price = page.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+    try {
+      await expect(price).toBeVisible();
+    } catch (error) {
+      await testInfo.attach("tablecast-product-layout", {
+        body: JSON.stringify(
+          await page
+            .locator("form, fieldset, section, input[type=number]")
+            .evaluateAll((elements) =>
+              elements.map((element) => {
+                const style = getComputedStyle(element);
+                const bounds = element.getBoundingClientRect();
+                return {
+                  tag: element.tagName,
+                  id: element.id,
+                  className: element.getAttribute("class"),
+                  hidden: element.getAttribute("hidden"),
+                  display: style.display,
+                  visibility: style.visibility,
+                  contentVisibility: style.contentVisibility,
+                  bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+                };
+              }),
+            ),
+          null,
+          2,
+        ),
+        contentType: "application/json",
+      });
+      throw error;
+    }
     await price.fill(String(product.price + 100));
     await page.getByRole("button", { name: ja.common_save, exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
