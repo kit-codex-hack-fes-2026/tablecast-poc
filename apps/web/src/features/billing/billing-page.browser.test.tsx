@@ -115,7 +115,7 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
     path: "../../../test-results/tablecast-billing-plans.png",
     fullPage: false,
   });
-  const filter = page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" });
+  const filter = page.getByRole("searchbox", { name: "卓名で絞り込み" });
   await userEvent.click(filter);
   await userEvent.type(filter, "T01");
   await expect.element(filter).toHaveFocus();
@@ -250,7 +250,7 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
   await expect
     .element(billingLink)
     .toHaveAttribute("href", `/billing/${billingFixture.organization.id}`);
-  await userEvent.fill(page.getByLabelText("利用状況の対象月（UTC）"), "2026-09");
+  await userEvent.fill(page.getByLabelText("利用状況の対象月"), "2026-09");
   await expect
     .poll(() =>
       fetch.mock.calls.some(
@@ -261,10 +261,7 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
     .toBe(true);
   const oldResponse = Promise.withResolvers<Response>();
   fetch.mockImplementationOnce(() => oldResponse.promise);
-  await userEvent.fill(
-    page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" }),
-    "old-table",
-  );
+  await userEvent.fill(page.getByRole("searchbox", { name: "卓名で絞り込み" }), "old-table");
   fetch.mockImplementation(async (input, init) => {
     const request = new Request(input, init);
     const pathname = new URL(request.url).pathname;
@@ -318,7 +315,7 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
       ),
     )
     .toBe(true);
-  await expect.element(page.getByLabelText("利用状況の対象月（UTC）")).toHaveValue("2026-10");
+  await expect.element(page.getByLabelText("利用状況の対象月")).toHaveValue("2026-10");
   await expect.element(billingLink).toHaveAttribute("href", "/billing/tablecast-new-org");
   oldResponse.resolve(
     Response.json({
@@ -332,7 +329,7 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
 it("狭い画面の店舗切替は送信中と失敗をナビ内に示し、入力を保って再試行できる", async () => {
   const { fetch, router } = await show();
   await page.viewport(390, 844);
-  const filter = page.getByRole("searchbox", { name: "卓名・来店IDで絞り込み" });
+  const filter = page.getByRole("searchbox", { name: "卓名で絞り込み" });
   await userEvent.fill(filter, "old-table");
   await expect.poll(() => client.isFetching()).toBe(0);
   const originalFetch = fetch.getMockImplementation();
@@ -378,7 +375,7 @@ it("狭い画面の店舗切替は送信中と失敗をナビ内に示し、入�
     await expect.poll(() => router.state.location.pathname).toBe("/billing/tablecast-new-org");
     await expect.element(navigation).not.toBeInTheDocument();
     await expect.element(filter).toHaveValue("");
-    await expect.element(page.getByLabelText("利用状況の対象月（UTC）")).toHaveValue("2026-10");
+    await expect.element(page.getByLabelText("利用状況の対象月")).toHaveValue("2026-10");
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   } finally {
     failedSwitch.resolve(Response.json({}, { status: 503 }));

@@ -52,6 +52,8 @@ export const Restored: Story = {
         at: 1792357300000,
         actorId: "tablecast-staff",
         actorName: null,
+        actorEmail: null,
+        actorImage: null,
       },
       ...configurationHistoryFixture.entries,
     ],
@@ -70,6 +72,8 @@ export const Narrow: Story = {
     entries: configurationHistoryFixture.entries.map((entry) => ({
       ...entry,
       actorName: "TableCast Restaurant Operations Administrator",
+      actorEmail: "staff@example.test",
+      actorImage: null,
     })),
   },
 };

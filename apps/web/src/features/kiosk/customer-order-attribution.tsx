@@ -1,3 +1,4 @@
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionFeedback } from "../../components/action-feedback";
 import { useAppForm } from "../../components/form";
@@ -72,7 +73,7 @@ export function CustomerOrderAttribution({
                 <option value="">{t("customer_choose_person")}</option>
                 {participants.data.participants.map((person) => (
                   <option key={person.id} value={person.id}>
-                    {person.name ?? t("customer_anonymous")}
+                    <ParticipantIdentity name={person.name} />
                   </option>
                 ))}
               </NativeSelect>

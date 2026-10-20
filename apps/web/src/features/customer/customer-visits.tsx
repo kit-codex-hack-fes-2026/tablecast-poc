@@ -1,3 +1,5 @@
+import { ParticipantIdentity } from "../../components/user-identity";
+import { calendarDate } from "../../i18n/format";
 import {
   useInfiniteQuery,
   useMutation,
@@ -19,11 +21,6 @@ import {
   customerVisitOptions,
   customerVisitsOptions,
 } from "./customer-visit-query";
-
-const visitDate = {
-  ja: new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-};
 
 export function CustomerVisits({ storeId }: { storeId: string }) {
   const { t, locale } = useI18n();
@@ -60,12 +57,12 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
                         >
                           <span className="min-w-0">
                             <span className="block font-medium wrap-anywhere">
-                              {visitDate[locale].format(visit.openedAt)} · {visit.tableName}
+                              {calendarDate(visit.openedAt, locale)} · {visit.tableName}
                             </span>
                             <span className="mt-1 block text-sm text-muted-foreground">
-                              {visit.participants
-                                .map((person) => person.name ?? t("customer_anonymous"))
-                                .join(" · ")}
+                              {visit.participants.map((person) => (
+                                <ParticipantIdentity key={person.id} name={person.name} />
+                              ))}
                             </span>
                           </span>
                           <ArrowRight aria-hidden className="size-4 shrink-0" />
@@ -161,7 +158,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
       <header className="space-y-2">
         <p className="text-sm text-muted-foreground">{t("customer_visits")}</p>
         <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
-          {visitDate[locale].format(data.openedAt)} · {data.tableName}
+          {calendarDate(data.openedAt, locale)} · {data.tableName}
         </h1>
         <p
           role="status"
@@ -188,7 +185,9 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         <ul className="space-y-3">
           {data.participants.map((person) => (
             <li key={person.id} className="flex flex-wrap items-center gap-2">
-              <span>{person.name ?? t("customer_anonymous")}</span>
+              <span>
+                <ParticipantIdentity name={person.name} />
+              </span>
               {person.id === data.participantId && <small>{t("customer_you")}</small>}
               {person.leftAt !== null && (
                 <small className="text-muted-foreground">{t("customer_disconnected")}</small>

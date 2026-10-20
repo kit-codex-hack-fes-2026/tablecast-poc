@@ -21,7 +21,13 @@ import {
   startGame,
   validateGame,
 } from "../src/modules/games/service";
-import { getGame, getGameRun, getGameVersion, listTableGames } from "../src/modules/games/queries";
+import {
+  getGame,
+  getGameRun,
+  getGameVersion,
+  listGames,
+  listTableGames,
+} from "../src/modules/games/queries";
 import { createDemo, resetDemo } from "../src/modules/demo/service";
 import { updateCart } from "../src/modules/orders/service";
 import { device, deviceToken, setupFixture } from "./fixture";
@@ -49,6 +55,10 @@ it("未検証・未試遊・MCP承認を拒否し、人間が確認した版だ�
     gameId: "tablecast-dice",
     package: gamePackage,
   });
+  expect((await listGames(api, staff)).games).toEqual([
+    expect.objectContaining({ id: "tablecast-dice", name: gamePackage.manifest.name }),
+  ]);
+  expect((await listGames(api, { ...staff, storeId: "tablecast-other" })).games).toEqual([]);
   const approval = { versionId, expectedRevision: 0, approved: true as const };
   expect((await listTableGames(api, device)).games).toEqual([]);
   await expect(previewGame(api, staff, "tablecast-dice", versionId)).rejects.toMatchObject({

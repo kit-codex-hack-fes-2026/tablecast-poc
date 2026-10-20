@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { customerMemoryInputSchema } from "@tablecast/api/schema";
@@ -8,10 +9,6 @@ import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { customerMemoriesOptions } from "./customer-memory-query";
-const memoryDates = {
-  ja: new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-};
 type Memory = Awaited<
   ReturnType<NonNullable<ReturnType<typeof customerMemoriesOptions>["queryFn"]>>
 >["memories"][number];
@@ -60,7 +57,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
                     ? "customer_memory_voice"
                     : "customer_memory_manual",
                 )}{" "}
-                · {memoryDates[locale].format(memory.createdAt)}
+                · {calendarDate(memory.createdAt, locale)}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setEditing(memory)}>

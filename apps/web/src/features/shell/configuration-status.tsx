@@ -8,7 +8,15 @@ import { m } from "../../paraglide/messages";
 export function DraftStatus({ status }: { status: ConfigDraft["status"] }) {
   const { t } = useI18n();
   return (
-    <Badge variant={status === "ready" || status === "published" ? "success" : "inactive"}>
+    <Badge
+      variant={
+        status === "published" || status === "ready"
+          ? "success"
+          : status === "draft"
+            ? "info"
+            : "inactive"
+      }
+    >
       {status === "ready" || status === "published" ? (
         <Check className="size-4" />
       ) : (
@@ -35,15 +43,6 @@ export function ConfigurationStatus({
   error?: unknown;
 }) {
   const { t, locale } = useI18n();
-  const state = pending
-    ? "workflow_saving"
-    : error
-      ? apiError(error)?.status === 409
-        ? "workflow_conflict"
-        : "workflow_failed"
-      : dirty
-        ? "workflow_dirty"
-        : undefined;
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm" role="status">
       <span hidden={!storeName} className="min-w-0 wrap-anywhere font-semibold">
@@ -52,26 +51,51 @@ export function ConfigurationStatus({
       <span>{m.workflow_published_version({ version: publishedVersion }, { locale })}</span>
       {draft && (
         <>
-          <span className="wrap-anywhere">
-            {m.workflow_draft_identity({ id: draft.id.slice(0, 8) }, { locale })}
+          <span className="inline-flex flex-wrap items-center gap-2 border-l-2 border-info/30 pl-3">
+            <FilePenLine aria-hidden="true" className="size-4 text-info" />
+            {t("workflow_draft_identity")}
+            <span className="text-muted-foreground">
+              {m.workflow_base_version({ version: draft.baseVersion }, { locale })}
+            </span>
           </span>
-          <span>{m.workflow_base_version({ version: draft.baseVersion }, { locale })}</span>
-          <span>{m.workflow_revision({ version: draft.version }, { locale })}</span>
           <DraftStatus status={draft.status} />
         </>
       )}
-      {state && (
-        <Badge variant={error ? "destructive" : "secondary"}>
-          {pending ? (
-            <LoaderCircle className="size-4 motion-safe:animate-spin" />
-          ) : error ? (
-            <TriangleAlert className="size-4" />
-          ) : (
-            <FilePenLine className="size-4" />
-          )}
-          {t(state)}
-        </Badge>
-      )}
+      <SaveStatus dirty={dirty} pending={pending} error={error} />
     </div>
   );
+}
+
+function SaveStatus({
+  dirty,
+  pending,
+  error,
+}: {
+  dirty: boolean;
+  pending: boolean;
+  error?: unknown;
+}) {
+  const { t } = useI18n();
+  if (pending)
+    return (
+      <Badge variant="info">
+        <LoaderCircle className="size-4 motion-safe:animate-spin" />
+        {t("workflow_saving")}
+      </Badge>
+    );
+  if (error)
+    return (
+      <Badge variant="destructive">
+        <TriangleAlert className="size-4" />
+        {t(apiError(error)?.status === 409 ? "workflow_conflict" : "workflow_failed")}
+      </Badge>
+    );
+  if (dirty)
+    return (
+      <Badge variant="warning">
+        <FilePenLine className="size-4" />
+        {t("workflow_dirty")}
+      </Badge>
+    );
+  return null;
 }

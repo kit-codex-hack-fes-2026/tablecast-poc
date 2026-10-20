@@ -228,6 +228,8 @@ export const configurationHistoryEntrySchema = z.object({
   at: z.number().int(),
   actorId: z.string(),
   actorName: z.string().nullable(),
+  actorEmail: z.string().nullable(),
+  actorImage: z.string().nullable(),
 });
 export const configurationHistoryPageSchema = z.object({
   entries: z.array(configurationHistoryEntrySchema),
@@ -247,6 +249,8 @@ export const configurationReleaseSchema = z.object({
   publishedAt: z.number().int(),
   publishedBy: z.string(),
   publisherName: z.string().nullable(),
+  publisherEmail: z.string().nullable(),
+  publisherImage: z.string().nullable(),
   configuration: configurationSchema.nullable(),
   changes: configurationChangesSchema,
 });

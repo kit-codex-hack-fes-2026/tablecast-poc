@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import {
   useInfiniteQuery,
   useQuery,
@@ -95,9 +96,12 @@ export function StoreHome({ today }: { today: string }) {
               to="/admin/stores/$storeId/floor"
               params={{ storeId: store.id }}
               search={{ view: "list", filter }}
-              className={`group flex min-h-24 items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${count > 0 ? "border-amber-300 bg-amber-50" : "border-border bg-card"}`}
+              className={`group flex min-h-24 items-center gap-3 rounded-xl border p-4 transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${count > 0 ? "border-warning/35 bg-warning-soft" : "border-border bg-card"}`}
             >
-              <Icon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+              <Icon
+                aria-hidden="true"
+                className={`size-5 shrink-0 ${count > 0 ? "text-warning" : "text-info"}`}
+              />
               <span className="flex-1 text-sm font-medium">{t(label)}</span>
               <span className="text-2xl font-semibold tabular-nums">
                 {count.toLocaleString(locale)}
@@ -243,7 +247,8 @@ function HomeStatistics({ storeId, today }: { storeId: string; today: string }) 
             <p className="text-sm text-amber-800">{t("statistics_missing")}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            {today} · {t("statistics_generated")}: <DateTime value={result.generatedAt} />
+            {calendarDate(today, locale)} · {t("statistics_generated")}:{" "}
+            <DateTime value={result.generatedAt} />
           </p>
         </>
       )}

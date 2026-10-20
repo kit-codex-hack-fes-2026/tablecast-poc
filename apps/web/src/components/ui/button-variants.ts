@@ -7,13 +7,13 @@ export const buttonVariants = tv({
       voice:
         "border-white/10 bg-neutral-950 text-white shadow-lg shadow-black/20 inset-shadow-sm inset-shadow-white/20 hover:bg-neutral-800 active:shadow-xs",
       outline:
-        "border-border bg-card text-foreground shadow-xs hover:bg-secondary aria-expanded:bg-secondary",
+        "border-input bg-card text-foreground shadow-xs hover:border-primary hover:bg-secondary aria-expanded:bg-secondary",
       secondary: "bg-secondary text-secondary-foreground hover:bg-muted aria-expanded:bg-muted",
       ghost:
         "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
       destructive:
         "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-      link: "text-primary underline-offset-4 hover:underline",
+      link: "text-primary underline decoration-primary/40 underline-offset-4 hover:decoration-current",
     },
     size: {
       text: "h-auto min-h-11 gap-1 px-0 py-2 text-sm underline underline-offset-4",

@@ -400,7 +400,7 @@ function HotspotEditor({
               }
             >
               {!configuration.products.some((item) => item.id === spot.productId) && (
-                <option value={spot.productId}>{spot.productId}</option>
+                <option value={spot.productId}>{t("object_unknown_product")}</option>
               )}
               {configuration.products.map((product) => (
                 <option key={product.id} value={product.id}>

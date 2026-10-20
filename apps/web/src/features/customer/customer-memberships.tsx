@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, QrCode } from "lucide-react";
@@ -5,10 +6,6 @@ import { Button } from "../../components/ui/button";
 import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
 import { customerMembershipsOptions } from "./customer-query";
-const dates = {
-  ja: new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo" }),
-};
 
 export function CustomerMemberships() {
   const { t, locale } = useI18n();
@@ -32,7 +29,7 @@ export function CustomerMemberships() {
                 <div className="min-w-0">
                   <p className="text-lg font-semibold wrap-anywhere">{membership.name}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {t("customer_since")} {dates[locale].format(membership.joinedAt)}
+                    {t("customer_since")} {calendarDate(membership.joinedAt, locale)}
                   </p>
                 </div>
                 <ArrowUpRight aria-hidden className="size-5 shrink-0" />

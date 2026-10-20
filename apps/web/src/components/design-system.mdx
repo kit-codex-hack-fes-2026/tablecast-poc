@@ -17,6 +17,8 @@ import { Meta } from "@storybook/addon-docs/blocks";
 | 主操作         | `bg-primary text-primary-foreground`     | Button default                   |
 | 補助・選択領域 | `bg-secondary text-secondary-foreground` | 強調し過ぎない内容               |
 | 補足           | `text-muted-foreground`                  | 日時・説明。重要な価格を弱めない |
+| 選択・進行     | `text-info bg-info-soft`                 | 下書き・利用中                   |
+| 要対応         | `text-warning bg-warning-soft`           | 呼出・会計待ち                   |
 | 正常           | `text-success bg-success-soft`           | 確認済み等。状態名も併記         |
 | 失敗・破壊操作 | `text-destructive`                       | ErrorNotice、破棄確認            |
 | 輪郭・入力     | `border-border` / `border-input`         | 内容区切りと入力を区別           |
@@ -52,3 +54,11 @@ Tailwindの標準スケールを使う。項目内は `gap-2`、同じ対象の�
 `components/ui` は業務非依存の操作・表示、`components` はフォーム・翻訳・状態等の共通表示、`features` は業務の状態と操作を所有する。金額・権限・注文確定はAPIの判断を使う。
 
 各部品のDocsで用途・props・StoryのSourceを確認する。NativeSelectとSelect、TableとDataTable、FieldErrorsとErrorNoticeなど、似ていても責務が違うものを置き換えない。
+
+## 対象を形で見分ける
+
+人物はUserIdentityの丸い画像・人物アイコンと名前・メールを一組にし、長いメールも折り返す。客向け同席者はParticipantIdentityを使い、共有を許可した名前だけを表示する。内部ID・短縮ハッシュを表示名へ代用しない。
+
+卓は卓名と来店、伝票状の金額、独立した詳細ボタンをまとめる。公開履歴は縦の公開版と派生する下書きで関係を補助する。静的な内容の面をボタンのように浮かせず、実行にはButton、移動には下線付きリンクを使う。状態のBadge自体は押せない。
+
+DateTimeとcalendarDateは年・月・日・曜日を言語に自然な形で表示する。JSTやハイフン区切りを表示へ足さない。Dialogとdrawerのoverlayは暗幕だけにし、背景をblurしない。

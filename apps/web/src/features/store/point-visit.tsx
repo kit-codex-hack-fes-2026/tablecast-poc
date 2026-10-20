@@ -1,3 +1,4 @@
+import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useHydrated } from "@tanstack/react-router";
@@ -50,8 +51,12 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
               return (
                 <li key={person.id} className="space-y-2">
                   {visit.data.confirmedAt === null ? (
-                    <label className="flex items-center gap-3">
+                    <label
+                      htmlFor={`tablecast-point-${person.id}`}
+                      className="flex items-center gap-3"
+                    >
                       <Checkbox
+                        id={`tablecast-point-${person.id}`}
                         checked={selectedIds.has(person.id)}
                         disabled={!hydrated || !person.active || confirm.isPending}
                         onCheckedChange={(checked) => {
@@ -61,11 +66,11 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
                           setKey(crypto.randomUUID());
                         }}
                       />
-                      {person.name}
+                      <UserIdentity user={person} compact />
                     </label>
                   ) : (
                     <p>
-                      {person.name}
+                      <UserIdentity user={person} compact />
                       {allocation ? ` · ¥${allocation.amount} · ${allocation.points} pt` : ""}
                     </p>
                   )}

@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import { barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -16,7 +17,6 @@ const formats = {
       currency: "JPY",
       maximumFractionDigits: 2,
     }),
-    date: new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric", timeZone: "UTC" }),
   },
   en: {
     number: new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }),
@@ -25,7 +25,6 @@ const formats = {
       currency: "JPY",
       maximumFractionDigits: 2,
     }),
-    date: new Intl.DateTimeFormat("en-GB", { month: "short", day: "numeric", timeZone: "UTC" }),
   },
 };
 function formatValue(amount: number, charge: boolean, locale: "ja" | "en", minutes: string) {
@@ -132,7 +131,7 @@ export function BillingUsageChart({ data }: { data: Billing }) {
             {data.daily.map((row, day) => (
               <tr key={row.day} className="border-b border-border/50 last:border-0">
                 <th scope="row" className="py-2 text-left font-normal">
-                  {formats[locale].date.format(row.day)}
+                  {calendarDate(row.day, locale)}
                 </th>
                 <td className="py-2 text-right">{format(values[day] ?? 0)}</td>
               </tr>
@@ -161,12 +160,8 @@ function DailyPlot({
   const [focused, setFocused] = useState<string | null>(null);
   const definition = useMemo(() => {
     const rows = daily.map((row, index) => ({
-      day: formats[locale].date.format(row.day),
+      day: calendarDate(row.day, locale),
       amount: values[index] ?? 0,
-      tick:
-        index === 0 || index === daily.length - 1 || (index + 1) % 7 === 0
-          ? String(new Date(row.day).getUTCDate())
-          : "",
     }));
     return defineChart({
       marks: [barY(rows, { x: "day", y: "amount", fill: "var(--color-primary)" })],
@@ -175,7 +170,7 @@ function DailyPlot({
           scale: () => scaleBand().padding(0.25),
           axis: {
             ticks: {
-              format: (value) => rows.find((row) => row.day === value)?.tick ?? "",
+              format: () => "",
             },
           },
         },
@@ -210,6 +205,14 @@ function DailyPlot({
         }
         className="[&_svg:focus-visible]:outline-2 [&_svg:focus-visible]:outline-ring [&_svg:focus-visible]:outline-offset-2"
       />
+      {daily.length > 0 && (
+        <p className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span>{calendarDate(daily[0].day, locale)}</span>
+          <span>
+            {locale === "ja" ? "から" : "to"} {calendarDate(daily[daily.length - 1].day, locale)}
+          </span>
+        </p>
+      )}
     </figure>
   );
 }

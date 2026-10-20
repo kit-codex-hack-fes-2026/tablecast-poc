@@ -62,6 +62,9 @@ it("二人が同じQRで参加でき、再読取りと同時送信で人数が�
     joinCustomerVisit(services, customer.userId, code),
   ]);
   expect(results.every((result) => result.connected)).toBe(true);
+  const participants = await getDeviceParticipants(services, tablet);
+  expect(JSON.stringify(participants)).not.toContain("@example.test");
+  expect(participants.participants.every((person) => !("email" in person))).toBe(true);
   expect(await fixtureDb.select().from(customerVisitParticipants)).toHaveLength(2);
   expect(
     (await getDeviceParticipants(services, tablet)).participants
@@ -88,6 +91,7 @@ it("退出後も同行履歴を残し、共有撤回を他会員の履歴へ反�
   });
   const history = await getCustomerVisit(services, customer, device.tableSessionId);
   expect(history.participants).toHaveLength(2);
+  expect(history.participants.every((person) => !("email" in person))).toBe(true);
   expect(
     history.participants.find((person) => person.id === result.participantId)?.name,
   ).toBeNull();

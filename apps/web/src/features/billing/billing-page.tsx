@@ -559,12 +559,6 @@ function usageColumns(
       cell: ({ row }) => (
         <div>
           <DateTime value={row.original.startedAt} />
-          <span
-            className="mt-1 block max-w-36 truncate text-xs text-muted-foreground"
-            title={row.original.sessionId}
-          >
-            {row.original.sessionId}
-          </span>
         </div>
       ),
     },

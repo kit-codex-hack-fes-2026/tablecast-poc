@@ -96,7 +96,7 @@ export function TableCalendar({
   const nowPosition = ((now - page.startAt) / (page.endAt - page.startAt)) * 100;
 
   function label(session: TimelineSession, tableName: string) {
-    return `${tableName} · ${session.guestCount} ${t("admin_guests")} · ${dateTime(session.openedAt, locale)} – ${session.closedAt === null ? t("admin_open") : dateTime(session.closedAt, locale)}`;
+    return `${tableName} · ${session.guestCount} ${t("admin_guests")} · ${dateTime(session.openedAt, locale)} ${locale === "ja" ? "から" : "to"} ${session.closedAt === null ? t("admin_open") : dateTime(session.closedAt, locale)}`;
   }
   function status(session: TimelineSession) {
     return today && session.status === "open" ? active.get(session.id) : undefined;

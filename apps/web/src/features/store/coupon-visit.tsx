@@ -1,3 +1,4 @@
+import { UserIdentity } from "../../components/user-identity";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
 import { useAppForm } from "../../components/form";
@@ -30,9 +31,8 @@ export function CouponVisit({ storeId, sessionId }: { storeId: string; sessionId
       <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
       {query.data?.requested.map((coupon) => (
         <div key={coupon.id} className="space-y-2">
-          <p>
-            {coupon.name} · {coupon.rules.title[locale]}
-          </p>
+          <h4 className="font-semibold">{coupon.rules.title[locale]}</h4>
+          <UserIdentity compact user={coupon} />
           <p>
             {coupon.rules.discountKind === "fixed"
               ? `¥${coupon.rules.discountValue}`

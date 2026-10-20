@@ -1,5 +1,5 @@
 import { Brand } from "../components/brand";
-import { Pwa, PwaInstallHelp } from "../components/pwa";
+import { Pwa } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { readPanelCookies } from "../lib/use-panel-layout";
 import { PanelLayoutProvider } from "../lib/panel-layout";
@@ -135,7 +135,6 @@ function RootContent() {
     <PanelLayoutProvider cookies={panelCookies}>
       <Pwa />
       <Outlet />
-      <PwaInstallHelp />
     </PanelLayoutProvider>
   );
 }

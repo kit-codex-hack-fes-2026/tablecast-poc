@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import { CustomerVisits } from "./customer-visits";
 import { customerConsentVersion } from "@tablecast/api/schema";
 import {
@@ -20,11 +21,6 @@ import { parseResponse, rpc } from "../../lib/api";
 import { customerStoreOptions } from "./customer-query";
 import { customerPointsOptions } from "./customer-points-query";
 import { customerCouponsOptions } from "./customer-coupons-query";
-
-const membershipDate = {
-  ja: new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo" }),
-};
 
 type CustomerStoreData = Awaited<
   ReturnType<NonNullable<ReturnType<typeof customerStoreOptions>["queryFn"]>>
@@ -93,7 +89,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="font-medium text-success">{t("customer_membership_active")}</span>
             <span className="text-muted-foreground">
-              {t("customer_since")} {membershipDate[locale].format(data.membership.joinedAt)}
+              {t("customer_since")} {calendarDate(data.membership.joinedAt, locale)}
             </span>
           </div>
         )}

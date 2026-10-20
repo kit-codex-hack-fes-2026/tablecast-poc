@@ -60,6 +60,8 @@ export async function getPointVisit(services: ApiServices, actor: Actor) {
         id: sql<string>`${customerVisitParticipants.id}`.as("participant_id"),
         membershipId: sql<string>`${customerMemberships.id}`.as("membership_id"),
         name: user.name,
+        email: user.email,
+        image: user.image,
         active: customerMemberships.active,
         joinedAt: customerVisitParticipants.joinedAt,
         leftAt: customerVisitParticipants.leftAt,

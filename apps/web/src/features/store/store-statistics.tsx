@@ -1,3 +1,4 @@
+import { calendarDate } from "../../i18n/format";
 import { barX, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
@@ -175,9 +176,9 @@ function StatisticsResults({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="font-medium tabular-nums">
-          <time dateTime={range.from}>{range.from}</time> –{" "}
-          <time dateTime={range.to}>{range.to}</time>{" "}
-          <span className="text-sm text-muted-foreground">(JST)</span>
+          <time dateTime={range.from}>{calendarDate(range.from, locale)}</time>{" "}
+          {locale === "ja" ? "から" : "to"}{" "}
+          <time dateTime={range.to}>{calendarDate(range.to, locale)}</time>
         </p>
         <Button
           variant="outline"
@@ -233,7 +234,8 @@ function StatisticsResults({
                   >
                     <table className="w-full text-sm tabular-nums">
                       <caption className="sr-only">
-                        {t(`statistics_view_${view}`)} · {range.from} – {range.to}
+                        {t(`statistics_view_${view}`)} · {calendarDate(range.from, locale)}{" "}
+                        {locale === "ja" ? "から" : "to"} {calendarDate(range.to, locale)}
                       </caption>
                       <thead className="bg-secondary/60 text-left">
                         <tr>
@@ -267,11 +269,6 @@ function StatisticsResults({
                               className="min-w-48 max-w-96 p-4 text-left font-medium wrap-anywhere"
                             >
                               {row.name ?? t("statistics_unknown")}
-                              {view === "modifiers" && (
-                                <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                                  {t("statistics_product_id")}: {row.productId}
-                                </span>
-                              )}
                             </th>
                             <td className="p-4">{row.quantity.toLocaleString(locale)}</td>
                             <td className="p-4">{row.orderingSessions.toLocaleString(locale)}</td>

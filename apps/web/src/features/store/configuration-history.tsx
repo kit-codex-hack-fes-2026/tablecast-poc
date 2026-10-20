@@ -1,3 +1,4 @@
+import { UserIdentity } from "../../components/user-identity";
 import type { ConfigurationRelease } from "@tablecast/api/schema";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -103,9 +104,12 @@ function HistoryContent({
               {t(query.isFetchingNextPage ? "common_loading" : "configuration_history_more")}
             </Button>
           )}
-          <p className="max-w-4xl text-sm text-muted-foreground">
-            {t("configuration_history_retention")}
-          </p>
+          <details className="max-w-4xl text-sm text-muted-foreground">
+            <summary className="w-fit cursor-pointer py-2 underline underline-offset-4">
+              {t("configuration_history_details")}
+            </summary>
+            <p className="mt-2">{t("configuration_history_retention")}</p>
+          </details>
         </>
       )}
       <Dialog
@@ -278,10 +282,17 @@ function ReleaseSummary({ release, storeId }: { release: ConfigurationRelease; s
         </Badge>
         <DateTime value={release.publishedAt} />
       </div>
-      <p className="text-sm">
-        {t("configuration_history_publisher")}:{" "}
-        {release.publisherName ?? t("configuration_history_unknown")}
-      </p>
+      <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">{t("configuration_history_publisher")}</p>
+        <UserIdentity
+          compact
+          user={{
+            name: release.publisherName,
+            email: release.publisherEmail,
+            image: release.publisherImage,
+          }}
+        />
+      </div>
       {release.sourceDraftId && (
         <Link
           className="underline underline-offset-4"

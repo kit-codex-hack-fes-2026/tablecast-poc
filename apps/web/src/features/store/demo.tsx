@@ -1,3 +1,4 @@
+import { dateTime } from "../../i18n/format";
 import type { Demo, DemoUpdate, ConfigDraft } from "@tablecast/api/schema";
 import { configurationIssueSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -328,7 +329,7 @@ export function DemoSelect({
   );
 }
 
-type DemoDraft = Pick<ConfigDraft, "id" | "status" | "version" | "configuration">;
+type DemoDraft = Pick<ConfigDraft, "id" | "status" | "version" | "configuration" | "createdAt">;
 function demoConfigurationState(
   data: Demo,
   drafts: DemoDraft[] | undefined,
@@ -359,7 +360,7 @@ function DemoConfigurationSelect({
   pending: boolean;
   onChange: (value: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <DemoSelect
       icon={<FileStack />}
@@ -370,13 +371,13 @@ function DemoConfigurationSelect({
         { value: "published", label: t("demo_published") },
         ...draftItems.map((draft) => ({
           value: draft.id,
-          label: `${t("demo_draft")} ${draft.id.slice(0, 8)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
+          label: `${t("demo_draft")} ${dateTime(draft.createdAt, locale)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
         })),
         ...(data.sourceDraftId && !draftItems.some((draft) => draft.id === data.sourceDraftId)
           ? [
               {
                 value: data.sourceDraftId,
-                label: `${t("demo_draft")} ${data.sourceDraftId.slice(0, 8)}`,
+                label: t("demo_draft"),
               },
             ]
           : []),

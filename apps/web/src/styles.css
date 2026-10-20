@@ -12,8 +12,12 @@
   --font-serif: "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
   --color-accent-soft: var(--accent);
   --color-surface-subtle: var(--muted);
-  --color-success: #507137;
-  --color-success-soft: #f0f5e8;
+  --color-success: #166534;
+  --color-success-soft: #dcfce7;
+  --color-info: #1d4ed8;
+  --color-info-soft: #eff6ff;
+  --color-warning: #92400e;
+  --color-warning-soft: #fffbeb;
   --color-focus: #18181b;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -60,7 +64,7 @@
   --card-foreground: #18181b;
   --popover: #ffffff;
   --popover-foreground: #18181b;
-  --primary: #18181b;
+  --primary: #1d4ed8;
   --primary-foreground: #ffffff;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
@@ -71,7 +75,7 @@
   --destructive: #ad3429;
   --border: #e4e4e7;
   --input: #71717a;
-  --ring: #18181b;
+  --ring: #1d4ed8;
 }
 
 @layer base {

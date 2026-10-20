@@ -47,6 +47,8 @@ beforeEach(() => {
     publishedAt: 1792270800000,
     publishedBy: "tablecast-staff",
     publisherName: "佐藤 晴香",
+    publisherEmail: "staff@example.test",
+    publisherImage: null,
     configuration: catalog.configuration,
     changes: [],
   };

@@ -1,3 +1,4 @@
+import { CircleDollarSign, Users, ReceiptText, Table2 } from "lucide-react";
 import type { StatisticsResult } from "@tablecast/api/schema";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -16,14 +17,26 @@ export function StatisticsSummary({
       <dl className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         {(
           [
-            ["paidAmount", money(summary.paidAmount, locale)],
-            ["sessions", number(summary.sessions)],
-            ["guests", number(summary.guests)],
-            ["orders", number(summary.orders)],
+            [
+              "paidAmount",
+              money(summary.paidAmount, locale),
+              CircleDollarSign,
+              "text-success bg-success-soft",
+            ],
+            ["sessions", number(summary.sessions), Table2, "text-info bg-info-soft"],
+            ["guests", number(summary.guests), Users, "text-info bg-info-soft"],
+            ["orders", number(summary.orders), ReceiptText, "text-warning bg-warning-soft"],
           ] as const
-        ).map(([key, value]) => (
-          <div key={key} className="min-w-0 space-y-2 border-l-2 border-border pl-4">
-            <dt className="text-sm text-muted-foreground">{t(`statistics_${key}`)}</dt>
+        ).map(([key, value, Icon, tone]) => (
+          <div key={key} className="min-w-0 space-y-2 border-b border-border pb-4">
+            <dt className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className={`inline-flex size-9 items-center justify-center rounded-full ${tone}`}
+              >
+                <Icon aria-hidden="true" className="size-5" />
+              </span>
+              {t(`statistics_${key}`)}
+            </dt>
             <dd className="text-2xl font-semibold tracking-tight tabular-nums wrap-break-word">
               {value}
             </dd>

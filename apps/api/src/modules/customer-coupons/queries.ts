@@ -45,7 +45,13 @@ export async function listRewardMembers(
 ) {
   ensure(actor.kind === "staff" || actor.kind === "mcp", "STAFF_REQUIRED", 403);
   const rows = await services.db
-    .select({ id: customerMemberships.id, name: user.name, joinedAt: customerMemberships.joinedAt })
+    .select({
+      id: customerMemberships.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      joinedAt: customerMemberships.joinedAt,
+    })
     .from(customerMemberships)
     .innerJoin(user, eq(user.id, customerMemberships.userId))
     .where(
@@ -124,7 +130,13 @@ export async function getVisitCoupons(services: ApiServices, actor: Actor) {
   const session = await getSession(services, actor);
   const [requested, uses] = await services.db.batch([
     services.db
-      .select({ id: customerCoupons.id, name: user.name, snapshot: customerCoupons.snapshotJson })
+      .select({
+        id: customerCoupons.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        snapshot: customerCoupons.snapshotJson,
+      })
       .from(customerCoupons)
       .innerJoin(customerMemberships, eq(customerMemberships.id, customerCoupons.membershipId))
       .innerJoin(user, eq(user.id, customerMemberships.userId))
@@ -157,6 +169,8 @@ export async function getVisitCoupons(services: ApiServices, actor: Actor) {
     requested: requested.map((row) => ({
       id: row.id,
       name: row.name,
+      email: row.email,
+      image: row.image,
       rules: couponRuleSchema.parse(JSON.parse(row.snapshot)),
     })),
     uses,
@@ -187,6 +201,8 @@ export async function listIssuedCoupons(
     .select({
       id: customerCoupons.id,
       name: user.name,
+      email: user.email,
+      image: user.image,
       state: customerCoupons.state,
       snapshot: customerCoupons.snapshotJson,
       issuedAt: customerCoupons.createdAt,

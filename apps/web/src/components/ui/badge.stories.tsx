@@ -13,11 +13,11 @@ type Story = StoryObj<typeof meta>;
 export const 標準: Story = {
   render: () => (
     <div className="flex flex-wrap gap-3">
-      <Badge>公開中</Badge>
-      <Badge variant="success">確認済み</Badge>
+      <Badge variant="success">公開中</Badge>
+      <Badge variant="info">下書き</Badge>
+      <Badge variant="warning">要対応</Badge>
+      <Badge variant="destructive">エラー</Badge>
       <Badge variant="inactive">終了</Badge>
-      <Badge variant="destructive">要対応</Badge>
-      <Badge variant="outline">下書き</Badge>
     </div>
   ),
 };

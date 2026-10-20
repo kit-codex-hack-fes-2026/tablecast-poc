@@ -28,7 +28,7 @@ export function CustomerConsumption({ storeId }: { storeId: string }) {
             className="space-y-3 rounded-xl bg-card p-5"
           >
             <h2 className="font-medium wrap-anywhere">
-              {record.name?.[locale] ?? record.productId}
+              {record.name?.[locale] ?? t("object_unknown_product")}
             </h2>
             <p className="text-sm text-muted-foreground">{t(`order_${record.orderStatus}`)}</p>
             <ConsumptionEditor

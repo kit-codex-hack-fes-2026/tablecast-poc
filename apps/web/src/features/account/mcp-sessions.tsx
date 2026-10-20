@@ -52,13 +52,7 @@ function sessionColumns(
         <div className="flex min-w-56 items-center gap-2">
           <Plug className="size-5 shrink-0" />
           <div className="min-w-0">
-            <p className="font-medium">{row.original.clientName ?? row.original.clientId}</p>
-            <p
-              className="max-w-64 truncate text-sm text-muted-foreground"
-              title={row.original.clientId}
-            >
-              {row.original.clientId}
-            </p>
+            <p className="font-medium">{row.original.clientName ?? t("object_external_app")}</p>
           </div>
         </div>
       ),
@@ -122,7 +116,7 @@ function sessionColumns(
       cell: ({ row }) => (
         <ConfirmAction
           label={t("mcp_revoke")}
-          subject={row.original.clientName ?? row.original.clientId}
+          subject={row.original.clientName ?? t("object_external_app")}
           icon={<ShieldOff />}
           disabled={pending}
           onConfirm={() => revoke(row.original.id)}

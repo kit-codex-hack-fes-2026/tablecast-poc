@@ -1,3 +1,4 @@
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -80,11 +81,13 @@ export function CustomerVisitPanel({
         <span className="text-sm text-muted-foreground">
           {t("kiosk_service_target")}{" "}
           <strong className="font-medium text-foreground">
-            {participants.isPending || participants.isError
-              ? t("kiosk_service_unknown")
-              : selectedPerson
-                ? (selectedPerson.name ?? t("customer_anonymous"))
-                : t("kiosk_service_group")}
+            {participants.isPending || participants.isError ? (
+              t("kiosk_service_unknown")
+            ) : selectedPerson ? (
+              <ParticipantIdentity name={selectedPerson.name} />
+            ) : (
+              t("kiosk_service_group")
+            )}
           </strong>
         </span>
       </DialogPrimitive.Trigger>
@@ -109,7 +112,7 @@ export function CustomerVisitPanel({
                     disabled={selectTarget.isPending}
                     onClick={() => selectTarget.mutate(person.id)}
                   >
-                    {person.name ?? t("customer_anonymous")}
+                    <ParticipantIdentity name={person.name} />
                   </Button>
                 </li>
               ))}

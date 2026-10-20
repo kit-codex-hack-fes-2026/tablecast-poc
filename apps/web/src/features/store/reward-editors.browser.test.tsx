@@ -8,7 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { couponDefinitionSchema, pointPolicySchema } from "@tablecast/api/schema";
 import type { z } from "zod";
@@ -35,6 +35,7 @@ let ruleCursors: (string | null)[];
 let policy: Awaited<ReturnType<NonNullable<ReturnType<typeof pointPolicyOptions>["queryFn"]>>>;
 let coupon: z.infer<typeof couponDefinitionSchema>;
 let policyWrites: z.infer<typeof pointPolicySchema>[];
+let couponIssues: unknown[];
 let couponWrites: z.infer<typeof couponDefinitionSchema>[];
 const unavailable = () => Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
 const conflict = () => Response.json({ error: { code: "STALE" } }, { status: 409 });
@@ -48,6 +49,7 @@ beforeEach(() => {
   ruleCursors = [];
   policyWrites = [];
   couponWrites = [];
+  couponIssues = [];
   policy = { version: 1, rules: { enabled: true, kind: "visit", points: 2, unitYen: 100 } };
   coupon = {
     id: "0adf07f9-5dc9-421d-826e-31ed385a7ac8",
@@ -115,7 +117,25 @@ beforeEach(() => {
       return Response.json({ id: coupon.id, version: coupon.expectedVersion });
     }
     if (path === `${api}/coupons/issued`) return Response.json({ coupons: [], nextCursor: null });
-    if (path === `${api}/coupons/members`) return Response.json({ members: [], nextCursor: null });
+    if (path === `${api}/coupons/members`)
+      return Response.json({
+        members: url.searchParams.get("query")
+          ? []
+          : [
+              {
+                id: "tablecast-long-email-member",
+                name: "佐藤 花子",
+                email: "hanako.sato.restaurant.member@example.test",
+                image: null,
+                joinedAt: 1,
+              },
+            ],
+        nextCursor: null,
+      });
+    if (path === `${api}/coupons/issue`) {
+      couponIssues.push(await request.json());
+      return failSave ? unavailable() : Response.json({ saved: true });
+    }
     unexpected.push(`${request.method} ${path}`);
     return unavailable();
   });
@@ -339,4 +359,45 @@ it("クーポンは409と再読込・保存の失敗で入力を保ち、自分�
   await save().click();
   await expect.element(title()).not.toBeInTheDocument();
   expect(couponWrites.map((value) => value.expectedVersion)).toEqual([1, 2, 2, 3]);
+});
+
+it("クーポンは人物のメールを確認して選び、検索変更と発行失敗でも選択を保持する", async () => {
+  await page.viewport(390, 844);
+  await show(<CouponManagement />);
+  await page
+    .getByRole("combobox", { name: ja.coupon_select_rule, exact: true })
+    .selectOptions(coupon.id);
+  await page.getByRole("button", { name: ja.coupon_issue, exact: true }).click();
+  expect(couponIssues).toEqual([]);
+  const member = page.getByRole("combobox", { name: ja.coupon_member, exact: true });
+  await member.click();
+  const option = page.getByRole("option", {
+    name: "佐藤 花子 hanako.sato.restaurant.member@example.test",
+    exact: true,
+  });
+  await expect.element(option).toBeVisible();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  await userEvent.keyboard("{ArrowDown}");
+  await expect.element(option).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  await expect
+    .element(member.getByText("hanako.sato.restaurant.member@example.test", { exact: true }))
+    .toBeVisible();
+  await page.getByRole("textbox", { name: ja.coupon_search, exact: true }).fill("別の名前");
+  await expect
+    .element(member.getByText("hanako.sato.restaurant.member@example.test", { exact: true }))
+    .toBeVisible();
+  failSave = true;
+  await page.getByRole("button", { name: ja.coupon_issue, exact: true }).click();
+  await expect.element(page.getByRole("alert")).toBeVisible();
+  await expect
+    .element(member.getByText("hanako.sato.restaurant.member@example.test", { exact: true }))
+    .toBeVisible();
+  failSave = false;
+  await page.getByRole("button", { name: ja.coupon_issue, exact: true }).click();
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+  expect(couponIssues).toEqual([
+    expect.objectContaining({ ruleId: coupon.id, membershipId: "tablecast-long-email-member" }),
+    expect.objectContaining({ ruleId: coupon.id, membershipId: "tablecast-long-email-member" }),
+  ]);
 });

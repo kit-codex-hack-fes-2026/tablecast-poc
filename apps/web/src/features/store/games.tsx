@@ -1,3 +1,4 @@
+import { DateTime } from "../../components/date-time";
 import { PageHeader } from "../../components/page-header";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -16,7 +17,7 @@ import { useStore } from "./store-shell";
 const emptyState = {};
 export function Games() {
   const { id: storeId } = useStore();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [after, setAfter] = useState("");
   const [selected, setSelected] = useState<string>();
   const games = useSuspenseQuery(gamesOptions(storeId, after));
@@ -40,7 +41,7 @@ export function Games() {
             variant={selected === game.id ? "default" : "outline"}
             onClick={() => setSelected(game.id)}
           >
-            {game.id}
+            {game.name?.[locale] ?? t("games_title")}
           </Button>
         ))}
       </div>
@@ -138,7 +139,7 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
     <article className="space-y-4 rounded-xl border border-border bg-white p-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">
-          {game.data.versions[0]?.manifest.name[locale] ?? gameId}
+          {game.data.versions[0]?.manifest.name[locale] ?? t("games_title")}
         </h2>
         <Badge>{t(game.data.activeVersionId ? "games_published" : "games_unpublished")}</Badge>
         {manager && game.data.activeVersionId && (
@@ -194,11 +195,15 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
         {game.data.versions.map((version) => (
           <li key={version.id} className="space-y-3 py-4">
             <div className="flex flex-wrap items-center gap-2">
-              <code className="break-all text-sm">{version.id}</code>
+              <span className="font-medium">
+                {t("object_game_version")} <DateTime value={version.createdAt} />
+              </span>
               {version.id === game.data.activeVersionId && (
                 <Badge variant="success">{t("games_published")}</Badge>
               )}
-              <Badge>{t(version.status === "ready" ? "games_validated" : "games_draft")}</Badge>
+              <Badge variant={version.status === "ready" ? "success" : "info"}>
+                {t(version.status === "ready" ? "games_validated" : "games_draft")}
+              </Badge>
             </div>
             <p>{version.manifest.description[locale]}</p>
             <details>

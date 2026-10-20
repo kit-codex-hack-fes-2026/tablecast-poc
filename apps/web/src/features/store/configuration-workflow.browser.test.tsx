@@ -623,13 +623,10 @@ it("他スタッフの公開と競合したら公開版と下書きを再取得�
         .first(),
     )
     .toBeVisible();
-  await expect
-    .element(
-      main
-        .getByText(m.workflow_revision({ version: 8 }, { locale: "ja" }), { exact: true })
-        .first(),
-    )
-    .toBeVisible();
+  expect(client.getQueryData(draftOptions(storeId, draftId).queryKey)).toMatchObject({
+    version: 8,
+    status: "draft",
+  });
   await expect
     .element(main.getByRole("link", { name: ja.workflow_view_published, exact: true }))
     .toHaveAttribute("href", `${base}/products`);

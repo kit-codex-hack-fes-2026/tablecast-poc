@@ -145,10 +145,6 @@ export function ProductsEditor({
                 {t("editor_reference_details")}
               </summary>
               <div className="grid gap-4 pt-3 @xl:grid-cols-2">
-                <label className="grid content-start gap-2 text-sm">
-                  {t("editor_id")}
-                  <Input value={product.id} readOnly />
-                </label>
                 <StringListField
                   label={t("editor_tags")}
                   value={product.tags}
@@ -321,15 +317,6 @@ export function CategoriesEditor({ value, onChange, disabled, selectedId }: Edit
               }
             />
           </ConfigurationSection>
-          <details className="border-t border-border pt-4">
-            <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
-              {t("editor_reference_details")}
-            </summary>
-            <label className="grid gap-2 pt-3 text-sm">
-              {t("editor_id")}
-              <Input readOnly value={category.id} />
-            </label>
-          </details>
         </>
       )}
     </>
@@ -451,15 +438,6 @@ export function PlansEditor({ value, onChange, disabled, selectedId }: EditorPro
               onChange={(includedOptionSurcharge) => update({ includedOptionSurcharge })}
             />
           </ConfigurationSection>
-          <details className="border-t border-border pt-4">
-            <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
-              {t("editor_reference_details")}
-            </summary>
-            <label className="grid gap-2 pt-3 text-sm">
-              {t("editor_id")}
-              <Input readOnly value={plan.id} />
-            </label>
-          </details>
         </>
       )}
     </>

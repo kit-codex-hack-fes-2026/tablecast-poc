@@ -1,3 +1,6 @@
+import { UserIdentity } from "../../components/user-identity";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "../../components/ui/select";
+import { Badge } from "../../components/ui/badge";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/page-header";
 import { useState } from "react";
@@ -116,9 +119,17 @@ function ManualCouponIssue({
     },
   });
   const form = useAppForm({
-    defaultValues: { ruleId: "", membershipId: "" },
+    defaultValues: {
+      ruleId: "",
+      membership: null as
+        | NonNullable<typeof members.data>["pages"][number]["members"][number]
+        | null,
+    },
     onSubmit: async ({ value }) => {
-      await issue.mutateAsync(value).catch(() => undefined);
+      if (!value.membership) return;
+      await issue
+        .mutateAsync({ ruleId: value.ruleId, membershipId: value.membership.id })
+        .catch(() => undefined);
     },
   });
   return (
@@ -157,29 +168,42 @@ function ManualCouponIssue({
         <Input value={search} onChange={(e) => setSearch(e.target.value)} />
       </label>
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
-      <form.Field name="membershipId">
-        {(field) => (
-          <label className="grid gap-2">
-            {t("coupon_member")}
-            <NativeSelect
-              required
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value);
-                setKey(crypto.randomUUID());
-              }}
-            >
-              <option value="">—</option>
-              {members.data?.pages.flatMap((page) =>
-                page.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} · {member.id.slice(-6)}
-                  </option>
-                )),
-              )}
-            </NativeSelect>
-          </label>
-        )}
+      <form.Field name="membership">
+        {(field) => {
+          const selectedMember = field.state.value;
+          const choices = members.data?.pages.flatMap((page) => page.members) ?? [];
+          if (selectedMember && !choices.some((person) => person.id === selectedMember.id))
+            choices.unshift(selectedMember);
+          return (
+            <div className="grid gap-2">
+              <span id="tablecast-coupon-member-label">{t("coupon_member")}</span>
+              <Select
+                required
+                name="membershipId"
+                value={selectedMember?.id ?? null}
+                onValueChange={(value) => {
+                  field.handleChange(choices.find((person) => person.id === value) ?? null);
+                  setKey(crypto.randomUUID());
+                }}
+              >
+                <SelectTrigger aria-labelledby="tablecast-coupon-member-label">
+                  {selectedMember ? (
+                    <UserIdentity compact user={selectedMember} />
+                  ) : (
+                    t("common_select")
+                  )}
+                </SelectTrigger>
+                <SelectContent className="max-w-[min(28rem,calc(100vw-2rem))]">
+                  {choices.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      <UserIdentity compact user={person} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        }}
       </form.Field>
       {members.hasNextPage && (
         <Button
@@ -217,10 +241,19 @@ function IssuedCoupons({ storeId, canEdit }: { storeId: string; canEdit: boolean
       {query.data?.pages.flatMap((page) =>
         page.coupons.map((coupon) => (
           <article key={coupon.id} className="space-y-3 rounded-xl border p-4">
-            <h3>
-              {coupon.name} · {coupon.rules.title[locale]}
-            </h3>
-            <p>{t(`coupon_${coupon.state}`)}</p>
+            <h3>{coupon.rules.title[locale]}</h3>
+            <UserIdentity compact user={coupon} />
+            <Badge
+              variant={
+                coupon.state === "available"
+                  ? "success"
+                  : coupon.state === "requested"
+                    ? "warning"
+                    : "inactive"
+              }
+            >
+              {t(`coupon_${coupon.state}`)}
+            </Badge>
             {canEdit && (coupon.state === "available" || coupon.state === "requested") && (
               <RevokeCoupon storeId={storeId} couponId={coupon.id} />
             )}

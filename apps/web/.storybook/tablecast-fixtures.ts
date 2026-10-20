@@ -219,6 +219,8 @@ export const configurationHistoryFixture = {
       at: 1792357200000,
       actorId: "tablecast-staff",
       actorName: "佐藤 晴香",
+      actorEmail: "staff@example.test",
+      actorImage: null,
     },
     {
       kind: "draft",
@@ -231,6 +233,8 @@ export const configurationHistoryFixture = {
       at: 1792357200000,
       actorId: "tablecast-staff",
       actorName: "佐藤 晴香",
+      actorEmail: "staff@example.test",
+      actorImage: null,
     },
     {
       kind: "draft",
@@ -243,6 +247,8 @@ export const configurationHistoryFixture = {
       at: 1792357100000,
       actorId: "tablecast-staff",
       actorName: "佐藤 晴香",
+      actorEmail: "staff@example.test",
+      actorImage: null,
     },
     {
       kind: "release",
@@ -255,6 +261,8 @@ export const configurationHistoryFixture = {
       at: 1792270800000,
       actorId: "tablecast-staff",
       actorName: "佐藤 晴香",
+      actorEmail: "staff@example.test",
+      actorImage: null,
     },
   ],
 } satisfies ConfigurationHistoryPage;

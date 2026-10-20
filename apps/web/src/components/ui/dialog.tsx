@@ -58,7 +58,7 @@ export function DialogContent({
   return (
     <DialogPrimitive.Portal>
       <StyleScopeBoundary>
-        <DialogPrimitive.Backdrop className="fixed inset-0 bg-foreground/35 backdrop-blur-xs z-40" />
+        <DialogPrimitive.Backdrop className="fixed inset-0 bg-black/40 z-40" />
         <DialogPrimitive.Viewport className={viewport()}>
           <DialogPrimitive.Popup
             {...props}

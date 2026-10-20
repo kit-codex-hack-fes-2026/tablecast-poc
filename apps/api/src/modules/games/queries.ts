@@ -1,3 +1,4 @@
+import { alias } from "drizzle-orm/sqlite-core";
 import { and, desc, eq, gt, lt, or, isNull, isNotNull } from "drizzle-orm";
 import { gamePlugins, gameRuns, gameVersions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
@@ -7,17 +8,34 @@ import { getSession } from "../tables/queries";
 import { gameManifestSchema, gamePackageSchema, gameStateSchema } from "./model";
 
 export async function listGames(services: ApiServices, actor: Actor, after = "") {
+  const latest = alias(gameVersions, "latest_game_version");
   const rows = await services.db
-    .select()
+    .select({
+      id: gamePlugins.id,
+      activeVersionId: gamePlugins.active_version_id,
+      revision: gamePlugins.revision,
+      manifest: gameVersions.manifest_json,
+    })
     .from(gamePlugins)
+    .leftJoin(
+      gameVersions,
+      eq(
+        gameVersions.id,
+        services.db
+          .select({ id: latest.id })
+          .from(latest)
+          .where(and(eq(latest.store_id, gamePlugins.store_id), eq(latest.game_id, gamePlugins.id)))
+          .orderBy(desc(latest.created_at), desc(latest.id))
+          .limit(1),
+      ),
+    )
     .where(and(eq(gamePlugins.store_id, actor.storeId), gt(gamePlugins.id, after)))
     .orderBy(gamePlugins.id)
     .limit(51);
   return {
-    games: rows.slice(0, 50).map((row) => ({
-      id: row.id,
-      activeVersionId: row.active_version_id,
-      revision: row.revision,
+    games: rows.slice(0, 50).map(({ manifest, ...row }) => ({
+      ...row,
+      name: manifest ? gameManifestSchema.parse(JSON.parse(manifest)).name : null,
     })),
     next: rows.length > 50 ? rows[49]?.id : null,
   };

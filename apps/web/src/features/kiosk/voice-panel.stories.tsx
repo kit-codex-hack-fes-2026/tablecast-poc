@@ -232,7 +232,7 @@ export const Speakers: Story = {
         canvas.getByRole("button", { name: english ? "Show debug details" : "デバッグ表示" }),
       );
       await expect(within(unknown).getByText(details)).toBeVisible();
-      await expect(canvas.getAllByText("STT tablecast-stream")).toHaveLength(2);
+      await expect(canvas.queryByText("STT tablecast-stream")).not.toBeInTheDocument();
     });
   },
 };

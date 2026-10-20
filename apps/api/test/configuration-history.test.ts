@@ -57,7 +57,11 @@ it("履歴は大量の商品snapshotを返さず、同一時刻の公開版と�
   expect(page.entries).toHaveLength(30);
   expect(JSON.stringify(raw)).not.toContain("products");
   expect(JSON.stringify(raw).length).toBeLessThan(12000);
-  expect(page.entries[0]?.actorName).toBe("店員");
+  expect(page.entries[0]).toMatchObject({
+    actorName: "店員",
+    actorEmail: "tablecast-staff@example.test",
+    actorImage: null,
+  });
   if (!page.nextCursor) throw new Error("履歴の続きが必要です");
   const query = new URLSearchParams({
     ...page.nextCursor,
@@ -92,7 +96,12 @@ it("空の履歴・欠損した公開版・非互換snapshotを正常な空状�
     created_at: Date.now(),
   });
   const invalid = await exports.default.fetch(new Request(`${base}/releases/1`, { headers }));
-  expect(configurationReleaseSchema.parse(await invalid.json()).configuration).toBeNull();
+  expect(configurationReleaseSchema.parse(await invalid.json())).toMatchObject({
+    configuration: null,
+    publisherName: "店員",
+    publisherEmail: "tablecast-staff@example.test",
+    publisherImage: null,
+  });
   const restore = await exports.default.fetch(
     new Request(`${base}/releases/1/restore`, {
       method: "POST",

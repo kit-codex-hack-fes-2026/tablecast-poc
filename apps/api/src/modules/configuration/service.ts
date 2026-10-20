@@ -542,6 +542,8 @@ export async function getConfigurationHistory(
       at: sql<number>`${business.configReleases.created_at}`.as("at"),
       actorId: sql<string>`${business.configReleases.published_by}`.as("actor_id"),
       actorName: sql<string | null>`${user.name}`.as("actor_name"),
+      actorEmail: sql<string | null>`${user.email}`.as("actor_email"),
+      actorImage: sql<string | null>`${user.image}`.as("actor_image"),
     })
     .from(business.configReleases)
     .leftJoin(user, eq(user.id, business.configReleases.published_by))
@@ -558,6 +560,8 @@ export async function getConfigurationHistory(
       at: sql<number>`${business.configDrafts.updated_at}`.as("at"),
       actorId: sql<string>`${business.configDrafts.created_by}`.as("actor_id"),
       actorName: sql<string | null>`${user.name}`.as("actor_name"),
+      actorEmail: sql<string | null>`${user.email}`.as("actor_email"),
+      actorImage: sql<string | null>`${user.image}`.as("actor_image"),
     })
     .from(business.configDrafts)
     .leftJoin(user, eq(user.id, business.configDrafts.created_by))
@@ -618,6 +622,8 @@ export async function getConfigurationRelease(
         publishedAt: business.configReleases.created_at,
         publishedBy: business.configReleases.published_by,
         publisherName: user.name,
+        publisherEmail: user.email,
+        publisherImage: user.image,
         snapshot: business.configReleases.config_json,
       })
       .from(business.configReleases)

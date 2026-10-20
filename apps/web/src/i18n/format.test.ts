@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateTime, money, time } from "./format";
+import { calendarDate, dateTime, money, time } from "./format";
 
 describe("店舗の金額・日時表示", () => {
   it("日英とも日本円の整数と桁区切りを表示し、円記号を正規化する", () => {
@@ -21,18 +21,18 @@ describe("店舗の金額・日時表示", () => {
   it.each([
     {
       iso: "2026-12-31T14:59:00Z",
-      japanese: "2026/12/31 23:59",
-      english: "31 Dec 2026, 23:59",
+      japanese: "2026年12月31日(木) 23:59",
+      english: "Thursday, 31 December 2026, 23:59",
     },
     {
       iso: "2026-12-31T15:00:00Z",
-      japanese: "2027/01/01 0:00",
-      english: "1 Jan 2027, 00:00",
+      japanese: "2027年1月1日(金) 00:00",
+      english: "Friday, 1 January 2027, 00:00",
     },
     {
       iso: "2026-06-30T15:05:00Z",
-      japanese: "2026/07/01 0:05",
-      english: "1 Jul 2026, 00:05",
+      japanese: "2026年7月1日(水) 00:05",
+      english: "Wednesday, 1 July 2026, 00:05",
     },
   ])("$isoの日付は店舗のtimezoneと日英の書式で表示する", ({ iso, japanese, english }) => {
     const value = new Date(iso);
@@ -40,4 +40,9 @@ describe("店舗の金額・日時表示", () => {
     expect(dateTime(value.getTime(), "en")).toBe(english);
     expect(dateTime(value, "ja")).toBe(japanese);
   });
+});
+
+it("日付キーは曜日と月名を含む自然な表記になりタイムゾーン略称を表示しない", () => {
+  expect(calendarDate("2026-10-20", "ja")).toBe("2026年10月20日(火)");
+  expect(calendarDate("2026-10-20", "en")).toBe("Tuesday, 20 October 2026");
 });

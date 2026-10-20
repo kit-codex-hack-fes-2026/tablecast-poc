@@ -1,7 +1,16 @@
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Plus, Trash2, TriangleAlert, X, Upload } from "lucide-react";
+import {
+  FilePenLine,
+  ArrowLeft,
+  Check,
+  Plus,
+  Trash2,
+  TriangleAlert,
+  X,
+  Upload,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -295,14 +304,15 @@ function settingsDraftsColumns(
   return [
     {
       accessorKey: "id",
-      header: t("editor_id"),
+      header: t("workflow_draft_identity"),
       cell: ({ row }) => (
         <Link
-          className="inline-flex min-h-11 max-w-56 items-center font-mono text-sm font-medium break-all underline decoration-border underline-offset-4 hover:decoration-current whitespace-normal"
+          className="inline-flex min-h-11 max-w-72 items-center gap-2 text-sm font-medium text-info underline underline-offset-4 whitespace-normal"
           to="/admin/stores/$storeId/menu/changes/$draftId"
           params={{ storeId, draftId: row.original.id }}
         >
-          {row.original.id}
+          <FilePenLine aria-hidden="true" className="size-5 shrink-0" />
+          <DateTime value={row.original.createdAt} />
         </Link>
       ),
     },

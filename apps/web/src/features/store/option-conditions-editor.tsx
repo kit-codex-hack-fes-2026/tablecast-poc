@@ -393,9 +393,7 @@ export function OptionConditionsEditor({
                     )
                   }
                 />
-                <span className="wrap-anywhere">
-                  {choice.label} <span className="text-xs text-muted-foreground">{choice.id}</span>
-                </span>
+                <span className="wrap-anywhere">{choice.label}</span>
               </label>
               {choice.allowsQuantity && quantities.has(choice.id) && (
                 <label className="flex min-h-11 items-center gap-2 text-sm">

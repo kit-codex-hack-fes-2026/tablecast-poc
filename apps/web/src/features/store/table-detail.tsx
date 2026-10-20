@@ -244,16 +244,6 @@ export function TableDetail({
             <Tabs.Panel value="diagnostics">
               <dl className="">
                 <div className="border-b border-b-border py-3.5 px-0">
-                  <dt className="text-sm text-muted-foreground">tableSessionId</dt>
-                  <dd className="font-mono text-sm wrap-anywhere mt-1">{table.id}</dd>
-                </div>
-                <div className="border-b border-b-border py-3.5 px-0">
-                  <dt className="text-sm text-muted-foreground">voiceSessionId</dt>
-                  <dd className="font-mono text-sm wrap-anywhere mt-1">
-                    {table.voiceSessionId ?? "—"}
-                  </dd>
-                </div>
-                <div className="border-b border-b-border py-3.5 px-0">
                   <dt className="text-sm text-muted-foreground">cursor</dt>
                   <dd className="font-mono text-sm wrap-anywhere mt-1">{table.cursor}</dd>
                 </div>
@@ -300,7 +290,7 @@ function TableDetailHeader({
       <PageHeader
         title={table.tableName}
         status={
-          <Badge variant={table.status === "open" ? "success" : "inactive"}>
+          <Badge variant={table.status === "open" ? "info" : "inactive"}>
             {t(table.status === "open" ? "admin_open" : "admin_visit_closed")}
           </Badge>
         }
@@ -342,7 +332,17 @@ function SessionOrders({
         >
           <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-sm">
             <time>{time(order.createdAt, locale)}</time>
-            <Badge variant="secondary">{t(`order_${order.status}`)}</Badge>
+            <Badge
+              variant={
+                order.status === "served"
+                  ? "success"
+                  : order.status === "cancelled"
+                    ? "inactive"
+                    : "info"
+              }
+            >
+              {t(`order_${order.status}`)}
+            </Badge>
             <strong className="text-base">{money(order.total, locale)}</strong>
           </div>
           <CartLines lines={order.snapshot.lines} />

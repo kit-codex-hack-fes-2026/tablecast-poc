@@ -62,7 +62,7 @@ afterEach(async () => {
   }
 });
 
-it("日本語で初回HTTP待機中も本番のフロア見出しと表を表示し、取得後も見出しの位置を保つ", async () => {
+it("日本語で初回HTTP待機中も本番のフロア見出しと卓カードの枠を表示し、取得後も見出しの位置を保つ", async () => {
   const locale = "ja";
   const labels = ja;
   await page.viewport(1024, 768);
@@ -128,14 +128,16 @@ it("日本語で初回HTTP待機中も本番のフロア見出しと表を表示
     await reached.promise;
     const heading = screen.getByRole("heading", { name: labels.admin_live, exact: true });
     await expect.element(heading).toBeVisible();
-    await expect.element(screen.getByRole("table")).toBeVisible();
+    await expect
+      .element(screen.getByRole("region", { name: labels.floor_list, exact: true }))
+      .toBeVisible();
     await expect.element(screen.getByRole("status").first()).toBeVisible();
     const before = heading.element().getBoundingClientRect();
-    // 英語の長い行は内側へ横スクロールするため、利用者に見える枠の幅を観測する。
+    // 読込中から卓カードが入るまで、見出しと一覧の枠がずれない。
     const tableWidth = screen
-      .getByRole("table")
+      .getByRole("region", { name: labels.floor_list, exact: true })
       .element()
-      .parentElement?.getBoundingClientRect().width;
+      .getBoundingClientRect().width;
     release.resolve(
       Response.json({
         store: { id: "tablecast-komorebi", name: "こもれび", role: "owner" },
@@ -153,9 +155,12 @@ it("日本語で初回HTTP待機中も本番のフロア見出しと表を表示
       width: before.width,
       height: before.height,
     });
-    expect(screen.getByRole("table").element().parentElement?.getBoundingClientRect().width).toBe(
-      tableWidth,
-    );
+    expect(
+      screen
+        .getByRole("region", { name: labels.floor_list, exact: true })
+        .element()
+        .getBoundingClientRect().width,
+    ).toBe(tableWidth);
     await expect.poll(() => document.querySelectorAll('[aria-busy="true"]').length).toBe(0);
   } finally {
     release.resolve(Response.json({ tables: [], vacantTables: [], events: [], cursor: 0 }));
@@ -273,9 +278,7 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   await expect.element(screen.getByRole("heading", { name: table.id, exact: true })).toBeVisible();
   router.history.back();
   await screen.getByRole("tab", { name: labels.floor_list, exact: true }).click();
-  await expect
-    .element(screen.getByRole("columnheader", { name: labels.common_status, exact: true }))
-    .toBeVisible();
+  await expect.element(screen.getByRole("button", { name: /^T03/ })).toBeVisible();
   await screen.getByRole("tab", { name: labels.floor_timeline, exact: true }).click();
   await screen.getByRole("button", { name: labels.floor_previous, exact: true }).click();
   await expect

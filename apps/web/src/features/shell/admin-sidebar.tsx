@@ -484,7 +484,7 @@ function SidebarUserMenu({
       <Menu.Trigger
         className="flex w-full min-w-0 items-center gap-2 rounded-lg p-2 text-left hover:bg-secondary"
         aria-label={t("account_title")}
-        title={user?.name}
+        title={t("account_title")}
       >
         {user &&
           (collapsed ? (

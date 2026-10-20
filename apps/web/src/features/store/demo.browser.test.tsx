@@ -55,7 +55,7 @@ it("日本語で設定更新を明示反映し、不正下書き・人数変更�
     createdAt: 1,
     updatedAt: 2,
   } satisfies ConfigDraft;
-  const invalid = { ...draft, id: "invalid-tablecast-draft" };
+  const invalid = { ...draft, id: "invalid-tablecast-draft", createdAt: Date.UTC(2026, 9, 20) };
   const updates: unknown[] = [];
   let resets = 0;
   const resetInputs: unknown[] = [];
@@ -172,7 +172,7 @@ it("日本語で設定更新を明示反映し、不正下書き・人数変更�
       .toBeDisabled();
     expect(updates).toEqual([{ expectedVersion: 1, reload: true }]);
     await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
-    await screen.getByRole("option", { name: new RegExp(invalid.id.slice(0, 8)) }).click();
+    await screen.getByRole("option", { name: /2026年10月20日/ }).click();
     await expect
       .element(screen.getByRole("list", { name: labels.config_error_list }))
       .toMatchTextContent(labels.config_error_category_missing);
@@ -180,10 +180,10 @@ it("日本語で設定更新を明示反映し、不正下書き・人数変更�
       .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
       .toMatchTextContent(labels.demo_published);
     await screen.getByRole("combobox", { name: labels.demo_configuration }).click();
-    await screen.getByRole("option", { name: new RegExp(draft.id.slice(0, 8)) }).click();
+    await screen.getByRole("option", { name: /1970年1月1日/ }).click();
     await expect
       .element(screen.getByRole("combobox", { name: labels.demo_configuration }))
-      .toMatchTextContent(draft.id.slice(0, 8));
+      .toMatchTextContent("1970年1月1日(木)");
     await screen.getByRole("combobox", { name: labels.demo_guests }).click();
     await screen.getByRole("option", { name: "3", exact: true }).click();
     await expect.element(screen.getByRole("combobox", { name: labels.demo_guests })).toBeDisabled();

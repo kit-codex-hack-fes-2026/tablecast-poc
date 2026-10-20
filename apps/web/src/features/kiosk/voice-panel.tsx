@@ -550,11 +550,6 @@ function ConversationDebug({ line }: { line: ConversationLine }) {
       {line.role === "user" && !line.speaker && (
         <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
       )}
-      {line.streamId && (
-        <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-          STT {line.streamId}
-        </p>
-      )}
     </>
   );
 }
