@@ -62,7 +62,7 @@ test(`${language}でゲームを試遊・承認・公開し、卓の実状態を
     const version = z.object({ versionId: z.uuid() }).parse(await registered.json());
     await page.goto(`/admin/stores/${storeId}/games`);
     const admin = page.getByRole("main");
-    await admin.getByRole("button", { name: "tablecast-turns", exact: true }).click();
+    await admin.getByRole("button", { name: "順番ゲーム", exact: true }).click();
     await admin.getByRole("button", { name: labels.admin_validate, exact: true }).click();
     const previewButton = admin.getByRole("button", { name: labels.games_preview, exact: true });
     await expect(previewButton).toBeEnabled();
