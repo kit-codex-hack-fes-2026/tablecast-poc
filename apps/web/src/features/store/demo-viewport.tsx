@@ -1,3 +1,4 @@
+import { KioskPending } from "../../components/kiosk-pending";
 import { useEffect, useRef, useState } from "react";
 import { type DemoDevice, demoDevices } from "./demo-device-model";
 import { DemoDeviceFrame } from "./demo-device-frame";
@@ -8,7 +9,7 @@ export function DemoViewport({
   device,
   portrait,
 }: {
-  src: string;
+  src?: string;
   device: DemoDevice;
   portrait: boolean;
 }) {
@@ -54,17 +55,25 @@ export function DemoViewport({
         }
       >
         {device !== "browser" && <DemoDeviceFrame device={device} portrait={portrait} />}
-        {/* 自アプリの認証とマイクを使うため同一originのscript実行が必要。外部URLは受け取らない。 */}
-        {/* oxlint-disable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
-        <iframe
-          title={t("demo_screen")}
-          src={src}
-          allow="microphone; autoplay"
-          sandbox="allow-scripts allow-same-origin"
-          className="absolute block size-full border-0 bg-background"
+        <div
+          className="absolute size-full overflow-hidden bg-background"
           style={frame ? { left: bezel, top: bezel, width, height, borderRadius: 18 } : undefined}
-        />
-        {/* oxlint-enable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
+        >
+          {/* 自アプリの認証とマイクを使う。同一originのscript実行が必要。 */}
+          {/* oxlint-disable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
+          {src ? (
+            <iframe
+              title={t("demo_screen")}
+              src={src}
+              allow="microphone; autoplay"
+              sandbox="allow-scripts allow-same-origin"
+              className="block size-full border-0"
+            />
+          ) : (
+            <KioskPending />
+          )}
+          {/* oxlint-enable react/iframe-missing-sandbox, react-doctor/iframe-missing-sandbox */}
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import {
   Terminal,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { integrationConnection } from "./integration-query";
+import { type integrationConnection, readIntegrationConnection } from "./integration-query";
 import advisorSkill from "../../../../../plugins/tablecast/skills/tablecast-advisor/SKILL.md?raw";
 import analyticsSkill from "../../../../../plugins/tablecast/skills/tablecast-analytics/SKILL.md?raw";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
@@ -60,7 +60,7 @@ function Guide({
 
 export function IntegrationSetup({
   mode,
-  connection = integrationConnection(""),
+  connection = readIntegrationConnection(),
 }: {
   mode: "plugins" | "manual";
   connection?: ReturnType<typeof integrationConnection>;
@@ -68,7 +68,7 @@ export function IntegrationSetup({
   const { t } = useI18n();
   const { endpoint, name, staging } = connection;
   return (
-    <IntegrationsShell>
+    <IntegrationsShell publicGuide>
       {staging && <p>{t("mcp_staging_connection")}</p>}
       {mode === "plugins" ? (
         <>

@@ -1,8 +1,8 @@
+import { History, RotateCcw, X } from "lucide-react";
 import { UserIdentity } from "../../components/user-identity";
 import type { ConfigurationRelease } from "@tablecast/api/schema";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { RotateCcw, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { PageHeader } from "../../components/page-header";
 import { ErrorNotice } from "../../components/error-notice";
@@ -46,6 +46,7 @@ export function ConfigurationHistory({
     <>
       <PageHeader
         title={t("configuration_history_title")}
+        icon={<History />}
         description={t("configuration_history_description")}
       />
       {["owner", "admin"].includes(store.role) ? (
@@ -81,6 +82,7 @@ function HistoryContent({
         <>
           <p className="text-sm text-muted-foreground">
             {m.configuration_history_count({ count: entries.length }, { locale })}
+            <span className="mt-1 block text-xs">{t("configuration_history_retention")}</span>
           </p>
           {entries.length ? (
             <ConfigurationTimeline
@@ -104,12 +106,6 @@ function HistoryContent({
               {t(query.isFetchingNextPage ? "common_loading" : "configuration_history_more")}
             </Button>
           )}
-          <details className="max-w-4xl text-sm text-muted-foreground">
-            <summary className="w-fit cursor-pointer py-2 underline underline-offset-4">
-              {t("configuration_history_details")}
-            </summary>
-            <p className="mt-2">{t("configuration_history_retention")}</p>
-          </details>
         </>
       )}
       <Dialog

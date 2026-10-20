@@ -18,10 +18,11 @@ import type {
 } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
+import { KioskPending } from "../../components/kiosk-pending";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -73,13 +74,19 @@ export function Kiosk({
       </main>
     );
   if (table.data === null) return <Pairing onReady={refresh} evaluation={evaluation} />;
+  if (table.isPending)
+    return (
+      <main className="h-dvh">
+        <KioskPending />
+      </main>
+    );
   if (!table.data)
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
         <a data-ui="brand" className="inline-flex shrink-0 items-center" href="/">
           <Brand />
         </a>
-        {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
+        <ErrorNotice error={table.error} onRetry={refresh} />
       </main>
     );
   return (
@@ -356,6 +363,9 @@ function TableSession({
     language,
     voiceActive,
   } = model;
+  const panelSizes = horizontal
+    ? ({ conversation: "28%", order: "72%", minConversation: "20%", maxOrder: "80%" } as const)
+    : ({ conversation: "35%", order: "65%", minConversation: "25%", maxOrder: "75%" } as const);
   const toggleVoice = () => {
     if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
     else void voice.start(locale, data.speechSpeed);
@@ -373,9 +383,9 @@ function TableSession({
           data={data}
           language={language}
           call={call}
+          tools={<KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />}
         />
         <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
           <ResizablePanelGroup
             orientation={horizontal ? "horizontal" : "vertical"}
             className="min-h-128 flex-1 max-sm:flex-col!"
@@ -384,8 +394,8 @@ function TableSession({
           >
             <ResizablePanel
               id="tablecast-conversation"
-              defaultSize="40%"
-              minSize="30%"
+              defaultSize={panelSizes.conversation}
+              minSize={panelSizes.minConversation}
               maxSize="70%"
               className="h-full"
             >
@@ -418,9 +428,9 @@ function TableSession({
             <ResizableHandle aria-label={t("kiosk_resize_panes")} />
             <ResizablePanel
               id="tablecast-order"
-              defaultSize="60%"
+              defaultSize={panelSizes.order}
               minSize="30%"
-              maxSize="70%"
+              maxSize={panelSizes.maxOrder}
               className="h-full"
             >
               <aside
@@ -591,7 +601,9 @@ function KioskHeader({
   data,
   language,
   call,
+  tools,
 }: {
+  tools: ReactNode;
   logo?: ThemeImage | null;
   storeName?: string;
   data: TableState;
@@ -615,6 +627,7 @@ function KioskHeader({
         <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
         <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
       </div>
+      {tools}
       <Button
         variant="outline"
         size="lg"
@@ -669,7 +682,7 @@ function KioskVisitTools({
   stopVoice: () => Promise<void>;
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border bg-card px-4 py-1">
+    <div className="flex min-w-0 shrink-0 items-center gap-1">
       {data.kind === "table" && (
         <CustomerVisitPanel
           key={data.id}

@@ -1,10 +1,11 @@
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { FileClock, History, LayoutList, Mic, Tags, UtensilsCrossed } from "lucide-react";
+import { FileClock, History, LayoutList, Mic, Tags, UtensilsCrossed, Palette } from "lucide-react";
+import { navigationItemClass } from "./navigation-group";
 import { useI18n } from "../../i18n/locale";
 
 import { menuLabels, menuReviewSearchSchema } from "../store/menu-model";
 const items = [
-  { section: "products", Icon: UtensilsCrossed },
+  { section: "products", Icon: UtensilsCrossed, Palette },
   { section: "categories", Icon: Tags },
   { section: "plans", Icon: LayoutList },
   { section: "cast", Icon: Mic },
@@ -13,11 +14,13 @@ export function MenuNavigation({
   storeId,
   draftId,
   manager,
+  collapsed = false,
   onNavigate,
 }: {
   storeId: string;
   draftId?: string;
   manager: boolean;
+  collapsed?: boolean;
   onNavigate?: () => void;
 }) {
   const { t } = useI18n();
@@ -26,10 +29,9 @@ export function MenuNavigation({
     useSearch({ strict: false }),
   );
   const currentSection = activeSection ?? returnSection ?? "products";
-  const className =
-    "flex min-h-11 items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary data-[status=active]:bg-secondary data-[status=active]:font-semibold";
+  const className = navigationItemClass;
   return (
-    <nav className="ml-4 space-y-1 border-l border-border pl-3" aria-label={t("admin_config")}>
+    <nav className="space-y-1" aria-label={t("admin_config")}>
       {items.map(({ section, Icon }) =>
         draftId ? (
           <Link
@@ -37,11 +39,12 @@ export function MenuNavigation({
             to="/admin/stores/$storeId/menu/changes/$draftId/$section"
             params={{ storeId, draftId, section }}
             search={section === currentSection ? listSearch : {}}
+            title={t(menuLabels[section])}
             className={className}
             onClick={onNavigate}
           >
             <Icon className="size-4" />
-            {t(menuLabels[section])}
+            {!collapsed && t(menuLabels[section])}
           </Link>
         ) : (
           <Link
@@ -49,24 +52,28 @@ export function MenuNavigation({
             to="/admin/stores/$storeId/menu/$section"
             params={{ storeId, section }}
             search={section === currentSection ? listSearch : {}}
+            title={t(menuLabels[section])}
             className={className}
             onClick={onNavigate}
           >
             <Icon className="size-4" />
-            {t(menuLabels[section])}
+            {!collapsed && t(menuLabels[section])}
           </Link>
         ),
       )}
       <Link
+        title={t("theme_title")}
         to="/admin/stores/$storeId/design"
         params={{ storeId }}
         search={{ ...listSearch, returnSection: currentSection, draftId }}
         className={className}
         onClick={onNavigate}
       >
-        {t("theme_title")}
+        <Palette className="size-4" />
+        {!collapsed && t("theme_title")}
       </Link>
       <Link
+        title={t("admin_drafts")}
         to={
           draftId
             ? "/admin/stores/$storeId/menu/changes/$draftId"
@@ -79,17 +86,18 @@ export function MenuNavigation({
         onClick={onNavigate}
       >
         <FileClock className="size-4" />
-        {t("admin_drafts")}
+        {!collapsed && t("admin_drafts")}
       </Link>
       {manager && (
         <Link
+          title={t("configuration_history_title")}
           to="/admin/stores/$storeId/menu/history"
           params={{ storeId }}
           className={className}
           onClick={onNavigate}
         >
           <History className="size-4" />
-          {t("configuration_history_title")}
+          {!collapsed && t("configuration_history_title")}
         </Link>
       )}
     </nav>

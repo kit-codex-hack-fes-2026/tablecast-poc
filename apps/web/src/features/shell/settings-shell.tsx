@@ -7,7 +7,13 @@ import { sessionOptions } from "../../lib/session-query";
 
 import { AdminShell } from "./admin-shell";
 
-export function SettingsShell({ children }: { children: ReactNode }) {
+export function SettingsShell({
+  children,
+  publicContent = false,
+}: {
+  children: ReactNode;
+  publicContent?: boolean;
+}) {
   const session = useQuery(sessionOptions);
   const path = useRouterState({ select: (state) => state.location.pathname });
   useEffect(() => {
@@ -26,7 +32,7 @@ export function SettingsShell({ children }: { children: ReactNode }) {
             : "account"
       }
     >
-      {session.data ? (
+      {session.data || (publicContent && session.isPending) ? (
         children
       ) : session.error ? (
         <ErrorNotice error={session.error} onRetry={() => void session.refetch()} />

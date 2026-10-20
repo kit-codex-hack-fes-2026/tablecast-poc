@@ -353,7 +353,7 @@ export function VoicePanel({
       data-theme-part="conversation"
       aria-label={t("kiosk_conversation")}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-border py-1">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-1">
         <h2 className="text-sm font-semibold">{t("kiosk_conversation")}</h2>
         <span
           data-ui="voice-status"

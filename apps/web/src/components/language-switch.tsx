@@ -1,11 +1,9 @@
 import type { Locale } from "@tablecast/api/schema";
+import { LanguageLabel } from "./language-label";
 import { Button } from "./ui/button";
 import { useI18n } from "../i18n/locale";
 
-const languages = [
-  { locale: "ja", flag: "jp", label: "common_language_native_ja" },
-  { locale: "en", flag: "gb", label: "common_language_native_en" },
-] as const;
+const languages = ["ja", "en"] as const;
 
 /**
  * 日英を直接選ぶ操作。
@@ -29,23 +27,17 @@ export function LanguageSwitch({
     >
       {languages.map((language) => (
         <Button
-          key={language.locale}
-          className="whitespace-nowrap font-semibold aria-pressed:bg-card aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
+          key={language}
+          className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-info aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
           size="sm"
           variant="ghost"
           type="button"
-          lang={language.locale}
-          aria-pressed={locale === language.locale}
+          lang={language}
+          aria-pressed={locale === language}
           disabled={disabled}
-          onClick={() => onChange(language.locale)}
+          onClick={() => onChange(language)}
         >
-          <img
-            className="h-3.5 w-5 rounded-sm border border-border object-cover"
-            src={`/flags/${language.flag}.svg`}
-            alt=""
-            aria-hidden="true"
-          />
-          {t(language.label)}
+          <LanguageLabel locale={language} />
         </Button>
       ))}
     </fieldset>

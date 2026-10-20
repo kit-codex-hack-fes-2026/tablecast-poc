@@ -1,3 +1,4 @@
+import { ChartNoAxesCombined, RefreshCw } from "lucide-react";
 import { calendarDate } from "../../i18n/format";
 import { barX, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
@@ -6,7 +7,6 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { StatisticsResult } from "@tablecast/api/schema";
-import { RefreshCw } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useAppForm } from "../../components/form";
 import { DateTime } from "../../components/date-time";
@@ -44,7 +44,11 @@ export function StoreStatistics({
   const manager = ["owner", "admin"].includes(store.role);
   return (
     <>
-      <PageHeader title={t("statistics_title")} description={t("statistics_basis")} />
+      <PageHeader
+        title={t("statistics_title")}
+        icon={<ChartNoAxesCombined />}
+        description={t("statistics_basis")}
+      />
       {!manager ? (
         <p>{t("statistics_permission")}</p>
       ) : (
@@ -207,6 +211,7 @@ function StatisticsResults({
             className="rounded-2xl border border-border bg-card p-5 sm:p-6"
           >
             <StatisticsSummary summary={result.summary} detailed={view === "summary"} />
+            <p className="mt-4 text-xs text-muted-foreground">{t("statistics_limitations")}</p>
             {result.summary.sessions === 0 && (
               <p className="mt-6 text-sm text-muted-foreground">{t("statistics_empty")}</p>
             )}
@@ -221,6 +226,7 @@ function StatisticsResults({
               <div>
                 <h2 className="text-lg font-semibold">{t(`statistics_view_${view}`)}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t("statistics_page_basis")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("statistics_order_basis")}</p>
               </div>
               {rows.length ? (
                 <>
@@ -251,9 +257,23 @@ function StatisticsResults({
                             <th
                               key={key}
                               scope="col"
-                              className="px-4 py-3 font-medium whitespace-nowrap"
+                              className={`px-4 py-3 font-medium whitespace-nowrap ${key === "item" ? "text-left" : "text-right"}`}
                             >
                               {t(`statistics_${key}`)}
+                              {key === "quantity" && (
+                                <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                                  {t(
+                                    view === "modifiers"
+                                      ? "statistics_option_quantity_hint"
+                                      : "statistics_quantity_hint",
+                                  )}
+                                </span>
+                              )}
+                              {key === "orderRate" && (
+                                <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                                  {t("statistics_rate_basis")}
+                                </span>
+                              )}
                             </th>
                           ))}
                         </tr>
@@ -270,14 +290,18 @@ function StatisticsResults({
                             >
                               {row.name ?? t("statistics_unknown")}
                             </th>
-                            <td className="p-4">{row.quantity.toLocaleString(locale)}</td>
-                            <td className="p-4">{row.orderingSessions.toLocaleString(locale)}</td>
-                            <td className="p-4">
+                            <td className="p-4 text-right">
+                              {row.quantity.toLocaleString(locale)}
+                            </td>
+                            <td className="p-4 text-right">
+                              {row.orderingSessions.toLocaleString(locale)}
+                            </td>
+                            <td className="p-4 text-right">
                               {row.orderRate === null
                                 ? t("statistics_unavailable")
                                 : percentages[locale].format(row.orderRate)}
                             </td>
-                            <td className="p-4">
+                            <td className="p-4 text-right">
                               {row.planCoveredQuantity.toLocaleString(locale)}
                             </td>
                           </tr>
@@ -313,25 +337,6 @@ function StatisticsResults({
               {t("statistics_snapshot")}: <DateTime value={result.asOf} /> ·{" "}
               {t("statistics_generated")}: <DateTime value={result.generatedAt} />
             </p>
-            <details className="rounded-xl border border-border p-4">
-              <summary className="cursor-pointer font-medium text-foreground">
-                {t("statistics_definitions")}
-              </summary>
-              <ul className="mt-3 list-disc space-y-2 pl-5">
-                {(
-                  [
-                    "basis",
-                    "money_basis",
-                    "order_basis",
-                    "rate_basis",
-                    "plan_basis",
-                    "limitations",
-                  ] as const
-                ).map((key) => (
-                  <li key={key}>{t(`statistics_${key}`)}</li>
-                ))}
-              </ul>
-            </details>
           </div>
         </>
       )}

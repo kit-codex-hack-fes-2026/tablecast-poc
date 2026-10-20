@@ -32,7 +32,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Table, TableCell, TableHead } from "./ui/table";
 
+const columnMeta: { align?: "left" | "right" } = {};
 const features = tableFeatures({
+  columnMeta,
   columnFilteringFeature,
   columnVisibilityFeature,
   globalFilteringFeature,
@@ -59,6 +61,7 @@ export type DataTableColumn<T extends RowData> = ColumnDef<typeof features, T>;
  * stateとonGlobalFilterChange/onPaginationChangeでURL等へ同期できる。
  * 部分取得ではpagination=false、manualFilteringを実際のAPIに合わせる。
  * 取得した一部だけを全件集計と呼ばない。
+ * 数値列はmeta.align=rightで見出しと値を右揃えにする。
  * 行全体をクリック領域にせず、対象名へリンクを置く。
  */
 export function DataTable<T extends RowData>({
@@ -140,12 +143,20 @@ export function DataTable<T extends RowData>({
         </label>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <Table className="text-base">
+        <Table className="text-sm">
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
                 {group.headers.map((header) => (
-                  <TableHead scope="col" key={header.id} className="whitespace-nowrap text-sm">
+                  <TableHead
+                    scope="col"
+                    key={header.id}
+                    className={
+                      header.column.columnDef.meta?.align === "right"
+                        ? "text-right whitespace-nowrap"
+                        : "text-left whitespace-nowrap"
+                    }
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -169,7 +180,14 @@ export function DataTable<T extends RowData>({
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} data-row-id={row.id} className="hover:bg-secondary/50">
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="text-base">
+                    <TableCell
+                      key={cell.id}
+                      className={
+                        cell.column.columnDef.meta?.align === "right"
+                          ? "text-right tabular-nums"
+                          : "text-left"
+                      }
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

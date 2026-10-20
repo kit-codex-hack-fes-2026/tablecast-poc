@@ -2,6 +2,7 @@ import remarkGfm from "remark-gfm";
 import type { StorybookConfig } from "@storybook/tanstack-react";
 
 const config: StorybookConfig = {
+  staticDirs: ["../public"],
   stories: ["../src/**/*.mdx", "../src/**/*.stories.tsx"],
   framework: {
     name: "@storybook/tanstack-react",

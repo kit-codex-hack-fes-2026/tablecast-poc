@@ -1,3 +1,4 @@
+import { LayoutDashboard } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { useCallback } from "react";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,6 +63,7 @@ export function Floor({
     <>
       <PageHeader
         title={t("admin_live")}
+        icon={<LayoutDashboard />}
         status={
           <span className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className={connectionDot({ connected })} />
@@ -147,6 +149,7 @@ export function FloorPending() {
     <>
       <PageHeader
         title={t("admin_live")}
+        icon={<LayoutDashboard />}
         status={
           <span role="status" className="text-sm text-muted-foreground">
             {t("common_loading")}

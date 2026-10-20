@@ -20,3 +20,5 @@ export const Browser: Story = { name: "ブラウザ全体", args: { device: "bro
 
 export const Air11: Story = { name: "iPad Air 11インチ", args: { device: "ipad-air-11" } };
 export const Air13: Story = { name: "iPad Air 13インチ", args: { device: "ipad-air-13" } };
+
+export const Loading: Story = { name: "読込中も同じ端末枠", args: { src: undefined } };

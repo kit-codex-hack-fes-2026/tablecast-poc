@@ -15,6 +15,7 @@ export default defineConfig({
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
+            "@base-ui/react/popover",
             "@tablecast/api > css-tree/parser",
             "@tablecast/api > css-tree/generator",
             "react",
@@ -80,6 +81,8 @@ export default defineConfig({
                   "src/features/store/device-qr-reader.browser.test.tsx",
                   "src/features/store/devices.browser.test.tsx",
                   "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/shell/sidebar-preferences.browser.test.tsx",
+                  "src/components/month-picker.browser.test.tsx",
                   "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
@@ -98,6 +101,7 @@ export default defineConfig({
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
+            "@base-ui/react/popover",
             "react",
             "react-dom/client",
             "react/jsx-runtime",

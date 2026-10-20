@@ -235,8 +235,9 @@ function menuCollectionColumns(
       ? [
           {
             accessorKey: "price",
+            meta: { align: "right" },
             header: () => (
-              <span className="block max-w-44 whitespace-normal">
+              <span className="block whitespace-normal">
                 {t(section === "plans" ? "editor_plan_price" : "admin_unit_price")}
               </span>
             ),

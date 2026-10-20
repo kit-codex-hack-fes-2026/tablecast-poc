@@ -1,9 +1,9 @@
+import { Gamepad2, Check, ShieldOff } from "lucide-react";
 import { DateTime } from "../../components/date-time";
 import { PageHeader } from "../../components/page-header";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ShieldOff } from "lucide-react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { GameFrame } from "../../components/game-frame";
@@ -25,6 +25,7 @@ export function Games() {
     <section className="space-y-6">
       <PageHeader
         title={t("games_title")}
+        icon={<Gamepad2 />}
         description={t("games_intro")}
         actions={
           <Link className="underline" to="/account/integrations/manual">

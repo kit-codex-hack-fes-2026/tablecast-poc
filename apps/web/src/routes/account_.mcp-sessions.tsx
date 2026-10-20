@@ -3,5 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { McpSessions } from "../features/account/mcp-sessions";
 export const Route = createFileRoute("/account_/mcp-sessions")({
   loader: ({ context }) => context.queryClient.ensureQueryData(mcpSessionsOptions),
-  component: () => <McpSessions />,
+  pendingComponent: McpSessions,
+  component: McpSessions,
 });

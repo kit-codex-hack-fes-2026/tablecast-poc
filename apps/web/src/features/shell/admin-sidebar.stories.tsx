@@ -3,13 +3,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, fn, userEvent, within } from "storybook/test";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
-import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
+import { AdminSidebar, useSidebarStore, type AdminSidebarProps } from "./admin-sidebar";
+
+function ConnectedSidebar(props: AdminSidebarProps) {
+  const selection = useSidebarStore(props);
+  return <AdminSidebar {...props} selection={selection} />;
+}
 
 function StoreChangeExample(props: AdminSidebarProps) {
   const [storeId, setStoreId] = useState("tablecast-first");
   return (
     <>
-      <AdminSidebar {...props} storeId={storeId} />
+      <ConnectedSidebar {...props} storeId={storeId} />
       <Button onClick={() => setStoreId("tablecast-second")}>店舗情報を更新</Button>
     </>
   );
@@ -17,7 +22,7 @@ function StoreChangeExample(props: AdminSidebarProps) {
 
 const meta = {
   title: "店舗/ナビゲーション",
-  component: AdminSidebar,
+  component: ConnectedSidebar,
   decorators: [
     (Story) => (
       <QueryClientProvider
@@ -33,7 +38,7 @@ const meta = {
     onSignOut: fn(),
     signingOut: false,
   },
-} satisfies Meta<typeof AdminSidebar>;
+} satisfies Meta<typeof ConnectedSidebar>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Japanese: Story = { name: "日本語の店舗操作" };

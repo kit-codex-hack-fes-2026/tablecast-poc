@@ -1,4 +1,4 @@
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Eye, FilePenLine, Plug, ShieldOff } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
@@ -14,7 +14,7 @@ type Session = Awaited<ReturnType<typeof loadMcpSessions>>["sessions"][number];
 export function McpSessions() {
   const { t } = useI18n(),
     client = useQueryClient();
-  const sessions = useSuspenseQuery(mcpSessionsOptions);
+  const sessions = useQuery(mcpSessionsOptions);
   const revoke = useMutation({
     mutationFn: (id: string) =>
       parseResponse(rpc.api.account["mcp-sessions"][":id"].revoke.$post({ param: { id } })),
@@ -27,10 +27,13 @@ export function McpSessions() {
   return (
     <IntegrationsShell>
       <h2 className="text-xl font-semibold">{t("mcp_oauth_sessions")}</h2>
-      <ErrorNotice error={sessions.error || revoke.error} onRetry={() => void sessions.refetch()} />
+      <ErrorNotice error={revoke.error} />
 
       <DataTable
-        data={sessions.data.sessions}
+        data={sessions.data?.sessions ?? []}
+        pending={sessions.isPending}
+        error={sessions.error}
+        onRetry={() => void sessions.refetch()}
         columns={columns}
         searchLabel={t("mcp_session_search")}
         empty={t("mcp_session_empty")}

@@ -1,3 +1,4 @@
+import { getRequest } from "@tanstack/react-start/server";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import connection from "../../../../../plugins/tablecast/.mcp.json";
 
@@ -11,8 +12,7 @@ export function integrationConnection(origin: string) {
 }
 
 export const readIntegrationConnection = createIsomorphicFn()
-  .server(async () => {
-    const { getRequest } = await import("@tanstack/react-start/server");
+  .server(() => {
     return integrationConnection(new URL(getRequest().url).origin);
   })
-  .client(async () => integrationConnection(window.location.origin));
+  .client(() => integrationConnection(window.location.origin));

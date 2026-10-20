@@ -1,3 +1,7 @@
+import { useId } from "react";
+import { Table2 } from "lucide-react";
+import { LanguageLabel } from "../../components/language-label";
+import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
 import { PageHeader } from "../../components/page-header";
 import { Field } from "@base-ui/react/field";
 import { zodFieldValidator } from "../../lib/form-validation";
@@ -24,6 +28,7 @@ export function OpenTable({
   onOpened: () => void;
 }) {
   const { t, locale } = useI18n();
+  const languageId = useId();
   const catalog = useSuspenseQuery(catalogOptions(storeId));
   const client = useQueryClient();
   const open = useMutation({
@@ -60,7 +65,7 @@ export function OpenTable({
   });
   return (
     <section className="max-w-2xl space-y-5">
-      <PageHeader title={table.name} description={t("admin_open_table")} />
+      <PageHeader icon={<Table2 />} title={table.name} description={t("admin_open_table")} />
       <form
         noValidate
         className="flex flex-col gap-4 pt-6"
@@ -81,23 +86,35 @@ export function OpenTable({
         </form.AppField>
         <form.Field name="guestLocale">
           {(field) => (
-            <Field.Root name={field.name} invalid={!field.state.meta.isValid}>
-              <label className="flex flex-col gap-2 text-base">
+            <fieldset className="space-y-2">
+              <legend id={`${languageId}-label`} className="mb-2 text-base">
                 {t("admin_locale")}
-                <NativeSelect
-                  aria-invalid={field.state.meta.errors.length > 0 || undefined}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) =>
-                    field.handleChange(event.target.value === "en" ? "en" : "ja")
-                  }
-                >
-                  <option value="ja">{t("common_language_native_ja")}</option>
-                  <option value="en">{t("common_language_native_en")}</option>
-                </NativeSelect>
-                <FieldErrors errors={field.state.meta.errors} />
-              </label>
-            </Field.Root>
+              </legend>
+              <RadioGroup
+                aria-labelledby={`${languageId}-label`}
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onValueChange={(value) => field.handleChange(value === "en" ? "en" : "ja")}
+                className="grid grid-cols-2 gap-3"
+              >
+                {(["ja", "en"] as const).map((language) => (
+                  <label
+                    key={language}
+                    htmlFor={`${languageId}-${language}`}
+                    className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 has-data-checked:border-primary has-data-checked:bg-info-soft has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                  >
+                    <RadioGroupItem
+                      className="focus-visible:outline-none"
+                      id={`${languageId}-${language}`}
+                      value={language}
+                    />
+                    <LanguageLabel locale={language} />
+                  </label>
+                ))}
+              </RadioGroup>
+              <FieldErrors errors={field.state.meta.errors} />
+            </fieldset>
           )}
         </form.Field>
         <form.Field name="plan">

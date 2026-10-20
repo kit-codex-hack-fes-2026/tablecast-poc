@@ -128,9 +128,7 @@ export function ProductsEditor({
                   onChange={(event) => update({ categoryId: event.target.value })}
                 >
                   {!value.categories.some((item) => item.id === product.categoryId) && (
-                    <option value={product.categoryId}>
-                      {product.categoryId} · {t("editor_missing_reference")}
-                    </option>
+                    <option value={product.categoryId}>{t("editor_missing_reference")}</option>
                   )}
                   {value.categories.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -140,19 +138,12 @@ export function ProductsEditor({
                 </NativeSelect>
               </label>
             </div>
-            <details className="rounded-xl bg-secondary/40 px-4 py-2">
-              <summary className="cursor-pointer py-2 text-sm text-muted-foreground">
-                {t("editor_reference_details")}
-              </summary>
-              <div className="grid gap-4 pt-3 @xl:grid-cols-2">
-                <StringListField
-                  label={t("editor_tags")}
-                  value={product.tags}
-                  disabled={disabled}
-                  onChange={(tags) => update({ tags })}
-                />
-              </div>
-            </details>
+            <StringListField
+              label={t("editor_tags")}
+              value={product.tags}
+              disabled={disabled}
+              onChange={(tags) => update({ tags })}
+            />
           </ConfigurationSection>
           <ConfigurationSection title={t("editor_images")} icon={Image}>
             <ConfigurationImageField

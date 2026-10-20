@@ -1,6 +1,7 @@
+import { useSidebarPreferences } from "./sidebar-preferences";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { PanelLeft, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
@@ -14,7 +15,7 @@ import { useI18n } from "../../i18n/locale";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 
-import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
+import { AdminSidebar, useSidebarStore, type AdminSidebarProps } from "./admin-sidebar";
 
 export function AdminShell({
   children,
@@ -23,10 +24,15 @@ export function AdminShell({
   ...sidebar
 }: AdminSidebarProps & { children: ReactNode; header?: ReactNode; storeName?: string }) {
   const { t, setLocale } = useI18n();
-  const [collapsed, setCollapsed] = useState(false);
+  const selection = useSidebarStore(sidebar);
+  const { session } = selection;
+  const { preferences, update } = useSidebarPreferences(session.data?.user.id);
+  const collapsed = preferences.collapsed ?? false;
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
+  const sidebarInteraction = useRef(false);
   const toggleSidebar = () => {
+    sidebarInteraction.current = true;
     if (panel.current?.isCollapsed()) panel.current.expand();
     else panel.current?.collapse();
   };
@@ -43,7 +49,13 @@ export function AdminShell({
         orientation="horizontal"
         className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden"
         defaultLayout={defaultLayout}
-        onLayoutChanged={onLayoutChanged}
+        onLayoutChanged={(layout, meta) => {
+          onLayoutChanged(layout, {
+            ...meta,
+            isUserInteraction: meta.isUserInteraction || sidebarInteraction.current,
+          });
+          sidebarInteraction.current = false;
+        }}
       >
         {desktop && (
           <ResizablePanel
@@ -55,10 +67,10 @@ export function AdminShell({
             maxSize="24rem"
             collapsedSize="4.5rem"
             collapsible
-            onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
+            onResize={() => update({ collapsed: panel.current?.isCollapsed() ?? false })}
           >
             <aside className="flex h-full min-w-0 flex-col px-2">
-              <AdminSidebar {...sidebar} collapsed={collapsed} />
+              <AdminSidebar {...sidebar} selection={selection} collapsed={collapsed} />
             </aside>
           </ResizablePanel>
         )}
@@ -89,7 +101,11 @@ export function AdminShell({
               >
                 <PanelLeft />
               </Button>
-              <MobileNavigation key={desktop ? "desktop" : "mobile"} {...sidebar} />
+              <MobileNavigation
+                key={desktop ? "desktop" : "mobile"}
+                {...sidebar}
+                selection={selection}
+              />
               {storeName && (!desktop || collapsed) && (
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{storeName}</span>
               )}
@@ -102,7 +118,7 @@ export function AdminShell({
                 <LanguageSwitch onChange={setLocale} />
               </div>
             </header>
-            <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+            <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8">
               {children}
             </div>
           </main>
@@ -112,7 +128,9 @@ export function AdminShell({
   );
 }
 
-function MobileNavigation(sidebar: AdminSidebarProps) {
+function MobileNavigation(
+  sidebar: AdminSidebarProps & { selection: ReturnType<typeof useSidebarStore> },
+) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (

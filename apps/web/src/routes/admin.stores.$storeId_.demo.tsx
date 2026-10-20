@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { DemoPage } from "../features/store/demo";
+import { DemoPage, DemoPending } from "../features/store/demo";
 import { demoOptions } from "../features/store/demo-query";
 import { storesOptions } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId_/demo")({
@@ -15,10 +15,16 @@ export const Route = createFileRoute("/admin/stores/$storeId_/demo")({
     if (deps.demoId)
       await context.queryClient.ensureQueryData(demoOptions(params.storeId, deps.demoId));
   },
+  pendingComponent: Pending,
   component: Page,
 });
 function Page() {
   const { storeId } = Route.useParams();
   const search = Route.useSearch();
   return <DemoPage storeId={storeId} {...search} />;
+}
+
+function Pending() {
+  const search = Route.useSearch();
+  return <DemoPending device={search.device} portrait={search.portrait} />;
 }

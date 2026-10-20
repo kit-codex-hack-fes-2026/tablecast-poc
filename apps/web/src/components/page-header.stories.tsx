@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { Plus } from "lucide-react";
+import { Plus, UtensilsCrossed } from "lucide-react";
 import { expect, within } from "storybook/test";
 import { PageHeader } from "./page-header";
 import { Badge } from "./ui/badge";
@@ -17,7 +17,7 @@ const meta = {
       </main>
     ),
   ],
-  args: { title: "商品" },
+  args: { title: "商品", icon: <UtensilsCrossed /> },
 } satisfies Meta<typeof PageHeader>;
 export default meta;
 type Story = StoryObj<typeof meta>;

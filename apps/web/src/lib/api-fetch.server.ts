@@ -29,6 +29,10 @@ export async function readPanelCookies() {
   const { getRequest } = await import("@tanstack/react-start/server");
   return (getRequest().headers.get("cookie") ?? "")
     .split(";")
-    .filter((cookie) => cookie.trim().startsWith("tablecast-layout-"))
+    .filter(
+      (cookie) =>
+        cookie.trim().startsWith("tablecast-layout-") ||
+        cookie.trim().startsWith("tablecast-navigation="),
+    )
     .join(";");
 }

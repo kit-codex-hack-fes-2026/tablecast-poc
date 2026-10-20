@@ -1,3 +1,4 @@
+import { LanguageLabel } from "../../components/language-label";
 import { PageHeader } from "../../components/page-header";
 import { CouponVisit } from "./coupon-visit";
 import { PointVisit } from "./point-visit";
@@ -5,7 +6,7 @@ import { useHydrated, Link } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
 import type { Order, TableState } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Table2, Users, Clock3 } from "lucide-react";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -289,6 +290,7 @@ function TableDetailHeader({
       </Button>
       <PageHeader
         title={table.tableName}
+        icon={<Table2 />}
         status={
           <Badge variant={table.status === "open" ? "info" : "inactive"}>
             {t(table.status === "open" ? "admin_open" : "admin_visit_closed")}
@@ -296,9 +298,17 @@ function TableDetailHeader({
         }
         description={
           <>
-            {table.guestCount} {t("admin_guests")} ·{" "}
-            {t(table.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} ·{" "}
-            <DateTime value={table.openedAt} />
+            <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-4" aria-hidden="true" />
+                {table.guestCount} {t("admin_guests")}
+              </span>
+              <LanguageLabel locale={table.locale} />
+              <span className="inline-flex items-center gap-1.5">
+                <Clock3 className="size-4" aria-hidden="true" />
+                <DateTime value={table.openedAt} />
+              </span>
+            </span>
           </>
         }
       />

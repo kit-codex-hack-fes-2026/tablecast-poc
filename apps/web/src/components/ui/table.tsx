@@ -22,7 +22,7 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "border-b border-border bg-muted text-sm font-medium text-muted-foreground p-3",
+        "border-b border-border bg-surface-subtle text-xs font-semibold leading-relaxed text-muted-foreground px-4 py-3",
         className,
       )}
       {...props}
@@ -33,7 +33,10 @@ export function TableCell({ className, ...props }: ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("border-b border-border text-sm tabular-nums p-3", className)}
+      className={cn(
+        "border-b border-border/70 text-sm leading-relaxed align-middle px-4 py-3",
+        className,
+      )}
       {...props}
     />
   );

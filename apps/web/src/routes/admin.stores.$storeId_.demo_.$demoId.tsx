@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { KioskPending } from "../components/kiosk-pending";
 import { Kiosk } from "../features/kiosk/kiosk";
 import {
   tableOptions,
@@ -17,6 +18,11 @@ export const Route = createFileRoute("/admin/stores/$storeId_/demo_/$demoId")({
         tableCatalogOptions(table.storeId, table.configVersion, endpoint),
       );
   },
+  pendingComponent: () => (
+    <main className="h-dvh">
+      <KioskPending />
+    </main>
+  ),
   component: Page,
 });
 function Page() {

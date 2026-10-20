@@ -464,15 +464,16 @@ it.each(["ja", "en"] as const)(
     await page.viewport(1024, 768);
     await mountKiosk();
     const tools = page.getByRole("button", { name: new RegExp(`^${labels.kiosk_visit_tools}`) });
-    await expect.element(tools).toMatchTextContent(labels.kiosk_service_group);
+    await expect.element(tools).toBeVisible();
+    expect(tools.element().closest("header")).not.toBeNull();
     const conversation = page
       .getByRole("region", { name: labels.kiosk_conversation, exact: true })
       .element();
     const socket = TablecastSocket.instances[0];
     const cart = structuredClone(current.cart);
     const paneWidth = orderPanel()?.getBoundingClientRect().width ?? 0;
-    expect(paneWidth / 1024).toBeGreaterThan(0.58);
-    expect(paneWidth / 1024).toBeLessThan(0.62);
+    expect(paneWidth / 1024).toBeGreaterThan(0.7);
+    expect(paneWidth / 1024).toBeLessThan(0.74);
     await expect
       .element(page.getByRole("region", { name: labels.customer_join_visit }))
       .not.toBeInTheDocument();
@@ -480,6 +481,9 @@ it.each(["ja", "en"] as const)(
     await userEvent.keyboard("{Enter}");
     const dialog = page.getByRole("dialog", { name: labels.kiosk_visit_tools, exact: true });
     await expect.element(dialog).toBeVisible();
+    await expect
+      .element(dialog.getByText(labels.kiosk_service_group, { exact: true }))
+      .toBeVisible();
     await dialog.getByRole("button", { name: "Alex", exact: true }).click();
     await expect
       .element(dialog.getByRole("button", { name: "Alex", exact: true }))
@@ -487,7 +491,11 @@ it.each(["ja", "en"] as const)(
     await userEvent.keyboard("{Escape}");
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(tools).toHaveFocus();
-    await expect.element(tools).toMatchTextContent("Alex");
+    await tools.click();
+    await expect
+      .element(dialog.getByRole("button", { name: "Alex", exact: true }))
+      .toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("{Escape}");
     for (const [width, height] of [
       [1024, 768],
       [768, 1024],
@@ -511,6 +519,10 @@ it.each(["ja", "en"] as const)(
         expect(bounds.right).toBeLessThanOrEqual(width);
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
+      if (width === 1024)
+        await page.screenshot({
+          path: `../../../test-results/tablecast-guest-compact-${locale}.png`,
+        });
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
       await expect
@@ -584,10 +596,10 @@ it("注文ペインの比率をCookieから復元し、縦横の切替でもタ�
   await expect.element(handle).toHaveAttribute("aria-orientation", "horizontal");
   const initialHeight = orderPanel()?.getBoundingClientRect().height ?? 0;
   handle.element().focus();
-  await userEvent.keyboard("{ArrowUp}");
+  await userEvent.keyboard("{ArrowDown}");
   await expect
     .poll(() => orderPanel()?.getBoundingClientRect().height ?? 0)
-    .toBeGreaterThan(initialHeight + 10);
+    .toBeLessThan(initialHeight - 10);
   await expect
     .element(page.getByRole("tab", { name: new RegExp(`^${ja.kiosk_cart}`) }))
     .toHaveAttribute("aria-selected", "true");

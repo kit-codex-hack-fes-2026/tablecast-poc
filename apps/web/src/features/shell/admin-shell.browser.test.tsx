@@ -35,7 +35,8 @@ afterEach(async () => {
     vi.unstubAllGlobals();
     for (const cookie of document.cookie.split(";")) {
       const name = cookie.trim().split("=")[0];
-      if (name?.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+      if (name?.startsWith("tablecast-layout-") || name === "tablecast-navigation")
+        document.cookie = `${name}=; Path=/; Max-Age=0`;
     }
     document.documentElement.style.fontSize = "";
     if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
@@ -48,7 +49,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en" = "ja", initial = "/account") {
+async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn = false) {
   unexpected = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
@@ -60,7 +61,19 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account") {
     return Response.json({}, { status: 500 });
   });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(["tablecast-session"], null);
+  client.setQueryData(
+    ["tablecast-session"],
+    signedIn
+      ? {
+          user: {
+            id: "tablecast-user",
+            name: "店舗スタッフ",
+            email: "restaurant.staff@example.com",
+            image: null,
+          },
+        }
+      : null,
+  );
   const stores: Parameters<typeof StorePicker>[0]["stores"] = [
     {
       id: "tablecast-shell",
@@ -256,4 +269,26 @@ it("サイドバーのショートカットは編集入力を奪わず、通常�
   await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
   await userEvent.click(trigger);
   await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+});
+
+it("利用者メニューを開いてもトリガー・サイドバー・本文を動かさない", async () => {
+  await page.viewport(1024, 768);
+  await show("ja", "/account", true);
+  const trigger = page.getByRole("button", { name: ja.account_title, exact: true });
+  await expect.element(trigger).toMatchTextContent("restaurant.staff@example.com");
+  const main = page.getByRole("main");
+  const before = [trigger.element(), main.element()].map((element) =>
+    element.getBoundingClientRect(),
+  );
+  await trigger.click();
+  await expect.element(page.getByRole("menu")).toBeVisible();
+  const after = [trigger.element(), main.element()].map((element) =>
+    element.getBoundingClientRect(),
+  );
+
+  for (let i = 0; i < before.length; i++)
+    for (const key of ["x", "y", "width", "height"] as const)
+      expect(after[i]?.[key]).toBeCloseTo(before[i]?.[key] ?? 0, 1);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(trigger).toHaveFocus();
 });

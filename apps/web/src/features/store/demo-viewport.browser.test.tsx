@@ -6,10 +6,10 @@ import { DemoViewport } from "./demo-viewport";
 import "../../styles.css";
 
 afterEach(cleanup);
-const view = (device: DemoDevice, portrait: boolean) => (
+const view = (device: DemoDevice, portrait: boolean, pending = false) => (
   <LocaleProvider initialLocale="ja" persist={false}>
     <div style={{ width: 1000, height: 700, display: "flex" }}>
-      <DemoViewport src="about:blank" device={device} portrait={portrait} />
+      <DemoViewport src={pending ? undefined : "about:blank"} device={device} portrait={portrait} />
     </div>
   </LocaleProvider>
 );
@@ -47,3 +47,20 @@ it("端末の向き・通常表示を切り替えるとviewportを変更しifram
   expect(iframe.clientHeight).toBe(700);
   await expect.element(screen.getByTestId("demo-device-frame")).not.toBeInTheDocument();
 });
+
+it.each([false, true])(
+  "デモ読込中も同じ端末枠と画面領域を保持する（縦向き: %s）",
+  async (portrait) => {
+    const screen = await render(view("ipad", portrait, true));
+    const pending = screen.getByRole("status");
+    await expect.poll(() => pending.element().getBoundingClientRect().width).toBeGreaterThan(0);
+    const before = pending.element().getBoundingClientRect();
+    await screen.rerender(view("ipad", portrait));
+    const after = screen
+      .getByTitle("会話注文タブレットのデモ画面")
+      .element()
+      .getBoundingClientRect();
+    for (const key of ["x", "y", "width", "height"] as const)
+      expect(after[key]).toBeCloseTo(before[key], 1);
+  },
+);

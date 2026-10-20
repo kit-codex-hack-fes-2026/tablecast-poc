@@ -229,7 +229,7 @@ it("memberは統計を取得せず、ホームにも管理者向け導入案内�
   await router.navigate({ to: "/admin/stores/$storeId", params: { storeId } });
   await expect.element(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   expect(requests).toEqual([]);
-  expect(document.body.textContent).not.toContain("ChatGPTから");
+  expect(document.body.textContent).not.toContain("ChatGPTとつなぐ");
   await userEvent.click(page.getByRole("link", { name: /スタッフ呼出/ }));
   await expect
     .poll(() => router.state.location.search)
@@ -270,3 +270,33 @@ it("ホームの準備状態は実データを使い、導入・商品・統計�
     .element(page.getByRole("link", { name: "詳しい統計を見る", exact: true }))
     .toHaveAttribute("href", expect.stringContaining(`/admin/stores/${storeId}/statistics`));
 });
+
+it.each([
+  { locale: "ja" as const, width: 1024, height: 768, name: "ホーム", plugin: "接続方法を見る" },
+  { locale: "ja" as const, width: 1440, height: 1000, name: "ホーム", plugin: "接続方法を見る" },
+  { locale: "en" as const, width: 390, height: 844, name: "Home", plugin: "See how to connect" },
+])(
+  "ホームは$locale / $width pxで操作と補助説明が欠けずに表示される",
+  async ({ locale, width, height, name, plugin }) => {
+    await page.viewport(width, height);
+    await show({ locale, initial: `/admin/stores/${storeId}` });
+    await expect.element(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect
+      .element(page.getByText(locale === "en" ? "JP¥61,200" : "¥61,200", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByRole("link", { name: plugin, exact: true })).toBeVisible();
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    await page.screenshot({
+      path: `../../../test-results/tablecast-home-${locale}-${width}.png`,
+      fullPage: true,
+    });
+    page
+      .getByRole("link", { name: plugin, exact: true })
+      .element()
+      .scrollIntoView({ block: "center" });
+    await page.screenshot({
+      path: `../../../test-results/tablecast-home-setup-${locale}-${width}.png`,
+      fullPage: true,
+    });
+  },
+);

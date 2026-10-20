@@ -250,7 +250,8 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
   await expect
     .element(billingLink)
     .toHaveAttribute("href", `/billing/${billingFixture.organization.id}`);
-  await userEvent.fill(page.getByLabelText("利用状況の対象月"), "2026-09");
+  await page.getByRole("button", { name: "利用状況の対象月: 2026年10月", exact: true }).click();
+  await page.getByRole("button", { name: "2026年9月", exact: true }).click();
   await expect
     .poll(() =>
       fetch.mock.calls.some(
@@ -315,7 +316,9 @@ it("組織切替で期間・検索・ページを初期化し、旧組織の遅�
       ),
     )
     .toBe(true);
-  await expect.element(page.getByLabelText("利用状況の対象月")).toHaveValue("2026-10");
+  await expect
+    .element(page.getByRole("button", { name: "利用状況の対象月: 2026年10月", exact: true }))
+    .toBeVisible();
   await expect.element(billingLink).toHaveAttribute("href", "/billing/tablecast-new-org");
   oldResponse.resolve(
     Response.json({
@@ -375,7 +378,9 @@ it("狭い画面の店舗切替は送信中と失敗をナビ内に示し、入�
     await expect.poll(() => router.state.location.pathname).toBe("/billing/tablecast-new-org");
     await expect.element(navigation).not.toBeInTheDocument();
     await expect.element(filter).toHaveValue("");
-    await expect.element(page.getByLabelText("利用状況の対象月")).toHaveValue("2026-10");
+    await expect
+      .element(page.getByRole("button", { name: "利用状況の対象月: 2026年10月", exact: true }))
+      .toBeVisible();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   } finally {
     failedSwitch.resolve(Response.json({}, { status: 503 }));

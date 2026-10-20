@@ -1,3 +1,4 @@
+import { LanguageLabel } from "../../components/language-label";
 import type { TableState } from "@tablecast/api/schema";
 import {
   Bell,
@@ -132,11 +133,7 @@ export function TableTimeline({
                         {t("kiosk_minutes")}
                       </span>
                       <span className="text-muted-foreground">
-                        {t(
-                          visit.locale === "ja"
-                            ? "common_language_native_ja"
-                            : "common_language_native_en",
-                        )}
+                        <LanguageLabel locale={visit.locale} />
                       </span>
                     </div>
                     {attention && (
