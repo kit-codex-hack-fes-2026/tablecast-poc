@@ -24,7 +24,7 @@ Issue #359、PR #360の管理・認証・連携・会員画面を対象とする
 | `/floor`                           | 一覧と時間軸、前日と現在、一覧への復帰                         | JA/EN Desktop                       | 空卓開始の確定は未実施。背景再取得・続きを取得・focus保持はBrowser       |
 | `/visits`、`/visits/$sessionId`    | 終了済み来店、概要・ログ・注文・会計・診断                     | JA Desktop                          | 会計調整の取消はBrowser。実会計登録は未実施                              |
 | `/tables/$tableId/open`            | 開始フォーム、フロアへ戻る                                     | JA/EN Desktop                       | 来店開始の確定は未実施                                                   |
-| `/statistics`                      | 今日、直近7日、商品別                                          | JA Desktop                          | 指定期間・権限・部分取得・再取得失敗はBrowser                            |
+| `/statistics`                      | 今日、直近7日、商品別、英語の指定期間と日付選択                | JA/EN Desktop                       | 権限・部分取得・再取得失敗はBrowser                                      |
 | `/members`                         | メール検索・解除、人物セル                                     | JA 390/Desktop                      | 権限変更・除名は未実施                                                   |
 | `/invitations`、`/invitations/new` | 空一覧、宛先・役割・戻る導線                                   | JA Desktop                          | 招待送信は未実施                                                         |
 | `/devices`、`/devices/new`         | 登録入口、QR・コード・卓選択                                   | JA Desktop                          | 実ペアリング・カメラ許可・解除は未実施                                   |

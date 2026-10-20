@@ -167,8 +167,11 @@ export function CouponRuleForm({
         onRetry={() => (reload.error ? reload.mutate() : void savedRules.refetch())}
         retrying={pending || savedRules.isFetching || !!uploads}
       />
-      <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+      <fieldset
+        disabled={pending}
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-5"
+      >
+        <div className="col-span-full">
           <LanguageFields>
             {(language) => (
               <>
@@ -258,7 +261,7 @@ export function CouponRuleForm({
             </label>
           )}
         </form.Field>
-        <div className="sm:col-span-2">
+        <div className="col-span-full">
           <form.Field name="rules">
             {(field) => (
               <ConfigurationImageField

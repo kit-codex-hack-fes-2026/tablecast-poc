@@ -1,4 +1,5 @@
 import { Popover } from "@base-ui/react/popover";
+import { cn } from "tailwind-variants";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useImperativeHandle,
@@ -123,6 +124,7 @@ export function DatePicker({
   ref,
   onBlur,
   onInvalid,
+  className,
   ...props
 }: DatePickerProps) {
   const {
@@ -142,9 +144,10 @@ export function DatePicker({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <div className="min-w-0 space-y-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           <Input
             {...props}
+            className={cn("flex-1 basis-67", className)}
             ref={input}
             type="text"
             aria-label={label}
@@ -166,7 +169,7 @@ export function DatePicker({
             }}
           />
           <Popover.Trigger
-            render={<Button variant="outline" size="icon" />}
+            render={<Button variant="outline" size="icon-sm" />}
             disabled={props.disabled || props.readOnly}
             aria-label={`${label}: ${t("calendar_open")}`}
           >

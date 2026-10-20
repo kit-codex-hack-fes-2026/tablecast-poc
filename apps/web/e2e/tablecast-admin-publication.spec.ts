@@ -59,7 +59,20 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await page.goto(`/admin/live?storeId=${storeId}&draftId=${draft.id}`);
     await page.getByRole("button", { name: "日本語", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
-    await expect(page.getByRole("button", { name: ja.admin_validate, exact: true })).toBeEnabled();
+    const configurationHeader = page.getByRole("region", { name: ja.workflow_context });
+    const validate = configurationHeader.getByRole("button", {
+      name: ja.admin_validate,
+      exact: true,
+    });
+    const publish = configurationHeader.getByRole("button", {
+      name: ja.admin_publish,
+      exact: true,
+    });
+    await expect(
+      configurationHeader.getByText(ja.workflow_changes_short.replace("{count}", "0")),
+    ).toBeVisible();
+    await expect(validate).toBeDisabled();
+    await expect(publish).toBeDisabled();
     await page.goto(`${reviewPath}/products/${product.id}`);
     await page.getByRole("link", { name: ja.editor_basic_information, exact: true }).click();
     const price = page.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
@@ -101,8 +114,9 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(guestProduct).toContainText(money(product.price, "ja"));
 
     await page.goto(reviewPath);
-    await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
-    const publish = page.getByRole("button", { name: ja.admin_publish, exact: true });
+    await expect(validate).toBeEnabled();
+    await expect(publish).toBeDisabled();
+    await validate.click();
     await expect(publish).toBeEnabled();
     await publish.click();
     const confirmation = page.getByRole("dialog", { name: ja.workflow_publish_title, exact: true });
@@ -137,8 +151,11 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
     await page.getByRole("button", { name: ja.configuration_history_create, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/stores/${storeId}/menu/changes/[^/]+$`));
-    await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
-    await page.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+    await expect(validate).toBeEnabled();
+    await expect(publish).toBeDisabled();
+    await validate.click();
+    await expect(publish).toBeEnabled();
+    await publish.click();
     const restoreConfirmation = page.getByRole("dialog", {
       name: ja.workflow_publish_title,
       exact: true,

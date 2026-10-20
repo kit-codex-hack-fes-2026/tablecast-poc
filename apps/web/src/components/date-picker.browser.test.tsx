@@ -173,3 +173,37 @@ function LocaleExample() {
     </>
   );
 }
+
+it.each([
+  { width: 320, includeTime: false },
+  { width: 390, includeTime: false },
+  { width: 320, includeTime: true },
+  { width: 390, includeTime: true },
+])(
+  "$width pxの日時入力で完全な英語日付を切らない（時刻: $includeTime）",
+  async ({ width, includeTime }) => {
+    await page.viewport(width, 844);
+    const Picker = includeTime ? DateTimePicker : DatePicker;
+    await render(
+      <LocaleProvider initialLocale="en" persist={false}>
+        <div className={width === 390 ? "p-9" : "p-5"}>
+          <Picker
+            label="Start date"
+            value={includeTime ? "2026-09-23T09:30" : "2026-09-23"}
+            onValueChange={() => {}}
+          />
+        </div>
+      </LocaleProvider>,
+    );
+    const input = page.getByRole("textbox", { name: "Start date", exact: true });
+    await expect.element(input).toHaveValue("Wednesday, 23 September 2026");
+    expect(input.element().scrollWidth).toBeLessThanOrEqual(input.element().clientWidth);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+    const choose = page.getByRole("button", { name: "Start date: Choose a date" });
+    const buttonBounds = choose.element().getBoundingClientRect();
+    const inputBounds = input.element().getBoundingClientRect();
+    const onSameRow =
+      buttonBounds.top + buttonBounds.height / 2 === inputBounds.top + inputBounds.height / 2;
+    expect(onSameRow).toBe(width === 390);
+  },
+);

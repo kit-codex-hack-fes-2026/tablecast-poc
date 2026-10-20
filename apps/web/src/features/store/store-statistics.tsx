@@ -142,7 +142,7 @@ function PeriodForm({
   });
   return (
     <form
-      className="flex flex-wrap items-end gap-3"
+      className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-end gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -154,7 +154,7 @@ function PeriodForm({
       <form.AppField name="to">
         {(field) => <field.DateField ref={endInput} required label={t("statistics_to")} />}
       </form.AppField>
-      <Button type="submit" variant="outline">
+      <Button type="submit" variant="outline" className="col-span-full justify-self-start">
         {t("statistics_apply")}
       </Button>
     </form>

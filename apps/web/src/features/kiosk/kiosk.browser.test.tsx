@@ -482,9 +482,21 @@ it.each(["ja", "en"] as const)(
       .element();
     const socket = TablecastSocket.instances[0];
     const cart = structuredClone(current.cart);
-    const paneWidth = orderPanel()?.getBoundingClientRect().width ?? 0;
-    expect(paneWidth / 1024).toBeGreaterThan(0.75);
-    expect(paneWidth / 1024).toBeLessThan(0.78);
+    const order = orderPanel();
+    const group = order?.parentElement;
+    if (!order || !group) throw new Error("分割された注文領域がありません");
+    const paneWidth = order.getBoundingClientRect().width;
+    const availableWidth = group.getBoundingClientRect().width;
+    const conversationWidth = conversation.getBoundingClientRect().width;
+    const handleWidth = page
+      .getByRole("separator", { name: labels.kiosk_resize_panes })
+      .element()
+      .getBoundingClientRect().width;
+    // OSの常設スクロールバー領域を除いた実Group幅に対して、メニューと固定幅の会話欄を確認する。
+    expect(conversationWidth).toBeCloseTo(240, 0);
+    expect(paneWidth + conversationWidth + handleWidth).toBeCloseTo(availableWidth, 0);
+    expect(paneWidth / availableWidth).toBeGreaterThan(0.75);
+    expect(paneWidth / availableWidth).toBeLessThan(0.78);
     await expect
       .element(page.getByRole("region", { name: labels.customer_join_visit }))
       .not.toBeInTheDocument();

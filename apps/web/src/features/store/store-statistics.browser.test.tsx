@@ -300,3 +300,29 @@ it.each([
     });
   },
 );
+
+it.each([390, 881])(
+  "%s pxの期間指定はコンテナ幅に合わせて日付を縦に並べ省略しない",
+  async (width) => {
+    await page.viewport(width, 1000);
+    await show({
+      locale: "en",
+      initial: `/admin/stores/${storeId}/statistics?period=custom&from=2026-09-23&to=2026-09-23`,
+    });
+    const from = page.getByRole("textbox", { name: "Start date", exact: true });
+    const to = page.getByRole("textbox", { name: "End date (inclusive)", exact: true });
+    await expect.element(from).toHaveValue("Wednesday, 23 September 2026");
+    await expect.element(to).toHaveValue("Wednesday, 23 September 2026");
+    for (const input of [from.element(), to.element()]) {
+      expect(input.scrollWidth).toBeLessThanOrEqual(input.clientWidth);
+    }
+    expect(to.element().getBoundingClientRect().top).toBeGreaterThan(
+      from.element().getBoundingClientRect().bottom,
+    );
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
+    await page.screenshot({
+      path: `../../../test-results/tablecast-statistics-dates-${width}.png`,
+      fullPage: true,
+    });
+  },
+);
