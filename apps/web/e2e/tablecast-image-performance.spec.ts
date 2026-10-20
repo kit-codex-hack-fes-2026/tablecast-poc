@@ -188,6 +188,10 @@ for (const count of [24, 120]) {
             source: new URL(image.currentSrc || image.src).searchParams.get("width"),
           })),
       }));
+      await testInfo.attach(`tablecast-image-sample-${sample}`, {
+        body: JSON.stringify(measured, null, 2),
+        contentType: "application/json",
+      });
       expect(measured.cls === null || measured.cls < 0.1).toBe(true);
       const transferred = measured.resources.some((resource) => resource.body > 0)
         ? measured.resources.reduce((total, resource) => total + resource.transfer, 0)
@@ -214,6 +218,20 @@ for (const count of [24, 120]) {
         expect(Math.abs(image.width - image.height)).toBeLessThan(1);
       samples.push({ sample, transferBytes: transferred, coldTransferBytes, ...measured });
     }
+    const lastImage = page.locator("#tablecast-order img").last();
+    await page
+      .locator("#tablecast-order button")
+      .filter({ has: page.locator("img") })
+      .last()
+      .scrollIntoViewIfNeeded();
+    await expect(lastImage).toBeVisible();
+    await expect
+      .poll(() =>
+        lastImage.evaluate(
+          (image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
     const source = await page
       .locator("#tablecast-order img")
       .first()

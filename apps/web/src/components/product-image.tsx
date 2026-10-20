@@ -74,7 +74,7 @@ export function ProductImage({
           className,
         )}
         transformer={transformImage}
-        breakpoints={[64, 96, 128, 192, 256, 384, 512, 640, 768, 960, 1280, 1600]}
+        breakpoints={[64, 96, 128, 192, 256, 384, 416, 512, 640, 768, 960, 1280, 1600]}
       />
     </span>
   );
