@@ -186,17 +186,22 @@ it.each([
     const Picker = includeTime ? DateTimePicker : DatePicker;
     await render(
       <LocaleProvider initialLocale="en" persist={false}>
-        <div className={width === 390 ? "p-9" : "p-5"}>
-          <Picker
-            label="Start date"
-            value={includeTime ? "2026-09-23T09:30" : "2026-09-23"}
-            onValueChange={() => {}}
-          />
+        <div className="p-4">
+          {/* 常設スクロールバーの幅とは独立に、フォームの内容幅を再現する。 */}
+          <div className="max-w-full" style={{ width: width === 390 ? 318 : 280 }}>
+            <Picker
+              label="Start date"
+              value={includeTime ? "2026-09-23T09:30" : "2026-09-23"}
+              onValueChange={() => {}}
+            />
+          </div>
         </div>
       </LocaleProvider>,
     );
     const input = page.getByRole("textbox", { name: "Start date", exact: true });
-    await expect.element(input).toHaveValue("Wednesday, 23 September 2026");
+    await expect.element(input).toHaveValue(calendarInputValue("2026-09-23", "en"));
+    // Intlの句読点差は認めるが、曜日・日・完全な月名・年の省略は認めない。
+    expect(input.element().value).toMatch(/^Wednesday,? 23 September 2026$/);
     expect(input.element().scrollWidth).toBeLessThanOrEqual(input.element().clientWidth);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
     const choose = page.getByRole("button", { name: "Start date: Choose a date" });

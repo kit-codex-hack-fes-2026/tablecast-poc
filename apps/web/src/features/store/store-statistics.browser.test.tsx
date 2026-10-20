@@ -18,6 +18,7 @@ import { StoreShell } from "./store-shell";
 import { StoreHome } from "./store-home";
 import { StoreStatistics } from "./store-statistics";
 import { statisticsSearchSchema } from "./statistics-query";
+import { calendarInputValue } from "../../lib/calendar-input";
 import "../../styles.css";
 
 const storeId = statisticsFixture.storeId;
@@ -311,8 +312,8 @@ it.each([390, 881])(
     });
     const from = page.getByRole("textbox", { name: "Start date", exact: true });
     const to = page.getByRole("textbox", { name: "End date (inclusive)", exact: true });
-    await expect.element(from).toHaveValue("Wednesday, 23 September 2026");
-    await expect.element(to).toHaveValue("Wednesday, 23 September 2026");
+    await expect.element(from).toHaveValue(calendarInputValue("2026-09-23", "en"));
+    await expect.element(to).toHaveValue(calendarInputValue("2026-09-23", "en"));
     for (const input of [from.element(), to.element()]) {
       expect(input.scrollWidth).toBeLessThanOrEqual(input.clientWidth);
     }
