@@ -4,7 +4,7 @@ import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 
 const userAvatar = tv({
-  base: "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-info-soft text-info ring-1 ring-info/15",
+  base: "relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-muted-foreground ring-1 ring-border",
   variants: { compact: { true: "size-9", false: "size-11" } },
 });
 

@@ -26,7 +26,7 @@ export function HomePreparation({ storeId }: { storeId: string }) {
         <div className="divide-y divide-border">
           <div className="space-y-2 py-4">
             <h3 className="flex items-center gap-2 text-sm font-medium">
-              <UtensilsCrossed aria-hidden="true" className="size-4 text-info" />
+              <UtensilsCrossed aria-hidden="true" className="size-4 text-muted-foreground" />
               {t("home_setup_menu")}
               {hasProducts && (
                 <CheckCircle2 aria-hidden="true" className="ml-auto size-4 text-success" />
@@ -64,7 +64,7 @@ export function HomePreparation({ storeId }: { storeId: string }) {
           </div>
           <div className="space-y-2 py-4">
             <h3 className="flex items-center gap-2 text-sm font-medium">
-              <Tablet aria-hidden="true" className="size-4 text-info" />
+              <Tablet aria-hidden="true" className="size-4 text-muted-foreground" />
               {t("home_setup_devices")}
               {hasDevices && (
                 <CheckCircle2 aria-hidden="true" className="ml-auto size-4 text-success" />
@@ -116,7 +116,7 @@ export function HomePreparation({ storeId }: { storeId: string }) {
         </div>
       </section>
       <section
-        className="overflow-hidden rounded-2xl border border-info/20 bg-info-soft"
+        className="overflow-hidden rounded-2xl border border-border bg-surface-subtle"
         aria-labelledby="tablecast-home-plugin"
       >
         <img

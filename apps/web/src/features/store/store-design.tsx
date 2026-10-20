@@ -1,3 +1,5 @@
+import { ConfigurationToolbar } from "../shell/configuration-toolbar";
+import { SaveStatus } from "../shell/configuration-status";
 import { configurationSchema, type Configuration, type ConfigDraft } from "@tablecast/api/schema";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useForm } from "@tanstack/react-form";
@@ -41,7 +43,6 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
     <div className="space-y-5">
       <PageHeader
         title={t("theme_title")}
-        description={t(draftId ? "theme_editing_note" : "theme_published_note")}
         actions={
           !draftId &&
           configuration &&
@@ -181,6 +182,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   );
   return (
     <form
+      id="tablecast-design-editor"
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -188,30 +190,44 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
       }}
       className="space-y-5"
     >
-      <p>
-        {t("theme_draft_hint")} · v{version}
-      </p>
-      <div className="sticky top-16 z-10 flex flex-wrap gap-3 border-b border-border bg-background/95 py-3 backdrop-blur-sm">
-        <Button type="submit" disabled={blocked} aria-keyshortcuts="Control+s Meta+s">
-          {t("common_save")}
-        </Button>
-        <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
-          {t("theme_preview")}
-        </Button>
-        <Button
-          nativeButton={false}
-          variant="outline"
-          render={
-            <Link
-              to="/admin/stores/$storeId/menu/changes/$draftId"
-              params={{ storeId: store.id, draftId: draft.id }}
+      <ConfigurationToolbar slot="status">
+        <form.Subscribe selector={(state) => state.isDirty}>
+          {(dirty) => (
+            <SaveStatus
+              dirty={dirty || hasStaged}
+              pending={pending}
+              error={save.error || preview.error || reload.error}
             />
-          }
-        >
-          {t("theme_review")}
-        </Button>
-      </div>
-      {hasStaged && <p role="status">{t("theme_staged_hint")}</p>}
+          )}
+        </form.Subscribe>
+      </ConfigurationToolbar>
+      <ConfigurationToolbar>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="submit"
+            form="tablecast-design-editor"
+            disabled={blocked}
+            aria-keyshortcuts="Control+s Meta+s"
+          >
+            {t("common_save")}
+          </Button>
+          <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
+            {t("theme_preview")}
+          </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={
+              <Link
+                to="/admin/stores/$storeId/menu/changes/$draftId"
+                params={{ storeId: store.id, draftId: draft.id }}
+              />
+            }
+          >
+            {t("theme_review")}
+          </Button>
+        </div>
+      </ConfigurationToolbar>
       <ActionFeedback
         pending={pending}
         error={issues.length ? undefined : save.error || preview.error || reload.error}

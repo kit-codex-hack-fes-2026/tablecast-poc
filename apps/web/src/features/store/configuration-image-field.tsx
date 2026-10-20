@@ -99,7 +99,9 @@ export function ConfigurationImageField({
   onChange,
   onStagedChange,
   disabled,
+  saveHint,
 }: {
+  saveHint?: string;
   storeId: string;
   value: ImageValue;
   onChange: (value: ImageValue) => void;
@@ -206,7 +208,7 @@ export function ConfigurationImageField({
         }}
       />
       <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-        {t("editor_image_save_hint")}
+        {saveHint ?? t("editor_image_save_hint")}
       </p>
       <label className="grid gap-2 text-sm">
         {t("editor_image_method")}

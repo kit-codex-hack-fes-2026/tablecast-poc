@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
+import { Pencil, UtensilsCrossed } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
@@ -72,6 +73,8 @@ export function ConsumptionEditor({
   const { t } = useI18n();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
+  const editorId = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
   const save = useMutation({
     mutationFn: (input: { quantity: number; shared: boolean }) =>
       parseResponse(
@@ -93,13 +96,23 @@ export function ConsumptionEditor({
   });
   return (
     <div className="space-y-3">
-      <Button size="sm" variant="outline" onClick={() => setOpen(!open)}>
+      <Button
+        ref={trigger}
+        size="sm"
+        variant="outline"
+        aria-expanded={open}
+        aria-controls={open ? editorId : undefined}
+        disabled={open || save.isPending}
+        onClick={() => setOpen(true)}
+      >
+        {revision ? <Pencil aria-hidden="true" /> : <UtensilsCrossed aria-hidden="true" />}
         {t(revision ? "customer_edit_consumption" : "customer_record_consumption")}
         {revision ? ` · ${quantity}` : ""}
       </Button>
       {open && (
         <form
-          className="space-y-3"
+          id={editorId}
+          className="space-y-3 rounded-xl border border-border bg-surface-subtle p-4"
           onSubmit={(event) => {
             event.preventDefault();
             void form.handleSubmit();
@@ -108,6 +121,7 @@ export function ConsumptionEditor({
           <form.AppField name="quantity">
             {(field) => (
               <field.NumberField
+                disabled={save.isPending}
                 label={t("customer_consumption_quantity")}
                 min={0}
                 max={99}
@@ -118,14 +132,33 @@ export function ConsumptionEditor({
           <form.Field name="shared">
             {(field) => (
               <label className="flex min-h-11 items-center gap-3">
-                <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
+                <Checkbox
+                  disabled={save.isPending}
+                  checked={field.state.value}
+                  onCheckedChange={field.handleChange}
+                />
                 {t("customer_consumption_shared")}
               </label>
             )}
           </form.Field>
-          <form.AppForm>
-            <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-          </form.AppForm>
+          <div className="flex flex-wrap gap-3">
+            <form.AppForm>
+              <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+            </form.AppForm>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={save.isPending}
+              onClick={() => {
+                form.reset();
+                save.reset();
+                setOpen(false);
+                requestAnimationFrame(() => trigger.current?.focus());
+              }}
+            >
+              {t("common_cancel")}
+            </Button>
+          </div>
         </form>
       )}
       {!save.isIdle && (

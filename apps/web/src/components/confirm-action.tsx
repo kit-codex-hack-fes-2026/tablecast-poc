@@ -18,6 +18,7 @@ export function ConfirmAction({
   onConfirm,
   icon,
   triggerClassName,
+  triggerLabel,
 }: {
   label: string;
   subject: string;
@@ -25,6 +26,7 @@ export function ConfirmAction({
   onConfirm: () => void;
   icon: ReactNode;
   triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const { t } = useI18n();
   return (
@@ -35,12 +37,12 @@ export function ConfirmAction({
         aria-label={label}
       >
         {icon}
-        {label}
+        {triggerLabel ?? label}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
+        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
         <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <AlertDialog.Popup className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-white p-6 shadow-lg">
+          <AlertDialog.Popup className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-lg">
             <AlertDialog.Title className="text-xl font-semibold">{label}</AlertDialog.Title>
             <AlertDialog.Description className="wrap-break-word text-base">
               {subject}

@@ -1,49 +1,12 @@
-import { Camera, CameraOff, LoaderCircle, X } from "lucide-react";
+import { Camera, CameraOff, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
 import { useI18n } from "../../i18n/locale";
 
-export function LocalCameraDialog() {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+export function LocalCameraFrame() {
   const camera = useLocalCamera();
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) camera.stop();
-        setOpen(next);
-      }}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={t("kiosk_camera_mirror")}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-      >
-        <Camera aria-hidden="true" />
-      </Button>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("kiosk_camera_mirror")}</DialogTitle>
-          <DialogClose aria-label={t("common_close")}>
-            <X />
-          </DialogClose>
-        </DialogHeader>
-        <LocalCamera camera={camera} />
-      </DialogContent>
-    </Dialog>
-  );
+  return <LocalCamera camera={camera} />;
 }
 
 // 鏡専用。VoiceConnectionへ渡さず、映像の送信・保存・フレーム取得を行わない。
@@ -117,36 +80,60 @@ export function useLocalCamera() {
   return { stream, pending, error, devices, start, stop };
 }
 
-export function LocalCamera({ camera }: { camera: ReturnType<typeof useLocalCamera> }) {
+export function LocalCamera({
+  camera,
+  showError = true,
+}: {
+  camera: ReturnType<typeof useLocalCamera>;
+  showError?: boolean;
+}) {
   const { t } = useI18n();
+  const enabled = Boolean(camera.stream || camera.pending);
+  const actionLabel = t(enabled ? "kiosk_camera_stop" : "kiosk_camera_start");
   const video = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (!video.current) return;
     video.current.srcObject = camera.stream ?? null;
   }, [camera.stream]);
   return (
-    <div className="space-y-2">
-      {camera.stream && (
-        <figure className="relative overflow-hidden rounded-xl bg-black">
-          <video
-            ref={video}
-            autoPlay
-            muted
-            playsInline
-            className="aspect-video w-full -scale-x-100 object-contain"
-            aria-label={t("kiosk_camera_mirror")}
-          />
-          <figcaption className="absolute bottom-2 left-2 rounded-md bg-black/75 px-2 py-1 text-xs text-white">
-            {t("kiosk_camera_local")}
-          </figcaption>
-        </figure>
-      )}
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="grid min-w-0 content-start gap-2" data-ui="local-camera">
+      <figure
+        className="relative aspect-4/3 overflow-hidden rounded-2xl bg-control shadow-surface"
+        data-ui="camera-frame"
+        data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
+      >
+        <video
+          ref={video}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 size-full -scale-x-100 object-contain"
+          aria-label={t("kiosk_camera_mirror")}
+          hidden={!camera.stream}
+        />
+        {!camera.stream && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pb-12 text-muted-foreground max-[56rem]:hidden">
+            {camera.pending ? (
+              <LoaderCircle className="size-6 motion-safe:animate-spin" />
+            ) : (
+              <CameraOff className="size-6" />
+            )}
+            <span className="text-xs">
+              {t(camera.pending ? "common_loading" : "kiosk_camera_off")}
+            </span>
+          </div>
+        )}
+        <figcaption className="absolute top-2 left-2 max-w-[calc(100%-1rem)] rounded-lg bg-glass px-2 py-1 text-xs text-foreground max-[56rem]:sr-only">
+          {t("kiosk_camera_local")}
+        </figcaption>
         <Button
           variant={camera.stream ? "default" : "outline"}
-          size="lg"
+          size="sm"
+          className="absolute right-2 bottom-2 max-w-[calc(100%-1rem)] max-[56rem]:size-11 max-[56rem]:p-0"
+          aria-label={actionLabel}
+          title={actionLabel}
           aria-pressed={Boolean(camera.stream)}
-          onClick={() => (camera.stream || camera.pending ? camera.stop() : void camera.start())}
+          onClick={() => (enabled ? camera.stop() : void camera.start())}
         >
           {camera.pending ? (
             <LoaderCircle className="motion-safe:animate-spin" />
@@ -155,32 +142,36 @@ export function LocalCamera({ camera }: { camera: ReturnType<typeof useLocalCame
           ) : (
             <Camera />
           )}
-          {t(camera.stream || camera.pending ? "kiosk_camera_stop" : "kiosk_camera_start")}
+          <span className="max-[56rem]:hidden">{actionLabel}</span>
         </Button>
-        {camera.stream && camera.devices.length > 1 && (
-          <label className="min-w-0 flex-1 text-xs">
-            <span className="sr-only">{t("kiosk_camera_device")}</span>
-            <NativeSelect
-              value={camera.stream.getVideoTracks()[0]?.getSettings().deviceId ?? ""}
-              onChange={(event) => void camera.start(event.target.value)}
-            >
-              {camera.devices.map((device, index) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || `${t("kiosk_camera_device")} ${index + 1}`}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-        )}
-      </div>
-      <p className="text-xs leading-relaxed text-muted-foreground">{t("kiosk_camera_privacy")}</p>
-      {camera.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {t(
-            camera.error === "permission" ? "kiosk_camera_permission" : "kiosk_camera_unavailable",
-          )}
-        </p>
+      </figure>
+      {camera.stream && camera.devices.length > 1 && (
+        <label className="min-w-0 flex-1 text-xs">
+          <span className="sr-only">{t("kiosk_camera_device")}</span>
+          <NativeSelect
+            value={camera.stream.getVideoTracks()[0]?.getSettings().deviceId ?? ""}
+            onChange={(event) => void camera.start(event.target.value)}
+          >
+            {camera.devices.map((device, index) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `${t("kiosk_camera_device")} ${index + 1}`}
+              </option>
+            ))}
+          </NativeSelect>
+        </label>
       )}
+      <p className="text-xs leading-relaxed text-muted-foreground">{t("kiosk_camera_privacy")}</p>
+      {showError && <LocalCameraError error={camera.error} />}
     </div>
+  );
+}
+
+export function LocalCameraError({ error }: { error: ReturnType<typeof useLocalCamera>["error"] }) {
+  const { t } = useI18n();
+  if (!error) return null;
+  return (
+    <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive">
+      {t(error === "permission" ? "kiosk_camera_permission" : "kiosk_camera_unavailable")}
+    </p>
   );
 }

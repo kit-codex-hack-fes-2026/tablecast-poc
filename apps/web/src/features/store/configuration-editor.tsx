@@ -1,5 +1,13 @@
-import { productSchema, type Configuration, type Plan, type Product } from "@tablecast/api/schema";
 import {
+  localeSchema,
+  productSchema,
+  type Configuration,
+  type Locale,
+  type Plan,
+  type Product,
+} from "@tablecast/api/schema";
+import {
+  AudioLines,
   Clock,
   Image,
   Info,
@@ -9,7 +17,8 @@ import {
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { LanguageFields } from "./language-fields";
 import type { CastTarget } from "./menu-model";
 import { Input } from "../../components/ui/input";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -81,30 +90,34 @@ export function ProductsEditor({
           </nav>
           <ConfigurationSection id="product-basics" title={t("editor_product_basics")} icon={Info}>
             <div className="grid min-w-0 gap-4 @xl:grid-cols-2">
-              {(["ja", "en"] as const).map((language) => (
-                <label key={language} className="grid gap-2 text-sm">
-                  <span>
-                    {t(language === "ja" ? "common_ja" : "common_en")} {t("admin_display_name")}
-                  </span>
-                  <Input
-                    required
-                    maxLength={150}
-                    disabled={disabled}
-                    value={product.text[language].displayName}
-                    onChange={(event) =>
-                      update({
-                        text: {
-                          ...product.text,
-                          [language]: {
-                            ...product.text[language],
-                            displayName: event.target.value,
-                          },
-                        },
-                      })
-                    }
-                  />
-                </label>
-              ))}
+              <div className="col-span-full">
+                <LanguageFields>
+                  {(language, languageLabelId) => (
+                    <label className="grid gap-2 text-sm">
+                      <span id={`product-name-${language}`}>{t("admin_display_name")}</span>
+                      <Input
+                        aria-labelledby={`${languageLabelId} product-name-${language}`}
+                        lang={language}
+                        required
+                        maxLength={150}
+                        disabled={disabled}
+                        value={product.text[language].displayName}
+                        onChange={(event) =>
+                          update({
+                            text: {
+                              ...product.text,
+                              [language]: {
+                                ...product.text[language],
+                                displayName: event.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  )}
+                </LanguageFields>
+              </div>
               <NumericField
                 label={t("admin_unit_price")}
                 value={product.price}
@@ -250,23 +263,30 @@ export function ProductsEditor({
                   <option value="no">{t("editor_no")}</option>
                 </NativeSelect>
               </label>
-              {(["ja", "en"] as const).map((language) => (
-                <label className="flex flex-col gap-2 text-sm" key={language}>
-                  {t("editor_safety_note")} · {t(language === "ja" ? "common_ja" : "common_en")}
-                  <textarea
-                    className="min-h-24 rounded-lg border border-input p-2 text-base"
-                    value={product.allergens.note[language]}
-                    onChange={(event) =>
-                      update({
-                        allergens: {
-                          ...product.allergens,
-                          note: { ...product.allergens.note, [language]: event.target.value },
-                        },
-                      })
-                    }
-                  />
-                </label>
-              ))}
+              <div className="col-span-full">
+                <LanguageFields>
+                  {(language, languageLabelId) => (
+                    <label className="grid gap-2 text-sm">
+                      <span id={`safety-note-${language}`}>{t("editor_safety_note")}</span>
+                      <textarea
+                        aria-labelledby={`${languageLabelId} safety-note-${language}`}
+                        lang={language}
+                        disabled={disabled}
+                        className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
+                        value={product.allergens.note[language]}
+                        onChange={(event) =>
+                          update({
+                            allergens: {
+                              ...product.allergens,
+                              note: { ...product.allergens.note, [language]: event.target.value },
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  )}
+                </LanguageFields>
+              </div>
             </div>
           </ConfigurationSection>
           <ConfigurationSection
@@ -451,57 +471,80 @@ export function CastEditor({
   focusTarget?: CastTarget;
 }) {
   const id = useId();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const targetLanguage = localeSchema.options.find((language) =>
+    focusTarget?.endsWith(`-${language}`),
+  );
+  const [selection, setSelection] = useState({
+    target: focusTarget,
+    language: targetLanguage ?? locale,
+  });
+  const language =
+    selection.target === focusTarget ? selection.language : (targetLanguage ?? selection.language);
+  const focusedTarget = useRef<CastTarget | undefined>(undefined);
   useEffect(() => {
-    if (focusTarget) document.getElementById(`${id}-${focusTarget}`)?.focus();
+    if (!focusTarget || focusedTarget.current === focusTarget) return;
+    document.getElementById(`${id}-${focusTarget}`)?.focus();
+    focusedTarget.current = focusTarget;
   }, [focusTarget, id]);
   return (
-    <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquare}>
-      <div className="grid min-w-0 gap-6 @2xl:grid-cols-2">
-        {(["ja", "en"] as const).map((language) => (
-          <fieldset key={language} className="flex min-w-0 flex-col gap-4 pt-0" disabled={disabled}>
-            <legend id={`${id}-${language}`} className="mb-3 font-semibold">
-              {t(language === "ja" ? "common_ja" : "common_en")}
-            </legend>
-            <div className="flex flex-col gap-2 text-sm">
-              <span id={`${id}-${language}-instructions`}>{t("editor_cast_instructions")}</span>
+    <div className="min-w-0 space-y-6">
+      <LanguageFields
+        value={language}
+        onValueChange={(next: Locale) => setSelection({ target: focusTarget, language: next })}
+      >
+        {(itemLanguage, languageLabelId) => (
+          <>
+            <ConfigurationSection
+              title={t("editor_cast_instructions")}
+              icon={MessageSquare}
+              headingId={`${id}-${itemLanguage}-instructions`}
+            >
+              <p className="text-sm text-muted-foreground">{t("editor_cast_instructions_hint")}</p>
               <PromptEditor
-                id={`${id}-instructions-${language}`}
-                labelledBy={`${id}-${language} ${id}-${language}-instructions`}
-                language={language}
-                value={value.instructions[language]}
+                id={`${id}-instructions-${itemLanguage}`}
+                labelledBy={`${languageLabelId} ${id}-${itemLanguage}-instructions`}
+                language={itemLanguage}
+                value={value.instructions[itemLanguage]}
                 disabled={disabled}
-                focusRequested={focusTarget === `instructions-${language}`}
                 onChange={(instructions) =>
                   onChange({
                     ...value,
-                    instructions: { ...value.instructions, [language]: instructions },
+                    instructions: { ...value.instructions, [itemLanguage]: instructions },
                   })
                 }
               />
-            </div>
-            <StandardVoiceSelect
-              storeId={storeId}
-              inputId={`${id}-voice-${language}`}
-              language={language}
-              labelledBy={`${id}-${language}`}
-              value={value.voice[language]}
-              retained={voices.map((voice) => voice[language])}
-              disabled={disabled}
-              onChange={(voiceId) =>
-                onChange({ ...value, voice: { ...value.voice, [language]: voiceId } })
-              }
-            />
-          </fieldset>
-        ))}
-      </div>
-      <BooleanField
-        inputId={`${id}-proactive`}
-        label={t("editor_proactive")}
-        value={value.proactive}
-        disabled={disabled}
-        onChange={(proactive) => onChange({ ...value, proactive })}
-      />
-    </ConfigurationSection>
+            </ConfigurationSection>
+            <ConfigurationSection title={t("editor_cast_voice_group")} icon={AudioLines}>
+              <StandardVoiceSelect
+                storeId={storeId}
+                inputId={`${id}-voice-${itemLanguage}`}
+                language={itemLanguage}
+                labelledBy={languageLabelId}
+                value={value.voice[itemLanguage]}
+                retained={voices.map((voice) => voice[itemLanguage])}
+                disabled={disabled}
+                onChange={(voiceId) =>
+                  onChange({ ...value, voice: { ...value.voice, [itemLanguage]: voiceId } })
+                }
+              />
+            </ConfigurationSection>
+          </>
+        )}
+      </LanguageFields>
+      <section className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
+        <MessageSquare className="mt-3 size-5 shrink-0" aria-hidden="true" />
+        <div className="min-w-0">
+          <BooleanField
+            inputId={`${id}-proactive`}
+            label={t("editor_proactive")}
+            value={value.proactive}
+            disabled={disabled}
+            onChange={(proactive) => onChange({ ...value, proactive })}
+          />
+          <p className="text-sm text-muted-foreground">{t("editor_cast_proactive_hint")}</p>
+        </div>
+      </section>
+    </div>
   );
 }

@@ -143,7 +143,7 @@ export function DataTable<T extends RowData>({
         </label>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <Table className="text-sm">
+        <Table className="min-w-max text-sm">
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
@@ -220,7 +220,7 @@ function TablePagination<T extends RowData>({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
       <span>
         {pending
           ? t("common_loading")

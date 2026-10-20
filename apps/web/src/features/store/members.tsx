@@ -95,7 +95,11 @@ function memberColumns(
       id: "user",
       accessorFn: (row) => `${row.user.name} ${row.user.email}`,
       header: t("org_members"),
-      cell: ({ row }) => <UserIdentity user={row.original.user} />,
+      cell: ({ row }) => (
+        <div className="min-w-56 max-w-sm">
+          <UserIdentity user={row.original.user} />
+        </div>
+      ),
     },
     {
       accessorKey: "role",

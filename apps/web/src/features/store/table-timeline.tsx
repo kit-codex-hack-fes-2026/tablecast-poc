@@ -180,7 +180,7 @@ export function TableTimeline({
                     <div className="p-4">
                       <Button
                         variant="outline"
-                        className="w-full justify-between text-info"
+                        className="w-full justify-between"
                         onClick={() => onSelect(id)}
                         aria-label={`${name} ${t("object_visit")}`}
                       >

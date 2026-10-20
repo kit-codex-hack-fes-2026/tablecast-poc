@@ -46,7 +46,7 @@ export function SidebarNavigation({
   const common = { collapsed, userId };
   return (
     <nav
-      className="min-h-0 flex-1 space-y-3 overflow-y-auto border-t border-border py-3"
+      className="min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-border py-3"
       aria-label={t("admin_navigation")}
     >
       {selectedStore && (

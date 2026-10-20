@@ -1,7 +1,8 @@
 import { useId } from "react";
-import { Table2 } from "lucide-react";
+import { ArrowLeft, Table2 } from "lucide-react";
 import { LanguageLabel } from "../../components/language-label";
 import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { Button } from "../../components/ui/button";
 import { PageHeader } from "../../components/page-header";
 import { Field } from "@base-ui/react/field";
 import { zodFieldValidator } from "../../lib/form-validation";
@@ -22,10 +23,12 @@ export function OpenTable({
   storeId,
   table,
   onOpened,
+  onCancel,
 }: {
   storeId: string;
   table: { id: string; name: string };
   onOpened: () => void;
+  onCancel?: () => void;
 }) {
   const { t, locale } = useI18n();
   const languageId = useId();
@@ -65,6 +68,12 @@ export function OpenTable({
   });
   return (
     <section className="max-w-2xl space-y-5">
+      {onCancel && (
+        <Button type="button" variant="ghost" disabled={open.isPending} onClick={onCancel}>
+          <ArrowLeft />
+          {t("admin_live")}
+        </Button>
+      )}
       <PageHeader icon={<Table2 />} title={table.name} description={t("admin_open_table")} />
       <form
         noValidate
@@ -102,7 +111,7 @@ export function OpenTable({
                   <label
                     key={language}
                     htmlFor={`${languageId}-${language}`}
-                    className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 has-data-checked:border-primary has-data-checked:bg-info-soft has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                    className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 has-data-checked:border-primary has-data-checked:bg-control-selected has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
                   >
                     <RadioGroupItem
                       className="focus-visible:outline-none"

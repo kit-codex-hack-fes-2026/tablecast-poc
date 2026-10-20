@@ -181,10 +181,8 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
           />
         </div>
         <BillingUsageChart data={data} />
-        <details className="rounded-xl border border-border bg-card p-5">
-          <summary className="min-h-6 cursor-pointer font-medium">
-            {t("billing_token_details")}
-          </summary>
+        <section className="rounded-2xl bg-surface-subtle p-4">
+          <h3 className="text-sm font-medium">{t("billing_token_details")}</h3>
           <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{t("billing_tokens_hint")}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Metric
@@ -198,7 +196,7 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
               detail={t("billing_output_hint")}
             />
           </div>
-        </details>
+        </section>
         <p className="text-sm text-muted-foreground">
           {t("billing_updated")}: <DateTime value={data.updatedAt} />
           {data.usage.unconfirmed > 0 &&

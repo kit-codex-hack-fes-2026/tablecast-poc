@@ -225,6 +225,7 @@ export const EnglishLabels: Story = {
     await userEvent.paste("Oat milk");
     await expect(field).toHaveFocus();
     await expect(field).toHaveValue("Oat milk");
+    await userEvent.click(option.getByRole("tab", { name: /^日本語$/ }));
     await expect(
       option.getByRole("textbox", { name: "Group 2: Milk Option 3: Milk Japanese Spoken name" }),
     ).toHaveValue("ミルク");
@@ -265,6 +266,7 @@ export const WhitespaceIds: Story = {
     await userEvent.paste("125");
     await expect(price).toHaveFocus();
     await userEvent.click(option.getByText("名称・説明・画像・組合せ条件", { exact: true }));
+    await userEvent.click(option.getByRole("tab", { name: /^English$/ }));
     await expect(
       option.getByRole("textbox", { name: "グループ 1：ミルク 選択肢 1：ミルク 英語 読上げ名" }),
     ).toHaveValue("Milk");

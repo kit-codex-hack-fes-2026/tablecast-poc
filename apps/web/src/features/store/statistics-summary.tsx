@@ -23,9 +23,19 @@ export function StatisticsSummary({
               CircleDollarSign,
               "text-success bg-success-soft",
             ],
-            ["sessions", number(summary.sessions), Table2, "text-info bg-info-soft"],
-            ["guests", number(summary.guests), Users, "text-info bg-info-soft"],
-            ["orders", number(summary.orders), ReceiptText, "text-info bg-info-soft"],
+            [
+              "sessions",
+              number(summary.sessions),
+              Table2,
+              "text-muted-foreground bg-surface-subtle",
+            ],
+            ["guests", number(summary.guests), Users, "text-muted-foreground bg-surface-subtle"],
+            [
+              "orders",
+              number(summary.orders),
+              ReceiptText,
+              "text-muted-foreground bg-surface-subtle",
+            ],
           ] as const
         ).map(([key, value, Icon, tone]) => (
           <div

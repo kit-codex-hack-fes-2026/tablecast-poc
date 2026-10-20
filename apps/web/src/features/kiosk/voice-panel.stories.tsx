@@ -119,6 +119,7 @@ export const Streaming: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("すっきりした日本酒なら")).toBeVisible();
     await expect(canvas.queryByText(/warm and friendly/)).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole("button", { name: "デバッグ表示" }));
@@ -172,6 +173,7 @@ export const ToolAndCards: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("完了", { exact: true })).toBeVisible();
     await expect(canvas.getByText("実行中", { exact: true })).toBeVisible();
     await expect(canvasElement.querySelector("figure[data-voice-state=tool]")).toBeVisible();
@@ -218,6 +220,11 @@ export const Speakers: Story = {
   play: async ({ canvasElement, globals, step }) => {
     const canvas = within(canvasElement);
     const english = globals.locale === "en";
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: english ? "Show conversation history" : "会話履歴を表示",
+      }),
+    );
     const unknown = canvas.getByText("おすすめも教えてください。").closest("article");
     if (!unknown) throw new Error("客の発話が表示されていません。");
     const details = english ? "Speaker metadata unavailable" : "話者情報なし（推定しません）";
@@ -264,6 +271,7 @@ export const EmptyInterruption: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getAllByRole("article")).toHaveLength(2);
     await expect(canvas.queryByText("中断", { exact: true })).not.toBeInTheDocument();
     const resume = canvas.getByRole("button", { name: "音声を再開" });
@@ -302,8 +310,8 @@ export const SpeakingWithTool: Story = {
   name: "先に話しながらツールを実行",
   args: { ...ToolAndCards.args, view: { status: "speaking" } },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const visual = canvas.getByRole("figure");
+    const visual = canvasElement.querySelector("figure[data-voice-state]");
+    if (!(visual instanceof HTMLElement)) throw new Error("音声の状態表示がありません");
     await expect(visual).toBeVisible();
     await expect(visual).toHaveAttribute("data-voice-state", "speaking");
     await expect(within(visual).getByText("商品を表示", { exact: true })).toBeVisible();
@@ -315,11 +323,13 @@ export const PausedWithStaleTool: Story = {
   args: { ...ToolAndCards.args, view: { status: "paused" } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const visual = canvas.getByRole("figure");
+    const visual = canvasElement.querySelector("figure[data-voice-state]");
+    if (!(visual instanceof HTMLElement)) throw new Error("音声の状態表示がありません");
     await expect(visual).toBeVisible();
     await expect(visual).toHaveAttribute("data-voice-state", "paused");
     await expect(visual).toHaveAttribute("data-motion", "still");
     await expect(within(visual).queryByText("商品を表示", { exact: true })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
 };
@@ -419,6 +429,7 @@ export const MicrophoneDisconnected: Story = {
     await expect(canvas.getByRole("alert")).toHaveTextContent(
       "選択したマイクが使用できなくなりました",
     );
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "マイク設定" }));
     const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", {
@@ -461,4 +472,43 @@ export const MicrophoneNarrow: Story = {
       </div>
     ),
   ],
+};
+
+export const CompactDock: Story = {
+  name: "狭い会話欄と縦画面の常設操作",
+  args: {
+    ...Paused.args,
+    compactControls: true,
+    speechSpeed: 1,
+    onSpeedChange: fn(),
+    onMicrophoneChange: fn(),
+    onMicrophoneRefresh: fn(),
+  },
+  decorators: [
+    (Story) => (
+      <div className="h-160 w-60 max-[56rem]:h-60 max-[56rem]:w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("button", { name: "会話履歴を表示" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(canvas.getByText("この日本酒は温かくできますか？")).not.toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
+    await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を閉じる" }));
+    await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "カメラをオン" })).toBeVisible();
+  },
+};
+export const CompactDockEnglish: Story = {
+  ...CompactDock,
+  name: "英語の狭い会話欄と常設操作",
+  globals: { locale: "en" },
+  tags: ["!test"],
+  play: undefined,
 };

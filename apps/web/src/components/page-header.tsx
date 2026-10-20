@@ -22,19 +22,19 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex min-w-0 flex-wrap items-start justify-between gap-x-6 gap-y-4 border-b border-border pb-5">
-      <div className="flex min-w-0 flex-1 basis-48 items-start gap-3">
+    <header className="flex min-w-0 flex-col items-stretch justify-between gap-x-6 gap-y-4 sm:flex-row sm:flex-wrap sm:items-start border-b border-border pb-5">
+      <div className="flex min-w-0 flex-1 sm:basis-48 items-start gap-3">
         {icon && (
           <span
             aria-hidden="true"
-            className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info [&_svg]:size-6"
+            className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground [&_svg]:size-6"
           >
             {icon}
           </span>
         )}
         <div className="min-w-0 space-y-1.5">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <h1 className="min-w-0 text-2xl leading-tight font-semibold tracking-tight wrap-anywhere">
+            <h1 className="min-w-0 text-2xl leading-tight font-semibold tracking-tight text-balance wrap-break-word">
               {title}
             </h1>
             {status && <div className="flex flex-wrap items-center gap-2">{status}</div>}
@@ -45,7 +45,7 @@ export function PageHeader({
         </div>
       </div>
       {actions && (
-        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 self-center">
+        <div className="flex max-w-full flex-wrap items-center justify-start gap-2 sm:ml-auto sm:justify-end sm:self-center">
           {actions}
         </div>
       )}

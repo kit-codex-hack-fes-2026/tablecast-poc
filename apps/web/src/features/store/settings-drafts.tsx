@@ -1,3 +1,4 @@
+import { ConfigurationToolbar } from "../shell/configuration-toolbar";
 import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -35,7 +36,7 @@ import { draftsOptions } from "./store-query";
 import { parseResponse, rpc } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
 import { m } from "../../paraglide/messages";
-import { ConfigurationStatus, DraftStatus } from "../shell/configuration-status";
+import { DraftStatus } from "../shell/configuration-status";
 import { menuLabels, menuSectionSchema, type MenuReviewSearch } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
@@ -173,29 +174,23 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
         <ArrowLeft />
         {t("admin_drafts")}
       </Button>
-      <PageHeader
-        title={t("admin_review_draft")}
-        status={
-          <>
-            <DraftStatus status={draft.status} />
-            {draft.changes.some((change) => change.sensitive) && (
-              <Badge variant="outline" className="bg-secondary text-foreground">
-                <TriangleAlert className="size-4" />
-                {t("admin_sensitive")}
-              </Badge>
-            )}
-          </>
-        }
-      />
+      <PageHeader title={t("admin_review_draft")} />
 
-      <ConfigurationStatus publishedVersion={catalog.data.version} draft={draft} error={error} />
       <ErrorNotice error={query.error || catalog.error || error} />
-      <p
-        role="status"
-        className={stale || draft.errors.length ? "text-destructive" : "text-muted-foreground"}
-      >
-        {editable ? t(guidance) : t("workflow_terminal_note")}
-      </p>
+      <div className="space-y-2">
+        <p
+          role="status"
+          className={stale || draft.errors.length ? "text-destructive" : "text-muted-foreground"}
+        >
+          {editable ? t(guidance) : t("workflow_terminal_note")}
+        </p>
+        {draft.changes.some((change) => change.sensitive) && (
+          <Badge variant="warning">
+            <TriangleAlert />
+            {t("admin_sensitive")}
+          </Badge>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2" aria-label={t("workflow_correction_links")}>
         {menuSectionSchema.options.map((section) => (
           <Button
@@ -239,27 +234,38 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
         </Button>
       )}
 
-      {editable && <p className="text-base text-muted-foreground">{t("menu_change_note")}</p>}
       <ConfigurationErrors errors={draft.errors} configuration={draft.configuration} />
       <ConfigurationChanges changes={draft.changes} configuration={draft.configuration} />
       {editable && (
-        <div className="flex flex-wrap gap-3 border-t border-border pt-5">
-          <ConfirmAction
-            label={t("editor_discard_draft")}
-            subject={t("menu_discard_note")}
-            disabled={busy}
-            onConfirm={() => discard.mutate()}
-            icon={<Trash2 />}
-          />
-          <Button variant="outline" disabled={busy} onClick={() => validate.mutate()}>
-            <Check />
-            {t("admin_validate")}
-          </Button>
-          <Button disabled={busy || cannotPublish} onClick={() => setConfirmPublish(true)}>
-            <Upload />
-            {t("admin_publish")}
-          </Button>
-        </div>
+        <ConfigurationToolbar>
+          <div className="flex flex-wrap gap-2">
+            <ConfirmAction
+              label={t("editor_discard_draft")}
+              triggerLabel={t("workflow_discard_short")}
+              subject={t("menu_discard_note")}
+              disabled={busy}
+              onConfirm={() => discard.mutate()}
+              icon={<Trash2 />}
+            />
+            <Button
+              variant="outline"
+              aria-label={t("admin_validate")}
+              disabled={busy || !draft.changes.length}
+              onClick={() => validate.mutate()}
+            >
+              <Check />
+              {t("workflow_validate_short")}
+            </Button>
+            <Button
+              aria-label={t("admin_publish")}
+              disabled={busy || cannotPublish}
+              onClick={() => setConfirmPublish(true)}
+            >
+              <Upload />
+              {t("workflow_publish_short")}
+            </Button>
+          </div>
+        </ConfigurationToolbar>
       )}
       <Dialog open={confirmPublish} onOpenChange={setConfirmPublish}>
         <DialogContent>
@@ -307,7 +313,7 @@ function settingsDraftsColumns(
       header: t("workflow_draft_identity"),
       cell: ({ row }) => (
         <Link
-          className="inline-flex min-h-11 max-w-72 items-center gap-2 text-sm font-medium text-info underline underline-offset-4 whitespace-normal"
+          className="inline-flex min-h-11 max-w-72 items-center gap-2 text-sm font-medium text-foreground underline underline-offset-4 whitespace-normal"
           to="/admin/stores/$storeId/menu/changes/$draftId"
           params={{ storeId, draftId: row.original.id }}
         >

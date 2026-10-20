@@ -226,7 +226,7 @@ function SidebarUserMenu({
   return (
     <Menu.Root>
       <Menu.Trigger
-        className="flex w-full min-w-0 items-center gap-2 rounded-lg p-2 text-left hover:bg-secondary"
+        className="flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent p-2 text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={t("account_title")}
         title={t("account_title")}
       >
@@ -235,27 +235,32 @@ function SidebarUserMenu({
             <UserRound className="size-4" />
           ) : (
             <>
-              <UserIdentity user={user} compact />
+              <span className="min-w-0 flex-1">
+                <UserIdentity user={user} compact />
+              </span>
               <ChevronsUpDown className="ml-auto size-4 shrink-0" />
             </>
           ))}
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner side="top" align="start" sideOffset={8} className="z-50">
-          <Menu.Popup className="w-64 max-w-[var(--available-width)] rounded-xl border border-border bg-card p-1 shadow-lg">
+          <Menu.Popup className="w-80 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-2 shadow-surface">
             {user && (
-              <div className="border-b border-border p-2">
+              <div className="mb-2 border-b border-border p-3">
                 <UserIdentity user={user} compact />
               </div>
             )}
-            <Menu.Item render={<Link to="/account" />} className={sidebarItemClass}>
+            <Menu.Item
+              render={<Link to="/account" />}
+              className={`${sidebarItemClass} justify-start`}
+            >
               <UserRound className="size-4" />
               {t("account_title")}
             </Menu.Item>
             <Menu.Item
               nativeButton
               render={<Button variant="ghost" />}
-              className={sidebarItemClass}
+              className={`${sidebarItemClass} justify-start`}
               disabled={signingOut}
               onClick={
                 onSignOut ??

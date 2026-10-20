@@ -4,7 +4,7 @@ import { Meta } from "@storybook/addon-docs/blocks";
 
 # TableCastのデザインシステム
 
-店舗や商品を見つけ、状態を読み、次の操作へ進める構造にする。客向けは従来の会話とメニューの分割、店舗向けは対象の概要と次の操作を先に示す。テーマ編集や注文の構造を、このカタログだけで別の仕組みに置き換えない。
+店舗や商品を見つけ、状態を読み、次の操作へ進める構造にする。客向けは細い会話欄とメニューの分割、店舗向けは対象の概要と次の操作を先に示す。テーマ編集や注文の構造を、このカタログだけで別の仕組みに置き換えない。
 
 ## 色は役割で選ぶ
 
@@ -17,7 +17,7 @@ import { Meta } from "@storybook/addon-docs/blocks";
 | 主操作         | `bg-primary text-primary-foreground`     | Button default                   |
 | 補助・選択領域 | `bg-secondary text-secondary-foreground` | 強調し過ぎない内容               |
 | 補足           | `text-muted-foreground`                  | 日時・説明。重要な価格を弱めない |
-| 選択・進行     | `text-info bg-info-soft`                 | 下書き・利用中                   |
+| 情報・進行     | `text-info bg-info-soft`                 | 情報通知・処理状態               |
 | 要対応         | `text-warning bg-warning-soft`           | 呼出・会計待ち                   |
 | 正常           | `text-success bg-success-soft`           | 確認済み等。状態名も併記         |
 | 失敗・破壊操作 | `text-destructive`                       | ErrorNotice、破棄確認            |
@@ -62,3 +62,43 @@ Tailwindの標準スケールを使う。項目内は `gap-2`、同じ対象の�
 卓は卓名と来店、伝票状の金額、独立した詳細ボタンをまとめる。公開履歴は縦の公開版と派生する下書きで関係を補助する。静的な内容の面をボタンのように浮かせず、実行にはButton、移動には下線付きリンクを使う。状態のBadge自体は押せない。
 
 DateTimeとcalendarDateは年・月・日・曜日を言語に自然な形で表示する。JSTやハイフン区切りを表示へ足さない。Dialogとdrawerのoverlayは暗幕だけにし、背景をblurしない。
+
+## 原色から意味、意味から操作状態へ
+
+`@radix-ui/colors` のスケールを `styles.css` で読み、TSXは意味別のutilityだけを参照する。Grayを標準とし、原色名・hex値・黒1pxの境界を画面側へ直書きしない。店舗独自色は既存の店舗テーマ境界だけで扱う。
+
+| スケール | 意味別の使い方                                                           |
+| -------- | ------------------------------------------------------------------------ |
+| 1–2      | background、muted。静的な背景                                            |
+| 3–5      | control、control-hover、control-selected。操作と選択                     |
+| 6–8      | border、control-edge、control-edge-hover。区切りと操作境界               |
+| 9–10     | success-solid等の役割別の塗りとhover                                     |
+| 11–12    | muted-foreground、foreground、役割別の文字。実背景とのコントラストを検査 |
+
+主操作はprimaryのチャコール。一般的な選択・リンク・人物を青にしない。成功・注意・危険・情報の色はhover・選択・focusまで同じ役割を維持する。状態ラベルは実背景上のコントラストを保証するため12を使う。ナビゲーションの色は群見出しと現在項目に限定し、群内の未選択アイコンは文字色に従う。
+
+## 光・影・操作面
+
+Buttonは上辺の光、浅いグラデーション、接地する影を持ち、押下時は沈む。Inputは内側の浅い陰影、静的カードは抑えたsurface shadow、Badgeは平らな状態面を使う。ガラスはshell・浮いた操作面へ限定する。影や色だけを操作性・focusの唯一の手掛かりにしない。
+
+通常48px・compact44px・客向け主操作56pxをButtonとInputで共有する。Badgeは内容に合わせて伸びる静的表示。クリック用途へ流用せず、Buttonまたはlinkを使う。tableの見出しとセルは共通余白、数値は右揃え・等幅数字、対象名は左揃え。
+
+NativeSelectとSelectは末尾に独立した矢印領域を確保する。選択値が長くても矢印を押し出さない。LanguageLabelの国旗は18×14pxの補助表示で、言語名を残す。言語ごとの編集はLanguageFieldsで一つの対象にまとめ、列を増やさない。非表示の言語の入力も保存・validationの対象に保つ。
+
+## 対象の近くに必要な操作を置く
+
+説明だけのAccordion・details・Popoverを作らない。短い補足は対象のlabelや操作へ隣接させる。実データ、編集項目、ナビゲーションの開閉は用途と内容が判別できる場合に使う。
+
+設定対象はshellの公開版・下書き・履歴の切替で一貫させる。入力はfeatureが所有し、共通headerへ保存状態と操作だけを描画する。保存失敗・409・再取得失敗で入力を消さない。現在のオブジェクトが切替先にない場合はその一覧へ戻す。公開選択だけで公開内容を変えない。
+
+## 再発を検出する境界
+
+見た目の正本は共通部品とこのカタログ。画面でサイズ・色を上書きする前に既存variantを選ぶ。必要な状態が不足した場合は共通variantとStoryを同じ差分で追加する。
+
+- 既存Tailwind lint：原色スケール・純黒/白のutility・arbitrary colorをerrorにし、semantic tokenへ誘導する。
+- `design-system.browser.test.tsx`：操作面の不透明度、状態色hover、focus、48px、矢印の位置、国旗寸法、390pxの横溢れ。
+- `admin-shell.browser.test.tsx`：人物選択を開閉した座標、sidebarの群・幅・店舗と組織の保持。
+- `configuration-workflow.browser.test.tsx`：未保存保護、保存・409・再取得失敗、権限、店舗切替。
+- `configuration-editor.browser.test.tsx`：言語を列に増やさず390pxで編集・validationできること。
+- カメラ・kioskのBrowser：許可待ち中のOFF、遅延stream解放、非表示、縦横の幅復元、注文と音声状態の保持。
+- Storybookのa11y：役割色のコントラスト、見出し順、名前とfocus。静止画は質感と配置、操作動画は状態遷移の証拠として併用する。

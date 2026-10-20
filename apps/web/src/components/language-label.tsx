@@ -5,12 +5,12 @@ import { useI18n } from "../i18n/locale";
 export function LanguageLabel({ locale }: { locale: Locale }) {
   const { t } = useI18n();
   return (
-    <span lang={locale} className="inline-flex items-center gap-2 whitespace-nowrap">
+    <span lang={locale} className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <img
         src={`/flags/${locale === "ja" ? "jp" : "gb"}.svg`}
-        width={28}
-        height={20}
-        className="h-5 w-7 shrink-0 rounded-sm object-contain ring-1 ring-black/10"
+        width={18}
+        height={14}
+        className="h-3.5 w-4.5 shrink-0 rounded-xs object-contain"
         alt=""
         aria-hidden="true"
       />

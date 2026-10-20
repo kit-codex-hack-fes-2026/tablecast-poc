@@ -5,6 +5,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { page, userEvent } from "vitest/browser";
@@ -13,6 +14,8 @@ import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
+import { ConfigurationHeader } from "../shell/configuration-header";
+import { ConfigurationToolbarProvider } from "../shell/configuration-toolbar";
 import { MenuCollection } from "./menu-collection";
 import { MenuOverview } from "./menu-overview";
 import { menuListSearchSchema, menuReviewSearchSchema, menuSectionSchema } from "./menu-model";
@@ -45,11 +48,21 @@ afterEach(async () => {
   }
 });
 
+function ConfigurationShell() {
+  return (
+    <ConfigurationToolbarProvider>
+      <ConfigurationHeader storeId={catalog.storeId} role={storeRole} />
+      <Outlet />
+    </ConfigurationToolbarProvider>
+  );
+}
+
 async function showMenu(
   value: Catalog | undefined,
   locale: Locale = "ja",
   path = "/admin/stores/tablecast-story/menu/products",
   draftStatus: ConfigDraft["status"] = "published",
+  withConfigurationShell = false,
 ) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity, gcTime: Infinity } },
@@ -68,7 +81,9 @@ async function showMenu(
       createdAt: 1,
       updatedAt: 2,
     } satisfies ConfigDraft);
-  const root = createRootRoute();
+  const root = createRootRoute({
+    component: withConfigurationShell ? ConfigurationShell : Outlet,
+  });
   const list = createRoute({
     getParentRoute: () => root,
     path: "/admin/stores/$storeId/menu/$section",
@@ -447,7 +462,7 @@ it("閲覧権限で商品一覧から接客概要へ移動してもhooksと一�
 });
 
 for (const status of ["published", "discarded"] as const) {
-  it(`管理者が${status}の接客概要を直接開くと状態を示し、編集入口を出さない`, async () => {
+  it(`管理者が${status}の接客概要を直接開くと共通ヘッダーに状態と変更確認を示し、編集入口を出さない`, async () => {
     storeRole = "owner";
     mockCastVoices();
     const { screen } = await showMenu(
@@ -455,8 +470,10 @@ for (const status of ["published", "discarded"] as const) {
       "ja",
       "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/cast",
       status,
+      true,
     );
-    await expect.element(screen.getByText(ja[`draft_${status}`], { exact: true })).toBeVisible();
+    const header = screen.getByRole("region", { name: ja.workflow_context });
+    await expect.element(header.getByText(ja[`draft_${status}`], { exact: true })).toBeVisible();
     await expect
       .element(screen.getByRole("link", { name: ja.cast_edit_proactive, exact: true }))
       .not.toBeInTheDocument();
@@ -464,7 +481,7 @@ for (const status of ["published", "discarded"] as const) {
       .element(screen.getByRole("button", { name: ja.cast_edit_proactive, exact: true }))
       .not.toBeInTheDocument();
     await expect
-      .element(screen.getByRole("link", { name: ja.workflow_review, exact: true }))
+      .element(header.getByRole("link", { name: ja.workflow_review, exact: true }))
       .toHaveAttribute(
         "href",
         "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft?returnSection=cast",

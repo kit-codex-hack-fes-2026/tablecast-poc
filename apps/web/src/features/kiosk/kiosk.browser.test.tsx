@@ -117,6 +117,15 @@ beforeEach(() => {
         current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
         return Response.json(current);
       }
+      if (request.method === "POST" && path === "/api/table/bill/request") {
+        current = {
+          ...current,
+          staffCalled: true,
+          billRequested: true,
+          cursor: current.cursor + 1,
+        };
+        return Response.json(current);
+      }
       if (request.method === "POST" && path === "/api/table/confirm") {
         current.snapshot = {
           id: "tablecast-confirmation",
@@ -387,7 +396,9 @@ it.each(["listening", "speaking"] as const)(
           />
         </LocaleProvider>,
       );
-      const figure = page.getByRole("figure");
+      const figure = page.getByRole("figure").filter({
+        hasText: status === "listening" ? ja.kiosk_voice_listening : ja.kiosk_voice_speaking,
+      });
       await expect.element(figure).toBeVisible();
       expect(figure.element().getBoundingClientRect().width).toBeLessThanOrEqual(80);
       expect(figure.element().getBoundingClientRect().height).toBeLessThanOrEqual(28);
@@ -472,8 +483,8 @@ it.each(["ja", "en"] as const)(
     const socket = TablecastSocket.instances[0];
     const cart = structuredClone(current.cart);
     const paneWidth = orderPanel()?.getBoundingClientRect().width ?? 0;
-    expect(paneWidth / 1024).toBeGreaterThan(0.7);
-    expect(paneWidth / 1024).toBeLessThan(0.74);
+    expect(paneWidth / 1024).toBeGreaterThan(0.75);
+    expect(paneWidth / 1024).toBeLessThan(0.78);
     await expect
       .element(page.getByRole("region", { name: labels.customer_join_visit }))
       .not.toBeInTheDocument();
@@ -505,6 +516,9 @@ it.each(["ja", "en"] as const)(
       await expect
         .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
         .toHaveAttribute("aria-orientation", width === 1024 ? "vertical" : "horizontal");
+      await expect
+        .poll(() => conversation.getBoundingClientRect().height)
+        .toBeGreaterThanOrEqual(224);
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
       expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
@@ -539,6 +553,45 @@ it.each(["ja", "en"] as const)(
         page.getByRole("region", { name: labels.kiosk_conversation, exact: true }).element(),
       ).toBe(conversation);
     }
+    const compactHeight = conversation.getBoundingClientRect().height;
+    const showHistory = page.getByRole("button", { name: labels.kiosk_history_show });
+    await showHistory.click();
+    const closeHistory = page.getByRole("button", { name: labels.kiosk_history_hide });
+    await expect.element(closeHistory).toHaveAttribute("aria-expanded", "true");
+    await expect
+      .poll(() => conversation.getBoundingClientRect().height)
+      .toBeGreaterThan(compactHeight);
+    const historyId = closeHistory.element().getAttribute("aria-controls");
+    const history = historyId ? document.getElementById(historyId) : null;
+    if (!history) throw new Error("表示対象の会話履歴がありません");
+    expect(history.hidden).toBe(false);
+    expect(history.getBoundingClientRect().height).toBeGreaterThanOrEqual(120);
+    const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
+    expect(resume.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      conversation.getBoundingClientRect().bottom,
+    );
+    await closeHistory.click();
+    await expect
+      .poll(() => conversation.getBoundingClientRect().height)
+      .toBeCloseTo(compactHeight, 0);
+    expect(history.hidden).toBe(true);
+    for (const tab of page.getByRole("tab").elements()) {
+      expect(tab.getBoundingClientRect().height).toBe(56);
+      expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
+    }
+    await page.viewport(1024, 768);
+    await expect.poll(() => orderPanel()?.getBoundingClientRect().width).toBeCloseTo(paneWidth, 0);
+    const separator = page.getByRole("separator", { name: labels.kiosk_resize_panes });
+    separator.element().focus();
+    await userEvent.keyboard("{ArrowRight}");
+    const resizedWidth = conversation.getBoundingClientRect().width;
+    expect(resizedWidth).toBeGreaterThan(240);
+    await page.viewport(768, 1024);
+    await expect.element(separator).toHaveAttribute("aria-orientation", "horizontal");
+    await page.viewport(1024, 768);
+    await expect
+      .poll(() => conversation.getBoundingClientRect().width)
+      .toBeCloseTo(resizedWidth, 0);
     expect(observe).toHaveBeenCalledTimes(1);
     expect(TablecastSocket.instances).toEqual([socket]);
     expect(socket.closed).toBe(false);
@@ -816,4 +869,65 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
   }
   await page.getByRole("button", { name: ja.kiosk_call_staff }).click();
   await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
+});
+
+it("会話履歴を閉じていても注文確認と音声エラーは操作の近くに残る", async () => {
+  await page.viewport(1024, 768);
+  const review = vi.fn<() => void>();
+  await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <div className="h-180 w-60">
+        <VoicePanel
+          compactControls
+          view={{ status: "error", error: "permission" }}
+          lines={[]}
+          onStart={() => {}}
+          onReview={review}
+          snapshot={{
+            id: "tablecast-voice-confirmation",
+            tableSessionId: current.id,
+            cartVersion: current.cart.version,
+            configVersion: current.configVersion,
+            lines: current.cart.lines,
+            total: current.cart.total,
+            locale: "ja",
+            text: "確認待ちの注文内容",
+            expiresAt: Date.now() + 60_000,
+            channel: "voice",
+            status: "pending",
+            createdTurnId: "tablecast-voice-turn",
+            plan: null,
+          }}
+        />
+      </div>
+    </LocaleProvider>,
+  );
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_history_show }))
+    .toHaveAttribute("aria-expanded", "false");
+  await expect.element(page.getByText("確認待ちの注文内容")).toBeVisible();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: ja.kiosk_voice_permission }))
+    .toBeVisible();
+  await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
+  expect(review).toHaveBeenCalledOnce();
+});
+
+it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻しても重複依頼しない", async () => {
+  await page.viewport(390, 844);
+  await mountKiosk();
+  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }).click();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_bill_request, exact: true }))
+    .not.toBeInTheDocument();
+  await page.getByRole("tab", { name: ja.kiosk_menu, exact: true }).click();
+  await page.getByRole("tab", { name: ja.kiosk_bill, exact: true }).click();
+  await expect
+    .element(page.getByRole("status").filter({ hasText: ja.kiosk_bill_requested }))
+    .toBeVisible();
+  expect(requests.filter((request) => request.url.endsWith("/table/bill/request"))).toHaveLength(1);
 });

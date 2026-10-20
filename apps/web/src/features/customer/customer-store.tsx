@@ -8,7 +8,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
@@ -84,7 +84,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
     <div key={storeId} className="space-y-9">
       <header className="space-y-3 pb-2">
         <p className="text-sm text-muted-foreground">{t("customer_card")}</p>
-        <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere">{data.store.name}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight wrap-break-word">{data.store.name}</h1>
         {data.membership?.active && (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="font-medium text-success">{t("customer_membership_active")}</span>
@@ -98,9 +98,9 @@ export function CustomerStore({ storeId }: { storeId: string }) {
         <>
           <CustomerBenefits key={storeId} storeId={storeId} />
           <CustomerVisits storeId={storeId} />
-          <nav aria-label={t("customer_personal_records")} className="space-y-1">
+          <nav aria-label={t("customer_personal_records")} className="space-y-3">
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 rounded-lg px-2 py-3 font-medium hover:bg-secondary"
+              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               to="/member/$storeId/memories"
               params={{ storeId }}
             >
@@ -108,7 +108,7 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
             <Link
-              className="flex min-h-14 items-center justify-between gap-4 rounded-lg px-2 py-3 font-medium hover:bg-secondary"
+              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               to="/member/$storeId/consumption"
               params={{ storeId }}
             >
@@ -176,7 +176,7 @@ function CustomerBenefits({ storeId }: { storeId: string }) {
           <ul className="space-y-3">
             {recentCoupons?.map((coupon) => (
               <li key={coupon.id} className="space-y-1">
-                <p className="font-medium wrap-anywhere">{coupon.rules.title[locale]}</p>
+                <p className="font-medium wrap-break-word">{coupon.rules.title[locale]}</p>
                 <p className="text-sm text-muted-foreground">
                   {t(`coupon_${coupon.state}`)}
                   {!coupon.inDate && ` · ${t("coupon_expired")}`}
@@ -211,6 +211,7 @@ function CustomerPreferences({ data }: { data: CustomerStoreData }) {
   const client = useQueryClient();
   const navigate = useNavigate();
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const leaveTrigger = useRef<HTMLButtonElement>(null);
   const membership = data.membership;
   const preferences = useMutation({
     mutationFn: (json: {
@@ -303,19 +304,38 @@ function CustomerPreferences({ data }: { data: CustomerStoreData }) {
         />
       </form>
       <div className="space-y-3 border-t border-border pt-6">
-        <Button variant="ghost" onClick={() => setConfirmLeave((value) => !value)}>
+        <Button
+          ref={leaveTrigger}
+          variant="outline"
+          aria-expanded={confirmLeave}
+          disabled={leave.isPending || preferences.isPending || confirmLeave}
+          onClick={() => setConfirmLeave(true)}
+        >
           {t("customer_leave")}
         </Button>
         {confirmLeave && (
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-xl border border-destructive-border bg-destructive-soft p-4">
             <p className="text-sm">{t("customer_leave_notice")}</p>
-            <Button
-              variant="destructive"
-              disabled={leave.isPending || preferences.isPending}
-              onClick={() => leave.mutate()}
-            >
-              {t("customer_leave_confirm")}
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={leave.isPending}
+                onClick={() => {
+                  setConfirmLeave(false);
+                  requestAnimationFrame(() => leaveTrigger.current?.focus());
+                }}
+              >
+                {t("common_cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={leave.isPending || preferences.isPending}
+                onClick={() => leave.mutate()}
+              >
+                {t("customer_leave_confirm")}
+              </Button>
+            </div>
           </div>
         )}
         <ActionFeedback

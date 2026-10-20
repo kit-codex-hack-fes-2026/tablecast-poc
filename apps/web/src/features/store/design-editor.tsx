@@ -1,3 +1,4 @@
+import { LanguageFields } from "./language-fields";
 import { ThemeCompositionEditor } from "./theme-composition-editor";
 import { useMutation } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
@@ -279,10 +280,10 @@ function ThemeImageEditor({
         }
       />
       {value && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(["ja", "en"] as const).map((locale) => (
-            <label key={locale}>
-              {t("theme_alt")} ({locale})
+        <LanguageFields>
+          {(locale) => (
+            <label className="grid gap-2">
+              {t("theme_alt")}
               <Input
                 disabled={disabled}
                 value={value.alt[locale]}
@@ -291,8 +292,8 @@ function ThemeImageEditor({
                 }
               />
             </label>
-          ))}
-        </div>
+          )}
+        </LanguageFields>
       )}
     </div>
   );

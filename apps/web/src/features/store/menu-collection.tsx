@@ -14,7 +14,6 @@ import { m } from "../../paraglide/messages";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { StartConfigurationEditing } from "./configuration-workflow";
-import { DraftStatus } from "../shell/configuration-status";
 import {
   emptyMenuListSearch,
   menuLabels,
@@ -102,7 +101,6 @@ function MenuListCollection({
     <>
       <PageHeader
         title={t(menuLabels[section])}
-        status={draft.data && <DraftStatus status={draft.data.status} />}
         actions={
           manager &&
           editable &&

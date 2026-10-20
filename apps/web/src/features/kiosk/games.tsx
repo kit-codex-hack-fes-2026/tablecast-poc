@@ -111,7 +111,7 @@ export function KioskGames({
         }}
       >
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/40" />
+          <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
           <Dialog.Popup className="fixed inset-3 z-50 flex flex-col gap-4 overflow-y-auto rounded-2xl bg-background p-5 shadow-xl">
             <div className="flex items-center justify-between gap-3">
               <Dialog.Title className="text-xl font-semibold">{t("games_title")}</Dialog.Title>
@@ -150,7 +150,7 @@ export function KioskGames({
                 {games.data?.games.map((game) => (
                   <article
                     key={game.id}
-                    className="space-y-3 rounded-xl border border-border bg-white p-5"
+                    className="space-y-3 rounded-xl border border-border bg-card p-5"
                   >
                     <h2 className="text-xl font-semibold">{game.manifest.name[locale]}</h2>
                     <p>{game.manifest.description[locale]}</p>

@@ -293,7 +293,7 @@ function TableDetailHeader({
         icon={<Table2 />}
         status={
           <Badge variant={table.status === "open" ? "info" : "inactive"}>
-            {t(table.status === "open" ? "admin_open" : "admin_visit_closed")}
+            {t(table.status === "open" ? "admin_open" : "admin_closed")}
           </Badge>
         }
         description={

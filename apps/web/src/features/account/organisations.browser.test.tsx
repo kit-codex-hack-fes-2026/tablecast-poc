@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 it.each(["ja", "en"] as const)(
-  "%sで店舗名からフロアへ移動でき、対象別の設定とメンバー操作を保つ",
+  "%sで店舗名からホームへ移動でき、対象別の設定とメンバー操作を保つ",
   async (locale) => {
     const labels = locale === "ja" ? ja : en;
     const store = {
@@ -47,13 +47,13 @@ it.each(["ja", "en"] as const)(
       path: "/organisations",
       component: Organisations,
     });
-    const floor = createRoute({
+    const home = createRoute({
       getParentRoute: () => root,
-      path: "/admin/stores/$storeId/floor",
-      component: () => <h1>店舗フロア</h1>,
+      path: "/admin/stores/$storeId",
+      component: () => <h1>店舗ホーム</h1>,
     });
     const router = createRouter({
-      routeTree: root.addChildren([collection, floor]),
+      routeTree: root.addChildren([collection, home]),
       history: createMemoryHistory({ initialEntries: ["/organisations"] }),
     });
     const screen = await render(
@@ -64,7 +64,7 @@ it.each(["ja", "en"] as const)(
       </QueryClientProvider>,
     );
     const identity = screen.getByRole("link", { name: store.name, exact: true });
-    await expect.element(identity).toHaveAttribute("href", `/admin/stores/${store.id}/floor`);
+    await expect.element(identity).toHaveAttribute("href", `/admin/stores/${store.id}`);
     expect(identity.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
     await expect
       .element(screen.getByRole("link", { name: labels.store_profile, exact: true }))
@@ -75,8 +75,8 @@ it.each(["ja", "en"] as const)(
     identity.element().focus();
     await userEvent.keyboard("{Enter}");
     await expect
-      .element(screen.getByRole("heading", { name: "店舗フロア", exact: true }))
+      .element(screen.getByRole("heading", { name: "店舗ホーム", exact: true }))
       .toBeVisible();
-    expect(router.state.location.pathname).toBe(`/admin/stores/${store.id}/floor`);
+    expect(router.state.location.pathname).toBe(`/admin/stores/${store.id}`);
   },
 );

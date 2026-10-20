@@ -137,7 +137,7 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
       <ErrorNotice error={game.error} onRetry={() => void refresh()} />
     );
   return (
-    <article className="space-y-4 rounded-xl border border-border bg-white p-5">
+    <article className="space-y-4 rounded-xl border border-border bg-card p-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">
           {game.data.versions[0]?.manifest.name[locale] ?? t("games_title")}
@@ -207,10 +207,10 @@ function GameDetails({ storeId, gameId }: { storeId: string; gameId: string }) {
               </Badge>
             </div>
             <p>{version.manifest.description[locale]}</p>
-            <details>
-              <summary className="cursor-pointer">{t("games_rules")}</summary>
+            <section className="rounded-xl bg-surface-subtle p-4">
+              <h3 className="text-sm font-medium">{t("games_rules")}</h3>
               <p className="mt-2 whitespace-pre-wrap">{version.manifest.rules[locale]}</p>
-            </details>
+            </section>
             {manager && (
               <div className="flex flex-wrap gap-2">
                 <Button

@@ -20,7 +20,9 @@ import { MotionProvider } from "../../components/motion-provider";
 import { CustomerStore } from "./customer-store";
 import { CustomerMemories } from "./customer-memories";
 import { CustomerPoints } from "./customer-points";
+import { ConsumptionEditor } from "./customer-consumption";
 import { CustomerCoupons } from "./customer-coupons";
+import { CustomerJoin } from "./customer-join";
 import "../../styles.css";
 
 let client: QueryClient;
@@ -182,7 +184,17 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   await expect
     .element(page.getByText("I prefer dry gin cocktails.", { exact: true }))
     .toBeVisible();
-  await page.getByRole("button", { name: labels.customer_delete, exact: true }).click();
+  const remove = page.getByRole("button", { name: labels.customer_delete, exact: true });
+  await remove.click();
+  const confirmation = page.getByRole("alertdialog");
+  await expect
+    .element(confirmation.getByText("I prefer dry gin cocktails.", { exact: false }))
+    .toBeVisible();
+  await confirmation.getByRole("button", { name: labels.common_cancel, exact: true }).click();
+  await expect.element(remove).toHaveFocus();
+  expect(writes).toHaveLength(2);
+  await remove.click();
+  await confirmation.getByRole("button", { name: labels.customer_delete, exact: true }).click();
   await expect
     .element(page.getByText("I prefer dry gin cocktails.", { exact: true }))
     .not.toBeInTheDocument();
@@ -271,4 +283,55 @@ it("ポイント交換の失敗は同じキーで再試行し、交換した券�
   ]);
   expect(writes[0]?.value).toHaveProperty("idempotencyKey", expect.any(String));
   expect(writes[1]?.value).toEqual(writes[0]?.value);
+});
+
+it("飲食記録は取消で送信せず閉じ、再度開くと保存済みの数量を表示する", async () => {
+  const writes: unknown[] = [];
+  vi.stubGlobal("fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+    writes.push(init?.body);
+    return Response.json({ saved: true });
+  });
+  await show(
+    <ConsumptionEditor
+      storeId="tablecast-store"
+      orderId="order"
+      lineId="line"
+      quantity={2}
+      shared={false}
+      revision={3}
+    />,
+  );
+  const trigger = page.getByRole("button", { name: new RegExp(ja.customer_edit_consumption) });
+  await trigger.click();
+  await page.getByRole("spinbutton", { name: ja.customer_consumption_quantity }).fill("5");
+  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(trigger).toHaveFocus();
+  await expect.element(page.getByRole("spinbutton")).not.toBeInTheDocument();
+  await trigger.click();
+  await expect
+    .element(page.getByRole("spinbutton", { name: ja.customer_consumption_quantity }))
+    .toHaveValue(2);
+  expect(writes).toEqual([]);
+});
+
+it.each([
+  { code: "CUSTOMER_VISIT_CODE_EXPIRED", status: 409, message: ja.customer_scan_again },
+  { code: "UNAVAILABLE", status: 503, message: ja.common_unavailable },
+])("参加QRの$codeを保存競合と混同せず復帰先を示す", async ({ code, status, message }) => {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    expect(new URL(request.url).pathname).toBe("/api/customer/visits/resolve");
+    return Response.json({ error: { code, message: "失敗" } }, { status });
+  });
+  await show(<CustomerJoin code={"0".repeat(64)} />);
+  await expect.element(page.getByRole("alert").getByText(message, { exact: true })).toBeVisible();
+  await expect.element(page.getByText(ja.common_conflict, { exact: true })).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("link", { name: ja.customer_title, exact: true }))
+    .toHaveAttribute("href", "/member");
+  expect(
+    [...document.querySelectorAll("button")].filter(
+      (button) => button.textContent === ja.common_retry,
+    ),
+  ).toHaveLength(status === 503 ? 1 : 0);
 });

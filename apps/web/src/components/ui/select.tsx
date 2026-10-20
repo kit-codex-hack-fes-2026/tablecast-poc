@@ -16,13 +16,13 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
       {...props}
       className={(state) =>
         cn(
-          "flex min-h-12 w-full items-center justify-between gap-2 rounded-lg border border-input bg-card px-3 py-2 text-base text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+          "flex min-h-12 min-w-0 w-full items-center justify-between gap-2 rounded-xl border border-input bg-card bg-(image:--surface-sheen) shadow-control hover:border-control-edge-hover hover:bg-control-hover px-3 py-2 text-base text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
           typeof className === "function" ? className(state) : className,
         )
       }
     >
       {children}
-      <SelectPrimitive.Icon>
+      <SelectPrimitive.Icon className="ms-auto flex size-4 shrink-0 items-center justify-center">
         <ChevronsUpDown className="size-4 shrink-0" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
@@ -41,7 +41,7 @@ export function SelectContent({ className, children, ...props }: SelectPrimitive
           {...props}
           className={(state) =>
             cn(
-              "max-h-80 min-w-56 overflow-y-auto rounded-lg border border-border bg-card p-1 text-foreground shadow-lg",
+              "max-h-80 min-w-56 overflow-y-auto rounded-2xl border border-border bg-card p-2 text-foreground shadow-lg",
               typeof className === "function" ? className(state) : className,
             )
           }

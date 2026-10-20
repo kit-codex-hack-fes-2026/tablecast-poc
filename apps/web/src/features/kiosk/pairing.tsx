@@ -48,7 +48,7 @@ export function Pairing({
       {request.data ? (
         <>
           <QRCodeSVG
-            className="mb-5 rounded-xl bg-white p-3"
+            className="mb-5 rounded-xl bg-card p-3"
             value={`${request.data.verification_uri}?user_code=${encodeURIComponent(request.data.user_code)}`}
             size={208}
             level="M"

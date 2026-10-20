@@ -264,3 +264,16 @@ it("退会は明示確認後だけrevision付きで送信し、失敗後も確�
     .toBeVisible();
   await expect.element(page.getByText(ja.customer_leave_notice, { exact: true })).toBeVisible();
 });
+
+it("退会確認を取り消すと保存せず元の操作へ戻る", async () => {
+  await show();
+  await page.getByText(ja.customer_preferences, { exact: true }).click();
+  const trigger = page.getByRole("button", { name: ja.customer_leave, exact: true });
+  await trigger.click();
+  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(trigger).toHaveFocus();
+  await expect
+    .element(page.getByRole("button", { name: ja.customer_leave_confirm }))
+    .not.toBeInTheDocument();
+  expect(writes).toEqual([]);
+});

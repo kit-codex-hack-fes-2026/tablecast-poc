@@ -1,6 +1,8 @@
 import { calendarDate } from "../../i18n/format";
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Brain, Pencil, Plus, Trash2 } from "lucide-react";
+import { ConfirmAction } from "../../components/confirm-action";
 import { customerMemoryInputSchema } from "@tablecast/api/schema";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
@@ -17,6 +19,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
   const client = useQueryClient();
   const records = useSuspenseInfiniteQuery(customerMemoriesOptions(storeId));
   const [editing, setEditing] = useState<Memory | null>();
+  const editOrigin = useRef<HTMLButtonElement | null>(null);
   const remove = useMutation({
     mutationFn: (memory: Memory) =>
       parseResponse(
@@ -31,25 +34,40 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
   return (
     <article className="space-y-6">
       <header className="space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("customer_memories")}</h1>
+        <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
+          <Brain aria-hidden="true" className="size-6 shrink-0" />
+          {t("customer_memories")}
+        </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
           {t("customer_memories_note")}
         </p>
       </header>
-      <Button onClick={() => setEditing(null)}>{t("customer_memory_add")}</Button>
+      <Button
+        disabled={editing !== undefined || remove.isPending}
+        onClick={(event) => {
+          editOrigin.current = event.currentTarget;
+          setEditing(null);
+        }}
+      >
+        <Plus aria-hidden="true" />
+        {t("customer_memory_add")}
+      </Button>
       {editing !== undefined && (
         <MemoryEditor
           key={editing?.id ?? "new"}
           storeId={storeId}
           memory={editing}
-          onClose={() => setEditing(undefined)}
+          onClose={() => {
+            setEditing(undefined);
+            requestAnimationFrame(() => editOrigin.current?.focus());
+          }}
         />
       )}
       <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
       <ul className="space-y-4">
         {records.data.pages.flatMap((page) =>
           page.memories.map((memory) => (
-            <li key={memory.id} className="space-y-3 rounded-xl bg-card p-5">
+            <li key={memory.id} className="space-y-3 rounded-xl border border-border bg-card p-5">
               <p className="whitespace-pre-wrap wrap-anywhere">{memory.content}</p>
               <p className="text-sm text-muted-foreground">
                 {t(
@@ -60,16 +78,24 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
                 · {calendarDate(memory.createdAt, locale)}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setEditing(memory)}>
+                <Button
+                  variant="outline"
+                  disabled={editing !== undefined || remove.isPending}
+                  onClick={(event) => {
+                    editOrigin.current = event.currentTarget;
+                    setEditing(memory);
+                  }}
+                >
+                  <Pencil aria-hidden="true" />
                   {t("customer_edit")}
                 </Button>
-                <Button
-                  variant="ghost"
-                  disabled={remove.isPending}
-                  onClick={() => remove.mutate(memory)}
-                >
-                  {t("customer_delete")}
-                </Button>
+                <ConfirmAction
+                  label={t("customer_delete")}
+                  subject={`${memory.content}\n\n${t("customer_memory_delete_notice")}`}
+                  disabled={remove.isPending || editing !== undefined}
+                  icon={<Trash2 aria-hidden="true" />}
+                  onConfirm={() => remove.mutate(memory)}
+                />
               </div>
             </li>
           )),
@@ -140,14 +166,19 @@ function MemoryEditor({
         validators={{ onChange: customerMemoryInputSchema.shape.content }}
       >
         {(field) => (
-          <field.TextField label={t("customer_memory_content")} required maxLength={1000} />
+          <field.TextField
+            label={t("customer_memory_content")}
+            required
+            maxLength={1000}
+            disabled={save.isPending}
+          />
         )}
       </form.AppField>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <form.AppForm>
           <form.SubmitButton>{t("account_save")}</form.SubmitButton>
         </form.AppForm>
-        <Button variant="ghost" onClick={onClose}>
+        <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
           {t("common_cancel")}
         </Button>
       </div>

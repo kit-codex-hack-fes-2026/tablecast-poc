@@ -28,7 +28,7 @@ export function LanguageSwitch({
       {languages.map((language) => (
         <Button
           key={language}
-          className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-info aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
+          className="whitespace-nowrap font-medium aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-sm max-xl:px-2 max-sm:px-1.5"
           size="sm"
           variant="ghost"
           type="button"

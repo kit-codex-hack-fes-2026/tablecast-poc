@@ -84,6 +84,8 @@ beforeEach(() => {
     }
     if (url.pathname.includes("/configuration/releases/")) return Response.json(release);
     if (url.pathname === "/api/auth/organization/get-full-organization") return Response.json(null);
+    if (url.pathname.endsWith("/catalog"))
+      return Response.json({ ...catalog, storeId, version: release.publishedVersion });
     if (url.pathname.endsWith("/events")) return Response.json({ events: [], cursor: 0 });
     unexpected.push(`${request.method} ${url.pathname}`);
     return Response.json({}, { status: 500 });

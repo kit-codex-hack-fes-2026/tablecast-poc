@@ -60,19 +60,27 @@ export function TableMetrics({
         const content = (
           <>
             <span
-              className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tone}`}
+              className={`flex size-8 shrink-0 items-center justify-center rounded-full ${tone}`}
             >
-              <Icon className="size-5" aria-hidden="true" />
+              <Icon className="size-4" aria-hidden="true" />
             </span>
-            <span className="min-w-0 flex-1 text-sm">{label}</span>
-            <strong className="shrink-0 text-2xl font-semibold tabular-nums">
-              {pending ? <Skeleton className="h-8 w-12" /> : value}
-              {!pending && "total" in metric && (
-                <small className="ml-1 text-sm font-normal text-muted-foreground">
-                  / {metric.total}
-                </small>
+            <span className="min-w-0 text-sm break-keep">{label}</span>
+            <span className="col-span-2 flex items-center justify-between gap-2">
+              <strong className="text-2xl font-semibold tabular-nums">
+                {pending ? <Skeleton className="h-8 w-12" /> : value}
+                {!pending && "total" in metric && (
+                  <small className="ml-1 text-sm font-normal text-muted-foreground">
+                    / {metric.total}
+                  </small>
+                )}
+              </strong>
+              {onFilterChange && !pending && (
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground"
+                />
               )}
-            </strong>
+            </span>
           </>
         );
         return onFilterChange && !pending ? (
@@ -81,13 +89,15 @@ export function TableMetrics({
             variant="outline"
             aria-pressed={filter === target}
             onClick={() => onFilterChange(target)}
-            className="min-h-20 justify-start gap-3 p-3 text-left aria-pressed:border-info aria-pressed:bg-info-soft"
+            className="grid min-h-28 grid-cols-[auto_minmax(0,1fr)] gap-2 p-3 text-left aria-pressed:border-control-edge-hover aria-pressed:bg-control-selected"
           >
             {content}
-            <ChevronRight aria-hidden="true" className="size-4 text-info" />
           </Button>
         ) : (
-          <div key={target} className="flex min-h-20 items-center gap-3 border-b border-border p-3">
+          <div
+            key={target}
+            className="grid min-h-28 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border-b border-border p-3"
+          >
             {content}
           </div>
         );

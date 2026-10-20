@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { calendarInputValue } from "../../lib/calendar-input";
 import type { TimelinePage } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -283,11 +285,11 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   await screen.getByRole("button", { name: labels.floor_previous, exact: true }).click();
   await expect
     .element(screen.getByLabelText(labels.floor_date, { exact: true }))
-    .toHaveValue(moveDate(data.date, -1));
+    .toHaveValue(calendarInputValue(moveDate(data.date, -1), locale));
   await screen.getByRole("button", { name: labels.floor_now, exact: true }).click();
   await expect
     .element(screen.getByLabelText(labels.floor_date, { exact: true }))
-    .toHaveValue(storeDate(Date.now()));
+    .toHaveValue(calendarInputValue(storeDate(Date.now()), locale));
   await viewport.getByRole("button", { name: labels.admin_open_table, exact: true }).click();
   await expect.element(screen.getByRole("heading", { name: "空卓を開く" })).toBeVisible();
   expect(router.state.location.pathname).toBe(
@@ -363,4 +365,69 @@ it("続きの失敗を再試行し、背景再取得でも既存の帯・フォ�
   await expect
     .element(screen.getByRole("button", { name: "続きを読み込む", exact: true }))
     .not.toBeInTheDocument();
+});
+
+it("日付変更の取得中もカレンダーの面積と操作フォーカスを保ち、前日の来店を新しい日付へ表示しない", async () => {
+  const pending = Promise.withResolvers<Response>();
+  vi.stubGlobal("fetch", () => pending.promise);
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  client.setQueryData(timelineOptions("tablecast-komorebi", initial.date).queryKey, {
+    pages: [{ ...initial, nextCursor: null }],
+    pageParams: [null],
+  });
+  const router = createRouter({
+    routeTree: createRootRoute({
+      component: function Timeline() {
+        const [date, setDate] = useState(initial.date);
+        return (
+          <FloorTimeline
+            storeId="tablecast-komorebi"
+            date={date}
+            initialNow={initial.observedAt + 24 * hour}
+            tables={[{ ...table, tableId: "tablecast-t03" }]}
+            vacantTables={[{ id: "tablecast-t10", name: "T10" }]}
+            onDateChange={setDate}
+            onSelect={() => {}}
+            onOpen={() => {}}
+          />
+        );
+      },
+    }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  try {
+    const screen = await render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initialLocale="ja" persist={false}>
+          <RouterProvider router={router} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const timeline = screen.getByRole("region", { name: ja.floor_timeline, exact: true });
+    await expect.element(timeline.getByRole("button", { name: /^T03 · 4 / })).toBeVisible();
+    const initialHeight = timeline.element().getBoundingClientRect().height;
+    const next = screen.getByRole("button", { name: ja.floor_next, exact: true });
+    await next.click();
+    await expect.element(timeline).toHaveAttribute("aria-busy", "true");
+    await expect.element(next).toHaveFocus();
+    await expect
+      .element(timeline.getByRole("button", { name: /^T03 · 4 / }))
+      .not.toBeInTheDocument();
+    expect(timeline.element().getBoundingClientRect().height).toBe(initialHeight);
+    pending.resolve(
+      Response.json({
+        ...initial,
+        date: moveDate(initial.date, 1),
+        startAt: initial.startAt + 24 * hour,
+        endAt: initial.endAt + 24 * hour,
+        sessions: [],
+        nextCursor: null,
+      }),
+    );
+    await expect.element(timeline).toHaveAttribute("aria-busy", "false");
+    await expect.element(next).toHaveFocus();
+    expect(timeline.element().getBoundingClientRect().height).toBe(initialHeight);
+  } finally {
+    pending.resolve(Response.json({ ...initial, sessions: [], nextCursor: null }));
+  }
 });

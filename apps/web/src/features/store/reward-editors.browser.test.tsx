@@ -367,7 +367,9 @@ it("クーポンは人物のメールを確認して選び、検索変更と発�
   await page
     .getByRole("combobox", { name: ja.coupon_select_rule, exact: true })
     .selectOptions(coupon.id);
-  await page.getByRole("button", { name: ja.coupon_issue, exact: true }).click();
+  await expect
+    .element(page.getByRole("button", { name: ja.coupon_issue, exact: true }))
+    .toBeDisabled();
   expect(couponIssues).toEqual([]);
   const member = page.getByRole("combobox", { name: ja.coupon_member, exact: true });
   await member.click();
@@ -400,4 +402,40 @@ it("クーポンは人物のメールを確認して選び、検索変更と発�
     expect.objectContaining({ ruleId: coupon.id, membershipId: "tablecast-long-email-member" }),
     expect.objectContaining({ ruleId: coupon.id, membershipId: "tablecast-long-email-member" }),
   ]);
+});
+
+it("新しいクーポンルールを言語切替で保持し、明示的な取消で保存せず閉じる", async () => {
+  await show(<CouponManagement />);
+  await page.getByRole("button", { name: ja.coupon_new, exact: true }).click();
+  await title().fill("下書きの割引");
+  await page.getByRole("tab", { name: "English", exact: true }).click();
+  await page.getByRole("textbox", { name: ja.coupon_title_en, exact: true }).fill("Draft discount");
+  await expect
+    .element(page.getByRole("tab", { name: "日本語", exact: true }))
+    .toHaveAttribute("aria-selected", "false");
+  await page.getByRole("tab", { name: "日本語", exact: true }).click();
+  await expect.element(title()).toHaveValue("下書きの割引");
+  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(title()).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: ja.coupon_new, exact: true }))
+    .toHaveFocus();
+  expect(couponWrites).toHaveLength(0);
+});
+
+it("来店ごとのポイントには購入額換算を出さず、付与方式の切替後だけ表示する", async () => {
+  await show(<PointPolicy />);
+  await expect
+    .element(page.getByRole("spinbutton", { name: ja.customer_points_unit }))
+    .not.toBeInTheDocument();
+  await page.getByRole("combobox", { name: ja.customer_points_kind }).selectOptions("spend");
+  await expect
+    .element(page.getByRole("spinbutton", { name: ja.customer_points_unit }))
+    .toHaveValue(100);
+  await page.getByRole("spinbutton", { name: ja.customer_points_unit }).fill("200");
+  await page.getByRole("combobox", { name: ja.customer_points_kind }).selectOptions("visit");
+  await page.getByRole("combobox", { name: ja.customer_points_kind }).selectOptions("spend");
+  await expect
+    .element(page.getByRole("spinbutton", { name: ja.customer_points_unit }))
+    .toHaveValue(200);
 });

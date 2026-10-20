@@ -93,6 +93,7 @@ it("保存通知と字幕の続きが届いても吹き出しを作り直さず�
       />
     </Surface>,
   );
+  await screen.getByRole("button", { name: "会話履歴を表示" }).click();
   const beforeGuest = screen.getByText("刺身に合う日本酒をください").element().closest("article");
   const beforeReply = screen.getByText("辛口の日本酒です").element().closest("article");
   const nextGuest = screen.getByText("冷やでお願いします").element().closest("article");
@@ -157,6 +158,7 @@ it("字幕のIDが異なっても業務toolを実行中と表示し終了通知�
       />
     </Surface>,
   );
+  await screen.getByRole("button", { name: "会話履歴を表示" }).click();
   await expect.element(screen.getByText("実行中", { exact: true })).toBeVisible();
   await expect.element(screen.getByText("中断", { exact: true })).not.toBeInTheDocument();
   await screen.rerender(
@@ -231,6 +233,7 @@ it("日本語の検索語を保ってツールを待機から実行・失敗へ�
       />
     </Surface>,
   );
+  await screen.getByRole("button", { name: "会話履歴を表示" }).click();
   await expect.element(screen.getByText(labels.waiting, { exact: true })).toBeVisible();
   await expect.element(screen.getByText(labels.complete, { exact: true })).not.toBeInTheDocument();
   await expect.element(screen.getByText(labels.search, { exact: true })).toBeVisible();
@@ -310,6 +313,7 @@ it("商品カードだけの業務イベントも字幕と独立して時系列�
       />
     </Surface>,
   );
+  await screen.getByRole("button", { name: "会話履歴を表示" }).click();
   const card = screen.getByRole("button", { name: /月凪/ });
   await expect.element(card).toBeVisible();
   const before = screen.getByText(line.text).element();

@@ -86,9 +86,9 @@ export function AdminShell({
           <main
             id="tablecast-admin-main"
             data-scroll-restoration-id="tablecast-admin-main"
-            className="h-full min-w-0 overflow-y-auto bg-white md:rounded-2xl md:border md:border-border"
+            className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
           >
-            <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-white/95 px-4 py-2 backdrop-blur-sm @container md:rounded-t-2xl">
+            <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-2 backdrop-blur-xl @container md:rounded-t-2xl">
               <Button
                 size="icon"
                 variant="ghost"

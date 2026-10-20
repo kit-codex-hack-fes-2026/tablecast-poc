@@ -66,7 +66,7 @@ export function ConfigurationStatus({
   );
 }
 
-function SaveStatus({
+export function SaveStatus({
   dirty,
   pending,
   error,

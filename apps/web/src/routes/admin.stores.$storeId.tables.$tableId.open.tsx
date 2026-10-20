@@ -28,6 +28,9 @@ function Page() {
         <OpenTable
           storeId={storeId}
           table={table}
+          onCancel={() =>
+            void navigate({ to: "/admin/stores/$storeId/floor", params: { storeId } })
+          }
           onOpened={() =>
             void navigate({ to: "/admin/stores/$storeId/floor", params: { storeId } })
           }

@@ -1,6 +1,7 @@
 import { zodFieldValidator } from "../../lib/form-validation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { CircleDollarSign } from "lucide-react";
 import { useHydrated } from "@tanstack/react-router";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
@@ -21,6 +22,7 @@ export function PaymentForm({
   const { t, locale } = useI18n();
   const hydrated = useHydrated();
   const [editing, setEditing] = useState(!closed);
+  const trigger = useRef<HTMLButtonElement>(null);
   const initialKind: "payment" | "adjustment" = closed ? "adjustment" : "payment";
   const client = useQueryClient();
   const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
@@ -54,21 +56,33 @@ export function PaymentForm({
   });
   if (!editing)
     return (
-      <Button variant="outline" disabled={!hydrated} onClick={() => setEditing(true)}>
+      <Button ref={trigger} variant="outline" disabled={!hydrated} onClick={() => setEditing(true)}>
+        <CircleDollarSign aria-hidden="true" />
         {t("admin_adjustment")}
       </Button>
     );
   return (
     <form
       noValidate
-      className="flex flex-col gap-4"
+      className="flex max-w-2xl flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
-      <h3>{t("admin_payment")}</h3>
-      <p className="text-sm text-muted-foreground">{t("admin_payment_note")}</p>
+      <form.Subscribe selector={(state) => state.values.kind}>
+        {(kind) => (
+          <>
+            <h3 className="flex items-center gap-2 font-semibold">
+              <CircleDollarSign aria-hidden="true" className="size-5" />
+              {t(kind === "payment" ? "admin_payment" : "admin_adjustment")}
+            </h3>
+            {kind === "payment" && (
+              <p className="text-sm text-muted-foreground">{t("admin_payment_note")}</p>
+            )}
+          </>
+        )}
+      </form.Subscribe>
       <fieldset disabled={payment.isPending} className="space-y-4">
         <form.Field name="kind">
           {(field) => (
@@ -123,15 +137,32 @@ export function PaymentForm({
         <form.AppForm>
           <form.FormErrors error={payment.error} />
         </form.AppForm>
-        <form.AppForm>
-          <form.Subscribe selector={(state) => state.values.kind}>
-            {(kind) => (
-              <form.SubmitButton size="lg">
-                {t(kind === "payment" ? "admin_payment" : "admin_adjustment")}
-              </form.SubmitButton>
-            )}
-          </form.Subscribe>
-        </form.AppForm>
+        <div className="flex flex-wrap items-center gap-3">
+          {closed && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                form.reset();
+                payment.reset();
+                setPaymentKey(crypto.randomUUID());
+                setEditing(false);
+                requestAnimationFrame(() => trigger.current?.focus());
+              }}
+            >
+              {t("common_cancel")}
+            </Button>
+          )}
+          <form.AppForm>
+            <form.Subscribe selector={(state) => state.values.kind}>
+              {(kind) => (
+                <form.SubmitButton>
+                  {t(kind === "payment" ? "admin_payment" : "admin_adjustment")}
+                </form.SubmitButton>
+              )}
+            </form.Subscribe>
+          </form.AppForm>
+        </div>
       </fieldset>
     </form>
   );

@@ -12,7 +12,10 @@ export function DateTime({ value }: { value: number | string | Date | null | und
   if (value === null || value === undefined) return <span>—</span>;
   const date = new Date(value);
   return (
-    <time className="text-sm tabular-nums" dateTime={date.toISOString()}>
+    <time
+      className="inline-block text-sm whitespace-nowrap tabular-nums"
+      dateTime={date.toISOString()}
+    >
       {dateTime(date, locale)}
     </time>
   );

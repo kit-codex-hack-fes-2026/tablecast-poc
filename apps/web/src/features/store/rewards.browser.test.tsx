@@ -71,10 +71,11 @@ it("券面をアップロードして出所と二言語の交換ルールをフ�
   const saved = vi.fn<() => void>();
   await show(<CouponRuleForm storeId="tablecast-store" onSaved={saved} />);
   await page.getByRole("textbox", { name: ja.coupon_title_ja }).fill("会員の100円割引");
-  await page.getByRole("textbox", { name: ja.coupon_title_en }).fill("Member discount");
   await page
     .getByRole("textbox", { name: ja.coupon_description_ja })
     .fill("会計から100円引きます。");
+  await page.getByRole("tab", { name: "English", exact: true }).click();
+  await page.getByRole("textbox", { name: ja.coupon_title_en }).fill("Member discount");
   await page
     .getByRole("textbox", { name: ja.coupon_description_en })
     .fill("JPY 100 off your bill.");

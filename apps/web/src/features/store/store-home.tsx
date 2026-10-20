@@ -98,11 +98,11 @@ export function StoreHome({ today }: { today: string }) {
               to="/admin/stores/$storeId/floor"
               params={{ storeId: store.id }}
               search={{ view: "list", filter }}
-              className={`group flex min-h-20 items-center gap-3 rounded-xl border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${count > 0 ? "border-warning/35 bg-warning-soft hover:border-warning hover:bg-warning-soft/70" : "border-border bg-card hover:border-info hover:bg-info-soft"}`}
+              className={`group flex min-h-16 @xl:min-h-20 items-center gap-3 rounded-xl border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${count > 0 ? (filter === "voice" ? "border-destructive-border bg-destructive-soft hover:border-destructive-border-hover hover:bg-destructive-hover" : "border-warning-border bg-warning-soft hover:border-warning-border-hover hover:bg-warning-hover") : "border-control-edge bg-control shadow-control hover:bg-control-hover"}`}
             >
               <Icon
                 aria-hidden="true"
-                className={`size-5 shrink-0 ${count > 0 ? "text-warning" : "text-info"}`}
+                className={`size-5 shrink-0 ${count > 0 ? (filter === "voice" ? "text-destructive" : "text-warning") : "text-muted-foreground"}`}
               />
               <span className="flex-1 text-sm font-medium">{t(label)}</span>
               <span className="text-2xl font-semibold tabular-nums">
@@ -122,7 +122,7 @@ export function StoreHome({ today }: { today: string }) {
           <h2 id="tablecast-home-current" className="sr-only">
             {t("floor_current")}
           </h2>
-          <dl className="grid grid-cols-3 gap-4">
+          <dl className="grid gap-3 @sm:grid-cols-3 @sm:gap-4">
             {(
               [
                 ["admin_active", active.length, Table2],
@@ -134,10 +134,13 @@ export function StoreHome({ today }: { today: string }) {
                 ],
               ] as const
             ).map(([label, count, Icon]) => (
-              <div key={label} className="row-span-2 grid grid-rows-subgrid gap-2">
-                <dt className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                  <Icon aria-hidden="true" className="size-4" />
-                  {t(label)}
+              <div
+                key={label}
+                className="flex items-center justify-between gap-3 @sm:row-span-2 @sm:grid @sm:grid-rows-subgrid @sm:gap-2"
+              >
+                <dt className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                  <Icon aria-hidden="true" className="size-4 shrink-0" />
+                  <span className="text-pretty">{t(label)}</span>
                 </dt>
                 <dd className="text-2xl font-semibold tabular-nums">
                   {count.toLocaleString(locale)}

@@ -5,6 +5,7 @@ import { StoreLogo } from "../../components/store-logo";
 import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
 import { Tabs } from "@base-ui/react/tabs";
+import { usePanelRef } from "react-resizable-panels";
 import type {
   ThemeImage,
   CartLine,
@@ -339,10 +340,35 @@ function TableSession({
   endpoint: TableEndpoint;
 }) {
   const horizontal = useMediaQuery("(min-width: 56rem)");
+  const conversationPanel = usePanelRef();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const previousHeight = useRef<number | undefined>(undefined);
+  const orientation = useRef(horizontal);
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
-    id: "tablecast-kiosk-layout",
+    id: horizontal ? "tablecast-kiosk-layout" : "tablecast-kiosk-vertical-layout",
     panelIds: ["tablecast-conversation", "tablecast-order"],
   });
+  useEffect(() => {
+    if (orientation.current === horizontal) return;
+    orientation.current = horizontal;
+    const savedSize = defaultLayout?.["tablecast-conversation"];
+    conversationPanel.current?.resize(savedSize === undefined ? "240px" : `${savedSize}%`);
+  }, [conversationPanel, defaultLayout, horizontal]);
+  useEffect(() => {
+    const panel = conversationPanel.current;
+    if (!panel) return;
+    if (horizontal) {
+      previousHeight.current = undefined;
+      return;
+    }
+    if (historyOpen) {
+      previousHeight.current = panel.getSize().inPixels;
+      panel.resize(Math.max(previousHeight.current, 420));
+    } else if (previousHeight.current !== undefined) {
+      panel.resize(previousHeight.current);
+      previousHeight.current = undefined;
+    }
+  }, [conversationPanel, historyOpen, horizontal]);
   const model = useTableSession({ data, refresh, endpoint });
   const {
     snapshot,
@@ -363,9 +389,6 @@ function TableSession({
     language,
     voiceActive,
   } = model;
-  const panelSizes = horizontal
-    ? ({ conversation: "28%", order: "72%", minConversation: "20%", maxOrder: "80%" } as const)
-    : ({ conversation: "35%", order: "65%", minConversation: "25%", maxOrder: "75%" } as const);
   const toggleVoice = () => {
     if (voiceActive) void voice.stop({ existingSession: view.error === "active" });
     else void voice.start(locale, data.speechSpeed);
@@ -394,12 +417,15 @@ function TableSession({
           >
             <ResizablePanel
               id="tablecast-conversation"
-              defaultSize={panelSizes.conversation}
-              minSize={panelSizes.minConversation}
+              panelRef={conversationPanel}
+              groupResizeBehavior="preserve-pixel-size"
+              defaultSize="240px"
+              minSize="224px"
               maxSize="70%"
               className="h-full"
             >
               <VoicePanel
+                onHistoryOpenChange={setHistoryOpen}
                 view={view}
                 lines={conversationLines(data.events)}
                 events={data.events}
@@ -426,13 +452,7 @@ function TableSession({
               />
             </ResizablePanel>
             <ResizableHandle aria-label={t("kiosk_resize_panes")} />
-            <ResizablePanel
-              id="tablecast-order"
-              defaultSize={panelSizes.order}
-              minSize="30%"
-              maxSize={panelSizes.maxOrder}
-              className="h-full"
-            >
+            <ResizablePanel id="tablecast-order" minSize="30%" className="h-full">
               <aside
                 data-theme-part="menu"
                 className="isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
@@ -579,17 +599,26 @@ function KioskBilling({
         <p className="text-muted-foreground text-xs mt-2.5">
           {t("kiosk_not_sent")}: {money(data.bill.cartTotal, locale)}
         </p>
-        <Button
-          variant="default"
-          size="lg"
-          type="button"
-          className="h-auto min-h-14 whitespace-normal py-2"
-
-          onClick={() => call.mutate(true)}
-          disabled={call.isPending}
-        >
-          {t("kiosk_bill_request")}
-        </Button>
+        {data.billRequested ? (
+          <div
+            role="status"
+            className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-xl bg-success-soft px-4 py-3 text-success"
+          >
+            <Check className="size-5 shrink-0" />
+            <span>{t("kiosk_bill_requested")}</span>
+          </div>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            type="button"
+            className="h-auto min-h-14 whitespace-normal py-2"
+            onClick={() => call.mutate(true)}
+            disabled={call.isPending}
+          >
+            {t("kiosk_bill_request")}
+          </Button>
+        )}
       </div>
     </Tabs.Panel>
   );
@@ -614,24 +643,30 @@ function KioskHeader({
   return (
     <header
       data-theme-part="header"
-      className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-sm:px-3"
+      className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-[56rem]:grid max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:px-3"
     >
-      <a
-        className="text-xl font-bold tracking-tight max-lg:hidden"
-        href={data.kind === "demo" ? "#" : "/"}
-      >
-        <Brand />
-      </a>
-      <StoreLogo logo={logo} />
-      <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2 text-sm">
-        <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
-        <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
+      <div className="mr-auto flex min-w-0 items-center gap-3">
+        <a
+          className="text-xl font-bold tracking-tight max-lg:hidden"
+          href={data.kind === "demo" ? "#" : "/"}
+        >
+          <Brand />
+        </a>
+        <StoreLogo logo={logo} />
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm max-[56rem]:flex-col max-[56rem]:items-start max-[56rem]:gap-0">
+          <span className="max-w-48 truncate max-[56rem]:max-w-full">
+            {storeName ?? data.storeName}
+          </span>
+          <strong className="max-[56rem]:max-w-full max-[56rem]:truncate">
+            {data.kind === "demo" ? t("demo_title") : data.tableName}
+          </strong>
+        </div>
       </div>
-      {tools}
+      <div className="max-[56rem]:justify-self-end">{tools}</div>
       <Button
         variant="outline"
         size="lg"
-        className="h-auto whitespace-normal py-2"
+        className="h-auto whitespace-normal py-2 max-[56rem]:text-sm"
         onClick={() => call.mutate(false)}
         disabled={call.isPending || data.staffCalled}
       >
@@ -651,7 +686,7 @@ function KioskMenuTabs({ data }: { data: TableState }) {
   return (
     <Tabs.List
       data-ui="menu-tabs"
-      className="flex gap-0 border-b border-border px-3 [&_button]:flex [&_button]:min-h-14 [&_button]:min-w-0 [&_button]:flex-1 [&_button]:flex-wrap [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:px-1.5 [&_button]:py-2 [&_button]:text-base [&_button]:text-muted-foreground [&_button[data-active]]:border-b-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:text-primary"
+      className="flex shrink-0 gap-0 overflow-x-auto border-b border-border px-1 [&_button]:flex [&_button]:min-h-14 [&_button]:flex-1 [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:p-2 [&_button]:text-sm [&_button]:whitespace-nowrap [&_button]:text-muted-foreground [&_button[data-active]]:border-b-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:text-primary"
     >
       <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="menu">
         {t("kiosk_menu")}

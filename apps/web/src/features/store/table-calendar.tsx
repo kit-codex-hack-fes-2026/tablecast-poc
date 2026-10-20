@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { Bell, CircleDollarSign, TriangleAlert } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { Button } from "../../components/ui/button";
+import { Skeleton } from "../../components/ui/skeleton";
 import { Input } from "../../components/ui/input";
 import { dateTime, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -34,7 +35,7 @@ export function TableCalendar({
   onSelect,
   onOpen,
 }: {
-  page: Pick<TimelinePage, "date" | "startAt" | "endAt">;
+  page?: Pick<TimelinePage, "date" | "startAt" | "endAt">;
   sessions: TimelineSession[];
   tables: TableState[];
   vacantTables: { id: string; name: string }[];
@@ -49,7 +50,7 @@ export function TableCalendar({
   const { t, locale } = useI18n();
   const [search, setSearch] = useState("");
   const viewport = useRef<HTMLDivElement>(null);
-  const today = page.date === storeDate(now);
+  const today = page?.date === storeDate(now);
   const active = new Map(tables.map((table) => [table.id, table]));
   const vacant = new Set(vacantTables.map((table) => table.id));
   const rows = useMemo(
@@ -73,7 +74,7 @@ export function TableCalendar({
   const visible = rows.filter((row) => row.name.toLowerCase().includes(search.toLowerCase()));
   const initialiseScroll = useEffectEvent((request: number) => {
     const element = viewport.current;
-    if (!element) return;
+    if (!element || !page) return;
     const target = today
       ? now
       : Math.min(
@@ -91,9 +92,9 @@ export function TableCalendar({
     element.scrollLeft = request ? position : (initialScrollLeft ?? position);
   });
   useEffect(() => {
-    initialiseScroll(scrollRequest);
-  }, [scrollRequest]);
-  const nowPosition = ((now - page.startAt) / (page.endAt - page.startAt)) * 100;
+    if (page?.date) initialiseScroll(scrollRequest);
+  }, [scrollRequest, page?.date]);
+  const nowPosition = page ? ((now - page.startAt) / (page.endAt - page.startAt)) * 100 : 0;
 
   function label(session: TimelineSession, tableName: string) {
     return `${tableName} · ${session.guestCount} ${t("admin_guests")} · ${dateTime(session.openedAt, locale)} ${locale === "ja" ? "から" : "to"} ${session.closedAt === null ? t("admin_open") : dateTime(session.closedAt, locale)}`;
@@ -118,6 +119,7 @@ export function TableCalendar({
         data-scroll-restoration-id={restorationId}
         role="region"
         aria-label={t("floor_timeline")}
+        aria-busy={!page}
         className="max-h-96 overflow-auto rounded-lg border border-border bg-card focus-visible:outline-2 focus-visible:outline-ring"
       >
         <div style={{ width: tableWidth + trackWidth }}>
@@ -141,13 +143,15 @@ export function TableCalendar({
             </div>
           </div>
           {visible.map((row) => (
-            <div key={row.id} className="flex min-h-20 border-b border-border last:border-b-0">
+            <div key={row.id} className="flex min-h-24 border-b border-border last:border-b-0">
               <div
                 className="sticky left-0 z-20 flex shrink-0 flex-col justify-center border-r border-border bg-card px-3 py-2"
                 style={{ width: tableWidth }}
               >
                 <strong>{row.name}</strong>
-                {today && vacant.has(row.id) ? (
+                {!page ? (
+                  <Skeleton className="mt-1 h-4 w-16" />
+                ) : today && vacant.has(row.id) ? (
                   <Button
                     variant="ghost"
                     className="min-h-11 justify-start px-0 text-xs"
@@ -167,39 +171,41 @@ export function TableCalendar({
                     <div key={hour} className="h-full flex-1 border-r border-border/50" />
                   ))}
                 </div>
-                {(grouped.get(row.id) ?? []).map((session) => {
-                  const position = visitPosition(session, page.startAt, page.endAt, now);
-                  const current = status(session);
-                  return position.width > 0 ? (
-                    <Button
-                      key={session.id}
-                      variant="ghost"
-                      className={band({ open: session.status === "open" })}
-                      style={{ left: `${position.left}%`, width: `${position.width}%` }}
-                      onClick={() => onSelect(session.id)}
-                      aria-label={label(session, row.name)}
-                      title={label(session, row.name)}
-                    >
-                      {(position.width * trackWidth) / 100 >= 80 && (
-                        <span className="min-w-0 whitespace-nowrap px-2">
-                          <span className="block truncate font-medium">
-                            {position.continuesBefore ? "← " : ""}
-                            {session.guestCount} {t("admin_guests")} ·{" "}
-                            {t(session.status === "open" ? "admin_open" : "admin_closed")}
-                            {position.continuesAfter ? " →" : ""}
+                {!page && <Skeleton className="absolute top-4 left-4 h-12 w-96" />}
+                {page &&
+                  (grouped.get(row.id) ?? []).map((session) => {
+                    const position = visitPosition(session, page.startAt, page.endAt, now);
+                    const current = status(session);
+                    return position.width > 0 ? (
+                      <Button
+                        key={session.id}
+                        variant="ghost"
+                        className={band({ open: session.status === "open" })}
+                        style={{ left: `${position.left}%`, width: `${position.width}%` }}
+                        onClick={() => onSelect(session.id)}
+                        aria-label={label(session, row.name)}
+                        title={label(session, row.name)}
+                      >
+                        {(position.width * trackWidth) / 100 >= 80 && (
+                          <span className="min-w-0 whitespace-nowrap px-2">
+                            <span className="block truncate font-medium">
+                              {position.continuesBefore ? "← " : ""}
+                              {session.guestCount} {t("admin_guests")} ·{" "}
+                              {t(session.status === "open" ? "admin_open" : "admin_closed")}
+                              {position.continuesAfter ? " →" : ""}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs">
+                              <VisitAttention current={current} />
+                              {time(session.openedAt, locale)}
+                              {session.closedAt === null
+                                ? " –"
+                                : ` – ${time(session.closedAt, locale)}`}
+                            </span>
                           </span>
-                          <span className="flex items-center gap-1 text-xs">
-                            <VisitAttention current={current} />
-                            {time(session.openedAt, locale)}
-                            {session.closedAt === null
-                              ? " –"
-                              : ` – ${time(session.closedAt, locale)}`}
-                          </span>
-                        </span>
-                      )}
-                    </Button>
-                  ) : null;
-                })}
+                        )}
+                      </Button>
+                    ) : null;
+                  })}
                 {today && nowPosition >= 0 && nowPosition <= 100 && (
                   <div
                     aria-hidden="true"
@@ -220,6 +226,7 @@ export function TableCalendar({
       {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <span>{t("floor_timezone")}</span>
+        {!page && <span role="status">{t("common_loading")}</span>}
         {today && (
           <span className="flex items-center gap-2">
             <span aria-hidden="true" className="h-4 border-l-2 border-destructive" />
@@ -256,7 +263,7 @@ export function TableCalendar({
               ))}
               {!grouped.get(row.id)?.length && (
                 <p className="text-sm text-muted-foreground">
-                  {t(partial ? "floor_incomplete" : "floor_no_visits")}
+                  {t(!page ? "common_loading" : partial ? "floor_incomplete" : "floor_no_visits")}
                 </p>
               )}
             </section>

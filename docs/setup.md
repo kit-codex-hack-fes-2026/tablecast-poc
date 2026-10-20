@@ -289,7 +289,11 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### 接客エディターの依存
 
-Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-kit・suggestionを使用する。rootの `bun.lock` と通常の `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。保存形式を読めるAPIを先に配備する。互換性とロールバック条件は[接客エディター設計](prompt-editor-design.md#読取互換と展開)を参照する。
+Webの接客方針はMarkdownソースと既存Streamdownのプレビューを使う。Tiptap依存は不要。既存の構造化本文は読取互換を保ち、編集した言語だけをMarkdownに変換する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。[接客エディター設計](prompt-editor-design.md)を参照する。
+
+### UIの色トークン
+
+Webは `@radix-ui/colors@3.0.0` のCSSを読み、既存Tailwindのsemantic aliasへ割り当てる。通常の `bun install --frozen-lockfile` に含まれ、別サーバーや設定は不要。色・質感・余白と操作状態の正本はWeb内Storybookのデザインシステムと `src/styles.css` に置く。
 
 ### 店舗テーマの開発依存
 

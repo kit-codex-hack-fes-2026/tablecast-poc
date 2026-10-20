@@ -149,12 +149,10 @@ function PeriodForm({
       }}
     >
       <form.AppField name="from">
-        {(field) => <field.TextField type="date" required label={t("statistics_from")} />}
+        {(field) => <field.DateField required label={t("statistics_from")} />}
       </form.AppField>
       <form.AppField name="to">
-        {(field) => (
-          <field.TextField ref={endInput} type="date" required label={t("statistics_to")} />
-        )}
+        {(field) => <field.DateField ref={endInput} required label={t("statistics_to")} />}
       </form.AppField>
       <Button type="submit" variant="outline">
         {t("statistics_apply")}
@@ -179,10 +177,18 @@ function StatisticsResults({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-medium tabular-nums">
-          <time dateTime={range.from}>{calendarDate(range.from, locale)}</time>{" "}
-          {locale === "ja" ? "から" : "to"}{" "}
-          <time dateTime={range.to}>{calendarDate(range.to, locale)}</time>
+        <p className="flex flex-wrap items-baseline gap-x-2 font-medium tabular-nums">
+          <time className="whitespace-nowrap" dateTime={range.from}>
+            {calendarDate(range.from, locale)}
+          </time>
+          {range.from !== range.to && (
+            <>
+              <span>{locale === "ja" ? "から" : "to"}</span>
+              <time className="whitespace-nowrap" dateTime={range.to}>
+                {calendarDate(range.to, locale)}
+              </time>
+            </>
+          )}
         </p>
         <Button
           variant="outline"
@@ -217,7 +223,10 @@ function StatisticsResults({
             )}
           </section>
           {result.summary.incompleteSnapshots > 0 && (
-            <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
+            <p
+              role="note"
+              className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm"
+            >
               {t("statistics_missing")}: {result.summary.incompleteSnapshots.toLocaleString(locale)}
             </p>
           )}

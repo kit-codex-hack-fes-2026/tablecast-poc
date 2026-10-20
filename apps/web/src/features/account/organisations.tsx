@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Store } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -21,6 +21,7 @@ export function Organisations() {
     <SettingsShell>
       <PageHeader
         title={t("stores_title")}
+        icon={<Store />}
         actions={
           <Button nativeButton={false} role="link" render={<Link to="/stores/new" />}>
             <Plus />
@@ -46,8 +47,8 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
       header: t("admin_store"),
       cell: ({ row }) => (
         <Link
-          className="inline-flex min-h-11 max-w-sm items-center gap-3 font-medium whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current wrap-anywhere"
-          to="/admin/stores/$storeId/floor"
+          className="inline-flex min-h-11 min-w-56 max-w-sm items-center gap-3 font-medium whitespace-normal underline decoration-border underline-offset-4 hover:decoration-current wrap-anywhere"
+          to="/admin/stores/$storeId"
           params={{ storeId: row.original.id }}
         >
           <span aria-hidden="true">

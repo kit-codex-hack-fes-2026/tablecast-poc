@@ -41,7 +41,7 @@ export function ConfigurationTimeline({
             >
               {entry.kind === "release" ? (
                 <Check
-                  className={`size-5 rounded-full p-0.5 ${historical ? "bg-secondary text-muted-foreground" : "bg-success text-white"}`}
+                  className={`size-5 rounded-full p-0.5 ${historical ? "bg-secondary text-muted-foreground" : "bg-success text-on-inverse"}`}
                 />
               ) : (
                 <CornerDownRight
