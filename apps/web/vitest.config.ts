@@ -71,6 +71,7 @@ export default defineConfig({
               { browser: "chromium" },
               {
                 browser: "webkit",
+                provider: playwright({ contextOptions: { permissions: ["camera"] } }),
                 include: [
                   "src/features/store/device-qr-reader.browser.test.tsx",
                   "src/features/store/devices.browser.test.tsx",

@@ -33,6 +33,14 @@ export function useLocalCamera() {
     setStream(undefined);
     setPending(false);
   }, []);
+  const playbackFailed = useCallback(
+    (failedStream: MediaStream) => {
+      if (streamRef.current !== failedStream) return;
+      stop();
+      setError("unavailable");
+    },
+    [stop],
+  );
   const start = useCallback(
     async (requestedDeviceId?: string) => {
       stop();
@@ -90,7 +98,7 @@ export function useLocalCamera() {
       stop();
     };
   }, [stop]);
-  return { stream, pending, error, devices, deviceId, start, stop };
+  return { stream, pending, error, devices, deviceId, start, stop, playbackFailed };
 }
 
 export function LocalCamera({
@@ -114,7 +122,7 @@ export function LocalCamera({
   );
   const width = Math.min(maxWidth, Math.max(minWidth, preferredWidth));
   const narrow = width < 100;
-  const compactStatus = width / aspectRatio < 80;
+  const compactStatus = width / aspectRatio < 80 || (narrow && camera.devices.length > 1);
   const resize = (value: number) =>
     setPreferredWidth(Math.min(maxWidth, Math.max(minWidth, value)));
   const readAspectRatio = () => {
@@ -146,10 +154,25 @@ export function LocalCamera({
     update();
     return () => observer.disconnect();
   }, [boundsRef]);
+  const { playbackFailed } = camera;
   useEffect(() => {
-    if (!video.current) return;
-    video.current.srcObject = camera.stream ?? null;
-  }, [camera.stream]);
+    const element = video.current;
+    if (!element) return undefined;
+    const stream = camera.stream;
+    element.srcObject = stream ?? null;
+    if (!stream) return undefined;
+    let cancelled = false;
+    void element.play().catch(() => {
+      if (!cancelled) playbackFailed(stream);
+    });
+    return () => {
+      cancelled = true;
+      if (element.srcObject === stream) {
+        element.pause();
+        element.srcObject = null;
+      }
+    };
+  }, [camera.stream, playbackFailed]);
   return (
     <figure
       ref={frame}

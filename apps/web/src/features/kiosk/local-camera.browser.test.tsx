@@ -1,7 +1,7 @@
 import { cleanup, render } from "vitest-browser-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useRef, useState } from "react";
-import { page, userEvent } from "vitest/browser";
+import { page, server, userEvent } from "vitest/browser";
 import { LocaleProvider } from "../../i18n/locale";
 import { LocalCamera, LocalCameraFrame, useLocalCamera } from "./local-camera";
 import "../../styles.css";
@@ -10,16 +10,29 @@ import en from "../../../messages/en.json";
 
 const streams: MediaStream[] = [];
 const paints: ReturnType<typeof setInterval>[] = [];
-function cameraStream(width = 640, height = 480) {
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("映像fixtureを描画できません");
-  context.fillStyle = "#d4d4d4";
-  context.fillRect(0, 0, width, height);
-  const stream = canvas.captureStream(10);
-  paints.push(setInterval(() => context.fillRect(0, 0, width, height), 100));
+const captureCamera = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+async function cameraStream(width = 640, height = 480) {
+  let stream: MediaStream;
+  if (server.browser === "webkit") {
+    // Linux WebKitでも実映像metadataを取得できる標準テスト用カメラを使う。
+    stream = await captureCamera({
+      audio: false,
+      video: { width: { exact: width }, height: { exact: height } },
+    });
+  } else {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("映像fixtureを描画できません");
+    const paint = () => {
+      context.fillStyle = "#d4d4d4";
+      context.fillRect(0, 0, width, height);
+    };
+    paint();
+    stream = canvas.captureStream(10);
+    paints.push(setInterval(paint, 100));
+  }
   streams.push(stream);
   return stream;
 }
@@ -80,7 +93,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 it("常設枠はオフでも同寸法を保ち、明示操作だけで撮影する", async () => {
-  const stream = cameraStream();
+  const stream = await cameraStream();
   const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
   await render(
     <LocaleProvider initialLocale="ja" persist={false}>
@@ -103,7 +116,7 @@ it("常設枠はオフでも同寸法を保ち、明示操作だけで撮影す�
   expect(capture).toHaveBeenCalledTimes(1);
 });
 it("明示開始だけで映像を取得し、表示切替では保持し音声を取得しない", async () => {
-  const stream = cameraStream();
+  const stream = await cameraStream();
   const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
   const screen = await render(<Mirror />);
   expect(capture).not.toHaveBeenCalled();
@@ -124,7 +137,7 @@ it.each(["stop", "unmount", "hidden"])(
   "取得待ちの%sの後に届いた映像も直ちに停止する",
   async (action) => {
     const deferred = Promise.withResolvers<MediaStream>();
-    const stream = cameraStream();
+    const stream = await cameraStream();
     const capture = vi
       .spyOn(navigator.mediaDevices, "getUserMedia")
       .mockReturnValue(deferred.promise);
@@ -153,7 +166,7 @@ it("権限拒否を表示し、自動再試行せず明示操作で再開でき�
   const capture = vi
     .spyOn(navigator.mediaDevices, "getUserMedia")
     .mockRejectedValueOnce(new DOMException("拒否", "NotAllowedError"))
-    .mockResolvedValue(cameraStream());
+    .mockResolvedValue(await cameraStream());
   const screen = await render(<Mirror />);
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.element(screen.getByRole("alert")).toHaveTextContent(ja.kiosk_camera_permission);
@@ -178,15 +191,19 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
       toJSON: () => ({}),
     })),
   );
-  const first = cameraStream(1280, 720),
-    second = cameraStream(720, 1280);
-  const replacement = Promise.withResolvers<MediaStream>();
+  const replacement = Promise.withResolvers<void>();
   const capture = vi
     .spyOn(navigator.mediaDevices, "getUserMedia")
-    .mockResolvedValueOnce(first)
-    .mockReturnValueOnce(replacement.promise);
+    .mockImplementationOnce(() => cameraStream(1280, 720))
+    .mockImplementationOnce(async () => {
+      const next = await cameraStream(720, 1280);
+      await replacement.promise;
+      return next;
+    });
   const screen = await render(<BoundedMirror />);
   await screen.getByRole("button", { name: ja.kiosk_camera_start }).click();
+  const first: unknown = await capture.mock.results[0]?.value;
+  if (!(first instanceof MediaStream)) throw new Error("初回の映像がありません");
   await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(1280);
   await expect
     .poll(() => {
@@ -217,7 +234,9 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
     expect(cameraSelect.element()).toBe(trigger);
     expect(cameraFrame().getBoundingClientRect().height).toBe(before.height);
     expect(first.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
-    replacement.resolve(second);
+    replacement.resolve();
+    const second: unknown = await capture.mock.results[1]?.value;
+    if (!(second instanceof MediaStream)) throw new Error("切替後の映像がありません");
     await expect.poll(() => document.querySelector("video")?.srcObject).toBe(second);
     await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(720);
     await expect
@@ -230,7 +249,7 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
     await expect.element(cameraSelect).toHaveFocus();
     expect(cameraSelect.element()).toBe(trigger);
   } finally {
-    replacement.resolve(second);
+    replacement.resolve();
     await replacement.promise;
   }
   expect(first.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
@@ -238,6 +257,8 @@ it("カメラ切替の取得待ちも選択入口とfocusを保ち、旧トラ�
     audio: false,
     video: { deviceId: { exact: "back" }, width: { ideal: 640 }, height: { ideal: 480 } },
   });
+  const second: unknown = await capture.mock.results[1]?.value;
+  if (!(second instanceof MediaStream)) throw new Error("切替後の映像がありません");
   second.getVideoTracks()[0]?.dispatchEvent(new Event("ended"));
   await expect.element(screen.getByRole("button", { name: ja.kiosk_camera_start })).toBeVisible();
   expect(second.getTracks().map((track) => track.readyState)).toEqual(["ended"]);
@@ -252,8 +273,9 @@ it.each([
   "%s×%sの実映像比率と44px操作領域を狭い会話欄でも保ち、停止後も寸法を維持する",
   async (sourceWidth, sourceHeight) => {
     twoCameras();
-    const stream = cameraStream(sourceWidth, sourceHeight);
-    const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+    const capture = vi
+      .spyOn(navigator.mediaDevices, "getUserMedia")
+      .mockImplementation(() => cameraStream(sourceWidth, sourceHeight));
     await render(<BoundedMirror width={216} height={344} />);
     await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
     await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(sourceWidth);
@@ -298,11 +320,14 @@ it.each([
   },
 );
 it("キーボードで最大・最小へ変更し、親領域を縮めても映像を作り直さず幅を復元する", async () => {
-  const stream = cameraStream(1280, 720);
-  const capture = vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
+  const capture = vi
+    .spyOn(navigator.mediaDevices, "getUserMedia")
+    .mockImplementation(() => cameraStream(1280, 720));
   const screen = await render(<BoundedMirror />);
   await page.getByRole("button", { name: ja.kiosk_camera_start }).click();
   await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(1280);
+  const stream: unknown = await capture.mock.results[0]?.value;
+  if (!(stream instanceof MediaStream)) throw new Error("映像がありません");
   const video = document.querySelector("video");
   const resize = page.getByRole("separator", { name: ja.kiosk_camera_resize });
   await resize.click();
@@ -373,24 +398,41 @@ it.each(["NotAllowedError", "NotFoundError"])(
     twoCameras();
     const capture = vi
       .spyOn(navigator.mediaDevices, "getUserMedia")
-      .mockResolvedValueOnce(cameraStream(720, 1280))
+      .mockImplementationOnce(() => cameraStream(720, 1280))
       .mockRejectedValueOnce(new DOMException("camera", errorName));
     await render(<BoundedMirror width={216} height={344} locale="en" />);
     await page.getByRole("button", { name: en.kiosk_camera_start }).click();
     await expect.poll(() => document.querySelector("video")?.videoWidth).toBe(720);
     await page.getByRole("button", { name: en.kiosk_camera_stop }).click();
     await page.getByRole("button", { name: en.kiosk_camera_start }).click();
-    const error = page.getByRole("alert");
+    const message =
+      errorName === "NotAllowedError" ? en.kiosk_camera_permission : en.kiosk_camera_unavailable;
+    const error = page.getByRole("button", { name: `${en.kiosk_camera_start}: ${message}` });
     await expect.element(error).toBeVisible();
+    await expect.element(error).toHaveAttribute("title", `${en.kiosk_camera_start}: ${message}`);
     const frame = cameraFrame().getBoundingClientRect();
-    const rect = error.element().getBoundingClientRect();
-    const controls = page
-      .getByRole("combobox", { name: en.kiosk_camera_device })
-      .element()
-      .getBoundingClientRect();
-    expect(rect.top).toBeGreaterThanOrEqual(frame.top);
-    expect(rect.bottom).toBeLessThanOrEqual(controls.top);
-    expect(rect.right).toBeLessThanOrEqual(frame.right);
+    const controls = [
+      error.element(),
+      page.getByRole("combobox", { name: en.kiosk_camera_device }).element(),
+      page.getByRole("separator", { name: en.kiosk_camera_resize }).element(),
+    ];
+    for (const control of controls) {
+      const rect = control.getBoundingClientRect();
+      expect(rect.width).toBeGreaterThanOrEqual(44);
+      expect(rect.height).toBeGreaterThanOrEqual(44);
+      expect(rect.top).toBeGreaterThanOrEqual(frame.top);
+      expect(rect.bottom).toBeLessThanOrEqual(frame.bottom);
+      expect(rect.right).toBeLessThanOrEqual(frame.right);
+      for (const other of controls.filter((item) => item !== control)) {
+        const second = other.getBoundingClientRect();
+        expect(
+          rect.right <= second.left ||
+            second.right <= rect.left ||
+            rect.bottom <= second.top ||
+            second.bottom <= rect.top,
+        ).toBe(true);
+      }
+    }
     expect(capture).toHaveBeenCalledTimes(2);
   },
 );

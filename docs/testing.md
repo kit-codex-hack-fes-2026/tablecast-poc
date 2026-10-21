@@ -55,6 +55,8 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 3. 実SSR/loader・Cookie属性・Service Binding・外部redirect・メールURL・SW・実WebSocket・build資産など、下位で再現できない具体的な失敗リスクだけを実Startまたは全構成E2Eへ上げる。
 4. E2Eではその境界を一巡する最小の代表操作を残す。日英・viewport・失敗・retry・価格/権限の全分岐を全構成で反復しない。WebKit固有のfocus・media・iframe等は既存Browserの対象構成と代表E2Eへ残す。
 
+カメラの比率・サイズ変更は実MediaStreamとvideo metadataで確認する。Chromiumは描画を継続するcanvas.captureStream、WebKitはPlaywrightが標準で有効にするmock capture devicesを使い、隔離したWebKit Browser contextだけに`camera`権限を付与する。物理カメラは使わず、失敗・遅着はgetUserMedia境界で制御する。映像metadataを検証するfixtureは、アプリの明示ON・機器切替によるgetUserMedia呼び出し時に映像を取得し、WebKitのユーザー操作開始条件を保つ。Linux WebKitのcanvas.captureStreamはmetadata到着が不安定なため、この保証の映像供給には使わない。試験後は全trackを停止する。
+
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 
 ### 大量データと背景取得失敗の境界
