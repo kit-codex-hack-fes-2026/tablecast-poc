@@ -233,6 +233,7 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
               to: "/admin/stores/$storeId/floor",
               params: { storeId: "tablecast-komorebi" },
               search,
+              resetScroll: false,
               replace: options?.replace,
             })
           }
@@ -273,14 +274,28 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   await page.screenshot({ path: "../../../test-results/tablecast-floor-slider-iphone17.png" });
   const narrowCentre = viewport.element().scrollLeft + viewport.element().clientWidth / 2;
   await page.viewport(1180, 820);
-  // ResizeObserverによる中央時刻の復元を観測してから、次の横移動を行う
+  // 幅変更後のメディアクエリと中央時刻の復元を観測してから、次の横移動を行う。
+  await expect
+    .poll(
+      () =>
+        document.querySelector("[data-floor-table]")?.parentElement?.getBoundingClientRect().width,
+    )
+    .toBe(80);
   await expect
     .poll(() =>
       Math.abs(viewport.element().scrollLeft + viewport.element().clientWidth / 2 - narrowCentre),
     )
     .toBeLessThanOrEqual(0.5);
-  viewport.element().scrollLeft = 650;
-  const centre = viewport.element().clientWidth / 2;
+  const element = viewport.element();
+  let reportedScroll = { left: element.scrollLeft, width: element.clientWidth };
+  const observeScroll = () => {
+    reportedScroll = { left: element.scrollLeft, width: element.clientWidth };
+  };
+  element.addEventListener("scroll", observeScroll);
+  element.scrollLeft = 650;
+  // Routerも監視するnative scrollの配送を待ってから、次のユーザー操作へ進む。
+  await expect.poll(() => reportedScroll.left).toBe(650);
+  const centre = element.clientWidth / 2;
   const zoom = screen.getByRole("slider", { name: labels.floor_zoom, exact: true });
   zoom.element().focus();
   await userEvent.keyboard("{ArrowRight}");
@@ -288,9 +303,9 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   await expect.element(zoom).toHaveAttribute("aria-valuenow", "110");
   await expect.element(zoom).toHaveFocus();
   // 奇数幅の中央は半端pxになるため、整数scrollLeftへの丸めも同じ時刻として扱う
-  const zoomedScrollLeft = (650 + centre) * 1.1 - centre;
+  const zoomedCentre = (650 + centre) * 1.1;
   await expect
-    .poll(() => Math.abs(viewport.element().scrollLeft - zoomedScrollLeft))
+    .poll(() => Math.abs(reportedScroll.left + reportedScroll.width / 2 - zoomedCentre))
     .toBeLessThanOrEqual(0.5);
   const beforeWheel = viewport.element().scrollLeft;
   const pointer = viewport.element().clientWidth / 4;
@@ -312,12 +327,11 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   const wheelOffset = wheel.clientX - viewport.element().getBoundingClientRect().left;
   await expect
     .poll(() =>
-      Math.abs(
-        viewport.element().scrollLeft - (((beforeWheel + wheelOffset) * 120) / 110 - wheelOffset),
-      ),
+      Math.abs(reportedScroll.left - (((beforeWheel + wheelOffset) * 120) / 110 - wheelOffset)),
     )
     .toBeLessThanOrEqual(0.5);
   const restoredScrollLeft = viewport.element().scrollLeft;
+  element.removeEventListener("scroll", observeScroll);
   // 修飾キーなし・時間軸の外のホイールはブラウザー本来の操作へ残す
   const ordinaryWheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: -100 });
   viewport.element().dispatchEvent(ordinaryWheel);

@@ -10,7 +10,7 @@ import { DatePicker } from "../../components/date-picker";
 import { dateTime } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { storeDate, moveDate, type FloorSort, type FloorZoom } from "./floor-model";
-import { TableCalendar } from "./table-calendar";
+import { TableCalendar, type TableCalendarHandle } from "./table-calendar";
 import { timelineOptions } from "./timeline-query";
 
 export function FloorTimeline({
@@ -46,7 +46,8 @@ export function FloorTimeline({
   const [now, setNow] = useState(initialNow);
   const [scrollRequest, setScrollRequest] = useState(0);
   const sliderGesture = useRef(false);
-  const restorationId = `tablecast-floor-${storeId}-${date}-${zoom}`;
+  const calendar = useRef<TableCalendarHandle>(null);
+  const restorationId = `tablecast-floor-${storeId}-${date}`;
   const restoration = useElementScrollRestoration({
     id: restorationId,
   });
@@ -123,7 +124,7 @@ export function FloorTimeline({
           disabled={!onZoomChange}
           onValueChange={(next) => {
             if (typeof next === "number") {
-              onZoomChange?.(next, { replace: sliderGesture.current });
+              calendar.current?.zoom(next, { replace: sliderGesture.current });
               sliderGesture.current = true;
             }
           }}
@@ -187,6 +188,7 @@ export function FloorTimeline({
               </p>
             )}
             <TableCalendar
+              ref={calendar}
               key={date}
               page={first}
               date={date}

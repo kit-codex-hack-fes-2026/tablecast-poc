@@ -1,7 +1,16 @@
 import { detectPlatform } from "@tanstack/react-hotkeys";
 import { Popover } from "@base-ui/react/popover";
 import type { TableState, TimelinePage, TimelineSession } from "@tablecast/api/schema";
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type Ref,
+} from "react";
 import {
   Bell,
   CircleDollarSign,
@@ -56,7 +65,12 @@ const popupClass = cn(
   surfaceMotion(),
 );
 
+export type TableCalendarHandle = {
+  zoom: (zoom: FloorZoom, options?: { replace?: boolean }) => void;
+};
+
 export function TableCalendar({
+  ref,
   page,
   date,
   sessions,
@@ -74,6 +88,7 @@ export function TableCalendar({
   zoom = 100,
   onZoomChange,
 }: {
+  ref?: Ref<TableCalendarHandle>;
   page?: Pick<TimelinePage, "date" | "startAt" | "endAt">;
   date?: string;
   sessions: TimelineSession[];
@@ -140,7 +155,7 @@ export function TableCalendar({
     )
     .map(sortValues)
     .toSorted((a, b) => compareFloorRows(a, b, sort ?? "table:asc", locale));
-  const viewport = useTimelineViewport({
+  const { viewport, changeZoom } = useTimelineViewport({
     page,
     sessions,
     now,
@@ -150,6 +165,7 @@ export function TableCalendar({
     zoom,
     onZoomChange,
   });
+  useImperativeHandle(ref, () => ({ zoom: changeZoom }));
   const nowPosition = page ? ((now - page.startAt) / (page.endAt - page.startAt)) * 100 : 0;
   const status = (session: TimelineSession) =>
     today && session.status === "open" ? active.get(session.id) : undefined;
@@ -340,7 +356,6 @@ function useTimelineViewport({
   const lastWheel = useRef(-Infinity);
   const wheelDelta = useRef(0);
   const wheelGesture = useRef(false);
-  const previousWidth = useRef(trackWidth);
   const initialiseScroll = useEffectEvent((request: number) => {
     const element = viewport.current;
     if (!element || !page) return;
@@ -363,22 +378,25 @@ function useTimelineViewport({
   useEffect(() => {
     if (page?.date) initialiseScroll(scrollRequest);
   }, [scrollRequest, page?.date]);
-  // 拡大しても見ている時刻を中央に保ち、通知更新では横位置を変えない。
+  // 明示的な倍率操作だけを補正し、戻る・進むの位置復元はRouterへ任せる。
   useEffect(() => {
     const element = viewport.current;
-    if (element && previousWidth.current !== trackWidth) {
-      const offset = zoomAnchor.current?.offset ?? element.clientWidth / 2;
-      const ratio =
-        zoomAnchor.current?.ratio ?? (element.scrollLeft + offset) / previousWidth.current;
-      // 戻る・進むでは、その履歴の実際の横位置を倍率の逆算より優先する。
-      element.scrollLeft =
-        !zoomAnchor.current && initialScrollLeft !== undefined
-          ? initialScrollLeft
-          : Math.round(ratio * trackWidth - offset);
+    const anchor = zoomAnchor.current;
+    if (element && anchor) {
+      element.scrollLeft = Math.round(anchor.ratio * trackWidth - anchor.offset);
       zoomAnchor.current = null;
     }
-    previousWidth.current = trackWidth;
-  }, [trackWidth, initialScrollLeft]);
+  }, [trackWidth]);
+  function changeZoom(next: FloorZoom, options?: { replace?: boolean }, offset?: number) {
+    const element = viewport.current;
+    if (!element || !onZoomChange || next === zoom) return;
+    const anchorOffset = offset ?? element.clientWidth / 2;
+    zoomAnchor.current = {
+      offset: anchorOffset,
+      ratio: Math.min(1, Math.max(0, (element.scrollLeft + anchorOffset) / trackWidth)),
+    };
+    onZoomChange(next, options);
+  }
   useEffect(() => {
     const element = viewport.current;
     if (!element) return undefined;
@@ -412,11 +430,7 @@ function useTimelineViewport({
     const next = Math.min(300, Math.max(10, zoom - steps * 10));
     if (next === zoom) return;
     const offset = event.clientX - element.getBoundingClientRect().left;
-    zoomAnchor.current = {
-      offset,
-      ratio: Math.min(1, Math.max(0, (element.scrollLeft + offset) / trackWidth)),
-    };
-    onZoomChange(next, { replace: wheelGesture.current });
+    changeZoom(next, { replace: wheelGesture.current }, offset);
     wheelGesture.current = true;
   });
   useEffect(() => {
@@ -426,7 +440,7 @@ function useTimelineViewport({
     element.addEventListener("wheel", handleWheel, { passive: false });
     return () => element.removeEventListener("wheel", handleWheel);
   }, []);
-  return viewport;
+  return { viewport, changeZoom };
 }
 
 function visitLabel(
