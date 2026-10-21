@@ -4,7 +4,7 @@ import { StoreTheme } from "../../components/store-theme";
 import { StoreLogo } from "../../components/store-logo";
 import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import { usePanelRef } from "react-resizable-panels";
 import type {
   ThemeImage,
@@ -18,7 +18,15 @@ import type {
   UiSectionInput,
 } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  ShoppingBag,
+  Utensils,
+  ReceiptText,
+  Wallet,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
@@ -667,23 +675,27 @@ function KioskMenuTabs({ data }: { data: TableState }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
   return (
-    <Tabs.List
-      data-ui="menu-tabs"
-      className="flex shrink-0 gap-0 overflow-x-auto border-b border-border px-1 [&_button]:flex [&_button]:min-h-14 [&_button]:flex-1 [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:p-2 [&_button]:text-sm [&_button]:whitespace-nowrap [&_button]:text-muted-foreground [&_button[data-active]]:border-b-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:text-primary"
-    >
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="menu">
+    <Tabs.List data-ui="menu-tabs" className="grid w-full grid-cols-2 sm:flex sm:w-fit">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="menu">
+        <Utensils aria-hidden />
         {t("kiosk_menu")}
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="cart">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="cart">
+        <ShoppingBag aria-hidden />
         {t("kiosk_cart")}
-        <span data-ui="count" className="rounded-2xl py-px px-1 text-xs bg-secondary">
+        <span
+          data-ui="count"
+          className="rounded-2xl py-px px-1 text-xs bg-secondary text-secondary-foreground"
+        >
           {data.cart.lines.reduce((sum, line) => sum + line.quantity, 0)}
         </span>
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="orders">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="orders">
+        <ReceiptText aria-hidden />
         {t("kiosk_orders")}
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="bill">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="bill">
+        <Wallet aria-hidden />
         {t("kiosk_bill")}
       </Tabs.Tab>
     </Tabs.List>

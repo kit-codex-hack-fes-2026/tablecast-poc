@@ -16,6 +16,7 @@ export default defineConfig({
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
             "@base-ui/react/popover",
+            "@base-ui/react/tooltip",
             "@tablecast/api > css-tree/parser",
             "@tablecast/api > css-tree/generator",
             "react",
@@ -99,6 +100,7 @@ export default defineConfig({
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
             "@base-ui/react/popover",
+            "@base-ui/react/tooltip",
             "react",
             "react-dom/client",
             "react/jsx-runtime",

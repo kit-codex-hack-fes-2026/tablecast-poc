@@ -6,7 +6,7 @@ import { tv } from "tailwind-variants";
 import { useSidebarPreferences, type NavigationGroupId } from "./sidebar-preferences";
 
 export const navigationItemClass =
-  "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold [&>svg]:shrink-0 [&>svg]:size-5";
+  "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
 const groupStyle = tv({
   base: "min-w-0",
   variants: {
@@ -27,7 +27,6 @@ export function NavigationGroup({
   label,
   icon: Icon,
   collapsed,
-  initialOpen = true,
   userId,
   children,
 }: {
@@ -35,18 +34,25 @@ export function NavigationGroup({
   label: string;
   icon: LucideIcon;
   collapsed: boolean;
-  initialOpen?: boolean;
   userId?: string;
   children: ReactNode;
 }) {
   const { preferences, update } = useSidebarPreferences(userId);
   const hydrated = useHydrated();
   const saved = preferences.groups?.[id];
-  const open = saved ?? initialOpen;
+  const open = saved ?? true;
   return (
-    <section className={groupStyle({ tone: id })} aria-label={label}>
+    <section
+      className={groupStyle({
+        tone: id,
+        className: collapsed
+          ? "border-t border-border pt-2 first:border-t-0 first:pt-0"
+          : undefined,
+      })}
+      aria-label={label}
+    >
       {collapsed ? (
-        <div className="border-t border-border pt-2">{children}</div>
+        <div>{children}</div>
       ) : (
         <Collapsible.Root open={open} onOpenChange={(next) => update({ groups: { [id]: next } })}>
           <h2 className="text-sm">

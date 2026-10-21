@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { NavigationLink as Link } from "./navigation-link";
 import {
   Building2,
   CreditCard,
@@ -7,6 +7,7 @@ import {
   ChartNoAxesCombined,
   Gamepad2,
   Gift,
+  TicketPercent,
   LayoutDashboard,
   MonitorSmartphone,
   Plug,
@@ -28,7 +29,6 @@ export function SidebarNavigation({
   selectedOrganization,
   collapsed,
   onNavigate,
-  inMenu,
   draftId,
   userId,
 }: Pick<AdminSidebarProps, "tab"> & {
@@ -37,12 +37,10 @@ export function SidebarNavigation({
   manager: boolean;
   collapsed: boolean;
   onNavigate?: () => void;
-  inMenu: boolean;
   draftId?: string;
   userId?: string;
 }) {
   const { t } = useI18n();
-  const path = useRouterState({ select: (state) => state.location.pathname });
   const common = { collapsed, userId };
   return (
     <nav
@@ -58,6 +56,7 @@ export function SidebarNavigation({
             icon={LayoutDashboard}
           >
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId"
               params={{ storeId: selectedStore }}
@@ -70,6 +69,7 @@ export function SidebarNavigation({
               {!collapsed && t("home_title")}
             </Link>
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId/floor"
               params={{ storeId: selectedStore }}
@@ -80,6 +80,7 @@ export function SidebarNavigation({
               {!collapsed && t("admin_live")}
             </Link>
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId/visits"
               params={{ storeId: selectedStore }}
@@ -91,6 +92,7 @@ export function SidebarNavigation({
             </Link>
             {manager && (
               <Link
+                collapsed={collapsed}
                 className={navigationItemClass}
                 to="/admin/stores/$storeId/statistics"
                 params={{ storeId: selectedStore }}
@@ -104,13 +106,7 @@ export function SidebarNavigation({
               </Link>
             )}
           </NavigationGroup>
-          <NavigationGroup
-            {...common}
-            id="menu"
-            label={t("admin_config")}
-            icon={UtensilsCrossed}
-            initialOpen={inMenu}
-          >
+          <NavigationGroup {...common} id="menu" label={t("admin_config")} icon={UtensilsCrossed}>
             <MenuNavigation
               manager={manager}
               storeId={selectedStore}
@@ -119,6 +115,7 @@ export function SidebarNavigation({
               onNavigate={onNavigate}
             />
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId/games"
               params={{ storeId: selectedStore }}
@@ -129,14 +126,9 @@ export function SidebarNavigation({
               {!collapsed && t("games_title")}
             </Link>
           </NavigationGroup>
-          <NavigationGroup
-            {...common}
-            id="rewards"
-            label={t("nav_rewards")}
-            icon={Gift}
-            initialOpen={/\/(points|coupons)$/.test(path)}
-          >
+          <NavigationGroup {...common} id="rewards" label={t("nav_rewards")} icon={Gift}>
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId/points"
               params={{ storeId: selectedStore }}
@@ -147,23 +139,18 @@ export function SidebarNavigation({
               {!collapsed && t("customer_points_policy")}
             </Link>
             <Link
+              collapsed={collapsed}
               className={navigationItemClass}
               to="/admin/stores/$storeId/coupons"
               params={{ storeId: selectedStore }}
               onClick={onNavigate}
               title={t("coupons")}
             >
-              <Gift className="size-4" />
+              <TicketPercent className="size-4" />
               {!collapsed && t("coupons")}
             </Link>
           </NavigationGroup>
-          <NavigationGroup
-            {...common}
-            id="store"
-            label={t("nav_store_management")}
-            icon={Store}
-            initialOpen={tab === "billing" || /\/(members|devices|profile)$/.test(path)}
-          >
+          <NavigationGroup {...common} id="store" label={t("nav_store_management")} icon={Store}>
             {(
               [
                 { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
@@ -176,6 +163,7 @@ export function SidebarNavigation({
               ] as const
             ).map(({ to, label, Icon }) => (
               <Link
+                collapsed={collapsed}
                 key={to}
                 className={navigationItemClass}
                 to={to}
@@ -189,6 +177,7 @@ export function SidebarNavigation({
             ))}
             {selectedOrganization && (
               <Link
+                collapsed={collapsed}
                 className={navigationItemClass}
                 to="/billing/$organizationId"
                 params={{ organizationId: selectedOrganization }}
@@ -227,14 +216,9 @@ function WorkspaceNavigation({
   const { t } = useI18n();
   const common = { collapsed, userId };
   return (
-    <NavigationGroup
-      {...common}
-      id="workspace"
-      label={t("nav_workspace")}
-      icon={Plug}
-      initialOpen={tab === "mcp" || tab === "organisations" || tab === "account"}
-    >
+    <NavigationGroup {...common} id="workspace" label={t("nav_workspace")} icon={Plug}>
       <Link
+        collapsed={collapsed}
         className={navigationItemClass}
         to="/organisations"
         title={t("nav_all_stores")}
@@ -253,6 +237,7 @@ function WorkspaceNavigation({
         ] as const
       ).map(({ to, label, Icon }) => (
         <Link
+          collapsed={collapsed}
           key={to}
           className={navigationItemClass}
           to={to}

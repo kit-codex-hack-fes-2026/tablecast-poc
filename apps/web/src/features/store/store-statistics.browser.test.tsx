@@ -28,6 +28,7 @@ let unexpected: string[];
 let fail: boolean;
 let empty: boolean;
 let missing: boolean;
+let statisticsGate: Promise<void> | undefined;
 class TablecastSocket extends EventTarget {
   close() {}
 }
@@ -38,12 +39,14 @@ beforeEach(() => {
   fail = false;
   empty = false;
   missing = false;
+  statisticsGate = undefined;
   vi.stubGlobal("WebSocket", TablecastSocket);
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
     if (url.pathname.endsWith("/statistics")) {
       requests.push(url);
+      await statisticsGate;
       const query = statisticsQuerySchema.parse(Object.fromEntries(url.searchParams));
       if (fail) return Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
       return Response.json({
@@ -168,7 +171,23 @@ async function show({
 }
 
 it("商品集計の部分取得を明示し、続きの失敗でも取得済み行を保って再試行する", async () => {
-  await show({ initial: `/admin/stores/${storeId}/statistics?view=products` });
+  await show();
+  await expect.element(page.getByText("¥61,200", { exact: true })).toBeVisible();
+  const { promise, resolve: release } = Promise.withResolvers<void>();
+  statisticsGate = promise;
+  try {
+    await page.getByRole("tab", { name: "商品別", exact: true }).click();
+    await expect
+      .element(page.getByRole("tab", { name: "商品別", exact: true }))
+      .toHaveAttribute("aria-selected", "true");
+    await expect.element(page.getByRole("tabpanel").getByRole("status")).toBeVisible();
+    await expect
+      .element(page.getByRole("button", { name: "期間を指定", exact: true }))
+      .toBeVisible();
+  } finally {
+    release();
+    statisticsGate = undefined;
+  }
   await expect.element(page.getByRole("rowheader", { name: "定番の商品" })).toBeVisible();
   await expect.element(page.getByText("1 項目を表示中・続きがあります")).toBeVisible();
   fail = true;

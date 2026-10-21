@@ -22,8 +22,8 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex min-w-0 flex-col items-stretch justify-between gap-x-6 gap-y-4 sm:flex-row sm:flex-wrap sm:items-start border-b border-border pb-5">
-      <div className="flex min-w-0 flex-1 sm:basis-48 items-start gap-3">
+    <header className="flex min-w-0 flex-col items-stretch justify-between gap-x-6 gap-y-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap sm:items-start">
+      <div className="flex min-h-12 min-w-0 flex-1 items-start gap-3 sm:basis-64">
         {icon && (
           <span
             aria-hidden="true"
@@ -33,7 +33,7 @@ export function PageHeader({
           </span>
         )}
         <div className="min-w-0 space-y-1.5">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="flex min-h-12 min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="min-w-0 text-2xl leading-tight font-semibold tracking-tight text-balance wrap-break-word">
               {title}
             </h1>
@@ -45,7 +45,7 @@ export function PageHeader({
         </div>
       </div>
       {actions && (
-        <div className="flex max-w-full flex-wrap items-center justify-start gap-2 sm:ml-auto sm:justify-end sm:self-center">
+        <div className="flex min-h-12 max-w-full flex-wrap items-center justify-start gap-2 sm:ml-auto sm:justify-end">
           {actions}
         </div>
       )}

@@ -1,4 +1,4 @@
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import { instructionLimit, instructionText } from "@tablecast/api/schema";
 import { Code2, Eye } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -43,18 +43,12 @@ export default function PromptEditorInput({
     >
       <div className="overflow-hidden rounded-xl border border-input bg-background shadow-inner">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 p-2">
-          <Tabs.List aria-labelledby={labelledBy} className="flex flex-wrap gap-1">
-            <Tabs.Tab
-              value="source"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-secondary data-active:bg-card data-active:text-foreground data-active:shadow-sm"
-            >
+          <Tabs.List aria-labelledby={labelledBy} className="max-w-full">
+            <Tabs.Tab value="source">
               <Code2 className="size-4 shrink-0" aria-hidden="true" />
               {t("prompt_source")}
             </Tabs.Tab>
-            <Tabs.Tab
-              value="preview"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-secondary data-active:bg-card data-active:text-foreground data-active:shadow-sm"
-            >
+            <Tabs.Tab value="preview">
               <Eye className="size-4 shrink-0" aria-hidden="true" />
               {t("prompt_preview")}
             </Tabs.Tab>

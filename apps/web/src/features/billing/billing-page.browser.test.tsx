@@ -355,7 +355,9 @@ it("狭い画面の店舗切替は送信中と失敗をナビ内に示し、入�
     return originalFetch(input, init);
   });
   try {
-    await expect.element(page.getByRole("combobox")).not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("combobox", { name: "店舗", exact: true }))
+      .not.toBeInTheDocument();
     await userEvent.click(page.getByRole("button", { name: "ナビゲーション", exact: true }));
     const navigation = page.getByRole("dialog", { name: "ナビゲーション", exact: true });
     const picker = navigation.getByRole("combobox", { name: "店舗", exact: true });

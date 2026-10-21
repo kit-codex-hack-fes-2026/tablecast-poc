@@ -18,9 +18,11 @@ export const Route = createFileRoute("/admin/stores/$storeId/statistics")({
     const today = storeDate(Date.now());
     const range = statisticsRange(deps, today);
     if (store && ["owner", "admin"].includes(store.role) && range) {
-      await context.queryClient.prefetchInfiniteQuery(
+      const pending = context.queryClient.prefetchInfiniteQuery(
         statisticsOptions(store.id, range, deps.view, getLocale()),
       );
+      // SSRは取得済み結果を転送し、クライアントのタブ操作は本文内の読込表示へ進める。
+      if (import.meta.env.SSR) await pending;
     }
     return { today };
   },

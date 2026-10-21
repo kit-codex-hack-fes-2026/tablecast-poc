@@ -49,7 +49,7 @@ afterEach(async () => {
   }
 });
 async function show(initial = "/admin/stores/tablecast-nav-first/floor", userId = session.user.id) {
-  await page.viewport(1280, 900);
+  await page.viewport(1512, 982);
   mutations = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init),
@@ -119,10 +119,9 @@ const picker = () => page.getByRole("combobox", { name: "店舗", exact: true })
 const floorLink = () => page.getByRole("link", { name: "フロアの様子", exact: true });
 it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、再表示と折りたたみから復元する", async () => {
   const { view } = await show();
-  await group("メニュー・接客").click();
+  for (const label of ["営業", "メニュー・接客", "会員施策", "店舗管理", "連携・店舗一覧"])
+    await expect.element(group(label)).toHaveAttribute("aria-expanded", "true");
   await group("会員施策").click();
-  await group("会員施策").click();
-  await group("連携・店舗一覧").click();
   await page.getByRole("link", { name: "手動導入", exact: true }).click();
   await expect.element(page.getByRole("heading", { name: "接続の手順" })).toBeVisible();
   await expect.element(picker()).toMatchTextContent("本店");
@@ -133,7 +132,6 @@ it("MCPとSkillsへ移っても選択店舗とグループの展開を保ち、�
   await expect
     .element(floorLink())
     .toHaveAttribute("href", "/admin/stores/tablecast-nav-first/floor");
-  await group("店舗管理").click();
   await expect
     .element(page.getByRole("link", { name: "課金／請求", exact: true }))
     .toHaveAttribute("href", "/billing/tablecast-nav-org-first");
@@ -170,10 +168,8 @@ it("連携画面から店舗を切り替え、組織・請求リンク・次回�
   expect(client.getQueryData(["tablecast-session"])).toMatchObject({
     session: { activeOrganizationId: "tablecast-nav-org-second" },
   });
-  await group("連携・店舗一覧").click();
   await page.getByRole("link", { name: "手動導入", exact: true }).click();
   await expect.element(picker()).toMatchTextContent("二号店");
-  await group("店舗管理").click();
   await expect
     .element(page.getByRole("link", { name: "課金／請求", exact: true }))
     .toHaveAttribute("href", "/billing/tablecast-nav-org-second");

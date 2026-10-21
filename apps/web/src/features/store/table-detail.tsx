@@ -1,12 +1,24 @@
+import { Suspense } from "react";
+import { Skeleton } from "../../components/ui/skeleton";
 import { LanguageLabel } from "../../components/language-label";
 import { PageHeader } from "../../components/page-header";
 import { CouponVisit } from "./coupon-visit";
 import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import type { Order, TableState } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Table2, Users, Clock3 } from "lucide-react";
+import {
+  ArrowLeft,
+  Table2,
+  Users,
+  Clock3,
+  LayoutDashboard,
+  MessagesSquare,
+  ReceiptText,
+  Wallet,
+  Activity,
+} from "lucide-react";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -115,20 +127,25 @@ export function TableDetail({
               onViewChange(next);
           }}
         >
-          <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-sm [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
+          <Tabs.List className="max-w-full">
             <Tabs.Tab disabled={!hydrated} value="overview">
+              <LayoutDashboard aria-hidden />
               {t("admin_overview")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="logs">
+              <MessagesSquare aria-hidden />
               {t("admin_logs")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="orders">
+              <ReceiptText aria-hidden />
               {t("admin_orders")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="billing">
+              <Wallet aria-hidden />
               {t("admin_payments")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="diagnostics">
+              <Activity aria-hidden />
               {t("admin_diagnostics")}
             </Tabs.Tab>
           </Tabs.List>
@@ -202,9 +219,20 @@ export function TableDetail({
                 closed={table.status === "closed"}
               />
             </Tabs.Panel>
-            {view === "orders" && (
-              <SessionOrders table={table} action={action} orderStatus={orderStatus} />
-            )}
+            <Tabs.Panel value="orders">
+              <Suspense
+                fallback={
+                  <div className="space-y-4" role="status" aria-label={t("common_loading")}>
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-48 w-full" />
+                  </div>
+                }
+              >
+                <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+              </Suspense>
+            </Tabs.Panel>
             <Tabs.Panel value="billing">
               <div
                 data-ui="bill-summary"
@@ -330,7 +358,7 @@ function SessionOrders({
   const products =
     catalog.data.version === table.configVersion ? catalog.data.configuration.products : [];
   return (
-    <Tabs.Panel value="orders">
+    <>
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
       <CartLines lines={table.cart.lines} products={products} />
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
@@ -410,6 +438,6 @@ function SessionOrders({
           )}
         </article>
       ))}
-    </Tabs.Panel>
+    </>
   );
 }

@@ -21,15 +21,16 @@ import {
   type OnChangeFn,
   type RowData,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { useI18n } from "../i18n/locale";
 import { m } from "../paraglide/messages";
 import { ErrorNotice } from "./error-notice";
 import { Skeleton } from "./ui/skeleton";
 
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { NativeSelect } from "./ui/native-select";
+import { CollectionToolbar } from "./collection-toolbar";
 import { Table, TableCell, TableHead } from "./ui/table";
 
 const columnMeta: { align?: "left" | "right" } = {};
@@ -78,6 +79,9 @@ export function DataTable<T extends RowData>({
   onGlobalFilterChange,
   onPaginationChange,
   manualFiltering,
+  filters,
+  filtersActive = false,
+  onReset,
 }: {
   data: T[];
   columns: DataTableColumn<T>[];
@@ -92,6 +96,9 @@ export function DataTable<T extends RowData>({
   onGlobalFilterChange?: OnChangeFn<string>;
   onPaginationChange?: OnChangeFn<PaginationState>;
   manualFiltering?: boolean;
+  filters?: ReactNode;
+  filtersActive?: boolean;
+  onReset?: () => void;
 }) {
   const { t } = useI18n();
   const [filter, setFilter] = useState("");
@@ -122,26 +129,16 @@ export function DataTable<T extends RowData>({
           {t("common_loading")}
         </span>
       )}
-      {searchLabel && (
-        <label className="relative block max-w-sm">
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-3 size-5 text-muted-foreground"
-          />
-          <span className="sr-only">{searchLabel}</span>
-          <Input
-            type="search"
-            disabled={initialPending}
-            className="pl-10"
-            placeholder={searchLabel}
-            value={state?.globalFilter ?? filter}
-            onChange={(event) => {
-              table.setGlobalFilter(event.target.value);
-              if (!onGlobalFilterChange) table.setPageIndex(0);
-            }}
-          />
-        </label>
-      )}
+      <TableControls
+        table={table}
+        searchLabel={searchLabel}
+        searchValue={state?.globalFilter ?? filter}
+        filters={filters}
+        filtersActive={filtersActive}
+        pending={initialPending}
+        onReset={onReset}
+        resetPageOnSearch={!onGlobalFilterChange}
+      />
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table className="min-w-max text-sm">
           <thead>
@@ -170,8 +167,8 @@ export function DataTable<T extends RowData>({
               ["first", "second"].map((id) => (
                 <tr key={id} aria-hidden="true">
                   {table.getVisibleLeafColumns().map((column) => (
-                    <TableCell key={column.id}>
-                      <Skeleton className="h-11 w-full" />
+                    <TableCell key={column.id} className="h-16">
+                      <Skeleton className="h-8 w-full" />
                     </TableCell>
                   ))}
                 </tr>
@@ -208,6 +205,91 @@ export function DataTable<T extends RowData>({
       </div>
       {pagination && <TablePagination table={table} pending={pending} />}
     </div>
+  );
+}
+
+function TableControls<T extends RowData>({
+  table,
+  searchLabel,
+  searchValue,
+  filters,
+  filtersActive,
+  pending,
+  onReset,
+  resetPageOnSearch,
+}: {
+  table: ReactTable<typeof features, T>;
+  searchLabel?: string;
+  searchValue: string;
+  filters?: ReactNode;
+  filtersActive: boolean;
+  pending: boolean;
+  onReset?: () => void;
+  resetPageOnSearch: boolean;
+}) {
+  const { t } = useI18n();
+  const sortable = table
+    .getAllLeafColumns()
+    .filter((column) => column.getCanSort() && typeof column.columnDef.header === "string");
+  const sorting = table.state.sorting[0];
+  const hasCriteria = !!searchValue || filtersActive || table.state.sorting.length > 0;
+  function resetCriteria() {
+    table.resetSorting();
+    if (onReset) onReset();
+    else {
+      table.setGlobalFilter("");
+      table.setPageIndex(0);
+    }
+  }
+  if (!searchLabel && !filters && sortable.length === 0) return null;
+  return (
+    <CollectionToolbar
+      disabled={pending}
+      search={
+        searchLabel
+          ? {
+              label: searchLabel,
+              value: searchValue,
+              onChange: (value) => {
+                table.setGlobalFilter(value);
+                if (resetPageOnSearch) table.setPageIndex(0);
+              },
+            }
+          : undefined
+      }
+      filters={filters}
+      sort={
+        sortable.length > 0 && (
+          <NativeSelect
+            aria-label={t("collection_sort")}
+            disabled={pending}
+            value={sorting ? `${sorting.id}:${sorting.desc ? "desc" : "asc"}` : ""}
+            onChange={(event) => {
+              const option = event.target.value;
+              const column = sortable.find(
+                (item) => option === `${item.id}:asc` || option === `${item.id}:desc`,
+              );
+              table.setSorting(
+                column ? [{ id: column.id, desc: option === `${column.id}:desc` }] : [],
+              );
+              table.setPageIndex(0);
+            }}
+          >
+            <option value="">{t("collection_sort_default")}</option>
+            {sortable.flatMap((column) => [
+              <option key={`${column.id}:asc`} value={`${column.id}:asc`}>
+                {String(column.columnDef.header)} · {t("collection_sort_ascending")}
+              </option>,
+              <option key={`${column.id}:desc`} value={`${column.id}:desc`}>
+                {String(column.columnDef.header)} · {t("collection_sort_descending")}
+              </option>,
+            ])}
+          </NativeSelect>
+        )
+      }
+      onReset={resetCriteria}
+      resetDisabled={!hasCriteria}
+    />
   );
 }
 

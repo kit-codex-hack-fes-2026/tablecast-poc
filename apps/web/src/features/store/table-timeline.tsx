@@ -12,7 +12,6 @@ import {
   Plus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Input } from "../../components/ui/input";
 import { Skeleton } from "../../components/ui/skeleton";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -29,6 +28,7 @@ export function TableTimeline({
   initialNow,
   pending = false,
   filter = "all",
+  search = "",
 }: {
   pending?: boolean;
   tables: TableState[];
@@ -37,9 +37,9 @@ export function TableTimeline({
   onSelect: (id: string) => void;
   onOpen?: (table: { id: string; name: string }) => void;
   filter?: FloorFilter;
+  search?: string;
 }) {
   const { locale, t } = useI18n();
-  const [search, setSearch] = useState("");
   const [now, setNow] = useState(() => initialNow ?? Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
@@ -78,15 +78,6 @@ export function TableTimeline({
   });
   return (
     <section className="space-y-4" aria-label={t("floor_list")}>
-      <label className="block max-w-sm space-y-2">
-        <span className="text-sm">{t("floor_search")}</span>
-        <Input
-          disabled={pending}
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-      </label>
       {pending ? (
         <div
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
@@ -209,7 +200,13 @@ export function TableTimeline({
         </ul>
       ) : (
         <p className="py-8 text-muted-foreground">
-          {t(filter === "all" ? "admin_no_tables" : "floor_filter_empty")}
+          {t(
+            search.trim()
+              ? "floor_search_empty"
+              : filter === "all"
+                ? "admin_no_tables"
+                : "floor_filter_empty",
+          )}
         </p>
       )}
     </section>

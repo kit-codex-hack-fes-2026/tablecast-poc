@@ -21,6 +21,7 @@ export function FloorTimeline({
   onDateChange,
   onSelect,
   onOpen,
+  search = "",
 }: {
   storeId: string;
   date: string;
@@ -30,6 +31,7 @@ export function FloorTimeline({
   onDateChange: (date: string) => void;
   onSelect: (id: string) => void;
   onOpen: (table: { id: string; name: string }) => void;
+  search?: string;
 }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
@@ -143,10 +145,12 @@ export function FloorTimeline({
             <TableCalendar
               key={date}
               page={first}
+              date={date}
               sessions={sessions}
               tables={tables}
               vacantTables={vacantTables}
               now={now}
+              search={search}
               partial={query.hasNextPage}
               scrollRequest={scrollRequest}
               restorationId={restorationId}

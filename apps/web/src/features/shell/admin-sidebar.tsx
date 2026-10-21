@@ -1,9 +1,18 @@
 import { Brand } from "../../components/brand";
 import { Menu } from "@base-ui/react/menu";
+import { Tooltip } from "@base-ui/react/tooltip";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, ChevronsUpDown, CircleAlert, LogOut, Tablet, UserRound } from "lucide-react";
+import {
+  ArrowUpRight,
+  AudioLines,
+  ChevronsUpDown,
+  CircleAlert,
+  LogOut,
+  Tablet,
+  UserRound,
+} from "lucide-react";
 import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import {
@@ -16,6 +25,7 @@ import {
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
+import { NavigationLink, SidebarTooltip } from "./navigation-link";
 import { SidebarNavigation } from "./sidebar-navigation";
 import { navigationItemClass as sidebarItemClass } from "./navigation-group";
 import { useSidebarPreferences } from "./sidebar-preferences";
@@ -47,15 +57,15 @@ export function AdminSidebar({
   selection: ReturnType<typeof useSidebarStore>;
 }) {
   const { t } = useI18n();
-  const { active: inMenu, draftId } = useConfigurationRoute();
+  const { draftId } = useConfigurationRoute();
   const { session, stores, availableStores, selectedStore, selectedOrganization, change, manager } =
     selection;
 
   return (
-    <>
+    <Tooltip.Provider delay={250}>
       <Link
         to="/admin/live"
-        className="flex h-14 shrink-0 items-center gap-2 px-2 font-semibold"
+        className={`flex h-14 shrink-0 items-center gap-2 font-semibold ${collapsed ? "justify-center" : "px-2"}`}
         onClick={onNavigate}
       >
         <Brand variant={collapsed ? "symbol" : "logo"} />
@@ -82,7 +92,6 @@ export function AdminSidebar({
         userId={session.data?.user.id}
         collapsed={collapsed}
         onNavigate={onNavigate}
-        inMenu={inMenu}
         draftId={draftId}
       />
       <div className="flex flex-col gap-2 border-t border-border py-3">
@@ -94,16 +103,17 @@ export function AdminSidebar({
             onNavigate={onNavigate}
           />
         )}
-        <Link
+        <NavigationLink
+          collapsed={collapsed}
           className={sidebarItemClass}
           to="/"
           title={t("auth_guest")}
           aria-label={t("auth_guest")}
           onClick={onNavigate}
         >
-          <ArrowUpRight className="size-5 shrink-0" />
+          <Tablet className="size-5 shrink-0" />
           {!collapsed && t("auth_guest")}
-        </Link>
+        </NavigationLink>
         <SidebarUserMenu
           user={session.data?.user}
           collapsed={collapsed}
@@ -111,7 +121,7 @@ export function AdminSidebar({
           onSignOut={onSignOut}
         />
       </div>
-    </>
+    </Tooltip.Provider>
   );
 }
 
@@ -128,7 +138,8 @@ function DemoLink({
 }) {
   const { t } = useI18n();
   return (
-    <Link
+    <NavigationLink
+      collapsed={collapsed}
       className={className}
       to="/admin/stores/$storeId/demo"
       params={{ storeId }}
@@ -139,10 +150,10 @@ function DemoLink({
       aria-label={t("demo_open")}
       onClick={onNavigate}
     >
-      <Tablet className="size-5 shrink-0" />
-      {!collapsed && t("demo_title")}
-      {!collapsed && <ArrowUpRight className="ml-auto size-4" />}
-    </Link>
+      <AudioLines className="size-5 shrink-0" />
+      {!collapsed && <span className="min-w-0">{t("demo_title")}</span>}
+      {!collapsed && <ArrowUpRight className="ml-auto size-4" aria-hidden="true" />}
+    </NavigationLink>
   );
 }
 
@@ -173,21 +184,23 @@ export function StorePicker({
           if (value) onChange(value);
         }}
       >
-        <SelectTrigger
-          className={`min-w-0 justify-start border-0 bg-transparent shadow-none hover:bg-secondary ${collapsed ? "gap-1 px-1" : "px-2"}`}
-          aria-label={t("stores_title")}
-          title={selected?.name}
-        >
-          <StoreIcon
-            name={selected?.name ?? t("admin_store")}
-            logo={selected?.logo}
-            className={collapsed ? "size-7" : undefined}
-          />
-          <SelectValue
-            className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate text-left"}
-            placeholder={t("stores_title")}
-          />
-        </SelectTrigger>
+        <SidebarTooltip label={selected?.name ?? t("stores_title")} collapsed={collapsed}>
+          <SelectTrigger
+            showIndicator={!collapsed}
+            className={`min-w-0 border-0 bg-transparent shadow-none hover:bg-control-hover ${collapsed ? "justify-center px-0" : "justify-start px-2"}`}
+            aria-label={t("stores_title")}
+          >
+            <StoreIcon
+              name={selected?.name ?? t("admin_store")}
+              logo={selected?.logo}
+              className={collapsed ? "size-7" : undefined}
+            />
+            <SelectValue
+              className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate text-left"}
+              placeholder={t("stores_title")}
+            />
+          </SelectTrigger>
+        </SidebarTooltip>
         <SelectContent>
           {stores.map((store) => (
             <SelectItem key={store.id} value={store.id}>
@@ -225,23 +238,23 @@ function SidebarUserMenu({
   const { t } = useI18n();
   return (
     <Menu.Root>
-      <Menu.Trigger
-        className="flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent p-2 text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label={t("account_title")}
-        title={t("account_title")}
-      >
-        {user &&
-          (collapsed ? (
-            <UserRound className="size-4" />
+      <SidebarTooltip label={t("account_title")} collapsed={collapsed}>
+        <Menu.Trigger
+          className={`flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring ${collapsed ? "justify-center p-0" : "p-2"}`}
+          aria-label={t("account_title")}
+        >
+          {collapsed || !user ? (
+            <UserRound className="size-5 shrink-0" />
           ) : (
             <>
               <span className="min-w-0 flex-1">
-                <UserIdentity user={user} compact />
+                <UserIdentity user={user} compact truncate />
               </span>
               <ChevronsUpDown className="ml-auto size-4 shrink-0" />
             </>
-          ))}
-      </Menu.Trigger>
+          )}
+        </Menu.Trigger>
+      </SidebarTooltip>
       <Menu.Portal>
         <Menu.Positioner side="top" align="start" sideOffset={8} className="z-50">
           <Menu.Popup className="w-80 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-2 shadow-surface">

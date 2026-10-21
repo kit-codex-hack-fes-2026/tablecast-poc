@@ -53,7 +53,6 @@ export const 店舗情報の更新後もメニューを開いたまま保つ: St
     // Given: メニューを展開したサイドバー。
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole("button", { name: "メニュー・接客" });
-    await userEvent.click(trigger);
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     // When: 後から確定した店舗情報を反映する。
     await userEvent.click(canvas.getByRole("button", { name: "店舗情報を更新" }));

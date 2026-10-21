@@ -10,7 +10,12 @@ export const SelectValue = SelectPrimitive.Value;
  * 単純な文字候補はNativeSelectを優先する。
  * Portal内のスタイルは標準テーマを使う。
  */
-export function SelectTrigger({ className, children, ...props }: SelectPrimitive.Trigger.Props) {
+export function SelectTrigger({
+  className,
+  children,
+  showIndicator = true,
+  ...props
+}: SelectPrimitive.Trigger.Props & { showIndicator?: boolean }) {
   return (
     <SelectPrimitive.Trigger
       {...props}
@@ -22,9 +27,11 @@ export function SelectTrigger({ className, children, ...props }: SelectPrimitive
       }
     >
       {children}
-      <SelectPrimitive.Icon className="ms-auto flex size-4 shrink-0 items-center justify-center">
-        <ChevronsUpDown className="size-4 shrink-0" />
-      </SelectPrimitive.Icon>
+      {showIndicator && (
+        <SelectPrimitive.Icon className="ms-auto flex size-4 shrink-0 items-center justify-center">
+          <ChevronsUpDown className="size-4 shrink-0" />
+        </SelectPrimitive.Icon>
+      )}
     </SelectPrimitive.Trigger>
   );
 }

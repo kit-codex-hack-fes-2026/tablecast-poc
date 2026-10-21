@@ -8,13 +8,15 @@ const userAvatar = tv({
   variants: { compact: { true: "size-9", false: "size-11" } },
 });
 
-/** 人物は丸いアイコン、名前、メールを常に一組で表示する。画像がない場合も人物アイコンを使う。メールは省略せず折り返し、取得不能時は短い代替文を表示する。 */
+/** 人物は丸いアイコン、名前、メールを一組で表示する。セレクタだけはtruncateを使い、開いた詳細に全文を残す。 */
 export function UserIdentity({
   user,
   compact = false,
+  truncate = false,
 }: {
   user: { name?: string | null; email: string | null; image?: string | null };
   compact?: boolean;
+  truncate?: boolean;
 }) {
   const { t } = useI18n();
   return (
@@ -27,9 +29,15 @@ export function UserIdentity({
       </Avatar.Root>
       <span className="min-w-0">
         {user.name && (
-          <span className="block text-base font-medium wrap-anywhere">{user.name}</span>
+          <span
+            className={`block text-base font-medium ${truncate ? "truncate" : "wrap-anywhere"}`}
+          >
+            {user.name}
+          </span>
         )}
-        <span className="block text-sm text-muted-foreground wrap-anywhere">
+        <span
+          className={`block text-sm text-muted-foreground ${truncate ? "truncate" : "wrap-anywhere"}`}
+        >
           {user.email ?? t("identity_email_unavailable")}
         </span>
       </span>

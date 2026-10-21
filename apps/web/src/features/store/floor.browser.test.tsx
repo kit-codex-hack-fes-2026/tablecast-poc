@@ -276,4 +276,13 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
     .toMatchObject({ filter: "billing", date: "2026-09-06", view: "list" });
   await expect.element(screen.getByRole("button", { name: /^T04/ })).toBeVisible();
   await expect.element(screen.getByRole("button", { name: /^T05/ })).not.toBeInTheDocument();
+  await screen.getByRole("searchbox", { name: ja.floor_search, exact: true }).fill("T04");
+  await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
+  await expect
+    .element(screen.getByRole("searchbox", { name: ja.floor_search, exact: true }))
+    .toHaveValue("");
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({ filter: "all", date: "2026-09-06", view: "list" });
+  await expect.element(screen.getByRole("button", { name: /^T05/ })).toBeVisible();
 });

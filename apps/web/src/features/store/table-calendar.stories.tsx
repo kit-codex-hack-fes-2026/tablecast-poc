@@ -81,7 +81,7 @@ export const Day: Story = {
       }),
     );
     await expect(args.onSelect).toHaveBeenCalledWith("tablecast-short");
-    await expect(canvas.getByText("会計待ち", { exact: true })).toBeVisible();
+    await expect(canvas.getAllByText("会計待ち", { exact: true })[0]).toBeVisible();
   },
 };
 export const English: Story = {

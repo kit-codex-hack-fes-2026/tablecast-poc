@@ -18,7 +18,7 @@ export function ConfigurationToolbarHost({ reserve = false }: { reserve?: boolea
   const context = useContext(ToolbarContext);
   return (
     <div
-      className={`flex min-w-0 flex-wrap items-center justify-between gap-3 ${reserve ? "min-h-12" : ""}`}
+      className={`flex min-w-0 flex-wrap items-center justify-between gap-3 ${reserve ? "min-h-12" : "not-has-[>_:not(:empty)]:hidden"}`}
     >
       <div ref={context?.setStatus} className="min-w-0 empty:hidden" />
       <div ref={context?.setActions} className="flex min-w-0 flex-wrap gap-2 empty:hidden" />

@@ -88,7 +88,7 @@ export function AdminShell({
             data-scroll-restoration-id="tablecast-admin-main"
             className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
           >
-            <header className="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-2 backdrop-blur-xl @container md:rounded-t-2xl">
+            <header className="sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container md:rounded-t-2xl">
               <Button
                 size="icon"
                 variant="ghost"
@@ -107,7 +107,11 @@ export function AdminShell({
                 selection={selection}
               />
               {storeName && (!desktop || collapsed) && (
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{storeName}</span>
+                <span
+                  className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
+                >
+                  {storeName}
+                </span>
               )}
               {header && (
                 <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
@@ -146,7 +150,7 @@ function MobileNavigation(
         <PanelLeft />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent side="left" className="max-w-72 p-3">
+        <DialogContent side="left" className="relative max-w-72 p-3">
           <DialogTitle className="sr-only">{t("admin_navigation")}</DialogTitle>
           <Button
             className="absolute right-2 top-3"

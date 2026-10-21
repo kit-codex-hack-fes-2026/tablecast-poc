@@ -122,24 +122,26 @@ export function ConfigurationHeader(props: { storeId: string; role: string }) {
     model;
   return (
     <section className="min-w-0 space-y-3" aria-label={t("workflow_context")}>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-h-12 min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
         <ConfigurationSwitcher model={model} />
-        {publishedVersion !== undefined && (
-          <span className="text-sm">
-            {m.workflow_current_short({ version: publishedVersion }, { locale })}
-          </span>
-        )}
-        {draft.data && (
-          <>
-            <span className="text-xs text-muted-foreground">
-              {m.workflow_source_short({ version: draft.data.baseVersion }, { locale })}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          {publishedVersion !== undefined && (
+            <span className="whitespace-nowrap text-sm">
+              {m.workflow_current_short({ version: publishedVersion }, { locale })}
             </span>
-            <DraftStatus status={draft.data.status} />
-            <Badge variant="secondary">
-              {m.workflow_changes_short({ count: draft.data.changes.length }, { locale })}
-            </Badge>
-          </>
-        )}
+          )}
+          {draft.data && (
+            <>
+              <span className="whitespace-nowrap text-sm text-muted-foreground">
+                {m.workflow_source_short({ version: draft.data.baseVersion }, { locale })}
+              </span>
+              <DraftStatus status={draft.data.status} />
+              <Badge variant="secondary" className="whitespace-nowrap">
+                {m.workflow_changes_short({ count: draft.data.changes.length }, { locale })}
+              </Badge>
+            </>
+          )}
+        </div>
       </div>
       <ErrorNotice error={error || (!historyPage && catalog.error) || draft.error} />
       <ConfigurationToolbarHost
@@ -174,7 +176,7 @@ function ConfigurationSwitcher({ model }: { model: ReturnType<typeof useConfigur
     <>
       {manager ? (
         <Menu.Root open={open} onOpenChange={setOpen}>
-          <Menu.Trigger render={<Button variant="outline" size="sm" disabled={busy} />}>
+          <Menu.Trigger render={<Button variant="outline" className="shrink-0" disabled={busy} />}>
             <FilePenLine />
             {t(
               pathname.endsWith("/history")

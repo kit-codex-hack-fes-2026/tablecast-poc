@@ -1,11 +1,12 @@
-import { Link, useParams, useSearch } from "@tanstack/react-router";
+import { useParams, useSearch } from "@tanstack/react-router";
+import { NavigationLink as Link } from "./navigation-link";
 import { FileClock, History, LayoutList, Mic, Tags, UtensilsCrossed, Palette } from "lucide-react";
 import { navigationItemClass } from "./navigation-group";
 import { useI18n } from "../../i18n/locale";
 
 import { menuLabels, menuReviewSearchSchema } from "../store/menu-model";
 const items = [
-  { section: "products", Icon: UtensilsCrossed, Palette },
+  { section: "products", Icon: UtensilsCrossed },
   { section: "categories", Icon: Tags },
   { section: "plans", Icon: LayoutList },
   { section: "cast", Icon: Mic },
@@ -35,6 +36,7 @@ export function MenuNavigation({
       {items.map(({ section, Icon }) =>
         draftId ? (
           <Link
+            collapsed={collapsed}
             key={section}
             to="/admin/stores/$storeId/menu/changes/$draftId/$section"
             params={{ storeId, draftId, section }}
@@ -48,6 +50,7 @@ export function MenuNavigation({
           </Link>
         ) : (
           <Link
+            collapsed={collapsed}
             key={section}
             to="/admin/stores/$storeId/menu/$section"
             params={{ storeId, section }}
@@ -62,6 +65,7 @@ export function MenuNavigation({
         ),
       )}
       <Link
+        collapsed={collapsed}
         title={t("theme_title")}
         to="/admin/stores/$storeId/design"
         params={{ storeId }}
@@ -73,6 +77,7 @@ export function MenuNavigation({
         {!collapsed && t("theme_title")}
       </Link>
       <Link
+        collapsed={collapsed}
         title={t("admin_drafts")}
         to={
           draftId
@@ -90,6 +95,7 @@ export function MenuNavigation({
       </Link>
       {manager && (
         <Link
+          collapsed={collapsed}
           title={t("configuration_history_title")}
           to="/admin/stores/$storeId/menu/history"
           params={{ storeId }}

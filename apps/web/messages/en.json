@@ -501,8 +501,8 @@
   "form_slug": "Use lowercase letters, numbers and hyphens.",
   "form_number": "Enter a whole number within the allowed range.",
   "form_submitting": "Submitting.",
-  "demo_title": "Conversation demo",
-  "demo_open": "Open conversation demo in a new tab",
+  "demo_title": "Voice ordering playground",
+  "demo_open": "Open voice ordering playground in a new tab",
   "demo_screen": "Conversation tablet demo",
   "demo_isolated": "Demo only · No orders sent to staff",
   "demo_display": "Display",
@@ -1326,8 +1326,15 @@
   "calendar_invalid_time": "Enter a time from 00:00 to 23:59.",
   "workflow_current_short": "Published {version}",
   "workflow_source_short": "From {version}",
-  "workflow_changes_short": "{count} changes",
+  "workflow_changes_short": "Changes: {count}",
   "workflow_discard_short": "Discard",
   "workflow_validate_short": "Validate",
-  "workflow_publish_short": "Apply"
+  "workflow_publish_short": "Apply",
+  "collection_filters": "Filters",
+  "collection_sort": "Sort",
+  "collection_reset": "Reset",
+  "collection_sort_default": "Original order",
+  "collection_sort_ascending": "Ascending",
+  "collection_sort_descending": "Descending",
+  "floor_view": "View"
 }

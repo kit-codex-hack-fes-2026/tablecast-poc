@@ -1,4 +1,4 @@
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import { localeSchema, type Locale } from "@tablecast/api/schema";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { LanguageLabel } from "../../components/language-label";
@@ -46,16 +46,9 @@ export function LanguageFields({
       }}
       className="min-w-0 space-y-5"
     >
-      <Tabs.List
-        aria-label={t("common_language")}
-        className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-border bg-muted p-1"
-      >
+      <Tabs.List aria-label={t("common_language")} className="max-w-full">
         {localeSchema.options.map((language) => (
-          <Tabs.Tab
-            key={language}
-            value={language}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary data-active:bg-card data-active:text-foreground data-active:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
+          <Tabs.Tab key={language} value={language}>
             <LanguageLabel locale={language} />
           </Tabs.Tab>
         ))}

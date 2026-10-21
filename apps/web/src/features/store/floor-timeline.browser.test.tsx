@@ -281,7 +281,15 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   router.history.back();
   await screen.getByRole("tab", { name: labels.floor_list, exact: true }).click();
   await expect.element(screen.getByRole("button", { name: /^T03/ })).toBeVisible();
+  await screen.getByRole("searchbox", { name: labels.floor_search, exact: true }).fill("T03");
   await screen.getByRole("tab", { name: labels.floor_timeline, exact: true }).click();
+  await expect
+    .element(screen.getByRole("searchbox", { name: labels.floor_search, exact: true }))
+    .toHaveValue("T03");
+  await screen.getByRole("button", { name: labels.collection_reset, exact: true }).click();
+  await expect
+    .element(screen.getByRole("searchbox", { name: labels.floor_search, exact: true }))
+    .toHaveValue("");
   await screen.getByRole("button", { name: labels.floor_previous, exact: true }).click();
   await expect
     .element(screen.getByLabelText(labels.floor_date, { exact: true }))

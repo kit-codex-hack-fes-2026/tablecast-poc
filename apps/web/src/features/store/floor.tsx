@@ -1,12 +1,19 @@
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, LayoutGrid, GanttChart } from "lucide-react";
 import { tv } from "tailwind-variants";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useHydrated } from "@tanstack/react-router";
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import { ErrorNotice } from "../../components/error-notice";
 import { PageHeader } from "../../components/page-header";
-import { Button } from "../../components/ui/button";
+import { CollectionToolbar } from "../../components/collection-toolbar";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../../components/ui/select";
 import { useI18n } from "../../i18n/locale";
 import { floorOptions } from "./store-query";
 
@@ -15,7 +22,7 @@ import { TableMetrics } from "./table-metrics";
 import { TableTimeline } from "./table-timeline";
 import { useStore } from "./store-shell";
 import { FloorTimeline } from "./floor-timeline";
-import { storeDate, type FloorSearch } from "./floor-model";
+import { storeDate, type FloorSearch, type FloorFilter } from "./floor-model";
 
 const connectionDot = tv({
   base: "size-2 rounded-full",
@@ -35,6 +42,7 @@ export function Floor({
   const client = useQueryClient();
   const state = useSuspenseQuery(floorOptions(store.id));
   const hydrated = useHydrated();
+  const [search, setSearch] = useState("");
   const referenceNow = initialNow ?? state.dataUpdatedAt;
   const selectedDate = date ?? storeDate(referenceNow);
   const connected = useRealtime({ storeId: store.id }, state.data.cursor, () => {
@@ -91,33 +99,20 @@ export function Floor({
             onNavigate?.({ view: next, date: selectedDate, filter });
         }}
       >
-        <Tabs.List className="mb-5 flex gap-1 border-b border-border [&_button]:min-h-12 [&_button]:border-b-2 [&_button]:border-transparent [&_button]:px-4 [&_button[data-active]]:border-primary [&_button[data-active]]:font-semibold">
-          <Tabs.Tab value="list" disabled={!hydrated}>
-            {t("floor_list")}
-          </Tabs.Tab>
-          <Tabs.Tab value="timeline" disabled={!hydrated}>
-            {t("floor_timeline")}
-          </Tabs.Tab>
-        </Tabs.List>
+        <FloorControls
+          view={view}
+          filter={filter}
+          search={search}
+          onSearchChange={setSearch}
+          disabled={!hydrated}
+          onFilterChange={(next) => onNavigate?.({ view, date: selectedDate, filter: next })}
+        />
         <Tabs.Panel value="list">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{t(`floor_filter_${filter}`)}</h2>
-            <div className="flex flex-wrap gap-2" aria-label={t("floor_filters")} role="group">
-              {(["all", "attention", "vacant"] as const).map((next) => (
-                <Button
-                  key={next}
-                  variant={filter === next ? "secondary" : "ghost"}
-                  aria-pressed={filter === next}
-                  onClick={() => onNavigate?.({ view: "list", date: selectedDate, filter: next })}
-                >
-                  {t(`floor_filter_${next}`)}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <h2 className="mb-4 text-lg font-semibold">{t(`floor_filter_${filter}`)}</h2>
           <TableTimeline
+            search={search}
             filter={filter}
-            initialNow={state.dataUpdatedAt}
+            initialNow={referenceNow}
             tables={state.data.tables}
             vacantTables={state.data.vacantTables}
             onSelect={selectVisit}
@@ -130,6 +125,7 @@ export function Floor({
               storeId={store.id}
               date={selectedDate}
               initialNow={referenceNow}
+              search={search}
               tables={state.data.tables}
               vacantTables={state.data.vacantTables}
               onSelect={selectVisit}
@@ -156,8 +152,92 @@ export function FloorPending() {
           </span>
         }
       />
-      <TableMetrics tables={[]} vacantCount={0} pending />
-      <TableTimeline tables={[]} pending onSelect={() => undefined} />
+      <section aria-label={t("floor_current")}>
+        <h2 className="mb-3 text-sm font-medium text-muted-foreground">{t("floor_current")}</h2>
+        <TableMetrics tables={[]} vacantCount={0} pending />
+      </section>
+      <Tabs.Root value="list">
+        <FloorControls
+          view="list"
+          filter="all"
+          search=""
+          onSearchChange={() => undefined}
+          onFilterChange={() => undefined}
+          disabled
+        />
+        <h2 className="mb-4 text-lg font-semibold">{t("floor_filter_all")}</h2>
+        <TableTimeline tables={[]} pending onSelect={() => undefined} />
+      </Tabs.Root>
     </>
+  );
+}
+
+function FloorControls({
+  view,
+  filter,
+  search,
+  onSearchChange,
+  onFilterChange,
+  disabled,
+}: {
+  view: "list" | "timeline";
+  filter: FloorFilter;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onFilterChange: (value: FloorFilter) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useI18n();
+  const filters = (
+    ["all", "attention", "active", "called", "billing", "voice", "vacant"] as const
+  ).map((value) => ({ value, label: t(`floor_filter_${value}`) }));
+  return (
+    <div className="mb-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="shrink-0 text-sm font-medium">{t("floor_view")}</p>
+        <Tabs.List aria-label={t("floor_view")}>
+          <Tabs.Tab value="list" disabled={disabled}>
+            <LayoutGrid aria-hidden />
+            {t("floor_list")}
+          </Tabs.Tab>
+          <Tabs.Tab value="timeline" disabled={disabled}>
+            <GanttChart aria-hidden />
+            {t("floor_timeline")}
+          </Tabs.Tab>
+        </Tabs.List>
+      </div>
+      <CollectionToolbar
+        disabled={disabled}
+        search={{ label: t("floor_search"), value: search, onChange: onSearchChange }}
+        filters={
+          view === "list" && (
+            <Select
+              items={filters}
+              value={filter}
+              onValueChange={(next) => {
+                if (next) onFilterChange(next);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger aria-label={t("floor_filters")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {filters.map(({ value, label }) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
+        resetDisabled={!search && (view === "timeline" || filter === "all")}
+        onReset={() => {
+          onSearchChange("");
+          if (view === "list") onFilterChange("all");
+        }}
+      />
+    </div>
   );
 }
