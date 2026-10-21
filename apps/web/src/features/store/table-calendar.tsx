@@ -242,7 +242,7 @@ export function TableCalendar({
                     {row.name}
                   </span>
                 </div>
-                <div className="relative min-w-0 grow">
+                <div className="relative isolate min-w-0 grow">
                   <div aria-hidden className="pointer-events-none absolute inset-0 flex">
                     {hours.slice(0, 24).map((hour) => (
                       <div key={hour} className="h-full flex-1 border-r border-border/50" />

@@ -542,6 +542,13 @@ it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリ
   await userEvent.keyboard("{Escape}");
   await expect.element(band).toHaveFocus();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  // focus中の長い帯も、固定された卓名列を覆わない。
+  const tableCell = document.querySelector("[data-floor-row]")?.firstElementChild;
+  if (!tableCell) throw new Error("卓名の固定列がありません");
+  const cellBounds = tableCell.getBoundingClientRect();
+  expect(
+    tableCell.contains(document.elementFromPoint(cellBounds.left + 40, cellBounds.top + 32)),
+  ).toBe(true);
   viewport.element().focus();
   band.element().focus({ preventScroll: true });
   await expect.element(page.getByRole("dialog")).toBeVisible();
