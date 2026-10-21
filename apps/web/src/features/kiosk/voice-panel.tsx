@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   Mic,
   MicOff,
+  Pause,
   ShoppingBag,
 } from "lucide-react";
 import { lazy, Suspense, useRef, type ReactNode } from "react";
@@ -394,6 +395,7 @@ export function VoicePanel({
       </div>
       <VoiceControls
         view={view}
+        active={active}
         phase={phase}
         visualState={visualState}
         toolLabel={usingTools ? toolPhase : undefined}
@@ -480,24 +482,45 @@ function VoiceIdle({
   state: string;
   toolLabel?: string;
 }) {
+  const pending = !["idle", "paused", "stopping", "error"].includes(state);
+  const Icon = pending
+    ? LoaderCircle
+    : state === "error"
+      ? CircleAlert
+      : state === "stopping"
+        ? MicOff
+        : Pause;
   return (
     <figure
-      className="flex items-center gap-3 py-1 text-foreground"
+      className="flex w-full max-w-96 shrink-0 items-center gap-2 text-foreground"
       data-voice-state={state}
       data-motion="still"
     >
       <div
         aria-hidden="true"
-        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-border"
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-card via-control to-card shadow-sm ring-1 ring-border"
       >
-        <MicOff className="size-4" />
+        <Icon
+          className={
+            state === "error"
+              ? "size-4 text-destructive"
+              : pending
+                ? "size-4 motion-safe:animate-spin"
+                : "size-4"
+          }
+        />
       </div>
       <div className="min-w-0 flex-1">
-        <figcaption className="sr-only">
+        <figcaption
+          className={
+            state === "error" ? "text-xs font-medium text-destructive" : "text-xs font-medium"
+          }
+          data-ui="voice-status"
+        >
           {label}
           {toolLabel && <span className="font-normal">{toolLabel}</span>}
         </figcaption>
-        <div className="flex h-7 items-center">
+        <div className="flex h-4 items-center" aria-hidden="true">
           <span className="h-px w-full bg-border" />
         </div>
       </div>
@@ -564,6 +587,7 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
 
 function VoiceControls({
   view,
+  active,
   phase,
   visualState,
   toolLabel,
@@ -583,6 +607,7 @@ function VoiceControls({
   | "onMicrophoneChange"
   | "onMicrophoneRefresh"
 > & {
+  active: boolean;
   phase: string;
   visualState: VoiceView["status"] | "tool";
   toolLabel?: string;
@@ -593,15 +618,21 @@ function VoiceControls({
       className="grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
     >
       <div className="min-w-0" data-ui="voice-media">
-        <Suspense fallback={<VoiceIdle label={phase} state={visualState} />}>
-          <AudioWaveform
-            compact
-            state={visualState}
-            toolLabel={toolLabel}
-            track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-            label={phase}
-          />
-        </Suspense>
+        {active ? (
+          <Suspense
+            fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}
+          >
+            <AudioWaveform
+              compact
+              state={visualState}
+              toolLabel={toolLabel}
+              track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+              label={phase}
+            />
+          </Suspense>
+        ) : (
+          <VoiceIdle label={phase} state={visualState} />
+        )}
       </div>
       <div className="flex min-w-0 items-center gap-2">
         <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />

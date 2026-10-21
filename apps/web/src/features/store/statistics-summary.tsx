@@ -14,7 +14,7 @@ export function StatisticsSummary({
   const number = (value: number) => value.toLocaleString(locale);
   return (
     <>
-      <dl className="grid grid-cols-3 gap-5">
+      <dl className="@container/statistics-summary grid grid-cols-3 gap-5">
         {(
           [
             [
@@ -42,11 +42,15 @@ export function StatisticsSummary({
             key={key}
             className={`min-w-0 border-b border-border pb-4 ${key === "paidAmount" ? "col-span-3 space-y-2" : "row-span-3 grid grid-rows-subgrid gap-2"}`}
           >
-            <dt className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className={`inline-flex size-9 items-center justify-center rounded-lg ${tone}`}>
+            <dt
+              className={`flex items-center gap-2 text-sm text-muted-foreground ${key === "paidAmount" ? "" : "@max-sm/statistics-summary:flex-col @max-sm/statistics-summary:items-start"}`}
+            >
+              <span
+                className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg ${tone}`}
+              >
                 <Icon aria-hidden="true" className="size-5" />
               </span>
-              {t(`statistics_${key}`)}
+              <span className="min-w-0">{t(`statistics_${key}`)}</span>
             </dt>
             <dd
               className={`${key === "paidAmount" ? "text-4xl" : "text-2xl"} font-semibold tracking-tight tabular-nums wrap-break-word`}

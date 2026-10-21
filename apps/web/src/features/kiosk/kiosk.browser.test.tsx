@@ -417,6 +417,9 @@ it.each(["listening", "speaking"] as const)(
       expect(stop.element().getBoundingClientRect().left).toBeLessThan(
         microphone.element().getBoundingClientRect().left,
       );
+      await expect
+        .poll(() => figure.element().querySelector("canvas[data-ui=audio-waveform]"))
+        .toBeInstanceOf(HTMLCanvasElement);
       const canvas = figure.element().querySelector("canvas[data-ui=audio-waveform]");
       if (!(canvas instanceof HTMLCanvasElement)) throw new Error("波形canvasが必要です");
       await expect
