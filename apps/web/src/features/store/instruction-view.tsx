@@ -1,5 +1,11 @@
 import type { CastInstruction, InstructionBlock } from "@tablecast/api/schema";
 import { createElement, type ReactNode } from "react";
+import { Streamdown } from "streamdown";
+
+const markdownComponents = {
+  a: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  img: () => null,
+};
 
 function instructionBlock(node: InstructionBlock, path: string): ReactNode {
   if (node.type === "bulletList" || node.type === "orderedList") {
@@ -47,7 +53,15 @@ export function InstructionView({ value }: { value: CastInstruction }) {
   return (
     <div className="space-y-3 whitespace-pre-wrap wrap-anywhere leading-relaxed">
       {typeof value === "string" ? (
-        <p>{value}</p>
+        <Streamdown
+          mode="static"
+          controls={false}
+          skipHtml
+          parseIncompleteMarkdown={false}
+          components={markdownComponents}
+        >
+          {value}
+        </Streamdown>
       ) : (
         value.document.content.map((node, index) => instructionBlock(node, String(index)))
       )}

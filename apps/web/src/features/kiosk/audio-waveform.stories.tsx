@@ -25,7 +25,7 @@ export const States: Story = {
           ["error", "接続エラー"],
         ] satisfies [VoiceVisualState, string][]
       ).map(([state, label]) => (
-        <div className="rounded-xl border border-border bg-white p-3" key={state}>
+        <div className="rounded-xl border border-border bg-card p-3" key={state}>
           <AudioWaveform state={state} label={label} />
         </div>
       ))}

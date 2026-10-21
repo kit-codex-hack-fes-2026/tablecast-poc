@@ -27,7 +27,6 @@ const boundaryFiles = [
   ["model", "src/features/kiosk/table-cache.ts"],
   ["runtime", "src/features/kiosk/voice-connection.ts"],
   ["model", "src/features/store/device-qr-code.ts"],
-  ["runtime", "src/features/store/prompt-editor-extensions.ts"],
   ["feature", "src/features/*/*.tsx"],
 ];
 
@@ -150,7 +149,25 @@ export default defineConfig({
     "tailwindcss/no-conflicting-classes": "error",
     "tailwindcss/no-deprecated-classes": "error",
     "tailwindcss/no-duplicate-classes": "error",
-    "tailwindcss/no-hardcoded-colors": "warn",
+    "tailwindcss/no-hardcoded-colors": "error",
+    "tailwindcss/no-restricted-classes": [
+      "error",
+      {
+        patterns: [
+          {
+            pattern:
+              "(?:^|:)(?:bg|text|border|ring|fill|stroke|divide|outline|accent|decoration|from|via|to)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]",
+            message: "原色スケールではなくstyles.cssの意味別トークンを使ってください。",
+          },
+          {
+            pattern:
+              "(?:^|:)(?:bg|text|border|ring|fill|stroke|divide|outline|accent|decoration|from|via|to)-(?:black|white)(?:/|$)",
+            message:
+              "純黒・白の直指定ではなくcard、inverse、on-inverse、overlayなど用途を示してください。",
+          },
+        ],
+      },
+    ],
     "tailwindcss/no-unknown-classes": "error",
     "tailwindcss/no-unnecessary-arbitrary-value": "warn",
     "tailwindcss/no-unnecessary-whitespace": "error",

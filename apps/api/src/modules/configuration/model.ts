@@ -169,6 +169,10 @@ export const draftChoicesPageSchema = z.object({
   nextCursor: z.object({ beforeUpdatedAt: z.number().int(), beforeId: z.string() }).nullable(),
 });
 
+export const configurationChangesSchema = z.array(
+  z.object({ path: z.string(), before: z.json(), after: z.json(), sensitive: z.boolean() }),
+);
+
 export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
@@ -179,9 +183,7 @@ export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   status: z.enum(["draft", "ready", "published", "discarded"]),
   configuration: configurationSchema,
   errors: z.array(configurationIssueSchema),
-  changes: z.array(
-    z.object({ path: z.string(), before: z.json(), after: z.json(), sensitive: z.boolean() }),
-  ),
+  changes: configurationChangesSchema,
 });
 
 export type Catalog = {
@@ -197,3 +199,68 @@ export const catalogSchema: z.ZodType<Catalog> = z.object({
   version: z.number().int(),
   configuration: configurationSchema,
 });
+
+export const configurationHistoryQuerySchema = z
+  .object({
+    beforeAt: decimalQuerySchema.pipe(z.number().int().nonnegative()).optional(),
+    beforeKind: z.enum(["release", "draft"]).optional(),
+    beforeId: id.optional(),
+  })
+  .strict()
+  .refine(
+    (query) => {
+      const values = [query.beforeAt, query.beforeKind, query.beforeId];
+      return (
+        values.every((value) => value === undefined) || values.every((value) => value !== undefined)
+      );
+    },
+    { path: ["beforeId"] },
+  );
+
+export const configurationHistoryEntrySchema = z.object({
+  kind: z.enum(["release", "draft"]),
+  id: z.string(),
+  version: z.number().int(),
+  baseVersion: z.number().int().nullable(),
+  sourceDraftId: z.string().nullable(),
+  restoredFromVersion: z.number().int().nullable(),
+  status: z.enum(["draft", "ready", "published", "discarded"]),
+  at: z.number().int(),
+  actorId: z.string(),
+  actorName: z.string().nullable(),
+  actorEmail: z.string().nullable(),
+  actorImage: z.string().nullable(),
+});
+export const configurationHistoryPageSchema = z.object({
+  entries: z.array(configurationHistoryEntrySchema),
+  publishedVersion: z.number().int(),
+  nextCursor: z
+    .object({
+      beforeAt: z.number().int(),
+      beforeKind: z.enum(["release", "draft"]),
+      beforeId: z.string(),
+    })
+    .nullable(),
+});
+export const configurationReleaseSchema = z.object({
+  version: z.number().int(),
+  publishedVersion: z.number().int(),
+  sourceDraftId: z.string().nullable(),
+  publishedAt: z.number().int(),
+  publishedBy: z.string(),
+  publisherName: z.string().nullable(),
+  publisherEmail: z.string().nullable(),
+  publisherImage: z.string().nullable(),
+  configuration: configurationSchema.nullable(),
+  changes: configurationChangesSchema,
+});
+export const configurationRestoreSchema = z
+  .object({
+    draftId: z.uuid(),
+    baseVersion: z.number().int().positive(),
+  })
+  .strict();
+export type ConfigurationHistoryEntry = z.infer<typeof configurationHistoryEntrySchema>;
+export type ConfigurationHistoryPage = z.infer<typeof configurationHistoryPageSchema>;
+export type ConfigurationRelease = Omit<z.infer<typeof configurationReleaseSchema>, "changes"> &
+  Pick<ConfigDraft, "changes">;

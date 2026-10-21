@@ -110,9 +110,10 @@ export const RestorePublishedVoice: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await expect(canvas.getByRole("textbox", { name: "日本語 接客方針" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "English" }));
     const group = within(canvas.getByRole("group", { name: "英語" }));
     const voice = group.getByRole("combobox", { name: /音声設定/ });
-    await expect(canvas.getByRole("textbox", { name: "日本語 接客方針" })).toBeInTheDocument();
     await expect(canvas.getByRole("textbox", { name: "英語 接客方針" })).toBeInTheDocument();
     await expect(await group.findByText("音声一覧は未設定です。")).toBeInTheDocument();
     await expect(voice).toHaveValue("Ashley");
@@ -188,28 +189,27 @@ export const PagedVoices: Story = {
             retry: "再試行",
           };
     const canvas = within(canvasElement);
-    const english = within(canvas.getByRole("group", { name: labels.english }));
+    await userEvent.click(canvas.getByRole("tab", { name: "日本語" }));
     const japanese = within(canvas.getByRole("group", { name: labels.japanese }));
+    await expect(await japanese.findByText(labels.empty)).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("tab", { name: "English" }));
+    const english = within(canvas.getByRole("group", { name: labels.english }));
     const voice = english.getByRole("combobox", { name: new RegExp(labels.voice) });
     // 初回の遅延モジュール変換を含むため、Browserテストと同じ待機時間にする。
     await waitFor(
       () =>
         expect(
           english.getByRole("textbox", { name: `${labels.english} ${labels.instructions}` }),
-        ).toHaveAttribute("contenteditable", "true"),
+        ).not.toBeDisabled(),
       { timeout: 5000 },
     );
     const instructions = english.getByRole("textbox", {
       name: `${labels.english} ${labels.instructions}`,
     });
     await expect(
-      japanese.getByRole("textbox", { name: `${labels.japanese} ${labels.instructions}` }),
-    ).toBeInTheDocument();
-    await expect(await japanese.findByText(labels.empty)).toBeInTheDocument();
-    await expect(
       await english.findByRole("option", { name: "Ashley — English" }),
     ).toBeInTheDocument();
-    // ProseMirrorの貼付け処理で入力し、合成typeによるDOM直接変更を避ける。
+    // Markdown本文を入力し、音声の再取得中も保持する。
     await userEvent.click(instructions);
     await userEvent.paste("Speak calmly.");
 
@@ -222,7 +222,7 @@ export const PagedVoices: Story = {
       await english.findByRole("option", { name: "Dennis — English" }),
     ).toBeInTheDocument();
     await expect(english.getAllByRole("option", { name: "Ashley — English" })).toHaveLength(1);
-    await expect(instructions).toHaveTextContent("Speak calmly.");
+    await expect(instructions).toHaveValue("Speak calmly.");
     await expect(english.queryByRole("button", { name: labels.more })).not.toBeInTheDocument();
     await userEvent.selectOptions(voice, "Dennis");
     await userEvent.click(canvas.getByRole("button", { name: "保存" }));
@@ -277,6 +277,7 @@ export const CancelPreviousStore: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("tab", { name: "English" }));
     const english = within(canvas.getByRole("group", { name: "英語" }));
     await waitFor(() => expect(oldSignal).toBeDefined());
     await userEvent.click(canvas.getByRole("button", { name: "別店舗へ切替" }));

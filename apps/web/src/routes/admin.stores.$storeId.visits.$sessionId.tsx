@@ -6,6 +6,7 @@ import { catalogOptions } from "../features/store/menu-query";
 import { tableDetailOptions } from "../features/store/store-query";
 import { floorSearchSchema } from "../features/store/floor-model";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
+  staticData: { document: { title: "head_visit", description: "head_visit_description" } },
   validateSearch: z.object({
     floorView: floorSearchSchema.shape.view,
     floorDate: floorSearchSchema.shape.date,
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
       await context.queryClient.ensureQueryData(
         catalogOptions(params.storeId, table.configVersion),
       );
+    return { document: { name: table.tableName } };
   },
   component: Page,
 });

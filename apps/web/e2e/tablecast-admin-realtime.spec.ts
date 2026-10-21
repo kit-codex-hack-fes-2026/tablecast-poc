@@ -56,11 +56,11 @@ test("管理画面が実通知の切断中と再接続後の会計イベント�
   await page.goto(`/admin/stores/${storeId}/floor`);
   await page.getByRole("button", { name: "日本語", exact: true }).click();
   await expect.poll(() => connected).toBeGreaterThan(0);
-  const row = page
-    .getByRole("row")
+  const table = page
+    .getByRole("listitem")
     .filter({ has: page.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }) });
-  await expect(row).toHaveCount(1);
-  await row.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
+  await expect(table).toHaveCount(1);
+  await table.getByRole("button", { name: new RegExp(`^${vacant.name}\\b`) }).click();
   const detail = page.getByRole("main");
   await detail.getByRole("tab", { name: ja.admin_logs, exact: true }).click();
   await record("adjustment", 100);
@@ -98,6 +98,6 @@ test("管理画面が実通知の切断中と再接続後の会計イベント�
   await expect(detail.getByText(ja.event_bill_adjusted, { exact: true })).toHaveCount(2);
   await expect(detail.getByText(ja.event_payment_recorded, { exact: true })).toHaveCount(1);
   await page.goto(`/admin/stores/${storeId}/floor`);
-  await expect(row).toContainText(/[¥￥]200/);
-  await expect(row).toHaveCount(1);
+  await expect(table).toContainText(/[¥￥]200/);
+  await expect(table).toHaveCount(1);
 });

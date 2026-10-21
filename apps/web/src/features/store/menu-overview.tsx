@@ -1,3 +1,4 @@
+import { LanguageFields } from "./language-fields";
 import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -319,10 +320,9 @@ function MenuDescription({
 }) {
   const { t } = useI18n();
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      {(["ja", "en"] as const).map((language) => (
-        <section key={language} className="space-y-3 rounded-xl border border-border p-5">
-          <h2 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h2>
+    <LanguageFields>
+      {(language) => (
+        <section className="space-y-3 rounded-xl bg-surface-subtle p-5" lang={language}>
           {item ? (
             <>
               <p className="font-medium">{item.text[language].displayName}</p>
@@ -352,8 +352,8 @@ function MenuDescription({
             </>
           )}
         </section>
-      ))}
-    </div>
+      )}
+    </LanguageFields>
   );
 }
 

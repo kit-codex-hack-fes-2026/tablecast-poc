@@ -1,20 +1,9 @@
 import type { Locale } from "@tablecast/api/schema";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { m } from "../paraglide/messages.js";
 import { getLocale, setLocale as setRuntimeLocale } from "../paraglide/runtime.js";
 
-const LocaleContext = createContext<{ locale: Locale; setLocale: (locale: Locale) => void }>({
-  locale: "ja",
-  setLocale: () => undefined,
-});
+import { LocaleContext } from "./locale-context";
 
 export function LocaleProvider({
   children,
@@ -41,7 +30,7 @@ export function LocaleProvider({
 }
 
 type MessageKey = Extract<keyof typeof m, string>;
-type SimpleMessageKey = {
+export type SimpleMessageKey = {
   [Key in MessageKey]: Record<string, never> extends Parameters<(typeof m)[Key]>[0] ? Key : never;
 }[MessageKey];
 

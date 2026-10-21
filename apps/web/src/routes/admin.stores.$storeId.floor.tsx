@@ -4,16 +4,17 @@ import { floorOptions } from "../features/store/store-query";
 import { floorSearchSchema, storeDate } from "../features/store/floor-model";
 import { timelineOptions } from "../features/store/timeline-query";
 export const Route = createFileRoute("/admin/stores/$storeId/floor")({
+  staticData: { document: { title: "admin_live", description: "head_floor_description" } },
   validateSearch: floorSearchSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, params, deps }) => {
+  loader: async ({ context, params, deps, cause }) => {
     await context.queryClient.ensureQueryData(floorOptions(params.storeId));
     const initialNow =
       context.queryClient.getQueryState(floorOptions(params.storeId).queryKey)?.dataUpdatedAt ??
       Date.now();
     const date = deps.date ?? storeDate(initialNow);
-    if (deps.view === "timeline") {
-      // 失敗はqueryに保持し、日付操作と既存のフロア集計を維持する。
+    if (deps.view === "timeline" && cause !== "stay") {
+      // 初回はSSRへ含め、日付変更では既存の操作欄とフォーカスを保つ。
       await context.queryClient.prefetchInfiniteQuery(timelineOptions(params.storeId, date));
     }
     return { initialNow, date };

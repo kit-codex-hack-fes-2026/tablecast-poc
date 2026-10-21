@@ -1,3 +1,5 @@
+import { revealDisclosureTarget } from "../../components/ui/disclosure-target";
+import { ConfigurationToolbar } from "../shell/configuration-toolbar";
 import {
   instructionText,
   instructionLimit,
@@ -12,11 +14,18 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Link, useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  useBlocker,
+  useLocation,
+  useMatch,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
-import { ConfigurationStatus } from "../shell/configuration-status";
+import { SaveStatus } from "../shell/configuration-status";
 import { apiError } from "../../lib/api-error";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
@@ -126,6 +135,8 @@ function useItemEditing({
   const client = useQueryClient();
   const images = useImageEdits(storeId);
   const navigate = useNavigate();
+  const router = useRouter();
+  const routeId = useMatch({ strict: false, select: (match) => match.routeId });
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
   const editable =
@@ -204,6 +215,7 @@ function useItemEditing({
           replace: true,
           search,
         });
+      else void router.invalidate({ filter: (match) => match.routeId === routeId });
     },
   });
   const reload = useMutation({
@@ -219,6 +231,7 @@ function useItemEditing({
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       images.reset();
       save.reset();
+      void router.invalidate({ filter: (match) => match.routeId === routeId });
     },
   });
   const pending = save.isPending || reload.isPending;
@@ -320,7 +333,6 @@ function ItemForm({
         {t(menuLabels[section])}
       </Button>
       <PageHeader
-        description={section === "products" ? t("editor_product_description") : undefined}
         title={
           itemId === "new"
             ? t("common_add")
@@ -342,6 +354,7 @@ function ItemForm({
         <p>{t("menu_item_missing")}</p>
       ) : (
         <form
+          id="tablecast-item-editor"
           onSubmit={(event) => {
             event.preventDefault();
             void submitConfiguration(event.currentTarget);
@@ -465,21 +478,16 @@ function ItemSaveAction({
     <div className="flex items-center gap-3">
       <Button
         type="submit"
+        form="tablecast-item-editor"
         data-pwa-blocked={dirty || pending || uploadingImages || stagedImages || newUnsaved}
         disabled={invalid || pending || uploadingImages || (!dirty && !isNew)}
       >
         <Save />
         {t("common_save")}
       </Button>
-      {(dirty || uploadingImages || stagedImages) && (
+      {(uploadingImages || stagedImages) && (
         <span role="status" className="text-sm text-muted-foreground">
-          {t(
-            uploadingImages
-              ? "editor_image_wait"
-              : stagedImages
-                ? "editor_image_staged"
-                : "admin_unsaved",
-          )}
+          {t(uploadingImages ? "editor_image_wait" : "editor_image_staged")}
         </span>
       )}
     </div>
@@ -492,12 +500,11 @@ function focusInvalidCondition(form: HTMLFormElement, aggregate: boolean) {
     (aggregate
       ? form.querySelector<HTMLElement>("[data-condition-editor] [data-node-control]")
       : null);
-  let parent = invalid?.parentElement;
-  while (parent && parent !== form) {
-    if (parent instanceof HTMLDetailsElement) parent.open = true;
-    parent = parent.parentElement;
-  }
-  invalid?.focus();
+  if (!invalid) return;
+  revealDisclosureTarget(invalid);
+  requestAnimationFrame(() => {
+    if (invalid.isConnected) invalid.focus();
+  });
 }
 
 function ItemEditorActions({
@@ -528,71 +535,74 @@ function ItemEditorActions({
     save,
   } = model;
   return (
-    <div className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-border bg-white py-4">
-      <ItemSaveAction
-        invalid={invalidInstructions}
-        dirty={dirty}
-        pending={pending}
-        uploadingImages={images.uploading}
-        stagedImages={images.hasStaged}
-        newUnsaved={itemId === "new" && !newSaved}
-        isNew={itemId === "new"}
-      />
-
-      {itemId !== "new" && section !== "cast" && (
-        <ConfirmAction
-          label={t("menu_remove_item")}
-          subject={t("menu_remove_note")}
-          disabled={remove.isPending || pending || images.uploading}
-          onConfirm={() => {
-            if (!images.uploadingNow()) remove.mutate();
-          }}
-          icon={<Trash2 />}
+    <ConfigurationToolbar>
+      <div className="flex flex-wrap items-center gap-2">
+        <ItemSaveAction
+          invalid={invalidInstructions}
+          dirty={dirty}
+          pending={pending}
+          uploadingImages={images.uploading}
+          stagedImages={images.hasStaged}
+          newUnsaved={itemId === "new" && !newSaved}
+          isNew={itemId === "new"}
         />
-      )}
 
-      <>
-        {(dirty || images.hasStaged) && (
+        {itemId !== "new" && section !== "cast" && (
           <ConfirmAction
-            label={t("workflow_revert")}
-            subject={t("workflow_revert_note")}
-            disabled={pending || images.uploading}
+            label={t("menu_remove_item")}
+            subject={t("menu_remove_note")}
+            disabled={remove.isPending || pending || images.uploading}
             onConfirm={() => {
-              if (images.uploadingNow()) return;
-              setConfiguration(initial);
-              setEditor((current) => ({ ...current, conditionError: null }));
-              images.reset();
-              save.reset();
+              if (!images.uploadingNow()) remove.mutate();
             }}
-            icon={<Undo2 />}
+            icon={<Trash2 />}
           />
         )}
-        <Button
-          nativeButton={false}
-          role="link"
-          variant="outline"
-          disabled={
-            dirty ||
-            pending ||
-            images.uploading ||
-            images.hasStaged ||
-            (itemId === "new" && !newSaved)
-          }
-          render={
-            <Link
-              to="/admin/stores/$storeId/menu/changes/$draftId"
-              params={{ storeId, draftId: draft.id }}
-              search={{ ...search, returnSection: section }}
-              onClick={(event) => {
-                if (images.uploadingNow() || images.staged.current.size > 0) event.preventDefault();
+
+        <>
+          {(dirty || images.hasStaged) && (
+            <ConfirmAction
+              label={t("workflow_revert")}
+              subject={t("workflow_revert_note")}
+              disabled={pending || images.uploading}
+              onConfirm={() => {
+                if (images.uploadingNow()) return;
+                setConfiguration(initial);
+                setEditor((current) => ({ ...current, conditionError: null }));
+                images.reset();
+                save.reset();
               }}
+              icon={<Undo2 />}
             />
-          }
-        >
-          {t("workflow_review")}
-        </Button>
-      </>
-    </div>
+          )}
+          <Button
+            nativeButton={false}
+            role="link"
+            variant="outline"
+            disabled={
+              dirty ||
+              pending ||
+              images.uploading ||
+              images.hasStaged ||
+              (itemId === "new" && !newSaved)
+            }
+            render={
+              <Link
+                to="/admin/stores/$storeId/menu/changes/$draftId"
+                params={{ storeId, draftId: draft.id }}
+                search={{ ...search, returnSection: section }}
+                onClick={(event) => {
+                  if (images.uploadingNow() || images.staged.current.size > 0)
+                    event.preventDefault();
+                }}
+              />
+            }
+          >
+            {t("workflow_review")}
+          </Button>
+        </>
+      </div>
+    </ConfigurationToolbar>
   );
 }
 
@@ -605,17 +615,17 @@ function ItemEditingStatus({
   itemId: string;
   draft: ConfigDraft;
 }) {
-  const { catalog, version, dirty, images, newSaved, save, reload, editable, t } = model;
+  const { catalog, dirty, images, newSaved, save, reload, editable, t } = model;
   return (
     <>
       {catalog.data && (
-        <ConfigurationStatus
-          publishedVersion={catalog.data.version}
-          draft={{ id: draft.id, status: draft.status, baseVersion: draft.baseVersion, version }}
-          dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
-          pending={save.isPending}
-          error={save.error || reload.error}
-        />
+        <ConfigurationToolbar slot="status">
+          <SaveStatus
+            dirty={dirty || images.hasStaged || (itemId === "new" && !newSaved)}
+            pending={save.isPending}
+            error={save.error || reload.error}
+          />
+        </ConfigurationToolbar>
       )}
       {catalog.data && editable && catalog.data.version !== draft.baseVersion && (
         <p className="text-destructive">{t("workflow_stale")}</p>
@@ -646,7 +656,6 @@ function ItemSaveFeedback({ model }: { model: ReturnType<typeof useItemEditing> 
           icon={<Undo2 />}
         />
       )}
-      {editable && <p className="text-sm text-muted-foreground">{t("workflow_save_first")}</p>}
     </>
   );
 }

@@ -4,6 +4,9 @@ import { customerVisitsOptions } from "../features/customer/customer-visit-query
 import { customerPointsOptions } from "../features/customer/customer-points-query";
 import { customerCouponsOptions } from "../features/customer/customer-coupons-query";
 export const Route = createFileRoute("/member/$storeId/")({
+  staticData: {
+    document: { title: "customer_card", description: "head_customer_store_description" },
+  },
   loader: async ({ context, params }) => {
     if (!context.customerStore.membership?.active) return;
     await Promise.all([

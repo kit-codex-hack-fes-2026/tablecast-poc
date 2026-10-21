@@ -173,3 +173,30 @@ it("チラシの2列と全幅をメニュー幅に合わせて配置しロゴ失
   expect(container.scrollWidth).toBeLessThanOrEqual(320);
   await expect.element(page.getByRole("heading", { name: "一乗寺 剛麺研究所" })).toBeVisible();
 });
+
+it.each(["#bb241c", "#ffdd44"])(
+  "店舗アクセント%sはhoverしても同系色と文字の明暗を維持する",
+  async (accent) => {
+    await render(
+      <StoreTheme appearance={{ colours: { ink: "#ffffff", paper: "#18181b", accent } }}>
+        <Button>確定</Button>
+        <Button variant="outline">取消</Button>
+      </StoreTheme>,
+    );
+    const action = page.getByRole("button", { name: "確定", exact: true });
+    const before = getComputedStyle(action.element()).backgroundColor;
+    const foreground = getComputedStyle(action.element()).color;
+    await action.hover();
+    await expect.poll(() => getComputedStyle(action.element()).backgroundColor).not.toBe(before);
+    const hovered = getComputedStyle(action.element());
+    expect(hovered.backgroundColor).not.toBe("rgb(100, 100, 100)");
+    expect(hovered.color).toBe(foreground);
+    expect(hovered.getPropertyValue("--primary-hover")).toContain(accent);
+    const cancel = page.getByRole("button", { name: "取消", exact: true });
+    await cancel.hover();
+    expect(getComputedStyle(cancel.element()).getPropertyValue("--control-hover")).toContain(
+      "#18181b",
+    );
+    expect(getComputedStyle(cancel.element()).color).toBe("rgb(255, 255, 255)");
+  },
+);

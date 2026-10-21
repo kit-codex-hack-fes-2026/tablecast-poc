@@ -22,11 +22,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Saved: Story = {
-  name: "保存済みの下書きと二種類の版",
+  name: "保存済みの下書きと作成元の公開版",
   play: async ({ canvasElement }) => {
     const status = within(canvasElement).getByRole("status");
     await expect(status).toHaveTextContent("現在公開版 12");
-    await expect(status).toHaveTextContent("下書き更新番号 4");
+    await expect(status).toHaveTextContent("作成元公開版 12");
     await expect(status).toHaveTextContent("保存済み・未検証");
   },
 };

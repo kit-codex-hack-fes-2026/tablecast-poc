@@ -71,10 +71,11 @@ it("券面をアップロードして出所と二言語の交換ルールをフ�
   const saved = vi.fn<() => void>();
   await show(<CouponRuleForm storeId="tablecast-store" onSaved={saved} />);
   await page.getByRole("textbox", { name: ja.coupon_title_ja }).fill("会員の100円割引");
-  await page.getByRole("textbox", { name: ja.coupon_title_en }).fill("Member discount");
   await page
     .getByRole("textbox", { name: ja.coupon_description_ja })
     .fill("会計から100円引きます。");
+  await page.getByRole("tab", { name: "English", exact: true }).click();
+  await page.getByRole("textbox", { name: ja.coupon_title_en }).fill("Member discount");
   await page
     .getByRole("textbox", { name: ja.coupon_description_en })
     .fill("JPY 100 off your bill.");
@@ -136,17 +137,35 @@ it("参加者を選んでポイント付与を確定し、返された結果へ�
       expectedVersion: 4,
       confirmedAt: confirmed ? 1 : null,
       participants: [
-        { id: "person-1", membershipId: "member-1", name: "本人", active: true },
-        { id: "person-2", membershipId: "member-2", name: "同行者", active: true },
+        {
+          id: "person-1",
+          membershipId: "member-1",
+          name: "本人",
+          email: "customer@example.test",
+          image: null,
+          active: true,
+        },
+        {
+          id: "person-2",
+          membershipId: "member-2",
+          name: "同行者",
+          email: "companion@example.test",
+          image: null,
+          active: true,
+        },
       ],
       allocations: confirmed ? [{ membershipId: "member-1", amount: 100, points: 4 }] : [],
     });
   });
   await show(<PointVisit storeId="tablecast-store" sessionId="tablecast-visit" />);
-  await page.getByRole("checkbox", { name: "本人", exact: true }).click();
+  await page.getByRole("checkbox", { name: "本人 customer@example.test", exact: true }).click();
   await page.getByRole("button", { name: ja.customer_points_award, exact: true }).click();
   await expect.element(page.getByText(ja.customer_points_confirmed, { exact: true })).toBeVisible();
-  await expect.element(page.getByText("本人 · ¥100 · 4 pt", { exact: true })).toBeVisible();
+  await expect
+    .element(
+      page.getByRole("paragraph").filter({ hasText: "本人customer@example.test · ¥100 · 4 pt" }),
+    )
+    .toBeVisible();
   expect(writes).toMatchObject([{ expectedVersion: 4, participantIds: ["person-1"] }]);
 });
 

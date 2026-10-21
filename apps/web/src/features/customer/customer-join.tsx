@@ -1,6 +1,7 @@
 import { apiError } from "../../lib/api-error";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, QrCode } from "lucide-react";
 import { useEffect } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -49,12 +50,29 @@ export function CustomerJoin({ code }: { code: string }) {
         replace: true,
       });
   }, [needsLogin, navigate, code]);
-  if (destination.isPending) return <LoadingState />;
+  if (destination.isPending || needsLogin) return <LoadingState />;
   if (destination.error)
     return (
-      <section className="space-y-4">
-        <p>{t("customer_scan_again")}</p>
-        <ErrorNotice error={destination.error} />
+      <section className="space-y-5">
+        {apiError(destination.error)?.code === "CUSTOMER_VISIT_CODE_EXPIRED" ? (
+          <div
+            role="alert"
+            className="flex items-start gap-4 rounded-2xl border border-warning-border bg-warning-soft p-5"
+          >
+            <QrCode aria-hidden="true" className="size-8 shrink-0 text-warning" />
+            <p className="text-pretty leading-relaxed">{t("customer_scan_again")}</p>
+          </div>
+        ) : (
+          <ErrorNotice
+            error={destination.error}
+            onRetry={() => void destination.refetch()}
+            retrying={destination.isFetching}
+          />
+        )}
+        <Button variant="outline" nativeButton={false} role="link" render={<Link to="/member" />}>
+          <ArrowLeft aria-hidden="true" />
+          {t("customer_title")}
+        </Button>
       </section>
     );
   if (!destination.data) return null;

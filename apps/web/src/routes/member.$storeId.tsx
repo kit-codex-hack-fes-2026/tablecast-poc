@@ -3,6 +3,9 @@ import { ArrowLeft } from "lucide-react";
 import { customerStoreOptions } from "../features/customer/customer-query";
 import { useI18n } from "../i18n/locale";
 export const Route = createFileRoute("/member/$storeId")({
+  staticData: {
+    document: { title: "customer_card", description: "head_customer_store_description" },
+  },
   beforeLoad: async ({ context, params, location }) => {
     const customerStore = await context.queryClient.ensureQueryData(
       customerStoreOptions(params.storeId),
@@ -14,7 +17,10 @@ export const Route = createFileRoute("/member/$storeId")({
       throw redirect({ to: "/member/$storeId", params: { storeId: params.storeId } });
     return { customerStore };
   },
-  loader: ({ context }) => context.customerStore,
+  loader: ({ context }) => ({
+    ...context.customerStore,
+    document: { store: context.customerStore.store.name },
+  }),
   component: Page,
 });
 

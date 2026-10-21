@@ -11,6 +11,12 @@ const roleBadge = tv({
   },
 });
 
+/**
+ * 所属対象の役割を文字と記号で示す。
+ * role=owner/admin/memberを渡す。
+ * 表示は認可ではなく、操作権限はAPIとfeatureで別に判定する。
+ * 任意の業務状態にはBadgeを使う。
+ */
 export function RoleBadge({ role }: { role: string }) {
   const { t } = useI18n();
   return (

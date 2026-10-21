@@ -138,3 +138,7 @@ routeからDB・Drizzle、serviceからHono・route、queryから更新・Agent�
 UIから業務やAPIへの参照、共通部品からfeatureへの参照、query/modelから画面への参照、featureからrouteや別featureの内部画面への参照を拒否する。WebはAPI内部・Drizzle・Hono・Bun runtimeへ依存しない。新しい役割・配置を追加するときは、同じ差分でこの契約とルールを更新する。
 
 `scripts/tablecast-import-rules.test.ts`はAPIとWebそれぞれの実設定を隔離workspaceへ複製し、実Oxlintで禁止・許可のimportと未分類の配置を確認する。
+
+### デザインシステムの再発防止
+
+Webの既存 `oxlint-tailwindcss` の `no-hardcoded-colors` と `no-restricted-classes` をerrorにする。原色名と数字のutility、純白/純黒の直接utilityを拒否し、`styles.css` の意味別色へ誘導する。店舗テーマの利用者入力・QRの描画契約は既存境界に残し、業務状態色へ流用しない。StorybookとBrowserでコントラスト・hover・寸法・focus・狭幅を検証する。説明の関連性や色の意味そのものは静的規則で推測せず、実画面の監査で判断する。

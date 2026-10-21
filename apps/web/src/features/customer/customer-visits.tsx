@@ -1,3 +1,5 @@
+import { ParticipantIdentity } from "../../components/user-identity";
+import { calendarDate } from "../../i18n/format";
 import {
   useInfiniteQuery,
   useMutation,
@@ -19,11 +21,6 @@ import {
   customerVisitOptions,
   customerVisitsOptions,
 } from "./customer-visit-query";
-
-const visitDate = {
-  ja: new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-};
 
 export function CustomerVisits({ storeId }: { storeId: string }) {
   const { t, locale } = useI18n();
@@ -54,18 +51,18 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
                     {group.map((visit) => (
                       <li key={visit.sessionId}>
                         <Link
-                          className="flex min-h-20 items-center justify-between gap-4 rounded-xl bg-secondary/60 p-4 hover:bg-secondary"
+                          className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control p-4 shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                           to="/member/$storeId/visits/$sessionId"
                           params={{ storeId, sessionId: visit.sessionId }}
                         >
                           <span className="min-w-0">
-                            <span className="block font-medium wrap-anywhere">
-                              {visitDate[locale].format(visit.openedAt)} · {visit.tableName}
+                            <span className="block font-medium wrap-break-word">
+                              {calendarDate(visit.openedAt, locale)} · {visit.tableName}
                             </span>
                             <span className="mt-1 block text-sm text-muted-foreground">
-                              {visit.participants
-                                .map((person) => person.name ?? t("customer_anonymous"))
-                                .join(" · ")}
+                              {visit.participants.map((person) => (
+                                <ParticipantIdentity key={person.id} name={person.name} />
+                              ))}
                             </span>
                           </span>
                           <ArrowRight aria-hidden className="size-4 shrink-0" />
@@ -160,8 +157,8 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
     <article className="space-y-7">
       <header className="space-y-2">
         <p className="text-sm text-muted-foreground">{t("customer_visits")}</p>
-        <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
-          {visitDate[locale].format(data.openedAt)} · {data.tableName}
+        <h1 className="text-2xl font-semibold tracking-tight wrap-break-word">
+          {calendarDate(data.openedAt, locale)} · {data.tableName}
         </h1>
         <p
           role="status"
@@ -174,7 +171,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         to="/member/$storeId/coupons"
         params={{ storeId }}
         search={{ sessionId }}
-        className="flex min-h-14 items-center justify-between gap-4 rounded-xl bg-secondary/60 px-4 py-3 font-medium hover:text-primary"
+        className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control px-4 py-3 font-medium shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {t("customer_owned_coupons")}
         <ArrowRight aria-hidden className="size-4 shrink-0" />
@@ -188,7 +185,9 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         <ul className="space-y-3">
           {data.participants.map((person) => (
             <li key={person.id} className="flex flex-wrap items-center gap-2">
-              <span>{person.name ?? t("customer_anonymous")}</span>
+              <span>
+                <ParticipantIdentity name={person.name} />
+              </span>
               {person.id === data.participantId && <small>{t("customer_you")}</small>}
               {person.leftAt !== null && (
                 <small className="text-muted-foreground">{t("customer_disconnected")}</small>

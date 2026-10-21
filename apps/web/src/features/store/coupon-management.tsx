@@ -1,6 +1,10 @@
+import { UserIdentity } from "../../components/user-identity";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "../../components/ui/select";
+import { Badge } from "../../components/ui/badge";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "../../components/page-header";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Plus, Ticket } from "lucide-react";
 import { useAppForm } from "../../components/form";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
@@ -17,6 +21,7 @@ export function CouponManagement() {
   const { t, locale } = useI18n();
   const query = useInfiniteQuery(couponRulesOptions(store.id));
   type CouponRule = NonNullable<typeof query.data>["pages"][number]["rules"][number];
+  const editOrigin = useRef<HTMLButtonElement | null>(null);
   const [editing, setEditing] = useState<"new" | CouponRule | null>(null);
   const rules = query.data?.pages.flatMap((page) => page.rules) ?? [];
   const current =
@@ -28,8 +33,22 @@ export function CouponManagement() {
     <section className="space-y-6">
       <PageHeader
         title={t("coupon_rules")}
+        icon={<Ticket />}
         description={t("coupon_version_note")}
-        actions={canEdit && <Button onClick={() => setEditing("new")}>{t("coupon_new")}</Button>}
+        actions={
+          canEdit && (
+            <Button
+              disabled={editing !== null}
+              onClick={(event) => {
+                editOrigin.current = event.currentTarget;
+                setEditing("new");
+              }}
+            >
+              <Plus />
+              {t("coupon_new")}
+            </Button>
+          )
+        }
       />
       <div className="max-w-3xl space-y-6">
         <ErrorNotice
@@ -52,6 +71,10 @@ export function CouponManagement() {
                 : undefined
             }
             onSaved={() => setEditing(null)}
+            onCancel={() => {
+              setEditing(null);
+              requestAnimationFrame(() => editOrigin.current?.focus());
+            }}
           />
         )}
         <ul className="space-y-4">
@@ -59,11 +82,12 @@ export function CouponManagement() {
             <li key={rule.id} className="space-y-3">
               <Button
                 variant="outline"
-                disabled={!canEdit}
+                disabled={!canEdit || editing !== null}
                 aria-pressed={editing !== "new" && editing?.id === rule.id}
-                onClick={() =>
-                  setEditing(editing !== "new" && editing?.id === rule.id ? null : rule)
-                }
+                onClick={(event) => {
+                  editOrigin.current = event.currentTarget;
+                  setEditing(rule);
+                }}
               >
                 {rule.rules.title[locale]} · v{rule.version} · {t(`coupon_${rule.rules.trigger}`)}
               </Button>
@@ -75,7 +99,7 @@ export function CouponManagement() {
             {t("customer_more")}
           </Button>
         )}
-        {canEdit && (
+        {canEdit && rules.some((rule) => rule.active && rule.rules.trigger === "manual") && (
           <ManualCouponIssue
             storeId={store.id}
             rules={rules.flatMap((rule) =>
@@ -116,9 +140,17 @@ function ManualCouponIssue({
     },
   });
   const form = useAppForm({
-    defaultValues: { ruleId: "", membershipId: "" },
+    defaultValues: {
+      ruleId: "",
+      membership: null as
+        | NonNullable<typeof members.data>["pages"][number]["members"][number]
+        | null,
+    },
     onSubmit: async ({ value }) => {
-      await issue.mutateAsync(value).catch(() => undefined);
+      if (!value.membership) return;
+      await issue
+        .mutateAsync({ ruleId: value.ruleId, membershipId: value.membership.id })
+        .catch(() => undefined);
     },
   });
   return (
@@ -157,29 +189,42 @@ function ManualCouponIssue({
         <Input value={search} onChange={(e) => setSearch(e.target.value)} />
       </label>
       <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
-      <form.Field name="membershipId">
-        {(field) => (
-          <label className="grid gap-2">
-            {t("coupon_member")}
-            <NativeSelect
-              required
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value);
-                setKey(crypto.randomUUID());
-              }}
-            >
-              <option value="">—</option>
-              {members.data?.pages.flatMap((page) =>
-                page.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} · {member.id.slice(-6)}
-                  </option>
-                )),
-              )}
-            </NativeSelect>
-          </label>
-        )}
+      <form.Field name="membership">
+        {(field) => {
+          const selectedMember = field.state.value;
+          const choices = members.data?.pages.flatMap((page) => page.members) ?? [];
+          if (selectedMember && !choices.some((person) => person.id === selectedMember.id))
+            choices.unshift(selectedMember);
+          return (
+            <div className="grid gap-2">
+              <span id="tablecast-coupon-member-label">{t("coupon_member")}</span>
+              <Select
+                required
+                name="membershipId"
+                value={selectedMember?.id ?? null}
+                onValueChange={(value) => {
+                  field.handleChange(choices.find((person) => person.id === value) ?? null);
+                  setKey(crypto.randomUUID());
+                }}
+              >
+                <SelectTrigger aria-labelledby="tablecast-coupon-member-label">
+                  {selectedMember ? (
+                    <UserIdentity compact user={selectedMember} />
+                  ) : (
+                    t("common_select")
+                  )}
+                </SelectTrigger>
+                <SelectContent className="max-w-[min(28rem,calc(100vw-2rem))]">
+                  {choices.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      <UserIdentity compact user={person} />
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        }}
       </form.Field>
       {members.hasNextPage && (
         <Button
@@ -191,7 +236,13 @@ function ManualCouponIssue({
         </Button>
       )}
       <form.AppForm>
-        <form.SubmitButton>{t("coupon_issue")}</form.SubmitButton>
+        <form.Subscribe selector={(state) => state.values}>
+          {(value) => (
+            <form.SubmitButton disabled={!value.ruleId || !value.membership}>
+              {t("coupon_issue")}
+            </form.SubmitButton>
+          )}
+        </form.Subscribe>
       </form.AppForm>
       <ActionFeedback
         pending={issue.isPending}
@@ -208,7 +259,14 @@ function IssuedCoupons({ storeId, canEdit }: { storeId: string; canEdit: boolean
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-semibold">{t("coupon_issued")}</h2>
-      <p>{t("coupon_revoke_note")}</p>
+      {query.data?.pages.some((page) => page.coupons.length > 0) && (
+        <p className="text-sm text-muted-foreground">{t("coupon_revoke_note")}</p>
+      )}
+      {query.isSuccess && query.data.pages.every((page) => page.coupons.length === 0) && (
+        <p className="rounded-xl border border-border bg-muted/50 p-5 text-muted-foreground">
+          {t("common_empty")}
+        </p>
+      )}
       <ErrorNotice
         error={query.error}
         onRetry={() => void query.refetch()}
@@ -217,10 +275,19 @@ function IssuedCoupons({ storeId, canEdit }: { storeId: string; canEdit: boolean
       {query.data?.pages.flatMap((page) =>
         page.coupons.map((coupon) => (
           <article key={coupon.id} className="space-y-3 rounded-xl border p-4">
-            <h3>
-              {coupon.name} · {coupon.rules.title[locale]}
-            </h3>
-            <p>{t(`coupon_${coupon.state}`)}</p>
+            <h3>{coupon.rules.title[locale]}</h3>
+            <UserIdentity compact user={coupon} />
+            <Badge
+              variant={
+                coupon.state === "available"
+                  ? "success"
+                  : coupon.state === "requested"
+                    ? "warning"
+                    : "inactive"
+              }
+            >
+              {t(`coupon_${coupon.state}`)}
+            </Badge>
             {canEdit && (coupon.state === "available" || coupon.state === "requested") && (
               <RevokeCoupon storeId={storeId} couponId={coupon.id} />
             )}

@@ -1,3 +1,4 @@
+import { dateTime } from "../../i18n/format";
 import type { Demo, DemoUpdate, ConfigDraft } from "@tablecast/api/schema";
 import { configurationIssueSchema } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
+import { Skeleton } from "../../components/ui/skeleton";
 import { Button } from "../../components/ui/button";
 import {
   Select,
@@ -45,7 +46,6 @@ export function DemoPage({
   device,
   portrait,
 }: { storeId: string; demoId?: string } & DemoDisplay) {
-  const { t } = useI18n();
   const navigate = useNavigate();
   const client = useQueryClient();
   const started = useRef(false);
@@ -72,14 +72,12 @@ export function DemoPage({
   if (demoId)
     return <DemoSession storeId={storeId} demoId={demoId} device={device} portrait={portrait} />;
   return (
-    <main className="p-6">
-      <h1>{t("demo_title")}</h1>
-      {create.isError ? (
-        <ErrorNotice error={create.error} onRetry={() => create.mutate()} />
-      ) : (
-        <LoadingState />
-      )}
-    </main>
+    <DemoPending
+      device={device}
+      portrait={portrait}
+      error={create.error}
+      onRetry={() => create.mutate()}
+    />
   );
 }
 
@@ -151,13 +149,12 @@ function DemoSession({
   const data = query.data;
   if (!data)
     return (
-      <main className="p-6">
-        {query.isPending ? (
-          <LoadingState />
-        ) : (
-          <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
-        )}
-      </main>
+      <DemoPending
+        device={device}
+        portrait={portrait}
+        error={query.error}
+        onRetry={() => void query.refetch()}
+      />
     );
   const pending = update.isPending || reset.isPending;
   const sourceError = data.sourceDraftId ? drafts.error : published.error;
@@ -170,9 +167,15 @@ function DemoSession({
   );
   const errors = configurationIssueSchema.array().safeParse(apiError(update.error)?.details);
   return (
-    <main className="flex h-dvh flex-col bg-background">
+    <main
+      data-page-motion
+      className="flex h-dvh flex-col bg-background [view-transition-name:tablecast-page]"
+    >
       <header className="z-10 max-h-96 shrink-0 overflow-y-auto border-b border-border bg-card">
-        <div className="flex items-center gap-2 overflow-x-auto p-2" data-testid="demo-toolbar">
+        <div
+          className="flex h-16 items-center gap-2 overflow-x-auto p-2"
+          data-testid="demo-toolbar"
+        >
           <div
             className="flex shrink-0 items-center gap-2 px-2 text-primary"
             title={t("demo_isolated")}
@@ -328,7 +331,7 @@ export function DemoSelect({
   );
 }
 
-type DemoDraft = Pick<ConfigDraft, "id" | "status" | "version" | "configuration">;
+type DemoDraft = Pick<ConfigDraft, "id" | "status" | "version" | "configuration" | "createdAt">;
 function demoConfigurationState(
   data: Demo,
   drafts: DemoDraft[] | undefined,
@@ -359,7 +362,7 @@ function DemoConfigurationSelect({
   pending: boolean;
   onChange: (value: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   return (
     <DemoSelect
       icon={<FileStack />}
@@ -370,13 +373,13 @@ function DemoConfigurationSelect({
         { value: "published", label: t("demo_published") },
         ...draftItems.map((draft) => ({
           value: draft.id,
-          label: `${t("demo_draft")} ${draft.id.slice(0, 8)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
+          label: `${t("demo_draft")} ${dateTime(draft.createdAt, locale)} · v${draft.id === data.sourceDraftId ? data.sourceVersion : draft.version}`,
         })),
         ...(data.sourceDraftId && !draftItems.some((draft) => draft.id === data.sourceDraftId)
           ? [
               {
                 value: data.sourceDraftId,
-                label: `${t("demo_draft")} ${data.sourceDraftId.slice(0, 8)}`,
+                label: t("demo_draft"),
               },
             ]
           : []),
@@ -459,5 +462,43 @@ function DemoDisplayControls({
         {t("demo_rotate")}
       </Button>
     </>
+  );
+}
+
+export function DemoPending({
+  device = "ipad",
+  portrait = false,
+  error,
+  onRetry,
+}: DemoDisplay & { error?: unknown; onRetry?: () => void }) {
+  const { t } = useI18n();
+  return (
+    <main
+      data-page-motion
+      className="flex h-dvh flex-col bg-background [view-transition-name:tablecast-page]"
+    >
+      <header className="z-10 shrink-0 border-b border-border bg-card">
+        <div className="flex h-16 items-center gap-2 overflow-hidden p-2" aria-busy={!error}>
+          <div className="flex shrink-0 items-center gap-2 px-2 text-primary">
+            <FlaskConical className="size-5" />
+            <h1 className="sr-only xl:not-sr-only xl:text-sm xl:font-semibold">
+              {t("demo_title")}
+            </h1>
+          </div>
+          {[
+            { id: "device", width: "w-36" },
+            { id: "rotate", width: "w-11" },
+            { id: "configuration", width: "w-44" },
+            { id: "reload", width: "w-11" },
+            { id: "plan", width: "w-32" },
+            { id: "guests", width: "w-20" },
+          ].map(({ id, width }) => (
+            <Skeleton key={id} className={`h-12 shrink-0 ${width}`} />
+          ))}
+        </div>
+        <ErrorNotice error={error} onRetry={onRetry} />
+      </header>
+      <DemoViewport device={device} portrait={portrait} />
+    </main>
   );
 }

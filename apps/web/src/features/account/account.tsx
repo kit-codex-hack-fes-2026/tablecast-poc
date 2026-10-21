@@ -35,6 +35,7 @@ import {
 import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 import { SettingsShell } from "../shell/settings-shell";
+import { sessionDeviceName } from "./session-device-model";
 
 function useAccount(pending: boolean) {
   const { t } = useI18n();
@@ -134,7 +135,7 @@ function AccountProfile({ controller }: { controller: ReturnType<typeof useAccou
       </h2>
       <div className="flex flex-wrap items-center gap-4">
         {session.data && <UserIdentity user={session.data.user} />}
-        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-input bg-white px-4 hover:bg-secondary focus-within:outline-3 focus-within:outline-offset-2">
+        <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-input bg-card px-4 hover:bg-secondary focus-within:outline-3 focus-within:outline-offset-2">
           <ImagePlus className="size-5" />
           {t("account_avatar")}
           <input
@@ -466,7 +467,7 @@ function loginSessionColumns(
           <Monitor className="shrink-0" />
           <div>
             <p className="wrap-break-word text-sm">
-              {row.original.userAgent || t("account_device")}
+              {sessionDeviceName(row.original.userAgent, t("account_device"))}
             </p>
             {row.original.id === currentId && (
               <Badge variant="secondary">
@@ -499,7 +500,7 @@ function loginSessionColumns(
       cell: ({ row }) => (
         <ConfirmAction
           label={t("account_revoke")}
-          subject={row.original.userAgent || t("account_device")}
+          subject={sessionDeviceName(row.original.userAgent, t("account_device"))}
           disabled={pending}
           icon={<LogOut />}
           onConfirm={() =>

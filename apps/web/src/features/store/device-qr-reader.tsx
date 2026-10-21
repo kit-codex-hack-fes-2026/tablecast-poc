@@ -158,7 +158,7 @@ function CameraReader({
         muted
         playsInline
         aria-label={t("device_scan_camera")}
-        className="aspect-square w-full rounded-xl bg-black object-cover"
+        className="aspect-square w-full rounded-xl bg-inverse object-cover"
       />
       <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
         <Camera className="size-4 shrink-0" />

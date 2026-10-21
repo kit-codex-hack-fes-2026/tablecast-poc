@@ -1,0 +1,75 @@
+import { Tooltip } from "@base-ui/react/tooltip";
+import { createLink, type LinkComponent } from "@tanstack/react-router";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
+import { forwardRef, type ComponentProps, type ReactElement } from "react";
+import { cn } from "tailwind-variants";
+import { surfaceMotion } from "../../components/ui/motion-variants";
+import { navigationItemClass } from "./navigation-group";
+
+/** 縮小表示でもリンクと選択操作の名前をhover・キーボードで確認できる。 */
+export function SidebarTooltip({
+  label,
+  collapsed,
+  children,
+}: {
+  label: string;
+  collapsed: boolean;
+  children: ReactElement;
+}) {
+  return (
+    <Tooltip.Root disabled={!collapsed}>
+      <Tooltip.Trigger render={children} />
+      <Tooltip.Portal>
+        <Tooltip.Positioner side="right" sideOffset={12} className="z-50">
+          <Tooltip.Popup
+            className={cn(
+              "max-w-64 rounded-xl border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-surface",
+              surfaceMotion(),
+            )}
+          >
+            {label}
+          </Tooltip.Popup>
+        </Tooltip.Positioner>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
+
+const NavigationAnchor = forwardRef<
+  HTMLAnchorElement,
+  ComponentProps<"a"> & { collapsed?: boolean }
+>(function NavigationAnchor(
+  { collapsed = false, title, className = navigationItemClass, children, ...props },
+  ref,
+) {
+  const reduced = useReducedMotion();
+  return (
+    <SidebarTooltip label={title ?? ""} collapsed={collapsed}>
+      <a
+        {...props}
+        ref={ref}
+        className={className}
+        data-collapsed={collapsed}
+        aria-label={props["aria-label"] ?? title}
+      >
+        {children}
+        {props["aria-current"] === "page" && (
+          <m.span
+            aria-hidden
+            data-slot="navigation-selection"
+            layoutId="navigation-selection"
+            initial={false}
+            transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+            className="pointer-events-none absolute left-0 top-1/4 h-1/2 w-0.5 rounded-full bg-(--nav-color,var(--color-foreground))"
+          />
+        )}
+      </a>
+    </SidebarTooltip>
+  );
+});
+
+const RouterNavigationLink = createLink(NavigationAnchor);
+export const NavigationLink: LinkComponent<typeof NavigationAnchor> = (props) => (
+  <RouterNavigationLink {...props} />
+);

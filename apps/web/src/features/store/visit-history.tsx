@@ -112,6 +112,7 @@ function visitHistoryTableColumns(
     },
     {
       id: "total",
+      meta: { align: "right" },
       header: t("admin_visit_total"),
       cell: ({ row }) => (
         <span className="whitespace-nowrap tabular-nums">

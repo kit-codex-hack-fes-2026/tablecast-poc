@@ -1,3 +1,4 @@
+import { surfaceMotion } from "./motion-variants";
 import { StyleScopeBoundary } from "./style-scope";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn, tv, type VariantProps } from "tailwind-variants";
@@ -6,7 +7,7 @@ import { Button } from "./button";
 
 const dialogVariants = tv({
   slots: {
-    viewport: "fixed inset-0 z-41 flex",
+    viewport: "fixed inset-0 z-41 flex data-ending-style:pointer-events-none",
     popup: "flex flex-col bg-card shadow-2xl",
   },
   variants: {
@@ -40,6 +41,15 @@ export function DialogDescription({ className, ...props }: DialogPrimitive.Descr
   );
 }
 
+/**
+ * 短い確認や詳細を重ねて表示する。
+ * Dialogにopen/onOpenChange、DialogContentにside(center/right/left)とinitialFocus/finalFocusを渡す。
+ * Header内のTitle、Description、Close、Scroll、Footerを組み合わせる。
+ * 閉じるアイコンにはaria-labelが必須。
+ * 長い内容はScrollへ置き、操作を隠さない。
+ * 破壊操作にはConfirmActionを使う。
+ * Portalのテーマは内部で引き継ぐ。
+ */
 export function DialogContent({
   className,
   side = "center",
@@ -49,14 +59,24 @@ export function DialogContent({
   return (
     <DialogPrimitive.Portal>
       <StyleScopeBoundary>
-        <DialogPrimitive.Backdrop className="fixed inset-0 bg-foreground/35 backdrop-blur-xs z-40" />
+        <DialogPrimitive.Backdrop
+          className={cn("fixed inset-0 bg-overlay z-40", surfaceMotion({ kind: "backdrop" }))}
+        />
         <DialogPrimitive.Viewport className={viewport()}>
           <DialogPrimitive.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
             {...props}
             data-slot="dialog-content"
             data-theme-part="dialog"
             className={(state) =>
-              popup({ className: typeof className === "function" ? className(state) : className })
+              popup({
+                className: cn(
+                  surfaceMotion({ kind: side === "center" ? "dialog" : side }),
+                  typeof className === "function" ? className(state) : className,
+                ),
+              })
             }
           />
         </DialogPrimitive.Viewport>

@@ -1,28 +1,19 @@
+import { controlMotion, surfaceMotion } from "../../components/ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { Brand } from "../../components/brand";
-import { Collapsible } from "@base-ui/react/collapsible";
 import { Menu } from "@base-ui/react/menu";
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { Link, useHydrated } from "@tanstack/react-router";
+import { Tooltip } from "@base-ui/react/tooltip";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, type ReactNode } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpRight,
-  Building2,
-  CreditCard,
-  ChevronRight,
+  AudioLines,
   ChevronsUpDown,
   CircleAlert,
-  History,
-  Gamepad2,
-  Gift,
-  LayoutDashboard,
   LogOut,
-  MonitorSmartphone,
-  Plug,
-  Settings2,
   Tablet,
-  Store,
   UserRound,
-  Users,
 } from "lucide-react";
 import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
@@ -36,11 +27,14 @@ import {
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
-import { MenuNavigation } from "./menu-navigation";
+import { NavigationLink, SidebarTooltip } from "./navigation-link";
+import { SidebarNavigation } from "./sidebar-navigation";
+import { navigationItemClass as sidebarItemClass } from "./navigation-group";
+import { useSidebarPreferences } from "./sidebar-preferences";
 import { useConfigurationRoute } from "./configuration-route";
 import { storesOptions, type loadStores } from "../store/store-query";
 
-import { authClient } from "../../lib/auth-client";
+import { authClient, authResult } from "../../lib/auth-client";
 
 type Tab = "live" | "history" | "settings";
 export type AdminSidebarProps = {
@@ -51,75 +45,77 @@ export type AdminSidebarProps = {
   signingOut?: boolean;
   renderStorePicker?: (options: { collapsed: boolean; onNavigate?: () => void }) => ReactNode;
 };
-const sidebarItemClass =
-  "flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-base text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:font-medium data-[status=active]:bg-secondary data-[status=active]:font-medium";
 export function AdminSidebar({
   tab,
-  storeId,
-  organizationId,
   onSignOut,
   signingOut,
   renderStorePicker,
   collapsed = false,
+  selection,
   onNavigate,
-}: AdminSidebarProps & { collapsed?: boolean; onNavigate?: () => void }) {
+}: AdminSidebarProps & {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+  selection: ReturnType<typeof useSidebarStore>;
+}) {
   const { t } = useI18n();
-  const session = useQuery(sessionOptions);
-  const { active: inMenu, draftId } = useConfigurationRoute();
-  const stores = useQuery({ ...storesOptions, enabled: !!session.data });
-  const availableStores = stores.data?.stores ?? [];
-  const selectedStore =
-    storeId ??
-    (organizationId
-      ? availableStores.find((store) => store.organizationId === organizationId)?.id
-      : undefined);
+  const { draftId } = useConfigurationRoute();
+  const { session, stores, availableStores, selectedStore, selectedOrganization, change, manager } =
+    selection;
 
   return (
-    <>
+    <Tooltip.Provider delay={250}>
       <Link
         to="/admin/live"
-        className="flex h-14 shrink-0 items-center gap-2 px-2 font-semibold"
+        className={`flex h-14 shrink-0 items-center gap-2 font-semibold ${collapsed ? "justify-center" : "px-2"}`}
         onClick={onNavigate}
       >
         <Brand variant={collapsed ? "symbol" : "logo"} />
       </Link>
-      {renderStorePicker && (
-        <div className="shrink-0 pb-3">{renderStorePicker({ collapsed, onNavigate })}</div>
-      )}
+      <div className="shrink-0 pb-3">
+        {renderStorePicker ? (
+          renderStorePicker({ collapsed, onNavigate })
+        ) : (
+          <StorePicker
+            stores={availableStores}
+            selectedStore={selectedStore}
+            pending={stores.isPending || change.isPending}
+            error={stores.error ?? change.error}
+            collapsed={collapsed}
+            onChange={(id) => change.mutate(id, { onSuccess: () => onNavigate?.() })}
+          />
+        )}
+      </div>
       <SidebarNavigation
         tab={tab}
         selectedStore={selectedStore}
-        selectedOrganization={
-          organizationId ??
-          availableStores.find((store) => store.id === selectedStore)?.organizationId
-        }
+        manager={manager}
+        selectedOrganization={selectedOrganization}
+        userId={session.data?.user.id}
         collapsed={collapsed}
         onNavigate={onNavigate}
-        inMenu={inMenu}
         draftId={draftId}
       />
-      <div className="space-y-2 border-t border-border py-3">
-        {selectedStore &&
-          ["owner", "admin"].includes(
-            availableStores.find((store) => store.id === selectedStore)?.role ?? "",
-          ) && (
-            <DemoLink
-              storeId={selectedStore}
-              collapsed={collapsed}
-              className={sidebarItemClass}
-              onNavigate={onNavigate}
-            />
-          )}
-        <Link
+      <div className="flex flex-col gap-2 border-t border-border py-3">
+        {selectedStore && manager && (
+          <DemoLink
+            storeId={selectedStore}
+            collapsed={collapsed}
+            className={sidebarItemClass}
+            onNavigate={onNavigate}
+          />
+        )}
+        <NavigationLink
+          collapsed={collapsed}
           className={sidebarItemClass}
           to="/"
           title={t("auth_guest")}
           aria-label={t("auth_guest")}
           onClick={onNavigate}
         >
-          <ArrowUpRight className="size-5 shrink-0" />
+          <Tablet className="size-5 shrink-0" />
           {!collapsed && t("auth_guest")}
-        </Link>
+        </NavigationLink>
         <SidebarUserMenu
           user={session.data?.user}
           collapsed={collapsed}
@@ -127,7 +123,7 @@ export function AdminSidebar({
           onSignOut={onSignOut}
         />
       </div>
-    </>
+    </Tooltip.Provider>
   );
 }
 
@@ -144,7 +140,8 @@ function DemoLink({
 }) {
   const { t } = useI18n();
   return (
-    <Link
+    <NavigationLink
+      collapsed={collapsed}
       className={className}
       to="/admin/stores/$storeId/demo"
       params={{ storeId }}
@@ -155,236 +152,10 @@ function DemoLink({
       aria-label={t("demo_open")}
       onClick={onNavigate}
     >
-      <Tablet className="size-5 shrink-0" />
-      {!collapsed && t("demo_title")}
-      {!collapsed && <ArrowUpRight className="ml-auto size-4" />}
-    </Link>
-  );
-}
-
-function SidebarNavigation({
-  tab,
-  selectedStore,
-  selectedOrganization,
-  collapsed,
-  onNavigate,
-  inMenu,
-  draftId,
-}: Pick<AdminSidebarProps, "tab"> & {
-  selectedStore?: string;
-  selectedOrganization?: string;
-  collapsed: boolean;
-  onNavigate?: () => void;
-  inMenu: boolean;
-  draftId?: string;
-}) {
-  const { t } = useI18n();
-  const hydrated = useHydrated();
-  return (
-    <nav
-      className="flex-1 space-y-1 overflow-y-auto border-t border-border py-3"
-      aria-label={t("admin_navigation")}
-    >
-      {selectedStore && (
-        <>
-          {!collapsed && (
-            <h2 className="px-2 pb-2 text-xs font-semibold text-muted-foreground">
-              {t("nav_operations")}
-            </h2>
-          )}
-          <Link
-            className={sidebarItemClass}
-            to="/admin/stores/$storeId/floor"
-            params={{ storeId: selectedStore }}
-            onClick={onNavigate}
-            title={t("admin_live")}
-          >
-            <LayoutDashboard className="size-5 shrink-0" />
-            {!collapsed && t("admin_live")}
-          </Link>
-          <Link
-            className={sidebarItemClass}
-            to="/admin/stores/$storeId/visits"
-            params={{ storeId: selectedStore }}
-            onClick={onNavigate}
-            title={t("admin_history")}
-          >
-            <History className="size-5 shrink-0" />
-            {!collapsed && t("admin_history")}
-          </Link>
-          <div className="pt-4">
-            {collapsed ? (
-              <Link
-                className={sidebarItemClass}
-                to="/admin/stores/$storeId/menu/$section"
-                params={{ storeId: selectedStore, section: "products" }}
-                title={t("admin_config")}
-                onClick={onNavigate}
-              >
-                <Settings2 className="size-5 shrink-0" />
-              </Link>
-            ) : (
-              <Collapsible.Root key={String(inMenu)} defaultOpen={inMenu}>
-                <Collapsible.Trigger disabled={!hydrated} className={`${sidebarItemClass} group`}>
-                  <Settings2 className="size-5 shrink-0" />
-                  {t("admin_config")}
-                  <ChevronRight className="ml-auto size-4 shrink-0 group-aria-expanded:rotate-90" />
-                </Collapsible.Trigger>
-                <Collapsible.Panel>
-                  <MenuNavigation
-                    storeId={selectedStore}
-                    draftId={draftId}
-                    onNavigate={onNavigate}
-                  />
-                  <Link
-                    className={`${sidebarItemClass} ml-4 w-auto`}
-                    to="/admin/stores/$storeId/games"
-                    params={{ storeId: selectedStore }}
-                    onClick={onNavigate}
-                  >
-                    <Gamepad2 className="size-4 shrink-0" />
-                    {t("games_title")}
-                  </Link>
-                </Collapsible.Panel>
-              </Collapsible.Root>
-            )}
-          </div>
-          {collapsed && (
-            <Link
-              className={sidebarItemClass}
-              to="/admin/stores/$storeId/games"
-              params={{ storeId: selectedStore }}
-              title={t("games_title")}
-              onClick={onNavigate}
-            >
-              <Gamepad2 className="size-5 shrink-0" />
-            </Link>
-          )}
-          {(
-            [
-              {
-                label: "nav_rewards",
-                items: [
-                  {
-                    to: "/admin/stores/$storeId/points",
-                    label: "customer_points_policy",
-                    Icon: Gift,
-                  },
-                  { to: "/admin/stores/$storeId/coupons", label: "coupons", Icon: Gift },
-                ],
-              },
-              {
-                label: "nav_store_management",
-                items: [
-                  { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
-                  {
-                    to: "/admin/stores/$storeId/devices",
-                    label: "device_title",
-                    Icon: MonitorSmartphone,
-                  },
-                  { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
-                ],
-              },
-            ] as const
-          ).map((group) => (
-            <section key={group.label} className="space-y-1 pt-4" aria-label={t(group.label)}>
-              {!collapsed && (
-                <h2 className="px-2 pb-1 text-xs font-semibold text-muted-foreground">
-                  {t(group.label)}
-                </h2>
-              )}
-              {group.items.map(({ to, label, Icon }) => (
-                <Link
-                  key={to}
-                  className={sidebarItemClass}
-                  to={to}
-                  params={{ storeId: selectedStore }}
-                  title={t(label)}
-                  onClick={onNavigate}
-                >
-                  <Icon className="size-5 shrink-0" />
-                  {!collapsed && t(label)}
-                </Link>
-              ))}
-              {group.label === "nav_store_management" && (
-                <BillingNavigation
-                  organizationId={selectedOrganization}
-                  tab={tab}
-                  collapsed={collapsed}
-                  onNavigate={onNavigate}
-                />
-              )}
-            </section>
-          ))}
-        </>
-      )}
-      <div className="h-4" />
-      {!collapsed && (
-        <p className="px-2 pb-2 text-sm font-medium text-muted-foreground">{t("nav_management")}</p>
-      )}
-      <Link
-        className={sidebarItemClass}
-        to="/organisations"
-        title={t("stores_title")}
-        aria-label={t("stores_title")}
-        aria-current={tab === "organisations" ? "page" : undefined}
-        onClick={onNavigate}
-      >
-        <Building2 className="size-5 shrink-0" />
-        {!collapsed && t("stores_title")}
-      </Link>
-      <Link
-        className={sidebarItemClass}
-        to="/account/mcp-sessions"
-        data-status={tab === "mcp" ? "active" : undefined}
-        onClick={onNavigate}
-        title={t("mcp_sessions")}
-      >
-        <Plug className="size-5 shrink-0" />
-        {!collapsed && t("mcp_sessions")}
-      </Link>
-      <Link
-        className={sidebarItemClass}
-        to="/account"
-        activeOptions={{ exact: true }}
-        title={t("account_title")}
-        aria-label={t("account_title")}
-        aria-current={tab === "account" ? "page" : undefined}
-        onClick={onNavigate}
-      >
-        <UserRound className="size-5 shrink-0" />
-        {!collapsed && t("account_title")}
-      </Link>
-    </nav>
-  );
-}
-
-function BillingNavigation({
-  organizationId: selectedOrganization,
-  tab,
-  collapsed,
-  onNavigate,
-}: {
-  organizationId?: string;
-  tab: AdminSidebarProps["tab"];
-  collapsed: boolean;
-  onNavigate?: () => void;
-}) {
-  const { t } = useI18n();
-  if (!selectedOrganization) return null;
-  return (
-    <Link
-      className={sidebarItemClass}
-      to="/billing/$organizationId"
-      params={{ organizationId: selectedOrganization }}
-      title={t("billing_title")}
-      aria-label={t("billing_title")}
-      aria-current={tab === "billing" ? "page" : undefined}
-      onClick={onNavigate}
-    >
-      <CreditCard className="size-5 shrink-0" />
-      {!collapsed && t("billing_title")}
-    </Link>
+      <AudioLines className="size-5 shrink-0" />
+      {!collapsed && <span className="min-w-0">{t("demo_title")}</span>}
+      {!collapsed && <ArrowUpRight className="ml-auto size-4" aria-hidden="true" />}
+    </NavigationLink>
   );
 }
 
@@ -415,21 +186,23 @@ export function StorePicker({
           if (value) onChange(value);
         }}
       >
-        <SelectTrigger
-          className={`min-w-0 justify-start border-0 bg-transparent shadow-none hover:bg-secondary ${collapsed ? "gap-1 px-1" : "px-2"}`}
-          aria-label={t("stores_title")}
-          title={selected?.name}
-        >
-          <StoreIcon
-            name={selected?.name ?? t("admin_store")}
-            logo={selected?.logo}
-            className={collapsed ? "size-7" : undefined}
-          />
-          <SelectValue
-            className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate text-left"}
-            placeholder={t("stores_title")}
-          />
-        </SelectTrigger>
+        <SidebarTooltip label={selected?.name ?? t("stores_title")} collapsed={collapsed}>
+          <SelectTrigger
+            showIndicator={!collapsed}
+            className={`min-w-0 border-0 bg-transparent shadow-none hover:bg-control-hover ${collapsed ? "justify-center px-0" : "justify-start px-2"}`}
+            aria-label={t("stores_title")}
+          >
+            <StoreIcon
+              name={selected?.name ?? t("admin_store")}
+              logo={selected?.logo}
+              className={collapsed ? "size-7" : undefined}
+            />
+            <SelectValue
+              className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate text-left"}
+              placeholder={t("stores_title")}
+            />
+          </SelectTrigger>
+        </SidebarTooltip>
         <SelectContent>
           {stores.map((store) => (
             <SelectItem key={store.id} value={store.id}>
@@ -467,36 +240,50 @@ function SidebarUserMenu({
   const { t } = useI18n();
   return (
     <Menu.Root>
-      <Menu.Trigger
-        className="flex w-full min-w-0 items-center gap-2 rounded-lg p-2 text-left hover:bg-secondary"
-        aria-label={t("account_title")}
-        title={user?.name}
-      >
-        {user &&
-          (collapsed ? (
-            <UserRound className="size-4" />
+      <SidebarTooltip label={t("account_title")} collapsed={collapsed}>
+        <Menu.Trigger
+          className={`${controlMotion} flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring ${collapsed ? "justify-center p-0" : "p-2"}`}
+          aria-label={t("account_title")}
+        >
+          {collapsed || !user ? (
+            <UserRound className="size-5 shrink-0" />
           ) : (
             <>
-              <UserIdentity user={user} compact />
+              <span className="min-w-0 flex-1">
+                <UserIdentity user={user} compact truncate />
+              </span>
               <ChevronsUpDown className="ml-auto size-4 shrink-0" />
             </>
-          ))}
-      </Menu.Trigger>
+          )}
+        </Menu.Trigger>
+      </SidebarTooltip>
       <Menu.Portal>
         <Menu.Positioner side="top" align="start" sideOffset={8} className="z-50">
-          <Menu.Popup className="w-64 rounded-xl border border-border bg-white p-1 shadow-lg">
+          <Menu.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              "w-80 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-2 shadow-surface",
+              surfaceMotion(),
+            )}
+          >
             {user && (
-              <div className="border-b border-border p-2">
+              <div className="mb-2 border-b border-border p-3">
                 <UserIdentity user={user} compact />
               </div>
             )}
-            <Menu.Item render={<Link to="/account" />} className={sidebarItemClass}>
+            <Menu.Item
+              render={<Link to="/account" />}
+              className={`${sidebarItemClass} justify-start`}
+            >
               <UserRound className="size-4" />
               {t("account_title")}
             </Menu.Item>
             <Menu.Item
+              nativeButton
               render={<Button variant="ghost" />}
-              className={sidebarItemClass}
+              className={`${sidebarItemClass} justify-start`}
               disabled={signingOut}
               onClick={
                 onSignOut ??
@@ -513,4 +300,64 @@ function SidebarUserMenu({
       </Menu.Portal>
     </Menu.Root>
   );
+}
+
+export function useSidebarStore({
+  storeId,
+  organizationId,
+  tab,
+}: Pick<AdminSidebarProps, "storeId" | "organizationId" | "tab">) {
+  const session = useQuery(sessionOptions);
+  const stores = useQuery({ ...storesOptions, enabled: !!session.data });
+  const availableStores = stores.data?.stores ?? [];
+  const { preferences, update } = useSidebarPreferences(session.data?.user.id);
+  const activeOrganization = organizationId ?? session.data?.session?.activeOrganizationId;
+  const remembered = availableStores.find((store) => store.id === preferences.storeId);
+  const selected =
+    availableStores.find((store) => store.id === storeId) ??
+    (organizationId
+      ? availableStores.find((store) => store.organizationId === organizationId)
+      : (remembered ??
+        availableStores.find((store) => store.organizationId === activeOrganization)));
+  const selectedStore = storeId ?? selected?.id;
+  const selectedOrganization =
+    organizationId ?? selected?.organizationId ?? activeOrganization ?? undefined;
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (selected && preferences.storeId !== selected.id) update({ storeId: selected.id });
+  }, [selected, preferences.storeId, update]);
+  const change = useMutation({
+    mutationFn: async (id: string) => {
+      const next = availableStores.find((store) => store.id === id);
+      if (!next) throw new Error("STORE_NOT_FOUND");
+      authResult(await authClient.organization.setActive({ organizationId: next.organizationId }));
+      return next;
+    },
+    onSuccess: async (next) => {
+      update({ storeId: next.id });
+      client.setQueryData(sessionOptions.queryKey, (current) => {
+        if (!current) return current;
+        const updated = structuredClone(current);
+        updated.session.activeOrganizationId = next.organizationId;
+        return updated;
+      });
+      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
+      await navigate(
+        tab === "billing"
+          ? { to: "/billing/$organizationId", params: { organizationId: next.organizationId } }
+          : { to: "/admin/stores/$storeId", params: { storeId: next.id } },
+      );
+    },
+  });
+
+  return {
+    session,
+    stores,
+    availableStores,
+    selectedStore,
+    selectedOrganization,
+    change,
+    manager: ["owner", "admin"].includes(selected?.role ?? ""),
+  };
 }

@@ -21,6 +21,18 @@ export const menuLabels = {
   plans: "editor_plans",
   cast: "editor_cast",
 } as const;
+/** 取得済みの公開版・下書きから表示名だけをheadへ渡す。内部IDは表示しない。 */
+export function menuDocument(configuration: Configuration, section: MenuSection, itemId?: string) {
+  const item =
+    section !== "cast" && itemId
+      ? configuration[section].find((candidate) => candidate.id === itemId)
+      : undefined;
+  return {
+    title: menuLabels[section],
+    name: item ? { ja: item.text.ja.displayName, en: item.text.en.displayName } : undefined,
+  };
+}
+
 export function addMenuItem(
   configuration: Configuration,
   section: MenuSection,

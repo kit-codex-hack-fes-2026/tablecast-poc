@@ -95,3 +95,27 @@ describe("日本語の会計入力", () => {
     expect(requests).toMatchObject([{ amount, kind: "adjustment", reason: "会計調整" }]);
   });
 });
+
+it("終了した来店の会計調整を取り消すと送信せず、開始ボタンへフォーカスを戻す", async () => {
+  await render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <PaymentForm storeId="tablecast-store" sessionId="tablecast-session" closed />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await page.getByRole("button", { name: ja.admin_adjustment, exact: true }).click();
+  await expect
+    .element(page.getByRole("heading", { name: ja.admin_adjustment, exact: true }))
+    .toBeVisible();
+  await page.getByRole("spinbutton", { name: ja.admin_amount }).fill("-100");
+  await page.getByRole("textbox", { name: ja.admin_reason }).fill("入力を取り消す");
+  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(page.getByRole("spinbutton")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: ja.admin_adjustment, exact: true }))
+    .toHaveFocus();
+  expect(requests).toHaveLength(0);
+  await page.getByRole("button", { name: ja.admin_adjustment, exact: true }).click();
+  await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
+});

@@ -1,5 +1,10 @@
 import { expect } from "@playwright/test";
-import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
+import {
+  adminStateSchema,
+  catalogSchema,
+  configDraftSchema,
+  configurationReleaseSchema,
+} from "@tablecast/api/schema";
 import { test } from "./support/test";
 import { approveGuestDevice, signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
@@ -11,7 +16,7 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
   page,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   const storeId = "tablecast-hanul";
   const api = `/api/admin/stores/${storeId}`;
   const headers = { Origin: baseURL ?? "" };
@@ -54,9 +59,53 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await page.goto(`/admin/live?storeId=${storeId}&draftId=${draft.id}`);
     await page.getByRole("button", { name: "日本語", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
-    await expect(page.getByRole("button", { name: ja.admin_validate, exact: true })).toBeEnabled();
+    const configurationHeader = page.getByRole("region", { name: ja.workflow_context });
+    const validate = configurationHeader.getByRole("button", {
+      name: ja.admin_validate,
+      exact: true,
+    });
+    const publish = configurationHeader.getByRole("button", {
+      name: ja.admin_publish,
+      exact: true,
+    });
+    await expect(
+      configurationHeader.getByText(ja.workflow_changes_short.replace("{count}", "0")),
+    ).toBeVisible();
+    await expect(validate).toBeDisabled();
+    await expect(publish).toBeDisabled();
     await page.goto(`${reviewPath}/products/${product.id}`);
+    await page.getByRole("link", { name: ja.editor_basic_information, exact: true }).click();
     const price = page.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true });
+    try {
+      await expect(price).toBeVisible();
+    } catch (error) {
+      await testInfo.attach("tablecast-product-layout", {
+        body: JSON.stringify(
+          await page
+            .locator("form, fieldset, section, input[type=number]")
+            .evaluateAll((elements) =>
+              elements.map((element) => {
+                const style = getComputedStyle(element);
+                const bounds = element.getBoundingClientRect();
+                return {
+                  tag: element.tagName,
+                  id: element.id,
+                  className: element.getAttribute("class"),
+                  hidden: element.getAttribute("hidden"),
+                  display: style.display,
+                  visibility: style.visibility,
+                  contentVisibility: style.contentVisibility,
+                  bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+                };
+              }),
+            ),
+          null,
+          2,
+        ),
+        contentType: "application/json",
+      });
+      throw error;
+    }
     await price.fill(String(product.price + 100));
     await page.getByRole("button", { name: ja.common_save, exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: ja.account_saved })).toBeVisible();
@@ -65,8 +114,9 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(guestProduct).toContainText(money(product.price, "ja"));
 
     await page.goto(reviewPath);
-    await page.getByRole("button", { name: ja.admin_validate, exact: true }).click();
-    const publish = page.getByRole("button", { name: ja.admin_publish, exact: true });
+    await expect(validate).toBeEnabled();
+    await expect(publish).toBeDisabled();
+    await validate.click();
     await expect(publish).toBeEnabled();
     await publish.click();
     const confirmation = page.getByRole("dialog", { name: ja.workflow_publish_title, exact: true });
@@ -83,6 +133,44 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
     await kiosk.reload();
     await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+
+    const original = configurationReleaseSchema.parse(
+      await (await staff.get(`${api}/configuration/releases/${catalog.version}`)).json(),
+    );
+    await page.goto(`/admin/stores/${storeId}/menu/history`);
+    await page
+      .getByRole("button", {
+        name: ja.configuration_history_release.replace("{version}", String(catalog.version)),
+        exact: true,
+      })
+      .click();
+    await page.getByRole("button", { name: ja.configuration_history_use, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: ja.configuration_history_confirm, exact: true }),
+    ).toBeVisible();
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+    await page.getByRole("button", { name: ja.configuration_history_create, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/stores/${storeId}/menu/changes/[^/]+$`));
+    await expect(validate).toBeEnabled();
+    await expect(publish).toBeDisabled();
+    await validate.click();
+    await expect(publish).toBeEnabled();
+    await publish.click();
+    const restoreConfirmation = page.getByRole("dialog", {
+      name: ja.workflow_publish_title,
+      exact: true,
+    });
+    await expect(restoreConfirmation).toBeVisible();
+    await expect(guestProduct).toContainText(money(product.price + 100, "ja"));
+    await restoreConfirmation.getByRole("button", { name: ja.admin_publish, exact: true }).click();
+    await expect(restoreConfirmation).toHaveCount(0);
+    await expect(guestProduct).toContainText(money(product.price, "ja"));
+    const restoredCatalog = catalogSchema.parse(await (await staff.get(`${api}/catalog`)).json());
+    expect(restoredCatalog.version).toBe(catalog.version + 2);
+    const savedOriginal = configurationReleaseSchema.parse(
+      await (await staff.get(`${api}/configuration/releases/${catalog.version}`)).json(),
+    );
+    expect(savedOriginal.configuration).toEqual(original.configuration);
   } finally {
     await guest.close();
   }

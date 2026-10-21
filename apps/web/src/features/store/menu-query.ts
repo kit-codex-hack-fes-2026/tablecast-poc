@@ -47,3 +47,28 @@ export const standardVoicesOptions = (storeId: string, language: Locale) =>
     retry: false,
     staleTime: 60_000,
   });
+
+export const draftChoicesOptions = (storeId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["tablecast-draft-choices", storeId],
+    initialPageParam: null,
+    queryFn: ({
+      signal,
+      pageParam,
+    }: {
+      signal: AbortSignal;
+      pageParam: { beforeUpdatedAt: number; beforeId: string } | null;
+    }) =>
+      parseResponse(
+        rpc.api.admin.stores[":storeId"].drafts.choices.$get(
+          {
+            param: { storeId },
+            query: pageParam
+              ? { beforeUpdatedAt: String(pageParam.beforeUpdatedAt), beforeId: pageParam.beforeId }
+              : {},
+          },
+          { init: { signal } },
+        ),
+      ),
+    getNextPageParam: (page) => page.nextCursor,
+  });

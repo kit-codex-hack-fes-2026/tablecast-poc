@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { configurationSchema } from "@tablecast/api/schema";
-import { expect, userEvent, within } from "storybook/test";
+import { waitFor, expect, userEvent, within } from "storybook/test";
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -185,15 +185,19 @@ export const RepeatedRows: Story = {
     });
     await userEvent.clear(speechName);
     await userEvent.click(details);
-    await expect(speechName).not.toBeVisible();
+    await waitFor(async () => {
+      await expect(speechName).not.toBeVisible();
+    });
     await userEvent.click(canvas.getByRole("button", { name: "保存する" }));
-    await expect(speechName).toBeVisible();
+    await waitFor(async () => {
+      await expect(speechName).toBeVisible();
+    });
     await expect(speechName).toHaveFocus();
     await expect(speechName).toBeInvalid();
     await expect(price).toHaveValue(275);
     await userEvent.paste("ミルク");
     await userEvent.click(canvas.getByRole("button", { name: "保存する" }));
-    await expect(canvas.getByRole("status")).toHaveTextContent("更新しました");
+    await expect(canvas.getByText("更新しました", { exact: true })).toBeVisible();
   },
 };
 
@@ -208,7 +212,7 @@ export const EnglishLabels: Story = {
       .getAllByRole("group", { name: /^Group \d: Milk$/ })
       .map((group) => within(group).getByText("Names and translations", { exact: true }));
     for (const [index, translation] of translations.entries()) {
-      await expect(translation.closest("summary")).toHaveAccessibleName(
+      await expect(translation.closest("button")).toHaveAccessibleName(
         `Group ${index + 1}: Milk Names and translations`,
       );
     }
@@ -225,6 +229,7 @@ export const EnglishLabels: Story = {
     await userEvent.paste("Oat milk");
     await expect(field).toHaveFocus();
     await expect(field).toHaveValue("Oat milk");
+    await userEvent.click(option.getByRole("tab", { name: /^日本語$/ }));
     await expect(
       option.getByRole("textbox", { name: "Group 2: Milk Option 3: Milk Japanese Spoken name" }),
     ).toHaveValue("ミルク");
@@ -253,7 +258,7 @@ export const WhitespaceIds: Story = {
     const canvas = within(canvasElement);
     const group = within(canvas.getByRole("group", { name: "グループ 1：ミルク" }));
     await expect(
-      group.getByText("名称・翻訳", { exact: true }).closest("summary"),
+      group.getByText("名称・翻訳", { exact: true }).closest("button"),
     ).toHaveAccessibleName("グループ 1：ミルク 名称・翻訳");
     const option = within(
       group.getByRole("group", { name: "グループ 1：ミルク 選択肢 1：ミルク" }),
@@ -265,6 +270,7 @@ export const WhitespaceIds: Story = {
     await userEvent.paste("125");
     await expect(price).toHaveFocus();
     await userEvent.click(option.getByText("名称・説明・画像・組合せ条件", { exact: true }));
+    await userEvent.click(option.getByRole("tab", { name: /^English$/ }));
     await expect(
       option.getByRole("textbox", { name: "グループ 1：ミルク 選択肢 1：ミルク 英語 読上げ名" }),
     ).toHaveValue("Milk");

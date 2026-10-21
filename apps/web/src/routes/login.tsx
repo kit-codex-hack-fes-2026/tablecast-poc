@@ -4,6 +4,7 @@ import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 import { Login } from "../features/account/login";
 
 export const Route = createFileRoute("/login")({
+  staticData: { document: { title: "auth_sign_in", description: "head_login_description" } },
   validateSearch: z.looseObject({
     returnStoreId: z.string().optional().catch(undefined),
     returnDraftId: z.string().optional().catch(undefined),

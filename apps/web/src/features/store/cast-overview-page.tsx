@@ -7,7 +7,7 @@ import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { m } from "../../paraglide/messages";
-import { DraftStatus } from "../shell/configuration-status";
+import { ConfigurationToolbar } from "../shell/configuration-toolbar";
 import { CastOverview } from "./cast-overview";
 import { StartConfigurationEditing } from "./configuration-workflow";
 import { emptyMenuListSearch, type CastTarget } from "./menu-model";
@@ -28,30 +28,26 @@ export function CastOverviewPage({ draftId }: { draftId?: string }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("editor_cast")}
-        description={t("cast_overview_note")}
-        status={draft.data && <DraftStatus status={draft.data.status} />}
-        actions={
-          draftId && (
-            <Button
-              nativeButton={false}
-              role="link"
-              variant="outline"
-              render={
-                <Link
-                  to="/admin/stores/$storeId/menu/changes/$draftId"
-                  params={{ storeId, draftId }}
-                  search={{ ...emptyMenuListSearch, returnSection: "cast" }}
-                />
-              }
-            >
-              <FileCheck2 />
-              {t("workflow_review")}
-            </Button>
-          )
-        }
-      />
+      <PageHeader title={t("editor_cast")} />
+      {draftId && (
+        <ConfigurationToolbar>
+          <Button
+            nativeButton={false}
+            role="link"
+            variant="outline"
+            render={
+              <Link
+                to="/admin/stores/$storeId/menu/changes/$draftId"
+                params={{ storeId, draftId }}
+                search={{ ...emptyMenuListSearch, returnSection: "cast" }}
+              />
+            }
+          >
+            <FileCheck2 />
+            {t("workflow_review")}
+          </Button>
+        </ConfigurationToolbar>
+      )}
       <ErrorNotice
         error={catalog.error || draft.error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}

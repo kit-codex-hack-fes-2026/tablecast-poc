@@ -1,9 +1,18 @@
+import { surfaceMotion } from "./ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n/locale";
 
 import { Button } from "./ui/button";
 
+/**
+ * 取り消せない操作の直前確認。
+ * labelは具体的な動詞、subjectは対象と影響、iconは装飾、disabledは処理状態、onConfirmは確定時だけ実行する。
+ * triggerClassNameは配置調整用。
+ * 確認後の非同期結果・失敗・再試行は呼出し元のActionFeedbackで扱う。
+ * 注文や公開の専用承認フローを置き換えない。
+ */
 export function ConfirmAction({
   label,
   subject,
@@ -11,6 +20,7 @@ export function ConfirmAction({
   onConfirm,
   icon,
   triggerClassName,
+  triggerLabel,
 }: {
   label: string;
   subject: string;
@@ -18,6 +28,7 @@ export function ConfirmAction({
   onConfirm: () => void;
   icon: ReactNode;
   triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const { t } = useI18n();
   return (
@@ -28,12 +39,22 @@ export function ConfirmAction({
         aria-label={label}
       >
         {icon}
-        {label}
+        {triggerLabel ?? label}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-black/30" />
-        <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <AlertDialog.Popup className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-white p-6 shadow-lg">
+        <AlertDialog.Backdrop
+          className={cn("fixed inset-0 z-40 bg-overlay", surfaceMotion({ kind: "backdrop" }))}
+        />
+        <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4 data-ending-style:pointer-events-none">
+          <AlertDialog.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              "w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-lg",
+              surfaceMotion({ kind: "dialog" }),
+            )}
+          >
             <AlertDialog.Title className="text-xl font-semibold">{label}</AlertDialog.Title>
             <AlertDialog.Description className="wrap-break-word text-base">
               {subject}

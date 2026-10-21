@@ -1,7 +1,7 @@
 import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { tv } from "tailwind-variants";
 import { MenuOptionImage } from "../../components/menu-option-image";
 import { ConditionSummary } from "../../components/condition-summary";
@@ -81,6 +81,10 @@ export function ProductPage({
 }) {
   const { locale, t } = useI18n();
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
@@ -104,13 +108,15 @@ export function ProductPage({
             priority
             width={640}
             height={640}
-            sizes="(min-width: 640px) 70vw, 100vw"
+            sizes="(min-width: 640px) 80vw, 100vw"
             className="mb-3 aspect-square w-full rounded-xl object-contain"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />
         )}
-        <h2 className="text-lg font-semibold">{product.text[locale].displayName}</h2>
+        <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
+          {product.text[locale].displayName}
+        </h2>
         <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
         <div className="my-3 text-lg font-semibold">{money(product.price, locale)}</div>
         {product.modifiers.map((group, groupIndex) => (

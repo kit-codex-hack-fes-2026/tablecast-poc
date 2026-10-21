@@ -1,14 +1,11 @@
+import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, QrCode } from "lucide-react";
+import { ArrowRight, QrCode, Store } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { ErrorNotice } from "../../components/error-notice";
 import { useI18n } from "../../i18n/locale";
 import { customerMembershipsOptions } from "./customer-query";
-const dates = {
-  ja: new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo" }),
-};
 
 export function CustomerMemberships() {
   const { t, locale } = useI18n();
@@ -27,15 +24,16 @@ export function CustomerMemberships() {
               <Link
                 to="/member/$storeId"
                 params={{ storeId: membership.storeId }}
-                className="flex min-h-24 items-center justify-between gap-4 rounded-xl bg-card p-5 hover:bg-secondary"
+                className="flex min-h-24 items-center justify-between gap-4 rounded-xl border border-control-edge bg-control p-5 shadow-control transition-colors hover:bg-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <div className="min-w-0">
-                  <p className="text-lg font-semibold wrap-anywhere">{membership.name}</p>
+                <Store aria-hidden="true" className="size-6 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-lg font-semibold wrap-break-word">{membership.name}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {t("customer_since")} {dates[locale].format(membership.joinedAt)}
+                    {t("customer_since")} {calendarDate(membership.joinedAt, locale)}
                   </p>
                 </div>
-                <ArrowUpRight aria-hidden className="size-5 shrink-0" />
+                <ArrowRight aria-hidden className="size-5 shrink-0" />
               </Link>
             </li>
           ))}
@@ -43,7 +41,7 @@ export function CustomerMemberships() {
       ) : (
         <div className="space-y-4 rounded-2xl border border-border border-dashed p-8 text-center">
           <QrCode aria-hidden className="mx-auto size-10 text-muted-foreground" />
-          <p>{t("customer_empty")}</p>
+          <p className="text-balance">{t("customer_empty")}</p>
         </div>
       )}
       <ErrorNotice error={memberships.error} onRetry={() => void memberships.refetch()} />

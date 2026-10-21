@@ -6,9 +6,13 @@ import { Button } from "./button";
 import { Input } from "./input";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "デザインシステム/操作",
   component: Button,
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+  },
 } satisfies Meta<typeof Button>;
 export default meta;
 type Story = StoryObj<typeof meta>;

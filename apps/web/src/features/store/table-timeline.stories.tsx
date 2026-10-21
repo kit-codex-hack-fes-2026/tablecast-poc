@@ -6,7 +6,15 @@ import { TableTimeline } from "./table-timeline";
 const meta = {
   title: "店舗/卓タイムライン",
   component: TableTimeline,
+  beforeEach: () => {
+    const clock = Date.now;
+    Date.now = () => table.openedAt + 90 * 60_000;
+    return () => {
+      Date.now = clock;
+    };
+  },
   args: {
+    initialNow: table.openedAt + 90 * 60_000,
     tables: [
       table,
       {
@@ -33,11 +41,10 @@ export const Attention: Story = {
 };
 export const EnglishStaff: Story = {
   name: "店側英語と客側日本語が共存",
-  tags: ["!test"],
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
+    await expect(canvas.getAllByText("Occupied")[0]).toBeInTheDocument();
     await expect(canvas.getByText("日本語")).toBeInTheDocument();
   },
 };
@@ -70,6 +77,7 @@ export const BeyondRecentEvents: Story = {
     };
   },
   args: {
+    initialNow: now,
     tables: [
       { ...recentTable, id: "tablecast-error", tableName: "T01", voiceState: "error" },
       { ...recentTable, id: "tablecast-billing", tableName: "T02", billRequested: true },
@@ -86,16 +94,40 @@ export const BeyondRecentEvents: Story = {
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement);
     await step("結果: 2分前の表示ログではなく90分前の開卓から数える", async () => {
-      const pending = within(canvas.getByRole("row", { name: /T02/ }));
+      const item = canvas.getByRole("button", { name: /T02/ }).closest("li");
+      if (!item) throw new Error("会計待ちの卓が必要です");
+      const pending = within(item);
       await expect(pending.getByText("90 分", { exact: true })).toBeInTheDocument();
     });
     await step("結果: 要対応・未精算の会計依頼・音声異常・精算済みの順に並ぶ", async () => {
       await expect(
-        canvas
-          .getAllByRole("row")
-          .slice(1)
-          .map((row) => within(row).getByRole("button", { name: /^T0/ }).textContent),
-      ).toEqual(["T032 名", "T022 名", "T012 名", "T042 名"]);
+        canvas.getAllByRole("listitem").map((row) => within(row).getByRole("heading").textContent),
+      ).toEqual(["T03", "T02", "T01", "T04"]);
     });
+  },
+};
+
+export const OperationalStates: Story = {
+  name: "呼出・会計待ち・利用中・空卓",
+  args: {
+    tables: [
+      table,
+      {
+        ...table,
+        id: "tablecast-billing",
+        tableName: "T04",
+        staffCalled: false,
+        billRequested: true,
+      },
+      {
+        ...table,
+        id: "tablecast-dining",
+        tableName: "T05",
+        staffCalled: false,
+        billRequested: false,
+      },
+    ],
+    vacantTables: [{ id: "tablecast-vacant", name: "T06" }],
+    onOpen: fn(),
   },
 };

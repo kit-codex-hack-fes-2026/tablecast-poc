@@ -1,6 +1,8 @@
 import { Brand } from "../components/brand";
-import { Pwa, PwaInstallHelp } from "../components/pwa";
+import { RouteMotion } from "../components/route-motion";
+import { Pwa } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
+import { DocumentHead } from "../components/document-head";
 import { readPanelCookies } from "../lib/use-panel-layout";
 import { PanelLayoutProvider } from "../lib/panel-layout";
 import type { QueryClient } from "@tanstack/react-query";
@@ -34,7 +36,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
-        const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
+        const floorMatch = /^\/admin\/stores\/([^/]+)\/(?:floor\/?)?$/.exec(location.pathname);
         const menuMatch = /^\/admin\/stores\/([^/]+)\/menu\/([^/]+)\/?$/.exec(location.pathname);
         const catalogStoreId =
           menuMatch && menuSectionSchema.safeParse(menuMatch[2]).success
@@ -42,7 +44,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             : undefined;
         const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : catalogStoreId;
         const search = new URLSearchParams(location.searchStr);
-        // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
+        // SSRの転送先は別のQueryClientになるため、ホームでも使うフロアの先読みはクライアントだけで行う。
         const defaultFloor =
           typeof window !== "undefined" &&
           location.pathname === "/admin/live" &&
@@ -80,7 +82,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#f7f7f2" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { title: "TableCast" },
     ],
     links: [
       { rel: "stylesheet", href: stylesheet },
@@ -121,6 +122,7 @@ function Root({ children }: { children: ReactNode }) {
       </head>
       <body>
         <LocaleProvider key={demo ? `${demo.storeId}/${demo.demoId}` : "app"} persist={!demo}>
+          <DocumentHead />
           <MotionProvider>{children}</MotionProvider>
         </LocaleProvider>
         <Scripts />
@@ -133,9 +135,9 @@ function RootContent() {
   const { panelCookies } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>
+      <RouteMotion />
       <Pwa />
       <Outlet />
-      <PwaInstallHelp />
     </PanelLayoutProvider>
   );
 }

@@ -1,3 +1,5 @@
+import * as Disclosure from "../../components/ui/disclosure";
+import { LanguageFields } from "./language-fields";
 import { ThemeCompositionEditor } from "./theme-composition-editor";
 import { useMutation } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
@@ -173,52 +175,30 @@ export function DesignEditor({
             </label>
           ))}
         </div>
-        <Button
-          variant="outline"
-          disabled={disabled}
-          onClick={() =>
-            updateAppearance({
-              colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
-              fonts: { heading: "serif", body: "sans" },
-              parts: {
-                ...appearance.parts,
-                "product-card": {
-                  background: "#fff8e7",
-                  foreground: "#201a16",
-                  borderColor: "#201a16",
-                  borderWidth: 3,
-                  radius: 4,
-                  shadow: "offset",
-                },
-                "category-button": { borderColor: "#201a16", borderWidth: 2, radius: 4 },
-              },
-            })
-          }
-        >
-          {t("theme_ramen_preset")}
-        </Button>
       </section>
       <section className="space-y-3 rounded-lg border border-border p-4">
         <h2>{t("theme_assets")}</h2>
         <p>{t("theme_assets_hint")}</p>
         {Object.entries(assets).map(([name, image]) => (
-          <details key={name} className="rounded border border-border p-3">
-            <summary>{name}</summary>
-            <ThemeImageEditor
-              storeId={storeId}
-              value={image}
-              disabled={disabled}
-              onStagedChange={onStagedChange}
-              onChange={(next) => {
-                if (next) updateAppearance({ assets: { ...assets, [name]: next } });
-                else {
-                  const rest = { ...assets };
-                  delete rest[name];
-                  updateAppearance({ assets: rest });
-                }
-              }}
-            />
-          </details>
+          <Disclosure.Root key={name} className="rounded border border-border p-3">
+            <Disclosure.Trigger>{name}</Disclosure.Trigger>
+            <Disclosure.Panel>
+              <ThemeImageEditor
+                storeId={storeId}
+                value={image}
+                disabled={disabled}
+                onStagedChange={onStagedChange}
+                onChange={(next) => {
+                  if (next) updateAppearance({ assets: { ...assets, [name]: next } });
+                  else {
+                    const rest = { ...assets };
+                    delete rest[name];
+                    updateAppearance({ assets: rest });
+                  }
+                }}
+              />
+            </Disclosure.Panel>
+          </Disclosure.Root>
         ))}
         <Button
           variant="outline"
@@ -303,10 +283,10 @@ function ThemeImageEditor({
         }
       />
       {value && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {(["ja", "en"] as const).map((locale) => (
-            <label key={locale}>
-              {t("theme_alt")} ({locale})
+        <LanguageFields>
+          {(locale) => (
+            <label className="grid gap-2">
+              {t("theme_alt")}
               <Input
                 disabled={disabled}
                 value={value.alt[locale]}
@@ -315,8 +295,8 @@ function ThemeImageEditor({
                 }
               />
             </label>
-          ))}
-        </div>
+          )}
+        </LanguageFields>
       )}
     </div>
   );
@@ -424,7 +404,7 @@ function HotspotEditor({
               }
             >
               {!configuration.products.some((item) => item.id === spot.productId) && (
-                <option value={spot.productId}>{spot.productId}</option>
+                <option value={spot.productId}>{t("object_unknown_product")}</option>
               )}
               {configuration.products.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -506,193 +486,198 @@ function ThemePartsEditor({
         const update = (change: Partial<ThemePart>) =>
           updateAppearance({ parts: { ...appearance.parts, [part]: { ...style, ...change } } });
         return (
-          <details key={part} className="rounded border border-border p-3">
-            <summary>{t(partNames[part])}</summary>
-            <div className="grid gap-3 pt-3 sm:grid-cols-2">
-              {(["background", "foreground", "borderColor"] as const).map((name) => (
-                <label key={name}>
-                  {t(
-                    name === "background"
-                      ? "theme_background"
-                      : name === "foreground"
-                        ? "theme_ink"
-                        : "theme_border_colour",
-                  )}
-                  <Input
-                    type="color"
-                    disabled={disabled}
-                    value={
-                      style[name] === "transparent"
-                        ? "#ffffff"
-                        : (style[name] ?? (name === "background" ? "#ffffff" : "#18181b"))
-                    }
-                    onChange={(event) => update({ [name]: event.target.value })}
-                  />
-                </label>
-              ))}
-              <label className="flex items-center gap-2">
-                <Input
-                  type="checkbox"
-                  checked={style.background === "transparent"}
-                  disabled={disabled}
-                  onChange={(event) =>
-                    update({ background: event.target.checked ? "transparent" : undefined })
-                  }
-                />
-                {t("theme_transparent")}
-              </label>
-              {(["radius", "borderWidth"] as const).map((name) => (
-                <label key={name}>
-                  {t(name === "radius" ? "theme_radius" : "theme_border_width")}
-                  <Input
-                    type="number"
-                    min={0}
-                    max={name === "radius" ? 24 : 4}
-                    disabled={disabled}
-                    value={style[name] ?? ""}
-                    onChange={(event) =>
-                      update({
-                        [name]: event.target.value === "" ? undefined : Number(event.target.value),
-                      })
-                    }
-                  />
-                </label>
-              ))}
-              <label>
-                {t("theme_shadow")}
-                <NativeSelect
-                  disabled={disabled}
-                  value={style.shadow ?? "none"}
-                  onChange={(event) =>
-                    update({ shadow: themePartSchema.shape.shadow.parse(event.target.value) })
-                  }
-                >
-                  <option value="none">{t("theme_none")}</option>
-                  <option value="soft">{t("theme_soft")}</option>
-                  <option value="offset">{t("theme_offset")}</option>
-                </NativeSelect>
-              </label>
-              <label>
-                {t("theme_part_font")}
-                <NativeSelect
-                  disabled={disabled}
-                  value={style.font ?? ""}
-                  onChange={(event) =>
-                    update({
-                      font: event.target.value
-                        ? themePartSchema.shape.font.parse(event.target.value)
-                        : undefined,
-                    })
-                  }
-                >
-                  <option value="">{t("theme_default")}</option>
-                  <option value="sans">{t("theme_sans")}</option>
-                  <option value="serif">{t("theme_serif")}</option>
-                  <option value="rounded">{t("theme_rounded")}</option>
-                </NativeSelect>
-              </label>
-              <label>
-                {t("theme_asset")}
-                <NativeSelect
-                  disabled={disabled}
-                  value={style.image?.asset ?? ""}
-                  onChange={(event) =>
-                    update({
-                      image: event.target.value
-                        ? { asset: event.target.value, fit: "cover", x: 50, y: 50, opacity: 1 }
-                        : undefined,
-                    })
-                  }
-                >
-                  <option value="">{t("theme_none")}</option>
-                  {Object.keys(assets).map((name) => (
-                    <option key={name}>{name}</option>
-                  ))}
-                </NativeSelect>
-              </label>
-              {style.image && (
-                <>
-                  <label>
-                    {t("theme_image_fit")}
-                    <NativeSelect
-                      disabled={disabled}
-                      value={style.image.fit}
-                      onChange={(event) => {
-                        if (style.image)
-                          update({
-                            image: {
-                              ...style.image,
-                              fit: themePartSchema.shape.image
-                                .unwrap()
-                                .shape.fit.parse(event.target.value),
-                            },
-                          });
-                      }}
-                    >
-                      <option value="contain">{t("theme_contain")}</option>
-                      <option value="cover">{t("theme_cover")}</option>
-                      <option value="repeat">{t("theme_repeat")}</option>
-                    </NativeSelect>
-                  </label>
-                  <label>
-                    {t(style.image.fit === "repeat" ? "theme_tile_size" : "theme_image_width")}
+          <Disclosure.Root key={part} className="rounded border border-border p-3">
+            <Disclosure.Trigger>{t(partNames[part])}</Disclosure.Trigger>
+            <Disclosure.Panel>
+              <div className="grid gap-3 pt-3 sm:grid-cols-2">
+                {(["background", "foreground", "borderColor"] as const).map((name) => (
+                  <label key={name}>
+                    {t(
+                      name === "background"
+                        ? "theme_background"
+                        : name === "foreground"
+                          ? "theme_ink"
+                          : "theme_border_colour",
+                    )}
                     <Input
-                      type="number"
+                      type="color"
                       disabled={disabled}
-                      min={style.image.fit === "repeat" ? 32 : 10}
-                      max={style.image.fit === "repeat" ? 1024 : 200}
                       value={
-                        (style.image.fit === "repeat"
-                          ? style.image.tileSize
-                          : style.image.widthPercent) ?? ""
+                        style[name] === "transparent"
+                          ? "#ffffff"
+                          : (style[name] ?? (name === "background" ? "#ffffff" : "#18181b"))
                       }
-                      onChange={(event) => {
-                        if (style.image)
-                          update({
-                            image: {
-                              ...style.image,
-                              [style.image.fit === "repeat" ? "tileSize" : "widthPercent"]:
-                                event.target.value === "" ? undefined : Number(event.target.value),
-                            },
-                          });
-                      }}
+                      onChange={(event) => update({ [name]: event.target.value })}
                     />
                   </label>
-                  {(["x", "y", "opacity"] as const).map((name) => (
-                    <label key={name}>
-                      {t(name === "x" ? "theme_x" : name === "y" ? "theme_y" : "theme_opacity")}
-                      <Input
-                        type="range"
-                        min={0}
-                        max={name === "opacity" ? 1 : 100}
-                        step={name === "opacity" ? 0.05 : 1}
+                ))}
+                <label className="flex items-center gap-2">
+                  <Input
+                    type="checkbox"
+                    checked={style.background === "transparent"}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      update({ background: event.target.checked ? "transparent" : undefined })
+                    }
+                  />
+                  {t("theme_transparent")}
+                </label>
+                {(["radius", "borderWidth"] as const).map((name) => (
+                  <label key={name}>
+                    {t(name === "radius" ? "theme_radius" : "theme_border_width")}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={name === "radius" ? 24 : 4}
+                      disabled={disabled}
+                      value={style[name] ?? ""}
+                      onChange={(event) =>
+                        update({
+                          [name]:
+                            event.target.value === "" ? undefined : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+                <label>
+                  {t("theme_shadow")}
+                  <NativeSelect
+                    disabled={disabled}
+                    value={style.shadow ?? "none"}
+                    onChange={(event) =>
+                      update({ shadow: themePartSchema.shape.shadow.parse(event.target.value) })
+                    }
+                  >
+                    <option value="none">{t("theme_none")}</option>
+                    <option value="soft">{t("theme_soft")}</option>
+                    <option value="offset">{t("theme_offset")}</option>
+                  </NativeSelect>
+                </label>
+                <label>
+                  {t("theme_part_font")}
+                  <NativeSelect
+                    disabled={disabled}
+                    value={style.font ?? ""}
+                    onChange={(event) =>
+                      update({
+                        font: event.target.value
+                          ? themePartSchema.shape.font.parse(event.target.value)
+                          : undefined,
+                      })
+                    }
+                  >
+                    <option value="">{t("theme_default")}</option>
+                    <option value="sans">{t("theme_sans")}</option>
+                    <option value="serif">{t("theme_serif")}</option>
+                    <option value="rounded">{t("theme_rounded")}</option>
+                  </NativeSelect>
+                </label>
+                <label>
+                  {t("theme_asset")}
+                  <NativeSelect
+                    disabled={disabled}
+                    value={style.image?.asset ?? ""}
+                    onChange={(event) =>
+                      update({
+                        image: event.target.value
+                          ? { asset: event.target.value, fit: "cover", x: 50, y: 50, opacity: 1 }
+                          : undefined,
+                      })
+                    }
+                  >
+                    <option value="">{t("theme_none")}</option>
+                    {Object.keys(assets).map((name) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </NativeSelect>
+                </label>
+                {style.image && (
+                  <>
+                    <label>
+                      {t("theme_image_fit")}
+                      <NativeSelect
                         disabled={disabled}
-                        value={style.image?.[name]}
+                        value={style.image.fit}
                         onChange={(event) => {
                           if (style.image)
                             update({
-                              image: { ...style.image, [name]: Number(event.target.value) },
+                              image: {
+                                ...style.image,
+                                fit: themePartSchema.shape.image
+                                  .unwrap()
+                                  .shape.fit.parse(event.target.value),
+                              },
+                            });
+                        }}
+                      >
+                        <option value="contain">{t("theme_contain")}</option>
+                        <option value="cover">{t("theme_cover")}</option>
+                        <option value="repeat">{t("theme_repeat")}</option>
+                      </NativeSelect>
+                    </label>
+                    <label>
+                      {t(style.image.fit === "repeat" ? "theme_tile_size" : "theme_image_width")}
+                      <Input
+                        type="number"
+                        disabled={disabled}
+                        min={style.image.fit === "repeat" ? 32 : 10}
+                        max={style.image.fit === "repeat" ? 1024 : 200}
+                        value={
+                          (style.image.fit === "repeat"
+                            ? style.image.tileSize
+                            : style.image.widthPercent) ?? ""
+                        }
+                        onChange={(event) => {
+                          if (style.image)
+                            update({
+                              image: {
+                                ...style.image,
+                                [style.image.fit === "repeat" ? "tileSize" : "widthPercent"]:
+                                  event.target.value === ""
+                                    ? undefined
+                                    : Number(event.target.value),
+                              },
                             });
                         }}
                       />
                     </label>
-                  ))}
-                </>
-              )}
-            </div>
-            <Button
-              className="mt-3"
-              variant="outline"
-              disabled={disabled}
-              onClick={() => {
-                const parts = { ...appearance.parts };
-                delete parts[part];
-                updateAppearance({ parts });
-              }}
-            >
-              {t("theme_reset_part")}
-            </Button>
-          </details>
+                    {(["x", "y", "opacity"] as const).map((name) => (
+                      <label key={name}>
+                        {t(name === "x" ? "theme_x" : name === "y" ? "theme_y" : "theme_opacity")}
+                        <Input
+                          type="range"
+                          min={0}
+                          max={name === "opacity" ? 1 : 100}
+                          step={name === "opacity" ? 0.05 : 1}
+                          disabled={disabled}
+                          value={style.image?.[name]}
+                          onChange={(event) => {
+                            if (style.image)
+                              update({
+                                image: { ...style.image, [name]: Number(event.target.value) },
+                              });
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </>
+                )}
+              </div>
+              <Button
+                className="mt-3"
+                variant="outline"
+                disabled={disabled}
+                onClick={() => {
+                  const parts = { ...appearance.parts };
+                  delete parts[part];
+                  updateAppearance({ parts });
+                }}
+              >
+                {t("theme_reset_part")}
+              </Button>
+            </Disclosure.Panel>
+          </Disclosure.Root>
         );
       })}
     </section>
@@ -720,88 +705,90 @@ function BannersEditor({
     <section className="space-y-3 rounded-lg border border-border p-4">
       <h2>{t("theme_banners")}</h2>
       {banners.map((banner, index) => (
-        <details key={banner.id} open className="space-y-3 rounded border border-border p-3">
-          <summary>
+        <Disclosure.Root key={banner.id} defaultOpen className="rounded border border-border p-3">
+          <Disclosure.Trigger>
             {t("theme_banner")} {index + 1}
-          </summary>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
+          </Disclosure.Trigger>
+          <Disclosure.Panel className="space-y-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                disabled={disabled}
+                checked={banner.enabled}
+                onChange={(event) =>
+                  updateBanner(index, { ...banner, enabled: event.target.checked })
+                }
+              />
+              {t("theme_visible")}
+            </label>
+            <ThemeImageEditor
+              storeId={storeId}
+              value={banner.image}
               disabled={disabled}
-              checked={banner.enabled}
-              onChange={(event) =>
-                updateBanner(index, { ...banner, enabled: event.target.checked })
+              onStagedChange={onStagedChange}
+              onChange={(image) =>
+                updateBanner(index, { ...banner, image: image ?? structuredClone(emptyImage) })
               }
             />
-            {t("theme_visible")}
-          </label>
-          <ThemeImageEditor
-            storeId={storeId}
-            value={banner.image}
-            disabled={disabled}
-            onStagedChange={onStagedChange}
-            onChange={(image) =>
-              updateBanner(index, { ...banner, image: image ?? structuredClone(emptyImage) })
-            }
-          />
-          <label>
-            {t("theme_banner_span")}
-            <NativeSelect
+            <label>
+              {t("theme_banner_span")}
+              <NativeSelect
+                disabled={disabled}
+                value={banner.span ?? "column"}
+                onChange={(event) =>
+                  updateBanner(index, {
+                    ...banner,
+                    span: event.target.value === "full" ? "full" : "column",
+                  })
+                }
+              >
+                <option value="column">{t("theme_banner_column")}</option>
+                <option value="full">{t("theme_banner_full")}</option>
+              </NativeSelect>
+            </label>
+            <HotspotEditor
+              banner={banner}
+              configuration={value}
               disabled={disabled}
-              value={banner.span ?? "column"}
-              onChange={(event) =>
-                updateBanner(index, {
-                  ...banner,
-                  span: event.target.value === "full" ? "full" : "column",
-                })
-              }
-            >
-              <option value="column">{t("theme_banner_column")}</option>
-              <option value="full">{t("theme_banner_full")}</option>
-            </NativeSelect>
-          </label>
-          <HotspotEditor
-            banner={banner}
-            configuration={value}
-            disabled={disabled}
-            onChange={(next) => updateBanner(index, next)}
-          />
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              disabled={disabled || index === 0}
-              onClick={() => {
-                const next = [...banners];
-                next.splice(index, 1);
-                next.splice(index - 1, 0, banner);
-                onChange({ ...value, banners: next });
-              }}
-            >
-              {t("theme_move_up")}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={disabled || index === banners.length - 1}
-              onClick={() => {
-                const next = [...banners];
-                next.splice(index, 1);
-                next.splice(index + 1, 0, banner);
-                onChange({ ...value, banners: next });
-              }}
-            >
-              {t("theme_move_down")}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={disabled}
-              onClick={() =>
-                onChange({ ...value, banners: banners.filter((item) => item.id !== banner.id) })
-              }
-            >
-              {t("common_remove")}
-            </Button>
-          </div>
-        </details>
+              onChange={(next) => updateBanner(index, next)}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={disabled || index === 0}
+                onClick={() => {
+                  const next = [...banners];
+                  next.splice(index, 1);
+                  next.splice(index - 1, 0, banner);
+                  onChange({ ...value, banners: next });
+                }}
+              >
+                {t("theme_move_up")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={disabled || index === banners.length - 1}
+                onClick={() => {
+                  const next = [...banners];
+                  next.splice(index, 1);
+                  next.splice(index + 1, 0, banner);
+                  onChange({ ...value, banners: next });
+                }}
+              >
+                {t("theme_move_down")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={disabled}
+                onClick={() =>
+                  onChange({ ...value, banners: banners.filter((item) => item.id !== banner.id) })
+                }
+              >
+                {t("common_remove")}
+              </Button>
+            </div>
+          </Disclosure.Panel>
+        </Disclosure.Root>
       ))}
       <Button
         variant="outline"

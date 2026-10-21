@@ -119,7 +119,7 @@ export function GameFrame({
               sandbox="allow-scripts"
               referrerPolicy="no-referrer"
               allow="camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; clipboard-read 'none'; clipboard-write 'none'"
-              className="min-h-96 w-full flex-1 rounded-xl border border-border bg-white"
+              className="min-h-96 w-full flex-1 rounded-xl border border-border bg-card"
             />
           )}
         </>

@@ -5,6 +5,18 @@ import "../src/styles.css";
 
 const preview: Preview = {
   parameters: { layout: "fullscreen", a11y: { test: "error" } },
+  // 最終状態のアクセシビリティを検査し、fade途中の文字色を測らない。
+  afterEach: async ({ canvasElement }) => {
+    await new Promise(requestAnimationFrame);
+    const animations = canvasElement.ownerDocument
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation.playState === "running" &&
+          Number.isFinite(animation.effect?.getComputedTiming().endTime),
+      );
+    await Promise.allSettled(animations.map((animation) => animation.finished));
+  },
   globalTypes: {
     locale: {
       description: "表示言語",

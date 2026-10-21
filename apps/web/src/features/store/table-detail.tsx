@@ -1,11 +1,24 @@
+import { Suspense } from "react";
+import { Skeleton } from "../../components/ui/skeleton";
+import { LanguageLabel } from "../../components/language-label";
 import { PageHeader } from "../../components/page-header";
 import { CouponVisit } from "./coupon-visit";
 import { PointVisit } from "./point-visit";
 import { useHydrated, Link } from "@tanstack/react-router";
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
 import type { Order, TableState } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Table2,
+  Users,
+  Clock3,
+  LayoutDashboard,
+  MessagesSquare,
+  ReceiptText,
+  Wallet,
+  Activity,
+} from "lucide-react";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
@@ -114,20 +127,25 @@ export function TableDetail({
               onViewChange(next);
           }}
         >
-          <Tabs.List className="flex overflow-x-auto border-b border-b-border shrink-0 [&_button]:whitespace-nowrap [&_button]:text-sm [&_button]:min-h-12 [&_button]:py-2.5 [&_button]:px-3 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:text-muted-foreground [&_button[data-active]]:text-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:border-b-primary">
+          <Tabs.List className="max-w-full">
             <Tabs.Tab disabled={!hydrated} value="overview">
+              <LayoutDashboard aria-hidden />
               {t("admin_overview")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="logs">
+              <MessagesSquare aria-hidden />
               {t("admin_logs")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="orders">
+              <ReceiptText aria-hidden />
               {t("admin_orders")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="billing">
+              <Wallet aria-hidden />
               {t("admin_payments")}
             </Tabs.Tab>
             <Tabs.Tab disabled={!hydrated} value="diagnostics">
+              <Activity aria-hidden />
               {t("admin_diagnostics")}
             </Tabs.Tab>
           </Tabs.List>
@@ -201,9 +219,20 @@ export function TableDetail({
                 closed={table.status === "closed"}
               />
             </Tabs.Panel>
-            {view === "orders" && (
-              <SessionOrders table={table} action={action} orderStatus={orderStatus} />
-            )}
+            <Tabs.Panel value="orders">
+              <Suspense
+                fallback={
+                  <div className="space-y-4" role="status" aria-label={t("common_loading")}>
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-48 w-full" />
+                  </div>
+                }
+              >
+                <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+              </Suspense>
+            </Tabs.Panel>
             <Tabs.Panel value="billing">
               <div
                 data-ui="bill-summary"
@@ -243,16 +272,6 @@ export function TableDetail({
             </Tabs.Panel>
             <Tabs.Panel value="diagnostics">
               <dl className="">
-                <div className="border-b border-b-border py-3.5 px-0">
-                  <dt className="text-sm text-muted-foreground">tableSessionId</dt>
-                  <dd className="font-mono text-sm wrap-anywhere mt-1">{table.id}</dd>
-                </div>
-                <div className="border-b border-b-border py-3.5 px-0">
-                  <dt className="text-sm text-muted-foreground">voiceSessionId</dt>
-                  <dd className="font-mono text-sm wrap-anywhere mt-1">
-                    {table.voiceSessionId ?? "—"}
-                  </dd>
-                </div>
                 <div className="border-b border-b-border py-3.5 px-0">
                   <dt className="text-sm text-muted-foreground">cursor</dt>
                   <dd className="font-mono text-sm wrap-anywhere mt-1">{table.cursor}</dd>
@@ -299,16 +318,25 @@ function TableDetailHeader({
       </Button>
       <PageHeader
         title={table.tableName}
+        icon={<Table2 />}
         status={
-          <Badge variant={table.status === "open" ? "success" : "inactive"}>
-            {t(table.status === "open" ? "admin_open" : "admin_visit_closed")}
+          <Badge variant={table.status === "open" ? "info" : "inactive"}>
+            {t(table.status === "open" ? "admin_open" : "admin_closed")}
           </Badge>
         }
         description={
           <>
-            {table.guestCount} {t("admin_guests")} ·{" "}
-            {t(table.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} ·{" "}
-            <DateTime value={table.openedAt} />
+            <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <span className="inline-flex items-center gap-1.5">
+                <Users className="size-4" aria-hidden="true" />
+                {table.guestCount} {t("admin_guests")}
+              </span>
+              <LanguageLabel locale={table.locale} />
+              <span className="inline-flex items-center gap-1.5">
+                <Clock3 className="size-4" aria-hidden="true" />
+                <DateTime value={table.openedAt} />
+              </span>
+            </span>
           </>
         }
       />
@@ -330,7 +358,7 @@ function SessionOrders({
   const products =
     catalog.data.version === table.configVersion ? catalog.data.configuration.products : [];
   return (
-    <Tabs.Panel value="orders">
+    <>
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
       <CartLines lines={table.cart.lines} products={products} />
       <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
@@ -342,7 +370,17 @@ function SessionOrders({
         >
           <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-sm">
             <time>{time(order.createdAt, locale)}</time>
-            <Badge variant="secondary">{t(`order_${order.status}`)}</Badge>
+            <Badge
+              variant={
+                order.status === "served"
+                  ? "success"
+                  : order.status === "cancelled"
+                    ? "inactive"
+                    : "info"
+              }
+            >
+              {t(`order_${order.status}`)}
+            </Badge>
             <strong className="text-base">{money(order.total, locale)}</strong>
           </div>
           <CartLines lines={order.snapshot.lines} />
@@ -400,6 +438,6 @@ function SessionOrders({
           )}
         </article>
       ))}
-    </Tabs.Panel>
+    </>
   );
 }

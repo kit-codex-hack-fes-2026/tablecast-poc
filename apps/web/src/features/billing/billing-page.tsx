@@ -1,7 +1,9 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import * as Disclosure from "../../components/ui/disclosure";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowUpRight, Check, RefreshCw } from "lucide-react";
+import { ArrowUpRight, Check, RefreshCw, ReceiptText } from "lucide-react";
+import { MonthPicker } from "../../components/month-picker";
+import { PageHeader } from "../../components/page-header";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
@@ -11,7 +13,6 @@ import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { AdminShell } from "../shell/admin-shell";
-import { StorePicker } from "../shell/admin-sidebar";
 import { storesOptions } from "../store/store-query";
 import { BillingUsageChart } from "./billing-usage-chart";
 import { billingOptions, invoiceOptions, type Billing, type Invoice } from "./billing-query";
@@ -37,28 +38,9 @@ const billingMoney = (value: number, locale: ReturnType<typeof useI18n>["locale"
 
 export function BillingPage({ organizationId }: { organizationId: string }) {
   const { t } = useI18n();
-  const navigate = useNavigate();
-  const client = useQueryClient();
   const stores = useQuery(storesOptions);
   const availableStores = stores.data?.stores ?? [];
   const selectedStore = availableStores.find((store) => store.organizationId === organizationId);
-  const changeOrganisation = useMutation({
-    mutationFn: async (nextStoreId: string) => {
-      const selected = availableStores.find((store) => store.id === nextStoreId);
-      if (!selected) throw new Error("STORE_NOT_FOUND");
-      authResult(
-        await authClient.organization.setActive({ organizationId: selected.organizationId }),
-      );
-      return selected.organizationId;
-    },
-    onSuccess: async (nextOrganizationId) => {
-      await client.invalidateQueries({ queryKey: ["tablecast-membership"] });
-      await navigate({
-        to: "/billing/$organizationId",
-        params: { organizationId: nextOrganizationId },
-      });
-    },
-  });
   const [month, setMonth] = useState("");
   const [search, setSearch] = useState("");
   const billing = useInfiniteQuery(
@@ -71,29 +53,22 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
       storeId={data?.storeId}
       storeName={selectedStore?.name ?? data?.organization.name}
       organizationId={organizationId}
-      renderStorePicker={({ collapsed, onNavigate }) => (
-        <StorePicker
-          stores={availableStores}
-          selectedStore={selectedStore?.id}
-          pending={changeOrganisation.isPending}
-          error={changeOrganisation.error}
-          collapsed={collapsed}
-          onChange={(id) => changeOrganisation.mutate(id, { onSuccess: () => onNavigate?.() })}
-        />
-      )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">{t("billing_title")}</h1>
-        <Button
-          variant="outline"
-          aria-label={t("billing_refresh")}
-          disabled={billing.isFetching}
-          onClick={() => void billing.refetch()}
-        >
-          <RefreshCw className="size-4" />
-          {t("billing_refresh")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("billing_title")}
+        icon={<ReceiptText />}
+        actions={
+          <Button
+            variant="outline"
+            aria-label={t("billing_refresh")}
+            disabled={billing.isFetching}
+            onClick={() => void billing.refetch()}
+          >
+            <RefreshCw className="size-4" />
+            {t("billing_refresh")}
+          </Button>
+        }
+      />
       <ErrorNotice error={billing.error} onRetry={() => void billing.refetch()} />
       {!data && billing.isPending ? (
         <LoadingState />
@@ -103,17 +78,14 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
             <BillingOverview
               data={data}
               periodControl={
-                <label className="block space-y-1 text-sm">
-                  {t("billing_month")}
-                  <Input
-                    type="month"
-                    value={month || data.month}
-                    onChange={(event) => {
-                      setMonth(event.target.value);
-                      setSearch("");
-                    }}
-                  />
-                </label>
+                <MonthPicker
+                  label={t("billing_month")}
+                  value={month || data.month}
+                  onChange={(value) => {
+                    setMonth(value);
+                    setSearch("");
+                  }}
+                />
               }
             />
             <section className="space-y-4" aria-labelledby="tablecast-billing-usage">
@@ -210,10 +182,8 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
           />
         </div>
         <BillingUsageChart data={data} />
-        <details className="rounded-xl border border-border bg-card p-5">
-          <summary className="min-h-6 cursor-pointer font-medium">
-            {t("billing_token_details")}
-          </summary>
+        <section className="rounded-2xl bg-surface-subtle p-4">
+          <h3 className="text-sm font-medium">{t("billing_token_details")}</h3>
           <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{t("billing_tokens_hint")}</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Metric
@@ -227,7 +197,7 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
               detail={t("billing_output_hint")}
             />
           </div>
-        </details>
+        </section>
         <p className="text-sm text-muted-foreground">
           {t("billing_updated")}: <DateTime value={data.updatedAt} />
           {data.usage.unconfirmed > 0 &&
@@ -559,47 +529,46 @@ function usageColumns(
       cell: ({ row }) => (
         <div>
           <DateTime value={row.original.startedAt} />
-          <span
-            className="mt-1 block max-w-36 truncate text-xs text-muted-foreground"
-            title={row.original.sessionId}
-          >
-            {row.original.sessionId}
-          </span>
         </div>
       ),
     },
     {
       accessorKey: "seconds",
+      meta: { align: "right" },
       header: t("billing_voice"),
       cell: ({ row }) =>
         `${(row.original.seconds / 60).toLocaleString(locale, { maximumFractionDigits: 1 })} ${t("billing_minutes")}`,
     },
-    { accessorKey: "responses", header: t("billing_responses") },
+    { accessorKey: "responses", meta: { align: "right" }, header: t("billing_responses") },
     {
       id: "tokens",
+      meta: { align: "right" },
       header: t("billing_text_usage"),
       cell: ({ row }) => (
-        <details>
-          <summary className="cursor-pointer text-sm underline underline-offset-4">
+        <Disclosure.Root>
+          <Disclosure.Trigger className="cursor-pointer text-sm underline underline-offset-4">
             {t("admin_details")}
-          </summary>
-          <dl className="mt-2 min-w-36 space-y-2 text-xs">
-            <div>
-              <dt className="text-muted-foreground">{t("billing_input_tokens")}</dt>
-              <dd className="tabular-nums">{row.original.inputTokens.toLocaleString(locale)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("billing_output_tokens")}</dt>
-              <dd className="tabular-nums">{row.original.outputTokens.toLocaleString(locale)}</dd>
-            </div>
-          </dl>
-        </details>
+          </Disclosure.Trigger>
+          <Disclosure.Panel>
+            <dl className="mt-2 min-w-36 space-y-2 text-xs">
+              <div>
+                <dt className="text-muted-foreground">{t("billing_input_tokens")}</dt>
+                <dd className="tabular-nums">{row.original.inputTokens.toLocaleString(locale)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("billing_output_tokens")}</dt>
+                <dd className="tabular-nums">{row.original.outputTokens.toLocaleString(locale)}</dd>
+              </div>
+            </dl>
+          </Disclosure.Panel>
+        </Disclosure.Root>
       ),
     },
     ...(canManage
       ? [
           {
             id: "charge",
+            meta: { align: "right" as const },
             header: t("billing_estimate"),
             cell: ({ row }: { row: { original: Billing["visits"][number] } }) =>
               "chargeMicros" in row.original
@@ -674,6 +643,7 @@ function invoiceColumns(
     },
     {
       accessorKey: "amount",
+      meta: { align: "right" },
       header: t("billing_amount"),
       cell: ({ row }) =>
         row.original.amount === null ? "—" : billingMoney(row.original.amount, locale),

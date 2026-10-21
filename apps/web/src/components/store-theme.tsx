@@ -22,7 +22,7 @@ function themeStyles(value: Appearance, id: string) {
   const colours = value.colours;
   const variables = [
     colours
-      ? `--tablecast-theme-ink:${colours.ink};--tablecast-theme-paper:${colours.paper};--tablecast-theme-accent:${colours.accent};--foreground:${colours.ink};--background:${colours.paper};--card:${colours.paper};--card-foreground:${colours.ink};--popover:${colours.paper};--popover-foreground:${colours.ink};--brand-accent:${colours.accent};--accent-foreground:${contrastingInk(colours.accent)};--primary:${colours.accent};--primary-foreground:${contrastingInk(colours.accent)};--ring:${colours.accent};--secondary:color-mix(in srgb,${colours.paper} 92%,${colours.ink});--secondary-foreground:${colours.ink};--muted:var(--secondary);--muted-foreground:color-mix(in srgb,${colours.ink} 80%,${colours.paper});--border:color-mix(in srgb,${colours.ink} 25%,${colours.paper});--input:color-mix(in srgb,${colours.ink} 60%,${colours.paper})`
+      ? `--tablecast-theme-ink:${colours.ink};--tablecast-theme-paper:${colours.paper};--tablecast-theme-accent:${colours.accent};--foreground:${colours.ink};--background:${colours.paper};--card:${colours.paper};--card-foreground:${colours.ink};--popover:${colours.paper};--popover-foreground:${colours.ink};--brand-accent:${colours.accent};--accent-foreground:${contrastingInk(colours.accent)};--primary:${colours.accent};--primary-hover:color-mix(in srgb,${colours.accent} 88%,${contrastingInk(colours.accent) === "#ffffff" ? "#000000" : "#ffffff"});--control:color-mix(in srgb,${colours.paper} 92%,${colours.ink});--control-hover:color-mix(in srgb,${colours.paper} 88%,${colours.ink});--control-selected:color-mix(in srgb,${colours.paper} 84%,${colours.ink});--primary-foreground:${contrastingInk(colours.accent)};--ring:${colours.accent};--secondary:color-mix(in srgb,${colours.paper} 92%,${colours.ink});--secondary-foreground:${colours.ink};--muted:var(--secondary);--muted-foreground:color-mix(in srgb,${colours.ink} 80%,${colours.paper});--border:color-mix(in srgb,${colours.ink} 25%,${colours.paper});--input:color-mix(in srgb,${colours.ink} 60%,${colours.paper})`
       : "",
     `--tablecast-font-heading:${themeFonts[value.fonts?.heading ?? "sans"]};--tablecast-font-body:${themeFonts[value.fonts?.body ?? "sans"]}`,
     ...Object.entries(value.assets ?? {}).map(
@@ -59,6 +59,13 @@ function themeStyles(value: Appearance, id: string) {
     .map((item) => rule(item.part, item.declarations, item.suffix))
     .join("")}`;
 }
+/**
+ * 既存店舗のappearanceを検証し、childrenとDialog Portalへテーマを適用する。
+ * appearance未指定は標準テーマ。
+ * 色・書体・部品装飾のデータ形式はAPI schemaを正本にする。
+ * 新しいテーマ設定や別のカスタマイズUIは追加しない。
+ * Standard Storyは店舗指定なしでも使える表示。
+ */
 export function StoreTheme({
   appearance,
   children,

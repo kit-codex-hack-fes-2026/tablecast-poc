@@ -25,7 +25,7 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
     if (
-      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/catalog)?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
+      /^\/api\/(?:admin\/(?:initial|stores(?:\/[^/]+(?:\/(?:catalog|statistics|devices))?)?)|auth\/(?:get-session|list-sessions|list-accounts|passkey\/list-user-passkeys))$/.test(
         path,
       )
     )
@@ -33,17 +33,21 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
   });
   for (const [path, heading] of [
     ["/account", "アカウント"],
-    ["/admin/live", "フロアの様子"],
+    ["/admin/live", "ホーム"],
+    ["/admin/stores/tablecast-komorebi/statistics", "統計"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
   ]) {
     requests.length = 0;
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-    // 実際にメニューを開いてhydration後の操作可能状態を確認する。
+    await expect(page).toHaveTitle(new RegExp(`${heading}.*TableCast$`));
+    await expect(page.locator("head title")).toHaveCount(1);
+    await expect(page.locator('head meta[name="description"]')).toHaveAttribute("content", /\S/);
+    // ポインターが移動後のロゴへ重なって先読みするのを避け、hydration後の操作をキーボードで確認する。
     const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
     await expect(navigation).toBeEnabled();
     const wasExpanded = await navigation.getAttribute("aria-expanded");
-    await navigation.click();
+    await navigation.press("Enter");
     await expect(navigation).toHaveAttribute("aria-expanded", String(wasExpanded !== "true"));
     expect(requests).toEqual([]);
   }
@@ -114,6 +118,14 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       await expect(
         staffPage.getByRole("heading", { name: "フロアの様子", exact: true }),
       ).toBeVisible();
+      await expect(staffPage).toHaveTitle(`フロアの様子 · ${floor.store.name} · TableCast`);
+      await expect(guestPage).toHaveTitle(`${ja.head_guest} · ${catalog.storeName} · TableCast`);
+      await expect(anonPage).toHaveTitle(`${ja.auth_sign_in} · TableCast`);
+      await expect(staffPage.locator("head title")).toHaveCount(1);
+      await expect(guestPage.locator('head meta[name="description"]')).toHaveAttribute(
+        "content",
+        `${catalog.storeName} · ${ja.head_guest_description}`,
+      );
       await expect(
         staffPage.getByRole("button", { name: new RegExp(`^${table.name}\\b`) }),
       ).toBeVisible();
@@ -178,7 +190,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
         interactive.getByRole("button", { name: "音声を再開", exact: true }),
       ).toBeEnabled();
       await expect(
-        interactive.getByRole("status").filter({ hasText: ja.kiosk_voice_paused }),
+        interactive.locator('[data-ui="voice-status"]').filter({ hasText: ja.kiosk_voice_paused }),
       ).toBeVisible();
       await interactive.evaluate(async () => {
         await document.fonts.ready;
@@ -222,7 +234,7 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("戻り先なしのログインはフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
+test("戻り先なしのログインはホームで使うフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
   page,
 }) => {
   await page.goto("/login");
@@ -231,11 +243,22 @@ test("戻り先なしのログインはフロアを一括取得し、フォー�
   const requests: string[] = [];
   page.on("request", (request) => requests.push(new URL(request.url()).pathname));
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/floor$/);
-  await expect(page.getByRole("heading", { name: "フロアの様子", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/?$/);
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
   expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
   expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
+
+  const main = page.locator("#tablecast-admin-main");
+  await page.getByRole("heading", { name: "ChatGPTとつなぐ" }).scrollIntoViewIfNeeded();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(100);
+  const previousScroll = await main.evaluate((element) => element.scrollTop);
+  await page.getByRole("link", { name: "統計", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "統計", exact: true })).toBeVisible();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(0);
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeAttached();
+  await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(previousScroll);
 
   await page.goto("/account");
   await expect(page.getByLabel("名前", { exact: true })).toBeEnabled();
@@ -253,7 +276,7 @@ test("戻り先なしのログインはフロアを一括取得し、フォー�
   expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
 });
 
-test("店側PWAの新規ドキュメント起動は転送先のフロアをSSRする", async ({ request, baseURL }) => {
+test("店側PWAの新規ドキュメント起動は転送先のホームをSSRする", async ({ request, baseURL }) => {
   await signInStaff(request, baseURL);
   const manifest = z
     .object({ start_url: z.string() })
@@ -261,11 +284,11 @@ test("店側PWAの新規ドキュメント起動は転送先のフロアをSSR�
   const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
   expect(launch.status()).toBe(307);
   const destination = launch.headers()["location"];
-  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/floor$/);
-  const floor = await request.get(destination);
-  expect(floor.ok()).toBe(true);
-  expect(await floor.text()).toContain("フロアの様子");
-  expect(floor.headers()["cache-control"]).toBe("private, no-store");
+  expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/?$/);
+  const home = await request.get(destination);
+  expect(home.ok()).toBe(true);
+  expect(await home.text()).toContain("ホーム");
+  expect(home.headers()["cache-control"]).toBe("private, no-store");
 });
 
 test("実Routerの遷移と既定エラー画面を接続し、再試行で復帰する", async ({ page, baseURL }) => {
@@ -288,6 +311,9 @@ test("実Routerの遷移と既定エラー画面を接続し、再試行で復�
     });
   });
   try {
+    const management = page.getByRole("button", { name: "店舗管理", exact: true });
+    if ((await management.getAttribute("aria-expanded")) === "false") await management.click();
+    await expect(management).toHaveAttribute("aria-expanded", "true");
     await page.getByRole("link", { name: "端末", exact: true }).click();
     await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();

@@ -94,25 +94,25 @@ export const JapaneseLongInstructions: Story = {
   globals: { locale: "ja" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Marin", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("Cedar", { exact: true })).toBeVisible();
-    await expect(canvas.queryByRole("table")).not.toBeInTheDocument();
-    const expand = canvas.getAllByRole("button", { name: "全文を表示" })[0];
-    expand.focus();
-    await userEvent.keyboard("{Enter}");
-    const dialog = await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-      name: "接客方針",
-    });
-    const fullText = within(dialog).getByText(japanese.trim(), { exact: false });
-    await expect(fullText.textContent).toBe(japanese.repeat(30));
-    await userEvent.keyboard("{Escape}");
     await waitFor(async () => {
-      await expect(dialog).not.toBeInTheDocument();
-      await expect(expand).toHaveFocus();
+      await expect(await canvas.findByText("Marin", { exact: true })).toBeVisible();
     });
+    await waitFor(() => expect(canvas.getByText("Cedar", { exact: true })).not.toBeVisible());
+    await expect(canvas.queryByRole("table")).not.toBeInTheDocument();
+    const japanesePanel = canvas.getByRole("tabpanel", { name: "日本語" });
+    const fullText = within(japanesePanel).getByText(japanese.trim(), { exact: false });
+    await expect(fullText.textContent?.split(japanese.trim())).toHaveLength(31);
+    await expect(canvas.queryByRole("button", { name: "全文を表示" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("tab", { name: /^English$/ }));
+    await waitFor(async () => {
+      await expect(canvas.getByText("Cedar", { exact: true })).toBeVisible();
+    });
+    await waitFor(() => expect(canvas.getByText("Marin", { exact: true })).not.toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "英語の音声を編集" }));
     await expect(edit).toHaveBeenCalledWith("voice-en");
-    await expect(canvas.getByText("ON（有効）")).toBeVisible();
+    await waitFor(async () => {
+      await expect(canvas.getByText("ON（有効）")).toBeVisible();
+    });
   },
 };
 
@@ -147,11 +147,30 @@ export const EnglishReadOnlyAndUnavailable: Story = {
             edit: /編集/,
           };
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText(labels.unavailable, { exact: true })).toBeVisible();
-    await expect(canvas.getByText(labels.unset, { exact: true })).toBeVisible();
-    await expect(canvas.getByText(labels.defaultVoice, { exact: true })).toBeVisible();
-    await expect(canvas.getAllByText(labels.instructions)).toHaveLength(2);
-    await expect(canvas.getByText(labels.off, { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: /^日本語$/ }));
+    const japanesePanel = within(canvas.getByRole("tabpanel", { name: "日本語" }));
+    await waitFor(async () => {
+      await expect(japanesePanel.getByText(labels.unset, { exact: true })).toBeVisible();
+    });
+    await waitFor(async () => {
+      await expect(japanesePanel.getByText(labels.defaultVoice, { exact: true })).toBeVisible();
+    });
+    await waitFor(async () => {
+      await expect(japanesePanel.getByText(labels.instructions)).toBeVisible();
+    });
+    await userEvent.click(canvas.getByRole("tab", { name: /^English$/ }));
+    const englishPanel = within(canvas.getByRole("tabpanel", { name: "English" }));
+    await waitFor(async () => {
+      await expect(
+        await englishPanel.findByText(labels.unavailable, { exact: true }),
+      ).toBeVisible();
+    });
+    await waitFor(async () => {
+      await expect(englishPanel.getByText(labels.instructions)).toBeVisible();
+    });
+    await waitFor(async () => {
+      await expect(canvas.getByText(labels.off, { exact: true })).toBeVisible();
+    });
     await expect(canvas.queryByRole("button", { name: labels.edit })).not.toBeInTheDocument();
   },
 };
@@ -181,6 +200,8 @@ export const VoiceCatalogRetry: Story = {
       }),
     );
     await userEvent.click(retry[0]);
-    await expect(await canvas.findByText("Marin", { exact: true })).toBeVisible();
+    await waitFor(async () => {
+      await expect(await canvas.findByText("Marin", { exact: true })).toBeVisible();
+    });
   },
 };

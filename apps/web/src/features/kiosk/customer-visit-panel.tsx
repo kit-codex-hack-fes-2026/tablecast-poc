@@ -1,3 +1,4 @@
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -68,25 +69,10 @@ export function CustomerVisitPanel({
   return (
     <Dialog>
       <DialogPrimitive.Trigger
-        render={
-          <Button
-            variant="ghost"
-            className="h-auto min-h-11 min-w-0 max-w-full shrink flex-wrap justify-start gap-x-2 gap-y-0 px-1 py-2 text-left whitespace-normal"
-          />
-        }
+        render={<Button variant="ghost" size="icon" title={t("kiosk_visit_tools")} />}
       >
         <QrCode aria-hidden="true" />
-        <span>{t("kiosk_visit_tools")}</span>
-        <span className="text-sm text-muted-foreground">
-          {t("kiosk_service_target")}{" "}
-          <strong className="font-medium text-foreground">
-            {participants.isPending || participants.isError
-              ? t("kiosk_service_unknown")
-              : selectedPerson
-                ? (selectedPerson.name ?? t("customer_anonymous"))
-                : t("kiosk_service_group")}
-          </strong>
-        </span>
+        <span className="sr-only">{t("kiosk_visit_tools")}</span>
       </DialogPrimitive.Trigger>
       <DialogContent className="overflow-y-auto">
         <DialogHeader>
@@ -94,6 +80,18 @@ export function CustomerVisitPanel({
           <DialogClose aria-label={t("common_close")}>×</DialogClose>
         </DialogHeader>
         <DialogDescription>{t("customer_scan_hint")}</DialogDescription>
+        <span className="text-sm text-muted-foreground">
+          {t("kiosk_service_target")}{" "}
+          <strong className="font-medium text-foreground">
+            {participants.isPending || participants.isError ? (
+              t("kiosk_service_unknown")
+            ) : selectedPerson ? (
+              <ParticipantIdentity name={selectedPerson.name} />
+            ) : (
+              t("kiosk_service_group")
+            )}
+          </strong>
+        </span>
         <section aria-label={t("customer_join_visit")} className="mt-4 flex flex-col gap-5">
           <div className="min-w-0 space-y-2">
             <p className="font-semibold">{t("customer_scan_phone")}</p>
@@ -109,7 +107,7 @@ export function CustomerVisitPanel({
                     disabled={selectTarget.isPending}
                     onClick={() => selectTarget.mutate(person.id)}
                   >
-                    {person.name ?? t("customer_anonymous")}
+                    <ParticipantIdentity name={person.name} />
                   </Button>
                 </li>
               ))}

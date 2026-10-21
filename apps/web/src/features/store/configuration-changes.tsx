@@ -1,3 +1,5 @@
+import { ArrowRight, Minus, Pencil, Plus } from "lucide-react";
+import { Badge } from "../../components/ui/badge";
 import { castInstructionSchema } from "@tablecast/api/schema";
 import { InstructionView } from "./instruction-view";
 import { Children } from "react";
@@ -95,9 +97,25 @@ export function ConfigurationChanges({
     const translation = labelKeys.get(key);
     return translation ? t(translation) : key;
   }
-  function title(path: string) {
+  function title(path: string, wholeObject = false) {
     const parts = path.split(".");
     const [collection, index] = parts;
+    const replacement = changes.find((change) => change.path === [collection, index].join("."));
+    const text =
+      replacement?.before && typeof replacement.before === "object" && "text" in replacement.before
+        ? replacement.before.text
+        : undefined;
+    const localized: unknown =
+      text && typeof text === "object"
+        ? Object.entries(text).find(([key]) => key === locale)?.[1]
+        : undefined;
+    const previousName =
+      localized &&
+      typeof localized === "object" &&
+      "displayName" in localized &&
+      typeof localized.displayName === "string"
+        ? localized.displayName
+        : undefined;
     const item =
       collection === "products"
         ? configuration.products[Number(index)]
@@ -106,8 +124,10 @@ export function ConfigurationChanges({
           : collection === "plans"
             ? configuration.plans[Number(index)]
             : undefined;
+    if (wholeObject)
+      return previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? "");
     return [
-      item?.text[locale].displayName ?? fieldLabel(collection ?? ""),
+      previousName ?? item?.text[locale].displayName ?? fieldLabel(collection ?? ""),
       ...parts
         .slice(item ? 2 : 1)
         .flatMap((part) =>
@@ -132,6 +152,7 @@ export function ConfigurationChanges({
         ? money(value, locale)
         : String(value);
     if (typeof value === "string") {
+      if (key === "id") return t("config_change_identifier");
       if (
         [
           "categoryId",
@@ -143,7 +164,7 @@ export function ConfigurationChanges({
           "excludes",
         ].includes(key)
       )
-        return names.get(value) ?? value;
+        return names.get(value) ?? t("editor_missing_reference");
       if (key === "imageKind")
         return value === "photograph" ? t("editor_photograph") : t("kiosk_illustration");
       if (key === "kind") {
@@ -188,42 +209,100 @@ export function ConfigurationChanges({
       );
     return JSON.stringify(value) ?? "—";
   }
+  const groups = Map.groupBy(changes, (change) => {
+    const [collection, index] = change.path.split(".");
+    return ["products", "categories", "plans"].includes(collection ?? "")
+      ? `${collection}.${index}`
+      : (collection ?? change.path);
+  });
   return (
-    <>
-      {changes.map((change) => {
-        const key =
-          change.path
-            .split(".")
-            .toReversed()
-            .find((part) => !/^\d+$/.test(part)) ?? "";
-        return (
-          <div
-            data-ui="config-change"
-            className="py-5 px-0 border-b border-b-border [&_pre]:bg-background [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:overflow-auto [&_pre]:text-sm [&_pre]:max-h-64 [&_pre]:m-0"
-            key={change.path}
-          >
-            <strong className="font-mono text-sm wrap-anywhere">{title(change.path)}</strong>
-            <div className="grid grid-cols-2 gap-3 mt-3.5 max-sm:grid-cols-1">
-              {[
-                { label: t("admin_before"), value: change.before },
-                { label: t("admin_after"), value: change.after },
-              ].map(({ label, value }) => (
-                <section className="min-w-0" key={label}>
-                  <h4 className="text-muted-foreground text-sm mb-1.5">{label}</h4>
-                  <div className="whitespace-pre-wrap wrap-break-word text-base">
-                    {/^cast\.instructions\.(ja|en)$/.test(change.path) &&
-                    castInstructionSchema.safeParse(value).success ? (
-                      <InstructionView value={castInstructionSchema.parse(value)} />
-                    ) : (
-                      valueText(value, key)
-                    )}
+    <div className="space-y-6">
+      {[...groups].map(([path, grouped]) => (
+        <section
+          key={path}
+          className="overflow-hidden rounded-2xl border border-border bg-card shadow-surface"
+        >
+          <h2 className="border-b border-border bg-surface-subtle px-4 py-3 font-semibold">
+            {title(path, true)}
+          </h2>
+          <div className="divide-y divide-border">
+            {grouped.map((change) => {
+              const key =
+                change.path
+                  .split(".")
+                  .toReversed()
+                  .find((part) => !/^\d+$/.test(part)) ?? "";
+              return (
+                <div
+                  data-ui="config-change"
+                  data-change-path={change.path}
+                  className="p-4 [&_pre]:bg-background [&_pre]:rounded-md [&_pre]:p-3 [&_pre]:overflow-auto [&_pre]:text-sm [&_pre]:max-h-64 [&_pre]:m-0"
+                  key={change.path}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold wrap-anywhere">
+                      {title(change.path).split(" · ").slice(1).join(" · ") || title(change.path)}
+                    </h3>
+                    <Badge
+                      variant={
+                        change.before == null
+                          ? "success"
+                          : change.after == null
+                            ? "destructive"
+                            : "warning"
+                      }
+                    >
+                      {change.before == null ? (
+                        <Plus />
+                      ) : change.after == null ? (
+                        <Minus />
+                      ) : (
+                        <Pencil />
+                      )}
+                      {t(
+                        change.before == null
+                          ? "config_change_added"
+                          : change.after == null
+                            ? "config_change_removed"
+                            : "config_change_updated",
+                      )}
+                    </Badge>
                   </div>
-                </section>
-              ))}
-            </div>
+                  <div className="mt-3 grid max-w-4xl grid-cols-[1fr_auto_1fr] items-start gap-3 max-sm:grid-cols-1">
+                    {[
+                      { label: t("admin_before"), value: change.before },
+                      { label: t("admin_after"), value: change.after },
+                    ].map(({ label, value }, index) => (
+                      <section
+                        className={
+                          index === 0
+                            ? "min-w-0 rounded-xl bg-card p-3"
+                            : "col-start-3 min-w-0 rounded-xl bg-success-soft p-3 max-sm:col-start-1"
+                        }
+                        key={label}
+                      >
+                        <h4 className="text-muted-foreground text-sm mb-1.5">{label}</h4>
+                        <div className="whitespace-pre-wrap wrap-break-word text-base">
+                          {/^cast\.instructions\.(ja|en)$/.test(change.path) &&
+                          castInstructionSchema.safeParse(value).success ? (
+                            <InstructionView value={castInstructionSchema.parse(value)} />
+                          ) : (
+                            valueText(value, key)
+                          )}
+                        </div>
+                      </section>
+                    ))}
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="col-start-2 row-start-1 mt-9 size-4 text-muted-foreground max-sm:hidden"
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </>
+        </section>
+      ))}
+    </div>
   );
 }

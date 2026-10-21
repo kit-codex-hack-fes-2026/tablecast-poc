@@ -1,3 +1,4 @@
+import { UserIdentity } from "../../components/user-identity";
 import { PageHeader } from "../../components/page-header";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
@@ -70,7 +71,11 @@ function invitationColumns(
   cancel: (id: string) => void,
 ): DataTableColumn<Invitation>[] {
   return [
-    { accessorKey: "email", header: t("auth_email") },
+    {
+      accessorKey: "email",
+      header: t("auth_email"),
+      cell: ({ row }) => <UserIdentity user={{ email: row.original.email }} compact />,
+    },
     {
       accessorKey: "role",
       header: t("org_role"),
@@ -80,7 +85,15 @@ function invitationColumns(
       accessorKey: "status",
       header: t("common_status"),
       cell: ({ row }) => (
-        <Badge variant="outline">
+        <Badge
+          variant={
+            row.original.status === "pending"
+              ? "warning"
+              : row.original.status === "accepted"
+                ? "success"
+                : "inactive"
+          }
+        >
           {t(
             row.original.status === "pending"
               ? "invite_pending"

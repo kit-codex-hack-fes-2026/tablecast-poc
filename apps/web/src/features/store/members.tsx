@@ -1,7 +1,7 @@
+import { Users, MailPlus, Trash2 } from "lucide-react";
 import { PageHeader } from "../../components/page-header";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { MailPlus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -56,6 +56,7 @@ export function Members() {
     <>
       <PageHeader
         title={t("org_members")}
+        icon={<Users />}
         actions={
           store.role !== "member" && (
             <Button
@@ -94,7 +95,11 @@ function memberColumns(
       id: "user",
       accessorFn: (row) => `${row.user.name} ${row.user.email}`,
       header: t("org_members"),
-      cell: ({ row }) => <UserIdentity user={row.original.user} />,
+      cell: ({ row }) => (
+        <div className="min-w-56 max-w-sm">
+          <UserIdentity user={row.original.user} />
+        </div>
+      ),
     },
     {
       accessorKey: "role",
@@ -108,10 +113,11 @@ function memberColumns(
     },
     {
       id: "actions",
+      meta: { align: "right" },
       header: t("common_actions"),
       cell: ({ row }) =>
         myRole !== "member" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <NativeSelect
               className="w-36"
               aria-label={`${t("org_role")} ${row.original.user.email}`}

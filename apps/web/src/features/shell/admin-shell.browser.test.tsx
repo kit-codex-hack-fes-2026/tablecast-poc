@@ -1,3 +1,4 @@
+import { detectPlatform } from "@tanstack/react-hotkeys";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -34,7 +35,8 @@ afterEach(async () => {
     vi.unstubAllGlobals();
     for (const cookie of document.cookie.split(";")) {
       const name = cookie.trim().split("=")[0];
-      if (name?.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
+      if (name?.startsWith("tablecast-layout-") || name === "tablecast-navigation")
+        document.cookie = `${name}=; Path=/; Max-Age=0`;
     }
     document.documentElement.style.fontSize = "";
     if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
@@ -47,7 +49,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en" = "ja", initial = "/account") {
+async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn = false) {
   unexpected = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
@@ -59,7 +61,19 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account") {
     return Response.json({}, { status: 500 });
   });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(["tablecast-session"], null);
+  client.setQueryData(
+    ["tablecast-session"],
+    signedIn
+      ? {
+          user: {
+            id: "tablecast-user",
+            name: "店舗スタッフ",
+            email: "restaurant.staff@example.com",
+            image: null,
+          },
+        }
+      : null,
+  );
   const stores: Parameters<typeof StorePicker>[0]["stores"] = [
     {
       id: "tablecast-shell",
@@ -142,7 +156,7 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account") {
 const width = () => sidebar()?.getBoundingClientRect().width ?? 0;
 
 it("サイドバーの幅をCookieへ保存し、再表示と折りたたみでも復元する", async () => {
-  await page.viewport(1024, 768);
+  await page.viewport(1180, 820);
   const view = await show();
   const handle = page.getByRole("separator", { name: ja.admin_resize_sidebar, exact: true });
   await expect.element(handle).toBeEnabled();
@@ -153,9 +167,14 @@ it("サイドバーの幅をCookieへ保存し、再表示と折りたたみで�
   const adjusted = width();
   expect(document.cookie).toContain("tablecast-layout-");
   const toggle = page.getByRole("button", { name: ja.admin_navigation, exact: true });
+  let widthTransition = false;
+  sidebar()?.addEventListener("transitionrun", (event) => {
+    if (event.propertyName === "flex-grow" && event.target === sidebar()) widthTransition = true;
+  });
   await toggle.click();
   await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
   await expect.poll(width).toBeLessThan(80);
+  expect(widthTransition).toBe(!matchMedia("(prefers-reduced-motion: reduce)").matches);
   await toggle.click();
   await expect.poll(() => Math.abs(width() - adjusted)).toBeLessThan(2);
   await view.unmount();
@@ -165,7 +184,7 @@ it("サイドバーの幅をCookieへ保存し、再表示と折りたたみで�
 });
 
 it("子ページの現在地を直接開き、モバイルの子リンクへ移るとナビゲーションを閉じる", async () => {
-  await page.viewport(390, 844);
+  await page.viewport(402, 874);
   await show("ja", "/admin/stores/tablecast-shell/menu/categories");
   const toggle = page.getByRole("button", { name: ja.admin_navigation, exact: true });
   await toggle.click();
@@ -181,9 +200,10 @@ it("子ページの現在地を直接開き、モバイルの子リンクへ移�
 });
 
 it("店舗選択をサイドバーに一つだけ表示し、折りたたみと画面幅の変更でも入力を保持する", async () => {
-  await page.viewport(1024, 768);
+  await page.viewport(1180, 820);
   await show();
   const name = page.getByLabelText("表示名");
+  const input = name.element();
   await name.fill("編集中の名前");
   const picker = page.getByRole("combobox", { name: ja.stores_title, exact: true });
   await expect.element(picker).toBeVisible();
@@ -208,9 +228,15 @@ it("店舗選択をサイドバーに一つだけ表示し、折りたたみと�
   expect(picker.elements()).toHaveLength(1);
   await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await expect.element(name).toHaveValue("編集中の名前");
+  expect(name.element()).toBe(input);
+  // 完了を待たずに反転しても、入力と保存した展開幅を維持する。
   await toggle.click();
+  await toggle.click();
+  await toggle.click();
+  await expect.element(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(name.element()).toBe(input);
 
-  await page.viewport(390, 844);
+  await page.viewport(402, 874);
   await expect.element(picker).not.toBeInTheDocument();
   await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await toggle.click();
@@ -223,20 +249,113 @@ it("店舗選択をサイドバーに一つだけ表示し、折りたたみと�
   await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(toggle).toHaveFocus();
   await expect.element(name).toHaveValue("編集中の名前");
-  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(402);
 
   await toggle.click();
   await expect.element(dialog).toBeVisible();
-  await page.viewport(1024, 768);
+  await page.viewport(1180, 820);
   await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(picker).toBeVisible();
   expect(picker.elements()).toHaveLength(1);
   await expect.element(picker).toMatchTextContent("二号店舗");
   await expect.element(name).toHaveValue("編集中の名前");
 
-  await page.viewport(390, 844);
+  await page.viewport(402, 874);
   await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(picker).not.toBeInTheDocument();
   await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await expect.element(name).toHaveValue("編集中の名前");
+});
+
+it("サイドバーのショートカットは編集入力を奪わず、通常ボタンと同じ状態を切り替える", async () => {
+  await page.viewport(1180, 820);
+  await show();
+  const trigger = page.getByRole("button", { name: "ナビゲーション", exact: true });
+  const shortcut = detectPlatform() === "mac" ? "{Meta>}b{/Meta}" : "{Control>}b{/Control}";
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  const floor = page.getByRole("link", { name: ja.admin_live, exact: true });
+  const floorElement = floor.element();
+  floorElement.focus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(floor.element()).toBe(floorElement);
+  await expect.element(floor).toHaveFocus();
+  // 幅の変更中に反転しても同じリンクにフォーカスを保つ。
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(floor.element()).toBe(floorElement);
+  await expect.element(floor).toHaveFocus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect.element(floor).toHaveFocus();
+  await userEvent.click(page.getByRole("textbox", { name: "表示名" }));
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(trigger);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+
+  const menuGroup = page.getByRole("button", { name: ja.admin_config, exact: true });
+  await menuGroup.click();
+  await expect.element(menuGroup).toHaveAttribute("aria-expanded", "false");
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  const products = page.getByRole("link", { name: ja.editor_products, exact: true });
+  const productElement = products.element();
+  await expect.element(products).toHaveFocus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect.element(menuGroup).toHaveFocus();
+  await expect.element(menuGroup).toHaveAttribute("aria-expanded", "false");
+  await menuGroup.click();
+  expect(products.element()).toBe(productElement);
+});
+
+it("利用者メニューを開いてもトリガー・サイドバー・本文を動かさない", async () => {
+  await page.viewport(1180, 820);
+  await show("ja", "/account", true);
+  const trigger = page.getByRole("button", { name: ja.account_title, exact: true });
+  await expect.element(trigger).toMatchTextContent("restaurant.staff@example.com");
+  const email = trigger.getByText("restaurant.staff@example.com").element();
+  expect(getComputedStyle(email).whiteSpace).toBe("nowrap");
+  expect(getComputedStyle(email).textOverflow).toBe("ellipsis");
+  const main = page.getByRole("main");
+  const before = [trigger.element(), main.element()].map((element) =>
+    element.getBoundingClientRect(),
+  );
+  await trigger.click();
+  await expect.element(page.getByRole("menu")).toBeVisible();
+  const after = [trigger.element(), main.element()].map((element) =>
+    element.getBoundingClientRect(),
+  );
+
+  for (let i = 0; i < before.length; i++)
+    for (const key of ["x", "y", "width", "height"] as const)
+      expect(after[i]?.[key]).toBeCloseTo(before[i]?.[key] ?? 0, 1);
+  await userEvent.keyboard("{Escape}");
+  await expect.element(trigger).toHaveFocus();
+  await page.getByRole("button", { name: ja.admin_navigation, exact: true }).click();
+  const link = page.getByRole("link", { name: ja.home_title, exact: true });
+  await expect.element(link).toHaveAttribute("data-collapsed", "true");
+  const icon = link.element().querySelector("svg");
+  expect(icon).not.toBeNull();
+  const linkRect = link.element().getBoundingClientRect();
+  const iconRect = icon?.getBoundingClientRect();
+  expect((iconRect?.left ?? 0) - linkRect.left).toBeCloseTo(
+    linkRect.right - (iconRect?.right ?? 0),
+    1,
+  );
+  await userEvent.hover(link);
+  await expect.element(page.getByText(ja.home_title, { exact: true })).toBeVisible();
+  await userEvent.unhover(link);
+  await expect.element(page.getByText(ja.home_title, { exact: true })).not.toBeInTheDocument();
+  await userEvent.keyboard("{Tab}");
+  link.element().focus();
+  await expect.element(link).toHaveFocus();
+  await expect.element(page.getByText(ja.home_title, { exact: true })).toBeVisible();
+  const accountRect = trigger.element().getBoundingClientRect();
+  const accountIconRect = trigger.element().querySelector("svg")?.getBoundingClientRect();
+  expect((accountIconRect?.left ?? 0) - accountRect.left).toBeCloseTo(
+    accountRect.right - (accountIconRect?.right ?? 0),
+    1,
+  );
 });

@@ -53,11 +53,7 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
           {
             accessorKey: "name",
             sortFn: "text",
-            header: ({ column }) => (
-              <button type="button" onClick={column.getToggleSortingHandler()}>
-                店舗名を並べ替え
-              </button>
-            ),
+            header: "店舗名",
           },
         ]}
         data={data}
@@ -76,8 +72,7 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await expect.element(page.getByRole("cell", { name: "店舗025", exact: true })).toBeVisible();
   await expect.element(next).toBeDisabled();
   await previous.click();
-  await page.getByRole("button", { name: "店舗名を並べ替え", exact: true }).click();
-  await page.getByRole("button", { name: "店舗名を並べ替え", exact: true }).click();
+  await page.getByRole("combobox", { name: "並べ替え", exact: true }).selectOptions("name:desc");
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
   await page.getByRole("searchbox").fill("店舗003");
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗003");
@@ -86,4 +81,7 @@ test("表の検索・昇降順の並べ替え・ページ移動で対象行を�
   await page.getByRole("searchbox").fill("");
   await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗025");
   await expect.element(next).toBeEnabled();
+  await page.getByRole("button", { name: "リセット", exact: true }).click();
+  await expect.element(page.getByRole("cell").first()).toHaveTextContent("店舗001");
+  await expect.element(page.getByRole("button", { name: "リセット", exact: true })).toBeDisabled();
 });

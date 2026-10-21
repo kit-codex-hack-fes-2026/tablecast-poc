@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { table } from "../../../.storybook/tablecast-fixtures";
 import { TableCalendar } from "./table-calendar";
 
@@ -81,7 +81,9 @@ export const Day: Story = {
       }),
     );
     await expect(args.onSelect).toHaveBeenCalledWith("tablecast-short");
-    await expect(canvas.getByText("会計待ち", { exact: true })).toBeVisible();
+    await waitFor(async () => {
+      await expect(canvas.getAllByText("会計待ち", { exact: true })[0]).toBeVisible();
+    });
   },
 };
 export const English: Story = {

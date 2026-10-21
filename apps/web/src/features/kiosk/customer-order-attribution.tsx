@@ -1,3 +1,5 @@
+import * as Disclosure from "../../components/ui/disclosure";
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionFeedback } from "../../components/action-feedback";
 import { useAppForm } from "../../components/form";
@@ -49,81 +51,83 @@ export function CustomerOrderAttribution({
   });
   if (!participants.data?.participants.length) return null;
   return (
-    <details className="border-t p-4">
-      <summary className="cursor-pointer text-sm font-medium">
+    <Disclosure.Root className="border-t p-4">
+      <Disclosure.Trigger className="cursor-pointer text-sm font-medium">
         {t("customer_record_consumption")}
-      </summary>
-      <form
-        className="mt-4 space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.Field name="participantId">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("customer_target_hint")}
-              <NativeSelect
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
+      </Disclosure.Trigger>
+      <Disclosure.Panel>
+        <form
+          className="mt-4 space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          <form.Field name="participantId">
+            {(field) => (
+              <label className="flex flex-col gap-2">
+                {t("customer_target_hint")}
+                <NativeSelect
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  required
+                >
+                  <option value="">{t("customer_choose_person")}</option>
+                  {participants.data.participants.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      <ParticipantIdentity name={person.name} />
+                    </option>
+                  ))}
+                </NativeSelect>
+              </label>
+            )}
+          </form.Field>
+          <form.Field name="lineId">
+            {(field) => (
+              <label className="flex flex-col gap-2">
+                {t("customer_consumption_item")}
+                <NativeSelect
+                  value={field.state.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                >
+                  {order.snapshot.lines.map((line) => (
+                    <option key={line.id} value={line.id}>
+                      {line.name[locale]}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </label>
+            )}
+          </form.Field>
+          <form.AppField name="quantity">
+            {(field) => (
+              <field.NumberField
+                label={t("customer_consumption_quantity")}
+                min={1}
+                max={20}
                 required
-              >
-                <option value="">{t("customer_choose_person")}</option>
-                {participants.data.participants.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name ?? t("customer_anonymous")}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          )}
-        </form.Field>
-        <form.Field name="lineId">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("customer_consumption_item")}
-              <NativeSelect
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-              >
-                {order.snapshot.lines.map((line) => (
-                  <option key={line.id} value={line.id}>
-                    {line.name[locale]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </label>
-          )}
-        </form.Field>
-        <form.AppField name="quantity">
-          {(field) => (
-            <field.NumberField
-              label={t("customer_consumption_quantity")}
-              min={1}
-              max={20}
-              required
-            />
-          )}
-        </form.AppField>
-        <form.Field name="shared">
-          {(field) => (
-            <label className="flex items-center gap-3">
-              <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
-              {t("customer_consumption_shared")}
-            </label>
-          )}
-        </form.Field>
-        <form.AppForm>
-          <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-        </form.AppForm>
-        <ActionFeedback
-          pending={save.isPending}
-          error={save.error}
-          success={save.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </form>
-    </details>
+              />
+            )}
+          </form.AppField>
+          <form.Field name="shared">
+            {(field) => (
+              <label className="flex items-center gap-3">
+                <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
+                {t("customer_consumption_shared")}
+              </label>
+            )}
+          </form.Field>
+          <form.AppForm>
+            <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+          </form.AppForm>
+          <ActionFeedback
+            pending={save.isPending}
+            error={save.error}
+            success={save.isSuccess}
+            successMessage={t("account_saved")}
+          />
+        </form>
+      </Disclosure.Panel>
+    </Disclosure.Root>
   );
 }

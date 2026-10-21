@@ -5,11 +5,17 @@ import { useI18n } from "../../i18n/locale";
 import { SettingsShell } from "../shell/settings-shell";
 import { PageHeader } from "../../components/page-header";
 
-export function IntegrationsShell({ children }: { children: ReactNode }) {
+export function IntegrationsShell({
+  children,
+  publicGuide = false,
+}: {
+  children: ReactNode;
+  publicGuide?: boolean;
+}) {
   const { t } = useI18n();
   return (
-    <SettingsShell>
-      <PageHeader title={t("mcp_sessions")} />
+    <SettingsShell publicContent={publicGuide}>
+      <PageHeader title={t("mcp_sessions")} icon={<Blocks />} />
       <nav
         aria-label={t("mcp_sessions")}
         className="flex flex-wrap gap-x-4 gap-y-1 border-b border-border"

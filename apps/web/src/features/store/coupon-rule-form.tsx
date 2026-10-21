@@ -10,6 +10,8 @@ import { useCallback, useState } from "react";
 import { useAppForm } from "../../components/form";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
+import { Button } from "../../components/ui/button";
+import { Ticket } from "lucide-react";
 import { Checkbox } from "../../components/ui/checkbox";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
@@ -18,6 +20,7 @@ import { apiError } from "../../lib/api-error";
 import { ConfigurationImageField } from "./configuration-image-field";
 import { couponRulesOptions } from "./coupon-query";
 import { configurationImageUploadKey } from "./menu-query";
+import { LanguageFields } from "./language-fields";
 import { RewardEditorStatus } from "./reward-editor-status";
 const dateInput = (time: number) => new Date(time + 9 * 3600000).toISOString().slice(0, 16);
 type CouponDefinition = z.infer<typeof couponDefinitionSchema>;
@@ -28,12 +31,14 @@ export function CouponRuleForm({
   storeId,
   initial,
   onSaved,
+  onCancel,
 }: {
   storeId: string;
   initial?: CouponDefinition;
   onSaved: () => void;
+  onCancel?: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const client = useQueryClient();
   const savedRules = useInfiniteQuery({ ...couponRulesOptions(storeId), enabled: false });
   const [staged, setStaged] = useState(false);
@@ -130,7 +135,22 @@ export function CouponRuleForm({
         void form.handleSubmit();
       }}
     >
-      <p>{t("coupon_version_note")}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold">
+          <Ticket aria-hidden="true" className="size-5 shrink-0" />
+          {initial ? initial.rules.title[locale] : t("coupon_new")}
+        </h2>
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending || !!uploads}
+            onClick={onCancel}
+          >
+            {t("common_cancel")}
+          </Button>
+        )}
+      </div>
       {defaults.expectedVersion > 0 && (
         <RewardEditorStatus
           version={defaults.expectedVersion}
@@ -147,26 +167,41 @@ export function CouponRuleForm({
         onRetry={() => (reload.error ? reload.mutate() : void savedRules.refetch())}
         retrying={pending || savedRules.isFetching || !!uploads}
       />
-      <fieldset disabled={pending} className="grid gap-5 sm:grid-cols-2">
-        {(["ja", "en"] as const).map((locale) => (
-          <form.AppField key={locale} name={`rules.title.${locale}`}>
-            {(field) => (
-              <field.TextField label={t(`coupon_title_${locale}`)} required maxLength={500} />
+      <fieldset
+        disabled={pending}
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-5"
+      >
+        <div className="col-span-full">
+          <LanguageFields>
+            {(language) => (
+              <>
+                <form.AppField name={`rules.title.${language}`}>
+                  {(field) => (
+                    <field.TextField
+                      label={t(`coupon_title_${language}`)}
+                      required
+                      maxLength={500}
+                    />
+                  )}
+                </form.AppField>
+                <form.AppField name={`rules.description.${language}`}>
+                  {(field) => (
+                    <field.TextField
+                      label={t(`coupon_description_${language}`)}
+                      required
+                      maxLength={500}
+                    />
+                  )}
+                </form.AppField>
+              </>
             )}
-          </form.AppField>
-        ))}
-        {(["ja", "en"] as const).map((locale) => (
-          <form.AppField key={locale} name={`rules.description.${locale}`}>
-            {(field) => (
-              <field.TextField label={t(`coupon_description_${locale}`)} required maxLength={500} />
-            )}
-          </form.AppField>
-        ))}
+          </LanguageFields>
+        </div>
         <form.AppField name="start">
-          {(field) => <field.TextField type="datetime-local" label={t("coupon_start")} required />}
+          {(field) => <field.DateField includeTime label={t("coupon_start")} required />}
         </form.AppField>
         <form.AppField name="end">
-          {(field) => <field.TextField type="datetime-local" label={t("coupon_end")} required />}
+          {(field) => <field.DateField includeTime label={t("coupon_end")} required />}
         </form.AppField>
         <form.Field name="active">
           {(field) => (
@@ -226,7 +261,7 @@ export function CouponRuleForm({
             </label>
           )}
         </form.Field>
-        <div className="sm:col-span-2">
+        <div className="col-span-full">
           <form.Field name="rules">
             {(field) => (
               <ConfigurationImageField
@@ -234,6 +269,7 @@ export function CouponRuleForm({
                 storeId={storeId}
                 value={field.state.value}
                 disabled={pending}
+                saveHint={t("coupon_version_note")}
                 onStagedChange={onStagedChange}
                 onChange={(image) =>
                   field.handleChange({

@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { EvaluationGuide } from "./evaluation-guide";
 import { Brand } from "../../components/brand";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
@@ -48,7 +49,7 @@ export function Pairing({
       {request.data ? (
         <>
           <QRCodeSVG
-            className="mb-5 rounded-xl bg-white p-3"
+            className="mb-5 rounded-xl bg-card p-3"
             value={`${request.data.verification_uri}?user_code=${encodeURIComponent(request.data.user_code)}`}
             size={208}
             level="M"
@@ -98,12 +99,12 @@ export function Pairing({
       </header>
       {evaluation && <EvaluationGuide />}
       {evaluation ? (
-        <details className="mx-auto max-w-6xl px-6 pb-10">
-          <summary className="cursor-pointer py-5 text-base font-medium">
+        <Disclosure.Root className="mx-auto max-w-6xl px-6 pb-10">
+          <Disclosure.Trigger className="cursor-pointer py-5 text-base font-medium">
             {t("evaluation_device")}
-          </summary>
-          {pairing}
-        </details>
+          </Disclosure.Trigger>
+          <Disclosure.Panel>{pairing}</Disclosure.Panel>
+        </Disclosure.Root>
       ) : (
         pairing
       )}

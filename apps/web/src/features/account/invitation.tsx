@@ -1,3 +1,4 @@
+import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
@@ -23,12 +24,12 @@ export function Invitation({ id }: { id: string }) {
   });
   return (
     <SettingsShell>
-      <section className="space-y-6 rounded-2xl border border-border bg-white p-6 shadow-sm">
+      <section className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold">{t("org_invitation")}</h1>
         {invitation.data && (
           <>
             <p>{invitation.data.organizationName}</p>
-            <p>{invitation.data.email}</p>
+            <UserIdentity user={{ email: invitation.data.email }} />
             <div className="flex gap-3">
               <Button disabled={decide.isPending} onClick={() => decide.mutate(true)}>
                 {t("org_accept")}

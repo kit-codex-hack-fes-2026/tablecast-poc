@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { PageHeader } from "../../components/page-header";
 import { pointRulesSchema } from "@tablecast/api/schema";
 import { useState } from "react";
+import { Gift } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
@@ -57,7 +58,11 @@ export function PointPolicy() {
   });
   return (
     <section className="space-y-6">
-      <PageHeader title={t("customer_points_policy")} description={t("customer_points_future")} />
+      <PageHeader
+        title={t("customer_points_policy")}
+        icon={<Gift />}
+        description={t("customer_points_future")}
+      />
       <form
         className="max-w-2xl space-y-5"
         onSubmit={(e) => {
@@ -109,14 +114,25 @@ export function PointPolicy() {
               <field.NumberField label={t("customer_points_rate")} min={0} max={100000} required />
             )}
           </form.AppField>
-          <form.AppField
-            name="rules.unitYen"
-            validators={{ onChange: pointRulesSchema.shape.unitYen }}
-          >
-            {(field) => (
-              <field.NumberField label={t("customer_points_unit")} min={1} max={1000000} required />
-            )}
-          </form.AppField>
+          <form.Subscribe selector={(state) => state.values.rules.kind}>
+            {(kind) =>
+              kind === "spend" && (
+                <form.AppField
+                  name="rules.unitYen"
+                  validators={{ onChange: pointRulesSchema.shape.unitYen }}
+                >
+                  {(field) => (
+                    <field.NumberField
+                      label={t("customer_points_unit")}
+                      min={1}
+                      max={1000000}
+                      required
+                    />
+                  )}
+                </form.AppField>
+              )
+            }
+          </form.Subscribe>
           <form.AppForm>
             <form.SubmitButton>{t("account_save")}</form.SubmitButton>
           </form.AppForm>

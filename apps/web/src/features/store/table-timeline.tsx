@@ -1,7 +1,18 @@
+import { LanguageLabel } from "../../components/language-label";
 import type { TableState } from "@tablecast/api/schema";
-import { Bell, ChevronRight, CircleDollarSign, TriangleAlert } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import {
+  Bell,
+  ChevronRight,
+  CircleDollarSign,
+  TriangleAlert,
+  Table2,
+  Users,
+  Clock3,
+  ReceiptText,
+  Plus,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Skeleton } from "../../components/ui/skeleton";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
@@ -17,6 +28,7 @@ export function TableTimeline({
   initialNow,
   pending = false,
   filter = "all",
+  search = "",
 }: {
   pending?: boolean;
   tables: TableState[];
@@ -25,6 +37,7 @@ export function TableTimeline({
   onSelect: (id: string) => void;
   onOpen?: (table: { id: string; name: string }) => void;
   filter?: FloorFilter;
+  search?: string;
 }) {
   const { locale, t } = useI18n();
   const [now, setNow] = useState(() => initialNow ?? Date.now());
@@ -51,7 +64,9 @@ export function TableTimeline({
       .map((visit) => ({ id: visit.id, name: visit.tableName, visit })),
     ...vacantTables.map((item) => ({ ...item, visit: null })),
   ];
-  const filtered = rows.filter(({ visit }) => {
+  const filtered = rows.filter(({ visit, name }) => {
+    if (!name.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale)))
+      return false;
     if (filter === "all") return true;
     if (filter === "vacant") return !visit;
     if (!visit) return false;
@@ -61,20 +76,140 @@ export function TableTimeline({
     if (filter === "billing") return visit.billRequested && visit.bill.due > 0;
     return visit.voiceState === "error";
   });
-  const columns = useMemo(
-    () => tableTimelineColumns(t, locale, now, onSelect, onOpen),
-    [t, locale, now, onSelect, onOpen],
-  );
   return (
-    <DataTable
-      pending={pending}
-      data={filtered}
-      columns={columns}
-      getRowId={(row) => row.id}
-      searchLabel={t("device_search_table")}
-      empty={t(filter === "all" ? "admin_no_tables" : "floor_filter_empty")}
-      pagination={false}
-    />
+    <section className="space-y-4" aria-label={t("floor_list")}>
+      {pending ? (
+        <div
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          aria-label={t("common_loading")}
+          role="status"
+        >
+          {[0, 1, 2].map((key) => (
+            <Skeleton key={key} className="h-64 rounded-2xl" />
+          ))}
+        </div>
+      ) : filtered.length ? (
+        <ul className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map(({ id, name, visit }) => {
+            const attention = visit && priority(visit) < 3;
+            return (
+              <li
+                key={id}
+                className={`min-w-0 overflow-hidden rounded-2xl border border-t-4 ${attention ? "border-border border-t-warning" : visit ? "border-border border-t-info" : "border-dashed border-border bg-surface-subtle/40"}`}
+              >
+                <div className="flex items-center gap-3 p-4">
+                  <span
+                    aria-hidden="true"
+                    className={`flex size-14 shrink-0 items-center justify-center rounded-xl ${attention ? "bg-warning-soft text-warning" : visit ? "bg-info-soft text-info" : "bg-secondary text-muted-foreground"}`}
+                  >
+                    <Table2 className="size-8" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xl wrap-anywhere">{name}</h3>
+                    <Badge variant={visit ? "info" : "inactive"}>
+                      {t(visit ? "admin_open" : "admin_vacant")}
+                    </Badge>
+                  </div>
+                </div>
+                {visit ? (
+                  <>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 px-4 pb-4 text-sm">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Users className="size-4 text-muted-foreground" aria-hidden="true" />
+                        {visit.guestCount} {t("admin_guests")}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 tabular-nums">
+                        <Clock3 className="size-4 text-muted-foreground" aria-hidden="true" />
+                        {Math.max(0, Math.floor((now - visit.openedAt) / 60_000))}{" "}
+                        {t("kiosk_minutes")}
+                      </span>
+                      <span className="text-muted-foreground">
+                        <LanguageLabel locale={visit.locale} />
+                      </span>
+                    </div>
+                    {attention && (
+                      <div className="flex flex-wrap gap-2 border-y border-warning/15 bg-warning-soft/50 px-4 py-3">
+                        {visit.staffCalled && (
+                          <Badge variant="warning">
+                            <Bell />
+                            {t("floor_filter_called")}
+                          </Badge>
+                        )}
+                        {visit.billRequested && visit.bill.due > 0 && (
+                          <Badge variant="warning">
+                            <CircleDollarSign />
+                            {t("admin_billing")}
+                          </Badge>
+                        )}
+                        {visit.voiceState === "error" && (
+                          <Badge variant="destructive">
+                            <TriangleAlert />
+                            {t("admin_voice_errors")}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                    <dl className="mx-4 mt-4 space-y-2 border-y border-dashed border-border py-3 text-sm tabular-nums">
+                      <div className="flex justify-between gap-4">
+                        <dt className="inline-flex items-center gap-1.5 text-muted-foreground">
+                          <ReceiptText className="size-4" aria-hidden="true" />
+                          {t("admin_ordered")}
+                        </dt>
+                        <dd>{money(visit.bill.orderedTotal, locale)}</dd>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-4 font-semibold">
+                        <dt>{t("admin_due")}</dt>
+                        <dd className="text-xl">{money(visit.bill.due, locale)}</dd>
+                      </div>
+                      {visit.cart.total > 0 && (
+                        <div className="flex justify-between gap-4 text-muted-foreground">
+                          <dt>{t("admin_cart")}</dt>
+                          <dd>{money(visit.cart.total, locale)}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <div className="p-4">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between"
+                        onClick={() => onSelect(id)}
+                        aria-label={`${name} ${t("object_visit")}`}
+                      >
+                        <span>{t("object_visit")}</span>
+                        <ChevronRight />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="px-4 pb-4">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      disabled={!onOpen}
+                      onClick={() => onOpen?.({ id, name })}
+                      aria-label={`${name} ${t("admin_open_table")}`}
+                    >
+                      <Plus />
+                      {t("admin_open_table")}
+                    </Button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="py-8 text-muted-foreground">
+          {t(
+            search.trim()
+              ? "floor_search_empty"
+              : filter === "all"
+                ? "admin_no_tables"
+                : "floor_filter_empty",
+          )}
+        </p>
+      )}
+    </section>
   );
 }
 function priority(table: TableState) {
@@ -82,122 +217,4 @@ function priority(table: TableState) {
   if (table.billRequested && table.bill.due > 0) return 1;
   if (table.voiceState === "error") return 2;
   return 3;
-}
-
-function tableTimelineColumns(
-  t: ReturnType<typeof useI18n>["t"],
-  locale: ReturnType<typeof useI18n>["locale"],
-  now: number,
-  onSelect: (id: string) => void,
-  onOpen: ((table: { id: string; name: string }) => void) | undefined,
-): DataTableColumn<FloorRow>[] {
-  return [
-    {
-      accessorKey: "name",
-      header: t("admin_table"),
-      cell: ({ row }) => (
-        <Button
-          className="h-auto min-h-12 min-w-24 justify-start px-0 text-left"
-          variant="ghost"
-          onClick={() =>
-            row.original.visit
-              ? onSelect(row.original.id)
-              : onOpen?.({ id: row.original.id, name: row.original.name })
-          }
-        >
-          <span>
-            <strong className="block text-base">{row.original.name}</strong>
-            <span className="block text-sm font-normal text-muted-foreground">
-              {row.original.visit
-                ? `${row.original.visit.guestCount} ${t("admin_guests")}`
-                : t("admin_open_table")}
-            </span>
-          </span>
-          <ChevronRight className="size-4" />
-        </Button>
-      ),
-    },
-    {
-      id: "status",
-      header: t("common_status"),
-      cell: ({ row }) => (
-        <div className="min-w-24 space-y-2">
-          <Badge variant={row.original.visit ? "success" : "inactive"}>
-            {t(row.original.visit ? "admin_open" : "admin_vacant")}
-          </Badge>
-          {row.original.visit && (
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <p className="tabular-nums">
-                {Math.max(0, Math.floor((now - row.original.visit.openedAt) / 60_000))}{" "}
-                {t("kiosk_minutes")}
-              </p>
-              <p>
-                {t(
-                  row.original.visit.locale === "ja"
-                    ? "common_language_native_ja"
-                    : "common_language_native_en",
-                )}
-              </p>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "attention",
-      header: t("floor_attention"),
-      cell: ({ row }) => {
-        const visit = row.original.visit;
-        return visit && priority(visit) < 3 ? (
-          <div className="flex min-w-32 flex-col items-start gap-2">
-            {visit.staffCalled && (
-              <Badge variant="outline">
-                <Bell className="size-4" />
-                {t("floor_filter_called")}
-              </Badge>
-            )}
-            {visit.billRequested && visit.bill.due > 0 && (
-              <Badge variant="outline">
-                <CircleDollarSign className="size-4" />
-                {t("admin_billing")}
-              </Badge>
-            )}
-            {visit.voiceState === "error" && (
-              <Badge variant="destructive">
-                <TriangleAlert className="size-4" />
-                {t("admin_voice_errors")}
-              </Badge>
-            )}
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        );
-      },
-    },
-    {
-      id: "billing",
-      header: t("floor_orders_billing"),
-      cell: ({ row }) =>
-        row.original.visit ? (
-          <dl className="min-w-36 space-y-1 text-sm tabular-nums">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
-              <dd>{money(row.original.visit.bill.orderedTotal, locale)}</dd>
-            </div>
-            <div className="flex justify-between gap-4 font-semibold">
-              <dt>{t("admin_due")}</dt>
-              <dd>{money(row.original.visit.bill.due, locale)}</dd>
-            </div>
-            {row.original.visit.cart.total > 0 && (
-              <div className="flex justify-between gap-4 text-muted-foreground">
-                <dt>{t("admin_cart")}</dt>
-                <dd>{money(row.original.visit.cart.total, locale)}</dd>
-              </div>
-            )}
-          </dl>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
-    },
-  ];
 }

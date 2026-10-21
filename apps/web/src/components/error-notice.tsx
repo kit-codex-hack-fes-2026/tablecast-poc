@@ -30,6 +30,13 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
   }
 }
 
+/**
+ * 通信・認可・競合など画面全体の失敗を表示する。
+ * errorはunknownで受けAPIエラーを翻訳し、生の内部エラーを表示しない。
+ * onRetryを渡す場合は呼出し元が再取得し、retryingで二重操作を防ぐ。
+ * 入力エラーにはFieldErrorsを使う。
+ * 取得済み情報を消さず隣接して配置する。
+ */
 export function ErrorNotice({
   error,
   onRetry,
@@ -49,7 +56,7 @@ export function ErrorNotice({
       : undefined;
   return (
     <div
-      className="flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
+      className="motion-safe:animate-tablecast-state flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
       role="alert"
     >
       <AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" />

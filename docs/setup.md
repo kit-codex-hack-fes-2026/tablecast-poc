@@ -93,6 +93,8 @@ bun run dev
 
 [mise.toml](../mise.toml)がNode 24.22.0、Bun 1.4.3を指定する。`setup` は固定lockでJS依存とhooksを導入し、Paraglideを生成する。追加worktreeでも `mise trust`、`mise install`、`bun run setup` を実行する。
 
+Webのアプリ操作ショートカットは`@tanstack/react-hotkeys`を使う。依存はWebのpackageとrootのlockで固定し、追加のブラウザー拡張やOS設定は不要。フォームの保存可否と同じ制約で動作し、コンポーネント固有の矢印キー操作は既存部品へ任せる。
+
 CIのNodeは`>=24.22.0 <25`を指定し、`setup-node`がrunnerのtoolcacheから適合する24系を選ぶ。収録版があればNodeの取得・展開・コピーを省き、なければ取得する。ローカルとDev Containerの24.22.0固定、Bunと依存lockは維持する。CIのminor・patch版はrunner image更新に追従するため、CI固有の問題を再現するときは`setup-node`ログの実行版とrunner imageを照合する。[setup-nodeの版選択](https://github.com/actions/setup-node/blob/49933ea5288caeca8642d1e84afbd3f7d6820020/README.md#supported-version-syntax)
 
 CIのBun取得cacheは各jobが復元し、静的検査jobだけが固定依存の導入後に保存する。全jobでfrozen installを実行し、取得cacheを試験成功の代わりに使わない。Turboを使うjobはcodegen前にcacheを復元する。APIではWeb生成物を使わず、Componentは直前に専用形式を生成するため、この2jobでは共通setupのcodegenだけを省く。実行範囲と費用の測定は[CIのジョブとキャッシュ](testing.md#ciのジョブとキャッシュ)を参照する。
@@ -287,11 +289,19 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### 接客エディターの依存
 
-Webの接客方針エディターはTiptap 3.31.3のcore・react・pm・starter-kit・suggestionを使用する。rootの `bun.lock` と通常の `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。保存形式を読めるAPIを先に配備する。互換性とロールバック条件は[接客エディター設計](prompt-editor-design.md#読取互換と展開)を参照する。
+Webの接客方針はMarkdownソースと既存Streamdownのプレビューを使う。Tiptap依存は不要。既存の構造化本文は読取互換を保ち、編集した言語だけをMarkdownに変換する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。追加の環境変数・外部サービス・ライセンスキーは不要。[接客エディター設計](prompt-editor-design.md)を参照する。
+
+### UIの色トークン
+
+Webは `@radix-ui/colors@3.0.0` のCSSを読み、既存Tailwindのsemantic aliasへ割り当てる。通常の `bun install --frozen-lockfile` に含まれ、別サーバーや設定は不要。色・質感・余白と操作状態の正本はWeb内Storybookのデザインシステムと `src/styles.css` に置く。
 
 ### 店舗テーマの開発依存
 
 追加CSSの検証にはAPI workspaceの`css-tree`を使う。通常の`bun install --frozen-lockfile`で導入する。ネイティブ実行や別サーバーは不要で、WorkersとWebが同じ入力契約を使う。製品pluginのテーマskill変更後は`bun --no-env-file scripts/tablecast-plugin.ts --skills-only`で配布コピーを同期する。接続先やOAuth設定は変更しない。
+
+### グラフとショートカットの依存
+
+Webは`@tanstack/charts@1.1.0`のReact adapterと`@tanstack/react-hotkeys@0.15.0`を使う。通常の`bun install --frozen-lockfile`で導入し、追加env・外部サービス・ライセンスキーは不要。ChartsのSVG・scale・tooltipは公開entrypointから必要なものだけ読み込む。新しいルートと翻訳は既存のVite plugin・`bun run codegen`で生成する。
 
 ## 型検査の実行版
 
@@ -318,3 +328,13 @@ Better Auth 1.7.3以降は`account.issuer`を書き込まない。`0025_tablecas
 React DoctorとOxlintの更新は通常のfrozen installへ含む。追加の実行手順やReact Compiler導入は不要で、診断モードと対象は[静的解析](static-analysis.md#webの追加ルール)を参照する。
 
 組織課金を開発する場合は [課金・請求の導入手順](billing.md#開発と導入) を参照する。`bun run dev:config` はAPI用の `.local/.dev.vars` とWeb用の `.local/.dev.vars.web` を分け、従来のWeb symlinkが同じworktreeのAPI設定を指す場合だけ生成先を更新する。
+
+Viteの開発起動ではAPIを補助Workerとして同時実行するため、`envDir`を自worktreeの`.local`に揃える。Cloudflare Viteプラグインは同じローカル設定を全Workerで参照し、各Workerが宣言したbindingだけを渡す。APIの認証・決済のsecretをWebのbindingへ追加しない。build・previewはこの開発用envDir切替の対象外とし、配備用のsecret管理を維持する。
+
+`0027_tablecast_configuration_history.sql`は公開版の作成元下書き、下書きの復元元公開版を保存するnullable列と履歴読取用indexを追加する。既存の設定・注文・履歴は書き換えず、過去の由来はNULLのまま保持する。APIの更新前に既存のmigration経路で適用する。追加列はNULLを許容し、旧版で作られた行に由来を推測して補完しない。
+
+### Storybook Docsの依存
+
+部品の用途・props・使用例はWeb内の公式 `@storybook/addon-docs@10.6.2` によるDocs/Autodocsで確認する。通常の `bun install --frozen-lockfile` と `bun run storybook` で利用できる。MCP登録は [開発環境](development.md#storybook-mcp) に従い、起動したworktreeの実URLを既存のGit管理外 `.codex/config.toml` へ統合する。ユーザー共通設定、API、DB、秘密情報の追加は不要。
+
+Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。

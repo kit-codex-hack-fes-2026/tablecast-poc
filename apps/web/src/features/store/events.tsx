@@ -1,4 +1,14 @@
 import type { TableEvent } from "@tablecast/api/schema";
+import {
+  Bell,
+  CircleCheck,
+  CircleDollarSign,
+  MessageCircle,
+  Radio,
+  ReceiptText,
+  Table2,
+} from "lucide-react";
+import { LanguageLabel } from "../../components/language-label";
 import { dateTime, time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
@@ -51,52 +61,76 @@ export function ActivityLog({
   return (
     <ol
       data-ui="activity-log"
-      className="list-none py-1 px-0 [&_>_li::before]:content-[''] [&_>_li::before]:absolute [&_>_li::before]:left-14 [&_>_li::before]:top-8 [&_>_li::before]:-bottom-2.5 [&_>_li::before]:w-px [&_>_li::before]:bg-border [&_>_li:last-child::before]:hidden [&[data-with-date]_time]:w-24 [&[data-with-date]_>_li::before]:left-28"
+      className="list-none py-1 [&_>_li::before]:absolute [&_>_li::before]:left-4 [&_>_li::before]:top-12 [&_>_li::before]:bottom-0 [&_>_li::before]:w-px [&_>_li::before]:bg-border [&_>_li:last-child::before]:hidden"
       data-with-date={includeDate || undefined}
     >
-      {events.map((event) => (
-        <li
-          className="flex items-start gap-3.5 py-3.5 px-0 relative"
-          key={event.cursor}
-          data-event-cursor={event.cursor}
-        >
-          <time
-            className="text-sm w-9 shrink-0 text-muted-foreground mt-0.5"
-            dateTime={new Date(event.createdAt).toISOString()}
+      {events.map((event) => {
+        const group = event.kind.split(".")[0];
+        const Icon =
+          group === "order" || group === "cart"
+            ? ReceiptText
+            : group === "staff"
+              ? Bell
+              : group === "billing" || group === "bill"
+                ? CircleDollarSign
+                : group === "table"
+                  ? Table2
+                  : group === "voice"
+                    ? Radio
+                    : group === "configuration"
+                      ? CircleCheck
+                      : MessageCircle;
+        const tone =
+          event.kind === "voice.error"
+            ? "bg-destructive/10 text-destructive"
+            : event.kind === "staff.called" || event.kind === "bill.requested"
+              ? "bg-warning-soft text-warning"
+              : event.kind === "staff.resolved" || event.kind === "billing.payment"
+                ? "bg-success-soft text-success"
+                : "bg-info-soft text-info";
+        return (
+          <li
+            className="relative grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-3 py-3"
+            key={event.cursor}
+            data-event-cursor={event.cursor}
           >
-            {includeDate ? dateTime(event.createdAt, locale) : time(event.createdAt, locale)}
-          </time>
-          <span
-            data-state={event.kind.split(".")[0]}
-            className="rounded-full bg-muted shrink-0 mt-1 [&[data-state=order]]:bg-success [&[data-state=staff]]:bg-accent size-2"
-            aria-hidden="true"
-          />
-          <div>
-            <strong className="text-sm font-medium">
-              <EventLabel event={event} />
-            </strong>
-            {typeof event.data.text === "string" && (
-              <p
-                className="text-sm mt-1 text-muted-foreground leading-loose whitespace-pre-wrap"
-                lang={event.data.locale === "en" ? "en" : "ja"}
-              >
-                {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
-                {event.data.text}
-                <small className="block text-sm text-muted-foreground mt-0.5">
-                  {t(
-                    event.data.locale === "en"
-                      ? "common_language_native_en"
-                      : "common_language_native_ja",
-                  )}
-                  {typeof event.data.source === "string" &&
-                    event.data.source.startsWith("synthetic-") &&
-                    ` · ${t("common_synthetic")}`}
-                </small>
-              </p>
-            )}
-          </div>
-        </li>
-      ))}
+            <span
+              aria-hidden="true"
+              className={`relative flex size-8 items-center justify-center rounded-lg ${tone}`}
+            >
+              <Icon className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <strong className="text-sm font-medium">
+                  <EventLabel event={event} />
+                </strong>
+                <time
+                  className="text-xs text-muted-foreground"
+                  dateTime={new Date(event.createdAt).toISOString()}
+                >
+                  {includeDate ? dateTime(event.createdAt, locale) : time(event.createdAt, locale)}
+                </time>
+              </div>
+              {typeof event.data.text === "string" && (
+                <p
+                  className="text-sm mt-2 text-muted-foreground leading-relaxed whitespace-pre-wrap"
+                  lang={event.data.locale === "en" ? "en" : "ja"}
+                >
+                  {event.data.role === "user" ? t("kiosk_guest") : t("kiosk_assistant")}:{" "}
+                  {event.data.text}
+                  <small className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <LanguageLabel locale={event.data.locale === "en" ? "en" : "ja"} />
+                    {typeof event.data.source === "string" &&
+                      event.data.source.startsWith("synthetic-") &&
+                      ` · ${t("common_synthetic")}`}
+                  </small>
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }

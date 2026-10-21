@@ -1,8 +1,9 @@
-import { Checkbox } from "@base-ui/react/checkbox";
 import type { Product } from "@tablecast/api/schema";
-import { Check, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { Input } from "../../components/ui/input";
+import { Checkbox } from "../../components/ui/checkbox";
+import { LanguageFields } from "./language-fields";
 import { NativeSelect } from "../../components/ui/native-select";
 import { useI18n } from "../../i18n/locale";
 
@@ -11,18 +12,21 @@ export function ConfigurationSection({
   icon: Icon,
   children,
   id: sectionId,
+  headingId,
 }: {
   id?: string;
+  headingId?: string;
   title: string;
   icon: LucideIcon;
   children: ReactNode;
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = headingId ?? generatedId;
   return (
     <section
       id={sectionId}
       aria-labelledby={id}
-      className="@container min-w-0 scroll-mt-28 space-y-5"
+      className="@container min-w-0 scroll-mt-28 space-y-5 rounded-2xl border border-border/60 bg-card p-4 sm:p-5"
     >
       <h2 id={id} className="flex items-start gap-2 text-lg font-semibold">
         <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
@@ -51,18 +55,13 @@ export function BooleanField({
   const id = useId();
   return (
     <label className="flex min-h-12 items-center gap-3 text-sm">
-      <Checkbox.Root
+      <Checkbox
         id={inputId}
         aria-labelledby={labelledBy ? `${labelledBy} ${id}` : id}
-        className="flex items-center justify-center border border-border rounded-md shrink-0 [&[data-checked]]:bg-primary [&[data-checked]]:border-primary [&[data-checked]]:text-card [&_span]:flex size-5"
         checked={value}
         disabled={disabled}
         onCheckedChange={onChange}
-      >
-        <Checkbox.Indicator>
-          <Check aria-hidden="true" size={16} />
-        </Checkbox.Indicator>
-      </Checkbox.Root>
+      />
       <span id={id}>{label}</span>
     </label>
   );
@@ -203,21 +202,19 @@ export function BilingualFields({
     { key: "description", label: t("admin_description") },
   ] as const;
   return (
-    <div className="@container grid min-w-0 gap-5 @xl:grid-cols-2">
-      {(["ja", "en"] as const).map((language) => (
-        <fieldset key={language} className="flex flex-col gap-4 min-w-0 pt-0" disabled={disabled}>
-          <legend id={`${id}-${language}`} className="mb-3 font-semibold">
-            {t(language === "ja" ? "common_ja" : "common_en")}
-          </legend>
+    <LanguageFields>
+      {(language, languageLabelId) => (
+        <fieldset className="grid min-w-0 gap-4" disabled={disabled}>
           {fields
             .filter(({ key }) => includeName || key !== "displayName")
             .map(({ key, label }) => (
-              <label className="flex flex-col gap-2 text-sm" key={key}>
+              <label className="grid min-w-0 gap-2 text-sm" key={key}>
                 <span id={`${id}-${language}-${key}`}>{label}</span>
                 {key === "description" ? (
                   <textarea
-                    aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
-                    className="min-h-24 w-full rounded-lg border border-input p-2 text-base"
+                    lang={language}
+                    aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
+                    className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
                     maxLength={3000}
                     value={value[language][key]}
                     onChange={(event) =>
@@ -229,7 +226,8 @@ export function BilingualFields({
                   />
                 ) : (
                   <Input
-                    aria-labelledby={`${labelledBy ?? ""} ${id}-${language} ${id}-${language}-${key}`}
+                    lang={language}
+                    aria-labelledby={`${labelledBy ?? ""} ${languageLabelId} ${id}-${language}-${key}`}
                     required
                     maxLength={150}
                     value={value[language][key]}
@@ -244,7 +242,7 @@ export function BilingualFields({
               </label>
             ))}
           <StringListField
-            labelledBy={`${labelledBy ?? ""} ${id}-${language}`}
+            labelledBy={`${labelledBy ?? ""} ${languageLabelId}`}
             label={t("editor_aliases")}
             value={value[language].aliases}
             disabled={disabled}
@@ -253,7 +251,7 @@ export function BilingualFields({
             }
           />
         </fieldset>
-      ))}
-    </div>
+      )}
+    </LanguageFields>
   );
 }

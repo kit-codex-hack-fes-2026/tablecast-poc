@@ -1,21 +1,18 @@
-import { instructionText } from "@tablecast/api/schema";
 import { tv, type VariantProps } from "tailwind-variants";
-import { Slider } from "@base-ui/react/slider";
 import type { Catalog, Product, Snapshot, TableEvent } from "@tablecast/api/schema";
-import { castInstructions } from "@tablecast/api/speech";
 import {
   AudioLines,
-  Bug,
   Check,
   CircleAlert,
   LoaderCircle,
   Mic,
   MicOff,
-  Rabbit,
+  Pause,
   ShoppingBag,
-  Turtle,
 } from "lucide-react";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { forwardRef, lazy, Suspense, useRef, type ReactNode } from "react";
+import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { Streamdown } from "streamdown";
 import {
   Conversation,
@@ -28,6 +25,7 @@ import { useI18n } from "../../i18n/locale";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "../../components/product-menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
+import { LocalCamera, useLocalCamera } from "./local-camera";
 import type { VoiceView } from "./voice-connection";
 
 const AudioWaveform = lazy(() =>
@@ -35,15 +33,15 @@ const AudioWaveform = lazy(() =>
 );
 
 const speakerBadge = tv({
-  base: "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+  base: "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2 py-0.5 font-semibold",
   variants: {
     colour: {
       assistant: "bg-primary/10 text-primary",
       guest: "bg-secondary text-secondary-foreground",
-      sky: "bg-sky-100 text-sky-900",
-      violet: "bg-violet-100 text-violet-900",
-      amber: "bg-amber-100 text-amber-900",
-      teal: "bg-teal-100 text-teal-900",
+      sky: "bg-nav-workspace-soft text-nav-workspace",
+      violet: "bg-nav-menu-soft text-nav-menu",
+      amber: "bg-warning-soft text-warning",
+      teal: "bg-nav-store-soft text-nav-store",
     },
   },
 });
@@ -58,30 +56,53 @@ function speakerColour(line: ConversationLine): VariantProps<typeof speakerBadge
   return speakerColours[Math.abs(hash) % speakerColours.length];
 }
 
-const activityDot = tv({
-  base: "size-2 rounded-full",
-  variants: {
-    active: { true: "bg-success motion-safe:animate-pulse", false: "bg-muted-foreground" },
-  },
-});
-
 const markdownComponents = {
   a: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   img: () => null,
 };
 
+const transcriptAnimation = {
+  animation: "fadeIn",
+  duration: 150,
+  sep: "char",
+  stagger: 0,
+  maxBacklogMs: 0,
+} as const;
+
+// 行のIDと本文DOMを保ち、追加された発話だけを短く表示する。
+const ConversationEntry = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
+  function ConversationEntry({ children, className }, ref) {
+    const present = useIsPresent();
+    const reduced = useReducedMotion();
+    return (
+      <m.div
+        ref={ref}
+        data-ui="conversation-entry"
+        className={className}
+        inert={!present}
+        aria-hidden={!present || undefined}
+        initial={reduced ? false : { opacity: 0, transform: "translateY(6px)" }}
+        animate={{ opacity: 1, transform: "none" }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+      >
+        {children}
+      </m.div>
+    );
+  },
+);
+
 function ConversationMessage({
   line,
   status,
-  debug,
   children,
 }: {
   line: ConversationLine;
   status?: string;
-  debug: boolean;
   children?: ReactNode;
 }) {
   const { locale, t } = useI18n();
+  const reduced = useReducedMotion();
   return (
     <article
       data-role={line.role}
@@ -98,13 +119,14 @@ function ConversationMessage({
           )}
           {conversationSpeakerName(line, t)}
         </span>
-        <span>{status || time(line.createdAt, locale)}</span>
+        <span className="text-right tabular-nums">{status || time(line.createdAt, locale)}</span>
       </div>
-      <div className="rounded-xl border border-border bg-card px-3 py-2 text-sm leading-relaxed text-foreground shadow-xs shadow-black/5 group-data-[role=user]:bg-secondary group-data-[live=true]:border-primary group-data-[live=true]:ring-1 group-data-[live=true]:ring-primary/20">
+      <div className="rounded-xl border border-border bg-card px-3 py-2 text-sm leading-relaxed text-foreground shadow-xs group-data-[role=user]:bg-secondary group-data-[live=true]:border-primary group-data-[live=true]:ring-1 group-data-[live=true]:ring-primary/20">
         {line.text ? (
           <Streamdown
             mode={status ? "streaming" : "static"}
             isAnimating={Boolean(status)}
+            animated={status && !reduced ? transcriptAnimation : false}
             controls={false}
             components={markdownComponents}
           >
@@ -135,7 +157,6 @@ function ConversationMessage({
       {line.synthetic && (
         <p className="mt-1 text-xs text-muted-foreground">{t("common_synthetic")}</p>
       )}
-      {debug && <ConversationDebug line={line} />}
     </article>
   );
 }
@@ -168,7 +189,6 @@ type VoicePanelProps = {
   onSpeedChange?: (value: number) => void;
   onMicrophoneChange?: (deviceId: string) => void;
   onMicrophoneRefresh?: () => void;
-  compactControls?: boolean;
 };
 
 function useVoicePanel({
@@ -179,7 +199,6 @@ function useVoicePanel({
   onChoose,
 }: Pick<VoicePanelProps, "view" | "lines" | "events" | "catalog" | "onChoose">) {
   const { locale, t } = useI18n();
-  const [debug, setDebug] = useState(false);
   const merged = mergeConversation(lines, view, locale);
   const { tools, turns, failedTurns, latestBusinessTurn, running } = voiceOperationState(events);
   const active = !["idle", "paused", "error", "stopping"].includes(view.status);
@@ -229,15 +248,17 @@ function useVoicePanel({
           className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
           data-tool-state={stale ? "interrupted" : failed ? "error" : String(event.data.state)}
         >
-          {failed ? (
-            <CircleAlert className="size-4 text-destructive" />
-          ) : pending && !stale ? (
-            <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
-          ) : stale ? (
-            <MicOff className="size-4" />
-          ) : (
-            <Check className="size-4 text-success" />
-          )}
+          <span key={toolStatus} className="shrink-0 motion-safe:animate-tablecast-confirm">
+            {failed ? (
+              <CircleAlert className="size-4 text-destructive" />
+            ) : pending && !stale ? (
+              <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
+            ) : stale ? (
+              <MicOff className="size-4" />
+            ) : (
+              <Check className="size-4 text-success" />
+            )}
+          </span>
           <span className="min-w-0 flex-1">
             {title}
             {name === "getCatalog" && typeof event.data.query === "string" && (
@@ -249,14 +270,8 @@ function useVoicePanel({
             {failed && (
               <span className="mt-1 block text-destructive">{t("kiosk_tool_failed_hint")}</span>
             )}
-            {debug && (
-              <code className="mt-1 block break-all text-muted-foreground">
-                {name} · {String(event.data.toolCallId)}
-                {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
-              </code>
-            )}
           </span>
-          <span className="text-muted-foreground">{t(toolStatus)}</span>
+          <span className="shrink-0 text-muted-foreground">{t(toolStatus)}</span>
         </div>,
       ];
     });
@@ -292,8 +307,6 @@ function useVoicePanel({
   return {
     locale,
     t,
-    debug,
-    setDebug,
     merged,
     latestBusinessTurn,
     active,
@@ -325,13 +338,12 @@ export function VoicePanel({
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
-  compactControls = false,
 }: VoicePanelProps) {
+  const camera = useLocalCamera();
+  const panel = useRef<HTMLElement>(null);
   const {
     locale,
     t,
-    debug,
-    setDebug,
     merged,
     latestBusinessTurn,
     active,
@@ -348,156 +360,157 @@ export function VoicePanel({
   } = useVoicePanel({ view, lines, events, catalog, onChoose });
   return (
     <section
-      className="relative flex h-full min-h-0 min-w-0 flex-col px-3"
+      ref={panel}
+      className="relative flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-3 @container"
       data-theme-part="conversation"
       aria-label={t("kiosk_conversation")}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-border py-1">
-        <h2 className="text-sm font-semibold">{t("kiosk_conversation")}</h2>
-        <output
-          className="ml-auto flex items-center gap-2 text-xs font-medium text-foreground"
-          aria-live="polite"
-        >
-          <span className={activityDot({ active })} />
-          {phase}
-        </output>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("kiosk_debug_details")}
-          aria-pressed={debug}
-          onClick={() => setDebug(!debug)}
-        >
-          <Bug className="size-4" />
-        </Button>
-      </header>
-      {debug && (
-        <details className="border-b border-dashed border-border py-3 text-xs">
-          <summary className="cursor-pointer">{t("kiosk_debug_prompt")}</summary>
-          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">
-            {castInstructions}
-            {"\n\n"}
-            {catalog
-              ? instructionText(catalog.configuration.cast.instructions[locale])
-              : t("kiosk_cast_loading")}
-          </pre>
-        </details>
-      )}
-      <Conversation>
-        <ConversationContent tabIndex={0}>
-          {merged.length === 0 && !active && (
-            <div className="flex flex-col items-start gap-3 py-5">
-              <AudioLines className="size-10 text-muted-foreground" strokeWidth={1.2} />
-              <h1 className="whitespace-pre-line font-serif text-xl leading-relaxed">
-                {t("kiosk_welcome")}
-              </h1>
-            </div>
-          )}
-          {timeline.map((entry) => {
-            const line = entry.line;
-            return line ? (
-              <div className="space-y-2" key={line.id}>
-                <ConversationMessage
-                  line={line}
-                  debug={debug}
-                  status={
-                    line === speakingLine
-                      ? t("kiosk_voice_speaking")
-                      : line.live
-                        ? line.role === "user"
-                          ? t("kiosk_transcribing")
-                          : t("kiosk_reply_generating")
-                        : undefined
-                  }
-                />
+      <h2 className="sr-only">{t("kiosk_conversation")}</h2>
+      <div className="min-w-0 shrink-0">
+        <LocalCamera camera={camera} boundsRef={panel} />
+      </div>
+      <div data-ui="conversation-history" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Conversation>
+          <ConversationContent tabIndex={0} className="relative">
+            {merged.length === 0 && !active && (
+              <div className="flex flex-col items-start gap-3 py-5">
+                <AudioLines className="size-10 text-muted-foreground" strokeWidth={1.2} />
+                <h1 className="whitespace-pre-line font-serif text-xl leading-relaxed">
+                  {t("kiosk_welcome")}
+                </h1>
               </div>
-            ) : (
-              <div key={entry.id} className="w-11/12 space-y-2">
-                {toolCards(entry.turnId)}
-                {products(entry.turnId)}
-              </div>
-            );
-          })}
-          {active && !hasLive && (
-            <ConversationMessage
-              debug={false}
-              status={phase}
-              line={{
-                id: "activity",
-                role: liveRole,
-                text: "",
-                locale,
-                createdAt: 0,
-                interrupted: false,
-                live: true,
-              }}
+            )}
+            <AnimatePresence initial={false} mode="popLayout">
+              {timeline.map((entry) => {
+                const line = entry.line;
+                return line ? (
+                  <ConversationEntry className="space-y-2" key={line.id}>
+                    <ConversationMessage
+                      line={line}
+                      status={
+                        line === speakingLine
+                          ? t("kiosk_voice_speaking")
+                          : line.live
+                            ? line.role === "user"
+                              ? t("kiosk_transcribing")
+                              : t("kiosk_reply_generating")
+                            : undefined
+                      }
+                    />
+                  </ConversationEntry>
+                ) : (
+                  <ConversationEntry key={entry.id} className="w-11/12 space-y-2">
+                    {toolCards(entry.turnId)}
+                    {products(entry.turnId)}
+                  </ConversationEntry>
+                );
+              })}
+              {active && !hasLive && (
+                <ConversationEntry key="activity">
+                  <ConversationMessage
+                    status={phase}
+                    line={{
+                      id: "activity",
+                      role: liveRole,
+                      text: "",
+                      locale,
+                      createdAt: 0,
+                      interrupted: false,
+                      live: true,
+                    }}
+                  />
+                </ConversationEntry>
+              )}
+            </AnimatePresence>
+            <VoiceAttention
+              snapshot={snapshot}
+              onReview={onReview}
+              reviewPending={reviewPending}
+              events={events}
+              latestBusinessTurn={latestBusinessTurn}
+              view={view}
             />
-          )}
-          {snapshot && ["pending", "read"].includes(snapshot.status) && onReview && (
-            <div className="w-11/12 rounded-xl border border-primary/30 bg-card p-4">
-              <div className="mb-3 flex items-center gap-2 font-medium">
-                <ShoppingBag className="size-4" />
-                {t("kiosk_review")}
-              </div>
-              <p className="whitespace-pre-wrap text-sm">{snapshot.text}</p>
-              <Button
-                className="mt-4 h-auto min-h-14 w-full whitespace-normal py-2"
-                onClick={onReview}
-                disabled={reviewPending}
-              >
-                {t("kiosk_review")}
-              </Button>
-            </div>
-          )}
-          {events
-            .filter(
-              (event) => event.kind === "voice.failed" && event.data.turnId === latestBusinessTurn,
-            )
-            .slice(-1)
-            .map((event) => (
-              <output
-                key={event.cursor}
-                className="flex gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-sm text-destructive"
-              >
-                <CircleAlert className="size-4 shrink-0" />
-                {t("kiosk_reply_interrupted")}
-                {debug && typeof event.data.code === "string" && <code>{event.data.code}</code>}
-              </output>
-            ))}
-          {view.status === "error" && (
-            <output className="rounded-lg bg-destructive/5 p-3 text-sm">
-              <MicOff className="mr-2 inline size-4" />
-              {view.error === "active"
-                ? t("kiosk_voice_already_active")
-                : view.error === "permission"
-                  ? t("kiosk_voice_permission")
-                  : view.error === "unconfigured"
-                    ? t("kiosk_voice_setup")
-                    : t("kiosk_voice_error")}
-              <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
-            </output>
-          )}
-          <MicrophoneNotice error={view.microphone?.error} />
-        </ConversationContent>
-        <ConversationScrollButton label={t("kiosk_latest")} followLabel={t("kiosk_following")} />
-      </Conversation>
+          </ConversationContent>
+          <ConversationScrollButton label={t("kiosk_latest")} followLabel={t("kiosk_following")} />
+        </Conversation>
+      </div>
       <VoiceControls
         view={view}
+        active={active}
+        phase={phase}
+        visualState={visualState}
+        toolLabel={usingTools ? toolPhase : undefined}
         onStart={onStart}
         controlDisabled={controlDisabled}
         speechSpeed={speechSpeed}
         onSpeedChange={onSpeedChange}
         onMicrophoneChange={onMicrophoneChange}
         onMicrophoneRefresh={onMicrophoneRefresh}
-        compactControls={compactControls}
-        active={active}
-        phase={phase}
-        usingTools={usingTools}
-        visualState={visualState}
-        toolPhase={toolPhase}
-        debug={debug}
       />
     </section>
+  );
+}
+
+function VoiceAttention({
+  snapshot,
+  onReview,
+  reviewPending,
+  events,
+  latestBusinessTurn,
+  view,
+}: Pick<VoicePanelProps, "snapshot" | "onReview" | "reviewPending" | "view"> & {
+  events: TableEvent[];
+  latestBusinessTurn: ReturnType<typeof voiceOperationState>["latestBusinessTurn"];
+}) {
+  const { t } = useI18n();
+  const voiceError = {
+    active: "kiosk_voice_already_active",
+    permission: "kiosk_voice_permission",
+    unconfigured: "kiosk_voice_setup",
+    connection: "kiosk_voice_error",
+  } as const;
+  const errorLabel = view.error ? voiceError[view.error] : "kiosk_voice_error";
+  return (
+    <div className="shrink-0 space-y-3 empty:hidden">
+      {snapshot && ["pending", "read"].includes(snapshot.status) && onReview && (
+        <div className="rounded-xl bg-card p-3 shadow-surface">
+          <div className="mb-3 flex items-center gap-2 font-medium">
+            <ShoppingBag className="size-4" />
+            {t("kiosk_review")}
+          </div>
+          <p className="whitespace-pre-wrap text-sm">{snapshot.text}</p>
+          <Button
+            className="mt-4 h-auto min-h-14 w-full whitespace-normal py-2"
+            onClick={onReview}
+            disabled={reviewPending}
+          >
+            {t("kiosk_review")}
+          </Button>
+        </div>
+      )}
+      {events
+        .filter(
+          (event) => event.kind === "voice.failed" && event.data.turnId === latestBusinessTurn,
+        )
+        .slice(-1)
+        .map((event) => (
+          <output
+            key={event.cursor}
+            className="flex gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-sm text-destructive"
+          >
+            <CircleAlert className="size-4 shrink-0" />
+            {t("kiosk_reply_interrupted")}
+          </output>
+        ))}
+      {view.status === "error" && (
+        <output className="rounded-lg bg-destructive/5 p-3 text-sm">
+          <MicOff className="mr-2 inline size-4" />
+          {t(errorLabel)}
+          <p className="mt-1 text-xs text-muted-foreground">{t("kiosk_voice_fallback")}</p>
+        </output>
+      )}
+      <MicrophoneNotice error={view.microphone?.error} />
+    </div>
   );
 }
 
@@ -510,50 +523,49 @@ function VoiceIdle({
   state: string;
   toolLabel?: string;
 }) {
+  const pending = !["idle", "paused", "stopping", "error"].includes(state);
+  const Icon = pending
+    ? LoaderCircle
+    : state === "error"
+      ? CircleAlert
+      : state === "stopping"
+        ? MicOff
+        : Pause;
   return (
     <figure
-      className="flex items-center gap-3 py-1 text-foreground"
+      className="flex w-full max-w-96 shrink-0 items-center gap-2 text-foreground"
       data-voice-state={state}
       data-motion="still"
     >
       <div
         aria-hidden="true"
-        className="flex size-20 shrink-0 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-black/5"
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-card via-control to-card shadow-sm ring-1 ring-border"
       >
-        <MicOff className="size-4" />
+        <Icon
+          className={
+            state === "error"
+              ? "size-4 text-destructive"
+              : pending
+                ? "size-4 motion-safe:animate-spin"
+                : "size-4"
+          }
+        />
       </div>
       <div className="min-w-0 flex-1">
-        <figcaption className="flex items-center gap-2 text-xs font-semibold">
+        <figcaption
+          className={
+            state === "error" ? "text-xs font-medium text-destructive" : "text-xs font-medium"
+          }
+          data-ui="voice-status"
+        >
           {label}
-          {toolLabel && <span className="font-normal">{toolLabel}</span>}
+          {toolLabel && toolLabel !== label && <span className="font-normal">{toolLabel}</span>}
         </figcaption>
-        <div className="flex h-7 items-center">
+        <div className="flex h-4 items-center" aria-hidden="true">
           <span className="h-px w-full bg-border" />
         </div>
       </div>
     </figure>
-  );
-}
-
-function ConversationDebug({ line }: { line: ConversationLine }) {
-  const { t } = useI18n();
-  return (
-    <>
-      {line.rawText && (
-        <details className="mt-2 rounded-lg border border-dashed border-border p-3 text-xs">
-          <summary className="cursor-pointer">{t("kiosk_debug_raw_text")}</summary>
-          <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
-        </details>
-      )}
-      {line.role === "user" && !line.speaker && (
-        <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
-      )}
-      {line.streamId && (
-        <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-          STT {line.streamId}
-        </p>
-      )}
-    </>
   );
 }
 
@@ -616,19 +628,16 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
 
 function VoiceControls({
   view,
+  active,
+  phase,
+  visualState,
+  toolLabel,
   onStart,
   controlDisabled,
   speechSpeed,
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
-  active,
-  phase,
-  usingTools,
-  visualState,
-  toolPhase,
-  debug,
-  compactControls,
 }: Pick<
   VoicePanelProps,
   | "view"
@@ -638,25 +647,24 @@ function VoiceControls({
   | "onSpeedChange"
   | "onMicrophoneChange"
   | "onMicrophoneRefresh"
-  | "compactControls"
-> &
-  Pick<
-    ReturnType<typeof useVoicePanel>,
-    "active" | "phase" | "usingTools" | "visualState" | "toolPhase" | "debug"
-  >) {
-  const { t } = useI18n();
-  const toolLabel = usingTools && view.status === "speaking" ? toolPhase : undefined;
+> & {
+  active: boolean;
+  phase: string;
+  visualState: VoiceView["status"] | "tool";
+  toolLabel?: string;
+}) {
   return (
     <footer
       data-theme-part="voice-controls"
-      className="shrink-0 border-t border-white/80 bg-card/65 px-1 pb-2 pt-1 backdrop-blur-xl"
+      className="grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
     >
-      {!compactControls &&
-        (active ? (
+      <div className="min-w-0" data-ui="voice-media">
+        {active ? (
           <Suspense
             fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}
           >
             <AudioWaveform
+              compact
               state={visualState}
               toolLabel={toolLabel}
               track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
@@ -665,63 +673,20 @@ function VoiceControls({
           </Suspense>
         ) : (
           <VoiceIdle label={phase} state={visualState} />
-        ))}
-      {compactControls && (
-        <div className="flex h-7 items-center">
-          {active && (
-            <Suspense fallback={null}>
-              <AudioWaveform
-                compact
-                state={visualState}
-                toolLabel={toolPhase}
-                track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-                label={phase}
-              />
-            </Suspense>
-          )}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-3">
-        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
-        <div className="flex min-w-44 flex-1 items-center gap-2">
-          {onSpeedChange && (
-            <Slider.Root
-              className="flex min-w-32 flex-1 items-center gap-2"
-              key={speechSpeed}
-              defaultValue={speechSpeed}
-              min={0.5}
-              max={1.5}
-              step={0.1}
-              onValueCommitted={(value) => {
-                if (typeof value === "number") onSpeedChange(value);
-              }}
-            >
-              <Turtle className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Control className="flex h-11 flex-1 touch-none items-center">
-                <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
-                  <Slider.Indicator className="rounded-full bg-primary" />
-                  <Slider.Thumb
-                    aria-label={t("kiosk_speech_speed")}
-                    className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  />
-                </Slider.Track>
-              </Slider.Control>
-              <Rabbit className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Value className="min-w-10 text-xs tabular-nums">
-                {(value) => `${Number(value).toFixed(1)}×`}
-              </Slider.Value>
-            </Slider.Root>
-          )}
-          {onMicrophoneChange && onMicrophoneRefresh && (
-            <MicrophoneSettings
-              view={view}
-              onChange={onMicrophoneChange}
-              onRefresh={onMicrophoneRefresh}
-            />
-          )}
-        </div>
+        )}
       </div>
-      {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
+      <div className="flex min-w-0 items-center gap-2">
+        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
+        {onMicrophoneChange && onMicrophoneRefresh && (
+          <MicrophoneSettings
+            view={view}
+            speechSpeed={speechSpeed}
+            onSpeedChange={onSpeedChange}
+            onChange={onMicrophoneChange}
+            onRefresh={onMicrophoneRefresh}
+          />
+        )}
+      </div>
     </footer>
   );
 }
@@ -735,9 +700,9 @@ function VoiceToggle({
   const active =
     view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
   return (
-    <span className="inline-flex min-w-0 rounded-xl bg-voice-spectrum p-0.5 shadow-md shadow-violet-500/15">
+    <span className="inline-flex w-full min-w-0 rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
       <Button
-        className="h-auto min-h-14 min-w-0 whitespace-normal rounded-[inherit] px-4 py-2 text-left"
+        className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-3 py-2 text-center text-sm"
         variant="voice"
         onClick={onStart}
         disabled={controlDisabled}

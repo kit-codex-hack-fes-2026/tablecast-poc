@@ -1,3 +1,5 @@
+import * as Disclosure from "../../components/ui/disclosure";
+import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useHydrated } from "@tanstack/react-router";
@@ -50,8 +52,12 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
               return (
                 <li key={person.id} className="space-y-2">
                   {visit.data.confirmedAt === null ? (
-                    <label className="flex items-center gap-3">
+                    <label
+                      htmlFor={`tablecast-point-${person.id}`}
+                      className="flex items-center gap-3"
+                    >
                       <Checkbox
+                        id={`tablecast-point-${person.id}`}
                         checked={selectedIds.has(person.id)}
                         disabled={!hydrated || !person.active || confirm.isPending}
                         onCheckedChange={(checked) => {
@@ -61,11 +67,11 @@ export function PointVisit({ storeId, sessionId }: { storeId: string; sessionId:
                           setKey(crypto.randomUUID());
                         }}
                       />
-                      {person.name}
+                      <UserIdentity user={person} compact />
                     </label>
                   ) : (
                     <p>
-                      {person.name}
+                      <UserIdentity user={person} compact />
                       {allocation ? ` · ¥${allocation.amount} · ${allocation.points} pt` : ""}
                     </p>
                   )}
@@ -129,40 +135,44 @@ function PointCorrection({
     },
   });
   return (
-    <details>
-      <summary className="cursor-pointer text-sm">{t("customer_points_correct")}</summary>
-      <form
-        className="mt-3 space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppField name="delta">
-          {(field) => (
-            <field.NumberField
-              label={t("customer_points_delta")}
-              min={-1000000}
-              max={1000000}
-              required
-            />
-          )}
-        </form.AppField>
-        <form.AppField name="reason">
-          {(field) => (
-            <field.TextField label={t("customer_points_reason")} maxLength={500} required />
-          )}
-        </form.AppField>
-        <form.AppForm>
-          <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-        </form.AppForm>
-        <ActionFeedback
-          pending={save.isPending}
-          error={save.error}
-          success={save.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </form>
-    </details>
+    <Disclosure.Root>
+      <Disclosure.Trigger className="cursor-pointer text-sm">
+        {t("customer_points_correct")}
+      </Disclosure.Trigger>
+      <Disclosure.Panel>
+        <form
+          className="mt-3 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          <form.AppField name="delta">
+            {(field) => (
+              <field.NumberField
+                label={t("customer_points_delta")}
+                min={-1000000}
+                max={1000000}
+                required
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="reason">
+            {(field) => (
+              <field.TextField label={t("customer_points_reason")} maxLength={500} required />
+            )}
+          </form.AppField>
+          <form.AppForm>
+            <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+          </form.AppForm>
+          <ActionFeedback
+            pending={save.isPending}
+            error={save.error}
+            success={save.isSuccess}
+            successMessage={t("account_saved")}
+          />
+        </form>
+      </Disclosure.Panel>
+    </Disclosure.Root>
   );
 }

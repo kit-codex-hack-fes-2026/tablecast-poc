@@ -20,7 +20,7 @@ import { parseResponse, rpc } from "../../lib/api";
 import { ConfigurationStatus } from "../shell/configuration-status";
 import { m } from "../../paraglide/messages";
 import { menuLabels, type MenuSection } from "./menu-model";
-import { draftOptions } from "./menu-query";
+import { draftOptions, draftChoicesOptions } from "./menu-query";
 import { useStore } from "./store-shell";
 
 export function StartConfigurationEditing({
@@ -53,30 +53,7 @@ export function StartConfigurationEditing({
     interaction.current += 1;
     setOpen(next);
   }
-  const choices = useInfiniteQuery({
-    queryKey: ["tablecast-draft-choices", storeId],
-    initialPageParam: null,
-    queryFn: ({
-      signal,
-      pageParam,
-    }: {
-      signal: AbortSignal;
-      pageParam: { beforeUpdatedAt: number; beforeId: string } | null;
-    }) =>
-      parseResponse(
-        rpc.api.admin.stores[":storeId"].drafts.choices.$get(
-          {
-            param: { storeId },
-            query: pageParam
-              ? { beforeUpdatedAt: String(pageParam.beforeUpdatedAt), beforeId: pageParam.beforeId }
-              : {},
-          },
-          { init: { signal } },
-        ),
-      ),
-    getNextPageParam: (page) => page.nextCursor,
-    enabled: open,
-  });
+  const choices = useInfiniteQuery({ ...draftChoicesOptions(storeId), enabled: open });
   function select(draftId: string) {
     changeOpen(false);
     if (onSelect) onSelect(draftId);

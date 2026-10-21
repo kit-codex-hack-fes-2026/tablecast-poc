@@ -7,6 +7,7 @@ import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import PromptEditorInput from "./prompt-editor-input";
 import { InstructionView } from "./instruction-view";
+import { LanguageFields } from "./language-fields";
 import "../../styles.css";
 
 afterEach(cleanup);
@@ -45,152 +46,138 @@ function Harness({
         編集可否を切替
       </button>
       <output aria-label="保存本文">{instructionText(saved)}</output>
-      <InstructionView value={saved} />
+      <div aria-label="保存したプレビュー">
+        <InstructionView value={saved} />
+      </div>
     </LocaleProvider>
   );
 }
 
-it("旧本文を開くだけでdirtyにせず、書式変更と保存・再読込を保つ", async () => {
+const legacy: CastInstruction = {
+  format: "tiptap-json",
+  version: 1,
+  document: {
+    type: "doc",
+    content: [
+      { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "接客方針" }] },
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "丁寧に", marks: [{ type: "bold" }] },
+          { type: "hardBreak" },
+          { type: "text", text: "* は記号" },
+        ],
+      },
+      {
+        type: "orderedList",
+        attrs: { start: 3 },
+        content: [
+          {
+            type: "listItem",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "おすすめ" }] }],
+          },
+        ],
+      },
+    ],
+  },
+};
+
+it("旧構造化本文は読込とプレビューで変更せず、編集後だけMarkdownとして保存する", async () => {
   changed.mockClear();
-  await render(<Harness initial="# 記号\n\n末尾\n" />);
+  await render(<Harness initial={legacy} />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await expect.element(input).toBeVisible();
+  await expect.element(input).toHaveValue(instructionText(legacy));
+  await page.getByRole("tab", { name: ja.prompt_preview }).click();
   expect(changed).not.toHaveBeenCalled();
-  await input.fill("接客方針");
-  await page.getByRole("combobox", { name: ja.prompt_block }).selectOptions("heading-2");
+  await expect.element(page.getByRole("heading", { name: "接客方針" }).first()).toBeVisible();
+  await page.getByRole("tab", { name: ja.prompt_source }).click();
+  await input.fill(`${instructionText(legacy)}\n\n## 追加\n- おすすめを一品`);
   await page.getByRole("button", { name: "保存を再現" }).click();
-  await expect
-    .element(page.getByRole("status", { name: "保存本文" }))
-    .toMatchTextContent("## 接客方針");
+  expect(changed.mock.lastCall?.[0]).toBe(
+    `${instructionText(legacy)}\n\n## 追加\n- おすすめを一品`,
+  );
   await input.fill("未保存の編集");
   await page.getByRole("button", { name: "再読込を再現" }).click();
-  await expect.element(input).toMatchTextContent("接客方針");
   await expect
-    .element(page.getByRole("button", { name: ja.prompt_undo, exact: true }))
-    .toBeDisabled();
+    .element(input)
+    .toHaveValue(`${instructionText(legacy)}\n\n## 追加\n- おすすめを一品`);
 });
 
-it("スラッシュ検索をキーボードで確定し、Escは入力を消さない", async () => {
-  await render(<Harness />);
+it("Markdownの記号と空行を保持し、プレビューの画像・HTMLを実行しない", async () => {
+  const markdown =
+    "# 方針\n\n**丁寧**に案内します。\n\n![画像](https://example.invalid/photo.png)\n\n<script>alert(1)</script>\n";
+  await render(<Harness initial={markdown} />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await input.click();
-  await userEvent.keyboard("/heading");
-  await expect.element(page.getByRole("listbox")).toBeVisible();
-  await userEvent.keyboard("{ArrowDown}{Enter}");
-  await expect.element(page.getByRole("listbox")).not.toBeInTheDocument();
-  await expect
-    .element(page.getByRole("combobox", { name: ja.prompt_block }))
-    .toHaveValue("heading-2");
-  await page.getByRole("combobox", { name: ja.prompt_block }).selectOptions("paragraph");
-  await input.fill("");
-  await userEvent.keyboard("/nothingmatches");
-  await expect.element(page.getByText(ja.prompt_no_commands)).toBeVisible();
-  await userEvent.keyboard("{Escape}");
-  await expect.element(input).toMatchTextContent("/nothingmatches");
+  await expect.element(input).toHaveValue(markdown);
+  await page.getByRole("tab", { name: ja.prompt_preview }).click();
+  await expect.element(page.getByRole("heading", { name: "方針" }).first()).toBeVisible();
+  expect(document.querySelector('img[src="https://example.invalid/photo.png"]')).toBeNull();
+  expect(document.querySelector("script:not([src])")?.textContent).not.toBe("alert(1)");
+  await page.getByRole("tab", { name: ja.prompt_source }).click();
+  await expect.element(input).toHaveValue(markdown);
 });
 
-it("IME確定中のEnterをスラッシュ候補が消費しない", async () => {
-  await render(<Harness />);
-  const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await input.click();
-  await userEvent.keyboard("/heading");
-  const event = new KeyboardEvent("keydown", {
-    key: "Enter",
-    isComposing: true,
-    bubbles: true,
-    cancelable: true,
-  });
-  input.element().dispatchEvent(event);
-  await expect.element(input).toMatchTextContent("/heading");
-  await expect.element(page.getByRole("listbox")).toBeVisible();
-});
-
-it("画像付きHTMLから文章と強調だけを取り込み、除外を知らせる", async () => {
-  await render(<Harness />);
-  const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await input.click();
-  const data = new DataTransfer();
-  data.setData(
-    "text/html",
-    '<p>前<strong>丁寧</strong><img src="https://example.invalid/image.png"><iframe src="https://example.invalid/embed"></iframe>後</p>',
-  );
-  input
-    .element()
-    .dispatchEvent(
-      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
-    );
-  await expect.element(input).toMatchTextContent("前丁寧後");
-  expect(input.element().querySelectorAll("img,iframe")).toHaveLength(0);
-  await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
-  await page.getByRole("button", { name: "保存を再現" }).click();
-  await expect
-    .element(page.getByRole("status", { name: "保存本文" }))
-    .toMatchTextContent("前**丁寧**後");
-});
-
-it("ファイルdropとdisabled中の貼付けで本文を書き換えない", async () => {
-  await render(<Harness initial="保持する本文" />);
-  const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await input.click();
-  const data = new DataTransfer();
-  data.items.add(new File(["image"], "tablecast-photo.png", { type: "image/png" }));
-  input
-    .element()
-    .dispatchEvent(new DragEvent("drop", { dataTransfer: data, bubbles: true, cancelable: true }));
-  await expect.element(input).toMatchTextContent("保持する本文");
-  await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
-  await page.getByRole("button", { name: "編集可否を切替" }).click();
-  await expect.element(input).toHaveAttribute("contenteditable", "false");
-  const clipboard = new DataTransfer();
-  clipboard.setData("text/html", "<p>上書き</p>");
-  input
-    .element()
-    .dispatchEvent(
-      new ClipboardEvent("paste", { clipboardData: clipboard, bubbles: true, cancelable: true }),
-    );
-  await expect.element(input).toMatchTextContent("保持する本文");
-  await expect.element(page.getByRole("button", { name: ja.prompt_bold })).toBeDisabled();
-});
-
-it("上限超過を切り捨てず入力を保持する", async () => {
+it("上限超過を切り捨てず、保存待機中は入力を止める", async () => {
   await render(<Harness />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
   const text = "あ".repeat(5001);
   await input.fill(text);
   await expect.element(page.getByRole("alert")).toMatchTextContent(ja.prompt_limit);
-  expect(input.element().textContent).toBe(text);
+  await expect.element(input).toHaveValue(text);
   await expect.element(input).toHaveAttribute("aria-invalid", "true");
+  await page.getByRole("button", { name: "編集可否を切替" }).click();
+  await expect.element(input).toBeDisabled();
+  await expect.element(input).toHaveValue(text);
 });
 
-it("通常入力のUndoで旧文字列へ戻り、Redoと強調中の改行も保持する", async () => {
-  const initial = "# 記号\n\n最後\n";
-  await render(<Harness initial={initial} />);
+it("プレビューを挟んでも本文とネイティブUndoの履歴を保つ", async () => {
+  await render(<Harness initial="既存本文" />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
   await input.click();
   await userEvent.keyboard("{Control>}{End}{/Control}追");
-  await page.getByRole("button", { name: ja.prompt_undo, exact: true }).click();
-  expect(changed).toHaveBeenLastCalledWith(initial);
-  await page.getByRole("button", { name: ja.prompt_redo, exact: true }).click();
-  await expect.element(input).toMatchTextContent("追");
-  await page.getByRole("button", { name: ja.prompt_bold, exact: true }).click();
-  await userEvent.keyboard("太字{Shift>}{Enter}{/Shift}続き");
-  await page.getByRole("button", { name: "保存を再現" }).click();
-  await expect.element(page.getByRole("status", { name: "保存本文" })).toMatchTextContent("太字");
-  await expect.element(page.getByRole("status", { name: "保存本文" })).toMatchTextContent("続き");
+  await expect.element(input).toHaveValue("既存本文追");
+  await page.getByRole("tab", { name: ja.prompt_preview }).click();
+  await page.getByRole("tab", { name: ja.prompt_source }).click();
+  await input.click();
+  await userEvent.keyboard(
+    navigator.platform.includes("Mac") ? "{Meta>}z{/Meta}" : "{Control>}z{/Control}",
+  );
+  await expect.element(input).toHaveValue("既存本文");
 });
 
-it("画像のみのHTML貼付けは選択中の既存本文を消さない", async () => {
-  await render(<Harness initial="保持する本文" />);
+it("長い本文は入力欄が伸び、利用者も縦にリサイズできる", async () => {
+  await render(<Harness initial="短い本文" />);
   const input = page.getByRole("textbox", { name: "日本語 接客方針" });
-  await input.click();
-  await userEvent.keyboard("{Control>}a{/Control}");
-  const data = new DataTransfer();
-  data.setData("text/html", '<p><img src="https://example.invalid/image.png"></p>');
-  input
-    .element()
-    .dispatchEvent(
-      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
-    );
-  await expect.element(input).toMatchTextContent("保持する本文");
-  await expect.element(page.getByText(ja.prompt_omitted)).toBeVisible();
+  const before = input.element().getBoundingClientRect().height;
+  await input.fill(Array.from({ length: 40 }, (_, index) => `行 ${index + 1}`).join("\n"));
+  expect(getComputedStyle(input.element()).resize).toBe("vertical");
+  await expect.poll(() => input.element().getBoundingClientRect().height).toBeGreaterThan(before);
+});
+
+it("非表示言語の必須項目にエラーがあればその言語を開き入力へ移る", async () => {
+  await render(
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <form onSubmit={(event) => event.preventDefault()}>
+        <LanguageFields>
+          {(language, labelId) => (
+            <input
+              required
+              aria-labelledby={labelId}
+              defaultValue={language === "ja" ? "保持する名前" : ""}
+            />
+          )}
+        </LanguageFields>
+        <button type="submit">保存</button>
+      </form>
+    </LocaleProvider>,
+  );
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect
+    .element(page.getByRole("tab", { name: "English" }))
+    .toHaveAttribute("aria-selected", "true");
+  await expect.element(page.getByRole("textbox", { name: "英語", exact: true })).toHaveFocus();
+  await page.getByRole("tab", { name: "日本語", exact: true }).click();
+  await expect
+    .element(page.getByRole("textbox", { name: "日本語", exact: true }))
+    .toHaveValue("保持する名前");
 });

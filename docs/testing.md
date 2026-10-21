@@ -8,6 +8,10 @@
 
 Browserの仮想entryから後で読み込む外部依存は、既存の`optimizeDeps.include`に明示する。実行中の依存再最適化でtest iframeがreloadした結果を、操作の失敗や成功と混同しない。認証clientのentry追加時もBrowserとStorybookの対象設定を揃え、共有cacheを消さず隔離した`cacheDir`の初回で確認する。warm再実行だけで準備不成立を解消済みとは扱わない。
 
+## UIの動きの検証
+
+`motion-system.browser.test.tsx`はChromium・WebKit・Chromiumのreduced motionで、入退場の途中反転、focus、keepMounted入力、閉じた多言語必須項目のエラー復帰、live regionの寿命を確認する。StorybookはCSS animationを最終フレームで止めるため、共通afterEachは実行中かつ有限のMotion animationだけを待ってからa11yへ進む。無限の待機表示を待たず、動きの無効化やコントラストの除外で失敗を隠さない。
+
 ## Vitest 5とWorkersのmodule cache
 
 全workspaceのrunnerをVitest 5.0.5へ揃える。APIのbindings projectだけ`fsModuleCache: false`を指定する。5系のwarm module一括転送は大きなWorkerのmodule graphでWebSocket上限を超え、先頭の試験が成功しても後続Workerが終了する。[上流Issue #16331](https://github.com/cloudflare/workers-sdk/issues/16331)を参照する。公開設定で転送方法を戻し、setupのmigration・storage reset、各fileのisolation、4 workerでの並列実行を維持する。単独の認証試験だけでは再現しないため、解除時には実D1・DO・R2を使うAPI全件を確認する。
@@ -54,6 +58,8 @@ Cloudflareの試験には採用SDKと対応する公式runnerを使い、通常�
 2. 不足する下位保証を本番の公開feature/HTTP入口へ追加し、実行成功を確認してから上位の重複を除く。移行前の観測結果・代替テスト・残す接続を対応付ける。
 3. 実SSR/loader・Cookie属性・Service Binding・外部redirect・メールURL・SW・実WebSocket・build資産など、下位で再現できない具体的な失敗リスクだけを実Startまたは全構成E2Eへ上げる。
 4. E2Eではその境界を一巡する最小の代表操作を残す。日英・viewport・失敗・retry・価格/権限の全分岐を全構成で反復しない。WebKit固有のfocus・media・iframe等は既存Browserの対象構成と代表E2Eへ残す。
+
+カメラの比率・サイズ変更は実MediaStreamとvideo metadataで確認する。Chromiumは描画を継続するcanvas.captureStream、WebKitはPlaywrightが標準で有効にするmock capture devicesを使い、隔離したWebKit Browser contextだけに`camera`権限を付与する。物理カメラは使わず、失敗・遅着はgetUserMedia境界で制御する。映像metadataを検証するfixtureは、アプリの明示ON・機器切替によるgetUserMedia呼び出し時に映像を取得し、WebKitのユーザー操作開始条件を保つ。Linux WebKitのcanvas.captureStreamはmetadata到着が不安定なため、この保証の映像供給には使わない。試験後は全trackを停止する。
 
 有料・実機では実LLM/STT/TTS、iPad、騒音・エコー・barge-in・実遅延を別途確認する。決定的なモデル応答や合成カメラの成功を、実モデル品質・実機カメラの受入と同一視しない。
 

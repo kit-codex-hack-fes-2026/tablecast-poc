@@ -1,4 +1,4 @@
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Eye, FilePenLine, Plug, ShieldOff } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
@@ -14,7 +14,7 @@ type Session = Awaited<ReturnType<typeof loadMcpSessions>>["sessions"][number];
 export function McpSessions() {
   const { t } = useI18n(),
     client = useQueryClient();
-  const sessions = useSuspenseQuery(mcpSessionsOptions);
+  const sessions = useQuery(mcpSessionsOptions);
   const revoke = useMutation({
     mutationFn: (id: string) =>
       parseResponse(rpc.api.account["mcp-sessions"][":id"].revoke.$post({ param: { id } })),
@@ -27,10 +27,13 @@ export function McpSessions() {
   return (
     <IntegrationsShell>
       <h2 className="text-xl font-semibold">{t("mcp_oauth_sessions")}</h2>
-      <ErrorNotice error={sessions.error || revoke.error} onRetry={() => void sessions.refetch()} />
+      <ErrorNotice error={revoke.error} />
 
       <DataTable
-        data={sessions.data.sessions}
+        data={sessions.data?.sessions ?? []}
+        pending={sessions.isPending}
+        error={sessions.error}
+        onRetry={() => void sessions.refetch()}
         columns={columns}
         searchLabel={t("mcp_session_search")}
         empty={t("mcp_session_empty")}
@@ -52,13 +55,7 @@ function sessionColumns(
         <div className="flex min-w-56 items-center gap-2">
           <Plug className="size-5 shrink-0" />
           <div className="min-w-0">
-            <p className="font-medium">{row.original.clientName ?? row.original.clientId}</p>
-            <p
-              className="max-w-64 truncate text-sm text-muted-foreground"
-              title={row.original.clientId}
-            >
-              {row.original.clientId}
-            </p>
+            <p className="font-medium">{row.original.clientName ?? t("object_external_app")}</p>
           </div>
         </div>
       ),
@@ -122,7 +119,7 @@ function sessionColumns(
       cell: ({ row }) => (
         <ConfirmAction
           label={t("mcp_revoke")}
-          subject={row.original.clientName ?? row.original.clientId}
+          subject={row.original.clientName ?? t("object_external_app")}
           icon={<ShieldOff />}
           disabled={pending}
           onConfirm={() => revoke(row.original.id)}

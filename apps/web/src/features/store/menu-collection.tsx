@@ -1,8 +1,8 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ImageOff, Plus } from "lucide-react";
-import { useMemo } from "react";
+import { ImageOff, Plus, Tags, CircleCheck } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
@@ -14,7 +14,6 @@ import { m } from "../../paraglide/messages";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { StartConfigurationEditing } from "./configuration-workflow";
-import { DraftStatus } from "../shell/configuration-status";
 import {
   emptyMenuListSearch,
   menuLabels,
@@ -102,7 +101,6 @@ function MenuListCollection({
     <>
       <PageHeader
         title={t(menuLabels[section])}
-        status={draft.data && <DraftStatus status={draft.data.status} />}
         actions={
           manager &&
           editable &&
@@ -142,15 +140,17 @@ function MenuListCollection({
         error={error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
-      {section === "products" && configuration && (
-        <ProductFilters
-          categories={configuration.categories}
-          search={search}
-          onChange={updateSearch}
-        />
-      )}
       {(configuration || !error) && (
         <MenuResults
+          filters={
+            section === "products" ? (
+              <ProductFilters
+                categories={configuration?.categories ?? []}
+                search={search}
+                onChange={updateSearch}
+              />
+            ) : undefined
+          }
           data={data}
           columns={columns}
           search={search}
@@ -235,11 +235,8 @@ function menuCollectionColumns(
       ? [
           {
             accessorKey: "price",
-            header: () => (
-              <span className="block max-w-44 whitespace-normal">
-                {t(section === "plans" ? "editor_plan_price" : "admin_unit_price")}
-              </span>
-            ),
+            meta: { align: "right" },
+            header: t(section === "plans" ? "editor_plan_price" : "admin_unit_price"),
             cell: ({ row }) => (
               <span className="whitespace-nowrap tabular-nums">
                 {money(row.original.price ?? 0, locale)}
@@ -367,9 +364,12 @@ function ProductFilters({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
       <label className="flex flex-col gap-2 text-sm font-medium">
-        {t("editor_category")}
+        <span className="flex items-center gap-2">
+          <Tags aria-hidden className="size-4" />
+          {t("editor_category")}
+        </span>
         <NativeSelect
           value={search.category ?? ""}
           onChange={(event) =>
@@ -385,7 +385,10 @@ function ProductFilters({
         </NativeSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
-        {t("menu_availability")}
+        <span className="flex items-center gap-2">
+          <CircleCheck aria-hidden className="size-4" />
+          {t("menu_availability")}
+        </span>
         <NativeSelect
           value={search.availability ?? ""}
           onChange={(event) =>
@@ -415,8 +418,10 @@ function MenuResults({
   search,
   pending,
   onChange,
+  filters,
 }: {
   data: ItemRow[];
+  filters?: ReactNode;
   columns: DataTableColumn<ItemRow>[];
   search: MenuListSearch;
   pending: boolean;
@@ -430,6 +435,11 @@ function MenuResults({
   return (
     <DataTable
       data={data}
+      filters={filters}
+      filtersActive={!!search.category || !!search.availability}
+      onReset={() =>
+        onChange({ q: undefined, category: undefined, availability: undefined, page: undefined })
+      }
       pending={pending}
       columns={columns}
       getRowId={(row) => row.id}

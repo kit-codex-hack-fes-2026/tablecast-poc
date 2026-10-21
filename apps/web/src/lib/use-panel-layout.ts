@@ -45,6 +45,10 @@ export const readPanelCookies = createIsomorphicFn()
   .client(() =>
     document.cookie
       .split(";")
-      .filter((cookie) => cookie.trim().startsWith("tablecast-layout-"))
+      .filter(
+        (cookie) =>
+          cookie.trim().startsWith("tablecast-layout-") ||
+          cookie.trim().startsWith("tablecast-navigation="),
+      )
       .join(";"),
   );

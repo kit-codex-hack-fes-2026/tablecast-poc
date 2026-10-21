@@ -4,7 +4,8 @@ import { StoreTheme } from "../../components/store-theme";
 import { StoreLogo } from "../../components/store-logo";
 import { Brand } from "../../components/brand";
 import { useHydrated } from "@tanstack/react-router";
-import { Tabs } from "@base-ui/react/tabs";
+import * as Tabs from "../../components/ui/tabs";
+import { usePanelRef } from "react-resizable-panels";
 import type {
   ThemeImage,
   CartLine,
@@ -17,11 +18,20 @@ import type {
   UiSectionInput,
 } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, Check, ChevronRight, ShoppingBag } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  ShoppingBag,
+  Utensils,
+  ReceiptText,
+  Wallet,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
+import { KioskPending } from "../../components/kiosk-pending";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -73,13 +83,19 @@ export function Kiosk({
       </main>
     );
   if (table.data === null) return <Pairing onReady={refresh} evaluation={evaluation} />;
+  if (table.isPending)
+    return (
+      <main className="h-dvh">
+        <KioskPending />
+      </main>
+    );
   if (!table.data)
     return (
       <main className="min-h-dvh flex justify-center items-center flex-col gap-7 p-8 text-center">
         <a data-ui="brand" className="inline-flex shrink-0 items-center" href="/">
           <Brand />
         </a>
-        {table.isPending ? <LoadingState /> : <ErrorNotice error={table.error} onRetry={refresh} />}
+        <ErrorNotice error={table.error} onRetry={refresh} />
       </main>
     );
   return (
@@ -332,10 +348,20 @@ function TableSession({
   endpoint: TableEndpoint;
 }) {
   const horizontal = useMediaQuery("(min-width: 56rem)");
+  const conversationPanel = usePanelRef();
+  const orientation = useRef(horizontal);
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
-    id: "tablecast-kiosk-layout",
+    id: horizontal ? "tablecast-kiosk-layout" : "tablecast-kiosk-vertical-layout",
     panelIds: ["tablecast-conversation", "tablecast-order"],
   });
+  useEffect(() => {
+    if (orientation.current === horizontal) return;
+    orientation.current = horizontal;
+    const savedSize = defaultLayout?.["tablecast-conversation"];
+    conversationPanel.current?.resize(
+      savedSize === undefined ? (horizontal ? "240px" : "360px") : `${savedSize}%`,
+    );
+  }, [conversationPanel, defaultLayout, horizontal]);
   const model = useTableSession({ data, refresh, endpoint });
   const {
     snapshot,
@@ -373,9 +399,9 @@ function TableSession({
           data={data}
           language={language}
           call={call}
+          tools={<KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />}
         />
         <div data-ui="kiosk-content" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <KioskVisitTools data={data} endpoint={endpoint} stopVoice={() => voice.stop()} />
           <ResizablePanelGroup
             orientation={horizontal ? "horizontal" : "vertical"}
             className="min-h-128 flex-1 max-sm:flex-col!"
@@ -384,8 +410,10 @@ function TableSession({
           >
             <ResizablePanel
               id="tablecast-conversation"
-              defaultSize="40%"
-              minSize="30%"
+              panelRef={conversationPanel}
+              groupResizeBehavior="preserve-pixel-size"
+              defaultSize={horizontal ? "240px" : "360px"}
+              minSize={horizontal ? "224px" : "344px"}
               maxSize="70%"
               className="h-full"
             >
@@ -403,7 +431,6 @@ function TableSession({
                 reviewPending={prepare.isPending}
                 onChoose={choose}
                 onStart={toggleVoice}
-                compactControls
                 controlDisabled={view.status === "stopping" || language.isPending}
                 speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
                 onSpeedChange={(value) => speed.mutate(value)}
@@ -416,13 +443,7 @@ function TableSession({
               />
             </ResizablePanel>
             <ResizableHandle aria-label={t("kiosk_resize_panes")} />
-            <ResizablePanel
-              id="tablecast-order"
-              defaultSize="60%"
-              minSize="30%"
-              maxSize="70%"
-              className="h-full"
-            >
+            <ResizablePanel id="tablecast-order" minSize="30%" className="h-full">
               <aside
                 data-theme-part="menu"
                 className="isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
@@ -569,17 +590,26 @@ function KioskBilling({
         <p className="text-muted-foreground text-xs mt-2.5">
           {t("kiosk_not_sent")}: {money(data.bill.cartTotal, locale)}
         </p>
-        <Button
-          variant="default"
-          size="lg"
-          type="button"
-          className="h-auto min-h-14 whitespace-normal py-2"
-
-          onClick={() => call.mutate(true)}
-          disabled={call.isPending}
-        >
-          {t("kiosk_bill_request")}
-        </Button>
+        {data.billRequested ? (
+          <div
+            role="status"
+            className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-xl bg-success-soft px-4 py-3 text-success"
+          >
+            <Check className="size-5 shrink-0" />
+            <span>{t("kiosk_bill_requested")}</span>
+          </div>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            type="button"
+            className="h-auto min-h-14 whitespace-normal py-2"
+            onClick={() => call.mutate(true)}
+            disabled={call.isPending}
+          >
+            {t("kiosk_bill_request")}
+          </Button>
+        )}
       </div>
     </Tabs.Panel>
   );
@@ -591,7 +621,9 @@ function KioskHeader({
   data,
   language,
   call,
+  tools,
 }: {
+  tools: ReactNode;
   logo?: ThemeImage | null;
   storeName?: string;
   data: TableState;
@@ -602,23 +634,30 @@ function KioskHeader({
   return (
     <header
       data-theme-part="header"
-      className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-sm:px-3"
+      className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-[56rem]:grid max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:px-3"
     >
-      <a
-        className="text-xl font-bold tracking-tight max-lg:hidden"
-        href={data.kind === "demo" ? "#" : "/"}
-      >
-        <Brand />
-      </a>
-      <StoreLogo logo={logo} />
-      <div className="mr-auto flex min-w-0 flex-wrap items-center gap-2 text-sm">
-        <span className="max-w-48 truncate">{storeName ?? data.storeName}</span>
-        <strong>{data.kind === "demo" ? t("demo_title") : data.tableName}</strong>
+      <div className="mr-auto flex min-w-0 items-center gap-3">
+        <a
+          className="text-xl font-bold tracking-tight max-lg:hidden"
+          href={data.kind === "demo" ? "#" : "/"}
+        >
+          <Brand />
+        </a>
+        <StoreLogo logo={logo} />
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm max-[56rem]:flex-col max-[56rem]:items-start max-[56rem]:gap-0">
+          <span className="max-w-48 truncate max-[56rem]:max-w-full">
+            {storeName ?? data.storeName}
+          </span>
+          <strong className="max-[56rem]:max-w-full max-[56rem]:truncate">
+            {data.kind === "demo" ? t("demo_title") : data.tableName}
+          </strong>
+        </div>
       </div>
+      <div className="max-[56rem]:justify-self-end">{tools}</div>
       <Button
         variant="outline"
         size="lg"
-        className="h-auto whitespace-normal py-2"
+        className="h-auto whitespace-normal py-2 max-[56rem]:text-sm"
         onClick={() => call.mutate(false)}
         disabled={call.isPending || data.staffCalled}
       >
@@ -635,24 +674,30 @@ function KioskHeader({
 function KioskMenuTabs({ data }: { data: TableState }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
+  const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
   return (
-    <Tabs.List
-      data-ui="menu-tabs"
-      className="flex gap-0 border-b border-border px-3 [&_button]:flex [&_button]:min-h-14 [&_button]:min-w-0 [&_button]:flex-1 [&_button]:flex-wrap [&_button]:items-center [&_button]:justify-center [&_button]:gap-1 [&_button]:border-b-2 [&_button]:border-b-transparent [&_button]:px-1.5 [&_button]:py-2 [&_button]:text-base [&_button]:text-muted-foreground [&_button[data-active]]:border-b-primary [&_button[data-active]]:font-semibold [&_button[data-active]]:text-primary"
-    >
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="menu">
+    <Tabs.List data-ui="menu-tabs" className="grid w-full grid-cols-2 sm:flex sm:w-fit">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="menu">
+        <Utensils aria-hidden />
         {t("kiosk_menu")}
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="cart">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="cart">
+        <ShoppingBag aria-hidden />
         {t("kiosk_cart")}
-        <span data-ui="count" className="rounded-2xl py-px px-1 text-xs bg-secondary">
-          {data.cart.lines.reduce((sum, line) => sum + line.quantity, 0)}
+        <span
+          key={quantity}
+          data-ui="count"
+          className="rounded-2xl py-px px-1 text-xs bg-secondary text-secondary-foreground motion-safe:animate-tablecast-confirm"
+        >
+          {quantity}
         </span>
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="orders">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="orders">
+        <ReceiptText aria-hidden />
         {t("kiosk_orders")}
       </Tabs.Tab>
-      <Tabs.Tab data-theme-part="menu-tab" disabled={!hydrated} value="bill">
+      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="bill">
+        <Wallet aria-hidden />
         {t("kiosk_bill")}
       </Tabs.Tab>
     </Tabs.List>
@@ -669,7 +714,7 @@ function KioskVisitTools({
   stopVoice: () => Promise<void>;
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border bg-card px-4 py-1">
+    <div className="flex min-w-0 shrink-0 items-center gap-1">
       {data.kind === "table" && (
         <CustomerVisitPanel
           key={data.id}
@@ -780,7 +825,7 @@ function KioskCart({
   return (
     <Tabs.Panel value="cart">
       {ordered && (
-        <output className="m-3 flex items-center gap-3 rounded-xl border border-primary bg-secondary p-3">
+        <output className="m-3 flex items-center gap-3 rounded-xl border border-success-border bg-success-soft p-3 text-success motion-safe:animate-tablecast-state">
           <Check />
           <strong className="flex-1">{t("kiosk_ordered")}</strong>
           <Button variant="ghost" onClick={() => setOrdered(false)}>
@@ -789,7 +834,10 @@ function KioskCart({
         </output>
       )}
       {snapshot ? (
-        <section className="p-4" aria-label={t("kiosk_review_title")}>
+        <section
+          className="p-4 motion-safe:animate-tablecast-state"
+          aria-label={t("kiosk_review_title")}
+        >
           <h2
             ref={confirmationHeading}
             tabIndex={-1}

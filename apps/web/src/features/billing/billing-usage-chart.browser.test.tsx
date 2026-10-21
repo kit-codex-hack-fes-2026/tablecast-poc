@@ -27,19 +27,26 @@ async function show(data: Billing = fixture, locale: "ja" | "en" = "ja") {
 it("日別の音声時間を分で表示し、矢印キーと数値表で日ごとの値を確認できる", async () => {
   await show();
   await expect.element(page.getByText("3 分", { exact: true })).toBeVisible();
-  const chart = page.getByRole("slider");
+  const chart = page.getByRole("img", { name: /AI/ });
   await userEvent.click(chart);
   await userEvent.keyboard("{Home}");
-  await expect.element(chart).toHaveAttribute("aria-valuenow", "1");
-  await expect.element(chart).toHaveAttribute("aria-valuetext", "10月1日 · 1 分");
+  await expect
+    .element(
+      page.getByRole("figure").getByText("2026年10月1日(木) · 1 分", { exact: true }).first(),
+    )
+    .toBeVisible();
   await userEvent.keyboard("{ArrowRight}");
-  await expect.element(chart).toHaveAttribute("aria-valuetext", "10月2日 · 2 分");
+  await expect
+    .element(
+      page.getByRole("figure").getByText("2026年10月2日(金) · 2 分", { exact: true }).first(),
+    )
+    .toBeVisible();
   await expect.element(chart).toHaveFocus();
   await userEvent.click(page.getByText("日ごとの数値を表示", { exact: true }));
   await expect.element(page.getByRole("table")).toBeVisible();
   expect(document.querySelectorAll("tbody tr")).toHaveLength(31);
   await expect
-    .element(page.getByRole("rowheader", { name: "10月31日", exact: true }))
+    .element(page.getByRole("rowheader", { name: "2026年10月31日(土)", exact: true }))
     .toBeVisible();
 });
 it("管理者だけが日別料金へ切り替えられ、memberの画面に料金を含めない", async () => {
@@ -52,10 +59,14 @@ it("管理者だけが日別料金へ切り替えられ、memberの画面に料�
   await userEvent.click(page.getByRole("button", { name: "AI利用料金", exact: true }));
   await expect.element(page.getByRole("paragraph").filter({ hasText: /^¥0$/ })).toBeVisible();
   expect(document.body.textContent).not.toContain("この期間のAI利用はありません");
-  const chart = page.getByRole("slider");
+  const chart = page.getByRole("img", { name: /AI/ });
   await userEvent.click(chart);
   await userEvent.keyboard("{Home}");
-  await expect.element(chart).toHaveAttribute("aria-valuetext", "10月1日 · > -¥0.01");
+  await expect
+    .element(
+      page.getByRole("figure").getByText("2026年10月1日(木) · > -¥0.01", { exact: true }).first(),
+    )
+    .toBeVisible();
   await expect
     .element(page.getByRole("button", { name: "AI利用料金", exact: true }))
     .toHaveAttribute("aria-pressed", "true");
@@ -78,11 +89,14 @@ it("利用のない期間は0を表示し、狭い日本語画面でも日付を
   );
   await expect.element(page.getByRole("paragraph").filter({ hasText: /^0 分$/ })).toBeVisible();
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
-  const chart = page.getByRole("slider");
+  const chart = page.getByRole("img", { name: /AI/ });
   await userEvent.click(chart);
   await userEvent.keyboard("{End}");
-  await expect.element(chart).toHaveAttribute("aria-valuenow", "31");
-  await expect.element(chart).toHaveAttribute("aria-valuetext", "10月31日 · 0 分");
+  await expect
+    .element(
+      page.getByRole("figure").getByText("2026年10月31日(土) · 0 分", { exact: true }).first(),
+    )
+    .toBeVisible();
   await page.screenshot({
     path: "../../../test-results/tablecast-billing-chart-narrow-ja.png",
     fullPage: true,

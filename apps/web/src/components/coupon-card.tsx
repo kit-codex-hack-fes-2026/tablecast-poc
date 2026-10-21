@@ -1,20 +1,9 @@
+import { DateTime } from "./date-time";
 import type { z } from "zod";
 import type { couponRuleSchema } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
 import { ProductImage } from "./product-image";
 import { useI18n } from "../i18n/locale";
-const dates = {
-  ja: new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Tokyo",
-  }),
-  en: new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Tokyo",
-  }),
-};
 export function CouponCard({
   rules,
   children,
@@ -24,7 +13,7 @@ export function CouponCard({
 }) {
   const { t, locale } = useI18n();
   return (
-    <article className="overflow-hidden rounded-xl border bg-card">
+    <article className="overflow-hidden rounded-2xl border border-warning/20 bg-warning-soft/30">
       <ProductImage
         src={`/media/${rules.imageKey}`}
         alt={rules.title[locale]}
@@ -33,7 +22,7 @@ export function CouponCard({
         sizes="(max-width: 640px) 100vw, 480px"
         className="aspect-2/1 w-full object-cover"
       />
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 border-t-2 border-dashed border-warning/30 p-5">
         <h3 className="text-xl font-semibold">{rules.title[locale]}</h3>
         <p>{rules.description[locale]}</p>
         <p className="text-3xl font-semibold">
@@ -48,7 +37,8 @@ export function CouponCard({
           {t("coupon_minimum")}: ¥{rules.minimumYen}
         </p>
         <p className="text-sm text-muted-foreground">
-          {dates[locale].format(rules.startsAt)} – {dates[locale].format(rules.endsAt)} (JST)
+          <DateTime value={rules.startsAt} /> {locale === "ja" ? "から" : "to"}{" "}
+          <DateTime value={rules.endsAt} />
         </p>
         {children}
       </div>

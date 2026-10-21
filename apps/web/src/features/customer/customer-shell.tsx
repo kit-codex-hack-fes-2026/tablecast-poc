@@ -33,7 +33,9 @@ export function CustomerShell({ children }: { children: ReactNode }) {
           {t("customer_account")}
         </Link>
       </nav>
-      {children}
+      <div data-page-motion className="space-y-6 [view-transition-name:tablecast-page]">
+        {children}
+      </div>
     </main>
   );
 }

@@ -1,27 +1,15 @@
-import {
-  instructionText,
-  type CastInstruction,
-  type Configuration,
-  type Locale,
-} from "@tablecast/api/schema";
+import { instructionText, type Configuration, type Locale } from "@tablecast/api/schema";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Maximize2, MessageSquareText, Mic, Sparkles } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { MessageSquareText, Mic, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogScroll,
-  DialogFooter,
-} from "../../components/ui/dialog";
 import type { CastTarget } from "./menu-model";
 import { ConfigurationSection } from "./configuration-fields";
 import { InstructionView } from "./instruction-view";
+import { LanguageFields } from "./language-fields";
 import { standardVoicesOptions } from "./menu-query";
 
 export function CastOverview({
@@ -36,102 +24,34 @@ export function CastOverview({
   const { t } = useI18n();
   return (
     <div className="max-w-5xl space-y-8">
-      <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquareText}>
-        <p className="text-sm text-muted-foreground">{t("cast_instructions_note")}</p>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {(["ja", "en"] as const).map((language) => (
-            <InstructionOverview
-              key={language}
-              language={language}
-              value={value.instructions[language]}
-              action={renderEdit?.(`instructions-${language}`)}
-            />
-          ))}
-        </div>
-      </ConfigurationSection>
-      <ConfigurationSection title={t("editor_voice")} icon={Mic}>
-        <p className="text-sm text-muted-foreground">{t("cast_voice_note")}</p>
-        <div className="grid gap-6 lg:grid-cols-2">
-          {(["ja", "en"] as const).map((language) => (
-            <section key={language} className="min-w-0 space-y-3">
-              <h3 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h3>
+      <LanguageFields>
+        {(language) => (
+          <>
+            <ConfigurationSection title={t("editor_cast_instructions")} icon={MessageSquareText}>
+              <div lang={language} className="min-w-0">
+                {instructionText(value.instructions[language]).trim() ? (
+                  <InstructionView value={value.instructions[language]} />
+                ) : (
+                  <p className="text-muted-foreground">{t("cast_instructions_unset")}</p>
+                )}
+              </div>
+              <div className="flex">{renderEdit?.(`instructions-${language}`)}</div>
+            </ConfigurationSection>
+            <ConfigurationSection title={t("editor_cast_voice_group")} icon={Mic}>
               <VoiceOverview storeId={storeId} language={language} value={value.voice[language]} />
-              {renderEdit?.(`voice-${language}`)}
-            </section>
-          ))}
-        </div>
-      </ConfigurationSection>
+              <div className="flex">{renderEdit?.(`voice-${language}`)}</div>
+            </ConfigurationSection>
+          </>
+        )}
+      </LanguageFields>
       <ConfigurationSection title={t("editor_proactive")} icon={Sparkles}>
         <Badge variant={value.proactive ? "success" : "inactive"}>
           {t(value.proactive ? "cast_proactive_on" : "cast_proactive_off")}
         </Badge>
-        <p className="text-sm text-muted-foreground">{t("cast_proactive_note")}</p>
-        {renderEdit?.("proactive")}
+        <p className="text-sm text-muted-foreground">{t("editor_cast_proactive_hint")}</p>
+        <div className="flex">{renderEdit?.("proactive")}</div>
       </ConfigurationSection>
     </div>
-  );
-}
-
-function InstructionOverview({
-  language,
-  value,
-  action,
-}: {
-  language: Locale;
-  value: CastInstruction;
-  action?: ReactNode;
-}) {
-  const { t } = useI18n();
-  const [expanded, setExpanded] = useState(false);
-  const content = useRef<HTMLDivElement>(null);
-  return (
-    <section className="min-w-0 space-y-3">
-      <h3 className="font-semibold">{t(language === "ja" ? "common_ja" : "common_en")}</h3>
-      {instructionText(value).trim() ? (
-        <>
-          <p
-            lang={language}
-            className="line-clamp-4 whitespace-pre-wrap wrap-anywhere leading-relaxed"
-          >
-            {instructionText(value)}
-          </p>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-haspopup="dialog"
-            onClick={() => setExpanded(true)}
-          >
-            <Maximize2 />
-            {t("cast_show_full")}
-          </Button>
-          <Dialog open={expanded} onOpenChange={setExpanded}>
-            <DialogContent initialFocus={content}>
-              <DialogTitle>{t("editor_cast_instructions")}</DialogTitle>
-              <DialogDescription>
-                {t(language === "ja" ? "common_ja" : "common_en")}
-              </DialogDescription>
-              <DialogScroll
-                ref={content}
-                tabIndex={0}
-                className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <div lang={language}>
-                  <InstructionView value={value} />
-                </div>
-              </DialogScroll>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setExpanded(false)}>
-                  {t("common_close")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      ) : (
-        <p className="text-muted-foreground">{t("cast_instructions_unset")}</p>
-      )}
-      <div>{action}</div>
-    </section>
   );
 }
 

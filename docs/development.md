@@ -161,3 +161,19 @@ commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持�
 TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
 
 RenovateのPRタイトルは、推奨設定に従って英語のcommit件名から生成する。`prTitle`は個別指定せず、`commitMessageAction`や`commitMessageTopic`でcommitと共通の表現を設定する。自動更新PRは日本語タイトル規約の例外とし、本文は既存の日本語4項目を維持する。
+
+### Storybookの部品ドキュメント
+
+デザインシステムのはじめにと使い分けはWeb内のMDX、各UI・主要共通部品の用途とpropsは隣接StoryのAutodocsで読む。色の値は `apps/web/src/styles.css`、variantは既存のTailwind Variantsが正本で、文書へ別の対応表を実装しない。DocsのSourceから組合せを確認し、Controlsを製品のテーマ編集UIとして流用しない。
+
+`@storybook/addon-docs` は既存Storybookと同じ10.6.2を使用する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。StorybookはAPI・DB・実モデルを使わず起動できる。部品を追加する場合は用途・props・使い分け・隣接Storyを一緒に更新し、MCPの `docs-show` でも説明と使用例を確認する。
+
+MCPの接続確認では `initialize`、`tools/list` の成功を先に確認する。続いて返されたschemaに従い `docs-list`、`docs-show`、`docs-show-story` または `stories-preview` を呼ぶ。サーバー名・接続URL・対象SHA・成功したtoolとStory IDをPRへ記録する。Git管理外の設定を追加しただけでは接続成功としない。Codexの既存チャットが設定を再読込しない場合は、その状態と標準MCP clientでの直接疎通結果を分けて報告する。
+
+Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。
+
+### ページ遷移・HMR時の計測
+
+`@inference-net/otel-cf-workers`は設定のcontext keyをmodule内に持つ。Viteの依存再最適化などでWorker全体を再評価する際は、共有telemetryの`vite:beforeFullReload`でOpenTelemetryのtrace・context・propagation登録を解除し、新しいSDK評価に合わせて登録し直す。通常のリクエストで計測を停止したり、例外後に業務処理を再実行したりしない。production buildにはこの開発用hookを含めない。
+
+回帰確認はWebの`src/server/telemetry-hmr.test.ts`で実ViteとCloudflare Workerを起動し、複数回の全再評価後にもHTTP 200、要求ごとのtrace分離、親子spanの相関を確認する。デモDBや稼働中の開発サーバーは使わない。

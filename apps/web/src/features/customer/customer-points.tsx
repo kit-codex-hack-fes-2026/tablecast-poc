@@ -1,12 +1,9 @@
+import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { customerPointsOptions } from "./customer-points-query";
-const dates = {
-  ja: new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-  en: new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Asia/Tokyo" }),
-};
 export function CustomerPoints({ storeId }: { storeId: string }) {
   const { t, locale } = useI18n();
   const query = useSuspenseInfiniteQuery(customerPointsOptions(storeId));
@@ -48,7 +45,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
                   ? entry.reason
                   : t(`customer_point_entry_${entry.reasonKind}`)}
                 <small className="block text-muted-foreground">
-                  {dates[locale].format(entry.createdAt)}
+                  {calendarDate(entry.createdAt, locale)}
                 </small>
               </span>
               <strong className="shrink-0 tabular-nums">

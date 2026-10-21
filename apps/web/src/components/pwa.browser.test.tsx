@@ -252,7 +252,7 @@ it.each([
     steps: ja.customer_install_steps,
     links: [],
   },
-])("$pathのPWA案内は一度の操作で説明と入口を表示する", async ({ path, title, steps, links }) => {
+])("$pathのPWA案内は対象の入口の近くへ手順を常設する", async ({ path, title, steps, links }) => {
   await mount(
     undefined,
     <LocaleProvider initialLocale="ja" persist={false}>
@@ -261,8 +261,7 @@ it.each([
     path,
   );
   const instructions = page.getByText(steps, { exact: true });
-  await expect.element(instructions).not.toBeVisible();
-  await page.getByText(title, { exact: true }).click();
+  await expect.element(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await expect.element(instructions).toBeVisible();
   expect(
     [...document.querySelectorAll("[data-pwa-install] a")].map((link) => ({

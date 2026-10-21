@@ -25,9 +25,18 @@ const waveformLayout = tv({
   slots: {
     root: "flex items-center gap-3 py-1 text-foreground",
     caption: "flex items-center gap-2 text-xs font-semibold",
+    orb: "relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-border",
+    waveform: "h-7 w-full min-w-0",
   },
   variants: {
-    compact: { true: { root: "w-20 shrink-0 py-0", caption: "sr-only" } },
+    compact: {
+      true: {
+        root: "w-full max-w-96 shrink-0 gap-2 py-0",
+        caption: "block font-medium",
+        orb: "size-12",
+        waveform: "h-4",
+      },
+    },
   },
 });
 
@@ -95,7 +104,6 @@ export function AudioWaveform({
   });
   const shapeRef = useRef(shape);
   useEffect(() => {
-    if (compact) return undefined;
     const target = {
       speed: preset.speed,
       radius: preset.radius,
@@ -105,15 +113,15 @@ export function AudioWaveform({
     };
     const interpolate = mix(shapeRef.current, target);
     const animation = animate(0, 1, {
-      duration: still || !preset.speed ? 0 : 0.45,
-      ease: "easeInOut",
+      duration: still || !preset.speed ? 0 : 0.2,
+      ease: [0.23, 1, 0.32, 1],
       onUpdate: (progress) => {
         shapeRef.current = interpolate(progress);
         setShape(shapeRef.current);
       },
     });
     return () => animation.stop();
-  }, [compact, preset, still]);
+  }, [preset, still]);
   const reactive = !still && (state === "listening" || state === "speaking");
   const volume = reactive ? audio.volume : 0;
   const brightness = reactive ? audio.brightness : 0;
@@ -196,43 +204,38 @@ export function AudioWaveform({
       data-voice-state={state}
       data-motion={still || !preset.speed ? "still" : "animated"}
     >
-      {!compact && (
-        <div
-          aria-hidden="true"
-          className="relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-black/5"
-        >
-          <SmokeRing
-            className="absolute inset-0 rounded-full blur-xs"
-            colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
-            colorBack="#00000000"
-            speed={still || !preset.speed ? 0 : shape.speed}
-            frame={12000}
-            radius={shape.radius + volume * 0.07}
-            thickness={shape.thickness + volume * 0.12}
-            innerShape={shape.inner}
-            noiseScale={shape.noise + brightness}
-            noiseIterations={3}
-            scale={1}
-            minPixelRatio={1}
-            maxPixelCount={65536}
+      <div aria-hidden="true" className={layout.orb()}>
+        <SmokeRing
+          className="absolute inset-0 rounded-full blur-xs"
+          colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
+          colorBack="#00000000"
+          speed={still || !preset.speed ? 0 : shape.speed}
+          frame={12000}
+          radius={shape.radius + volume * 0.07}
+          thickness={shape.thickness + volume * 0.12}
+          innerShape={shape.inner}
+          noiseScale={shape.noise + brightness}
+          noiseIterations={3}
+          scale={1}
+          minPixelRatio={1}
+          maxPixelCount={65536}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Icon
+            className={waveformIcon({
+              error: state === "error",
+              connecting: state === "connecting",
+            })}
           />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Icon
-              className={waveformIcon({
-                error: state === "error",
-                connecting: state === "connecting",
-              })}
-            />
-          </div>
-          {state === "tool" && (
-            <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:animation-duration-[6s]" />
-          )}
         </div>
-      )}
+        {state === "tool" && (
+          <span className="absolute inset-1 rounded-full border border-dashed border-foreground/50 motion-safe:animate-spin motion-safe:animation-duration-[6s]" />
+        )}
+      </div>
       <div className="min-w-0 flex-1">
-        <figcaption className={layout.caption()}>
+        <figcaption className={layout.caption()} data-ui="voice-status">
           {label}
-          {toolLabel && (
+          {toolLabel && toolLabel !== label && (
             <span className="flex items-center gap-1 font-normal">
               <Wrench className="size-3" />
               {toolLabel}
@@ -240,10 +243,11 @@ export function AudioWaveform({
           )}
         </figcaption>
         <canvas
+          data-ui="audio-waveform"
           ref={canvas}
           width={240}
           height={48}
-          className="h-7 w-full min-w-0"
+          className={layout.waveform()}
           aria-hidden="true"
         />
       </div>

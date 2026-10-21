@@ -1,8 +1,13 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { MenuItem } from "../features/store/menu-item";
-import { menuListSearchSchema, menuSectionSchema } from "../features/store/menu-model";
+import {
+  menuDocument,
+  menuListSearchSchema,
+  menuSectionSchema,
+} from "../features/store/menu-model";
 import { catalogOptions } from "../features/store/menu-query";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/$section_/$itemId")({
+  staticData: { document: { title: "admin_config", description: "head_catalog_description" } },
   validateSearch: menuListSearchSchema,
   params: { parse: (params) => ({ ...params, section: menuSectionSchema.parse(params.section) }) },
   beforeLoad: ({ params }) => {
@@ -13,7 +18,8 @@ export const Route = createFileRoute("/admin/stores/$storeId/menu/$section_/$ite
       });
   },
   loader: async ({ context, params }) => {
-    await context.queryClient.ensureQueryData(catalogOptions(params.storeId));
+    const catalog = await context.queryClient.ensureQueryData(catalogOptions(params.storeId));
+    return { document: menuDocument(catalog.configuration, params.section, params.itemId) };
   },
   component: Page,
 });

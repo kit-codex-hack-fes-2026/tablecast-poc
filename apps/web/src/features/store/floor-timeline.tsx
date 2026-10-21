@@ -4,9 +4,8 @@ import { useElementScrollRestoration } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, LocateFixed } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
-import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { DatePicker } from "../../components/date-picker";
 import { dateTime } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { storeDate, moveDate } from "./floor-model";
@@ -22,6 +21,7 @@ export function FloorTimeline({
   onDateChange,
   onSelect,
   onOpen,
+  search = "",
 }: {
   storeId: string;
   date: string;
@@ -31,6 +31,7 @@ export function FloorTimeline({
   onDateChange: (date: string) => void;
   onSelect: (id: string) => void;
   onOpen: (table: { id: string; name: string }) => void;
+  search?: string;
 }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
@@ -76,15 +77,17 @@ export function FloorTimeline({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <Input
-          type="date"
-          className="w-44"
-          aria-label={t("floor_date")}
-          value={date}
-          onChange={(event) => {
-            if (event.target.validity.valid && event.target.value) onDateChange(event.target.value);
-          }}
-        />
+        <div className="order-first w-full sm:order-0 sm:w-auto">
+          <DatePicker
+            label={t("floor_date")}
+            className="sm:w-72"
+            value={date}
+            required
+            onValueChange={(next) => {
+              if (next) onDateChange(next);
+            }}
+          />
+        </div>
         <Button
           variant="outline"
           aria-label={t("floor_next")}
@@ -117,9 +120,7 @@ export function FloorTimeline({
           void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch());
         }}
       />
-      {query.isPending ? (
-        <LoadingState />
-      ) : inconsistent ? (
+      {inconsistent ? (
         <div role="alert" className="space-y-2">
           <p>{t("floor_inconsistent")}</p>
           <Button
@@ -134,7 +135,7 @@ export function FloorTimeline({
           </Button>
         </div>
       ) : (
-        first && (
+        (first || query.isPending) && (
           <>
             {query.hasNextPage && (
               <p role="status" className="rounded-lg bg-accent-soft p-3 text-sm">
@@ -144,10 +145,12 @@ export function FloorTimeline({
             <TableCalendar
               key={date}
               page={first}
+              date={date}
               sessions={sessions}
               tables={tables}
               vacantTables={vacantTables}
               now={now}
+              search={search}
               partial={query.hasNextPage}
               scrollRequest={scrollRequest}
               restorationId={restorationId}
@@ -157,7 +160,7 @@ export function FloorTimeline({
             />
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
               <span>
-                {t("floor_updated")}: {dateTime(first.observedAt, locale)}
+                {first ? `${t("floor_updated")}: ${dateTime(first.observedAt, locale)}` : "\u00a0"}
                 {query.isFetching && ` · ${t("floor_updating")}`}
               </span>
               {query.hasNextPage && (

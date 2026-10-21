@@ -6,6 +6,7 @@ import {
   customerExchangesOptions,
 } from "../features/customer/customer-coupons-query";
 export const Route = createFileRoute("/member/$storeId/coupons")({
+  staticData: { document: { title: "coupons", description: "head_customer_coupons_description" } },
   validateSearch: z.object({ sessionId: z.string().optional() }),
   loader: async ({ context, params }) => {
     // 片側の失敗をQueryに残し、取得できた一覧と個別の再試行を表示する。

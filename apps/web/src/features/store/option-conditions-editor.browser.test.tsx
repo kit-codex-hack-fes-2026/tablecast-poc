@@ -235,7 +235,7 @@ it("日本語の試行で数量をそのまま送り、変更後に古い結果�
     .element(screen.getByRole("status", { name: "", exact: true }))
     .toMatchTextContent("OPTION_QUANTITY");
   expect(requests[1]).toMatchObject({ selections: [{ optionId: "X", quantity: 2 }] });
-  await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+  await screen.getByRole("checkbox", { name: "Toppings / X", exact: true }).click();
   await expect.element(quantity).not.toBeInTheDocument();
   await screen.getByRole("button", { name: labels.condition_run }).click();
   await expect.element(screen.getByRole("status", { name: "", exact: true })).toBeVisible();
@@ -250,17 +250,17 @@ it("商品から削除した試行の選択肢を除き、商品を戻しても�
   });
   const screen = await setup("ja");
   await screen.getByText(ja.condition_try, { exact: true }).click();
-  await screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }).click();
+  await screen.getByRole("checkbox", { name: "Toppings / A", exact: true }).click();
   await screen.getByRole("button", { name: "選択肢Aを削除", exact: true }).click();
   await expect
-    .element(screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }))
+    .element(screen.getByRole("checkbox", { name: "Toppings / A", exact: true }))
     .not.toBeInTheDocument();
   await screen.getByRole("button", { name: ja.condition_run }).click();
   await expect.poll(() => requests.length).toBe(1);
   expect(requests[0]).toMatchObject({ selections: [{ optionId: "X", quantity: 1 }] });
   await screen.getByRole("button", { name: "商品を戻す", exact: true }).click();
   await expect
-    .element(screen.getByRole("checkbox", { name: "Toppings / A A", exact: true }))
+    .element(screen.getByRole("checkbox", { name: "Toppings / A", exact: true }))
     .not.toBeChecked();
 });
 
@@ -297,7 +297,7 @@ it("日本語で入力変更後に届いた試行失敗を表示せず、再試�
     await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
     await run.click();
     await expect.element(screen.getByRole("alert")).toBeVisible();
-    await screen.getByRole("checkbox", { name: "Toppings / X X", exact: true }).click();
+    await screen.getByRole("checkbox", { name: "Toppings / X", exact: true }).click();
     await expect.element(screen.getByRole("alert")).not.toBeInTheDocument();
   } finally {
     first.resolve(failure());

@@ -7,11 +7,17 @@ import { floorOptions } from "../features/store/store-query";
 import { useI18n } from "../i18n/locale";
 
 export const Route = createFileRoute("/admin/stores/$storeId/tables/$tableId/open")({
+  staticData: {
+    document: { title: "admin_open_table", description: "head_open_table_description" },
+  },
   loader: async ({ context, params }) => {
-    await Promise.all([
+    const [floor] = await Promise.all([
       context.queryClient.ensureQueryData(floorOptions(params.storeId)),
       context.queryClient.ensureQueryData(catalogOptions(params.storeId)),
     ]);
+    return {
+      document: { name: floor.vacantTables.find((table) => table.id === params.tableId)?.name },
+    };
   },
   component: Page,
 });
@@ -28,6 +34,9 @@ function Page() {
         <OpenTable
           storeId={storeId}
           table={table}
+          onCancel={() =>
+            void navigate({ to: "/admin/stores/$storeId/floor", params: { storeId } })
+          }
           onOpened={() =>
             void navigate({ to: "/admin/stores/$storeId/floor", params: { storeId } })
           }

@@ -1,4 +1,7 @@
+import { ConfigurationToolbar } from "../shell/configuration-toolbar";
+import { SaveStatus } from "../shell/configuration-status";
 import { configurationSchema, type Configuration, type ConfigDraft } from "@tablecast/api/schema";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useForm } from "@tanstack/react-form";
 import {
   skipToken,
@@ -8,7 +11,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Undo2 } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
@@ -21,6 +24,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
 import { DesignEditor } from "./design-editor";
+import { designValidationIssues } from "./design-validation";
 import { StartConfigurationEditing } from "./configuration-workflow";
 import { catalogOptions, configurationImageUploadKey, draftOptions } from "./menu-query";
 import { useStore } from "./store-shell";
@@ -39,7 +43,6 @@ export function StoreDesign({ draftId }: { draftId?: string }) {
     <div className="space-y-5">
       <PageHeader
         title={t("theme_title")}
-        description={t(draftId ? "theme_editing_note" : "theme_published_note")}
         actions={
           !draftId &&
           configuration &&
@@ -75,11 +78,17 @@ function designValues({ branding, appearance, banners }: Configuration) {
 }
 function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigDraft }) {
   const store = useStore();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
   const client = useQueryClient();
   const [version, setVersion] = useState(() => draft.version);
   const [issues, setIssues] = useState<string[]>([]);
+  const issueSummary = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (!issues.length) return;
+    const summary = issueSummary.current;
+    summary?.focus();
+  }, [issues]);
   const [editorRevision, setEditorRevision] = useState(0);
   const staged = useRef(new Set<string>());
   const [hasStaged, setHasStaged] = useState(false);
@@ -107,11 +116,7 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   const save = useMutation({
     mutationFn: async (configuration: Configuration) => {
       const parsed = configurationSchema.safeParse(configuration);
-      setIssues(
-        parsed.success
-          ? []
-          : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
-      );
+      setIssues(parsed.success ? [] : designValidationIssues(parsed.error.issues, locale, t));
       if (!parsed.success) throw parsed.error;
       return parseResponse(
         rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
@@ -168,8 +173,16 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
   });
   const pending = save.isPending || preview.isPending || reload.isPending;
   const blocked = !editable || pending || hasStaged || !!uploads;
+  useHotkey(
+    "Mod+S",
+    () => {
+      if (!blocked) void form.handleSubmit();
+    },
+    { enabled: editable, ignoreInputs: false },
+  );
   return (
     <form
+      id="tablecast-design-editor"
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -177,33 +190,47 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
       }}
       className="space-y-5"
     >
-      <p>
-        {t("theme_draft_hint")} · {draft.id} · v{version}
-      </p>
-      <div className="sticky top-16 z-10 flex flex-wrap gap-3 border-b border-border bg-background/95 py-3 backdrop-blur-sm">
-        <Button type="submit" disabled={blocked}>
-          {t("common_save")}
-        </Button>
-        <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
-          {t("theme_preview")}
-        </Button>
-        <Button
-          nativeButton={false}
-          variant="outline"
-          render={
-            <Link
-              to="/admin/stores/$storeId/menu/changes/$draftId"
-              params={{ storeId: store.id, draftId: draft.id }}
+      <ConfigurationToolbar slot="status">
+        <form.Subscribe selector={(state) => state.isDirty}>
+          {(dirty) => (
+            <SaveStatus
+              dirty={dirty || hasStaged}
+              pending={pending}
+              error={save.error || preview.error || reload.error}
             />
-          }
-        >
-          {t("theme_review")}
-        </Button>
-      </div>
-      {hasStaged && <p role="status">{t("theme_staged_hint")}</p>}
+          )}
+        </form.Subscribe>
+      </ConfigurationToolbar>
+      <ConfigurationToolbar>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="submit"
+            form="tablecast-design-editor"
+            disabled={blocked}
+            aria-keyshortcuts="Control+s Meta+s"
+          >
+            {t("common_save")}
+          </Button>
+          <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
+            {t("theme_preview")}
+          </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={
+              <Link
+                to="/admin/stores/$storeId/menu/changes/$draftId"
+                params={{ storeId: store.id, draftId: draft.id }}
+              />
+            }
+          >
+            {t("theme_review")}
+          </Button>
+        </div>
+      </ConfigurationToolbar>
       <ActionFeedback
         pending={pending}
-        error={save.error || preview.error || reload.error}
+        error={issues.length ? undefined : save.error || preview.error || reload.error}
         success={save.isSuccess}
         successMessage={t("account_saved")}
       />
@@ -217,9 +244,14 @@ function DesignForm({ initial, draft }: { initial: Configuration; draft: ConfigD
         />
       )}
       {!!issues.length && (
-        <ul role="alert" className="list-inside list-disc text-destructive">
-          {issues.map((issue) => (
-            <li key={issue}>{issue}</li>
+        <ul
+          ref={issueSummary}
+          tabIndex={-1}
+          role="alert"
+          className="list-inside list-disc rounded-lg bg-destructive/10 p-4 text-sm text-destructive outline-none"
+        >
+          {issues.map((issue, index) => (
+            <li key={`${index}:${issue}`}>{issue}</li>
           ))}
         </ul>
       )}

@@ -44,7 +44,8 @@ async function openGame({ initialFailure = false, initialReady = false } = {}) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
-    if (path === api) return Response.json({ games: [{ id: "tablecast-turns" }], next: null });
+    if (path === api)
+      return Response.json({ games: [{ id: "tablecast-turns", name: manifest.name }], next: null });
     if (path === `${api}/tablecast-turns`)
       return Response.json({
         activeVersionId,
@@ -53,6 +54,7 @@ async function openGame({ initialFailure = false, initialReady = false } = {}) {
           {
             id: "tablecast-v1",
             manifest,
+            createdAt: Date.UTC(2026, 9, 20),
             status: ready ? "ready" : "draft",
             previewed,
             published: !!activeVersionId,
@@ -111,7 +113,7 @@ async function openGame({ initialFailure = false, initialReady = false } = {}) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await page.getByRole("button", { name: "tablecast-turns", exact: true }).click();
+  await page.getByRole("button", { name: "順番ゲーム", exact: true }).click();
   return {
     manifest,
     writes,
