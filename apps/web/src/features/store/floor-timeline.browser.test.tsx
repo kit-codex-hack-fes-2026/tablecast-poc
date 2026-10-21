@@ -271,9 +271,11 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   await screen.getByRole("combobox", { name: labels.floor_zoom, exact: true }).click();
   await page.getByRole("option", { name: labels.floor_zoom_detailed, exact: true }).click();
   await expect.poll(() => router.state.location.search).toMatchObject({ zoom: "detailed" });
+  // 奇数幅の中央は半端pxになるため、整数scrollLeftへの丸めも同じ時刻として扱う
+  const zoomedScrollLeft = (650 + centre) * 2 - centre;
   await expect
-    .poll(() => viewport.element().scrollLeft)
-    .toBeCloseTo((650 + centre) * 2 - centre, 0);
+    .poll(() => Math.abs(viewport.element().scrollLeft - zoomedScrollLeft))
+    .toBeLessThanOrEqual(0.5);
   router.history.back();
   await expect.poll(() => router.state.location.search.zoom).toBeUndefined();
   await expect.poll(() => viewport.element().scrollLeft).toBeCloseTo(650, 0);

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { expect, waitFor } from "storybook/test";
 import { ActionFeedback } from "./action-feedback";
 const meta = {
   title: "共通表示/ActionFeedback",
@@ -8,6 +9,13 @@ const meta = {
     layout: "padded",
   },
   args: { pending: false, error: null, success: true, successMessage: "変更を保存しました" },
+  play: async ({ canvas, args }) => {
+    const message = args.error
+      ? canvas.getByRole("alert").parentElement
+      : canvas.getByRole("status").firstElementChild;
+    // LazyMotionの機能取得と入場後の表示を待ち、途中の文字色をaxeへ渡さない
+    await waitFor(() => expect(message).toHaveStyle({ opacity: "1" }));
+  },
 } satisfies Meta<typeof ActionFeedback>;
 export default meta;
 type Story = StoryObj<typeof meta>;
