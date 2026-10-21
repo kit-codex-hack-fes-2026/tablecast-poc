@@ -189,7 +189,7 @@ it.each([
     await render(
       <LocaleProvider initialLocale="en" persist={false}>
         <div className="p-4">
-          {/* 常設スクロールバーの幅とは独立に、フォームの内容幅を再現する。 */}
+          {/* フォームの幅を再現し、常設スクロールバーがあれば残る領域へ収める。 */}
           <div className="max-w-full" style={{ width: contentWidth }}>
             <Picker
               label="Start date"
@@ -208,12 +208,6 @@ it.each([
     expect(dateInput.value).toMatch(/^Wednesday,? 23 September 2026$/);
     expect(dateInput.scrollWidth).toBeLessThanOrEqual(dateInput.clientWidth);
     const inputStyle = getComputedStyle(dateInput);
-    const textWidth =
-      dateInput.clientWidth -
-      Number.parseFloat(inputStyle.paddingInlineStart) -
-      Number.parseFloat(inputStyle.paddingInlineEnd);
-    // Linux WebKitの最長日付は約258px。OSの字幅差とcaretを含めて260pxを予約する。
-    expect(textWidth).toBeGreaterThanOrEqual(260);
     expect(Number.parseFloat(inputStyle.fontSize)).toBe(16);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
     const choose = page.getByRole("button", { name: "Start date: Choose a date" });

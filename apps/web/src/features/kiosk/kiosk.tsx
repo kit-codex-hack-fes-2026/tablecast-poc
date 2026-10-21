@@ -341,8 +341,6 @@ function TableSession({
 }) {
   const horizontal = useMediaQuery("(min-width: 56rem)");
   const conversationPanel = usePanelRef();
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const previousHeight = useRef<number | undefined>(undefined);
   const orientation = useRef(horizontal);
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
     id: horizontal ? "tablecast-kiosk-layout" : "tablecast-kiosk-vertical-layout",
@@ -352,23 +350,10 @@ function TableSession({
     if (orientation.current === horizontal) return;
     orientation.current = horizontal;
     const savedSize = defaultLayout?.["tablecast-conversation"];
-    conversationPanel.current?.resize(savedSize === undefined ? "240px" : `${savedSize}%`);
+    conversationPanel.current?.resize(
+      savedSize === undefined ? (horizontal ? "240px" : "360px") : `${savedSize}%`,
+    );
   }, [conversationPanel, defaultLayout, horizontal]);
-  useEffect(() => {
-    const panel = conversationPanel.current;
-    if (!panel) return;
-    if (horizontal) {
-      previousHeight.current = undefined;
-      return;
-    }
-    if (historyOpen) {
-      previousHeight.current = panel.getSize().inPixels;
-      panel.resize(Math.max(previousHeight.current, 420));
-    } else if (previousHeight.current !== undefined) {
-      panel.resize(previousHeight.current);
-      previousHeight.current = undefined;
-    }
-  }, [conversationPanel, historyOpen, horizontal]);
   const model = useTableSession({ data, refresh, endpoint });
   const {
     snapshot,
@@ -419,13 +404,12 @@ function TableSession({
               id="tablecast-conversation"
               panelRef={conversationPanel}
               groupResizeBehavior="preserve-pixel-size"
-              defaultSize="240px"
-              minSize="224px"
+              defaultSize={horizontal ? "240px" : "360px"}
+              minSize={horizontal ? "224px" : "344px"}
               maxSize="70%"
               className="h-full"
             >
               <VoicePanel
-                onHistoryOpenChange={setHistoryOpen}
                 view={view}
                 lines={conversationLines(data.events)}
                 events={data.events}
@@ -439,7 +423,6 @@ function TableSession({
                 reviewPending={prepare.isPending}
                 onChoose={choose}
                 onStart={toggleVoice}
-                compactControls
                 controlDisabled={view.status === "stopping" || language.isPending}
                 speechSpeed={speed.isPending ? speed.variables : data.speechSpeed}
                 onSpeedChange={(value) => speed.mutate(value)}

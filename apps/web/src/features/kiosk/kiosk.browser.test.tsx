@@ -362,7 +362,7 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
 
 const orderPanel = () => document.getElementById("tablecast-order");
 it.each(["listening", "speaking"] as const)(
-  "%sでは実音声の小さな波形を音声操作バーへ表示し、停止でも操作位置を保つ",
+  "%sでは小さなorbと実波形を表示し、停止しても下部操作の位置を保つ",
   async (status) => {
     await page.viewport(390, 844);
     const audio = new AudioContext();
@@ -381,7 +381,6 @@ it.each(["listening", "speaking"] as const)(
       await screen.rerender(
         <LocaleProvider initialLocale="ja" persist={false}>
           <VoicePanel
-            compactControls
             view={
               status === "listening"
                 ? { status, inputTrack: track }
@@ -400,10 +399,12 @@ it.each(["listening", "speaking"] as const)(
         hasText: status === "listening" ? ja.kiosk_voice_listening : ja.kiosk_voice_speaking,
       });
       await expect.element(figure).toBeVisible();
-      expect(figure.element().getBoundingClientRect().width).toBeLessThanOrEqual(80);
-      expect(figure.element().getBoundingClientRect().height).toBeLessThanOrEqual(28);
-      await expect.element(page.getByRole("slider", { name: ja.kiosk_speech_speed })).toBeVisible();
-      const microphone = page.getByRole("button", { name: ja.kiosk_microphone_settings });
+      expect(figure.element().getBoundingClientRect().width).toBeLessThanOrEqual(384);
+      expect(figure.element().getBoundingClientRect().height).toBeLessThanOrEqual(48);
+      await expect
+        .element(page.getByRole("slider", { name: ja.kiosk_speech_speed }))
+        .not.toBeInTheDocument();
+      const microphone = page.getByRole("button", { name: ja.kiosk_input_settings });
       await expect.element(microphone).toBeVisible();
       const waveBounds = figure.element().getBoundingClientRect();
       const stop = page.getByRole("button", { name: ja.kiosk_voice_stop, exact: true });
@@ -416,7 +417,7 @@ it.each(["listening", "speaking"] as const)(
       expect(stop.element().getBoundingClientRect().left).toBeLessThan(
         microphone.element().getBoundingClientRect().left,
       );
-      const canvas = figure.element().querySelector("canvas");
+      const canvas = figure.element().querySelector("canvas[data-ui=audio-waveform]");
       if (!(canvas instanceof HTMLCanvasElement)) throw new Error("波形canvasが必要です");
       await expect
         .poll(() => {
@@ -430,7 +431,6 @@ it.each(["listening", "speaking"] as const)(
       await screen.rerender(
         <LocaleProvider initialLocale="ja" persist={false}>
           <VoicePanel
-            compactControls
             view={{ status: "paused" }}
             lines={[]}
             onStart={() => {}}
@@ -441,7 +441,9 @@ it.each(["listening", "speaking"] as const)(
           />
         </LocaleProvider>,
       );
-      await expect.element(figure).not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("figure").filter({ hasText: ja.kiosk_voice_paused }))
+        .toBeVisible();
       const resume = page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true });
       await expect.element(resume).toBeVisible();
       expect(resume.element().closest("[data-theme-part=voice-controls]")).toBe(controls);
@@ -461,6 +463,52 @@ it.each(["ja", "en"] as const)(
     const labels = locale === "ja" ? ja : en;
     current.locale = locale;
     current.uiSection = "menu";
+    current.events = [
+      {
+        cursor: 1,
+        kind: "voice.user",
+        data: {
+          role: "user",
+          text:
+            locale === "ja"
+              ? "お刺身に合う日本酒はありますか？"
+              : "Which sake goes well with sashimi?",
+          locale,
+        },
+        storeId: current.storeId,
+        tableSessionId: current.id,
+        createdAt: 1788645000000,
+      },
+      {
+        cursor: 2,
+        kind: "voice.tool",
+        data: {
+          turnId: "tablecast-layout-turn",
+          toolCallId: "tablecast-layout-call",
+          toolName: "getCatalog",
+          state: "completed",
+        },
+        storeId: current.storeId,
+        tableSessionId: current.id,
+        createdAt: 1788645001000,
+      },
+      {
+        cursor: 3,
+        kind: "voice.assistant",
+        data: {
+          role: "assistant",
+          text:
+            locale === "ja"
+              ? "すっきりした辛口の月凪がおすすめです。"
+              : "I recommend the crisp, dry Tsukinagi.",
+          locale,
+        },
+        storeId: current.storeId,
+        tableSessionId: current.id,
+        createdAt: 1788645002000,
+      },
+    ];
+    current.cursor = 3;
     participantNames = ["Reo", "Alex"];
     vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
       {
@@ -520,17 +568,18 @@ it.each(["ja", "en"] as const)(
       .toHaveAttribute("aria-pressed", "true");
     await userEvent.keyboard("{Escape}");
     for (const [width, height] of [
-      [1024, 768],
-      [768, 1024],
-      [390, 844],
+      [1512, 982],
+      [1180, 820],
+      [820, 1180],
+      [402, 874],
     ]) {
       await page.viewport(width, height);
       await expect
         .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
-        .toHaveAttribute("aria-orientation", width === 1024 ? "vertical" : "horizontal");
+        .toHaveAttribute("aria-orientation", width >= 896 ? "vertical" : "horizontal");
       await expect
         .poll(() => conversation.getBoundingClientRect().height)
-        .toBeGreaterThanOrEqual(224);
+        .toBeGreaterThanOrEqual(width >= 896 ? 224 : 344);
       const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
       const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
       expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
@@ -545,10 +594,9 @@ it.each(["ja", "en"] as const)(
         expect(bounds.right).toBeLessThanOrEqual(width);
         expect(bounds.bottom).toBeLessThanOrEqual(height);
       }
-      if (width === 1024)
-        await page.screenshot({
-          path: `../../../test-results/tablecast-guest-compact-${locale}.png`,
-        });
+      await page.screenshot({
+        path: `../../../test-results/tablecast-guest-compact-${locale}-${width}.png`,
+      });
       expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
       await expect
@@ -556,7 +604,7 @@ it.each(["ja", "en"] as const)(
           const conversationBounds = conversation.getBoundingClientRect();
           const orderBounds = orderPanel()?.getBoundingClientRect();
           if (!orderBounds) throw new Error("注文ペインが必要です");
-          return width === 1024
+          return width >= 896
             ? conversationBounds.right - orderBounds.left
             : conversationBounds.bottom - orderBounds.top;
         })
@@ -565,28 +613,21 @@ it.each(["ja", "en"] as const)(
         page.getByRole("region", { name: labels.kiosk_conversation, exact: true }).element(),
       ).toBe(conversation);
     }
-    const compactHeight = conversation.getBoundingClientRect().height;
-    const showHistory = page.getByRole("button", { name: labels.kiosk_history_show });
-    await showHistory.click();
-    const closeHistory = page.getByRole("button", { name: labels.kiosk_history_hide });
-    await expect.element(closeHistory).toHaveAttribute("aria-expanded", "true");
-    await expect
-      .poll(() => conversation.getBoundingClientRect().height)
-      .toBeGreaterThan(compactHeight);
-    const historyId = closeHistory.element().getAttribute("aria-controls");
-    const history = historyId ? document.getElementById(historyId) : null;
-    if (!history) throw new Error("表示対象の会話履歴がありません");
-    expect(history.hidden).toBe(false);
-    expect(history.getBoundingClientRect().height).toBeGreaterThanOrEqual(120);
-    const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
-    expect(resume.element().getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    const history = conversation.querySelector('[data-ui="conversation-history"]');
+    const controls = conversation.querySelector('[data-theme-part="voice-controls"]');
+    const camera = conversation.querySelector('[data-ui="camera-frame"]');
+    if (!history || !controls || !camera) throw new Error("常設会話・操作・カメラがありません");
+    expect(history.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+    expect(camera.getBoundingClientRect().width).toBeLessThanOrEqual(160);
+    expect(controls.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      history.getBoundingClientRect().bottom,
+    );
+    expect(controls.getBoundingClientRect().bottom).toBeLessThanOrEqual(
       conversation.getBoundingClientRect().bottom,
     );
-    await closeHistory.click();
     await expect
-      .poll(() => conversation.getBoundingClientRect().height)
-      .toBeCloseTo(compactHeight, 0);
-    expect(history.hidden).toBe(true);
+      .element(page.getByRole("button", { name: labels.kiosk_history_show }))
+      .not.toBeInTheDocument();
     for (const tab of page.getByRole("tab").elements()) {
       expect(tab.getBoundingClientRect().height).toBe(56);
       expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
@@ -883,14 +924,13 @@ it("店舗テーマでもヘッダーと音声・カート操作を縦横で維�
   await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
 });
 
-it("会話履歴を閉じていても注文確認と音声エラーは操作の近くに残る", async () => {
+it("会話履歴の注文確認と音声エラーから下端の操作へ進める", async () => {
   await page.viewport(1024, 768);
   const review = vi.fn<() => void>();
   await render(
     <LocaleProvider initialLocale="ja" persist={false}>
       <div className="h-180 w-60">
         <VoicePanel
-          compactControls
           view={{ status: "error", error: "permission" }}
           lines={[]}
           onStart={() => {}}
@@ -916,7 +956,7 @@ it("会話履歴を閉じていても注文確認と音声エラーは操作の�
   );
   await expect
     .element(page.getByRole("button", { name: ja.kiosk_history_show }))
-    .toHaveAttribute("aria-expanded", "false");
+    .not.toBeInTheDocument();
   await expect.element(page.getByText("確認待ちの注文内容")).toBeVisible();
   await expect
     .element(page.getByRole("status").filter({ hasText: ja.kiosk_voice_permission }))

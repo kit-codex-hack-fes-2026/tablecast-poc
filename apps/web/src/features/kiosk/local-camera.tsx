@@ -1,7 +1,15 @@
-import { Camera, CameraOff, LoaderCircle } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import {
+  Camera,
+  CameraOff,
+  CircleAlert,
+  MoveDiagonal,
+  LoaderCircle,
+  SlidersHorizontal,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "../../components/ui/button";
-import { NativeSelect } from "../../components/ui/native-select";
+import { Select, SelectContent, SelectItem } from "../../components/ui/select";
 import { useI18n } from "../../i18n/locale";
 
 export function LocalCameraFrame() {
@@ -17,6 +25,7 @@ export function useLocalCamera() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<"permission" | "unavailable">();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [deviceId, setDeviceId] = useState("");
   const stop = useCallback(() => {
     generation.current += 1;
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -25,17 +34,20 @@ export function useLocalCamera() {
     setPending(false);
   }, []);
   const start = useCallback(
-    async (deviceId?: string) => {
+    async (requestedDeviceId?: string) => {
       stop();
       const request = generation.current;
       setError(undefined);
       setPending(true);
+      setDeviceId(requestedDeviceId ?? "");
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera unavailable");
         const next = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
-            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "user" }),
+            ...(requestedDeviceId
+              ? { deviceId: { exact: requestedDeviceId } }
+              : { facingMode: "user" }),
             width: { ideal: 640 },
             height: { ideal: 480 },
           },
@@ -46,6 +58,7 @@ export function useLocalCamera() {
         }
         streamRef.current = next;
         setStream(next);
+        setDeviceId(next.getVideoTracks()[0]?.getSettings().deviceId ?? requestedDeviceId ?? "");
         setPending(false);
         next
           .getVideoTracks()
@@ -77,101 +90,257 @@ export function useLocalCamera() {
       stop();
     };
   }, [stop]);
-  return { stream, pending, error, devices, start, stop };
+  return { stream, pending, error, devices, deviceId, start, stop };
 }
 
 export function LocalCamera({
   camera,
-  showError = true,
+  boundsRef,
 }: {
   camera: ReturnType<typeof useLocalCamera>;
-  showError?: boolean;
+  boundsRef?: RefObject<HTMLElement | null>;
 }) {
   const { t } = useI18n();
-  const enabled = Boolean(camera.stream || camera.pending);
-  const actionLabel = t(enabled ? "kiosk_camera_stop" : "kiosk_camera_start");
   const video = useRef<HTMLVideoElement>(null);
+  const frame = useRef<HTMLElement>(null);
+  const [aspectRatio, setAspectRatio] = useState(4 / 3);
+  const [preferredWidth, setPreferredWidth] = useState(128);
+  const [bounds, setBounds] = useState({ width: 320, height: 240 });
+  const drag = useRef<{ pointerId: number; x: number; y: number; width: number } | null>(null);
+  const maxWidth = Math.min(320, bounds.width, bounds.height * aspectRatio);
+  const minWidth = Math.min(
+    maxWidth,
+    Math.max(100, 48 * aspectRatio, Math.min(140, 96 * aspectRatio)),
+  );
+  const width = Math.min(maxWidth, Math.max(minWidth, preferredWidth));
+  const narrow = width < 100;
+  const compactStatus = width / aspectRatio < 80;
+  const resize = (value: number) =>
+    setPreferredWidth(Math.min(maxWidth, Math.max(minWidth, value)));
+  const readAspectRatio = () => {
+    const source = video.current;
+    if (source && source.srcObject === camera.stream && source.videoWidth && source.videoHeight)
+      setAspectRatio(source.videoWidth / source.videoHeight);
+  };
+  useEffect(() => {
+    const parent = frame.current?.parentElement;
+    if (!parent) return undefined;
+    const container = boundsRef?.current;
+    const update = () => {
+      const style = getComputedStyle(parent);
+      setBounds({
+        width: Math.max(
+          0,
+          parent.clientWidth -
+            Number.parseFloat(style.paddingLeft) -
+            Number.parseFloat(style.paddingRight),
+        ),
+        height: container
+          ? Math.min(240, container.clientHeight, Math.max(144, container.clientHeight * 0.4))
+          : 240,
+      });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(parent);
+    if (container && container !== parent) observer.observe(container);
+    update();
+    return () => observer.disconnect();
+  }, [boundsRef]);
   useEffect(() => {
     if (!video.current) return;
     video.current.srcObject = camera.stream ?? null;
   }, [camera.stream]);
   return (
-    <div className="grid min-w-0 content-start gap-2" data-ui="local-camera">
-      <figure
-        className="relative aspect-4/3 overflow-hidden rounded-2xl bg-control shadow-surface"
-        data-ui="camera-frame"
-        data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
+    <figure
+      ref={frame}
+      className="relative min-w-0 shrink-0 self-start overflow-hidden rounded-2xl bg-control shadow-surface"
+      style={{ width, aspectRatio }}
+      data-ui="camera-frame"
+      data-camera-state={camera.pending ? "pending" : camera.stream ? "on" : "off"}
+    >
+      <video
+        ref={video}
+        autoPlay
+        muted
+        playsInline
+        className="absolute inset-0 size-full -scale-x-100 object-contain"
+        aria-label={t("kiosk_camera_mirror")}
+        hidden={!camera.stream}
+        onLoadedMetadata={readAspectRatio}
+        onResize={readAspectRatio}
+      />
+      {!camera.stream && !compactStatus && <LocalCameraStatus camera={camera} narrow={narrow} />}
+      <div className={`absolute bottom-1 left-1 flex gap-1 ${narrow ? "flex-col" : ""}`}>
+        <CameraDeviceSetting camera={camera} />
+        <LocalCameraToggle camera={camera} compactStatus={compactStatus} />
+      </div>
+      <div
+        role="separator"
+        tabIndex={0}
+        aria-label={t("kiosk_camera_resize")}
+        aria-orientation="vertical"
+        aria-valuemin={Math.round(minWidth)}
+        aria-valuemax={Math.round(maxWidth)}
+        aria-valuenow={Math.round(width)}
+        title={t("kiosk_camera_resize")}
+        className="group absolute top-0 right-0 flex size-11 touch-none cursor-nesw-resize items-start justify-end p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        onPointerDown={(event) => {
+          if (drag.current || !event.isPrimary || event.button !== 0) return;
+          event.preventDefault();
+          event.currentTarget.focus();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, width };
+        }}
+        onPointerMove={(event) => {
+          const start = drag.current;
+          if (!start || event.pointerId !== start.pointerId) return;
+          const x = event.clientX - start.x;
+          const y = (start.y - event.clientY) * aspectRatio;
+          resize(start.width + (Math.abs(x) >= Math.abs(y) ? x : y));
+        }}
+        onPointerUp={(event) => {
+          if (drag.current?.pointerId !== event.pointerId) return;
+          drag.current = null;
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }}
+        onPointerCancel={(event) => {
+          if (drag.current?.pointerId !== event.pointerId) return;
+          resize(drag.current.width);
+          drag.current = null;
+        }}
+        onLostPointerCapture={() => {
+          drag.current = null;
+        }}
+        onKeyDown={(event) => {
+          const step = event.shiftKey ? 32 : 16;
+          const next = {
+            ArrowRight: width + step,
+            ArrowDown: width + step,
+            ArrowLeft: width - step,
+            ArrowUp: width - step,
+            Home: minWidth,
+            End: maxWidth,
+          }[event.key];
+          if (next !== undefined) {
+            event.preventDefault();
+            resize(next);
+          } else if (event.key === "Escape" && drag.current) {
+            event.preventDefault();
+            const start = drag.current;
+            resize(start.width);
+            drag.current = null;
+            event.currentTarget.releasePointerCapture(start.pointerId);
+          }
+        }}
       >
-        <video
-          ref={video}
-          autoPlay
-          muted
-          playsInline
-          className="absolute inset-0 size-full -scale-x-100 object-contain"
-          aria-label={t("kiosk_camera_mirror")}
-          hidden={!camera.stream}
+        <MoveDiagonal
+          className="size-4 rounded-sm bg-control/90 group-hover:bg-control-hover"
+          aria-hidden="true"
         />
-        {!camera.stream && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pb-12 text-muted-foreground max-[56rem]:hidden">
-            {camera.pending ? (
-              <LoaderCircle className="size-6 motion-safe:animate-spin" />
-            ) : (
-              <CameraOff className="size-6" />
-            )}
-            <span className="text-xs">
-              {t(camera.pending ? "common_loading" : "kiosk_camera_off")}
-            </span>
-          </div>
-        )}
-        <figcaption className="absolute top-2 left-2 max-w-[calc(100%-1rem)] rounded-lg bg-glass px-2 py-1 text-xs text-foreground max-[56rem]:sr-only">
-          {t("kiosk_camera_local")}
-        </figcaption>
-        <Button
-          variant={camera.stream ? "default" : "outline"}
-          size="sm"
-          className="absolute right-2 bottom-2 max-w-[calc(100%-1rem)] max-[56rem]:size-11 max-[56rem]:p-0"
-          aria-label={actionLabel}
-          title={actionLabel}
-          aria-pressed={Boolean(camera.stream)}
-          onClick={() => (enabled ? camera.stop() : void camera.start())}
-        >
-          {camera.pending ? (
-            <LoaderCircle className="motion-safe:animate-spin" />
-          ) : camera.stream ? (
-            <CameraOff />
-          ) : (
-            <Camera />
-          )}
-          <span className="max-[56rem]:hidden">{actionLabel}</span>
-        </Button>
-      </figure>
-      {camera.stream && camera.devices.length > 1 && (
-        <label className="min-w-0 flex-1 text-xs">
-          <span className="sr-only">{t("kiosk_camera_device")}</span>
-          <NativeSelect
-            value={camera.stream.getVideoTracks()[0]?.getSettings().deviceId ?? ""}
-            onChange={(event) => void camera.start(event.target.value)}
-          >
-            {camera.devices.map((device, index) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `${t("kiosk_camera_device")} ${index + 1}`}
-              </option>
-            ))}
-          </NativeSelect>
-        </label>
-      )}
-      <p className="text-xs leading-relaxed text-muted-foreground">{t("kiosk_camera_privacy")}</p>
-      {showError && <LocalCameraError error={camera.error} />}
+      </div>
+    </figure>
+  );
+}
+
+function LocalCameraStatus({
+  camera,
+  narrow,
+}: {
+  camera: ReturnType<typeof useLocalCamera>;
+  narrow: boolean;
+}) {
+  const { t } = useI18n();
+  const message = camera.error
+    ? camera.error === "permission"
+      ? "kiosk_camera_permission"
+      : "kiosk_camera_unavailable"
+    : camera.pending
+      ? "common_loading"
+      : "kiosk_camera_off";
+  return (
+    <div
+      className={`absolute inset-x-0 top-0 flex items-center justify-center pr-7 pl-2 text-center ${narrow && camera.devices.length > 1 ? "bottom-24" : "bottom-12"}`}
+    >
+      <p
+        role={camera.error ? "alert" : undefined}
+        className={`wrap-anywhere text-xs leading-4 ${camera.error ? "text-destructive" : "text-muted-foreground"}`}
+      >
+        {t(message)}
+      </p>
     </div>
   );
 }
 
-export function LocalCameraError({ error }: { error: ReturnType<typeof useLocalCamera>["error"] }) {
+function LocalCameraToggle({
+  camera,
+  compactStatus,
+}: {
+  camera: ReturnType<typeof useLocalCamera>;
+  compactStatus: boolean;
+}) {
   const { t } = useI18n();
-  if (!error) return null;
+  const enabled = Boolean(camera.stream || camera.pending);
+  const label = t(enabled ? "kiosk_camera_stop" : "kiosk_camera_start");
+  const compactError = compactStatus ? camera.error : undefined;
+  const errorMessages = {
+    permission: "kiosk_camera_permission",
+    unavailable: "kiosk_camera_unavailable",
+  } as const;
+  const accessibleLabel = compactError ? `${label}: ${t(errorMessages[compactError])}` : label;
   return (
-    <p role="alert" className="rounded-xl bg-destructive-soft px-3 py-2 text-sm text-destructive">
-      {t(error === "permission" ? "kiosk_camera_permission" : "kiosk_camera_unavailable")}
-    </p>
+    <Button
+      variant={compactError ? "destructive" : camera.stream ? "secondary" : "outline"}
+      size="icon"
+      className="size-11 min-h-11 shrink-0"
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
+      aria-pressed={Boolean(camera.stream)}
+      onClick={() => (enabled ? camera.stop() : void camera.start())}
+    >
+      {camera.pending ? (
+        <LoaderCircle className="motion-safe:animate-spin" />
+      ) : compactError ? (
+        <CircleAlert />
+      ) : camera.stream ? (
+        <CameraOff />
+      ) : (
+        <Camera />
+      )}
+    </Button>
+  );
+}
+
+function CameraDeviceSetting({ camera }: { camera: ReturnType<typeof useLocalCamera> }) {
+  const { t } = useI18n();
+  if (camera.devices.length < 2 || (!camera.stream && !camera.pending && !camera.error))
+    return null;
+  const options = camera.devices.map((device, index) => ({
+    value: device.deviceId,
+    label: device.label || `${t("kiosk_camera_device")} ${index + 1}`,
+  }));
+  return (
+    <Select
+      items={options}
+      value={camera.deviceId}
+      onValueChange={(value) => {
+        if (value) void camera.start(value);
+      }}
+    >
+      <SelectPrimitive.Trigger
+        render={<Button variant="outline" size="icon" className="size-11 min-h-11 shrink-0" />}
+        aria-label={t("kiosk_camera_device")}
+        title={t("kiosk_camera_device")}
+        aria-busy={camera.pending}
+      >
+        <SlidersHorizontal aria-hidden="true" />
+      </SelectPrimitive.Trigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

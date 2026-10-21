@@ -100,7 +100,7 @@ export const AlreadyActive: Story = {
 };
 
 export const Streaming: Story = {
-  name: "逐次本文と演技タグの切替",
+  name: "逐次本文だけを表示し演技タグとデバッグ操作を公開しない",
   args: {
     view: {
       status: "thinking",
@@ -119,12 +119,9 @@ export const Streaming: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("すっきりした日本酒なら")).toBeVisible();
     await expect(canvas.queryByText(/warm and friendly/)).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "デバッグ表示" }));
-    await userEvent.click(canvas.getByText("発話タグ・生成原文"));
-    await expect(canvas.getByText(/warm and friendly/)).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "デバッグ表示" })).not.toBeInTheDocument();
     await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
   },
 };
@@ -173,7 +170,6 @@ export const ToolAndCards: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("完了", { exact: true })).toBeVisible();
     await expect(canvas.getByText("実行中", { exact: true })).toBeVisible();
     await expect(canvasElement.querySelector("figure[data-voice-state=tool]")).toBeVisible();
@@ -220,11 +216,6 @@ export const Speakers: Story = {
   play: async ({ canvasElement, globals, step }) => {
     const canvas = within(canvasElement);
     const english = globals.locale === "en";
-    await userEvent.click(
-      canvas.getByRole("button", {
-        name: english ? "Show conversation history" : "会話履歴を表示",
-      }),
-    );
     const unknown = canvas.getByText("おすすめも教えてください。").closest("article");
     if (!unknown) throw new Error("客の発話が表示されていません。");
     const details = english ? "Speaker metadata unavailable" : "話者情報なし（推定しません）";
@@ -234,13 +225,9 @@ export const Speakers: Story = {
       await expect(within(unknown).getByText(english ? "You" : "お客さま")).toBeVisible();
       await expect(canvas.queryByText(details)).not.toBeInTheDocument();
     });
-    await step("操作と結果: debugでだけ話者欠損と接続の範囲を確認できる", async () => {
-      await userEvent.click(
-        canvas.getByRole("button", { name: english ? "Show debug details" : "デバッグ表示" }),
-      );
-      await expect(within(unknown).getByText(details)).toBeVisible();
-      await expect(canvas.queryByText("STT tablecast-stream")).not.toBeInTheDocument();
-    });
+    await expect(
+      canvas.queryByRole("button", { name: english ? "Show debug details" : "デバッグ表示" }),
+    ).not.toBeInTheDocument();
   },
 };
 export const EnglishSpeakers: Story = {
@@ -271,7 +258,6 @@ export const EmptyInterruption: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getAllByRole("article")).toHaveLength(2);
     await expect(canvas.queryByText("中断", { exact: true })).not.toBeInTheDocument();
     const resume = canvas.getByRole("button", { name: "音声を再開" });
@@ -283,18 +269,46 @@ export const EmptyInterruption: Story = {
 };
 export const SpeechSpeed: Story = {
   name: "話速をキーボードで変更して範囲内の値を送る",
-  args: { view: { status: "paused" }, speechSpeed: 1.0, onSpeedChange: fn() },
+  args: {
+    view: { status: "paused" },
+    speechSpeed: 1.0,
+    onSpeedChange: fn(),
+    onMicrophoneChange: fn(),
+    onMicrophoneRefresh: fn(),
+  },
+  render: function SpeechSpeedStory(args) {
+    const [speed, setSpeed] = useState(args.speechSpeed ?? 1);
+    return (
+      <VoicePanel
+        {...args}
+        speechSpeed={speed}
+        onSpeedChange={(next) => {
+          args.onSpeedChange?.(next);
+          setSpeed(next);
+        }}
+      />
+    );
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    const speed = canvas.getByRole("slider", { name: "話す速さ" });
+    await userEvent.click(canvas.getByRole("button", { name: "音声設定" }));
+    const speed = within(canvasElement.ownerDocument.body).getByRole("slider", {
+      name: "話す速さ",
+    });
     await expect(speed).toHaveAttribute("aria-valuenow", "1");
     speed.focus();
     await userEvent.keyboard("[ArrowRight]");
     await expect(args.onSpeedChange).toHaveBeenLastCalledWith(1.1);
+    await expect(speed).toHaveFocus();
+    await userEvent.keyboard("[ArrowRight]");
+    await expect(args.onSpeedChange).toHaveBeenLastCalledWith(1.2);
+    await expect(speed).toHaveFocus();
+    await expect(speed).toHaveAttribute("aria-valuenow", "1.2");
     await userEvent.keyboard("[End]");
     await expect(args.onSpeedChange).toHaveBeenLastCalledWith(1.5);
     await userEvent.keyboard("[Home]");
     await expect(args.onSpeedChange).toHaveBeenLastCalledWith(0.5);
+    await expect(speed).toHaveFocus();
   },
 };
 export const EnglishTools: Story = {
@@ -314,7 +328,7 @@ export const SpeakingWithTool: Story = {
     if (!(visual instanceof HTMLElement)) throw new Error("音声の状態表示がありません");
     await expect(visual).toBeVisible();
     await expect(visual).toHaveAttribute("data-voice-state", "speaking");
-    await expect(within(visual).getByText("商品を表示", { exact: true })).toBeVisible();
+    await expect(within(canvasElement).getByText("実行中", { exact: true })).toBeVisible();
   },
 };
 export const PausedWithStaleTool: Story = {
@@ -329,7 +343,6 @@ export const PausedWithStaleTool: Story = {
     await expect(visual).toHaveAttribute("data-voice-state", "paused");
     await expect(visual).toHaveAttribute("data-motion", "still");
     await expect(within(visual).queryByText("商品を表示", { exact: true })).not.toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("中断", { exact: true })).toBeVisible();
   },
 };
@@ -371,15 +384,14 @@ export const MicrophoneSelection: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    const trigger = canvas.getByRole("button", { name: "マイク設定" });
+    const trigger = canvas.getByRole("button", { name: "音声設定" });
     const bounds = trigger.getBoundingClientRect();
     await expect(bounds.width).toBe(bounds.height);
     await expect(bounds.width).toBeGreaterThanOrEqual(44);
-    const speed = canvas.getByRole("slider", { name: "話す速さ" }).getBoundingClientRect();
-    await expect(bounds.left).toBeGreaterThan(speed.right);
+    await expect(canvas.queryByRole("slider")).not.toBeInTheDocument();
     trigger.focus();
     await userEvent.keyboard("[Enter]");
-    const dialog = await body.findByRole("dialog", { name: "マイク設定" });
+    const dialog = await body.findByRole("dialog", { name: "音声設定" });
     await waitFor(() => expect(dialog).toBeVisible());
     const select = within(dialog).getByRole("combobox", { name: "入力マイク" });
     select.focus();
@@ -404,9 +416,9 @@ export const MicrophoneEnglish: Story = {
   globals: { locale: "en" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Microphone settings" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Voice and camera settings" }));
     const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", {
-      name: "Microphone settings",
+      name: "Voice and camera settings",
     });
     await expect(within(dialog).getByRole("combobox", { name: "Input microphone" })).toBeVisible();
     await expect(within(dialog).getByText("Voice is paused")).toBeVisible();
@@ -429,11 +441,10 @@ export const MicrophoneDisconnected: Story = {
     await expect(canvas.getByRole("alert")).toHaveTextContent(
       "選択したマイクが使用できなくなりました",
     );
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
     await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "マイク設定" }));
+    await userEvent.click(canvas.getByRole("button", { name: "音声設定" }));
     const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog", {
-      name: "マイク設定",
+      name: "音声設定",
     });
     await expect(within(dialog).getByRole("combobox")).toHaveTextContent(
       "選択したマイク（未接続）",
@@ -464,7 +475,7 @@ export const MicrophonePermission: Story = {
 };
 export const MicrophoneNarrow: Story = {
   ...MicrophoneSelection,
-  name: "狭い画面で速度スライダー右のマイク設定を操作",
+  name: "狭い画面でも下端の設定から話速とマイクを操作",
   decorators: [
     (Story) => (
       <div className="w-80">
@@ -478,7 +489,6 @@ export const CompactDock: Story = {
   name: "狭い会話欄と縦画面の常設操作",
   args: {
     ...Paused.args,
-    compactControls: true,
     speechSpeed: 1,
     onSpeedChange: fn(),
     onMicrophoneChange: fn(),
@@ -486,21 +496,15 @@ export const CompactDock: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="h-160 w-60 max-[56rem]:h-60 max-[56rem]:w-full">
+      <div className="h-160 w-60 max-[56rem]:h-90 max-[56rem]:w-full">
         <Story />
       </div>
     ),
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: "会話履歴を表示" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    await expect(canvas.getByText("この日本酒は温かくできますか？")).not.toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を表示" }));
+    await expect(canvas.queryByRole("button", { name: "会話履歴を表示" })).not.toBeInTheDocument();
     await expect(canvas.getByText("この日本酒は温かくできますか？")).toBeVisible();
-    await userEvent.click(canvas.getByRole("button", { name: "会話履歴を閉じる" }));
     await expect(canvas.getByRole("button", { name: "音声を再開" })).toBeVisible();
     await expect(canvas.getByRole("button", { name: "カメラをオン" })).toBeVisible();
   },

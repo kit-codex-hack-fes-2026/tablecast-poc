@@ -1,22 +1,15 @@
-import { instructionText } from "@tablecast/api/schema";
 import { tv, type VariantProps } from "tailwind-variants";
-import { Slider } from "@base-ui/react/slider";
 import type { Catalog, Product, Snapshot, TableEvent } from "@tablecast/api/schema";
-import { castInstructions } from "@tablecast/api/speech";
 import {
   AudioLines,
-  Bug,
   Check,
   CircleAlert,
   LoaderCircle,
   Mic,
   MicOff,
-  MessageSquareText,
-  Rabbit,
   ShoppingBag,
-  Turtle,
 } from "lucide-react";
-import { lazy, Suspense, useState, useId, type ReactNode } from "react";
+import { lazy, Suspense, useRef, type ReactNode } from "react";
 import { Streamdown } from "streamdown";
 import {
   Conversation,
@@ -29,7 +22,7 @@ import { useI18n } from "../../i18n/locale";
 import { mergeConversation, type ConversationLine } from "./conversation-model";
 import { ProductMenu } from "../../components/product-menu";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";
-import { LocalCamera, LocalCameraError, useLocalCamera } from "./local-camera";
+import { LocalCamera, useLocalCamera } from "./local-camera";
 import type { VoiceView } from "./voice-connection";
 
 const AudioWaveform = lazy(() =>
@@ -37,7 +30,7 @@ const AudioWaveform = lazy(() =>
 );
 
 const speakerBadge = tv({
-  base: "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+  base: "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-2 py-0.5 font-semibold",
   variants: {
     colour: {
       assistant: "bg-primary/10 text-primary",
@@ -60,13 +53,6 @@ function speakerColour(line: ConversationLine): VariantProps<typeof speakerBadge
   return speakerColours[Math.abs(hash) % speakerColours.length];
 }
 
-const activityDot = tv({
-  base: "size-2 rounded-full",
-  variants: {
-    active: { true: "bg-success motion-safe:animate-pulse", false: "bg-muted-foreground" },
-  },
-});
-
 const markdownComponents = {
   a: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   img: () => null,
@@ -75,12 +61,10 @@ const markdownComponents = {
 function ConversationMessage({
   line,
   status,
-  debug,
   children,
 }: {
   line: ConversationLine;
   status?: string;
-  debug: boolean;
   children?: ReactNode;
 }) {
   const { locale, t } = useI18n();
@@ -100,7 +84,7 @@ function ConversationMessage({
           )}
           {conversationSpeakerName(line, t)}
         </span>
-        <span>{status || time(line.createdAt, locale)}</span>
+        <span className="text-right tabular-nums">{status || time(line.createdAt, locale)}</span>
       </div>
       <div className="rounded-xl border border-border bg-card px-3 py-2 text-sm leading-relaxed text-foreground shadow-xs group-data-[role=user]:bg-secondary group-data-[live=true]:border-primary group-data-[live=true]:ring-1 group-data-[live=true]:ring-primary/20">
         {line.text ? (
@@ -137,7 +121,6 @@ function ConversationMessage({
       {line.synthetic && (
         <p className="mt-1 text-xs text-muted-foreground">{t("common_synthetic")}</p>
       )}
-      {debug && <ConversationDebug line={line} />}
     </article>
   );
 }
@@ -170,8 +153,6 @@ type VoicePanelProps = {
   onSpeedChange?: (value: number) => void;
   onMicrophoneChange?: (deviceId: string) => void;
   onMicrophoneRefresh?: () => void;
-  compactControls?: boolean;
-  onHistoryOpenChange?: (open: boolean) => void;
 };
 
 function useVoicePanel({
@@ -182,7 +163,6 @@ function useVoicePanel({
   onChoose,
 }: Pick<VoicePanelProps, "view" | "lines" | "events" | "catalog" | "onChoose">) {
   const { locale, t } = useI18n();
-  const [debug, setDebug] = useState(false);
   const merged = mergeConversation(lines, view, locale);
   const { tools, turns, failedTurns, latestBusinessTurn, running } = voiceOperationState(events);
   const active = !["idle", "paused", "error", "stopping"].includes(view.status);
@@ -252,14 +232,8 @@ function useVoicePanel({
             {failed && (
               <span className="mt-1 block text-destructive">{t("kiosk_tool_failed_hint")}</span>
             )}
-            {debug && (
-              <code className="mt-1 block break-all text-muted-foreground">
-                {name} · {String(event.data.toolCallId)}
-                {typeof event.data.errorCode === "string" ? ` · ${event.data.errorCode}` : ""}
-              </code>
-            )}
           </span>
-          <span className="text-muted-foreground">{t(toolStatus)}</span>
+          <span className="shrink-0 text-muted-foreground">{t(toolStatus)}</span>
         </div>,
       ];
     });
@@ -295,8 +269,6 @@ function useVoicePanel({
   return {
     locale,
     t,
-    debug,
-    setDebug,
     merged,
     latestBusinessTurn,
     active,
@@ -328,17 +300,12 @@ export function VoicePanel({
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
-  compactControls = false,
-  onHistoryOpenChange,
 }: VoicePanelProps) {
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const historyId = useId();
   const camera = useLocalCamera();
+  const panel = useRef<HTMLElement>(null);
   const {
     locale,
     t,
-    debug,
-    setDebug,
     merged,
     latestBusinessTurn,
     active,
@@ -355,91 +322,16 @@ export function VoicePanel({
   } = useVoicePanel({ view, lines, events, catalog, onChoose });
   return (
     <section
-      className="relative flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-y-auto p-3 @container"
+      ref={panel}
+      className="relative flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-hidden p-3 @container"
       data-theme-part="conversation"
       aria-label={t("kiosk_conversation")}
     >
-      <header className="flex shrink-0 items-center gap-2">
-        <h2 className="sr-only">{t("kiosk_conversation")}</h2>
-        <span
-          data-ui="voice-status"
-          className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-foreground"
-        >
-          <span className={activityDot({ active })} />
-          {phase}
-        </span>
-        <Button
-          variant={historyOpen ? "secondary" : "ghost"}
-          size="icon"
-          aria-label={t(historyOpen ? "kiosk_history_hide" : "kiosk_history_show")}
-          title={t(historyOpen ? "kiosk_history_hide" : "kiosk_history_show")}
-          aria-expanded={historyOpen}
-          aria-controls={historyId}
-          onClick={() => {
-            const next = !historyOpen;
-            setHistoryOpen(next);
-            onHistoryOpenChange?.(next);
-          }}
-        >
-          <MessageSquareText />
-        </Button>
-      </header>
-      <div className="grid shrink-0 gap-3 max-[56rem]:grid-cols-[6rem_minmax(0,1fr)]">
-        <LocalCamera camera={camera} showError={false} />
-        <VoiceControls
-          view={view}
-          onStart={onStart}
-          controlDisabled={controlDisabled}
-          speechSpeed={speechSpeed}
-          onSpeedChange={onSpeedChange}
-          onMicrophoneChange={onMicrophoneChange}
-          onMicrophoneRefresh={onMicrophoneRefresh}
-          compactControls={compactControls}
-          active={active}
-          phase={phase}
-          usingTools={usingTools}
-          visualState={visualState}
-          toolPhase={toolPhase}
-          debug={debug}
-        />
+      <h2 className="sr-only">{t("kiosk_conversation")}</h2>
+      <div className="min-w-0 shrink-0">
+        <LocalCamera camera={camera} boundsRef={panel} />
       </div>
-      <VoiceAttention
-        cameraError={camera.error}
-        snapshot={snapshot}
-        onReview={onReview}
-        reviewPending={reviewPending}
-        events={events}
-        latestBusinessTurn={latestBusinessTurn}
-        debug={debug}
-        view={view}
-      />
-      {historyOpen && (
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border pt-2">
-          <h3 className="text-sm font-medium">{t("kiosk_conversation")}</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("kiosk_debug_details")}
-            aria-pressed={debug}
-            onClick={() => setDebug(!debug)}
-          >
-            <Bug className="size-4" />
-          </Button>
-        </div>
-      )}
-      {historyOpen && debug && (
-        <details className="border-b border-dashed border-border py-3 text-xs">
-          <summary className="cursor-pointer">{t("kiosk_debug_prompt")}</summary>
-          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap">
-            {castInstructions}
-            {"\n\n"}
-            {catalog
-              ? instructionText(catalog.configuration.cast.instructions[locale])
-              : t("kiosk_cast_loading")}
-          </pre>
-        </details>
-      )}
-      <div id={historyId} hidden={!historyOpen} className="min-h-40 flex-1 overflow-hidden">
+      <div data-ui="conversation-history" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Conversation>
           <ConversationContent tabIndex={0}>
             {merged.length === 0 && !active && (
@@ -456,7 +348,6 @@ export function VoicePanel({
                 <div className="space-y-2" key={line.id}>
                   <ConversationMessage
                     line={line}
-                    debug={debug}
                     status={
                       line === speakingLine
                         ? t("kiosk_voice_speaking")
@@ -477,7 +368,6 @@ export function VoicePanel({
             })}
             {active && !hasLive && (
               <ConversationMessage
-                debug={false}
                 status={phase}
                 line={{
                   id: "activity",
@@ -490,28 +380,44 @@ export function VoicePanel({
                 }}
               />
             )}
+            <VoiceAttention
+              snapshot={snapshot}
+              onReview={onReview}
+              reviewPending={reviewPending}
+              events={events}
+              latestBusinessTurn={latestBusinessTurn}
+              view={view}
+            />
           </ConversationContent>
           <ConversationScrollButton label={t("kiosk_latest")} followLabel={t("kiosk_following")} />
         </Conversation>
       </div>
+      <VoiceControls
+        view={view}
+        phase={phase}
+        visualState={visualState}
+        toolLabel={usingTools ? toolPhase : undefined}
+        onStart={onStart}
+        controlDisabled={controlDisabled}
+        speechSpeed={speechSpeed}
+        onSpeedChange={onSpeedChange}
+        onMicrophoneChange={onMicrophoneChange}
+        onMicrophoneRefresh={onMicrophoneRefresh}
+      />
     </section>
   );
 }
 
 function VoiceAttention({
-  cameraError,
   snapshot,
   onReview,
   reviewPending,
   events,
   latestBusinessTurn,
-  debug,
   view,
 }: Pick<VoicePanelProps, "snapshot" | "onReview" | "reviewPending" | "view"> & {
-  cameraError: ReturnType<typeof useLocalCamera>["error"];
   events: TableEvent[];
   latestBusinessTurn: ReturnType<typeof voiceOperationState>["latestBusinessTurn"];
-  debug: boolean;
 }) {
   const { t } = useI18n();
   const voiceError = {
@@ -523,7 +429,6 @@ function VoiceAttention({
   const errorLabel = view.error ? voiceError[view.error] : "kiosk_voice_error";
   return (
     <div className="shrink-0 space-y-3 empty:hidden">
-      <LocalCameraError error={cameraError} />
       {snapshot && ["pending", "read"].includes(snapshot.status) && onReview && (
         <div className="rounded-xl bg-card p-3 shadow-surface">
           <div className="mb-3 flex items-center gap-2 font-medium">
@@ -552,7 +457,6 @@ function VoiceAttention({
           >
             <CircleAlert className="size-4 shrink-0" />
             {t("kiosk_reply_interrupted")}
-            {debug && typeof event.data.code === "string" && <code>{event.data.code}</code>}
           </output>
         ))}
       {view.status === "error" && (
@@ -584,12 +488,12 @@ function VoiceIdle({
     >
       <div
         aria-hidden="true"
-        className="flex size-20 shrink-0 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-border"
+        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-border"
       >
         <MicOff className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <figcaption className="flex items-center gap-2 text-xs font-semibold">
+        <figcaption className="sr-only">
           {label}
           {toolLabel && <span className="font-normal">{toolLabel}</span>}
         </figcaption>
@@ -598,23 +502,6 @@ function VoiceIdle({
         </div>
       </div>
     </figure>
-  );
-}
-
-function ConversationDebug({ line }: { line: ConversationLine }) {
-  const { t } = useI18n();
-  return (
-    <>
-      {line.rawText && (
-        <details className="mt-2 rounded-lg border border-dashed border-border p-3 text-xs">
-          <summary className="cursor-pointer">{t("kiosk_debug_raw_text")}</summary>
-          <pre className="mt-2 whitespace-pre-wrap wrap-break-word font-mono">{line.rawText}</pre>
-        </details>
-      )}
-      {line.role === "user" && !line.speaker && (
-        <p className="mt-1 text-xs">{t("kiosk_speaker_unavailable")}</p>
-      )}
-    </>
   );
 }
 
@@ -677,19 +564,15 @@ function conversationTimeline(merged: ConversationLine[], events: TableEvent[]) 
 
 function VoiceControls({
   view,
+  phase,
+  visualState,
+  toolLabel,
   onStart,
   controlDisabled,
   speechSpeed,
   onSpeedChange,
   onMicrophoneChange,
   onMicrophoneRefresh,
-  active,
-  phase,
-  usingTools,
-  visualState,
-  toolPhase,
-  debug,
-  compactControls,
 }: Pick<
   VoicePanelProps,
   | "view"
@@ -699,87 +582,39 @@ function VoiceControls({
   | "onSpeedChange"
   | "onMicrophoneChange"
   | "onMicrophoneRefresh"
-  | "compactControls"
-> &
-  Pick<
-    ReturnType<typeof useVoicePanel>,
-    "active" | "phase" | "usingTools" | "visualState" | "toolPhase" | "debug"
-  >) {
-  const { t } = useI18n();
-  const toolLabel = usingTools && view.status === "speaking" ? toolPhase : undefined;
+> & {
+  phase: string;
+  visualState: VoiceView["status"] | "tool";
+  toolLabel?: string;
+}) {
   return (
-    <footer data-theme-part="voice-controls" className="min-w-0 shrink-0">
-      {!compactControls &&
-        (active ? (
-          <Suspense
-            fallback={<VoiceIdle label={phase} state={visualState} toolLabel={toolLabel} />}
-          >
-            <AudioWaveform
-              state={visualState}
-              toolLabel={toolLabel}
-              track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-              label={phase}
-            />
-          </Suspense>
-        ) : (
-          <VoiceIdle label={phase} state={visualState} />
-        ))}
-      {compactControls && (
-        <div className="flex h-7 items-center">
-          {active && (
-            <Suspense fallback={null}>
-              <AudioWaveform
-                compact
-                state={visualState}
-                toolLabel={toolPhase}
-                track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
-                label={phase}
-              />
-            </Suspense>
-          )}
-        </div>
-      )}
-      <div className="flex flex-col gap-2">
-        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
-        <div className="flex min-w-0 items-center gap-2 empty:hidden">
-          {onSpeedChange && (
-            <Slider.Root
-              className="flex min-w-0 flex-1 items-center gap-2"
-              key={speechSpeed}
-              defaultValue={speechSpeed}
-              min={0.5}
-              max={1.5}
-              step={0.1}
-              onValueCommitted={(value) => {
-                if (typeof value === "number") onSpeedChange(value);
-              }}
-            >
-              <Turtle className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Control className="flex h-11 flex-1 touch-none items-center">
-                <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
-                  <Slider.Indicator className="rounded-full bg-primary" />
-                  <Slider.Thumb
-                    aria-label={t("kiosk_speech_speed")}
-                    className="size-5 rounded-full border-2 border-primary bg-card shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  />
-                </Slider.Track>
-              </Slider.Control>
-              <Rabbit className="size-5 shrink-0" aria-hidden="true" />
-              <Slider.Value className="min-w-10 text-xs tabular-nums">
-                {(value) => `${Number(value).toFixed(1)}×`}
-              </Slider.Value>
-            </Slider.Root>
-          )}
-          {onMicrophoneChange && onMicrophoneRefresh && (
-            <MicrophoneSettings
-              view={view}
-              onChange={onMicrophoneChange}
-              onRefresh={onMicrophoneRefresh}
-            />
-          )}
-        </div>
+    <footer
+      data-theme-part="voice-controls"
+      className="grid min-w-0 shrink-0 gap-2 border-t border-border pt-2"
+    >
+      <div className="min-w-0" data-ui="voice-media">
+        <Suspense fallback={<VoiceIdle label={phase} state={visualState} />}>
+          <AudioWaveform
+            compact
+            state={visualState}
+            toolLabel={toolLabel}
+            track={view.status === "speaking" ? view.outputTrack : view.inputTrack}
+            label={phase}
+          />
+        </Suspense>
       </div>
-      {debug && <p className="mt-2 text-xs">{t("kiosk_voice_privacy")}</p>}
+      <div className="flex min-w-0 items-center gap-2">
+        <VoiceToggle view={view} onStart={onStart} controlDisabled={controlDisabled} />
+        {onMicrophoneChange && onMicrophoneRefresh && (
+          <MicrophoneSettings
+            view={view}
+            speechSpeed={speechSpeed}
+            onSpeedChange={onSpeedChange}
+            onChange={onMicrophoneChange}
+            onRefresh={onMicrophoneRefresh}
+          />
+        )}
+      </div>
     </footer>
   );
 }
@@ -793,9 +628,9 @@ function VoiceToggle({
   const active =
     view.error === "active" || !["idle", "paused", "error", "stopping"].includes(view.status);
   return (
-    <span className="inline-flex min-w-0 rounded-xl shadow-control-dark">
+    <span className="inline-flex w-full min-w-0 rounded-xl bg-(image:--voice-spectrum) p-0.5 shadow-control-dark">
       <Button
-        className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-4 py-2 text-center"
+        className="h-auto min-h-14 w-full min-w-0 whitespace-normal rounded-[inherit] px-3 py-2 text-center text-sm"
         variant="voice"
         onClick={onStart}
         disabled={controlDisabled}
