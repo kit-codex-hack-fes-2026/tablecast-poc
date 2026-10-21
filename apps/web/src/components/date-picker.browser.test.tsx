@@ -175,20 +175,22 @@ function LocaleExample() {
 }
 
 it.each([
-  { width: 320, includeTime: false },
-  { width: 390, includeTime: false },
-  { width: 320, includeTime: true },
-  { width: 390, includeTime: true },
+  { width: 320, contentWidth: 280, includeTime: false, sameRow: false },
+  { width: 390, contentWidth: 318, includeTime: false, sameRow: false },
+  { width: 448, contentWidth: 360, includeTime: false, sameRow: true },
+  { width: 320, contentWidth: 280, includeTime: true, sameRow: false },
+  { width: 390, contentWidth: 318, includeTime: true, sameRow: false },
+  { width: 448, contentWidth: 360, includeTime: true, sameRow: true },
 ])(
   "$width pxの日時入力で完全な英語日付を切らない（時刻: $includeTime）",
-  async ({ width, includeTime }) => {
+  async ({ width, contentWidth, includeTime, sameRow }) => {
     await page.viewport(width, 844);
     const Picker = includeTime ? DateTimePicker : DatePicker;
     await render(
       <LocaleProvider initialLocale="en" persist={false}>
         <div className="p-4">
           {/* 常設スクロールバーの幅とは独立に、フォームの内容幅を再現する。 */}
-          <div className="max-w-full" style={{ width: width === 390 ? 318 : 280 }}>
+          <div className="max-w-full" style={{ width: contentWidth }}>
             <Picker
               label="Start date"
               value={includeTime ? "2026-09-23T09:30" : "2026-09-23"}
@@ -201,14 +203,28 @@ it.each([
     const input = page.getByRole("textbox", { name: "Start date", exact: true });
     await expect.element(input).toHaveValue(calendarInputValue("2026-09-23", "en"));
     // Intlの句読点差は認めるが、曜日・日・完全な月名・年の省略は認めない。
-    expect(input.element().value).toMatch(/^Wednesday,? 23 September 2026$/);
-    expect(input.element().scrollWidth).toBeLessThanOrEqual(input.element().clientWidth);
+    const dateInput = input.element();
+    if (!(dateInput instanceof HTMLInputElement)) throw new Error("日付の入力がありません");
+    expect(dateInput.value).toMatch(/^Wednesday,? 23 September 2026$/);
+    expect(dateInput.scrollWidth).toBeLessThanOrEqual(dateInput.clientWidth);
+    const inputStyle = getComputedStyle(dateInput);
+    const textWidth =
+      dateInput.clientWidth -
+      Number.parseFloat(inputStyle.paddingInlineStart) -
+      Number.parseFloat(inputStyle.paddingInlineEnd);
+    // Linux WebKitの最長日付は約258px。OSの字幅差とcaretを含めて260pxを予約する。
+    expect(textWidth).toBeGreaterThanOrEqual(260);
+    expect(Number.parseFloat(inputStyle.fontSize)).toBe(16);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
     const choose = page.getByRole("button", { name: "Start date: Choose a date" });
     const buttonBounds = choose.element().getBoundingClientRect();
     const inputBounds = input.element().getBoundingClientRect();
     const onSameRow =
       buttonBounds.top + buttonBounds.height / 2 === inputBounds.top + inputBounds.height / 2;
-    expect(onSameRow).toBe(width === 390);
+    expect(onSameRow).toBe(sameRow);
+    if (width === 390)
+      await page.screenshot({
+        path: `../../test-results/tablecast-date-input-${includeTime ? "datetime" : "date"}-390.png`,
+      });
   },
 );

@@ -147,7 +147,7 @@ export function DatePicker({
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           <Input
             {...props}
-            className={cn("flex-1 basis-67", className)}
+            className={cn("flex-1 basis-72 px-2", className)}
             ref={input}
             type="text"
             aria-label={label}
