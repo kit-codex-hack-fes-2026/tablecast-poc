@@ -52,13 +52,13 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await expect(staff.getByLabel(labels.admin_pair_code)).toHaveValue(code ?? "");
     await staff
       .getByRole("row")
-      .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
+      .filter({ has: staff.getByRole("rowheader", { name: vacant.name, exact: true }) })
       .getByRole("button")
       .click();
     await expect(
       staff
         .getByRole("row")
-        .filter({ has: staff.getByRole("cell", { name: vacant.name, exact: true }) })
+        .filter({ has: staff.getByRole("rowheader", { name: vacant.name, exact: true }) })
         .getByRole("button"),
     ).toHaveAttribute("aria-pressed", "true");
     await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();

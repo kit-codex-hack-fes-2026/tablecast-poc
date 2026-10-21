@@ -11,6 +11,8 @@ import { page, userEvent } from "vitest/browser";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
+import { billingSearchSchema } from "./billing-model";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
 import { BillingPage } from "./billing-page";
 import { billingFixture } from "./billing-fixture";
 import type { Billing } from "./billing-query";
@@ -68,12 +70,15 @@ async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", 
   const billing = createRoute({
     getParentRoute: () => root,
     path: "/billing/$organizationId",
+    validateSearch: billingSearchSchema,
     component: () => {
       const { organizationId } = billing.useParams();
       return <BillingPage key={organizationId} organizationId={organizationId} />;
     },
   });
   const router = createRouter({
+    parseSearch: parseFlatSearch,
+    stringifySearch: stringifyFlatSearch,
     routeTree: root.addChildren([billing]),
     history: createMemoryHistory({ initialEntries: [`/billing/${data.organization.id}`] }),
   });
@@ -91,7 +96,7 @@ async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", 
   return { fetch, router };
 }
 it("ownerの利用明細・空の請求履歴を表示し、キーボードで絞り込める", async () => {
-  const { fetch } = await show();
+  const { fetch, router } = await show();
   await expect.element(page.getByRole("heading", { name: "スタンダード", level: 2 })).toBeVisible();
   await expect.element(page.getByText("¥420.25", { exact: true })).toBeVisible();
   await expect.element(page.getByText("今回の請求期間（日本時間）")).toBeVisible();
@@ -119,6 +124,10 @@ it("ownerの利用明細・空の請求履歴を表示し、キーボードで�
   await userEvent.click(filter);
   await userEvent.type(filter, "T01");
   await expect.element(filter).toHaveFocus();
+  await expect
+    .poll(() => new URLSearchParams(router.state.location.searchStr).get("usageQ"))
+    .toBe("T01");
+  await expect.element(filter).toHaveAttribute("placeholder", "卓名で絞り込み");
   await expect
     .poll(() =>
       fetch.mock.calls.some(

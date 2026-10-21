@@ -29,11 +29,12 @@ function FloorRoute() {
   const navigate = Route.useNavigate();
   return (
     <Floor
-      view={search.view}
-      filter={search.filter}
+      {...search}
       date={data.date}
       initialNow={data.initialNow}
-      onNavigate={(next) => void navigate({ search: next, resetScroll: false })}
+      onNavigate={(next, options) =>
+        void navigate({ search: next, resetScroll: false, replace: options?.replace })
+      }
     />
   );
 }

@@ -1,12 +1,13 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { z } from "zod";
+import { collectionSearchSchema, collectionSearchFields } from "../shell/collection-model";
 import { emptyText } from "./configuration-defaults";
 export const menuSectionSchema = z.enum(["products", "categories", "plans", "cast"]);
 export const menuListSearchSchema = z.object({
-  q: z.string().optional().catch(undefined),
+  ...collectionSearchSchema.shape,
+  ...collectionSearchFields("options"),
   category: z.string().optional().catch(undefined),
   availability: z.enum(["available", "sold-out"]).optional().catch(undefined),
-  page: z.number().int().positive().optional().catch(undefined),
 });
 export const menuReviewSearchSchema = menuListSearchSchema.extend({
   returnSection: menuSectionSchema.optional().catch(undefined),

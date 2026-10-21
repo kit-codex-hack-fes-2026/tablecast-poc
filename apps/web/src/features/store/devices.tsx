@@ -1,3 +1,4 @@
+import { useCollectionSearch } from "../shell/collection-search";
 import { zodFieldValidator } from "../../lib/form-validation";
 import { Field } from "@base-ui/react/field";
 import { useStore as useFormStore } from "@tanstack/react-form";
@@ -7,7 +8,18 @@ import { FieldErrors } from "../../components/ui/field-errors";
 import { tv } from "tailwind-variants";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useHydrated, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, MonitorSmartphone, Plus, ShieldOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  MonitorSmartphone,
+  Plus,
+  ShieldOff,
+  CalendarDays,
+  CircleCheck,
+  UserRound,
+  Clock3,
+  Table2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -32,6 +44,9 @@ const selectionIcon = tv({
 });
 type Device = Awaited<ReturnType<typeof loadDevices>>["devices"][number];
 export function Devices() {
+  const collection = useCollectionSearch({
+    sortIds: ["tableName", "status", "createdAt", "approvedBy", "revokedAt"],
+  });
   const { id: storeId } = useStore();
   const { t } = useI18n();
   const client = useQueryClient();
@@ -64,10 +79,13 @@ export function Devices() {
       />
       <ErrorNotice error={devices.error || revoke.error} onRetry={() => void devices.refetch()} />
       <DataTable
+        {...collection}
         data={devices.data.devices}
         columns={columns}
         getRowId={(row) => row.id}
+        tableLabel={t("device_title")}
         searchLabel={t("device_search")}
+        searchPlaceholder={t("collection_search_devices_placeholder")}
         empty={t("device_empty")}
       />
     </>
@@ -80,6 +98,7 @@ export function RegisterDevice({
   userCode: string;
   tableId?: string;
 }) {
+  const collection = useCollectionSearch({ sortIds: ["name"] });
   const hydrated = useHydrated();
   const [tableId, setTableId] = useState(initialTableId);
   const { id: storeId } = useStore();
@@ -116,7 +135,7 @@ export function RegisterDevice({
         void navigate({
           to: "/admin/stores/$storeId/devices/new",
           params: { storeId },
-          search: { user_code: userCode, tableId: nextTableId },
+          search: (previous) => ({ ...previous, user_code: userCode, tableId: nextTableId }),
           replace: true,
         });
       }),
@@ -140,7 +159,7 @@ export function RegisterDevice({
           void navigate({
             to: "/admin/stores/$storeId/devices/new",
             params: { storeId },
-            search: { user_code: code, tableId },
+            search: (previous) => ({ ...previous, user_code: code, tableId }),
             replace: true,
           });
         }}
@@ -183,7 +202,7 @@ export function RegisterDevice({
                     void navigate({
                       to: "/admin/stores/$storeId/devices/new",
                       params: { storeId },
-                      search: { user_code: code, tableId },
+                      search: (previous) => ({ ...previous, user_code: code, tableId }),
                       replace: true,
                     });
                   }}
@@ -193,10 +212,13 @@ export function RegisterDevice({
             )}
           </form.Field>
           <DataTable
+            {...collection}
             data={devices.data.tables}
             columns={columns}
             getRowId={(row) => row.id}
+            tableLabel={t("admin_pair_table")}
             searchLabel={t("device_search_table")}
+            searchPlaceholder={t("collection_search_tables_placeholder")}
           />
           <ErrorNotice error={devices.error} onRetry={() => void devices.refetch()} />
           <form.AppForm>
@@ -220,7 +242,8 @@ function deviceColumns(
   return [
     {
       accessorKey: "tableName",
-      header: t("admin_table"),
+      meta: { icon: Table2, rowHeader: true },
+      header: t("collection_table_name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <MonitorSmartphone className="size-5" />
@@ -229,7 +252,10 @@ function deviceColumns(
       ),
     },
     {
-      accessorKey: "revokedAt",
+      id: "status",
+      accessorFn: (row) => (row.revokedAt === null ? 0 : 1),
+      enableGlobalFilter: false,
+      meta: { icon: CircleCheck },
       header: t("common_status"),
       cell: ({ row }) => (
         <Badge variant={row.original.revokedAt ? "inactive" : "success"}>
@@ -240,11 +266,15 @@ function deviceColumns(
     },
     {
       accessorKey: "createdAt",
+      enableGlobalFilter: false,
+      meta: { icon: CalendarDays },
       header: t("device_registered_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
     {
       id: "approvedBy",
+      accessorFn: (row) => `${row.approvedByName ?? ""} ${row.approvedByEmail ?? ""}`,
+      meta: { icon: UserRound },
       header: t("device_registered_by"),
       cell: ({ row }) => (
         <UserIdentity
@@ -258,7 +288,11 @@ function deviceColumns(
       ),
     },
     {
-      id: "revocation",
+      id: "revokedAt",
+      accessorFn: (row) => row.revokedAt ?? undefined,
+      sortUndefined: "last",
+      enableGlobalFilter: false,
+      meta: { icon: Clock3 },
       header: t("device_revoked_at"),
       cell: ({ row }) => <DateTime value={row.original.revokedAt} />,
     },
@@ -285,7 +319,11 @@ function registrationColumns(
   onSelect: (tableId: string) => void,
 ): DataTableColumn<{ id: string; name: string }>[] {
   return [
-    { accessorKey: "name", header: t("admin_table") },
+    {
+      accessorKey: "name",
+      header: t("collection_table_name"),
+      meta: { icon: Table2, rowHeader: true },
+    },
     {
       id: "selection",
       header: t("admin_pair_table"),

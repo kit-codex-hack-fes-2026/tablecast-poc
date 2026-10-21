@@ -1,5 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Eye, FilePenLine, Plug, ShieldOff } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FilePenLine,
+  Plug,
+  ShieldCheck,
+  ShieldOff,
+  Store,
+} from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -7,6 +18,7 @@ import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
+import { useCollectionSearch } from "../shell/collection-search";
 import { parseResponse, rpc } from "../../lib/api";
 import { mcpSessionsOptions, type loadMcpSessions } from "./account-query";
 import { IntegrationsShell } from "./integrations-shell";
@@ -15,6 +27,18 @@ export function McpSessions() {
   const { t } = useI18n(),
     client = useQueryClient();
   const sessions = useQuery(mcpSessionsOptions);
+  const collection = useCollectionSearch({
+    sortIds: [
+      "client",
+      "storeName",
+      "status",
+      "scopes",
+      "createdAt",
+      "updatedAt",
+      "expiresAt",
+      "refreshExpiresAt",
+    ],
+  });
   const revoke = useMutation({
     mutationFn: (id: string) =>
       parseResponse(rpc.api.account["mcp-sessions"][":id"].revoke.$post({ param: { id } })),
@@ -30,12 +54,14 @@ export function McpSessions() {
       <ErrorNotice error={revoke.error} />
 
       <DataTable
+        {...collection}
         data={sessions.data?.sessions ?? []}
         pending={sessions.isPending}
         error={sessions.error}
         onRetry={() => void sessions.refetch()}
         columns={columns}
         searchLabel={t("mcp_session_search")}
+        searchPlaceholder={t("mcp_session_search")}
         empty={t("mcp_session_empty")}
         getRowId={(row) => row.id}
       />
@@ -50,6 +76,8 @@ function sessionColumns(
   return [
     {
       id: "client",
+      accessorFn: (row) => row.clientName ?? t("object_external_app"),
+      meta: { icon: Plug },
       header: t("mcp_application"),
       cell: ({ row }) => (
         <div className="flex min-w-56 items-center gap-2">
@@ -60,9 +88,10 @@ function sessionColumns(
         </div>
       ),
     },
-    { accessorKey: "storeName", header: t("admin_store") },
+    { accessorKey: "storeName", header: t("admin_store"), meta: { icon: Store } },
     {
       accessorKey: "status",
+      meta: { icon: CheckCircle2 },
       header: t("mcp_status"),
       cell: ({ row }) => (
         <Badge variant={row.original.status === "active" ? "active" : "inactive"}>
@@ -77,6 +106,8 @@ function sessionColumns(
     },
     {
       id: "scopes",
+      accessorFn: (row) => row.scopes.join(" "),
+      meta: { icon: ShieldCheck },
       header: t("mcp_scopes"),
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
@@ -95,21 +126,25 @@ function sessionColumns(
     },
     {
       accessorKey: "createdAt",
+      meta: { icon: CalendarDays },
       header: t("mcp_connected_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
     {
       accessorKey: "updatedAt",
+      meta: { icon: CalendarClock },
       header: t("mcp_updated_at"),
       cell: ({ row }) => <DateTime value={row.original.updatedAt} />,
     },
     {
       accessorKey: "expiresAt",
+      meta: { icon: Clock },
       header: t("mcp_access_expires"),
       cell: ({ row }) => <DateTime value={row.original.expiresAt} />,
     },
     {
       accessorKey: "refreshExpiresAt",
+      meta: { icon: Clock },
       header: t("mcp_refresh_expires"),
       cell: ({ row }) => <DateTime value={row.original.refreshExpiresAt} />,
     },

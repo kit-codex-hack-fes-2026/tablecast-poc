@@ -7,6 +7,9 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { useId, useMemo, useState } from "react";
 import { Button } from "../../components/ui/button";
+import { AudioLines, CalendarDays, Coins, TableProperties } from "lucide-react";
+import { DataTable, type DataTableColumn } from "../../components/data-table";
+import type { useCollectionSearch } from "../shell/collection-search";
 import { useI18n } from "../../i18n/locale";
 import type { Billing } from "./billing-query";
 
@@ -36,7 +39,13 @@ function formatValue(amount: number, charge: boolean, locale: "ja" | "en", minut
   return `${prefix}${formats[locale].currency.format(displayed).replace("￥", "¥")}`;
 }
 
-export function BillingUsageChart({ data }: { data: Billing }) {
+export function BillingUsageChart({
+  data,
+  collection,
+}: {
+  data: Billing;
+  collection?: ReturnType<typeof useCollectionSearch>;
+}) {
   const { t, locale } = useI18n();
   const id = useId();
   const [metric, setMetric] = useState<"voice" | "charge">("voice");
@@ -77,6 +86,7 @@ export function BillingUsageChart({ data }: { data: Billing }) {
               aria-pressed={!charge}
               onClick={() => setMetric("voice")}
             >
+              <AudioLines />
               {t("billing_voice")}
             </Button>
             <Button
@@ -85,6 +95,7 @@ export function BillingUsageChart({ data }: { data: Billing }) {
               aria-pressed={charge}
               onClick={() => setMetric("charge")}
             >
+              <Coins />
               {t("billing_daily_charge")}
             </Button>
           </div>
@@ -112,37 +123,62 @@ export function BillingUsageChart({ data }: { data: Billing }) {
       )}
       <Disclosure.Root className="mt-4 border-t border-border pt-3">
         <Disclosure.Trigger className="w-fit cursor-pointer rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <TableProperties className="mr-2 inline size-4" />
           {t("billing_daily_table")}
         </Disclosure.Trigger>
         <Disclosure.Panel>
-          <table className="mt-3 w-full text-sm tabular-nums">
-            <caption className="sr-only">
-              {t("billing_daily_title")} · {label}
-            </caption>
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th scope="col" className="py-2 text-left font-medium">
-                  {t("billing_daily_day")}
-                </th>
-                <th scope="col" className="py-2 text-right font-medium">
-                  {label}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.daily.map((row, day) => (
-                <tr key={row.day} className="border-b border-border/50 last:border-0">
-                  <th scope="row" className="py-2 text-left font-normal">
-                    {calendarDate(row.day, locale)}
-                  </th>
-                  <td className="py-2 text-right">{format(values[day] ?? 0)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="mt-3">
+            <DailyTable
+              data={data.daily.map((row, day) => ({ day: row.day, amount: values[day] ?? 0 }))}
+              label={label}
+              charge={charge}
+              format={format}
+              collection={collection}
+            />
+          </div>
         </Disclosure.Panel>
       </Disclosure.Root>
     </section>
+  );
+}
+
+function DailyTable({
+  data,
+  label,
+  charge,
+  format,
+  collection,
+}: {
+  data: { day: number; amount: number }[];
+  label: string;
+  charge: boolean;
+  format: (amount: number) => string;
+  collection?: ReturnType<typeof useCollectionSearch>;
+}) {
+  const { t, locale } = useI18n();
+  const columns: DataTableColumn<{ day: number; amount: number }>[] = [
+    {
+      accessorKey: "day",
+      header: t("billing_daily_day"),
+      meta: { icon: CalendarDays, rowHeader: true },
+      cell: ({ row }) => calendarDate(row.original.day, locale),
+    },
+    {
+      accessorKey: "amount",
+      header: label,
+      meta: { align: "right", icon: charge ? Coins : AudioLines },
+      cell: ({ row }) => format(row.original.amount),
+    },
+  ];
+  return (
+    <DataTable
+      {...collection}
+      data={data}
+      columns={columns}
+      getRowId={(row) => String(row.day)}
+      pagination={false}
+      tableLabel={`${t("billing_daily_title")} · ${label}`}
+    />
   );
 }
 

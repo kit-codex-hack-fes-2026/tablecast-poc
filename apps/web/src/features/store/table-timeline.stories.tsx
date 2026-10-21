@@ -97,7 +97,7 @@ export const BeyondRecentEvents: Story = {
       const item = canvas.getByRole("button", { name: /T02/ }).closest("li");
       if (!item) throw new Error("会計待ちの卓が必要です");
       const pending = within(item);
-      await expect(pending.getByText("90 分", { exact: true })).toBeInTheDocument();
+      await expect(pending.getByText("利用90分", { exact: true })).toBeInTheDocument();
     });
     await step("結果: 要対応・未精算の会計依頼・音声異常・精算済みの順に並ぶ", async () => {
       await expect(

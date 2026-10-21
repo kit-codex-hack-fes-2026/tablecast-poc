@@ -14,12 +14,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const 標準: Story = {
-  play: async ({ canvas }) => {
-    await waitFor(() => expect(canvas.getByText("保存しました")).toHaveStyle({ opacity: "1" }));
-  },
   render: () => (
     <MotionProvider>
       <ActionFeedback pending={false} error={null} success successMessage="保存しました" />
     </MotionProvider>
   ),
+  play: async ({ canvas }) => {
+    // 入場後の面と文字を対象に、axeでコントラストを検査する。
+    await waitFor(() => expect(canvas.getByText("保存しました")).toHaveStyle({ opacity: "1" }));
+  },
 };

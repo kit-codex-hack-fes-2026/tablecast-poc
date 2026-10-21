@@ -58,6 +58,8 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 
 ルートで `bun run setup`、`bun run storybook` を順に実行する。Storybook公式CLIを直接使い、DB・runtimeの準備やWorkersの起動は不要である。
 
+StorybookのViewportメニューには、PR確認用のiPhone 17（402×874）、11インチiPad横（1180×820）、MacBook Pro 14インチ（1512×982）を用意する。CSS viewportの検証と実機検証は区別する。
+
 Storybookの起動ログのURLへ `/mcp` を付け、Git管理外の `.codex/config.toml` に登録する。標準ポートは6006で、他worktreeが使う場合は `bun run storybook --port 6007` などで指定する。既存のCodex設定は保持して次のテーブルを統合する。
 
 ```toml

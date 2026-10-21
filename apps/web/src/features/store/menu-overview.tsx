@@ -2,8 +2,18 @@ import { LanguageFields } from "./language-fields";
 import { InstructionView } from "./instruction-view";
 import type { Configuration } from "@tablecast/api/schema";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, ImageOff, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ImageOff,
+  TriangleAlert,
+  Layers,
+  Package,
+  Banknote,
+  CircleCheck,
+} from "lucide-react";
 import { useMemo } from "react";
+import { useCollectionSearch } from "../shell/collection-search";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ProductImage } from "../../components/product-image";
 import { MenuOptionImage } from "../../components/menu-option-image";
@@ -155,9 +165,10 @@ function menuOverviewColumns(
   locale: ReturnType<typeof useI18n>["locale"],
 ): DataTableColumn<OptionRow>[] {
   return [
-    { accessorKey: "group", header: t("editor_modifiers") },
+    { accessorKey: "group", header: t("editor_modifiers"), meta: { icon: Layers } },
     {
       accessorKey: "name",
+      meta: { icon: Package },
       header: t("editor_options"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -175,11 +186,13 @@ function menuOverviewColumns(
     },
     {
       accessorKey: "price",
+      meta: { icon: Banknote, align: "right" },
       header: t("editor_price_delta"),
       cell: ({ row }) => money(row.original.price, locale),
     },
     {
       accessorKey: "available",
+      meta: { icon: CircleCheck },
       header: t("common_status"),
       cell: ({ row }) => (
         <Badge variant="outline">
@@ -193,6 +206,10 @@ function menuOverviewColumns(
 function ProductDetails({ product }: { product: Configuration["products"][number] }) {
   const { t, locale } = useI18n();
   const columns = useMemo(() => menuOverviewColumns(t, locale), [t, locale]);
+  const collection = useCollectionSearch({
+    prefix: "options",
+    sortIds: ["group", "name", "price", "available"],
+  });
   return (
     <>
       <section className="space-y-4 rounded-xl border border-border p-5">
@@ -243,6 +260,9 @@ function ProductDetails({ product }: { product: Configuration["products"][number
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">{t("editor_modifiers")}</h2>
         <DataTable
+          {...collection}
+          searchLabel={t("editor_options")}
+          searchPlaceholder={t("collection_search_options_placeholder")}
           data={product.modifiers.flatMap((group) =>
             group.options.map((option) => ({
               id: option.id,

@@ -10,11 +10,11 @@ const meta = {
   },
   args: { pending: false, error: null, success: true, successMessage: "変更を保存しました" },
   play: async ({ canvas, args }) => {
-    if (args.success) {
-      await waitFor(() =>
-        expect(canvas.getByText(args.successMessage)).toHaveStyle({ opacity: "1" }),
-      );
-    }
+    const message = args.error
+      ? canvas.getByRole("alert").parentElement
+      : canvas.getByRole("status").firstElementChild;
+    // LazyMotionの機能取得と入場後の表示を待ち、途中の文字色をaxeへ渡さない
+    await waitFor(() => expect(message).toHaveStyle({ opacity: "1" }));
   },
 } satisfies Meta<typeof ActionFeedback>;
 export default meta;

@@ -1,8 +1,10 @@
+import { collectionSearchSchema } from "../features/shell/collection-model";
 import { createFileRoute } from "@tanstack/react-router";
 import { Invitations } from "../features/store/invitations";
 import { membershipOptions } from "../features/store/membership-query";
 import { storesOptions } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId/invitations/")({
+  validateSearch: collectionSearchSchema,
   staticData: {
     document: { title: "invitations_title", description: "head_invitations_description" },
   },

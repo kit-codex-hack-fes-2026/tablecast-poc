@@ -1,9 +1,11 @@
+import { collectionSearchSchema } from "../features/shell/collection-model";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { VisitHistory } from "../features/store/visit-history";
 import { historyOptions } from "../features/store/history-query";
 import { useI18n } from "../i18n/locale";
 
 export const Route = createFileRoute("/admin/stores/$storeId/visits/")({
+  validateSearch: collectionSearchSchema,
   staticData: { document: { title: "admin_history", description: "head_visits_description" } },
   loader: async ({ context, params }) => {
     await context.queryClient.ensureInfiniteQueryData(historyOptions(params.storeId));
