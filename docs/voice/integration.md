@@ -2,20 +2,20 @@
 
 ## 採用構成
 
-ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-5.6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
+ブラウザーからGPT-Live 1.1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
 
 ```mermaid
 flowchart LR
-    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1]
+    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1.1]
     L <-->|標準Responses delegation| R[Luna]
     B <-->|認証済みtool HTTP| H[Hono]
     H <--> D[D1]
     H --> N[通知DO]
 ```
 
-公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはLuna、reasoning none、verbosity low、priority、最大800出力tokenとする。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
+公式OpenAI SDKのLive session作成をHonoが行い、SDPだけをブラウザーへ返す。APIキーはサーバーだけが持つ。backendはTABLECAST_MODELのLuna、reasoning medium、verbosity low、Fast mode（service_tier: priority）、最大4096出力tokenとする。出力上限は推論tokenも含むため、従来の800から推論用の余地を増やす。独立したtoolはparallel_tool_callsを許可し、書込みや版に依存する操作は順序を保つ。
 
-[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)
+[公式Delegation仕様](https://developers.openai.com/api/docs/guides/live-delegation)、[GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna)
 
 ## ツールと出力
 

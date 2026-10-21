@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、cf/Vite/Storybook
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono、D1、DO、R2、Imagesの対応範囲、MCP、Storybook。
-通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはgpt-5.6-luna、、音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声はブラウザーからGPT-Live 1.1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはTABLECAST_MODELで指定し、雛形はgpt-6-luna、Fast mode、reasoning mediumとする。音声モデルはgpt-live-1.1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験

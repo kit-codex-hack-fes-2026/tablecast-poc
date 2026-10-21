@@ -189,7 +189,7 @@ JSの設定生成は[Bun標準のenv読み込み](https://bun.sh/docs/runtime/en
 
 `.env.local` に `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を設定して `bun run dev` を起動する。別の音声プロセスは不要である。APIが公式SDKでGPT-LiveのResponses delegationを設定し、ブラウザーはSDP answerを使ってGPT-Liveと直接WebRTC接続する。
 
-OpenAI projectにはGPT-Liveの利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-5.6-luna`。音声モデルは `gpt-live-1` に固定する。モデルが利用できない場合の自動切替は行わない。
+OpenAI projectにはGPT-Live 1.1の利用権限に加え、Responses delegationの `api.responses.write` が必要である。`TABLECAST_MODEL` は業務委任モデルで、雛形は `gpt-6-luna`。音声モデルは `gpt-live-1.1` に固定し、委譲先はFast mode（`service_tier: "priority"`）と `reasoning.effort: "medium"` を使う。既存の `.env.local` に旧モデルを指定している場合は `TABLECAST_MODEL=gpt-6-luna` へ更新し、音声を停止・再開して新しいsessionへ反映する。モデルが利用できない場合の自動切替は行わない。
 
 業務応答はSSEで本文差分と完了・失敗を分ける。Webの解析には `eventsource-parser` 3.1.1を使い、`bun run setup` で導入する。途中の切断を正常完了として扱わず、失敗時は音声を停止してGUIを維持する。
 
