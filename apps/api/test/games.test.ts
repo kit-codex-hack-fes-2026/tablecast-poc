@@ -1,26 +1,10 @@
 import { env, exports } from "cloudflare:workers";
-import { expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { createApiServices } from "../src/platform/context";
-import {
-  gamePlugins,
-  gameRuns,
-  gameVersions,
-  tableSessions,
-  restaurantTables,
-} from "../src/db/business-schema";
+import { expect, it } from "vitest";
+import { gamePlugins, gameRuns, gameVersions } from "../src/db/games-schema";
+import { restaurantTables, tableSessions } from "../src/db/table-schema";
+import { createDemo, resetDemo } from "../src/modules/demo/service";
 import { gamePackageSchema, gameStateSchema } from "../src/modules/games/model";
-import {
-  confirmGamePreview,
-  disableGame,
-  endGame,
-  previewGame,
-  publishGame,
-  registerGame,
-  saveGameState,
-  startGame,
-  validateGame,
-} from "../src/modules/games/service";
 import {
   getGame,
   getGameRun,
@@ -28,8 +12,17 @@ import {
   listGames,
   listTableGames,
 } from "../src/modules/games/queries";
-import { createDemo, resetDemo } from "../src/modules/demo/service";
-import { updateCart } from "../src/modules/orders/service";
+import { endGame, saveGameState, startGame } from "../src/modules/games/use-cases/play";
+import {
+  confirmGamePreview,
+  disableGame,
+  previewGame,
+  publishGame,
+  registerGame,
+  validateGame,
+} from "../src/modules/games/use-cases/publication";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { createApiServices } from "../src/platform/context";
 import { device, deviceToken, setupFixture } from "./fixture";
 
 const services = () => createApiServices(env);

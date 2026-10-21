@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { Brand } from "../../components/brand";
 import { LanguageSwitch } from "../../components/language-switch";
 import { useI18n } from "../../i18n/locale";
@@ -10,10 +10,10 @@ export function AuthLayout({
   footer,
   onLocaleChange,
 }: {
-  title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  onLocaleChange?: (locale: "ja" | "en") => void;
+  onLocaleChange?: (locale: "en" | "ja") => void;
+  title: ReactNode;
 }) {
   const { setLocale } = useI18n();
   return (

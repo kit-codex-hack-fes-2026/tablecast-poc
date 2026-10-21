@@ -1,23 +1,23 @@
-import themeSkill from "../../../../../plugins/tablecast/skills/tablecast-theme/SKILL.md?raw";
+import type { ReactNode } from "react";
 import {
   Blocks,
-  MessagesSquare,
   Download,
   ExternalLink,
   FolderGit2,
   Globe,
+  MessagesSquare,
   ShieldCheck,
   Terminal,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { type integrationConnection, readIntegrationConnection } from "./integration-query";
 import advisorSkill from "../../../../../plugins/tablecast/skills/tablecast-advisor/SKILL.md?raw";
 import analyticsSkill from "../../../../../plugins/tablecast/skills/tablecast-analytics/SKILL.md?raw";
+import themeSkill from "../../../../../plugins/tablecast/skills/tablecast-theme/SKILL.md?raw";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
 import { CopyValue } from "../../components/copy-value";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { type integrationConnection, readIntegrationConnection } from "./integration-query";
 import { IntegrationsShell } from "./integrations-shell";
 
 const repository = "https://github.com/kit-codex-hack-fes-2026/tablecast-poc";
@@ -30,10 +30,10 @@ function Guide({
   children,
   source,
 }: {
-  title: string;
-  icon: ReactNode;
   children: ReactNode;
+  icon: ReactNode;
   source?: string;
+  title: string;
 }) {
   const { t } = useI18n();
   return (
@@ -62,8 +62,8 @@ export function IntegrationSetup({
   mode,
   connection = readIntegrationConnection(),
 }: {
-  mode: "plugins" | "manual";
   connection?: ReturnType<typeof integrationConnection>;
+  mode: "manual" | "plugins";
 }) {
   const { t } = useI18n();
   const { endpoint, name, staging } = connection;

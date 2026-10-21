@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable";
 const meta = {
   title: "デザインシステム/部品/ResizablePanelGroup",
   component: ResizablePanelGroup,

@@ -1,16 +1,16 @@
 import { useMatches } from "@tanstack/react-router";
-import { useI18n, type SimpleMessageKey } from "../i18n/locale";
+import { type SimpleMessageKey, useI18n } from "../i18n/locale";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
-    document?: { title: SimpleMessageKey; description: SimpleMessageKey };
+    document?: { description: SimpleMessageKey; title: SimpleMessageKey };
   }
 }
 
-export type DocumentDetails = {
-  title?: SimpleMessageKey;
-  name?: string | { ja: string; en: string };
+type DocumentDetails = {
+  name?: string | { en: string; ja: string };
   store?: string;
+  title?: SimpleMessageKey;
 };
 
 /** titleとdescriptionはこの一箇所だけが所有し、言語変更でloaderを再実行しない。 */

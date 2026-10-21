@@ -1,28 +1,25 @@
+import type { z } from "zod";
 import { and, desc, eq, exists, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
+import type { CustomerActor } from "../customers/model";
+import type { customerMemoryPageSchema, customerSuggestionsSchema } from "./model";
 import {
   customerConsumption,
   customerContexts,
-  customerMemories,
   customerMemberships,
+  customerMemories,
   customerMemorySources,
   customerVisitParticipants,
-  orders,
-  tableSessions,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/customer-schema";
+import { orders, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
-import type { CustomerActor } from "../customers/model";
-import { requireCustomer } from "../customers/queries";
 import { getCatalog } from "../catalog/queries";
-import { getSession } from "../tables/queries";
+import { requireCustomer } from "../customers/queries";
 import { snapshotSchema } from "../orders/model";
+import { getSession } from "../tables/queries";
 
-export function currentCustomerParticipants(
-  services: ApiServices,
-  storeId: string,
-  sessionId: string,
-) {
+function currentCustomerParticipants(services: ApiServices, storeId: string, sessionId: string) {
   return services.db
     .select({
       participant: { id: sql<string>`${customerVisitParticipants.id}`.as("target_participant_id") },
@@ -51,6 +48,7 @@ export function currentCustomerParticipants(
       ),
     );
 }
+
 export async function customerServiceTarget(services: ApiServices, actor: Actor) {
   ensure(
     (actor.kind === "device" || actor.kind === "voice") && !actor.demoId,
@@ -78,6 +76,7 @@ export async function customerServiceTarget(services: ApiServices, actor: Actor)
       : undefined;
   return { session, context, participants, target };
 }
+
 // 最初に選んだ対象・同意と、読取り時点の来店・音声状態を同じSQLで照合する。
 function customerReadGate(
   services: ApiServices,
@@ -133,6 +132,7 @@ function customerReadGate(
       ),
   );
 }
+
 function customerReadProof(services: ApiServices, gate: ReturnType<typeof customerReadGate>) {
   return services.db
     .select({ id: customerContexts.sessionId })
@@ -140,10 +140,11 @@ function customerReadProof(services: ApiServices, gate: ReturnType<typeof custom
     .where(gate)
     .limit(1);
 }
+
 export async function listCustomerMemories(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof customerMemoryPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const rows = await services.db
@@ -169,10 +170,11 @@ export async function listCustomerMemories(
   const memories = rows.slice(0, query.limit);
   return { memories, nextCursor: rows.length > query.limit ? (memories.at(-1)?.id ?? null) : null };
 }
+
 export async function listCustomerConsumption(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof customerMemoryPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const rows = await services.db
@@ -199,6 +201,7 @@ export async function listCustomerConsumption(
   }));
   return { records, nextCursor: rows.length > query.limit ? (records.at(-1)?.id ?? null) : null };
 }
+
 export async function customerRecommendationContext(services: ApiServices, actor: Actor) {
   const snapshot = await customerServiceTarget(services, actor);
   const { session, context, participants, target } = snapshot;
@@ -274,7 +277,7 @@ export async function customerRecommendationContext(services: ApiServices, actor
 export async function customerSuggestions(
   services: ApiServices,
   actor: Actor,
-  input: { kind: "usual" | "untried" | "companions"; offset: number },
+  input: z.infer<typeof customerSuggestionsSchema>,
 ) {
   const snapshot = await customerServiceTarget(services, actor);
   const { session, participants, target } = snapshot;

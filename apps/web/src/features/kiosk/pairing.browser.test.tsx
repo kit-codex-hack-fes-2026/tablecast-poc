@@ -7,14 +7,14 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider } from "../../i18n/locale";
-import { Pairing } from "./pairing";
+import { page, userEvent } from "vitest/browser";
 import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
+import { Pairing } from "./pairing";
 
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });

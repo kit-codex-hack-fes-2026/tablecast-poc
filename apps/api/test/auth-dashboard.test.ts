@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, inject, test, vi } from "vitest";
 import app from "../src/app";
-import { session, user } from "../src/db/auth-schema";
+import { session, user } from "../src/db/identity-schema";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 

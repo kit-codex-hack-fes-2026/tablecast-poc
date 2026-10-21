@@ -8,17 +8,17 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
-import { StoreShell } from "./store-shell";
-import { StoreProfile } from "./store-profile";
 import "../../styles.css";
+import { StoreProfile } from "./store-profile";
+import { StoreShell } from "./store-shell";
 
 let client: QueryClient;
 let unexpected: string[];
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });

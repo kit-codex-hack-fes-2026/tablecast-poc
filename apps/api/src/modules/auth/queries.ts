@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { member } from "../../db/auth-schema";
-import { devices, stores, tableSessions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
+import { member } from "../../db/identity-schema";
+import { devices, stores, tableSessions } from "../../db/table-schema";
 export async function findDeviceSession(services: ApiServices, tokenHash: string) {
   return services.db
     .select({ store_id: devices.store_id, id: tableSessions.id, deviceId: devices.id })

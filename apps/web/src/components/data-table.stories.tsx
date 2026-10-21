@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { Package, Hash } from "lucide-react";
+import { Hash, Package } from "lucide-react";
 import { DataTable } from "./data-table";
 const meta = {
   title: "共通表示/DataTable",
-  component: DataTable<{ id: string; name: string; count: number }>,
+  component: DataTable<{ count: number; id: string; name: string }>,
   tags: ["autodocs"],
   parameters: {
     layout: "padded",
@@ -21,7 +21,7 @@ const meta = {
     searchLabel: "商品を検索",
     searchPlaceholder: "商品名で検索",
   },
-} satisfies Meta<typeof DataTable<{ id: string; name: string; count: number }>>;
+} satisfies Meta<typeof DataTable<{ count: number; id: string; name: string }>>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const 標準: Story = {};

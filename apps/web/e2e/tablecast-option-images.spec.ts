@@ -1,9 +1,9 @@
-import { readFile } from "node:fs/promises";
 import { expect } from "@playwright/test";
 import { catalogSchema, configDraftSchema, uploadedImageSchema } from "@tablecast/api/schema";
-import { test } from "./support/test";
-import { signInStaff } from "./support/session";
+import { readFile } from "node:fs/promises";
 import ja from "../messages/ja.json" with { type: "json" };
+import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off", serviceWorkers: "block" });
 

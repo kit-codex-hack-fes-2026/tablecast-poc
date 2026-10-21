@@ -35,59 +35,43 @@ APIは業務moduleごとに入力、操作、読取を所有する。処理が�
 
 ```text
 tablecast/
-├── AGENTS.md
-├── .agents/skills/
-├── docs/
 ├── apps/
-│   ├── web/
-│   │   ├── .storybook/
-│   │   ├── src/
-│   │   │   ├── routes/
-│   │   │   ├── features/kiosk/
-│   │   │   ├── features/admin/
-│   │   │   ├── components/
-│   │   │   ├── i18n/
-│   │   │   └── lib/api.ts
-│   │   ├── e2e/
-│   │   ├── vite.config.ts
-│   │   ├── wrangler.jsonc
-│   │   └── package.json
-│   └── api/
-│       ├── src/
-│       │   ├── app.ts
-│       │   ├── worker.ts
-│       │   ├── client.ts
-│       │   ├── schema.ts
-│       │   ├── platform/
-│       │   ├── modules/auth/
-│       │   ├── modules/account/
-│       │   ├── modules/stores/
-│       │   ├── modules/configuration/
-│       │   ├── modules/devices/
-│       │   ├── modules/voice/
-│       │   ├── modules/mcp/
-│       │   ├── modules/media/
-│       │   ├── modules/system/
-│       │   ├── modules/catalog/
-│       │   ├── modules/orders/
-│       │   ├── modules/tables/
-│       │   ├── db/
-│       │   └── realtime/
-│       ├── migrations/
-│       ├── test/
-│       ├── drizzle.config.ts
-│       ├── wrangler.jsonc
-│       └── package.json
-├── scripts/
+│   ├── api/src/
+│   │   ├── app.ts・worker.ts          # HTTPとWorkerの組立て
+│   │   ├── client.ts・schema.ts       # Web向け公開契約
+│   │   ├── db/
+│   │   │   ├── public.ts・client.ts  # CLIの限定入口、DB生成・型
+│   │   │   ├── auth-schema.ts        # 認証schemaの公開面
+│   │   │   └── *-schema.ts           # 業務別のschema
+│   │   ├── modules/
+│   │   │   ├── orders/use-cases/     # カート・確認・確定・入金
+│   │   │   ├── tables/               # 卓・session・表示投影
+│   │   │   ├── voice/                # 停止意思・認可・利用量・委任
+│   │   │   ├── auth/                 # 認証runtimeと認可
+│   │   │   └── その他の所有業務/
+│   │   ├── emails/                   # 文面・template・送信時の描画とtransport
+│   │   ├── integrations/             # 解決済み入力を受ける外部protocol
+│   │   ├── platform/                 # request依存・エラー・観測
+│   │   └── realtime/                 # DO通知
+│   ├── web/src/
+│   │   ├── routes/                   # loader・URL・ページ合成
+│   │   ├── features/
+│   │   │   ├── store/                # 店舗選択・プロフィール・権限
+│   │   │   ├── floor・catalog・configuration・devices/
+│   │   │   ├── rewards・statistics・demo・games/
+│   │   │   ├── kiosk/                # session・cart・checkout・voice・描画
+│   │   │   ├── account・billing・customer/
+│   │   │   └── shell/                # 受け取ったデータのレイアウト
+│   │   ├── components/ui/            # 業務非依存のUI
+│   │   ├── components/               # 共通表示
+│   │   └── lib/                      # HTTP・SSR・ブラウザー境界
+│   ├── presentation/                 # 収録・制作・動画生成
+│   └── emulate/                      # 開発・PRのOAuth模擬
+├── scripts/                          # 既存CLI入口と用途別処理
 ├── fixtures/demo/
-├── package.json
-├── bun.lock
-├── turbo.json
-├── oxlint.config.ts
-├── oxfmt.config.ts
-├── lefthook.yml
-├── .gitignore
-└── .worktreeinclude
+├── docs/
+├── .agents/skills/
+└── package.json・bun.lock・turbo.json・oxlint.config.ts・lefthook.yml
 ```
 
 rootのBun workspacesは `apps/*`。`@tablecast/web`、`@tablecast/api`、開発・PR認証用の `@tablecast/emulate` を置く。依存はrootの `bun.lock` で固定する。
@@ -95,32 +79,65 @@ rootのBun workspacesは `apps/*`。`@tablecast/web`、`@tablecast/api`、開発
 ## 業務moduleと依存の寿命
 
 Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。小さな処理にcontroller/service/repository/interfaceを一組ずつ生成しない。
+同じ状態・寿命・変更理由を持つ処理は同じ所有者へまとめる。一回しか使わないhookとviewの間で多数の状態を返して再展開するだけなら、同じ編集・接続・表示の処理へ戻す。ファイル内の関数・privateメソッド・表示componentで役割を整理し、公開契約・独立したI/O・mount・購読の境界は維持する。実装300行は分割を強制する上限ではなくレビューの目安とする。
 APIではroute・音声のfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
+HTTPはHono公式のfactoryでEnvとmiddlewareの型を共有し、パスと操作を登録するchainからHono Clientへ型を伝える。共通のrequest準備はrootだけで行い、入力検証と認証の順序は各入口の契約として維持する。店舗・卓・本人のscopeを確定するguardを再利用し、GUI・音声・MCPから直に呼ばれる業務側の認可も保つ。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
-`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。生成時に`db/auth-schema.ts`の関連定義を渡し、Better Authのsession/userの関連queryを有効にする。この初期化のためだけにcontextから認証schemaへの依存を許可する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+`app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
 
-| 所有者                                                                | 責務                                                                       |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `platform/context.ts`、`platform/http.ts`                             | リクエスト依存、trace・Origin検査、共通エラー応答                          |
-| `modules/auth/middleware.ts`                                          | スタッフ認証、店舗membership、端末CookieからActorを確定                    |
-| `modules/*/routes.ts`、`*-routes.ts`                                  | HTTP入力の検証、認可middleware、業務操作呼出し、JSON・Cookie・streamの出力 |
-| `modules/*/service.ts`、音声の`session.ts`・`realtime.ts`・`turns.ts` | Hono Contextに依存しない業務判断、条件付き更新・batch、音声の競合・停止    |
-| `modules/*/queries.ts`、`tables/history.ts`                           | 複数呼出し元で利用する読取、tenant条件、集計・ページング                   |
-| `modules/*/model.ts`                                                  | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
-| `db`、`migrations`                                                    | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
+Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Authの対応adapterを同時に扱う。DB列と同義の入力は`drizzle-orm/zod`から必要なfieldだけを選び、業務の制約を重ねる。JSON列内の設定・snapshot等は業務Zod schemaを正本にし、DBの文字列列から生成しない。行型はDrizzle、公開HTTPの入出力型はZodとHono Clientから推論する。WebへDB schemaのruntime依存を渡さない。
+
+| 所有者                                                                                  | 責務                                                                       |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `platform/context.ts`、`platform/http.ts`                                               | リクエスト依存、trace・Origin検査、共通エラー応答                          |
+| `modules/auth/middleware.ts`                                                            | スタッフ認証、店舗membership、端末CookieからActorを確定                    |
+| `modules/*/routes.ts`、`*-routes.ts`                                                    | HTTP入力の検証、認可middleware、業務操作呼出し、JSON・Cookie・streamの出力 |
+| `modules/*/use-cases/*.ts`・`service.ts`、音声の`session.ts`・`realtime.ts`・`turns.ts` | Hono Contextに依存しない業務判断、条件付き更新・batch、音声の競合・停止    |
+| `modules/*/queries.ts`、`tables/history.ts`                                             | 複数呼出し元で利用する読取、tenant条件、集計・ページング                   |
+| `modules/*/model.ts`                                                                    | 業務別の入出力schema・型。共通のID・言語は`platform/model.ts`              |
+| `db`、`migrations`                                                                      | D1 schema・制約・移行。汎用repositoryや別DBのadapterは設けない             |
 
 卓・フロア・下書きの表示読取は、既存のquery builderをD1の`db.batch()`へまとめる。卓・フロアの回復cursorは同じbatchの状態読取より先に取得し、取得後の更新をイベント経路で回収する。デモの作成者と現在の店舗権限はjoinで確認してから結果を返す。カタログのqueryと結果変換は単独取得・batchで共有し、D1が列名で返すbatch結果ではjoin先の重複列に別名を付ける。
 
-GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
+GUI・音声・MCPは同じ所有moduleのuse-caseを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
 
 HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tablecast/api/client`、共有が必要な公開型・schemaだけは `@tablecast/api/schema` から明示公開する。
 メニュー検索の純粋関数は `@tablecast/api/catalog-search` から公開し、音声ツールと店側で共有する。`modules/catalog/search.ts` だけがFuse.jsへ依存し、Webは取得済みの公開版・下書きの設定ごとに索引を再利用する。DB・認証・価格判定・モデル実行をこの公開入口へ含めない。
 これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・モデル実行コードをruntime importしないことをbuildで確認する。
 型はtype-only importで扱い、画面専用のstateと業務契約を無理に一つにしない。音声のブラウザーとAPIの契約も同じ公開schemaを使う。全APIの巨大SDKは生成しない。
+Webの取得定義は既存の`queryOptions`・`infiniteQueryOptions`、更新定義は共有する処理がある場合の`mutationOptions`を使う。応答型を得るためだけのload関数を作らず、公開clientの成功応答から推論する。cache key・版・cursor・取消signalを定義と一緒に保ち、共通cache更新と画面固有の入力・focus・遷移をそれぞれの所有者で扱う。
 
 共有packageを作るのは、実在する独立した複数consumerと、切り出した方が変更箇所を減らす根拠がある場合だけ。
+
+## 操作の所有と公開入口
+
+```mermaid
+flowchart TD
+    Entry["HTTP・音声tool・MCP<br/>認証・入力検証・protocol変換"]
+    UseCase["所有業務moduleのuse-case<br/>ルールの調整・単一batchの確定"]
+    Own["同moduleの判定・query・更新statement"]
+    Other["他moduleの明示契約<br/>照会・判定・更新statement"]
+    IO["外部I/O adapter"]
+    DB["API内db<br/>schema・DB型・生成"]
+    D1[(D1)]
+    External["OpenAI・Stripe・メール・通知"]
+    Entry --> UseCase
+    UseCase --> Own
+    UseCase --> Other
+    UseCase --> IO
+    Own --> DB
+    Other --> DB
+    DB --> D1
+    IO --> External
+```
+
+中央の`operations`や汎用workflow runnerは作らない。注文確定はorders、卓の開閉はtables、音声開始停止はvoice、ポイント交換はcustomer-points、券の発行・適用はcustomer-couponsが所有する。他moduleが必要な読取・純粋な判定・準備済み更新statementを公開し、一つのuse-caseが版条件とbatch成功の確認を所有する。独立commitするuse-caseを連鎖させない。版条件・確認失効・event cursorなど実在する下位契約だけを共有する。
+
+`@tablecast/api/db`は運用CLI向けのschema・DB生成・型、`@tablecast/api/bootstrap`は初期化に限定した公開入口とする。CLIから任意のAPI内部ファイルへ到達させず、Webは両入口を利用しない。認証schemaを認証runtime配下へ移してdb→auth→dbの循環を作らない。DB切り出しは複数の実consumerがあるため将来候補だが、今回は`packages/*`を追加しない。auth client・React Email・WebのUIは変更理由と利用者が異なるため、現在のapp内の所有を保つ。
+
+メールはtemplate・文面を独立させ、送信を所有する`emails/send.ts`が描画とtransportを選ぶ。React Email rendererとtemplateは送信時だけ遅延importする。外部protocol adapterへは資格情報を解決済みの入力を渡し、APIの認可・DBやHonoへ逆依存させない。Oxlint boundariesは所有業務・読取/更新/HTTPの役割・公開入口を検査し、未知の配置も拒否する。行数だけで分割の妥当性を判断しない。
 
 ## 単一オリジン
 
@@ -144,7 +161,7 @@ MCPのOAuthとブラウザーのCookieをそれぞれ検証し、内部パスと
 
 Honoのroute chainから `AppType` を推論し、`@tablecast/api/client` の公開入口で `hc<AppType>` を提供する。Webの業務APIはこのクライアントとHonoの `parseResponse` を使い、レスポンス用Zodを二重定義しない。外部入力のZod検証と認可はAPI側に残す。業務エラーはAPIの共通例外処理で正規化し、WebはHonoの標準`DetailedError`を読む。
 
-`components/ui` は業務を知らないshadcn/Base UI部品、`components` はDataTable・日時・ユーザー表示、`features/store` は店舗のメニュー・メンバー・招待・端末、`features/account` は本人の認証設定を所有する。ai-elementsは `components/ai-elements` に置く。
+`components/ui` は業務を知らないshadcn/Base UI部品、`components` はDataTable・日時・ユーザー表示、`features/store` は店舗選択・プロフィール・権限、`features/catalog`・`configuration`・`devices`は各業務、`features/account` は本人の認証設定を所有する。ai-elementsは `components/ai-elements` に置く。
 
 migration 0011で店舗と組織を1対1にする。以前の複数店舗組織は店舗単位へ分割し、管理者は各店舗、一般メンバーは従来所属していた店舗へ引き継ぐ。旧teamの表は移行履歴として残すが、アクセス判定では使わない。店舗・卓・注文のIDとカートは変えない。分割した組織のOAuth承認は再取得する。
 
@@ -156,7 +173,7 @@ mainは`tablecast.kit-codex.workers.dev`、同一repoのPRは`tablecast-pr-<番�
 
 ## APIと画面のデータ取得
 
-Honoの`app.ts`は共通middlewareと公開入口を組み立て、各`modules/*/routes.ts`で認可と入力検証を行う。業務更新と読取投影は所有moduleの`service.ts`へ置く。リクエストで共有するDrizzleのD1 adapterとSQL templateを使い、条件付き更新・監査イベントの同一batchと店舗境界を維持する。単にDB処理を転送するrepository層は作らない。
+Honoの`app.ts`は共通middlewareと公開入口を組み立て、各`modules/*/routes.ts`で認可と入力検証を行う。業務更新は所有moduleの`use-cases`または小さな`service.ts`、読取投影はそのquery・valuesへ置く。リクエストで共有するDrizzleのD1 adapterとSQL templateを使い、条件付き更新・監査イベントの同一batchと店舗境界を維持する。単にDB処理を転送するrepository層は作らない。
 
 フロア取得は、店舗内の利用卓・注文・入金・確認・履歴をまとめて読み、卓ごとに投影する。店舗全体のイベントは100件、各卓の履歴は100件を上限とし、卓数に比例してDB問い合わせを発行しない。下書き一覧ではカタログを一度だけ読み、各下書きの差分へ共有する。
 
@@ -166,7 +183,7 @@ WebはrequestごとにQueryClientを生成し、TanStack RouterのQuery SSR連�
 
 ## Webの依存と読込境界
 
-`routes`はURL・loader・ページ合成、`features/store`は店舗管理・設定・会計、`features/account`は認証・アカウント、`features/kiosk`は卓の操作を所有する。`features/shell`は実際に共有する認証済みナビゲーションを持つ。画面から別featureの内部画面をimportせず、共有するquery・modelまたはshellを参照する。
+`routes`はURL・loader・ページ合成、`features/store`は店舗選択・プロフィール・権限、`features/floor`・`catalog`・`configuration`・`devices`・`rewards`・`statistics`・`demo`・`games`は各業務、`features/account`は認証・アカウント、`features/kiosk`は卓の操作を所有する。`features/shell`は実際に共有する認証済みナビゲーションを持つ。画面から別featureの内部画面をimportせず、他業務が明示したquery・modelの公開契約だけを参照する。shellはrouteや店舗基盤から受け取ったsession・店舗情報を描画し、業務queryを逆向きに取得しない。
 
 `components`はロール表示・注文行・フォームなどのアプリ共通表示、`components/ui`はBase UIとTailwind Variantsの業務非依存プリミティブである。共通部品からfeatureへの逆依存は禁止する。`lib`はHTTP・認証client、SSRとブラウザー機能の境界を持つ。APIは公開`schema`、純粋な`catalog-search`とtransportからの`client`を使い、API内部やDBへ依存しない。
 

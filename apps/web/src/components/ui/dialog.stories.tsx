@@ -1,18 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { Dialog as Primitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./button";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogClose,
-  DialogScroll,
+  DialogContent,
+  DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogScroll,
+  DialogTitle,
 } from "./dialog";
-import { expect, userEvent, within, waitFor } from "storybook/test";
 const meta = {
   title: "デザインシステム/部品/DialogContent",
   component: DialogContent,

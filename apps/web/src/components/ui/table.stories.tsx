@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { Table, TableHead, TableCell } from "./table";
+import { Table, TableCell, TableHead } from "./table";
 const meta = {
   title: "デザインシステム/部品/Table",
   component: Table,

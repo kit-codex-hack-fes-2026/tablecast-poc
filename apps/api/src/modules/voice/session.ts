@@ -1,22 +1,22 @@
-import { beginVoiceUsage, voiceBillingAccount } from "../billing/usage";
+import type { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import OpenAI, { APIError } from "openai";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import type { VoiceDiagnostics } from "./diagnostics";
+import type { voiceDelegationSchema } from "./model";
+import * as business from "../../db/business-schema";
+import { DomainError, ensure } from "../../platform/errors";
+import { beginVoiceUsage, voiceBillingAccount } from "../billing/usage";
 import { getCatalog } from "../catalog/queries";
-import { getSession, getTableState } from "../tables/queries";
-import { liveVoice } from "./catalog";
-import { castSessionInstructions, createCastTools } from "./agent";
 import { instructionText } from "../configuration/instruction-model";
+import { getSession, getTableState } from "../tables/queries";
+import { castSessionInstructions, createCastTools } from "./agent";
+import { liveVoice } from "./catalog";
 import { liveInstructions } from "./prompt";
 import { conversationHistory } from "./realtime";
 import { closeLiveSession, stopVoiceRoom } from "./runtime";
 import { setVoiceSession } from "./service";
-import type { z } from "zod";
-import type { voiceDelegationSchema } from "./model";
-import type { VoiceDiagnostics } from "./diagnostics";
 import { startVoiceTurn } from "./turns";
 
 export async function startVoiceSession(

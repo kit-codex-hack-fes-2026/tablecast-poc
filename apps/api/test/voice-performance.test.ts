@@ -1,17 +1,16 @@
-import { env } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
-import * as business from "../src/db/business-schema";
 import app from "../src/app";
-import { createApiServices } from "../src/platform/context";
+import * as business from "../src/db/business-schema";
+import { getTableState } from "../src/modules/tables/queries";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { setVoiceSession } from "../src/modules/voice/service";
-import { getTableState } from "../src/modules/tables/queries";
-import { runVoiceTurn } from "./voice-fixture";
+import { createApiServices } from "../src/platform/context";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
-
 import { measuredDatabase } from "./measured-database";
+import { runVoiceTurn } from "./voice-fixture";
 
 it("商品数が増えても検索とカード表示の往復・出力が増えず実際に表示を保存する", async () => {
   await setupFixture();

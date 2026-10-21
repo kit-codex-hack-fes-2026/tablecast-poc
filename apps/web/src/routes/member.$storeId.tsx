@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Link, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { customerStoreOptions } from "../features/customer/customer-query";
 import { useI18n } from "../i18n/locale";

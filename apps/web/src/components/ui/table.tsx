@@ -1,5 +1,5 @@
-import { cn } from "tailwind-variants";
 import type { ComponentProps } from "react";
+import { cn } from "tailwind-variants";
 
 /**
  * 静的な表構造。

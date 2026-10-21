@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, within } from "storybook/test";
-import { UserIdentity, ParticipantIdentity } from "./user-identity";
+import { ParticipantIdentity, UserIdentity } from "./user-identity";
 const meta = {
   title: "共通表示/UserIdentity",
   component: UserIdentity,

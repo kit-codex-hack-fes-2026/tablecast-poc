@@ -1,13 +1,13 @@
 import Fuse from "fuse.js";
 import type { Configuration } from "../configuration/model";
 
-type MenuSection = "products" | "categories" | "plans";
+type MenuSection = "categories" | "plans" | "products";
 type SearchDocument = {
-  id: string;
-  categoryId?: string;
-  names: string[];
   categories: string[];
+  categoryId?: string;
   descriptions: string[];
+  id: string;
+  names: string[];
 };
 
 function normalise(value: string) {

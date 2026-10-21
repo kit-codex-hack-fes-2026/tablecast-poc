@@ -1,6 +1,6 @@
+import type { OnChangeFn, PaginationState } from "@tanstack/react-table";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import type { OnChangeFn, PaginationState } from "@tanstack/react-table";
 import { expect, it, vi } from "vitest";
 import { LocaleContext } from "../i18n/locale-context";
 import { DataTable } from "./data-table";

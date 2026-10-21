@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 import { Kiosk } from "../features/kiosk/kiosk";
 import { tableCatalogOptions, tableOptions } from "../features/kiosk/table-query";
+import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 
 export const Route = createFileRoute("/")({
   staticData: { document: { title: "head_guest", description: "head_guest_description" } },

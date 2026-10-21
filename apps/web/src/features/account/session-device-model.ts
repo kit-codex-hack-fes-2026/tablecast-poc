@@ -1,5 +1,5 @@
 /** 保存された端末情報を、ログインを見分けられる短い表示名にする。 */
-export function sessionDeviceName(userAgent: string | null | undefined, fallback: string): string {
+export function sessionDeviceName(userAgent: null | string | undefined, fallback: string): string {
   if (!userAgent) return fallback;
   const browser = (
     [

@@ -1,13 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { execFile } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseEnv, promisify } from "node:util";
-import { z } from "zod";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import { localReleaseSha } from "./tablecast-runtime";
+import { z } from "zod";
+import { localReleaseSha } from "./tablecast-runtime.ts";
 
 beforeEach(async () => {
   // Git hookから継承した参照先を外し、fixture以外のリポジトリを操作しない。
@@ -220,9 +220,10 @@ describe("開発資源の所有境界", () => {
         "scripts/tablecast-runtime.ts",
         "scripts/tablecast-env.sh",
         "scripts/tablecast-deploy-config.ts",
+        "scripts/tablecast-deploy",
         "apps/api/cloudflare.config.ts",
       ])
-        await cp(join(process.cwd(), path), join(root, path));
+        await cp(join(process.cwd(), path), join(root, path), { recursive: true });
       await writeFile(join(root, ".local/state/tablecast-keep"), "tablecast saved data");
       await writeFile(
         join(root, ".local/.dev.vars"),

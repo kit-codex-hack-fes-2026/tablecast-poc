@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./select";
-import { expect, userEvent, within, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
 const meta = {
   title: "デザインシステム/部品/SelectTrigger",
   component: SelectTrigger,

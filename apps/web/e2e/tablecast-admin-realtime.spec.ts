@@ -1,8 +1,8 @@
-import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, eventsSchema, tableStateSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ actionTimeout: 15_000, serviceWorkers: "block" });
 

@@ -13,9 +13,9 @@ export function StoreIcon({
   logo,
   className,
 }: {
-  name: string;
-  logo?: string | null;
   className?: string;
+  logo?: null | string;
+  name: string;
 }) {
   return (
     <Avatar.Root

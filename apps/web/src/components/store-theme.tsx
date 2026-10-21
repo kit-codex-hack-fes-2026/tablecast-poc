@@ -1,12 +1,11 @@
 import {
+  type Appearance,
   appearanceSchema,
   themeCssRules,
   themeFonts,
-  type Appearance,
 } from "@tablecast/api/schema";
-import { useId, useMemo, type ReactNode } from "react";
-
-import { StyleScopeProvider, StyleScopeBoundary } from "./ui/style-scope";
+import { type ReactNode, useId, useMemo } from "react";
+import { StyleScopeBoundary, StyleScopeProvider } from "./ui/style-scope";
 function contrastingInk(hex: string) {
   const channels = [1, 3, 5].map((offset) => {
     const channel = Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;

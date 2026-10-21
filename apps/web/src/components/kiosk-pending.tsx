@@ -1,6 +1,6 @@
+import { useI18n } from "../i18n/locale";
 import { Brand } from "./brand";
 import { Skeleton } from "./ui/skeleton";
-import { useI18n } from "../i18n/locale";
 
 /** 卓情報の取得中もヘッダー・会話・メニューの領域を確保する。 */
 export function KioskPending() {

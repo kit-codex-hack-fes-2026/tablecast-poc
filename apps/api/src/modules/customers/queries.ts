@@ -1,8 +1,10 @@
+import type { z } from "zod";
 import { and, desc, eq, lt, or } from "drizzle-orm";
-import { customerMemberships, stores } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
+import type { CustomerActor, customerMembershipPageSchema } from "./model";
+import { customerMemberships } from "../../db/customer-schema";
+import { stores } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import type { CustomerActor } from "./model";
 
 export async function getCustomerStore(services: ApiServices, actor: CustomerActor) {
   const row = await services.db
@@ -40,7 +42,7 @@ export async function requireCustomer(services: ApiServices, actor: CustomerActo
 export async function listCustomerMemberships(
   services: ApiServices,
   userId: string,
-  query: { beforeJoinedAt?: number; beforeId?: string; limit: number } = { limit: 100 },
+  query: z.infer<typeof customerMembershipPageSchema> = { limit: 100 },
 ) {
   const rows = await services.db
     .select({

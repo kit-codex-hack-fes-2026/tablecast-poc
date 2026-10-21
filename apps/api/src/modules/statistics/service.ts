@@ -12,10 +12,10 @@ import {
   sql,
   sum,
 } from "drizzle-orm";
-import { orders, payments, tableEvents, tableSessions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import { orders, payments, tableEvents, tableSessions } from "../../db/table-schema";
+import { ensure } from "../../platform/errors";
 import { requireManagerRead } from "../auth/policy";
 import { statisticsCursorSchema, type StatisticsQuery, type StatisticsResult } from "./model";
 
@@ -167,7 +167,7 @@ export async function getStatistics(
         optionId: optionId.as("option_id"),
         sessionId: orders.table_session_id,
         name: sql<
-          string | null
+          null | string
         >`first_value(${name}) over (partition by ${productId},${optionId} order by ${orders.created_at} desc,${orders.id} desc,line.key desc)`.as(
           "name",
         ),
@@ -194,7 +194,7 @@ export async function getStatistics(
     .select({
       productId: lines.productId,
       optionId: lines.optionId,
-      name: sql<string | null>`max(${lines.name})`,
+      name: sql<null | string>`max(${lines.name})`,
       quantity: sum(lines.quantity),
       orderingSessions: countDistinct(lines.sessionId),
       planCoveredQuantity: sum(lines.covered),

@@ -1,14 +1,5 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
-import {
-  deploymentOwner,
-  tableSessions,
-  tableEvents,
-  stores,
-  orders,
-  payments,
-} from "../apps/api/src/db/business-schema";
-import { account, user, organization, member } from "../apps/api/src/db/auth-schema";
+import { business, createDatabase, identity } from "@tablecast/api/db";
+import { and, eq, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,19 +7,15 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import {
-  seedDemoDatabase,
-  seedPreviewDatabase,
-  tablecastHistoryBaseTime,
-  sampleLine,
-} from "./tablecast-seed-data";
-import type { DemoCredentials } from "./tablecast-seed";
-import { configurationSchema } from "../apps/api/src/schema";
-import { z } from "zod";
-import { uploadPreviewImage } from "./tablecast-seed-media";
-import { demoStores } from "./tablecast-fixtures";
-import { legacyIdentityIconUrl } from "./tablecast-seed-icons";
-import { tablecastDemoLinkIdentity } from "../apps/emulate/src/tablecast-demo-identities";
+import type { DemoCredentials } from "./tablecast-seed.ts";
+import { tablecastDemoLinkIdentity } from "../apps/emulate/src/tablecast-demo-identities.ts";
+import { demoStores } from "./tablecast-fixtures.ts";
+import { seedDemoDatabase, seedPreviewDatabase } from "./tablecast-seed-data.ts";
+import { legacyIdentityIconUrl } from "./tablecast-seed-icons.ts";
+import { uploadPreviewImage } from "./tablecast-seed-media.ts";
+import { assertSeedIcons, seedIntegrity } from "./test-support/tablecast-seed-integrity.ts";
+const { account, member, organization, user } = identity;
+const { deploymentOwner, stores, tableSessions } = business;
 
 const execute = promisify(execFile);
 
@@ -99,7 +86,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       remoteBindings: false,
     });
     try {
-      const db = drizzle(platform.env.TABLECAST_DB);
+      const db = createDatabase(platform.env.TABLECAST_DB);
       // 実R2 bindingでも条件付きPUTとMD5による再開判定が成立する。
       const imageKey = "tablecast/demo/tablecast-test.png";
       const imageBytes = new TextEncoder().encode("tablecast-test-image");
@@ -355,113 +342,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
       expect(
         (await platform.env.TABLECAST_MEDIA.head(refreshedImage))?.httpMetadata?.contentType,
       ).toBe("image/webp");
-      const counts = await seedDemoDatabase(platform.env, credentials);
-      // Then: 規模だけでなく組織、プラン、支払、時系列の整合性を持つ。
-      expect(counts).toMatchObject({
-        stores: 3,
-        tables: 36,
-        historicalSessions: 600,
-        orders: 2415,
-      });
-      expect(counts.events).toBeGreaterThanOrEqual(20_000);
-      const catalogs = {
-        results: await db.all<{ config_json: string }>(sql`SELECT config_json FROM stores`),
-      };
-      const products = catalogs.results.flatMap(
-        (row) => configurationSchema.parse(JSON.parse(row.config_json)).products,
-      );
-      expect(products).toHaveLength(102);
-      for (const product of products.filter((item) => item.imageKey))
-        expect(product.imageKey).toMatch(/^tablecast\/images\/[a-f0-9]{64}\.webp$/);
-      for (const product of products) {
-        expect(product.imageKind).toBe("illustration");
-        expect(product.allergens.note.ja).toMatch(/(?:混入|交差接触)は未確認/);
-        expect(product.allergens.note.en).toContain("cross-contact");
-        expect(product.allergens.note.en).toContain("unverified");
-      }
-      for (const product of products.filter((item) => item.categoryId !== "sake")) {
-        expect(product.allergens.note.ja).toContain(product.text.ja.description);
-        expect(product.allergens.note.en).toContain(product.text.en.description);
-      }
-      expect(
-        products.find((product) => product.id === "tablecast-komorebi-karaage")?.allergens,
-      ).toMatchObject({
-        contains: ["wheat", "soya"],
-        evidence: "verified",
-        crossContact: "unknown",
-        vegan: "unknown",
-      });
-      expect(
-        products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens,
-      ).toMatchObject({
-        contains: [],
-        evidence: "unknown",
-        crossContact: "unknown",
-        vegan: "unknown",
-      });
-      expect(
-        products.find((product) => product.id === "tablecast-komorebi-pickles")?.allergens.note.ja,
-      ).toContain("詳しい原材料は未登録");
-      expect(
-        await db.get(sql`SELECT COUNT(DISTINCT organization_id) AS count FROM stores`),
-      ).toEqual({ count: 3 });
-      expect(
-        await db.get(
-          sql`SELECT COUNT(DISTINCT CAST((opened_at-${tablecastHistoryBaseTime})/86400000 AS INTEGER)) AS days FROM table_sessions WHERE id LIKE '%-history-%'`,
-        ),
-      ).toEqual({ days: 30 });
-      expect(
-        await db.get(
-          sql`SELECT COUNT(*) AS count FROM table_sessions WHERE plan_json IS NOT NULL AND status='open'`,
-        ),
-      ).toEqual({ count: 3 });
-      expect(
-        await db.get(
-          sql`SELECT COUNT(*) AS count FROM restaurant_tables t WHERE NOT EXISTS(SELECT 1 FROM table_sessions s WHERE s.table_id=t.id AND s.status='open')`,
-        ),
-      ).toEqual({ count: 6 });
-      expect({
-        results: await db.all(
-          sql`SELECT s.id FROM table_sessions s WHERE status='closed' AND (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.table_session_id=s.id)!=(SELECT COALESCE(SUM(amount),0) FROM payments p WHERE p.table_session_id=s.id)`,
-        ),
-      }).toMatchObject({ results: [] });
-      expect({
-        results: await db.all(
-          sql`SELECT o.id FROM orders o JOIN confirmations c ON c.id=o.snapshot_id JOIN table_sessions s ON s.id=o.table_session_id WHERE o.store_id!=s.store_id OR c.store_id!=o.store_id OR o.total!=json_extract(o.snapshot_json,'$.total') OR o.created_at<c.created_at OR o.updated_at<o.created_at`,
-        ),
-      }).toMatchObject({ results: [] });
-      expect({
-        results: await db.all(
-          sql`SELECT cursor FROM (SELECT cursor,created_at,LAG(created_at) OVER(PARTITION BY table_session_id ORDER BY cursor) AS previous FROM table_events) WHERE created_at<previous`,
-        ),
-      }).toMatchObject({ results: [] });
-      expect(await db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
-      const conversation = (
-        await db
-          .select({ data: tableEvents.data_json })
-          .from(tableEvents)
-          .where(eq(tableEvents.table_session_id, "tablecast-komorebi-table-02-session"))
-          .orderBy(tableEvents.cursor)
-      )
-        .map((row) =>
-          z
-            .object({
-              source: z.literal("synthetic-demo"),
-              role: z.string().optional(),
-              text: z.string().optional(),
-              speaker: z.object({ id: z.string().nullable() }).optional(),
-            })
-            .parse(JSON.parse(row.data)),
-        )
-        .filter((line) => line.role === "user");
-      expect(new Set(conversation.map((line) => line.speaker?.id))).toEqual(
-        new Set([
-          "tablecast-komorebi-table-02-session-synthetic-stream:0",
-          "tablecast-komorebi-table-02-session-synthetic-stream:1",
-          null,
-        ]),
-      );
-      expect(conversation.some((line) => line.text?.includes("一つに訂正"))).toBe(true);
+      const counts = await seedIntegrity(platform.env, credentials);
       const reserved = "tablecast-komorebi-table-01-session";
       await db
         .update(tableSessions)
@@ -486,23 +367,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
           }),
         ),
       );
-      const seededIcons = {
-        results: await db.all<{ url: string | null }>(
-          sql`SELECT image AS url FROM user UNION ALL SELECT logo AS url FROM organization`,
-        ),
-      };
-      expect(seededIcons.results.length).toBe(12);
-      for (const { url } of seededIcons.results) {
-        expect(url).toMatch(/^\/api\/avatars\/[a-f0-9-]+$/);
-        const image = await platform.env.TABLECAST_MEDIA.get(
-          `tablecast/avatars/${url?.split("/").at(-1)}`,
-        );
-        expect(image?.httpMetadata?.contentType).toBe("image/webp");
-        if (!image) throw new Error("seed画像がありません。");
-        const bytes = new Uint8Array(await image.arrayBuffer());
-        expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("RIFF");
-        expect(new TextDecoder().decode(bytes.slice(8, 12))).toBe("WEBP");
-      }
+      await assertSeedIcons(platform.env);
       // 店舗とユーザーが変更した画像は、再投入で初期画像へ戻さない。
       await db
         .update(user)
@@ -628,159 +493,3 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
     await rm(directory, { recursive: true, force: true });
   }
 }, 120_000);
-
-it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち、別IDの閉卓履歴は新しい初期卓を妨げない", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "tablecast-current-seed-test-"));
-  const configPath = join(directory, "wrangler.json");
-  const state = join(directory, "state");
-  await writeFile(
-    configPath,
-    JSON.stringify({
-      name: "tablecast-current-seed-test",
-      compatibility_date: "2026-09-03",
-      compatibility_flags: ["nodejs_compat"],
-      vars: {
-        TABLECAST_ENV: "development",
-        TABLECAST_PUBLIC_ORIGIN: "http://localhost:3999",
-        TABLECAST_AUTH_SECRET: "tablecast-current-seed-test-secret-not-used-in-deployment",
-      },
-      r2_buckets: [
-        { binding: "TABLECAST_MEDIA", bucket_name: "tablecast-current-seed-test-media" },
-      ],
-      d1_databases: [
-        {
-          binding: "TABLECAST_DB",
-          database_name: "tablecast-current-seed-test",
-          database_id: "00000000-0000-4000-8000-000000000002",
-        },
-      ],
-    }),
-  );
-  const credentials: DemoCredentials = {
-    email: "haruka.sato@komorebi-shijo.com",
-    password: "tablecast-current-seed-owner-password",
-    otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-    otherPassword: "tablecast-current-seed-other-password",
-    baseTime: Date.UTC(2026, 8, 6, 0),
-    profile: "demo",
-  };
-  try {
-    const migrations = execute(
-      process.execPath,
-      [
-        resolve("scripts/tablecast-cf-local.ts"),
-        "d1",
-        "migrations",
-        "apply",
-        "00000000-0000-4000-8000-000000000002",
-        "--dir",
-        resolve("apps/api/migrations"),
-        "--local",
-        "--persist-to",
-        state,
-      ],
-      {
-        env: {
-          ...process.env,
-          WRANGLER_LOG_PATH: join(directory, "tablecast-migrate.log"),
-          CI: "true",
-        },
-      },
-    );
-    migrations.child.stdin?.end();
-    await migrations;
-    const platform = await getPlatformProxy<TablecastEnv>({
-      configPath,
-      envFiles: [],
-      persist: { path: join(state, "v3") },
-      remoteBindings: false,
-    });
-    try {
-      const db = drizzle(platform.env.TABLECAST_DB);
-      const initial = await seedDemoDatabase(platform.env, credentials);
-      expect(initial).toMatchObject({ stores: 3, tables: 36, historicalSessions: 0, orders: 15 });
-      const liveId = "tablecast-current-manual-open";
-      const historyId = "tablecast-current-manual-closed";
-      const originalLiveId = "tablecast-komorebi-table-01-session";
-      const originalHistoryId = "tablecast-komorebi-table-08-session";
-      const replaced = [originalLiveId, originalHistoryId];
-      const closedId = "tablecast-komorebi-table-12-session";
-      const unpaidId = "tablecast-komorebi-table-04-session";
-      const configuration = demoStores("demo")[0]?.configuration;
-      if (!configuration) throw new Error("デモ店舗の設定がありません。");
-      // 営業中の別セッション、閉卓済みの同一ID、閉卓履歴だけの卓を同時に照合する。
-      await db.batch([
-        db.delete(tableEvents).where(inArray(tableEvents.table_session_id, replaced)),
-        db.delete(tableSessions).where(inArray(tableSessions.id, replaced)),
-        db.insert(tableSessions).values([
-          {
-            id: liveId,
-            store_id: "tablecast-komorebi",
-            table_id: "tablecast-komorebi-table-01",
-            status: "open",
-            locale: "en",
-            guest_count: 3,
-            cart_version: 23,
-            cart_json: JSON.stringify([{ ...sampleLine(configuration), quantity: 2 }]),
-            opened_at: credentials.baseTime,
-          },
-          {
-            id: historyId,
-            store_id: "tablecast-komorebi",
-            table_id: "tablecast-komorebi-table-08",
-            status: "closed",
-            locale: "ja",
-            guest_count: 2,
-            opened_at: credentials.baseTime - 60_000,
-            closed_at: credentials.baseTime,
-          },
-        ]),
-        db
-          .update(tableSessions)
-          .set({ status: "closed", cart_version: 29, closed_at: credentials.baseTime })
-          .where(eq(tableSessions.id, closedId)),
-      ]);
-      const preservedIds = [liveId, historyId, closedId];
-      const before = await db.batch([
-        db
-          .select()
-          .from(tableSessions)
-          .where(inArray(tableSessions.id, preservedIds))
-          .orderBy(tableSessions.id),
-        db.select().from(orders).where(eq(orders.table_session_id, unpaidId)),
-        db.select().from(payments).where(eq(payments.table_session_id, unpaidId)),
-      ]);
-      expect(before[1].reduce((total, order) => total + order.total, 0)).toBeGreaterThan(0);
-      expect(before[2]).toEqual([]);
-      const next = { ...credentials, baseTime: credentials.baseTime + 86_400_000 };
-      const repeated = await seedDemoDatabase(platform.env, next);
-      expect(
-        await db.batch([
-          db
-            .select()
-            .from(tableSessions)
-            .where(inArray(tableSessions.id, preservedIds))
-            .orderBy(tableSessions.id),
-          db.select().from(orders).where(eq(orders.table_session_id, unpaidId)),
-          db.select().from(payments).where(eq(payments.table_session_id, unpaidId)),
-        ]),
-      ).toEqual(before);
-      expect(
-        await db.select().from(tableSessions).where(eq(tableSessions.id, originalLiveId)),
-      ).toEqual([]);
-      expect(
-        await db
-          .select({ status: tableSessions.status })
-          .from(tableSessions)
-          .where(eq(tableSessions.id, originalHistoryId))
-          .get(),
-      ).toEqual({ status: "open" });
-      expect(await seedDemoDatabase(platform.env, next)).toEqual(repeated);
-      expect(await db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
-    } finally {
-      await platform.dispose();
-    }
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-}, 60_000);

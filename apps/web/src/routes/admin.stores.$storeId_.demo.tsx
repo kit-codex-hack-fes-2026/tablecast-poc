@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { DemoPage, DemoPending } from "../features/store/demo";
-import { demoOptions } from "../features/store/demo-query";
-import { storesOptions } from "../features/store/store-query";
+import { DemoPage } from "../features/demo/demo";
+import { DemoPending } from "../features/demo/demo-pending";
+import { demoOptions } from "../features/demo/demo-query";
+import { findStore } from "../features/store/store-query";
 export const Route = createFileRoute("/admin/stores/$storeId_/demo")({
   staticData: { document: { title: "demo_title", description: "head_demo_description" } },
   validateSearch: z.object({
@@ -12,11 +13,11 @@ export const Route = createFileRoute("/admin/stores/$storeId_/demo")({
   }),
   loaderDeps: ({ search }) => ({ demoId: search.demoId }),
   loader: async ({ context, params, deps }) => {
-    const stores = await context.queryClient.ensureQueryData(storesOptions);
+    const store = await findStore(context.queryClient, params.storeId);
     if (deps.demoId)
       await context.queryClient.ensureQueryData(demoOptions(params.storeId, deps.demoId));
     return {
-      document: { store: stores.stores.find((store) => store.id === params.storeId)?.name },
+      document: { store: store?.name },
     };
   },
   pendingComponent: Pending,

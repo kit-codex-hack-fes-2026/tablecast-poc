@@ -6,17 +6,17 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import type { Billing } from "./billing-query";
 import { LocaleProvider } from "../../i18n/locale";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
-import { billingSearchSchema } from "./billing-model";
-import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
-import { BillingPage } from "./billing-page";
-import { billingFixture } from "./billing-fixture";
-import type { Billing } from "./billing-query";
 import "../../styles.css";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
+import { billingFixture } from "./billing-fixture";
+import { billingSearchSchema } from "./billing-model";
+import { BillingPage } from "./billing-page";
 let client: QueryClient;
 const initialViewport = { width: 1024, height: 768 };
 afterEach(async () => {
@@ -25,7 +25,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   await page.viewport(initialViewport.width, initialViewport.height);
 });
-async function show(data: Billing = billingFixture, locale: "ja" | "en" = "ja", fail = false) {
+async function show(data: Billing = billingFixture, locale: "en" | "ja" = "ja", fail = false) {
   let failed = false;
   const stores = [
     {

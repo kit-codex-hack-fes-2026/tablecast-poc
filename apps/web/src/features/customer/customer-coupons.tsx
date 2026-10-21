@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
-import { CouponCard } from "../../components/coupon-card";
 import { ActionFeedback } from "../../components/action-feedback";
+import { CouponCard } from "../../components/coupon-card";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
@@ -9,7 +9,7 @@ import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { customerCouponsOptions, customerExchangesOptions } from "./customer-coupons-query";
 
-export function CustomerCoupons({ storeId, sessionId }: { storeId: string; sessionId?: string }) {
+export function CustomerCoupons({ storeId, sessionId }: { sessionId?: string; storeId: string }) {
   const { t } = useI18n();
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ["tablecast-customer", storeId] });
@@ -30,7 +30,7 @@ export function CustomerCoupons({ storeId, sessionId }: { storeId: string; sessi
   );
 }
 
-type CouponCollectionProps = { storeId: string; onChanged: () => Promise<void> };
+type CouponCollectionProps = { onChanged: () => Promise<void>; storeId: string };
 
 function OwnedCoupons({
   storeId,
@@ -56,18 +56,9 @@ function OwnedCoupons({
       <h2 id={title} className="text-xl font-semibold">
         {t("customer_coupons_owned")}
       </h2>
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {(coupons.length > 0 || request.status !== "idle") && (
-        <ActionFeedback
-          pending={request.isPending}
-          error={request.error}
-          success={request.isSuccess}
-          successMessage={t("coupon_requested")}
-        />
+        <ActionFeedback mutation={request} successMessage={t("coupon_requested")} />
       )}
       {query.isPending && <LoadingState />}
       {query.isSuccess && !coupons.length && <p>{t("customer_coupons_empty")}</p>}
@@ -110,7 +101,7 @@ function ExchangeCoupons({ storeId, onChanged }: CouponCollectionProps) {
   const rules = query.data?.pages.flatMap((page) => page.rules) ?? [];
   const keys = useRef<Record<string, string>>({});
   const exchange = useMutation({
-    mutationFn: ({ ruleId, idempotencyKey }: { ruleId: string; idempotencyKey: string }) =>
+    mutationFn: ({ ruleId, idempotencyKey }: { idempotencyKey: string; ruleId: string }) =>
       parseResponse(
         rpc.api.customer.stores[":storeId"].coupons.exchange.$post({
           param: { storeId },
@@ -127,18 +118,9 @@ function ExchangeCoupons({ storeId, onChanged }: CouponCollectionProps) {
       <h2 id={title} className="text-xl font-semibold">
         {t("coupon_exchange")}
       </h2>
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {(rules.length > 0 || exchange.status !== "idle") && (
-        <ActionFeedback
-          pending={exchange.isPending}
-          error={exchange.error}
-          success={exchange.isSuccess}
-          successMessage={t("account_saved")}
-        />
+        <ActionFeedback mutation={exchange} successMessage={t("account_saved")} />
       )}
       {query.isPending && <LoadingState />}
       {query.isSuccess && !rules.length && <p>{t("customer_exchanges_empty")}</p>}

@@ -1,10 +1,10 @@
-import { demoStores } from "./tablecast-fixtures";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getPlatformProxy } from "wrangler";
 import { expect, it, vi } from "vitest";
-import { demoImageKey, imageKey, seedMenuImages } from "./tablecast-seed-media";
+import { getPlatformProxy } from "wrangler";
+import { demoStores } from "./tablecast-fixtures.ts";
+import { demoImageKey, imageKey, seedMenuImages } from "./tablecast-seed-media.ts";
 it("画像内容が同じならキーを再利用し、差し替えた内容だけ別キーになる", () => {
   // Given: 同じ内容と変更した内容の画像。
   const original = new TextEncoder().encode("tablecast-image");
@@ -46,7 +46,7 @@ it("実R2で遅い画像を待たず4枠を使い、再配備・欠損復旧・�
         key: string,
         bytes: Uint8Array,
         options: R2PutOptions & { onlyIf: R2Conditional },
-      ) => Promise<R2Object | null>
+      ) => Promise<null | R2Object>
     >(async (key, bytes, options) => {
       const first = holdFirst;
       holdFirst = false;

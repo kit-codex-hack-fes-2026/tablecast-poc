@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { CartLines } from "./cart-lines";
-import { table, catalog } from "../../.storybook/tablecast-fixtures";
-import { fn } from "storybook/test";
-import { useState } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "./ui/button";
+import { useState } from "react";
+import { fn } from "storybook/test";
+import { catalog, table } from "../../.storybook/tablecast-fixtures";
 import { useI18n } from "../i18n/locale";
+import { CartLines } from "./cart-lines";
+import { Button } from "./ui/button";
 const meta = {
   title: "共通表示/CartLines",
   component: CartLines,

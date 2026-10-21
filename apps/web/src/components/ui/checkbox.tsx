@@ -1,7 +1,7 @@
-import { controlMotion } from "./motion-variants";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
-import { cn } from "tailwind-variants";
 import { Check } from "lucide-react";
+import { cn } from "tailwind-variants";
+import { controlMotion } from "./motion-variants";
 
 /**
  * 独立した真偽値、複数選択に使う。

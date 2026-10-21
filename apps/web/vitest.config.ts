@@ -1,9 +1,9 @@
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
-import { playwright } from "@vitest/browser-playwright";
-import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vitest/config";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -76,8 +76,10 @@ export default defineConfig({
                 provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
                 include: [
                   "src/features/shell/admin-shell.browser.test.tsx",
-                  "src/features/store/floor-timeline.browser.test.tsx",
+                  "src/features/floor/floor-timeline.browser.test.tsx",
+                  "src/features/floor/floor-calendar-layout.browser.test.tsx",
                   "src/features/kiosk/voice-panel.browser.test.tsx",
+                  "src/features/kiosk/voice-panel-video.browser.test.tsx",
                   "src/components/motion-system.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
                 ],
@@ -86,9 +88,10 @@ export default defineConfig({
                 browser: "webkit",
                 provider: playwright({ contextOptions: { permissions: ["camera"] } }),
                 include: [
-                  "src/features/store/device-qr-reader.browser.test.tsx",
-                  "src/features/store/devices.browser.test.tsx",
-                  "src/features/store/floor-timeline.browser.test.tsx",
+                  "src/features/devices/device-qr-reader.browser.test.tsx",
+                  "src/features/devices/devices.browser.test.tsx",
+                  "src/features/floor/floor-timeline.browser.test.tsx",
+                  "src/features/floor/floor-calendar-layout.browser.test.tsx",
                   "src/features/shell/admin-shell.browser.test.tsx",
                   "src/features/shell/sidebar-preferences.browser.test.tsx",
                   "src/components/month-picker.browser.test.tsx",
@@ -99,6 +102,9 @@ export default defineConfig({
                   "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",
+                  "src/features/kiosk/kiosk-layout.browser.test.tsx",
+                  "src/features/kiosk/kiosk-voice.browser.test.tsx",
+                  "src/features/kiosk/kiosk-realtime.browser.test.tsx",
                   "src/features/kiosk/local-camera.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
                   "src/components/game-frame.browser.test.tsx",

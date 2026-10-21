@@ -2,12 +2,12 @@ import { execFile } from "node:child_process";
 import { chmod, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
-import { bootstrapOptions, bootstrapTarget, readBootstrapInput } from "./tablecast-bootstrap";
-import { demoStores } from "./tablecast-fixtures";
+import { bootstrapOptions, bootstrapTarget, readBootstrapInput } from "./tablecast-bootstrap.ts";
+import { demoStores } from "./tablecast-fixtures.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execute = promisify(execFile);

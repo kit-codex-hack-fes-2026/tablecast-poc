@@ -1,17 +1,18 @@
-import * as Disclosure from "../../components/ui/disclosure";
-import { calendarDate } from "../../i18n/format";
 import { barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import { useId, useMemo, useState } from "react";
-import { Button } from "../../components/ui/button";
 import { AudioLines, CalendarDays, Coins, TableProperties } from "lucide-react";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import { useId, useMemo, useState } from "react";
 import type { useCollectionSearch } from "../shell/collection-search";
-import { useI18n } from "../../i18n/locale";
 import type { Billing } from "./billing-query";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
+import { Button } from "../../components/ui/button";
+import * as Disclosure from "../../components/ui/disclosure";
+import { calendarDate } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
 
 const formats = {
   ja: {
@@ -31,7 +32,7 @@ const formats = {
     }),
   },
 };
-function formatValue(amount: number, charge: boolean, locale: "ja" | "en", minutes: string) {
+function formatValue(amount: number, charge: boolean, locale: "en" | "ja", minutes: string) {
   if (!charge) return `${formats[locale].number.format(amount)} ${minutes}`;
   const belowPrecision = Math.abs(amount) > 0 && Math.abs(amount) < 0.01;
   const prefix = belowPrecision ? (amount < 0 ? "> " : "< ") : "";
@@ -43,12 +44,12 @@ export function BillingUsageChart({
   data,
   collection,
 }: {
-  data: Billing;
   collection?: ReturnType<typeof useCollectionSearch>;
+  data: Billing;
 }) {
   const { t, locale } = useI18n();
   const id = useId();
-  const [metric, setMetric] = useState<"voice" | "charge">("voice");
+  const [metric, setMetric] = useState<"charge" | "voice">("voice");
   const charges = data.daily.flatMap((row) => ("chargeMicros" in row ? [row.chargeMicros] : []));
   const canViewCharge =
     data.canManage && data.financial !== null && charges.length === data.daily.length;
@@ -149,14 +150,14 @@ function DailyTable({
   format,
   collection,
 }: {
-  data: { day: number; amount: number }[];
-  label: string;
   charge: boolean;
-  format: (amount: number) => string;
   collection?: ReturnType<typeof useCollectionSearch>;
+  data: { amount: number; day: number }[];
+  format: (amount: number) => string;
+  label: string;
 }) {
   const { t, locale } = useI18n();
-  const columns: DataTableColumn<{ day: number; amount: number }>[] = [
+  const columns: DataTableColumn<{ amount: number; day: number }>[] = [
     {
       accessorKey: "day",
       header: t("billing_daily_day"),
@@ -189,14 +190,14 @@ function DailyPlot({
   format,
   charge,
 }: {
-  daily: Billing["daily"];
-  values: number[];
-  label: string;
-  format: (amount: number) => string;
   charge: boolean;
+  daily: Billing["daily"];
+  format: (amount: number) => string;
+  label: string;
+  values: number[];
 }) {
   const { t, locale } = useI18n();
-  const [focused, setFocused] = useState<string | null>(null);
+  const [focused, setFocused] = useState<null | string>(null);
   const definition = useMemo(() => {
     const rows = daily.map((row, index) => ({
       day: calendarDate(row.day, locale),
@@ -246,9 +247,9 @@ function DailyPlot({
       />
       {daily.length > 0 && (
         <p className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span>{calendarDate(daily[0].day, locale)}</span>
+          <span>{calendarDate(daily.at(0)?.day ?? "", locale)}</span>
           <span>
-            {locale === "ja" ? "から" : "to"} {calendarDate(daily[daily.length - 1].day, locale)}
+            {locale === "ja" ? "から" : "to"} {calendarDate(daily.at(-1)?.day ?? "", locale)}
           </span>
         </p>
       )}

@@ -1,10 +1,10 @@
 import { expect, type Request } from "@playwright/test";
-import { test } from "./support/test";
-import { credentials } from "./support/runtime";
-import { approveGuestDevice, signInStaff } from "./support/session";
-import ja from "../messages/ja.json" with { type: "json" };
 import { adminStateSchema, customerConsentVersion, tableStateSchema } from "@tablecast/api/schema";
 import { z } from "zod";
+import ja from "../messages/ja.json" with { type: "json" };
+import { credentials } from "./support/runtime";
+import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ viewport: { width: 390, height: 844 }, trace: "off", serviceWorkers: "block" });
 

@@ -1,15 +1,15 @@
-import { DateTime } from "./date-time";
-import type { z } from "zod";
 import type { couponRuleSchema } from "@tablecast/api/schema";
 import type { ReactNode } from "react";
-import { ProductImage } from "./product-image";
+import type { z } from "zod";
 import { useI18n } from "../i18n/locale";
+import { DateTime } from "./date-time";
+import { ProductImage } from "./product-image";
 export function CouponCard({
   rules,
   children,
 }: {
-  rules: z.infer<typeof couponRuleSchema>;
   children?: ReactNode;
+  rules: z.infer<typeof couponRuleSchema>;
 }) {
   const { t, locale } = useI18n();
   return (

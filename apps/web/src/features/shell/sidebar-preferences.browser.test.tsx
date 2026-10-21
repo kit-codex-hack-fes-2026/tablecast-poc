@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -7,14 +6,15 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { LocaleProvider } from "../../i18n/locale";
 import { PanelLayoutProvider } from "../../lib/panel-layout";
-import { IntegrationSetup } from "../account/integration-setup";
-import { AdminShell } from "./admin-shell";
 import "../../styles.css";
+import { IntegrationSetup } from "../account/integration-setup";
+import { StoreAdminShell } from "../store/admin-shell";
 
 const stores = [
   {
@@ -70,27 +70,27 @@ async function show(initial = "/admin/stores/tablecast-nav-first/floor", userId 
     getParentRoute: () => root,
     path: "/admin/stores/$storeId/floor",
     component: () => (
-      <AdminShell tab="live" storeId={floor.useParams().storeId}>
+      <StoreAdminShell tab="live" storeId={floor.useParams().storeId}>
         <h1>フロア</h1>
-      </AdminShell>
+      </StoreAdminShell>
     ),
   });
   const home = createRoute({
     getParentRoute: () => root,
     path: "/admin/stores/$storeId",
     component: () => (
-      <AdminShell tab="live" storeId={home.useParams().storeId}>
+      <StoreAdminShell tab="live" storeId={home.useParams().storeId}>
         <h1>店舗ホーム</h1>
-      </AdminShell>
+      </StoreAdminShell>
     ),
   });
   const manual = createRoute({
     getParentRoute: () => root,
     path: "/account/integrations/manual",
     component: () => (
-      <AdminShell tab="mcp">
+      <StoreAdminShell tab="mcp">
         <h1>接続の手順</h1>
-      </AdminShell>
+      </StoreAdminShell>
     ),
   });
   const plugin = createRoute({

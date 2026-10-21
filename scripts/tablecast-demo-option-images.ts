@@ -1,4 +1,4 @@
-import { demoImageKey } from "./tablecast-seed-media";
+import { demoImageKey } from "./tablecast-seed-media.ts";
 
 // 写真で比べる選択肢だけを紐付ける。温度・辛さ・なし等は画像を持たない。
 const optionImageFiles: Readonly<Partial<Record<string, string>>> = {

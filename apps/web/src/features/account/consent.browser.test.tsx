@@ -7,15 +7,15 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider } from "../../i18n/locale";
+import { page } from "vitest/browser";
 import { MotionProvider } from "../../components/motion-provider";
+import { LocaleProvider } from "../../i18n/locale";
 import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
-import { sessionOptions, type loadInitial } from "../../lib/session-query";
+import { type loadInitial, sessionOptions } from "../../lib/session-query";
+import "../../styles.css";
 import { storesOptions } from "../store/store-query";
 import { Consent } from "./consent";
-import "../../styles.css";
 
 let client: QueryClient;
 afterEach(async () => {

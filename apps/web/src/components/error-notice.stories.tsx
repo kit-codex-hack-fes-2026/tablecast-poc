@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { ErrorNotice } from "./error-notice";
-import { waitFor, fn, expect, userEvent, within } from "storybook/test";
 const meta = {
   title: "共通表示/ErrorNotice",
   component: ErrorNotice,

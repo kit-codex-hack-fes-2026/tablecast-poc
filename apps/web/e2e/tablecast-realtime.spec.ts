@@ -1,7 +1,7 @@
-import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ serviceWorkers: "block" });
 

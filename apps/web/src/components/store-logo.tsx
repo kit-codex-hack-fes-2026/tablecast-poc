@@ -6,9 +6,9 @@ export function StoreLogo({
   width = 96,
   height = 40,
 }: {
-  logo?: ThemeImage | null;
-  width?: number;
   height?: number;
+  logo?: null | ThemeImage;
+  width?: number;
 }) {
   const { locale } = useI18n();
   const [failed, setFailed] = useState<string>();

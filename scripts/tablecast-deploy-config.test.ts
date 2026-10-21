@@ -1,15 +1,15 @@
 import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
-import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
-import { webCloudflareConfig } from "../apps/web/cloudflare.config";
-import { z } from "zod";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { z } from "zod";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config.ts";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
 import {
   bindDeploymentDatabase,
   deploymentOptions,
-  optionsSchema,
   deploymentSecrets,
   deploymentTarget,
-} from "./tablecast-deploy-config";
+  optionsSchema,
+} from "./tablecast-deploy-config.ts";
 
 function deploymentConfigs(...args: Parameters<typeof deploymentOptions>) {
   const options = deploymentOptions(...args);

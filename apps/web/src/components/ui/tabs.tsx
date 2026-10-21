@@ -88,4 +88,3 @@ export function List({ className, ...props }: TabsPrimitive.List.Props) {
     />
   );
 }
-export const Indicator = TabsPrimitive.Indicator;

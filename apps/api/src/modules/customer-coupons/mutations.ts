@@ -1,12 +1,9 @@
-import { and, eq, exists, sql } from "drizzle-orm";
-import {
-  customerCouponEvents,
-  customerCoupons,
-  payments,
-  tableSessions,
-} from "../../db/business-schema";
+import { and, eq, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
+import { customerCouponEvents, customerCoupons } from "../../db/rewards-schema";
+import { payments, tableSessions } from "../../db/table-schema";
+import { mutationGate } from "../tables/mutations";
 export function couponEvent(
   services: ApiServices,
   storeId: string,
@@ -28,20 +25,6 @@ export function couponEvent(
       })
       .from(customerCoupons)
       .where(and(eq(customerCoupons.storeId, storeId), eq(customerCoupons.mutationId, token))),
-  );
-}
-export function billingGate(services: ApiServices, actor: Actor, token: string) {
-  return exists(
-    services.db
-      .select({ id: tableSessions.id })
-      .from(tableSessions)
-      .where(
-        and(
-          eq(tableSessions.id, actor.tableSessionId ?? ""),
-          eq(tableSessions.store_id, actor.storeId),
-          eq(tableSessions.mutation_id, token),
-        ),
-      ),
   );
 }
 export function couponPayment(
@@ -67,7 +50,7 @@ export function couponPayment(
       })
       .from(tableSessions)
       .where(
-        and(eq(tableSessions.id, actor.tableSessionId ?? ""), billingGate(services, actor, token)),
+        and(eq(tableSessions.id, actor.tableSessionId ?? ""), mutationGate(services, actor, token)),
       ),
   );
 }

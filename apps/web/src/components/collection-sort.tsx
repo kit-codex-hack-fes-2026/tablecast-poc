@@ -10,11 +10,11 @@ export function CollectionSort({
   disabled,
   label,
 }: {
-  options: { value: string; label: string; icon: LucideIcon }[];
-  value: string;
-  onValueChange: (value: string) => void;
   disabled?: boolean;
   label?: string;
+  onValueChange: (value: string) => void;
+  options: { icon: LucideIcon; label: string; value: string }[];
+  value: string;
 }) {
   const { t } = useI18n();
   const selected = options.find((option) => option.value === value) ?? options[0];

@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { Serwist } from "@serwist/window";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useRouterState } from "@tanstack/react-router";
-import { Serwist } from "@serwist/window";
+import { useEffect } from "react";
 import { useI18n } from "../i18n/locale";
 import { canReloadPwaClient } from "../lib/pwa-update";
 
@@ -15,7 +15,7 @@ export function Pwa() {
     let disposed = false;
     let reloading = false;
     let locked = false;
-    let preparedController: ServiceWorker | null | undefined;
+    let preparedController: null | ServiceWorker | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const release = () => {
       clearTimeout(timer);
@@ -28,15 +28,17 @@ export function Pwa() {
       router.state.status === "idle" &&
       !document.querySelector('[data-pwa-blocked="true"]') &&
       [...document.forms].every((form) => form.querySelector("[data-pwa-blocked]"));
-    const message = (event: MessageEvent) => {
-      if (event.data?.type === "TABLECAST_CANCEL_UPDATE") {
+    const message = (event: MessageEvent<unknown>) => {
+      const data = event.data;
+      if (!data || typeof data !== "object" || !("type" in data) || typeof data.type !== "string")
+        return;
+      if (data.type === "TABLECAST_CANCEL_UPDATE") {
         preparedController = undefined;
         release();
       }
-      if (!["TABLECAST_CHECK_UPDATE", "TABLECAST_PREPARE_UPDATE"].includes(event.data?.type))
-        return;
+      if (!["TABLECAST_CHECK_UPDATE", "TABLECAST_PREPARE_UPDATE"].includes(data.type)) return;
       const ready = readyToUpdate();
-      if (ready && event.data.type === "TABLECAST_PREPARE_UPDATE") {
+      if (ready && data.type === "TABLECAST_PREPARE_UPDATE") {
         preparedController = navigator.serviceWorker.controller;
         locked = true;
         document.body.inert = true;

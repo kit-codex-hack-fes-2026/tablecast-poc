@@ -1,13 +1,13 @@
-import { MenuBanners } from "./menu-banners";
-import { StoreLogo } from "./store-logo";
-import { tv } from "tailwind-variants";
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
-import { useState } from "react";
-import { ProductImage } from "./product-image";
-import { Button } from "./ui/button";
+import { memo, useState } from "react";
+import { tv } from "tailwind-variants";
 import { money } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
+import { MenuBanners } from "./menu-banners";
+import { ProductImage } from "./product-image";
+import { StoreLogo } from "./store-logo";
+import { Button } from "./ui/button";
 
 const productGrid = tv({
   base: "grid grid-cols-1 @xs/tablecast-menu:grid-cols-2 @2xl/tablecast-menu:grid-cols-3",
@@ -23,7 +23,7 @@ const productGrid = tv({
  * 商品名・価格・売切をAPIから表示し、選んだ商品はfeatureのカスタマイズへ進める。
  * 店舗の自由な画像案内はMenuBannersで補う。
  */
-export function ProductMenu({
+export const ProductMenu = memo(function ProductMenu({
   catalog,
   onChoose,
   productIds,
@@ -161,4 +161,4 @@ export function ProductMenu({
       </div>
     </div>
   );
-}
+});

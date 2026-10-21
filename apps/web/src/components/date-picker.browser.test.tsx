@@ -1,14 +1,14 @@
 import { Field } from "@base-ui/react/field";
 import { useRef, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
 import { LocaleProvider, useI18n } from "../i18n/locale";
 import { calendarInputValue } from "../lib/calendar-input";
+import "../styles.css";
 import { DatePicker } from "./date-picker";
 import { DateTimePicker } from "./date-time-picker";
 import { Button } from "./ui/button";
-import "../styles.css";
 
 afterEach(cleanup);
 it.each(["ja", "en"] as const)(

@@ -1,10 +1,10 @@
-import { configurationSchema, type CastInstruction } from "../src/schema";
 import { exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { member, session } from "../src/db/auth-schema";
-import { stores } from "../src/db/business-schema";
-import { fixtureDb } from "./database-fixture";
 import { expect, it } from "vitest";
+import { member, session } from "../src/db/identity-schema";
+import { stores } from "../src/db/table-schema";
+import { type CastInstruction, configurationSchema } from "../src/schema";
+import { fixtureDb } from "./database-fixture";
 import { configuration, setupFixture } from "./fixture";
 
 it("初期取得は既存の店舗一覧とフロア状態を同じ認証で返す", async () => {
@@ -16,9 +16,9 @@ it("初期取得は既存の店舗一覧とフロア状態を同じ認証で返�
   const response = await get(`/api/admin/initial?storeId=${staff.storeId}`);
   expect(response.status).toBe(200);
   const initial = await response.json<{
+    floor: unknown;
     session: { user: { id: string } };
     stores: unknown;
-    floor: unknown;
   }>();
   expect(initial.session.user.id).toBe(staff.userId);
   expect(initial.stores).toEqual(
@@ -33,7 +33,13 @@ it("未認証の初期取得は店舗とフロアを返さない", async () => {
     new Request("http://localhost:3000/api/admin/initial?storeId=tablecast-store"),
   );
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ session: null, stores: [], floor: null, catalog: null });
+  expect(await response.json()).toEqual({
+    session: null,
+    stores: [],
+    floor: null,
+    catalog: null,
+    home: null,
+  });
 });
 
 it.each(["", "&view=catalog"])("初期取得でも所属しない店舗は拒否する %s", async (view) => {
@@ -88,7 +94,13 @@ it("セッション更新Cookieを返し、取消後の同じCookieでは商品�
   expect(await refreshed.json()).toMatchObject({ catalog: { storeId: staff.storeId } });
   await fixtureDb.delete(session).where(eq(session.userId, staff.userId));
   const revoked = await get();
-  expect(await revoked.json()).toEqual({ session: null, stores: [], floor: null, catalog: null });
+  expect(await revoked.json()).toEqual({
+    session: null,
+    stores: [],
+    floor: null,
+    catalog: null,
+    home: null,
+  });
 });
 
 it("既定フロアの初期取得は所属店舗を選び、セッションだけの初期取得はフロアを読まない", async () => {
@@ -101,11 +113,47 @@ it("既定フロアの初期取得は所属店舗を選び、セッションだ�
     );
   const initial = await (
     await get("?defaultFloor=true")
-  ).json<{ floor: { store: { id: string } } }>();
+  ).json<{ floor: { store: { id: string } }; home: unknown }>();
   expect(initial.floor.store.id).toBe(staff.storeId);
+  expect(initial.home).toBeNull();
   expect(await (await get("")).json()).toMatchObject({ floor: null });
   await fixtureDb.delete(member).where(eq(member.userId, staff.userId));
   expect(await (await get("?defaultFloor=true")).json()).toMatchObject({ stores: [], floor: null });
+});
+
+it.each(["owner", "admin", "member"])(
+  "既定フロアとホームを明示した初期取得は%sの権限で一括取得する",
+  async (role) => {
+    const { cookie, staff } = await setupFixture();
+    await fixtureDb.update(member).set({ role }).where(eq(member.userId, staff.userId));
+    const response = await exports.default.fetch(
+      new Request("http://localhost:3000/api/admin/initial?defaultFloor=true&view=home", {
+        headers: { Cookie: cookie },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      session: { user: { id: staff.userId } },
+      floor: { store: { id: staff.storeId } },
+      catalog: null,
+      home:
+        role === "member" ? null : { storeId: staff.storeId, hasProducts: true, hasDevices: true },
+    });
+  },
+);
+
+it.each([
+  "view=home",
+  "defaultFloor=true&view=catalog",
+  "storeId=tablecast-store&defaultFloor=true&view=home",
+])("店舗指定が曖昧な初期表示の組合せを拒否する %s", async (query) => {
+  const { cookie } = await setupFixture();
+  const response = await exports.default.fetch(
+    new Request(`http://localhost:3000/api/admin/initial?${query}`, {
+      headers: { Cookie: cookie },
+    }),
+  );
+  expect(response.status).toBe(400);
 });
 
 it.each([undefined, "0", "1"])(

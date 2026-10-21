@@ -1,46 +1,15 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import type { InferResponseType } from "../../lib/api";
 import { parseResponse, rpc } from "../../lib/api";
-export const loadStores = (signal?: AbortSignal) =>
-  parseResponse(rpc.api.admin.stores.$get({}, { init: { signal } }));
+export type Store = InferResponseType<typeof rpc.api.admin.stores.$get, 200>["stores"][number];
 export const storesOptions = queryOptions({
   queryKey: ["tablecast-stores"],
-  queryFn: ({ signal }) => loadStores(signal),
+  queryFn: ({ signal }) => parseResponse(rpc.api.admin.stores.$get({}, { init: { signal } })),
 });
-export const floorOptions = (storeId: string) =>
-  queryOptions({
-    queryKey: ["tablecast-admin", storeId],
-    queryFn: ({ signal }) =>
-      parseResponse(
-        rpc.api.admin.stores[":storeId"].$get({ param: { storeId } }, { init: { signal } }),
-      ),
-    refetchInterval: 30_000,
-  });
-export const loadDevices = (storeId: string, signal?: AbortSignal) =>
-  parseResponse(
-    rpc.api.admin.stores[":storeId"].devices.$get({ param: { storeId } }, { init: { signal } }),
-  );
-export const devicesOptions = (storeId: string) =>
-  queryOptions({
-    queryKey: ["tablecast-devices", storeId],
-    queryFn: ({ signal }) => loadDevices(storeId, signal),
-  });
-export const draftsOptions = (storeId: string) =>
-  queryOptions({
-    queryKey: ["tablecast-drafts", storeId],
-    queryFn: ({ signal }) =>
-      parseResponse(
-        rpc.api.admin.stores[":storeId"].drafts.$get({ param: { storeId } }, { init: { signal } }),
-      ),
-  });
-export const tableDetailOptions = (storeId: string, tableId: string) =>
-  queryOptions({
-    queryKey: ["tablecast-table-detail", storeId, tableId],
-    queryFn: ({ signal }) =>
-      parseResponse(
-        rpc.api.admin.stores[":storeId"].tables[":id"].$get(
-          { param: { storeId, id: tableId } },
-          { init: { signal } },
-        ),
-      ),
-    refetchInterval: (query) => (query.state.data?.status === "closed" ? false : 5000),
-  });
+
+/** loader用の初回lookup。画面の背景更新はStoreShellのquery購読へ任せる。 */
+export const findStore = async (client: QueryClient, storeId: string) =>
+  (await client.ensureQueryData(storesOptions)).stores.find((store) => store.id === storeId);
+
+export const isStoreManager = (store: Store | undefined): store is Store =>
+  store !== undefined && (store.role === "owner" || store.role === "admin");

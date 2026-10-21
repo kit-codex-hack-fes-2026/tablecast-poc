@@ -4,9 +4,7 @@ import { useI18n } from "../i18n/locale";
 import { validClock } from "../lib/calendar-input";
 import { DatePicker, type DatePickerProps } from "./date-picker";
 import { Input } from "./ui/input";
-
-/** 店舗の壁時計日時を保つ。タイムゾーン変換は既存フォーム送信の責務。 */
-function useDateTimeInput({ value, onValueChange, min, max, ...props }: DatePickerProps) {
+export function DateTimePicker({ value, onValueChange, min, max, ...props }: DatePickerProps) {
   const { t } = useI18n();
   const [draft, setDraft] = useState(() => ({
     source: value,
@@ -33,48 +31,45 @@ function useDateTimeInput({ value, onValueChange, min, max, ...props }: DatePick
     setDraft({ source: next, date: nextDate, clock: nextClock });
     onValueChange(next);
   }
-  return { t, date, clock, clockInput, clockId, clockError, showError, setShowError, update };
-}
-
-export function DateTimePicker({ value, onValueChange, min, max, ...props }: DatePickerProps) {
-  const { t, date, clock, clockInput, clockId, clockError, showError, setShowError, update } =
-    useDateTimeInput({ value, onValueChange, min, max, ...props });
-  return (
-    <div className="grid min-w-0 gap-3">
-      <DatePicker
-        {...props}
-        value={date}
-        min={min?.slice(0, 10)}
-        max={max?.slice(0, 10)}
-        onValueChange={(next) => update(next, clock)}
-      />
-      <Field.Root className="flex items-center gap-3">
-        <Field.Label htmlFor={clockId} className="text-sm text-muted-foreground">
-          <span className="sr-only">{props.label}: </span>
-          {t("calendar_time")}
-        </Field.Label>
-        <Input
-          id={clockId}
-          ref={clockInput}
-          className="w-28 tabular-nums"
-          type="text"
-          value={clock}
-          aria-label={`${props.label}: ${t("calendar_time")}`}
-          required={props.required}
-          disabled={props.disabled}
-          readOnly={props.readOnly}
-          aria-invalid={showError && Boolean(clockError)}
-          aria-describedby={showError && clockError ? `${clockId}-error` : undefined}
-          onChange={(event) => update(date, event.target.value)}
-          onBlur={props.onBlur}
-          onInvalid={() => setShowError(true)}
+  function renderInput() {
+    return (
+      <div className="grid min-w-0 gap-3">
+        <DatePicker
+          {...props}
+          value={date}
+          min={min?.slice(0, 10)}
+          max={max?.slice(0, 10)}
+          onValueChange={(next) => update(next, clock)}
         />
-      </Field.Root>
-      {showError && clockError && (
-        <p id={`${clockId}-error`} className="text-sm text-destructive">
-          {clockError}
-        </p>
-      )}
-    </div>
-  );
+        <Field.Root className="flex items-center gap-3">
+          <Field.Label htmlFor={clockId} className="text-sm text-muted-foreground">
+            <span className="sr-only">{props.label}: </span>
+            {t("calendar_time")}
+          </Field.Label>
+          <Input
+            id={clockId}
+            ref={clockInput}
+            className="w-28 tabular-nums"
+            type="text"
+            value={clock}
+            aria-label={`${props.label}: ${t("calendar_time")}`}
+            required={props.required}
+            disabled={props.disabled}
+            readOnly={props.readOnly}
+            aria-invalid={showError && Boolean(clockError)}
+            aria-describedby={showError && clockError ? `${clockId}-error` : undefined}
+            onChange={(event) => update(date, event.target.value)}
+            onBlur={props.onBlur}
+            onInvalid={() => setShowError(true)}
+          />
+        </Field.Root>
+        {showError && clockError && (
+          <p id={`${clockId}-error`} className="text-sm text-destructive">
+            {clockError}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return renderInput();
 }

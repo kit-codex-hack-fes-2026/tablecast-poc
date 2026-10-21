@@ -1,11 +1,11 @@
-import { expect, type BrowserContext } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { type BrowserContext, expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
+import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
-import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
@@ -36,7 +36,7 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     ["/admin/live", "ホーム"],
     ["/admin/stores/tablecast-komorebi/statistics", "統計"],
     ["/admin/stores/tablecast-komorebi/menu/products", "商品"],
-  ]) {
+  ] as const) {
     requests.length = 0;
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
@@ -283,7 +283,7 @@ test("店側PWAの新規ドキュメント起動は転送先のホームをSSR�
     .parse(await (await request.get("/tablecast-staff.webmanifest")).json());
   const launch = await request.get(manifest.start_url, { maxRedirects: 0 });
   expect(launch.status()).toBe(307);
-  const destination = launch.headers()["location"];
+  const destination = z.string().parse(launch.headers()["location"]);
   expect(destination).toMatch(/^\/admin\/stores\/[^/]+\/?$/);
   const home = await request.get(destination);
   expect(home.ok()).toBe(true);

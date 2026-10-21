@@ -1,14 +1,19 @@
-import process from "node:process";
 import { randomUUID } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import process from "node:process";
 import { parseArgs } from "node:util";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
-import { seedDemoDatabase } from "./tablecast-seed-data";
-import { tablecastDemoEmail } from "../apps/emulate/src/tablecast-demo-identities";
-export { sampleLine } from "./tablecast-seed-data";
-import { assertPrepared, portAvailable, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
+import { tablecastDemoEmail } from "../apps/emulate/src/tablecast-demo-identities.ts";
+import {
+  assertPrepared,
+  portAvailable,
+  tablecastLocal,
+  tablecastRoot,
+} from "./tablecast-runtime.ts";
+import { seedDemoDatabase } from "./tablecast-seed-data.ts";
+export { sampleLine } from "./tablecast-seed-data.ts";
 
 const demoSchema = z.object({
   email: z.string().email(),
@@ -45,7 +50,7 @@ async function seed() {
     args: process.argv.slice(2).filter((arg: string) => arg !== "--"),
     options: { reset: { type: "boolean" }, profile: { type: "string" } },
   });
-  const requestedProfile = z.enum(["smoke", "demo", "history"]).optional().parse(values.profile);
+  const requestedProfile = demoSchema.shape.profile.optional().parse(values.profile);
   await assertPrepared();
   const state = join(tablecastLocal, "state");
   const origin = process.env.TABLECAST_PUBLIC_ORIGIN;

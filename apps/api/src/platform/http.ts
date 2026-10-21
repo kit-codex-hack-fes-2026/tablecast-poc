@@ -1,14 +1,17 @@
-import { context, trace, SpanStatusCode } from "@opentelemetry/api";
+import type { ErrorHandler, MiddlewareHandler } from "hono";
+import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import { isAPIError } from "better-auth/api";
-import type { ErrorHandler } from "hono";
-import { createMiddleware } from "hono/factory";
+import { bodyLimit } from "hono/body-limit";
+import { createFactory, createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { routePath } from "hono/route";
 import { STATUS_CODES } from "node:http";
-import { DomainError, ensure } from "./errors";
-import { diagnosticSecrets, errorAttributes } from "./diagnostics";
-import { requestLog, telemetryChannel } from "./telemetry";
 import type { ApiEnv } from "./context";
+import { diagnosticSecrets, errorAttributes } from "./diagnostics";
+import { DomainError, ensure } from "./errors";
+import { requestLog, telemetryChannel } from "./telemetry";
+
+export const apiFactory = createFactory<ApiEnv>();
 
 export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   const started = performance.now();
@@ -123,3 +126,18 @@ export const handleRpcError: ErrorHandler<ApiEnv> = (error, c) => {
   );
   return c.newResponse(result.body, result);
 };
+
+export const requestBodyLimit = createMiddleware<ApiEnv>(async (c, next) => {
+  const limit: MiddlewareHandler<ApiEnv> = bodyLimit({
+    maxSize:
+      c.req.path === "/mcp" || /^\/api\/admin\/stores\/[^/]+\/images$/.test(c.req.path)
+        ? 8 * 1024 * 1024
+        : 2 * 1024 * 1024,
+    onError: () =>
+      c.json(
+        { error: { code: "BODY_TOO_LARGE", message: "BODY_TOO_LARGE" }, traceId: c.get("traceId") },
+        413,
+      ),
+  });
+  return limit(c, next);
+});

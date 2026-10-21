@@ -3,7 +3,7 @@ const gameTextSchema = z
   .object({ ja: z.string().min(1).max(3000), en: z.string().min(1).max(3000) })
   .strict();
 
-export const gameIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,59}$/);
+const gameIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,59}$/);
 export const gameManifestSchema = z
   .object({
     apiVersion: z.literal(1),

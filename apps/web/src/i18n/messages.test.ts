@@ -2,10 +2,13 @@ import { expect, it } from "vitest";
 import en from "../../messages/en.json";
 import ja from "../../messages/ja.json";
 import { m } from "../paraglide/messages.js";
+import { fixtureValue } from "../test-support/fixture-value";
 
 // 現在の翻訳は単純文字列と{name}補間。構文の検証と生成はParaglideへ任せる。
 const placeholders = (message: string) =>
-  [...new Set([...message.matchAll(/\{(\w+)\}/gu)].map((match) => match[1]))].toSorted();
+  [
+    ...new Set([...message.matchAll(/\{(\w+)\}/gu)].map((match) => fixtureValue(match[1]))),
+  ].toSorted();
 
 it("日英の翻訳キーと単純補間の入力名が揃い、空の文言がない", () => {
   const japanese: Record<string, string> = ja;
@@ -16,7 +19,7 @@ it("日英の翻訳キーと単純補間の入力名が揃い、空の文言が�
   for (const [key, message] of Object.entries(japanese)) {
     expect({ key, inputs: placeholders(message) }).toEqual({
       key,
-      inputs: placeholders(english[key]),
+      inputs: placeholders(fixtureValue(english[key])),
     });
   }
 });

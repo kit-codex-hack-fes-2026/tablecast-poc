@@ -25,15 +25,15 @@ export function ProductImage({
   blurDataURL,
   onError,
 }: {
-  src: string;
   alt: string;
-  width: number;
-  height: number;
-  sizes?: string;
-  className?: string;
-  priority?: boolean;
   blurDataURL?: `data:image/${string}`;
+  className?: string;
+  height: number;
   onError?: () => void;
+  priority?: boolean;
+  sizes?: string;
+  src: string;
+  width: number;
 }) {
   const [settledSrc, setSettledSrc] = useState<string>();
   const background = blurDataURL && settledSrc !== src ? blurDataURL : undefined;

@@ -16,20 +16,20 @@ const inlineSchema = z
   .meta({ id: "tablecastInstructionInline" });
 type Inline = z.infer<typeof inlineSchema>;
 type TextBlock =
-  | { type: "paragraph"; content?: Inline[] }
-  | { type: "heading"; attrs: { level: number }; content?: Inline[] };
+  | { attrs: { level: number }; content?: Inline[]; type: "heading" }
+  | { content?: Inline[]; type: "paragraph" };
 type Previous = [never, 0, 1];
 type ListBlock<Depth extends 0 | 1 | 2> = (
+  | { attrs?: { start: number; type?: null }; type: "orderedList" }
   | { type: "bulletList" }
-  | { type: "orderedList"; attrs?: { start: number; type?: null } }
 ) & {
   content: {
+    content: ((Depth extends 0 ? never : ListBlock<Previous[Depth]>) | TextBlock)[];
     type: "listItem";
-    content: (TextBlock | (Depth extends 0 ? never : ListBlock<Previous[Depth]>))[];
   }[];
 };
-export type InstructionBlock = TextBlock | ListBlock<2>;
-export type InstructionDocument = { type: "doc"; content: InstructionBlock[] };
+export type InstructionBlock = ListBlock<2> | TextBlock;
+export type InstructionDocument = { content: InstructionBlock[]; type: "doc" };
 const paragraphSchema = z
   .object({ type: z.literal("paragraph"), content: z.array(inlineSchema).optional() })
   .strict()

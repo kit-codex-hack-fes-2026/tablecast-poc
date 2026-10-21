@@ -47,7 +47,7 @@ export function parseCalendarInput(input: string, locale: Locale): string | unde
   if (!english) return undefined;
   return dateKey(
     Number(english[3]),
-    months.findIndex((month) => month.toLowerCase() === english[2].toLowerCase()) + 1,
+    months.findIndex((month) => month.toLowerCase() === english[2]?.toLowerCase()) + 1,
     Number(english[1]),
   );
 }
@@ -74,7 +74,7 @@ export function validClock(value: string): boolean {
 export function shiftCalendarDate(value: string, days: number): string {
   const date = new Date(`${value}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().split("T")[0];
+  return date.toISOString().slice(0, 10);
 }
 
 export function calendarKeyDate(date: string, key: string, shift = false): string | undefined {

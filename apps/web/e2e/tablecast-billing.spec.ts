@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { z } from "zod";
-import { test } from "./support/test";
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 test.use({ trace: "off", serviceWorkers: "block" });
 test("課金ページをSSRし、memberと匿名の応答へ金融情報を含めない", async ({
   page,

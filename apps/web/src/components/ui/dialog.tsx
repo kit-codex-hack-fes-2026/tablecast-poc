@@ -1,9 +1,9 @@
-import { surfaceMotion } from "./motion-variants";
-import { StyleScopeBoundary } from "./style-scope";
+import type { ComponentProps } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn, tv, type VariantProps } from "tailwind-variants";
-import type { ComponentProps } from "react";
 import { Button } from "./button";
+import { surfaceMotion } from "./motion-variants";
+import { StyleScopeBoundary } from "./style-scope";
 
 const dialogVariants = tv({
   slots: {

@@ -6,18 +6,18 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { afterEach, expect, it, vi } from "vitest";
+import type { authClient } from "../../lib/auth-client";
+import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
-import type { authClient } from "../../lib/auth-client";
-import { storesOptions } from "../store/store-query";
-import { type loadMcpSessions } from "./account-query";
-import { McpSessions } from "./mcp-sessions";
-import ja from "../../../messages/ja.json";
 import "../../styles.css";
+import { storesOptions } from "../store/store-query";
+import { type McpSessionsData } from "./account-query";
+import { McpSessions } from "./mcp-sessions";
 
 let client: QueryClient;
 let unexpected: string[] = [];
@@ -55,7 +55,7 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
   };
   client.setQueryData(sessionOptions.queryKey, login);
   client.setQueryData(storesOptions.queryKey, { stores: [], locale: "ja" });
-  let data: Awaited<ReturnType<typeof loadMcpSessions>> = {
+  let data: McpSessionsData = {
     sessions: [
       {
         id: "tablecast-mcp-consent",

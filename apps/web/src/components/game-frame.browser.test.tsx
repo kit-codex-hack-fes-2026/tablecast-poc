@@ -1,8 +1,8 @@
+import type { GamePackage, GameState } from "@tablecast/api/schema";
 import { expect, it, onTestFinished, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import type { GamePackage, GameState } from "@tablecast/api/schema";
-import { GameFrame } from "./game-frame";
 import { LocaleProvider } from "../i18n/locale";
+import { GameFrame } from "./game-frame";
 
 const manifest: GamePackage["manifest"] = {
   apiVersion: 1,

@@ -1,0 +1,3679 @@
+{
+  "before": {
+    "files": 379,
+    "allMatch": true,
+    "manifest": [
+      {
+        "path": "apps/web/src/components/action-feedback.tsx",
+        "sha256": "9dd6c5c48d5e203a33d23d5bbdd43fb2c27f4aa56b12a058e5b5e7bcb242661b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ai-elements/conversation.tsx",
+        "sha256": "19adef3df4bbf1855def291b97c9567b298c49b566f083793093dac9a368614c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/brand.tsx",
+        "sha256": "1853e754be424d1fb70802a87302364ab2095b34ad55c50a27df076551058140",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/calendar-panel.tsx",
+        "sha256": "b73f759aebf8916207856ac18a0a87384e2157d52e45d2f872f2d48fc0e171f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/cart-lines.tsx",
+        "sha256": "68f0577100d1cdd1d851feb3799d03aa035d134147f501d1601b69c49037ca7c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/collection-sort.tsx",
+        "sha256": "f961e325eb2ffc0809af3799827b1fdacfbcc773b261b88ad26fc446fb845324",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/collection-toolbar.tsx",
+        "sha256": "8b7184ec3e0e06a3311e8345954168660a79b5d6f66a0c4930841641ec36c0ec",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/condition-summary.tsx",
+        "sha256": "4b25f1350e13183ada0e4d7254ece5b155b170a4c4d0071d3618f8c368007f3e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/confirm-action.tsx",
+        "sha256": "bb771b1b1ae63f9810e17e0250f13d874f181699ff23de19f3fd6de6c03b1143",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/copy-value.tsx",
+        "sha256": "7e5affe4d2f2f77d643b0c12004bdee8add10b04375934a73c84dce89817555e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/coupon-card.tsx",
+        "sha256": "c2bbc4bb5c9cf516b4f24ecca2c2dfcc85750d8670624a9e13e279735abc0354",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table-controls.tsx",
+        "sha256": "e3c83cc8a44b9bb0b08463282be5cf8ad222d47c3b1891bb97b53a483afeb754",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table-markup.tsx",
+        "sha256": "08a00ad2523b80f4cd535f6d9e57d98ec74c8dd90717f02ab5c15ca8108c183f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table-model.ts",
+        "sha256": "d4f64a23561c3d9597a6efd5d750c48044c1527bc6cf15454f92fa9e86cc59b9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table.tsx",
+        "sha256": "eaa2b9b174afa6ba9d8503aaab9e431740916e8fc842f92d4d9fd2351d52cd0e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-picker.tsx",
+        "sha256": "5aebc6a54e7d46b0181d6aa244005baf4602d37987a68917687252f58151bdef",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-time-picker.tsx",
+        "sha256": "676986361c4c6a160c6464abf0dd4e5c52e5b5c2d25df2464b8d0b631e473146",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-time.tsx",
+        "sha256": "84109fd13ef20f2c52ac3e69021152465f14960c90605ca2e798694887b04b26",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/document-head.tsx",
+        "sha256": "c1fc86bf40e67833fbe29d01644f8059743f1fb3271ea8f7866bfbd973497dca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/error-notice.tsx",
+        "sha256": "1aac67439212242df99b8ae70477d538ce9f92d2dafa6463300ed7f1ef45a336",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form.tsx",
+        "sha256": "2313a1a6d3e1885ec203dc086de32e5e942a84e9d694e5d04332b8c6b9e8cf50",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/date-field.tsx",
+        "sha256": "87ca8c0364f8ef99591a75acd4e83a9503b6a77245fb32794ae2e53dc82567b3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/errors.tsx",
+        "sha256": "c3765d3b9631b72b0199806921627c3da2a87e0c70289c3ccc61acc2375e06a2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/field-props.ts",
+        "sha256": "c0aaedcc068dd5154ca2430274b0d6fd9fb4669436d90b9c436650289a5d560d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/number-field.tsx",
+        "sha256": "f71faf0c0807fc774ace8af7d8721e01a6a91bcfc9324306dd5a950f00ddf58e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/submit-button.tsx",
+        "sha256": "9ebacbd2dad3ce8fc9522a6217ac16416e5ae334b3fef51381abdfae264a468e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form/text-field.tsx",
+        "sha256": "0449d6b9d75cc11a08138b8700e747df66d44d30ca68fc5b4c049ab8f8db33f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/game-frame.tsx",
+        "sha256": "88ffb6e3b8e1a37ddc4d56580cb2e9508dc1a58ccd249f94c05285c402d70374",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/google-icon.tsx",
+        "sha256": "fc63a0606eb65e5bcda8a3b3e244a1440b690eb2136825247d05daf2d70443ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/kiosk-pending.tsx",
+        "sha256": "130dd46e780a4b6f4882d9a96311da61400dc9c7c4a19588c3b1d9c4e3a13699",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/language-label.tsx",
+        "sha256": "e9739f57f06d77d2c756719c8e455148afde1f10c9485b9f0099a69feb93ee33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/language-switch.tsx",
+        "sha256": "34c89068e3ffa013799257c2ddecccfc3898bec4032bede3fb499c4d1e9cf73b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/loading-state.tsx",
+        "sha256": "e697f412d1d0bf70f102f5457f3374899f812bc4badff4316503012260cc9797",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/menu-banners.tsx",
+        "sha256": "83ad4b7c4f1034d8a7341445e34a97bc648d0f01d9b72f13c7195a9fd4d6aab7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/menu-option-image.tsx",
+        "sha256": "5397b645a5a53448fc903866e5ae7143a3dae1eb0f43a3cbcca33cfde81f74e8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/month-picker.tsx",
+        "sha256": "662457a5943e7ea8d2cb546342065568d8162c69e20e07be4a0da9b148e62029",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/motion-features.ts",
+        "sha256": "6a2a9de6d9d9a69eb2b21d402f3431daef681a76f8c9d580f847d956cd08375c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/motion-provider.tsx",
+        "sha256": "2cfe974ec361dc72d61e1e1556e79e3411a133259aa7ef75828f7cc7b9d42e58",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/page-header.tsx",
+        "sha256": "512359ba3693615c533cb8e72b12db7bec15c0ca758ecbfc32a8d86fea7efffc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/product-image.tsx",
+        "sha256": "604b83ff9af9ba13edc9dc4df92e20166423154bcd774021719b6f25cefa0711",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/product-menu.tsx",
+        "sha256": "0bde7d5f93b105f98a8fb85f016fcc2b5881ba3d34724963b77d978025bf644b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/pwa.tsx",
+        "sha256": "c2aad791f45e75716f4ddec5d622fc0595f93496d5e63c41c56d30ef0f3c52b2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/role-badge.tsx",
+        "sha256": "f53501dd6baea55566dd5ad391e30dce87b931a865802017265ddbb0d956cfd1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/route-motion.tsx",
+        "sha256": "7bd269e291797cb96312e36730571156e6bb02057f395dd84a8bc261e484291f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/route-state.tsx",
+        "sha256": "d199a90fc717d157bd5341aa4259a64a97f8af97c4fc86561844519f12af67bd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-icon.tsx",
+        "sha256": "63688e26a6773198377b64efbd37b2b7e63caea7e76b8e7d1d127ea5796d4f50",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-logo.tsx",
+        "sha256": "957a92bd9f7793316a35065c808ac0d40ea03832a51fe36f75f46bf07ab3a074",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-theme.tsx",
+        "sha256": "162ee485029d7cb2fd20705db7127e2a7a4ec9668223647770183f4dc54c07c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/badge-variants.ts",
+        "sha256": "870e58ce2909ff29ae733f5e80d505c4ac1b833c03f20f395ae08f0ddcaa37dd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/badge.tsx",
+        "sha256": "df791ea6dafb5caa9afcd0fb29ebc2f595b6a2ef7ce6a39d8de0c382ba6fc838",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/button-variants.ts",
+        "sha256": "65e7a85e2517a8c45edaa0017a037a84686f163aa1cafe5315deaf4e04c76f3a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/button.tsx",
+        "sha256": "f032c55521cf85e964ec90853ad5401b5b695363e8df801dd9af278f1d52ed2a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/checkbox.tsx",
+        "sha256": "a16565af97834c57d9b9c596e235aa25daacec4959e0f6b9bfd163b095a7cb47",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/dialog.tsx",
+        "sha256": "14f2b2c9447c1a795c574260471ef125b6553e769c02659538f02e4a6b12b9f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/disclosure-target.ts",
+        "sha256": "d1907a8921729626d01cecea773b3e9f0577de4db877600b52a3f80361961e06",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/disclosure.tsx",
+        "sha256": "d69286c054f166c9124796c05d8b7457084c70f779ae1452c209420c8a00c98e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/field-errors.tsx",
+        "sha256": "9c8a6afb3821d2048dfe3d5919d5a9564fff79f0e5f39847c97d63b50cfe1771",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/input.tsx",
+        "sha256": "92362e2c382132708210b0afaea6d08463048eabbbce6a27bba97a3d3937c42a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/motion-variants.ts",
+        "sha256": "8a3413a6a1f1b518a9aff98d73c2dcc882536bc7ec4af55db7c1e7011730e3e8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/native-select.tsx",
+        "sha256": "845caf5780ee9dd960019cf58c44c626b4e63a299aa9ce981e888ffd3c3fce43",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/radio-group.tsx",
+        "sha256": "5328e1cbc24741fef36d03034704b6feb2db0c7da1f263760002debf1ccf3eab",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/resizable.tsx",
+        "sha256": "31b68bc0fd4592dd8a303d5f967e1f0564f04ae4af5d18bae2483b88194857d3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/select.tsx",
+        "sha256": "db3e3e3db66490e07daa4d43f422802fd7687ccbfa3488327b9d0bd30a07024a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/skeleton.tsx",
+        "sha256": "2e8066d08c710b666659296db1284096277586af85ac651d1be7d44b2445d954",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/style-scope.tsx",
+        "sha256": "335254519359726182da7581e56e3392372055872066569013fd385dc5ff01d0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/tab-variants.ts",
+        "sha256": "b37353e37dcf6297aaffcdbcded021673f0785f5fc70d3d62042b9ccef68426d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/table.tsx",
+        "sha256": "7d6684ffe7735fa3e40249152e5fcb3262bef019faebb3898de543522987676b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/tabs.tsx",
+        "sha256": "c771dfffcd66bba860c3483fa5b75f3c3df0ec8fc1418ef41eb7e7b17d3ed82b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/user-identity.tsx",
+        "sha256": "aa640b3ccb6590af57d1702c07a146685fa5be191331275e3879ce81c8d85550",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-connections.tsx",
+        "sha256": "18326b815382fd58c13ba801f49f198a8418d40f3445602a42139e975e24216d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-model.ts",
+        "sha256": "b13e1bbbb4a9019353ef72fcc85e86751648dcf7ea0d215c5fcba108c87fbfbd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-passkeys.tsx",
+        "sha256": "c37c2e5ea17116e3b8f4b2a35c0610b988d882070fa9914c0e1bc9334ee31609",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-profile.tsx",
+        "sha256": "d420e32a7f26488e284a303a1b927bc84a2c0fd30a10b48afd8ee328d609c11c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-query.ts",
+        "sha256": "586bebcb82a383df3aa624356b2f25d196eb7cdee2892a54ece70d754a041499",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-sessions.tsx",
+        "sha256": "3c8cbc67de24a24d8e69b4e8c5bacd77cb75a8e8bed05f48ce94f3a4778f3df3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-state.tsx",
+        "sha256": "308fde69c0a25360475775fc998be2105c3cd943d1592644eeb7dc2aff315ae0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account.tsx",
+        "sha256": "a32827984e57ac65c65f9df5768457af71fe535873be0537c851be67cdd5c539",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/auth-layout.tsx",
+        "sha256": "eb29a8b2ed54206e30cad2fec3ba31e79e94aab0c1ee57edc25c0ea4cc3039a4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/consent.tsx",
+        "sha256": "44a232679ef40a2f5369a43334274d914af4543105fdf20d374e0ff7663a19d2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/device.tsx",
+        "sha256": "d850a644c94b1f42b8b044c11294a4c13a825f3832dd549cd62638689d884d09",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/email-access.tsx",
+        "sha256": "7b26e516c2fd0659cf15b4e77761de5e8ec51fffeadc82b17037a122ecd34749",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integration-query.ts",
+        "sha256": "b8b4d52749bc85f848c7f9867e335521db01b642376348e33d7ac0ebf1acd49a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integration-setup.tsx",
+        "sha256": "0671f53200c581460f91286f1dfb3de7aec6ed896dc838269119c5a58891411c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integrations-shell.tsx",
+        "sha256": "7f1cfec81de8b549332fd58908cc205c7488fb446b1b31f48151eb5c235b7175",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/invitation.tsx",
+        "sha256": "6c44d33480284354a01cb9d952702d533cec77ea0b2a33f70a7bde7aedd8aeab",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/login-model.ts",
+        "sha256": "6e6282145bc46b9216e51fb80ecedfc69bd2545f191377d519a81289212b491c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/login.tsx",
+        "sha256": "249c22f2e0553763a7939c53cb043db2d8fb7ae3578c856c2a9ad93e44c00f5d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/mcp-sessions.tsx",
+        "sha256": "5cd4e1d064b14ed94f4dd11841a8735f469679d691b8442a9f2aec638cf47394",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/organisations.tsx",
+        "sha256": "412023137bc06346fb969ec7c059426e9152f9400fea1170403ca8df204c2941",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/session-device-model.ts",
+        "sha256": "46d50863cab8e2268a67ebd35f67ef87bbe61e8b793015308fc5096df0cc5a3e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-contract.tsx",
+        "sha256": "568221631ac205c1214e569c32b70865d9958696a7095750df63e3ac8b545b22",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-format.tsx",
+        "sha256": "91ea611cec1ec9c11dc250f9a9912aa4ec836d21201b26b3bb7350960cda9a66",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-invoices.tsx",
+        "sha256": "1b3b2948a551fb0d9818b79145aa21ca219fe97ae879678570a50f3f41da88ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-model.ts",
+        "sha256": "e75189a5dc9df69a4b1ed150d7f2b19c0d3f7970df78c7003788484ef28c3828",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-monthly-usage.tsx",
+        "sha256": "857dd547cf2c6a34b0f54b9f258da7152c7369f6ad282675e2846a5a826fb9fc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-page.tsx",
+        "sha256": "0fe688f6e502b2abf472c3e1da27c896c921d29c528817c667f50a7645294a5a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-plan-features.tsx",
+        "sha256": "713584a2207284612ff7ca1eb89d253ad01367d266349973a1c942ffbbdaa15f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-plan-options.tsx",
+        "sha256": "19b5db3ccfbc349d8564f17ad02d83ef5f6c0bcdf5ff68bf8f13dd8c8b2eddd1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-query.ts",
+        "sha256": "e0776e70d898dc80e6e26db9bbc017a68937ca059d006daad51edd83d0aa9e9a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-usage-chart.tsx",
+        "sha256": "2e194853b011cd697aea3bf1c1a00dc423709a270c97a77f8e1a4c406d113f3c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-usage-table.tsx",
+        "sha256": "6da6da2bb532a988706e842669d3975e9111c679b426480667fe557b2740b201",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/catalog-query.ts",
+        "sha256": "173b3bf10b7e7fff83684248d1c31edabeb0b90a1df2d9cace26668e9a6e8ac9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/categories-editor.tsx",
+        "sha256": "412db8ea24adbb4db7144970b83d85a47313abae1c09ac973f7b807e4343dc79",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection-columns.tsx",
+        "sha256": "00d0a4855621e6b4c237ac02cd36e4a3efea5b58cd8be8d4058f181ccf3102ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection-model.ts",
+        "sha256": "996100b504db0a1f15a36d9eacea10ddd86ce735915d2551e00ec94abb9843f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection-results.tsx",
+        "sha256": "fe5288802ac2dad3d444160f0bf80fb7ed211f63ce90197c6db2035ae892c0d3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection.tsx",
+        "sha256": "aad4917350b316e008b50f8341050f0ba8ce368fc5c1468d9b20d31b15644fa2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-actions.tsx",
+        "sha256": "16f51adccecdeea94447396f30d1af45eb0a55410f822156e97ddd38362325d6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-dom.ts",
+        "sha256": "b72fc4112654588afd196fba33a358482cc9a2e443dcbb424dbe499549c77fa7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-form.tsx",
+        "sha256": "e34c17562c1100167ca2dfa8f8d84e0fc37d2ffbd5fb5fdb8b1055d9b4a8d5e0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-state.tsx",
+        "sha256": "d3fa2090280d1075a5a1e9a803c0cc77faa16707d2e1c37d1fdbeb7c2fd42269",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item.tsx",
+        "sha256": "5e1a55e3212dd139ab2a61f922075adc80795b50963dff32135281f039df07df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-overview-columns.tsx",
+        "sha256": "5c9c6857131d2e97884bcea606d3ff57f0a97e7ba97b03628b2aac52447494e1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-overview.tsx",
+        "sha256": "efc3b7fb17ca2811beaad451f899c2e95d5c6122befafe7a8081f72644e5c795",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-product-details.tsx",
+        "sha256": "b8ca9ea1624fbfbc7b703189ab8cd967df5970e7742302fea2d1e6f0ff188cf1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifier-option-editor.tsx",
+        "sha256": "9419ea081380952ee77174db06313daa1bb04a027a92a329aaad15889c0c707e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifier-option-model.ts",
+        "sha256": "b3cf9e994deae54e641251ddcd1622de665c72d9dd77d16fb112f2fe4b8559c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifiers-editor.tsx",
+        "sha256": "48738800e06fff0d885d93694c59a3448e1f1e3f59191e577746ecfdc6273a3d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-model.ts",
+        "sha256": "3ae1f768a6f89c9fa80b8905c448d5c93981de0692fcded6a149bbde8f8f4cad",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-node.tsx",
+        "sha256": "c66f52fa36bfd7f40e38844db539f9756e7bf63574a47c7fd8941f0f1a8fbac5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-picker.tsx",
+        "sha256": "570ca9441e49b12b7f055ef83620c22462f49ad7b6c50907c3581d052f3670ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-conditions-editor.tsx",
+        "sha256": "9e96aac1e412db4f2f2b1fb98710f20e135d1f8197fb3b86c31953f771e5b745",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/plans-editor.tsx",
+        "sha256": "97ba7fa5dc0cc68fabad83b12d44104bec800a9cfad3072a5189e6efdbaa307b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/products-editor.tsx",
+        "sha256": "cc7284072543279bb624313a8224e30c5ab7204968a00f08cfa4c92bf1c2e0cc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/cast-overview-page.tsx",
+        "sha256": "53b7f7dbaae16dbea4b09c3fbc68f359dc6c1fe371b4ee1314ba1055e1ec1613",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/cast-overview.tsx",
+        "sha256": "ff81eddb687b743068c4120dabb7042af560e90991174c4eb124c0d68ffc5519",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-change-labels-model.ts",
+        "sha256": "25e13fc3e7a3ff59e9446b32e5f30fdda0f235faa9c8f233f7877e656d581ec3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-changes.tsx",
+        "sha256": "b4af8b7935680b87b042c556d44a0955ea897e915ad7a66c49637081419d114c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-defaults.ts",
+        "sha256": "09007d9b2fe384dd3a4146e424f13f1ef5db784fbf36a0654829bfe39724ab72",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-draft-page.tsx",
+        "sha256": "05dbebc229ebfde2a3e2e76d8e5f89c13fbc5ee0865a2509f9208206113cd3f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-editor-model.ts",
+        "sha256": "db2fae207157728948e769cd4395c27dbe52e934d861ebf208c0c5a17971d9a9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-editor.tsx",
+        "sha256": "0abd1b09864bc585d8118af9babb9aef03decc86acceee68c89cc6a021dc5570",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-errors.tsx",
+        "sha256": "18097293ce2c8f1000119135f56f0bd892c0dd624cc81c3ac4a41cd3af9fc3a8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-fields.tsx",
+        "sha256": "44913f85ac54703e0ea79587841bd21d60f3186d858c6891f145f40f3e7e96f5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-header.tsx",
+        "sha256": "b990ed7e1a2af22a920b301449400811e34d4beb7ae02d19c26df213ad182e0c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-history-query.ts",
+        "sha256": "582a045195a297699520713c237b03edd5fe9346e4b475973c32f2486b874495",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-history.tsx",
+        "sha256": "686078fddade8c6d9333ea81bad46f71bb17cc079392c3f94d659888ab85408b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-details.tsx",
+        "sha256": "462d2f6800d5c72f89059919153aa8718a9aacfe0049a9909e2ef869272f6bd3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-field.tsx",
+        "sha256": "f11d6e71921670cc78b38e454d500af2796e95af5b63a6d29cea63a9de9b2c69",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-model.ts",
+        "sha256": "5bdc15407dce18ac6ec9a6ae2aef5fe86bd151f10d506fe5a4168a14999960fd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-release.tsx",
+        "sha256": "ac3a0ffb54f0113248dd064dd8961a2bac62900b54283f53441d863f39428e5d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-route.tsx",
+        "sha256": "5361dfbed888f3bf04b000844c8436a177a205a0b34c9dc39f9d0284ab50ece5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-status.tsx",
+        "sha256": "bed2505db61fac4fb751274e3cb8317a499354f9fa69c421b48360610bb93714",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-timeline.tsx",
+        "sha256": "caf2447843f33738e9316948c7eea673f4bdcdc46fd97d3103608ce9107ce2ea",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-toolbar.tsx",
+        "sha256": "52da9c04af39a21e62d434b675ca357a60bf877bb6360d279ff1cdfae28c1490",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-workflow.tsx",
+        "sha256": "96e0c33791658b611947f012881bd1ec1d4f361cfc98c272ccf979ee527bfb8b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-banners.tsx",
+        "sha256": "678db20b25fb50e59c45dfdd2523ca14c18aa4e6957f0bda5f399d451f474757",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-editor.tsx",
+        "sha256": "65752636cbc3e60c2f025e9339cad0b178ee40074b4f641f87739db78340646b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-image-editor.tsx",
+        "sha256": "c128673194e6fe074940ac119ac9d20940ce84976233570a112b2a828b0931e7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-image-model.ts",
+        "sha256": "521836bbad1e49d9ff7f872f8db5a322fffe0410b34815cb8916cfede7c92b90",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-theme-parts.tsx",
+        "sha256": "9638f6cbf878703e07f5b301b54744ff0734b88c6173209e99825f18fdf241f9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-validation.tsx",
+        "sha256": "b16f22e37cca6bb889f75b22a47f023c5a5d0ba7708ea9c15ff7b8ab2da529b0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/drafts-query.ts",
+        "sha256": "bfafe28675c69c519b7219f3450c491a39b416a2a5f45502c7a2d1e10a59f8cc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/instruction-view.tsx",
+        "sha256": "90fabf7f0c44c9cfc2c9add5f7ad3ea45b05200e1543c45ca720f804e88788a1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/language-fields.tsx",
+        "sha256": "7fec9779c57c8c793db308da8e2c4fa2aecaeaa200b219caae24153197766a1d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-model.ts",
+        "sha256": "e6ff111d3d23b377f162371b11b7d46c071209bdf6805ad6dd121afc546c03e0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-navigation.tsx",
+        "sha256": "167dab11684bae3400a24e9a06c2c7f8d3a1d86012f80bc3174d02d55348af5e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-query.ts",
+        "sha256": "4b9bf131689268009434ce033651304144f87655d6366c042bb8e1b5a36efd0e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/prompt-editor-input.tsx",
+        "sha256": "5dcd3b52e077c24b24d17595a31ed9fd4f5016df7bfce06cc6a0d507b0166b6c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/prompt-editor.tsx",
+        "sha256": "cfad5f9764e51340e3657053fc7b3672e7a467cf9822bc8ae563d1f225dfe626",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/settings-drafts.tsx",
+        "sha256": "e7f2fb589a33266d8396846fd1810944dfb643ef368ce9528149b39636921c60",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/standard-voice-select.tsx",
+        "sha256": "8f93e032dfc859c46b116d603d3ee7dcb3d97434bb807e7ed31ad3e73399b0c2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/store-design-overview.tsx",
+        "sha256": "f6312bf4cfc692531f9322949c4fea6887cda0636eb59b311ec3c58d604e7216",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/store-design.tsx",
+        "sha256": "e249c06fc18eab8878ce180114af78ab4af6900b33b97274b28744236246e777",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/theme-composition-editor.tsx",
+        "sha256": "cd6cb7f203969578450d2a8ac1ebe269ddce4aff8091efed97fee02ee1a09e69",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-consumption.tsx",
+        "sha256": "6c036173a30d781443721a37b2d38a50203d7bb1090c4a98fe578d168e7e949c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-coupons-query.ts",
+        "sha256": "76d1b405cc5d26eb78d58a673a1461b67eda22842da87e7abd09535f74350d40",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-coupons.tsx",
+        "sha256": "8f1e30dc213e2036e81b65763e14c0aa08986cb04c266ff6d60a71653b443552",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-join.tsx",
+        "sha256": "58fd9cb817d8b5b1d621bab2e200fd5e932b1a143fed142d484b6bcd1862b9f0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memberships.tsx",
+        "sha256": "f1c2cfa672bdcd8ee57c65517b696fb969d7e0bfc66353af4c401f067602d95f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memories.tsx",
+        "sha256": "beff8c44681a7a75786e6bd0ab89c07854face2471d6f63a5c0e5b6742da6d06",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memory-query.ts",
+        "sha256": "c472e8ba37f5ae52708bc1377888d99b37ccb1fc34c8ac9ef54f85c77d9e2e48",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-points-query.ts",
+        "sha256": "e674a21e636a2c460221b60117d1f495a445d061916317b51472578148f45b20",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-points.tsx",
+        "sha256": "db5e43af547ba31ca9d498e62a1cfb9089671675c4b863509807fea5cb056836",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-query.ts",
+        "sha256": "8aca526ba2e99d8c9f2f1769678392bdc1e67b13d25863967f3d3c0982dc3ec4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-shell.tsx",
+        "sha256": "f3302fbba4064b9e87f21cbabd0081cdaa99c0dcc0b36d07d4daef2280589492",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-store-preferences.tsx",
+        "sha256": "850f520da0259a3ee2de00d0ceff2f0de000120c23cf876bb026f6087fdffe6c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-store.tsx",
+        "sha256": "0950919491719269e0e1262a5e9e4a04b6e5282366518705101e0bf21af0b75a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-visit-query.ts",
+        "sha256": "eeffebe95b6a24b2aa75d5ccdebe8910f1b9d7890780da2b347bf94a10870a33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-visits.tsx",
+        "sha256": "6d9c7ceb46f82fe44ce28a372200049b987f9cf08b338aaae68c60357faf0b0f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-configuration-model.ts",
+        "sha256": "2846c1ca4336a5346eb8fc9c3dbc26a01a51a1f3cdd03062815cc1e462715356",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-configuration-select.tsx",
+        "sha256": "fee717e1f529ad1b135ef707995ce37598baebc722b743fde2b91014bec6afb5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-device-frame.tsx",
+        "sha256": "bc4718447b9b362d26e4aa5aeec0eb8375a0bb72f647b125a4ea4ab746b84b06",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-device-model.ts",
+        "sha256": "8bf891ae1dd11fc51c19cd7375fe2253906f1ebdd950495a30c916923a3083f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-display-controls.tsx",
+        "sha256": "f859ba869982556fdacb18f044f080647d56440201b3793f79cf5a3556cc846d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-pending.tsx",
+        "sha256": "56a9174b4a886e2fe52616f8da4656ed4403161dba742f6dcaef3762163274f0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-query.ts",
+        "sha256": "92f3f3acac32d8251a235efdbd99b8eb4a50d126df2f06d1dde1c74ba8ee237a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-session.tsx",
+        "sha256": "8d4c2862c806de5685faa5bd0d9ee408b445b5e26c12a999e365bae81e48cdbb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-viewport.tsx",
+        "sha256": "a5e24b2d9f0dbbb53f9831c4c9d5ad9a0f543073aed5f3800021ba1127c6789c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo.tsx",
+        "sha256": "33b28b2952b127930941ceb954aa7b992cb8714eacbdc571822d7f651dc64310",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-columns.tsx",
+        "sha256": "b4f0b1fa76b667baef8de1096cdf7bbdfd2daca25e15f35114f22de6001a39c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-qr-code.ts",
+        "sha256": "df3310c73e5a724fd68e8cd16217beb42f497f78f7113ed03f5368bec90b6867",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-qr-reader.tsx",
+        "sha256": "3a93f379891cc0b09edd9f1cf69d34a8977fefd630d08f23630d3245a4d806aa",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices-model.ts",
+        "sha256": "b07606a216bcaa1c92237609cfd5e0cc173ad56ef14eab330e850d8743d66c58",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices-query.ts",
+        "sha256": "0f258d56129e990fc7aa22808069ff6de7f9c4946cf5149f63afe31393965808",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices.tsx",
+        "sha256": "134a0c57d2937334c6bec51d919bf32d15620df16b203215b6c331f5bc54655b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/events.tsx",
+        "sha256": "780f167e83c4a3f1a270d5a88c8bdca51fa92a0491b43bc8f6a034181b1f0e82",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-controls.tsx",
+        "sha256": "5b052c8f1ac70e0791b01a97fe5d45dc7c21d76ef162627ababedc8530667a20",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-model.ts",
+        "sha256": "46a72e886d3eb8a05a5ad9ee9aa2da60a1ac9a6180422e3183d643f1a9f2e315",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-query.ts",
+        "sha256": "0ab1b9218886b0202335017bb34bbf2408a9d522b858ef9b234a022341e84491",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-timeline.tsx",
+        "sha256": "f3c76fb8d02130c085daa41d9676c555812c48c9fd8658f6dbc89192ae95ea64",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor.tsx",
+        "sha256": "4b09d35bd8cdd996ab7aa8b68fac22808c0f47476b9d0a929e43e94223941cc1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/history-query.ts",
+        "sha256": "920be9dc35178329c6519f528e091e7bd00f4e09adee3833f104770a5736ec81",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/open-table.tsx",
+        "sha256": "81e3bb096def202b702adb3cdfa268af6e862b802ee5a24de8c9eb806747078c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/payment-form.tsx",
+        "sha256": "e3c4c22bd0e5c84759d8ba16df90c9a2b7b2a38f3b52ea1abd948a39970c6947",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/session-activity.tsx",
+        "sha256": "e638429aaa68eaa1d9ac5502091ac2daf1b5fa5ec1b53801e02132dd42774d5d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-band.tsx",
+        "sha256": "6eb39d3da22efaa8adb99a72ec9cd2051e8901ecf1586621381cd8ce30c892b2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-label-model.ts",
+        "sha256": "335cc5298abc516a0114825f13722292805037ba354de9c3254610f372f9c598",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-preview.tsx",
+        "sha256": "450b007316c763ec47cfd3631404469e30beafa7b5e4cca88ee960a1158c8e6b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-viewport.tsx",
+        "sha256": "6ae6eb305434b02c61cc38e655117c4662bbfb05b67ed781070ee95dbcaa607f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar.tsx",
+        "sha256": "657d213d6131708193bb25c4f5a2cad1f7297ae1eff5e29b621383d9653677c6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-detail-orders.tsx",
+        "sha256": "4d94080fec4b6b6e7915e6f5d60aa660d496195487594a2f03d3dfccca59f470",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-detail-state.tsx",
+        "sha256": "b3b0032b7c59caea7e968e33436746a2b49710a0ca0541fa127307af8b439ca4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-detail.tsx",
+        "sha256": "c35c201e46b20fd3587aa5c3bf85f12cb745a36b08e7ef62b0f3ff9df8514129",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-metrics.tsx",
+        "sha256": "93e3a2c5be6f6868531259bc7d2593eb5234593308ce270f1f569609d7c6dd2e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-time-limit.tsx",
+        "sha256": "3ed482c65099aa7c23d8209ac2339e8bd23a0d38965c69c57dc58a65f440dfeb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-timeline.tsx",
+        "sha256": "6a3b3cc70fac28f271afb8f7c105b281797d595ccc5ae9c467ddde11c1c150e6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/timeline-query.ts",
+        "sha256": "4de322527de4bef8220b133748809259623a72bc51d8ba2c32108cc7682745c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/visit-history.tsx",
+        "sha256": "6896ab3b662df519e8c508477678d29f6e3802fe1401cb0482358b833bfbf2e1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/games/game-query.ts",
+        "sha256": "3c83def445cf5c4e76170935f96a5d378f15646e404ade9c40dd7704e95a3d65",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/games/games.tsx",
+        "sha256": "d25c36c27da80b487c041853ea8be587bbb73aa209c483cca84343d88efa9382",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/audio-waveform.tsx",
+        "sha256": "df97611eccb55acd8eba8bb49b4968ee16c3490c52e18e4f7f8fc92df1b3ef61",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/conversation-model.ts",
+        "sha256": "67eac6f104ddd3f979d6790863eada23010645f530a2b40344501c4f5540e4ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/customer-order-attribution.tsx",
+        "sha256": "a8c918c91327ca298a01b8e7699a374b9ee89566d8a3c612d1c8979154530841",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/customer-visit-panel.tsx",
+        "sha256": "2891603d38dd7ebc1e56d2e3e19e1ee5487e2a35c15601a8f6173bf1b717612f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/evaluation-guide.tsx",
+        "sha256": "2830850571f51911a474472d47c3f44c1e76d7d9c1dcb1e9ece0b9b20f4ce97f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/games.tsx",
+        "sha256": "ba95a51a86754a94b6b080bd202bd4d6f2844ade869b9764826c58354a8bcb0b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-cart.tsx",
+        "sha256": "8aa2687fe34dd5f1d2e42555dd92d6b645429ec5966a2a0e2bb43cab6ffd0ff6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-checkout.tsx",
+        "sha256": "bc08a0746e2ef3e886a46f2e264af269d0b75b6ef41ee53617c5b42155d24d30",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-header.tsx",
+        "sha256": "a04786b4eefadbd7dc127afb7a5c854ff53f29168c150a8485c780020479634c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-orders.tsx",
+        "sha256": "e4ba271c16c71f098c2a87701a5cb6b59e5e7f9269a7c1d789542c56b66a6112",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-session-view.tsx",
+        "sha256": "da3b9544d33b99222ff305f1e5d9679afaa47ceef0368eef282969dd38f13290",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-session.tsx",
+        "sha256": "000c23864e57fb30b3814904041e6d9430f3fa01474cdcde72a1534e8abd39ed",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-voice-panel.tsx",
+        "sha256": "0af62ecc992453994c2959c7755ff5da3762ce7e5844681b6d6ad1b30af90c8d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk.tsx",
+        "sha256": "93bed2449c89845038ee81b1ca2534368056f53ca9666275c82e7f80c0db578b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/local-camera-controls.tsx",
+        "sha256": "acee3d1871e95cccf72d63dc34defd981fe0ea5b57357dac149ffde56fdf9df6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/local-camera.tsx",
+        "sha256": "5b736cb41932e5b323cdc963dc7a72e6afb990d3566e34ff2a69a6b025fd042a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/microphone-settings.tsx",
+        "sha256": "c97460c59c05ebaf4863c1d02c1e82b394f2dc85a001e440297f7fb5b77b5558",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/pairing.tsx",
+        "sha256": "b0a915d675fbe17f11f1f2d2134df5266e2687dea6c9591d8e25d834f898eba6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-allergens.tsx",
+        "sha256": "3c5bceb9303aa4e72acdf48fc1df8cfbff74b4a0d7ddeb0ae4d2e0c43d0b59aa",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-dialog.tsx",
+        "sha256": "b3ce6e3b95fc571de6184be3a9d27a2f67b482cf15fdabf4923d04b22a5d2b07",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-option-content.tsx",
+        "sha256": "0f1585a3567a93cf63e4ecb125ffbbb0ea1ed1b28c1843eb902d30e137b97bf8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-option-model.ts",
+        "sha256": "51205ddf027dddfd5148f72d9caaab38484ee2edee96357fc9759da428b14f73",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/table-cache.ts",
+        "sha256": "2ef25daa25a4593929f797442c22b6153ca3366103c8b2ff7d92401a2bab731c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/table-query.ts",
+        "sha256": "9710bbf66e81b1c423621a92791000047aab190d06b490062f10d20ab5b315b8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-connection.ts",
+        "sha256": "fe360c8cfead650e59466c03869c018690f0cbf62ff81677e75da185a4007084",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-controls.tsx",
+        "sha256": "64c7cd811d13bcfc25aa14ba8353e541179431fe7c59e6f3c27c6e853e2c28da",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-conversation-message.tsx",
+        "sha256": "201c0e1b126ec6922a5cbd76471012f696e1c5eba49355d7bcf229969f4c78bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-delegation.ts",
+        "sha256": "76b494072c68be41a7729151c3a1177913c7be9c1314563dabef619e723c77da",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-events-model.ts",
+        "sha256": "eb0d8462572b6b505d784ec11ea17b7cd5730a4673aaf548b6e1a486c2f0da89",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-microphone.ts",
+        "sha256": "26ad4af8e0a97e22130a0b35faefa1d427d3ab5e5bae975ba0c8ede12394cba3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-model.ts",
+        "sha256": "d28c22c56577d988c1d1ccd6f6ac3e27054b41d0d997218b35b51140fb3ae546",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-panel-state.tsx",
+        "sha256": "40148bbdeb483bdf306c7ae181251d444869684a0d6fdfc0f556f177eff09ad8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-panel.tsx",
+        "sha256": "0d726f1d9ffcc222111bc88ce9b901bb80b9a6a900e0728987655b990fa8e415",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-proactive.ts",
+        "sha256": "0d996c793210eafeeefb41af683871cafbbec690848b405187c469b6a31e4682",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-runtime.ts",
+        "sha256": "4d278186f54486b06d3bd3d8fc6d3fac0b75f6318e06cdca75db4f4794982a60",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-subscription.ts",
+        "sha256": "1c649faea71df833de5b052dd0f9d672999a7a3a3aacc4c3d3d85527ae7b093c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-transcript.ts",
+        "sha256": "917ddd99df78ef546b861e05dc41f2dc73108c406aa103f9146055c500c2220b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-transport.ts",
+        "sha256": "3573d43afdcda7a9be5e755a0801e1a548f61d2b1b6dfa4f25966a9554cb5ffb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-management.tsx",
+        "sha256": "e05f9ad91a62911e14d3f667f153e7175f57d3155a5f2338a85a91d7a2caa607",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-query.ts",
+        "sha256": "133948469e318b177a1c267e01f726fd0482c2488f98062091f958b143f9ef68",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-rule-form.tsx",
+        "sha256": "71e23f3fe8211b59dd0fdec27a5909dbf378c3cc288616a1048769fd0dcfdf7b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-visit.tsx",
+        "sha256": "413983d6782b30c4bf90c08a19e8109f5d4c1c37da4935abb8a90dea63bcb565",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/issued-coupons.tsx",
+        "sha256": "651897cae3287a0e4ac64d61ce9f80f79c4802af661b45406febd0922f0defff",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-policy.tsx",
+        "sha256": "56b84b09e8adae270085981e84b719bde4e3a541b0345eac86cf2af03bae3ab8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-query.ts",
+        "sha256": "b4f9e78d49741f803b66f623a809ec1ccfc2647ae8d8f14953aff1535238393e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-visit.tsx",
+        "sha256": "92f62dce0ddad91d974cceae18e28bdc633ac506673dbf4adae5c82c192b5bc8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/reward-editor-status.tsx",
+        "sha256": "d01c029bce9d30f53783ee81b4b363fd4989fcd0e35e905f21bfdc86dbabae9c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/admin-shell.tsx",
+        "sha256": "a66ca8dcf8390df0f37ac31a496db738984c4a0976f40e008aaa3e540e1961d4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/admin-sidebar.tsx",
+        "sha256": "ba0f72af7a8f999fd6a275bd6bafdf3c58160b593a10b7efc23ddfa37921f34d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/collection-model.ts",
+        "sha256": "c62173a344ca32b63eea2dfa84cef34a7f851a9a0b886cdbcb8782fcc1852f17",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/collection-search.tsx",
+        "sha256": "87c439a2743d6fef633c44c8eceac47edd241525475c340c54d2f8cb57d78244",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/navigation-group.tsx",
+        "sha256": "742cbf30e5b21bae1a55d9a169db6caec869431e53f02ad33d3e178ad66998b5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/navigation-link.tsx",
+        "sha256": "3791dbf6560bf1aa6c9ac907c84b8e771de3e567d3a36937da6892ead3cd98cc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-model.ts",
+        "sha256": "ee6a92eb3ffa38889074b34316291138702f2625b0cd918f63582ad1eeaa7197",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-navigation.tsx",
+        "sha256": "3d32ac66ba1d192a78cba156133e8109a02b493a7a41539a925c8186d8a83bd7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-preferences.tsx",
+        "sha256": "77164fd538259c4127821fba889173f1908ae136339c6b34fb62b1e8dc905cf5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-user-menu.tsx",
+        "sha256": "83bbcdfafe45f8e48d7f47314d9b23469cb26f5515f09b05d8592d9b99265dee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/store-picker.tsx",
+        "sha256": "213468a9426c670a76ded270fd11c8221f69c02e3ff93a3ae2c33f3b3f1ae672",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/home-statistics.tsx",
+        "sha256": "883d930597665c53d15b14c4039ecce80c0810f97535b47e84474f98bbc23ad1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-query.ts",
+        "sha256": "553eebfd1c005386865d8f92f5e5419e92d4d5da8ac3e970aad027c224f1fb47",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-results-skeleton.tsx",
+        "sha256": "056d8bb4a0a08f1c8cc9f700217a22157f75f093e50c5036363088ea0a5db98c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-results.tsx",
+        "sha256": "6d4c5e7c5841e5502abdfc73e46ae06fcd1772c94701697f442884df70110583",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-summary.tsx",
+        "sha256": "00c57f11c32c17237b98d3e2f0bb8b1ddd0d4eed28d155aa1ca8a4231c3d3404",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-table.tsx",
+        "sha256": "9a1b6d5b5914a53c54b3773e03f44318fe4c684227422c8dc24643168c9e2065",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/store-statistics.tsx",
+        "sha256": "be0df45e3cea417da6505da07aa4270df79ace99dae7fbe3ca69de6897e7c698",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/admin-shell.tsx",
+        "sha256": "11f899c7d8aa99b811c521dd390e6e7580cca2bc6713ffb20658a201edd14fe9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/admin.tsx",
+        "sha256": "c72441b94b6f556a6af36e4c9a3b25a3cf68dc1f9694aea5f98e7b1dd3f0094c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/create-store.tsx",
+        "sha256": "51ecdd4d500c980b5f11fdfe9738a4e13445047d70ec2ca26aeacafa7a91251d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/home-preparation.tsx",
+        "sha256": "bdb4faf8eb459259c650ccda844741708fcaa7679777a08a127623d5ac5eb285",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/home-query.ts",
+        "sha256": "d47496f593c54bb1924b14182f6ea34409684415552a62649065b073dc55b953",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/invitations.tsx",
+        "sha256": "382ecc8c7c0090ef510939e8c54dd583ecd059371cbe8d9c10562662d2b319ab",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/members.tsx",
+        "sha256": "7c9b590540641cbfce155f0489f5422ba16d0527017a4a59f64d32faa09808d2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/membership-query.ts",
+        "sha256": "22a3d64382978b6b471c1d82602518f02b6b6f2eb78987f9624fccadebcf306c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/settings-shell.tsx",
+        "sha256": "0c2548549800ed05ff19b1b6752f1780997bed82bd0105aee2c157ab371f1adb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/sidebar-selection.tsx",
+        "sha256": "3d8aeddd4b14d1f7a38d84bfc0161e982f5a9b5c1451429368a7e85725897d45",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-context.tsx",
+        "sha256": "9df6e70389c29e590b0769cbea406c3857afedbed20ad6b552bb3c12964a48af",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-home.tsx",
+        "sha256": "ba3e8ede0dd750c4c36b359b9f0d1d2d3cd6464534806060287a5ea2260abc1b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-profile.tsx",
+        "sha256": "2e3673e8b0e3fcb9c0196c2929835df4d941bcb1f19072617774d9d45110faa4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-query.ts",
+        "sha256": "f26519897ff3909b1a9c199a1052edabadc100778b74ae8c5c60bed07c0d450c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-shell.tsx",
+        "sha256": "ffa4552a058a8ed6172e418c9f23b3566a1eba211a83d6ace8234db7cdb5e284",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/format.ts",
+        "sha256": "bf8f3802d4eb37f10a20a90b518910d5e9984d8b59dbd160c18d93f9979525fc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/locale-context.ts",
+        "sha256": "dfd883ca292c0ac433de2c7759dc3e2fc201249639b0ae5a3c2f9cf63a209edd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/locale.tsx",
+        "sha256": "2697dbae412f2dd52d727deb25627db3436fd9850360667c3a81fce246905329",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-error.ts",
+        "sha256": "dc3d1fbcd5dbcbff87c15d745aaa1168fb72ff9d58247dc3d1cdeec08975cecd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-fetch.server.ts",
+        "sha256": "70f04c1686e18cdd956503d10f32254005eda0d903d38452248991a081f06e1c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-fetch.ts",
+        "sha256": "26272e057d60ffc12b41bafe27fff73c9da5eb711f72a6a361c75836afc56bcc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api.ts",
+        "sha256": "cf0b320c5c117f71201bbe9f71e7703cc45d957ad95f884a71111584a349f804",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/auth-client.ts",
+        "sha256": "06328163bebf11ce8f415343bd67a3fdad1a7dca4eb3aa0ab485effc4ceebd33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/calendar-input.ts",
+        "sha256": "152e17c2eb0410ae242888935af101183a5c50880178ebf554ab000d52c8d5bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/evaluation-environment.ts",
+        "sha256": "75334a09c42d5968cde32d083f10dfa8d3fc18d835ff944cb1069ff845555c37",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/form-context.ts",
+        "sha256": "d3857b3e2baf8060a5a3ca7bdf4f9364060c223bfb7fd50bd7a42ad9bf97282a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/form-validation.ts",
+        "sha256": "d4b3e93bf1678b4979b92e6f25050e24fc34a6fa4313d6b6f9a4134a51b94450",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/game-document.ts",
+        "sha256": "2695bf23e8650b121db0bdaec2ce28ed109b58449e01a9a48b0d4672d66391c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/initial-store-path.ts",
+        "sha256": "7ff9adffa14b114bde672f187b1a6488b13382d435cbba2186e5cb6b9b2e2699",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/panel-layout.tsx",
+        "sha256": "c60eb09ce05502cfe3565750295d72d3e6576502aa33654feb81d6880afe13f0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/pwa-update.ts",
+        "sha256": "82011a53e8bea58668793d48418a786b86d29d5b7999b66bb953438276d1c55f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/route-motion.ts",
+        "sha256": "f0b214103c99a3042486d67344abaea6e08614f1b31d292fe1bf542feeacd996",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/router-search.ts",
+        "sha256": "1917431308bc58a88b0d4f5dea85dcd3d2fe4d208c54da7f353c729f10b46c9e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/server-field-errors.ts",
+        "sha256": "de0bc41b8caac54d7760badb039b7c06f56d5ef4487cd654722f86692e0dc3f7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/session-query.ts",
+        "sha256": "702da21c2de602e3a754ff267a94db15e3fd591375cb26fdb27eeae91af051ee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-media-query.ts",
+        "sha256": "d088929817f4a22996d13d6ec53ec776cbb313b14b9df6e8315ad1c9fa934304",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-panel-layout.ts",
+        "sha256": "8bd8eb0cbdc7e1ded344324cb21bdec30241ffe9f8f4850169ac67dc146bf64f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-realtime.ts",
+        "sha256": "4f2e6bd234cf455a81bc90543d114f35a0b1a786c79bae4c21ab6438c7f86209",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/router.tsx",
+        "sha256": "ecaf95a219a12b255b35339866a81a85be44b1bd96f96ea1edde1bbc36baf259",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/__root.tsx",
+        "sha256": "54211d20968bf4956f3f9d683ddb85bb06722a86a358f7dd4a3e4d389a79c700",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account.tsx",
+        "sha256": "f4839e922818efe3e33974b9420d0a00617a0ae08a1abf782c1f48c1074b2a0b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.integrations.manual.tsx",
+        "sha256": "f2d1d686b9e61a8313f299ba01c8b126ec3f3ad8cfe0f656774f5e31b7274ec8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.integrations.plugins.tsx",
+        "sha256": "3e61e22393ff56816517efdc86350ed1946b881c14db4b68ff154228e9ccaf37",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.mcp-sessions.tsx",
+        "sha256": "59b9f719b73ba784ccd8fee429a2e1c916f084ec575c6785564d44a71e3e5762",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.live.tsx",
+        "sha256": "33b180fb7c6f557973287df9e43f4946423a0721aca548660e3240b039396ba1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.coupons.tsx",
+        "sha256": "a82b9f212e94db9de4095dea62f32c50453f8409ab57f8fd11a7dd11444bb08a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.design.tsx",
+        "sha256": "946c93c17c9578fe81da0dd78a2c2e5534838ddb98422667d29d6d397a1e86d1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.devices.index.tsx",
+        "sha256": "44cc0a98fe181f612203ab3a7de531e31f007c8c69d7aa75db7e782a74decbe3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.devices.new.tsx",
+        "sha256": "05742d0f4dec7e1bacfe52debaa558823bf60ee63cd79579076cd691b8e6a664",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.floor.tsx",
+        "sha256": "57df22af47671ab245452720df3549a640fe8d337cb4512341654726adca95b8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.games.tsx",
+        "sha256": "0cba01c8ae7a3cbaa83425fc3eb9c5b958d519c5890f9be65ad4d04616167dfe",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.index.tsx",
+        "sha256": "197206ccb5059bedc9d98c9cbf27ca51ed9df389f1591273111b54df325eaa61",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.invitations.index.tsx",
+        "sha256": "856a3eae742663599e8b880ed26fcf660afec995e776579d2e14f1f816d0b642",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.invitations.new.tsx",
+        "sha256": "734a8748260c07cbe6f7d7ef164e09445e80fe8d424912e7ccf8c60a4d32525c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.members.tsx",
+        "sha256": "7696120564b2ebcb5f77082f951be32d9d1f24d615179facbd5bc91b37ecd2b5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.$section.tsx",
+        "sha256": "4717b8a1122e7284ab5871ecdbb771fd5ae6acf50f12e1df59200df336d52fe4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.$section_.$itemId.tsx",
+        "sha256": "aa399a15ddfbdf01eaff45c783e1974ce6af576e96b8b0f8bc266932d50cac84",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId.tsx",
+        "sha256": "ea9e93c8945d3828ff2edd2138d1cda76d1d6808e813db7eb63a41be00a00950",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId_.$section.tsx",
+        "sha256": "62676acda17a0246df982d2a7b065e99a62873473183fec8ca38e85b906de38a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId_.$section_.$itemId.tsx",
+        "sha256": "df08feb5369f51f0da368bd57ee3109c586e01d82ab00a8ddffc38f7f9174f51",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.index.tsx",
+        "sha256": "c003cb79351d11a67b3f7f74e152c6213a7371ef4e9fa2bca09e3d5860e4fc23",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.history.tsx",
+        "sha256": "5c4ff7ccb57d9792c4fecb02570408bdfa7d67f9126af8279f11cbb22fa31210",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.points.tsx",
+        "sha256": "a9514d60179b6a3d1c1ae80b3e8dc329d1d51518bfcb66ef8544eaa3d73976bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.profile.tsx",
+        "sha256": "94f4bf506df78c5c83fa3149d03d90a7c74539e48aff56dc110756ffb8b646a4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.statistics.tsx",
+        "sha256": "af2d213bee0ab451487a8a2fce24d53362ecbc5764c94042a0e218308709a860",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.tables.$tableId.open.tsx",
+        "sha256": "a977afa2cfd9255e5d58038ee13dd25815b703fbe573b108e89e8cf3d22cf60b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.tsx",
+        "sha256": "1ef21f452f017e7d65573180efc3a096dec15a1c86d77bfdee0582f1e93f46ee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.visits.$sessionId.tsx",
+        "sha256": "c96f383735d9524e77f82b53a5b58eb1f6a15baa78ef6c0ea564247c20c8e81f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.visits.index.tsx",
+        "sha256": "edaca4ae6e7f2e91f470a84c6244b6fc869101718ee79d28f3ca7e00d342db4e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId_.demo.tsx",
+        "sha256": "1b28aa05d81c1e42eea32662fffe20108c60545b31419cb4093080ec3e724a94",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId_.demo_.$demoId.tsx",
+        "sha256": "20fd5caca189a0fe98a4ceb3163216d906a6e7fd53822f8f38b1367951d203c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/billing.$organizationId.tsx",
+        "sha256": "559289a03bdcf7223a23db4097823ba0a90343b9d065f7f09e2fd064aa6b334a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/consent.tsx",
+        "sha256": "79326629027cbe0bd4cb90388805f22a8efcea4b2242ca4baf9ae9ffb596d620",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/device.tsx",
+        "sha256": "081714ccdd3654e7cddf3a8d0d9a031defb99876d29d9a30bd3d8602cd7dc4e6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/index.tsx",
+        "sha256": "31a3d26091ca18aa158afd87d88b6bacd10e84999fc197593c3dae30c0861c8d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/invitations.$invitationId.tsx",
+        "sha256": "25c85cfb22c824e9f79c7a25184381851016b8ca6486c233bfea34a6bcf61e39",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/login.tsx",
+        "sha256": "5db4b2677022e794e74870569a280fa79b13ecf48f3d085652b51ec5fb4fc851",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.consumption.tsx",
+        "sha256": "b472a3242f9f24255afd354f11c5bd1776a74196f1d46705fd3c6b3eccb9da0a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.coupons.tsx",
+        "sha256": "16589d6552469c9b36b772dc8e43f7c757bc860137ad19177dc334893c51900e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.index.tsx",
+        "sha256": "249fc05219c0c1129d3b08fc271194960c21567a77fc708e95d16a8ea2a902da",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.memories.tsx",
+        "sha256": "b2c0c30cb53ca6eaeb90dac60936602b003670a7d415244e142f655aafc123fc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.points.tsx",
+        "sha256": "0b52156bc729a57113d6f332d0b7e72dfd6f15bff5929bf1a1f3edb362bce9a2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.tsx",
+        "sha256": "d85c5929e8bb5b8e04eef08fbfd0a13e48801d86cacc54c78d6e9e443f045dc6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.visits.$sessionId.tsx",
+        "sha256": "bca186f0b62b5363a76df3b88c2c929544c62b2d4dd1c354faab4e0259504899",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.index.tsx",
+        "sha256": "320793d382e4cf40ef8cf318d572813d69354e256c801a0a7506e9e6e1c2a9c4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.join.tsx",
+        "sha256": "8f8668a0dbbeac2855ea9903b5eeba2ec8982d39ea284b23b8908b6fdddb11df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.tsx",
+        "sha256": "216d8cafa3a3f9f1a948f6df24b02d2c250dca104e4b10a2fa0f19aa262f2259",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/organisations.tsx",
+        "sha256": "1bd0e6b90eb8d8e328a58b954cb3e46bb61e9d2357eb9413c02aac0c3d87fb7d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/register.tsx",
+        "sha256": "fe0dc95274b12d9e1dcc13332d90424197cb4b5abaef73bf3fe90d785f1594f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/reset-password.tsx",
+        "sha256": "c91582c4276315d0dbfcf69f33568e3e58490f08622ddbacb2b77785cd44ac99",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/stores.new.tsx",
+        "sha256": "7ef7ab06ef2e61eef2410bbb9d642f1e7b414b04f67e7c00e65392c4f7f805ac",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/server.ts",
+        "sha256": "6d26013ce4a950383fcc457cd1e96211bbf5890b6d1f4b73a83ecd39479e4f1f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/sw.ts",
+        "sha256": "a336abe5f2a549ea870eb43fcb05a4d35399c5a17594c75642ae33d66d418e2f",
+        "matches": true
+      }
+    ]
+  },
+  "after": {
+    "files": 354,
+    "allMatch": true,
+    "manifest": [
+      {
+        "path": "apps/web/src/components/form/fields.tsx",
+        "sha256": "409d6db5d7d2c8850271e3e386b13ea68688014c365f9349b8e44bc78482511e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/action-feedback.tsx",
+        "sha256": "7986c979bac448c7fc4eadbceaff21600e3f8395f9058e8e8a0d372ddc447d93",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ai-elements/conversation.tsx",
+        "sha256": "19adef3df4bbf1855def291b97c9567b298c49b566f083793093dac9a368614c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/brand.tsx",
+        "sha256": "1853e754be424d1fb70802a87302364ab2095b34ad55c50a27df076551058140",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/calendar-panel.tsx",
+        "sha256": "b73f759aebf8916207856ac18a0a87384e2157d52e45d2f872f2d48fc0e171f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/cart-lines.tsx",
+        "sha256": "68f0577100d1cdd1d851feb3799d03aa035d134147f501d1601b69c49037ca7c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/collection-sort.tsx",
+        "sha256": "f961e325eb2ffc0809af3799827b1fdacfbcc773b261b88ad26fc446fb845324",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/collection-toolbar.tsx",
+        "sha256": "8b7184ec3e0e06a3311e8345954168660a79b5d6f66a0c4930841641ec36c0ec",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/condition-summary.tsx",
+        "sha256": "4b25f1350e13183ada0e4d7254ece5b155b170a4c4d0071d3618f8c368007f3e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/confirm-action.tsx",
+        "sha256": "bb771b1b1ae63f9810e17e0250f13d874f181699ff23de19f3fd6de6c03b1143",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/copy-value.tsx",
+        "sha256": "7e5affe4d2f2f77d643b0c12004bdee8add10b04375934a73c84dce89817555e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/coupon-card.tsx",
+        "sha256": "c2bbc4bb5c9cf516b4f24ecca2c2dfcc85750d8670624a9e13e279735abc0354",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table-controls.tsx",
+        "sha256": "e3c83cc8a44b9bb0b08463282be5cf8ad222d47c3b1891bb97b53a483afeb754",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table-model.ts",
+        "sha256": "d4f64a23561c3d9597a6efd5d750c48044c1527bc6cf15454f92fa9e86cc59b9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/data-table.tsx",
+        "sha256": "b7733a8eb824a4eeedafd4ff59069a02c1710722e1adf83fc3c396d38fe59368",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-picker.tsx",
+        "sha256": "ca2cad621ef0b49cc4cf21fd633d55ea92ce6be1cd49446a42505340bc0010a9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-time-picker.tsx",
+        "sha256": "2dd332b009b981fe737e0df5c9b58d9f93ba886815078f13e84eb785d5c37d9e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/date-time.tsx",
+        "sha256": "84109fd13ef20f2c52ac3e69021152465f14960c90605ca2e798694887b04b26",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/document-head.tsx",
+        "sha256": "c1fc86bf40e67833fbe29d01644f8059743f1fb3271ea8f7866bfbd973497dca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/error-notice.tsx",
+        "sha256": "f0d697e8fb1ad0cdade602fdcec11a86a1083f2e1abd040d54a613c46864f236",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/form.tsx",
+        "sha256": "66f1862799023a6856e090a79d210d7c1e79ccdd53695aab49b2eea7291790eb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/game-frame.tsx",
+        "sha256": "88ffb6e3b8e1a37ddc4d56580cb2e9508dc1a58ccd249f94c05285c402d70374",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/google-icon.tsx",
+        "sha256": "fc63a0606eb65e5bcda8a3b3e244a1440b690eb2136825247d05daf2d70443ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/kiosk-pending.tsx",
+        "sha256": "130dd46e780a4b6f4882d9a96311da61400dc9c7c4a19588c3b1d9c4e3a13699",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/language-label.tsx",
+        "sha256": "e9739f57f06d77d2c756719c8e455148afde1f10c9485b9f0099a69feb93ee33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/language-switch.tsx",
+        "sha256": "34c89068e3ffa013799257c2ddecccfc3898bec4032bede3fb499c4d1e9cf73b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/loading-state.tsx",
+        "sha256": "e697f412d1d0bf70f102f5457f3374899f812bc4badff4316503012260cc9797",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/menu-banners.tsx",
+        "sha256": "83ad4b7c4f1034d8a7341445e34a97bc648d0f01d9b72f13c7195a9fd4d6aab7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/menu-option-image.tsx",
+        "sha256": "5397b645a5a53448fc903866e5ae7143a3dae1eb0f43a3cbcca33cfde81f74e8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/month-picker.tsx",
+        "sha256": "662457a5943e7ea8d2cb546342065568d8162c69e20e07be4a0da9b148e62029",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/motion-features.ts",
+        "sha256": "6a2a9de6d9d9a69eb2b21d402f3431daef681a76f8c9d580f847d956cd08375c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/motion-provider.tsx",
+        "sha256": "2cfe974ec361dc72d61e1e1556e79e3411a133259aa7ef75828f7cc7b9d42e58",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/page-header.tsx",
+        "sha256": "512359ba3693615c533cb8e72b12db7bec15c0ca758ecbfc32a8d86fea7efffc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/product-image.tsx",
+        "sha256": "604b83ff9af9ba13edc9dc4df92e20166423154bcd774021719b6f25cefa0711",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/product-menu.tsx",
+        "sha256": "0bde7d5f93b105f98a8fb85f016fcc2b5881ba3d34724963b77d978025bf644b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/pwa.tsx",
+        "sha256": "c2aad791f45e75716f4ddec5d622fc0595f93496d5e63c41c56d30ef0f3c52b2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/role-badge.tsx",
+        "sha256": "f53501dd6baea55566dd5ad391e30dce87b931a865802017265ddbb0d956cfd1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/route-motion.tsx",
+        "sha256": "7bd269e291797cb96312e36730571156e6bb02057f395dd84a8bc261e484291f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/route-state.tsx",
+        "sha256": "d199a90fc717d157bd5341aa4259a64a97f8af97c4fc86561844519f12af67bd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-icon.tsx",
+        "sha256": "63688e26a6773198377b64efbd37b2b7e63caea7e76b8e7d1d127ea5796d4f50",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-logo.tsx",
+        "sha256": "957a92bd9f7793316a35065c808ac0d40ea03832a51fe36f75f46bf07ab3a074",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/store-theme.tsx",
+        "sha256": "162ee485029d7cb2fd20705db7127e2a7a4ec9668223647770183f4dc54c07c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/badge-variants.ts",
+        "sha256": "870e58ce2909ff29ae733f5e80d505c4ac1b833c03f20f395ae08f0ddcaa37dd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/badge.tsx",
+        "sha256": "df791ea6dafb5caa9afcd0fb29ebc2f595b6a2ef7ce6a39d8de0c382ba6fc838",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/button-variants.ts",
+        "sha256": "65e7a85e2517a8c45edaa0017a037a84686f163aa1cafe5315deaf4e04c76f3a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/button.tsx",
+        "sha256": "f032c55521cf85e964ec90853ad5401b5b695363e8df801dd9af278f1d52ed2a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/checkbox.tsx",
+        "sha256": "a16565af97834c57d9b9c596e235aa25daacec4959e0f6b9bfd163b095a7cb47",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/dialog.tsx",
+        "sha256": "14f2b2c9447c1a795c574260471ef125b6553e769c02659538f02e4a6b12b9f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/disclosure-target.ts",
+        "sha256": "d1907a8921729626d01cecea773b3e9f0577de4db877600b52a3f80361961e06",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/disclosure.tsx",
+        "sha256": "d69286c054f166c9124796c05d8b7457084c70f779ae1452c209420c8a00c98e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/field-errors.tsx",
+        "sha256": "9c8a6afb3821d2048dfe3d5919d5a9564fff79f0e5f39847c97d63b50cfe1771",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/input.tsx",
+        "sha256": "92362e2c382132708210b0afaea6d08463048eabbbce6a27bba97a3d3937c42a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/motion-variants.ts",
+        "sha256": "8a3413a6a1f1b518a9aff98d73c2dcc882536bc7ec4af55db7c1e7011730e3e8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/native-select.tsx",
+        "sha256": "845caf5780ee9dd960019cf58c44c626b4e63a299aa9ce981e888ffd3c3fce43",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/radio-group.tsx",
+        "sha256": "5328e1cbc24741fef36d03034704b6feb2db0c7da1f263760002debf1ccf3eab",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/resizable.tsx",
+        "sha256": "31b68bc0fd4592dd8a303d5f967e1f0564f04ae4af5d18bae2483b88194857d3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/select.tsx",
+        "sha256": "db3e3e3db66490e07daa4d43f422802fd7687ccbfa3488327b9d0bd30a07024a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/skeleton.tsx",
+        "sha256": "2e8066d08c710b666659296db1284096277586af85ac651d1be7d44b2445d954",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/style-scope.tsx",
+        "sha256": "335254519359726182da7581e56e3392372055872066569013fd385dc5ff01d0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/tab-variants.ts",
+        "sha256": "b37353e37dcf6297aaffcdbcded021673f0785f5fc70d3d62042b9ccef68426d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/table.tsx",
+        "sha256": "7d6684ffe7735fa3e40249152e5fcb3262bef019faebb3898de543522987676b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/ui/tabs.tsx",
+        "sha256": "c771dfffcd66bba860c3483fa5b75f3c3df0ec8fc1418ef41eb7e7b17d3ed82b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/components/user-identity.tsx",
+        "sha256": "aa640b3ccb6590af57d1702c07a146685fa5be191331275e3879ce81c8d85550",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-connections.tsx",
+        "sha256": "18326b815382fd58c13ba801f49f198a8418d40f3445602a42139e975e24216d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-model.ts",
+        "sha256": "b13e1bbbb4a9019353ef72fcc85e86751648dcf7ea0d215c5fcba108c87fbfbd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-passkeys.tsx",
+        "sha256": "10d4152689adec1f52f1cd4a9270d7ab4a0def537c1e876c8866ca74ecf66bce",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-profile.tsx",
+        "sha256": "a510bc923a1d2a7b23542f369326a64a73191bd4720b07953eb4b4ac95b16c7c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-query.ts",
+        "sha256": "24fc9dbfdb269a6768b21d5fe9a726c4fc5d0668da8a48fd76bbda652c49eeb9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-sessions.tsx",
+        "sha256": "3c8cbc67de24a24d8e69b4e8c5bacd77cb75a8e8bed05f48ce94f3a4778f3df3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account-state.tsx",
+        "sha256": "27103a1dbae0b9ed9973cccd09646970af457cd0f2b6cdb1638e51cccf61ec93",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/account.tsx",
+        "sha256": "a32827984e57ac65c65f9df5768457af71fe535873be0537c851be67cdd5c539",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/auth-layout.tsx",
+        "sha256": "eb29a8b2ed54206e30cad2fec3ba31e79e94aab0c1ee57edc25c0ea4cc3039a4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/consent.tsx",
+        "sha256": "820f8e619a59311e40ad31487d0f6323f758244b1f8f996acef046d6adcfdbd9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/device.tsx",
+        "sha256": "8e921d85323a38a1e5b0cea99eec7f34aa317616445ed1a18abb4d4d30b7d3fd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/email-access.tsx",
+        "sha256": "bec8c5b389d2425f033d336454c361ea71261962d82f9f35fb441284d248f888",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integration-query.ts",
+        "sha256": "b8b4d52749bc85f848c7f9867e335521db01b642376348e33d7ac0ebf1acd49a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integration-setup.tsx",
+        "sha256": "0671f53200c581460f91286f1dfb3de7aec6ed896dc838269119c5a58891411c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/integrations-shell.tsx",
+        "sha256": "7f1cfec81de8b549332fd58908cc205c7488fb446b1b31f48151eb5c235b7175",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/invitation.tsx",
+        "sha256": "6c44d33480284354a01cb9d952702d533cec77ea0b2a33f70a7bde7aedd8aeab",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/login-model.ts",
+        "sha256": "6e6282145bc46b9216e51fb80ecedfc69bd2545f191377d519a81289212b491c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/login.tsx",
+        "sha256": "beb51180a629fc5d8e9256dad76e99895b2cf6c02253abf20a5cf41e9b7ebc1f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/mcp-sessions.tsx",
+        "sha256": "496f13b11690eec5ba72bcd7c63b7dc9d929247c9fc774100589b7b72cf36c40",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/organisations.tsx",
+        "sha256": "365630b3b0fcd52a556c321b2d56b8c695cc3b1ca343d84c332e6a02be8df742",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/account/session-device-model.ts",
+        "sha256": "46d50863cab8e2268a67ebd35f67ef87bbe61e8b793015308fc5096df0cc5a3e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-contract.tsx",
+        "sha256": "568221631ac205c1214e569c32b70865d9958696a7095750df63e3ac8b545b22",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-format.tsx",
+        "sha256": "91ea611cec1ec9c11dc250f9a9912aa4ec836d21201b26b3bb7350960cda9a66",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-invoices.tsx",
+        "sha256": "1b3b2948a551fb0d9818b79145aa21ca219fe97ae879678570a50f3f41da88ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-model.ts",
+        "sha256": "e75189a5dc9df69a4b1ed150d7f2b19c0d3f7970df78c7003788484ef28c3828",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-page.tsx",
+        "sha256": "1ee52c969091fc42e45cfbe9250ee896c9bcaa24c8243230068d91a892a24351",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-plan-features.tsx",
+        "sha256": "713584a2207284612ff7ca1eb89d253ad01367d266349973a1c942ffbbdaa15f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-plan-options.tsx",
+        "sha256": "b771f04f8031e13ccb163c00abdba56d57427983a76c8d8014a996f22dd263bb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-query.ts",
+        "sha256": "4a4ad2ace46af4922f51dea6811e9993abab00cff1ad9af0df097cb83667a98e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-usage-chart.tsx",
+        "sha256": "2e194853b011cd697aea3bf1c1a00dc423709a270c97a77f8e1a4c406d113f3c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/billing/billing-usage-table.tsx",
+        "sha256": "6da6da2bb532a988706e842669d3975e9111c679b426480667fe557b2740b201",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/catalog-query.ts",
+        "sha256": "173b3bf10b7e7fff83684248d1c31edabeb0b90a1df2d9cace26668e9a6e8ac9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/categories-editor.tsx",
+        "sha256": "71440d78e92271bebc76f741c763b49d137ca3227cc4b524d43e008dc77aa312",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection-columns.tsx",
+        "sha256": "00d0a4855621e6b4c237ac02cd36e4a3efea5b58cd8be8d4058f181ccf3102ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection-model.ts",
+        "sha256": "996100b504db0a1f15a36d9eacea10ddd86ce735915d2551e00ec94abb9843f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-collection.tsx",
+        "sha256": "6c20d787380afe94075bd1678e6949d1f673f539cb6eb97e2652cfc87b63d4a4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-dom.ts",
+        "sha256": "b72fc4112654588afd196fba33a358482cc9a2e443dcbb424dbe499549c77fa7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item-form.tsx",
+        "sha256": "78638f61331daae855eae2cd00e0a9d875fd18094703e1567029ad2a042b13f4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-item.tsx",
+        "sha256": "5e1a55e3212dd139ab2a61f922075adc80795b50963dff32135281f039df07df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-overview-columns.tsx",
+        "sha256": "5c9c6857131d2e97884bcea606d3ff57f0a97e7ba97b03628b2aac52447494e1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-overview.tsx",
+        "sha256": "efc3b7fb17ca2811beaad451f899c2e95d5c6122befafe7a8081f72644e5c795",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/menu-product-details.tsx",
+        "sha256": "b8ca9ea1624fbfbc7b703189ab8cd967df5970e7742302fea2d1e6f0ff188cf1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifier-option-editor.tsx",
+        "sha256": "9419ea081380952ee77174db06313daa1bb04a027a92a329aaad15889c0c707e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifier-option-model.ts",
+        "sha256": "b3cf9e994deae54e641251ddcd1622de665c72d9dd77d16fb112f2fe4b8559c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/modifiers-editor.tsx",
+        "sha256": "48738800e06fff0d885d93694c59a3448e1f1e3f59191e577746ecfdc6273a3d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-model.ts",
+        "sha256": "3ae1f768a6f89c9fa80b8905c448d5c93981de0692fcded6a149bbde8f8f4cad",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-node.tsx",
+        "sha256": "c66f52fa36bfd7f40e38844db539f9756e7bf63574a47c7fd8941f0f1a8fbac5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-condition-picker.tsx",
+        "sha256": "570ca9441e49b12b7f055ef83620c22462f49ad7b6c50907c3581d052f3670ca",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/option-conditions-editor.tsx",
+        "sha256": "9e96aac1e412db4f2f2b1fb98710f20e135d1f8197fb3b86c31953f771e5b745",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/plans-editor.tsx",
+        "sha256": "12e487b1b7f2d2e95de71e6f4cf413c9d9558f958e4a4dcb7461b4c2180fb867",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/catalog/products-editor.tsx",
+        "sha256": "d6b39d5c87147eb0ba893260391ce1b6568e1b76ce2a9badd3c0d18bf48576b6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/cast-overview-page.tsx",
+        "sha256": "53b7f7dbaae16dbea4b09c3fbc68f359dc6c1fe371b4ee1314ba1055e1ec1613",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/cast-overview.tsx",
+        "sha256": "dabb0fbf2a763f5fc6e4e78519a565279b245449424f997f1614999c75b28896",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-change-labels-model.ts",
+        "sha256": "25e13fc3e7a3ff59e9446b32e5f30fdda0f235faa9c8f233f7877e656d581ec3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-changes.tsx",
+        "sha256": "b4af8b7935680b87b042c556d44a0955ea897e915ad7a66c49637081419d114c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-defaults.ts",
+        "sha256": "09007d9b2fe384dd3a4146e424f13f1ef5db784fbf36a0654829bfe39724ab72",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-draft-page.tsx",
+        "sha256": "2bb3d164667ca197b4f73bc1cc11fccae3968c4f8602a3be06328aa5415f0fdb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-editor-model.ts",
+        "sha256": "db2fae207157728948e769cd4395c27dbe52e934d861ebf208c0c5a17971d9a9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-editor.tsx",
+        "sha256": "0abd1b09864bc585d8118af9babb9aef03decc86acceee68c89cc6a021dc5570",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-errors.tsx",
+        "sha256": "18097293ce2c8f1000119135f56f0bd892c0dd624cc81c3ac4a41cd3af9fc3a8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-fields.tsx",
+        "sha256": "653b1f0537873e15adb3702e5d5eee21ce5d7cc740b29d8cc46a87645985d895",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-header.tsx",
+        "sha256": "4f04acf23ebb9cf266f6ce4a63890a3ffc1dffa3094cf86cc36b3191e81fa27f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-history-query.ts",
+        "sha256": "582a045195a297699520713c237b03edd5fe9346e4b475973c32f2486b874495",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-history.tsx",
+        "sha256": "686078fddade8c6d9333ea81bad46f71bb17cc079392c3f94d659888ab85408b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-details.tsx",
+        "sha256": "462d2f6800d5c72f89059919153aa8718a9aacfe0049a9909e2ef869272f6bd3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-field.tsx",
+        "sha256": "c67de374d45e295a799328be4ce977b66edab06d19fab1dcd7204a62661815e7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-image-model.ts",
+        "sha256": "5bdc15407dce18ac6ec9a6ae2aef5fe86bd151f10d506fe5a4168a14999960fd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-release.tsx",
+        "sha256": "a01222a2bafd69f169df49f1590ef4428a635aa86567224dc9e7a5490aa14741",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-route.tsx",
+        "sha256": "5361dfbed888f3bf04b000844c8436a177a205a0b34c9dc39f9d0284ab50ece5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-status.tsx",
+        "sha256": "bed2505db61fac4fb751274e3cb8317a499354f9fa69c421b48360610bb93714",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-timeline.tsx",
+        "sha256": "caf2447843f33738e9316948c7eea673f4bdcdc46fd97d3103608ce9107ce2ea",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-toolbar.tsx",
+        "sha256": "52da9c04af39a21e62d434b675ca357a60bf877bb6360d279ff1cdfae28c1490",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/configuration-workflow.tsx",
+        "sha256": "d5214d2ac63d304ea7a923b772235140e44b9b14f57d220d48dec3af337999f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-banners.tsx",
+        "sha256": "678db20b25fb50e59c45dfdd2523ca14c18aa4e6957f0bda5f399d451f474757",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-editor.tsx",
+        "sha256": "c267f535feb27139a0acacaf0d9116d2729b3091b44dc9d377641755129f5bc6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-image-editor.tsx",
+        "sha256": "c128673194e6fe074940ac119ac9d20940ce84976233570a112b2a828b0931e7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-image-model.ts",
+        "sha256": "521836bbad1e49d9ff7f872f8db5a322fffe0410b34815cb8916cfede7c92b90",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-theme-parts.tsx",
+        "sha256": "9638f6cbf878703e07f5b301b54744ff0734b88c6173209e99825f18fdf241f9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/design-validation.tsx",
+        "sha256": "b16f22e37cca6bb889f75b22a47f023c5a5d0ba7708ea9c15ff7b8ab2da529b0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/drafts-query.ts",
+        "sha256": "bfafe28675c69c519b7219f3450c491a39b416a2a5f45502c7a2d1e10a59f8cc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/instruction-view.tsx",
+        "sha256": "90fabf7f0c44c9cfc2c9add5f7ad3ea45b05200e1543c45ca720f804e88788a1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/language-fields.tsx",
+        "sha256": "7fec9779c57c8c793db308da8e2c4fa2aecaeaa200b219caae24153197766a1d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-model.ts",
+        "sha256": "e6ff111d3d23b377f162371b11b7d46c071209bdf6805ad6dd121afc546c03e0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-navigation.tsx",
+        "sha256": "167dab11684bae3400a24e9a06c2c7f8d3a1d86012f80bc3174d02d55348af5e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/menu-query.ts",
+        "sha256": "f15eeed26ad26884022a813a745a6afb245773dbdff2663144a5f154062591e9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/prompt-editor.tsx",
+        "sha256": "dc0cebc480d61c1464f9e30e94723fd742b00ce10027e3c2004b17548c65b572",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/settings-drafts.tsx",
+        "sha256": "88e1326b9e611c38d58afd5cafa8d9ffccab213a271d9224fefd1f1842fa337f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/standard-voice-select.tsx",
+        "sha256": "8f93e032dfc859c46b116d603d3ee7dcb3d97434bb807e7ed31ad3e73399b0c2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/store-design-overview.tsx",
+        "sha256": "f6312bf4cfc692531f9322949c4fea6887cda0636eb59b311ec3c58d604e7216",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/store-design.tsx",
+        "sha256": "bfebf50b6e53ace9e48abd20d9ef16cadd154dd24bf295f8e119cfb6dfb1dd7f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/configuration/theme-composition-editor.tsx",
+        "sha256": "cd6cb7f203969578450d2a8ac1ebe269ddce4aff8091efed97fee02ee1a09e69",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-consumption.tsx",
+        "sha256": "ac4b41fecad4c1499619c84b6064a89a5b8bbcc501614fc3de79d877eb260081",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-coupons-query.ts",
+        "sha256": "76d1b405cc5d26eb78d58a673a1461b67eda22842da87e7abd09535f74350d40",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-coupons.tsx",
+        "sha256": "09d6793998017f8936d5ed9ef572ddf0c3e068468574359c003a50a336730752",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-join.tsx",
+        "sha256": "7f439f128e4db07b4c920d70348fb6aebd46f77c3a3ce7336e786770f8214bee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memberships.tsx",
+        "sha256": "9c0d88be47e0f35730b61a142e1ca1b356ab0f60d7381e48ad18c43f474c8304",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memories.tsx",
+        "sha256": "fe6a550f58e421d17e664311dd0e98dc0678fc514ebf57162e3a81078d20b960",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-memory-query.ts",
+        "sha256": "c472e8ba37f5ae52708bc1377888d99b37ccb1fc34c8ac9ef54f85c77d9e2e48",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-points-query.ts",
+        "sha256": "e674a21e636a2c460221b60117d1f495a445d061916317b51472578148f45b20",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-points.tsx",
+        "sha256": "539afe8f96f7142d3896399e3f2634d2bb8b7d6ec2c5317eb0b2e16450bba7c2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-query.ts",
+        "sha256": "8aca526ba2e99d8c9f2f1769678392bdc1e67b13d25863967f3d3c0982dc3ec4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-shell.tsx",
+        "sha256": "f3302fbba4064b9e87f21cbabd0081cdaa99c0dcc0b36d07d4daef2280589492",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-store-preferences.tsx",
+        "sha256": "7c5abde5590807a01ddeb6b0fe88313efbe0dc4800526fae63275dec53572930",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-store.tsx",
+        "sha256": "0e150c4c2e10798219f2929b8dea1a63e50e5c80016e52a19bb4d2ffea8d6b79",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-visit-query.ts",
+        "sha256": "eeffebe95b6a24b2aa75d5ccdebe8910f1b9d7890780da2b347bf94a10870a33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/customer/customer-visits.tsx",
+        "sha256": "14c2b4dc6e7a604eb7c6187f4f804fd343444df70bbd6f6ac9039b11674ba617",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-configuration-model.ts",
+        "sha256": "2846c1ca4336a5346eb8fc9c3dbc26a01a51a1f3cdd03062815cc1e462715356",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-configuration-select.tsx",
+        "sha256": "fee717e1f529ad1b135ef707995ce37598baebc722b743fde2b91014bec6afb5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-device-frame.tsx",
+        "sha256": "bc4718447b9b362d26e4aa5aeec0eb8375a0bb72f647b125a4ea4ab746b84b06",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-device-model.ts",
+        "sha256": "8bf891ae1dd11fc51c19cd7375fe2253906f1ebdd950495a30c916923a3083f6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-display-controls.tsx",
+        "sha256": "f859ba869982556fdacb18f044f080647d56440201b3793f79cf5a3556cc846d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-pending.tsx",
+        "sha256": "56a9174b4a886e2fe52616f8da4656ed4403161dba742f6dcaef3762163274f0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-query.ts",
+        "sha256": "92f3f3acac32d8251a235efdbd99b8eb4a50d126df2f06d1dde1c74ba8ee237a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-session.tsx",
+        "sha256": "e475cd9461049bcb58f0203826749706c30d05a1b818bf35273bb48e390d6bcd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo-viewport.tsx",
+        "sha256": "a5e24b2d9f0dbbb53f9831c4c9d5ad9a0f543073aed5f3800021ba1127c6789c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/demo/demo.tsx",
+        "sha256": "33b28b2952b127930941ceb954aa7b992cb8714eacbdc571822d7f651dc64310",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-columns.tsx",
+        "sha256": "97aa906a397b85ddb0b15cbc2975526f04713515eb658f5441ea5672befc4370",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-qr-code.ts",
+        "sha256": "df3310c73e5a724fd68e8cd16217beb42f497f78f7113ed03f5368bec90b6867",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/device-qr-reader.tsx",
+        "sha256": "3a93f379891cc0b09edd9f1cf69d34a8977fefd630d08f23630d3245a4d806aa",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices-model.ts",
+        "sha256": "b07606a216bcaa1c92237609cfd5e0cc173ad56ef14eab330e850d8743d66c58",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices-query.ts",
+        "sha256": "1484440494d454f9d8ff4ab8214f39a0477283faa0eec8592422da9114864a33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/devices/devices.tsx",
+        "sha256": "fd2f123b253e4cd472b52d5db1f67a6455f57054f27ed9fb9ba7efdf7e403975",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/events.tsx",
+        "sha256": "780f167e83c4a3f1a270d5a88c8bdca51fa92a0491b43bc8f6a034181b1f0e82",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-controls.tsx",
+        "sha256": "5b052c8f1ac70e0791b01a97fe5d45dc7c21d76ef162627ababedc8530667a20",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-model.ts",
+        "sha256": "46a72e886d3eb8a05a5ad9ee9aa2da60a1ac9a6180422e3183d643f1a9f2e315",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-query.ts",
+        "sha256": "0ab1b9218886b0202335017bb34bbf2408a9d522b858ef9b234a022341e84491",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor-timeline.tsx",
+        "sha256": "f3c76fb8d02130c085daa41d9676c555812c48c9fd8658f6dbc89192ae95ea64",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/floor.tsx",
+        "sha256": "f39efa89f33a65fa66fdc02a4f6f90b8ab6d86ff5313f0bc55333e72bc2a99dc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/history-query.ts",
+        "sha256": "920be9dc35178329c6519f528e091e7bd00f4e09adee3833f104770a5736ec81",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/open-table.tsx",
+        "sha256": "b6425c5546ffefa4f3bd7ed5eef2829b4cf0b133e95048945d87ba01ab5d87c7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/payment-form.tsx",
+        "sha256": "780ea2cb86864336ad527066c539b15ab78f23674f5e26c311c3a293c59b3739",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/session-activity.tsx",
+        "sha256": "e638429aaa68eaa1d9ac5502091ac2daf1b5fa5ec1b53801e02132dd42774d5d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-band.tsx",
+        "sha256": "6eb39d3da22efaa8adb99a72ec9cd2051e8901ecf1586621381cd8ce30c892b2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-label-model.ts",
+        "sha256": "335cc5298abc516a0114825f13722292805037ba354de9c3254610f372f9c598",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-preview.tsx",
+        "sha256": "450b007316c763ec47cfd3631404469e30beafa7b5e4cca88ee960a1158c8e6b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar-viewport.tsx",
+        "sha256": "6ae6eb305434b02c61cc38e655117c4662bbfb05b67ed781070ee95dbcaa607f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-calendar.tsx",
+        "sha256": "657d213d6131708193bb25c4f5a2cad1f7297ae1eff5e29b621383d9653677c6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-detail.tsx",
+        "sha256": "eb0d4738fa971162a2f3f5c3610bfb2fb4d14123be40e4aba163dfe68ad3e974",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-metrics.tsx",
+        "sha256": "93e3a2c5be6f6868531259bc7d2593eb5234593308ce270f1f569609d7c6dd2e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-time-limit.tsx",
+        "sha256": "3ed482c65099aa7c23d8209ac2339e8bd23a0d38965c69c57dc58a65f440dfeb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/table-timeline.tsx",
+        "sha256": "6a3b3cc70fac28f271afb8f7c105b281797d595ccc5ae9c467ddde11c1c150e6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/timeline-query.ts",
+        "sha256": "4de322527de4bef8220b133748809259623a72bc51d8ba2c32108cc7682745c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/floor/visit-history.tsx",
+        "sha256": "3b3f5c5beb9734ac9a0a4b892af3e4e608273487d64210400489392227513b7d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/games/game-query.ts",
+        "sha256": "3c83def445cf5c4e76170935f96a5d378f15646e404ade9c40dd7704e95a3d65",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/games/games.tsx",
+        "sha256": "2461c1bd461ab8b268b9f8d42aaea6bd9b0565b9ae00221474b1abf716dc04cb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/audio-waveform.tsx",
+        "sha256": "df97611eccb55acd8eba8bb49b4968ee16c3490c52e18e4f7f8fc92df1b3ef61",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/conversation-model.ts",
+        "sha256": "3b3904aa3ff440d1cc09821e879caba503b2617fd864eb3e2176f19db9b9f2e5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/customer-order-attribution.tsx",
+        "sha256": "9ebb4a691984b8b9263e8eccab692764a4c1e914141857aa42292e8acd661daf",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/customer-visit-panel.tsx",
+        "sha256": "c7f6d7080a4b8fac7bb4041fe27ebeeb7e75b221b4f263c7df647ed44132baad",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/evaluation-guide.tsx",
+        "sha256": "2830850571f51911a474472d47c3f44c1e76d7d9c1dcb1e9ece0b9b20f4ce97f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/games.tsx",
+        "sha256": "ba95a51a86754a94b6b080bd202bd4d6f2844ade869b9764826c58354a8bcb0b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-session.tsx",
+        "sha256": "7c106acfefd5e49d27616b61949018b156feb43df482af6e912c6964a74ea870",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk-voice-panel.tsx",
+        "sha256": "0af62ecc992453994c2959c7755ff5da3762ce7e5844681b6d6ad1b30af90c8d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/kiosk.tsx",
+        "sha256": "0945ef675fd2615cd98554d132a17e9b9b035c327f828f00cd7915d3063a6f28",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/local-camera-controls.tsx",
+        "sha256": "acee3d1871e95cccf72d63dc34defd981fe0ea5b57357dac149ffde56fdf9df6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/local-camera.tsx",
+        "sha256": "5b736cb41932e5b323cdc963dc7a72e6afb990d3566e34ff2a69a6b025fd042a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/microphone-settings.tsx",
+        "sha256": "c97460c59c05ebaf4863c1d02c1e82b394f2dc85a001e440297f7fb5b77b5558",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/pairing.tsx",
+        "sha256": "b0a915d675fbe17f11f1f2d2134df5266e2687dea6c9591d8e25d834f898eba6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-allergens.tsx",
+        "sha256": "3c5bceb9303aa4e72acdf48fc1df8cfbff74b4a0d7ddeb0ae4d2e0c43d0b59aa",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-dialog.tsx",
+        "sha256": "b3ce6e3b95fc571de6184be3a9d27a2f67b482cf15fdabf4923d04b22a5d2b07",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-option-content.tsx",
+        "sha256": "0f1585a3567a93cf63e4ecb125ffbbb0ea1ed1b28c1843eb902d30e137b97bf8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/product-option-model.ts",
+        "sha256": "51205ddf027dddfd5148f72d9caaab38484ee2edee96357fc9759da428b14f73",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/table-cache.ts",
+        "sha256": "2ef25daa25a4593929f797442c22b6153ca3366103c8b2ff7d92401a2bab731c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/table-query.ts",
+        "sha256": "9710bbf66e81b1c423621a92791000047aab190d06b490062f10d20ab5b315b8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-connection.ts",
+        "sha256": "4395d8af99eefe14aeef637b9cc20f7720180a2839694c172fcf2e237ff94b68",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-controls.tsx",
+        "sha256": "bea3a485d10f742fa2bb771c0c9c880d527f69ab4e9f41bc2cd8bd67d744145d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-conversation-message.tsx",
+        "sha256": "201c0e1b126ec6922a5cbd76471012f696e1c5eba49355d7bcf229969f4c78bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-events-model.ts",
+        "sha256": "eb0d8462572b6b505d784ec11ea17b7cd5730a4673aaf548b6e1a486c2f0da89",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-model.ts",
+        "sha256": "d28c22c56577d988c1d1ccd6f6ac3e27054b41d0d997218b35b51140fb3ae546",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-panel.tsx",
+        "sha256": "d535ecb66e0b50f2bf60c732b6e3022c17412055092d79cf8648b20de9e51ccb",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/kiosk/voice-subscription.ts",
+        "sha256": "1c649faea71df833de5b052dd0f9d672999a7a3a3aacc4c3d3d85527ae7b093c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-management.tsx",
+        "sha256": "48fd0cb52e297c72af7ac8bedb6feda06fea64901cddcf0dd48731a1ff9e7891",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-query.ts",
+        "sha256": "133948469e318b177a1c267e01f726fd0482c2488f98062091f958b143f9ef68",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-rule-form.tsx",
+        "sha256": "2eb1d7c9f9eb9053cda859bdb763924f40532b6ccc4f04c49ff486847c5801df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/coupon-visit.tsx",
+        "sha256": "d717d0d323bdc877f6c247a1e58be0fb04f1cd957dcff363b49e36615b11c8c5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/issued-coupons.tsx",
+        "sha256": "fd7e00d26375aae93aebed06f3372493797cb13f9a184cb1390545489fd541a2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-policy.tsx",
+        "sha256": "78be685abbdf390b9e592b38f852315b88206d0af00a2e4dd2f9173f63b6873b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-query.ts",
+        "sha256": "b4f9e78d49741f803b66f623a809ec1ccfc2647ae8d8f14953aff1535238393e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/point-visit.tsx",
+        "sha256": "5d9f8fd3a0263d6f8e08aeb626e6d83a64caaddb776b101958c62522f27aa7c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/rewards/reward-editor-status.tsx",
+        "sha256": "d01c029bce9d30f53783ee81b4b363fd4989fcd0e35e905f21bfdc86dbabae9c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/admin-shell.tsx",
+        "sha256": "a66ca8dcf8390df0f37ac31a496db738984c4a0976f40e008aaa3e540e1961d4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/admin-sidebar.tsx",
+        "sha256": "ba0f72af7a8f999fd6a275bd6bafdf3c58160b593a10b7efc23ddfa37921f34d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/collection-model.ts",
+        "sha256": "c62173a344ca32b63eea2dfa84cef34a7f851a9a0b886cdbcb8782fcc1852f17",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/collection-search.tsx",
+        "sha256": "87c439a2743d6fef633c44c8eceac47edd241525475c340c54d2f8cb57d78244",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/navigation-group.tsx",
+        "sha256": "742cbf30e5b21bae1a55d9a169db6caec869431e53f02ad33d3e178ad66998b5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/navigation-link.tsx",
+        "sha256": "3791dbf6560bf1aa6c9ac907c84b8e771de3e567d3a36937da6892ead3cd98cc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-model.ts",
+        "sha256": "ee6a92eb3ffa38889074b34316291138702f2625b0cd918f63582ad1eeaa7197",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-navigation.tsx",
+        "sha256": "3d32ac66ba1d192a78cba156133e8109a02b493a7a41539a925c8186d8a83bd7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-preferences.tsx",
+        "sha256": "77164fd538259c4127821fba889173f1908ae136339c6b34fb62b1e8dc905cf5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/sidebar-user-menu.tsx",
+        "sha256": "83bbcdfafe45f8e48d7f47314d9b23469cb26f5515f09b05d8592d9b99265dee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/shell/store-picker.tsx",
+        "sha256": "213468a9426c670a76ded270fd11c8221f69c02e3ff93a3ae2c33f3b3f1ae672",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/home-statistics.tsx",
+        "sha256": "d7da5c760731d258be128e19b0aca17e7feffd139beb8740f3c2b3c65b0dece5",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-query.ts",
+        "sha256": "553eebfd1c005386865d8f92f5e5419e92d4d5da8ac3e970aad027c224f1fb47",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-results-skeleton.tsx",
+        "sha256": "056d8bb4a0a08f1c8cc9f700217a22157f75f093e50c5036363088ea0a5db98c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-results.tsx",
+        "sha256": "6d4c5e7c5841e5502abdfc73e46ae06fcd1772c94701697f442884df70110583",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-summary.tsx",
+        "sha256": "00c57f11c32c17237b98d3e2f0bb8b1ddd0d4eed28d155aa1ca8a4231c3d3404",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/statistics-table.tsx",
+        "sha256": "9a1b6d5b5914a53c54b3773e03f44318fe4c684227422c8dc24643168c9e2065",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/statistics/store-statistics.tsx",
+        "sha256": "ebd414c26b7ceae0f9ebc8e63dc627de2632307e75edcbd3f680625d89e8a2af",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/admin-shell.tsx",
+        "sha256": "11f899c7d8aa99b811c521dd390e6e7580cca2bc6713ffb20658a201edd14fe9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/admin.tsx",
+        "sha256": "c72441b94b6f556a6af36e4c9a3b25a3cf68dc1f9694aea5f98e7b1dd3f0094c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/create-store.tsx",
+        "sha256": "16cf7af8fb3e07669509881705dd16b7ee17ba8de7cb4ab8658844f37de7edee",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/home-preparation.tsx",
+        "sha256": "145b5861cc7bbf533dee722c32bac5c7443462a467346fe0031a5165b3c467c2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/home-query.ts",
+        "sha256": "d47496f593c54bb1924b14182f6ea34409684415552a62649065b073dc55b953",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/invitations.tsx",
+        "sha256": "86e5c5d1a05a9f75024a8929558c0b356f5235b64d21959587befd9b19972ff9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/members.tsx",
+        "sha256": "2dbc2b7f9d49ed26a593571881e1f19c104fcb7d21477b5013b4b13814c0af0a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/membership-query.ts",
+        "sha256": "1427ff58a444758e9c8ceb04aeda46ccb77f067e2f8d569c1228ff8c53502515",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/settings-shell.tsx",
+        "sha256": "aa81d4f786eaea76ee61b5792f93e28927a5217c250c8a0d6ebeea5a041b10e2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/sidebar-selection.tsx",
+        "sha256": "3d8aeddd4b14d1f7a38d84bfc0161e982f5a9b5c1451429368a7e85725897d45",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-context.tsx",
+        "sha256": "eb833220dbeacbe79db1fe64bcdfc0fc1ebe9aba4b37b07c90e9d3bae2acec02",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-home.tsx",
+        "sha256": "371b3a7b8e9886f5e113400cf6046ee04e91ff5a43ed9dccc284ca6ff20d9aa1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-profile.tsx",
+        "sha256": "4c2e479cf417e8d8f7771fda3dc3421bb958cb774c025ad8f49fc9da24db2eef",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-query.ts",
+        "sha256": "eda802aea81bccf28d03d913877c059649b754c55119cdd8af12a9fdaacd2606",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/features/store/store-shell.tsx",
+        "sha256": "89e83c4e38602be9e8866abee1b19f23f956b0dd42a93a5a43ac301811af7f20",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/format.ts",
+        "sha256": "bf8f3802d4eb37f10a20a90b518910d5e9984d8b59dbd160c18d93f9979525fc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/locale-context.ts",
+        "sha256": "dfd883ca292c0ac433de2c7759dc3e2fc201249639b0ae5a3c2f9cf63a209edd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/i18n/locale.tsx",
+        "sha256": "2697dbae412f2dd52d727deb25627db3436fd9850360667c3a81fce246905329",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-error.ts",
+        "sha256": "dc3d1fbcd5dbcbff87c15d745aaa1168fb72ff9d58247dc3d1cdeec08975cecd",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-fetch.server.ts",
+        "sha256": "70f04c1686e18cdd956503d10f32254005eda0d903d38452248991a081f06e1c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api-fetch.ts",
+        "sha256": "26272e057d60ffc12b41bafe27fff73c9da5eb711f72a6a361c75836afc56bcc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/api.ts",
+        "sha256": "18e7603be9dc06e44c11cf95640e4a49826d05d578bec74bc70beb1742cdf07c",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/auth-client.ts",
+        "sha256": "06328163bebf11ce8f415343bd67a3fdad1a7dca4eb3aa0ab485effc4ceebd33",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/calendar-input.ts",
+        "sha256": "152e17c2eb0410ae242888935af101183a5c50880178ebf554ab000d52c8d5bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/evaluation-environment.ts",
+        "sha256": "75334a09c42d5968cde32d083f10dfa8d3fc18d835ff944cb1069ff845555c37",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/form-context.ts",
+        "sha256": "d3857b3e2baf8060a5a3ca7bdf4f9364060c223bfb7fd50bd7a42ad9bf97282a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/form-validation.ts",
+        "sha256": "d4b3e93bf1678b4979b92e6f25050e24fc34a6fa4313d6b6f9a4134a51b94450",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/game-document.ts",
+        "sha256": "2695bf23e8650b121db0bdaec2ce28ed109b58449e01a9a48b0d4672d66391c1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/initial-store-path.ts",
+        "sha256": "7ff9adffa14b114bde672f187b1a6488b13382d435cbba2186e5cb6b9b2e2699",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/panel-layout.tsx",
+        "sha256": "c60eb09ce05502cfe3565750295d72d3e6576502aa33654feb81d6880afe13f0",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/pwa-update.ts",
+        "sha256": "82011a53e8bea58668793d48418a786b86d29d5b7999b66bb953438276d1c55f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/route-motion.ts",
+        "sha256": "f0b214103c99a3042486d67344abaea6e08614f1b31d292fe1bf542feeacd996",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/router-search.ts",
+        "sha256": "1917431308bc58a88b0d4f5dea85dcd3d2fe4d208c54da7f353c729f10b46c9e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/server-field-errors.ts",
+        "sha256": "de0bc41b8caac54d7760badb039b7c06f56d5ef4487cd654722f86692e0dc3f7",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/session-query.ts",
+        "sha256": "fc046a677d0df139536afb25588e3f782e132ed352d88708a7ea457d7a9c47b8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-media-query.ts",
+        "sha256": "d088929817f4a22996d13d6ec53ec776cbb313b14b9df6e8315ad1c9fa934304",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-panel-layout.ts",
+        "sha256": "8bd8eb0cbdc7e1ded344324cb21bdec30241ffe9f8f4850169ac67dc146bf64f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/lib/use-realtime.ts",
+        "sha256": "4f2e6bd234cf455a81bc90543d114f35a0b1a786c79bae4c21ab6438c7f86209",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/router.tsx",
+        "sha256": "ecaf95a219a12b255b35339866a81a85be44b1bd96f96ea1edde1bbc36baf259",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/__root.tsx",
+        "sha256": "cad6975cf418637eae6167c08f3d12a9907801ac9b103c7326e1b8daf45fcd9a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account.tsx",
+        "sha256": "f4839e922818efe3e33974b9420d0a00617a0ae08a1abf782c1f48c1074b2a0b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.integrations.manual.tsx",
+        "sha256": "f2d1d686b9e61a8313f299ba01c8b126ec3f3ad8cfe0f656774f5e31b7274ec8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.integrations.plugins.tsx",
+        "sha256": "3e61e22393ff56816517efdc86350ed1946b881c14db4b68ff154228e9ccaf37",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/account_.mcp-sessions.tsx",
+        "sha256": "59b9f719b73ba784ccd8fee429a2e1c916f084ec575c6785564d44a71e3e5762",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.live.tsx",
+        "sha256": "33b180fb7c6f557973287df9e43f4946423a0721aca548660e3240b039396ba1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.coupons.tsx",
+        "sha256": "a82b9f212e94db9de4095dea62f32c50453f8409ab57f8fd11a7dd11444bb08a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.design.tsx",
+        "sha256": "946c93c17c9578fe81da0dd78a2c2e5534838ddb98422667d29d6d397a1e86d1",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.devices.index.tsx",
+        "sha256": "44cc0a98fe181f612203ab3a7de531e31f007c8c69d7aa75db7e782a74decbe3",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.devices.new.tsx",
+        "sha256": "05742d0f4dec7e1bacfe52debaa558823bf60ee63cd79579076cd691b8e6a664",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.floor.tsx",
+        "sha256": "57df22af47671ab245452720df3549a640fe8d337cb4512341654726adca95b8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.games.tsx",
+        "sha256": "0cba01c8ae7a3cbaa83425fc3eb9c5b958d519c5890f9be65ad4d04616167dfe",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.index.tsx",
+        "sha256": "034c359536002972db7e2e5e0ebe8014c4e4f41d9e273eed6ae0925580721042",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.invitations.index.tsx",
+        "sha256": "f689f3bf1a9a9b7651cbfcfefdbdf7c274500518610ef8e6b54e21793bb74c42",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.invitations.new.tsx",
+        "sha256": "c8dacaf848f554f4715536aac90a773aab89f51f7cdc7023b3c72b7b0daee019",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.members.tsx",
+        "sha256": "6cdf6e3359ace816c7ff98bd814350719c719b243e048d0f306d7ac41dc8cb89",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.$section.tsx",
+        "sha256": "4717b8a1122e7284ab5871ecdbb771fd5ae6acf50f12e1df59200df336d52fe4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.$section_.$itemId.tsx",
+        "sha256": "aa399a15ddfbdf01eaff45c783e1974ce6af576e96b8b0f8bc266932d50cac84",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId.tsx",
+        "sha256": "ea9e93c8945d3828ff2edd2138d1cda76d1d6808e813db7eb63a41be00a00950",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId_.$section.tsx",
+        "sha256": "62676acda17a0246df982d2a7b065e99a62873473183fec8ca38e85b906de38a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.$draftId_.$section_.$itemId.tsx",
+        "sha256": "df08feb5369f51f0da368bd57ee3109c586e01d82ab00a8ddffc38f7f9174f51",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.changes.index.tsx",
+        "sha256": "c003cb79351d11a67b3f7f74e152c6213a7371ef4e9fa2bca09e3d5860e4fc23",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.menu.history.tsx",
+        "sha256": "59882a491fcc1d2faa1fe5bcb9754510c4c86fc77d19ace3e642386b90125c82",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.points.tsx",
+        "sha256": "a9514d60179b6a3d1c1ae80b3e8dc329d1d51518bfcb66ef8544eaa3d73976bc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.profile.tsx",
+        "sha256": "94f4bf506df78c5c83fa3149d03d90a7c74539e48aff56dc110756ffb8b646a4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.statistics.tsx",
+        "sha256": "da318c731f67baf10029c5a7a6c3b0f78dbf2e55ebc1eebf6e38aa41d3d984df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.tables.$tableId.open.tsx",
+        "sha256": "a977afa2cfd9255e5d58038ee13dd25815b703fbe573b108e89e8cf3d22cf60b",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.tsx",
+        "sha256": "ef33483e40872e61c90c8bda6acc1170a7fbd0cff2d0f6716be0f5b486354b02",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.visits.$sessionId.tsx",
+        "sha256": "c96f383735d9524e77f82b53a5b58eb1f6a15baa78ef6c0ea564247c20c8e81f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId.visits.index.tsx",
+        "sha256": "edaca4ae6e7f2e91f470a84c6244b6fc869101718ee79d28f3ca7e00d342db4e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId_.demo.tsx",
+        "sha256": "249e289890cf5b565bd5c1170d50ff5bb37ff970cfa9ed4391f5b2aa688fecea",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/admin.stores.$storeId_.demo_.$demoId.tsx",
+        "sha256": "20fd5caca189a0fe98a4ceb3163216d906a6e7fd53822f8f38b1367951d203c9",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/billing.$organizationId.tsx",
+        "sha256": "559289a03bdcf7223a23db4097823ba0a90343b9d065f7f09e2fd064aa6b334a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/consent.tsx",
+        "sha256": "79326629027cbe0bd4cb90388805f22a8efcea4b2242ca4baf9ae9ffb596d620",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/device.tsx",
+        "sha256": "081714ccdd3654e7cddf3a8d0d9a031defb99876d29d9a30bd3d8602cd7dc4e6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/index.tsx",
+        "sha256": "31a3d26091ca18aa158afd87d88b6bacd10e84999fc197593c3dae30c0861c8d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/invitations.$invitationId.tsx",
+        "sha256": "25c85cfb22c824e9f79c7a25184381851016b8ca6486c233bfea34a6bcf61e39",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/login.tsx",
+        "sha256": "5db4b2677022e794e74870569a280fa79b13ecf48f3d085652b51ec5fb4fc851",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.consumption.tsx",
+        "sha256": "b472a3242f9f24255afd354f11c5bd1776a74196f1d46705fd3c6b3eccb9da0a",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.coupons.tsx",
+        "sha256": "16589d6552469c9b36b772dc8e43f7c757bc860137ad19177dc334893c51900e",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.index.tsx",
+        "sha256": "249fc05219c0c1129d3b08fc271194960c21567a77fc708e95d16a8ea2a902da",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.memories.tsx",
+        "sha256": "b2c0c30cb53ca6eaeb90dac60936602b003670a7d415244e142f655aafc123fc",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.points.tsx",
+        "sha256": "0b52156bc729a57113d6f332d0b7e72dfd6f15bff5929bf1a1f3edb362bce9a2",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.tsx",
+        "sha256": "d85c5929e8bb5b8e04eef08fbfd0a13e48801d86cacc54c78d6e9e443f045dc6",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.$storeId.visits.$sessionId.tsx",
+        "sha256": "bca186f0b62b5363a76df3b88c2c929544c62b2d4dd1c354faab4e0259504899",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.index.tsx",
+        "sha256": "320793d382e4cf40ef8cf318d572813d69354e256c801a0a7506e9e6e1c2a9c4",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.join.tsx",
+        "sha256": "8f8668a0dbbeac2855ea9903b5eeba2ec8982d39ea284b23b8908b6fdddb11df",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/member.tsx",
+        "sha256": "216d8cafa3a3f9f1a948f6df24b02d2c250dca104e4b10a2fa0f19aa262f2259",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/organisations.tsx",
+        "sha256": "1bd0e6b90eb8d8e328a58b954cb3e46bb61e9d2357eb9413c02aac0c3d87fb7d",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/register.tsx",
+        "sha256": "fe0dc95274b12d9e1dcc13332d90424197cb4b5abaef73bf3fe90d785f1594f8",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/reset-password.tsx",
+        "sha256": "c91582c4276315d0dbfcf69f33568e3e58490f08622ddbacb2b77785cd44ac99",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/routes/stores.new.tsx",
+        "sha256": "7ef7ab06ef2e61eef2410bbb9d642f1e7b414b04f67e7c00e65392c4f7f805ac",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/server.ts",
+        "sha256": "6d26013ce4a950383fcc457cd1e96211bbf5890b6d1f4b73a83ecd39479e4f1f",
+        "matches": true
+      },
+      {
+        "path": "apps/web/src/sw.ts",
+        "sha256": "a336abe5f2a549ea870eb43fcb05a4d35399c5a17594c75642ae33d66d418e2f",
+        "matches": true
+      }
+    ]
+  }
+}

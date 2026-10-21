@@ -1,9 +1,9 @@
+import { hashPassword } from "better-auth/crypto";
 import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { hashPassword } from "better-auth/crypto";
 import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
-import { account } from "../src/db/auth-schema";
+import { account } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
 import { resetFixtureStorage } from "./fixture";

@@ -1,12 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { configurationSchema } from "@tablecast/api/schema";
-import { waitFor, expect, userEvent, within } from "storybook/test";
-import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Save } from "lucide-react";
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { CategoriesEditor, PlansEditor, ProductsEditor } from "./configuration-editor";
+import { fixtureValue } from "../../test-support/fixture-value";
+import { CategoriesEditor } from "../catalog/categories-editor";
+import { PlansEditor } from "../catalog/plans-editor";
+import { ProductsEditor } from "../catalog/products-editor";
 
 const text = (ja: string, en: string) => ({
   ja: {
@@ -93,14 +96,14 @@ function ConfigurationLayout({
   section = "products",
   initialConfiguration = compactConfiguration,
 }: {
-  section?: "products" | "categories" | "plans";
   initialConfiguration?: typeof configuration;
+  section?: "categories" | "plans" | "products";
 }) {
   const { t, locale } = useI18n();
   const [client] = useState(() => new QueryClient());
   const [value, setValue] = useState(initialConfiguration);
   const [saved, setSaved] = useState(false);
-  const item = value[section][0];
+  const item = fixtureValue(value[section][0]);
   const props = { value, onChange: setValue, selectedId: item.id, disabled: false };
   return (
     <QueryClientProvider client={client}>
@@ -216,7 +219,7 @@ export const EnglishLabels: Story = {
         `Group ${index + 1}: Milk Names and translations`,
       );
     }
-    await userEvent.click(translations[1]);
+    await userEvent.click(fixtureValue(translations[1]));
     await expect(
       canvas.getByRole("textbox", { name: "Group 2: Milk English Display name" }),
     ).toHaveValue("Milk");

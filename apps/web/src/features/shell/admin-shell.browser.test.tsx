@@ -8,23 +8,23 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { useState } from "react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { useState } from "react";
-import { LocaleProvider } from "../../i18n/locale";
-import { MotionProvider } from "../../components/motion-provider";
-import { PanelLayoutProvider } from "../../lib/panel-layout";
-import { AdminShell } from "./admin-shell";
-import { StorePicker } from "./admin-sidebar";
-import ja from "../../../messages/ja.json";
 import { catalog } from "../../../.storybook/tablecast-fixtures";
+import ja from "../../../messages/ja.json";
+import { MotionProvider } from "../../components/motion-provider";
+import { LocaleProvider } from "../../i18n/locale";
+import { PanelLayoutProvider } from "../../lib/panel-layout";
 import "../../styles.css";
+import { StoreAdminShell } from "../store/admin-shell";
+import { StorePicker } from "./store-picker";
 
 let client: QueryClient;
 let unexpected: string[] = [];
 const sidebar = () => document.getElementById("tablecast-admin-sidebar");
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -49,7 +49,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn = false) {
+async function show(locale: "en" | "ja" = "ja", initial = "/account", signedIn = false) {
   unexpected = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
@@ -79,15 +79,11 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn =
       id: "tablecast-shell",
       name: "試験店舗",
       logo: null,
-      role: "owner",
-      organizationId: "tablecast-org",
     },
     {
       id: "tablecast-shell-second",
       name: "二号店舗",
       logo: null,
-      role: "owner",
-      organizationId: "tablecast-org-second",
     },
   ];
   client.setQueryData(["tablecast-stores"], { stores });
@@ -95,7 +91,7 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn =
     component: function ShellPage() {
       const [selectedStore, setSelectedStore] = useState("tablecast-shell");
       return (
-        <AdminShell
+        <StoreAdminShell
           tab={initial === "/account" ? "account" : "live"}
           storeId={selectedStore}
           storeName={stores.find((store) => store.id === selectedStore)?.name}
@@ -113,7 +109,7 @@ async function show(locale: "ja" | "en" = "ja", initial = "/account", signedIn =
           )}
         >
           <Outlet />
-        </AdminShell>
+        </StoreAdminShell>
       );
     },
   });

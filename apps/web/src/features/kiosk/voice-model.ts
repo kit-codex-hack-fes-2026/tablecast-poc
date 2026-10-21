@@ -1,45 +1,45 @@
 import type { Locale } from "@tablecast/api/schema";
 export type VoiceStatus =
-  | "idle"
   | "connecting"
+  | "error"
+  | "idle"
   | "listening"
-  | "thinking"
+  | "paused"
   | "speaking"
   | "stopping"
-  | "paused"
-  | "error";
+  | "thinking";
 export type LiveMessage = {
-  id: string;
-  role: "user" | "assistant";
-  turnId?: string;
-  text: string;
-  rawText?: string;
-  final: boolean;
-  interrupted?: boolean;
   createdAt: number;
+  displayIncomplete?: boolean;
+  final: boolean;
+  id: string;
+  interrupted?: boolean;
+  locale?: Locale;
+  rawText?: string;
+  role: "assistant" | "user";
   speaker?: string;
   streamId?: string;
-  locale?: Locale;
-  displayIncomplete?: boolean;
+  text: string;
+  turnId?: string;
 };
-export type MicrophoneError = "permission" | "empty" | "disconnected" | "failed" | "unsupported";
+export type MicrophoneError = "disconnected" | "empty" | "failed" | "permission" | "unsupported";
 export type MicrophoneView = {
-  devices: { deviceId: string; label: string }[];
-  selectedId: string;
   activeLabel?: string;
-  loading?: boolean;
-  switching?: boolean;
-  permissionRequired?: boolean;
-  limited?: boolean;
+  devices: { deviceId: string; label: string }[];
   error?: MicrophoneError;
+  limited?: boolean;
+  loading?: boolean;
+  permissionRequired?: boolean;
+  selectedId: string;
+  switching?: boolean;
 };
 export const initialMicrophone: MicrophoneView = { devices: [], selectedId: "default" };
 export type VoiceView = {
-  microphone?: MicrophoneView;
-  status: VoiceStatus;
-  error?: "permission" | "unconfigured" | "connection" | "active";
+  error?: "active" | "connection" | "permission" | "unconfigured";
+  inputTrack?: MediaStreamTrack;
   interim?: string;
   messages?: LiveMessage[];
-  inputTrack?: MediaStreamTrack;
+  microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
+  status: VoiceStatus;
 };

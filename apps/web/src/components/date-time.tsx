@@ -7,7 +7,7 @@ import { useI18n } from "../i18n/locale";
  * 無効な日時文字列を直接渡さない。
  * 業務の日付集計と表示タイムゾーンを混同しない。
  */
-export function DateTime({ value }: { value: number | string | Date | null | undefined }) {
+export function DateTime({ value }: { value: Date | null | number | string | undefined }) {
   const { locale } = useI18n();
   if (value === null || value === undefined) return <span>—</span>;
   const date = new Date(value);

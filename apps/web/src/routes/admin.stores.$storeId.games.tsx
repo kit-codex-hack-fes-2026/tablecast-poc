@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Games } from "../features/store/games";
-import { gamesOptions } from "../features/store/game-query";
+import { gamesOptions } from "../features/games/game-query";
+import { Games } from "../features/games/games";
 
 export const Route = createFileRoute("/admin/stores/$storeId/games")({
   staticData: { document: { title: "games_title", description: "head_games_description" } },

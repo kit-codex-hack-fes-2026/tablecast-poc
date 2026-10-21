@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import { ensure } from "../../platform/errors";
 export async function resolveMcpActor(
   services: ApiServices,
   principal: Awaited<ReturnType<ApiServices["auth"]["api"]["tablecastMcpPrincipal"]>>,

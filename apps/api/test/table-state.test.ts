@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import * as businessTables from "../src/db/business-schema";
 import { getAdminState } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
-import { requestBill, resolveCall } from "../src/modules/tables/service";
+import { requestBill, resolveCall } from "../src/modules/tables/use-cases/presentation";
 import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
 import { insertFixture } from "./database-fixture";

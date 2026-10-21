@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { StyleScopeProvider, StyleScopeBoundary } from "./style-scope";
+import { StyleScopeBoundary, StyleScopeProvider } from "./style-scope";
 const meta = {
   title: "デザインシステム/部品/StyleScopeBoundary",
   component: StyleScopeBoundary,

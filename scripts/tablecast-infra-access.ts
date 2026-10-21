@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { cloudflare } from "./tablecast-deploy-api";
-import { tablecastAccess } from "./tablecast-deploy-config";
+import { cloudflare } from "./tablecast-deploy-api.ts";
+import { tablecastAccess } from "./tablecast-deploy-config.ts";
 
 const policySchema = z.object({
   id: z.string(),
@@ -36,7 +36,7 @@ export async function reconcileAccess(apply = false, request = cloudflare) {
   )
     throw new Error("採用済みservice tokenがありません。再生成せず外部入力を確認してください。");
   // durationの更新でも既存client secretを再発行しない。失効したtokenも勝手に置換しない。
-  const changes: { resource: string; action: "update" | "unchanged" }[] = [];
+  const changes: { action: "unchanged" | "update"; resource: string }[] = [];
   for (const desired of tablecastAccess.policies) {
     const actual = policies.find((value) => value.id === desired.id);
     if (!actual || actual.name !== desired.name)

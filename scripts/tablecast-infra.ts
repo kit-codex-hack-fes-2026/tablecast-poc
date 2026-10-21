@@ -1,23 +1,27 @@
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
-import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
-import { webCloudflareConfig } from "../apps/web/cloudflare.config";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config.ts";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
+import { catalogKinds, catalogTarget } from "./tablecast-catalog-config.ts";
+import { ownedCatalogApplication } from "./tablecast-catalog-deploy.ts";
+import { cloudflare, currentRevision } from "./tablecast-deploy-api.ts";
 import {
   accessApplicationConfig,
-  deploymentOptions,
-  deploymentTarget,
   deploymentBuildOutput,
+  deploymentOptions,
   deploymentSecrets,
-} from "./tablecast-deploy-config";
-import { resources, accessApplication, verifyDurableNamespaces } from "./tablecast-deploy";
-import { reconcileAccess } from "./tablecast-infra-access";
-import { canonical, assertWorkerOwner, workerConfigurationDiff } from "./tablecast-infra-diff";
-import { catalogKinds, catalogTarget } from "./tablecast-catalog-config";
-import { ownedCatalogApplication } from "./tablecast-catalog-deploy";
-import { readBuildOutput } from "@cloudflare/build-output-utils";
+  deploymentTarget,
+} from "./tablecast-deploy-config.ts";
+import {
+  accessApplication,
+  resources,
+  verifyDurableNamespaces,
+} from "./tablecast-deploy/resources.ts";
+import { reconcileAccess } from "./tablecast-infra-access.ts";
+import { assertWorkerOwner, canonical, workerConfigurationDiff } from "./tablecast-infra-diff.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const apply = process.argv.includes("--apply");
@@ -43,7 +47,7 @@ const desired = {
   web: convertToWranglerConfig(InputConfigSchema.parse(webCloudflareConfig(options.web))),
 };
 const workers = z.array(z.object({ id: z.string() })).parse(await cloudflare("workers/scripts"));
-const changes: { resource: string; action: string; fields?: string[] }[] = [
+const changes: { action: string; fields?: string[]; resource: string }[] = [
   ...accessChanges,
   { resource: target.database, action: storage.database ? "unchanged" : "create" },
   { resource: target.bucket, action: storage.bucketExists ? "unchanged" : "create" },

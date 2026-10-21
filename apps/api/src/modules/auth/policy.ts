@@ -1,5 +1,5 @@
-import { ensure } from "../../platform/errors";
 import type { Actor } from "./model";
+import { ensure } from "../../platform/errors";
 export function requireManagerRead(actor: Actor) {
   ensure(
     (actor.kind === "staff" || actor.kind === "mcp") &&

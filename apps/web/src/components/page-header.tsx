@@ -15,11 +15,11 @@ export function PageHeader({
   status,
   actions,
 }: {
-  title: ReactNode;
-  icon?: ReactNode;
-  description?: ReactNode;
-  status?: ReactNode;
   actions?: ReactNode;
+  description?: ReactNode;
+  icon?: ReactNode;
+  status?: ReactNode;
+  title: ReactNode;
 }) {
   return (
     <header className="flex min-w-0 flex-col items-stretch justify-between gap-x-6 gap-y-4 border-b border-border pb-6 sm:flex-row sm:flex-wrap sm:items-start">

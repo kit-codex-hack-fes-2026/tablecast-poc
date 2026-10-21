@@ -1,9 +1,9 @@
 import type {
   Catalog,
-  Product,
-  TableState,
-  StatisticsResult,
   ConfigurationHistoryPage,
+  Product,
+  StatisticsResult,
+  TableState,
 } from "@tablecast/api/schema";
 
 const text = (ja: string, en: string) => ({

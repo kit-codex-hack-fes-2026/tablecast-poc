@@ -1,24 +1,24 @@
-import { Brand } from "../../components/brand";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ArrowRight, Check, ShieldCheck, Store, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import type { Store as StoreData } from "../store/store-query";
+import { Brand } from "../../components/brand";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
+import { RoleBadge } from "../../components/role-badge";
+import { StoreIcon } from "../../components/store-icon";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
 import { useI18n } from "../../i18n/locale";
-import { useCollectionSearch } from "../shell/collection-search";
-import { withoutCollectionSearch } from "../shell/collection-model";
-import { sessionOptions } from "../../lib/session-query";
-import { StoreIcon } from "../../components/store-icon";
-import { RoleBadge } from "../../components/role-badge";
-import type { loadStores } from "../store/store-query";
-import { storesOptions } from "../store/store-query";
-
 import { apiError } from "../../lib/api-error";
 import { authClient, authResult } from "../../lib/auth-client";
+import { sessionOptions } from "../../lib/session-query";
+import { withoutCollectionSearch } from "../shell/collection-model";
+import { useCollectionSearch } from "../shell/collection-search";
+import { storesOptions } from "../store/store-query";
 
 export function Consent() {
   const searchStr = useLocation({ select: (location) => location.searchStr });
@@ -146,7 +146,7 @@ export function Consent() {
   );
 }
 
-type ConsentStore = Awaited<ReturnType<typeof loadStores>>["stores"][number];
+type ConsentStore = StoreData;
 function consentStoreColumns(
   t: ReturnType<typeof useI18n>["t"],
   selected: string | undefined,

@@ -1,10 +1,9 @@
-import { surfaceMotion } from "./ui/motion-variants";
-import { cn } from "tailwind-variants";
-import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { ReactNode } from "react";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
-
 import { Button } from "./ui/button";
+import { surfaceMotion } from "./ui/motion-variants";
 
 /**
  * 取り消せない操作の直前確認。
@@ -22,11 +21,11 @@ export function ConfirmAction({
   triggerClassName,
   triggerLabel,
 }: {
-  label: string;
-  subject: string;
   disabled?: boolean;
-  onConfirm: () => void;
   icon: ReactNode;
+  label: string;
+  onConfirm: () => void;
+  subject: string;
   triggerClassName?: string;
   triggerLabel?: string;
 }) {

@@ -1,12 +1,12 @@
-import { PageHeader } from "../../components/page-header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
+import { PageHeader } from "../../components/page-header";
 import { StoreIcon } from "../../components/store-icon";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { ConfigurationSection } from "./configuration-fields";
-import { useStore } from "./store-shell";
+import { ConfigurationSection } from "../configuration/configuration-fields";
+import { useStore } from "./store-context";
 
 export function StoreProfile() {
   const store = useStore();
@@ -55,12 +55,7 @@ export function StoreProfile() {
           )}
         </div>
         {!manager && <p className="text-sm text-muted-foreground">{t("store_icon_permission")}</p>}
-        <ActionFeedback
-          pending={upload.isPending}
-          error={upload.error}
-          success={upload.isSuccess}
-          successMessage={t("account_saved")}
-        />
+        <ActionFeedback mutation={upload} successMessage={t("account_saved")} />
       </ConfigurationSection>
     </>
   );

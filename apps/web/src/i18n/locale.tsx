@@ -1,8 +1,7 @@
 import type { Locale } from "@tablecast/api/schema";
-import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { m } from "../paraglide/messages.js";
 import { getLocale, setLocale as setRuntimeLocale } from "../paraglide/runtime.js";
-
 import { LocaleContext } from "./locale-context";
 
 export function LocaleProvider({

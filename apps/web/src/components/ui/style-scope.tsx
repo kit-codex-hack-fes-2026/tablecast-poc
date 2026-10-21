@@ -1,11 +1,11 @@
-import { createContext, useContext, type ReactNode } from "react";
-const ScopeContext = createContext<{ id: string; css: string } | null>(null);
+import { createContext, type ReactNode, useContext } from "react";
+const ScopeContext = createContext<null | { css: string; id: string }>(null);
 export function StyleScopeProvider({
   value,
   children,
 }: {
-  value: { id: string; css: string } | null;
   children: ReactNode;
+  value: null | { css: string; id: string };
 }) {
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
 }

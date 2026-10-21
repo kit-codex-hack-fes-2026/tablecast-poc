@@ -1,21 +1,21 @@
 import { env } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import { z } from "zod";
+import { configurationErrors } from "../src/modules/catalog/pricing";
+import { getCatalog } from "../src/modules/catalog/queries";
+import {
+  createDraft,
+  updateDraft,
+  validateDraft,
+} from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
+import { createApiServices } from "../src/platform/context";
 import {
   appearanceSchema,
   bannerSchema,
   configurationSchema,
   type ThemeImage,
 } from "../src/schema";
-import { configurationErrors } from "../src/modules/catalog/pricing";
-import {
-  createDraft,
-  updateDraft,
-  validateDraft,
-  publishDraft,
-} from "../src/modules/configuration/service";
-import { getCatalog } from "../src/modules/catalog/queries";
-import { createApiServices } from "../src/platform/context";
 import { configuration, setupFixture } from "./fixture";
 
 const image: ThemeImage = {

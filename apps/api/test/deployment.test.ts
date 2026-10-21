@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, test } from "vitest";
-import { createAuth } from "../src/modules/auth/service";
 import { sendAccountEmail } from "../src/emails/send";
+import { createAuth } from "../src/modules/auth/service";
 
 test("PR以外でOAuth emulatorの公開経路を要求すると拒否する", async () => {
   const response = await exports.default.fetch(

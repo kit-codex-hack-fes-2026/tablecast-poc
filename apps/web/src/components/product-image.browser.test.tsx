@@ -2,17 +2,17 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server.browser";
 import { expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { catalog, product } from "../../.storybook/tablecast-fixtures";
+import transparent from "../../.storybook/tablecast-transparent.svg?url&no-inline";
+import { LocaleProvider } from "../i18n/locale";
 import "../styles.css";
 import { ProductImage } from "./product-image";
 import { ProductMenu } from "./product-menu";
-import { catalog, product } from "../../.storybook/tablecast-fixtures";
-import { LocaleProvider } from "../i18n/locale";
-import transparent from "../../.storybook/tablecast-transparent.svg?url&no-inline";
 
 const blurDataURL =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%23d4a574'/%3E%3C/svg%3E";
 
-const menu = (imageKey: string | null) => (
+const menu = (imageKey: null | string) => (
   <LocaleProvider initialLocale="ja" persist={false}>
     <div className="w-64">
       <ProductMenu

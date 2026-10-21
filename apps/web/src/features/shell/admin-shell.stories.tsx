@@ -10,18 +10,18 @@ import {
 import { useState } from "react";
 import { Input } from "../../components/ui/input";
 import { useI18n } from "../../i18n/locale";
-import { AdminShell } from "./admin-shell";
+import { StoreAdminShell } from "../store/admin-shell";
 
 function ShellPage() {
   const { locale, t } = useI18n();
   return (
-    <AdminShell tab="settings" storeId="tablecast-story" storeName="こもれび">
+    <StoreAdminShell tab="settings" storeId="tablecast-story" storeName="こもれび">
       <h1 className="text-2xl font-semibold">{t("store_profile")}</h1>
       <label className="grid max-w-lg gap-2">
         {locale === "ja" ? "店舗名" : "Store name"}
         <Input defaultValue={locale === "ja" ? "こもれび" : "Komorebi"} />
       </label>
-    </AdminShell>
+    </StoreAdminShell>
   );
 }
 

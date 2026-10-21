@@ -7,11 +7,11 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
+import "../styles.css";
 import { MotionProvider } from "./motion-provider";
 import { RouteMotion } from "./route-motion";
-import "../styles.css";
 
 afterEach(async () => {
   await cleanup();
@@ -64,16 +64,21 @@ async function mount(native: boolean) {
 
 it("未対応ブラウザーの連続ページ遷移でも入力DOM・focus・scrollを保持する", async () => {
   const { router, surface } = await mount(false);
+  // CSSの一時的なtransitionとは分け、fallbackのWAAPI呼出しを検査する。
+  const animate = vi.spyOn(surface, "animate");
   const input = page.getByRole("textbox", { name: "入力中の商品名" });
   await input.fill("季節の御膳");
   const original = input.element();
   surface.scrollTop = 64;
-  expect(surface.getAnimations()).toHaveLength(0);
+  expect(animate).not.toHaveBeenCalled();
   await router.navigate({ href: "/cast" });
   await expect.element(page.getByRole("heading", { name: "接客" })).toBeVisible();
-  await expect
-    .poll(() => surface.getAnimations().length > 0)
-    .toBe(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+  expect(animate.mock.calls.length > 0).toBe(
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   await router.navigate({ href: "/menu" });
   await expect.element(page.getByRole("heading", { name: "商品" })).toBeVisible();
   expect(input.element()).toBe(original);

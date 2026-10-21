@@ -1,8 +1,8 @@
-import { controlMotion } from "./motion-variants";
-import { useHydrated } from "@tanstack/react-router";
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { cn } from "tailwind-variants";
+import { useHydrated } from "@tanstack/react-router";
 import * as React from "react";
+import { cn } from "tailwind-variants";
+import { controlMotion } from "./motion-variants";
 
 /**
  * 低水準の入力。

@@ -1,13 +1,14 @@
-import { table } from "../../.storybook/tablecast-fixtures";
-import { CartLines } from "./cart-lines";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LanguageFields } from "../features/store/language-fields";
+import { page, userEvent } from "vitest/browser";
+import { table } from "../../.storybook/tablecast-fixtures";
+import { LanguageFields } from "../features/configuration/language-fields";
 import { LocaleProvider } from "../i18n/locale";
+import "../styles.css";
 import { ActionFeedback } from "./action-feedback";
+import { CartLines } from "./cart-lines";
 import { MotionProvider } from "./motion-provider";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -16,7 +17,6 @@ import * as Disclosure from "./ui/disclosure";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import * as Tabs from "./ui/tabs";
-import "../styles.css";
 
 afterEach(cleanup);
 

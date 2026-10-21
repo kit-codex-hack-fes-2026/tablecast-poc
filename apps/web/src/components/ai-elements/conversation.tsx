@@ -1,10 +1,10 @@
+import type { ComponentProps } from "react";
 // AI ElementsのConversationを採用し、不要なダウンロード操作を省く。
 // https://elements.ai-sdk.dev/components/conversation
-import type { ComponentProps } from "react";
 import { ArrowDown } from "lucide-react";
+import { cn } from "tailwind-variants";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { Button } from "../ui/button";
-import { cn } from "tailwind-variants";
 
 export function Conversation({ className, ...props }: ComponentProps<typeof StickToBottom>) {
   return (
@@ -32,8 +32,8 @@ export function ConversationScrollButton({
   label,
   followLabel = label,
 }: {
-  label: string;
   followLabel?: string;
+  label: string;
 }) {
   const { isAtBottom, scrollToBottom, stopScroll, escapedFromLock } = useStickToBottomContext();
   return (

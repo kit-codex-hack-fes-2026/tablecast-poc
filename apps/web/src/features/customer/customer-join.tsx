@@ -1,4 +1,3 @@
-import { apiError } from "../../lib/api-error";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, QrCode } from "lucide-react";
@@ -8,8 +7,9 @@ import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { customerVisitOptions } from "./customer-visit-query";
+import { apiError } from "../../lib/api-error";
 import { CustomerConsent } from "./customer-store";
+import { customerVisitOptions } from "./customer-visit-query";
 
 export function CustomerJoin({ code }: { code: string }) {
   const { t } = useI18n();
@@ -63,11 +63,7 @@ export function CustomerJoin({ code }: { code: string }) {
             <p className="text-pretty leading-relaxed">{t("customer_scan_again")}</p>
           </div>
         ) : (
-          <ErrorNotice
-            error={destination.error}
-            onRetry={() => void destination.refetch()}
-            retrying={destination.isFetching}
-          />
+          <ErrorNotice query={destination} retrying={destination.isFetching} />
         )}
         <Button variant="outline" nativeButton={false} role="link" render={<Link to="/member" />}>
           <ArrowLeft aria-hidden="true" />

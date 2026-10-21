@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectTablecastTests, type TablecastChangedFile } from "./tablecast-test-selection";
+import { selectTablecastTests, type TablecastChangedFile } from "./tablecast-test-selection.ts";
 
 const modified = (filename: string): TablecastChangedFile => ({ filename, status: "modified" });
 const all = {

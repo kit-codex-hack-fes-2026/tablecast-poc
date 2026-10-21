@@ -1,13 +1,8 @@
-import {
-  billingAccess,
-  billingSummary,
-  billingVisits,
-  billingCustomer,
-  organizationCostReport,
-} from "./queries";
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { billingUsdJpy, utcMonthRange } from "./pricing";
+import { billingAccess, billingCustomer, billingSummary } from "./queries";
+import { billingVisits, organizationCostReport } from "./reports";
 import { billingEnabled, billingRates, stripeClient } from "./stripe";
 
 export async function organizationBilling(
@@ -49,7 +44,7 @@ export async function organizationBilling(
   const checkoutRequired =
     !subscription?.stripeSubscriptionId ||
     ["canceled", "incomplete", "incomplete_expired"].includes(subscription.status);
-  let monthlyBase: number | null = null;
+  let monthlyBase: null | number = null;
   let priceUnavailable = false;
   if (billingEnabled(services.env)) {
     try {
@@ -150,7 +145,7 @@ export async function organizationOperatingReport(
     range.end,
   );
   const customer = await billingCustomer(services, organizationId);
-  let revenue: { billedJpy: number; paidJpy: number; fetchedAt: number } | null = null;
+  let revenue: null | { billedJpy: number; fetchedAt: number; paidJpy: number } = null;
   if (customer && billingEnabled(services.env)) {
     let billedJpy = 0,
       paidJpy = 0;

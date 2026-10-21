@@ -5,10 +5,10 @@ import {
   configDraftSchema,
   configurationReleaseSchema,
 } from "@tablecast/api/schema";
-import { test } from "./support/test";
-import { approveGuestDevice, signInStaff } from "./support/session";
 import ja from "../messages/ja.json" with { type: "json" };
 import { money } from "../src/i18n/format";
+import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off", serviceWorkers: "block" });
 

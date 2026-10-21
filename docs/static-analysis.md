@@ -5,7 +5,7 @@
 ## スターターからの採用範囲
 
 参照リポジトリのBun/Turbo、明示的な公開入口、型・import境界、統合テスト中心の考え方を採用する。
-同じ巨大なworkspace一覧、固定行数budget、全アプリ共通の抽象層、全種類の品質ツールはコピーしない。[参照と採否](sources.md#reference-repositories)
+同じ巨大なworkspace一覧、全アプリ共通の抽象層、全種類の品質ツールはコピーしない。[参照と採否](sources.md#reference-repositories)
 安全性を保つルールは強制し、好みの構文をそろえるためだけにファイル分割・ラッパー・型キャストを増やさない。
 
 ## 初期設定ファイル
@@ -17,6 +17,7 @@
 | oxlint.config.ts                                 | 小さな共通ルールとWeb/API/testのoverride                 |
 | oxfmt.config.ts                                  | TS/JSON/Markdown等の統一した整形                         |
 | lefthook.yml                                     | 段階的な検証、部分stageの保全                            |
+| .fallowrc.json                                   | 未使用コード・依存・複雑度・重複の解析と差分gate         |
 | apps/webのtsconfig / Vite / Storybook            | クライアントとSSR、部品試験                              |
 | apps/apiのtsconfig / Wrangler / Vitest / Drizzle | workerd、実Binding、migration                            |
 
@@ -34,18 +35,18 @@ root側のlintとformatは毎回実行し、workspaceのlint・typecheckはTurbo
 
 全ルールを一括有効化せず、correctness・suspiciousを基礎に必要なものを明示する。各rule名・option・対応状況は導入版のschemaで確認する。[S20](sources.md#s20)
 
-| 目的             | ルール候補・設定方針                                                                      |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| 非同期処理の脱落 | `typescript/no-floating-promises`、`typescript/no-misused-promises` を型付き解析で検査    |
-| 不明な入力の扱い | `typescript/no-explicit-any`、危険なassignment/call/returnの検査。外部値はunknownから絞る |
-| 型の強制         | `typescript/no-non-null-assertion`、危険な型assertion。`as unknown as` で不整合を隠さない |
-| 型だけのimport   | `typescript/consistent-type-imports`、type-only export                                    |
-| 循環・自己参照   | `import/no-cycle`、`import/no-self-import`、重複import                                    |
-| runtime境界      | `no-restricted-imports` でWebからAPI内部DB/auth/agentを禁止                               |
-| 危険な実行       | eval、動的Function生成、予期しないthrow/catchや比較を検出                                 |
-| React            | hooksの正しい呼出しと依存、key、使用するJSXアクセシビリティ規則                           |
-| テスト           | exclusive test、不正なexpect、未awaitの非同期テストを検出                                 |
-| 無効化の管理     | 不要なdisable directiveを報告し、広いファイル・フォルダーignoreを避ける                   |
+| 目的             | ルール候補・設定方針                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 非同期処理の脱落 | `typescript/no-floating-promises`、`typescript/no-misused-promises` を型付き解析で検査                           |
+| 不明な入力の扱い | `typescript/no-explicit-any`、危険なassignment/call/return/argument/member accessの検査。外部値はunknownから絞る |
+| 型の強制         | `typescript/no-non-null-assertion`、危険な型assertion。`as unknown as` で不整合を隠さない                        |
+| 型だけのimport   | `typescript/consistent-type-imports`、type-only export                                                           |
+| 循環・自己参照   | `import/no-cycle`、`import/no-self-import`、重複import                                                           |
+| runtime境界      | `no-restricted-imports` でWebからAPI内部DB/auth/agentを禁止                                                      |
+| 危険な実行       | eval、動的Function生成、予期しないthrow/catchや比較を検出                                                        |
+| React            | hooksの正しい呼出しと依存、key、使用するJSXアクセシビリティ規則                                                  |
+| テスト           | exclusive test、不正なexpect、未awaitの非同期テストを検出                                                        |
+| 無効化の管理     | 不要なdisable directiveを報告し、広いファイル・フォルダーignoreを避ける                                          |
 
 採用版で未対応のルール名を置いて通ったことにしない。必要な安全性をTypeScript・testで補い、代替策と理由を記録する。
 `void promise` だけでエラー処理を省略しない。意図した非同期処理にはcatchと記録、Workersでは必要に応じてctx.waitUntilを使う。
@@ -62,11 +63,15 @@ APIからWebのfeature・UIをimportしない。モデルはAPIの公式SDKを�
 
 すべての関数をarrowへ変更するルール、interface/typeの好み、すべての `as const` / satisfies禁止、固定の非常に短い行数budgetは採用しない。
 単純な関数をbudget回避のため複数ファイルへ分割しない。複雑さは分岐・責務・テスト難度で判断する。
-行数や複雑度を導入する場合もレビュー用の目安から始め、業務の明瞭さを壊す例外回避を誘発しない。
+実装・設定・CLIの300行は、空行・コメントを除くレビューの目安とする。同じ状態・寿命・変更理由を持つ処理は所有者へまとめ、行数のためだけのファイル分割・中継型・facadeを作らない。公開契約、独立したI/O・mount・購読の境界で分け、関数・privateメソッド・表示componentによる整理も使う。React Doctorの行数だけの診断も必須ゲートにせず、制御フローの複雑度検査を維持する。テスト・Story・テスト専用fixtureは500行を上限とし、runtimeで使うseed/demoデータは実装として扱う。複雑度と重複はfallowの警告も確認する。
+
+今回追加したunsafe argument/member、switch網羅性、Perfectionistとテスト行数のルールは、rootのoverrideの`excludeFiles`で`apps/presentation/**`を対象外にする。これは新規ルールの適用範囲であり、動画基盤の従来の型付きlint・型検査・テストやfallowのworkspace認識は維持する。
+
+Perfectionist 5.12.1をOxlintのJS pluginとして固定し、import・named import・export・named export・interface・object type・union・intersectionの8規則をnatural昇順で必須にする。JSX props・実行時object key・class memberは並べ替えない。`sortSideEffects: false`で副作用・CSS import同士の相対順序を保つ。値importが副作用importをまたぐ場合もあるため、代表実行境界で初期化を確認する。Oxfmtとの二重所有を避け、Oxfmtのimport sortは有効にしない。手動修正では`oxlint --fix`を再実行して重なる修正を収束させ、Oxfmt・lintを確認する。hookは修正を行わない。
 
 ## 型付き解析と型検査
 
-TypeScriptはstrictを基本に、noUncheckedIndexedAccess、exactOptionalPropertyTypes、noImplicitOverride等を実ライブラリと合わせて確認する。
+TypeScriptはstrictを基本に、Webも`noUncheckedIndexedAccess`を必須にする。`exactOptionalPropertyTypes`は今回は有効にしない。省略と明示的undefinedの区別はReactの独自propsやBetter Authとの契約に広い変更を要するため、型安全性はunsafe argument/member accessの拒否と判別unionのswitch網羅性で補う。`switch-exhaustiveness-check`はdefault分岐だけで網羅した扱いにしない。
 unsafeな外部境界は実行時schemaで検証する。型検査だけでは認可やJSON入力の安全性を証明できない。
 Oxlintの型付き解析は必要なエンジンとTypeScriptの互換条件がある。参照スターターの古いTypeScript pinと現行Oxlintを無検証で混ぜない。[S20](sources.md#s20)
 型付きルールが実際に実行されることを小さい失敗例で確認する。型ゲートは各manifestの`typecheck` scriptを正本とし、Oxlintだけで完全代替できると仮定しない。
@@ -83,18 +88,45 @@ rootの`format`・`format:check`はリポジトリ全体を一度だけ処理し
 
 ## Lefthook
 
-pre-commitは変更ファイルへのformat/lint、commit-msgはコミット規約を検査する。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
+pre-commitは変更ファイルへのformat/lintとfallowの差分検査、commit-msgはコミット規約を検査する。formatと解析のgroupを並列実行し、解析はcodegenを一度完了してからlintとfallowを並列実行する。生成中のParaglideを読まず、codegenの失敗もcommitを止める。実行内容は[lefthook.yml](../lefthook.yml)が正本であり、重い全ブラウザー試験・有料音声試験を毎commitへ入れない。変更別の確認範囲は[テスト戦略](testing.md#変更に応じた検証)に従う。
 部分stageを壊さない。`git add .` や無関係な差分の自動stageは禁止。formatterの自動stageを使う場合は部分stageを保全できる挙動を先に検証する。
 pre-pushは設定せず、push時に全体検証を繰り返さない。無課金の全体検証はCIで実行し、ローカルで必要な場合は `bun run check` を使う。
 commit-msgはrootの `commitlint.config.ts` を使う。公式の `@commitlint/config-conventional` と本文・Issue参照必須の組込みルールを採用し、Gitmojiの先頭検査だけを追加する。CIの静的解析ジョブは履歴を取得し、PRではbaseからheadまで、mainへのpushでは直前のコミットを同じ設定で検査する。
 失敗時の `--no-verify`、skip、全ignoreを通常手順にしない。起動した別worktreeのGit設定を変更しない。
+
+## fallow
+
+rootの開発依存へ固定したfallowを、CLI・Lefthook・CI・Codex MCPで共有する。解析設定の正本は[.fallowrc.json](../.fallowrc.json)とする。Oxfmt・Oxlint・型検査を維持し、fallowはリポジトリ全体のimport graphから未使用コード・依存・循環参照を検出する。型付き解析、有料のruntime解析、モデルを使う類似コード検出は初期導入では有効化しない。
+
+```sh
+# CI・checkと同じ全体gate。未変更ファイルの構造errorも失敗する。
+bun run fallow
+# branchの変更と現在の作業ツリーを統合先と比較する。
+bun run fallow:audit --base origin/staging
+# 今回のcommit前の変更を検査する。pre-commitもこの比較を使う。
+bun run fallow:audit --base HEAD --quiet
+```
+
+`fallow` scriptは標準CLIの`fallow dead-code && fallow --skip dead-code`を実行する。3.34.1の引数なし全体解析は報告のみであり、`--fail-on-issues`は複雑度・重複も失敗へ昇格するため使用しない。先に全体の構造errorをgateし、成功後に複雑度・重複を報告する。既存・新規を問わず構造errorは0件を要求し、parse不備も失敗する。
+
+commit前のauditだけは`gate: new-only`で比較元にも同じ解析を行い、新規のerrorだけを失敗させる。既存の指摘は文脈として残す。複雑度のcyclomatic・cognitive・CRAPは`warn`、重複は標準の報告のみとし、予算超過による失敗閾値を設定しない。他のruleは導入版の標準severityを使う。終了コード0はpass/warn、1はgate対象のエラー、2等は設定・実行の不備であり、`|| true`で解析失敗を隠さない。[audit](https://fallow.tools/docs/cli/audit/)と[severity](https://fallow.tools/docs/configuration/rules/)を参照する。
+
+fallowを直接実行すると作業ツリーを解析するため、未stage差分も判定へ影響する。Lefthookは部分stageされたファイルの未stage差分を標準機能で一時退避して復元するが、stage対象外のファイルの未stage変更はauditへ影響する。pre-commit全体がindexだけのsnapshot検査になるわけではない。自動修正・baselineの自動更新・自動stageは行わず、実行後のindexと未stage差分を維持する。CIはcheckoutしたcommit全体を検査し、比較元SHAに依存しない。手動auditで比較元が存在しない場合も検査を失敗させる。
+
+TanStack Router・Storybook・Vitest等の入口は標準pluginに任せる。静的importに現れないService Worker、CLI設定、shell経由の開発CLI、コピーして使う動画CSS、ローカルMCPの入口だけを`entry`へ補う。WorkersのDurable Object RPCで使う`start`・`notify`は、呼出し元を確認したうえで`DurableObject`継承に限定した`usedClassMembers`に登録する。生成型・route tree・Paraglideは解析対象から除き、第三者skillsは標準の隠しディレクトリ除外に従う。`.fallow/`のcacheはGit管理しない。APIの実Worker入口は`apps/api/src/worker.ts`へ明示する。
+
+テスト用transportは`vi.stubGlobal`で実装する標準protocolのメソッドを、member単位の理由付きコメントで認識させる。テストfile全体や本番srcを無効化しない。Fast Refresh専用のcomponent export規則は、実画面として配信しない`test-support`だけ対象外とし、他の型・境界・行数規則を維持する。取得済みskillのサンプルassetは取得元を正本とし、製品・運用CLIのlintへ含めない。
+
+設定の名前から動的にロードする`eslint-import-resolver-typescript`、実ファイルパスで呼ぶ`@tablecast/typescript-native`、shellへ渡すコマンド文字列の`portless`は、実際の設定・package scriptsに使用があるため`ignoreDependencies`へ限定登録する。名前を消すときは使用側も確認し、他の未使用依存を一括除外しない。
+
+削除・依存整理の前に`bunx --no-install fallow list --format json`でworkspaceと入口を確認し、`dead-code --trace`やMCPのtrace系toolで利用元を追う。誤検知は実入口や具体的なframework呼出しを補い、手書きのsrc全体をentryやignoreへ追加して通さない。既存の真の未使用export・型・依存は利用元を追って削除し、全体errorを残さない。UIの独立した公開namespace（`tabs.tsx`と`disclosure.tsx`の`Root`・`Panel`）は同名で別契約のため、ファイルと名前を限定して`ignoreExports`へ登録する。全src・全exportを除外しない。Codexからの起動は[セットアップ](setup.md#mcp設定の配置と確認)へ進む。
 
 ## 依存・CI
 
 Bun/Nodeの必要バージョン、lockfile、Wrangler/Vite/Cloudflare Vitestの互換組合せを最初の接続ゲートで固定する。
 CIはbun.lockの存在を検査し、frozen指定で導入する。未知の最新バージョンを毎回bunxで取得して検査を変えない。
 通常はroot scriptからローカル導入済みCLIを起動する。workspace同士はworkspace依存を使い、同じ依存の不要な二重pinを増やさない。
-Knipや重複検知は必要が生じた場合の追加とし、初期PoCで複数の同種静的ツールを一括必須化しない。
+未使用コード・重複の解析はfallowへ集約し、同じ目的でKnipやjscpdを重ねない。
 生成型・migrationの差分を確認する。デプロイ、seed、reset、外部モデルの実行はTurbo cacheの再利用対象にしない。
 
 ## Webの追加ルール
@@ -125,9 +157,11 @@ GitHub Actionsでは静的解析、単体・実Binding・音声接続テスト�
 
 Oxlintの [JS plugin機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)で、WebのStorybook・Playwright、APIの [Drizzle](https://orm.drizzle.team/docs/eslint-plugin) とコミュニティの [Hono plugin](https://github.com/ouka-lab/eslint-plugin-hono) を使う。Storybookはstoryのみ、PlaywrightはE2Eのみへ適用する。Drizzleのwhere欠落、Honoの応答return漏れ・next重複・param不一致・process.env依存を検出する。HonoのDomainErrorは共通onErrorが処理するためHTTPExceptionへの一律置換は要求しない。Drizzle pluginはSQLリテラルの必要性や不要な直列読取を判定しない。これらは[API skill](../.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)に従い、新規実装時と差分レビューで呼出し経路・読取の依存関係・標準APIの採用を確認する。意味を推測するregexや独自の監査runnerを追加しない。
 
-APIは`eslint-plugin-boundaries`の`boundaries/files`で、`modules/<業務>`のroute・service・query・modelとplatform・DB・公開入口を分類する。`boundaries/dependencies`は既定で依存を拒否し、`apps/api/oxlint.config.ts`の対応表だけを許可する。`no-unknown-files`と`no-unknown-dependencies`により、未分類のファイル配置や内部パスへの依存も失敗させる。TypeScript resolverとworkspaceの絶対rootを指定し、ルート・workspace・エディターから同じ解決結果を使う。
+APIは`eslint-plugin-boundaries`の`boundaries/files`で、`modules/<業務>`のroute・use-case・service・query・mutation・modelとplatform・DB・外部integration・公開入口を分類する。`boundaries/dependencies`は既定で依存を拒否し、`apps/api/oxlint.config.ts`の対応表だけを許可する。`no-unknown-files`と`no-unknown-dependencies`により、未分類のファイル配置や内部パスへの依存も失敗させる。TypeScript resolverとworkspaceの絶対rootを指定し、ルート・workspace・エディターから同じ解決結果を使う。
 
-routeからDB・Drizzle、serviceからHono・route、queryから更新・Agent、modelから実行コードへの依存を拒否する。modelは他のmodelとZodのみ、DBはDB schemaとDrizzleのみを参照する。Contextへの依存は型だけ許可し、moduleでのAuth再生成も禁止する。route合成は`app.ts`と`stores/routes.ts`の明示した子moduleに限定する。
+routeからDB・Drizzle、serviceからHono・route、queryから更新・Agent、modelから実行コードへの依存を拒否する。modelは他のmodelとZodのみ、DBはDB schemaとDrizzleのみを参照する。Contextへの依存は型だけ許可し、moduleでのAuth再生成も禁止する。route合成は`apps/api/config/module-contracts.ts`で明示した所有routeと子moduleの組合せに限定する。
+
+`apps/api/config/module-contracts.ts`は業務ごとの公開ファイルとroute合成だけを明示する。他moduleのprivate処理、integrationからDB/Auth、WebからDB/bootstrap、shellから業務queryの逆取得を拒否する。rootの運用CLIもAPI内部の相対importを拒否し、workspace公開入口を使う。
 
 配置や依存の追加時は、この対応表と構成文書を同じ差分で更新する。`scripts/tablecast-import-rules.test.ts`は隔離workspaceへ実設定を複製し、導入済みOxlint CLIで禁止・許可importと未知の配置を検証する。標準機能への対応は[JS BoundariesのOxlint統合](https://www.jsboundaries.dev/docs/guides/oxlint-integration/)に従う。
 
@@ -142,3 +176,7 @@ UIから業務やAPIへの参照、共通部品からfeatureへの参照、query
 ### デザインシステムの再発防止
 
 Webの既存 `oxlint-tailwindcss` の `no-hardcoded-colors` と `no-restricted-classes` をerrorにする。原色名と数字のutility、純白/純黒の直接utilityを拒否し、`styles.css` の意味別色へ誘導する。店舗テーマの利用者入力・QRの描画契約は既存境界に残し、業務状態色へ流用しない。StorybookとBrowserでコントラスト・hover・寸法・focus・狭幅を検証する。説明の関連性や色の意味そのものは静的規則で推測せず、実画面の監査で判断する。
+
+## 厳格化と性能の検証記録
+
+Issue #343の[計測・静的fixture・残件](quality-343.md)へ、基準SHA、全体gate、固定版MCP、部分stage、実D1/Browserの比較を記録する。

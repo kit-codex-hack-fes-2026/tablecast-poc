@@ -1,22 +1,22 @@
 export type TablecastChangedFile = {
   filename: string;
-  status: string;
   previous_filename?: string;
+  status: string;
 };
 
-export type TablecastTestMode = "pull_request" | "full";
-type TestScope = "full" | "changed" | "none";
+export type TablecastTestMode = "full" | "pull_request";
+type TestScope = "changed" | "full" | "none";
 
 export type TablecastTestSelection = {
-  web: TestScope;
-  components: TestScope;
   api: "full" | "none";
-  runtime: "full" | "imports" | "none";
+  build: boolean;
+  components: TestScope;
+  e2e: TestScope;
   fixtures: "full" | "none";
   presentation: "full" | "none";
-  e2e: TestScope;
-  build: boolean;
   reason: string;
+  runtime: "full" | "imports" | "none";
+  web: TestScope;
 };
 
 function fullSelection(reason: string): TablecastTestSelection {

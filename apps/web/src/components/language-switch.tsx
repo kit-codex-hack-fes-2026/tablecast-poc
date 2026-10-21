@@ -1,7 +1,7 @@
 import type { Locale } from "@tablecast/api/schema";
+import { useI18n } from "../i18n/locale";
 import { LanguageLabel } from "./language-label";
 import { Button } from "./ui/button";
-import { useI18n } from "../i18n/locale";
 
 const languages = ["ja", "en"] as const;
 
@@ -15,8 +15,8 @@ export function LanguageSwitch({
   onChange,
   disabled = false,
 }: {
-  onChange: (locale: Locale) => void;
   disabled?: boolean;
+  onChange: (locale: Locale) => void;
 }) {
   const { locale, t } = useI18n();
   return (

@@ -5,8 +5,8 @@ import {
   Bell,
   CheckCircle2,
   CircleDollarSign,
-  Radio,
   House,
+  Radio,
   Table2,
   Users,
   UtensilsCrossed,
@@ -17,10 +17,10 @@ import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { useRealtime } from "../../lib/use-realtime";
-import { floorOptions } from "./store-query";
-import { HomeStatistics } from "./home-statistics";
+import { floorOptions } from "../floor/floor-query";
+import { HomeStatistics } from "../statistics/home-statistics";
 import { HomePreparation } from "./home-preparation";
-import { useStore } from "./store-shell";
+import { useStore } from "./store-context";
 
 export function StoreHome({ today }: { today: string }) {
   const store = useStore();
@@ -70,11 +70,7 @@ export function StoreHome({ today }: { today: string }) {
           </Button>
         }
       />
-      <ErrorNotice
-        error={floor.error}
-        onRetry={() => void floor.refetch()}
-        retrying={floor.isFetching}
-      />
+      <ErrorNotice query={floor} retrying={floor.isFetching} />
       <section
         className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6"
         aria-labelledby="tablecast-home-attention"

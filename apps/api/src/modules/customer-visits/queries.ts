@@ -1,21 +1,19 @@
+import type { z } from "zod";
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import { user } from "../../db/auth-schema";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
+import type { CustomerActor } from "../customers/model";
+import type { customerOrderPageSchema, customerVisitPageSchema } from "./model";
 import {
   customerConsumption,
   customerContexts,
   customerMemberships,
   customerVisitCodes,
   customerVisitParticipants,
-  devices,
-  orders,
-  restaurantTables,
-  stores,
-  tableSessions,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/customer-schema";
+import { user } from "../../db/identity-schema";
+import { devices, orders, restaurantTables, stores, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
-import type { CustomerActor } from "../customers/model";
 import { requireCustomer } from "../customers/queries";
 import { snapshotSchema } from "../orders/model";
 
@@ -57,7 +55,7 @@ export function validVisitCode(services: ApiServices, tokenHash: string) {
     );
 }
 
-export function listVisitParticipants(
+function listVisitParticipants(
   services: ApiServices,
   storeId: string,
   sessionIds: string[],
@@ -68,7 +66,7 @@ export function listVisitParticipants(
       sessionId: customerVisitParticipants.sessionId,
       id: customerVisitParticipants.id,
       name: sql<
-        string | null
+        null | string
       >`CASE WHEN ${customerMemberships.active} AND ${customerMemberships.shareCompanions} THEN ${user.name} ELSE NULL END`,
       joinedAt: customerVisitParticipants.joinedAt,
       leftAt: customerVisitParticipants.leftAt,
@@ -202,7 +200,7 @@ export async function getCustomerVisit(
 export async function listCustomerVisits(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeJoinedAt?: number; beforeId?: string; limit: number },
+  query: z.infer<typeof customerVisitPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const rows = await services.db
@@ -250,12 +248,7 @@ export async function listCustomerVisits(
     visits.map((visit) => visit.sessionId),
     false,
   );
-  const companions = new Map<string, typeof participants>();
-  for (const participant of participants) {
-    const group = companions.get(participant.sessionId) ?? [];
-    group.push(participant);
-    companions.set(participant.sessionId, group);
-  }
+  const companions = Map.groupBy(participants, (participant) => participant.sessionId);
   return {
     visits: visits.map((visit) => ({
       ...visit,
@@ -268,11 +261,27 @@ export async function listCustomerVisits(
   };
 }
 
+export async function listCustomerOrders(
+  services: ApiServices,
+  actor: CustomerActor,
+  sessionId: string,
+  query: z.infer<typeof customerOrderPageSchema>,
+) {
+  const { membership } = await requireCustomerVisit(services, actor, sessionId);
+  return customerOrderValue(
+    services,
+    actor.storeId,
+    membership.id,
+    await customerOrderRows(services, actor.storeId, sessionId, query),
+    query.limit,
+  );
+}
+
 function customerOrderRows(
   services: ApiServices,
   storeId: string,
   sessionId: string,
-  query: { beforeCreatedAt?: number; beforeId?: string; limit: number },
+  query: z.infer<typeof customerOrderPageSchema>,
 ) {
   return services.db
     .select({
@@ -297,6 +306,7 @@ function customerOrderRows(
     .orderBy(desc(orders.created_at), desc(orders.id))
     .limit(query.limit + 1);
 }
+
 async function customerOrderValue(
   services: ApiServices,
   storeId: string,
@@ -339,19 +349,4 @@ async function customerOrderValue(
         ? { beforeCreatedAt: String(last.createdAt), beforeId: last.id }
         : null,
   };
-}
-export async function listCustomerOrders(
-  services: ApiServices,
-  actor: CustomerActor,
-  sessionId: string,
-  query: { beforeCreatedAt?: number; beforeId?: string; limit: number },
-) {
-  const { membership } = await requireCustomerVisit(services, actor, sessionId);
-  return customerOrderValue(
-    services,
-    actor.storeId,
-    membership.id,
-    await customerOrderRows(services, actor.storeId, sessionId, query),
-    query.limit,
-  );
 }

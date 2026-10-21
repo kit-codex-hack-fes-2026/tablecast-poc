@@ -1,8 +1,8 @@
-import { useSidebarPreferences } from "./sidebar-preferences";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { PanelLeft, X } from "lucide-react";
-import { useRef, useState, type ReactNode, type SyntheticEvent } from "react";
+import { type ReactNode, type SyntheticEvent, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
+import type { SidebarSelection } from "./sidebar-model";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
@@ -14,19 +14,23 @@ import {
 import { useI18n } from "../../i18n/locale";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
-
-import { AdminSidebar, useSidebarStore, type AdminSidebarProps } from "./admin-sidebar";
+import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
+import { useSidebarPreferences } from "./sidebar-preferences";
 
 export function AdminShell({
   children,
   header,
   storeName,
+  selection,
   ...sidebar
-}: AdminSidebarProps & { children: ReactNode; header?: ReactNode; storeName?: string }) {
+}: AdminSidebarProps & {
+  children: ReactNode;
+  header?: ReactNode;
+  selection: SidebarSelection;
+  storeName?: string;
+}) {
   const { t, setLocale } = useI18n();
-  const selection = useSidebarStore(sidebar);
-  const { session } = selection;
-  const { preferences, update } = useSidebarPreferences(session.data?.user.id);
+  const { preferences, update } = useSidebarPreferences(selection.user?.id);
   const collapsed = preferences.collapsed ?? false;
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
@@ -152,9 +156,7 @@ export function AdminShell({
   );
 }
 
-function MobileNavigation(
-  sidebar: AdminSidebarProps & { selection: ReturnType<typeof useSidebarStore> },
-) {
+function MobileNavigation(sidebar: AdminSidebarProps & { selection: SidebarSelection }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (

@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, within } from "storybook/test";
-import { BillingOverview } from "./billing-page";
 import { billingFixture } from "./billing-fixture";
+import { BillingOverview } from "./billing-page";
 const meta = {
   title: "管理/課金と請求",
   component: BillingOverview,

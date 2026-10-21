@@ -5,11 +5,12 @@ import {
 } from "@tablecast/api/client";
 import { apiFetch } from "./api-fetch";
 export { parseResponse };
+export type { InferResponseType } from "@tablecast/api/client";
 const origin = typeof window === "undefined" ? "" : window.location.origin;
 const options = { fetch: apiFetch, headers: { "X-Tablecast-Instructions": "1" } };
 export const rpc = createTablecastClient(origin || "/", options);
 export type TableClient = ReturnType<typeof createTableSessionClient>;
-export type TableEndpoint = { key: string; client: TableClient };
+export type TableEndpoint = { client: TableClient; key: string };
 export const tableEndpoint: TableEndpoint = {
   key: "table",
   client: createTableSessionClient(`${origin}/api/table`, options),

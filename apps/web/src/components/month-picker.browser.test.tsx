@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
 import { LocaleProvider } from "../i18n/locale";
-import { MonthPicker } from "./month-picker";
 import "../styles.css";
+import { MonthPicker } from "./month-picker";
 afterEach(cleanup);
 it.each(["ja", "en"] as const)(
   "%sの月選択は年を移動して確定し、Escapeでfocusを戻す",

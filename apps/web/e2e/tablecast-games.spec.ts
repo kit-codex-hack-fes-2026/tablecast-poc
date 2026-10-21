@@ -1,14 +1,14 @@
 import { expect } from "@playwright/test";
-import { z } from "zod";
 import {
   adminStateSchema,
   catalogSchema,
   gameStateSchema,
   tableStateSchema,
 } from "@tablecast/api/schema";
-import { test } from "./support/test";
-import { approveGuestDevice, signInStaff } from "./support/session";
+import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
+import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
 

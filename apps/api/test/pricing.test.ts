@@ -1,12 +1,12 @@
 import { expect, it } from "vitest";
-import { configurationErrors, priceCart, type PlanContext } from "../src/modules/catalog/pricing";
 import { z } from "zod";
+import { configurationErrors, type PlanContext, priceCart } from "../src/modules/catalog/pricing";
 import {
-  configurationSchema,
-  optionSchema,
-  optionConditionSchema,
-  type OptionCondition,
   configurationIssueSchema,
+  configurationSchema,
+  type OptionCondition,
+  optionConditionSchema,
+  optionSchema,
 } from "../src/schema";
 import { configuration, text } from "./configuration-fixture";
 
@@ -326,7 +326,7 @@ it.each(Array.from({ length: 8 }, (_, mask) => ({ mask })))(
       matched ? undefined : [{ optionId: "X", relation: "requires" }],
     );
     owner.conditions = { version: 2, requires: null, excludes: expression };
-    let failure: string | null = null;
+    let failure: null | string = null;
     try {
       priceCart({ products: [product] }, lines, 0);
     } catch (error) {

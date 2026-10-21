@@ -1,17 +1,18 @@
+import type { z } from "zod";
 import { and, asc, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
-import { user } from "../../db/auth-schema";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
+import type { CustomerActor } from "../customers/model";
+import type { pointPageSchema } from "./model";
+import { customerMemberships, customerVisitParticipants } from "../../db/customer-schema";
+import { user } from "../../db/identity-schema";
 import {
-  customerMemberships,
   customerPointAllocations,
   customerPointEntries,
   customerPointPolicies,
   customerPointVisits,
-  customerVisitParticipants,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/rewards-schema";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
-import type { CustomerActor } from "../customers/model";
 import { requireCustomer } from "../customers/queries";
 import { getSession } from "../tables/queries";
 import { noPointRules, pointRulesSchema } from "./model";
@@ -108,7 +109,7 @@ export async function getPointVisit(services: ApiServices, actor: Actor) {
 export async function getCustomerPoints(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof pointPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const [balance, rows, totals] = await services.db.batch([
@@ -120,7 +121,7 @@ export async function getCustomerPoints(
         kind: customerPointEntries.kind,
         reason: customerPointEntries.reason,
         reasonKind: sql<
-          "award" | "exchange" | "billing" | "manual"
+          "award" | "billing" | "exchange" | "manual"
         >`CASE WHEN ${customerPointEntries.kind}='award' THEN 'award' WHEN ${customerPointEntries.kind}='exchange' THEN 'exchange' WHEN ${customerPointEntries.reference} LIKE 'billing:%' THEN 'billing' ELSE 'manual' END`.as(
           "reason_kind",
         ),

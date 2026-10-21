@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useI18n } from "../../i18n/locale";
-import { Button } from "./button";
 import { Badge } from "./badge";
+import { Button } from "./button";
 import { Input } from "./input";
-import { Table, TableHead, TableCell } from "./table";
+import { Table, TableCell, TableHead } from "./table";
 function Materials() {
   const { locale } = useI18n();
   const ja = locale === "ja";

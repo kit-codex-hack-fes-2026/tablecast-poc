@@ -1,14 +1,14 @@
 import { afterEach, expect, it } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
 import { LocaleProvider } from "../i18n/locale";
+import "../styles.css";
 import { LanguageLabel } from "./language-label";
-import { UserIdentity } from "./user-identity";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { NativeSelect } from "./ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Badge } from "./ui/badge";
-import "../styles.css";
+import { UserIdentity } from "./user-identity";
 
 afterEach(async () => {
   await cleanup();

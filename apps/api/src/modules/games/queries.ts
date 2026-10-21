@@ -1,9 +1,9 @@
+import { and, desc, eq, gt, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import { and, desc, eq, gt, lt, or, isNull, isNotNull } from "drizzle-orm";
-import { gamePlugins, gameRuns, gameVersions } from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import { gamePlugins, gameRuns, gameVersions } from "../../db/games-schema";
+import { ensure } from "../../platform/errors";
 import { getSession } from "../tables/queries";
 import { gameManifestSchema, gamePackageSchema, gameStateSchema } from "./model";
 

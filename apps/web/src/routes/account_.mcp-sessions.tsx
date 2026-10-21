@@ -1,7 +1,7 @@
-import { collectionSearchSchema } from "../features/shell/collection-model";
-import { mcpSessionsOptions } from "../features/account/account-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { mcpSessionsOptions } from "../features/account/account-query";
 import { McpSessions } from "../features/account/mcp-sessions";
+import { collectionSearchSchema } from "../features/shell/collection-model";
 export const Route = createFileRoute("/account_/mcp-sessions")({
   validateSearch: collectionSearchSchema,
   staticData: {

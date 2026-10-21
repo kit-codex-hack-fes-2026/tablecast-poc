@@ -42,7 +42,7 @@ export const statisticsCursorSchema = z.object({
 });
 
 const count = z.number().int().nonnegative();
-export const statisticsSummarySchema = z.object({
+const statisticsSummarySchema = z.object({
   sessions: count,
   guests: count,
   planSessions: count,
@@ -58,7 +58,7 @@ export const statisticsSummarySchema = z.object({
   staffCalls: count,
   billCalls: count,
 });
-export const statisticsRowSchema = z.object({
+const statisticsRowSchema = z.object({
   productId: z.string(),
   optionId: z.string().nullable(),
   name: z.string().nullable(),

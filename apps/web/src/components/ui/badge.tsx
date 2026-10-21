@@ -1,6 +1,6 @@
+import type { VariantProps } from "tailwind-variants";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import type { VariantProps } from "tailwind-variants";
 import { badgeVariants } from "./badge-variants";
 
 /**

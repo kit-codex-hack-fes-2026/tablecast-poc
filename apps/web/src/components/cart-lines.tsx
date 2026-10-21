@@ -1,14 +1,14 @@
+import type { PricedLine, Product } from "@tablecast/api/schema";
+import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
 import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { forwardRef, type ReactNode } from "react";
-import type { PricedLine, Product } from "@tablecast/api/schema";
-import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
+import { money } from "../i18n/format";
+import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
 import { ProductImage } from "./product-image";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { money } from "../i18n/format";
-import { useI18n } from "../i18n/locale";
 
 /**
  * 注文かごの行。
@@ -25,12 +25,12 @@ export function CartLines({
   products = [],
   disabled = false,
 }: {
+  disabled?: boolean;
   lines: PricedLine[];
   onEdit?: (line: PricedLine) => void;
-  onRemove?: (line: PricedLine) => void;
-  disabled?: boolean;
-  products?: Product[];
   onQuantity?: (line: PricedLine, quantity: number) => void;
+  onRemove?: (line: PricedLine) => void;
+  products?: Product[];
 }) {
   const { locale, t } = useI18n();
   const productsById = new Map(products.map((product) => [product.id, product]));

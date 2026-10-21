@@ -1,14 +1,16 @@
+import { validationIssuesSchema } from "@tablecast/api/schema";
 import { AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useI18n } from "../i18n/locale";
 import { apiError } from "../lib/api-error";
-import { validationIssuesSchema } from "@tablecast/api/schema";
 
 function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>["t"]>[0] {
   const failure = apiError(error);
   if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
   if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
   switch (failure.status) {
+    case undefined:
+      return "common_error";
     case 401:
       return "common_session_error";
     case 403:
@@ -38,14 +40,18 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
  * 取得済み情報を消さず隣接して配置する。
  */
 export function ErrorNotice({
-  error,
-  onRetry,
+  query,
+  error = query?.error,
+  onRetry = query
+    ? () => {
+        void query.refetch();
+      }
+    : undefined,
   retrying = false,
-}: {
-  error: unknown;
-  onRetry?: () => void;
-  retrying?: boolean;
-}) {
+}: (
+  | { error: unknown; onRetry?: () => void; query?: never }
+  | { error?: never; onRetry?: never; query: { error: unknown; refetch: () => unknown } }
+) & { retrying?: boolean }) {
   const { t, locale } = useI18n();
   if (!error) return null;
   const message = t(errorMessageKey(error));

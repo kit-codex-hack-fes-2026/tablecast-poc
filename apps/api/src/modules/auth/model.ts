@@ -1,12 +1,12 @@
 export type Actor = {
-  kind: "device" | "staff" | "voice" | "mcp";
+  canWrite?: boolean;
+  demoId?: string;
+  deviceId?: string;
+  kind: "device" | "mcp" | "staff" | "voice";
+  role?: string;
   storeId: string;
   tableSessionId?: string;
-  deviceId?: string;
-  demoId?: string;
-  userId?: string;
-  role?: string;
-  voiceSessionId?: string;
   turnId?: string;
-  canWrite?: boolean;
+  userId?: string;
+  voiceSessionId?: string;
 };

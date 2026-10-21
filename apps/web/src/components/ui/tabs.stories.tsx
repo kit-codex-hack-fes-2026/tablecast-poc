@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { LayoutGrid, ChartColumn } from "lucide-react";
+import { ChartColumn, LayoutGrid } from "lucide-react";
 import * as Tabs from "./tabs";
 
 const meta = {

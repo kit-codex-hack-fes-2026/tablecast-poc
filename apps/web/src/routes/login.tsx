@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 import { Login } from "../features/account/login";
+import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 
 export const Route = createFileRoute("/login")({
   staticData: { document: { title: "auth_sign_in", description: "head_login_description" } },

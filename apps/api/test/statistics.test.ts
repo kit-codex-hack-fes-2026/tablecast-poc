@@ -1,13 +1,13 @@
-import { env } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import app from "../src/app";
-import { member } from "../src/db/auth-schema";
-import { orders } from "../src/db/business-schema";
-import { statisticsQuerySchema, statisticsResultSchema } from "../src/schema";
+import { member } from "../src/db/identity-schema";
+import { orders } from "../src/db/table-schema";
 import { getStatistics } from "../src/modules/statistics/service";
 import { createApiServices } from "../src/platform/context";
+import { statisticsQuerySchema, statisticsResultSchema } from "../src/schema";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 import { measuredDatabase } from "./measured-database";

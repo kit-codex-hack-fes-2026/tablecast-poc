@@ -57,7 +57,7 @@ const bindings = {
             "better-auth/plugins",
             "better-auth/api",
             "better-auth/db",
-            "@better-auth/drizzle-adapter",
+            "@better-auth/drizzle-adapter/relations-v2",
             "@better-auth/oauth-provider",
             "@better-auth/passkey",
             "@better-auth/infra",

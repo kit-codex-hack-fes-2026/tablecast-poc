@@ -7,16 +7,16 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider } from "../../i18n/locale";
-import { IntegrationSetup } from "./integration-setup";
-import { integrationConnection } from "./integration-query";
+import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
+import { integrationConnection } from "./integration-query";
+import { IntegrationSetup } from "./integration-setup";
 
 // 認証済みの枠だけを省略し、案内・翻訳・コピー値は実物を検査する。
-vi.mock("../shell/settings-shell", () => ({
+vi.mock("../store/settings-shell", () => ({
   SettingsShell: ({ children }: { children: ReactNode }) => (
     <main className="mx-auto max-w-4xl space-y-6 p-8">{children}</main>
   ),

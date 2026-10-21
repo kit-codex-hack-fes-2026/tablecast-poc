@@ -2,8 +2,8 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
-import { member, subscription } from "../src/db/auth-schema";
-import { billingOutbox, voiceUsageSessions } from "../src/db/business-schema";
+import { billingOutbox, voiceUsageSessions } from "../src/db/billing-schema";
+import { member, subscription } from "../src/db/identity-schema";
 import { createApiServices } from "../src/platform/context";
 import { setupFixture } from "./fixture";
 

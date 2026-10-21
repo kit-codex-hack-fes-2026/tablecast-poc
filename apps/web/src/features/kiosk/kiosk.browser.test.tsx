@@ -1,250 +1,46 @@
-import { cleanup, render } from "vitest-browser-react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type TableState } from "@tablecast/api/schema";
+import { expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import {
-  cartUpdateSchema,
-  uiSectionInputSchema,
-  submitSchema,
-  type CartUpdate,
-  type TableState,
-} from "@tablecast/api/schema";
 import { catalog, product, table } from "../../../.storybook/tablecast-fixtures";
-import { LocaleProvider } from "../../i18n/locale";
-import { useRealtime } from "../../lib/use-realtime";
-import { Kiosk } from "./kiosk";
 import ja from "../../../messages/ja.json";
-import en from "../../../messages/en.json";
-import { VoiceConnection } from "./voice-connection";
-import { VoicePanel } from "./voice-panel";
 import "../../styles.css";
-
-// 接続先だけを差し替える。hook、QueryClient、HTTP client、画面は本番実装を使う。
-class TablecastSocket extends EventTarget {
-  static instances: TablecastSocket[] = [];
-  closed = false;
-  constructor(readonly url: string) {
-    super();
-    TablecastSocket.instances.push(this);
-  }
-  close() {
-    this.closed = true;
-    this.dispatchEvent(new Event("close"));
-  }
-}
-
-let catalogResponse: Response;
-let client: QueryClient;
-let current: TableState;
-let unexpected: string[];
-let cartFailure: number;
-let savedCart: TableState["cart"];
-let confirmationDuration: number;
-let selectedParticipant: string | null;
-let participantNames: string[];
-const cartWrites: CartUpdate[] = [];
-const targetWrites: unknown[] = [];
-const orderWrites: ReturnType<typeof submitSchema.parse>[] = [];
-const requests: Request[] = [];
-let initialViewport: { width: number; height: number };
-beforeEach(() => {
-  initialViewport = { width: window.innerWidth, height: window.innerHeight };
-  vi.stubGlobal("WebSocket", TablecastSocket);
-  // カートと通知の統合では実端末のマイク列挙を避ける。
-  vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([]);
-  TablecastSocket.instances = [];
-  catalogResponse = Response.json(catalog);
-  current = structuredClone(table);
-  current.uiSection = "cart";
-  current.voiceState = "stopped";
-  current.voiceSessionId = null;
-  unexpected = [];
-  requests.length = 0;
-  cartWrites.length = 0;
-  targetWrites.length = 0;
-  orderWrites.length = 0;
-  cartFailure = 0;
-  confirmationDuration = 60_000;
-  selectedParticipant = null;
-  participantNames = [];
-  savedCart = structuredClone(table.cart);
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = new Request(input, init);
-      requests.push(request);
-      const path = new URL(request.url).pathname;
-      if (request.method === "GET" && path === "/api/table/participants")
-        return Response.json({
-          participants: participantNames.map((name, index) => ({
-            id: `11111111-1111-4111-8111-11111111111${index}`,
-            name,
-          })),
-          context: {
-            selectedParticipantId: selectedParticipant,
-            token: "22222222-2222-4222-8222-222222222222",
-          },
-        });
-      if (request.method === "POST" && path === "/api/table/customer-target") {
-        targetWrites.push(await request.json());
-        selectedParticipant = "11111111-1111-4111-8111-111111111111";
-        return Response.json({ selected: true });
-      }
-      if (request.method === "POST" && path === "/api/table/customer-code")
-        return Response.json({
-          code: "a".repeat(64),
-          expiresAt: Date.now() + 300000,
-          url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
-        });
-      if (request.method === "GET" && path === "/api/table") return Response.json(current);
-      if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
-      if (request.method === "GET" && path.endsWith("/events")) {
-        const after = Number(new URL(request.url).searchParams.get("after"));
-        return Response.json({
-          cursor: current.cursor,
-          events: current.events.filter((event) => event.cursor > after),
-        });
-      }
-      if (request.method === "PUT" && path === "/api/table/cart") {
-        cartWrites.push(cartUpdateSchema.parse(await request.json()));
-        if (cartFailure)
-          return Response.json({ error: { code: "CART_CONFLICT" } }, { status: cartFailure });
-        current = { ...current, cursor: current.cursor + 1, cart: savedCart, snapshot: null };
-        return Response.json(current);
-      }
-      if (request.method === "POST" && path === "/api/table/call") {
-        current = { ...current, staffCalled: true, cursor: current.cursor + 1 };
-        return Response.json(current);
-      }
-      if (request.method === "POST" && path === "/api/table/bill/request") {
-        current = {
-          ...current,
-          staffCalled: true,
-          billRequested: true,
-          cursor: current.cursor + 1,
-        };
-        return Response.json(current);
-      }
-      if (request.method === "POST" && path === "/api/table/confirm") {
-        current.snapshot = {
-          id: "tablecast-confirmation",
-          tableSessionId: current.id,
-          cartVersion: current.cart.version,
-          configVersion: current.configVersion,
-          lines: current.cart.lines,
-          total: current.cart.total,
-          locale: current.locale,
-          text: "注文内容",
-          expiresAt: Date.now() + confirmationDuration,
-          channel: "gui",
-          status: "pending",
-          createdTurnId: null,
-          plan: null,
-        };
-        return Response.json(current.snapshot);
-      }
-      if (request.method === "POST" && path === "/api/table/orders") {
-        orderWrites.push(submitSchema.parse(await request.json()));
-        current = {
-          ...current,
-          cursor: current.cursor + 1,
-          cart: { ...current.cart, lines: [], total: 0, version: current.cart.version + 1 },
-          snapshot: null,
-        };
-        return Response.json({ orderId: "tablecast-confirmed-order" });
-      }
-      if (request.method === "PATCH" && path === "/api/table/ui") {
-        const screenInput = uiSectionInputSchema.parse(await request.json());
-        current = {
-          ...current,
-          uiSection: screenInput.section,
-          selectedProductId: screenInput.productId ?? null,
-          cursor: current.cursor + 1,
-        };
-        return Response.json(current);
-      }
-      if (request.method === "POST" && path === "/api/table/voice/stop")
-        return Response.json({ ok: true });
-      if (request.method === "POST" && path === "/api/table/voice/start") {
-        return Response.json({ error: { code: "VOICE_NOT_CONFIGURED" } }, { status: 503 });
-      }
-      unexpected.push(`${request.method} ${path}`);
-      return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
-    }),
-  );
-});
-afterEach(async () => {
-  try {
-    await cleanup();
-    client.clear();
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-    for (const cookie of document.cookie.split(";")) {
-      const name = cookie.trim().split("=")[0];
-      if (name.startsWith("tablecast-layout-")) document.cookie = `${name}=; Path=/; Max-Age=0`;
-    }
-    if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
-  } finally {
-    if (
-      window.innerWidth !== initialViewport.width ||
-      window.innerHeight !== initialViewport.height
-    )
-      await page.viewport(initialViewport.width, initialViewport.height);
-  }
-});
-
-async function mountKiosk() {
-  return render(
-    <LocaleProvider initialLocale={current.locale} persist={false}>
-      <QueryClientProvider client={client}>
-        <Kiosk />
-      </QueryClientProvider>
-    </LocaleProvider>,
-  );
-}
-
-function notify(kind: "cart.updated" | "configuration.published") {
-  current.cursor += 1;
-  current.events.push({
-    cursor: current.cursor,
-    storeId: current.storeId,
-    tableSessionId: kind === "configuration.published" ? null : current.id,
-    kind,
-    data: {},
-    createdAt: Date.now(),
-  });
-  const socket = TablecastSocket.instances.at(-1);
-  if (!socket) throw new Error("卓の通知接続がありません");
-  socket.dispatchEvent(new MessageEvent("message", { data: "changed" }));
-}
+import { fixtureValue } from "../../test-support/fixture-value";
+import {
+  cartWrites,
+  fixture,
+  mountKiosk,
+  notify,
+  orderPanel,
+  orderWrites,
+  requests,
+  TablecastSocket,
+} from "./test-support/kiosk-fixture";
 
 it("未充足行の修正は競合後も選択を保持し、再送でも同じ行だけを更新する", async () => {
   await page.viewport(1280, 1000);
   const conditional = structuredClone(product);
-  conditional.modifiers[0].kind = "multiple";
-  conditional.modifiers[0].min = 0;
-  conditional.modifiers[0].max = 2;
-  const [first, required] = conditional.modifiers[0].options;
+  fixtureValue(conditional.modifiers[0]).kind = "multiple";
+  fixtureValue(conditional.modifiers[0]).min = 0;
+  fixtureValue(conditional.modifiers[0]).max = 2;
+  const [first, required] = fixtureValue(conditional.modifiers[0]).options;
   if (!first || !required) throw new Error("条件付き選択肢が必要です");
   first.conditions = {
     version: 2,
     requires: { kind: "option", optionId: required.id },
     excludes: null,
   };
-  catalogResponse = Response.json({
+  fixture.catalogResponse = Response.json({
     ...catalog,
     configuration: { ...catalog.configuration, products: [conditional] },
   });
-  const line = current.cart.lines[0];
+  const line = fixture.current.cart.lines[0];
   if (!line) throw new Error("未充足行が必要です");
   line.selections = [{ optionId: first.id, quantity: 1 }];
   line.conditionIssues = [{ optionId: first.id, relation: "requires" }];
-  current.cart.complete = false;
-  savedCart = {
-    ...structuredClone(current.cart),
-    version: current.cart.version + 1,
+  fixture.current.cart.complete = false;
+  fixture.savedCart = {
+    ...structuredClone(fixture.current.cart),
+    version: fixture.current.cart.version + 1,
     complete: true,
     lines: [
       {
@@ -262,12 +58,12 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
   const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
   const choice = detail.getByRole("checkbox", { name: required.text.ja.displayName, exact: true });
   await choice.click();
-  cartFailure = 409;
+  fixture.cartFailure = 409;
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
   await expect.element(detail.getByRole("alert")).toBeVisible();
   await expect.element(choice).toBeChecked();
-  expect(current.cart.complete).toBe(false);
-  cartFailure = 0;
+  expect(fixture.current.cart.complete).toBe(false);
+  fixture.cartFailure = 0;
   await detail.getByRole("button", { name: ja.common_update, exact: true }).click();
   await expect.element(detail).not.toBeInTheDocument();
   expect(cartWrites).toEqual(
@@ -278,7 +74,7 @@ it("未充足行の修正は競合後も選択を保持し、再送でも同じ�
           id: line.id,
           productId: product.id,
           quantity: 1,
-          selections: savedCart.lines[0].selections,
+          selections: fixtureValue(fixture.savedCart.lines[0]).selections,
         },
       ],
     })),
@@ -293,7 +89,7 @@ it("確認の期限が失効したら確定操作を閉じる", async () => {
   await mountKiosk();
   const review = page.getByRole("button", { name: ja.kiosk_review, exact: true });
   await expect.element(review).toBeEnabled();
-  confirmationDuration = 2000;
+  fixture.confirmationDuration = 2000;
   vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
   vi.setSystemTime(new Date("2026-10-17T00:00:00Z"));
   try {
@@ -302,7 +98,7 @@ it("確認の期限が失効したら確定操作を閉じる", async () => {
     const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
     await expect.element(confirmation).toBeVisible();
     // APIの期限を本番effectで観測し、RAF・setInterval・MessageChannelは置き換えない。
-    await vi.advanceTimersByTimeAsync(confirmationDuration - 1);
+    await vi.advanceTimersByTimeAsync(fixture.confirmationDuration - 1);
     await expect.element(confirmation).toBeVisible();
     await vi.advanceTimersByTimeAsync(1);
     await expect.element(confirmation).not.toBeInTheDocument();
@@ -320,11 +116,11 @@ it.each(["カート版", "公開版"] as const)("確認の%sが失効したら�
   await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
   const confirmation = page.getByRole("region", { name: ja.kiosk_review_title, exact: true });
   await expect.element(confirmation).toBeVisible();
-  if (reason === "カート版") current.cart.version += 1;
+  if (reason === "カート版") fixture.current.cart.version += 1;
   else {
-    current.configVersion += 1;
-    if (current.snapshot) current.snapshot.status = "invalid";
-    catalogResponse = Response.json({ ...catalog, version: current.configVersion });
+    fixture.current.configVersion += 1;
+    if (fixture.current.snapshot) fixture.current.snapshot.status = "invalid";
+    fixture.catalogResponse = Response.json({ ...catalog, version: fixture.current.configVersion });
   }
   notify(reason === "公開版" ? "configuration.published" : "cart.updated");
   await expect.element(confirmation).not.toBeInTheDocument();
@@ -335,15 +131,15 @@ it.each(["カート版", "公開版"] as const)("確認の%sが失効したら�
 
 it("公開通知で開いた商品を閉じて新価格を取得し、同じ通知でもカート行を重複しない", async () => {
   await page.viewport(1280, 1000);
-  current.uiSection = "menu";
+  fixture.current.uiSection = "menu";
   await mountKiosk();
   await page.getByRole("button", { name: new RegExp(product.text.ja.displayName) }).click();
   const detail = page.getByRole("region", { name: product.text.ja.displayName, exact: true });
   await expect.element(detail).toBeVisible();
-  current.configVersion += 1;
-  catalogResponse = Response.json({
+  fixture.current.configVersion += 1;
+  fixture.catalogResponse = Response.json({
     ...catalog,
-    version: current.configVersion,
+    version: fixture.current.configVersion,
     configuration: { ...catalog.configuration, products: [{ ...product, price: 980 }] },
   });
   notify("configuration.published");
@@ -355,339 +151,14 @@ it("公開通知で開いた商品を閉じて新価格を取得し、同じ通�
   if (!socket) throw new Error("卓の通知接続がありません");
   socket.dispatchEvent(new MessageEvent("message", { data: "changed" }));
   await expect
-    .element(page.getByRole("tabpanel").getByText(current.cart.lines[0].name.ja, { exact: true }))
+    .element(
+      page
+        .getByRole("tabpanel")
+        .getByText(fixtureValue(fixture.current.cart.lines[0]).name.ja, { exact: true }),
+    )
     .toBeVisible();
-  expect(client.getQueryData<TableState>(["tablecast-table"])?.cart.lines).toHaveLength(1);
+  expect(fixture.client.getQueryData<TableState>(["tablecast-table"])?.cart.lines).toHaveLength(1);
 });
-
-const orderPanel = () => document.getElementById("tablecast-order");
-it.each(["listening", "speaking"] as const)(
-  "%sでは小さなorbと実波形を表示し、停止しても下部操作の位置を保つ",
-  async (status) => {
-    await page.viewport(390, 844);
-    const audio = new AudioContext();
-    const oscillator = audio.createOscillator();
-    const destination = audio.createMediaStreamDestination();
-    const analyser = audio.createAnalyser();
-    analyser.fftSize = 256;
-    const samples = new Uint8Array(analyser.fftSize);
-    oscillator.connect(destination);
-    oscillator.connect(analyser);
-    oscillator.start();
-    try {
-      const screen = await render(
-        <button onClick={() => void audio.resume()}>音声入力を開始</button>,
-      );
-      await screen.getByRole("button", { name: "音声入力を開始" }).click();
-      await expect.poll(() => audio.state).toBe("running");
-      // running への遷移だけでなく、fixture の実音声が流れてから画面へ渡す。
-      await expect
-        .poll(() => {
-          analyser.getByteTimeDomainData(samples);
-          return samples.some((value) => value < 96);
-        })
-        .toBe(true);
-      const track = destination.stream.getAudioTracks()[0];
-      if (!track) throw new Error("実音声trackが必要です");
-      await screen.rerender(
-        <LocaleProvider initialLocale="ja" persist={false}>
-          <VoicePanel
-            view={
-              status === "listening"
-                ? { status, inputTrack: track }
-                : { status, outputTrack: track }
-            }
-            lines={[]}
-            onStart={() => {}}
-            speechSpeed={1}
-            onSpeedChange={() => {}}
-            onMicrophoneChange={() => {}}
-            onMicrophoneRefresh={() => {}}
-          />
-        </LocaleProvider>,
-      );
-      const figure = page.getByRole("figure").filter({
-        hasText: status === "listening" ? ja.kiosk_voice_listening : ja.kiosk_voice_speaking,
-      });
-      await expect.element(figure).toBeVisible();
-      expect(figure.element().getBoundingClientRect().width).toBeLessThanOrEqual(384);
-      expect(figure.element().getBoundingClientRect().height).toBeLessThanOrEqual(48);
-      await expect
-        .element(page.getByRole("slider", { name: ja.kiosk_speech_speed }))
-        .not.toBeInTheDocument();
-      const microphone = page.getByRole("button", { name: ja.kiosk_input_settings });
-      await expect.element(microphone).toBeVisible();
-      const waveBounds = figure.element().getBoundingClientRect();
-      const stop = page.getByRole("button", { name: ja.kiosk_voice_stop, exact: true });
-      await expect.element(stop).toBeVisible();
-      const controls = stop.element().closest("[data-theme-part=voice-controls]");
-      if (!(controls instanceof HTMLElement)) throw new Error("音声操作バーが必要です");
-      const controlHeight = controls.getBoundingClientRect().height;
-      expect(controls.contains(figure.element())).toBe(true);
-      expect(waveBounds.bottom).toBeLessThanOrEqual(stop.element().getBoundingClientRect().top);
-      expect(stop.element().getBoundingClientRect().left).toBeLessThan(
-        microphone.element().getBoundingClientRect().left,
-      );
-      await expect
-        .poll(() => figure.element().querySelector("canvas[data-ui=audio-waveform]"))
-        .toBeInstanceOf(HTMLCanvasElement);
-      const canvas = figure.element().querySelector("canvas[data-ui=audio-waveform]");
-      if (!(canvas instanceof HTMLCanvasElement)) throw new Error("波形canvasが必要です");
-      await expect
-        .poll(() => {
-          const context = canvas.getContext("2d");
-          if (!context) throw new Error("波形の描画contextが必要です");
-          analyser.getByteTimeDomainData(samples);
-          return {
-            source: audio.state,
-            sourceSignal: samples.some((value) => value < 96),
-            visibility: document.visibilityState,
-            motion: figure.element().getAttribute("data-motion"),
-            waveform: context
-              .getImageData(0, 0, canvas.width, 18)
-              .data.some((value, index) => index % 4 === 3 && value > 0),
-          };
-        })
-        .toEqual({
-          source: "running",
-          sourceSignal: true,
-          visibility: "visible",
-          motion: "animated",
-          waveform: true,
-        });
-      await screen.rerender(
-        <LocaleProvider initialLocale="ja" persist={false}>
-          <VoicePanel
-            view={{ status: "paused" }}
-            lines={[]}
-            onStart={() => {}}
-            speechSpeed={1}
-            onSpeedChange={() => {}}
-            onMicrophoneChange={() => {}}
-            onMicrophoneRefresh={() => {}}
-          />
-        </LocaleProvider>,
-      );
-      await expect
-        .element(page.getByRole("figure").filter({ hasText: ja.kiosk_voice_paused }))
-        .toBeVisible();
-      const resume = page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true });
-      await expect.element(resume).toBeVisible();
-      expect(resume.element().closest("[data-theme-part=voice-controls]")).toBe(controls);
-      expect(controls.getBoundingClientRect().height).toBe(controlHeight);
-    } finally {
-      oscillator.stop();
-      oscillator.disconnect();
-      analyser.disconnect();
-      for (const track of destination.stream.getTracks()) track.stop();
-      await audio.close();
-    }
-  },
-);
-
-it.each(["ja", "en"] as const)(
-  "%sの補助入口と縦横の切替は接客対象・会話・カートを保持する",
-  async (locale) => {
-    const labels = locale === "ja" ? ja : en;
-    current.locale = locale;
-    current.uiSection = "menu";
-    current.events = [
-      {
-        cursor: 1,
-        kind: "voice.user",
-        data: {
-          role: "user",
-          text:
-            locale === "ja"
-              ? "お刺身に合う日本酒はありますか？"
-              : "Which sake goes well with sashimi?",
-          locale,
-        },
-        storeId: current.storeId,
-        tableSessionId: current.id,
-        createdAt: 1788645000000,
-      },
-      {
-        cursor: 2,
-        kind: "voice.tool",
-        data: {
-          turnId: "tablecast-layout-turn",
-          toolCallId: "tablecast-layout-call",
-          toolName: "getCatalog",
-          state: "completed",
-        },
-        storeId: current.storeId,
-        tableSessionId: current.id,
-        createdAt: 1788645001000,
-      },
-      {
-        cursor: 3,
-        kind: "voice.assistant",
-        data: {
-          role: "assistant",
-          text:
-            locale === "ja"
-              ? "すっきりした辛口の月凪がおすすめです。"
-              : "I recommend the crisp, dry Tsukinagi.",
-          locale,
-        },
-        storeId: current.storeId,
-        tableSessionId: current.id,
-        createdAt: 1788645002000,
-      },
-    ];
-    current.cursor = 3;
-    participantNames = ["Reo", "Alex"];
-    vi.spyOn(navigator.mediaDevices, "enumerateDevices").mockResolvedValue([
-      {
-        deviceId: "default",
-        groupId: "tablecast-ipad",
-        kind: "audioinput",
-        label: "iPad microphone",
-        toJSON: () => ({}),
-      },
-    ]);
-    const observe = vi.spyOn(VoiceConnection.prototype, "observeMicrophones");
-    await page.viewport(1024, 768);
-    await mountKiosk();
-    const tools = page.getByRole("button", { name: new RegExp(`^${labels.kiosk_visit_tools}`) });
-    await expect.element(tools).toBeVisible();
-    expect(tools.element().closest("header")).not.toBeNull();
-    const conversation = page
-      .getByRole("region", { name: labels.kiosk_conversation, exact: true })
-      .element();
-    const socket = TablecastSocket.instances[0];
-    const cart = structuredClone(current.cart);
-    const order = orderPanel();
-    const group = order?.parentElement;
-    if (!order || !group) throw new Error("分割された注文領域がありません");
-    const paneWidth = order.getBoundingClientRect().width;
-    const availableWidth = group.getBoundingClientRect().width;
-    const conversationWidth = conversation.getBoundingClientRect().width;
-    const handleWidth = page
-      .getByRole("separator", { name: labels.kiosk_resize_panes })
-      .element()
-      .getBoundingClientRect().width;
-    // OSの常設スクロールバー領域を除いた実Group幅に対して、メニューと固定幅の会話欄を確認する。
-    expect(conversationWidth).toBeCloseTo(240, 0);
-    expect(paneWidth + conversationWidth + handleWidth).toBeCloseTo(availableWidth, 0);
-    expect(paneWidth / availableWidth).toBeGreaterThan(0.75);
-    expect(paneWidth / availableWidth).toBeLessThan(0.78);
-    await expect
-      .element(page.getByRole("region", { name: labels.customer_join_visit }))
-      .not.toBeInTheDocument();
-    tools.element().focus();
-    await userEvent.keyboard("{Enter}");
-    const dialog = page.getByRole("dialog", { name: labels.kiosk_visit_tools, exact: true });
-    await expect.element(dialog).toBeVisible();
-    await expect
-      .element(dialog.getByText(labels.kiosk_service_group, { exact: true }))
-      .toBeVisible();
-    await dialog.getByRole("button", { name: "Alex", exact: true }).click();
-    await expect
-      .element(dialog.getByRole("button", { name: "Alex", exact: true }))
-      .toHaveAttribute("aria-pressed", "true");
-    await userEvent.keyboard("{Escape}");
-    await expect.element(dialog).not.toBeInTheDocument();
-    await expect.element(tools).toHaveFocus();
-    await tools.click();
-    await expect
-      .element(dialog.getByRole("button", { name: "Alex", exact: true }))
-      .toHaveAttribute("aria-pressed", "true");
-    await userEvent.keyboard("{Escape}");
-    for (const [width, height] of [
-      [1512, 982],
-      [1180, 820],
-      [820, 1180],
-      [402, 874],
-    ]) {
-      await page.viewport(width, height);
-      await expect
-        .element(page.getByRole("separator", { name: labels.kiosk_resize_panes }))
-        .toHaveAttribute("aria-orientation", width >= 896 ? "vertical" : "horizontal");
-      await expect
-        .poll(() => conversation.getBoundingClientRect().height)
-        .toBeGreaterThanOrEqual(width >= 896 ? 224 : 344);
-      const resume = page.getByRole("button", { name: labels.kiosk_voice_resume, exact: true });
-      const review = page.getByRole("button", { name: labels.kiosk_review, exact: true });
-      expect(resume.element().closest("[data-theme-part=voice-controls]")).not.toBeNull();
-      expect(document.querySelector("[data-theme-part=header]")?.contains(resume.element())).toBe(
-        false,
-      );
-      for (const control of [resume, review]) {
-        await expect.element(control).toBeVisible();
-        const bounds = control.element().getBoundingClientRect();
-        expect(bounds.height).toBeGreaterThanOrEqual(56);
-        expect(bounds.left).toBeGreaterThanOrEqual(0);
-        expect(bounds.right).toBeLessThanOrEqual(width);
-        expect(bounds.bottom).toBeLessThanOrEqual(height);
-      }
-      await page.screenshot({
-        path: `../../../test-results/tablecast-guest-compact-${locale}-${width}.png`,
-      });
-      expect(tools.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
-      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-      await expect
-        .poll(() => {
-          const conversationBounds = conversation.getBoundingClientRect();
-          const orderBounds = orderPanel()?.getBoundingClientRect();
-          if (!orderBounds) throw new Error("注文ペインが必要です");
-          return width >= 896
-            ? conversationBounds.right - orderBounds.left
-            : conversationBounds.bottom - orderBounds.top;
-        })
-        .toBeLessThanOrEqual(2);
-      expect(
-        page.getByRole("region", { name: labels.kiosk_conversation, exact: true }).element(),
-      ).toBe(conversation);
-    }
-    const history = conversation.querySelector('[data-ui="conversation-history"]');
-    const controls = conversation.querySelector('[data-theme-part="voice-controls"]');
-    const camera = conversation.querySelector('[data-ui="camera-frame"]');
-    if (!history || !controls || !camera) throw new Error("常設会話・操作・カメラがありません");
-    expect(history.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
-    expect(camera.getBoundingClientRect().width).toBeLessThanOrEqual(160);
-    expect(controls.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      history.getBoundingClientRect().bottom,
-    );
-    expect(controls.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-      conversation.getBoundingClientRect().bottom,
-    );
-    await expect
-      .element(page.getByRole("button", { name: labels.kiosk_history_show }))
-      .not.toBeInTheDocument();
-    for (const tab of page.getByRole("tab").elements()) {
-      expect(tab.getBoundingClientRect().height).toBe(56);
-      expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
-    }
-    await page.viewport(1024, 768);
-    await expect.poll(() => orderPanel()?.getBoundingClientRect().width).toBeCloseTo(paneWidth, 0);
-    const separator = page.getByRole("separator", { name: labels.kiosk_resize_panes });
-    separator.element().focus();
-    await userEvent.keyboard("{ArrowRight}");
-    const resizedWidth = conversation.getBoundingClientRect().width;
-    expect(resizedWidth).toBeGreaterThan(240);
-    await page.viewport(768, 1024);
-    await expect.element(separator).toHaveAttribute("aria-orientation", "horizontal");
-    await page.viewport(1024, 768);
-    await expect
-      .poll(() => conversation.getBoundingClientRect().width)
-      .toBeCloseTo(resizedWidth, 0);
-    expect(observe).toHaveBeenCalledTimes(1);
-    expect(TablecastSocket.instances).toEqual([socket]);
-    expect(socket.closed).toBe(false);
-    expect(current.cart).toEqual(cart);
-    expect(targetWrites).toEqual([
-      {
-        participantId: "11111111-1111-4111-8111-111111111111",
-        token: "22222222-2222-4222-8222-222222222222",
-      },
-    ]);
-    expect(requests.filter((request) => /\/voice\/(start|stop)$/.test(request.url))).toHaveLength(
-      0,
-    );
-  },
-);
 
 it("注文操作は確認から修正・明示確定へ一箇所で切り替わる", async () => {
   await page.viewport(1024, 768);
@@ -706,7 +177,7 @@ it("注文操作は確認から修正・明示確定へ一箇所で切り替わ�
   await userEvent.keyboard("{Enter}");
   await expect.element(page.getByText(ja.kiosk_ordered, { exact: true })).toBeVisible();
   expect(requests.filter((request) => request.url.endsWith("/table/orders"))).toHaveLength(1);
-  expect(current.cart.lines).toHaveLength(0);
+  expect(fixture.current.cart.lines).toHaveLength(0);
   expect(orderWrites).toHaveLength(1);
   expect(orderWrites[0]?.snapshotId).toBe("tablecast-confirmation");
   expect(orderWrites[0]?.approved).toBe(true);
@@ -748,249 +219,6 @@ it("注文ペインの比率をCookieから復元し、縦横の切替でもタ�
   await expect
     .poll(() => Math.abs((orderPanel()?.getBoundingClientRect().width ?? 0) - desktop))
     .toBeLessThan(2);
-});
-
-it("音声開始が失敗しても実Queryのカートと画面操作を維持する", async () => {
-  // APIの開始拒否まで実WebRTCを通し、OSのマイク取得だけを無音トラックに置き換える。
-  const audio = new AudioContext();
-  const stream = audio.createMediaStreamDestination().stream;
-  try {
-    vi.spyOn(navigator.mediaDevices, "getUserMedia").mockResolvedValue(stream);
-    await render(
-      <LocaleProvider initialLocale="ja" persist={false}>
-        <QueryClientProvider client={client}>
-          <Kiosk />
-        </QueryClientProvider>
-      </LocaleProvider>,
-    );
-    await expect
-      .element(page.getByRole("button", { name: "音声を再開", exact: true }))
-      .toBeVisible();
-    const before = structuredClone(current.cart);
-    await page.getByRole("button", { name: "音声を再開", exact: true }).click();
-    await expect
-      .element(page.getByText(/音声サービスの準備が整い次第ご利用いただけます。/))
-      .toBeVisible();
-    await page.getByRole("tab", { name: "おしながき", exact: true }).click();
-    await expect
-      .element(page.getByRole("tab", { name: "おしながき", exact: true }))
-      .toHaveAttribute("aria-selected", "true");
-    expect(client.getQueryData<TableState>(["tablecast-table"])?.cart).toEqual(before);
-    expect(requests.filter((request) => request.url.endsWith("/voice/start"))).toHaveLength(1);
-    expect(stream.getAudioTracks()[0].readyState).toBe("ended");
-  } finally {
-    stream.getTracks().forEach((track) => track.stop());
-    await audio.close();
-  }
-});
-
-function Subscription({ storeId, onChange }: { storeId: string; onChange: () => void }) {
-  const connected = useRealtime({ storeId }, 10, onChange);
-  return <output aria-label="接続状態">{connected ? "接続済み" : "切断中"}</output>;
-}
-it("店舗切替で旧取得を中断し、遅い旧店舗の通知を新店舗へ伝えない", async () => {
-  const changed = vi.fn<() => void>();
-  const reached = Promise.withResolvers<Request>();
-  const release = Promise.withResolvers<Response>();
-  vi.mocked(fetch).mockImplementation(async (input, init) => {
-    const request = new Request(input, init);
-    requests.push(request);
-    if (request.url.includes("/tablecast-old/events")) {
-      reached.resolve(request);
-      return release.promise;
-    }
-    return Response.json({ cursor: 20, events: [] });
-  });
-  const screen = await render(<Subscription storeId="tablecast-old" onChange={changed} />);
-  const oldSocket = TablecastSocket.instances[0];
-  if (!oldSocket) throw new Error("旧店舗の接続がありません");
-  oldSocket.dispatchEvent(new Event("open"));
-  const oldRequest = await reached.promise;
-  try {
-    await screen.rerender(<Subscription storeId="tablecast-new" onChange={changed} />);
-    expect(oldRequest.signal.aborted).toBe(true);
-    expect(oldSocket.closed).toBe(true);
-    {
-      release.resolve(Response.json({ cursor: 99, events: [{ kind: "table.ui" }] }));
-      await release.promise;
-    }
-    await screen.rerender(<Subscription storeId="tablecast-new" onChange={changed} />);
-    expect(changed).not.toHaveBeenCalled();
-    const latest = TablecastSocket.instances.at(-1);
-    if (!latest) throw new Error("新店舗の接続がありません");
-    latest.dispatchEvent(new Event("open"));
-    await expect
-      .element(page.getByRole("status", { name: "接続状態" }))
-      .toMatchTextContent("接続済み");
-    const lastRequest = requests.at(-1);
-    if (!lastRequest) throw new Error("新店舗の要求がありません");
-    expect(new URL(lastRequest.url).searchParams.get("after")).toBe("10");
-  } finally {
-    release.resolve(Response.json({ cursor: 10, events: [] }));
-  }
-});
-
-it("切断の再接続を一度予約し、unmount後は再接続もpollも開始しない", async () => {
-  vi.useFakeTimers();
-  const screen = await render(
-    <Subscription storeId="tablecast-store" onChange={vi.fn<() => void>()} />,
-  );
-  const socket = TablecastSocket.instances[0];
-  if (!socket) throw new Error("店舗の接続がありません");
-  socket.close();
-  await vi.advanceTimersByTimeAsync(2999);
-  expect(TablecastSocket.instances).toHaveLength(1);
-  await vi.advanceTimersByTimeAsync(1);
-  expect(TablecastSocket.instances).toHaveLength(2);
-  await screen.unmount();
-  const before = requests.length;
-  await vi.advanceTimersByTimeAsync(10000);
-  expect(TablecastSocket.instances).toHaveLength(2);
-  expect(requests).toHaveLength(before);
-  expect(TablecastSocket.instances.every((item) => item.closed)).toBe(true);
-});
-
-it("日本語の商品0件でも店員を呼べる", async () => {
-  const locale = "ja";
-  const labels = ja;
-  current.locale = locale;
-  current.uiSection = "menu";
-  current.staffCalled = false;
-  current.cart = { ...current.cart, lines: [], total: 0 };
-  catalogResponse = Response.json({
-    ...catalog,
-    configuration: { ...catalog.configuration, products: [], categories: [] },
-  });
-  await page.viewport(1280, 800);
-  await render(
-    <LocaleProvider initialLocale={locale} persist={false}>
-      <QueryClientProvider client={client}>
-        <Kiosk />
-      </QueryClientProvider>
-    </LocaleProvider>,
-  );
-  await expect.element(page.getByText(labels.kiosk_menu_empty)).toBeVisible();
-
-  await page.getByRole("button", { name: labels.kiosk_call_staff, exact: true }).click();
-  await expect
-    .element(page.getByRole("button", { name: labels.kiosk_called_staff, exact: true }))
-    .toBeDisabled();
-  expect(requests.filter((request) => request.url.endsWith("/table/call"))).toHaveLength(1);
-});
-
-it("日本語の商品取得失敗は空状態にせず再試行できる", async () => {
-  const locale = "ja";
-  const labels = ja;
-  current.locale = locale;
-  current.uiSection = "menu";
-  catalogResponse = Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
-  await render(
-    <LocaleProvider initialLocale={locale} persist={false}>
-      <QueryClientProvider client={client}>
-        <Kiosk />
-      </QueryClientProvider>
-    </LocaleProvider>,
-  );
-  const catalogError = page.getByRole("alert").filter({ hasText: labels.common_unavailable });
-  const microphoneError = page
-    .getByRole("alert")
-    .filter({ hasText: labels.kiosk_microphone_error_empty });
-  await expect.element(catalogError).toBeVisible();
-  await expect.element(microphoneError).toBeVisible();
-  await expect.element(page.getByText(labels.kiosk_menu_empty)).not.toBeInTheDocument();
-  await expect.element(page.getByText(labels.kiosk_category_empty)).not.toBeInTheDocument();
-  catalogResponse = Response.json(catalog);
-  await page.getByRole("button", { name: labels.common_retry, exact: true }).click();
-  await expect
-    .element(
-      page.getByRole("button", {
-        name: new RegExp(product.text[locale].displayName),
-      }),
-    )
-    .toBeEnabled();
-  await expect.element(catalogError).not.toBeInTheDocument();
-  await expect.element(microphoneError).toBeVisible();
-});
-
-it("店舗テーマでもヘッダーと音声・カート操作を縦横で維持する", async () => {
-  current.uiSection = "menu";
-  current.staffCalled = false;
-  catalogResponse = Response.json({
-    ...catalog,
-    configuration: {
-      ...catalog.configuration,
-      appearance: {
-        colours: { ink: "#201a16", paper: "#fff8e7", accent: "#bb241c" },
-        parts: {
-          header: { background: "#fff8e7" },
-          "product-card": { borderWidth: 3, borderColor: "#201a16", radius: 4, shadow: "offset" },
-        },
-      },
-    },
-  });
-  await page.viewport(1180, 820);
-  await render(
-    <LocaleProvider initialLocale="ja" persist={false}>
-      <QueryClientProvider client={client}>
-        <Kiosk />
-      </QueryClientProvider>
-    </LocaleProvider>,
-  );
-  for (const [width, height] of [
-    [1180, 820],
-    [820, 1180],
-  ]) {
-    await page.viewport(width, height);
-    await expect.element(page.getByRole("button", { name: ja.kiosk_call_staff })).toBeVisible();
-    await expect.element(page.getByRole("button", { name: ja.kiosk_review })).toBeVisible();
-    const voice = document.querySelector('[data-theme-part="voice-controls"]');
-    if (!voice) throw new Error("音声操作が必要です");
-    expect(voice.getBoundingClientRect().height).toBeGreaterThan(0);
-    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);
-  }
-  await page.getByRole("button", { name: ja.kiosk_call_staff }).click();
-  await expect.element(page.getByRole("button", { name: ja.kiosk_called_staff })).toBeDisabled();
-});
-
-it("会話履歴の注文確認と音声エラーから下端の操作へ進める", async () => {
-  await page.viewport(1024, 768);
-  const review = vi.fn<() => void>();
-  await render(
-    <LocaleProvider initialLocale="ja" persist={false}>
-      <div className="h-180 w-60">
-        <VoicePanel
-          view={{ status: "error", error: "permission" }}
-          lines={[]}
-          onStart={() => {}}
-          onReview={review}
-          snapshot={{
-            id: "tablecast-voice-confirmation",
-            tableSessionId: current.id,
-            cartVersion: current.cart.version,
-            configVersion: current.configVersion,
-            lines: current.cart.lines,
-            total: current.cart.total,
-            locale: "ja",
-            text: "確認待ちの注文内容",
-            expiresAt: Date.now() + 60_000,
-            channel: "voice",
-            status: "pending",
-            createdTurnId: "tablecast-voice-turn",
-            plan: null,
-          }}
-        />
-      </div>
-    </LocaleProvider>,
-  );
-  await expect
-    .element(page.getByRole("button", { name: ja.kiosk_history_show }))
-    .not.toBeInTheDocument();
-  await expect.element(page.getByText("確認待ちの注文内容")).toBeVisible();
-  await expect
-    .element(page.getByRole("status").filter({ hasText: ja.kiosk_voice_permission }))
-    .toBeVisible();
-  await page.getByRole("button", { name: ja.kiosk_review, exact: true }).click();
-  expect(review).toHaveBeenCalledOnce();
 });
 
 it("会計依頼後は操作を依頼済みの表示へ替え、画面を戻しても重複依頼しない", async () => {

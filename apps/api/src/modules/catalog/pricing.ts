@@ -1,8 +1,8 @@
-import { ensure } from "../../platform/errors";
 import type { Locale } from "../../platform/model";
 import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
+import { ensure } from "../../platform/errors";
 import { evaluateCondition, productConditionErrors } from "./conditions";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
   const errors: ConfigurationIssue[] = [];
@@ -128,18 +128,18 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
 }
 
 export type PlanContext = {
-  id: string;
-  startedAt: number;
-  rules: Plan;
   guestCount: number;
+  id: string;
+  lastOrderAt: null | number;
   orderedQuantity: number;
-  lastOrderAt: number | null;
+  rules: Plan;
+  startedAt: number;
 };
 export function priceCart(
   config: Pick<Configuration, "products">,
   lines: CartLine[],
   version: number,
-  plan?: PlanContext | null,
+  plan?: null | PlanContext,
   now = Date.now(),
 ): Cart {
   ensure(new Set(lines.map((line) => line.id)).size === lines.length, "DUPLICATE_LINE", 422);

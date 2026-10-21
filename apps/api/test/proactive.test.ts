@@ -3,11 +3,11 @@ import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import * as business from "../src/db/business-schema";
 import { getTableState } from "../src/modules/tables/queries";
+import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { voiceBindings, runVoiceTurn } from "./voice-fixture";
-import { invokeVoiceTool } from "../src/modules/voice/realtime";
 import { configuration, device, setupFixture } from "./fixture";
+import { runVoiceTurn, voiceBindings } from "./voice-fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const voiceId = "tablecast-proactive-voice";

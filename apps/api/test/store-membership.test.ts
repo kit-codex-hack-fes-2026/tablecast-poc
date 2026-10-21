@@ -21,11 +21,11 @@ it("店舗作成は所有者・空メニュー・指定卓を同時に作り、�
   const created = await env.TABLECAST_DB.prepare(
     "SELECT s.id,s.organization_id,m.user_id,m.role,s.config_json FROM stores s JOIN organization o ON o.id=s.organization_id JOIN member m ON m.organization_id=o.id WHERE o.slug='tablecast-new'",
   ).first<{
+    config_json: string;
     id: string;
     organization_id: string;
-    user_id: string;
     role: string;
-    config_json: string;
+    user_id: string;
   }>();
   expect(created).toMatchObject({ user_id: staff.userId, role: "owner" });
   if (!created) throw new Error("店舗がありません。");

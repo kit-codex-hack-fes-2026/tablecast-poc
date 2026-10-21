@@ -1,9 +1,9 @@
-import { catalogOptions } from "../features/store/menu-query";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ErrorNotice } from "../components/error-notice";
-import { OpenTable } from "../features/store/open-table";
-import { floorOptions } from "../features/store/store-query";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { floorOptions } from "../features/floor/floor-query";
+import { OpenTable } from "../features/floor/open-table";
 import { useI18n } from "../i18n/locale";
 
 export const Route = createFileRoute("/admin/stores/$storeId/tables/$tableId/open")({

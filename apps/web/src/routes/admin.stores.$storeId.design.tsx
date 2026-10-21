@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { StoreDesign } from "../features/store/store-design";
-import { catalogOptions, draftOptions } from "../features/store/menu-query";
-import { menuReviewSearchSchema } from "../features/store/menu-model";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { menuReviewSearchSchema } from "../features/configuration/menu-model";
+import { draftOptions } from "../features/configuration/menu-query";
+import { StoreDesign } from "../features/configuration/store-design";
 export const Route = createFileRoute("/admin/stores/$storeId/design")({
   staticData: { document: { title: "theme_title", description: "head_design_description" } },
   validateSearch: menuReviewSearchSchema.extend({ draftId: z.string().optional() }),

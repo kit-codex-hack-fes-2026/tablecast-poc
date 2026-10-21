@@ -2,7 +2,7 @@ import type { Locale } from "@tablecast/api/schema";
 import { useI18n } from "../i18n/locale";
 
 /** compactは小さな旗と読み上げ用の言語名を使い、狭いバー内でも識別を保つ。 */
-export function LanguageLabel({ locale, compact = false }: { locale: Locale; compact?: boolean }) {
+export function LanguageLabel({ locale, compact = false }: { compact?: boolean; locale: Locale }) {
   const { t } = useI18n();
   return (
     <span lang={locale} className="inline-flex items-center gap-1.5 whitespace-nowrap">

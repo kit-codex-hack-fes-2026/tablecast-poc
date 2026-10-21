@@ -1,10 +1,11 @@
-import { test } from "./support/test";
-import { expect } from "@playwright/test";
 import type { CartLine } from "@tablecast/api/schema";
+import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
 import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
+import { fixtureValue } from "../src/test-support/fixture-value";
 import { credentials } from "./support/runtime";
+import { test } from "./support/test";
 
 // スタッフの認証入力を含むため、通信traceを保存しない。
 test.use({ trace: "off", actionTimeout: 15_000, serviceWorkers: "block" });
@@ -178,7 +179,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
       .getByRole("tabpanel")
       .getByRole("article")
       .filter({
-        has: staff.getByText(products[0].text.ja.displayName, { exact: true }),
+        has: staff.getByText(fixtureValue(products[0]).text.ja.displayName, { exact: true }),
       });
     await order.getByRole("button", { name: labels.admin_accept, exact: true }).click();
     const serve = order.getByRole("button", { name: labels.admin_serve, exact: true });

@@ -1,15 +1,16 @@
-import { billingRateVersions } from "../../db/business-schema";
 import { stripe } from "@better-auth/stripe";
-import { Stripe } from "stripe";
 import { and, eq, inArray } from "drizzle-orm";
-import { member, subscription } from "../../db/auth-schema";
-import type { Database } from "../../platform/context";
+import { Stripe } from "stripe";
+import { z } from "zod";
+import type { Database } from "../../db/client";
+import { billingRateVersions } from "../../db/billing-schema";
+import { member, subscription } from "../../db/identity-schema";
 import { ensure } from "../../platform/errors";
 import { billingRatesSchema } from "./model";
 
 export const billingEnabled = (env: Partial<TablecastEnv>) =>
   env.TABLECAST_BILLING_ENABLED === "true";
-export function billingPlans(env: Partial<TablecastEnv>) {
+function billingPlans(env: Partial<TablecastEnv>) {
   const value: unknown = JSON.parse(
     env.TABLECAST_BILLING_RATES ||
       JSON.stringify({
@@ -136,7 +137,8 @@ export function billingPlugin(env: Partial<TablecastEnv>, db: Database) {
             .get();
           if (row?.role !== "owner" && row?.role !== "admin") return false;
           if (action === "upgrade-subscription") {
-            const plan: unknown = ctx.body?.plan;
+            const body = z.record(z.string(), z.unknown()).safeParse(ctx.body);
+            const plan = body.success ? body.data.plan : undefined;
             ensure(typeof plan === "string", "BILLING_PLAN_REQUIRED", 422);
             if (plan !== plans[0]?.version) {
               const current = await db

@@ -1,17 +1,18 @@
+import { couponRuleSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { couponRuleSchema } from "@tablecast/api/schema";
-import ja from "../../../messages/ja.json";
+import { page } from "vitest/browser";
 import en from "../../../messages/en.json";
+import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
+import { fixtureValue } from "../../test-support/fixture-value";
 import { CustomerCoupons } from "./customer-coupons";
 import { customerCouponsOptions, customerExchangesOptions } from "./customer-coupons-query";
-import "../../styles.css";
 
 let client: QueryClient;
-let viewport: { width: number; height: number };
+let viewport: { height: number; width: number };
 beforeEach(() => {
   viewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -59,7 +60,7 @@ const empty = {
   exchanges: { rules: [], nextCursor: null },
 };
 type Collection = keyof typeof available;
-function respond(reply: (collection: Collection) => Response | Promise<Response>) {
+function respond(reply: (collection: Collection) => Promise<Response> | Response) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
@@ -68,7 +69,7 @@ function respond(reply: (collection: Collection) => Response | Promise<Response>
     throw new Error(`未定義の要求: ${request.method} ${path}`);
   });
 }
-async function show(locale: "ja" | "en" = "ja") {
+async function show(locale: "en" | "ja" = "ja") {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
   });
@@ -89,7 +90,7 @@ const region = (collection: Collection) =>
   });
 const titles = {
   coupons: rules.title.ja,
-  exchanges: available.exchanges.rules[0].rules.title.ja,
+  exchanges: fixtureValue(available.exchanges.rules[0]).rules.title.ja,
 };
 
 it("保有券と交換候補の初回待機を別々に示し、一方が空でも他方の読込中を保つ", async () => {

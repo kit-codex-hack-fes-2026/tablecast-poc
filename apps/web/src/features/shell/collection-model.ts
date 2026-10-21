@@ -29,7 +29,9 @@ export function parseCollectionSort(
   sortIds: readonly string[],
 ): SortingState {
   const match = value?.match(/^(.+):(asc|desc)$/);
-  return match && sortIds.includes(match[1]) ? [{ id: match[1], desc: match[2] === "desc" }] : [];
+  return match?.[1] && sortIds.includes(match[1])
+    ? [{ id: match[1], desc: match[2] === "desc" }]
+    : [];
 }
 
 /** OAuthへ戻す文字列のエンコードと順序を保ち、一覧表示専用のqueryだけを除く。 */

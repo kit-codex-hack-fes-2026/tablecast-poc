@@ -1,12 +1,12 @@
 import { and, desc, eq, exists, gt, inArray, isNull, max, or, sql, sum } from "drizzle-orm";
-import * as business from "../../db/business-schema";
-import { member, organization } from "../../db/auth-schema";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
-import { catalogQuery, catalogValue } from "../catalog/queries";
 import type { TableEvent } from "../tables/model";
-import { eventValue, tableStateValue } from "../tables/queries";
 import type { AdminState } from "./model";
+import * as business from "../../db/business-schema";
+import { member, organization } from "../../db/identity-schema";
+import { catalogQuery, catalogValue } from "../catalog/queries";
+import { eventValue, tableStateValue } from "../tables/values";
 export async function getAdminState(services: ApiServices, actor: Actor): Promise<AdminState> {
   const db = services.db;
   const storeEvents = and(
@@ -178,7 +178,7 @@ export async function getEvents(
   services: ApiServices,
   actor: Actor,
   after = 0,
-): Promise<{ events: TableEvent[]; cursor: number }> {
+): Promise<{ cursor: number; events: TableEvent[] }> {
   const db = services.db;
 
   const scope = actor.tableSessionId

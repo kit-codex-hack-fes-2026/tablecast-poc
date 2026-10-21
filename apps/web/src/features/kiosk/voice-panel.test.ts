@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import type { TableEvent } from "@tablecast/api/schema";
+import { describe, expect, it } from "vitest";
 import type { LiveMessage } from "./voice-model";
-import { conversationLines, mergeConversation, type ConversationLine } from "./conversation-model";
+import { type ConversationLine, conversationLines, mergeConversation } from "./conversation-model";
 
 describe("逐次字幕と発話済み履歴の統合", () => {
   it("中断後は生成した全文ではなく保存済みの再生範囲だけを本文に残す", () => {

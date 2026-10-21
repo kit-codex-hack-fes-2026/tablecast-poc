@@ -20,4 +20,4 @@ export const customerPreferencesSchema = z.object({
 export const customerRevisionSchema = customerPreferencesSchema.pick({ revision: true });
 
 // 店舗スタッフのActorへ変換せず、会員本人の操作だけに使う。
-export type CustomerActor = { kind: "customer"; userId: string; storeId: string };
+export type CustomerActor = { kind: "customer"; storeId: string; userId: string };

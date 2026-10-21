@@ -1,7 +1,7 @@
-import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { customerPointsOptions } from "./customer-points-query";
 export function CustomerPoints({ storeId }: { storeId: string }) {
@@ -35,7 +35,7 @@ export function CustomerPoints({ storeId }: { storeId: string }) {
           </dd>
         </div>
       </dl>
-      <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
+      <ErrorNotice query={query} />
       <ul className="divide-y divide-border">
         {query.data.pages.flatMap((page) =>
           page.entries.map((entry) => (

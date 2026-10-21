@@ -1,32 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LoadingState } from "../components/loading-state";
-import { storeDate } from "../features/store/floor-model";
-import { catalogOptions } from "../features/store/menu-query";
+import { storeDate } from "../features/floor/floor-model";
+import { floorOptions } from "../features/floor/floor-query";
+import { statisticsOptions } from "../features/statistics/statistics-query";
+import { homeOptions } from "../features/store/home-query";
 import { StoreHome } from "../features/store/store-home";
-import { devicesOptions, floorOptions, storesOptions } from "../features/store/store-query";
-import { statisticsOptions } from "../features/store/statistics-query";
+import { isStoreManager } from "../features/store/store-query";
 import { getLocale } from "../paraglide/runtime.js";
 
 export const Route = createFileRoute("/admin/stores/$storeId/")({
   staticData: { document: { title: "home_title", description: "head_home_description" } },
-  loader: async ({ context, params }) => {
+  loader: async ({ context }) => {
     const { queryClient } = context;
-    const stores = await queryClient.ensureQueryData(storesOptions);
-    const store = stores.stores.find((item) => item.id === params.storeId);
+    const { store } = context;
     const today = storeDate(Date.now());
     if (!store) return { today };
-    await Promise.all([
-      queryClient.ensureQueryData(floorOptions(store.id)),
-      ...(["owner", "admin"].includes(store.role)
+    await Promise.all(
+      isStoreManager(store)
         ? [
             queryClient.prefetchInfiniteQuery(
               statisticsOptions(store.id, { from: today, to: today }, "summary", getLocale()),
             ),
-            queryClient.prefetchQuery(catalogOptions(store.id)),
-            queryClient.prefetchQuery(devicesOptions(store.id)),
+            queryClient.prefetchQuery(homeOptions(store.id)),
           ]
-        : []),
-    ]);
+        : [],
+    );
+    await queryClient.ensureQueryData(floorOptions(store.id));
     return { today };
   },
   pendingComponent: LoadingState,

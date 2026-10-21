@@ -1,9 +1,9 @@
-import { ParticipantIdentity } from "../../components/user-identity";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useEffect } from "react";
+import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
-import { ErrorNotice } from "../../components/error-notice";
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
 
@@ -22,9 +22,9 @@ export function CustomerVisitPanel({
   sessionId,
   cursor,
 }: {
+  cursor: number;
   endpoint: TableEndpoint;
   sessionId: string;
-  cursor: number;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
@@ -52,7 +52,7 @@ export function CustomerVisitPanel({
     refetchInterval: 10_000,
   });
   const selectTarget = useMutation({
-    mutationFn: (participantId: string | null) =>
+    mutationFn: (participantId: null | string) =>
       parseResponse(
         endpoint.client["customer-target"].$post({
           json: { participantId, token: participants.data?.context?.token ?? "" },
@@ -129,7 +129,7 @@ export function CustomerVisitPanel({
               </div>
             )}
             <ErrorNotice error={selectTarget.error} />
-            <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
+            <ErrorNotice query={participants} />
           </div>
           <div className="self-center">
             <div className="grid min-h-48 w-48 items-center justify-center">

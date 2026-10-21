@@ -1,12 +1,12 @@
+import { configurationErrors } from "@tablecast/api/bootstrap";
+import { configurationSchema } from "@tablecast/api/schema";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
-import { configurationSchema } from "../apps/api/src/schema";
-import { configurationErrors } from "../apps/api/src/modules/catalog/pricing";
-import { tablecastDemoIdentities } from "../apps/emulate/src/tablecast-demo-identities";
-import { demoStores } from "./tablecast-fixtures";
+import { tablecastDemoIdentities } from "../apps/emulate/src/tablecast-demo-identities.ts";
+import { demoStores } from "./tablecast-fixtures.ts";
 
 const root = resolve(import.meta.dirname, "..");
 const defaultPath = resolve(root, ".local/tablecast-seed-template/seed.json");

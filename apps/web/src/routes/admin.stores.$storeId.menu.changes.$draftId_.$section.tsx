@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MenuCollection } from "../features/store/menu-collection";
-import { menuLabels, menuListSearchSchema, menuSectionSchema } from "../features/store/menu-model";
-import { catalogOptions, draftOptions, standardVoicesOptions } from "../features/store/menu-query";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { MenuCollection } from "../features/catalog/menu-collection";
+import {
+  menuLabels,
+  menuListSearchSchema,
+  menuSectionSchema,
+} from "../features/configuration/menu-model";
+import { draftOptions, standardVoicesOptions } from "../features/configuration/menu-query";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/$draftId_/$section")({
   staticData: { document: { title: "admin_config", description: "head_catalog_description" } },
   validateSearch: menuListSearchSchema,

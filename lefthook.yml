@@ -2,8 +2,8 @@ lefthook: bunx --no-install lefthook
 
 pre-commit:
   parallel: true
-  commands:
-    format:
+  jobs:
+    - name: format
       glob: "*.{ts,tsx,js,json,jsonc,md,yml,yaml,css}"
       exclude:
         - "apps/presentation/assets/openscreen/**/*.json"
@@ -11,13 +11,25 @@ pre-commit:
         - ".agents/skills/hyperframes-animation/**"
         - ".agents/skills/hyperframes-creative/**"
       run: bunx --no-install oxfmt --check {staged_files}
-    lint:
-      glob: "*.{ts,tsx,js}"
-      exclude:
-        - ".agents/skills/hyperframes-core/**"
-        - ".agents/skills/hyperframes-animation/**"
-        - ".agents/skills/hyperframes-creative/**"
-      run: bun run codegen && bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
+    - name: analysis
+      group:
+        piped: true
+        jobs:
+          - name: codegen
+            run: bun run codegen
+          - name: checks
+            group:
+              parallel: true
+              jobs:
+                - name: lint
+                  glob: "*.{ts,tsx,js}"
+                  exclude:
+                    - ".agents/skills/hyperframes-core/**"
+                    - ".agents/skills/hyperframes-animation/**"
+                    - ".agents/skills/hyperframes-creative/**"
+                  run: bunx --no-install oxlint --type-aware --deny-warnings {staged_files}
+                - name: fallow
+                  run: bun run fallow:audit --base HEAD --quiet
 commit-msg:
   commands:
     commitlint:

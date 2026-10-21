@@ -6,19 +6,19 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { cleanup, render } from "vitest-browser-react";
-import { page, server, userEvent, type Locator } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render } from "vitest-browser-react";
+import { type Locator, page, server, userEvent } from "vitest/browser";
+import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
+import "../../styles.css";
 import { EmailAccess } from "./email-access";
 import { Login } from "./login";
-import ja from "../../../messages/ja.json";
-import "../../styles.css";
 
 let client: QueryClient;
 let unexpected: string[] = [];
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -38,7 +38,7 @@ afterEach(async () => {
   }
 });
 
-async function show(locale: "ja" | "en", register = true, search = "") {
+async function show(locale: "en" | "ja", register = true, search = "") {
   unexpected = [];
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

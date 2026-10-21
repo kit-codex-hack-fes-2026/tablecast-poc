@@ -1,21 +1,21 @@
-import { ParticipantIdentity } from "../../components/user-identity";
-import { calendarDate } from "../../i18n/format";
 import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Users } from "lucide-react";
-import { ConsumptionEditor } from "./customer-consumption";
+import { useEffect } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
+import { ParticipantIdentity } from "../../components/user-identity";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
+import { ConsumptionEditor } from "./customer-consumption";
 import {
   customerOrdersOptions,
   customerVisitOptions,
@@ -33,7 +33,7 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
         <LoadingState />
       ) : (
         <>
-          <ErrorNotice error={visits.error} onRetry={() => void visits.refetch()} />
+          <ErrorNotice query={visits} />
           {!visits.data?.pages[0]?.visits.length && !visits.error && (
             <p className="text-muted-foreground">{t("customer_visits_empty")}</p>
           )}
@@ -89,7 +89,7 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
   );
 }
 
-export function CustomerVisit({ storeId, sessionId }: { storeId: string; sessionId: string }) {
+export function CustomerVisit({ storeId, sessionId }: { sessionId: string; storeId: string }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const visit = useSuspenseQuery(customerVisitOptions(storeId, sessionId));
@@ -176,7 +176,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         {t("customer_owned_coupons")}
         <ArrowRight aria-hidden className="size-4 shrink-0" />
       </Link>
-      <ErrorNotice error={visit.error} onRetry={() => void visit.refetch()} />
+      <ErrorNotice query={visit} />
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-semibold">
           <Users aria-hidden className="size-5" />
@@ -222,7 +222,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
             </section>
           )),
         )}
-        <ErrorNotice error={orderPages.error} onRetry={() => void orderPages.refetch()} />
+        <ErrorNotice query={orderPages} />
         {orderPages.hasNextPage && (
           <Button
             variant="outline"
@@ -239,12 +239,7 @@ export function CustomerVisit({ storeId, sessionId }: { storeId: string; session
         </Button>
       )}
       {!leave.isIdle && (
-        <ActionFeedback
-          pending={leave.isPending}
-          error={leave.error}
-          success={leave.isSuccess}
-          successMessage={t("customer_disconnected")}
-        />
+        <ActionFeedback mutation={leave} successMessage={t("customer_disconnected")} />
       )}
       <Link
         className="inline-flex min-h-11 items-center text-sm underline underline-offset-4"

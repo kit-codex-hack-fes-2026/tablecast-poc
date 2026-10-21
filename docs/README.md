@@ -36,6 +36,7 @@ Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接�
 | [ローカル・worktree](development.md)                 | Bun、Wrangler、単一オリジン、ポート、秘密情報         |
 | [テスト戦略](testing.md)                             | 保証の所有層、E2E昇格条件、移行対応、実行と隔離       |
 | [静的解析と設定](static-analysis.md)                 | Oxlint、Oxfmt、型検査、Lefthook、依存管理             |
+| [品質厳格化の検証記録](quality-343.md)               | 既存fallow修正、境界fixture、実D1・Browser性能比較    |
 | [Seedとデモ](demo.md)                                | 現実的な合成データ、録画、再現性、リセット            |
 | [実装の順序](implementation.md)                      | Codexの開始プロンプト、段階、並列担当、検証ゲート     |
 | [受入条件](acceptance.md)                            | 完成判定とリリース前の必須シナリオ                    |

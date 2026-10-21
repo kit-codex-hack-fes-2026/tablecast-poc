@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { ProductMenu } from "./product-menu";
-import { catalog } from "../../.storybook/tablecast-fixtures";
 import { fn } from "storybook/test";
+import { catalog } from "../../.storybook/tablecast-fixtures";
+import { ProductMenu } from "./product-menu";
 const meta = {
   title: "共通表示/ProductMenu",
   component: ProductMenu,

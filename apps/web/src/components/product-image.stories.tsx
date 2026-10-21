@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, waitFor } from "storybook/test";
-import { ProductImage } from "./product-image";
 import transparent from "../../.storybook/tablecast-transparent.svg?url&no-inline";
+import { ProductImage } from "./product-image";
 
 const meta = {
   tags: ["autodocs"],

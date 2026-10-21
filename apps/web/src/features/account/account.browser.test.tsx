@@ -6,17 +6,17 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n/locale";
-import { MotionProvider } from "../../components/motion-provider";
-import { accountSearchSchema } from "./account-model";
-import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
-import { Account } from "./account";
-import { accountKeysOptions, accountLinksOptions, accountSessionsOptions } from "./account-query";
 import ja from "../../../messages/ja.json";
+import { MotionProvider } from "../../components/motion-provider";
+import { LocaleProvider } from "../../i18n/locale";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
 import "../../styles.css";
+import { Account } from "./account";
+import { accountSearchSchema } from "./account-model";
+import { accountKeysOptions, accountLinksOptions, accountSessionsOptions } from "./account-query";
 
 const session = {
   user: {
@@ -41,7 +41,7 @@ const session = {
 };
 let client: QueryClient;
 let unexpected: string[];
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -61,7 +61,7 @@ afterEach(async () => {
 });
 
 async function show(
-  locale: "ja" | "en",
+  locale: "en" | "ja",
   handle: (request: Request) => Promise<Response | undefined>,
 ) {
   unexpected = [];

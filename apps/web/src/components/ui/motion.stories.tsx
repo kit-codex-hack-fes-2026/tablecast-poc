@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { useId, useState } from "react";
 import { X } from "lucide-react";
-import { waitFor, expect, userEvent, within } from "storybook/test";
+import { useId, useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { useI18n } from "../../i18n/locale";
 import { ActionFeedback } from "../action-feedback";
 import { Button } from "./button";

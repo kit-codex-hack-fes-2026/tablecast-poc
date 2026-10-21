@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ConfigurationHistory } from "../features/store/configuration-history";
+import { ConfigurationHistory } from "../features/configuration/configuration-history";
 import {
   configurationHistoryOptions,
   configurationHistorySearchSchema,
   configurationReleaseOptions,
-} from "../features/store/configuration-history-query";
-import { storesOptions } from "../features/store/store-query";
+} from "../features/configuration/configuration-history-query";
+import { isStoreManager } from "../features/store/store-query";
 
 export const Route = createFileRoute("/admin/stores/$storeId/menu/history")({
   staticData: {
@@ -13,10 +13,9 @@ export const Route = createFileRoute("/admin/stores/$storeId/menu/history")({
   },
   validateSearch: configurationHistorySearchSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, params, deps }) => {
-    const stores = await context.queryClient.ensureQueryData(storesOptions);
-    const store = stores.stores.find((item) => item.id === params.storeId);
-    if (!store || !["owner", "admin"].includes(store.role)) return;
+  loader: async ({ context, deps }) => {
+    const { store } = context;
+    if (!isStoreManager(store)) return;
     await Promise.all([
       context.queryClient.prefetchInfiniteQuery(configurationHistoryOptions(store.id)),
       deps.version === undefined

@@ -1,24 +1,25 @@
-import { and, eq, gt, lte, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lte, or, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import type { ApiServices } from "../../platform/context";
+import { customerMemberships } from "../../db/customer-schema";
 import {
-  customerMemberships,
   customerCouponRules,
   customerCoupons,
   customerPointAllocations,
   customerPointVisits,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/rewards-schema";
 import { couponEvent } from "./mutations";
-export async function issueEligibleCoupons(
+
+// 実行・commitは入会、ポイント確定、会計訂正を所有するuse-caseへ任せる。
+function eligibleCouponStatements(
   services: ApiServices,
   storeId: string,
-  membershipIds: string[],
+  targets: SQLWrapper,
   event: "enrol" | "visit",
+  gate?: SQL,
 ) {
-  if (!membershipIds.length) return;
   const { db } = services;
   const token = crypto.randomUUID();
   const now = Date.now();
-  const targetIds = sql`${customerMemberships.id} IN (SELECT value FROM json_each(${JSON.stringify(membershipIds)}))`;
   const totals = db
     .select({
       membershipId: sql<string>`${customerPointAllocations.membershipId}`.as(
@@ -32,13 +33,14 @@ export async function issueEligibleCoupons(
       customerPointVisits,
       and(
         eq(customerPointVisits.sessionId, customerPointAllocations.sessionId),
+        eq(customerPointVisits.storeId, storeId),
         sql`${customerPointVisits.confirmedAt} IS NOT NULL`,
       ),
     )
     .where(
       and(
         eq(customerPointAllocations.storeId, storeId),
-        sql`${customerPointAllocations.membershipId} IN (SELECT value FROM json_each(${JSON.stringify(membershipIds)}))`,
+        inArray(customerPointAllocations.membershipId, targets),
       ),
     )
     .groupBy(customerPointAllocations.membershipId)
@@ -52,7 +54,7 @@ export async function issueEligibleCoupons(
           and(eq(trigger, "visits"), sql`coalesce(${totals.visits},0)>=${threshold}`),
           and(eq(trigger, "spend"), sql`coalesce(${totals.amount},0)>=${threshold}`),
         );
-  await db.batch([
+  return [
     db
       .insert(customerCoupons)
       .select(
@@ -67,7 +69,7 @@ export async function issueEligibleCoupons(
             ruleVersion: customerCouponRules.version,
             snapshotJson: customerCouponRules.rulesJson,
             state: sql<"available">`'available'`.as("state"),
-            requestedSessionId: sql<string | null>`NULL`.as("requested_session_id"),
+            requestedSessionId: sql<null | string>`NULL`.as("requested_session_id"),
             issuanceKey: sql<string>`'rule:' || ${customerCouponRules.id} || ':once'`.as(
               "issuance_key",
             ),
@@ -84,23 +86,33 @@ export async function issueEligibleCoupons(
             and(
               eq(customerMemberships.storeId, storeId),
               eq(customerMemberships.active, true),
-              targetIds,
+              inArray(customerMemberships.id, targets),
               eligible,
+              gate,
               gt(sql<number>`json_extract(${customerCouponRules.rulesJson},'$.endsAt')`, now),
             ),
           ),
       )
       .onConflictDoNothing(),
     couponEvent(services, storeId, token, "issued", event, "system"),
-  ]);
+  ] as const;
 }
 
-export async function issueConfirmedVisitCoupons(
+export function enrolmentCouponStatements(services: ApiServices, storeId: string, userId: string) {
+  const targets = services.db
+    .select({ membershipId: customerMemberships.id })
+    .from(customerMemberships)
+    .where(and(eq(customerMemberships.storeId, storeId), eq(customerMemberships.userId, userId)));
+  return eligibleCouponStatements(services, storeId, targets, "enrol");
+}
+
+export function confirmedVisitCouponStatements(
   services: ApiServices,
   storeId: string,
   sessionId: string,
+  gate?: SQL,
 ) {
-  const allocations = await services.db
+  const targets = services.db
     .select({ membershipId: customerPointAllocations.membershipId })
     .from(customerPointAllocations)
     .where(
@@ -110,10 +122,5 @@ export async function issueConfirmedVisitCoupons(
       ),
     )
     .limit(50);
-  await issueEligibleCoupons(
-    services,
-    storeId,
-    allocations.map((row) => row.membershipId),
-    "visit",
-  );
+  return eligibleCouponStatements(services, storeId, targets, "visit", gate);
 }

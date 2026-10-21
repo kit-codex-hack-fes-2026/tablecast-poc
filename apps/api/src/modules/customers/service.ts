@@ -1,56 +1,56 @@
-import { issueEligibleCoupons } from "../customer-coupons/issuance";
-import { and, eq, exists, isNull, sql } from "drizzle-orm";
 import type { z } from "zod";
-import { customerMemberships, customerVisitParticipants } from "../../db/business-schema";
+import { and, eq, exists, isNull, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
+import { customerMemberships, customerVisitParticipants } from "../../db/customer-schema";
 import { ensure } from "../../platform/errors";
+import { enrolmentCouponStatements } from "../customer-coupons/issuance";
 import {
-  customerConsentVersion,
+  customerSessionsScope,
+  finishCustomerContextChange,
+  resetCustomerContextStatements,
+} from "../customer-memory/context";
+import {
   type CustomerActor,
+  customerConsentVersion,
   type customerPreferencesSchema,
 } from "./model";
 import { getCustomerStore, requireCustomer } from "./queries";
-import {
-  customerSessionsScope,
-  resetCustomerContextStatements,
-  finishCustomerContextChange,
-} from "../customer-memory/service";
 
 export async function enrolCustomer(services: ApiServices, actor: CustomerActor) {
   await getCustomerStore(services, actor);
   const now = Date.now();
-  await services.db
-    .insert(customerMemberships)
-    .values({
-      id: crypto.randomUUID(),
-      storeId: actor.storeId,
-      userId: actor.userId,
-      active: true,
-      shareCompanions: true,
-      useMemories: true,
-      saveMemories: true,
-      consentVersion: customerConsentVersion,
-      joinedAt: now,
-      updatedAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [customerMemberships.storeId, customerMemberships.userId],
-      set: {
+  await services.db.batch([
+    services.db
+      .insert(customerMemberships)
+      .values({
+        id: crypto.randomUUID(),
+        storeId: actor.storeId,
+        userId: actor.userId,
         active: true,
         shareCompanions: true,
         useMemories: true,
         saveMemories: true,
         consentVersion: customerConsentVersion,
-        revision: sql`${customerMemberships.revision} + 1`,
+        joinedAt: now,
         updatedAt: now,
-      },
-      // 入会の再送で、後から撤回した同意を復活させない。
-      setWhere: eq(customerMemberships.active, false),
-    });
-  const result = await getCustomerStore(services, actor);
-  if (result.membership)
-    await issueEligibleCoupons(services, actor.storeId, [result.membership.id], "enrol");
-  return result;
+      })
+      .onConflictDoUpdate({
+        target: [customerMemberships.storeId, customerMemberships.userId],
+        set: {
+          active: true,
+          shareCompanions: true,
+          useMemories: true,
+          saveMemories: true,
+          consentVersion: customerConsentVersion,
+          revision: sql`${customerMemberships.revision} + 1`,
+          updatedAt: now,
+        },
+        // 入会の再送で、後から撤回した同意を復活させない。
+        setWhere: eq(customerMemberships.active, false),
+      }),
+    ...enrolmentCouponStatements(services, actor.storeId, actor.userId),
+  ]);
+  return getCustomerStore(services, actor);
 }
 
 export async function updateCustomerPreferences(
@@ -87,7 +87,7 @@ export async function updateCustomerPreferences(
     ),
   ]);
   ensure(result[0].length === 1, "CUSTOMER_MEMBERSHIP_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, result[1]);
+  await finishCustomerContextChange(services, actor.storeId, result[1], result[6]);
   return getCustomerStore(services, actor);
 }
 
@@ -147,6 +147,6 @@ export async function leaveCustomerMembership(
       ),
   ]);
   ensure(result[0].length === 1, "CUSTOMER_MEMBERSHIP_STALE", 409);
-  await finishCustomerContextChange(services, actor.storeId, result[1]);
+  await finishCustomerContextChange(services, actor.storeId, result[1], result[6]);
   return { left: true };
 }

@@ -1,6 +1,6 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { renameSync, writeFileSync } from "node:fs";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { join } from "node:path";
 import process from "node:process";
 import { defineConfig } from "vite";
@@ -10,7 +10,7 @@ const env = z
   .object({
     TABLECAST_E2E_CASE_DIRECTORY: z.string(),
   })
-  .parse(process.env);
+  .parse(z.object({ env: z.unknown() }).parse(process).env);
 
 // build済みのWeb/APIをcase専用のrootとstorageでpreviewする。
 export default defineConfig({

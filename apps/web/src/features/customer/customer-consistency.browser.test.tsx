@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -5,18 +6,17 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
-import { PointVisit } from "../store/point-visit";
-import { CustomerMemberships } from "./customer-memberships";
-import { CustomerVisit } from "./customer-visits";
-import { customerVisitOptions } from "./customer-visit-query";
 import "../../styles.css";
+import { PointVisit } from "../rewards/point-visit";
+import { CustomerMemberships } from "./customer-memberships";
+import { customerVisitOptions } from "./customer-visit-query";
+import { CustomerVisit } from "./customer-visits";
 
 let client: QueryClient;
 afterEach(async () => {
