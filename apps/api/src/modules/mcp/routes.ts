@@ -114,7 +114,13 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
       inputSchema: rewardMembersSchema.shape,
       annotations: { readOnlyHint: true },
     },
-    async (input) => result(await listRewardMembers(c.get("services"), actor, input)),
+    async (input) => {
+      const page = await listRewardMembers(c.get("services"), actor, input);
+      return result({
+        members: page.members.map(({ id, name }) => ({ id, name })),
+        nextCursor: page.nextCursor,
+      });
+    },
   );
   server.registerTool(
     "list_issued_coupons",
@@ -123,7 +129,19 @@ export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
       inputSchema: couponPageSchema.shape,
       annotations: { readOnlyHint: true },
     },
-    async (input) => result(await listIssuedCoupons(c.get("services"), actor, input)),
+    async (input) => {
+      const page = await listIssuedCoupons(c.get("services"), actor, input);
+      return result({
+        coupons: page.coupons.map(({ id, name, state, issuedAt, rules }) => ({
+          id,
+          name,
+          state,
+          issuedAt,
+          rules,
+        })),
+        nextCursor: page.nextCursor,
+      });
+    },
   );
   server.registerTool(
     "issue_coupon",

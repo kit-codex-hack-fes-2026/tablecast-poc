@@ -18,6 +18,7 @@ import {
   voicePageSchema,
   uploadedImageSchema,
   gamePackageSchema,
+  couponRuleSchema,
 } from "../src/schema";
 import { addStatisticsSession, statisticsPeriod } from "./statistics-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
@@ -260,6 +261,141 @@ function toolError(value: unknown, code: string) {
   if (content?.type !== "text") throw new Error("MCPエラー応答がtextではありません");
   expect(content.text).toContain(code);
 }
+
+it("特典MCPは会員の表示名と券の状態だけをページ取得し、管理HTTPの人物情報と権限を保つ", async () => {
+  const { cookie, staff } = await setupFixture();
+  const issuedAt = Date.now();
+  const rules = couponRuleSchema.parse({
+    title: { ja: "ご来店特典", en: "Visit reward" },
+    description: { ja: "100円引き", en: "JPY 100 off" },
+    imageKey: `tablecast/uploads/${"a".repeat(64)}.webp`,
+    imageKind: "illustration",
+    imageSource: { generated: false, description: "テスト券面" },
+    startsAt: issuedAt - 10000,
+    endsAt: issuedAt + 86400000,
+    minimumYen: 100,
+    discountKind: "fixed",
+    discountValue: 100,
+    maximumYen: 500,
+    trigger: "manual",
+    threshold: 1,
+  });
+  await fixtureDb.insert(businessTables.customerCouponRules).values({
+    id: "tablecast-reward-rule",
+    storeId: "tablecast-store",
+    version: 1,
+    active: true,
+    rulesJson: JSON.stringify(rules),
+    createdAt: issuedAt,
+    updatedAt: issuedAt,
+    createdBy: staff.userId,
+  });
+  for (const [index, state] of (["available", "revoked"] as const).entries()) {
+    const id = `tablecast-reward-${index}`;
+    await fixtureDb.batch([
+      fixtureDb.insert(authTables.user).values({
+        id,
+        name: `会員${index}`,
+        email: `${id}@example.test`,
+        image: `https://example.test/${id}.png`,
+      }),
+      fixtureDb.insert(businessTables.customerMemberships).values({
+        id,
+        userId: id,
+        storeId: "tablecast-store",
+        shareCompanions: false,
+        useMemories: false,
+        saveMemories: false,
+        consentVersion: 1,
+        joinedAt: issuedAt,
+        updatedAt: issuedAt,
+      }),
+      fixtureDb.insert(businessTables.customerCoupons).values({
+        id,
+        storeId: "tablecast-store",
+        membershipId: id,
+        ruleId: "tablecast-reward-rule",
+        ruleVersion: 1,
+        snapshotJson: JSON.stringify(rules),
+        state,
+        issuanceKey: id,
+        mutationId: id,
+        createdAt: issuedAt,
+      }),
+    ]);
+  }
+  const { token } = await authorise(cookie, "tablecast:read");
+  const client = await connect(token);
+  const memberPageSchema = z.strictObject({
+    members: z.array(z.strictObject({ id: z.string(), name: z.string() })),
+    nextCursor: z.string().nullable(),
+  });
+  const couponPageSchema = z.strictObject({
+    coupons: z.array(
+      z.strictObject({
+        id: z.string(),
+        name: z.string(),
+        state: z.enum(["available", "requested", "used", "revoked"]),
+        issuedAt: z.number(),
+        rules: couponRuleSchema,
+      }),
+    ),
+    nextCursor: z.string().nullable(),
+  });
+  for (const index of [1, 0]) {
+    const id = `tablecast-reward-${index}`;
+    const args = { limit: 1, ...(index === 0 ? { beforeId: "tablecast-reward-1" } : {}) };
+    const nextCursor = index === 1 ? id : null;
+    expect(
+      toolData(
+        await client.callTool({ name: "list_reward_members", arguments: args }),
+        memberPageSchema,
+      ),
+    ).toEqual({ members: [{ id, name: `会員${index}` }], nextCursor });
+    expect(
+      toolData(
+        await client.callTool({ name: "list_issued_coupons", arguments: args }),
+        couponPageSchema,
+      ),
+    ).toEqual({
+      coupons: [
+        { id, name: `会員${index}`, state: index === 1 ? "revoked" : "available", issuedAt, rules },
+      ],
+      nextCursor,
+    });
+  }
+  expect(
+    toolData(
+      await client.callTool({ name: "list_reward_members", arguments: { query: "会員0" } }),
+      memberPageSchema,
+    ),
+  ).toEqual({ members: [{ id: "tablecast-reward-0", name: "会員0" }], nextCursor: null });
+  for (const [path, key] of [
+    ["members", "members"],
+    ["issued", "coupons"],
+  ] as const) {
+    const response = await exports.default.fetch(
+      new Request(`${origin}/api/admin/stores/tablecast-store/coupons/${path}?limit=1`, {
+        headers: { Cookie: cookie },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      [key]: [
+        {
+          id: "tablecast-reward-1",
+          email: "tablecast-reward-1@example.test",
+          image: "https://example.test/tablecast-reward-1.png",
+        },
+      ],
+      nextCursor: "tablecast-reward-1",
+    });
+  }
+  await fixtureDb.delete(authTables.member).where(eq(authTables.member.id, "tablecast-member"));
+  for (const name of ["list_reward_members", "list_issued_coupons"]) {
+    await expect(client.callTool({ name, arguments: {} })).rejects.toMatchObject({ code: 403 });
+  }
+});
 
 it("MCPのテーマ制作を商品を保持した検証済み下書きへ保存し管理画面から同じ版を取得する", async () => {
   const { cookie } = await setupFixture();
