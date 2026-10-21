@@ -247,7 +247,15 @@ Lucideは追加にPlus、削除・破棄にTrash2、保存にSave、公開にUpl
 
 ログイン、登録・パスワード再設定、店舗作成、招待、プロフィール・パスキー名、端末登録、開卓、会計入力はTanStack Formで入力・validation・送信状態を管理する。項目エラーはBase UI Fieldによりラベルと説明へ関連付け、`aria-invalid`・`aria-describedby`で取得できる。日英の修正案を表示し、失敗しても入力を保持する。送信中は主ボタンを無効化し、支援技術にも送信中を伝える。
 
-保存・送信結果は寸法を確保した共通表示で切り替える。Motionの入場は160ms、退場は100msでopacity・transformを使い、reduced motionでは移動を止める。フォームの入力・フォーカスは切替中も維持する。
+保存・送信結果は寸法を確保した共通表示で切り替える。Motionの入場は200msでopacity・transformを使い、新しい状態を古い状態の退場待ちで遅らせない。処理中から失敗・成功へ即時に意味と操作を更新する。フォームの入力・フォーカスは切替中も維持する。
+
+動きは`styles.css`の意味別時間トークンと`components/ui/motion-variants.ts`を共用し、押下120ms、hover150ms、Menu・Popover・Select180ms、Dialog・Drawer220ms、タブ・開閉・結果200msとする。Base UIの入退場属性を使い、途中反転できるCSS transitionを優先する。focusの輪郭は遷移させず、overlayにblurを付けない。タブは同時に二つのpanelをレイアウトへ残さず、`keepMounted`の入力とUndoを保つ。
+
+実データ・編集欄の開閉は共通`Disclosure`を使う。非表示の必須入力がinvalidになった場合は祖先を開き、対象の入力へfocusを移す。補助説明だけを折りたたむ用途には使わない。カートの数量・追加・注文完了と保存・検証・公開状態の変化に短いフィードバックを付ける。表・統計の行や数値、頻繁なページ遷移には装飾的な移動を加えない。
+
+`prefers-reduced-motion`では移動・拡縮・反復とCSS transitionを止め、操作・選択・結果は即時に利用できる。音声可視化の通常色は無彩色、エラーだけ危険色とし、Canvasとshaderへ同じ意味別トークンを渡す。停止・非表示では音声解析の描画更新も止める。
+
+全画面の適用対象と維持する状態は[動きの適用範囲](ui-motion-audit.md)を参照する。
 
 ## 卓上ゲーム
 
@@ -354,3 +362,7 @@ modal/drawerのoverlayは半透明の暗幕だけを使い、背景をぼかさ�
 - 統計は期間操作とタブを読込境界の外へ置く。タブ本文の遅延読込と集計取得は同じ集計構造のスケルトンで示す。来店の注文タブも本文内にSuspenseを置き、他タブや見出しを消さない。取得失敗は0件に置き換えず、再取得中は取得済み結果を保つ。
 - サイドバーの各グループは初回にすべて展開し、利用者が明示変更した状態を優先する。縮小時は左右余白を均等にし、リンクはhoverとfocusでTooltipに名前を出す。アカウントの操作にはユーザーアイコンを使う。ユーザーセレクタの名前・メールは一行省略し、メニュー内では全文を確認できる。
 - ページ見出しは一行でも48pxの領域を確保し、複数行は自然に伸ばす。設定ヘッダーは版と状態のまとまり、操作のまとまりを分け、ラベルの途中で折り返さない。
+
+### ページと選択位置の遷移
+
+ページ本文はRouterの公開View Transition APIで描画snapshotを遷移し、Outletにmotion用のkeyを付けない。初回SSR・同じpathnameの検索条件変更・接続済み客画面を出入りする遷移は対象外。型付きView Transitionの未対応ブラウザーはonResolvedで既存本文だけをMotionで200ms入場させ、nativeとの二重再生を避ける。戻る操作で方向を反転し、shellのナビとスクロールは既存Routerが所有する。Tabsとsidebarはscope付きLayoutGroup/layoutIdで選択位置を結び、客カートはAnimatePresence/popLayoutで追加・削除の位置関係を示す。退場中の行は即時inertにし、入力DOMと明示注文確定を維持する。reduced motionでは移動を止める。

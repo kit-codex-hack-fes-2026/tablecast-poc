@@ -1,3 +1,5 @@
+import { controlMotion, surfaceMotion } from "../../components/ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { Brand } from "../../components/brand";
 import { Menu } from "@base-ui/react/menu";
 import { Tooltip } from "@base-ui/react/tooltip";
@@ -240,7 +242,7 @@ function SidebarUserMenu({
     <Menu.Root>
       <SidebarTooltip label={t("account_title")} collapsed={collapsed}>
         <Menu.Trigger
-          className={`flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring ${collapsed ? "justify-center p-0" : "p-2"}`}
+          className={`${controlMotion} flex min-h-14 w-full min-w-0 items-center gap-2 rounded-xl border border-transparent text-left outline-none hover:border-control-edge hover:bg-control-hover data-popup-open:border-control-edge data-popup-open:bg-control-selected focus-visible:ring-2 focus-visible:ring-ring ${collapsed ? "justify-center p-0" : "p-2"}`}
           aria-label={t("account_title")}
         >
           {collapsed || !user ? (
@@ -257,7 +259,15 @@ function SidebarUserMenu({
       </SidebarTooltip>
       <Menu.Portal>
         <Menu.Positioner side="top" align="start" sideOffset={8} className="z-50">
-          <Menu.Popup className="w-80 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-2 shadow-surface">
+          <Menu.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              "w-80 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-2 shadow-surface",
+              surfaceMotion(),
+            )}
+          >
             {user && (
               <div className="mb-2 border-b border-border p-3">
                 <UserIdentity user={user} compact />

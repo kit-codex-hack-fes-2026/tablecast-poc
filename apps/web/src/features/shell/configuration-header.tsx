@@ -1,3 +1,5 @@
+import { controlMotion, surfaceMotion } from "../../components/ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { Menu } from "@base-ui/react/menu";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
@@ -189,10 +191,25 @@ function ConfigurationSwitcher({ model }: { model: ReturnType<typeof useConfigur
           </Menu.Trigger>
           <Menu.Portal>
             <Menu.Positioner sideOffset={8} className="z-50">
-              <Menu.Popup className="max-h-[min(28rem,var(--available-height))] w-80 max-w-[var(--available-width)] overflow-auto rounded-2xl border border-border bg-card p-2 shadow-surface">
+              <Menu.Popup
+                render={(renderProps, state) => (
+                  <div
+                    {...renderProps}
+                    inert={!state.open}
+                    aria-hidden={!state.open || undefined}
+                  />
+                )}
+                className={cn(
+                  "max-h-[min(28rem,var(--available-height))] w-80 max-w-[var(--available-width)] overflow-auto rounded-2xl border border-border bg-card p-2 shadow-surface",
+                  surfaceMotion(),
+                )}
+              >
                 <Menu.Item
                   aria-current={!draftId && !historyPage ? "true" : undefined}
-                  className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm outline-none data-highlighted:bg-control-hover"
+                  className={cn(
+                    controlMotion,
+                    "flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm outline-none data-highlighted:bg-control-hover",
+                  )}
                   onClick={() => void select()}
                 >
                   <Check
@@ -209,7 +226,10 @@ function ConfigurationSwitcher({ model }: { model: ReturnType<typeof useConfigur
                     <Menu.Item
                       key={choice.id}
                       aria-current={draftId === choice.id ? "true" : undefined}
-                      className="flex min-h-11 cursor-pointer flex-col items-start gap-1 rounded-lg px-3 py-2 text-sm outline-none data-highlighted:bg-control-hover"
+                      className={cn(
+                        controlMotion,
+                        "flex min-h-11 cursor-pointer flex-col items-start gap-1 rounded-lg px-3 py-2 text-sm outline-none data-highlighted:bg-control-hover",
+                      )}
                       onClick={() => void select(choice.id)}
                     >
                       <span className="flex flex-wrap items-center gap-2">
@@ -237,7 +257,10 @@ function ConfigurationSwitcher({ model }: { model: ReturnType<typeof useConfigur
                 )}
                 <Menu.Item
                   render={<Link to="/admin/stores/$storeId/menu/history" params={{ storeId }} />}
-                  className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm outline-none data-highlighted:bg-control-hover"
+                  className={cn(
+                    controlMotion,
+                    "flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm outline-none data-highlighted:bg-control-hover",
+                  )}
                 >
                   <History className="size-4" />
                   {t("configuration_history_title")}

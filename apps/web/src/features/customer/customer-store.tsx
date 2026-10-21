@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { calendarDate } from "../../i18n/format";
 import { CustomerVisits } from "./customer-visits";
 import { customerConsentVersion } from "@tablecast/api/schema";
@@ -9,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
@@ -116,13 +117,14 @@ export function CustomerStore({ storeId }: { storeId: string }) {
               <ArrowRight aria-hidden className="size-4 shrink-0" />
             </Link>
           </nav>
-          <details className="group rounded-xl bg-secondary/60 px-4">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          <Disclosure.Root className="group rounded-xl bg-secondary/60 px-4">
+            <Disclosure.Trigger className="flex min-h-12 cursor-pointer items-center justify-between gap-4 text-sm font-medium">
               {t("customer_preferences")}
-              <ChevronDown aria-hidden className="size-4 group-open:rotate-180" />
-            </summary>
-            <CustomerPreferences key={data.membership.id} data={data} />
-          </details>
+            </Disclosure.Trigger>
+            <Disclosure.Panel>
+              <CustomerPreferences key={data.membership.id} data={data} />
+            </Disclosure.Panel>
+          </Disclosure.Root>
         </>
       ) : (
         <CustomerConsent storeId={storeId} />

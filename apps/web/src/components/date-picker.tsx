@@ -1,3 +1,4 @@
+import { surfaceMotion } from "./ui/motion-variants";
 import { Popover } from "@base-ui/react/popover";
 import { cn } from "tailwind-variants";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
@@ -259,9 +260,15 @@ function CalendarPanel({
   }
   return (
     <Popover.Popup
+      render={(renderProps, state) => (
+        <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+      )}
       initialFocus={selected}
       finalFocus={finalFocus}
-      className="w-88 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-3 text-foreground shadow-lg"
+      className={cn(
+        "w-88 max-w-[var(--available-width)] rounded-2xl border border-border bg-card p-3 text-foreground shadow-lg",
+        surfaceMotion(),
+      )}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <Button

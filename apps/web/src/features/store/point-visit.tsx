@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -134,40 +135,44 @@ function PointCorrection({
     },
   });
   return (
-    <details>
-      <summary className="cursor-pointer text-sm">{t("customer_points_correct")}</summary>
-      <form
-        className="mt-3 space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppField name="delta">
-          {(field) => (
-            <field.NumberField
-              label={t("customer_points_delta")}
-              min={-1000000}
-              max={1000000}
-              required
-            />
-          )}
-        </form.AppField>
-        <form.AppField name="reason">
-          {(field) => (
-            <field.TextField label={t("customer_points_reason")} maxLength={500} required />
-          )}
-        </form.AppField>
-        <form.AppForm>
-          <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-        </form.AppForm>
-        <ActionFeedback
-          pending={save.isPending}
-          error={save.error}
-          success={save.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </form>
-    </details>
+    <Disclosure.Root>
+      <Disclosure.Trigger className="cursor-pointer text-sm">
+        {t("customer_points_correct")}
+      </Disclosure.Trigger>
+      <Disclosure.Panel>
+        <form
+          className="mt-3 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          <form.AppField name="delta">
+            {(field) => (
+              <field.NumberField
+                label={t("customer_points_delta")}
+                min={-1000000}
+                max={1000000}
+                required
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="reason">
+            {(field) => (
+              <field.TextField label={t("customer_points_reason")} maxLength={500} required />
+            )}
+          </form.AppField>
+          <form.AppForm>
+            <form.SubmitButton>{t("account_save")}</form.SubmitButton>
+          </form.AppForm>
+          <ActionFeedback
+            pending={save.isPending}
+            error={save.error}
+            success={save.isSuccess}
+            successMessage={t("account_saved")}
+          />
+        </form>
+      </Disclosure.Panel>
+    </Disclosure.Root>
   );
 }

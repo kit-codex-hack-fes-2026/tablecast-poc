@@ -167,7 +167,10 @@ function DemoSession({
   );
   const errors = configurationIssueSchema.array().safeParse(apiError(update.error)?.details);
   return (
-    <main className="flex h-dvh flex-col bg-background">
+    <main
+      data-page-motion
+      className="flex h-dvh flex-col bg-background [view-transition-name:tablecast-page]"
+    >
       <header className="z-10 max-h-96 shrink-0 overflow-y-auto border-b border-border bg-card">
         <div
           className="flex h-16 items-center gap-2 overflow-x-auto p-2"
@@ -470,7 +473,10 @@ export function DemoPending({
 }: DemoDisplay & { error?: unknown; onRetry?: () => void }) {
   const { t } = useI18n();
   return (
-    <main className="flex h-dvh flex-col bg-background">
+    <main
+      data-page-motion
+      className="flex h-dvh flex-col bg-background [view-transition-name:tablecast-page]"
+    >
       <header className="z-10 shrink-0 border-b border-border bg-card">
         <div className="flex h-16 items-center gap-2 overflow-hidden p-2" aria-busy={!error}>
           <div className="flex shrink-0 items-center gap-2 px-2 text-primary">

@@ -152,6 +152,12 @@
   --surface-sheen: linear-gradient(to bottom, var(--white-a8), transparent);
   color-scheme: light;
   scrollbar-gutter: stable;
+  --motion-press: 120ms;
+  --motion-hover: 150ms;
+  --motion-popup: 180ms;
+  --motion-dialog: 220ms;
+  --motion-state: 200ms;
+  --motion-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --voice-spectrum: conic-gradient(
     #6366f1,
     #a855f7,
@@ -223,6 +229,21 @@
   p {
     @apply wrap-anywhere;
   }
+  a[href],
+  button,
+  input,
+  select,
+  textarea {
+    transition-property: color, background-color, border-color, box-shadow, text-decoration-color;
+    transition-duration: var(--motion-hover);
+    transition-timing-function: var(--motion-ease-out);
+  }
+  button:active {
+    transition-duration: var(--motion-press);
+  }
+  :focus-visible {
+    transition-property: color, background-color, text-decoration-color;
+  }
   input[type="radio"] {
     @apply accent-primary;
   }
@@ -243,6 +264,7 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
@@ -250,6 +272,26 @@
 }
 
 @theme {
+  --animate-tablecast-state: tablecast-state var(--motion-state) var(--motion-ease-out);
+  --animate-tablecast-confirm: tablecast-confirm var(--motion-state) var(--motion-ease-out);
+  @keyframes tablecast-state {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes tablecast-confirm {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
   --animate-tablecast-enter: tablecast-enter 180ms ease-out;
   @keyframes tablecast-enter {
     from {
@@ -269,5 +311,53 @@
   body {
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
       env(safe-area-inset-left);
+  }
+}
+
+/* Routerが公開APIで取得する描画snapshotだけを動かし、Outletを二重mountしない。 */
+:root {
+  view-transition-name: none;
+}
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-group(tablecast-page) {
+  animation-duration: var(--motion-state);
+}
+::view-transition-old(tablecast-page) {
+  animation: tablecast-route-out var(--motion-hover) var(--motion-ease-out) both;
+}
+::view-transition-new(tablecast-page) {
+  animation: tablecast-route-in var(--motion-state) var(--motion-ease-out) both;
+}
+:root:active-view-transition-type(tablecast-back) {
+  --route-enter: -8px;
+  --route-exit: 8px;
+}
+@keyframes tablecast-route-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--route-enter, 8px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes tablecast-route-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--route-exit, -8px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
   }
 }

@@ -56,9 +56,11 @@ export const 標準: Story = {
   play: async ({ canvasElement }) => {
     const trigger = within(canvasElement).getByRole("button", { name: "詳細を開く" });
     await userEvent.click(trigger);
-    await expect(
-      within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "注文の確認" }),
-    ).toBeVisible();
+    await waitFor(async () => {
+      await expect(
+        within(canvasElement.ownerDocument.body).getByRole("dialog", { name: "注文の確認" }),
+      ).toBeVisible();
+    });
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(trigger).toHaveFocus());
   },

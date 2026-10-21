@@ -1,12 +1,15 @@
+import { controlMotion, disclosureMotion } from "../../components/ui/motion-variants";
+
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useHydrated } from "@tanstack/react-router";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { tv } from "tailwind-variants";
+import { cn, tv } from "tailwind-variants";
 import { useSidebarPreferences, type NavigationGroupId } from "./sidebar-preferences";
 
 export const navigationItemClass =
-  "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
+  controlMotion +
+  " relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base text-muted-foreground data-[collapsed=true]:justify-center data-[collapsed=true]:px-0 hover:bg-[var(--nav-surface,var(--color-control-hover))] hover:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:bg-[var(--nav-surface,var(--color-control-selected))] aria-[current=page]:text-[var(--nav-color,var(--color-foreground))] aria-[current=page]:font-semibold data-[status=active]:bg-[var(--nav-surface,var(--color-control-selected))] data-[status=active]:text-[var(--nav-color,var(--color-foreground))] data-[status=active]:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:shrink-0 [&>svg]:size-5";
 const groupStyle = tv({
   base: "min-w-0",
   variants: {
@@ -58,16 +61,19 @@ export function NavigationGroup({
           <h2 className="text-sm">
             <Collapsible.Trigger
               disabled={!hydrated}
-              className="group flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left font-semibold text-[var(--nav-color)] hover:bg-[var(--nav-surface)]"
+              className={cn(
+                controlMotion,
+                "group flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left font-semibold text-[var(--nav-color)] hover:bg-[var(--nav-surface)]",
+              )}
             >
               <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--nav-surface)]">
                 <Icon className="size-5" />
               </span>
               {label}
-              <ChevronRight className="ml-auto size-4 shrink-0 transition-transform duration-150 group-aria-expanded:rotate-90 motion-reduce:transition-none" />
+              <ChevronRight className="ml-auto size-4 shrink-0 transition-transform duration-(--motion-state) ease-(--motion-ease-out) group-aria-expanded:rotate-90 motion-reduce:transition-none" />
             </Collapsible.Trigger>
           </h2>
-          <Collapsible.Panel>
+          <Collapsible.Panel className={disclosureMotion}>
             <div className="ml-4 border-l border-border pl-2">{children}</div>
           </Collapsible.Panel>
         </Collapsible.Root>

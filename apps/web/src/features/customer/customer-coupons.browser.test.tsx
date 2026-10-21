@@ -200,7 +200,7 @@ it.each(["coupons", "exchanges"] as const)(
       .element(region(failed).getByRole("alert"))
       .toMatchTextContent(ja.common_unavailable);
     await expect.element(card).toBeVisible();
-    await expect.element(region(failed).getByRole("status")).not.toBeInTheDocument();
+    await expect.element(region(failed).getByRole("status")).toBeEmptyDOMElement();
     failing = false;
     await region(failed).getByRole("button", { name: ja.common_retry, exact: true }).click();
     await expect.element(region(failed).getByRole("alert")).not.toBeInTheDocument();

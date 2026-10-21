@@ -25,7 +25,10 @@ export function AuthLayout({
           </Link>
           <LanguageSwitch onChange={onLocaleChange ?? setLocale} />
         </header>
-        <section className="min-w-0 pt-10 sm:pt-14">
+        <section
+          data-page-motion
+          className="min-w-0 pt-10 sm:pt-14 [view-transition-name:tablecast-page]"
+        >
           <h1 className="mb-7 text-2xl font-semibold tracking-tight">{title}</h1>
           {children}
         </section>

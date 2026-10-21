@@ -1,3 +1,4 @@
+import { controlMotion } from "./motion-variants";
 import { Radio } from "@base-ui/react/radio";
 import { cn } from "tailwind-variants";
 
@@ -16,12 +17,13 @@ export function RadioGroupItem({ className, ...props }: Radio.Root.Props) {
       {...props}
       className={(state) =>
         cn(
+          controlMotion,
           "flex size-6 shrink-0 items-center justify-center rounded-full border border-input data-checked:border-primary",
           typeof className === "function" ? className(state) : className,
         )
       }
     >
-      <Radio.Indicator className="size-3 rounded-full bg-primary" />
+      <Radio.Indicator className="size-3 rounded-full bg-primary transition-[opacity,transform] duration-(--motion-press) ease-(--motion-ease-out) data-starting-style:opacity-0 data-ending-style:opacity-0 motion-safe:data-starting-style:[transform:scale(.8)] motion-safe:data-ending-style:[transform:scale(.8)] motion-reduce:transition-none" />
     </Radio.Root>
   );
 }

@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import type { TableState, TimelinePage, TimelineSession } from "@tablecast/api/schema";
 import { useEffect, useEffectEvent, useMemo, useRef } from "react";
 import {
@@ -236,61 +237,63 @@ export function TableCalendar({
           ← {t("floor_previous_day")} · → {t("floor_next_day")}
         </span>
       </div>
-      <details className="rounded-lg border border-border bg-card">
-        <summary className="min-h-12 cursor-pointer px-4 py-3 font-medium">
+      <Disclosure.Root className="rounded-lg border border-border bg-card">
+        <Disclosure.Trigger className="min-h-12 cursor-pointer px-4 py-3 font-medium">
           {t("floor_visits")}
-        </summary>
-        <div className="divide-y divide-border px-4">
-          {visible.map((row) => (
-            <section key={row.id} className="py-3" aria-label={row.name}>
-              <h3 className="mb-1 font-semibold">{row.name}</h3>
-              {(grouped.get(row.id) ?? []).map((session) => {
-                const current = status(session);
-                return (
-                  <Button
-                    key={session.id}
-                    variant="ghost"
-                    onClick={() => onSelect(session.id)}
-                    className="flex min-h-12 w-full justify-start whitespace-normal text-left"
-                  >
-                    <span>
-                      <span className="block">{label(session, row.name)}</span>
-                      <span className="mt-2 inline-flex items-center gap-1.5 text-sm tabular-nums">
-                        <Clock3 className="size-4 text-muted-foreground" aria-hidden />
-                        {Math.max(
-                          0,
-                          Math.floor(((session.closedAt ?? now) - session.openedAt) / 60_000),
-                        )}{" "}
-                        {t("kiosk_minutes")}
-                      </span>
-                      <span className="flex flex-wrap items-center gap-2 text-xs">
-                        <VisitAttention current={current} verbose />
-                        {session.openedAt === session.closedAt && t("floor_zero")}
-                      </span>
-                      {current && (
-                        <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                          <LanguageLabel locale={current.locale} />
-                          <span>
-                            {t("admin_ordered")} {money(current.bill.orderedTotal, locale)}
-                          </span>
-                          <strong>
-                            {t("admin_due")} {money(current.bill.due, locale)}
-                          </strong>
+        </Disclosure.Trigger>
+        <Disclosure.Panel>
+          <div className="divide-y divide-border px-4">
+            {visible.map((row) => (
+              <section key={row.id} className="py-3" aria-label={row.name}>
+                <h3 className="mb-1 font-semibold">{row.name}</h3>
+                {(grouped.get(row.id) ?? []).map((session) => {
+                  const current = status(session);
+                  return (
+                    <Button
+                      key={session.id}
+                      variant="ghost"
+                      onClick={() => onSelect(session.id)}
+                      className="flex min-h-12 w-full justify-start whitespace-normal text-left"
+                    >
+                      <span>
+                        <span className="block">{label(session, row.name)}</span>
+                        <span className="mt-2 inline-flex items-center gap-1.5 text-sm tabular-nums">
+                          <Clock3 className="size-4 text-muted-foreground" aria-hidden />
+                          {Math.max(
+                            0,
+                            Math.floor(((session.closedAt ?? now) - session.openedAt) / 60_000),
+                          )}{" "}
+                          {t("kiosk_minutes")}
                         </span>
-                      )}
-                    </span>
-                  </Button>
-                );
-              })}
-              {!grouped.get(row.id)?.length && (
-                <p className="text-sm text-muted-foreground">
-                  {t(!page ? "common_loading" : partial ? "floor_incomplete" : "floor_no_visits")}
-                </p>
-              )}
-            </section>
-          ))}
-        </div>
-      </details>
+                        <span className="flex flex-wrap items-center gap-2 text-xs">
+                          <VisitAttention current={current} verbose />
+                          {session.openedAt === session.closedAt && t("floor_zero")}
+                        </span>
+                        {current && (
+                          <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                            <LanguageLabel locale={current.locale} />
+                            <span>
+                              {t("admin_ordered")} {money(current.bill.orderedTotal, locale)}
+                            </span>
+                            <strong>
+                              {t("admin_due")} {money(current.bill.due, locale)}
+                            </strong>
+                          </span>
+                        )}
+                      </span>
+                    </Button>
+                  );
+                })}
+                {!grouped.get(row.id)?.length && (
+                  <p className="text-sm text-muted-foreground">
+                    {t(!page ? "common_loading" : partial ? "floor_incomplete" : "floor_no_visits")}
+                  </p>
+                )}
+              </section>
+            ))}
+          </div>
+        </Disclosure.Panel>
+      </Disclosure.Root>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowUpRight, Check, RefreshCw, ReceiptText } from "lucide-react";
@@ -544,21 +545,23 @@ function usageColumns(
       meta: { align: "right" },
       header: t("billing_text_usage"),
       cell: ({ row }) => (
-        <details>
-          <summary className="cursor-pointer text-sm underline underline-offset-4">
+        <Disclosure.Root>
+          <Disclosure.Trigger className="cursor-pointer text-sm underline underline-offset-4">
             {t("admin_details")}
-          </summary>
-          <dl className="mt-2 min-w-36 space-y-2 text-xs">
-            <div>
-              <dt className="text-muted-foreground">{t("billing_input_tokens")}</dt>
-              <dd className="tabular-nums">{row.original.inputTokens.toLocaleString(locale)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("billing_output_tokens")}</dt>
-              <dd className="tabular-nums">{row.original.outputTokens.toLocaleString(locale)}</dd>
-            </div>
-          </dl>
-        </details>
+          </Disclosure.Trigger>
+          <Disclosure.Panel>
+            <dl className="mt-2 min-w-36 space-y-2 text-xs">
+              <div>
+                <dt className="text-muted-foreground">{t("billing_input_tokens")}</dt>
+                <dd className="tabular-nums">{row.original.inputTokens.toLocaleString(locale)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{t("billing_output_tokens")}</dt>
+                <dd className="tabular-nums">{row.original.outputTokens.toLocaleString(locale)}</dd>
+              </div>
+            </dl>
+          </Disclosure.Panel>
+        </Disclosure.Root>
       ),
     },
     ...(canManage

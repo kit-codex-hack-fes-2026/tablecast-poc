@@ -1,3 +1,4 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { calendarDate } from "../../i18n/format";
 import { barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
@@ -109,36 +110,38 @@ export function BillingUsageChart({ data }: { data: Billing }) {
       {charge && (
         <p className="mt-2 text-sm text-muted-foreground">{t("billing_daily_charge_hint")}</p>
       )}
-      <details className="mt-4 border-t border-border pt-3">
-        <summary className="w-fit cursor-pointer rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Disclosure.Root className="mt-4 border-t border-border pt-3">
+        <Disclosure.Trigger className="w-fit cursor-pointer rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {t("billing_daily_table")}
-        </summary>
-        <table className="mt-3 w-full text-sm tabular-nums">
-          <caption className="sr-only">
-            {t("billing_daily_title")} · {label}
-          </caption>
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th scope="col" className="py-2 text-left font-medium">
-                {t("billing_daily_day")}
-              </th>
-              <th scope="col" className="py-2 text-right font-medium">
-                {label}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.daily.map((row, day) => (
-              <tr key={row.day} className="border-b border-border/50 last:border-0">
-                <th scope="row" className="py-2 text-left font-normal">
-                  {calendarDate(row.day, locale)}
+        </Disclosure.Trigger>
+        <Disclosure.Panel>
+          <table className="mt-3 w-full text-sm tabular-nums">
+            <caption className="sr-only">
+              {t("billing_daily_title")} · {label}
+            </caption>
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th scope="col" className="py-2 text-left font-medium">
+                  {t("billing_daily_day")}
                 </th>
-                <td className="py-2 text-right">{format(values[day] ?? 0)}</td>
+                <th scope="col" className="py-2 text-right font-medium">
+                  {label}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </details>
+            </thead>
+            <tbody>
+              {data.daily.map((row, day) => (
+                <tr key={row.day} className="border-b border-border/50 last:border-0">
+                  <th scope="row" className="py-2 text-left font-normal">
+                    {calendarDate(row.day, locale)}
+                  </th>
+                  <td className="py-2 text-right">{format(values[day] ?? 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Disclosure.Panel>
+      </Disclosure.Root>
     </section>
   );
 }

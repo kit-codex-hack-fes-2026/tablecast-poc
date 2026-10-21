@@ -71,6 +71,15 @@ export default defineConfig({
             instances: [
               { browser: "chromium" },
               {
+                browser: "chromium",
+                name: "chromium-reduced-motion",
+                provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
+                include: [
+                  "src/components/motion-system.browser.test.tsx",
+                  "src/components/route-motion.browser.test.tsx",
+                ],
+              },
+              {
                 browser: "webkit",
                 provider: playwright({ contextOptions: { permissions: ["camera"] } }),
                 include: [
@@ -81,6 +90,8 @@ export default defineConfig({
                   "src/components/month-picker.browser.test.tsx",
                   "src/components/date-picker.browser.test.tsx",
                   "src/components/design-system.browser.test.tsx",
+                  "src/components/motion-system.browser.test.tsx",
+                  "src/components/route-motion.browser.test.tsx",
                   "src/features/account/email-access.browser.test.tsx",
                   "src/features/kiosk/store-theme.browser.test.tsx",
                   "src/features/kiosk/kiosk.browser.test.tsx",

@@ -1,3 +1,4 @@
+import { revealDisclosureTarget } from "../../components/ui/disclosure-target";
 import { ConfigurationToolbar } from "../shell/configuration-toolbar";
 import {
   instructionText,
@@ -499,12 +500,11 @@ function focusInvalidCondition(form: HTMLFormElement, aggregate: boolean) {
     (aggregate
       ? form.querySelector<HTMLElement>("[data-condition-editor] [data-node-control]")
       : null);
-  let parent = invalid?.parentElement;
-  while (parent && parent !== form) {
-    if (parent instanceof HTMLDetailsElement) parent.open = true;
-    parent = parent.parentElement;
-  }
-  invalid?.focus();
+  if (!invalid) return;
+  revealDisclosureTarget(invalid);
+  requestAnimationFrame(() => {
+    if (invalid.isConnected) invalid.focus();
+  });
 }
 
 function ItemEditorActions({

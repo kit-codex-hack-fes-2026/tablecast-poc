@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { waitFor, expect, fn, userEvent, within } from "storybook/test";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { AdminSidebar, useSidebarStore, type AdminSidebarProps } from "./admin-sidebar";
@@ -58,7 +58,9 @@ export const 店舗情報の更新後もメニューを開いたまま保つ: St
     await userEvent.click(canvas.getByRole("button", { name: "店舗情報を更新" }));
     // Then: 開閉状態と子ページへの操作を維持する。
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
-    await expect(canvas.getByRole("navigation", { name: "メニュー・接客" })).toBeVisible();
+    await waitFor(async () => {
+      await expect(canvas.getByRole("navigation", { name: "メニュー・接客" })).toBeVisible();
+    });
     await expect(canvas.getByRole("link", { name: "カテゴリ" })).toHaveAttribute(
       "href",
       "/admin/stores/tablecast-second/menu/categories",

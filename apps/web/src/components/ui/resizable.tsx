@@ -29,7 +29,7 @@ export function ResizableHandle({ className, disabled, ...props }: SeparatorProp
       disabled={!hydrated || disabled}
       aria-disabled={!hydrated || disabled}
       className={cn(
-        "group relative z-10 flex w-2 shrink-0 items-center justify-center bg-transparent outline-none transition-colors hover:bg-border focus-visible:bg-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:w-full",
+        "group relative z-10 flex w-2 shrink-0 items-center justify-center bg-transparent outline-none transition-colors duration-(--motion-hover) ease-(--motion-ease-out) motion-reduce:transition-none hover:bg-border focus-visible:bg-border focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset aria-[orientation=horizontal]:h-2 aria-[orientation=horizontal]:w-full",
         className,
       )}
       {...props}

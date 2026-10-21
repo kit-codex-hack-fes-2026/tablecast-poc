@@ -1,3 +1,6 @@
+import { LayoutGroup } from "motion/react";
+import * as m from "motion/react-m";
+import { useId } from "react";
 import { NavigationLink as Link } from "./navigation-link";
 import {
   Building2,
@@ -42,164 +45,168 @@ export function SidebarNavigation({
 }) {
   const { t } = useI18n();
   const common = { collapsed, userId };
+  const layoutId = useId();
   return (
-    <nav
-      className="min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-border py-3"
-      aria-label={t("admin_navigation")}
-    >
-      {selectedStore && (
-        <>
-          <NavigationGroup
-            {...common}
-            id="operations"
-            label={t("nav_operations")}
-            icon={LayoutDashboard}
-          >
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId"
-              params={{ storeId: selectedStore }}
-              activeOptions={{ exact: true }}
-              onClick={onNavigate}
-              title={t("home_title")}
-              aria-label={t("home_title")}
+    <LayoutGroup id={layoutId}>
+      <m.nav
+        layoutScroll
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-border py-3"
+        aria-label={t("admin_navigation")}
+      >
+        {selectedStore && (
+          <>
+            <NavigationGroup
+              {...common}
+              id="operations"
+              label={t("nav_operations")}
+              icon={LayoutDashboard}
             >
-              <House className="size-4" />
-              {!collapsed && t("home_title")}
-            </Link>
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId/floor"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("admin_live")}
-            >
-              <LayoutDashboard className="size-4" />
-              {!collapsed && t("admin_live")}
-            </Link>
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId/visits"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("admin_history")}
-            >
-              <History className="size-4" />
-              {!collapsed && t("admin_history")}
-            </Link>
-            {manager && (
               <Link
                 collapsed={collapsed}
                 className={navigationItemClass}
-                to="/admin/stores/$storeId/statistics"
+                to="/admin/stores/$storeId"
                 params={{ storeId: selectedStore }}
-                search={{ period: "today", view: "summary" }}
+                activeOptions={{ exact: true }}
                 onClick={onNavigate}
-                title={t("statistics_title")}
-                aria-label={t("statistics_title")}
+                title={t("home_title")}
+                aria-label={t("home_title")}
               >
-                <ChartNoAxesCombined className="size-4" />
-                {!collapsed && t("statistics_title")}
+                <House className="size-4" />
+                {!collapsed && t("home_title")}
               </Link>
-            )}
-          </NavigationGroup>
-          <NavigationGroup {...common} id="menu" label={t("admin_config")} icon={UtensilsCrossed}>
-            <MenuNavigation
-              manager={manager}
-              storeId={selectedStore}
-              draftId={draftId}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-            />
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId/games"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("games_title")}
-            >
-              <Gamepad2 className="size-4" />
-              {!collapsed && t("games_title")}
-            </Link>
-          </NavigationGroup>
-          <NavigationGroup {...common} id="rewards" label={t("nav_rewards")} icon={Gift}>
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId/points"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("customer_points_policy")}
-            >
-              <Gift className="size-4" />
-              {!collapsed && t("customer_points_policy")}
-            </Link>
-            <Link
-              collapsed={collapsed}
-              className={navigationItemClass}
-              to="/admin/stores/$storeId/coupons"
-              params={{ storeId: selectedStore }}
-              onClick={onNavigate}
-              title={t("coupons")}
-            >
-              <TicketPercent className="size-4" />
-              {!collapsed && t("coupons")}
-            </Link>
-          </NavigationGroup>
-          <NavigationGroup {...common} id="store" label={t("nav_store_management")} icon={Store}>
-            {(
-              [
-                { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
-                {
-                  to: "/admin/stores/$storeId/devices",
-                  label: "device_title",
-                  Icon: MonitorSmartphone,
-                },
-                { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
-              ] as const
-            ).map(({ to, label, Icon }) => (
               <Link
                 collapsed={collapsed}
-                key={to}
                 className={navigationItemClass}
-                to={to}
+                to="/admin/stores/$storeId/floor"
                 params={{ storeId: selectedStore }}
-                title={t(label)}
                 onClick={onNavigate}
+                title={t("admin_live")}
               >
-                <Icon className="size-4" />
-                {!collapsed && t(label)}
+                <LayoutDashboard className="size-4" />
+                {!collapsed && t("admin_live")}
               </Link>
-            ))}
-            {selectedOrganization && (
               <Link
                 collapsed={collapsed}
                 className={navigationItemClass}
-                to="/billing/$organizationId"
-                params={{ organizationId: selectedOrganization }}
-                title={t("billing_title")}
-                aria-label={t("billing_title")}
-                aria-current={tab === "billing" ? "page" : undefined}
+                to="/admin/stores/$storeId/visits"
+                params={{ storeId: selectedStore }}
                 onClick={onNavigate}
+                title={t("admin_history")}
               >
-                <CreditCard className="size-4" />
-                {!collapsed && t("billing_title")}
+                <History className="size-4" />
+                {!collapsed && t("admin_history")}
               </Link>
-            )}
-          </NavigationGroup>
-        </>
-      )}
-      <WorkspaceNavigation
-        tab={tab}
-        collapsed={collapsed}
-        userId={userId}
-        onNavigate={onNavigate}
-      />
-    </nav>
+              {manager && (
+                <Link
+                  collapsed={collapsed}
+                  className={navigationItemClass}
+                  to="/admin/stores/$storeId/statistics"
+                  params={{ storeId: selectedStore }}
+                  search={{ period: "today", view: "summary" }}
+                  onClick={onNavigate}
+                  title={t("statistics_title")}
+                  aria-label={t("statistics_title")}
+                >
+                  <ChartNoAxesCombined className="size-4" />
+                  {!collapsed && t("statistics_title")}
+                </Link>
+              )}
+            </NavigationGroup>
+            <NavigationGroup {...common} id="menu" label={t("admin_config")} icon={UtensilsCrossed}>
+              <MenuNavigation
+                manager={manager}
+                storeId={selectedStore}
+                draftId={draftId}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+              <Link
+                collapsed={collapsed}
+                className={navigationItemClass}
+                to="/admin/stores/$storeId/games"
+                params={{ storeId: selectedStore }}
+                onClick={onNavigate}
+                title={t("games_title")}
+              >
+                <Gamepad2 className="size-4" />
+                {!collapsed && t("games_title")}
+              </Link>
+            </NavigationGroup>
+            <NavigationGroup {...common} id="rewards" label={t("nav_rewards")} icon={Gift}>
+              <Link
+                collapsed={collapsed}
+                className={navigationItemClass}
+                to="/admin/stores/$storeId/points"
+                params={{ storeId: selectedStore }}
+                onClick={onNavigate}
+                title={t("customer_points_policy")}
+              >
+                <Gift className="size-4" />
+                {!collapsed && t("customer_points_policy")}
+              </Link>
+              <Link
+                collapsed={collapsed}
+                className={navigationItemClass}
+                to="/admin/stores/$storeId/coupons"
+                params={{ storeId: selectedStore }}
+                onClick={onNavigate}
+                title={t("coupons")}
+              >
+                <TicketPercent className="size-4" />
+                {!collapsed && t("coupons")}
+              </Link>
+            </NavigationGroup>
+            <NavigationGroup {...common} id="store" label={t("nav_store_management")} icon={Store}>
+              {(
+                [
+                  { to: "/admin/stores/$storeId/members", label: "org_members", Icon: Users },
+                  {
+                    to: "/admin/stores/$storeId/devices",
+                    label: "device_title",
+                    Icon: MonitorSmartphone,
+                  },
+                  { to: "/admin/stores/$storeId/profile", label: "store_profile", Icon: Store },
+                ] as const
+              ).map(({ to, label, Icon }) => (
+                <Link
+                  collapsed={collapsed}
+                  key={to}
+                  className={navigationItemClass}
+                  to={to}
+                  params={{ storeId: selectedStore }}
+                  title={t(label)}
+                  onClick={onNavigate}
+                >
+                  <Icon className="size-4" />
+                  {!collapsed && t(label)}
+                </Link>
+              ))}
+              {selectedOrganization && (
+                <Link
+                  collapsed={collapsed}
+                  className={navigationItemClass}
+                  to="/billing/$organizationId"
+                  params={{ organizationId: selectedOrganization }}
+                  title={t("billing_title")}
+                  aria-label={t("billing_title")}
+                  aria-current={tab === "billing" ? "page" : undefined}
+                  onClick={onNavigate}
+                >
+                  <CreditCard className="size-4" />
+                  {!collapsed && t("billing_title")}
+                </Link>
+              )}
+            </NavigationGroup>
+          </>
+        )}
+        <WorkspaceNavigation
+          tab={tab}
+          collapsed={collapsed}
+          userId={userId}
+          onNavigate={onNavigate}
+        />
+      </m.nav>
+    </LayoutGroup>
   );
 }
 
@@ -215,6 +222,7 @@ function WorkspaceNavigation({
 }) {
   const { t } = useI18n();
   const common = { collapsed, userId };
+  const layoutId = useId();
   return (
     <NavigationGroup {...common} id="workspace" label={t("nav_workspace")} icon={Plug}>
       <Link

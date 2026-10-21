@@ -674,6 +674,7 @@ function KioskHeader({
 function KioskMenuTabs({ data }: { data: TableState }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
+  const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
   return (
     <Tabs.List data-ui="menu-tabs" className="grid w-full grid-cols-2 sm:flex sm:w-fit">
       <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="menu">
@@ -684,10 +685,11 @@ function KioskMenuTabs({ data }: { data: TableState }) {
         <ShoppingBag aria-hidden />
         {t("kiosk_cart")}
         <span
+          key={quantity}
           data-ui="count"
-          className="rounded-2xl py-px px-1 text-xs bg-secondary text-secondary-foreground"
+          className="rounded-2xl py-px px-1 text-xs bg-secondary text-secondary-foreground motion-safe:animate-tablecast-confirm"
         >
-          {data.cart.lines.reduce((sum, line) => sum + line.quantity, 0)}
+          {quantity}
         </span>
       </Tabs.Tab>
       <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="orders">
@@ -823,7 +825,7 @@ function KioskCart({
   return (
     <Tabs.Panel value="cart">
       {ordered && (
-        <output className="m-3 flex items-center gap-3 rounded-xl border border-primary bg-secondary p-3">
+        <output className="m-3 flex items-center gap-3 rounded-xl border border-success-border bg-success-soft p-3 text-success motion-safe:animate-tablecast-state">
           <Check />
           <strong className="flex-1">{t("kiosk_ordered")}</strong>
           <Button variant="ghost" onClick={() => setOrdered(false)}>
@@ -832,7 +834,10 @@ function KioskCart({
         </output>
       )}
       {snapshot ? (
-        <section className="p-4" aria-label={t("kiosk_review_title")}>
+        <section
+          className="p-4 motion-safe:animate-tablecast-state"
+          aria-label={t("kiosk_review_title")}
+        >
           <h2
             ref={confirmationHeading}
             tabIndex={-1}

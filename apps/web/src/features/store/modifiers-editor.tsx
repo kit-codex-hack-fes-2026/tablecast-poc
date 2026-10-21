@@ -1,6 +1,7 @@
+import * as Disclosure from "../../components/ui/disclosure";
 import { type Modifier, type Product } from "@tablecast/api/schema";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Image, Plus, Trash2 } from "lucide-react";
+import { Image, Plus, Trash2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
@@ -143,28 +144,24 @@ export function ModifiersEditor({
                 disabled={disabled}
               />
             </div>
-            <details
-              className="group min-w-0"
-              onInvalidCapture={(event) => {
-                event.currentTarget.open = true;
-              }}
-            >
-              <summary
+            <Disclosure.Root className="group min-w-0">
+              <Disclosure.Trigger
                 aria-labelledby={`${groupId} ${groupId}-translation`}
-                className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+                className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2"
               >
-                <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
                 <span id={`${groupId}-translation`}>{t("editor_translation")}</span>
-              </summary>
-              <div className="pt-4">
-                <BilingualFields
-                  labelledBy={groupId}
-                  value={group.text}
-                  onChange={(text) => updateGroup(group.id, { text })}
-                  disabled={disabled}
-                />
-              </div>
-            </details>
+              </Disclosure.Trigger>
+              <Disclosure.Panel>
+                <div className="pt-4">
+                  <BilingualFields
+                    labelledBy={groupId}
+                    value={group.text}
+                    onChange={(text) => updateGroup(group.id, { text })}
+                    disabled={disabled}
+                  />
+                </div>
+              </Disclosure.Panel>
+            </Disclosure.Root>
             <div className="grid min-w-0 gap-6">
               {group.options.map((option, optionIndex) => (
                 <ModifierOptionEditor
@@ -324,59 +321,57 @@ function ModifierOptionEditor({
           disabled={disabled}
         />
       </div>
-      <details
-        onToggle={(event) => {
-          if (event.currentTarget.open) setConditionsVisible(true);
+      <Disclosure.Root
+        onOpenChange={(open) => {
+          if (open) setConditionsVisible(true);
         }}
         className="group min-w-0"
-        onInvalidCapture={(event) => {
-          event.currentTarget.open = true;
-        }}
       >
-        <summary
+        <Disclosure.Trigger
           aria-labelledby={`${context} ${optionId}-details`}
-          className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
+          className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium focus-visible:outline-3 focus-visible:outline-offset-2"
         >
-          <ChevronRight aria-hidden="true" className="size-4 shrink-0 group-open:rotate-90" />
           <span id={`${optionId}-details`}>{t("editor_option_details")}</span>
-        </summary>
-        <div className="grid min-w-0 gap-5 pt-4">
-          <BilingualFields
-            labelledBy={context}
-            value={option.text}
-            onChange={(text) => onChange({ text })}
-            disabled={disabled}
-          />
-          <fieldset
-            className="grid min-w-0 gap-4"
-            aria-labelledby={`${context} ${optionId}-images`}
-          >
-            <legend id={`${optionId}-images`} className="mb-3 text-sm font-semibold">
-              <span className="flex items-center gap-2">
-                <Image aria-hidden="true" className="size-4" />
-                {t("editor_images")}
-              </span>
-            </legend>
-            <ConfigurationImageField
-              onStagedChange={onImageStagedChange}
-              key={`${storeId}:${option.id}`}
-              storeId={storeId}
-              value={option}
+        </Disclosure.Trigger>
+        <Disclosure.Panel>
+          <div className="grid min-w-0 gap-5 pt-4">
+            <BilingualFields
+              labelledBy={context}
+              value={option.text}
+              onChange={(text) => onChange({ text })}
               disabled={disabled}
-              onChange={({ imageKey, imageKind }) => onChange({ imageKey, imageKind })}
             />
-          </fieldset>
-          {conditionsVisible && (
-            <OptionConditionsEditor
-              storeId={storeId}
-              product={product}
-              optionId={option.id}
-              disabled={disabled}
-              onChange={onChange}
-            />
-          )}
-        </div>
-      </details>
+            <fieldset
+              className="grid min-w-0 gap-4"
+              aria-labelledby={`${context} ${optionId}-images`}
+            >
+              <legend id={`${optionId}-images`} className="mb-3 text-sm font-semibold">
+                <span className="flex items-center gap-2">
+                  <Image aria-hidden="true" className="size-4" />
+                  {t("editor_images")}
+                </span>
+              </legend>
+              <ConfigurationImageField
+                onStagedChange={onImageStagedChange}
+                key={`${storeId}:${option.id}`}
+                storeId={storeId}
+                value={option}
+                disabled={disabled}
+                onChange={({ imageKey, imageKind }) => onChange({ imageKey, imageKind })}
+              />
+            </fieldset>
+            {conditionsVisible && (
+              <OptionConditionsEditor
+                storeId={storeId}
+                product={product}
+                optionId={option.id}
+                disabled={disabled}
+                onChange={onChange}
+              />
+            )}
+          </div>
+        </Disclosure.Panel>
+      </Disclosure.Root>
       <Button
         variant="outline"
         type="button"

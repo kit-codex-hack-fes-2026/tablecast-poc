@@ -200,6 +200,32 @@ it("商品集計の部分取得を明示し、続きの失敗でも取得済み�
   await expect.element(page.getByText("2 項目・すべて取得済み")).toBeVisible();
 });
 
+it("表示タブは期間を保ってURLを更新し、選択した集計だけ取得する", async () => {
+  const router = await show({
+    initial: `/admin/stores/${storeId}/statistics?period=week&view=summary`,
+  });
+  const summary = page.getByRole("tab", { name: "概要", exact: true });
+  await expect.element(summary).toHaveAttribute("aria-selected", "true");
+  await expect.element(page.getByText("¥61,200", { exact: true })).toBeVisible();
+  expect(requests.every((request) => request.searchParams.get("view") === "summary")).toBe(true);
+  await page.getByRole("tab", { name: "商品別", exact: true }).click();
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({
+      period: "week",
+      view: "products",
+    });
+  await expect.element(page.getByRole("tab", { name: "商品別", exact: true })).toHaveFocus();
+  await expect.element(page.getByRole("rowheader", { name: "定番の商品" })).toBeVisible();
+  expect(requests.some((request) => request.searchParams.get("view") === "modifiers")).toBe(false);
+  await userEvent.keyboard("{Home}{Enter}");
+  await expect.element(summary).toHaveAttribute("aria-selected", "true");
+  await expect.element(summary).toHaveFocus();
+  await expect.element(page.getByRole("tabpanel", { name: "概要", exact: true })).toBeVisible();
+  await expect.element(page.getByRole("rowheader", { name: "定番の商品" })).not.toBeInTheDocument();
+  expect(router.state.location.search.period).toBe("week");
+});
+
 it("指定期間はJSTの終了日を含めてURLに残し、別店舗では前店舗の集計を使わない", async () => {
   const router = await show();
   await userEvent.click(page.getByRole("button", { name: "期間を指定", exact: true }));

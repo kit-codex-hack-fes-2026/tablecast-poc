@@ -1,3 +1,6 @@
+import { cn } from "tailwind-variants";
+import { surfaceMotion, controlMotion } from "../../components/ui/motion-variants";
+import * as Disclosure from "../../components/ui/disclosure";
 import { Combobox } from "@base-ui/react/combobox";
 import {
   conditionLimits,
@@ -373,99 +376,103 @@ export function OptionConditionsEditor({
           </section>
         );
       })}
-      <details className="rounded-lg border border-border p-3">
-        <summary className="min-h-11 cursor-pointer text-sm font-medium">
+      <Disclosure.Root className="rounded-lg border border-border p-3">
+        <Disclosure.Trigger className="min-h-11 cursor-pointer text-sm font-medium">
           {t("condition_try")}
-        </summary>
-        <p className="mb-3 text-sm text-muted-foreground">{t("condition_try_help")}</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {choices.map((choice) => (
-            <div key={choice.id} className="flex min-w-0 flex-wrap items-center gap-2">
-              <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-sm">
-                <Checkbox
-                  disabled={disabled}
-                  checked={quantities.has(choice.id)}
-                  onCheckedChange={(checked) =>
-                    setSelections((current) =>
-                      checked
-                        ? [...current, { optionId: choice.id, quantity: 1 }]
-                        : current.filter((item) => item.optionId !== choice.id),
-                    )
-                  }
-                />
-                <span className="wrap-anywhere">{choice.label}</span>
-              </label>
-              {choice.allowsQuantity && quantities.has(choice.id) && (
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  {t("common_quantity")}
-                  <NativeSelect
-                    aria-label={`${choice.label} (${choice.id}) · ${t("common_quantity")}`}
-                    className="min-h-11 w-20"
-                    value={quantities.get(choice.id)}
+        </Disclosure.Trigger>
+        <Disclosure.Panel>
+          <p className="mb-3 text-sm text-muted-foreground">{t("condition_try_help")}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {choices.map((choice) => (
+              <div key={choice.id} className="flex min-w-0 flex-wrap items-center gap-2">
+                <label className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-sm">
+                  <Checkbox
                     disabled={disabled}
-                    onChange={(event) => {
-                      const quantity = Number(event.target.value);
+                    checked={quantities.has(choice.id)}
+                    onCheckedChange={(checked) =>
                       setSelections((current) =>
-                        current.map((item) =>
-                          item.optionId === choice.id ? { ...item, quantity } : item,
-                        ),
-                      );
-                    }}
-                  >
-                    {Array.from({ length: 20 }, (_value, index) => (
-                      <option key={index + 1} value={index + 1}>
-                        {index + 1}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                        checked
+                          ? [...current, { optionId: choice.id, quantity: 1 }]
+                          : current.filter((item) => item.optionId !== choice.id),
+                      )
+                    }
+                  />
+                  <span className="wrap-anywhere">{choice.label}</span>
                 </label>
-              )}
-            </div>
-          ))}
-        </div>
-        <Button
-          type="button"
-          className="mt-3"
-          disabled={disabled || !valid || preview.isPending}
-          onClick={() => preview.mutate({ signature, product, selections })}
-        >
-          {t("condition_run")}
-        </Button>
-        <ErrorNotice error={preview.variables?.signature === signature ? preview.error : null} />
-        {result && (
-          <div role="status" className="mt-3 space-y-2 text-sm">
-            {!result.applied && <p>{t("condition_not_applied")}</p>}
-            {result.conditions.map((condition) => (
-              <div key={condition.relation}>
-                <p>
-                  {t(
-                    condition.relation === "requires" ? "condition_requires" : "condition_excludes",
-                  )}
-                  ：{t(condition.satisfied ? "condition_satisfied" : "condition_unsatisfied")}
-                </p>
-                {condition.nodes.length > 1 && (
-                  <ul className="ml-4 list-disc">
-                    {condition.nodes.map((node) => (
-                      <li key={node.path.join(".")}>
-                        {node.path.join(" / ") || t("condition_root")}：
-                        {t(node.matched ? "condition_true" : "condition_false")}
-                      </li>
-                    ))}
-                  </ul>
+                {choice.allowsQuantity && quantities.has(choice.id) && (
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
+                    {t("common_quantity")}
+                    <NativeSelect
+                      aria-label={`${choice.label} (${choice.id}) · ${t("common_quantity")}`}
+                      className="min-h-11 w-20"
+                      value={quantities.get(choice.id)}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        const quantity = Number(event.target.value);
+                        setSelections((current) =>
+                          current.map((item) =>
+                            item.optionId === choice.id ? { ...item, quantity } : item,
+                          ),
+                        );
+                      }}
+                    >
+                      {Array.from({ length: 20 }, (_value, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          {index + 1}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </label>
                 )}
               </div>
             ))}
-            {result.errors.length > 0 && (
-              <p className="text-destructive">{t("condition_invalid")}</p>
-            )}
-            {result.selectionError && (
-              <p>
-                {t("condition_selection_error")} · {result.selectionError}
-              </p>
-            )}
           </div>
-        )}
-      </details>
+          <Button
+            type="button"
+            className="mt-3"
+            disabled={disabled || !valid || preview.isPending}
+            onClick={() => preview.mutate({ signature, product, selections })}
+          >
+            {t("condition_run")}
+          </Button>
+          <ErrorNotice error={preview.variables?.signature === signature ? preview.error : null} />
+          {result && (
+            <div role="status" className="mt-3 space-y-2 text-sm">
+              {!result.applied && <p>{t("condition_not_applied")}</p>}
+              {result.conditions.map((condition) => (
+                <div key={condition.relation}>
+                  <p>
+                    {t(
+                      condition.relation === "requires"
+                        ? "condition_requires"
+                        : "condition_excludes",
+                    )}
+                    ：{t(condition.satisfied ? "condition_satisfied" : "condition_unsatisfied")}
+                  </p>
+                  {condition.nodes.length > 1 && (
+                    <ul className="ml-4 list-disc">
+                      {condition.nodes.map((node) => (
+                        <li key={node.path.join(".")}>
+                          {node.path.join(" / ") || t("condition_root")}：
+                          {t(node.matched ? "condition_true" : "condition_false")}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+              {result.errors.length > 0 && (
+                <p className="text-destructive">{t("condition_invalid")}</p>
+              )}
+              {result.selectionError && (
+                <p>
+                  {t("condition_selection_error")} · {result.selectionError}
+                </p>
+              )}
+            </div>
+          )}
+        </Disclosure.Panel>
+      </Disclosure.Root>
     </div>
   );
 }
@@ -541,7 +548,15 @@ function OptionPicker({
       </div>
       <Combobox.Portal>
         <Combobox.Positioner sideOffset={4} className="z-50 max-w-[calc(100vw-24px)]">
-          <Combobox.Popup className="max-h-72 w-(--anchor-width) overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+          <Combobox.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              surfaceMotion({ kind: "popup" }),
+              "max-h-72 w-(--anchor-width) overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg",
+            )}
+          >
             <Combobox.Empty className="p-3 text-sm">{t("condition_no_candidates")}</Combobox.Empty>
             <Combobox.List>
               {(item: Choice) => (
@@ -549,7 +564,10 @@ function OptionPicker({
                   key={item.id}
                   value={item}
                   disabled={item.invalid}
-                  className="flex min-h-11 cursor-default items-center gap-2 rounded-md p-2 text-sm wrap-anywhere data-highlighted:bg-accent data-disabled:opacity-50"
+                  className={cn(
+                    controlMotion,
+                    "flex min-h-11 cursor-default items-center gap-2 rounded-md p-2 text-sm wrap-anywhere data-highlighted:bg-accent data-disabled:opacity-50",
+                  )}
                 >
                   <Combobox.ItemIndicator>
                     <Check className="size-4" />

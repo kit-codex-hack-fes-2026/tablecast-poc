@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { ErrorNotice } from "./error-notice";
-import { fn, expect, userEvent, within } from "storybook/test";
+import { waitFor, fn, expect, userEvent, within } from "storybook/test";
 const meta = {
   title: "共通表示/ErrorNotice",
   component: ErrorNotice,
@@ -15,7 +15,9 @@ type Story = StoryObj<typeof meta>;
 export const 標準: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("alert")).toBeVisible();
+    await waitFor(async () => {
+      await expect(canvas.getByRole("alert")).toBeVisible();
+    });
     await userEvent.click(canvas.getByRole("button"));
     await expect(args.onRetry).toHaveBeenCalled();
   },

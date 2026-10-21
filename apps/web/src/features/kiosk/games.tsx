@@ -1,3 +1,5 @@
+import { surfaceMotion } from "../../components/ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -111,8 +113,18 @@ export function KioskGames({
         }}
       >
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
-          <Dialog.Popup className="fixed inset-3 z-50 flex flex-col gap-4 overflow-y-auto rounded-2xl bg-background p-5 shadow-xl">
+          <Dialog.Backdrop
+            className={cn("fixed inset-0 z-40 bg-overlay", surfaceMotion({ kind: "backdrop" }))}
+          />
+          <Dialog.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              "fixed inset-3 z-50 flex flex-col gap-4 overflow-y-auto rounded-2xl bg-background p-5 shadow-xl",
+              surfaceMotion({ kind: "dialog" }),
+            )}
+          >
             <div className="flex items-center justify-between gap-3">
               <Dialog.Title className="text-xl font-semibold">{t("games_title")}</Dialog.Title>
               <Button variant="outline" onClick={close}>

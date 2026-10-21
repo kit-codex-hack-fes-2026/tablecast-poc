@@ -1,3 +1,5 @@
+import { surfaceMotion } from "./ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { Popover } from "@base-ui/react/popover";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -52,8 +54,14 @@ export function MonthPicker({
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
           <Popover.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
             initialFocus={selected}
-            className="w-80 max-w-[var(--available-width)] rounded-xl border border-border bg-card p-4 text-foreground shadow-lg"
+            className={cn(
+              "w-80 max-w-[var(--available-width)] rounded-xl border border-border bg-card p-4 text-foreground shadow-lg",
+              surfaceMotion(),
+            )}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <Button

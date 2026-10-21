@@ -1,3 +1,5 @@
+import { surfaceMotion } from "./ui/motion-variants";
+import { cn } from "tailwind-variants";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n/locale";
@@ -40,9 +42,19 @@ export function ConfirmAction({
         {triggerLabel ?? label}
       </AlertDialog.Trigger>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay" />
-        <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <AlertDialog.Popup className="w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-lg">
+        <AlertDialog.Backdrop
+          className={cn("fixed inset-0 z-40 bg-overlay", surfaceMotion({ kind: "backdrop" }))}
+        />
+        <AlertDialog.Viewport className="fixed inset-0 z-50 flex items-center justify-center p-4 data-ending-style:pointer-events-none">
+          <AlertDialog.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
+            className={cn(
+              "w-full max-w-md space-y-5 rounded-2xl border border-border bg-card p-6 shadow-lg",
+              surfaceMotion({ kind: "dialog" }),
+            )}
+          >
             <AlertDialog.Title className="text-xl font-semibold">{label}</AlertDialog.Title>
             <AlertDialog.Description className="wrap-break-word text-base">
               {subject}

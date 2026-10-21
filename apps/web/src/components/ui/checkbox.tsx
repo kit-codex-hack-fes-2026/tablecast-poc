@@ -1,3 +1,4 @@
+import { controlMotion } from "./motion-variants";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { cn } from "tailwind-variants";
 import { Check } from "lucide-react";
@@ -14,12 +15,13 @@ export function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) 
       {...props}
       className={(state) =>
         cn(
+          controlMotion,
           "flex size-6 shrink-0 items-center justify-center rounded-sm border border-input data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
           typeof className === "function" ? className(state) : className,
         )
       }
     >
-      <CheckboxPrimitive.Indicator className="flex">
+      <CheckboxPrimitive.Indicator className="flex transition-[opacity,transform] duration-(--motion-press) ease-(--motion-ease-out) data-starting-style:opacity-0 data-ending-style:opacity-0 motion-safe:data-starting-style:[transform:scale(.8)] motion-safe:data-ending-style:[transform:scale(.8)] motion-reduce:transition-none">
         <Check className="size-4" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

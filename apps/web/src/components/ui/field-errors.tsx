@@ -21,7 +21,12 @@ export function FieldErrors({ errors }: { errors: unknown[] }) {
     return message ? [message] : [];
   });
   return [...new Set(messages)].map((message) => (
-    <Field.Error key={message} match className="text-sm text-destructive" role="alert">
+    <Field.Error
+      key={message}
+      match
+      className="text-sm text-destructive motion-safe:animate-tablecast-state"
+      role="alert"
+    >
       {message}
     </Field.Error>
   ));

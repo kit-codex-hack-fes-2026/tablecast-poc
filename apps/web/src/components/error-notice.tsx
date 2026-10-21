@@ -56,7 +56,7 @@ export function ErrorNotice({
       : undefined;
   return (
     <div
-      className="flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
+      className="motion-safe:animate-tablecast-state flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
       role="alert"
     >
       <AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" />

@@ -1,4 +1,5 @@
 import { Brand } from "../components/brand";
+import { RouteMotion } from "../components/route-motion";
 import { Pwa } from "../components/pwa";
 import { MotionProvider } from "../components/motion-provider";
 import { DocumentHead } from "../components/document-head";
@@ -134,6 +135,7 @@ function RootContent() {
   const { panelCookies } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>
+      <RouteMotion />
       <Pwa />
       <Outlet />
     </PanelLayoutProvider>

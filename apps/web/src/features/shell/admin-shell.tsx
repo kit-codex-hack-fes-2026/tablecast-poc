@@ -122,7 +122,10 @@ export function AdminShell({
                 <LanguageSwitch onChange={setLocale} />
               </div>
             </header>
-            <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8">
+            <div
+              data-page-motion
+              className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8 [view-transition-name:tablecast-page]"
+            >
               {children}
             </div>
           </main>

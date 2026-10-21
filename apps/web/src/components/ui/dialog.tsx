@@ -1,3 +1,4 @@
+import { surfaceMotion } from "./motion-variants";
 import { StyleScopeBoundary } from "./style-scope";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn, tv, type VariantProps } from "tailwind-variants";
@@ -6,7 +7,7 @@ import { Button } from "./button";
 
 const dialogVariants = tv({
   slots: {
-    viewport: "fixed inset-0 z-41 flex",
+    viewport: "fixed inset-0 z-41 flex data-ending-style:pointer-events-none",
     popup: "flex flex-col bg-card shadow-2xl",
   },
   variants: {
@@ -58,14 +59,24 @@ export function DialogContent({
   return (
     <DialogPrimitive.Portal>
       <StyleScopeBoundary>
-        <DialogPrimitive.Backdrop className="fixed inset-0 bg-overlay z-40" />
+        <DialogPrimitive.Backdrop
+          className={cn("fixed inset-0 bg-overlay z-40", surfaceMotion({ kind: "backdrop" }))}
+        />
         <DialogPrimitive.Viewport className={viewport()}>
           <DialogPrimitive.Popup
+            render={(renderProps, state) => (
+              <div {...renderProps} inert={!state.open} aria-hidden={!state.open || undefined} />
+            )}
             {...props}
             data-slot="dialog-content"
             data-theme-part="dialog"
             className={(state) =>
-              popup({ className: typeof className === "function" ? className(state) : className })
+              popup({
+                className: cn(
+                  surfaceMotion({ kind: side === "center" ? "dialog" : side }),
+                  typeof className === "function" ? className(state) : className,
+                ),
+              })
             }
           />
         </DialogPrimitive.Viewport>

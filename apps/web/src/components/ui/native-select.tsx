@@ -1,3 +1,4 @@
+import { controlMotion } from "./motion-variants";
 import { ChevronDown } from "lucide-react";
 import { useHydrated } from "@tanstack/react-router";
 import { cn } from "tailwind-variants";
@@ -17,6 +18,7 @@ export function NativeSelect({ className, ...props }: ComponentProps<"select">) 
       <select
         data-slot="native-select"
         className={cn(
+          controlMotion,
           "peer min-h-12 min-w-0 max-w-full rounded-xl border border-input bg-card px-3 py-2 text-base text-foreground inset-shadow-field outline-none hover:border-control-edge-hover focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
           className,
           !props.multiple && "appearance-none pr-10",

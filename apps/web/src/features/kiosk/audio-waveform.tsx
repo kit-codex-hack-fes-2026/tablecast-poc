@@ -113,8 +113,8 @@ export function AudioWaveform({
     };
     const interpolate = mix(shapeRef.current, target);
     const animation = animate(0, 1, {
-      duration: still || !preset.speed ? 0 : 0.45,
-      ease: "easeInOut",
+      duration: still || !preset.speed ? 0 : 0.2,
+      ease: [0.23, 1, 0.32, 1],
       onUpdate: (progress) => {
         shapeRef.current = interpolate(progress);
         setShape(shapeRef.current);

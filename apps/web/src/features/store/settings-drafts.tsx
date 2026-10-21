@@ -3,6 +3,8 @@ import type { ConfigDraft } from "@tablecast/api/schema";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  LoaderCircle,
+  type LucideIcon,
   FilePenLine,
   ArrowLeft,
   Check,
@@ -182,7 +184,9 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
           role="status"
           className={stale || draft.errors.length ? "text-destructive" : "text-muted-foreground"}
         >
-          {editable ? t(guidance) : t("workflow_terminal_note")}
+          <span key={guidance} className="block motion-safe:animate-tablecast-state">
+            {editable ? t(guidance) : t("workflow_terminal_note")}
+          </span>
         </p>
         {draft.changes.some((change) => change.sensitive) && (
           <Badge variant="warning">
@@ -253,7 +257,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
               disabled={busy || !draft.changes.length}
               onClick={() => validate.mutate()}
             >
-              <Check />
+              <PublicationIcon pending={validate.isPending} icon={Check} />
               {t("workflow_validate_short")}
             </Button>
             <Button
@@ -261,7 +265,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
               disabled={busy || cannotPublish}
               onClick={() => setConfirmPublish(true)}
             >
-              <Upload />
+              <PublicationIcon pending={publish.isPending} icon={Upload} />
               {t("workflow_publish_short")}
             </Button>
           </div>
@@ -294,7 +298,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
               data-pwa-blocked={busy}
               onClick={() => publish.mutate()}
             >
-              <Upload />
+              <PublicationIcon pending={publish.isPending} icon={Upload} />
               {t("admin_publish")}
             </Button>
           </DialogFooter>
@@ -303,6 +307,10 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
     </>
   );
 }
+function PublicationIcon({ pending, icon: Icon }: { pending: boolean; icon: LucideIcon }) {
+  return pending ? <LoaderCircle className="motion-safe:animate-spin" /> : <Icon />;
+}
+
 function settingsDraftsColumns(
   t: ReturnType<typeof useI18n>["t"],
   storeId: string,

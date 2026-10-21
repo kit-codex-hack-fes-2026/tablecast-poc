@@ -9,6 +9,8 @@ export function DraftStatus({ status }: { status: ConfigDraft["status"] }) {
   const { t } = useI18n();
   return (
     <Badge
+      key={status}
+      className="motion-safe:animate-tablecast-state"
       variant={
         status === "published" || status === "ready"
           ? "success"
@@ -78,21 +80,25 @@ export function SaveStatus({
   const { t } = useI18n();
   if (pending)
     return (
-      <Badge variant="info">
+      <Badge key="info" variant="info" className="motion-safe:animate-tablecast-state">
         <LoaderCircle className="size-4 motion-safe:animate-spin" />
         {t("workflow_saving")}
       </Badge>
     );
   if (error)
     return (
-      <Badge variant="destructive">
+      <Badge
+        key="destructive"
+        variant="destructive"
+        className="motion-safe:animate-tablecast-state"
+      >
         <TriangleAlert className="size-4" />
         {t(apiError(error)?.status === 409 ? "workflow_conflict" : "workflow_failed")}
       </Badge>
     );
   if (dirty)
     return (
-      <Badge variant="warning">
+      <Badge key="warning" variant="warning" className="motion-safe:animate-tablecast-state">
         <FilePenLine className="size-4" />
         {t("workflow_dirty")}
       </Badge>

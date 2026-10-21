@@ -31,7 +31,9 @@ export function CopyValue({ label, value }: { label: string; value: string }) {
           aria-label={`${label}: ${t("common_copy")}`}
           onClick={() => void copy()}
         >
-          {status === "copied" ? <Check /> : <Copy />}
+          <span key={status} className="inline-flex motion-safe:animate-tablecast-confirm">
+            {status === "copied" ? <Check /> : <Copy />}
+          </span>
         </Button>
       </div>
       <textarea
@@ -43,11 +45,13 @@ export function CopyValue({ label, value }: { label: string; value: string }) {
         className="block w-full resize-none rounded-lg border border-border bg-secondary/50 p-3 font-mono text-sm leading-relaxed"
       />
       <span role="status" className="block min-h-5 text-sm">
-        {status === "error"
-          ? t("common_copy_failed")
-          : status === "copied"
-            ? t("common_copied")
-            : null}
+        <span key={status} className="block motion-safe:animate-tablecast-state">
+          {status === "error"
+            ? t("common_copy_failed")
+            : status === "copied"
+              ? t("common_copied")
+              : null}
+        </span>
       </span>
     </div>
   );
