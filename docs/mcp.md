@@ -110,6 +110,8 @@ stagingの接続先は`https://tablecast-staging.kit-codex.workers.dev/mcp`、�
 
 `get_point_policy` / `set_point_policy`で将来の来店向けポイント設定を扱う。`list_coupon_rules` / `save_coupon_rule`は券面画像と日英条件を含む発行ルール、`list_reward_members`は発行先の会員ID・表示名、`list_issued_coupons`は発行済み券の状態をページ取得する。`issue_coupon`は手動ルールから冪等キー付きで発行し、`revoke_coupon`は未使用券を理由付きで取り消す。
 
+会員検索は会員ID・表示名と`nextCursor`だけを返す。発行済み券は券ID・表示名・状態・発行日時・発行時の条件と`nextCursor`を返す。MCPの出力境界でこれらを明示的に選び、管理HTTP用の会員メール・画像・入会日時をモデルへ渡さない。管理画面の人物表示に必要なHTTP応答は維持する。
+
 券面は既存の`upload_image`で取り込み、返された画像キーと出所を保存する。書込みには既存の店舗管理権限を検証し、GUIと同じAPI serviceを通す。発行済み券の条件は後から変更しない。会員の個人記憶を一覧・検索するMCP操作は設けない。
 
 ## テーマ・店舗ロゴ・チラシ
