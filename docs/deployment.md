@@ -74,6 +74,8 @@ DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからli
 
 PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品URLとSHAの通知までを測る。カタログは手動要求から対象URLのSHA確認・通知までを別に測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。手動カタログが同じPRの排他を先に取得した場合も、製品の待機時間へ含める。単独区間の短縮だけで判断せず、計測のSHA・run・標本数はPRへ残す。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
 
+GitHubの照合は`gh api --jq`でbranchのSHA、PRのstate・head SHA・head repositoryだけを子プロセスから返す。commitのpatchやPR本文は出力せず、大きな統合commitでもNodeの標準出力buffer上限に依存しない。取得・形式検証の失敗、SHA不一致、別repository、配備時のclosed・cleanup時のopenは引き続き拒否する。
+
 ## 初期データと再実行
 
 PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だけ投入する。固定JSONは架空店舗・商品構成・スタッフ名簿を決定的に生成したfixtureで、rootのTurbo task `seed:template`が`.local/tablecast-seed-template/seed.json`へ出力する。cache入力は`scripts/**`、APIの`src/**`と`migrations/**`、emulateの共通名簿、`assets/demo/**`、依存lock・package・Turbo設定を明示する。認証account、パスワード・hash、実行時刻、token、所有marker、実DBはcacheへ含めない。`sourceHash`と`payloadHash`をbuild・配備で照合する。
