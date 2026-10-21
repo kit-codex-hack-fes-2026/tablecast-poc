@@ -2,33 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "oxlint";
 import { RECOMMENDED_RULES, TANSTACK_QUERY_RULES } from "oxlint-plugin-react-doctor";
 import rootConfig from "../../oxlint.config.ts";
-
-// 実ファイルの役割を分類し、未知の配置と依存方向を検査する。
-const boundaryFiles = [
-  ["test", "src/**/*.{test,stories}.{ts,tsx}"],
-  ["test", "src/features/billing/billing-fixture.ts"],
-  ["route", "src/routes/*.tsx"],
-  ["router", "src/router.tsx"],
-  ["server", "src/{server,lib/api-fetch.server}.ts"],
-  ["lib", "src/sw.ts"],
-  ["transport", "src/lib/{api,api-fetch,auth-client}.ts"],
-  ["lib", "src/lib/*.{ts,tsx}"],
-  ["ui", "src/components/ui/*.{ts,tsx}"],
-  ["component", "src/components/*.{ts,tsx}"],
-  ["component", "src/components/ai-elements/*.tsx"],
-  ["component", "src/components/form/*.{ts,tsx}"],
-  ["i18n", "src/i18n/*.{ts,tsx}"],
-  ["generated", "src/paraglide/**"],
-  ["generated", "src/routeTree.gen.ts"],
-  ["asset", "src/*.css"],
-  ["declaration", "src/env.d.ts"],
-  ["model", "src/features/*/*-{model,defaults}.ts"],
-  ["query", "src/features/*/*-query.ts"],
-  ["model", "src/features/kiosk/table-cache.ts"],
-  ["runtime", "src/features/kiosk/voice-connection.ts"],
-  ["model", "src/features/store/device-qr-code.ts"],
-  ["feature", "src/features/*/*.tsx"],
-];
+import { boundaryFiles, boundaryPolicies } from "./oxlint.boundaries.ts";
 
 export default defineConfig({
   extends: [rootConfig],
@@ -42,6 +16,17 @@ export default defineConfig({
     { name: "boundaries", specifier: "eslint-plugin-boundaries" },
   ],
   rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["@tablecast/api", "@tablecast/api/db", "@tablecast/api/bootstrap"],
+            message: "Webはschema/clientなどの公開契約だけを使用します。",
+          },
+        ],
+      },
+    ],
     "boundaries/no-unknown-files": "error",
     "boundaries/no-unknown-dependencies": "error",
     "boundaries/dependencies": [
@@ -50,88 +35,7 @@ export default defineConfig({
         default: "disallow",
         checkAllOrigins: true,
         checkInternals: true,
-        policies: [
-          ...Object.entries({
-            test: [
-              "test",
-              "feature",
-              "model",
-              "query",
-              "runtime",
-              "component",
-              "ui",
-              "lib",
-              "transport",
-              "i18n",
-            ],
-            route: [
-              "feature",
-              "query",
-              "model",
-              "component",
-              "ui",
-              "lib",
-              "i18n",
-              "generated",
-              "asset",
-            ],
-            router: ["generated", "component", "lib"],
-            server: ["server", "generated"],
-            transport: ["transport", "lib", "server"],
-            lib: ["lib", "transport", "server"],
-            component: ["component", "ui", "lib", "i18n"],
-            ui: ["ui"],
-            i18n: ["i18n", "generated"],
-            model: ["model"],
-            query: ["query", "model", "lib", "transport"],
-            runtime: ["runtime", "model", "lib", "transport"],
-            feature: ["query", "model", "runtime", "component", "ui", "lib", "transport", "i18n"],
-          }).map(([from, to]) => ({
-            from: { file: { categories: from } },
-            allow: { to: { file: { categories: to } } },
-          })),
-          ...["account", "store", "kiosk", "shell", "customer", "billing"].map((feature) => ({
-            from: { file: { categories: "feature", captured: { feature } } },
-            allow: {
-              to: { file: { categories: "feature", captured: { feature: [feature, "shell"] } } },
-            },
-          })),
-          { allow: { to: { module: { origin: ["external", "core"] } } } },
-          { disallow: { to: { module: { source: "@tablecast/api" } } } },
-          { allow: { to: { module: { source: "@tablecast/api", internalPath: "schema" } } } },
-          {
-            from: { file: { categories: ["feature", "test"] } },
-            allow: { to: { module: { source: "@tablecast/api", internalPath: "catalog-search" } } },
-          },
-          {
-            from: { file: { categories: "transport" } },
-            allow: { to: { module: { source: "@tablecast/api", internalPath: "client" } } },
-          },
-          {
-            from: { file: { categories: "ui" } },
-            disallow: { to: { module: { source: "@tablecast/api" } } },
-          },
-          {
-            disallow: {
-              to: { module: { source: ["drizzle-orm", "hono", "@hono/*", "bun", "bun:*"] } },
-            },
-          },
-          {
-            from: { file: { categories: ["ui", "model"] } },
-            disallow: {
-              to: {
-                module: {
-                  source: [
-                    "@tanstack/react-query",
-                    "@tanstack/react-start",
-                    "better-auth",
-                    "@better-auth/*",
-                  ],
-                },
-              },
-            },
-          },
-        ],
+        policies: boundaryPolicies,
       },
     ],
     ...RECOMMENDED_RULES,
@@ -177,6 +81,7 @@ export default defineConfig({
     "tailwindcss/no-unnecessary-whitespace": "error",
   },
   overrides: [
+    { files: ["src/**/test-support/**"], rules: { "react-doctor/only-export-components": "off" } },
     {
       files: ["e2e/**/*.ts"],
       rules: {
@@ -218,7 +123,7 @@ export default defineConfig({
     "boundaries/files": boundaryFiles.map(([category, pattern]) => ({
       category,
       pattern,
-      capture: ["feature"],
+      capture: ["feature", "module"],
     })),
     "import/resolver": { typescript: { project: `${import.meta.dirname}/tsconfig.json` } },
     react: { version: "19.3.1" },

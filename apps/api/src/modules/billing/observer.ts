@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
-import { voiceUsageSessions } from "../../db/business-schema";
+import { voiceUsageSessions } from "../../db/billing-schema";
 import { createApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { sessionCredential } from "./credentials";

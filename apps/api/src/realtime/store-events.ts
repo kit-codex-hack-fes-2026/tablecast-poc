@@ -17,7 +17,7 @@ export class StoreEvents extends DurableObject<TablecastEnv> {
       }
     }
   }
-  override webSocketMessage(socket: WebSocket, message: string | ArrayBuffer) {
+  override webSocketMessage(socket: WebSocket, message: ArrayBuffer | string) {
     if (message === "ping") socket.send("pong");
   }
   override webSocketClose(socket: WebSocket) {

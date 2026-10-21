@@ -2,31 +2,31 @@ import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
-import { member } from "../src/db/auth-schema";
 import {
   billingOutbox,
+  billingSync,
   organizationAi,
   organizationAiKeys,
   organizationCosts,
-  billingSync,
-  voiceUsageSessions,
   responseUsage,
-} from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
+  voiceUsageSessions,
+} from "../src/db/billing-schema";
+import { member } from "../src/db/identity-schema";
+import {
+  organizationCredential,
+  pendingOrganizationKey,
+  provisionOrganizationKey,
+  sessionCredential,
+} from "../src/modules/billing/credentials";
+import { billingPricingVersion } from "../src/modules/billing/pricing";
+import { syncOrganizationCosts } from "../src/modules/billing/sync";
 import {
   beginVoiceUsage,
   recordVoiceUsage,
   voiceBillingAccount,
 } from "../src/modules/billing/usage";
-import {
-  pendingOrganizationKey,
-  provisionOrganizationKey,
-  organizationCredential,
-  sessionCredential,
-} from "../src/modules/billing/credentials";
-import { syncOrganizationCosts } from "../src/modules/billing/sync";
 import { createStore } from "../src/modules/stores/service";
-import { billingPricingVersion } from "../src/modules/billing/pricing";
+import { createApiServices } from "../src/platform/context";
 import { setupFixture } from "./fixture";
 
 const configured = () => ({

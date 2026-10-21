@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { readSeedTemplate, writeSeedTemplate } from "./tablecast-seed-template";
+import { readSeedTemplate, writeSeedTemplate } from "./tablecast-seed-template.ts";
 
 const directories: string[] = [];
 

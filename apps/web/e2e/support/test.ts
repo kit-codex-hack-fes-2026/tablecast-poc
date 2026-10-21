@@ -1,15 +1,15 @@
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { test as base } from "@playwright/test";
-import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { access, constants, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
 import { z } from "zod";
-import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { startGateway } from "./gateway";
-import { createWorkerRuntime, credentials, runtime as template, type CaseRuntime } from "./runtime";
+import { type CaseRuntime, createWorkerRuntime, credentials, runtime as template } from "./runtime";
 
 // API client由来のWorker global型ではprocessがanyになる。fixtureの実行環境はNodeである。
 declare const process: NodeJS.Process;
@@ -17,7 +17,7 @@ const execute = promisify(execFile);
 const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
 const root = resolve(import.meta.dirname, "../../../..");
 
-function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
+function signalGroup(child: ChildProcess, signal: 0 | NodeJS.Signals) {
   if (!child.pid) return false;
   try {
     process.kill(-child.pid, signal);
@@ -32,10 +32,10 @@ function signalGroup(child: ChildProcess, signal: NodeJS.Signals | 0) {
 }
 
 type RuntimeHandles = CaseRuntime & {
-  setOnline: (online: boolean) => Promise<void>;
-  restartWeb: () => Promise<void>;
-  prepareForTest: () => Promise<void>;
   flushLog: (path: string) => Promise<void>;
+  prepareForTest: () => Promise<void>;
+  restartWeb: () => Promise<void>;
+  setOnline: (online: boolean) => Promise<void>;
 };
 
 export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: RuntimeHandles }>({

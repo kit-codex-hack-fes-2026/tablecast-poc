@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const billingPeriodSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const billingPeriodSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 export const billingQuerySchema = z.object({
   month: billingPeriodSchema.optional(),
   before: z.string().max(300).optional(),
@@ -13,7 +13,7 @@ export const billingRatesSchema = z.object({
   meterPriceId: z.string().startsWith("price_"),
   eventName: z.string().min(1),
 });
-export const providerUsageSchema = z.object({
+const providerUsageSchema = z.object({
   input_tokens: z.number().int().nonnegative(),
   output_tokens: z.number().int().nonnegative(),
   input_tokens_details: z.object({ cached_tokens: z.number().int().nonnegative() }).optional(),

@@ -1,27 +1,28 @@
-import { useCollectionSearch } from "../shell/collection-search";
-import { Users, MailPlus, Trash2, ShieldCheck, CalendarDays } from "lucide-react";
-import { PageHeader } from "../../components/page-header";
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { CalendarDays, MailPlus, ShieldCheck, Trash2, Users } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
+import { RoleBadge } from "../../components/role-badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
+import { useCollectionSearch } from "../shell/collection-search";
 import { membershipOptions } from "./membership-query";
-import { RoleBadge } from "../../components/role-badge";
-import { useStore } from "./store-shell";
-type Role = "owner" | "admin" | "member";
+import { useStore } from "./store-context";
+type Role = "admin" | "member" | "owner";
 const load = async (organizationId: string) =>
   authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
 type Member = Awaited<ReturnType<typeof load>>["members"][number];
-type Action = { kind: "role"; memberId: string; role: Role } | { kind: "remove"; memberId: string };
+type Action = { kind: "remove"; memberId: string } | { kind: "role"; memberId: string; role: Role };
 export function Members() {
   const collection = useCollectionSearch({ sortIds: ["user", "role", "createdAt"] });
   const store = useStore(),

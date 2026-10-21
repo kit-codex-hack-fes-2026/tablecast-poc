@@ -1,9 +1,9 @@
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { execFileSync } from "node:child_process";
 import { copyFile, cp, readdir, rm } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
-import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { modeOptions } from "./tablecast-deploy-config";
-import { readSeedTemplate } from "./tablecast-seed-template";
+import { dirname, resolve } from "node:path";
+import { modeOptions } from "./tablecast-deploy-config.ts";
+import { readSeedTemplate } from "./tablecast-seed-template.ts";
 
 const root = resolve(import.meta.dirname, "..");
 

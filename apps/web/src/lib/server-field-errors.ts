@@ -24,7 +24,7 @@ export function serverFieldErrors(
 
 export function activeServerFieldErrors(
   fields: Record<string, string[]>,
-  metadata: Record<string, { errorMap: { onServer?: unknown } } | undefined>,
+  metadata: Record<string, undefined | { errorMap: { onServer?: unknown } }>,
   sameError: boolean,
 ) {
   // 言語切替では、入力の修正によって消えたサーバーエラーを復活させない。

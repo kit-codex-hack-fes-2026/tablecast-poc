@@ -2,11 +2,11 @@ import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { ApiEnv } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "./model";
+import { ensure } from "../../platform/errors";
 import { findDeviceSession, findStoreMembership } from "./queries";
-import { hashDeviceToken } from "./service";
-export async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
+import { hashDeviceToken } from "./token";
+async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   const token = getCookie(c, "tablecast.device");
   ensure(token, "DEVICE_REQUIRED", 401);
   const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));

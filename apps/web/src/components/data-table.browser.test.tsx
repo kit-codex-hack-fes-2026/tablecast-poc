@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
-import { DataTable } from "./data-table";
+import { page } from "vitest/browser";
 import { LocaleProvider } from "../i18n/locale";
 import "../styles.css";
+import { DataTable } from "./data-table";
 
 const paginationRows = Array.from({ length: 45 }, (_, index) => ({
   id: String(index + 1),
@@ -18,9 +18,9 @@ function ControlledPagination({
   onClamp,
 }: {
   data: typeof paginationRows;
-  pending?: boolean;
   filter?: string;
   onClamp: (page: number) => void;
+  pending?: boolean;
 }) {
   const [pagination, setPagination] = useState({ pageIndex: 1, pageSize: 20 });
   return (

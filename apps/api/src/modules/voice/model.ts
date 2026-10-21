@@ -84,8 +84,6 @@ export const voiceTurnSchema = z
   })
   .strict();
 
-export { id } from "../../platform/model";
-
 export const toolSchema = z
   .object({
     voiceSessionId: id,

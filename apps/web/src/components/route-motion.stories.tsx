@@ -8,8 +8,8 @@ import {
   RouterProvider,
   useRouter,
 } from "@tanstack/react-router";
+import { MessageSquare, Package } from "lucide-react";
 import { useMemo } from "react";
-import { Package, MessageSquare } from "lucide-react";
 import { expect, userEvent } from "storybook/test";
 import { useI18n } from "../i18n/locale";
 import { routeMotionDirection, supportsPageTransition } from "../lib/route-motion";

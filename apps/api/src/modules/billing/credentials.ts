@@ -1,7 +1,7 @@
-import OpenAI from "openai";
 import { and, eq, inArray, lt, or, sql } from "drizzle-orm";
-import { organizationAi, organizationAiKeys } from "../../db/business-schema";
+import OpenAI from "openai";
 import type { ApiServices } from "../../platform/context";
+import { organizationAi, organizationAiKeys } from "../../db/billing-schema";
 import { ensure } from "../../platform/errors";
 
 export const organizationAiEnabled = (env: TablecastEnv) =>
@@ -125,7 +125,7 @@ export async function provisionOrganizationKey(services: ApiServices, organizati
             serviceAccountId: sql<string>`${created.id}`.as("service_account_id"),
             encryptedKey: sql<string>`${encryptedKey}`.as("encrypted_key"),
             createdAt: sql<number>`${Date.now()}`.as("created_at"),
-            revokedAt: sql<number | null>`NULL`.as("revoked_at"),
+            revokedAt: sql<null | number>`NULL`.as("revoked_at"),
           })
           .from(organizationAi)
           .where(
@@ -190,7 +190,7 @@ export async function organizationCredential(services: ApiServices, organization
     ),
   };
 }
-export async function sessionCredential(services: ApiServices, credentialId: string | null) {
+export async function sessionCredential(services: ApiServices, credentialId: null | string) {
   if (!credentialId) {
     ensure(services.env.TABLECAST_MODEL_API_KEY, "VOICE_NOT_CONFIGURED", 503);
     return services.env.TABLECAST_MODEL_API_KEY;

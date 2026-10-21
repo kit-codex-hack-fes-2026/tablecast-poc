@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { Checkbox } from "./checkbox";
 import { expect, userEvent, within } from "storybook/test";
+import { Checkbox } from "./checkbox";
 const meta = {
   title: "デザインシステム/部品/Checkbox",
   component: Checkbox,

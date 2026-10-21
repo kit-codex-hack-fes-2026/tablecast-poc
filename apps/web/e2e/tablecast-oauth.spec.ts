@@ -1,9 +1,9 @@
-import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { credentials } from "./support/runtime";
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 // callbackを差し替えるHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });

@@ -21,14 +21,14 @@ export function GameFrame({
   onReady,
 }: {
   game: GamePackage;
-  locale: Locale;
-  players: number;
   initialState: GameState;
-  preview?: boolean;
-  parentOrigin: string;
-  onSave: (state: GameState) => Promise<void>;
+  locale: Locale;
   onExit: () => void;
   onReady?: () => void;
+  onSave: (state: GameState) => Promise<void>;
+  parentOrigin: string;
+  players: number;
+  preview?: boolean;
 }) {
   const { t } = useI18n();
   const frame = useRef<HTMLIFrameElement>(null);

@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { useState } from "react";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 
@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
  */
 export function CopyValue({ label, value }: { label: string; value: string }) {
   const { t } = useI18n();
-  const [status, setStatus] = useState<"idle" | "copied" | "error">("idle");
+  const [status, setStatus] = useState<"copied" | "error" | "idle">("idle");
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);

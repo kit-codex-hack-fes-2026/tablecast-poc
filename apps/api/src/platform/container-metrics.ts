@@ -4,11 +4,11 @@ type MetricsEnv = Partial<
   Pick<
     TablecastEnv,
     | "TABLECAST_CLOUDFLARE_ACCOUNT_ID"
-    | "TABLECAST_CONTAINER_METRICS_TOKEN"
     | "TABLECAST_CONTAINER_METRICS_APPLICATIONS"
-    | "TABLECAST_OTEL_ENDPOINT"
-    | "TABLECAST_OTEL_AUTHORIZATION"
+    | "TABLECAST_CONTAINER_METRICS_TOKEN"
     | "TABLECAST_ENV"
+    | "TABLECAST_OTEL_AUTHORIZATION"
+    | "TABLECAST_OTEL_ENDPOINT"
     | "TABLECAST_PR_NUMBER"
     | "TABLECAST_RELEASE_SHA"
   >
@@ -39,8 +39,8 @@ const sample = z.object({
 const attributes = (values: Record<string, string>) =>
   Object.entries(values).map(([key, stringValue]) => ({ key, value: { stringValue } }));
 
-type Point = { attributes: ReturnType<typeof attributes>; timeUnixNano: string; asDouble: number };
-type Metric = { name: string; unit: string; gauge: { dataPoints: Point[] } };
+type Point = { asDouble: number; attributes: ReturnType<typeof attributes>; timeUnixNano: string };
+type Metric = { gauge: { dataPoints: Point[] }; name: string; unit: string };
 const timestamp = (milliseconds: number) => (BigInt(milliseconds) * 1_000_000n).toString();
 const interval = 5 * 60_000;
 

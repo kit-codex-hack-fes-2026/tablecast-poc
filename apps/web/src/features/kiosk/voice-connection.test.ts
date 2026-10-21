@@ -1,100 +1,33 @@
-import { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { VoiceConnection, type VoiceView } from "./voice-connection";
+import { z } from "zod";
 import { apiFetch } from "../../lib/api-fetch";
+import {
+  deferred,
+  peer,
+  track,
+  VoiceAudio,
+  VoiceMediaStream,
+  VoicePeer,
+} from "./test-support/voice-transport-fixture";
+import { VoiceConnection, type VoiceView } from "./voice-connection";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 
-class VoiceChannel extends EventTarget {
-  readyState = "open";
-  send = vi.fn<(data: string) => void>((data: string) => {
-    const event: unknown = JSON.parse(data);
-    if (event && typeof event === "object" && "type" in event && event.type === "session.close")
-      this.receive({ type: "session.closed" });
-  });
-  close = vi.fn<() => void>(() => {
-    this.readyState = "closed";
-    this.dispatchEvent(new Event("close"));
-  });
-  receive(data: unknown) {
-    this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(data) }));
-  }
-}
-class VoicePeer extends EventTarget {
-  static instances: VoicePeer[] = [];
-  channel = new VoiceChannel();
-  iceGatheringState = "complete";
-  connectionState = "new";
-  localDescription?: { type: string; sdp: string };
-  addTrack = vi.fn<(track: unknown, stream: unknown) => void>();
-  createDataChannel = vi.fn<() => VoiceChannel>(() => this.channel);
-  createOffer = vi.fn<() => Promise<{ type: string; sdp: string }>>(async () => ({
-    type: "offer",
-    sdp: "tablecast-offer",
-  }));
-  setLocalDescription = vi.fn<(description: { type: string; sdp: string }) => Promise<void>>(
-    async (description: { type: string; sdp: string }) => {
-      this.localDescription = description;
-    },
-  );
-  setRemoteDescription = vi.fn<() => Promise<void>>(async () => {
-    this.connectionState = "connected";
-    this.channel.receive({ type: "session.started" });
-  });
-  close = vi.fn<() => void>(() => {
-    this.connectionState = "closed";
-    this.dispatchEvent(new Event("connectionstatechange"));
-  });
-  constructor() {
-    super();
-    VoicePeer.instances.push(this);
-  }
-}
-class VoiceAudio {
-  static instances: VoiceAudio[] = [];
-  autoplay = false;
-  srcObject: unknown = null;
-  play = vi.fn<() => Promise<void>>(async () => undefined);
-  pause = vi.fn<() => void>();
-  constructor() {
-    VoiceAudio.instances.push(this);
-  }
-}
-const track = {
-  kind: "audio",
-  label: "Built-in",
-  addEventListener: vi.fn<() => void>(),
-  stop: vi.fn<() => void>(),
-};
-class VoiceMediaStream {
-  getTracks = () => [track];
-  getAudioTracks = () => [track];
-}
-const ignoreResolution = () => undefined;
-function deferred<T>() {
-  let resolve: (value: T) => void = ignoreResolution;
-  const promise = new Promise<T>((complete) => {
-    resolve = complete;
-  });
-  return { promise, resolve };
-}
+let requests: { body: unknown; path: string; signal: AbortSignal | null | undefined }[];
 
-let requests: { path: string; body: unknown; signal: AbortSignal | null | undefined }[];
 let connections: VoiceConnection[];
+
 const capture = vi.fn<() => Promise<VoiceMediaStream>>();
+
 function connection() {
   const changes: VoiceView[] = [];
   const value = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
   connections.push(value);
   return { value, changes };
 }
-function peer() {
-  const value = VoicePeer.instances.at(-1);
-  if (!value) throw new Error("音声接続がまだ作成されていない");
-  return value;
-}
+
 function caption(
-  role: "user" | "assistant",
+  role: "assistant" | "user",
   text: string,
   start: number,
   end: number,
@@ -108,6 +41,7 @@ function caption(
     end_ms: end,
   });
 }
+
 function sentEvent(data: string) {
   return z
     .object({
@@ -116,6 +50,7 @@ function sentEvent(data: string) {
     })
     .parse(JSON.parse(data));
 }
+
 function delegate(id = "item_tablecast_delegation") {
   peer().channel.receive({
     type: "session.delegation.created",
@@ -157,6 +92,7 @@ beforeEach(() => {
     return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
   });
 });
+
 afterEach(async () => {
   for (const value of connections) await value.stop();
   vi.useRealTimers();
@@ -396,12 +332,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_tools" } });
     for (const [call_id, name] of [
       ["call_catalog", "getCatalog"],
@@ -452,12 +383,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_error" } });
     receive({
       type: "response.output_item.done",
@@ -488,12 +414,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_old" } });
     receive({
       type: "response.output_item.done",
@@ -520,3 +441,10 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     ).toBe(false);
   });
 });
+
+const receive = (event: unknown) =>
+  peer().channel.receive({
+    type: "response.event",
+    delegation_id: "item_tablecast_delegation",
+    event,
+  });

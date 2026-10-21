@@ -1,5 +1,5 @@
-import remarkGfm from "remark-gfm";
 import type { StorybookConfig } from "@storybook/tanstack-react";
+import remarkGfm from "remark-gfm";
 
 const config: StorybookConfig = {
   staticDirs: ["../public"],

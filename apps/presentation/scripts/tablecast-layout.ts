@@ -24,8 +24,8 @@ export function inspectLayout({ sceneId, time }: { sceneId: string; time: number
     return true;
   };
   const inside = (
-    box: { left: number; top: number; right: number; bottom: number },
-    bounds: { left: number; top: number; right: number; bottom: number },
+    box: { bottom: number; left: number; right: number; top: number },
+    bounds: { bottom: number; left: number; right: number; top: number },
   ) =>
     box.left >= bounds.left - 2 &&
     box.right <= bounds.right + 2 &&

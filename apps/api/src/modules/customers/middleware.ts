@@ -1,9 +1,9 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { ApiEnv } from "../../platform/context";
+import type { CustomerActor } from "./model";
 import { ensure } from "../../platform/errors";
 import { staffIdentity } from "../auth/middleware";
-import type { CustomerActor } from "./model";
 
 export type CustomerEnv = ApiEnv & { Variables: { customerUserId: string } };
 

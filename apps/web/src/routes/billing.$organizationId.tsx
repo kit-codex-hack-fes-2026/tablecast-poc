@@ -1,5 +1,5 @@
-import { billingSearchSchema } from "../features/billing/billing-model";
 import { createFileRoute } from "@tanstack/react-router";
+import { billingSearchSchema } from "../features/billing/billing-model";
 import { BillingPage } from "../features/billing/billing-page";
 import { billingOptions } from "../features/billing/billing-query";
 export const Route = createFileRoute("/billing/$organizationId")({

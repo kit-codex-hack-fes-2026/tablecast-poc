@@ -1,33 +1,24 @@
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { parseArgs, promisify } from "node:util";
-import { chromium } from "@playwright/test";
 import { z } from "zod";
-import { resolveSource, repositoryPath } from "./tablecast-source.ts";
 import {
   audioPath,
   needsVoice,
   projectPath,
-  projectSchema,
   readProject,
   root,
   selectScenes,
 } from "./tablecast-project.ts";
+import { repositoryPath, resolveSource } from "./tablecast-source.ts";
+import { sha } from "./tablecast-video/inputs.ts";
+import { renderVideo } from "./tablecast-video/render.ts";
+import { timingSchema } from "./tablecast-video/types.ts";
+export { validatedPeakDb } from "./tablecast-video/render.ts";
 
 const execute = promisify(execFile);
-const sha = async (file: string): Promise<string> => {
-  const content = (await stat(file)).isDirectory()
-    ? JSON.stringify(
-        await Promise.all(
-          (await readdir(file)).sort().map(async (name) => [name, await sha(resolve(file, name))]),
-        ),
-      )
-    : await readFile(file);
-  return createHash("sha256").update(content).digest("hex");
-};
 
 export function videoPaths(name: string, films: string[]) {
   if (!/^[a-z][a-z0-9-]*$/.test(name) || films.includes(name))
@@ -35,14 +26,6 @@ export function videoPaths(name: string, films: string[]) {
       "--name は完成動画のfilm名と異なる英小文字・数字・ハイフンの未使用名にしてください",
     );
   return { composition: `dist/${name}`, output: `output/${name}` };
-}
-
-export function validatedPeakDb(log: string) {
-  const peak = Number(log.match(/max_volume: ([-.0-9]+) dB/)?.[1]);
-  // volumedetectは16bitへ変換して測り、デジタル無音も-infではなく-91.0 dBと報告する。
-  if (!Number.isFinite(peak) || peak <= -91 || peak >= 0)
-    throw new Error("音声が無音またはピークを超えています");
-  return peak;
 }
 
 export async function createVideo(args: string[]) {
@@ -72,7 +55,7 @@ export async function createVideo(args: string[]) {
   await mkdir(resolve(root, "dist"), { recursive: true });
   // 使用済みの成果物を上書きしない。失敗したrunも検査できる形で残す。
   await mkdir(directory);
-  const steps: { name: string; status: string; log: string }[] = [];
+  const steps: { log: string; name: string; status: string }[] = [];
   const report: Record<string, unknown> = {
     status: "running",
     startedAt: new Date().toISOString(),
@@ -132,8 +115,7 @@ export async function createVideo(args: string[]) {
       resolve(root, "assets/fonts/LICENSE"),
       resolve(root, "../../bun.lock"),
     ]);
-    for (const file of await readdir(resolve(root, "scripts")))
-      if (file.endsWith(".ts")) inputs.add(resolve(root, "scripts", file));
+    inputs.add(resolve(root, "scripts"));
     for (const scene of project.scenes) {
       for (const file of [
         ...(scene.images ?? []),
@@ -213,169 +195,12 @@ export async function createVideo(args: string[]) {
     const cli = resolve(root, "node_modules/hyperframes/bin/hyperframes.mjs");
     await run("lint", "node", [cli, "lint", paths.composition]);
     await run("transitions", "node", [cli, "check", paths.composition, "--at-transitions"]);
-    const timing = z
-      .object({
-        duration: z.number().positive(),
-        scenes: projectSchema.shape.scenes.element
-          .extend({ start: z.number(), duration: z.number().positive() })
-          .array(),
-        cues: z.object({ audioDuration: z.number() }).array(),
-      })
-      .parse(JSON.parse(await readFile(resolve(composition, "timing.json"), "utf8")));
+    const timing = timingSchema.parse(
+      JSON.parse(await readFile(resolve(composition, "timing.json"), "utf8")),
+    );
     report.duration = timing.duration;
     if (values.render) {
-      const video = resolve(directory, "video.mp4");
-      await run("render", "node", [
-        cli,
-        "render",
-        paths.composition,
-        "--output",
-        video,
-        "--experimental-fast-capture=false",
-      ]);
-      const probe = await run("metadata", "ffprobe", [
-        "-v",
-        "error",
-        "-show_streams",
-        "-show_format",
-        "-of",
-        "json",
-        video,
-      ]);
-      const metadata = z
-        .object({
-          format: z.object({ duration: z.coerce.number() }),
-          streams: z.array(
-            z.object({
-              codec_type: z.string(),
-              codec_name: z.string(),
-              width: z.number().optional(),
-              height: z.number().optional(),
-              r_frame_rate: z.string().optional(),
-            }),
-          ),
-        })
-        .parse(JSON.parse(probe.stdout));
-      const visual = metadata.streams.find((s) => s.codec_type === "video");
-      const sound = metadata.streams.find((s) => s.codec_type === "audio");
-      const hasSound =
-        !!project.soundtrack ||
-        timing.cues.some((c) => c.audioDuration > 0) ||
-        project.scenes.some((s) => s.media?.audio);
-      if (
-        visual?.width !== project.width ||
-        visual.height !== project.height ||
-        visual.r_frame_rate !== `${project.fps}/1` ||
-        visual.codec_name !== "h264" ||
-        (hasSound && sound?.codec_name !== "aac") ||
-        Math.abs(metadata.format.duration - timing.duration) > 0.05
-      )
-        throw new Error("完成MP4の形式・音声・尺が台本と一致しません");
-      await run("decode", "ffmpeg", [
-        "-hide_banner",
-        "-v",
-        "error",
-        "-i",
-        video,
-        "-f",
-        "null",
-        "-",
-      ]);
-      if (hasSound) {
-        const volume = await run("volume", "ffmpeg", [
-          "-hide_banner",
-          "-i",
-          video,
-          "-af",
-          "volumedetect",
-          "-vn",
-          "-f",
-          "null",
-          "-",
-        ]);
-        report.peakDb = validatedPeakDb(volume.stderr);
-      }
-      const times = [
-        ...new Set(
-          timing.scenes
-            .flatMap((s) => [
-              s.start,
-              s.start + s.duration / 2,
-              s.start + s.duration - 0.1,
-              ...(s.technical?.focus.map(
-                (f) => s.start + (s.cues.find((c) => c.id === f.cue)?.at ?? 0) + f.offset + 0.5,
-              ) ?? []),
-            ])
-            .map((t) => Math.max(0, Math.min(timing.duration - 0.05, t))),
-        ),
-      ];
-      await mkdir(resolve(directory, "frames"));
-      for (const [index, time] of times.entries())
-        await run(`frame-${index}`, "ffmpeg", [
-          "-v",
-          "error",
-          "-ss",
-          String(time),
-          "-i",
-          video,
-          "-frames:v",
-          "1",
-          resolve(directory, "frames", `${index}.png`),
-        ]);
-      report.frames = times.map((time, index) => ({ time, path: `frames/${index}.png` }));
-      await writeFile(
-        resolve(directory, "player.html"),
-        '<!doctype html><html lang="ja"><meta charset="utf-8"><title>完成動画の確認</title><body style="margin:0;background:#000"><video controls playsinline src="video.mp4" style="width:100vw;height:100vh"></video></body></html>',
-      );
-      const browser = await chromium.launch({
-        channel: "chrome",
-        args: ["--allow-file-access-from-files", "--autoplay-policy=no-user-gesture-required"],
-      });
-      try {
-        const page = await browser.newPage();
-        await page.goto(pathToFileURL(resolve(directory, "player.html")).href);
-        await page.evaluate(async () => {
-          const v = document.querySelector("video");
-          if (!v) throw new Error("確認する動画がありません");
-          v.muted = false;
-          v.playbackRate = 1;
-          await v.play();
-        });
-        console.info("playback: 完成MP4を等速で全編再生中");
-        await page.waitForFunction(() => document.querySelector("video")?.ended, null, {
-          timeout: (timing.duration + 30) * 1000,
-        });
-        const playback = await page.evaluate(() => {
-          const v = document.querySelector("video");
-          if (!v) throw new Error("確認する動画がありません");
-          return {
-            ended: v.ended,
-            error: v.error?.code ?? null,
-            duration: v.duration,
-            muted: v.muted,
-            rate: v.playbackRate,
-            played: Array.from({ length: v.played.length }, (_, i) => [
-              v.played.start(i),
-              v.played.end(i),
-            ]),
-          };
-        });
-        if (
-          playback.error ||
-          !playback.ended ||
-          playback.muted ||
-          playback.rate !== 1 ||
-          playback.played.length !== 1 ||
-          (playback.played[0]?.[0] ?? 1) > 1 / project.fps ||
-          (playback.played[0]?.[1] ?? 0) < timing.duration - 0.05
-        )
-          throw new Error("完成MP4を全編再生できません");
-        report.playback = playback;
-      } finally {
-        await browser.close();
-      }
-      report.videoHash = await sha(video);
-      report.metadata = metadata;
+      await renderVideo({ project, timing, directory, paths, cli, run, report });
     }
     if (JSON.stringify(before) !== JSON.stringify(await hashes()))
       throw new Error("実行中に入力が変わりました。別名で再実行してください");

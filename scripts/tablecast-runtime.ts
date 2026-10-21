@@ -1,16 +1,16 @@
-import {
-  tablecastBillingVars,
-  tablecastBillingSecrets,
-  modeOptions,
-} from "./tablecast-deploy-config";
-import process from "node:process";
+import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, realpath, writeFile, symlink, readlink, unlink } from "node:fs/promises";
+import { mkdir, readlink, realpath, symlink, unlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
+import process from "node:process";
 import { parseEnv, promisify } from "node:util";
-import { execFile } from "node:child_process";
-import { apiSdkConfiguration } from "../apps/api/cloudflare.config";
+import { apiSdkConfiguration } from "../apps/api/cloudflare.config.ts";
+import {
+  modeOptions,
+  tablecastBillingSecrets,
+  tablecastBillingVars,
+} from "./tablecast-deploy-config.ts";
 
 const execute = promisify(execFile);
 export const tablecastRoot = await realpath(resolve(import.meta.dirname, ".."));

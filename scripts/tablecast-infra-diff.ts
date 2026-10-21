@@ -1,6 +1,6 @@
-import { z } from "zod";
 import type { RawConfig } from "@cloudflare/workers-utils";
-import type { DeploymentTarget } from "./tablecast-deploy-config";
+import { z } from "zod";
+import type { DeploymentTarget } from "./tablecast-deploy-config.ts";
 
 export const canonical = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(canonical).sort().join(",")}]`;
@@ -18,7 +18,7 @@ export function assertWorkerOwner(
   target: DeploymentTarget,
   api: boolean,
   databaseId?: string,
-  namespaces?: readonly { id: string; class: string }[],
+  namespaces?: readonly { class: string; id: string }[],
 ) {
   const bindings = bindingSchema.parse(actual.bindings);
   const text = (name: string) => bindings.find((binding) => binding.name === name)?.text;

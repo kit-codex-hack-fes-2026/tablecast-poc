@@ -1,4 +1,8 @@
-import { Suspense, type ReactNode } from "react";
+import {
+  customerConsentVersion,
+  customerMemoryInputSchema,
+  customerPreferencesSchema,
+} from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -6,27 +10,23 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { type ReactNode, Suspense } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import {
-  customerConsentVersion,
-  customerMemoryInputSchema,
-  customerPreferencesSchema,
-} from "@tablecast/api/schema";
+import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
-import { LocaleProvider } from "../../i18n/locale";
 import { MotionProvider } from "../../components/motion-provider";
-import { CustomerStore } from "./customer-store";
-import { CustomerMemories } from "./customer-memories";
-import { CustomerPoints } from "./customer-points";
+import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
 import { ConsumptionEditor } from "./customer-consumption";
 import { CustomerCoupons } from "./customer-coupons";
 import { CustomerJoin } from "./customer-join";
-import "../../styles.css";
+import { CustomerMemories } from "./customer-memories";
+import { CustomerPoints } from "./customer-points";
+import { CustomerStore } from "./customer-store";
 
 let client: QueryClient;
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -44,7 +44,7 @@ afterEach(async () => {
   }
 });
 
-async function show(view: ReactNode, locale: "ja" | "en" = "ja") {
+async function show(view: ReactNode, locale: "en" | "ja" = "ja") {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -70,7 +70,7 @@ const base = "/api/customer/stores/tablecast-store";
 it("日本語で初回同意後の設定を保存し、新しい画面でも撤回済み設定を表示する", async () => {
   const locale = "ja";
   const labels = ja;
-  let membership: object | null = null;
+  let membership: null | object = null;
   const writes: { path: string; value: unknown }[] = [];
   const response = () => ({ store: { id: "tablecast-store", name: "卓上喫茶" }, membership });
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -136,10 +136,10 @@ it("日本語で記憶を作成・編集し、新しい画面で再取得して�
   const locale = "ja";
   const labels = ja;
   let memories: {
-    id: string;
-    revision: number;
     content: string;
     createdAt: number;
+    id: string;
+    revision: number;
     sourceKind: string;
   }[] = [];
   const writes: unknown[] = [];

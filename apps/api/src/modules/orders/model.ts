@@ -33,60 +33,60 @@ export type CartLine = z.infer<typeof cartLineSchema>;
 export type CartUpdate = z.infer<typeof cartUpdateSchema>;
 
 export type PricedLine = CartLine & {
+  conditionIssues?: {
+    optionId: string;
+    relation: "excludes" | "requires";
+  }[];
+  missing: string[];
   name: Record<Locale, string>;
-  speechName: Record<Locale, string>;
   options: {
     id: string;
     name: Record<Locale, string>;
-    speechName: Record<Locale, string>;
-    quantity: number;
     priceDelta: number;
-  }[];
-  unitPrice: number;
-  total: number;
-  missing: string[];
-  conditionIssues?: {
-    optionId: string;
-    relation: "requires" | "excludes";
+    quantity: number;
+    speechName: Record<Locale, string>;
   }[];
   planCovered: boolean;
+  speechName: Record<Locale, string>;
+  total: number;
+  unitPrice: number;
 };
 
-export type Cart = { version: number; lines: PricedLine[]; total: number; complete: boolean };
+export type Cart = { complete: boolean; lines: PricedLine[]; total: number; version: number };
 
 export type Snapshot = {
-  id: string;
-  tableSessionId: string;
   cartVersion: number;
-  configVersion: number;
-  lines: PricedLine[];
-  total: number;
-  locale: Locale;
-  text: string;
-  expiresAt: number;
   channel: "gui" | "voice";
-  status: "pending" | "read" | "invalid" | "submitted";
-  createdTurnId: string | null;
-  plan: { id: string; name: Record<Locale, string> } | null;
+  configVersion: number;
+  createdTurnId: null | string;
+  expiresAt: number;
+  id: string;
+  lines: PricedLine[];
+  locale: Locale;
+  plan: null | { id: string; name: Record<Locale, string> };
+  status: "invalid" | "pending" | "read" | "submitted";
+  tableSessionId: string;
+  text: string;
+  total: number;
 };
 
 export type Order = {
-  id: string;
-  tableSessionId: string;
-  snapshotId: string;
-  idempotencyKey: string;
-  status: "submitted" | "accepted" | "served" | "cancelled" | "rejected";
-  snapshot: Snapshot;
-  total: number;
   createdAt: number;
+  id: string;
+  idempotencyKey: string;
+  snapshot: Snapshot;
+  snapshotId: string;
+  status: "accepted" | "cancelled" | "rejected" | "served" | "submitted";
+  tableSessionId: string;
+  total: number;
 };
 
 export type Bill = {
-  orderedTotal: number;
   adjustmentTotal: number;
-  paidTotal: number;
-  due: number;
   cartTotal: number;
+  due: number;
+  orderedTotal: number;
+  paidTotal: number;
   planTotal: number;
 };
 

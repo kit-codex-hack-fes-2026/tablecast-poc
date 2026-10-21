@@ -1,30 +1,30 @@
-import { LayoutGroup } from "motion/react";
-import * as m from "motion/react-m";
-import { useId } from "react";
-import { NavigationLink as Link } from "./navigation-link";
+import type { ReactNode } from "react";
 import {
+  Blocks,
+  BookOpen,
   Building2,
-  CreditCard,
-  History,
-  House,
   ChartNoAxesCombined,
+  CreditCard,
   Gamepad2,
   Gift,
-  TicketPercent,
+  History,
+  House,
+  KeyRound,
   LayoutDashboard,
   MonitorSmartphone,
   Plug,
   Store,
+  TicketPercent,
   Users,
   UtensilsCrossed,
-  Blocks,
-  BookOpen,
-  KeyRound,
 } from "lucide-react";
-import { useI18n } from "../../i18n/locale";
+import { LayoutGroup } from "motion/react";
+import * as m from "motion/react-m";
+import { useId } from "react";
 import type { AdminSidebarProps } from "./admin-sidebar";
-import { MenuNavigation } from "./menu-navigation";
+import { useI18n } from "../../i18n/locale";
 import { NavigationGroup, navigationItemClass } from "./navigation-group";
+import { NavigationLink as Link } from "./navigation-link";
 export function SidebarNavigation({
   tab,
   manager,
@@ -32,15 +32,15 @@ export function SidebarNavigation({
   selectedOrganization,
   collapsed,
   onNavigate,
-  draftId,
   userId,
+  menuNavigation,
 }: Pick<AdminSidebarProps, "tab"> & {
-  selectedStore?: string;
-  selectedOrganization?: string;
-  manager: boolean;
   collapsed: boolean;
+  manager: boolean;
+  menuNavigation?: ReactNode;
   onNavigate?: () => void;
-  draftId?: string;
+  selectedOrganization?: string;
+  selectedStore?: string;
   userId?: string;
 }) {
   const { t } = useI18n();
@@ -113,13 +113,7 @@ export function SidebarNavigation({
               )}
             </NavigationGroup>
             <NavigationGroup {...common} id="menu" label={t("admin_config")} icon={UtensilsCrossed}>
-              <MenuNavigation
-                manager={manager}
-                storeId={selectedStore}
-                draftId={draftId}
-                collapsed={collapsed}
-                onNavigate={onNavigate}
-              />
+              {menuNavigation}
               <Link
                 collapsed={collapsed}
                 className={navigationItemClass}
@@ -217,8 +211,8 @@ function WorkspaceNavigation({
   onNavigate,
 }: Pick<AdminSidebarProps, "tab"> & {
   collapsed: boolean;
-  userId?: string;
   onNavigate?: () => void;
+  userId?: string;
 }) {
   const { t } = useI18n();
   const common = { collapsed, userId };

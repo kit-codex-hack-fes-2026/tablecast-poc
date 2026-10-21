@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { account, user } from "../src/db/auth-schema";
+import { account, user } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
 import { responseCookies } from "./fixture";
@@ -14,7 +14,7 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
   const email = "tablecast-linking@example.test";
   const password = "tablecast-linking-verification-password";
   const mails: { HTML: string; Text: string }[] = [];
-  const userinfoHeaders: (string | null)[] = [];
+  const userinfoHeaders: (null | string)[] = [];
   // メール配送とIdPの外側だけを固定し、token・state・Cookie・D1は実認証を通す。
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);

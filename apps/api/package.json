@@ -8,7 +8,9 @@
     "./client": "./src/client.ts",
     "./catalog-search": "./src/modules/catalog/search.ts",
     "./speech": "./src/modules/voice/prompt.ts",
-    "./telemetry": "./src/platform/telemetry.ts"
+    "./telemetry": "./src/platform/telemetry.ts",
+    "./db": "./src/db/public.ts",
+    "./bootstrap": "./src/bootstrap.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",
@@ -58,7 +60,6 @@
     "eslint-plugin-hono": "1.1.0",
     "typescript": "6.0.3",
     "vite": "8.3.4",
-    "vitest": "5.0.5",
-    "wrangler": "4.151.1"
+    "vitest": "5.0.5"
   }
 }

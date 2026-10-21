@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ArrowRight, Store as StoreIcon } from "lucide-react";
 import { useMemo } from "react";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import type { loadStores } from "../store/store-query";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { useCollectionSearch } from "../shell/collection-search";
 import { sessionOptions } from "../../lib/session-query";
-import type { loadStores } from "../store/store-query";
+import { useCollectionSearch } from "../shell/collection-search";
+import { SettingsShell } from "../store/settings-shell";
 import { storesOptions } from "../store/store-query";
-
-import { SettingsShell } from "../shell/settings-shell";
 type Store = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function DeviceApproval() {
   const searchStr = useLocation({ select: (location) => location.searchStr });

@@ -3,9 +3,9 @@ import { useMemo } from "react";
 import { KioskPending } from "../components/kiosk-pending";
 import { Kiosk } from "../features/kiosk/kiosk";
 import {
-  tableOptions,
-  tableCatalogOptions,
   demoTableEndpoint,
+  tableCatalogOptions,
+  tableOptions,
 } from "../features/kiosk/table-query";
 export const Route = createFileRoute("/admin/stores/$storeId_/demo_/$demoId")({
   staticData: { document: { title: "demo_title", description: "head_demo_description" } },

@@ -1,13 +1,13 @@
-import { env, exports } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import app from "../src/app";
-import { member } from "../src/db/auth-schema";
-import { stores, restaurantTables, tableSessions } from "../src/db/business-schema";
-import { getTimeline } from "../src/modules/tables/history";
+import { member } from "../src/db/identity-schema";
+import { restaurantTables, stores, tableSessions } from "../src/db/table-schema";
+import { getTimeline } from "../src/modules/tables/timeline";
 import { createApiServices } from "../src/platform/context";
-import { timelinePageSchema, type TimelinePage } from "../src/schema";
+import { type TimelinePage, timelinePageSchema } from "../src/schema";
 import { fixtureDb, insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 import { measuredDatabase } from "./measured-database";
@@ -16,7 +16,7 @@ const date = "2026-09-01";
 const startAt = Date.parse(`${date}T00:00:00+09:00`);
 const endAt = startAt + 86_400_000;
 const base = "/api/admin/stores/tablecast-store/timeline";
-const closed = (id: string, openedAt: number, closedAt: number | null) => ({
+const closed = (id: string, openedAt: number, closedAt: null | number) => ({
   id,
   store_id: device.storeId,
   table_id: "tablecast-table",

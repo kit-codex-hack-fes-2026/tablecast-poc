@@ -1,29 +1,29 @@
-import { describe, expect, test } from "vitest";
-import { resolveAndParseConfig, InputWorkerSchema } from "@cloudflare/config";
+import {
+  getWorkerBundleDir,
+  readBuildOutput,
+  writeContainerConfig,
+  writeRootConfig,
+  writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
+import { InputWorkerSchema, resolveAndParseConfig } from "@cloudflare/config";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, test } from "vitest";
+import { apiCloudflareConfig } from "../apps/api/cloudflare.config.ts";
+import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
 import {
-  readBuildOutput,
-  writeWorkerConfig,
-  writeContainerConfig,
-  writeRootConfig,
-  getWorkerBundleDir,
-} from "@cloudflare/build-output-utils";
-import { apiCloudflareConfig } from "../apps/api/cloudflare.config";
-import { webCloudflareConfig } from "../apps/web/cloudflare.config";
-import {
-  tablecastAccess,
   accessApplicationConfig,
-  deploymentTarget,
-  deploymentOptions,
-  modeOptions,
   bindDeploymentDatabase,
   deploymentBuildOutput,
+  deploymentOptions,
+  deploymentTarget,
+  modeOptions,
+  tablecastAccess,
   tablecastAccountId,
-} from "./tablecast-deploy-config";
-import { assertWorkerOwner } from "./tablecast-infra-diff";
-import { reconcileAccess } from "./tablecast-infra-access";
+} from "./tablecast-deploy-config.ts";
+import { reconcileAccess } from "./tablecast-infra-access.ts";
+import { assertWorkerOwner } from "./tablecast-infra-diff.ts";
 
 describe("cfの環境解決と実資源の採用", () => {
   test.each(["production", "staging", "preview"] as const)(

@@ -1,16 +1,16 @@
-import { openscreenPath } from "./tablecast-openscreen.ts";
 // 保存した店員・管理者の収録を、台本の注目先で再編集する。有料音声や再収録は不要。
 import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
-import { root, readProject, devices } from "./tablecast-project";
-import { screenProject, pointerEvent } from "./tablecast-capture-types";
-import { zoomRegions } from "./tablecast-zoom";
-import { verifyShotEdit } from "./tablecast-shot";
 import { z } from "zod";
-import { composeCursor } from "./tablecast-cursor";
-import { recordingEdits } from "./tablecast-edit-plan";
+import { pointerEvent, screenProject } from "./tablecast-capture-types.ts";
+import { composeCursor } from "./tablecast-cursor.ts";
+import { recordingEdits } from "./tablecast-edit-plan.ts";
+import { openscreenPath } from "./tablecast-openscreen.ts";
+import { devices, readProject, root } from "./tablecast-project.ts";
+import { verifyShotEdit } from "./tablecast-shot.ts";
+import { zoomRegions } from "./tablecast-zoom.ts";
 
 const run = promisify(execFile);
 const source = await readProject();

@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { parseResponse, rpc } from "../../lib/api";
 const endpoint = rpc.api.admin.organizations[":organizationId"].billing;
-export const loadBilling = (
+const loadBilling = (
   organizationId: string,
   month?: string,
   before?: string,
@@ -27,7 +27,7 @@ export const billingOptions = (organizationId: string, month?: string, search?: 
     staleTime: 0,
     refetchInterval: 30000,
   });
-export const loadInvoices = (organizationId: string, before?: string, signal?: AbortSignal) =>
+const loadInvoices = (organizationId: string, before?: string, signal?: AbortSignal) =>
   parseResponse(
     endpoint.invoices.$get({ param: { organizationId }, query: { before } }, { init: { signal } }),
   );

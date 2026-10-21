@@ -2,19 +2,19 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
+import { ensure } from "../../platform/errors";
 import { validate } from "../../platform/validation";
+import { getSession } from "../tables/session";
+import { recordConversationItems } from "./conversation";
 import {
   toolSchema,
   voiceConversationSchema,
   voiceDelegationSchema,
   voiceStartSchema,
 } from "./model";
-import { ensure } from "../../platform/errors";
-import { getSession } from "../tables/queries";
 import { invokeVoiceTool } from "./realtime";
-import { finishVoiceTurn } from "./turns";
-import { recordConversationItems } from "./conversation";
 import { startVoiceDelegation, startVoiceSession, stopVoiceSession } from "./session";
+import { finishVoiceTurn } from "./turns";
 
 // 卓端末とデモの認証済み経路からだけ組み込む。音声用の共有bearer資格は不要。
 export const voiceRoutes = new Hono<ApiEnv>()

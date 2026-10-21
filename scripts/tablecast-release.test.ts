@@ -1,15 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
+import { tablecastRepository } from "./tablecast-deploy-config.ts";
 import {
   changeSummary,
-  releaseChanges,
-  supplementMergedPulls,
-  renderRelease,
-  validReleaseSource,
-  validReleaseHead,
   type ReleaseChange,
-} from "./tablecast-release";
-import { tablecastRepository } from "./tablecast-deploy-config";
+  releaseChanges,
+  renderRelease,
+  supplementMergedPulls,
+  validReleaseHead,
+  validReleaseSource,
+} from "./tablecast-release.ts";
 const base = "a".repeat(40),
   head = "b".repeat(40),
   previousHead = "c".repeat(40);

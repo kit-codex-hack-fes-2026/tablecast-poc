@@ -1,16 +1,16 @@
-import {
-  resetCustomerContextStatements,
-  finishCustomerContextChange,
-} from "../customer-memory/service";
 import { isAPIError } from "better-auth/api";
-import { and, inArray, desc, eq } from "drizzle-orm";
-import { user } from "../../db/auth-schema";
-import * as business from "../../db/business-schema";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import * as business from "../../db/business-schema";
+import { user } from "../../db/identity-schema";
+import { ensure } from "../../platform/errors";
 import { requireManager } from "../auth/policy";
-import { hashDeviceToken } from "../auth/service";
+import { hashDeviceToken } from "../auth/token";
+import {
+  finishCustomerContextChange,
+  resetCustomerContextStatements,
+} from "../customer-memory/context";
 export async function redeemDevice(services: ApiServices, deviceCode: string) {
   const { db } = services;
   let result;
@@ -53,7 +53,7 @@ export async function approveDevice(
   services: ApiServices,
   actor: Actor,
   headers: Headers,
-  input: { userCode: string; tableId: string },
+  input: { tableId: string; userCode: string },
 ) {
   requireManager(actor);
   ensure(actor.userId, "LOGIN_REQUIRED", 401);
@@ -111,7 +111,7 @@ export async function revokeDevice(services: ApiServices, actor: Actor, id: stri
       token,
     ),
   ]);
-  await finishCustomerContextChange(services, actor.storeId, result[1]);
+  await finishCustomerContextChange(services, actor.storeId, result[1], result[6]);
   return { revoked: true };
 }
 

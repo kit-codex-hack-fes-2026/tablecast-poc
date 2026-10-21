@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from "vitest";
 import { access, readFile } from "node:fs/promises";
+import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { canReloadPwaClient, preparePwaClients } from "./pwa-update";
 

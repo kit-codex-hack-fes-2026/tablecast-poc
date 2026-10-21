@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, waitFor } from "storybook/test";
-import { MotionProvider } from "./motion-provider";
 import { ActionFeedback } from "./action-feedback";
+import { MotionProvider } from "./motion-provider";
 const meta = {
   title: "共通表示/MotionProvider",
   component: MotionProvider,

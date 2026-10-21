@@ -1,7 +1,7 @@
 export const previewCommentMarker = "<!-- tablecast-catalog-preview -->";
 const catalogKinds = ["storybook", "email"] as const;
 type CatalogKind = (typeof catalogKinds)[number];
-type CatalogSelection = CatalogKind | "all";
+type CatalogSelection = "all" | CatalogKind;
 
 function requestLine(kind: CatalogKind, checked: boolean) {
   return `- [${checked ? "x" : " "}] 🚀 **実行** <!-- tablecast-catalog-request:${kind} -->`;
@@ -33,10 +33,10 @@ export function resetCatalogRequest(body: string, catalog: CatalogSelection) {
 
 export function parseCatalogRequest(input: {
   action: string;
-  body: string;
-  before?: string;
   authorLogin: string;
-}): { catalog: CatalogSelection; sha?: string } | null {
+  before?: string;
+  body: string;
+}): null | { catalog: CatalogSelection; sha?: string } {
   if (
     input.action !== "edited" ||
     input.authorLogin !== "github-actions[bot]" ||
@@ -55,18 +55,18 @@ export function parseCatalogRequest(input: {
 }
 
 export function renderPreviewComment(input: {
-  pr: number;
-  sha: string;
-  product: { url: string; result: string; served: string; deployedAt?: string };
   catalogs: {
-    kind: CatalogKind;
-    url: string;
-    served: string;
-    result?: string;
     deployedAt?: string;
+    kind: CatalogKind;
+    result?: string;
+    served: string;
+    url: string;
   }[];
-  runUrl: string;
+  pr: number;
+  product: { deployedAt?: string; result: string; served: string; url: string };
   requested?: CatalogKind[];
+  runUrl: string;
+  sha: string;
 }) {
   if (!Number.isSafeInteger(input.pr) || input.pr < 1 || !/^[a-f0-9]{40}$/.test(input.sha))
     throw new Error("プレビュー通知のPR・SHAが不正です。");

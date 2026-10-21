@@ -1,19 +1,26 @@
-import { createApi, createContext, main as serwist } from "@serwist/vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { resolveAndParseConfig } from "@cloudflare/config";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import { createApi, createContext, main as serwist } from "@serwist/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
-import process from "node:process";
 import { resolve } from "node:path";
+import process from "node:process";
 import { defineConfig } from "vite";
 import { z } from "zod";
-import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
 import { modeOptions } from "../../scripts/tablecast-deploy-config.ts";
+import { apiCloudflareConfig } from "../api/cloudflare.config.ts";
 
 export default defineConfig(async ({ command, mode, isPreview }) => {
-  const tablecastEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+  const tablecastEnv = z
+    .object({
+      env: z.preprocess(
+        (value) => (typeof value === "object" && value !== null ? { ...value } : value),
+        z.record(z.string(), z.string().optional()),
+      ),
+    })
+    .parse(process).env;
   const api =
     command === "serve" && !isPreview
       ? await resolveAndParseConfig(apiCloudflareConfig(modeOptions("api", mode)), {

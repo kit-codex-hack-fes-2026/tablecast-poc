@@ -1,8 +1,8 @@
+import type { z } from "zod";
 import { execFile } from "node:child_process";
 import { copyFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
-import type { z } from "zod";
 import type { pointerEvent } from "./tablecast-capture-types.ts";
 import { openscreenPath } from "./tablecast-openscreen.ts";
 
@@ -45,8 +45,8 @@ export async function composeCursor(
   source: string,
   events: Event[],
   sourceStart: number,
-  viewport: { width: number; height: number },
-  frame: { x: number; y: number; width: number; height: number },
+  viewport: { height: number; width: number },
+  frame: { height: number; width: number; x: number; y: number },
 ) {
   const out = dirname(source);
   const run = promisify(execFile);

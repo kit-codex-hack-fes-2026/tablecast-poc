@@ -1,13 +1,13 @@
-import { calendarDate } from "../../i18n/format";
-import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { Brain, Pencil, Plus, Trash2 } from "lucide-react";
-import { ConfirmAction } from "../../components/confirm-action";
 import { customerMemoryInputSchema } from "@tablecast/api/schema";
+import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import { Brain, Pencil, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
+import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
 import { Button } from "../../components/ui/button";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { customerMemoriesOptions } from "./customer-memory-query";
@@ -127,9 +127,9 @@ function MemoryEditor({
   memory,
   onClose,
 }: {
-  storeId: string;
   memory: Memory | null;
   onClose: () => void;
+  storeId: string;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();

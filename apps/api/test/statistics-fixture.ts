@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
-import * as business from "../src/db/business-schema";
 import type { Actor } from "../src/modules/auth/model";
 import type { Order, Snapshot } from "../src/modules/orders/model";
+import * as business from "../src/db/business-schema";
 import { insertFixture } from "./database-fixture";
 
 export const statisticsPeriod = {
@@ -11,12 +11,12 @@ export const statisticsPeriod = {
 export async function addStatisticsSession(
   actor: Actor,
   input: {
-    id: string;
     closedAt: number;
-    plan?: boolean;
     demo?: boolean;
-    orders?: { productId: string; quantity: number; status?: Order["status"]; name?: string }[];
-    payments?: { kind: "payment" | "adjustment"; amount: number }[];
+    id: string;
+    orders?: { name?: string; productId: string; quantity: number; status?: Order["status"] }[];
+    payments?: { amount: number; kind: "adjustment" | "payment" }[];
+    plan?: boolean;
   },
 ) {
   const openedAt = Date.parse(statisticsPeriod.from) - 86400000;

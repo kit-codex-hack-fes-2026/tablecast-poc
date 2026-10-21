@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { validate, validateQuery } from "../../platform/validation";
+import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { couponPageSchema, exchangeCouponSchema, requestCouponSchema } from "./model";
 import { listCouponExchanges, listCustomerCoupons } from "./queries";
-import { exchangeCustomerCoupon, requestCustomerCoupon } from "./service";
+import { exchangeCustomerCoupon } from "./use-cases/issue";
+import { requestCustomerCoupon } from "./use-cases/selection";
 export const customerCouponRoutes = new Hono<CustomerEnv>()
   .get("/stores/:storeId/coupons", validateQuery(couponPageSchema), async (c) => {
     return c.json(

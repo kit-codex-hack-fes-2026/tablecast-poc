@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -9,14 +10,13 @@ import {
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { Pwa, PwaInstallHelp } from "./pwa";
-import type { ReactNode } from "react";
-import { catalog, table } from "../../.storybook/tablecast-fixtures";
-import { LocaleProvider } from "../i18n/locale";
-import { Kiosk } from "../features/kiosk/kiosk";
-import ja from "../../messages/ja.json";
 import { page } from "vitest/browser";
+import { catalog, table } from "../../.storybook/tablecast-fixtures";
+import ja from "../../messages/ja.json";
+import { Kiosk } from "../features/kiosk/kiosk";
+import { LocaleProvider } from "../i18n/locale";
 import "../styles.css";
+import { Pwa, PwaInstallHelp } from "./pwa";
 
 // Worker登録だけを省略し、ページの判定・Query・Router・MessageChannelは実物を使う
 vi.mock("@serwist/window", () => ({

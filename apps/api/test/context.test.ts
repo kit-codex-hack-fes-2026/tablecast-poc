@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { expect, it, vi } from "vitest";
 import { staffActor, staffIdentity } from "../src/modules/auth/middleware";
-import { requestServices, type ApiEnv, type ApiServices } from "../src/platform/context";
+import { type ApiEnv, type ApiServices, requestServices } from "../src/platform/context";
 import { handleError } from "../src/platform/http";
 import { setupFixture } from "./fixture";
 

@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ConfigurationHistory } from "../features/store/configuration-history";
+import { ConfigurationHistory } from "../features/configuration/configuration-history";
 import {
   configurationHistoryOptions,
   configurationHistorySearchSchema,
   configurationReleaseOptions,
-} from "../features/store/configuration-history-query";
+} from "../features/configuration/configuration-history-query";
 import { storesOptions } from "../features/store/store-query";
 
 export const Route = createFileRoute("/admin/stores/$storeId/menu/history")({

@@ -1,19 +1,17 @@
+import { createAuth } from "@tablecast/api/bootstrap";
+import { business, createDatabase, type Database, identity } from "@tablecast/api/db";
+import { eq, sql } from "drizzle-orm";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { eq, sql } from "drizzle-orm";
-import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 import { expect, it } from "vitest";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
-import * as identity from "../apps/api/src/db/auth-schema";
-import * as business from "../apps/api/src/db/business-schema";
-import { createAuth } from "../apps/api/src/modules/auth/service";
-import type { DemoCredentials } from "./tablecast-seed";
-import { seedPreviewDatabase, type SeedEnv } from "./tablecast-seed-data";
-import { createSeedTemplate } from "./tablecast-seed-template";
+import type { DemoCredentials } from "./tablecast-seed.ts";
+import { type SeedEnv, seedPreviewDatabase } from "./tablecast-seed-data.ts";
+import { createSeedTemplate } from "./tablecast-seed-template.ts";
 
 const execute = promisify(execFile);
 
@@ -69,7 +67,7 @@ async function seedDatabase(directory: string, pr: number) {
     remoteBindings: false,
   });
   try {
-    const db = drizzle(platform.env.TABLECAST_DB);
+    const db = createDatabase(platform.env.TABLECAST_DB);
     await db.run(
       sql`CREATE TABLE tablecast_deployment_owner(repository TEXT NOT NULL, environment TEXT NOT NULL, seeded INTEGER NOT NULL)`,
     );
@@ -85,7 +83,7 @@ async function seedDatabase(directory: string, pr: number) {
   }
 }
 
-async function stableSeed(db: DrizzleD1Database, baseTime: number) {
+async function stableSeed(db: Database, baseTime: number) {
   const [users, organisations, members, stores, releases, tables] = await db.batch([
     db.select().from(identity.user).orderBy(identity.user.id),
     db.select().from(identity.organization).orderBy(identity.organization.id),
@@ -120,7 +118,7 @@ async function stableSeed(db: DrizzleD1Database, baseTime: number) {
   };
 }
 
-async function currentTimes(db: DrizzleD1Database, baseTime: number) {
+async function currentTimes(db: Database, baseTime: number) {
   const [sessions, orders, confirmations] = await db.batch([
     db
       .select({

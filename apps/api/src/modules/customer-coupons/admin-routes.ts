@@ -10,14 +10,11 @@ import {
   revokeCouponSchema,
   rewardMembersSchema,
 } from "./model";
-import { getVisitCoupons, listCouponRules, listRewardMembers, listIssuedCoupons } from "./queries";
-import {
-  applyCustomerCoupon,
-  cancelCustomerCouponUse,
-  issueCustomerCoupon,
-  revokeCustomerCoupon,
-  saveCouponRule,
-} from "./service";
+import { getVisitCoupons, listCouponRules, listIssuedCoupons, listRewardMembers } from "./queries";
+import { applyCustomerCoupon } from "./use-cases/apply";
+import { cancelCustomerCouponUse } from "./use-cases/cancel";
+import { issueCustomerCoupon } from "./use-cases/issue";
+import { revokeCustomerCoupon, saveCouponRule } from "./use-cases/rules";
 export const couponsAdminRoutes = new Hono<ApiEnv>()
   .get("/coupons/issued", validateQuery(couponPageSchema), async (c) =>
     c.json(await listIssuedCoupons(c.get("services"), c.get("actor"), c.req.valid("query")), 200),

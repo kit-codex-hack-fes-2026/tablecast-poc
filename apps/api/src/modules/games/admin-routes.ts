@@ -11,7 +11,7 @@ import {
   publishGame,
   registerGame,
   validateGame,
-} from "./service";
+} from "./use-cases/publication";
 
 export const gamesAdminRoutes = new Hono<ApiEnv>()
   .get("/", validateQuery(z.object({ after: z.string().max(60).default("") })), async (c) =>

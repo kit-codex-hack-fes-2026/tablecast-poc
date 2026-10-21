@@ -5,7 +5,7 @@ import {
   type deploymentTarget,
   tablecastAccountId,
   tablecastRepository,
-} from "./tablecast-deploy-config";
+} from "./tablecast-deploy-config.ts";
 const execFileAsync = promisify(execFile);
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
 

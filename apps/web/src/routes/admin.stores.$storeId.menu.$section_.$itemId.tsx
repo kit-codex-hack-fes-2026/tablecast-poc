@@ -1,11 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { MenuItem } from "../features/store/menu-item";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { MenuItem } from "../features/catalog/menu-item";
 import {
   menuDocument,
   menuListSearchSchema,
   menuSectionSchema,
-} from "../features/store/menu-model";
-import { catalogOptions } from "../features/store/menu-query";
+} from "../features/configuration/menu-model";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/$section_/$itemId")({
   staticData: { document: { title: "admin_config", description: "head_catalog_description" } },
   validateSearch: menuListSearchSchema,

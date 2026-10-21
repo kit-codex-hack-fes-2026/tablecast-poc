@@ -2,7 +2,7 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
-import { configDrafts, configReleases } from "../src/db/business-schema";
+import { configDrafts, configReleases } from "../src/db/table-schema";
 import { fixtureDb } from "./database-fixture";
 import { configuration, resetFixtureStorage, setupFixture } from "./fixture";
 

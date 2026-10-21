@@ -2,18 +2,21 @@ import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import * as business from "../src/db/business-schema";
-import { member } from "../src/db/auth-schema";
-import { createApiServices } from "../src/platform/context";
+import { member } from "../src/db/identity-schema";
 import { getCatalog } from "../src/modules/catalog/queries";
-import { publishDraft, updateDraft, validateDraft } from "../src/modules/configuration/service";
+import { updateDraft, validateDraft } from "../src/modules/configuration/use-cases/drafts";
+import { publishDraft } from "../src/modules/configuration/use-cases/publish";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { createApiServices } from "../src/platform/context";
 import {
   configDraftSchema,
   configurationHistoryPageSchema,
   configurationReleaseSchema,
 } from "../src/schema";
 import { fixtureDb, insertFixture } from "./database-fixture";
-import { prepareConfirmation, submitOrder, updateCart } from "../src/modules/orders/service";
-import { configuration, setupFixture, device } from "./fixture";
+import { configuration, device, setupFixture } from "./fixture";
 
 const base = "http://localhost:3000/api/admin/stores/tablecast-store/configuration";
 

@@ -1,5 +1,5 @@
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createEmulator } from "emulate";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { tablecastDemoIdentities, tablecastDemoLinkIdentity } from "./tablecast-demo-identities";
 
 const preview = ["preview", "staging"].includes(process.env.TABLECAST_ENV ?? "");

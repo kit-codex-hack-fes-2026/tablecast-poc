@@ -16,8 +16,8 @@ export function ActionFeedback({
   success,
   successMessage,
 }: {
-  pending: boolean;
   error: unknown;
+  pending: boolean;
   success: boolean;
   successMessage: string;
 }) {

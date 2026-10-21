@@ -1,9 +1,10 @@
 import { z } from "zod";
 import type { ApiServices } from "../../platform/context";
-import { DomainError, ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
-import { requireManager } from "../auth/policy";
 import type { Configuration } from "../configuration/model";
+import { DomainError, ensure } from "../../platform/errors";
+import { byteStream } from "../../platform/streams";
+import { requireManager } from "../auth/policy";
 import { imageMetadataSchema, maxImageBytes, uploadImageSchema } from "./model";
 
 export async function uploadImage(
@@ -78,8 +79,8 @@ async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>
         await response.body?.cancel();
         throw new DomainError("IMAGE_DOWNLOAD_FAILED", 422, "IMAGE_DOWNLOAD_FAILED");
       }
-      const reader = response.body.getReader();
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
+      const reader = byteStream(response.body).getReader();
+      const chunks: Uint8Array[] = [];
       let size = 0;
       try {
         while (true) {
@@ -93,7 +94,12 @@ async function downloadImage(file: NonNullable<z.infer<typeof uploadImageSchema>
         await reader.cancel();
         reader.releaseLock();
       }
-      const bytes = new Uint8Array(await new Blob(chunks).arrayBuffer());
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
       const headerType = response.headers.get("Content-Type")?.split(";")[0]?.trim();
       const mimeType =
         file.mime_type ??
@@ -126,7 +132,7 @@ export async function saveMenuImage(
   await validatedImageBytes(image, maxImageBytes);
   let bytes: ArrayBuffer;
   try {
-    const info = await services.env.TABLECAST_IMAGES.info(image.stream());
+    const info = await services.env.TABLECAST_IMAGES.info(byteStream(image.stream()));
     ensure(
       "width" in info &&
         "height" in info &&
@@ -137,7 +143,7 @@ export async function saveMenuImage(
       "INVALID_IMAGE",
       422,
     );
-    const output = await services.env.TABLECAST_IMAGES.input(image.stream())
+    const output = await services.env.TABLECAST_IMAGES.input(byteStream(image.stream()))
       .transform({ width: 1600, height: 1600, fit: "scale-down" })
       .output({ format: "image/webp", quality: 85, anim: false });
     bytes = await output.response().arrayBuffer();
@@ -201,9 +207,9 @@ export async function requireImageAssets(
   services: ApiServices,
   actor: Actor,
   images: {
-    imageKey?: string | null;
+    imageKey?: null | string;
     imageKind: z.infer<typeof imageMetadataSchema>["imageKind"];
-    imageSource?: z.infer<typeof imageMetadataSchema>["imageSource"] | null;
+    imageSource?: null | z.infer<typeof imageMetadataSchema>["imageSource"];
     verifySource: boolean;
   }[],
 ) {

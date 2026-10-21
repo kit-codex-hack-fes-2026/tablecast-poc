@@ -21,10 +21,10 @@ export function evaluateCondition(
   }
 }
 
-export function conditionReferences(
+function conditionReferences(
   condition: OptionCondition,
-  path: (string | number)[] = [],
-): { optionId: string; path: (string | number)[] }[] {
+  path: (number | string)[] = [],
+): { optionId: string; path: (number | string)[] }[] {
   if (condition.kind === "option")
     return [{ optionId: condition.optionId, path: [...path, "optionId"] }];
   if (condition.kind === "not") return conditionReferences(condition.child, [...path, "child"]);
@@ -35,7 +35,7 @@ export function conditionReferences(
 
 export function productConditionErrors(
   product: Product,
-  path: (string | number)[] = [],
+  path: (number | string)[] = [],
 ): ConfigurationIssue[] {
   const ids = new Set(
     product.modifiers.flatMap((group) => group.options.map((option) => option.id)),

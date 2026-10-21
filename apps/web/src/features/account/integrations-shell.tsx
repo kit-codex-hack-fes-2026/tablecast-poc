@@ -1,9 +1,9 @@
-import { Link } from "@tanstack/react-router";
-import { BookOpen, Blocks, KeyRound } from "lucide-react";
 import type { ReactNode } from "react";
-import { useI18n } from "../../i18n/locale";
-import { SettingsShell } from "../shell/settings-shell";
+import { Link } from "@tanstack/react-router";
+import { Blocks, BookOpen, KeyRound } from "lucide-react";
 import { PageHeader } from "../../components/page-header";
+import { useI18n } from "../../i18n/locale";
+import { SettingsShell } from "../store/settings-shell";
 
 export function IntegrationsShell({
   children,

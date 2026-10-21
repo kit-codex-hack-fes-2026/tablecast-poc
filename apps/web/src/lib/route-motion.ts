@@ -12,7 +12,7 @@ export function routeMotionDirection({
   fromLocation,
   toLocation,
   pathChanged,
-}: Pick<RouterEvent, "fromLocation" | "toLocation" | "pathChanged">): false | 1 | -1 {
+}: Pick<RouterEvent, "fromLocation" | "pathChanged" | "toLocation">): -1 | 1 | false {
   if (
     !fromLocation ||
     !pathChanged ||

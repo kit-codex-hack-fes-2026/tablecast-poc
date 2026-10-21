@@ -1,11 +1,11 @@
-import { z } from "zod";
 import { expect, type Page } from "@playwright/test";
+import { catalogSchema } from "@tablecast/api/schema";
 import { appendFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { test } from "./support/test";
-import { catalogSchema } from "@tablecast/api/schema";
+import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test("PWAの入口を分け、画像を再利用し、オフラインでは復帰案内を表示する", async ({
   page,
@@ -123,6 +123,8 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
     await worker.evaluate((target) => {
       const descriptor = Object.getOwnPropertyDescriptor(Cache.prototype, "put");
       if (!descriptor) throw new Error("Cache.putが必要です");
+      const originalPut: unknown = descriptor.value;
+      if (typeof originalPut !== "function") throw new Error("Cache.putが必要です");
       Object.defineProperty(Cache.prototype, "put", {
         ...descriptor,
         value: async function tablecastQuotaFailure(
@@ -134,7 +136,10 @@ test("PWAの入口を分け、画像を再利用し、オフラインでは復�
             request instanceof Request
               ? request.url
               : new URL(String(request), self.location.origin).href;
-          if (url !== target) return Reflect.apply(descriptor.value, this, [request, response]);
+          if (url !== target) {
+            await Reflect.apply(originalPut, this, [request, response]);
+            return;
+          }
           Object.defineProperty(Cache.prototype, "put", descriptor);
           throw new DOMException("試験用の容量不足", "QuotaExceededError");
         },
@@ -268,7 +273,14 @@ test("二つのログイン画面は未保存入力がある間はPWA更新を�
       const decision = await page.evaluateHandle(() => {
         const state = { cancellations: 0 };
         navigator.serviceWorker.addEventListener("message", (event) => {
-          if (event.data?.type === "TABLECAST_CANCEL_UPDATE") state.cancellations++;
+          const data: unknown = event.data;
+          if (
+            data &&
+            typeof data === "object" &&
+            "type" in data &&
+            data.type === "TABLECAST_CANCEL_UPDATE"
+          )
+            state.cancellations++;
         });
         return state;
       });

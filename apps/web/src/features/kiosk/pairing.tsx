@@ -1,25 +1,24 @@
-import * as Disclosure from "../../components/ui/disclosure";
-import { EvaluationGuide } from "./evaluation-guide";
-import { Brand } from "../../components/brand";
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { MonitorSmartphone } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect } from "react";
+import { Brand } from "../../components/brand";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { buttonVariants } from "../../components/ui/button-variants";
+import * as Disclosure from "../../components/ui/disclosure";
 import { useI18n } from "../../i18n/locale";
-
 import { parseResponse, rpc } from "../../lib/api";
+import { EvaluationGuide } from "./evaluation-guide";
 
 export function Pairing({
   onReady,
   evaluation = false,
 }: {
-  onReady: () => void;
   evaluation?: boolean;
+  onReady: () => void;
 }) {
   const { t, setLocale } = useI18n();
   const request = useMutation({

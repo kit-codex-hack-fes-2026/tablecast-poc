@@ -1,9 +1,8 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { ChevronRight } from "lucide-react";
 import { cn } from "tailwind-variants";
-import { controlMotion, disclosureMotion } from "./motion-variants";
-
 import { revealDisclosureTarget } from "./disclosure-target";
+import { controlMotion, disclosureMotion } from "./motion-variants";
 
 export function Root({ onInvalidCapture, ...props }: Collapsible.Root.Props) {
   return (

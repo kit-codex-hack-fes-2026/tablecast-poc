@@ -1,14 +1,14 @@
 import { expect, test } from "vitest";
+import sample from "../sample.json";
+import { projectSchema } from "./tablecast-project.ts";
 import {
-  shotSchema,
+  bindShotZoom,
   shotHash,
+  shotSchema,
   subjectMatches,
   verifyShot,
-  bindShotZoom,
   verifyShotEdit,
-} from "./tablecast-shot";
-import { projectSchema } from "./tablecast-project";
-import sample from "../sample.json";
+} from "./tablecast-shot.ts";
 const shot = shotSchema.parse({
   intent: "注文した商品の数量と金額",
   subject: { selector: "[data-ui=cart-lines] > li", required: ["数量 1", "780"] },

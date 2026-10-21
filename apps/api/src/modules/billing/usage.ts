@@ -1,12 +1,13 @@
 import { and, desc, eq, gt, lte, sql } from "drizzle-orm";
-import { billingOutbox, responseUsage, voiceUsageSessions, stores } from "../../db/business-schema";
-import { subscription } from "../../db/auth-schema";
-import { billingEnabled, frozenBillingRates } from "./stripe";
-import { organizationAiEnabled, organizationCredential, sessionCredential } from "./credentials";
 import type { ApiServices } from "../../platform/context";
+import { billingOutbox, responseUsage, voiceUsageSessions } from "../../db/billing-schema";
+import { subscription } from "../../db/identity-schema";
+import { stores } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
+import { organizationAiEnabled, organizationCredential, sessionCredential } from "./credentials";
 import { billingEventSchema, billingRatesSchema } from "./model";
 import { billingPricingVersion, billingPricingVersions, usageCharge } from "./pricing";
+import { billingEnabled, frozenBillingRates } from "./stripe";
 
 export async function voiceBillingAccount(services: ApiServices, storeId: string) {
   if (!organizationAiEnabled(services.env)) {
@@ -117,8 +118,8 @@ export async function recordVoiceUsage(services: ApiServices, sessionId: string,
             organizationId: sql<string>`${row.organizationId}`.as("organization_id"),
             chargeMicros: sql<number>`${chargeMicros}`.as("charge_micros"),
             createdAt: sql<number>`${now}`.as("created_at"),
-            firstAttemptAt: sql<number | null>`NULL`.as("first_attempt_at"),
-            sentAt: sql<number | null>`NULL`.as("sent_at"),
+            firstAttemptAt: sql<null | number>`NULL`.as("first_attempt_at"),
+            sentAt: sql<null | number>`NULL`.as("sent_at"),
             state: sql<string>`${row.billable ? "pending" : "unbilled"}`.as("state"),
           })
           .from(voiceUsageSessions)

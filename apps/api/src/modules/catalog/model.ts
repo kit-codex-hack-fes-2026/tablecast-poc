@@ -26,9 +26,9 @@ const imageFields = {
 };
 
 export type OptionCondition =
-  | { kind: "option"; optionId: string }
-  | { kind: "and" | "or"; children: OptionCondition[] }
-  | { kind: "not"; child: OptionCondition };
+  | { child: OptionCondition; kind: "not" }
+  | { children: OptionCondition[]; kind: "and" | "or" }
+  | { kind: "option"; optionId: string };
 
 export const conditionLimits = {
   depth: 8,
@@ -61,7 +61,7 @@ function conditionAtDepth(depth: number): z.ZodType<OptionCondition> {
   ]);
 }
 
-export function conditionNodeCount(condition: OptionCondition | null): number {
+function conditionNodeCount(condition: null | OptionCondition): number {
   if (!condition) return 0;
   const pending = [condition];
   let count = 0;

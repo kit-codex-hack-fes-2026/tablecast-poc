@@ -1,8 +1,8 @@
 import type { Catalog, Product } from "@tablecast/api/schema";
 import { useState } from "react";
+import { tv } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
-import { tv } from "tailwind-variants";
 const bannerGrid = tv({
   base: "grid",
   variants: { columns: { 1: "grid-cols-1", 2: "grid-cols-1 @sm:grid-cols-2" } },

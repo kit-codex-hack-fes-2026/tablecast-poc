@@ -1,10 +1,10 @@
-import { UserIdentity } from "../../components/user-identity";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
+import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
-import { SettingsShell } from "../shell/settings-shell";
+import { SettingsShell } from "../store/settings-shell";
 
 export function Invitation({ id }: { id: string }) {
   const { t } = useI18n();

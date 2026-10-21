@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
 import * as schema from "./db/auth-schema";
 import * as business from "./db/business-schema";
-import { createAuth, type AuthEnv } from "./modules/auth/service";
+import { type AuthEnv, createAuth } from "./modules/auth/service";
 import { configurationErrors } from "./modules/catalog/pricing";
 import { configurationSchema } from "./modules/configuration/model";
 import { DomainError, ensure } from "./platform/errors";
@@ -66,11 +66,11 @@ export const bootstrapInputSchema = z
 export type BootstrapInput = z.infer<typeof bootstrapInputSchema>;
 export type BootstrapEnv = AuthEnv & Pick<TablecastEnv, "TABLECAST_ENV">;
 export type BootstrapResult = {
-  userId: string;
+  configVersion: 1;
   organizationId: string;
   storeId: string;
   tableIds: string[];
-  configVersion: 1;
+  userId: string;
 };
 
 // 管理CLI専用。既存資源の採用・更新や途中失敗からの自動再開は行わない。
@@ -84,9 +84,9 @@ export async function bootstrapDatabase(
   const input = parsed.data;
   const db = drizzle(env.TABLECAST_DB, { schema });
   const progress: {
-    stage: "preflight" | "administrator" | "organization" | "store";
-    userId: string | null;
-    organizationId: string | null;
+    organizationId: null | string;
+    stage: "administrator" | "organization" | "preflight" | "store";
+    userId: null | string;
   } = { stage: "preflight", userId: null, organizationId: null };
   try {
     const conflict = await db.get<Record<string, unknown> | undefined>(
@@ -143,3 +143,19 @@ export async function bootstrapDatabase(
     throw new DomainError("BOOTSTRAP_FAILED", 503, "BOOTSTRAP_FAILED", progress, { cause: error });
   }
 }
+
+export { isHostedEmulator } from "./modules/auth/preview";
+// 初期化・seed・reset用のCLI契約。HTTPの業務入口には公開しない。
+export {
+  createAuth,
+  tablecastCredentialIssuer,
+  tablecastGoogleMockIssuer,
+} from "./modules/auth/service";
+export {
+  configurationErrors,
+  confirmationText,
+  type PlanContext,
+  priceCart,
+} from "./modules/catalog/pricing";
+
+export { DomainError } from "./platform/errors";

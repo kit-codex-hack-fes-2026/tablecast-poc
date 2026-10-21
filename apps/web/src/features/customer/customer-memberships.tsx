@@ -1,9 +1,9 @@
-import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, QrCode, Store } from "lucide-react";
-import { Button } from "../../components/ui/button";
 import { ErrorNotice } from "../../components/error-notice";
+import { Button } from "../../components/ui/button";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { customerMembershipsOptions } from "./customer-query";
 

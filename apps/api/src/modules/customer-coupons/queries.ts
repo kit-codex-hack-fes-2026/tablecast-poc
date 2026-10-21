@@ -1,17 +1,13 @@
 import { and, asc, desc, eq, gt, isNull, like, lt, sql } from "drizzle-orm";
-import { user } from "../../db/auth-schema";
-import {
-  customerCouponRules,
-  customerCoupons,
-  customerCouponUses,
-  customerMemberships,
-} from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
+import { customerMemberships } from "../../db/customer-schema";
+import { user } from "../../db/identity-schema";
+import { customerCouponRules, customerCoupons, customerCouponUses } from "../../db/rewards-schema";
+import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
-import { getSession } from "../tables/queries";
+import { getSession } from "../tables/session";
 import { couponRuleSchema } from "./model";
 export async function listCouponRules(
   services: ApiServices,

@@ -2,9 +2,9 @@ import { expect } from "@playwright/test";
 import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { test } from "./support/test";
 import { credentials } from "./support/runtime";
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off" });
 

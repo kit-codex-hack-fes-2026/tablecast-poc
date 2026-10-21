@@ -1,34 +1,34 @@
-import { updateCart, prepareConfirmation, submitOrder } from "../src/modules/orders/service";
-import { getTableState } from "../src/modules/tables/queries";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, assert, expect, it, vi } from "vitest";
-import { user } from "../src/db/auth-schema";
+import { customerMemories, customerMemorySources } from "../src/db/customer-schema";
+import { user } from "../src/db/identity-schema";
+import { tableEvents, tableSessions } from "../src/db/table-schema";
 import {
-  customerMemories,
-  customerMemorySources,
-  tableSessions,
-  tableEvents,
-} from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
-import { enrolCustomer, updateCustomerPreferences } from "../src/modules/customers/service";
-import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
-import {
-  customerSuggestions,
-  listCustomerConsumption,
-  customerServiceTarget,
-  listCustomerMemories,
   customerRecommendationContext,
+  customerServiceTarget,
+  listCustomerConsumption,
+  listCustomerMemories,
 } from "../src/modules/customer-memory/queries";
+import { customerSuggestions } from "../src/modules/customer-memory/suggestions";
+import { recordCustomerConsumption } from "../src/modules/customer-memory/use-cases/consumption";
 import {
-  recordCustomerConsumption,
   deleteCustomerMemory,
+  writeCustomerMemory,
+} from "../src/modules/customer-memory/use-cases/memories";
+import {
   recordCustomerMemorySource,
   saveAutomaticCustomerMemory,
-  selectCustomerTarget,
-  writeCustomerMemory,
-} from "../src/modules/customer-memory/service";
+} from "../src/modules/customer-memory/use-cases/sources";
+import { selectCustomerTarget } from "../src/modules/customer-memory/use-cases/target";
+import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
+import { enrolCustomer, updateCustomerPreferences } from "../src/modules/customers/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { getTableState } from "../src/modules/tables/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
+import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { device, setupFixture } from "./fixture";
 afterEach(() => {

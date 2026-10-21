@@ -1,9 +1,7 @@
-import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Product } from "@tablecast/api/schema";
+import { RadioGroup } from "@base-ui/react/radio-group";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { tv } from "tailwind-variants";
-import { MenuOptionImage } from "../../components/menu-option-image";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
 import { ProductImage } from "../../components/product-image";
@@ -13,56 +11,9 @@ import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-
-const allergenLabels: Partial<Record<string, Parameters<ReturnType<typeof useI18n>["t"]>[0]>> = {
-  crustaceans: "kiosk_allergen_crustaceans",
-  molluscs: "kiosk_allergen_molluscs",
-  buckwheat: "kiosk_allergen_buckwheat",
-  peanuts: "kiosk_allergen_peanuts",
-  mustard: "kiosk_allergen_mustard",
-  fish: "kiosk_allergen_fish",
-  wheat: "kiosk_allergen_wheat",
-  soya: "kiosk_allergen_soya",
-  egg: "kiosk_allergen_egg",
-  sesame: "kiosk_allergen_sesame",
-  prawn: "kiosk_allergen_prawn",
-  barley: "kiosk_allergen_barley",
-  milk: "kiosk_allergen_milk",
-};
-
-const optionRow = tv({
-  base: "flex min-h-14 min-w-0 items-center gap-3 rounded-lg border border-transparent p-3 text-base",
-  variants: { selected: { true: "border-primary bg-surface-subtle" } },
-});
-
-function OptionContent({
-  option,
-  locale,
-  id,
-}: {
-  option: Product["modifiers"][number]["options"][number];
-  locale: "ja" | "en";
-  id: string;
-}) {
-  return (
-    <span className="flex min-w-0 flex-1 items-center gap-3">
-      <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
-      <span className="min-w-0">
-        <span id={`${id}-name`} className="block font-medium wrap-break-word">
-          {option.text[locale].displayName}
-        </span>
-        {option.text[locale].description && (
-          <span
-            id={`${id}-description`}
-            className="mt-1 block text-sm leading-relaxed text-muted-foreground wrap-break-word"
-          >
-            {option.text[locale].description}
-          </span>
-        )}
-      </span>
-    </span>
-  );
-}
+import { ProductAllergens } from "./product-allergens";
+import { OptionContent } from "./product-option-content";
+import { optionRow } from "./product-option-model";
 
 export function ProductPage({
   product,
@@ -72,12 +23,12 @@ export function ProductPage({
   onClose,
   onSave,
 }: {
-  product: Product;
-  initial?: CartLine;
   busy: boolean;
   error?: unknown;
+  initial?: CartLine;
   onClose: () => void;
   onSave: (line: CartLine) => void;
+  product: Product;
 }) {
   const { locale, t } = useI18n();
   const id = useId();
@@ -346,36 +297,5 @@ export function ProductPage({
         </Button>
       </div>
     </section>
-  );
-}
-
-function ProductAllergens({ product }: { product: Product }) {
-  const { locale, t } = useI18n();
-  return (
-    <div className="bg-surface-subtle rounded-md p-4 mt-1">
-      <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-      <p className="mb-2 text-sm font-semibold">
-        {product.allergens.contains
-          .map((item) => {
-            const key = allergenLabels[item];
-            return key ? t(key) : item;
-          })
-          .join(t("kiosk_allergen_separator")) ||
-          (product.allergens.evidence === "verified"
-            ? t("kiosk_allergens_none")
-            : t("kiosk_unknown"))}
-      </p>
-      <p className="block text-xs leading-loose text-muted-foreground">
-        {product.allergens.note[locale] || t("kiosk_unknown")}
-      </p>
-      {product.allergens.vegan === "yes" && (
-        <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
-      )}
-      {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-        <p className="block text-xs leading-loose text-muted-foreground">
-          {t("kiosk_cross_contact")}
-        </p>
-      )}
-    </div>
   );
 }

@@ -1,14 +1,14 @@
-import { randomUUID } from "node:crypto";
-import { z } from "zod";
 import {
   adminStateSchema,
   catalogSchema,
-  tableStateSchema,
-  snapshotSchema,
   orderSchema,
-} from "../apps/api/src/schema";
-import { demoCredentials, sampleLine } from "./tablecast-seed";
-import { assertPrepared } from "./tablecast-runtime";
+  snapshotSchema,
+  tableStateSchema,
+} from "@tablecast/api/schema";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { assertPrepared } from "./tablecast-runtime.ts";
+import { demoCredentials, sampleLine } from "./tablecast-seed.ts";
 
 // 焦点のT01とブラウザー試験用T12には触れず、背景のT02だけで注文する。
 async function main() {

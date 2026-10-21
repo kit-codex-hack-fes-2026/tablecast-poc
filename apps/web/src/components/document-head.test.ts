@@ -1,5 +1,3 @@
-import { createElement as h } from "react";
-import { renderToString } from "react-dom/server";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -8,6 +6,8 @@ import {
   HeadContent,
   RouterContextProvider,
 } from "@tanstack/react-router";
+import { createElement as h } from "react";
+import { renderToString } from "react-dom/server";
 import { expect, it } from "vitest";
 import { LocaleProvider } from "../i18n/locale";
 import { DocumentHead } from "./document-head";

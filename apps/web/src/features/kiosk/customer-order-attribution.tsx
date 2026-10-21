@@ -1,13 +1,13 @@
-import * as Disclosure from "../../components/ui/disclosure";
-import { ParticipantIdentity } from "../../components/user-identity";
+import type { Order } from "@tablecast/api/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ActionFeedback } from "../../components/action-feedback";
 import { useAppForm } from "../../components/form";
-import { NativeSelect } from "../../components/ui/native-select";
 import { Checkbox } from "../../components/ui/checkbox";
+import * as Disclosure from "../../components/ui/disclosure";
+import { NativeSelect } from "../../components/ui/native-select";
+import { ParticipantIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
-import type { Order } from "@tablecast/api/schema";
 export function CustomerOrderAttribution({
   endpoint,
   order,
@@ -25,8 +25,8 @@ export function CustomerOrderAttribution({
   });
   const save = useMutation({
     mutationFn: (input: {
-      participantId: string;
       lineId: string;
+      participantId: string;
       quantity: number;
       shared: boolean;
     }) =>

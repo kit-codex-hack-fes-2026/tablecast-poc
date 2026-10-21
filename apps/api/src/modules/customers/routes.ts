@@ -1,10 +1,10 @@
 import { Hono } from "hono";
+import { validate, validateQuery } from "../../platform/validation";
 import { customerCouponRoutes } from "../customer-coupons/routes";
 import { customerMemoryRoutes } from "../customer-memory/routes";
 import { customerPointsRoutes } from "../customer-points/routes";
 import { customerVisitRoutes } from "../customer-visits/routes";
-import { customerActor, requireCustomerIdentity, type CustomerEnv } from "./middleware";
-import { validate, validateQuery } from "../../platform/validation";
+import { customerActor, type CustomerEnv, requireCustomerIdentity } from "./middleware";
 import {
   customerMembershipPageSchema,
   customerPreferencesSchema,

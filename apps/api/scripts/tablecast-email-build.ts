@@ -1,14 +1,14 @@
+import { render } from "@react-email/render";
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createElement } from "react";
-import { render } from "@react-email/render";
-import { AccountEmail } from "../src/emails/account-email";
+import { catalogRelease } from "../../../scripts/tablecast-catalog-config";
 import {
   invitationEmail,
-  verificationEmail,
   resetPasswordEmail,
+  verificationEmail,
 } from "../src/emails/account-content";
-import { catalogRelease } from "../../../scripts/tablecast-catalog-config";
+import { AccountEmail } from "../src/emails/account-email";
 
 const directory = resolve(import.meta.dirname, "../email-static");
 const samples = [

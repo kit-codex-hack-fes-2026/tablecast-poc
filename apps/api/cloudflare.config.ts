@@ -1,5 +1,5 @@
-import { bindings, defineConfig, defineContainer, exports, triggers } from "cf/config";
 import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import { bindings, defineConfig, defineContainer, exports, triggers } from "cf/config";
 import { resolve } from "node:path";
 import {
   modeOptions,

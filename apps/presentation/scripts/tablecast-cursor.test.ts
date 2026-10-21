@@ -1,8 +1,8 @@
-import { test, expect, vi } from "vitest";
-import { cursorAt, copyCursorAssets } from "./tablecast-cursor";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expect, test, vi } from "vitest";
+import { copyCursorAssets, cursorAt } from "./tablecast-cursor.ts";
 const events = [
   { at: 100, x: 10, y: 20, cursorType: "arrow", interactionType: "move" as const },
   { at: 1100, x: 100, y: 200, cursorType: "arrow", interactionType: "move" as const },

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { validate, validateQuery } from "../../platform/validation";
+import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { customerOrderPageSchema, customerVisitCodeSchema, customerVisitPageSchema } from "./model";
 import { getCustomerVisit, listCustomerOrders, listCustomerVisits } from "./queries";
 import { joinCustomerVisit, leaveCustomerVisit, resolveCustomerVisit } from "./service";

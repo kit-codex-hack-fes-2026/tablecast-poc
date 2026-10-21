@@ -1,14 +1,14 @@
+import { type GamePackage, gameStateSchema } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, onTestFinished, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { gameStateSchema, type GamePackage } from "@tablecast/api/schema";
+import { page } from "vitest/browser";
 import { z } from "zod";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { tableEndpoint } from "../../lib/api";
-import { KioskGames } from "./games";
 import "../../styles.css";
+import { KioskGames } from "./games";
 
 let client: QueryClient;
 afterEach(async () => {

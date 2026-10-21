@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { storeDate } from "../features/store/floor-model";
-import { StoreStatistics } from "../features/store/store-statistics";
+import { storeDate } from "../features/floor/floor-model";
 import {
   statisticsOptions,
   statisticsRange,
   statisticsSearchSchema,
-} from "../features/store/statistics-query";
+} from "../features/statistics/statistics-query";
+import { StoreStatistics } from "../features/statistics/store-statistics";
 import { storesOptions } from "../features/store/store-query";
 import { getLocale } from "../paraglide/runtime.js";
 

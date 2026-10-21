@@ -1,7 +1,7 @@
-import { stripe } from "@better-auth/stripe";
-import { Stripe } from "stripe";
 import { dash } from "@better-auth/infra";
+import { stripe } from "@better-auth/stripe";
 import { betterAuth } from "better-auth";
+import { Stripe } from "stripe";
 import { authOptions } from "./src/modules/auth/options";
 
 // schema生成のCLIだけが読み込み、Workerの公開入口からは参照しない。

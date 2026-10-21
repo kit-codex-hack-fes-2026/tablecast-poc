@@ -1,15 +1,14 @@
-import { AuthLayout } from "./auth-layout";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useEffect } from "react";
-import { GoogleIcon } from "../../components/google-icon";
-import { Button } from "../../components/ui/button";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
+import { GoogleIcon } from "../../components/google-icon";
+import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-
 import { authClient, authResult } from "../../lib/auth-client";
+import { AuthLayout } from "./auth-layout";
 import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {

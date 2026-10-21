@@ -1,6 +1,6 @@
 import { and, eq, exists, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { organization, subscription } from "../../db/auth-schema";
+import type { ApiServices } from "../../platform/context";
 import {
   billingOutbox,
   billingSync,
@@ -8,16 +8,16 @@ import {
   organizationAiKeys,
   organizationCosts,
   voiceUsageSessions,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/billing-schema";
+import { organization, subscription } from "../../db/identity-schema";
 import {
   adminOpenAI,
   organizationAiProvisioningEnabled,
   provisionOrganizationKey,
 } from "./credentials";
-import { billingEnabled, stripeClient } from "./stripe";
 import { billingRatesSchema } from "./model";
 import { utcMonthRange } from "./pricing";
+import { billingEnabled, stripeClient } from "./stripe";
 
 const costsResponse = z.object({
   has_more: z.boolean(),
@@ -122,8 +122,8 @@ export async function syncOrganizationCosts(services: ApiServices, now = Date.no
             .select({
               id: sql<string>`${`costs:${value}`}`.as("id"),
               completedAt: sql<number>`${now}`.as("completed_at"),
-              failedAt: sql<number | null>`NULL`.as("failed_at"),
-              lease: sql<string | null>`NULL`.as("lease"),
+              failedAt: sql<null | number>`NULL`.as("failed_at"),
+              lease: sql<null | string>`NULL`.as("lease"),
               leaseUntil: sql<number>`0`.as("lease_until"),
             })
             .from(billingSync)
@@ -167,8 +167,8 @@ export async function sendBillingUsage(services: ApiServices, now = Date.now()) 
     .select({
       organizationId: subscription.referenceId,
       count: sql<number>`count(*)`.as("contract_count"),
-      start: sql<number | null>`min(${subscription.periodStart})`.as("contract_start"),
-      end: sql<number | null>`max(${subscription.periodEnd})`.as("contract_end"),
+      start: sql<null | number>`min(${subscription.periodStart})`.as("contract_start"),
+      end: sql<null | number>`max(${subscription.periodEnd})`.as("contract_end"),
     })
     .from(subscription)
     .where(inArray(subscription.status, ["active", "past_due"]))

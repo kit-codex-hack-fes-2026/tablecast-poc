@@ -1,4 +1,4 @@
-import { escapeHtml as h, type timeline } from "./tablecast-project";
+import { escapeHtml as h, type timeline } from "./tablecast-project.ts";
 
 export function technicalMarkup(
   scene: ReturnType<typeof timeline>["scenes"][number],

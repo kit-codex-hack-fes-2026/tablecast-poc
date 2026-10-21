@@ -1,10 +1,10 @@
-import { env } from "cloudflare:workers";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { expect, it } from "vitest";
 import { z } from "zod";
 import app from "../src/app";
-import { stores } from "../src/db/business-schema";
+import { stores } from "../src/db/table-schema";
 import { catalogSchema } from "../src/schema";
 import { fixtureDb } from "./database-fixture";
 import { configuration, setupFixture } from "./fixture";

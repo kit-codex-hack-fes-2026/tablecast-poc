@@ -1,11 +1,12 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { execFileSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import dialogue from "../docs/demo/dialogue.json";
 import voiceAssignments from "../docs/demo/voices.json";
+import { downloadSchema, probe, receiptSchema } from "./tablecast-demo-audio/media.ts";
 
 const { values } = parseArgs({
   args: process.argv.slice(2),
@@ -15,82 +16,41 @@ const { values } = parseArgs({
     only: { type: "string" },
   },
 });
+
 const root = resolve(import.meta.dir, "..");
+
 const output = resolve(root, "assets/demo/audio");
+
 const manifestPath = resolve(output, "manifest.json");
+
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+
 const speakers = new Map(Object.entries(dialogue.speakers));
+
 const voices = new Map(Object.entries(voiceAssignments.voices));
+
 if (values.generate || values.verify) {
   execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
   execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
 }
-const downloadSchema = z.object({
-  requestSha256: z.string(),
-  audioContent: z.string().min(1),
-  generatedAt: z.string(),
-  processedCharacters: z.number().nullable(),
-});
-const receiptSchema = z.object({
-  requestSha256: z.string(),
-  audioSha256: z.string(),
-  generatedAt: z.string(),
-  durationSeconds: z.number().positive(),
-  sampleRateHertz: z.number(),
-  channels: z.number(),
-  processedCharacters: z.number().nullable(),
-  voiceId: z.string().optional(),
-  language: z.string().optional(),
-  instruction: z.string().optional(),
-  overlap: z
-    .object({ sourceFiles: z.array(z.string()).length(2), offsetMs: z.number() })
-    .optional(),
-});
+
 const receipts = z
   .record(z.string(), receiptSchema)
   .parse(
-    (await Bun.file(manifestPath).exists()) ? (await Bun.file(manifestPath).json()).files : {},
+    (await Bun.file(manifestPath).exists())
+      ? z.object({ files: z.unknown() }).parse(await Bun.file(manifestPath).json()).files
+      : {},
   );
+
 const jobs = [
   ...dialogue.scenarios.flatMap((scenario) =>
     scenario.turns.map((turn) => ({ ...turn, file: `${scenario.id}/${turn.id}.mp3` })),
   ),
   ...dialogue.staffExamples.map((turn) => ({ ...turn, file: `reference/${turn.id}.mp3` })),
 ];
+
 if (values.only && !jobs.some((job) => job.id === values.only))
   throw new Error("--onlyにはdialogue.jsonに存在する発話IDを指定してください。");
-
-function probe(path: string) {
-  const result = z
-    .object({
-      format: z.object({ duration: z.coerce.number().positive() }),
-      streams: z.tuple([
-        z.object({ sample_rate: z.coerce.number().pipe(z.literal(48000)), channels: z.literal(1) }),
-      ]),
-    })
-    .parse(
-      JSON.parse(
-        execFileSync(
-          "ffprobe",
-          [
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration:stream=sample_rate,channels",
-            "-of",
-            "json",
-            path,
-          ],
-          { encoding: "utf8" },
-        ),
-      ),
-    );
-  return {
-    durationSeconds: result.format.duration,
-    sampleRateHertz: result.streams[0].sample_rate,
-    channels: result.streams[0].channels,
-  };
-}
 
 async function saveManifest() {
   await mkdir(output, { recursive: true });
@@ -113,7 +73,9 @@ async function saveManifest() {
 }
 
 let generated = 0;
+
 let reused = 0;
+
 for (const job of jobs.filter((item) => !values.only || item.id === values.only)) {
   const speaker = speakers.get(job.speaker);
   const voice = voices.get(job.speaker);
@@ -297,6 +259,7 @@ if (!values.only && (values.generate || values.verify)) {
     }
   }
 }
+
 console.log(
   JSON.stringify({
     generated,

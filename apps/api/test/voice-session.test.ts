@@ -1,19 +1,19 @@
-import { instructionText, type Locale, type Configuration } from "../src/schema";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
 import * as business from "../src/db/business-schema";
-import { updateCart } from "../src/modules/orders/service";
-import { changeLocale } from "../src/modules/tables/service";
-import { getTableState } from "../src/modules/tables/queries";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { getEvents } from "../src/modules/stores/queries";
+import { getTableState } from "../src/modules/tables/queries";
+import { changeLocale } from "../src/modules/tables/use-cases/presentation";
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { startVoiceSession } from "../src/modules/voice/session";
 import { finishVoiceTurn } from "../src/modules/voice/turns";
 import { createApiServices } from "../src/platform/context";
+import { type Configuration, instructionText, type Locale } from "../src/schema";
 import { configuration, device, deviceToken, setupFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
@@ -177,7 +177,7 @@ it.each([
   { locale: "en", rich: false, model: "gpt-6-luna" },
   { locale: "ja", rich: true, model: "tablecast-configured-model" },
   { locale: "en", rich: true, model: "tablecast-configured-model" },
-] satisfies { locale: Locale; rich: boolean; model: string }[])(
+] satisfies { locale: Locale; model: string; rich: boolean }[])(
   "認証した卓の$locale接客設定（文書=$rich）と委譲先$modelを渡し、SDPだけを返す",
   async ({ locale, rich, model }) => {
     await setupFixture();

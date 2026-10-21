@@ -1,28 +1,24 @@
-import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
+// 合成店舗の店員・管理者画面を実操作し、OpenScreenでカーソルとズームを出力する。
+import { chromium, type Locator } from "@playwright/test";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+import { promisify } from "node:util";
 import {
-  waitForTablecastState,
+  readTablecastGuestCapture,
   tablecastCaptureOrigin,
   tablecastCaptureStorageState,
   tablecastHostArguments,
-  readTablecastGuestCapture,
+  waitForTablecastState,
 } from "./tablecast-app-capture.ts";
-import { captureShot, bindShotZoom, type ShotEvidence } from "./tablecast-shot.ts";
-import { zoomRegions } from "./tablecast-zoom.ts";
-import { readProject, readCaptureProject, projectPath } from "./tablecast-project.ts";
+import { captureBrowserPointer, screenProject } from "./tablecast-capture-types.ts";
 import { composeCursor } from "./tablecast-cursor.ts";
-// 合成店舗の店員・管理者画面を実操作し、OpenScreenでカーソルとズームを出力する。
-import { chromium, type Locator } from "@playwright/test";
-import { spawn, execFile } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { promisify } from "node:util";
-import { setTimeout as sleep } from "node:timers/promises";
-import {
-  captureBrowserPointer,
-  screenProject,
-  videoDimensions,
-  assertCaptureFrame,
-} from "./tablecast-capture-types.ts";
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
+import { projectPath, readCaptureProject, readProject } from "./tablecast-project.ts";
+import { normalizeRoleCapture } from "./tablecast-record-role/normalize.ts";
+import { bindShotZoom, captureShot, type ShotEvidence } from "./tablecast-shot.ts";
+import { zoomRegions } from "./tablecast-zoom.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
 const role = process.argv[2];
@@ -99,7 +95,7 @@ try {
   recorder.stderr.on("data", (d: Buffer) => {
     stderr += d.toString();
   });
-  const completion = new Promise<number | null>((accept, reject) => {
+  const completion = new Promise<null | number>((accept, reject) => {
     recorder.once("error", reject);
     recorder.once("close", (code) => {
       closed = true;
@@ -160,83 +156,15 @@ try {
     ),
   );
   const project = screenProject.parse(JSON.parse(await readFile(rawProject, "utf8")));
-  const source = project.media.screenVideoPath;
-  const dims = videoDimensions.parse(
-    JSON.parse(
-      (
-        await run(
-          "ffprobe",
-          [
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=width,height",
-            "-of",
-            "json",
-            source,
-          ],
-          options,
-        )
-      ).stdout,
-    ),
-  ).streams[0];
-  assertCaptureFrame(dims, viewport);
-  await run(openscreen, ["pack", rawProject, "--out", resolve(out, "original"), "--json"], options);
-  const padX = (1920 - viewport.width) / 2,
-    padY = (1080 - viewport.height) / 2;
-  const normalized = resolve(out, "tablecast-source.mp4");
-  await run(
-    "ffmpeg",
-    [
-      "-v",
-      "error",
-      "-i",
-      source,
-      "-vf",
-      `crop=${viewport.width}:${viewport.height}:1:81,pad=1920:1080:${padX}:${padY},setsar=1`,
-      "-an",
-      "-c:v",
-      "libx264",
-      "-g",
-      "30",
-      "-keyint_min",
-      "30",
-      "-sc_threshold",
-      "0",
-      "-crf",
-      "17",
-      "-preset",
-      "fast",
-      normalized,
-    ],
-    options,
-  );
-  await writeFile(
-    `${normalized}.cursor.json`,
-    JSON.stringify(
-      {
-        version: 2,
-        provider: "none",
-        assets: [],
-        provenance: "Actual Playwright-dispatched DOM events; not OS cursor telemetry",
-        samples: pointer
-          .filter((e) => e.at >= captureStartedAtMs)
-          .map((e) => ({
-            timeMs: e.at - captureStartedAtMs,
-            cx: (padX + e.x) / 1920,
-            cy: (padY + e.y) / 1080,
-            visible: true,
-            assetId: null,
-            cursorType: e.cursorType,
-            interactionType: e.interactionType,
-          })),
-      },
-      null,
-      2,
-    ),
-  );
+  const { normalized, padX, padY } = await normalizeRoleCapture({
+    project,
+    out,
+    viewport,
+    openscreen,
+    rawProject,
+    pointer,
+    captureStartedAtMs,
+  });
   if (!shot) throw new Error("撮影証跡がありません");
   const relativeOut = `assets/openscreen/${out.split(/[\\/]/).at(-1)}`;
   const media = scene.media;

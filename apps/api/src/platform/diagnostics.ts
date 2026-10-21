@@ -55,11 +55,11 @@ export function errorAttributes(
   capture = false,
 ): Attributes {
   const exceptions: {
-    type: string;
-    message: string;
-    stack: string;
     httpStatus?: number;
+    message: string;
     providerCode?: string;
+    stack: string;
+    type: string;
   }[] = [];
   const seen = new Set<Error>();
   let hideMessage = false;

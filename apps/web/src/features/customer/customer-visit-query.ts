@@ -16,7 +16,7 @@ export const customerVisitOptions = (storeId: string, sessionId: string) =>
 export const customerVisitsOptions = (storeId: string) =>
   infiniteQueryOptions({
     queryKey: ["tablecast-customer", storeId, "visits"],
-    initialPageParam: undefined as { beforeJoinedAt: string; beforeId: string } | undefined,
+    initialPageParam: undefined as undefined | { beforeId: string; beforeJoinedAt: string },
     queryFn: ({ pageParam, signal }) =>
       parseResponse(
         rpc.api.customer.stores[":storeId"].visits.$get(
@@ -30,7 +30,7 @@ export const customerVisitsOptions = (storeId: string) =>
 export const customerOrdersOptions = (storeId: string, sessionId: string) =>
   infiniteQueryOptions({
     queryKey: ["tablecast-customer", storeId, "visits", sessionId, "orders"],
-    initialPageParam: undefined as { beforeCreatedAt: string; beforeId: string } | undefined,
+    initialPageParam: undefined as undefined | { beforeCreatedAt: string; beforeId: string },
     queryFn: ({ pageParam, signal }) =>
       parseResponse(
         rpc.api.customer.stores[":storeId"].visits[":sessionId"].orders.$get(

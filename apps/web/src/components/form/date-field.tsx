@@ -10,7 +10,7 @@ export function DateField({
   description,
   includeTime = false,
   ...props
-}: Omit<DatePickerProps, "value" | "onValueChange" | "name"> & {
+}: Omit<DatePickerProps, "name" | "onValueChange" | "value"> & {
   description?: string;
   includeTime?: boolean;
 }) {

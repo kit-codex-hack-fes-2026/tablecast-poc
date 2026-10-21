@@ -1,34 +1,30 @@
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { assert, expect, it } from "vitest";
-import { user } from "../src/db/auth-schema";
+import { customerVisitCodes, customerVisitParticipants } from "../src/db/customer-schema";
+import { user } from "../src/db/identity-schema";
+import { confirmations, devices, orders, tableSessions } from "../src/db/table-schema";
 import {
-  customerVisitCodes,
-  customerVisitParticipants,
-  devices,
-  orders,
-  confirmations,
-  tableSessions,
-} from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
-import {
-  enrolCustomer,
-  leaveCustomerMembership,
-  updateCustomerPreferences,
-} from "../src/modules/customers/service";
+  getCustomerVisit,
+  getDeviceParticipants,
+  listCustomerOrders,
+} from "../src/modules/customer-visits/queries";
 import {
   createCustomerVisitCode,
   joinCustomerVisit,
   leaveCustomerVisit,
   resolveCustomerVisit,
 } from "../src/modules/customer-visits/service";
-import { updateCart, prepareConfirmation, submitOrder } from "../src/modules/orders/service";
-import { getTableState } from "../src/modules/tables/queries";
 import {
-  getCustomerVisit,
-  getDeviceParticipants,
-  listCustomerOrders,
-} from "../src/modules/customer-visits/queries";
+  enrolCustomer,
+  leaveCustomerMembership,
+  updateCustomerPreferences,
+} from "../src/modules/customers/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { getTableState } from "../src/modules/tables/queries";
+import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { device, deviceToken, setupFixture } from "./fixture";
 

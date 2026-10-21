@@ -1,16 +1,16 @@
-import { surfaceMotion } from "../../components/ui/motion-variants";
-import { cn } from "tailwind-variants";
+import type { GameState, Locale } from "@tablecast/api/schema";
 import { Dialog } from "@base-ui/react/dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import type { GameState, Locale } from "@tablecast/api/schema";
 import { Gamepad2 } from "lucide-react";
-import { GameFrame } from "../../components/game-frame";
+import { useRef, useState } from "react";
+import { cn } from "tailwind-variants";
 import { ErrorNotice } from "../../components/error-notice";
+import { GameFrame } from "../../components/game-frame";
 import { Button } from "../../components/ui/button";
-import { m } from "../../paraglide/messages.js";
+import { surfaceMotion } from "../../components/ui/motion-variants";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
+import { m } from "../../paraglide/messages.js";
 import { tableQueryKey } from "./table-query";
 
 const startGame = (endpoint: TableEndpoint, gameId: string) =>
@@ -220,11 +220,11 @@ function PlayingGame({
   snapshot,
   onExit,
 }: {
-  run: Run;
   endpoint: TableEndpoint;
   locale: Locale;
-  snapshot: { state: GameState; revision: number };
   onExit: () => void;
+  run: Run;
+  snapshot: { revision: number; state: GameState };
 }) {
   // poll中はframeを作り直さず、通信復旧で再mountした時だけ最新snapshotを採用する。
   const [initialState] = useState(snapshot.state);

@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { waitForRelease } from "./tablecast-deploy-api";
-import { seedMenuImages, uploadPreviewImage } from "./tablecast-seed-media";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { waitForRelease } from "./tablecast-deploy-api.ts";
+import { seedMenuImages, uploadPreviewImage } from "./tablecast-seed-media.ts";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -71,7 +71,7 @@ describe("PR商品画像の投入", () => {
     return {
       head: vi.fn<R2Bucket["head"]>().mockResolvedValue(null),
       put: vi
-        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<R2Object | null>>()
+        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<null | R2Object>>()
         .mockResolvedValue(stored),
     };
   }
@@ -160,7 +160,7 @@ describe("商品画像群の投入", () => {
         .mockResolvedValue({ objects: [], truncated: false, delimitedPrefixes: [] }),
       head: vi.fn<R2Bucket["head"]>(),
       put: vi
-        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<R2Object | null>>()
+        .fn<(key: string, bytes: Uint8Array, options: R2PutOptions) => Promise<null | R2Object>>()
         .mockImplementation(async (key, bytes) => {
           const index = calls++;
           active++;

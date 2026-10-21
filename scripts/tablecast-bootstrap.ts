@@ -1,19 +1,17 @@
+import { convertToWranglerConfig, loadAndParseConfig } from "@cloudflare/config";
+import { bootstrapDatabase, bootstrapInputSchema, DomainError } from "@tablecast/api/bootstrap";
+import { parse, type ParseError } from "jsonc-parser";
 import { constants } from "node:fs";
 import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { parse, type ParseError } from "jsonc-parser";
 import { z } from "zod";
-import { bootstrapDatabase, bootstrapInputSchema } from "../apps/api/src/bootstrap";
-import { DomainError } from "../apps/api/src/platform/errors";
-import { loadAndParseConfig, convertToWranglerConfig } from "@cloudflare/config";
-
 import {
   deploymentOptions,
   deploymentTarget,
   tablecastAdoptedResources,
-} from "./tablecast-deploy-config";
+} from "./tablecast-deploy-config.ts";
 
 const environmentSchema = z.enum(["staging", "production"]);
 const originSchema = z
@@ -78,7 +76,7 @@ export function bootstrapOptions(args: string[]) {
   };
 }
 
-export function bootstrapTarget(text: string, environment: "staging" | "production") {
+export function bootstrapTarget(text: string, environment: "production" | "staging") {
   const errors: ParseError[] = [];
   const parsed: unknown = parse(text, errors, { allowTrailingComma: true });
   if (errors.length) throw new Error("Wrangler設定のJSONが不正です。");

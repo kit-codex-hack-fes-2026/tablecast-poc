@@ -1,19 +1,19 @@
-import { beginVoiceUsage, voiceBillingAccount } from "../src/modules/billing/usage";
-import { env } from "cloudflare:workers";
 import {
   createExecutionContext,
   runInDurableObject,
   waitOnExecutionContext,
 } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import app from "../src/app";
-import { organizationAi, organizationAiKeys, voiceUsageSessions } from "../src/db/business-schema";
+import { organizationAi, organizationAiKeys, voiceUsageSessions } from "../src/db/billing-schema";
 import {
   pendingOrganizationKey,
   provisionOrganizationKey,
   sealOrganizationKey,
 } from "../src/modules/billing/credentials";
+import { beginVoiceUsage, voiceBillingAccount } from "../src/modules/billing/usage";
 import { createApiServices } from "../src/platform/context";
 import { deviceToken, setupFixture } from "./fixture";
 const configured = () => ({
@@ -202,7 +202,7 @@ it("計測できないモデル料金を0円で確定せず、実DOが停止要�
     account,
   );
   const stub = env.TABLECAST_VOICE_USAGE.getByName("live_unpriced");
-  let peer: WebSocket | undefined;
+  let peer: undefined | WebSocket;
   let closeRequested = false;
   vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
     const pair = new WebSocketPair();

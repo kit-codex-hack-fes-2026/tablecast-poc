@@ -2,10 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
-import { AuthLayout } from "./auth-layout";
 import { useI18n } from "../../i18n/locale";
-
 import { authClient, authResult } from "../../lib/auth-client";
+import { AuthLayout } from "./auth-layout";
 
 export function EmailAccess({ register = false }: { register?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });

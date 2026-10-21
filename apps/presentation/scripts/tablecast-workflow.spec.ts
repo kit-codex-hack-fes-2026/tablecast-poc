@@ -1,10 +1,10 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import { captureShot, shotSchema } from "./tablecast-shot";
 import { createServer } from "node:http";
-import { checkCaptureHealth } from "./tablecast-doctor";
-import { pinWindowTitle } from "./tablecast-openscreen.ts";
 import { captureBrowserPointer } from "./tablecast-capture-types.ts";
+import { checkCaptureHealth } from "./tablecast-doctor.ts";
+import { pinWindowTitle } from "./tablecast-openscreen.ts";
+import { captureShot, shotSchema } from "./tablecast-shot.ts";
 
 test("@product 画面がタイトルを変更しても録画対象名を保持し、実ポインター操作を区別する", async ({
   page,

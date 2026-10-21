@@ -1,29 +1,24 @@
-import { instructionResponse } from "./instruction-response";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate, validateQuery } from "../../platform/validation";
+import { previewConditions } from "./conditions";
 import {
-  configurationSchema,
-  draftChoicesQuerySchema,
-  conditionPreviewSchema,
-  configurationHistoryQuerySchema,
-  configurationRestoreSchema,
-} from "./model";
-import {
-  createDraft,
   getConfigurationHistory,
   getConfigurationRelease,
   restoreConfigurationRelease,
-  discardDraft,
-  getDraft,
-  listDrafts,
-  listDraftChoices,
-  publishDraft,
-  updateDraft,
-  validateDraft,
-  previewConditions,
-} from "./service";
+} from "./history";
+import { instructionResponse } from "./instruction-response";
+import {
+  conditionPreviewSchema,
+  configurationHistoryQuerySchema,
+  configurationRestoreSchema,
+  configurationSchema,
+  draftChoicesQuerySchema,
+} from "./model";
+import { getDraft, listDraftChoices, listDrafts } from "./queries";
+import { createDraft, discardDraft, updateDraft, validateDraft } from "./use-cases/drafts";
+import { publishDraft } from "./use-cases/publish";
 const versionSchema = z.object({ expectedVersion: z.number().int().nonnegative() }).strict();
 
 export const configurationAdminRoutes = new Hono<ApiEnv>()

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { byteStream } from "../../platform/streams";
 export const mediaRoutes = new Hono<ApiEnv>()
   .get("/api/avatars/:key", async (c) => {
     const key = z.uuid().parse(c.req.param("key"));
@@ -60,7 +61,7 @@ export const mediaRoutes = new Hono<ApiEnv>()
       response.headers.set("X-Tablecast-Image-Cache", "HIT");
       return response;
     }
-    const output = await c.env.TABLECAST_IMAGES.input(asset.body)
+    const output = await c.env.TABLECAST_IMAGES.input(byteStream(asset.body))
       .transform({ width, fit: "scale-down" })
       .output({ format: "image/webp" });
     const response = output.response();

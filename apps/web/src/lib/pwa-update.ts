@@ -6,9 +6,9 @@ export function canReloadPwaClient({
   ready,
   reloading,
 }: {
-  preparedController: object | null | undefined;
-  controller: object | null;
+  controller: null | object;
   locked: boolean;
+  preparedController: null | object | undefined;
   ready: boolean;
   reloading: boolean;
 }) {

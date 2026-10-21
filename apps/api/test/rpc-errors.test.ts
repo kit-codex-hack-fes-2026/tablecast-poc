@@ -1,6 +1,6 @@
+import type { InferResponseType } from "hono/client";
 import { env } from "cloudflare:workers";
 import { expect, expectTypeOf, it } from "vitest";
-import type { InferResponseType } from "hono/client";
 import app from "../src/app";
 import {
   createTablecastClient,
@@ -20,7 +20,7 @@ it("未認証のRPCを呼ぶと、hcの失敗型と実応答が一致しrequest 
   // Given: Cookieを持たない公開client。
   type Failure = InferResponseType<typeof client.api.admin.stores.$get, 401>;
   expectTypeOf<Failure>().toEqualTypeOf<{
-    error: { code: string; message?: string; details?: unknown };
+    error: { code: string; details?: unknown; message?: string };
     traceId?: string;
   }>();
   // When: 店舗一覧の認証が失敗する。

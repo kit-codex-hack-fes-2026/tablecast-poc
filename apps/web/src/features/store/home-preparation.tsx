@@ -5,15 +5,13 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useI18n } from "../../i18n/locale";
-import { catalogOptions } from "./menu-query";
-import { devicesOptions } from "./store-query";
+import { homeOptions } from "./home-query";
 
 export function HomePreparation({ storeId }: { storeId: string }) {
   const { t } = useI18n();
-  const catalog = useQuery(catalogOptions(storeId));
-  const devices = useQuery(devicesOptions(storeId));
-  const hasProducts = (catalog.data?.configuration.products.length ?? 0) > 0;
-  const hasDevices = devices.data?.devices.some((device) => device.revokedAt === null);
+  const home = useQuery(homeOptions(storeId));
+  const hasProducts = home.data?.hasProducts;
+  const hasDevices = home.data?.hasDevices;
   return (
     <div className="space-y-6">
       <section
@@ -33,14 +31,14 @@ export function HomePreparation({ storeId }: { storeId: string }) {
               )}
             </h3>
             <ErrorNotice
-              error={catalog.error}
-              onRetry={() => void catalog.refetch()}
-              retrying={catalog.isFetching}
+              error={home.error}
+              onRetry={() => void home.refetch()}
+              retrying={home.isFetching}
             />
-            {catalog.isPending ? (
+            {home.isPending ? (
               <Skeleton className="h-5 w-28" />
             ) : (
-              catalog.data && (
+              home.data && (
                 <p className="text-sm text-muted-foreground">
                   {t(hasProducts ? "home_menu_ready" : "home_menu_empty")}
                 </p>
@@ -71,14 +69,14 @@ export function HomePreparation({ storeId }: { storeId: string }) {
               )}
             </h3>
             <ErrorNotice
-              error={devices.error}
-              onRetry={() => void devices.refetch()}
-              retrying={devices.isFetching}
+              error={home.error}
+              onRetry={() => void home.refetch()}
+              retrying={home.isFetching}
             />
-            {devices.isPending ? (
+            {home.isPending ? (
               <Skeleton className="h-5 w-28" />
             ) : (
-              devices.data && (
+              home.data && (
                 <p className="text-sm text-muted-foreground">
                   {t(hasDevices ? "home_devices_ready" : "home_devices_empty")}
                 </p>

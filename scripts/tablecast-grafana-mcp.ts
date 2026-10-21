@@ -1,6 +1,6 @@
 import { $ } from "bun";
 import { join, resolve } from "node:path";
-import { tablecastContainer, tablecastLocal } from "./tablecast-runtime";
+import { tablecastContainer, tablecastLocal } from "./tablecast-runtime.ts";
 
 const target = process.argv[2];
 if (target !== "local" && target !== "cloud")

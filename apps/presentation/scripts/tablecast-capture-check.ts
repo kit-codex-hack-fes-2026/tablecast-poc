@@ -1,4 +1,3 @@
-import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
 import { chromium } from "@playwright/test";
 import { execFile, spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -7,15 +6,16 @@ import process from "node:process";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parseArgs, promisify } from "node:util";
 import { z } from "zod";
-import { openScreenResult } from "./tablecast-doctor.ts";
+import { tablecastCaptureOrigin, tablecastHostArguments } from "./tablecast-app-capture.ts";
 import {
+  assertCaptureFrame,
   captureBrowserPointer,
+  pointerEvent,
   screenProject,
   videoDimensions,
-  assertCaptureFrame,
-  pointerEvent,
 } from "./tablecast-capture-types.ts";
-import { tablecastCaptureOrigin, tablecastHostArguments } from "./tablecast-app-capture.ts";
+import { openScreenResult } from "./tablecast-doctor.ts";
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
 
 // 認証済みの合成店舗で、商品詳細を開いて戻る短い収録を行う。
 // 注文・音声接続・TTS生成は行わない。Cookieは出力に含めない。
@@ -82,7 +82,7 @@ async function main() {
       stderr += data.toString();
     });
     let closed = false;
-    const completion = new Promise<number | null>((accept, reject) => {
+    const completion = new Promise<null | number>((accept, reject) => {
       recorder.once("error", reject);
       recorder.once("close", (code) => {
         closed = true;

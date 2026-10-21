@@ -8,15 +8,15 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider } from "../../i18n/locale";
-import { CreateStore } from "./create-store";
+import { page } from "vitest/browser";
 import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
+import { CreateStore } from "./create-store";
 
 // 認証済みの枠だけを省略し、フォーム・hc・Query・Routerは実物を使う。
-vi.mock("../shell/settings-shell", () => ({
+vi.mock("../store/settings-shell", () => ({
   SettingsShell: ({ children }: { children: ReactNode }) => (
     <main className="max-w-2xl space-y-5 p-8">{children}</main>
   ),

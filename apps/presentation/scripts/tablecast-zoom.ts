@@ -1,4 +1,4 @@
-import type { Project } from "./tablecast-project";
+import type { Project } from "./tablecast-project.ts";
 
 type Media = NonNullable<Project["scenes"][number]["media"]>;
 type Detail = Extract<NonNullable<Media["zoom"]>, { mode: "detail" }>;
@@ -34,17 +34,17 @@ export function fitZoom(target: Detail["target"]) {
 // 台本の判断を標準OpenScreen projectへ反映。切り出し境界でも同じ確認対象を保つ。
 export function zoomRegions(
   scenes: Project["scenes"],
-  viewport: { x: number; y: number; width: number; height: number },
+  viewport: { height: number; width: number; x: number; y: number },
   sourceTrim = 0,
 ) {
   const regions: {
-    id: string;
-    startMs: number;
-    endMs: number;
     depth: number;
+    endMs: number;
     focus: { cx: number; cy: number };
     focusMode: "manual";
+    id: string;
     source: "manual";
+    startMs: number;
   }[] = [];
   const byScene = new Map<string, (typeof regions)[number]>();
   for (const scene of [...scenes].sort((a, b) => (a.media?.offset ?? 0) - (b.media?.offset ?? 0))) {

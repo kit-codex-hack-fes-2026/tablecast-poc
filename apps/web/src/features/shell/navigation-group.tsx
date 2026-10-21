@@ -1,11 +1,10 @@
-import { controlMotion, disclosureMotion } from "../../components/ui/motion-variants";
-
 import { Collapsible } from "@base-ui/react/collapsible";
 import { useHydrated } from "@tanstack/react-router";
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef } from "react";
 import { cn, tv } from "tailwind-variants";
-import { useSidebarPreferences, type NavigationGroupId } from "./sidebar-preferences";
+import { controlMotion, disclosureMotion } from "../../components/ui/motion-variants";
+import { type NavigationGroupId, useSidebarPreferences } from "./sidebar-preferences";
 
 export const navigationItemClass =
   controlMotion +
@@ -33,12 +32,12 @@ export function NavigationGroup({
   userId,
   children,
 }: {
+  children: ReactNode;
+  collapsed: boolean;
+  icon: LucideIcon;
   id: NavigationGroupId;
   label: string;
-  icon: LucideIcon;
-  collapsed: boolean;
   userId?: string;
-  children: ReactNode;
 }) {
   const { preferences, update } = useSidebarPreferences(userId);
   const hydrated = useHydrated();

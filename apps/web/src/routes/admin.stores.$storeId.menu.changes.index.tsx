@@ -1,8 +1,8 @@
-import { collectionSearchSchema } from "../features/shell/collection-model";
 import { createFileRoute } from "@tanstack/react-router";
-import { SettingsDrafts } from "../features/store/settings-drafts";
-import { catalogOptions } from "../features/store/menu-query";
-import { draftsOptions } from "../features/store/store-query";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { draftsOptions } from "../features/configuration/drafts-query";
+import { SettingsDrafts } from "../features/configuration/settings-drafts";
+import { collectionSearchSchema } from "../features/shell/collection-model";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/")({
   validateSearch: collectionSearchSchema,
   staticData: { document: { title: "admin_drafts", description: "head_review_description" } },

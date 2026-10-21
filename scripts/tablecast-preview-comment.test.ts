@@ -5,10 +5,10 @@ import {
   previewCommentMarker,
   renderPreviewComment,
   resetCatalogRequest,
-} from "./tablecast-preview-comment";
+} from "./tablecast-preview-comment.ts";
 
 const sha = "a".repeat(40);
-function comment(requested: ("storybook" | "email")[] = []) {
+function comment(requested: ("email" | "storybook")[] = []) {
   return renderPreviewComment({
     pr: 276,
     sha,

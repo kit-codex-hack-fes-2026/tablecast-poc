@@ -1,7 +1,7 @@
-import { controlMotion, surfaceMotion } from "./motion-variants";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { cn } from "tailwind-variants";
 import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "tailwind-variants";
+import { controlMotion, surfaceMotion } from "./motion-variants";
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 /**

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MenuItem } from "../features/store/menu-item";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { MenuItem } from "../features/catalog/menu-item";
 import {
   menuDocument,
   menuListSearchSchema,
   menuSectionSchema,
-} from "../features/store/menu-model";
-import { catalogOptions, draftOptions } from "../features/store/menu-query";
+} from "../features/configuration/menu-model";
+import { draftOptions } from "../features/configuration/menu-query";
 export const Route = createFileRoute(
   "/admin/stores/$storeId/menu/changes/$draftId_/$section_/$itemId",
 )({

@@ -1,11 +1,5 @@
-import { Brand } from "../components/brand";
-import { RouteMotion } from "../components/route-motion";
-import { Pwa } from "../components/pwa";
-import { MotionProvider } from "../components/motion-provider";
-import { DocumentHead } from "../components/document-head";
-import { readPanelCookies } from "../lib/use-panel-layout";
-import { PanelLayoutProvider } from "../lib/panel-layout";
 import type { QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -14,12 +8,21 @@ import {
   Scripts,
   useMatchRoute,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { floorOptions, storesOptions } from "../features/store/store-query";
-import { catalogOptions } from "../features/store/menu-query";
-import { menuSectionSchema } from "../features/store/menu-model";
+import { Brand } from "../components/brand";
+import { DocumentHead } from "../components/document-head";
+import { MotionProvider } from "../components/motion-provider";
+import { Pwa } from "../components/pwa";
+import { RouteMotion } from "../components/route-motion";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { menuSectionSchema } from "../features/configuration/menu-model";
+import { floorOptions } from "../features/floor/floor-query";
+import { homeOptions } from "../features/store/home-query";
+import { storesOptions } from "../features/store/store-query";
 import { LocaleProvider } from "../i18n/locale";
+import { initialStorePath } from "../lib/initial-store-path";
+import { PanelLayoutProvider } from "../lib/panel-layout";
 import { loadInitial, sessionOptions } from "../lib/session-query";
+import { readPanelCookies } from "../lib/use-panel-layout";
 import { getLocale } from "../paraglide/runtime.js";
 import stylesheet from "../styles.css?url";
 
@@ -36,13 +39,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
-        const floorMatch = /^\/admin\/stores\/([^/]+)\/(?:floor\/?)?$/.exec(location.pathname);
+        const storePath = initialStorePath(location.pathname);
         const menuMatch = /^\/admin\/stores\/([^/]+)\/menu\/([^/]+)\/?$/.exec(location.pathname);
         const catalogStoreId =
-          menuMatch && menuSectionSchema.safeParse(menuMatch[2]).success
+          menuMatch?.[1] && menuSectionSchema.safeParse(menuMatch[2]).success
             ? decodeURIComponent(menuMatch[1])
             : undefined;
-        const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : catalogStoreId;
+        const storeId = storePath?.storeId ?? catalogStoreId;
         const search = new URLSearchParams(location.searchStr);
         // SSRの転送先は別のQueryClientになるため、ホームでも使うフロアの先読みはクライアントだけで行う。
         const defaultFloor =
@@ -54,7 +57,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         const initial = await loadInitial(
           storeId,
           defaultFloor ? "true" : undefined,
-          catalogStoreId ? "catalog" : undefined,
+          catalogStoreId ? "catalog" : storePath?.home || defaultFloor ? "home" : undefined,
         );
         queryClient.setQueryData(sessionOptions.queryKey, initial.session);
         queryClient.setQueryData(storesOptions.queryKey, {
@@ -64,6 +67,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         if (initial.floor) {
           queryClient.setQueryData(floorOptions(initial.floor.store.id).queryKey, initial.floor);
         }
+        if (initial.home)
+          queryClient.setQueryData(homeOptions(initial.home.storeId).queryKey, initial.home);
         if (initial.catalog) {
           queryClient.setQueryData(
             catalogOptions(initial.catalog.storeId).queryKey,

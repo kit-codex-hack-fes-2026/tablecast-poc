@@ -1,10 +1,11 @@
 import { env, exports } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { assert, expect, it } from "vitest";
-import { member, organization } from "../src/db/auth-schema";
-import { customerMemberships, stores } from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
+import { customerMemberships } from "../src/db/customer-schema";
+import { member, organization } from "../src/db/identity-schema";
+import { stores } from "../src/db/table-schema";
 import { listCustomerMemberships, requireCustomer } from "../src/modules/customers/queries";
+import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";
 import { deviceToken, setupFixture } from "./fixture";
 

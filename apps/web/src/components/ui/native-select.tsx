@@ -1,8 +1,8 @@
-import { controlMotion } from "./motion-variants";
-import { ChevronDown } from "lucide-react";
-import { useHydrated } from "@tanstack/react-router";
-import { cn } from "tailwind-variants";
 import type { ComponentProps } from "react";
+import { useHydrated } from "@tanstack/react-router";
+import { ChevronDown } from "lucide-react";
+import { cn } from "tailwind-variants";
+import { controlMotion } from "./motion-variants";
 
 /**
  * 単純な文字の候補ではOS標準選択を優先する。

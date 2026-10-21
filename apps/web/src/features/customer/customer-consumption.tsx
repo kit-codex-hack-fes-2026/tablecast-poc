@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseInfiniteQuery } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
 import { Pencil, UtensilsCrossed } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { useAppForm } from "../../components/form";
@@ -63,12 +63,12 @@ export function ConsumptionEditor({
   shared = false,
   revision = 0,
 }: {
-  storeId: string;
-  orderId: string;
   lineId: string;
+  orderId: string;
   quantity?: number;
-  shared?: boolean;
   revision?: number;
+  shared?: boolean;
+  storeId: string;
 }) {
   const { t } = useI18n();
   const client = useQueryClient();

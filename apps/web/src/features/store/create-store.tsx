@@ -1,14 +1,14 @@
-import { PageHeader } from "../../components/page-header";
-import { zodFieldValidator } from "../../lib/form-validation";
 import { createStoreSchema } from "@tablecast/api/schema";
-import { useAppForm } from "../../components/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Plus } from "lucide-react";
+import { useAppForm } from "../../components/form";
+import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { SettingsShell } from "../shell/settings-shell";
+import { zodFieldValidator } from "../../lib/form-validation";
+import { SettingsShell } from "./settings-shell";
 export function CreateStore() {
   const { t, locale } = useI18n(),
     navigate = useNavigate(),

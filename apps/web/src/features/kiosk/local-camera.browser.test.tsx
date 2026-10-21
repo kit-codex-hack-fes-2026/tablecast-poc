@@ -1,12 +1,12 @@
-import { cleanup, render } from "vitest-browser-react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useRef, useState } from "react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render } from "vitest-browser-react";
 import { page, server, userEvent } from "vitest/browser";
-import { LocaleProvider } from "../../i18n/locale";
-import { LocalCamera, LocalCameraFrame, useLocalCamera } from "./local-camera";
-import "../../styles.css";
-import ja from "../../../messages/ja.json";
 import en from "../../../messages/en.json";
+import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
+import { LocalCamera, LocalCameraFrame, useLocalCamera } from "./local-camera";
 
 const streams: MediaStream[] = [];
 const paints: ReturnType<typeof setInterval>[] = [];
@@ -53,9 +53,9 @@ function BoundedMirror({
   height = 640,
   locale = "ja",
 }: {
-  width?: number;
   height?: number;
-  locale?: "ja" | "en";
+  locale?: "en" | "ja";
+  width?: number;
 }) {
   const camera = useLocalCamera();
   const bounds = useRef<HTMLDivElement>(null);

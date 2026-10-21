@@ -1,8 +1,8 @@
 import { expect } from "@playwright/test";
-import { test } from "./support/test";
-import { signInStaff } from "./support/session";
-import ja from "../messages/ja.json" with { type: "json" };
 import en from "../messages/en.json" with { type: "json" };
+import ja from "../messages/ja.json" with { type: "json" };
+import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
 

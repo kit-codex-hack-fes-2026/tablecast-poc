@@ -14,14 +14,14 @@ export type CreateStore = z.infer<typeof createStoreSchema>;
 
 import type { TableEvent, TableState } from "../tables/model";
 import { tableEventSchema, tableStateSchema } from "../tables/model";
-export type StoreSummary = { id: string; name: string; role: string; organizationId?: string };
+export type StoreSummary = { id: string; name: string; organizationId?: string; role: string };
 
 export type AdminState = {
+  cursor: number;
+  events: TableEvent[];
   store: StoreSummary;
   tables: TableState[];
   vacantTables: { id: string; name: string }[];
-  events: TableEvent[];
-  cursor: number;
 };
 
 export const storeSummarySchema: z.ZodType<StoreSummary> = z.object({

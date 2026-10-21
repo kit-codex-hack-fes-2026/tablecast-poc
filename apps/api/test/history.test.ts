@@ -2,22 +2,20 @@ import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import * as authTables from "../src/db/auth-schema";
 import * as businessTables from "../src/db/business-schema";
-import {
-  changeOrderStatus,
-  prepareConfirmation,
-  recordPayment,
-  submitOrder,
-  updateCart,
-} from "../src/modules/orders/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { recordPayment } from "../src/modules/orders/use-cases/payment";
+import { changeOrderStatus } from "../src/modules/orders/use-cases/status";
+import { submitOrder } from "../src/modules/orders/use-cases/submit";
 import { getTableState } from "../src/modules/tables/queries";
-import { closeTable } from "../src/modules/tables/service";
+import { closeTable } from "../src/modules/tables/use-cases/lifecycle";
 import { createApiServices } from "../src/platform/context";
 import {
+  type HistoryPage,
   historyPageSchema,
   planSchema,
   sessionEventsPageSchema,
   tableStateSchema,
-  type HistoryPage,
 } from "../src/schema";
 import { insertFixture } from "./database-fixture";
 import { configuration, device, deviceToken, setupFixture, text } from "./fixture";
@@ -31,7 +29,7 @@ function get(path: string, cookie: string) {
 }
 function closedSession(
   id: string,
-  time: number | null = closedAt,
+  time: null | number = closedAt,
   storeId = "tablecast-store",
   tableId = "tablecast-table",
 ) {

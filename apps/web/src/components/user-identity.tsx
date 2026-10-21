@@ -14,9 +14,9 @@ export function UserIdentity({
   compact = false,
   truncate = false,
 }: {
-  user: { name?: string | null; email: string | null; image?: string | null };
   compact?: boolean;
   truncate?: boolean;
+  user: { email: null | string; image?: null | string; name?: null | string };
 }) {
   const { t } = useI18n();
   return (
@@ -46,7 +46,7 @@ export function UserIdentity({
 }
 
 /** 客向けの同席者。共有が許可された名前だけを使い、メールやアカウント画像を取得しない。 */
-export function ParticipantIdentity({ name }: { name: string | null }) {
+export function ParticipantIdentity({ name }: { name: null | string }) {
   const { t } = useI18n();
   return (
     <span className="inline-flex min-w-0 items-center gap-2">

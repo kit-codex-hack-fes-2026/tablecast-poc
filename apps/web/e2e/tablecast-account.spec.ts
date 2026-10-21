@@ -1,8 +1,8 @@
-import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import { z } from "zod";
-import { signInStaff } from "./support/session";
 import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 // 認証・招待・メールの実HTTP接続を確認する。
 test.use({ trace: "off", serviceWorkers: "block" });

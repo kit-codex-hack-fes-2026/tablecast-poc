@@ -1,13 +1,13 @@
 import { dirname } from "node:path";
-import type { Project } from "./tablecast-project";
+import type { Project } from "./tablecast-project.ts";
 
 type Scene = Project["scenes"][number];
 type Edit = {
-  media: NonNullable<Scene["media"]> & { project: string };
   device: NonNullable<Scene["device"]>;
+  end: number;
+  media: NonNullable<Scene["media"]> & { project: string };
   scenes: Scene[];
   sourceTrim: number;
-  end: number;
 };
 
 // 同じ素材の全カットを一度に編集し、後続場面によるズーム・尺の上書きを防ぐ。

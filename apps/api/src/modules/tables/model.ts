@@ -1,9 +1,9 @@
 import { z } from "zod";
 import type { Locale } from "../../platform/model";
-import { decimalQuerySchema, id, localeSchema, pageLimitSchema } from "../../platform/model";
 import type { Plan } from "../catalog/model";
-import { planSchema } from "../catalog/model";
 import type { Bill, Cart, Order, Snapshot } from "../orders/model";
+import { decimalQuerySchema, id, localeSchema, pageLimitSchema } from "../../platform/model";
+import { planSchema } from "../catalog/model";
 import { billSchema, cartSchema, orderSchema, snapshotSchema } from "../orders/model";
 import { speechSpeedSchema } from "../voice/model";
 export const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
@@ -17,40 +17,40 @@ export const uiSectionInputSchema = z
 export type UiSectionInput = z.infer<typeof uiSectionInputSchema>;
 
 export type TableEvent = {
-  cursor: number;
-  storeId: string;
-  tableSessionId: string | null;
-  kind: string;
-  data: Record<string, unknown>;
   createdAt: number;
+  cursor: number;
+  data: Record<string, unknown>;
+  kind: string;
+  storeId: string;
+  tableSessionId: null | string;
 };
 
 export type TableState = {
-  id: string;
-  tableId: string | null;
-  kind: "table" | "demo";
-  tableName: string;
-  storeId: string;
-  storeName: string;
-  configVersion: number;
-  locale: Locale;
-  status: "open" | "closed";
-  voiceState: "stopped" | "active" | "error";
-  voiceSessionId: string | null;
-  uiSection: UiSection;
-  selectedProductId: string | null;
-  speechSpeed: number;
-  guestCount: number;
-  openedAt: number;
-  cart: Cart;
-  orders: Order[];
   bill: Bill;
   billRequested: boolean;
-  events: TableEvent[];
+  cart: Cart;
+  configVersion: number;
   cursor: number;
-  plan: { id: string; startedAt: number; rules: Plan } | null;
+  events: TableEvent[];
+  guestCount: number;
+  id: string;
+  kind: "demo" | "table";
+  locale: Locale;
+  openedAt: number;
+  orders: Order[];
+  plan: null | { id: string; rules: Plan; startedAt: number };
+  selectedProductId: null | string;
+  snapshot: null | Snapshot;
+  speechSpeed: number;
   staffCalled: boolean;
-  snapshot: Snapshot | null;
+  status: "closed" | "open";
+  storeId: string;
+  storeName: string;
+  tableId: null | string;
+  tableName: string;
+  uiSection: UiSection;
+  voiceSessionId: null | string;
+  voiceState: "active" | "error" | "stopped";
 };
 
 export const historyQuerySchema = z

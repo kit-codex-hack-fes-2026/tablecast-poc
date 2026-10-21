@@ -1,6 +1,6 @@
-import { expect, type APIRequestContext } from "@playwright/test";
-import { credentials } from "./runtime";
+import { type APIRequestContext, expect } from "@playwright/test";
 import { z } from "zod";
+import { credentials } from "./runtime";
 
 // 認証がGivenの試験だけで使う。ログイン画面・OAuthそのものの試験は公開操作を本体へ残す。
 export async function signInStaff(request: APIRequestContext, origin: string | undefined) {

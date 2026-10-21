@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Floor, FloorPending } from "../features/store/floor";
-import { floorOptions } from "../features/store/store-query";
-import { floorSearchSchema, storeDate } from "../features/store/floor-model";
-import { timelineOptions } from "../features/store/timeline-query";
+import { Floor, FloorPending } from "../features/floor/floor";
+import { floorSearchSchema, storeDate } from "../features/floor/floor-model";
+import { floorOptions } from "../features/floor/floor-query";
+import { timelineOptions } from "../features/floor/timeline-query";
 export const Route = createFileRoute("/admin/stores/$storeId/floor")({
   staticData: { document: { title: "admin_live", description: "head_floor_description" } },
   validateSearch: floorSearchSchema,

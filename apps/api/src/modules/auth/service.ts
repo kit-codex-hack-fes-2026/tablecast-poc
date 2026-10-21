@@ -1,25 +1,28 @@
-import { billingPlugin } from "../billing/stripe";
-import { APIError, createAuthMiddleware } from "better-auth/api";
-import {
-  invitationEmail,
-  verificationEmail,
-  resetPasswordEmail,
-} from "../../emails/account-content";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { genericOAuth } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import * as schema from "../../db/auth-schema";
+import type { Database } from "../../db/client";
 import type { MailEnv } from "../../emails/send";
+import * as schema from "../../db/auth-schema";
+import {
+  invitationEmail,
+  resetPasswordEmail,
+  verificationEmail,
+} from "../../emails/account-content";
 import { sendAccountEmail } from "../../emails/send";
-import type { Database } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { billingPlugin } from "../billing/stripe";
 import { authOptions } from "./options";
 import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./preview";
+
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
+
 export const tablecastCredentialIssuer = "local:credential";
+
 export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],
@@ -138,7 +141,12 @@ export function createAuth(
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path.startsWith("/subscription/") && ctx.path !== "/subscription/success") {
-          const customerType: unknown = ctx.body?.customerType ?? ctx.query?.customerType;
+          const record = z.record(z.string(), z.unknown());
+          const body = record.safeParse(ctx.body);
+          const query = record.safeParse(ctx.query);
+          const customerType =
+            (body.success ? body.data.customerType : undefined) ??
+            (query.success ? query.data.customerType : undefined);
           if (customerType !== "organization")
             throw new APIError("BAD_REQUEST", { message: "ORGANIZATION_BILLING_REQUIRED" });
         }
@@ -157,31 +165,27 @@ export function createAuth(
         : {},
   });
 }
-export async function hashDeviceToken(token: string) {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
-export type AuthEnv = Partial<
-  Pick<
-    TablecastEnv,
-    | "TABLECAST_BILLING_ENABLED"
-    | "TABLECAST_BILLING_RATES"
-    | "TABLECAST_STRIPE_SECRET_KEY"
-    | "TABLECAST_STRIPE_WEBHOOK_SECRET"
-  >
-> &
-  Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_AUTH_SECRET" | "TABLECAST_PUBLIC_ORIGIN"> &
+export type AuthEnv = MailEnv &
   Partial<
     Pick<
       TablecastEnv,
+      | "TABLECAST_BETTER_AUTH_API_KEY"
+      | "TABLECAST_EMULATE"
+      | "TABLECAST_ENV"
+      | "TABLECAST_GOOGLE_AUTHORIZE_URL"
       | "TABLECAST_GOOGLE_CLIENT_ID"
       | "TABLECAST_GOOGLE_CLIENT_SECRET"
       | "TABLECAST_GOOGLE_EMULATOR_URL"
-      | "TABLECAST_GOOGLE_AUTHORIZE_URL"
-      | "TABLECAST_ENV"
-      | "TABLECAST_BETTER_AUTH_API_KEY"
-      | "TABLECAST_EMULATE"
     >
   > &
-  MailEnv;
+  Partial<
+    Pick<
+      TablecastEnv,
+      | "TABLECAST_BILLING_ENABLED"
+      | "TABLECAST_BILLING_RATES"
+      | "TABLECAST_STRIPE_SECRET_KEY"
+      | "TABLECAST_STRIPE_WEBHOOK_SECRET"
+    >
+  > &
+  Pick<TablecastEnv, "TABLECAST_AUTH_SECRET" | "TABLECAST_DB" | "TABLECAST_PUBLIC_ORIGIN">;

@@ -1,6 +1,6 @@
 const rawSearchString = Symbol("rawSearchString");
 
-type FlatValue = string | number | boolean | null | undefined;
+type FlatValue = boolean | null | number | string | undefined;
 type FlatSearch = Record<string, FlatValue | FlatValue[]> & {
   [rawSearchString]?: string;
 };

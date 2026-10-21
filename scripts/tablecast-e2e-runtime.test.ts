@@ -8,14 +8,14 @@ import { join, resolve as resolvePath } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
 import { z } from "zod";
-import { startGateway } from "../apps/web/e2e/support/gateway";
+import { startGateway } from "../apps/web/e2e/support/gateway.ts";
 
 it("四つのケースの転送先を分離し、停止中もoriginのポートを保持する", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-gateway-test-"));
   const cases: {
-    server: ReturnType<typeof createServer>;
     gateway: Awaited<ReturnType<typeof startGateway>>;
     id: number;
+    server: ReturnType<typeof createServer>;
   }[] = [];
   try {
     for (let id = 0; id < 4; id++) {

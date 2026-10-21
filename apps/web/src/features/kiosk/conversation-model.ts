@@ -1,19 +1,19 @@
 import type { TableEvent } from "@tablecast/api/schema";
 import type { VoiceView } from "./voice-model";
 export type ConversationLine = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  locale: "ja" | "en";
   createdAt: number;
+  displayIncomplete?: boolean;
+  id: string;
   interrupted: boolean;
+  live?: boolean;
+  locale: "en" | "ja";
+  rawText?: string;
+  role: "assistant" | "user";
   speaker?: string;
   streamId?: string;
   synthetic?: boolean;
+  text: string;
   turnId?: string;
-  rawText?: string;
-  live?: boolean;
-  displayIncomplete?: boolean;
 };
 
 export function conversationLines(events: TableEvent[]): ConversationLine[] {
@@ -47,7 +47,7 @@ export function conversationLines(events: TableEvent[]): ConversationLine[] {
   });
 }
 
-export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: "ja" | "en") {
+export function mergeConversation(lines: ConversationLine[], view: VoiceView, locale: "en" | "ja") {
   const saved = lines.filter((line) => line.text.trim());
   const merged: ConversationLine[] = [];
   for (const message of view.messages ?? []) {

@@ -1,12 +1,12 @@
-import { instructionResponse } from "../configuration/instruction-response";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { requireManager } from "../auth/policy";
-import { getSession } from "../tables/queries";
+import { instructionResponse } from "../configuration/instruction-response";
 import { tableOperations } from "../tables/operations-routes";
+import { getSession } from "../tables/session";
 import { demoUpdateSchema } from "./model";
 import { getDemo } from "./queries";
 import { createDemo, resetDemo, updateDemo } from "./service";

@@ -3,6 +3,7 @@ import { defineConfig } from "oxlint";
 export default defineConfig({
   options: { typeAware: true },
   plugins: ["typescript", "import", "react", "jsx-a11y", "vitest"],
+  jsPlugins: [{ name: "perfectionist", specifier: "eslint-plugin-perfectionist" }],
   categories: { correctness: "error", suspicious: "warn" },
   rules: {
     "typescript/no-floating-promises": "error",
@@ -12,6 +13,12 @@ export default defineConfig({
     "typescript/no-unsafe-assignment": "error",
     "typescript/no-unsafe-call": "error",
     "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      { considerDefaultExhaustiveForUnions: false },
+    ],
     "typescript/consistent-type-imports": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
@@ -19,10 +26,54 @@ export default defineConfig({
     "vitest/no-focused-tests": "error",
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": ["warn", { allow: ["**/*.css"] }],
+    "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+    "perfectionist/sort-imports": [
+      "error",
+      { type: "natural", order: "asc", sortSideEffects: false, newlinesBetween: 0 },
+    ],
+    "perfectionist/sort-named-imports": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-exports": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-named-exports": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-interfaces": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-object-types": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-union-types": ["error", { type: "natural", order: "asc" }],
+    "perfectionist/sort-intersection-types": ["error", { type: "natural", order: "asc" }],
   },
   overrides: [
     {
-      files: ["scripts/tablecast-seed*.ts", "scripts/tablecast-deploy*.ts"],
+      files: ["scripts/**/*.{ts,tsx}"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [
+              "**/apps/api/src/**",
+              "@tablecast/api/src/**",
+              "@tablecast/api/modules/**",
+              "@tablecast/api/platform/**",
+            ],
+          },
+        ],
+      },
+    },
+    {
+      files: [
+        "**/*.{test,spec,stories}.{ts,tsx,js,jsx}",
+        "**/test/**",
+        "**/e2e/**",
+        "**/test-support/**",
+        "**/testing/**",
+        "apps/web/src/features/billing/billing-fixture.ts",
+      ],
+      rules: { "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }] },
+    },
+    {
+      files: [
+        "scripts/tablecast-seed*.ts",
+        "scripts/tablecast-deploy*.ts",
+        "scripts/tablecast-seed/**/*.ts",
+        "scripts/tablecast-deploy/**/*.ts",
+      ],
       rules: {
         "no-restricted-properties": [
           "error",
@@ -62,6 +113,8 @@ export default defineConfig({
     },
   ],
   ignorePatterns: [
+    // 取得済みskillのサンプルは取得元で管理し、製品・運用CLIの検査へ含めない。
+    ".agents/skills/conventional-commit/assets/**",
     ".agents/skills/animate/**",
     ".agents/skills/emil-design-eng/**",
     ".agents/skills/hyperframes-core/**",

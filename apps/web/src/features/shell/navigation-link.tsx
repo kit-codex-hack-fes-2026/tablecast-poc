@@ -2,7 +2,7 @@ import { Tooltip } from "@base-ui/react/tooltip";
 import { createLink, type LinkComponent } from "@tanstack/react-router";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
-import { forwardRef, type ComponentProps, type ReactElement } from "react";
+import { type ComponentProps, forwardRef, type ReactElement } from "react";
 import { cn } from "tailwind-variants";
 import { surfaceMotion } from "../../components/ui/motion-variants";
 import { navigationItemClass } from "./navigation-group";
@@ -13,9 +13,9 @@ export function SidebarTooltip({
   collapsed,
   children,
 }: {
-  label: string;
-  collapsed: boolean;
   children: ReactElement;
+  collapsed: boolean;
+  label: string;
 }) {
   return (
     <Tooltip.Root disabled={!collapsed}>

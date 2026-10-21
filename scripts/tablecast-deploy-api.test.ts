@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { currentRevision } from "./tablecast-deploy-api";
-import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config";
+import { currentRevision } from "./tablecast-deploy-api.ts";
+import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config.ts";
 
 const execute = vi.hoisted(() =>
-  vi.fn<(file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>>(),
+  vi.fn<(file: string, args: string[]) => Promise<{ stderr: string; stdout: string }>>(),
 );
 vi.mock("node:child_process", async () => {
   const { promisify } = await import("node:util");

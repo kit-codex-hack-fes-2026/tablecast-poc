@@ -7,12 +7,12 @@ export const billingUsdJpy = 160;
 // 百万分の一円で保存する。整数の有理数計算で、累積値の差分を料金にする。
 export function usageCharge(
   input: {
-    seconds?: number;
-    inputTokens?: number;
     cachedTokens?: number;
-    outputTokens?: number;
+    inputTokens?: number;
     model?: string;
-    serviceTier?: string | null;
+    outputTokens?: number;
+    seconds?: number;
+    serviceTier?: null | string;
   },
   markupBps: BillingRates["markupBps"],
   pricingVersion = billingPricingVersion,

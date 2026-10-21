@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
-import * as authTables from "../../db/auth-schema";
 import type { ApiServices } from "../../platform/context";
+import * as authTables from "../../db/auth-schema";
 import { ensure } from "../../platform/errors";
 import { saveIdentityImage } from "../media/service";
 import { getMcpSessions } from "./queries";

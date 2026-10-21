@@ -8,8 +8,8 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { cleanup, render } from "vitest-browser-react";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { LocaleProvider, useI18n } from "../i18n/locale";
 import { DocumentHead } from "./document-head";

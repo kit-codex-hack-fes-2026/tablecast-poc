@@ -1,4 +1,6 @@
-import { trace, SpanStatusCode } from "@opentelemetry/api";
+import { OTLPTransport } from "@inference-net/otel-cf-workers";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   BasicTracerProvider,
   InMemorySpanExporter,
@@ -9,14 +11,12 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { mcpRoutes } from "../src/modules/mcp/routes";
 import { type ApiEnv, requestServices } from "../src/platform/context";
 import { DomainError } from "../src/platform/errors";
 import { handleError, requestTelemetry } from "../src/platform/http";
-import { OTLPTransport } from "@inference-net/otel-cf-workers";
-import { telemetryConfig } from "../src/platform/telemetry";
-import { resourceFromAttributes } from "@opentelemetry/resources";
-import { z } from "zod";
+import { telemetryConfig } from "../src/platform/telemetry-export";
 
 afterEach(() => vi.restoreAllMocks());
 

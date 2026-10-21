@@ -1,77 +1,37 @@
-import { closeTable } from "../src/modules/tables/service";
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { assert, expect, it } from "vitest";
 import {
   customerCoupons,
   customerCouponUses,
   customerPointEntries,
-  payments,
-} from "../src/db/business-schema";
-import { createApiServices } from "../src/platform/context";
-import { enrolCustomer } from "../src/modules/customers/service";
-import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
+} from "../src/db/rewards-schema";
+import { payments } from "../src/db/table-schema";
+import { listCustomerCoupons } from "../src/modules/customer-coupons/queries";
+import { applyCustomerCoupon } from "../src/modules/customer-coupons/use-cases/apply";
+import { cancelCustomerCouponUse } from "../src/modules/customer-coupons/use-cases/cancel";
 import {
-  saveCouponRule,
   exchangeCustomerCoupon,
   issueCustomerCoupon,
-  requestCustomerCoupon,
-  applyCustomerCoupon,
-  cancelCustomerCouponUse,
+} from "../src/modules/customer-coupons/use-cases/issue";
+import {
   revokeCustomerCoupon,
-} from "../src/modules/customer-coupons/service";
-import { listCustomerCoupons } from "../src/modules/customer-coupons/queries";
+  saveCouponRule,
+} from "../src/modules/customer-coupons/use-cases/rules";
+import { requestCustomerCoupon } from "../src/modules/customer-coupons/use-cases/selection";
 import { getCustomerPoints, getPointVisit } from "../src/modules/customer-points/queries";
-import {
-  correctCustomerPoints,
-  confirmCustomerPoints,
-} from "../src/modules/customer-points/service";
+import { confirmCustomerPoints } from "../src/modules/customer-points/use-cases/allocation";
+import { correctCustomerPoints } from "../src/modules/customer-points/use-cases/corrections";
+import { enrolCustomer } from "../src/modules/customers/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
+import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { recordPayment } from "../src/modules/orders/use-cases/payment";
+import { changeOrderStatus } from "../src/modules/orders/use-cases/status";
+import { submitOrder } from "../src/modules/orders/use-cases/submit";
 import { getTableState } from "../src/modules/tables/queries";
-import {
-  changeOrderStatus,
-  prepareConfirmation,
-  recordPayment,
-  submitOrder,
-  updateCart,
-} from "../src/modules/orders/service";
-import { device, setupFixture } from "./fixture";
+import { closeTable } from "../src/modules/tables/use-cases/lifecycle";
+import { setupCouponCustomer as setup } from "./coupon-fixture";
 import { fixtureDb } from "./database-fixture";
-async function setup(trigger: "manual" | "enrol" | "visits" | "spend" | "exchange" = "manual") {
-  const { staff } = await setupFixture();
-  const services = createApiServices(env);
-  const actor = { ...staff, tableSessionId: device.tableSessionId };
-  const customer = { kind: "customer", storeId: device.storeId, userId: staff.userId } as const;
-  const imageKey = `tablecast/uploads/${"a".repeat(64)}.webp`;
-  const imageSource = { generated: false, description: "テスト券面" };
-  await env.TABLECAST_MEDIA.put(imageKey, new Uint8Array([1]), {
-    customMetadata: {
-      storeId: actor.storeId,
-      metadata: JSON.stringify({ imageKind: "illustration", imageSource }),
-    },
-  });
-  const rules = {
-    title: { ja: "ご来店特典", en: "Visit reward" },
-    description: { ja: "100円引き", en: "JPY 100 off" },
-    imageKey,
-    imageKind: "illustration" as const,
-    imageSource,
-    startsAt: Date.now() - 10000,
-    endsAt: Date.now() + 86400000,
-    minimumYen: 100,
-    discountKind: "fixed" as const,
-    discountValue: 100,
-    maximumYen: 500,
-    trigger,
-    threshold: trigger === "exchange" ? 5 : 1,
-  };
-  const ruleId = crypto.randomUUID();
-  await saveCouponRule(services, actor, { id: ruleId, expectedVersion: 0, active: true, rules });
-  const enrolled = await enrolCustomer(services, customer);
-  assert(enrolled.membership);
-  const code = await createCustomerVisitCode(services, { ...device, deviceId: "tablecast-device" });
-  await joinCustomerVisit(services, customer.userId, code.code);
-  return { services, actor, customer, ruleId, rules, membershipId: enrolled.membership.id };
-}
+import { device } from "./fixture";
 it("入会券は一度だけ発行し、設定変更後も発行時の画像と条件を保持する", async () => {
   const { services, actor, customer, ruleId, rules } = await setup("enrol");
   await enrolCustomer(services, customer);

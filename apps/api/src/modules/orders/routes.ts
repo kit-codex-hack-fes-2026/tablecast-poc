@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
-import { validate } from "../../platform/validation";
 import type { Actor } from "../auth/model";
-import { changeOrderStatus, recordPayment } from "./service";
+import { validate } from "../../platform/validation";
+import { recordPayment } from "./use-cases/payment";
+import { changeOrderStatus } from "./use-cases/status";
 const paymentSchema = z
   .object({
     amount: z

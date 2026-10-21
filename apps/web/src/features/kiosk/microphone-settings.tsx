@@ -1,6 +1,6 @@
-import { Slider } from "@base-ui/react/slider";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { CircleAlert, LoaderCircle, SlidersHorizontal, Turtle, Rabbit, X } from "lucide-react";
+import { Slider } from "@base-ui/react/slider";
+import { CircleAlert, LoaderCircle, Rabbit, SlidersHorizontal, Turtle, X } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/button";
 import {
@@ -46,11 +46,11 @@ export function MicrophoneSettings({
   speechSpeed = 1,
   onSpeedChange,
 }: {
-  view: VoiceView;
   onChange: (deviceId: string) => void;
   onRefresh: () => void;
-  speechSpeed?: number;
   onSpeedChange?: (value: number) => void;
+  speechSpeed?: number;
+  view: VoiceView;
 }) {
   const { t } = useI18n();
   const labelId = useId();
@@ -138,8 +138,8 @@ function SpeechSpeedSetting({
   value,
   onChange,
 }: {
-  value: number;
   onChange: (value: number) => void;
+  value: number;
 }) {
   const { t } = useI18n();
   const labelId = useId();
@@ -190,7 +190,7 @@ function useMicrophoneOptions(view: VoiceView) {
   const selectedMissing =
     microphone.selectedId !== "default" &&
     !microphone.devices.some((device) => device.deviceId === microphone.selectedId);
-  let statusMessage: string | null = null;
+  let statusMessage: null | string = null;
   if (microphone.switching) {
     statusMessage = t("kiosk_microphone_switching");
   } else if (microphone.activeLabel) {

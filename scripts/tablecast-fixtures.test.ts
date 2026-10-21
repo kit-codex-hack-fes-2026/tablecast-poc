@@ -1,6 +1,6 @@
+import { configurationErrors, priceCart } from "@tablecast/api/bootstrap";
 import { describe, expect, it } from "vitest";
-import { demoStores } from "./tablecast-fixtures";
-import { configurationErrors, priceCart } from "../apps/api/src/modules/catalog/pricing";
+import { demoStores } from "./tablecast-fixtures.ts";
 
 describe("デモの構成データ", () => {
   it("同じプロファイルから和食・バーガー・韓国料理店の日英102商品と個別写真を作る", () => {

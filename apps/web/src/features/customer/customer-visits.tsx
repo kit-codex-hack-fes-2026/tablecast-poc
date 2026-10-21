@@ -1,21 +1,21 @@
-import { ParticipantIdentity } from "../../components/user-identity";
-import { calendarDate } from "../../i18n/format";
 import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Users } from "lucide-react";
-import { ConsumptionEditor } from "./customer-consumption";
+import { useEffect } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
+import { ParticipantIdentity } from "../../components/user-identity";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
+import { ConsumptionEditor } from "./customer-consumption";
 import {
   customerOrdersOptions,
   customerVisitOptions,
@@ -89,7 +89,7 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
   );
 }
 
-export function CustomerVisit({ storeId, sessionId }: { storeId: string; sessionId: string }) {
+export function CustomerVisit({ storeId, sessionId }: { sessionId: string; storeId: string }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const visit = useSuspenseQuery(customerVisitOptions(storeId, sessionId));

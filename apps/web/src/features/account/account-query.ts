@@ -1,5 +1,5 @@
-import { parseResponse, rpc } from "../../lib/api";
 import { queryOptions } from "@tanstack/react-query";
+import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 export const accountSessionsOptions = queryOptions({
   queryKey: ["tablecast-account", "sessions"],

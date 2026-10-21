@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { validate, validateQuery } from "../../platform/validation";
+import { customerActor, type CustomerEnv } from "../customers/middleware";
 import {
   customerConsumptionSchema,
   customerMemoryDeleteSchema,
@@ -8,7 +8,8 @@ import {
   customerMemoryPageSchema,
 } from "./model";
 import { listCustomerConsumption, listCustomerMemories } from "./queries";
-import { deleteCustomerMemory, recordCustomerConsumption, writeCustomerMemory } from "./service";
+import { recordCustomerConsumption } from "./use-cases/consumption";
+import { deleteCustomerMemory, writeCustomerMemory } from "./use-cases/memories";
 export const customerMemoryRoutes = new Hono<CustomerEnv>()
   .get("/stores/:storeId/memories", validateQuery(customerMemoryPageSchema), async (c) => {
     return c.json(

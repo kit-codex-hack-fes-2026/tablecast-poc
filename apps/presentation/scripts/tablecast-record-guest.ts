@@ -1,23 +1,23 @@
-import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
+// 合成店舗の認証済み端末を収録する明示実行用。音声APIを実際に呼び出す。
+import { chromium, type Locator } from "@playwright/test";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
-  waitForTablecastState,
   tablecastCaptureOrigin,
   tablecastCaptureStorageState,
   tablecastHostArguments,
-  tablecastVoiceEvents,
-  tablecastResponseComplete,
+  waitForTablecastState,
 } from "./tablecast-app-capture.ts";
-import { readCaptureProject } from "./tablecast-project.ts";
-import { captureShot, type ShotEvidence } from "./tablecast-shot.ts";
-import { z } from "zod";
-// 合成店舗の認証済み端末を収録する明示実行用。音声APIを実際に呼び出す。
-import { chromium, expect, type Locator } from "@playwright/test";
-import { spawn, execFileSync, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 import { captureBrowserAudio } from "./tablecast-browser-audio.ts";
-import { captureBrowserPointer, recordedTable, screenProject } from "./tablecast-capture-types.ts";
+import { captureBrowserPointer, recordedTable } from "./tablecast-capture-types.ts";
+import { openscreenPath, pinWindowTitle } from "./tablecast-openscreen.ts";
+import { readCaptureProject } from "./tablecast-project.ts";
+import { saveAcceptedGuestCapture } from "./tablecast-record-guest/evidence.ts";
+import { saveRejectedGuestCapture } from "./tablecast-record-guest/rejected.ts";
+import { guestSpeech } from "./tablecast-record-guest/speech.ts";
+import { captureShot, type ShotEvidence } from "./tablecast-shot.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
 const storageState = tablecastCaptureStorageState("guest");
@@ -43,7 +43,7 @@ const browser = await chromium.launch({
   ],
 });
 let recorder: ChildProcessWithoutNullStreams | undefined;
-let completion: Promise<number | null> | undefined;
+let completion: Promise<null | number> | undefined;
 let stdout = "",
   stderr = "";
 let recordingClosed = false;
@@ -155,7 +155,7 @@ try {
     if (recordingClosed) throw new Error("必要な表示時間の途中で録画が終了しました");
     console.info(`撮影条件を確認: ${id}`);
   };
-  const marks: { id: string; at: number }[] = [];
+  const marks: { at: number; id: string }[] = [];
   const mark = (id: string) => {
     const value = { id, at: Date.now() };
     marks.push(value);
@@ -186,73 +186,18 @@ try {
       { timeout: 60000 },
     );
   await waitForAgentAudio();
-  const speak = async (id: string) => {
-    const base64 = (
-      await readFile(resolve(root, "apps/presentation/assets/audio", `tablecast-input-${id}.wav`))
-    ).toString("base64");
-    const inputStartedAt = Date.now();
-    mark(id);
-    await page.evaluate((input) => window.tablecastCapture.speak(input.base64, input.id), {
-      base64,
-      id,
-    });
-    const sceneId = (
-      {
-        consult: "consult-answer",
-        order: "order-added",
-        confirm: "readback",
-        approve: "approval-result",
-      } as Record<string, string>
-    )[id];
-    if (sceneId && id !== "approve") await shoot(sceneId);
-    await expect
-      .poll(
-        async () => {
-          const { events } = z
-            .object({
-              events: tablecastVoiceEvents,
-            })
-            .parse(await readTable());
-          return (
-            tablecastResponseComplete(events, inputStartedAt) &&
-            (await page.locator("article[data-role=assistant][data-live=true]").count()) === 0
-          );
-        },
-        { timeout: 60000, message: `${id}への実応答の再生完了` },
-      )
-      .toBe(true);
-    await sleep(800);
-    if (sceneId && id === "approve") await shoot(sceneId);
-    mark(`${id}-end`);
-    await page.screenshot({ path: resolve(out, `tablecast-${id}.png`) });
-    await writeFile(resolve(out, `tablecast-${id}.txt`), await page.locator("body").innerText());
-    await writeFile(
-      resolve(out, "tablecast-audio.webm"),
-      Buffer.from(await page.evaluate(() => window.tablecastCapture.dump()), "base64"),
-    );
-    const telemetry = await page.evaluate(() => ({
-      pointer: window.tablecastPointerEvents,
-      screen: window.tablecastScreenEvents,
-      speech: window.tablecastCapture.events,
-    }));
-    await writeFile(
-      resolve(out, "tablecast-events.json"),
-      JSON.stringify(
-        {
-          source: "Actual Playwright-dispatched browser events and real app responses",
-          viewport: { width: 1024, height: 768 },
-          audioStartedAt,
-          initial,
-          marks,
-          shots,
-          appEvents: (await readTable()).events,
-          ...telemetry,
-        },
-        null,
-        2,
-      ),
-    );
-  };
+  const speak = guestSpeech({
+    page,
+    root,
+    out,
+    readTable,
+    mark,
+    shoot,
+    audioStartedAt,
+    initial,
+    marks,
+    shots,
+  });
   if (!englishOnly) {
     await speak("consult");
     await speak("order");
@@ -319,68 +264,9 @@ try {
   );
   recorder.stdin.write("stop\n");
   if ((await completion) !== 0) throw new Error("OpenScreen録画が異常終了しました");
-  const source = screenProject.parse(
-    JSON.parse(await readFile(resolve(out, "tablecast-raw.openscreen"), "utf8")),
-  );
-  execFileSync(
-    openscreen,
-    ["pack", resolve(out, "tablecast-raw.openscreen"), "--out", resolve(out, "original"), "--json"],
-    { windowsHide: true, timeout: 90000 },
-  );
-  const captureStartedAtMs = Number(stderr.match(/"captureStartedAtMs":(\d+)/)?.[1]);
-  if (!Number.isFinite(captureStartedAtMs)) throw new Error("録画開始時刻がありません");
-  const savedEvents = z
-    .record(z.string(), z.unknown())
-    .parse(JSON.parse(await readFile(resolve(out, "tablecast-events.json"), "utf8")));
-  await writeFile(
-    resolve(out, "tablecast-events.json"),
-    JSON.stringify({ ...savedEvents, captureStartedAtMs }, null, 2),
-  );
-  await writeFile(
-    resolve(out, "tablecast-take.json"),
-    JSON.stringify({ status: "accepted", scenes: shots.map((shot) => shot.sceneId) }, null, 2),
-  );
-  console.info("保存完了: 実応答・注文結果・音声・操作時刻・OpenScreen元project", source.version);
+  await saveAcceptedGuestCapture(out, openscreen, stderr, shots);
 } catch (error) {
-  const page = browser.contexts()[0]?.pages()[0];
-  if (page && !page.isClosed()) {
-    await page.screenshot({ path: resolve(out, "tablecast-failure.png") });
-    await writeFile(resolve(out, "tablecast-failure.txt"), await page.locator("body").innerText());
-    const captured = await page.evaluate(async () => {
-      if (!window.tablecastCapture?.startedAt) return null;
-      return {
-        audio: await window.tablecastCapture.dump(),
-        events: {
-          audioStartedAt: window.tablecastCapture.startedAt,
-          speech: window.tablecastCapture.events,
-          screen: window.tablecastScreenEvents,
-          pointer: window.tablecastPointerEvents,
-        },
-      };
-    });
-    if (captured) {
-      await writeFile(
-        resolve(out, "tablecast-failure-audio.webm"),
-        Buffer.from(captured.audio, "base64"),
-      );
-      await writeFile(
-        resolve(out, "tablecast-failure-events.json"),
-        JSON.stringify(captured.events, null, 2),
-      );
-    }
-  }
-  await writeFile(
-    resolve(out, "tablecast-rejected.json"),
-    JSON.stringify(
-      { status: "rejected", reason: error instanceof Error ? error.message : String(error) },
-      null,
-      2,
-    ),
-  );
-  console.error(
-    "撮影条件を満たさず不採用。録画の保存終了を待ちます。",
-    error instanceof Error ? error.message : String(error),
-  );
+  await saveRejectedGuestCapture(browser, out, error);
   throw error;
 } finally {
   if (voiceStarted) {

@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { adminStateSchema, catalogSchema, configDraftSchema } from "@tablecast/api/schema";
-import { test } from "./support/test";
 import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off", serviceWorkers: "block" });
 

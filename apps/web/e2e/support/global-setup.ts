@@ -5,15 +5,22 @@ import process from "node:process";
 import { promisify } from "node:util";
 import { getPlatformProxy } from "wrangler";
 import { z } from "zod";
+import { buildTablecast } from "../../../../scripts/tablecast-build";
 import { seedDemoDatabase } from "../../../../scripts/tablecast-seed-data";
+import { apiSdkConfiguration } from "../../../api/cloudflare.config";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { credentials, runtime } from "./runtime";
-import { apiSdkConfiguration } from "../../../api/cloudflare.config";
-import { buildTablecast } from "../../../../scripts/tablecast-build";
 const execute = promisify(execFile);
 const root = resolve(import.meta.dirname, "../../../..");
 export default async function setup() {
-  const parentEnv = z.record(z.string(), z.string().optional()).parse({ ...process.env });
+  const parentEnv = z
+    .object({
+      env: z.preprocess(
+        (value) => (typeof value === "object" && value !== null ? { ...value } : value),
+        z.record(z.string(), z.string().optional()),
+      ),
+    })
+    .parse(process).env;
   const stop = async () => {
     const errors: unknown[] = [];
     try {

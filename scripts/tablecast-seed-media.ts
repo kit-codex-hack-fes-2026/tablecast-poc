@@ -1,4 +1,4 @@
-import type { Configuration } from "../apps/api/src/schema";
+import type { Configuration } from "@tablecast/api/schema";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
@@ -118,12 +118,12 @@ export async function uploadPreviewImage(
       key: string,
       bytes: Uint8Array,
       options: R2PutOptions & { onlyIf: R2Conditional },
-    ): Promise<R2Object | null>;
+    ): Promise<null | R2Object>;
   },
   key: string,
   bytes: Uint8Array,
   contentType: "image/png" | "image/webp" = key.endsWith(".webp") ? "image/webp" : "image/png",
-  known?: Pick<R2Object, "etag" | "size"> | null,
+  known?: null | Pick<R2Object, "etag" | "size">,
 ) {
   const md5 = createHash("md5").update(bytes).digest("hex");
   for (let attempt = 1; attempt <= 3; attempt++) {

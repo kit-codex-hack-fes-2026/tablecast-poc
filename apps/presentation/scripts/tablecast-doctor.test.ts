@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { openScreenResult } from "./tablecast-doctor";
+import { openScreenResult } from "./tablecast-doctor.ts";
 
 test("OpenScreenの複数行の応答から正常完了だけを取り出す", () => {
   const done = { event: "done", success: true, sources: { windows: [] } };

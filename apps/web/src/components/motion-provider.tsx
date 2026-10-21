@@ -1,5 +1,5 @@
-import { LazyMotion, MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
+import { LazyMotion, MotionConfig } from "motion/react";
 
 const loadFeatures = () => import("./motion-features").then((module) => module.default);
 

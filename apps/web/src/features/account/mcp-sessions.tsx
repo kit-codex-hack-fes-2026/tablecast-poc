@@ -13,14 +13,15 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
-import { useCollectionSearch } from "../shell/collection-search";
 import { parseResponse, rpc } from "../../lib/api";
-import { mcpSessionsOptions, type loadMcpSessions } from "./account-query";
+import { useCollectionSearch } from "../shell/collection-search";
+import { type loadMcpSessions, mcpSessionsOptions } from "./account-query";
 import { IntegrationsShell } from "./integrations-shell";
 type Session = Awaited<ReturnType<typeof loadMcpSessions>>["sessions"][number];
 export function McpSessions() {

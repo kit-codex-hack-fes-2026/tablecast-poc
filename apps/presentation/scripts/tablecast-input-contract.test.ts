@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
-import current from "../projects/tablecast-main-rerecord.json";
-import sample from "../sample.json";
 import booking from "../examples/tablecast-booking/project.json";
 import mutation from "../experiments/tablecast-mutation/project.json";
-import { projectSchema, speakers, timeline, type Project } from "./tablecast-project";
+import current from "../projects/tablecast-main-rerecord.json";
+import sample from "../sample.json";
+import { type Project, projectSchema, speakers, timeline } from "./tablecast-project.ts";
 
 const project = projectSchema.parse(current);
 test.each(["\n", "\r", "\r\n\r\n00:01.000 --> 00:02.000\r\n"])(

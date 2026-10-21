@@ -1,4 +1,4 @@
-import { escapeHtml as h, type Project, type timeline } from "./tablecast-project";
+import { escapeHtml as h, type Project, type timeline } from "./tablecast-project.ts";
 
 type Timing = ReturnType<typeof timeline>;
 

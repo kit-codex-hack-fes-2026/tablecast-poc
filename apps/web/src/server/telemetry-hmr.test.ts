@@ -1,6 +1,6 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { resolve, join } from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { createServer, type ViteDevServer } from "vite";
 import { expect, it } from "vitest";
 import { z } from "zod";
@@ -11,7 +11,7 @@ it("Workerの全再評価後も有効な親子traceを持つ応答を返す", as
   const directory = await mkdtemp(join(parent, "tablecast-telemetry-hmr-"));
   const entry = join(directory, "worker.ts");
   const telemetry = resolve("../api/src/platform/telemetry.ts");
-  let server: ViteDevServer | undefined;
+  let server: undefined | ViteDevServer;
   try {
     await writeFile(
       entry,

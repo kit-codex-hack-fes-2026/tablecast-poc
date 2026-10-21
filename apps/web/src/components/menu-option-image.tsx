@@ -9,7 +9,7 @@ export function MenuOptionImage({
   imageKind,
 }: Pick<Modifier["options"][number], "imageKey" | "imageKind">) {
   const { t } = useI18n();
-  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const [failedKey, setFailedKey] = useState<null | string>(null);
   if (!imageKey) return null;
   return (
     <span className="flex w-24 shrink-0 flex-col gap-1">

@@ -1,32 +1,33 @@
-import { useCollectionSearch } from "../shell/collection-search";
-import { UserIdentity } from "../../components/user-identity";
-import { PageHeader } from "../../components/page-header";
-import { z } from "zod";
-import { useAppForm } from "../../components/form";
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  MailPlus,
-  X,
-  Mail,
-  ShieldCheck,
-  CircleCheck,
   CalendarClock,
+  CircleCheck,
+  Mail,
+  MailPlus,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 import { useMemo } from "react";
+import { z } from "zod";
 import { ConfirmAction } from "../../components/confirm-action";
-import { DataTable, type DataTableColumn } from "../../components/data-table";
+import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { useAppForm } from "../../components/form";
+import { PageHeader } from "../../components/page-header";
+import { RoleBadge } from "../../components/role-badge";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
+import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
+import { useCollectionSearch } from "../shell/collection-search";
 import { membershipOptions } from "./membership-query";
-import { RoleBadge } from "../../components/role-badge";
-import { useStore } from "./store-shell";
+import { useStore } from "./store-context";
 const load = async (organizationId: string) =>
   authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
 type Invitation = Awaited<ReturnType<typeof load>>["invitations"][number];
@@ -163,7 +164,7 @@ export function InviteMember() {
     navigate = useNavigate(),
     client = useQueryClient();
   const invite = useMutation({
-    mutationFn: async (input: { email: string; role: "member" | "admin" | "owner" }) =>
+    mutationFn: async (input: { email: string; role: "admin" | "member" | "owner" }) =>
       authResult(
         await authClient.organization.inviteMember({
           ...input,
@@ -176,7 +177,7 @@ export function InviteMember() {
     },
   });
   const form = useAppForm({
-    defaultValues: { email: "", role: "member" as "member" | "admin" | "owner" },
+    defaultValues: { email: "", role: "member" as "admin" | "member" | "owner" },
     onSubmit: async ({ value }) => {
       await invite.mutateAsync(value).catch(() => undefined);
     },

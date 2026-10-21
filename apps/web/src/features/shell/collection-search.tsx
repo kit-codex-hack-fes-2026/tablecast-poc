@@ -1,5 +1,5 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
 import type { OnChangeFn, PaginationState, SortingState } from "@tanstack/react-table";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   collectionSearchKeys,
   collectionSearchSchema,
@@ -29,7 +29,7 @@ export function useCollectionSearch({
     ),
   });
   const update = (
-    patch: (previous: Record<string, unknown>) => Record<string, string | number | undefined>,
+    patch: (previous: Record<string, unknown>) => Record<string, number | string | undefined>,
     replace = false,
   ) => {
     void navigate({

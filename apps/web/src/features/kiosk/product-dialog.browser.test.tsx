@@ -1,13 +1,14 @@
-import { productSchema, type CartLine } from "@tablecast/api/schema";
+import { type CartLine, productSchema } from "@tablecast/api/schema";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
 import { product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
 import { money } from "../../i18n/format";
 import { LocaleProvider } from "../../i18n/locale";
-import { ProductPage } from "./product-dialog";
+import { fixtureValue } from "../../test-support/fixture-value";
 import "../../styles.css";
+import { ProductPage } from "./product-dialog";
 
 const text = (jaName: string, enName: string, jaDescription = "", enDescription = "") => ({
   ja: { displayName: jaName, speechName: jaName, description: jaDescription, aliases: [] },
@@ -87,7 +88,7 @@ const pictured = productSchema.parse({
   ],
 });
 
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 beforeEach(() => {
   initialViewport = { width: window.innerWidth, height: window.innerHeight };
 });
@@ -128,7 +129,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(sesame)
     .toHaveAccessibleDescription(
-      `${money(80, locale)} ${pictured.modifiers[0].options[0].text[locale].description}`,
+      `${money(80, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[0]).options[0]).text[locale].description}`,
     );
   await expect.poll(() => document.querySelectorAll("img").length).toBe(0);
   await expect.element(screen.getByText(labels.kiosk_sold_out, { exact: true })).toBeVisible();
@@ -158,12 +159,12 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   await expect
     .element(increase)
     .toHaveAccessibleDescription(
-      `${money(100, locale)} ${pictured.modifiers[2].options[0].text[locale].description}`,
+      `${money(100, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[2]).options[0]).text[locale].description}`,
     );
   await expect
     .element(screen.getByRole("checkbox", { name: "レタス", exact: true }))
     .toHaveAccessibleDescription(
-      `${money(40, locale)} ${pictured.modifiers[1].options[0].text[locale].description}`,
+      `${money(40, locale)} ${fixtureValue(fixtureValue(pictured.modifiers[1]).options[0]).text[locale].description}`,
     );
   await increase.click();
   await increase.click();
@@ -186,7 +187,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
   for (const [width, height] of [
     [768, 1024],
     [1024, 768],
-  ]) {
+  ] as const) {
     await page.viewport(width, height);
     const region = screen
       .getByRole("region", { name: pictured.text[locale].displayName, exact: true })

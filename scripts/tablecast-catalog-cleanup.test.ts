@@ -1,8 +1,8 @@
 import type * as childProcess from "node:child_process";
 import { execFileSync } from "node:child_process";
 import { beforeEach, expect, it, vi } from "vitest";
-import { cleanupCatalogs } from "./tablecast-catalog-deploy";
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
+import { cleanupCatalogs } from "./tablecast-catalog-deploy.ts";
+import { cloudflare, currentRevision } from "./tablecast-deploy-api.ts";
 vi.mock("./tablecast-deploy-api", () => ({
   cloudflare: vi.fn<typeof cloudflare>(),
   currentRevision: vi.fn<typeof currentRevision>(),
@@ -14,7 +14,7 @@ vi.mock("node:child_process", async (original) => ({
 }));
 
 let workers: Set<string>;
-let apps: Map<string, { id: string; name: string; domain: string }>;
+let apps: Map<string, { domain: string; id: string; name: string }>;
 let failWorker: boolean;
 beforeEach(() => {
   vi.resetAllMocks();

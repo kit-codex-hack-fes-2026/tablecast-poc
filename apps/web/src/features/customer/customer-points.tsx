@@ -1,7 +1,7 @@
-import { calendarDate } from "../../i18n/format";
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
+import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { customerPointsOptions } from "./customer-points-query";
 export function CustomerPoints({ storeId }: { storeId: string }) {

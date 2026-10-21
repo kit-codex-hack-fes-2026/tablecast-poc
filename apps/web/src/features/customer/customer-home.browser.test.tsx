@@ -7,19 +7,19 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import ja from "../../../messages/ja.json";
+import { page, userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
-import { LocaleProvider } from "../../i18n/locale";
+import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
+import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
+import { customerPointsOptions } from "./customer-points-query";
 import { CustomerShell } from "./customer-shell";
 import { CustomerStore } from "./customer-store";
-import { customerPointsOptions } from "./customer-points-query";
-import "../../styles.css";
 
 let client: QueryClient;
-let initialViewport: { width: number; height: number };
+let initialViewport: { height: number; width: number };
 let paths: string[];
 let active: boolean;
 let pointsFail: boolean;
@@ -122,7 +122,7 @@ afterEach(async () => {
   await page.viewport(initialViewport.width, initialViewport.height);
 });
 
-async function show(locale: "ja" | "en" = "ja", initial = "/member/tablecast-first") {
+async function show(locale: "en" | "ja" = "ja", initial = "/member/tablecast-first") {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
   });

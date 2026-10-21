@@ -1,5 +1,5 @@
-import { ListFilter, RotateCcw, Search, ArrowDownUp } from "lucide-react";
-import { useId, type ReactNode } from "react";
+import { ArrowDownUp, ListFilter, RotateCcw, Search } from "lucide-react";
+import { type ReactNode, useId } from "react";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -13,17 +13,17 @@ export function CollectionToolbar({
   resetDisabled,
   disabled = false,
 }: {
-  search?: {
-    label: string;
-    placeholder?: string;
-    value: string;
-    onChange: (value: string) => void;
-  };
+  disabled?: boolean;
   filters?: ReactNode;
-  sort?: ReactNode;
   onReset: () => void;
   resetDisabled: boolean;
-  disabled?: boolean;
+  search?: {
+    label: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    value: string;
+  };
+  sort?: ReactNode;
 }) {
   const { t } = useI18n();
   const id = useId();

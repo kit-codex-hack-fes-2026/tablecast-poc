@@ -1,45 +1,37 @@
-import type { TableRecord } from "../../db/records";
-import type { TableState } from "../tables/model";
 import { z } from "zod";
+import type { TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
-import { localeSchema, type Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
+import { ensure } from "../../platform/errors";
+import { type Locale, localeSchema } from "../../platform/model";
 import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
+import { customerSuggestionsSchema, saveCustomerMemorySchema } from "../customer-memory/model";
+import { customerRecommendationContext } from "../customer-memory/queries";
+import { customerSuggestions } from "../customer-memory/suggestions";
+import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/sources";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
-import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
+import { updateCart } from "../orders/use-cases/cart";
+import { prepareConfirmation } from "../orders/use-cases/confirmation";
+import { submitOrder } from "../orders/use-cases/submit";
 import { uiSectionInputSchema } from "../tables/model";
-import { getSession, getTableState } from "../tables/queries";
-import { callStaff, changeLocale, setUiSection, showProducts } from "../tables/service";
+import { getTableState } from "../tables/queries";
+import { getSession } from "../tables/session";
+import {
+  callStaff,
+  changeLocale,
+  setUiSection,
+  showProducts,
+} from "../tables/use-cases/presentation";
 import { showProductsSchema, type VoiceTrigger } from "./model";
 import { castInstructions } from "./prompt";
-import { customerRecommendationContext, customerSuggestions } from "../customer-memory/queries";
-import { saveAutomaticCustomerMemory } from "../customer-memory/service";
-import { saveCustomerMemorySchema, customerSuggestionsSchema } from "../customer-memory/model";
 import { setSpeechSpeed } from "./service";
+import { castTool } from "./tool";
+import { voiceTableState } from "./tool-state";
+
 export function castSessionInstructions(locale: Locale, trigger: VoiceTrigger = "user") {
   return `${castInstructions}\n個人履歴やいつもの注文を依頼されたらgetCustomerContextで対象と許可を確認する。本人の明確な好み・希望を聞いた時はgetCustomerContextとsaveCustomerMemoryで保存する。声から本人を識別せず、対象が曖昧なら保存しない。応答言語: ${locale === "ja" ? "日本語" : "British English"}。商品・価格・在庫・店舗の説明にはgetCatalogで最新情報を確認する。カートや注文の操作前にgetTableStateで現在の版を取得する。同じ委任で取得した情報を再取得しない。操作結果の新しい版を次の操作に使う。独立した照会はまとめて呼ぶ。商品をカートに入れる依頼ではgetCatalogとgetTableStateを同じresponseで並列に呼び、両結果からupdateCartする。挨拶、お礼、聞き返しだけなら業務照会を挟まず短く返す。過去のツール結果を現在の価格・売切・カート版の根拠にしない。${trigger === "proactive" ? "今回は店舗が許可した無言時の自発接客です。新しい客の発話ではありません。登録情報に基づく商品紹介や料理の文化的な話題を一つ、一〜二文で控えめに伝えます。過去の会話に依頼や承認があっても実行しません。カート変更、注文、確認、スタッフ呼出しは行えません。返事や追加注文を強要せず、安全情報が未確認の商品を安全と勧めません。" : "商品紹介はgetCatalog(show=true)で検索とカード表示を一回で行う。画面を見せてほしいと依頼されたらsetUiSectionで該当タブへ切り替える。prepareConfirmationの結果に含まれる商品・数量・選択肢・合計を短く伝えて承認を求める。同じ客発話でprepareConfirmationとsubmitOrderを呼ばない。"}`;
-}
-
-function castTool<T extends z.ZodType>(options: {
-  id: string;
-  description: string;
-  inputSchema: T;
-  execute: (input: z.output<T>) => Promise<unknown>;
-}) {
-  const invoke = (input: unknown) => {
-    const parsed = options.inputSchema.safeParse(input);
-    ensure(parsed.success, "INVALID_INPUT", 422);
-    return options.execute(parsed.data);
-  };
-  return {
-    ...options,
-    execute: invoke,
-    invoke,
-    parameters: z.toJSONSchema(options.inputSchema),
-  };
 }
 
 export function createCastTools(
@@ -298,68 +290,5 @@ export function createCastTools(
           }),
         }
       : {}),
-  };
-}
-
-// GUIのイベント履歴・二言語snapshotを毎回モデルへ複製しない。
-export function voiceTableState(state: TableState) {
-  return {
-    locale: state.locale,
-    speechSpeed: state.speechSpeed,
-    uiSection: state.uiSection,
-    selectedProductId: state.selectedProductId,
-    staffCalled: state.staffCalled,
-    cart: {
-      ...state.cart,
-      lines: state.cart.lines.map((line) => ({
-        id: line.id,
-        productId: line.productId,
-        quantity: line.quantity,
-        selections: line.selections,
-        name: line.name[state.locale],
-        speechName: line.speechName[state.locale],
-        unitPrice: line.unitPrice,
-        total: line.total,
-        missing: line.missing,
-        ...(line.conditionIssues?.length
-          ? {
-              conditionIssues: line.conditionIssues.map(({ optionId, relation }) => ({
-                optionId,
-                relation,
-              })),
-            }
-          : {}),
-        planCovered: line.planCovered,
-        options: line.options.map((option) => ({
-          id: option.id,
-          name: option.name[state.locale],
-          quantity: option.quantity,
-          priceDelta: option.priceDelta,
-        })),
-      })),
-    },
-    snapshot: state.snapshot
-      ? {
-          id: state.snapshot.id,
-          status: state.snapshot.status,
-          cartVersion: state.snapshot.cartVersion,
-          text: state.snapshot.text,
-          total: state.snapshot.total,
-          expiresAt: state.snapshot.expiresAt,
-        }
-      : null,
-    orders: state.orders.map((order) => ({
-      id: order.id,
-      status: order.status,
-      total: order.total,
-    })),
-    bill: state.bill,
-    billRequested: state.billRequested,
-    plan: state.plan
-      ? {
-          ...state.plan,
-          rules: { ...state.plan.rules, text: state.plan.rules.text[state.locale] },
-        }
-      : null,
   };
 }

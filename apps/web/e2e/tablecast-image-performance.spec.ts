@@ -1,12 +1,13 @@
 import { expect, type Request } from "@playwright/test";
 import { catalogSchema, configDraftSchema } from "@tablecast/api/schema";
 import ja from "../messages/ja.json" with { type: "json" };
-import { test } from "./support/test";
+import { fixtureValue } from "../src/test-support/fixture-value";
 import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 declare global {
   interface Window {
-    tablecastImageMetrics: { lcp: number | null; cls: number | null };
+    tablecastImageMetrics: { cls: null | number; lcp: null | number };
   }
 }
 
@@ -33,7 +34,9 @@ for (const count of [24, 120]) {
         ...plan,
         excludedOptionIds: [],
         productIds: Array.from({ length: count }, (_, index) => index)
-          .filter((index) => plan.productIds.includes(originals[index % originals.length].id))
+          .filter((index) =>
+            plan.productIds.includes(fixtureValue(originals[index % originals.length]).id),
+          )
           .map((index) => `tablecast-image-product-${index}`),
       })),
       products: Array.from({ length: count }, (_, index) => ({
@@ -252,11 +255,11 @@ for (const count of [24, 120]) {
       .first()
       .click();
     const detail = page.getByRole("region", {
-      name: originals[0].text.ja.displayName,
+      name: fixtureValue(originals[0]).text.ja.displayName,
       exact: true,
     });
     const detailImage = detail.getByRole("img", {
-      name: originals[0].text.ja.displayName,
+      name: fixtureValue(originals[0]).text.ja.displayName,
       exact: true,
     });
     await expect

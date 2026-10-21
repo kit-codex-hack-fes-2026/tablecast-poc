@@ -1,16 +1,16 @@
-import { appearanceSchema, bannerSchema, brandingSchema } from "../appearance/model";
 import { z } from "zod";
-import { castInstructionSchema } from "./instruction-model";
 import { decimalQuerySchema, id, localeSchema } from "../../platform/model";
+import { appearanceSchema, bannerSchema, brandingSchema } from "../appearance/model";
 import {
   bilingualSchema,
+  conditionLimits,
   modifierSchema,
   planSchema,
-  productSchema,
-  conditionLimits,
   productConditionNodeCount,
+  productSchema,
 } from "../catalog/model";
 import { selectionSchema } from "../orders/model";
+import { castInstructionSchema } from "./instruction-model";
 export const maxConfigurationProducts = 2000;
 export const configurationSchema = z
   .object({
@@ -52,7 +52,7 @@ export const conditionPreviewSchema = z
   })
   .strict();
 
-export const configurationIssueBase = z.object({
+const configurationIssueBase = z.object({
   path: z.array(z.union([z.string(), z.number().int().nonnegative()])),
 });
 
@@ -120,16 +120,16 @@ export const configurationIssueSchema = z.discriminatedUnion("code", [
 export type ConfigurationIssue = z.infer<typeof configurationIssueSchema>;
 
 export type ConfigDraft = {
-  id: string;
-  storeId: string;
   baseVersion: number;
-  version: number;
-  status: "draft" | "ready" | "published" | "discarded";
+  changes: { after: unknown; before: unknown; path: string; sensitive: boolean }[];
   configuration: Configuration;
-  errors: ConfigurationIssue[];
   createdAt: number;
+  errors: ConfigurationIssue[];
+  id: string;
+  status: "discarded" | "draft" | "published" | "ready";
+  storeId: string;
   updatedAt: number;
-  changes: { path: string; before: unknown; after: unknown; sensitive: boolean }[];
+  version: number;
 };
 
 export const draftChoicesQuerySchema = z
@@ -169,7 +169,7 @@ export const draftChoicesPageSchema = z.object({
   nextCursor: z.object({ beforeUpdatedAt: z.number().int(), beforeId: z.string() }).nullable(),
 });
 
-export const configurationChangesSchema = z.array(
+const configurationChangesSchema = z.array(
   z.object({ path: z.string(), before: z.json(), after: z.json(), sensitive: z.boolean() }),
 );
 
@@ -187,10 +187,10 @@ export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
 });
 
 export type Catalog = {
+  configuration: Configuration;
   storeId: string;
   storeName: string;
   version: number;
-  configuration: Configuration;
 };
 
 export const catalogSchema: z.ZodType<Catalog> = z.object({
@@ -217,7 +217,7 @@ export const configurationHistoryQuerySchema = z
     { path: ["beforeId"] },
   );
 
-export const configurationHistoryEntrySchema = z.object({
+const configurationHistoryEntrySchema = z.object({
   kind: z.enum(["release", "draft"]),
   id: z.string(),
   version: z.number().int(),

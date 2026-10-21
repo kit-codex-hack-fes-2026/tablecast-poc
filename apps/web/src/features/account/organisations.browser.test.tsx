@@ -8,16 +8,16 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
-import { userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import ja from "../../../messages/ja.json";
+import { userEvent } from "vitest/browser";
 import en from "../../../messages/en.json";
+import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
-import { storesOptions, type loadStores } from "../store/store-query";
-import { Organisations } from "./organisations";
 import "../../styles.css";
+import { type loadStores, storesOptions } from "../store/store-query";
+import { Organisations } from "./organisations";
 
-vi.mock("../shell/settings-shell", () => ({
+vi.mock("../store/settings-shell", () => ({
   SettingsShell: ({ children }: { children: ReactNode }) => <main className="p-6">{children}</main>,
 }));
 let client: QueryClient;

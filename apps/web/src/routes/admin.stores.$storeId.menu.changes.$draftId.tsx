@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { menuReviewSearchSchema } from "../features/store/menu-model";
-import { DraftPage } from "../features/store/settings-drafts";
-import { catalogOptions, draftOptions } from "../features/store/menu-query";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { DraftPage } from "../features/configuration/configuration-draft-page";
+import { menuReviewSearchSchema } from "../features/configuration/menu-model";
+import { draftOptions } from "../features/configuration/menu-query";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/$draftId")({
   staticData: { document: { title: "workflow_review", description: "head_review_description" } },
   validateSearch: menuReviewSearchSchema,

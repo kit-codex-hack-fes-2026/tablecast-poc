@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { validateQuery } from "../../platform/validation";
+import { customerActor, type CustomerEnv } from "../customers/middleware";
 import { pointPageSchema } from "./model";
 import { getCustomerPoints } from "./queries";
 export const customerPointsRoutes = new Hono<CustomerEnv>().get(

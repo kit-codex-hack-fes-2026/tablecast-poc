@@ -1,9 +1,9 @@
 import * as files from "node:fs/promises";
 import { afterEach, expect, test, vi } from "vitest";
 import sample from "../sample.json";
-import * as projectFiles from "./tablecast-project";
-import { projectSchema } from "./tablecast-project";
-import { generateAudio, requestSpeech } from "./tablecast-tts";
+import * as projectFiles from "./tablecast-project.ts";
+import { projectSchema } from "./tablecast-project.ts";
+import { generateAudio, requestSpeech } from "./tablecast-tts.ts";
 
 vi.mock("node:fs/promises", { spy: true });
 

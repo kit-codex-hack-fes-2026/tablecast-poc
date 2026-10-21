@@ -1,11 +1,11 @@
 import { createTablecastClient, parseResponse } from "@tablecast/api/client";
 import { afterEach, expect, it, vi } from "vitest";
-import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
-import { LocaleProvider } from "../i18n/locale";
-import { ErrorNotice } from "./error-notice";
+import { page } from "vitest/browser";
 import ja from "../../messages/ja.json";
+import { LocaleProvider } from "../i18n/locale";
 import "../styles.css";
+import { ErrorNotice } from "./error-notice";
 
 afterEach(cleanup);
 

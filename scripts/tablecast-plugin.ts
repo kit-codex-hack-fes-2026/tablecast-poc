@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseEnv } from "node:util";
-import { assertPrepared, tablecastLocal, tablecastRoot } from "./tablecast-runtime";
+import { assertPrepared, tablecastLocal, tablecastRoot } from "./tablecast-runtime.ts";
 
 const syncOnly = process.argv.includes("--skills-only");
 await cp(

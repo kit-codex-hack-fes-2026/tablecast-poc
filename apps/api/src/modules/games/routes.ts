@@ -1,10 +1,10 @@
-import { z } from "zod";
 import { Hono } from "hono";
+import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { validate, validateQuery } from "../../platform/validation";
 import { saveGameStateSchema } from "./model";
 import { getGameRun, listTableGames } from "./queries";
-import { endGame, saveGameState, startGame } from "./service";
+import { endGame, saveGameState, startGame } from "./use-cases/play";
 
 export const gamesTableRoutes = new Hono<ApiEnv>()
   .get("/", validateQuery(z.object({ after: z.string().max(60).default("") })), async (c) =>

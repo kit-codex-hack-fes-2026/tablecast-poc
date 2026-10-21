@@ -1,10 +1,10 @@
-import { surfaceMotion } from "./ui/motion-variants";
-import { cn } from "tailwind-variants";
 import { Popover } from "@base-ui/react/popover";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { cn } from "tailwind-variants";
 import { useI18n } from "../i18n/locale";
 import { Button } from "./ui/button";
+import { surfaceMotion } from "./ui/motion-variants";
 
 /** 月単位の期間選択。value/onChangeはYYYY-MM、表示と操作名はアプリの言語に従う。 */
 export function MonthPicker({
@@ -12,9 +12,9 @@ export function MonthPicker({
   onChange,
   label,
 }: {
-  value: string;
-  onChange: (value: string) => void;
   label: string;
+  onChange: (value: string) => void;
+  value: string;
 }) {
   const { t, locale } = useI18n();
   const [year, setYear] = useState(Number(value.slice(0, 4)));

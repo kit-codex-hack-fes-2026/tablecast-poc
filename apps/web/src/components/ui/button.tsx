@@ -1,6 +1,6 @@
-import { useHydrated } from "@tanstack/react-router";
-import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import type { VariantProps } from "tailwind-variants";
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { useHydrated } from "@tanstack/react-router";
 import { buttonVariants } from "./button-variants";
 
 /**

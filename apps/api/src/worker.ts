@@ -1,8 +1,9 @@
 import { instrument } from "@inference-net/otel-cf-workers";
-import { telemetryConfig, type TelemetryEnv } from "./platform/telemetry";
+import { type TelemetryEnv } from "./platform/telemetry-content";
+import { telemetryConfig } from "./platform/telemetry-export";
+export { TablecastEmulate } from "./containers";
 export { TablecastVoiceUsage } from "./modules/billing/observer";
 export { StoreEvents } from "./realtime/store-events";
-export { TablecastEmulate } from "./containers";
 export default instrument(
   {
     async scheduled(controller, env) {

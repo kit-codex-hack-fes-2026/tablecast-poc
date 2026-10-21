@@ -3,7 +3,9 @@ import type { ApiEnv } from "../../platform/context";
 import { validate } from "../../platform/validation";
 import { confirmPointsSchema, pointCorrectionSchema, pointPolicySchema } from "./model";
 import { getPointPolicy, getPointVisit } from "./queries";
-import { confirmCustomerPoints, correctCustomerPoints, setPointPolicy } from "./service";
+import { confirmCustomerPoints } from "./use-cases/allocation";
+import { correctCustomerPoints } from "./use-cases/corrections";
+import { setPointPolicy } from "./use-cases/policy";
 export const pointsAdminRoutes = new Hono<ApiEnv>()
   .get("/points/policy", async (c) =>
     c.json(await getPointPolicy(c.get("services"), c.get("actor")), 200),

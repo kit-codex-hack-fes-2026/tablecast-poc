@@ -1,24 +1,27 @@
-import { instructionResponse } from "../configuration/instruction-response";
 import { Hono } from "hono";
-import { gamesTableRoutes } from "../games/routes";
 import { z } from "zod";
 import type { ApiEnv } from "../../platform/context";
 import { localeSchema } from "../../platform/model";
 import { validate, validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
-import { customerTargetSchema, customerAttributionSchema } from "../customer-memory/model";
-import { selectCustomerTarget, attributeCustomerConsumption } from "../customer-memory/service";
+import { instructionResponse } from "../configuration/instruction-response";
+import { customerAttributionSchema, customerTargetSchema } from "../customer-memory/model";
+import { attributeCustomerConsumption } from "../customer-memory/use-cases/consumption";
+import { selectCustomerTarget } from "../customer-memory/use-cases/target";
 import { getDeviceParticipants } from "../customer-visits/queries";
 import { createCustomerVisitCode } from "../customer-visits/service";
+import { gamesTableRoutes } from "../games/routes";
 import { cartUpdateSchema, prepareSchema, submitSchema } from "../orders/model";
-import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
+import { updateCart } from "../orders/use-cases/cart";
+import { prepareConfirmation } from "../orders/use-cases/confirmation";
+import { submitOrder } from "../orders/use-cases/submit";
 import { getEvents } from "../stores/queries";
 import { speechSpeedInputSchema } from "../voice/model";
-import { setSpeechSpeed } from "../voice/service";
 import { voiceRoutes } from "../voice/routes";
+import { setSpeechSpeed } from "../voice/service";
 import { uiSectionInputSchema } from "./model";
 import { getTableState } from "./queries";
-import { callStaff, changeLocale, requestBill, setUiSection } from "./service";
+import { callStaff, changeLocale, requestBill, setUiSection } from "./use-cases/presentation";
 export const tableOperations = new Hono<ApiEnv>()
   .post("/customer-target", validate(customerTargetSchema), async (c) =>
     c.json(await selectCustomerTarget(c.get("services"), c.get("actor"), c.req.valid("json")), 200),

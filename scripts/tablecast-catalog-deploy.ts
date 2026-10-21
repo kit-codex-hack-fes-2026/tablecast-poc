@@ -1,98 +1,28 @@
+import { writeAssets, writeRootConfig, writeWorkerConfig } from "@cloudflare/build-output-utils";
+import { InputWorkerSchema } from "@cloudflare/config";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
 import {
+  type CatalogKind,
   catalogKinds,
   catalogRelease,
   catalogReleaseSchema,
   catalogTarget,
-  type CatalogKind,
-} from "./tablecast-catalog-config";
+} from "./tablecast-catalog-config.ts";
+import { cloudflare, currentRevision } from "./tablecast-deploy-api.ts";
+import { deploymentTarget, tablecastAccountId } from "./tablecast-deploy-config.ts";
 import {
-  deploymentTarget,
-  tablecastAccountId,
-  accessApplicationConfig,
-  tablecastAccess,
-} from "./tablecast-deploy-config";
-import { assertAccessConfiguration } from "./tablecast-infra-access";
-import { InputWorkerSchema } from "@cloudflare/config";
-import { writeAssets, writeWorkerConfig, writeRootConfig } from "@cloudflare/build-output-utils";
+  applications,
+  ownedCatalogApplication,
+  protect,
+} from "./tablecast-deploy/catalog-access.ts";
 
 const root = resolve(import.meta.dirname, "..");
-const appSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  domain: z.string().optional(),
-  destinations: z
-    .array(
-      z.object({ type: z.string(), worker_id: z.string().optional(), uri: z.string().optional() }),
-    )
-    .optional(),
-  policies: z.array(z.object({ id: z.string() })).optional(),
-});
+
 const workerSchema = z.object({ id: z.string(), name: z.string() });
-
-async function applications() {
-  const apps = z.array(appSchema).parse(await cloudflare("access/apps?per_page=1000"));
-  if (apps.length >= 1000) throw new Error("Access一覧の上限に達しました。");
-  return apps;
-}
-
-export function ownedCatalogApplication(
-  app: z.infer<typeof appSchema>,
-  name: string,
-  domain: string,
-  workerId?: string,
-) {
-  if (
-    app.name !== name ||
-    (app.domain !== domain &&
-      !(
-        workerId &&
-        app.destinations?.length === 1 &&
-        app.destinations[0]?.type === "worker" &&
-        app.destinations[0]?.worker_id === workerId
-      ))
-  )
-    throw new Error("カタログAccessの所有対象が一致しません。");
-  if (
-    app.destinations?.some(
-      (value) =>
-        !(value.type === "public" && value.uri === domain) &&
-        !(value.type === "worker" && value.worker_id === workerId),
-    )
-  )
-    throw new Error("他の対象を含むAccess applicationは変更できません。");
-}
-
-async function protect(name: string, domain: string, workerId?: string) {
-  const [apps] = await Promise.all([applications(), assertAccessConfiguration()]);
-  const app = apps.find((value) => value.name === name);
-  if (app) ownedCatalogApplication(app, name, domain, workerId);
-  const policies = tablecastAccess.policies.map((value) => value.id);
-  const created = appSchema.parse(
-    await cloudflare(
-      `access/apps${app ? `/${app.id}` : ""}`,
-      app ? "PUT" : "POST",
-      accessApplicationConfig(name, domain, workerId),
-    ),
-  );
-  const checked = appSchema.parse(await cloudflare(`access/apps/${created.id}`));
-  ownedCatalogApplication(checked, name, domain, workerId);
-  if (
-    workerId &&
-    !checked.destinations?.some((value) => value.type === "worker" && value.worker_id === workerId)
-  )
-    throw new Error("Worker単位のAccess保護を確認できません。");
-  if (
-    checked.policies?.length !== 2 ||
-    !policies.every((id) => checked.policies?.some((value) => value.id === id))
-  )
-    throw new Error("Access policyを確認できません。");
-}
 
 async function assertCatalogSubdomain(name: string, kind: CatalogKind) {
   const subdomain = z
@@ -315,3 +245,5 @@ if (import.meta.main) {
     process.exitCode = 1;
   }
 }
+
+export { ownedCatalogApplication } from "./tablecast-deploy/catalog-access.ts";

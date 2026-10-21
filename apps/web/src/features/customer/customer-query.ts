@@ -3,7 +3,7 @@ import { parseResponse, rpc } from "../../lib/api";
 
 export const customerMembershipsOptions = infiniteQueryOptions({
   queryKey: ["tablecast-customer", "memberships"],
-  initialPageParam: undefined as { beforeJoinedAt: string; beforeId: string } | undefined,
+  initialPageParam: undefined as undefined | { beforeId: string; beforeJoinedAt: string },
   queryFn: ({ pageParam, signal }) =>
     parseResponse(
       rpc.api.customer.memberships.$get(

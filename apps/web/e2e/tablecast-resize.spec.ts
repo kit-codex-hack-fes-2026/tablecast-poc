@@ -1,7 +1,7 @@
-import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import ja from "../messages/ja.json" with { type: "json" };
 import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 test.use({ trace: "off", serviceWorkers: "block" });
 

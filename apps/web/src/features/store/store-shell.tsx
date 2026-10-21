@@ -5,16 +5,13 @@ import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { storesOptions } from "./store-query";
-
 import { apiError } from "../../lib/api-error";
-import { ConfigurationHeader } from "../shell/configuration-header";
-import { ConfigurationToolbarProvider } from "../shell/configuration-toolbar";
-import { AdminShell } from "../shell/admin-shell";
-import { useConfigurationRoute } from "../shell/configuration-route";
-
+import { ConfigurationHeader } from "../configuration/configuration-header";
+import { useConfigurationRoute } from "../configuration/configuration-route";
+import { ConfigurationToolbarProvider } from "../configuration/configuration-toolbar";
+import { StoreAdminShell } from "./admin-shell";
 import { StoreContext } from "./store-context";
-export { useStore } from "./store-context";
+import { storesOptions } from "./store-query";
 
 export function StoreShell({ storeId }: { storeId: string }) {
   const { t } = useI18n();
@@ -40,7 +37,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
   }, [stores.error, navigate]);
   return (
     <ConfigurationToolbarProvider key={storeId}>
-      <AdminShell
+      <StoreAdminShell
         tab="live"
         storeId={storeId}
         storeName={store?.name}
@@ -73,7 +70,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
             </div>
           )
         )}
-      </AdminShell>
+      </StoreAdminShell>
     </ConfigurationToolbarProvider>
   );
 }

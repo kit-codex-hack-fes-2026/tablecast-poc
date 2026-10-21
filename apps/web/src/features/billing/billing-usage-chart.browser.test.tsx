@@ -1,11 +1,11 @@
 import { afterEach, expect, it } from "vitest";
-import { page, userEvent } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
+import type { Billing } from "./billing-query";
+import "../../styles.css";
 import { LocaleProvider } from "../../i18n/locale";
 import { billingFixture } from "./billing-fixture";
-import type { Billing } from "./billing-query";
 import { BillingUsageChart } from "./billing-usage-chart";
-import "../../styles.css";
 
 const daily = Array.from({ length: 31 }, (_, index) => ({
   day: Date.UTC(2026, 9, index + 1),
@@ -17,7 +17,7 @@ afterEach(async () => {
   await cleanup();
   await page.viewport(1024, 768);
 });
-async function show(data: Billing = fixture, locale: "ja" | "en" = "ja") {
+async function show(data: Billing = fixture, locale: "en" | "ja" = "ja") {
   await render(
     <LocaleProvider initialLocale={locale} persist={false}>
       <BillingUsageChart data={data} />

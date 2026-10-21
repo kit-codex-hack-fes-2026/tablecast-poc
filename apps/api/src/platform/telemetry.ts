@@ -1,26 +1,15 @@
+import { getLogger } from "@inference-net/otel-cf-workers";
 import {
-  getLogger,
-  OTLPExporter,
-  OTLPTransport,
-  type LogTransport,
-  type WorkerOtelConfig,
-} from "@inference-net/otel-cf-workers";
-import {
+  type Attributes,
   context,
   createContextKey,
   propagation,
   SpanStatusCode,
   trace,
-  type Attributes,
 } from "@opentelemetry/api";
-import { diagnosticSecrets, errorAttributes, redactCredentials } from "./diagnostics";
+import { diagnosticSecrets, errorAttributes } from "./diagnostics";
 import { DomainError } from "./errors";
-import { resourceFromAttributes } from "@opentelemetry/resources";
-import {
-  BatchSpanProcessor,
-  type ReadableSpan,
-  type SpanExporter,
-} from "@opentelemetry/sdk-trace-base";
+import { telemetryAttributes, telemetryContent, type TelemetryEnv } from "./telemetry-content";
 
 if (import.meta.hot) {
   // Viteの全再評価と同じ寿命で登録を解放し、古いSDKの設定キーを持ち越さない。
@@ -29,246 +18,6 @@ if (import.meta.hot) {
     context.disable();
     propagation.disable();
   });
-}
-
-export interface TelemetryEnv {
-  TABLECAST_ENV?: string;
-  TABLECAST_RELEASE_SHA?: string;
-  TABLECAST_PR_NUMBER?: string;
-  TABLECAST_OTEL_ENDPOINT?: string;
-  TABLECAST_OTEL_AUTHORIZATION?: string;
-  TABLECAST_OTEL_CAPTURE_CONTENT?: string;
-}
-
-// 自動計測はURL・SQL・ヘッダーを含むため、送信境界で許可した属性だけを残す。
-const allowed = new Set([
-  "tablecast.voice.session.id",
-  "tablecast.voice.turn.id",
-  "tablecast.agent.session.id",
-  "tablecast.tool.name",
-  "tablecast.tool.call.id",
-  "tablecast.tool.output_bytes",
-  "tablecast.operation",
-  "tablecast.channel",
-  "tablecast.outcome",
-  "http.request.method",
-  "http.method",
-  "http.response.status_code",
-  "http.status_code",
-  "http.route",
-  "db.system",
-  "db.system.name",
-  "cloudflare.colo",
-  "cloudflare.placement",
-  "cloudflare.d1.response.rows_read",
-  "cloudflare.d1.response.rows_written",
-  "cloudflare.d1.response.sql_duration_ms",
-  "cloudflare.d1.response.served_by_region",
-  "cloudflare.d1.response.served_by_primary",
-  "cloudflare.d1.response.total_attempts",
-  "db.operation",
-  "db.operation.name",
-  "faas.coldstart",
-  "tablecast.request.id",
-  "tablecast.duration_ms",
-  "tablecast.error.code",
-  "tablecast.error.phase",
-]);
-const diagnosticKeys = new Set([
-  "tablecast.error.sanitized",
-  "exception.type",
-  "exception.message",
-  "exception.stacktrace",
-  "tablecast.error.causes",
-]);
-const credentialKey = /authorization|cookie|password|secret|api[_-]?key|token$/i;
-
-// 顧客情報の収集設定に関係なく、認証資格と現在のbindingの秘密値は除去する。
-export function telemetryContent(value: string, env: TelemetryEnv): string;
-export function telemetryContent<T>(value: T, env: TelemetryEnv): T;
-export function telemetryContent(value: unknown, env: TelemetryEnv): unknown {
-  // envの列挙はbindingの計測Proxyも作るため、本文の各値で繰り返さない。
-  const secrets = Object.entries(env).flatMap(([key, secret]) =>
-    credentialKey.test(key) && typeof secret === "string" && secret.length >= 8 ? [secret] : [],
-  );
-  function sanitize(item: unknown): unknown {
-    if (typeof item === "string") {
-      const start = item.trimStart()[0];
-      if (start === "{" || start === "[") {
-        try {
-          const parsed: unknown = JSON.parse(item);
-          if (parsed && typeof parsed === "object") return JSON.stringify(sanitize(parsed));
-        } catch {
-          // JSON候補が通常の文だった場合も資格情報を除去する。
-        }
-      }
-      return redactCredentials(item, secrets);
-    }
-    if (item instanceof Date) return item;
-    if (Array.isArray(item)) return item.map(sanitize);
-    if (item && typeof item === "object")
-      return Object.fromEntries(
-        Object.entries(item).map(([key, entry]) => [
-          key,
-          credentialKey.test(key) ? "[REDACTED]" : sanitize(entry),
-        ]),
-      );
-    return item;
-  }
-  return sanitize(value);
-}
-
-export function telemetryAttributes(
-  attributes: Record<string, unknown>,
-  env: TelemetryEnv = {},
-): Attributes {
-  const result: Attributes = {};
-  for (const [key, value] of Object.entries(attributes)) {
-    if (credentialKey.test(key)) continue;
-    if (
-      (allowed.has(key) ||
-        (attributes["tablecast.error.sanitized"] === true && diagnosticKeys.has(key)) ||
-        /^gen_ai\.(usage\.|response\.model|request\.model|provider\.name|operation\.name)/.test(
-          key,
-        ) ||
-        (env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" &&
-          /^(exception\.|db\.(statement|query\.text)|tablecast\.(input|output)|gen_ai\.)/.test(
-            key,
-          ))) &&
-      (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-    )
-      result[key] = typeof value === "string" ? telemetryContent(value, env) : value;
-  }
-  return result;
-}
-
-export function telemetryConfig(env: TelemetryEnv, service: string): WorkerOtelConfig {
-  const resource = resourceFromAttributes({
-    "service.namespace": "tablecast",
-    "service.name": service,
-    "service.version": env.TABLECAST_RELEASE_SHA ?? "local",
-    "deployment.environment.name": env.TABLECAST_ENV ?? "development",
-    ...(env.TABLECAST_ENV === "preview" && env.TABLECAST_PR_NUMBER
-      ? { "tablecast.pr.number": env.TABLECAST_PR_NUMBER }
-      : {}),
-  });
-  const endpoint = env.TABLECAST_OTEL_ENDPOINT?.replace(/\/$/, "");
-  const headers: Record<string, string> = env.TABLECAST_OTEL_AUTHORIZATION
-    ? { Authorization: env.TABLECAST_OTEL_AUTHORIZATION }
-    : {};
-  const traceTransport = endpoint
-    ? new OTLPExporter({ url: `${endpoint}/v1/traces`, headers })
-    : undefined;
-  const logTransport = endpoint
-    ? new OTLPTransport({ url: `${endpoint}/v1/logs`, headers })
-    : undefined;
-  const exporter: SpanExporter = {
-    export(spans, callback) {
-      if (!traceTransport) {
-        callback({ code: 0 });
-        return;
-      }
-      traceTransport.export(
-        spans.map((span): ReadableSpan => ({
-          ...span,
-          // spanContextはprototype上のメソッドなので明示的に引き継ぐ。
-          spanContext: () => span.spanContext(),
-          name: /^tablecast\.[a-z_.]+$/.test(span.name)
-            ? span.name
-            : span.attributes["http.request.method"] || span.attributes["http.method"]
-              ? "HTTP"
-              : span.attributes["db.system"] || span.attributes["db.system.name"]
-                ? "DB"
-                : "Worker binding",
-          resource,
-          attributes: telemetryAttributes(span.attributes, env),
-          events: span.events
-            .filter(
-              (event) =>
-                env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" ||
-                (event.name === "exception" &&
-                  event.attributes?.["tablecast.error.sanitized"] === true),
-            )
-            .map((event) => ({
-              ...event,
-              name: telemetryContent(event.name, env),
-              attributes: telemetryAttributes(event.attributes ?? {}, env),
-            })),
-          links: [],
-          status: {
-            code: span.status.code,
-            ...(env.TABLECAST_OTEL_CAPTURE_CONTENT === "true" && span.status.message
-              ? { message: telemetryContent(span.status.message, env) }
-              : {}),
-          },
-        })),
-        callback,
-      );
-    },
-    shutdown: () => traceTransport?.shutdown() ?? Promise.resolve(),
-  };
-  const logs: LogTransport = {
-    name: "tablecast-safe-logs",
-    export(records, callback) {
-      const safe = records
-        .filter(
-          (record) => typeof record.body === "string" && /^tablecast\.[a-z_.]+$/.test(record.body),
-        )
-        .flatMap((record) => {
-          const attributes = telemetryAttributes(record.attributes, env);
-          const content = Object.fromEntries(
-            Object.entries(attributes).filter(([key]) => !allowed.has(key)),
-          );
-          const metadata = Object.fromEntries(
-            Object.entries(attributes).filter(([key]) => allowed.has(key)),
-          );
-          const completed = { ...record, resource, attributes: metadata };
-          if (Object.keys(content).length === 0) return [completed];
-          // Lokiの64 KiB属性上限を避ける。Unicodeを壊さず本文へ分割し、
-          // 256 KiB行上限にも収める。完了ログは一件のまま集計する。
-          const parts = JSON.stringify(content).match(/.{1,16000}/gsu) ?? [];
-          return [
-            completed,
-            ...parts.map((part, index) => ({
-              ...completed,
-              body: JSON.stringify({
-                event: "tablecast.content",
-                part: index + 1,
-                parts: parts.length,
-                content: part,
-              }),
-            })),
-          ];
-        });
-      if (logTransport) logTransport.export(safe, callback);
-      else callback({ code: 0 });
-    },
-    shutdown: () => logTransport?.shutdown() ?? Promise.resolve(),
-  };
-  return {
-    service: {
-      name: service,
-      namespace: "tablecast",
-      version: env.TABLECAST_RELEASE_SHA ?? "local",
-    },
-    trace: {
-      // 完了済みtraceを保持する既定processorを避け、標準の上限付きqueueを使う。
-      // Worker入口のwaitUntilからforceFlushされ、未完了spanを強制終了しない。
-      spanProcessors: [
-        new BatchSpanProcessor(exporter, { maxQueueSize: 512, maxExportBatchSize: 64 }),
-      ],
-      sampling: {
-        headSampler: { ratio: 1, acceptRemote: false },
-      },
-      fetch: { includeTraceContext: false },
-      instrumentation: { instrumentGlobalFetch: false, instrumentGlobalCache: false },
-    },
-    logs: {
-      transports: [logs],
-      instrumentation: { instrumentConsole: false },
-      batching: { strategy: "size", maxQueueSize: 256, maxExportBatchSize: 64 },
-    },
-  };
 }
 
 export async function measured<T>(
@@ -356,7 +105,7 @@ export function requestLog(attributes: Attributes, failed: boolean, env: Telemet
 export function telemetryLog(
   event: `tablecast.${string}`,
   attributes: Attributes,
-  failed: boolean | "warn" = false,
+  failed: "warn" | boolean = false,
   env: TelemetryEnv = {},
 ) {
   const level =
@@ -397,3 +146,5 @@ export function failureLog(
   trace.getActiveSpan()?.addEvent("exception", diagnostic);
   telemetryLog(event, { ...attributes, ...diagnostic }, "warn", env);
 }
+export type { TelemetryEnv } from "./telemetry-content";
+export { telemetryConfig } from "./telemetry-export";

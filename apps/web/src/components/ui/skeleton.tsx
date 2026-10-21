@@ -1,5 +1,5 @@
-import { cn } from "tailwind-variants";
 import type { ComponentProps } from "react";
+import { cn } from "tailwind-variants";
 /**
  * 読み込み中の形状のみを表す。
  * classNameとHTML div propsを受け取る。

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
-import { useI18n } from "../../i18n/locale";
 import { Field } from "@base-ui/react/field";
-import { useFieldContext } from "../../lib/form-context";
-import { Input } from "../ui/input";
-import { FieldErrors } from "../ui/field-errors";
+import { useEffect, useRef } from "react";
 import type { FieldProps } from "./field-props";
+import { useI18n } from "../../i18n/locale";
+import { useFieldContext } from "../../lib/form-context";
+import { FieldErrors } from "../ui/field-errors";
+import { Input } from "../ui/input";
 export function TextField({ label, description, ...props }: FieldProps) {
   const field = useFieldContext<string>();
   const { locale } = useI18n();

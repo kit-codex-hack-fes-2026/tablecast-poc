@@ -1,4 +1,3 @@
-import { tv } from "tailwind-variants";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
   AudioLines,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { animate, mix } from "motion";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { tv } from "tailwind-variants";
 import type { VoiceStatus } from "./voice-connection";
 
 const waveformIcon = tv({
@@ -40,7 +40,7 @@ const waveformLayout = tv({
   },
 });
 
-export type VoiceVisualState = VoiceStatus | "tool";
+export type VoiceVisualState = "tool" | VoiceStatus;
 
 // 色だけに依存せず、中心の記号・輪郭・流れを状態へ対応付ける。
 const states = {
@@ -84,11 +84,11 @@ export function AudioWaveform({
   toolLabel,
   compact = false,
 }: {
-  track?: MediaStreamTrack;
+  compact?: boolean;
   label: string;
   state: VoiceVisualState;
   toolLabel?: string;
-  compact?: boolean;
+  track?: MediaStreamTrack;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const layout = waveformLayout({ compact });

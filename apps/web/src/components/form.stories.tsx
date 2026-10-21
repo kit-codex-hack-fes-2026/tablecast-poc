@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
-import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { useState } from "react";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { z } from "zod";
 import { useI18n } from "../i18n/locale";
 import { ActionFeedback } from "./action-feedback";
 import { useAppForm } from "./form";
-import { TextField } from "./form/text-field";
+import { FormErrors } from "./form/errors";
 import { NumberField } from "./form/number-field";
 import { SubmitButton } from "./form/submit-button";
-import { FormErrors } from "./form/errors";
+import { TextField } from "./form/text-field";
 
 /**
  * useAppFormがTanStack FormとBase UI Fieldを組み合わせる。
@@ -21,7 +21,7 @@ import { FormErrors } from "./form/errors";
 function FormExample({
   submit,
 }: {
-  submit: (value: { email: string; count: number }) => Promise<void>;
+  submit: (value: { count: number; email: string }) => Promise<void>;
 }) {
   const { t } = useI18n();
   const [error, setError] = useState<unknown>();
@@ -87,7 +87,7 @@ function FormExample({
   );
 }
 
-const submit = fn<(value: { email: string; count: number }) => Promise<void>>();
+const submit = fn<(value: { count: number; email: string }) => Promise<void>>();
 const meta = {
   tags: ["autodocs"],
 

@@ -1,10 +1,10 @@
 import { trace } from "@opentelemetry/api";
-import { observeOperation } from "../../platform/telemetry";
 import { and, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
+import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
+import { observeOperation } from "../../platform/telemetry";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
@@ -39,7 +39,7 @@ export async function conversationHistory(
     )
     .orderBy(desc(business.tableEvents.cursor))
     .limit(40);
-  const history: { role: "user" | "assistant"; content: string; interrupted: boolean }[] = [];
+  const history: { content: string; interrupted: boolean; role: "assistant" | "user" }[] = [];
   let characters = 0;
   for (const row of rows) {
     const data = z
@@ -79,7 +79,7 @@ export async function invokeVoiceTool(
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
       const tools = createCastTools(services, actor, signal, trigger, session);
       const tool = tools[input.toolName];
-      const record = async (state: "running" | "completed" | "error", errorCode?: string) =>
+      const record = async (state: "completed" | "error" | "running", errorCode?: string) =>
         recordVoiceEvent(
           services,
           actor,

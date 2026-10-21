@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config";
+import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config.ts";
 
 export const catalogKinds = ["storybook", "email"] as const;
 export type CatalogKind = (typeof catalogKinds)[number];

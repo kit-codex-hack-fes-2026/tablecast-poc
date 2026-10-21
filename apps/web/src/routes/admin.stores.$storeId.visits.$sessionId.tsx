@@ -1,10 +1,10 @@
-import { pointVisitOptions } from "../features/store/point-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { TableDetail } from "../features/store/table-detail";
-import { catalogOptions } from "../features/store/menu-query";
-import { tableDetailOptions } from "../features/store/store-query";
-import { floorSearchSchema } from "../features/store/floor-model";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { floorSearchSchema } from "../features/floor/floor-model";
+import { tableDetailOptions } from "../features/floor/floor-query";
+import { TableDetail } from "../features/floor/table-detail";
+import { pointVisitOptions } from "../features/rewards/point-query";
 export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")({
   staticData: { document: { title: "head_visit", description: "head_visit_description" } },
   validateSearch: z.object({

@@ -1,6 +1,6 @@
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { readdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { readBuildOutput } from "@cloudflare/build-output-utils";
 
 // Viteのpreview用秘密値は、Turboが成果物をcacheする前に除外する。
 const root = process.cwd();

@@ -1,22 +1,20 @@
 import { and, eq, exists, isNull, sql } from "drizzle-orm";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
+import type { CustomerActor } from "../customers/model";
 import {
   customerMemberships,
   customerVisitCodes,
   customerVisitParticipants,
-  devices,
-  tableEvents,
-  tableSessions,
-} from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
+} from "../../db/customer-schema";
+import { devices, tableEvents, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
-import { hashDeviceToken } from "../auth/service";
+import { hashDeviceToken } from "../auth/token";
 import {
-  resetCustomerContextStatements,
   finishCustomerContextChange,
-} from "../customer-memory/service";
+  resetCustomerContextStatements,
+} from "../customer-memory/context";
 import { getCustomerStore } from "../customers/queries";
-import type { CustomerActor } from "../customers/model";
 import { notifyStore } from "../tables/mutations";
 import { getCustomerVisit, requireCustomerVisit, validVisitCode } from "./queries";
 
@@ -98,7 +96,7 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
       sessionId: valid.sessionId,
       membershipId: customerMemberships.id,
       joinedAt: sql<number>`${now}`.as("joined_at"),
-      leftAt: sql<number | null>`NULL`.as("left_at"),
+      leftAt: sql<null | number>`NULL`.as("left_at"),
     })
     .from(customerMemberships)
     .innerJoin(valid, eq(valid.storeId, customerMemberships.storeId))
@@ -142,7 +140,7 @@ export async function joinCustomerVisit(services: ApiServices, userId: string, c
   ]);
   const validResult = joined.at(-1);
   ensure(Array.isArray(validResult) && validResult.length, "CUSTOMER_VISIT_CODE_EXPIRED", 409);
-  await finishCustomerContextChange(services, visit.storeId, joined[1]);
+  await finishCustomerContextChange(services, visit.storeId, joined[1], joined[6]);
   const actor = { kind: "customer", userId, storeId: visit.storeId } as const;
   const result = await getCustomerVisit(services, actor, visit.sessionId);
   await notifyStore(services, visit.storeId, visit.sessionId);
@@ -205,7 +203,7 @@ export async function leaveCustomerVisit(
         ),
     ),
   ]);
-  await finishCustomerContextChange(services, actor.storeId, result[1]);
+  await finishCustomerContextChange(services, actor.storeId, result[1], result[6]);
   await notifyStore(services, actor.storeId, sessionId);
   return getCustomerVisit(services, actor, sessionId);
 }

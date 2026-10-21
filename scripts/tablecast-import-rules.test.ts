@@ -24,9 +24,9 @@ it(
           'export { route } from "../orders/routes";',
           'export { Hono } from "hono";',
           'export type { ApiServices } from "../../platform/context";',
-          'export { submitOrder } from "../orders/service";',
+          'export { submitOrder } from "../orders/use-cases/submit";',
         ],
-        rejectedLines: [1, 2, 3, 4],
+        rejectedLines: [1, 2, 3, 4, 5],
       },
       {
         path: "modules/example/service.ts",
@@ -40,7 +40,7 @@ it(
           'export { contract } from "../../schema.ts";',
           'export type { ApiServices } from "../../platform/context";',
           'export { orderSchema } from "../orders/model";',
-          'export { getSession } from "../tables/queries";',
+          'export { getSession } from "../tables/session";',
         ],
         rejectedLines: [1, 2, 3, 4, 5, 6, 7],
       },
@@ -60,7 +60,7 @@ it(
       {
         path: "modules/example/queries.ts",
         imports: [
-          'export { submitOrder } from "../orders/service";',
+          'export { submitOrder } from "../orders/use-cases/submit";',
           'export { notifyStore } from "../tables/mutations";',
           'export { sql } from "drizzle-orm";',
           'export type { ApiServices } from "../../platform/context";',
@@ -70,7 +70,7 @@ it(
       {
         path: "db/records.ts",
         imports: [
-          'export { submitOrder } from "../modules/orders/service";',
+          'export { submitOrder } from "../modules/orders/use-cases/submit";',
           'export { Hono } from "hono";',
           'export { sqliteTable } from "drizzle-orm/sqlite-core";',
           'export { orders } from "./business-schema";',
@@ -80,12 +80,34 @@ it(
       {
         path: "app.ts",
         imports: [
-          'export { submitOrder } from "./modules/orders/service";',
+          'export { submitOrder } from "./modules/orders/use-cases/submit";',
           'export { schema } from "./db/business-schema";',
           'export { routes } from "./modules/orders/routes";',
           'export { requestServices } from "./platform/context";',
         ],
         rejectedLines: [1, 2],
+      },
+      {
+        path: "modules/example/use-cases/submit.ts",
+        imports: [
+          'export { recordPayment } from "../../orders/use-cases/payment";',
+          'export { changeOrderStatus } from "../../orders/use-cases/status";',
+          'export { submitOrder } from "../../orders/use-cases/submit";',
+          'export { getSession } from "../../tables/session";',
+          'export { Hono } from "hono";',
+        ],
+        rejectedLines: [1, 2, 3, 5],
+      },
+      {
+        path: "integrations/boundary-example.ts",
+        imports: [
+          'export { business } from "../db/public";',
+          'export { createAuth } from "../modules/auth/service";',
+          'export type { ApiServices } from "../platform/context";',
+          'export { Hono } from "hono";',
+          'export { z } from "zod";',
+        ],
+        rejectedLines: [1, 2, 3, 4],
       },
       {
         path: "modules/example/other.ts",
@@ -110,6 +132,9 @@ it(
     try {
       await mkdir(join(temporary, "apps/api"), { recursive: true });
       await cp(join(root, "apps/api/src"), join(temporary, "apps/api/src"), { recursive: true });
+      await cp(join(root, "apps/api/config"), join(temporary, "apps/api/config"), {
+        recursive: true,
+      });
       await cp(join(root, "tsconfig.json"), join(temporary, "tsconfig.json"));
       await cp(join(root, "apps/api/tsconfig.json"), join(temporary, "apps/api/tsconfig.json"));
       await cp(join(root, "oxlint.config.ts"), join(temporary, "oxlint.config.ts"));
@@ -143,6 +168,7 @@ it(
       );
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(1);
+      expect(result.stdout).toMatch(/^\s*\{/);
       const output = z
         .object({
           diagnostics: z.array(
@@ -219,8 +245,10 @@ it(
           'export { rpc } from "../../lib/api";',
           'export { Button } from "../../components/ui/button";',
           'export { createStoreSchema } from "@tablecast/api/schema";',
+          'export { createDatabase } from "@tablecast/api/db";',
+          'export { createAuth } from "@tablecast/api/bootstrap";',
         ],
-        rejectedLines: [1, 2],
+        rejectedLines: [1, 2, 4, 5],
       },
       {
         path: "components/boundary-example.tsx",
@@ -230,6 +258,34 @@ it(
           'export { ErrorNotice } from "./error-notice";',
         ],
         rejectedLines: [1, 2],
+      },
+      {
+        path: "features/kiosk/voice-subscription.ts",
+        imports: [
+          'export { Kiosk } from "./kiosk";',
+          'export { VoiceConnection } from "./voice-connection";',
+          'export { voiceStateSchema } from "./voice-model";',
+        ],
+        rejectedLines: [1],
+      },
+      {
+        path: "features/shell/boundary-example.tsx",
+        imports: [
+          'export { storeOptions } from "../store/store-query";',
+          'export { Floor } from "../floor/floor";',
+          'export { Button } from "../../components/ui/button";',
+          'export { NavigationLink } from "./navigation-link";',
+        ],
+        rejectedLines: [1, 2],
+      },
+      {
+        path: "features/devices/boundary-example.tsx",
+        imports: [
+          'export { Kiosk } from "../kiosk/kiosk";',
+          'export { catalogOptions } from "../catalog/catalog-query";',
+          'export { rpc } from "../../lib/api";',
+        ],
+        rejectedLines: [1],
       },
       { path: "utils/legacy.ts", imports: ["export const misplaced = true;"], rejectedLines: [1] },
       {
@@ -246,6 +302,7 @@ it(
         "oxlint.config.ts",
         "apps/web/tsconfig.json",
         "apps/web/oxlint.config.ts",
+        "apps/web/oxlint.boundaries.ts",
       ])
         await cp(join(root, path), join(temporary, path));
       await symlink(join(root, "node_modules"), join(temporary, "node_modules"));
@@ -269,6 +326,7 @@ it(
       );
       expect(result.error).toBeUndefined();
       expect(result.status).toBe(1);
+      expect(result.stdout).toMatch(/^\s*\{/);
       const output = z
         .object({
           diagnostics: z.array(
@@ -300,3 +358,59 @@ it(
     }
   },
 );
+
+it("分割後のseed・deploy CLIでも直接prepareを拒否し、batch呼出しを許可する", async () => {
+  const root = resolve(import.meta.dirname, "..");
+  const temporary = await mkdtemp(join(tmpdir(), "tablecast-cli-db-rules-"));
+  const files = [
+    "scripts/tablecast-seed-direct.ts",
+    "scripts/tablecast-seed/database.ts",
+    "scripts/tablecast-deploy/storage.ts",
+  ];
+  try {
+    await cp(join(root, "oxlint.config.ts"), join(temporary, "oxlint.config.ts"));
+    await cp(join(root, "tsconfig.json"), join(temporary, "tsconfig.json"));
+    await symlink(join(root, "node_modules"), join(temporary, "node_modules"));
+    for (const file of files) {
+      const path = join(temporary, file);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(
+        path,
+        [
+          "declare const db: { batch(): void; prepare(query: string): void };",
+          'db.prepare("SELECT 1");',
+          "db.batch();",
+        ].join("\n"),
+      );
+    }
+    const result = spawnSync("bunx", ["--no-install", "oxlint", "--format", "json", ...files], {
+      cwd: temporary,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    const output = z
+      .object({
+        diagnostics: z.array(
+          z.object({
+            code: z.string(),
+            filename: z.string(),
+            labels: z.array(z.object({ span: z.object({ line: z.number() }) })),
+          }),
+        ),
+      })
+      .parse(JSON.parse(result.stdout));
+    for (const file of files) {
+      const lines = output.diagnostics
+        .filter(
+          (item) =>
+            item.code === "eslint(no-restricted-properties)" && item.filename.endsWith(file),
+        )
+        .flatMap((item) => item.labels.map((label) => label.span.line));
+      expect(lines).toEqual([2]);
+    }
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+}, 45_000);

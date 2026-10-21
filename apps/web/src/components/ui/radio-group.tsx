@@ -1,6 +1,6 @@
-import { controlMotion } from "./motion-variants";
 import { Radio } from "@base-ui/react/radio";
 import { cn } from "tailwind-variants";
+import { controlMotion } from "./motion-variants";
 
 export { RadioGroup } from "@base-ui/react/radio-group";
 

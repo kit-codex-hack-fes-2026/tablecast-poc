@@ -1,8 +1,9 @@
-import { failureLog } from "../../platform/telemetry";
 import { and, eq, exists, notExists, sql, type SQL } from "drizzle-orm";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
+import * as business from "../../db/business-schema";
+import { tableSessions } from "../../db/table-schema";
+import { failureLog } from "../../platform/telemetry";
 export function voiceCondition(actor: Actor) {
   return actor.kind === "voice"
     ? sql` AND voice_state='active' AND voice_session_id=${actor.voiceSessionId ?? null} AND active_turn_id=${actor.turnId ?? null}`
@@ -40,7 +41,7 @@ export async function notifyStore(
           )
           .get()
       : undefined;
-    const row = await db.get<{ cursor: number | null } | undefined>(
+    const row = await db.get<undefined | { cursor: null | number }>(
       sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId} AND ${demo ? sql`table_session_id=${demo.id}` : sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`}`,
     );
     await services.env.TABLECAST_EVENTS.get(
@@ -140,6 +141,21 @@ export function voiceTurnEvent(services: ApiServices, condition: SQL | undefined
                 ),
               ),
           ),
+        ),
+      ),
+  );
+}
+
+export function mutationGate(services: ApiServices, actor: Actor, token: string) {
+  return exists(
+    services.db
+      .select({ id: tableSessions.id })
+      .from(tableSessions)
+      .where(
+        and(
+          eq(tableSessions.id, actor.tableSessionId ?? ""),
+          eq(tableSessions.store_id, actor.storeId),
+          eq(tableSessions.mutation_id, token),
         ),
       ),
   );

@@ -1,13 +1,13 @@
-import { cn } from "tailwind-variants";
 import { useHydrated } from "@tanstack/react-router";
 import { GripVertical } from "lucide-react";
 import {
   Group,
+  type GroupProps,
   Panel,
   Separator,
-  type GroupProps,
   type SeparatorProps,
 } from "react-resizable-panels";
+import { cn } from "tailwind-variants";
 
 /**
  * react-resizable-panelsのGroup/Panel/Separatorを利用した分割。

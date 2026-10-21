@@ -1,13 +1,33 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { waitFor, expect, fn, userEvent, within } from "storybook/test";
 import { useState } from "react";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "../../components/ui/button";
-import { AdminSidebar, useSidebarStore, type AdminSidebarProps } from "./admin-sidebar";
+import { useConfigurationRoute } from "../configuration/configuration-route";
+import { MenuNavigation } from "../configuration/menu-navigation";
+import { useSidebarStore } from "../store/sidebar-selection";
+import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
 
 function ConnectedSidebar(props: AdminSidebarProps) {
   const selection = useSidebarStore(props);
-  return <AdminSidebar {...props} selection={selection} />;
+  const { draftId } = useConfigurationRoute();
+  return (
+    <AdminSidebar
+      {...props}
+      selection={selection}
+      renderMenuNavigation={({ collapsed, onNavigate }) =>
+        selection.selectedStore ? (
+          <MenuNavigation
+            storeId={selection.selectedStore}
+            manager={selection.manager}
+            draftId={draftId}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        ) : undefined
+      }
+    />
+  );
 }
 
 function StoreChangeExample(props: AdminSidebarProps) {
