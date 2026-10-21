@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
 import {
+  CalendarClock,
+  CalendarDays,
+  Clock,
   Check,
   ImagePlus,
   KeyRound,
@@ -25,6 +28,7 @@ import { ActionFeedback } from "../../components/action-feedback";
 import { UserIdentity } from "../../components/user-identity";
 import { PageHeader } from "../../components/page-header";
 import { useI18n } from "../../i18n/locale";
+import { useCollectionSearch } from "../shell/collection-search";
 import { sessionOptions } from "../../lib/session-query";
 import {
   accountKeysOptions,
@@ -212,6 +216,10 @@ type Passkey = NonNullable<AccountController["keys"]["data"]>[number];
 type Session = NonNullable<AccountController["sessions"]["data"]>[number];
 function AccountConnections({ controller }: { controller: AccountController }) {
   const { t, accounts, change, session, section } = controller;
+  const collection = useCollectionSearch({
+    prefix: "connections",
+    sortIds: ["providerId", "createdAt", "updatedAt"],
+  });
   const columns = useMemo(
     () =>
       connectionColumns(
@@ -233,6 +241,9 @@ function AccountConnections({ controller }: { controller: AccountController }) {
         {t("account_connections")}
       </h2>
       <DataTable
+        {...collection}
+        searchLabel={t("account_connections_search")}
+        searchPlaceholder={t("account_connections_search")}
         data={accounts.data ?? []}
         pending={accounts.isPending}
         error={accounts.error}
@@ -269,7 +280,9 @@ function connectionColumns(
 ): DataTableColumn<Connection>[] {
   return [
     {
-      accessorKey: "providerId",
+      id: "providerId",
+      accessorFn: (row) => (row.providerId === "google" ? "Google" : t("auth_password")),
+      meta: { icon: Link2 },
       header: t("account_connections"),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -283,11 +296,13 @@ function connectionColumns(
     },
     {
       accessorKey: "createdAt",
+      meta: { icon: CalendarDays },
       header: t("mcp_connected_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
     {
       accessorKey: "updatedAt",
+      meta: { icon: CalendarClock },
       header: t("mcp_updated_at"),
       cell: ({ row }) => <DateTime value={row.original.updatedAt} />,
     },
@@ -313,6 +328,7 @@ function connectionColumns(
 }
 function AccountPasskeys({ controller }: { controller: AccountController }) {
   const { t, keys, change, section } = controller;
+  const collection = useCollectionSearch({ prefix: "passkeys", sortIds: ["name", "createdAt"] });
   const columns = useMemo(
     () => passkeyColumns(t, change.isPending || controller.loading, change.mutate),
     [t, change.isPending, controller.loading, change.mutate],
@@ -335,6 +351,9 @@ function AccountPasskeys({ controller }: { controller: AccountController }) {
         {t("account_passkeys")}
       </h2>
       <DataTable
+        {...collection}
+        searchLabel={t("account_passkeys_search")}
+        searchPlaceholder={t("account_passkeys_search")}
         data={keys.data ?? []}
         pending={keys.isPending}
         error={keys.error}
@@ -379,7 +398,9 @@ function passkeyColumns(
 ): DataTableColumn<Passkey>[] {
   return [
     {
-      accessorKey: "name",
+      id: "name",
+      accessorFn: (row) => row.name || t("account_passkeys"),
+      meta: { icon: KeyRound },
       header: t("account_key_name"),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -390,6 +411,7 @@ function passkeyColumns(
     },
     {
       accessorKey: "createdAt",
+      meta: { icon: CalendarDays },
       header: t("mcp_connected_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
@@ -414,6 +436,10 @@ function passkeyColumns(
 }
 function AccountSessions({ controller }: { controller: AccountController }) {
   const { t, sessions, session, change, section } = controller;
+  const collection = useCollectionSearch({
+    prefix: "sessions",
+    sortIds: ["userAgent", "createdAt", "updatedAt", "expiresAt"],
+  });
   const columns = useMemo(
     () =>
       loginSessionColumns(
@@ -431,6 +457,9 @@ function AccountSessions({ controller }: { controller: AccountController }) {
         {t("account_sessions")}
       </h2>
       <DataTable
+        {...collection}
+        searchLabel={t("account_sessions_search")}
+        searchPlaceholder={t("account_sessions_search")}
         data={sessions.data ?? []}
         pending={sessions.isPending}
         error={sessions.error}
@@ -460,7 +489,9 @@ function loginSessionColumns(
 ): DataTableColumn<Session>[] {
   return [
     {
-      accessorKey: "userAgent",
+      id: "userAgent",
+      accessorFn: (row) => sessionDeviceName(row.userAgent, t("account_device")),
+      meta: { icon: Monitor },
       header: t("account_device"),
       cell: ({ row }) => (
         <div className="flex max-w-sm items-center gap-3">
@@ -481,16 +512,19 @@ function loginSessionColumns(
     },
     {
       accessorKey: "createdAt",
+      meta: { icon: CalendarDays },
       header: t("mcp_connected_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
     {
       accessorKey: "updatedAt",
+      meta: { icon: CalendarClock },
       header: t("mcp_updated_at"),
       cell: ({ row }) => <DateTime value={row.original.updatedAt} />,
     },
     {
       accessorKey: "expiresAt",
+      meta: { icon: Clock },
       header: t("invite_expires_at"),
       cell: ({ row }) => <DateTime value={row.original.expiresAt} />,
     },

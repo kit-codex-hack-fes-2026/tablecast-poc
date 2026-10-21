@@ -1,3 +1,4 @@
+import { StatisticsTable } from "./statistics-table";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useI18n } from "../../i18n/locale";
 import { StatisticsSummary } from "./statistics-summary";
@@ -30,7 +31,7 @@ export function StatisticsResultsSkeleton({
           <p className="text-sm text-muted-foreground">{t("statistics_page_basis")}</p>
           <p className="text-xs text-muted-foreground">{t("statistics_order_basis")}</p>
           <Skeleton className="h-64 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-xl" />
+          <StatisticsTable rows={[]} view={view} pending />
         </section>
       )}
     </div>

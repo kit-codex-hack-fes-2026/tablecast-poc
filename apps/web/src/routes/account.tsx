@@ -1,3 +1,4 @@
+import { accountSearchSchema } from "../features/account/account-model";
 import { RouteError } from "../components/route-state";
 import { SettingsShell } from "../features/shell/settings-shell";
 import { createFileRoute } from "@tanstack/react-router";
@@ -8,6 +9,7 @@ import {
   accountSessionsOptions,
 } from "../features/account/account-query";
 export const Route = createFileRoute("/account")({
+  validateSearch: accountSearchSchema,
   staticData: { document: { title: "account_title", description: "head_account_description" } },
   loader: async ({ context }) => {
     await Promise.all([

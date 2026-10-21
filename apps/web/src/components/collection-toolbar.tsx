@@ -13,7 +13,12 @@ export function CollectionToolbar({
   resetDisabled,
   disabled = false,
 }: {
-  search?: { label: string; value: string; onChange: (value: string) => void };
+  search?: {
+    label: string;
+    placeholder?: string;
+    value: string;
+    onChange: (value: string) => void;
+  };
   filters?: ReactNode;
   sort?: ReactNode;
   onReset: () => void;
@@ -38,6 +43,7 @@ export function CollectionToolbar({
             type="search"
             disabled={disabled}
             value={search.value}
+            placeholder={search.placeholder ?? search.label}
             onChange={(event) => search.onChange(event.target.value)}
           />
         </label>

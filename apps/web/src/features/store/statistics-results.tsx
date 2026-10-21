@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChevronDown } from "lucide-react";
 import { calendarDate } from "../../i18n/format";
 import { barX, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
@@ -13,13 +13,9 @@ import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { statisticsOptions, type StatisticsSearch } from "./statistics-query";
+import { StatisticsTable } from "./statistics-table";
 import { StatisticsSummary } from "./statistics-summary";
 import { StatisticsResultsSkeleton } from "./statistics-results-skeleton";
-
-const percentages = {
-  ja: new Intl.NumberFormat("ja-JP", { style: "percent", maximumFractionDigits: 1 }),
-  en: new Intl.NumberFormat("en-GB", { style: "percent", maximumFractionDigits: 1 }),
-};
 
 export default function StatisticsResults({
   storeId,
@@ -100,85 +96,7 @@ export default function StatisticsResults({
               {rows.length ? (
                 <>
                   <QuantityChart rows={rows} />
-                  {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- 明細表の横スクロールをSafariでも標準キーで操作可能にする。 */}
-                  <div
-                    className="overflow-x-auto rounded-xl border border-border focus-visible:outline-2 focus-visible:outline-ring"
-                    tabIndex={0}
-                    role="region"
-                    aria-label={t("statistics_table")}
-                  >
-                    <table className="w-full text-sm tabular-nums">
-                      <caption className="sr-only">
-                        {t(`statistics_view_${view}`)} · {calendarDate(range.from, locale)}{" "}
-                        {locale === "ja" ? "から" : "to"} {calendarDate(range.to, locale)}
-                      </caption>
-                      <thead className="bg-secondary/60 text-left">
-                        <tr>
-                          {(
-                            [
-                              "item",
-                              "quantity",
-                              "orderingSessions",
-                              "orderRate",
-                              "planCoveredQuantity",
-                            ] as const
-                          ).map((key) => (
-                            <th
-                              key={key}
-                              scope="col"
-                              className={`px-4 py-3 font-medium whitespace-nowrap ${key === "item" ? "text-left" : "text-right"}`}
-                            >
-                              {t(`statistics_${key}`)}
-                              {key === "quantity" && (
-                                <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                                  {t(
-                                    view === "modifiers"
-                                      ? "statistics_option_quantity_hint"
-                                      : "statistics_quantity_hint",
-                                  )}
-                                </span>
-                              )}
-                              {key === "orderRate" && (
-                                <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                                  {t("statistics_rate_basis")}
-                                </span>
-                              )}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row) => (
-                          <tr
-                            key={`${row.productId}:${row.optionId}`}
-                            className="border-t border-border"
-                          >
-                            <th
-                              scope="row"
-                              className="min-w-48 max-w-96 p-4 text-left font-medium wrap-anywhere"
-                            >
-                              {row.name ?? t("statistics_unknown")}
-                            </th>
-                            <td className="p-4 text-right">
-                              {row.quantity.toLocaleString(locale)}
-                            </td>
-                            <td className="p-4 text-right">
-                              {row.orderingSessions.toLocaleString(locale)}
-                            </td>
-                            <td className="p-4 text-right">
-                              {row.orderRate === null
-                                ? t("statistics_unavailable")
-                                : percentages[locale].format(row.orderRate)}
-                            </td>
-                            <td className="p-4 text-right">
-                              {row.planCoveredQuantity.toLocaleString(locale)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
+                  <StatisticsTable rows={rows} view={view} />
                   <p className="text-sm text-muted-foreground">
                     {rows.length.toLocaleString(locale)}{" "}
                     {t(query.hasNextPage ? "statistics_partial" : "statistics_all_loaded")}
@@ -196,6 +114,7 @@ export default function StatisticsResults({
                   aria-busy={query.isFetchingNextPage}
                   onClick={() => void query.fetchNextPage()}
                 >
+                  <ChevronDown aria-hidden />
                   {t(query.isFetchingNextPage ? "common_loading" : "statistics_more")}
                 </Button>
               )}

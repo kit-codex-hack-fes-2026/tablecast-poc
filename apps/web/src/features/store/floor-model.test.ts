@@ -1,5 +1,11 @@
 import { expect, it } from "vitest";
-import { floorSearchSchema, moveDate, storeDate, visitPosition } from "./floor-model";
+import {
+  floorSearchSchema,
+  moveDate,
+  storeDate,
+  visitPosition,
+  compareFloorRows,
+} from "./floor-model";
 
 const start = Date.parse("2026-09-15T00:00:00+09:00");
 const end = start + 86_400_000;
@@ -60,4 +66,25 @@ it("日末ちょうどの閉卓は翌日へ継続せず、利用中だけ継続�
   expect(
     visitPosition({ ...visit, status: "open", closedAt: null }, start, end, end).continuesAfter,
   ).toBe(true);
+});
+
+it("並べ替えは自然な卓番号順・数値順と昇降順を使う", () => {
+  const rows = [
+    { id: "t10", name: "T10", status: 3, duration: 2, guests: 2, due: 1000 },
+    { id: "t2", name: "T2", status: 0, duration: 10, guests: 4, due: 900 },
+  ];
+  expect(
+    rows.toSorted((a, b) => compareFloorRows(a, b, "table:asc", "ja")).map((row) => row.name),
+  ).toEqual(["T2", "T10"]);
+  expect(
+    rows.toSorted((a, b) => compareFloorRows(a, b, "due:asc", "en")).map((row) => row.name),
+  ).toEqual(["T2", "T10"]);
+  expect(
+    rows.toSorted((a, b) => compareFloorRows(a, b, "duration:desc", "ja")).map((row) => row.name),
+  ).toEqual(["T2", "T10"]);
+  expect(floorSearchSchema.parse({ sort: "hash:asc", zoom: "infinite", q: "T2" })).toMatchObject({
+    sort: undefined,
+    zoom: undefined,
+    q: "T2",
+  });
 });

@@ -1,3 +1,4 @@
+import { collectionSearchSchema } from "../shell/collection-model";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -97,7 +98,10 @@ async function show(
   const register = createRoute({
     getParentRoute: () => store,
     path: "devices/new",
-    validateSearch: z.object({ user_code: z.string().optional(), tableId: z.string().optional() }),
+    validateSearch: collectionSearchSchema.extend({
+      user_code: z.string().optional(),
+      tableId: z.string().optional(),
+    }),
   });
   register.update({
     component: () => {
@@ -108,6 +112,7 @@ async function show(
   const list = createRoute({
     getParentRoute: () => store,
     path: "devices",
+    validateSearch: collectionSearchSchema,
     loader: () => client.ensureQueryData(devicesOptions(storeId)),
     pendingComponent: RoutePending,
     errorComponent: RouteError,
@@ -171,12 +176,38 @@ it("日本語の端末コードと卓をURLで復元し、明示承認まで送�
   const locale = "ja";
   const labels = ja;
   await page.viewport(1024, 768);
-  const { router, view } = await show(locale);
+  const { router, view } = await show(
+    locale,
+    `${base}/new?user_code=TABLECAST-URL&tableId=tablecast-first&q=T&sort=name%3Adesc`,
+  );
+  const search = page.getByRole("searchbox", { name: labels.device_search_table, exact: true });
+  await expect.element(search).toHaveValue("T");
+  expect(
+    [...page.getByRole("table").element().querySelectorAll("tbody tr")].map((row) =>
+      row.getAttribute("data-row-id"),
+    ),
+  ).toEqual(["tablecast-second", "tablecast-first"]);
+  await search.fill("T02");
+  await page.getByRole("combobox", { name: labels.collection_sort, exact: true }).click();
+  await page
+    .getByRole("option", {
+      name: `${labels.collection_table_name} · ${labels.collection_sort_ascending}`,
+      exact: true,
+    })
+    .click();
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({
+      user_code: "TABLECAST-URL",
+      tableId: "tablecast-first",
+      q: "T02",
+      sort: "name:asc",
+    });
   const code = page.getByLabelText(labels.admin_pair_code, { exact: true });
   await expect.element(code).toHaveValue("TABLECAST-URL");
   const row = page
     .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
+    .filter({ has: page.getByRole("rowheader", { name: "T02", exact: true }) });
   const table = page.getByRole("table");
   const before = [...table.element().querySelectorAll("th")].map(
     (cell) => cell.getBoundingClientRect().width,
@@ -189,12 +220,22 @@ it("日本語の端末コードと卓をURLで復元し、明示承認まで送�
   expect(router.state.location.search).toMatchObject({
     user_code: "TABLECAST-URL",
     tableId: "tablecast-second",
+    q: "T02",
+    sort: "name:asc",
   });
   expect(approvals).toEqual([]);
   const url = router.state.location.href;
   await view.unmount();
   client.clear();
-  await show(locale, url);
+  const restored = await show(locale, url);
+  await expect.element(search).toHaveValue("T02");
+  expect(restored.router.state.location.search).toMatchObject({ q: "T02", sort: "name:asc" });
+  await page.getByRole("button", { name: labels.collection_reset, exact: true }).click();
+  await expect
+    .poll(() => restored.router.state.location.search)
+    .toMatchObject({ user_code: "TABLECAST-URL", tableId: "tablecast-second" });
+  expect(restored.router.state.location.search.q).toBeUndefined();
+  expect(restored.router.state.location.search.sort).toBeUndefined();
   await expect.element(code).toHaveValue("TABLECAST-URL");
   await expect.element(row.getByRole("button")).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: labels.admin_approve, exact: true }).click();
@@ -217,7 +258,7 @@ it("日本語の端末登録でコードと卓を選び、キーボードで承�
   await expect.element(table).toBeVisible();
   const row = table
     .getByRole("row")
-    .filter({ has: page.getByRole("cell", { name: "T02", exact: true }) });
+    .filter({ has: page.getByRole("rowheader", { name: "T02", exact: true }) });
   const choose = row.getByRole("button");
   await expectReadableControl(choose);
   await tabTo(code);

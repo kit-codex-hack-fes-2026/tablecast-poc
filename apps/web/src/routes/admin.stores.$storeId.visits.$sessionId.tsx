@@ -11,6 +11,9 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
     floorView: floorSearchSchema.shape.view,
     floorDate: floorSearchSchema.shape.date,
     floorFilter: floorSearchSchema.shape.filter,
+    floorQ: floorSearchSchema.shape.q,
+    floorSort: floorSearchSchema.shape.sort,
+    floorZoom: floorSearchSchema.shape.zoom,
     view: z
       .enum(["overview", "logs", "orders", "billing", "diagnostics"])
       .default("overview")
@@ -34,7 +37,8 @@ export const Route = createFileRoute("/admin/stores/$storeId/visits/$sessionId")
 });
 function Page() {
   const { storeId, sessionId } = Route.useParams();
-  const { view, floorView, floorDate, floorFilter } = Route.useSearch();
+  const { view, floorView, floorDate, floorFilter, floorQ, floorSort, floorZoom } =
+    Route.useSearch();
   const navigate = useNavigate();
   return (
     <TableDetail
@@ -43,8 +47,15 @@ function Page() {
       tableId={sessionId}
       view={view}
       floorSearch={
-        floorView || floorDate || floorFilter
-          ? { view: floorView, date: floorDate, filter: floorFilter }
+        floorView || floorDate || floorFilter || floorQ || floorSort || floorZoom
+          ? {
+              view: floorView,
+              date: floorDate,
+              filter: floorFilter,
+              q: floorQ,
+              sort: floorSort,
+              zoom: floorZoom,
+            }
           : undefined
       }
       onViewChange={(next) =>

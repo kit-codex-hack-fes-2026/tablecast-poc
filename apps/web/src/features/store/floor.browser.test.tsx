@@ -203,6 +203,9 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
       floorView: floorSearchSchema.shape.view,
       floorDate: floorSearchSchema.shape.date,
       floorFilter: floorSearchSchema.shape.filter,
+      floorQ: floorSearchSchema.shape.q,
+      floorSort: floorSearchSchema.shape.sort,
+      floorZoom: floorSearchSchema.shape.zoom,
       view: z.enum(["overview", "logs", "orders", "billing", "diagnostics"]).default("overview"),
     }),
     component: function VisitPage() {
@@ -216,6 +219,9 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
             view: search.floorView,
             date: search.floorDate,
             filter: search.floorFilter,
+            q: search.floorQ,
+            sort: search.floorSort,
+            zoom: search.floorZoom,
           }}
           onViewChange={(view) =>
             void router.navigate({ to: ".", search: (previous) => ({ ...previous, view }) })
@@ -228,7 +234,7 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
     routeTree: root.addChildren([store.addChildren([floor, visit])]),
     history: createMemoryHistory({
       initialEntries: [
-        "/admin/stores/tablecast-komorebi/floor?view=list&date=2026-09-06&filter=attention",
+        "/admin/stores/tablecast-komorebi/floor?view=list&date=2026-09-06&filter=attention&sort=table%3Adesc&q=T0&zoom=compact",
       ],
     }),
   });
@@ -262,7 +268,14 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   await screen.getByRole("button", { name: /^T04/ }).click();
   await expect
     .poll(() => router.state.location.search)
-    .toMatchObject({ floorFilter: "billing", floorDate: "2026-09-06", floorView: "list" });
+    .toMatchObject({
+      floorFilter: "billing",
+      floorDate: "2026-09-06",
+      floorView: "list",
+      floorQ: "T0",
+      floorSort: "table:desc",
+      floorZoom: "compact",
+    });
   await screen.getByRole("tab", { name: ja.admin_logs, exact: true }).click();
   await expect
     .poll(() => router.state.location.search)
@@ -276,6 +289,9 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
     .toMatchObject({ filter: "billing", date: "2026-09-06", view: "list" });
   await expect.element(screen.getByRole("button", { name: /^T04/ })).toBeVisible();
   await expect.element(screen.getByRole("button", { name: /^T05/ })).not.toBeInTheDocument();
+  await expect
+    .poll(() => router.state.location.search)
+    .toMatchObject({ q: "T0", sort: "table:desc", zoom: "compact" });
   await screen.getByRole("searchbox", { name: ja.floor_search, exact: true }).fill("T04");
   await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
   await expect
@@ -285,4 +301,24 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
     .poll(() => router.state.location.search)
     .toMatchObject({ filter: "all", date: "2026-09-06", view: "list" });
   await expect.element(screen.getByRole("button", { name: /^T05/ })).toBeVisible();
+  expect(router.state.location.search.q).toBeUndefined();
+  expect(router.state.location.search.sort).toBeUndefined();
+  expect(router.state.location.search.zoom).toBe("compact");
+  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
+  await page
+    .getByRole("option", {
+      name: `${ja.floor_table} · ${ja.collection_sort_descending}`,
+      exact: true,
+    })
+    .click();
+  await expect.poll(() => router.state.location.search.sort).toBe("table:desc");
+  const names = () =>
+    Array.from(
+      screen
+        .getByRole("region", { name: ja.floor_list, exact: true })
+        .element()
+        .querySelectorAll("h3"),
+      (item) => item.textContent,
+    );
+  await expect.poll(names).toEqual(["T06", "T05", "T04", "T03"]);
 });

@@ -1,7 +1,24 @@
 import * as Disclosure from "../../components/ui/disclosure";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
-import { useMemo, useState, type ReactNode } from "react";
-import { ArrowUpRight, Check, RefreshCw, ReceiptText } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
+import {
+  ArrowDown,
+  ArrowUpRight,
+  AudioLines,
+  CalendarDays,
+  Check,
+  CircleCheck,
+  Clock,
+  Coins,
+  FileDown,
+  Hash,
+  MessageSquare,
+  RefreshCw,
+  ReceiptText,
+  TableProperties,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { MonthPicker } from "../../components/month-picker";
 import { PageHeader } from "../../components/page-header";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -9,7 +26,9 @@ import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
 import { LoadingState } from "../../components/loading-state";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useCollectionSearch } from "../shell/collection-search";
+import { billingSearchSchema } from "./billing-model";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { AdminShell } from "../shell/admin-shell";
@@ -41,10 +60,28 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
   const stores = useQuery(storesOptions);
   const availableStores = stores.data?.stores ?? [];
   const selectedStore = availableStores.find((store) => store.organizationId === organizationId);
-  const [month, setMonth] = useState("");
-  const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const search = useLocation({ select: (location) => billingSearchSchema.parse(location.search) });
+  const usage = useCollectionSearch({
+    prefix: "usage",
+    sortIds: ["tableName", "startedAt", "seconds", "responses", "tokens", "charge"],
+  });
+  const daily = useCollectionSearch({ prefix: "daily", sortIds: ["day", "amount"] });
+  const month = search.month;
+  const resetUsage = () =>
+    void navigate({
+      to: ".",
+      resetScroll: false,
+      search: (previous) => ({
+        ...previous,
+        month: undefined,
+        usageQ: undefined,
+        usageSort: undefined,
+        usagePage: undefined,
+      }),
+    });
   const billing = useInfiniteQuery(
-    billingOptions(organizationId, month || undefined, search || undefined),
+    billingOptions(organizationId, month, usage.state.globalFilter || undefined),
   );
   const data = billing.data?.pages[0];
   return (
@@ -77,13 +114,17 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
           <>
             <BillingOverview
               data={data}
+              dailyCollection={daily}
               periodControl={
                 <MonthPicker
                   label={t("billing_month")}
                   value={month || data.month}
                   onChange={(value) => {
-                    setMonth(value);
-                    setSearch("");
+                    void navigate({
+                      to: ".",
+                      resetScroll: false,
+                      search: (previous) => ({ ...previous, month: value, usagePage: undefined }),
+                    });
                   }}
                 />
               }
@@ -95,25 +136,22 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">{t("billing_usage_hint")}</p>
               </div>
-              <label className="block max-w-sm space-y-1 text-sm">
-                {t("billing_filter")}
-                <Input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </label>
               <UsageTable
+                collection={usage}
+                filtersActive={Boolean(month)}
+                onReset={resetUsage}
                 data={billing.data?.pages.flatMap((page) => page.visits) ?? []}
                 canManage={data.canManage}
                 pending={billing.isFetching}
               />
+              <p className="text-sm text-muted-foreground">{t("billing_loaded_sort")}</p>
               {billing.hasNextPage && (
                 <Button
                   variant="outline"
                   disabled={billing.isFetching}
                   onClick={() => void billing.fetchNextPage()}
                 >
+                  <ArrowDown />
                   {t("billing_more")}
                 </Button>
               )}
@@ -129,11 +167,15 @@ export function BillingPage({ organizationId }: { organizationId: string }) {
 export function BillingOverview({
   data,
   periodControl,
+  dailyCollection,
 }: {
   data: Billing;
   periodControl?: ReactNode;
+  dailyCollection?: ReturnType<typeof useCollectionSearch>;
 }) {
-  const usage = <MonthlyUsage data={data} periodControl={periodControl} />;
+  const usage = (
+    <MonthlyUsage data={data} periodControl={periodControl} dailyCollection={dailyCollection} />
+  );
   return data.financial ? (
     <ContractSection financial={data.financial} organizationId={data.organization.id}>
       {usage}
@@ -143,7 +185,15 @@ export function BillingOverview({
   );
 }
 
-function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: ReactNode }) {
+function MonthlyUsage({
+  data,
+  periodControl,
+  dailyCollection,
+}: {
+  data: Billing;
+  periodControl?: ReactNode;
+  dailyCollection?: ReturnType<typeof useCollectionSearch>;
+}) {
   const { t, locale } = useI18n();
   const state = data.usage.aiState;
   const monthTitle = months[locale].format(data.period.start);
@@ -181,7 +231,7 @@ function MonthlyUsage({ data, periodControl }: { data: Billing; periodControl?: 
             detail={t("billing_responses_hint")}
           />
         </div>
-        <BillingUsageChart data={data} />
+        <BillingUsageChart data={data} collection={dailyCollection} />
         <section className="rounded-2xl bg-surface-subtle p-4">
           <h3 className="text-sm font-medium">{t("billing_token_details")}</h3>
           <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{t("billing_tokens_hint")}</p>
@@ -494,15 +544,28 @@ function UsageTable({
   data,
   canManage,
   pending,
+  collection,
+  filtersActive,
+  onReset,
 }: {
   data: Billing["visits"];
   canManage: boolean;
   pending: boolean;
+  collection: ReturnType<typeof useCollectionSearch>;
+  filtersActive: boolean;
+  onReset: () => void;
 }) {
   const { t, locale } = useI18n();
   const columns = useMemo(() => usageColumns(t, locale, canManage), [t, locale, canManage]);
   return (
     <DataTable
+      {...collection}
+      filtersActive={filtersActive}
+      onReset={onReset}
+      searchLabel={t("billing_filter")}
+      searchPlaceholder={t("billing_filter")}
+      manualFiltering
+      tableLabel={t("billing_usage")}
       data={data}
       columns={columns}
       getRowId={(row) => row.id}
@@ -519,12 +582,15 @@ function usageColumns(
 ): DataTableColumn<Billing["visits"][number]>[] {
   return [
     {
-      accessorKey: "tableName",
+      id: "tableName",
+      accessorFn: (row) => (row.demo ? t("demo_title") : (row.tableName ?? "")),
+      meta: { icon: TableProperties },
       header: t("admin_table"),
       cell: ({ row }) => (row.original.demo ? t("demo_title") : (row.original.tableName ?? "—")),
     },
     {
       accessorKey: "startedAt",
+      meta: { icon: CalendarDays },
       header: t("admin_visit_started"),
       cell: ({ row }) => (
         <div>
@@ -534,15 +600,20 @@ function usageColumns(
     },
     {
       accessorKey: "seconds",
-      meta: { align: "right" },
+      meta: { align: "right", icon: AudioLines },
       header: t("billing_voice"),
       cell: ({ row }) =>
         `${(row.original.seconds / 60).toLocaleString(locale, { maximumFractionDigits: 1 })} ${t("billing_minutes")}`,
     },
-    { accessorKey: "responses", meta: { align: "right" }, header: t("billing_responses") },
+    {
+      accessorKey: "responses",
+      meta: { align: "right", icon: MessageSquare },
+      header: t("billing_responses"),
+    },
     {
       id: "tokens",
-      meta: { align: "right" },
+      accessorFn: (row) => row.inputTokens + row.outputTokens,
+      meta: { align: "right", icon: Hash },
       header: t("billing_text_usage"),
       cell: ({ row }) => (
         <Disclosure.Root>
@@ -568,7 +639,9 @@ function usageColumns(
       ? [
           {
             id: "charge",
-            meta: { align: "right" as const },
+            accessorFn: (row: Billing["visits"][number]) =>
+              "chargeMicros" in row ? row.chargeMicros : undefined,
+            meta: { align: "right" as const, icon: Coins },
             header: t("billing_estimate"),
             cell: ({ row }: { row: { original: Billing["visits"][number] } }) =>
               "chargeMicros" in row.original
@@ -582,7 +655,24 @@ function usageColumns(
 
 function Invoices({ organizationId }: { organizationId: string }) {
   const { t, locale } = useI18n();
-  const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
+  const navigate = useNavigate();
+  const cursors = useLocation({
+    select: (location) => billingSearchSchema.parse(location.search).invoiceCursors ?? [],
+  });
+  const collection = useCollectionSearch({
+    prefix: "invoices",
+    sortIds: ["createdAt", "number", "period", "amount", "status"],
+  });
+  const setCursors = (value: string[]) =>
+    void navigate({
+      to: ".",
+      resetScroll: false,
+      search: (previous) => ({
+        ...previous,
+        invoiceCursors: value.length ? value : undefined,
+        invoicesPage: undefined,
+      }),
+    });
   const invoices = useQuery(invoiceOptions(organizationId, cursors.at(-1)));
   const columns = useMemo(() => invoiceColumns(t, locale), [t, locale]);
   return (
@@ -591,6 +681,10 @@ function Invoices({ organizationId }: { organizationId: string }) {
         {t("billing_invoices")}
       </h2>
       <DataTable
+        {...collection}
+        searchLabel={t("billing_invoice_search")}
+        searchPlaceholder={t("billing_invoice_search")}
+        tableLabel={t("billing_invoices")}
         data={invoices.data?.invoices ?? []}
         columns={columns}
         getRowId={(row) => row.id}
@@ -600,20 +694,25 @@ function Invoices({ organizationId }: { organizationId: string }) {
         onRetry={() => void invoices.refetch()}
         empty={t("billing_invoices_empty")}
       />
+      <p className="text-sm text-muted-foreground">{t("billing_invoice_loaded_search")}</p>
       <div className="flex gap-3">
         <Button
           variant="outline"
-          disabled={cursors.length === 1 || invoices.isFetching}
-          onClick={() => setCursors((value) => value.slice(0, -1))}
+          disabled={cursors.length === 0 || invoices.isFetching}
+          onClick={() => setCursors(cursors.slice(0, -1))}
         >
+          <ChevronLeft />
           {t("billing_previous")}
         </Button>
         <Button
           variant="outline"
           disabled={!invoices.data?.next || invoices.isFetching}
-          onClick={() => setCursors((value) => [...value, invoices.data?.next ?? undefined])}
+          onClick={() => {
+            if (invoices.data?.next) setCursors([...cursors, invoices.data.next]);
+          }}
         >
           {t("billing_next")}
+          <ChevronRight />
         </Button>
       </div>
     </section>
@@ -627,12 +726,15 @@ function invoiceColumns(
   return [
     {
       accessorKey: "createdAt",
+      meta: { icon: CalendarDays },
       header: t("billing_issued"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
-    { accessorKey: "number", header: t("billing_number") },
+    { accessorKey: "number", header: t("billing_number"), meta: { icon: Hash } },
     {
       id: "period",
+      accessorFn: (row) => row.periodStart,
+      meta: { icon: Clock },
       header: t("billing_invoice_period"),
       cell: ({ row }) => (
         <span>
@@ -643,13 +745,14 @@ function invoiceColumns(
     },
     {
       accessorKey: "amount",
-      meta: { align: "right" },
+      meta: { align: "right", icon: Coins },
       header: t("billing_amount"),
       cell: ({ row }) =>
         row.original.amount === null ? "—" : billingMoney(row.original.amount, locale),
     },
     {
       accessorKey: "status",
+      meta: { icon: CircleCheck },
       header: t("billing_payment_status"),
       cell: ({ row }) =>
         t(
@@ -687,6 +790,7 @@ function invoiceColumns(
               target="_blank"
               rel="noopener noreferrer"
             >
+              <FileDown className="mr-1 size-4" />
               PDF
             </a>
           )}

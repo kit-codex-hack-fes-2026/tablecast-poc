@@ -11,6 +11,8 @@ import { page } from "vitest/browser";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n/locale";
 import { MotionProvider } from "../../components/motion-provider";
+import { accountSearchSchema } from "./account-model";
+import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
 import { Account } from "./account";
 import { accountKeysOptions, accountLinksOptions, accountSessionsOptions } from "./account-query";
 import ja from "../../../messages/ja.json";
@@ -87,8 +89,15 @@ async function show(
     return Response.json({}, { status: 500 });
   });
   const root = createRootRoute();
-  const account = createRoute({ getParentRoute: () => root, path: "/account", component: Account });
+  const account = createRoute({
+    getParentRoute: () => root,
+    path: "/account",
+    validateSearch: accountSearchSchema,
+    component: Account,
+  });
   const router = createRouter({
+    parseSearch: parseFlatSearch,
+    stringifySearch: stringifyFlatSearch,
     routeTree: root.addChildren([account]),
     history: createMemoryHistory({ initialEntries: ["/account"] }),
   });
@@ -101,6 +110,7 @@ async function show(
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return router;
 }
 
 it.each([
@@ -203,4 +213,55 @@ it("名前を保存中は入力を止め、保存後の背景取得が失敗し�
     saving.resolve();
     refetch.resolve(Response.json([]));
   }
+});
+
+it("複数のアカウント一覧の検索と並べ替えをURLで分離し、リセットで他の一覧を変えない", async () => {
+  const router = await show("ja", async (request) => {
+    const path = new URL(request.url).pathname;
+    if (path === "/api/auth/list-accounts")
+      return Response.json([
+        {
+          id: "tablecast-google",
+          providerId: "google",
+          accountId: "tablecast-provider",
+          userId: "tablecast-user",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ]);
+    if (path === "/api/auth/passkey/list-user-passkeys")
+      return Response.json([
+        {
+          id: "tablecast-passkey",
+          name: "MacBook",
+          userId: "tablecast-user",
+          publicKey: "test",
+          credentialID: "test",
+          counter: 0,
+          deviceType: "singleDevice",
+          backedUp: false,
+          createdAt: new Date(0),
+        },
+      ]);
+    return undefined;
+  });
+  await page.getByRole("searchbox", { name: "接続先を検索" }).fill("Google");
+  await page.getByRole("searchbox", { name: "パスキー名で検索" }).fill("MacBook");
+  const passkeys = page.getByRole("region", { name: "パスキー", exact: true });
+  await passkeys.getByRole("combobox", { name: "並べ替え" }).click();
+  await page.getByRole("option", { name: "パスキーの名前 · 降順", exact: true }).click();
+  await expect
+    .poll(() => new URLSearchParams(router.state.location.searchStr).get("passkeysSort"))
+    .toBe("name:desc");
+  await passkeys.getByRole("button", { name: "リセット", exact: true }).click();
+  await expect.element(page.getByRole("searchbox", { name: "接続先を検索" })).toHaveValue("Google");
+  await expect.element(page.getByRole("searchbox", { name: "パスキー名で検索" })).toHaveValue("");
+  expect(new URLSearchParams(router.state.location.searchStr).get("passkeysSort")).toBeNull();
+  router.history.back();
+  await expect
+    .element(page.getByRole("searchbox", { name: "パスキー名で検索" }))
+    .toHaveValue("MacBook");
+  await expect
+    .element(passkeys.getByRole("combobox", { name: "並べ替え" }))
+    .toHaveTextContent("パスキーの名前 · 降順");
 });

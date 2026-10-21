@@ -86,6 +86,8 @@ it("未対応ブラウザーの連続ページ遷移でも入力DOM・focus・sc
 
 it("検索だけ・接続済みdemoの入退場ではfallbackの画面移動を追加しない", async () => {
   const { router, surface } = await mount(false);
+  // CSSの一時的なtransitionとは分け、fallbackのWAAPI呼出しを検査する。
+  const animate = vi.spyOn(surface, "animate");
   await router.navigate({ href: "/menu?filter=seasonal" });
   await router.navigate({ href: "/demo/sample" });
   await expect.element(page.getByRole("heading", { name: "接続中" })).toBeVisible();
@@ -94,7 +96,7 @@ it("検索だけ・接続済みdemoの入退場ではfallbackの画面移動を�
   await new Promise<void>((resolve) =>
     requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
   );
-  expect(surface.getAnimations()).toHaveLength(0);
+  expect(animate).not.toHaveBeenCalled();
   expect(getComputedStyle(surface).transform).toBe("none");
 });
 

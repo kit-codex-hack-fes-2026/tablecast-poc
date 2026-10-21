@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Plus, Settings2, Store } from "lucide-react";
+import { Plus, Settings2, ShieldCheck, Store, UsersRound } from "lucide-react";
 import { useMemo } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -8,6 +8,7 @@ import { StoreIcon } from "../../components/store-icon";
 import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { useCollectionSearch } from "../shell/collection-search";
 import { RoleBadge } from "../../components/role-badge";
 import type { loadStores } from "../store/store-query";
 import { storesOptions } from "../store/store-query";
@@ -16,6 +17,7 @@ type StoreRow = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function Organisations() {
   const { t } = useI18n();
   const stores = useSuspenseQuery(storesOptions);
+  const collection = useCollectionSearch({ sortIds: ["name", "role"] });
   const columns = useMemo(() => storeColumns(t), [t]);
   return (
     <SettingsShell>
@@ -31,10 +33,12 @@ export function Organisations() {
       />
       <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
       <DataTable
+        {...collection}
         data={stores.data.stores}
         columns={columns}
         getRowId={(row) => row.id}
         searchLabel={t("stores_search")}
+        searchPlaceholder={t("stores_search")}
         empty={t("stores_empty")}
       />
     </SettingsShell>
@@ -44,6 +48,7 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
   return [
     {
       accessorKey: "name",
+      meta: { icon: Store },
       header: t("admin_store"),
       cell: ({ row }) => (
         <Link
@@ -60,6 +65,7 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
     },
     {
       accessorKey: "role",
+      meta: { icon: ShieldCheck },
       header: t("org_role"),
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
@@ -87,6 +93,7 @@ function storeColumns(t: ReturnType<typeof useI18n>["t"]): DataTableColumn<Store
               <Link to="/admin/stores/$storeId/members" params={{ storeId: row.original.id }} />
             }
           >
+            <UsersRound />
             {t("org_members")}
           </Button>
         </div>

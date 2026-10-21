@@ -233,12 +233,15 @@ for (const alias of ["moon drink", "月の酒"] as const) {
         screen.getByText(labels.common_result_count.replace("{count}", "26"), { exact: true }),
       )
       .toBeVisible();
-    await screen
-      .getByRole("combobox", { name: labels.editor_category, exact: true })
-      .selectOptions("tablecast-sake-category");
-    await screen
-      .getByRole("combobox", { name: labels.menu_availability })
-      .selectOptions("available");
+    await screen.getByRole("combobox", { name: labels.editor_category, exact: true }).click();
+    await page
+      .getByRole("option", {
+        name: value.configuration.categories[0].text[locale].displayName,
+        exact: true,
+      })
+      .click();
+    await screen.getByRole("combobox", { name: labels.menu_availability }).click();
+    await page.getByRole("option", { name: labels.editor_available, exact: true }).click();
     await screen.getByRole("button", { name: labels.common_next_page }).click();
     await expect.element(screen.getByText("2 / 2", { exact: true })).toBeVisible();
     const expectedSearch = router.state.location.search;
@@ -270,9 +273,8 @@ for (const alias of ["moon drink", "月の酒"] as const) {
     expect(router.state.location.search).toEqual(expectedSearch);
     await search.fill("Sake");
     await expect.element(screen.getByText("1 / 2", { exact: true })).toBeVisible();
-    await screen
-      .getByRole("combobox", { name: labels.menu_availability })
-      .selectOptions("sold-out");
+    await screen.getByRole("combobox", { name: labels.menu_availability }).click();
+    await page.getByRole("option", { name: labels.kiosk_sold_out, exact: true }).click();
     await expect
       .element(
         screen.getByText(labels.common_result_count.replace("{count}", "1"), { exact: true }),
@@ -488,3 +490,47 @@ for (const status of ["published", "discarded"] as const) {
       );
   });
 }
+
+it("価格を金額順に並べ、URLの昇降順を履歴と詳細の往復で復元する", async () => {
+  const value = structuredClone(catalog);
+  value.configuration.products = [10000, 900, 50].map((price) => ({
+    ...structuredClone(product),
+    id: `tablecast-price-${price}`,
+    price,
+    text: { ...product.text, ja: { ...product.text.ja, displayName: `料理 ${price}` } },
+  }));
+  const { screen, router } = await showMenu(
+    value,
+    "ja",
+    "/admin/stores/tablecast-story/menu/products?sort=price%3Adesc",
+  );
+  const first = () => screen.getByRole("table").getByRole("row").nth(1);
+  await expect
+    .element(first().getByRole("link", { name: "料理 10000", exact: true }))
+    .toBeVisible();
+  const search = screen.getByRole("searchbox", { name: ja.menu_search });
+  await expect
+    .element(search)
+    .toHaveAttribute("placeholder", ja.collection_search_menu_placeholder);
+  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
+  await page
+    .getByRole("option", {
+      name: `${ja.admin_unit_price} · ${ja.collection_sort_ascending}`,
+      exact: true,
+    })
+    .click();
+  await expect.element(first().getByRole("link", { name: "料理 50", exact: true })).toBeVisible();
+  expect(router.state.location.search).toMatchObject({ sort: "price:asc" });
+  router.history.back();
+  await expect
+    .element(first().getByRole("link", { name: "料理 10000", exact: true }))
+    .toBeVisible();
+  await first().getByRole("link", { name: "料理 10000", exact: true }).click();
+  await screen.getByRole("link", { name: ja.editor_products, exact: true }).click();
+  await expect
+    .element(first().getByRole("link", { name: "料理 10000", exact: true }))
+    .toBeVisible();
+  expect(router.state.location.search).toMatchObject({ sort: "price:desc" });
+  await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
+  expect(router.state.location.search).toEqual({});
+});

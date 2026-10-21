@@ -173,6 +173,12 @@ it("サイドバーの幅をCookieへ保存し、再表示と折りたたみで�
   });
   await toggle.click();
   await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
+  // 幅の終端を測り、描画中のflex-growを保存幅と取り違えない。
+  await Promise.allSettled(
+    sidebar()
+      ?.getAnimations()
+      .map((animation) => animation.finished) ?? [],
+  );
   await expect.poll(width).toBeLessThan(80);
   expect(widthTransition).toBe(!matchMedia("(prefers-reduced-motion: reduce)").matches);
   await toggle.click();

@@ -1,14 +1,24 @@
 import type { TableState } from "@tablecast/api/schema";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useElementScrollRestoration } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, LocateFixed } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LocateFixed,
+  ZoomIn,
+  ZoomOut,
+  ScanLine,
+  RotateCw,
+  ListPlus,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { DatePicker } from "../../components/date-picker";
 import { dateTime } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { storeDate, moveDate } from "./floor-model";
+import { CollectionSort } from "../../components/collection-sort";
+import { storeDate, moveDate, type FloorSort, type FloorZoom } from "./floor-model";
 import { TableCalendar } from "./table-calendar";
 import { timelineOptions } from "./timeline-query";
 
@@ -22,6 +32,9 @@ export function FloorTimeline({
   onSelect,
   onOpen,
   search = "",
+  sort,
+  zoom = "normal",
+  onZoomChange,
 }: {
   storeId: string;
   date: string;
@@ -32,16 +45,19 @@ export function FloorTimeline({
   onSelect: (id: string) => void;
   onOpen: (table: { id: string; name: string }) => void;
   search?: string;
+  sort?: FloorSort;
+  zoom?: FloorZoom;
+  onZoomChange?: (zoom: FloorZoom) => void;
 }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const query = useInfiniteQuery(timelineOptions(storeId, date));
   const [now, setNow] = useState(initialNow);
   const [scrollRequest, setScrollRequest] = useState(0);
-  const restorationId = `tablecast-floor-${storeId}-${date}`;
+  const restorationId = `tablecast-floor-${storeId}-${date}-${zoom}`;
   const restoration = useElementScrollRestoration({
     id: restorationId,
-    getKey: (location) => `${location.pathname}?date=${date}`,
+    getKey: (location) => `${location.pathname}?date=${date}&zoom=${zoom}`,
   });
   useEffect(() => {
     const update = () => {
@@ -69,7 +85,7 @@ export function FloorTimeline({
   const inconsistent = sessions.some((session) => !tableIds.has(session.tableId));
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <Button
           variant="outline"
           aria-label={t("floor_previous")}
@@ -107,6 +123,26 @@ export function FloorTimeline({
           <LocateFixed className="size-4" />
           {t("floor_now")}
         </Button>
+        <div className="ml-auto grid min-w-48 gap-1">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <ZoomIn aria-hidden className="size-4" />
+            {t("floor_zoom")}
+          </span>
+          <CollectionSort
+            label={t("floor_zoom")}
+            value={zoom}
+            options={[
+              { value: "compact", label: t("floor_zoom_compact"), icon: ZoomOut },
+              { value: "normal", label: t("floor_zoom_normal"), icon: ScanLine },
+              { value: "detailed", label: t("floor_zoom_detailed"), icon: ZoomIn },
+            ]}
+            onValueChange={(next) => {
+              if (next === "compact" || next === "normal" || next === "detailed")
+                onZoomChange?.(next);
+            }}
+            disabled={!onZoomChange}
+          />
+        </div>
       </div>
       {storeDate(initialNow) !== storeDate(now) && date !== storeDate(now) && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -131,6 +167,7 @@ export function FloorTimeline({
               void query.refetch();
             }}
           >
+            <RotateCw aria-hidden />
             {t("common_retry")}
           </Button>
         </div>
@@ -151,6 +188,8 @@ export function FloorTimeline({
               vacantTables={vacantTables}
               now={now}
               search={search}
+              sort={sort}
+              zoom={zoom}
               partial={query.hasNextPage}
               scrollRequest={scrollRequest}
               restorationId={restorationId}
@@ -169,6 +208,7 @@ export function FloorTimeline({
                   disabled={query.isFetching}
                   onClick={() => void query.fetchNextPage()}
                 >
+                  <ListPlus aria-hidden />
                   {t(query.isFetchingNextPage ? "common_loading" : "floor_more")}
                 </Button>
               )}

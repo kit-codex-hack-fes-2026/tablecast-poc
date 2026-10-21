@@ -13,7 +13,8 @@ import {
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
+import { TableCalendar } from "./table-calendar";
 import { table } from "../../../.storybook/tablecast-fixtures";
 import { LocaleProvider } from "../../i18n/locale";
 import { FloorTimeline } from "./floor-timeline";
@@ -262,19 +263,32 @@ it("日本語で同卓の閉卓・利用中を選び、戻ると時間軸と横�
   );
   const viewport = screen.getByRole("region", { name: labels.floor_timeline, exact: true });
   await expect.element(viewport).toBeVisible();
+  await expect
+    .element(screen.getByRole("searchbox", { name: labels.floor_search, exact: true }))
+    .toHaveAttribute("placeholder", labels.floor_search_placeholder);
   viewport.element().scrollLeft = 650;
-  await screen.getByText(labels.floor_visits, { exact: true }).click();
-  await screen
-    .getByRole("region", { name: "T03", exact: true })
+  const centre = (viewport.element().clientWidth - 112 - 88) / 2;
+  await screen.getByRole("combobox", { name: labels.floor_zoom, exact: true }).click();
+  await page.getByRole("option", { name: labels.floor_zoom_detailed, exact: true }).click();
+  await expect.poll(() => router.state.location.search).toMatchObject({ zoom: "detailed" });
+  await expect
+    .poll(() => viewport.element().scrollLeft)
+    .toBeCloseTo((650 + centre) * 2 - centre, 0);
+  router.history.back();
+  await expect.poll(() => router.state.location.search.zoom).toBeUndefined();
+  await expect.poll(() => viewport.element().scrollLeft).toBeCloseTo(650, 0);
+  await viewport.getByRole("button", { name: `T03 ${labels.floor_visits}`, exact: true }).click();
+  await page
+    .getByRole("dialog")
     .getByRole("button", { name: /^T03 · 1 / })
     .click();
   await expect.element(screen.getByRole("heading", { name: closedId, exact: true })).toBeVisible();
   router.history.back();
   await expect.element(viewport).toBeVisible();
   await expect.poll(() => viewport.element().scrollLeft).toBe(650);
-  await screen.getByText(labels.floor_visits, { exact: true }).click();
-  await screen
-    .getByRole("region", { name: "T03", exact: true })
+  await viewport.getByRole("button", { name: `T03 ${labels.floor_visits}`, exact: true }).click();
+  await page
+    .getByRole("dialog")
     .getByRole("button", { name: /^T03 · 4 / })
     .click();
   await expect.element(screen.getByRole("heading", { name: table.id, exact: true })).toBeVisible();
@@ -438,4 +452,107 @@ it("日付変更の取得中もカレンダーの面積と操作フォーカス�
   } finally {
     pending.resolve(Response.json({ ...initial, sessions: [], nextCursor: null }));
   }
+});
+
+it("12卓の行を3端末幅で見渡し、帯の詳細はhover・focus・クリックで確認できる", async () => {
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const dense = Array.from({ length: 12 }, (_, index) => ({
+    ...table,
+    id: `tablecast-visit-${index}`,
+    tableId: `tablecast-table-${index}`,
+    tableName: `T${String(index + 1).padStart(2, "0")}`,
+    guestCount: (index % 5) + 1,
+    openedAt: startAt + (8 + index / 4) * hour,
+    staffCalled: index === 0,
+    billRequested: index === 1,
+    voiceState: index === 2 ? ("error" as const) : ("stopped" as const),
+  }));
+  const sessions = dense.map((visit) => ({
+    id: visit.id,
+    tableId: visit.tableId,
+    guestCount: visit.guestCount,
+    status: "open" as const,
+    openedAt: visit.openedAt,
+    closedAt: null,
+  }));
+  const selected = vi.fn<(id: string) => void>();
+  const router = createRouter({
+    routeTree: createRootRoute({
+      component: () => (
+        <main className="p-4">
+          <TableCalendar
+            page={initial}
+            sessions={sessions}
+            tables={dense}
+            vacantTables={[]}
+            now={initial.observedAt}
+            onOpen={() => {}}
+            onSelect={selected}
+          />
+        </main>
+      ),
+    }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  const screen = await render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <RouterProvider router={router} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const viewport = screen.getByRole("region", { name: ja.floor_timeline, exact: true });
+  await expect.element(viewport).toBeVisible();
+  for (const [name, width, height] of [
+    ["iphone17", 402, 874],
+    ["ipad11", 1180, 820],
+    ["macbook14", 1512, 982],
+  ] as const) {
+    await page.viewport(width, height);
+    const rows = Array.from(document.querySelectorAll<HTMLElement>("[data-floor-row]"));
+    expect(rows).toHaveLength(12);
+    expect(rows.every((row) => row.getBoundingClientRect().height === 64)).toBe(true);
+    expect(rows[0]?.firstElementChild?.textContent).toBe("T01");
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+    await page.screenshot({ path: `../../../test-results/tablecast-floor-dense-${name}.png` });
+  }
+  const band = viewport.getByRole("button", { name: /^T01 · 1 / });
+  // 長い帯の左端が卓名列の裏へ隠れた状態でも、見えている部分への実ポインター操作で横位置を変えない。
+  viewport.element().scrollLeft = 1000;
+  const beforePreview = viewport.element().scrollLeft;
+  const visiblePoint = () => ({
+    x: Math.max(
+      8,
+      viewport.element().getBoundingClientRect().left +
+        112 +
+        16 -
+        band.element().getBoundingClientRect().left,
+    ),
+    y: 24,
+  });
+  await band.hover({ position: visiblePoint() });
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  expect(viewport.element().scrollLeft).toBe(beforePreview);
+  await expect
+    .element(page.getByRole("dialog").getByText(ja.admin_due, { exact: true }))
+    .toBeVisible();
+  await page.screenshot({ path: "../../../test-results/tablecast-floor-band-detail.png" });
+  await userEvent.keyboard("{Escape}");
+  await expect.element(band).toHaveFocus();
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  viewport.element().focus();
+  band.element().focus({ preventScroll: true });
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  expect(viewport.element().scrollLeft).toBe(beforePreview);
+  await userEvent.keyboard("{Escape}");
+  await band.click({ position: visiblePoint() });
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  expect(viewport.element().scrollLeft).toBe(beforePreview);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: ja.object_visit, exact: true })
+    .click();
+  expect(selected).toHaveBeenCalledWith(dense[0]?.id);
 });

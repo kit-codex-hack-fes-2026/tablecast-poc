@@ -74,16 +74,23 @@ export const Day: Story = {
   name: "複数回来店・短時間・日跨ぎ・現在の要対応",
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByText("時刻・状態から来店を選ぶ"));
+    await userEvent.click(canvas.getByRole("button", { name: "T03 時刻・状態から来店を選ぶ" }));
+    const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      within(canvas.getByRole("region", { name: "T03" })).getByRole("button", {
+      within(body.getByRole("dialog")).getByRole("button", {
         name: /T03 · 1 名/,
       }),
     );
     await expect(args.onSelect).toHaveBeenCalledWith("tablecast-short");
+    const bill = body.getByText("会計待ち", { exact: true });
+    bill.scrollIntoView({ block: "nearest" });
     await waitFor(async () => {
-      await expect(canvas.getAllByText("会計待ち", { exact: true })[0]).toBeVisible();
+      await expect(bill).toBeVisible();
     });
+    await userEvent.keyboard("{Escape}");
+    const row = canvasElement.querySelector("[data-floor-row]");
+    await expect(row?.getBoundingClientRect().height).toBe(64);
+    await expect(row?.firstElementChild?.textContent).toBe("T03");
   },
 };
 export const English: Story = {
@@ -106,5 +113,31 @@ export const Past: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByLabelText("音声異常")).not.toBeInTheDocument();
+  },
+};
+
+export const Dense: Story = {
+  name: "12卓をコンパクトに見渡す",
+  args: {
+    tables: Array.from({ length: 12 }, (_, index) => ({
+      ...current,
+      id: `tablecast-visit-${index}`,
+      tableId: `tablecast-table-${index}`,
+      tableName: `T${String(index + 1).padStart(2, "0")}`,
+      guestCount: (index % 5) + 1,
+      openedAt: startAt + (8 + index / 4) * hour,
+      staffCalled: index === 0,
+      billRequested: index === 1,
+      voiceState: index === 2 ? "error" : "stopped",
+    })),
+    vacantTables: [],
+    sessions: Array.from({ length: 12 }, (_, index) => ({
+      id: `tablecast-visit-${index}`,
+      tableId: `tablecast-table-${index}`,
+      guestCount: (index % 5) + 1,
+      status: "open",
+      openedAt: startAt + (8 + index / 4) * hour,
+      closedAt: null,
+    })),
   },
 };
