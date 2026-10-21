@@ -6,6 +6,7 @@ import { ensure } from "../../platform/errors";
 import { localeSchema, type Locale } from "../../platform/model";
 import type { Actor } from "../auth/model";
 import { getCatalog } from "../catalog/queries";
+import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
@@ -87,7 +88,7 @@ export function createCastTools(
     getCatalog: castTool({
       id: "getCatalog",
       description:
-        "商品検索。商品名・ID・別名・カテゴリをqueryへ指定する。複数対象は空白区切りで一括検索し、対象別にtoolを分けない。紹介時はshow=trueで候補カードも表示し、追加のshowProductsは不要。detail=falseは概要、trueは注文・アレルギー回答に必要な選択肢を含む詳細。商品を選ぶ前に必須選択肢を先回りして尋ねない。more=trueならoffsetを進めて次頁を取得できる。同じ委任で取得済みの商品は再照会しない。",
+        "商品検索。商品名・読み・ID・別名・カテゴリ・説明文をqueryへ指定する。かな表記と全半角を同一視し、誤字・脱字も候補へ含める。複数対象は空白区切りのOR検索で、全語一致を上位へ返す。対象別にtoolを分けない。紹介時はshow=trueで候補カードも表示し、追加のshowProductsは不要。detail=falseは概要、trueは注文・アレルギー回答に必要な選択肢を含む詳細。商品を選ぶ前に必須選択肢を先回りして尋ねない。more=trueならoffsetを進めて次頁を取得できる。同じ委任で取得済みの商品は再照会しない。",
       inputSchema: z
         .object({
           query: z.string().max(100).optional(),
@@ -105,64 +106,14 @@ export function createCastTools(
         const session = currentSession ?? (await getSession(services, actor));
         const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = session.locale;
-        const searchText = query?.trim().toLocaleLowerCase();
-        const terms = searchText?.split(/\s+/).filter(Boolean);
-        const exact = searchText
-          ? catalog.configuration.products.filter(
-              (product) =>
-                product.id.toLocaleLowerCase() === searchText ||
-                Object.values(product.text).some((text) =>
-                  [text.displayName, text.speechName, ...text.aliases].some(
-                    (name) => name.trim().toLocaleLowerCase() === searchText,
-                  ),
-                ),
-            )
-          : [];
-        const categoryNames = new Map(
-          catalog.configuration.categories.map((category) => [
-            category.id,
-            Object.values(category.text).flatMap((text) =>
-              [text.displayName, text.speechName, ...text.aliases]
-                .map((name) => name.trim().toLocaleLowerCase())
-                .filter(Boolean),
-            ),
-          ]),
+        const { ids, detail } = createMenuSearch(catalog.configuration)(query);
+        const byId = new Map(
+          catalog.configuration.products.map((product) => [product.id, product]),
         );
-        const matched = exact.length
-          ? exact
-          : catalog.configuration.products.filter(
-              (product) =>
-                !terms?.length ||
-                terms.some((term) =>
-                  JSON.stringify([
-                    product.id,
-                    product.categoryId,
-                    product.text,
-                    categoryNames.get(product.categoryId),
-                  ])
-                    .toLocaleLowerCase()
-                    .includes(term),
-                ) ||
-                Object.values(product.text).some((text) =>
-                  [text.displayName, text.speechName, ...text.aliases].some(
-                    (name) =>
-                      name.trim().length > 0 && searchText?.includes(name.toLocaleLowerCase()),
-                  ),
-                ) ||
-                categoryNames.get(product.categoryId)?.some((name) => searchText?.includes(name)),
-            );
-        const categorySearch = catalog.configuration.categories.some(
-          (category) =>
-            terms?.some((term) =>
-              JSON.stringify([category.id, categoryNames.get(category.id)])
-                .toLocaleLowerCase()
-                .includes(term),
-            ) || categoryNames.get(category.id)?.some((name) => searchText?.includes(name)),
-        );
-        // 紹介用の複数候補には選択肢を複製せず、特定した商品だけ詳細を返す。
-        const detail =
-          !!terms?.length && matched.length === 1 && (exact.length === 1 || !categorySearch);
-        const matches = matched;
+        const matches = ids.flatMap((id) => {
+          const product = byId.get(id);
+          return product ? [product] : [];
+        });
         const products = matches.slice(offset, offset + limit);
         if (show) {
           ensure(trigger === "user", "VOICE_TOOL_FORBIDDEN", 403);

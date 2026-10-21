@@ -1,4 +1,5 @@
 import type { Configuration } from "@tablecast/api/schema";
+import { createMenuSearch } from "@tablecast/api/catalog-search";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -47,7 +48,6 @@ type ItemRow = {
   duration?: number;
   summary?: string;
   categoryId?: string;
-  searchText: string;
   lastOrder?: string;
 };
 export function MenuCollection({
@@ -106,9 +106,17 @@ function MenuListCollection({
           params: { storeId, section },
         }));
   }
-  const data = menuCollectionRows(configuration, section, locale).filter((row) =>
-    matchesMenuSearch(row, section, search),
+  const searchMenu = useMemo(
+    () => configuration && createMenuSearch(configuration, section),
+    [configuration, section],
   );
+  const rows = new Map(
+    menuCollectionRows(configuration, section, locale).map((row) => [row.id, row]),
+  );
+  const data = (searchMenu?.(search.q).ids ?? []).flatMap((id) => {
+    const row = rows.get(id);
+    return row && matchesMenuFilters(row, section, search) ? [row] : [];
+  });
 
   return (
     <>
@@ -327,9 +335,6 @@ function menuCollectionRows(
         price: item.price,
         available: item.available,
         categoryId: item.categoryId,
-        searchText: normalise(
-          `${menuSearchText(item)} ${category ? menuSearchText(category) : ""}`,
-        ),
       };
     });
   if (section === "categories")
@@ -341,7 +346,6 @@ function menuCollectionRows(
         secondary: item.text[locale === "ja" ? "en" : "ja"].displayName,
         count: products.length,
         summary: products.map((product) => product.text[locale].displayName).join(" · "),
-        searchText: normalise(menuSearchText(item)),
       };
     });
   return configuration.plans.map((item) => ({
@@ -366,23 +370,15 @@ function menuCollectionRows(
       ),
       ...item.tags,
     ].join(" · "),
-    searchText: normalise(menuSearchText(item)),
   }));
 }
 
-const menuSearchText = (item: Configuration["categories"][number]) =>
-  Object.values(item.text)
-    .flatMap((value) => [value.displayName, value.speechName, ...value.aliases])
-    .join(" ");
-const normalise = (value: string) => value.normalize("NFKC").toLowerCase();
-
-function matchesMenuSearch(
+function matchesMenuFilters(
   row: ItemRow,
   section: Exclude<MenuSection, "cast">,
   search: MenuListSearch,
 ) {
   return (
-    (!search.q || row.searchText.includes(search.q.trim().normalize("NFKC").toLowerCase())) &&
     (section !== "products" || !search.category || row.categoryId === search.category) &&
     (section !== "products" ||
       !search.availability ||

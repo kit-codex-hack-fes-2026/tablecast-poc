@@ -100,6 +100,10 @@ export default defineConfig({
           { disallow: { to: { module: { source: "@tablecast/api" } } } },
           { allow: { to: { module: { source: "@tablecast/api", internalPath: "schema" } } } },
           {
+            from: { file: { categories: ["feature", "test"] } },
+            allow: { to: { module: { source: "@tablecast/api", internalPath: "catalog-search" } } },
+          },
+          {
             from: { file: { categories: "transport" } },
             allow: { to: { module: { source: "@tablecast/api", internalPath: "client" } } },
           },
