@@ -81,10 +81,7 @@ function MotionExamples() {
           {english ? "Tabs and disclosure" : "表示の切り替え"}
         </h2>
         <Tabs.Root defaultValue="ja">
-          <Tabs.List
-            aria-label={labels.locale}
-            className="mb-4 flex gap-1 [&_button]:min-h-11 [&_button]:rounded-lg [&_button]:px-4 [&_button[data-active]]:bg-control-selected"
-          >
+          <Tabs.List aria-label={labels.locale} className="mb-4">
             <Tabs.Tab value="ja">日本語</Tabs.Tab>
             <Tabs.Tab value="en">English</Tabs.Tab>
           </Tabs.List>

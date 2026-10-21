@@ -1,7 +1,7 @@
 import { useSidebarPreferences } from "./sidebar-preferences";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { PanelLeft, X } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode, type SyntheticEvent } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
@@ -31,7 +31,13 @@ export function AdminShell({
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
   const sidebarInteraction = useRef(false);
+  const [sidebarTransition, setSidebarTransition] = useState(false);
+  const resizeDirectly = (event: SyntheticEvent<HTMLDivElement>) => {
+    if (event.target instanceof Element && event.target.closest("[data-separator]"))
+      setSidebarTransition(false);
+  };
   const toggleSidebar = () => {
+    setSidebarTransition(true);
     sidebarInteraction.current = true;
     if (panel.current?.isCollapsed()) panel.current.expand();
     else panel.current?.collapse();
@@ -47,7 +53,18 @@ export function AdminShell({
     <>
       <ResizablePanelGroup
         orientation="horizontal"
-        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden"
+        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none"
+        data-sidebar-transition={sidebarTransition}
+        onPointerDownCapture={resizeDirectly}
+        onKeyDownCapture={resizeDirectly}
+        onTransitionEnd={(event) => {
+          if (
+            event.propertyName === "flex-grow" &&
+            event.target instanceof Element &&
+            event.target.parentElement === event.currentTarget
+          )
+            setSidebarTransition(false);
+        }}
         defaultLayout={defaultLayout}
         onLayoutChanged={(layout, meta) => {
           onLayoutChanged(layout, {

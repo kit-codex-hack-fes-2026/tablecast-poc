@@ -10,7 +10,9 @@ import {
   Pause,
   ShoppingBag,
 } from "lucide-react";
-import { lazy, Suspense, useRef, type ReactNode } from "react";
+import { forwardRef, lazy, Suspense, useRef, type ReactNode } from "react";
+import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { Streamdown } from "streamdown";
 import {
   Conversation,
@@ -59,6 +61,37 @@ const markdownComponents = {
   img: () => null,
 };
 
+const transcriptAnimation = {
+  animation: "fadeIn",
+  duration: 150,
+  sep: "char",
+  stagger: 0,
+  maxBacklogMs: 0,
+} as const;
+
+// 行のIDと本文DOMを保ち、追加された発話だけを短く表示する。
+const ConversationEntry = forwardRef<HTMLDivElement, { children: ReactNode; className?: string }>(
+  function ConversationEntry({ children, className }, ref) {
+    const present = useIsPresent();
+    const reduced = useReducedMotion();
+    return (
+      <m.div
+        ref={ref}
+        data-ui="conversation-entry"
+        className={className}
+        inert={!present}
+        aria-hidden={!present || undefined}
+        initial={reduced ? false : { opacity: 0, transform: "translateY(6px)" }}
+        animate={{ opacity: 1, transform: "none" }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
+      >
+        {children}
+      </m.div>
+    );
+  },
+);
+
 function ConversationMessage({
   line,
   status,
@@ -69,6 +102,7 @@ function ConversationMessage({
   children?: ReactNode;
 }) {
   const { locale, t } = useI18n();
+  const reduced = useReducedMotion();
   return (
     <article
       data-role={line.role}
@@ -92,6 +126,7 @@ function ConversationMessage({
           <Streamdown
             mode={status ? "streaming" : "static"}
             isAnimating={Boolean(status)}
+            animated={status && !reduced ? transcriptAnimation : false}
             controls={false}
             components={markdownComponents}
           >
@@ -213,15 +248,17 @@ function useVoicePanel({
           className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-2 text-xs"
           data-tool-state={stale ? "interrupted" : failed ? "error" : String(event.data.state)}
         >
-          {failed ? (
-            <CircleAlert className="size-4 text-destructive" />
-          ) : pending && !stale ? (
-            <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
-          ) : stale ? (
-            <MicOff className="size-4" />
-          ) : (
-            <Check className="size-4 text-success" />
-          )}
+          <span key={toolStatus} className="shrink-0 motion-safe:animate-tablecast-confirm">
+            {failed ? (
+              <CircleAlert className="size-4 text-destructive" />
+            ) : pending && !stale ? (
+              <LoaderCircle className="size-4 motion-safe:animate-spin text-primary" />
+            ) : stale ? (
+              <MicOff className="size-4" />
+            ) : (
+              <Check className="size-4 text-success" />
+            )}
+          </span>
           <span className="min-w-0 flex-1">
             {title}
             {name === "getCatalog" && typeof event.data.query === "string" && (
@@ -334,7 +371,7 @@ export function VoicePanel({
       </div>
       <div data-ui="conversation-history" className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <Conversation>
-          <ConversationContent tabIndex={0}>
+          <ConversationContent tabIndex={0} className="relative">
             {merged.length === 0 && !active && (
               <div className="flex flex-col items-start gap-3 py-5">
                 <AudioLines className="size-10 text-muted-foreground" strokeWidth={1.2} />
@@ -343,44 +380,48 @@ export function VoicePanel({
                 </h1>
               </div>
             )}
-            {timeline.map((entry) => {
-              const line = entry.line;
-              return line ? (
-                <div className="space-y-2" key={line.id}>
+            <AnimatePresence initial={false} mode="popLayout">
+              {timeline.map((entry) => {
+                const line = entry.line;
+                return line ? (
+                  <ConversationEntry className="space-y-2" key={line.id}>
+                    <ConversationMessage
+                      line={line}
+                      status={
+                        line === speakingLine
+                          ? t("kiosk_voice_speaking")
+                          : line.live
+                            ? line.role === "user"
+                              ? t("kiosk_transcribing")
+                              : t("kiosk_reply_generating")
+                            : undefined
+                      }
+                    />
+                  </ConversationEntry>
+                ) : (
+                  <ConversationEntry key={entry.id} className="w-11/12 space-y-2">
+                    {toolCards(entry.turnId)}
+                    {products(entry.turnId)}
+                  </ConversationEntry>
+                );
+              })}
+              {active && !hasLive && (
+                <ConversationEntry key="activity">
                   <ConversationMessage
-                    line={line}
-                    status={
-                      line === speakingLine
-                        ? t("kiosk_voice_speaking")
-                        : line.live
-                          ? line.role === "user"
-                            ? t("kiosk_transcribing")
-                            : t("kiosk_reply_generating")
-                          : undefined
-                    }
+                    status={phase}
+                    line={{
+                      id: "activity",
+                      role: liveRole,
+                      text: "",
+                      locale,
+                      createdAt: 0,
+                      interrupted: false,
+                      live: true,
+                    }}
                   />
-                </div>
-              ) : (
-                <div key={entry.id} className="w-11/12 space-y-2">
-                  {toolCards(entry.turnId)}
-                  {products(entry.turnId)}
-                </div>
-              );
-            })}
-            {active && !hasLive && (
-              <ConversationMessage
-                status={phase}
-                line={{
-                  id: "activity",
-                  role: liveRole,
-                  text: "",
-                  locale,
-                  createdAt: 0,
-                  interrupted: false,
-                  live: true,
-                }}
-              />
-            )}
+                </ConversationEntry>
+              )}
+            </AnimatePresence>
             <VoiceAttention
               snapshot={snapshot}
               onReview={onReview}
@@ -518,7 +559,7 @@ function VoiceIdle({
           data-ui="voice-status"
         >
           {label}
-          {toolLabel && <span className="font-normal">{toolLabel}</span>}
+          {toolLabel && toolLabel !== label && <span className="font-normal">{toolLabel}</span>}
         </figcaption>
         <div className="flex h-4 items-center" aria-hidden="true">
           <span className="h-px w-full bg-border" />

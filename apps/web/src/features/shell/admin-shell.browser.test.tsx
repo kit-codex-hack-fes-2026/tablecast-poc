@@ -167,9 +167,14 @@ it("サイドバーの幅をCookieへ保存し、再表示と折りたたみで�
   const adjusted = width();
   expect(document.cookie).toContain("tablecast-layout-");
   const toggle = page.getByRole("button", { name: ja.admin_navigation, exact: true });
+  let widthTransition = false;
+  sidebar()?.addEventListener("transitionrun", (event) => {
+    if (event.propertyName === "flex-grow" && event.target === sidebar()) widthTransition = true;
+  });
   await toggle.click();
   await expect.element(toggle).toHaveAttribute("aria-expanded", "false");
   await expect.poll(width).toBeLessThan(80);
+  expect(widthTransition).toBe(!matchMedia("(prefers-reduced-motion: reduce)").matches);
   await toggle.click();
   await expect.poll(() => Math.abs(width() - adjusted)).toBeLessThan(2);
   await view.unmount();
@@ -198,6 +203,7 @@ it("店舗選択をサイドバーに一つだけ表示し、折りたたみと�
   await page.viewport(1180, 820);
   await show();
   const name = page.getByLabelText("表示名");
+  const input = name.element();
   await name.fill("編集中の名前");
   const picker = page.getByRole("combobox", { name: ja.stores_title, exact: true });
   await expect.element(picker).toBeVisible();
@@ -222,7 +228,13 @@ it("店舗選択をサイドバーに一つだけ表示し、折りたたみと�
   expect(picker.elements()).toHaveLength(1);
   await expect.element(page.getByRole("main").getByText("二号店舗", { exact: true })).toBeVisible();
   await expect.element(name).toHaveValue("編集中の名前");
+  expect(name.element()).toBe(input);
+  // 完了を待たずに反転しても、入力と保存した展開幅を維持する。
   await toggle.click();
+  await toggle.click();
+  await toggle.click();
+  await expect.element(toggle).toHaveAttribute("aria-expanded", "true");
+  expect(name.element()).toBe(input);
 
   await page.viewport(402, 874);
   await expect.element(picker).not.toBeInTheDocument();
@@ -261,14 +273,41 @@ it("サイドバーのショートカットは編集入力を奪わず、通常�
   const trigger = page.getByRole("button", { name: "ナビゲーション", exact: true });
   const shortcut = detectPlatform() === "mac" ? "{Meta>}b{/Meta}" : "{Control>}b{/Control}";
   await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
-  trigger.element().focus();
+  const floor = page.getByRole("link", { name: ja.admin_live, exact: true });
+  const floorElement = floor.element();
+  floorElement.focus();
   await userEvent.keyboard(shortcut);
   await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(floor.element()).toBe(floorElement);
+  await expect.element(floor).toHaveFocus();
+  // 幅の変更中に反転しても同じリンクにフォーカスを保つ。
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(floor.element()).toBe(floorElement);
+  await expect.element(floor).toHaveFocus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect.element(floor).toHaveFocus();
   await userEvent.click(page.getByRole("textbox", { name: "表示名" }));
   await userEvent.keyboard(shortcut);
   await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
   await userEvent.click(trigger);
   await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+
+  const menuGroup = page.getByRole("button", { name: ja.admin_config, exact: true });
+  await menuGroup.click();
+  await expect.element(menuGroup).toHaveAttribute("aria-expanded", "false");
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+  const products = page.getByRole("link", { name: ja.editor_products, exact: true });
+  const productElement = products.element();
+  await expect.element(products).toHaveFocus();
+  await userEvent.keyboard(shortcut);
+  await expect.element(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect.element(menuGroup).toHaveFocus();
+  await expect.element(menuGroup).toHaveAttribute("aria-expanded", "false");
+  await menuGroup.click();
+  expect(products.element()).toBe(productElement);
 });
 
 it("利用者メニューを開いてもトリガー・サイドバー・本文を動かさない", async () => {

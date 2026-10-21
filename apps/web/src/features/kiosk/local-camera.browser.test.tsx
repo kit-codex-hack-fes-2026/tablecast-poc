@@ -346,13 +346,17 @@ it("キーボードで最大・最小へ変更し、親領域を縮めても映�
   await userEvent.keyboard("{Home}");
   await expect.poll(() => cameraFrame().getBoundingClientRect().width).toBe(140);
 });
-it("ドラッグで映像比率を保って拡大し、終了後のポインター移動では寸法を変えない", async () => {
+it("右下ハンドルを下へドラッグすると比率を保って拡大し、終了後は寸法を変えない", async () => {
   await render(<BoundedMirror />);
   const resize = page.getByRole("separator", { name: ja.kiosk_camera_resize });
   const target = page.getByTestId("camera-bounds");
+  const before = cameraFrame().getBoundingClientRect();
+  const corner = resize.element().getBoundingClientRect();
+  expect(corner.right).toBe(before.right);
+  expect(corner.bottom).toBe(before.bottom);
   await userEvent.dragAndDrop(resize, target, {
     sourcePosition: { x: 22, y: 22 },
-    targetPosition: { x: 260, y: 22 },
+    targetPosition: { x: 106, y: 160 },
   });
   const after = cameraFrame().getBoundingClientRect();
   expect(after.width).toBeGreaterThan(128);

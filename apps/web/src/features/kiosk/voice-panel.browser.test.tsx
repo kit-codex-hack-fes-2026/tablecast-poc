@@ -107,6 +107,9 @@ it("保存通知と字幕の続きが届いても吹き出しを作り直さず�
       />
     </Surface>,
   );
+  const camera = document.querySelector("video");
+  const controls = document.querySelector("[data-theme-part=voice-controls]");
+  const controlsBottom = controls?.getBoundingClientRect().bottom;
   const beforeGuest = screen.getByText("刺身に合う日本酒をください").element().closest("article");
   const beforeReply = screen.getByText("辛口の日本酒です").element().closest("article");
   const nextGuest = screen.getByText("冷やでお願いします").element().closest("article");
@@ -148,6 +151,18 @@ it("保存通知と字幕の続きが届いても吹き出しを作り直さず�
   const replyArticle = reply.element().closest("article");
   expect(guestArticle).toBe(beforeGuest);
   expect(replyArticle).toBe(beforeReply);
+  expect(document.querySelector("video")).toBe(camera);
+  expect(document.querySelector("[data-theme-part=voice-controls]")).toBe(controls);
+  expect(controls?.getBoundingClientRect().bottom).toBe(controlsBottom);
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const animatedTranscript = replyArticle?.querySelector("[data-sd-animate]");
+  expect(reducedMotion && Boolean(animatedTranscript)).toBe(false);
+  const reducedMotionAnimations = reducedMotion ? document.getAnimations() : [];
+  expect(
+    reducedMotionAnimations.every(
+      (animation) => Number(animation.effect?.getTiming().duration) <= 1,
+    ),
+  ).toBe(true);
   if (!guestArticle || !replyArticle || !nextGuest) throw new Error("会話の吹き出しがない");
   expect(
     guestArticle.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -534,7 +549,7 @@ it("映像枠内のカメラ操作で左上の映像だけを切り替え、会�
     const resize = screen.getByRole("separator", { name: ja.kiosk_camera_resize });
     await resize.click();
     await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
-    expect(frame.getBoundingClientRect().width).toBe(176);
+    await expect.poll(() => frame.getBoundingClientRect().width).toBe(176);
     expect(frame.getBoundingClientRect().width / frame.getBoundingClientRect().height).toBeCloseTo(
       4 / 3,
       2,

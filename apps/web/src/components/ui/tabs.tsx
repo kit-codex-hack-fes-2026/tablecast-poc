@@ -19,7 +19,7 @@ export function Tab({
   className,
   size,
   ...props
-}: TabsPrimitive.Tab.Props & VariantProps<typeof tabVariants>) {
+}: Omit<TabsPrimitive.Tab.Props, "render"> & VariantProps<typeof tabVariants>) {
   const reduced = useReducedMotion();
   return (
     <TabsPrimitive.Tab
@@ -37,7 +37,7 @@ export function Tab({
                 initial={false}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.2, ease: [0.23, 1, 0.32, 1] }}
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-current"
+                className="pointer-events-none absolute inset-0 rounded-[inherit] border-2 border-control-edge-hover shadow-control"
               />
             )}
           </AnimatePresence>

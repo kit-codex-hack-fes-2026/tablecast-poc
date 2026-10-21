@@ -222,7 +222,6 @@ function WorkspaceNavigation({
 }) {
   const { t } = useI18n();
   const common = { collapsed, userId };
-  const layoutId = useId();
   return (
     <NavigationGroup {...common} id="workspace" label={t("nav_workspace")} icon={Plug}>
       <Link

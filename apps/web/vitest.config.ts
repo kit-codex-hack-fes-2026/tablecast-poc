@@ -75,6 +75,8 @@ export default defineConfig({
                 name: "chromium-reduced-motion",
                 provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
                 include: [
+                  "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/kiosk/voice-panel.browser.test.tsx",
                   "src/components/motion-system.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
                 ],

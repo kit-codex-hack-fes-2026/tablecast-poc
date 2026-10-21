@@ -3,7 +3,7 @@ import {
   Camera,
   CameraOff,
   CircleAlert,
-  MoveDiagonal,
+  MoveDiagonal2,
   LoaderCircle,
   SlidersHorizontal,
 } from "lucide-react";
@@ -122,7 +122,8 @@ export function LocalCamera({
   );
   const width = Math.min(maxWidth, Math.max(minWidth, preferredWidth));
   const narrow = width < 100;
-  const compactStatus = width / aspectRatio < 80 || (narrow && camera.devices.length > 1);
+  const controlsAtTop = narrow || (camera.devices.length > 1 && width < 140);
+  const compactStatus = width / aspectRatio < 80 || controlsAtTop;
   const resize = (value: number) =>
     setPreferredWidth(Math.min(maxWidth, Math.max(minWidth, value)));
   const readAspectRatio = () => {
@@ -193,7 +194,9 @@ export function LocalCamera({
         onResize={readAspectRatio}
       />
       {!camera.stream && !compactStatus && <LocalCameraStatus camera={camera} narrow={narrow} />}
-      <div className={`absolute bottom-1 left-1 flex gap-1 ${narrow ? "flex-col" : ""}`}>
+      <div
+        className={`absolute left-1 flex gap-1 ${controlsAtTop ? "top-1" : "bottom-1"} ${narrow ? "flex-col" : ""}`}
+      >
         <CameraDeviceSetting camera={camera} />
         <LocalCameraToggle camera={camera} compactStatus={compactStatus} />
       </div>
@@ -206,7 +209,7 @@ export function LocalCamera({
         aria-valuemax={Math.round(maxWidth)}
         aria-valuenow={Math.round(width)}
         title={t("kiosk_camera_resize")}
-        className="group absolute top-0 right-0 flex size-11 touch-none cursor-nesw-resize items-start justify-end p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        className="group absolute right-0 bottom-0 flex size-11 touch-none cursor-nwse-resize items-end justify-end p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         onPointerDown={(event) => {
           if (drag.current || !event.isPrimary || event.button !== 0) return;
           event.preventDefault();
@@ -218,7 +221,7 @@ export function LocalCamera({
           const start = drag.current;
           if (!start || event.pointerId !== start.pointerId) return;
           const x = event.clientX - start.x;
-          const y = (start.y - event.clientY) * aspectRatio;
+          const y = (event.clientY - start.y) * aspectRatio;
           resize(start.width + (Math.abs(x) >= Math.abs(y) ? x : y));
         }}
         onPointerUp={(event) => {
@@ -256,7 +259,7 @@ export function LocalCamera({
           }
         }}
       >
-        <MoveDiagonal
+        <MoveDiagonal2
           className="size-4 rounded-sm bg-control/90 group-hover:bg-control-hover"
           aria-hidden="true"
         />
