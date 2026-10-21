@@ -126,6 +126,10 @@ export const 項目エラーと失敗後の再送: Story = {
     await expect(submit).toHaveBeenCalledTimes(2);
     await expect(submit).toHaveBeenLastCalledWith({ email: "staff@example.test", count: 2 });
     await waitFor(() => expect(canvas.getByText("更新しました")).toBeVisible());
+    // axeは成功表示の入場が完了した状態で文字のコントラストを検査する。
+    await waitFor(() =>
+      expect(canvas.getByText("更新しました").parentElement).toHaveStyle({ opacity: "1" }),
+    );
   },
 };
 export const 英語: Story = {

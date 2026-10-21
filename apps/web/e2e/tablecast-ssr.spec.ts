@@ -311,7 +311,9 @@ test("実Routerの遷移と既定エラー画面を接続し、再試行で復�
     });
   });
   try {
-    await page.getByRole("button", { name: "店舗管理", exact: true }).click();
+    const management = page.getByRole("button", { name: "店舗管理", exact: true });
+    if ((await management.getAttribute("aria-expanded")) === "false") await management.click();
+    await expect(management).toHaveAttribute("aria-expanded", "true");
     await page.getByRole("link", { name: "端末", exact: true }).click();
     await requested.promise;
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
