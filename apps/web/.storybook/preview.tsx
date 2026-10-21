@@ -5,10 +5,6 @@ import "../src/styles.css";
 
 const preview: Preview = {
   parameters: { layout: "fullscreen", a11y: { test: "error" } },
-  // 初回の機能読込がafterEachのアニメーション検出より遅れないようにする。
-  beforeAll: async () => {
-    await import("../src/components/motion-features");
-  },
   // 最終状態のアクセシビリティを検査し、fade途中の文字色を測らない。
   afterEach: async ({ canvasElement }) => {
     await new Promise(requestAnimationFrame);
