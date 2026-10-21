@@ -51,12 +51,12 @@ export async function startVoiceSession(
         delegation: {
           type: "responses",
           responses: {
-            model: "gpt-5.6-luna",
+            model: services.env.TABLECAST_MODEL,
             instructions: `${castSessionInstructions(row.locale)}\n${storeInstructions}`,
-            reasoning: { effort: "none" },
+            reasoning: { effort: "medium" },
             text: { verbosity: "low" },
             service_tier: "priority",
-            max_output_tokens: 800,
+            max_output_tokens: 4096,
             parallel_tool_calls: true,
             tools: Object.values(createCastTools(services, actor, requestSignal)).map((tool) => ({
               type: "function" as const,

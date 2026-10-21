@@ -19,7 +19,7 @@ import { deviceToken, setupFixture } from "./fixture";
 const configured = () => ({
   ...env,
   TABLECAST_VOICE_ENABLED: "true",
-  TABLECAST_MODEL: "gpt-5.6-luna",
+  TABLECAST_MODEL: "gpt-6-luna",
   TABLECAST_ORGANIZATION_AI_ENABLED: "true",
   TABLECAST_OPENAI_ADMIN_API_KEY: "tablecast-admin-key",
   TABLECAST_OPENAI_PROJECT_ID: "proj_tablecast_test",

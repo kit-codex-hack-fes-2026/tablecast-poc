@@ -26,6 +26,7 @@ import {
 } from "../src/modules/billing/credentials";
 import { syncOrganizationCosts } from "../src/modules/billing/sync";
 import { createStore } from "../src/modules/stores/service";
+import { billingPricingVersion } from "../src/modules/billing/pricing";
 import { setupFixture } from "./fixture";
 
 const configured = () => ({
@@ -114,63 +115,96 @@ it("並行発行を一度に制限し、失われた応答の固定名資源を�
   expect(await services.db.select().from(organizationAiKeys)).toHaveLength(1);
   expect(await sessionCredential(services, "key_tablecast")).toBe("tablecast-secret-org-key");
 });
-it("初期料金・累積秒・逆順・再送を一度だけ計上し、ResponsesをIDで重複排除する", async () => {
-  await setupFixture();
-  const services = createApiServices(configured());
-  await pendingOrganizationKey(services, "tablecast-org");
-  provider();
-  await provisionOrganizationKey(services, "tablecast-org");
-  const selected = await voiceBillingAccount(services, "tablecast-store");
-  await beginVoiceUsage(
-    services,
-    "live_tablecast",
-    "tablecast-store",
-    "tablecast-session",
-    false,
-    selected,
-  );
-  const voice = (seconds: number, type = "session.usage.updated") =>
-    recordVoiceUsage(services, "live_tablecast", { type, usage: { seconds } });
-  await Promise.all([voice(30), voice(60)]);
-  await voice(30);
-  await voice(90, "session.closed");
-  await voice(90, "session.closed");
-  const response = {
-    type: "response.event",
-    event: {
-      type: "response.completed",
-      response: {
-        id: "resp_tablecast",
-        model: "gpt-5.6-luna",
-        service_tier: "priority",
-        usage: {
-          input_tokens: 1000,
-          input_tokens_details: { cached_tokens: 500 },
-          output_tokens: 100,
+it.each([
+  {
+    pricingVersion: "openai-2026-10-18",
+    model: "gpt-5.6-luna",
+    serviceTier: "priority",
+    charge: 73600,
+  },
+  {
+    pricingVersion: billingPricingVersion,
+    model: "gpt-6-luna",
+    serviceTier: "priority",
+    charge: 33600,
+  },
+  {
+    pricingVersion: billingPricingVersion,
+    model: "gpt-6-luna",
+    serviceTier: "fast",
+    charge: 33600,
+  },
+])(
+  "$pricingVersionの$model・$serviceTierで累積秒とResponsesの再送を重複計上しない",
+  async ({ pricingVersion, model, serviceTier, charge }) => {
+    await setupFixture();
+    const services = createApiServices(configured());
+    await pendingOrganizationKey(services, "tablecast-org");
+    provider();
+    await provisionOrganizationKey(services, "tablecast-org");
+    const selected = await voiceBillingAccount(services, "tablecast-store");
+    await beginVoiceUsage(
+      services,
+      "live_tablecast",
+      "tablecast-store",
+      "tablecast-session",
+      false,
+      selected,
+    );
+    expect(await services.db.select().from(voiceUsageSessions).get()).toMatchObject({
+      pricingVersion: billingPricingVersion,
+    });
+    if (pricingVersion !== billingPricingVersion) {
+      await services.db
+        .update(voiceUsageSessions)
+        .set({ pricingVersion })
+        .where(eq(voiceUsageSessions.id, "live_tablecast"));
+    }
+    const voice = (seconds: number, type = "session.usage.updated") =>
+      recordVoiceUsage(services, "live_tablecast", { type, usage: { seconds } });
+    await Promise.all([voice(30), voice(60)]);
+    await voice(30);
+    await voice(90, "session.closed");
+    await voice(90, "session.closed");
+    const response = {
+      type: "response.event",
+      event: {
+        type: "response.completed",
+        response: {
+          id: "resp_tablecast",
+          model,
+          service_tier: serviceTier,
+          usage: {
+            input_tokens: 1000,
+            input_tokens_details: { cached_tokens: 500 },
+            output_tokens: 100,
+          },
         },
       },
-    },
-  };
-  await Promise.all([
-    recordVoiceUsage(services, "live_tablecast", response),
-    recordVoiceUsage(services, "live_tablecast", response),
-  ]);
-  const outbox = await services.db.select().from(billingOutbox);
-  expect(outbox.reduce((sum, row) => sum + row.seconds, 0)).toBe(90);
-  expect(outbox.reduce((sum, row) => sum + row.chargeMicros, 0)).toBe(12_073_600);
-  expect(await services.db.select().from(responseUsage)).toHaveLength(1);
-  expect(await services.db.select().from(voiceUsageSessions).get()).toMatchObject({
-    seconds: 90,
-    final: true,
-  });
-  const changed = createApiServices({
-    ...services.env,
-    TABLECAST_BILLING_RATES: JSON.stringify({ ...selected.rates, markupBps: 20000 }),
-  });
-  await expect(voiceBillingAccount(changed, "tablecast-store")).rejects.toMatchObject({
-    code: "BILLING_VERSION_CHANGED",
-  });
-});
+    };
+    await Promise.all([
+      recordVoiceUsage(services, "live_tablecast", response),
+      recordVoiceUsage(services, "live_tablecast", response),
+    ]);
+    const outbox = await services.db.select().from(billingOutbox);
+    expect(outbox.reduce((sum, row) => sum + row.seconds, 0)).toBe(90);
+    expect(outbox.reduce((sum, row) => sum + row.chargeMicros, 0)).toBe(12_000_000 + charge);
+    expect(await services.db.select().from(responseUsage)).toMatchObject([
+      { model, serviceTier, chargeMicros: charge },
+    ]);
+    expect(await services.db.select().from(voiceUsageSessions).get()).toMatchObject({
+      seconds: 90,
+      final: true,
+    });
+    const changed = createApiServices({
+      ...services.env,
+      TABLECAST_BILLING_RATES: JSON.stringify({ ...selected.rates, markupBps: 20000 }),
+    });
+    await expect(voiceBillingAccount(changed, "tablecast-store")).rejects.toMatchObject({
+      code: "BILLING_VERSION_CHANGED",
+    });
+  },
+);
 it("memberの本番HTTP応答から金額とStripe情報を除き、他組織の閲覧を拒否する", async () => {
   const { staff, cookie } = await setupFixture();
   const services = createApiServices(env);

@@ -36,3 +36,47 @@ it("月末と年末を半開区間で扱う", () => {
   });
   expect(() => utcMonthRange("2026-13")).toThrow("INVALID_INPUT");
 });
+
+it("GPT-6 Lunaのcached input・Fast mode・長文料金を旧Lunaと区別する", () => {
+  const input = {
+    model: "gpt-6-luna",
+    serviceTier: "default",
+    inputTokens: 1000,
+    cachedTokens: 500,
+    outputTokens: 100,
+  };
+  expect(usageCharge(input, 10000)).toBe(16800);
+  for (const serviceTier of ["priority", "fast"]) {
+    expect(usageCharge({ ...input, serviceTier }, 15000)).toBe(50400);
+  }
+  expect(
+    usageCharge({ ...input, inputTokens: 272000, cachedTokens: 0, outputTokens: 0 }, 10000),
+  ).toBe(4352000);
+  expect(
+    usageCharge({ ...input, inputTokens: 272001, cachedTokens: 0, outputTokens: 100 }, 10000),
+  ).toBe(8716032);
+  expect(() => usageCharge({ ...input, serviceTier: "flex" }, 10000)).toThrow(
+    "BILLING_TIER_UNPRICED",
+  );
+});
+
+it("旧料金版の継続精算を保ち、旧版で新モデルや未知の料金版を受け付けない", () => {
+  expect(usageCharge({ seconds: 90 }, 10000, "openai-2026-10-18")).toBe(12_000_000);
+  expect(
+    usageCharge(
+      { model: "gpt-5.6-luna", serviceTier: "priority", inputTokens: 1000 },
+      10000,
+      "openai-2026-10-18",
+    ),
+  ).toBe(64000);
+  expect(() =>
+    usageCharge(
+      { model: "gpt-6-luna", serviceTier: "priority", inputTokens: 1000 },
+      10000,
+      "openai-2026-10-18",
+    ),
+  ).toThrow("BILLING_MODEL_UNPRICED");
+  expect(() => usageCharge({ seconds: 1 }, 10000, "tablecast-unknown-version")).toThrow(
+    "BILLING_VERSION_UNAVAILABLE",
+  );
+});

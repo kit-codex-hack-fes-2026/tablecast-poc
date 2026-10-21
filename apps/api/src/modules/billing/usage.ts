@@ -6,7 +6,7 @@ import { organizationAiEnabled, organizationCredential, sessionCredential } from
 import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
 import { billingEventSchema, billingRatesSchema } from "./model";
-import { billingPricingVersion, usageCharge } from "./pricing";
+import { billingPricingVersion, billingPricingVersions, usageCharge } from "./pricing";
 
 export async function voiceBillingAccount(services: ApiServices, storeId: string) {
   if (!organizationAiEnabled(services.env)) {
@@ -101,7 +101,7 @@ export async function recordVoiceUsage(services: ApiServices, sessionId: string,
     .where(eq(voiceUsageSessions.id, sessionId))
     .get();
   ensure(row, "VOICE_USAGE_NOT_FOUND", 404);
-  ensure(row.pricingVersion === billingPricingVersion, "BILLING_VERSION_UNAVAILABLE", 503);
+  ensure(billingPricingVersions.includes(row.pricingVersion), "BILLING_VERSION_UNAVAILABLE", 503);
   const db = services.db,
     rates = billingRatesSchema.parse(JSON.parse(row.ratesJson));
   const now = Date.now();
@@ -139,6 +139,7 @@ export async function recordVoiceUsage(services: ApiServices, sessionId: string,
     const chargeMicros = usageCharge(
       { seconds: !row.started && seconds === 0 ? 15 : seconds },
       rates.markupBps,
+      row.pricingVersion,
     );
     // 累積の比較と更新を同じ条件で行い、逆順・並行受信でも差分を重複させない。
     const result = await db.batch([
@@ -186,6 +187,7 @@ export async function recordVoiceUsage(services: ApiServices, sessionId: string,
         outputTokens: usage.output_tokens,
       },
       rates.markupBps,
+      row.pricingVersion,
     );
     await db.batch([
       db

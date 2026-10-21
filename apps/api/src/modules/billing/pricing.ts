@@ -1,7 +1,8 @@
 import type { BillingRates } from "./model";
 import { ensure } from "../../platform/errors";
 
-export const billingPricingVersion = "openai-2026-10-18";
+export const billingPricingVersion = "openai-2026-10-21";
+export const billingPricingVersions = ["openai-2026-10-18", billingPricingVersion];
 export const billingUsdJpy = 160;
 // 百万分の一円で保存する。整数の有理数計算で、累積値の差分を料金にする。
 export function usageCharge(
@@ -14,7 +15,9 @@ export function usageCharge(
     serviceTier?: string | null;
   },
   markupBps: BillingRates["markupBps"],
+  pricingVersion = billingPricingVersion,
 ) {
+  ensure(billingPricingVersions.includes(pricingVersion), "BILLING_VERSION_UNAVAILABLE", 503);
   const { seconds = 0, inputTokens = 0, cachedTokens = 0, outputTokens = 0 } = input;
   ensure(
     Number.isFinite(seconds) &&
@@ -32,23 +35,32 @@ export function usageCharge(
   ensure(Number.isSafeInteger(secondsMicros), "BILLING_USAGE_INVALID", 422);
   let numerator = BigInt(secondsMicros) * 50_000n;
   if (input.model) {
+    const luna6 =
+      pricingVersion === billingPricingVersion &&
+      /^gpt-6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model);
     ensure(
-      /^gpt-5\.6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model),
+      luna6 || /^gpt-5\.6-luna(?:-\d{4}-\d{2}-\d{2})?$/.test(input.model),
       "BILLING_MODEL_UNPRICED",
       422,
     );
     ensure(
-      input.serviceTier === "default" || input.serviceTier === "priority",
+      input.serviceTier === "default" ||
+        input.serviceTier === "priority" ||
+        (luna6 && input.serviceTier === "fast"),
       "BILLING_TIER_UNPRICED",
       422,
     );
     const longContext = inputTokens > 272000;
-    const priority = input.serviceTier === "priority" ? 2n : 1n;
+    const priority = input.serviceTier === "default" ? 1n : 2n;
+    // 百分の一USD / 百万token。旧料金版と旧モデルの単価は維持する。
+    const inputRate = luna6 ? 10n : 20n;
+    const cachedRate = luna6 ? 1n : 2n;
+    const outputRate = luna6 ? 25n : 60n;
     const tokenHundredths =
-      (BigInt(inputTokens - cachedTokens) * 20n + BigInt(cachedTokens) * 2n) *
+      (BigInt(inputTokens - cachedTokens) * inputRate + BigInt(cachedTokens) * cachedRate) *
         priority *
         (longContext ? 2n : 1n) +
-      BigInt(outputTokens) * 60n * priority * (longContext ? 3n : 2n);
+      BigInt(outputTokens) * outputRate * priority * (longContext ? 3n : 2n);
     numerator += tokenHundredths * 600_000n;
   }
   const denominator = 60_000_000n * 10000n;
