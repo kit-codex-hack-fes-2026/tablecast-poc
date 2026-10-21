@@ -1,7 +1,18 @@
 import type { Configuration } from "@tablecast/api/schema";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ImageOff, Plus, Tags, CircleCheck } from "lucide-react";
+import {
+  ImageOff,
+  Plus,
+  Tags,
+  CircleCheck,
+  CircleSlash,
+  List,
+  Package,
+  Banknote,
+  Clock3,
+  Layers,
+} from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
@@ -9,7 +20,8 @@ import { ProductImage } from "../../components/product-image";
 import { PageHeader } from "../../components/page-header";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { NativeSelect } from "../../components/ui/native-select";
+import { CollectionSort } from "../../components/collection-sort";
+import { parseCollectionSort } from "../shell/collection-model";
 import { m } from "../../paraglide/messages";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
@@ -32,6 +44,7 @@ type ItemRow = {
   price?: number;
   available?: boolean;
   count?: number;
+  duration?: number;
   summary?: string;
   categoryId?: string;
   searchText: string;
@@ -80,7 +93,7 @@ function MenuListCollection({
     [t, locale, section, draftId, storeId, search],
   );
   function updateSearch(next: MenuListSearch) {
-    const options = { search: { ...search, ...next }, replace: true, resetScroll: false };
+    const options = { search: { ...search, ...next }, replace: "q" in next, resetScroll: false };
     void (draftId
       ? navigate({
           ...options,
@@ -173,6 +186,7 @@ function menuCollectionColumns(
   return [
     {
       accessorKey: "name",
+      meta: { icon: section === "categories" ? Tags : section === "plans" ? Layers : Package },
       header: t(
         section === "products"
           ? "admin_product"
@@ -235,7 +249,7 @@ function menuCollectionColumns(
       ? [
           {
             accessorKey: "price",
-            meta: { align: "right" },
+            meta: { align: "right", icon: Banknote },
             header: t(section === "plans" ? "editor_plan_price" : "admin_unit_price"),
             cell: ({ row }) => (
               <span className="whitespace-nowrap tabular-nums">
@@ -249,6 +263,7 @@ function menuCollectionColumns(
       ? [
           {
             accessorKey: "available",
+            meta: { icon: CircleCheck },
             header: t("common_status"),
             cell: ({ row }) => (
               <Badge variant={row.original.available ? "success" : "inactive"}>
@@ -258,10 +273,25 @@ function menuCollectionColumns(
           } satisfies DataTableColumn<ItemRow>,
         ]
       : []),
+    ...(section === "plans"
+      ? [
+          {
+            accessorKey: "duration",
+            header: t("editor_duration"),
+            meta: { align: "right", icon: Clock3 },
+            cell: ({ row }) => (
+              <span className="whitespace-nowrap tabular-nums">
+                {row.original.duration} {t("kiosk_minutes")}
+              </span>
+            ),
+          } satisfies DataTableColumn<ItemRow>,
+        ]
+      : []),
     ...(section === "categories" || section === "plans"
       ? [
           {
-            accessorKey: "summary",
+            accessorKey: "count",
+            meta: { align: "right", icon: Layers },
             header: t(section === "categories" ? "menu_category_products" : "menu_plan_scope"),
             cell: ({ row }) => (
               <div className="min-w-40 max-w-sm whitespace-normal">
@@ -320,6 +350,13 @@ function menuCollectionRows(
     secondary: m.menu_plan_duration({ minutes: item.durationMinutes }, { locale }),
     lastOrder: m.menu_plan_last_order({ minutes: item.lastOrderMinutesBeforeEnd }, { locale }),
     price: item.pricePerPerson,
+    duration: item.durationMinutes,
+    count: configuration.products.filter(
+      (product) =>
+        item.productIds.includes(product.id) ||
+        item.categoryIds.includes(product.categoryId) ||
+        product.tags.some((tag) => item.tags.includes(tag)),
+    ).length,
     summary: [
       ...configuration.products.flatMap((product) =>
         item.productIds.includes(product.id) ? [product.text[locale].displayName] : [],
@@ -365,49 +402,46 @@ function ProductFilters({
   const { t, locale } = useI18n();
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
-      <label className="flex flex-col gap-2 text-sm font-medium">
+      <div className="flex flex-col gap-2 text-sm font-medium">
         <span className="flex items-center gap-2">
           <Tags aria-hidden className="size-4" />
           {t("editor_category")}
         </span>
-        <NativeSelect
+        <CollectionSort
+          label={t("editor_category")}
           value={search.category ?? ""}
-          onChange={(event) =>
-            onChange({ category: event.target.value || undefined, page: undefined })
-          }
-        >
-          <option value="">{t("menu_all_categories")}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.text[locale].displayName}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
+          onValueChange={(value) => onChange({ category: value || undefined, page: undefined })}
+          options={[
+            { value: "", label: t("menu_all_categories"), icon: List },
+            ...categories.map((category) => ({
+              value: category.id,
+              label: category.text[locale].displayName,
+              icon: Tags,
+            })),
+          ]}
+        />
+      </div>
+      <div className="flex flex-col gap-2 text-sm font-medium">
         <span className="flex items-center gap-2">
           <CircleCheck aria-hidden className="size-4" />
           {t("menu_availability")}
         </span>
-        <NativeSelect
+        <CollectionSort
+          label={t("menu_availability")}
           value={search.availability ?? ""}
-          onChange={(event) =>
+          onValueChange={(value) =>
             onChange({
-              availability:
-                event.target.value === "available"
-                  ? "available"
-                  : event.target.value === "sold-out"
-                    ? "sold-out"
-                    : undefined,
+              availability: value === "available" || value === "sold-out" ? value : undefined,
               page: undefined,
             })
           }
-        >
-          <option value="">{t("menu_all_availability")}</option>
-          <option value="available">{t("editor_available")}</option>
-          <option value="sold-out">{t("kiosk_sold_out")}</option>
-        </NativeSelect>
-      </label>
+          options={[
+            { value: "", label: t("menu_all_availability"), icon: List },
+            { value: "available", label: t("editor_available"), icon: CircleCheck },
+            { value: "sold-out", label: t("kiosk_sold_out"), icon: CircleSlash },
+          ]}
+        />
+      </div>
     </div>
   );
 }
@@ -428,6 +462,16 @@ function MenuResults({
   onChange: (next: MenuListSearch) => void;
 }) {
   const { t } = useI18n();
+  const sorting = parseCollectionSort(
+    search.sort,
+    columns.flatMap((column) =>
+      "accessorKey" in column &&
+      typeof column.accessorKey === "string" &&
+      column.enableSorting !== false
+        ? [column.accessorKey]
+        : [],
+    ),
+  );
   const pagination = {
     pageIndex: Math.min((search.page ?? 1) - 1, Math.max(0, Math.ceil(data.length / 20) - 1)),
     pageSize: 20,
@@ -438,13 +482,27 @@ function MenuResults({
       filters={filters}
       filtersActive={!!search.category || !!search.availability}
       onReset={() =>
-        onChange({ q: undefined, category: undefined, availability: undefined, page: undefined })
+        onChange({
+          q: undefined,
+          category: undefined,
+          availability: undefined,
+          page: undefined,
+          sort: undefined,
+        })
       }
       pending={pending}
       columns={columns}
       getRowId={(row) => row.id}
       searchLabel={t("menu_search")}
-      state={{ globalFilter: search.q ?? "", pagination }}
+      searchPlaceholder={t("collection_search_menu_placeholder")}
+      state={{ globalFilter: search.q ?? "", pagination, sorting }}
+      onSortingChange={(next) => {
+        const value = (typeof next === "function" ? next(sorting) : next)[0];
+        onChange({
+          sort: value ? `${value.id}:${value.desc ? "desc" : "asc"}` : undefined,
+          page: undefined,
+        });
+      }}
       onGlobalFilterChange={(next) =>
         onChange({
           q: (typeof next === "function" ? next(search.q ?? "") : next) || undefined,

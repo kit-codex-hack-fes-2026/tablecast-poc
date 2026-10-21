@@ -47,7 +47,7 @@ export function TableMetrics({
     },
   ] as const;
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-4 gap-1 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
       {metrics.map(({ label, value, icon: Icon, filter: target, ...metric }) => {
         const tone =
           target === "active"
@@ -60,16 +60,18 @@ export function TableMetrics({
         const content = (
           <>
             <span
-              className={`flex size-6 shrink-0 items-center justify-center rounded-full sm:size-8 ${tone}`}
+              className={`col-start-1 row-start-1 flex size-5 shrink-0 items-center justify-center rounded-full sm:size-8 ${tone}`}
             >
-              <Icon className="size-4" aria-hidden="true" />
+              <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
             </span>
-            <span className="min-w-0 text-sm break-keep">{label}</span>
-            <span className="col-span-2 flex items-center justify-between gap-2">
-              <strong className="text-xl font-semibold tabular-nums sm:text-2xl">
-                {pending ? <Skeleton className="h-8 w-12" /> : value}
+            <span className="col-span-2 col-start-1 row-start-2 min-w-0 text-center text-[0.6875rem] leading-tight break-keep sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:text-left sm:text-sm">
+              {label}
+            </span>
+            <span className="col-start-2 row-start-1 flex min-w-0 items-center justify-between gap-1 sm:col-span-2 sm:col-start-1 sm:row-start-2 sm:gap-2">
+              <strong className="text-base font-semibold whitespace-nowrap tabular-nums sm:text-2xl">
+                {pending ? <Skeleton className="size-6 sm:h-8 sm:w-12" /> : value}
                 {!pending && "total" in metric && (
-                  <small className="ml-1 text-sm font-normal text-muted-foreground">
+                  <small className="ml-0.5 text-xs font-normal text-muted-foreground sm:ml-1 sm:text-sm">
                     / {metric.total}
                   </small>
                 )}
@@ -77,7 +79,7 @@ export function TableMetrics({
               {onFilterChange && !pending && (
                 <ChevronRight
                   aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground"
+                  className="hidden size-4 shrink-0 text-muted-foreground sm:block"
                 />
               )}
             </span>
@@ -89,14 +91,14 @@ export function TableMetrics({
             variant="outline"
             aria-pressed={filter === target}
             onClick={() => onFilterChange(target)}
-            className="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 p-2 text-left sm:min-h-28 sm:gap-2 sm:p-3 aria-pressed:border-control-edge-hover aria-pressed:bg-control-selected"
+            className="grid min-h-18 grid-cols-[auto_minmax(0,1fr)] gap-1 px-1 py-2 text-left sm:min-h-28 sm:gap-2 sm:p-3 aria-pressed:border-control-edge-hover aria-pressed:bg-control-selected"
           >
             {content}
           </Button>
         ) : (
           <div
             key={target}
-            className="grid min-h-22 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 border-b border-border p-2 sm:min-h-28 sm:gap-2 sm:p-3"
+            className="grid min-h-18 grid-cols-[auto_minmax(0,1fr)] items-center gap-1 border-b border-border px-1 py-2 sm:min-h-28 sm:gap-2 sm:p-3"
           >
             {content}
           </div>

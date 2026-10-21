@@ -33,7 +33,7 @@ CloudflareのWorkers Paid・Containersの利用条件、D1、R2、Images、Acces
 | Environment `production` secret  | `TABLECAST_BETTER_AUTH_API_KEY`                                | Better Auth Dashboardで発行した本番プロジェクトのAPI key |
 | Repository secrets               | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`               | PRの機械通信用Access service token                       |
 
-`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-5.6-luna` を明示指定し、JSON内の旧モデル名より優先する。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
+`TABLECAST_RUNTIME_SECRETS`には公開環境用の `TABLECAST_MODEL_API_KEY` と `TABLECAST_MODEL` を入れる。GPT-Live 1とResponses delegationの利用権限があるprojectを使い、配備jobは `TABLECAST_MODEL=gpt-6-luna` を明示指定し、JSON内の旧モデル名より優先する。委譲先はFast mode（`service_tier: "priority"`）とreasoning mediumを使う。この選択は自動fallbackではなく配備版の固定設定である。JSONはActions secretから一時ファイルを経てAPI Worker secretへ渡し、Git・イメージ・ブラウザーへ含めない。旧 `OPENAI_API_KEY`、LiveKit鍵、音声内部token、Mastra観測設定は利用しない。
 
 認証secretは固定masterからAPI Worker名・用途別にHMACで導出する。再配備で変化せず、PR間では異なる。masterの変更は全環境の認証に影響するため通常のキー追加時に再生成しない。
 
@@ -73,6 +73,8 @@ D1 migrationは追加型で旧APIとも互換にする。配備時もGUIの営�
 DockerイメージはActionsのUbuntu runnerの`images` jobでDockerfileからlinux/amd64へ一度buildし、起動検査後に`docker save`でartifactへ保存する。配備ジョブは`docker load`と公式`cf containers push`で同じイメージをCloudflare Registryへ送り、Registry参照を設定した`cf deploy --prebuilt`で配備する。cfのversion・image digest出力と対象SHAを同じrunで追跡する。OAuth emulatorの依存は既存Dockerfileのbuild段階で準備する。[Containersのイメージ](https://developers.cloudflare.com/containers/image-management/)
 
 PR配備の高速化は、jobの実行時間に加えて前提検査・排他の待機から製品URLとSHAの通知までを測る。カタログは手動要求から対象URLのSHA確認・通知までを別に測る。checkout・依存準備・artifact取得・Docker load・DB準備・イメージ送信・Worker配備・公開SHA確認を分け、初回資源作成と既存資源の更新を区別する。手動カタログが同じPRの排他を先に取得した場合も、製品の待機時間へ含める。単独区間の短縮だけで判断せず、計測のSHA・run・標本数はPRへ残す。[backgroundとwaitの仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsbackground)
+
+GitHubの照合は`gh api --jq`でbranchのSHA、PRのstate・head SHA・head repositoryだけを子プロセスから返す。commitのpatchやPR本文は出力せず、大きな統合commitでもNodeの標準出力buffer上限に依存しない。取得・形式検証の失敗、SHA不一致、別repository、配備時のclosed・cleanup時のopenは引き続き拒否する。
 
 ## 初期データと再実行
 

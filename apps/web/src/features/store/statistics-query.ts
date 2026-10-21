@@ -7,10 +7,13 @@ import {
 } from "@tablecast/api/schema";
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
+import { collectionSearchFields } from "../shell/collection-model";
 import { parseResponse, rpc } from "../../lib/api";
 import { moveDate } from "./floor-model";
 
 export const statisticsSearchSchema = z.object({
+  ...collectionSearchFields("products"),
+  ...collectionSearchFields("modifiers"),
   period: z.enum(["today", "week", "month", "custom"]).default("today").catch("today"),
   from: storeDateSchema.optional().catch(undefined),
   to: storeDateSchema.optional().catch(undefined),

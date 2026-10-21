@@ -21,7 +21,7 @@ const configured = () => ({
   ...env,
   TABLECAST_VOICE_ENABLED: "true",
   TABLECAST_MODEL_API_KEY: "tablecast-private-model-key",
-  TABLECAST_MODEL: "gpt-5.6-luna",
+  TABLECAST_MODEL: "gpt-6-luna",
 });
 const startRequest = () =>
   new Request("http://localhost:3000/api/table/voice/start", {
@@ -173,13 +173,13 @@ it("同じ音声session・他卓・切替後の新turnを古い停止要求で�
 });
 
 it.each([
-  { locale: "ja", rich: false },
-  { locale: "en", rich: false },
-  { locale: "ja", rich: true },
-  { locale: "en", rich: true },
-] satisfies { locale: Locale; rich: boolean }[])(
-  "認証した卓の$locale接客設定（文書=$rich）を両モデルへ渡し、SDPだけを返す",
-  async ({ locale, rich }) => {
+  { locale: "ja", rich: false, model: "gpt-6-luna" },
+  { locale: "en", rich: false, model: "gpt-6-luna" },
+  { locale: "ja", rich: true, model: "tablecast-configured-model" },
+  { locale: "en", rich: true, model: "tablecast-configured-model" },
+] satisfies { locale: Locale; rich: boolean; model: string }[])(
+  "認証した卓の$locale接客設定（文書=$rich）と委譲先$modelを渡し、SDPだけを返す",
+  async ({ locale, rich, model }) => {
     await setupFixture();
     const selected: Configuration = structuredClone(configuration);
     if (rich) {
@@ -221,9 +221,10 @@ it.each([
           delegation: {
             type: "responses",
             responses: {
-              model: "gpt-5.6-luna",
-              reasoning: { effort: "none" },
+              model,
+              reasoning: { effort: "medium" },
               service_tier: "priority",
+              max_output_tokens: 4096,
               parallel_tool_calls: true,
             },
           },
@@ -250,7 +251,12 @@ it.each([
       });
     });
     const ctx = createExecutionContext();
-    const response = await app.request(startRequest(), undefined, configured(), ctx);
+    const response = await app.request(
+      startRequest(),
+      undefined,
+      { ...configured(), TABLECAST_MODEL: model },
+      ctx,
+    );
     expect(response.status).toBe(200);
     const body = await response.text();
     expect(JSON.parse(body)).toMatchObject({

@@ -10,7 +10,7 @@ Browserの仮想entryから後で読み込む外部依存は、既存の`optimiz
 
 ## UIの動きの検証
 
-`motion-system.browser.test.tsx`はChromium・WebKit・Chromiumのreduced motionで、入退場の途中反転、focus、keepMounted入力、閉じた多言語必須項目のエラー復帰、live regionの寿命を確認する。StorybookはCSS animationを最終フレームで止めるため、共通afterEachは実行中かつ有限のMotion animationだけを待ってからa11yへ進む。無限の待機表示を待たず、動きの無効化やコントラストの除外で失敗を隠さない。
+`motion-system.browser.test.tsx`はChromium・WebKit・Chromiumのreduced motionで、入退場の途中反転、focus、keepMounted入力、閉じた多言語必須項目のエラー復帰、live regionの寿命を確認する。StorybookはCSS animationを最終フレームで止めるため、共通afterEachは実行中かつ有限のMotion animationだけを待ってからa11yへ進む。ActionFeedbackとMotionProviderの成功表示は、Web Animations APIで検出できないMotionの描画もあるため、Storyのplayで成功文のopacityが1になってからa11yへ進む。無限の待機表示を待たず、動きの無効化やコントラストの除外で失敗を隠さない。
 
 ## Vitest 5とWorkersのmodule cache
 

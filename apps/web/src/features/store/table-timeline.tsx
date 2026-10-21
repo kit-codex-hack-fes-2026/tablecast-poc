@@ -17,7 +17,9 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { FloorFilter } from "./floor-model";
+import { compareFloorRows, floorPriority, type FloorFilter, type FloorSort } from "./floor-model";
+import { TableTimeLimit } from "./table-time-limit";
+import { m } from "../../paraglide/messages";
 
 type FloorRow = { id: string; name: string; visit: TableState | null };
 export function TableTimeline({
@@ -29,6 +31,7 @@ export function TableTimeline({
   pending = false,
   filter = "all",
   search = "",
+  sort,
 }: {
   pending?: boolean;
   tables: TableState[];
@@ -38,6 +41,7 @@ export function TableTimeline({
   onOpen?: (table: { id: string; name: string }) => void;
   filter?: FloorFilter;
   search?: string;
+  sort?: FloorSort;
 }) {
   const { locale, t } = useI18n();
   const [now, setNow] = useState(() => initialNow ?? Date.now());
@@ -50,7 +54,9 @@ export function TableTimeline({
     () =>
       new Map(
         [...tables]
-          .toSorted((a, b) => priority(a) - priority(b) || a.tableName.localeCompare(b.tableName))
+          .toSorted(
+            (a, b) => floorPriority(a) - floorPriority(b) || a.tableName.localeCompare(b.tableName),
+          )
           .map((item, index) => [item.id, index]),
       ),
   );
@@ -64,13 +70,35 @@ export function TableTimeline({
       .map((visit) => ({ id: visit.id, name: visit.tableName, visit })),
     ...vacantTables.map((item) => ({ ...item, visit: null })),
   ];
-  const filtered = rows.filter(({ visit, name }) => {
+  const ordered = sort
+    ? rows.toSorted((a, b) =>
+        compareFloorRows(
+          {
+            ...a,
+            status: floorPriority(a.visit),
+            duration: a.visit ? Math.max(0, now - a.visit.openedAt) : 0,
+            guests: a.visit?.guestCount ?? 0,
+            due: a.visit?.bill.due ?? 0,
+          },
+          {
+            ...b,
+            status: floorPriority(b.visit),
+            duration: b.visit ? Math.max(0, now - b.visit.openedAt) : 0,
+            guests: b.visit?.guestCount ?? 0,
+            due: b.visit?.bill.due ?? 0,
+          },
+          sort,
+          locale,
+        ),
+      )
+    : rows;
+  const filtered = ordered.filter(({ visit, name }) => {
     if (!name.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale)))
       return false;
     if (filter === "all") return true;
     if (filter === "vacant") return !visit;
     if (!visit) return false;
-    if (filter === "attention") return priority(visit) < 3;
+    if (filter === "attention") return floorPriority(visit) < 3;
     if (filter === "active") return visit.status === "open";
     if (filter === "called") return visit.staffCalled;
     if (filter === "billing") return visit.billRequested && visit.bill.due > 0;
@@ -91,7 +119,7 @@ export function TableTimeline({
       ) : filtered.length ? (
         <ul className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map(({ id, name, visit }) => {
-            const attention = visit && priority(visit) < 3;
+            const attention = visit && floorPriority(visit) < 3;
             return (
               <li
                 key={id}
@@ -120,12 +148,17 @@ export function TableTimeline({
                       </span>
                       <span className="inline-flex items-center gap-1.5 tabular-nums">
                         <Clock3 className="size-4 text-muted-foreground" aria-hidden="true" />
-                        {Math.max(0, Math.floor((now - visit.openedAt) / 60_000))}{" "}
-                        {t("kiosk_minutes")}
+                        {m.floor_elapsed(
+                          { minutes: Math.max(0, Math.floor((now - visit.openedAt) / 60_000)) },
+                          { locale },
+                        )}
                       </span>
                       <span className="text-muted-foreground">
                         <LanguageLabel locale={visit.locale} />
                       </span>
+                    </div>
+                    <div className="px-4 pb-4 text-sm">
+                      <TableTimeLimit plan={visit.plan} now={now} detail />
                     </div>
                     {attention && (
                       <div className="flex flex-wrap gap-2 border-y border-warning/15 bg-warning-soft/50 px-4 py-3">
@@ -173,9 +206,9 @@ export function TableTimeline({
                         variant="outline"
                         className="w-full justify-between"
                         onClick={() => onSelect(id)}
-                        aria-label={`${name} ${t("object_visit")}`}
+                        aria-label={`${name} ${t("floor_open_details")}`}
                       >
-                        <span>{t("object_visit")}</span>
+                        <span>{t("floor_open_details")}</span>
                         <ChevronRight />
                       </Button>
                     </div>
@@ -211,10 +244,4 @@ export function TableTimeline({
       )}
     </section>
   );
-}
-function priority(table: TableState) {
-  if (table.staffCalled) return 0;
-  if (table.billRequested && table.bill.due > 0) return 1;
-  if (table.voiceState === "error") return 2;
-  return 3;
 }

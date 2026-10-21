@@ -1,10 +1,19 @@
+import { useCollectionSearch } from "../shell/collection-search";
 import { UserIdentity } from "../../components/user-identity";
 import { PageHeader } from "../../components/page-header";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, MailPlus, X } from "lucide-react";
+import {
+  ArrowLeft,
+  MailPlus,
+  X,
+  Mail,
+  ShieldCheck,
+  CircleCheck,
+  CalendarClock,
+} from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable, type DataTableColumn } from "../../components/data-table";
@@ -22,6 +31,7 @@ const load = async (organizationId: string) =>
   authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
 type Invitation = Awaited<ReturnType<typeof load>>["invitations"][number];
 export function Invitations() {
+  const collection = useCollectionSearch({ sortIds: ["email", "role", "status", "expiresAt"] });
   const store = useStore(),
     { t } = useI18n(),
     client = useQueryClient();
@@ -55,12 +65,15 @@ export function Invitations() {
       />
       <ErrorNotice error={query.error || cancel.error} onRetry={() => void query.refetch()} />
       <DataTable
+        {...collection}
         data={query.data.invitations}
         error={query.error}
         onRetry={() => void query.refetch()}
         columns={columns}
         getRowId={(row) => row.id}
-        searchLabel={t("auth_email")}
+        tableLabel={t("invitations_title")}
+        searchLabel={t("collection_search_invitations")}
+        searchPlaceholder={t("collection_search_invitations_placeholder")}
       />
     </>
   );
@@ -74,15 +87,29 @@ function invitationColumns(
     {
       accessorKey: "email",
       header: t("auth_email"),
+      meta: { icon: Mail, rowHeader: true },
       cell: ({ row }) => <UserIdentity user={{ email: row.original.email }} compact />,
     },
     {
-      accessorKey: "role",
+      id: "role",
+      accessorFn: (row) => (row.role === "owner" ? 0 : row.role === "admin" ? 1 : 2),
+      enableGlobalFilter: false,
+      meta: { icon: ShieldCheck },
       header: t("org_role"),
       cell: ({ row }) => <RoleBadge role={row.original.role ?? "member"} />,
     },
     {
-      accessorKey: "status",
+      id: "status",
+      accessorFn: (row) =>
+        row.status === "pending"
+          ? 0
+          : row.status === "accepted"
+            ? 1
+            : row.status === "rejected"
+              ? 2
+              : 3,
+      enableGlobalFilter: false,
+      meta: { icon: CircleCheck },
       header: t("common_status"),
       cell: ({ row }) => (
         <Badge
@@ -107,7 +134,10 @@ function invitationColumns(
       ),
     },
     {
-      accessorKey: "expiresAt",
+      id: "expiresAt",
+      accessorFn: (row) => new Date(row.expiresAt).getTime(),
+      enableGlobalFilter: false,
+      meta: { icon: CalendarClock },
       header: t("invite_expires_at"),
       cell: ({ row }) => <DateTime value={row.original.expiresAt} />,
     },

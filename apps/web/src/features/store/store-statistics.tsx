@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  Check,
   ChartNoAxesCombined,
   ChartColumn,
   Package,
@@ -63,6 +64,7 @@ export function StoreStatistics({
                     })
                   }
                 >
+                  <CalendarDays aria-hidden />
                   {t(`statistics_period_${period}`)}
                 </Button>
               ))}
@@ -161,6 +163,7 @@ function PeriodForm({
         {(field) => <field.DateField ref={endInput} required label={t("statistics_to")} />}
       </form.AppField>
       <Button type="submit" variant="outline" className="col-span-full justify-self-start">
+        <Check aria-hidden />
         {t("statistics_apply")}
       </Button>
     </form>

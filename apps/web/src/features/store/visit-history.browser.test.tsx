@@ -1,3 +1,11 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { collectionSearchSchema } from "../shell/collection-model";
+import type { ReactNode } from "react";
 import type { ClosedSessionSummary, TableEvent } from "@tablecast/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
@@ -57,6 +65,14 @@ const event = (cursor: number): TableEvent => ({
   createdAt: Date.UTC(2026, 8, 5, 15, cursor),
 });
 
+function historyRouter(content: ReactNode, initial = "/") {
+  const routeTree = createRootRoute({
+    validateSearch: collectionSearchSchema,
+    component: () => content,
+  });
+  return createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [initial] }) });
+}
+
 function History() {
   const [storeId, setStoreId] = useState("tablecast-first");
   const [selected, setSelected] = useState<string>();
@@ -96,13 +112,16 @@ it("日本語で履歴の初回待機中にも表を表示し、取得後も位�
     unexpected.push(`${request.method} ${path}`);
     return Response.json({}, { status: 500 });
   });
+  const router = historyRouter(
+    <main className="space-y-6 p-6">
+      <VisitHistory storeId="tablecast-first" onSelect={() => undefined} />
+    </main>,
+  );
   try {
     const screen = await render(
       <QueryClientProvider client={client}>
         <LocaleProvider initialLocale={locale} persist={false}>
-          <main className="space-y-6 p-6">
-            <VisitHistory storeId="tablecast-first" onSelect={() => undefined} />
-          </main>
+          <RouterProvider router={router} />
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -162,10 +181,11 @@ it("日本語で履歴と古いログをcursorで辿り、店舗切替後へ前�
     unexpected.push(`${request.method} ${url.pathname}`);
     return Response.json({}, { status: 500 });
   });
+  const router = historyRouter(<History />);
   const screen = await render(
     <QueryClientProvider client={client}>
       <LocaleProvider initialLocale={locale} persist={false}>
-        <History />
+        <RouterProvider router={router} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -217,4 +237,54 @@ it("日本語で履歴と古いログをcursorで辿り、店舗切替後へ前�
   const switched = requests.find((url) => url.pathname.includes("tablecast-second"));
   expect(switched?.searchParams.has("beforeId")).toBe(false);
   expect(switched?.searchParams.has("beforeClosedAt")).toBe(false);
+});
+
+it("取得済み来店を金額の数値順で並べ、検索と並べ替えをURLから復元・解除できる", async () => {
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  unexpected = [];
+  const first = visit("T01");
+  const second = visit("T02");
+  first.bill.orderedTotal = 10000;
+  second.bill.orderedTotal = 900;
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const path = new URL(request.url).pathname;
+    if (path === "/api/admin/stores/tablecast-first/history")
+      return Response.json({ sessions: [first, second], nextCursor: null });
+    unexpected.push(`${request.method} ${path}`);
+    return Response.json({}, { status: 500 });
+  });
+  const router = historyRouter(
+    <VisitHistory storeId="tablecast-first" onSelect={() => undefined} />,
+    "/?q=T&sort=total%3Aasc",
+  );
+  const screen = await render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <RouterProvider router={router} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const order = () =>
+    [...screen.getByRole("table").element().querySelectorAll("tbody tr")].map((row) =>
+      row.getAttribute("data-row-id"),
+    );
+  await expect.poll(order).toEqual(["T02", "T01"]);
+  const search = screen.getByRole("searchbox", { name: ja.collection_search_visits, exact: true });
+  await expect.element(search).toHaveValue("T");
+  await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
+  await page
+    .getByRole("option", {
+      name: `${ja.admin_visit_total} · ${ja.collection_sort_descending}`,
+      exact: true,
+    })
+    .click();
+  await expect.poll(order).toEqual(["T01", "T02"]);
+  expect(router.state.location.search).toMatchObject({ q: "T", sort: "total:desc" });
+  await search.fill("T02");
+  await expect.poll(order).toEqual(["T02"]);
+  await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
+  await expect.poll(order).toEqual(["T01", "T02"]);
+  expect(router.state.location.search.q).toBeUndefined();
+  expect(router.state.location.search.sort).toBeUndefined();
 });

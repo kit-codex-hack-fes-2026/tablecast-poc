@@ -29,10 +29,12 @@ export function TableHead({ className, ...props }: ComponentProps<"th">) {
     />
   );
 }
-export function TableCell({ className, ...props }: ComponentProps<"td">) {
+export function TableCell({ className, scope, ...props }: ComponentProps<"th">) {
+  const Tag = scope ? "th" : "td";
   return (
-    <td
+    <Tag
       data-slot="table-cell"
+      scope={scope}
       className={cn(
         "border-b border-border/70 text-sm leading-relaxed align-middle px-4 py-3",
         className,

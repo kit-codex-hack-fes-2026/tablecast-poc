@@ -1,4 +1,5 @@
-import { Users, MailPlus, Trash2 } from "lucide-react";
+import { useCollectionSearch } from "../shell/collection-search";
+import { Users, MailPlus, Trash2, ShieldCheck, CalendarDays } from "lucide-react";
 import { PageHeader } from "../../components/page-header";
 import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -22,6 +23,7 @@ const load = async (organizationId: string) =>
 type Member = Awaited<ReturnType<typeof load>>["members"][number];
 type Action = { kind: "role"; memberId: string; role: Role } | { kind: "remove"; memberId: string };
 export function Members() {
+  const collection = useCollectionSearch({ sortIds: ["user", "role", "createdAt"] });
   const store = useStore(),
     { t } = useI18n(),
     client = useQueryClient(),
@@ -75,10 +77,13 @@ export function Members() {
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
 
       <DataTable
+        {...collection}
         data={query.data.members}
         columns={columns}
         getRowId={(member) => member.id}
-        searchLabel={t("auth_email")}
+        tableLabel={t("org_members")}
+        searchLabel={t("collection_search_members")}
+        searchPlaceholder={t("collection_search_members_placeholder")}
       />
     </>
   );
@@ -95,6 +100,7 @@ function memberColumns(
       id: "user",
       accessorFn: (row) => `${row.user.name} ${row.user.email}`,
       header: t("org_members"),
+      meta: { icon: Users, rowHeader: true },
       cell: ({ row }) => (
         <div className="min-w-56 max-w-sm">
           <UserIdentity user={row.original.user} />
@@ -102,12 +108,18 @@ function memberColumns(
       ),
     },
     {
-      accessorKey: "role",
+      id: "role",
+      accessorFn: (row) => (row.role === "owner" ? 0 : row.role === "admin" ? 1 : 2),
+      enableGlobalFilter: false,
+      meta: { icon: ShieldCheck },
       header: t("org_role"),
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
     {
-      accessorKey: "createdAt",
+      id: "createdAt",
+      accessorFn: (row) => new Date(row.createdAt).getTime(),
+      enableGlobalFilter: false,
+      meta: { icon: CalendarDays },
       header: t("members_created_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },

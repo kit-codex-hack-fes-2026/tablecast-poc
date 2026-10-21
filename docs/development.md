@@ -9,7 +9,7 @@ Bunを使っても本番Workersのruntimeはworkerdであり、cf/Vite/Storybook
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono、D1、DO、R2、Imagesの対応範囲、MCP、Storybook。
-通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはgpt-5.6-luna、、音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはTABLECAST_MODELで指定し、雛形はgpt-6-luna、Fast mode、reasoning mediumとする。音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験
@@ -57,6 +57,8 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 ### Storybook MCP
 
 ルートで `bun run setup`、`bun run storybook` を順に実行する。Storybook公式CLIを直接使い、DB・runtimeの準備やWorkersの起動は不要である。
+
+StorybookのViewportメニューには、PR確認用のiPhone 17（402×874）、11インチiPad横（1180×820）、MacBook Pro 14インチ（1512×982）を用意する。CSS viewportの検証と実機検証は区別する。
 
 Storybookの起動ログのURLへ `/mcp` を付け、Git管理外の `.codex/config.toml` に登録する。標準ポートは6006で、他worktreeが使う場合は `bun run storybook --port 6007` などで指定する。既存のCodex設定は保持して次のテーブルを統合する。
 
