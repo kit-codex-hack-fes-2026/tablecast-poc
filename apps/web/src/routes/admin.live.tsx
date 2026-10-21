@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Admin } from "../features/store/admin";
 
 export const Route = createFileRoute("/admin/live")({
+  staticData: { document: { title: "home_title", description: "head_home_description" } },
   validateSearch: z.object({
     section: z.enum(["live", "history", "settings"]).optional(),
     storeId: z.string().optional().catch(undefined),

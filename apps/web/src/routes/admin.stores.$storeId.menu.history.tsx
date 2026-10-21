@@ -8,6 +8,9 @@ import {
 import { storesOptions } from "../features/store/store-query";
 
 export const Route = createFileRoute("/admin/stores/$storeId/menu/history")({
+  staticData: {
+    document: { title: "configuration_history_title", description: "head_history_description" },
+  },
   validateSearch: configurationHistorySearchSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, params, deps }) => {

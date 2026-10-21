@@ -10,6 +10,9 @@ import { storesOptions } from "../features/store/store-query";
 import { getLocale } from "../paraglide/runtime.js";
 
 export const Route = createFileRoute("/admin/stores/$storeId/statistics")({
+  staticData: {
+    document: { title: "statistics_title", description: "head_statistics_description" },
+  },
   validateSearch: statisticsSearchSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, params, deps }) => {

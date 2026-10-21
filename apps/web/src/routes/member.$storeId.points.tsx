@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CustomerPoints } from "../features/customer/customer-points";
 import { customerPointsOptions } from "../features/customer/customer-points-query";
 export const Route = createFileRoute("/member/$storeId/points")({
+  staticData: {
+    document: { title: "customer_points", description: "head_customer_points_description" },
+  },
   loader: ({ context, params }) =>
     context.queryClient.ensureInfiniteQueryData(customerPointsOptions(params.storeId)),
   component: Page,

@@ -11,12 +11,15 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  Outlet,
 } from "@tanstack/react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
+import { DocumentHead } from "../../components/document-head";
+import { menuDocument } from "./menu-model";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
@@ -94,7 +97,14 @@ async function mountForm(
     ],
   });
   client.setQueryData(sessionOptions.queryKey, null);
-  const root = createRootRoute();
+  const root = createRootRoute({
+    component: () => (
+      <>
+        <DocumentHead />
+        <Outlet />
+      </>
+    ),
+  });
   const storeRoute = createRoute({
     getParentRoute: () => root,
     path: "/admin/stores/$storeId",
@@ -103,6 +113,13 @@ async function mountForm(
   const edit = createRoute({
     getParentRoute: () => storeRoute,
     path: "menu/changes/$draftId/products/$itemId",
+    loader: async () => ({
+      document: menuDocument(
+        (await client.ensureQueryData(draftOptions(storeId, draftId))).configuration,
+        "products",
+        itemId,
+      ),
+    }),
     component: () => <MenuItem section="products" itemId={itemId} draftId={draftId} />,
   });
   const list = createRoute({
@@ -163,6 +180,12 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
   const initial = await mountForm();
   try {
     const form = page.getByRole("main");
+    await form
+      .getByRole("textbox", {
+        name: `${ja.common_language_native_ja} ${ja.admin_display_name}`,
+        exact: true,
+      })
+      .fill("柚子ソーダ");
     await form.getByRole("spinbutton", { name: ja.admin_unit_price, exact: true }).fill("700");
     const image = form.getByRole("region", { name: ja.editor_images, exact: true });
     await image.getByLabelText(ja.editor_image_choose).upload(png);
@@ -200,6 +223,7 @@ it("画像取込中の保存を止め、取込後の画像を含めて保存し�
     await expect
       .element(form.getByRole("status").filter({ hasText: ja.account_saved }))
       .toBeVisible();
+    await expect.poll(() => document.title).toBe("柚子ソーダ · 商品 · TableCast");
     await expect.element(image.getByText(ja.editor_photograph, { exact: true })).toBeVisible();
     await expect.element(form.getByText(ja.admin_unsaved, { exact: true })).not.toBeInTheDocument();
   } finally {

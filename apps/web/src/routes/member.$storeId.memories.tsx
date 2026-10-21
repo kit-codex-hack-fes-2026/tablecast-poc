@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CustomerMemories } from "../features/customer/customer-memories";
 import { customerMemoriesOptions } from "../features/customer/customer-memory-query";
 export const Route = createFileRoute("/member/$storeId/memories")({
+  staticData: {
+    document: { title: "customer_memories", description: "head_customer_memories_description" },
+  },
   loader: ({ context, params }) =>
     context.queryClient.ensureInfiniteQueryData(customerMemoriesOptions(params.storeId)),
   component: Page,

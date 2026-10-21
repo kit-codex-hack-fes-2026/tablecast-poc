@@ -4,6 +4,7 @@ import { historyOptions } from "../features/store/history-query";
 import { useI18n } from "../i18n/locale";
 
 export const Route = createFileRoute("/admin/stores/$storeId/visits/")({
+  staticData: { document: { title: "admin_history", description: "head_visits_description" } },
   loader: async ({ context, params }) => {
     await context.queryClient.ensureInfiniteQueryData(historyOptions(params.storeId));
   },

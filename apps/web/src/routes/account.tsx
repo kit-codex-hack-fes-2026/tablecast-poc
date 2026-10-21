@@ -8,6 +8,7 @@ import {
   accountSessionsOptions,
 } from "../features/account/account-query";
 export const Route = createFileRoute("/account")({
+  staticData: { document: { title: "account_title", description: "head_account_description" } },
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(accountSessionsOptions),

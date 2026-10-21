@@ -40,6 +40,9 @@ test("代表管理ページのSSRデータをhydrationで再取得せず表示�
     requests.length = 0;
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    await expect(page).toHaveTitle(new RegExp(`${heading}.*TableCast$`));
+    await expect(page.locator("head title")).toHaveCount(1);
+    await expect(page.locator('head meta[name="description"]')).toHaveAttribute("content", /\S/);
     // ポインターが移動後のロゴへ重なって先読みするのを避け、hydration後の操作をキーボードで確認する。
     const navigation = page.getByRole("button", { name: "ナビゲーション", exact: true });
     await expect(navigation).toBeEnabled();
@@ -115,6 +118,14 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
       await expect(
         staffPage.getByRole("heading", { name: "フロアの様子", exact: true }),
       ).toBeVisible();
+      await expect(staffPage).toHaveTitle(`フロアの様子 · ${floor.store.name} · TableCast`);
+      await expect(guestPage).toHaveTitle(`${ja.head_guest} · ${catalog.storeName} · TableCast`);
+      await expect(anonPage).toHaveTitle(`${ja.auth_sign_in} · TableCast`);
+      await expect(staffPage.locator("head title")).toHaveCount(1);
+      await expect(guestPage.locator('head meta[name="description"]')).toHaveAttribute(
+        "content",
+        `${catalog.storeName} · ${ja.head_guest_description}`,
+      );
       await expect(
         staffPage.getByRole("button", { name: new RegExp(`^${table.name}\\b`) }),
       ).toBeVisible();

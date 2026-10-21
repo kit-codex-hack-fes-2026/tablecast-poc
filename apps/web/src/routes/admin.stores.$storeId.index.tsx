@@ -8,6 +8,7 @@ import { statisticsOptions } from "../features/store/statistics-query";
 import { getLocale } from "../paraglide/runtime.js";
 
 export const Route = createFileRoute("/admin/stores/$storeId/")({
+  staticData: { document: { title: "home_title", description: "head_home_description" } },
   loader: async ({ context, params }) => {
     const { queryClient } = context;
     const stores = await queryClient.ensureQueryData(storesOptions);

@@ -4,6 +4,7 @@ import { StoreDesign } from "../features/store/store-design";
 import { catalogOptions, draftOptions } from "../features/store/menu-query";
 import { menuReviewSearchSchema } from "../features/store/menu-model";
 export const Route = createFileRoute("/admin/stores/$storeId/design")({
+  staticData: { document: { title: "theme_title", description: "head_design_description" } },
   validateSearch: menuReviewSearchSchema.extend({ draftId: z.string().optional() }),
   loaderDeps: ({ search }) => ({ draftId: search.draftId }),
   loader: ({ context, params, deps }) =>

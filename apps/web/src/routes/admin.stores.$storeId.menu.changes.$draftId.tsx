@@ -3,6 +3,7 @@ import { menuReviewSearchSchema } from "../features/store/menu-model";
 import { DraftPage } from "../features/store/settings-drafts";
 import { catalogOptions, draftOptions } from "../features/store/menu-query";
 export const Route = createFileRoute("/admin/stores/$storeId/menu/changes/$draftId")({
+  staticData: { document: { title: "workflow_review", description: "head_review_description" } },
   validateSearch: menuReviewSearchSchema,
   loader: async ({ context, params }) => {
     await Promise.all([

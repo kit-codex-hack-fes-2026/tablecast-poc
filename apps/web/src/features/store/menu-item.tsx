@@ -13,7 +13,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Link, useBlocker, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  Link,
+  useBlocker,
+  useLocation,
+  useMatch,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { ArrowLeft, Save, Trash2, Undo2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
@@ -127,6 +134,8 @@ function useItemEditing({
   const client = useQueryClient();
   const images = useImageEdits(storeId);
   const navigate = useNavigate();
+  const router = useRouter();
+  const routeId = useMatch({ strict: false, select: (match) => match.routeId });
   const [newId] = useState(() => crypto.randomUUID());
   const selectedId = itemId === "new" ? newId : itemId;
   const editable =
@@ -205,6 +214,7 @@ function useItemEditing({
           replace: true,
           search,
         });
+      else void router.invalidate({ filter: (match) => match.routeId === routeId });
     },
   });
   const reload = useMutation({
@@ -220,6 +230,7 @@ function useItemEditing({
       client.setQueryData(draftOptions(storeId, next.id).queryKey, next);
       images.reset();
       save.reset();
+      void router.invalidate({ filter: (match) => match.routeId === routeId });
     },
   });
   const pending = save.isPending || reload.isPending;

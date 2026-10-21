@@ -30,7 +30,7 @@ export function LocaleProvider({
 }
 
 type MessageKey = Extract<keyof typeof m, string>;
-type SimpleMessageKey = {
+export type SimpleMessageKey = {
   [Key in MessageKey]: Record<string, never> extends Parameters<(typeof m)[Key]>[0] ? Key : never;
 }[MessageKey];
 

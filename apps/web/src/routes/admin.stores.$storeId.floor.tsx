@@ -4,6 +4,7 @@ import { floorOptions } from "../features/store/store-query";
 import { floorSearchSchema, storeDate } from "../features/store/floor-model";
 import { timelineOptions } from "../features/store/timeline-query";
 export const Route = createFileRoute("/admin/stores/$storeId/floor")({
+  staticData: { document: { title: "admin_live", description: "head_floor_description" } },
   validateSearch: floorSearchSchema,
   loaderDeps: ({ search }) => search,
   loader: async ({ context, params, deps, cause }) => {
