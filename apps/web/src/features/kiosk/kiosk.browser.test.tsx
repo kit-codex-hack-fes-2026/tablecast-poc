@@ -368,7 +368,11 @@ it.each(["listening", "speaking"] as const)(
     const audio = new AudioContext();
     const oscillator = audio.createOscillator();
     const destination = audio.createMediaStreamDestination();
+    const analyser = audio.createAnalyser();
+    analyser.fftSize = 256;
+    const samples = new Uint8Array(analyser.fftSize);
     oscillator.connect(destination);
+    oscillator.connect(analyser);
     oscillator.start();
     try {
       const screen = await render(
@@ -376,6 +380,13 @@ it.each(["listening", "speaking"] as const)(
       );
       await screen.getByRole("button", { name: "音声入力を開始" }).click();
       await expect.poll(() => audio.state).toBe("running");
+      // running への遷移だけでなく、fixture の実音声が流れてから画面へ渡す。
+      await expect
+        .poll(() => {
+          analyser.getByteTimeDomainData(samples);
+          return samples.some((value) => value < 96);
+        })
+        .toBe(true);
       const track = destination.stream.getAudioTracks()[0];
       if (!track) throw new Error("実音声trackが必要です");
       await screen.rerender(
@@ -426,11 +437,24 @@ it.each(["listening", "speaking"] as const)(
         .poll(() => {
           const context = canvas.getContext("2d");
           if (!context) throw new Error("波形の描画contextが必要です");
-          return context
-            .getImageData(0, 0, canvas.width, 18)
-            .data.some((value, index) => index % 4 === 3 && value > 0);
+          analyser.getByteTimeDomainData(samples);
+          return {
+            source: audio.state,
+            sourceSignal: samples.some((value) => value < 96),
+            visibility: document.visibilityState,
+            motion: figure.element().getAttribute("data-motion"),
+            waveform: context
+              .getImageData(0, 0, canvas.width, 18)
+              .data.some((value, index) => index % 4 === 3 && value > 0),
+          };
         })
-        .toBe(true);
+        .toEqual({
+          source: "running",
+          sourceSignal: true,
+          visibility: "visible",
+          motion: "animated",
+          waveform: true,
+        });
       await screen.rerender(
         <LocaleProvider initialLocale="ja" persist={false}>
           <VoicePanel
@@ -454,6 +478,7 @@ it.each(["listening", "speaking"] as const)(
     } finally {
       oscillator.stop();
       oscillator.disconnect();
+      analyser.disconnect();
       for (const track of destination.stream.getTracks()) track.stop();
       await audio.close();
     }
