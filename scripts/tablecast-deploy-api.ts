@@ -56,6 +56,10 @@ export async function currentRevision(
     target.pr
       ? `repos/${tablecastRepository}/pulls/${target.pr}`
       : `repos/${tablecastRepository}/commits/${target.branch}`,
+    "--jq",
+    target.pr
+      ? "{state, head: {sha: .head.sha, repo: {full_name: .head.repo.full_name}}}"
+      : "{sha}",
   ]);
   const value: unknown = JSON.parse(gh.stdout);
   if (target.pr) {
