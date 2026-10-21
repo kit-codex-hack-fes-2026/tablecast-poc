@@ -13,11 +13,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { catalog, product } from "../../../.storybook/tablecast-fixtures";
 import ja from "../../../messages/ja.json";
+import en from "../../../messages/en.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { ConfigurationHeader } from "../shell/configuration-header";
 import { ConfigurationToolbarProvider } from "../shell/configuration-toolbar";
 import { MenuCollection } from "./menu-collection";
 import { MenuOverview } from "./menu-overview";
+import { MenuItem } from "./menu-item";
 import { menuListSearchSchema, menuReviewSearchSchema, menuSectionSchema } from "./menu-model";
 import { catalogOptions, draftOptions } from "./menu-query";
 import { DraftPage } from "./settings-drafts";
@@ -134,8 +136,27 @@ async function showMenu(
       return <MenuCollection section={section} draftId={draftId} search={draftList.useSearch()} />;
     },
   });
+  const draftDetail = createRoute({
+    getParentRoute: () => root,
+    path: "/admin/stores/$storeId/menu/changes/$draftId/$section/$itemId",
+    validateSearch: menuListSearchSchema,
+    params: {
+      parse: (params) => ({ ...params, section: menuSectionSchema.parse(params.section) }),
+    },
+    component: function DraftItem() {
+      const { section, draftId, itemId } = draftDetail.useParams();
+      return (
+        <MenuItem
+          section={section}
+          draftId={draftId}
+          itemId={itemId}
+          search={draftDetail.useSearch()}
+        />
+      );
+    },
+  });
   const router = createRouter({
-    routeTree: root.addChildren([list, detail, review, draftList]),
+    routeTree: root.addChildren([list, detail, review, draftList, draftDetail]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   const screen = await render(
@@ -149,6 +170,91 @@ async function showMenu(
   );
   return { screen, router };
 }
+
+it.each([
+  { locale: "ja" as const, draft: false },
+  { locale: "en" as const, draft: true },
+])(
+  "$locale / 公開版・下書きでかな・誤字・説明文を検索し、絞込みと詳細からの復帰を保つ",
+  async ({ locale, draft }) => {
+    await page.viewport(1280, 800);
+    const value = structuredClone(catalog);
+    const chicken = {
+      ...structuredClone(product),
+      id: "tablecast-chicken",
+      text: {
+        ja: {
+          displayName: "唐揚げ",
+          speechName: "からあげ",
+          aliases: [],
+          description: "柚子を添えた温かい料理",
+        },
+        en: {
+          displayName: "Fried chicken",
+          speechName: "Fried chicken",
+          aliases: [],
+          description: "Chicken with a citrus garnish",
+        },
+      },
+    };
+    value.configuration.products = [
+      chicken,
+      { ...structuredClone(chicken), id: "tablecast-sold-out", available: false },
+      { ...structuredClone(product), id: "tablecast-unrelated" },
+    ];
+    const labels = locale === "ja" ? ja : en;
+    const path = draft
+      ? "/admin/stores/tablecast-story/menu/changes/tablecast-published-draft/products"
+      : "/admin/stores/tablecast-story/menu/products";
+    const { screen, router } = await showMenu(value, locale, path, "draft");
+    const search = screen.getByRole("searchbox", { name: labels.menu_search });
+    const name = chicken.text[locale].displayName;
+    for (const query of ["ｶﾗｱｹﾞ", "からあけ", "柚子", "citrus garnish"]) {
+      await search.fill(query);
+      await expect
+        .element(
+          screen.getByText(labels.common_result_count.replace("{count}", "2"), { exact: true }),
+        )
+        .toBeVisible();
+      await expect
+        .element(screen.getByText(product.text[locale].displayName, { exact: true }))
+        .not.toBeInTheDocument();
+    }
+    await screen.getByRole("combobox", { name: labels.editor_category, exact: true }).click();
+    const category = value.configuration.categories.find((item) => item.id === chicken.categoryId);
+    if (!category) throw new Error("検索対象のカテゴリがありません");
+    await page
+      .getByRole("option", { name: category.text[locale].displayName, exact: true })
+      .click();
+    await screen.getByRole("combobox", { name: labels.menu_availability }).click();
+    await page.getByRole("option", { name: labels.editor_available, exact: true }).click();
+    await expect
+      .element(
+        screen.getByText(labels.common_result_count.replace("{count}", "1"), { exact: true }),
+      )
+      .toBeVisible();
+    await search.fill("からあけ");
+    const expectedSearch = router.state.location.search;
+    const link = screen.getByRole("link", { name, exact: true });
+    await expect.element(link).toBeVisible();
+    const destination = new URL(link.element().getAttribute("href") ?? "", window.location.href);
+    expect(destination.pathname).toContain(
+      draft ? "/changes/tablecast-published-draft/products/" : "/menu/products/",
+    );
+    await link.click();
+    await expect.element(screen.getByRole("heading", { name, exact: true })).toBeVisible();
+    router.history.back();
+    await expect.element(screen.getByRole("link", { name, exact: true })).toBeVisible();
+    expect(router.state.location.search).toEqual(expectedSearch);
+    await expect.element(search).toHaveValue("からあけ");
+    await search.fill("");
+    await expect
+      .element(
+        screen.getByText(labels.common_result_count.replace("{count}", "2"), { exact: true }),
+      )
+      .toBeVisible();
+  },
+);
 
 it.each(["tr", "az"])("ホストの%sロケールでもIced teaをicedとICEDで検索できる", async (locale) => {
   // oxlint-disable-next-line typescript/unbound-method -- 保存したメソッドはcallで明示的なthisを渡して使う。

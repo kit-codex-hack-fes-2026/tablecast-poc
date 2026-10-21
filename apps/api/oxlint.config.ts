@@ -42,6 +42,7 @@ const files = [
   ["service", "src/modules/customer-coupons/issuance.ts"],
   ["model", "src/modules/configuration/instruction-model.ts"],
   ["pure", "src/modules/configuration/instruction-response.ts"],
+  ["pure", "src/modules/catalog/search.ts"],
 
   ["model", "src/modules/appearance/css-tree.d.ts"],
   ["model", "src/modules/*/model.ts"],
@@ -218,6 +219,10 @@ export default defineConfig({
             disallow: { to: { module: { origin: ["external", "core"] } } },
           },
           { from: { file: { categories: "model" } }, allow: { to: { module: { source: "zod" } } } },
+          {
+            from: { file: { path: "src/modules/catalog/search.ts" } },
+            allow: { to: { module: { source: "fuse.js" } } },
+          },
           {
             from: { file: { path: "src/modules/appearance/{model.ts,css-tree.d.ts}" } },
             allow: { to: { module: { source: ["css-tree", "css-tree/*"] } } },

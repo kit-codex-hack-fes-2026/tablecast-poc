@@ -116,6 +116,7 @@ DB queryが十分短ければ操作関数内に置いてよい。複雑なquery�
 GUI・音声・MCPは同じserviceを利用する。注文確定のsnapshot、版の比較、mutation_id、`changes()`を用いた条件付きbatchは元の原子性を保つ。serviceからrouteを呼び戻さず、音声接続の制御は`voice/runtime.ts`へ依存する。
 
 HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tablecast/api/client`、共有が必要な公開型・schemaだけは `@tablecast/api/schema` から明示公開する。
+メニュー検索の純粋関数は `@tablecast/api/catalog-search` から公開し、音声ツールと店側で共有する。`modules/catalog/search.ts` だけがFuse.jsへ依存し、Webは取得済みの公開版・下書きの設定ごとに索引を再利用する。DB・認証・価格判定・モデル実行をこの公開入口へ含めない。
 これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・モデル実行コードをruntime importしないことをbuildで確認する。
 型はtype-only importで扱い、画面専用のstateと業務契約を無理に一つにしない。音声のブラウザーとAPIの契約も同じ公開schemaを使う。全APIの巨大SDKは生成しない。
 
@@ -167,7 +168,7 @@ WebはrequestごとにQueryClientを生成し、TanStack RouterのQuery SSR連�
 
 `routes`はURL・loader・ページ合成、`features/store`は店舗管理・設定・会計、`features/account`は認証・アカウント、`features/kiosk`は卓の操作を所有する。`features/shell`は実際に共有する認証済みナビゲーションを持つ。画面から別featureの内部画面をimportせず、共有するquery・modelまたはshellを参照する。
 
-`components`はロール表示・注文行・フォームなどのアプリ共通表示、`components/ui`はBase UIとTailwind Variantsの業務非依存プリミティブである。共通部品からfeatureへの逆依存は禁止する。`lib`はHTTP・認証client、SSRとブラウザー機能の境界を持つ。APIは公開`schema`とtransportからの`client`だけを使い、API内部やDBへ依存しない。
+`components`はロール表示・注文行・フォームなどのアプリ共通表示、`components/ui`はBase UIとTailwind Variantsの業務非依存プリミティブである。共通部品からfeatureへの逆依存は禁止する。`lib`はHTTP・認証client、SSRとブラウザー機能の境界を持つ。APIは公開`schema`、純粋な`catalog-search`とtransportからの`client`を使い、API内部やDBへ依存しない。
 
 初期取得をloaderが所有する一覧は`useSuspenseQuery`、独立した複数取得は`useSuspenseQueries`で読む。初回の失敗はroute境界、取得済みデータの再取得失敗は画面内の再試行表示が所有する。Queryのエラー解除とroute invalidateを使い、無関係なキャッシュを全消去しない。下書きの表示では使わない公開カタログを取得しない。
 

@@ -55,6 +55,45 @@ const tool = (
   );
 
 describe("Responses functionと共通業務の認可", () => {
+  it("かな・誤字・説明文の共通検索で最新の価格と版を返し、曖昧な候補は概要のカードとして表示する", async () => {
+    await setup();
+    const next = structuredClone(configuration);
+    const tea = next.products[0];
+    if (!tea) throw new Error("検索対象の商品がありません");
+    tea.price = 920;
+    tea.text.ja = {
+      displayName: "唐揚げ",
+      speechName: "からあげ",
+      aliases: [],
+      description: "柚子を添えた温かい料理",
+    };
+    await services()
+      .db.update(business.stores)
+      .set({ config_version: 4, config_json: JSON.stringify(next) })
+      .where(eq(business.stores.id, device.storeId));
+    expect((await tool("getCatalog", { query: "ｶﾗｱｹﾞ" })).result).toMatchObject({
+      total: 1,
+      version: 4,
+      detail: true,
+      products: [{ id: "tea", price: 920, allergens: tea.allergens }],
+    });
+    for (const query of ["からあけ", "柚子"])
+      expect((await tool("getCatalog", { query, show: true })).result).toMatchObject({
+        total: 1,
+        version: 4,
+        detail: false,
+        displayedProductIds: ["tea"],
+        products: [{ id: "tea", price: 920 }],
+      });
+    const events = (await getTableState(services(), device)).events.filter(
+      (event) => event.kind === "voice.products",
+    );
+    expect(events.at(-1)?.data).toMatchObject({ productIds: ["tea"] });
+    const overview = (await tool("getCatalog", { query: "柚子" })).result;
+    expect(overview).not.toHaveProperty("products.0.allergens");
+    expect(overview).not.toHaveProperty("products.0.modifiers");
+  });
+
   it.each(["アイス烏龍茶", "冷たいうーろん茶", "ウーロンティーを一つ"])(
     "登録名や別名を含む%sから必須選択肢付きの商品詳細を一回で取得する",
     async (query) => {

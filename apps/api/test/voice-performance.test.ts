@@ -52,7 +52,7 @@ it("商品数が増えても検索とカード表示の往復・出力が増え�
         turnId: "tablecast-performance-turn",
         toolCallId: `tablecast-call-${size}`,
         toolName: "getCatalog",
-        arguments: { show: true },
+        arguments: { query: "ほうし茶", show: true },
       },
       new AbortController().signal,
     );
@@ -93,7 +93,7 @@ it("商品数が増えても検索とカード表示の往復・出力が増え�
           turnId: "tablecast-performance-turn",
           toolCallId: `tablecast-http-${size}`,
           toolName: "getCatalog",
-          arguments: { show: true },
+          arguments: { query: "ほうし茶", show: true },
         }),
       },
       { ...env, TABLECAST_DB: httpDatabase.database },
