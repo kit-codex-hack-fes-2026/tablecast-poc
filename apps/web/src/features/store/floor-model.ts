@@ -3,8 +3,10 @@ import {
   storeTimeZone,
   type TimelineSession,
   type TableState,
+  type Locale,
 } from "@tablecast/api/schema";
 import { z } from "zod";
+import { m } from "../../paraglide/messages";
 
 export const floorSortValues = [
   "table:asc",
@@ -19,10 +21,22 @@ export const floorSortValues = [
   "due:desc",
 ] as const;
 
+export const floorZoomSchema = z.preprocess(
+  (value) =>
+    value === "compact" || value === "overview"
+      ? 50
+      : value === "normal"
+        ? 100
+        : value === "detailed"
+          ? 200
+          : value,
+  z.coerce.number().int().min(10).max(300).multipleOf(10).optional().catch(undefined),
+);
+
 export const floorSearchSchema = z.object({
   q: z.string().max(200).optional().catch(undefined),
   sort: z.enum(floorSortValues).optional().catch(undefined),
-  zoom: z.enum(["compact", "normal", "detailed"]).optional().catch(undefined),
+  zoom: floorZoomSchema,
   view: z.enum(["list", "timeline"]).optional().catch(undefined),
   date: storeDateSchema.optional().catch(undefined),
   filter: z
@@ -34,11 +48,28 @@ export type FloorSearch = z.infer<typeof floorSearchSchema>;
 export type FloorFilter = NonNullable<FloorSearch["filter"]>;
 export type FloorSort = NonNullable<FloorSearch["sort"]>;
 export type FloorZoom = NonNullable<FloorSearch["zoom"]>;
-export const floorTrackWidths: Record<FloorZoom, number> = {
-  compact: 1152,
-  normal: 2304,
-  detailed: 4608,
-};
+export const floorTrackWidth = (zoom: FloorZoom = 100) => (2304 * zoom) / 100;
+
+/** 取得済みプランの表示用時刻だけを求め、閉卓や注文可否は判断しない。 */
+export function tableTimeLimit(plan: TableState["plan"] | undefined, now: number) {
+  if (plan === undefined) return { kind: "unknown" } as const;
+  if (plan === null) return { kind: "unlimited" } as const;
+  const endsAt = plan.startedAt + plan.rules.durationMinutes * 60_000;
+  return {
+    kind: "timed",
+    endsAt,
+    remainingMinutes: Math.sign(endsAt - now) * Math.ceil(Math.abs(endsAt - now) / 60_000),
+    lastOrderAt: endsAt - plan.rules.lastOrderMinutesBeforeEnd * 60_000,
+  } as const;
+}
+
+export function timeLimitText(limit: ReturnType<typeof tableTimeLimit>, locale: Locale) {
+  if (limit.kind === "unknown") return m.floor_limit_unknown({}, { locale });
+  if (limit.kind === "unlimited") return m.floor_limit_unlimited({}, { locale });
+  return limit.remainingMinutes >= 0
+    ? m.floor_limit_remaining({ minutes: limit.remainingMinutes }, { locale })
+    : m.floor_limit_overdue({ minutes: Math.abs(limit.remainingMinutes) }, { locale });
+}
 
 export function floorPriority(visit?: TableState | null) {
   if (!visit) return 4;

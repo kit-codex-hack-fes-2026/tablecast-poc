@@ -5,6 +5,7 @@ import {
   storeDate,
   visitPosition,
   compareFloorRows,
+  tableTimeLimit,
 } from "./floor-model";
 
 const start = Date.parse("2026-09-15T00:00:00+09:00");
@@ -86,5 +87,60 @@ it("並べ替えは自然な卓番号順・数値順と昇降順を使う", () =
     sort: undefined,
     zoom: undefined,
     q: "T2",
+  });
+});
+
+it("倍率の数値URLと旧URLを同じ表示へ復元し、範囲外・刻み外を受け付けない", () => {
+  for (const [zoom, expected] of [
+    ["10", 10],
+    [120, 120],
+    ["300", 300],
+    ["compact", 50],
+    ["overview", 50],
+    ["normal", 100],
+    ["detailed", 200],
+  ] as const)
+    expect(floorSearchSchema.parse({ zoom }).zoom).toBe(expected);
+  for (const zoom of [0, 15, 310, "", "infinite", null, true])
+    expect(floorSearchSchema.parse({ zoom }).zoom).toBeUndefined();
+});
+
+it("取得済みの時間制を開始時刻から計算し、終了・超過と未取得・無制限を区別する", () => {
+  const plan = {
+    id: "tablecast-time-plan",
+    startedAt: start + 60_000,
+    rules: {
+      id: "tablecast-plan",
+      text: {
+        ja: { displayName: "90分", speechName: "90分", description: "", aliases: [] },
+        en: { displayName: "90 minutes", speechName: "90 minutes", description: "", aliases: [] },
+      },
+      pricePerPerson: 2000,
+      durationMinutes: 90,
+      lastOrderMinutesBeforeEnd: 15,
+      productIds: [],
+      categoryIds: [],
+      tags: [],
+      maxPerOrder: 5,
+      maxTotalPerPerson: 20,
+      intervalSeconds: 0,
+      excludedOptionIds: [],
+      includedOptionSurcharge: false,
+    },
+  };
+  const endsAt = start + 91 * 60_000;
+  expect(tableTimeLimit(undefined, endsAt)).toEqual({ kind: "unknown" });
+  expect(tableTimeLimit(null, endsAt)).toEqual({ kind: "unlimited" });
+  expect(tableTimeLimit(plan, endsAt - 1)).toEqual({
+    kind: "timed",
+    endsAt,
+    lastOrderAt: endsAt - 15 * 60_000,
+    remainingMinutes: 1,
+  });
+  expect(tableTimeLimit(plan, endsAt)).toMatchObject({ kind: "timed", remainingMinutes: 0 });
+  expect(tableTimeLimit(plan, endsAt + 1)).toMatchObject({ kind: "timed", remainingMinutes: -1 });
+  expect(tableTimeLimit(plan, endsAt + 60_000)).toMatchObject({
+    kind: "timed",
+    remainingMinutes: -1,
   });
 });

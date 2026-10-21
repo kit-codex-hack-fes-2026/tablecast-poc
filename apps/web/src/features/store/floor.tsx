@@ -170,7 +170,7 @@ export function Floor({
               search={search}
               sort={sort}
               zoom={zoom}
-              onZoomChange={(next) => onNavigate?.({ ...criteria, zoom: next })}
+              onZoomChange={(next, options) => onNavigate?.({ ...criteria, zoom: next }, options)}
               tables={state.data.tables}
               vacantTables={state.data.vacantTables}
               onSelect={selectVisit}

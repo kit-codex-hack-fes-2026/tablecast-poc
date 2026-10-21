@@ -1,3 +1,4 @@
+import { detectPlatform } from "@tanstack/react-hotkeys";
 import { Popover } from "@base-ui/react/popover";
 import type { TableState, TimelinePage, TimelineSession } from "@tablecast/api/schema";
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactElement } from "react";
@@ -9,7 +10,7 @@ import {
   Clock3,
   Plus,
   ReceiptText,
-  List,
+  History,
   ChevronRight,
   X,
 } from "lucide-react";
@@ -21,10 +22,14 @@ import { surfaceMotion } from "../../components/ui/motion-variants";
 import { LanguageLabel } from "../../components/language-label";
 import { dateTime, time, money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
+import { m } from "../../paraglide/messages";
+import { TableTimeLimit } from "./table-time-limit";
 import {
+  tableTimeLimit,
+  timeLimitText,
   storeDate,
   visitPosition,
-  floorTrackWidths,
+  floorTrackWidth,
   compareFloorRows,
   floorPriority,
   type FloorSort,
@@ -45,8 +50,6 @@ const band = tv({
     },
   },
 });
-const tableWidth = 112;
-const visitsWidth = 88;
 const hours = Array.from({ length: 25 }, (_, hour) => hour);
 const popupClass = cn(
   "w-80 max-w-[var(--available-width)] rounded-xl border border-border bg-card p-4 text-foreground shadow-lg",
@@ -68,7 +71,8 @@ export function TableCalendar({
   onOpen,
   search = "",
   sort,
-  zoom = "normal",
+  zoom = 100,
+  onZoomChange,
 }: {
   page?: Pick<TimelinePage, "date" | "startAt" | "endAt">;
   date?: string;
@@ -85,11 +89,10 @@ export function TableCalendar({
   search?: string;
   sort?: FloorSort;
   zoom?: FloorZoom;
+  onZoomChange?: (zoom: FloorZoom, options?: { replace?: boolean }) => void;
 }) {
   const { t, locale } = useI18n();
-  const viewport = useRef<HTMLDivElement>(null);
-  const trackWidth = floorTrackWidths[zoom];
-  const previousWidth = useRef(trackWidth);
+  const trackWidth = floorTrackWidth(zoom);
   const today = (page?.date ?? date) === storeDate(now);
   const active = new Map(tables.map((table) => [table.id, table]));
   const currentTables = new Map(tables.map((table) => [table.tableId, table]));
@@ -137,78 +140,63 @@ export function TableCalendar({
     )
     .map(sortValues)
     .toSorted((a, b) => compareFloorRows(a, b, sort ?? "table:asc", locale));
-  const initialiseScroll = useEffectEvent((request: number) => {
-    const element = viewport.current;
-    if (!element || !page) return;
-    const target = today
-      ? now
-      : Math.min(
-          ...sessions.map((session) => Math.max(session.openedAt, page.startAt)),
-          page.endAt,
-        );
-    const position =
-      target === page.endAt
-        ? 0
-        : Math.max(
-            0,
-            ((target - page.startAt) / (page.endAt - page.startAt)) * trackWidth -
-              (element.clientWidth - tableWidth - visitsWidth) / 2,
-          );
-    element.scrollLeft = request ? position : (initialScrollLeft ?? position);
+  const viewport = useTimelineViewport({
+    page,
+    sessions,
+    now,
+    today,
+    initialScrollLeft,
+    scrollRequest,
+    zoom,
+    onZoomChange,
   });
-  useEffect(() => {
-    if (page?.date) initialiseScroll(scrollRequest);
-  }, [scrollRequest, page?.date]);
-  // 拡大しても見ている時刻を中央に保ち、通知更新では横位置を変えない。
-  useEffect(() => {
-    const element = viewport.current;
-    if (element && previousWidth.current !== trackWidth) {
-      const centre = (element.clientWidth - tableWidth - visitsWidth) / 2;
-      const timeRatio = (element.scrollLeft + centre) / previousWidth.current;
-      element.scrollLeft = timeRatio * trackWidth - centre;
-    }
-    previousWidth.current = trackWidth;
-  }, [trackWidth]);
-  useEffect(() => {
-    const element = viewport.current;
-    if (!element) return undefined;
-    let width = element.clientWidth;
-    const observer = new ResizeObserver(() => {
-      const nextWidth = element.clientWidth;
-      if (nextWidth !== width) {
-        element.scrollLeft += (width - nextWidth) / 2;
-        width = nextWidth;
-      }
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
   const nowPosition = page ? ((now - page.startAt) / (page.endAt - page.startAt)) * 100 : 0;
   const status = (session: TimelineSession) =>
     today && session.status === "open" ? active.get(session.id) : undefined;
   return (
     <div className="space-y-3">
-      {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- 横スクロール領域をSafariでも標準キー操作で移動可能にする。 */}
-      <div
-        tabIndex={0}
-        ref={viewport}
-        data-scroll-restoration-id={restorationId}
-        role="region"
-        aria-label={t("floor_timeline")}
-        aria-busy={!page}
-        className="overflow-x-auto rounded-2xl border border-border bg-card focus-visible:outline-2 focus-visible:outline-ring"
-      >
-        <div style={{ width: tableWidth + trackWidth + visitsWidth }}>
-          <div className="sticky top-0 z-30 flex h-12 border-b border-border bg-card">
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_3rem] sm:grid-cols-[5rem_minmax(0,1fr)_3.5rem]">
+        <div className="min-w-0 border-r border-border">
+          <div className="flex h-12 items-center border-b border-border px-1 text-xs font-medium sm:px-3 sm:text-sm">
+            {t("floor_table")}
+          </div>
+          {visible.map((row) => (
             <div
-              className="sticky left-0 z-40 flex shrink-0 items-center border-r border-border bg-card px-4 text-sm font-medium"
-              style={{ width: tableWidth }}
+              key={row.id}
+              data-floor-table={row.id}
+              className="flex h-16 items-center border-b border-border px-1 text-xs font-semibold last:border-b-0 sm:px-3 sm:text-sm"
             >
-              {t("floor_table")}
+              <span className="line-clamp-2 wrap-anywhere" title={row.name}>
+                {row.name}
+              </span>
             </div>
-            <div className="relative grow text-xs tabular-nums text-muted-foreground">
+          ))}
+        </div>
+        {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- 横スクロール領域をSafariでも標準キー操作で移動可能にする。 */}
+        <div
+          tabIndex={0}
+          ref={viewport}
+          data-scroll-restoration-id={restorationId}
+          role="region"
+          aria-label={t("floor_timeline")}
+          aria-busy={!page}
+          className="min-w-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <div style={{ width: trackWidth }}>
+            <div className="relative h-12 border-b border-border text-xs tabular-nums text-muted-foreground">
               {hours
-                .filter((hour) => zoom !== "compact" || hour % 2 === 0)
+                .filter(
+                  (hour) =>
+                    hour %
+                      (trackWidth >= 1536
+                        ? 1
+                        : trackWidth >= 768
+                          ? 2
+                          : trackWidth >= 384
+                            ? 4
+                            : 8) ===
+                    0,
+                )
                 .map((hour) => (
                   <span
                     key={hour}
@@ -219,30 +207,14 @@ export function TableCalendar({
                   </span>
                 ))}
             </div>
-            <div
-              className="sticky right-0 z-40 flex shrink-0 items-center justify-center border-l border-border bg-card text-xs font-medium"
-              style={{ width: visitsWidth }}
-            >
-              {t("floor_visit_count")}
-            </div>
-          </div>
-          {visible.map((row) => {
-            const visits = grouped.get(row.id) ?? [];
-            return (
-              <div
-                key={row.id}
-                data-floor-row={row.id}
-                className="flex h-16 border-b border-border last:border-b-0"
-              >
+            {visible.map((row) => {
+              const visits = grouped.get(row.id) ?? [];
+              return (
                 <div
-                  className="sticky left-0 z-20 flex shrink-0 items-center border-r border-border bg-card px-4 text-sm font-semibold"
-                  style={{ width: tableWidth }}
+                  key={row.id}
+                  data-floor-row={row.id}
+                  className="relative isolate h-16 border-b border-border last:border-b-0"
                 >
-                  <span className="line-clamp-2 wrap-anywhere" title={row.name}>
-                    {row.name}
-                  </span>
-                </div>
-                <div className="relative isolate min-w-0 grow">
                   <div aria-hidden className="pointer-events-none absolute inset-0 flex">
                     {hours.slice(0, 24).map((hour) => (
                       <div key={hour} className="h-full flex-1 border-r border-border/50" />
@@ -263,7 +235,7 @@ export function TableCalendar({
                       />
                     ))}
                   {page && visits.length === 0 && (
-                    <div className="sticky top-2 left-32 inline-flex h-16 items-center px-3 text-xs text-muted-foreground">
+                    <div className="sticky left-0 inline-flex h-16 items-center px-3 text-xs text-muted-foreground">
                       {today && vacant.has(row.id) ? (
                         <Button variant="outline" size="sm" onClick={() => onOpen(row)}>
                           <Plus aria-hidden />
@@ -282,35 +254,49 @@ export function TableCalendar({
                     />
                   )}
                 </div>
-                <div
-                  className="sticky right-0 z-20 flex shrink-0 items-center justify-center border-l border-border bg-card"
-                  style={{ width: visitsWidth }}
-                >
-                  {!page ? (
-                    <Skeleton className="h-8 w-12" />
-                  ) : visits.length ? (
-                    <VisitList
-                      visits={visits}
-                      tableName={row.name}
-                      currentForSession={status}
-                      now={now}
-                      onSelect={onSelect}
-                    />
-                  ) : (
-                    <span className="text-xs tabular-nums text-muted-foreground">0</span>
-                  )}
-                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
+        <div className="min-w-0 border-l border-border">
+          <div className="flex h-12 items-center justify-center border-b border-border text-xs font-medium">
+            {t("floor_visit_count")}
+          </div>
+          {visible.map((row) => {
+            const visits = grouped.get(row.id) ?? [];
+            return (
+              <div
+                key={row.id}
+                data-floor-history={row.id}
+                className="flex h-16 items-center justify-center border-b border-border last:border-b-0"
+              >
+                {!page ? (
+                  <Skeleton className="size-8" />
+                ) : visits.length ? (
+                  <VisitList
+                    visits={visits}
+                    tableName={row.name}
+                    currentForSession={status}
+                    now={now}
+                    onSelect={onSelect}
+                    partial={partial}
+                  />
+                ) : (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {partial ? "—" : "0"}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
-        {visible.length === 0 && (
-          <p className="sticky left-0 w-fit p-6 text-muted-foreground">
-            {t(rows.length ? "floor_search_empty" : "admin_no_tables")}
-          </p>
-        )}
       </div>
-      {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
+      {visible.length === 0 && (
+        <p className="p-6 text-muted-foreground">
+          {t(rows.length ? "floor_search_empty" : "admin_no_tables")}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span>{t("floor_timezone")}</span>
         {!page && <span role="status">{t("common_loading")}</span>}
@@ -326,6 +312,121 @@ export function TableCalendar({
       </div>
     </div>
   );
+}
+
+/** 初期位置・倍率・ホイールを時間軸の一つのスクロール領域に限定する。 */
+function useTimelineViewport({
+  page,
+  sessions,
+  now,
+  today,
+  initialScrollLeft,
+  scrollRequest,
+  zoom,
+  onZoomChange,
+}: {
+  page?: Pick<TimelinePage, "date" | "startAt" | "endAt">;
+  sessions: TimelineSession[];
+  now: number;
+  today: boolean;
+  initialScrollLeft?: number;
+  scrollRequest: number;
+  zoom: FloorZoom;
+  onZoomChange?: (zoom: FloorZoom, options?: { replace?: boolean }) => void;
+}) {
+  const trackWidth = floorTrackWidth(zoom);
+  const viewport = useRef<HTMLDivElement>(null);
+  const zoomAnchor = useRef<{ offset: number; ratio: number } | null>(null);
+  const lastWheel = useRef(-Infinity);
+  const wheelDelta = useRef(0);
+  const wheelGesture = useRef(false);
+  const previousWidth = useRef(trackWidth);
+  const initialiseScroll = useEffectEvent((request: number) => {
+    const element = viewport.current;
+    if (!element || !page) return;
+    const target = today
+      ? now
+      : Math.min(
+          ...sessions.map((session) => Math.max(session.openedAt, page.startAt)),
+          page.endAt,
+        );
+    const position =
+      target === page.endAt
+        ? 0
+        : Math.max(
+            0,
+            ((target - page.startAt) / (page.endAt - page.startAt)) * trackWidth -
+              element.clientWidth / 2,
+          );
+    element.scrollLeft = request ? position : (initialScrollLeft ?? position);
+  });
+  useEffect(() => {
+    if (page?.date) initialiseScroll(scrollRequest);
+  }, [scrollRequest, page?.date]);
+  // 拡大しても見ている時刻を中央に保ち、通知更新では横位置を変えない。
+  useEffect(() => {
+    const element = viewport.current;
+    if (element && previousWidth.current !== trackWidth) {
+      const offset = zoomAnchor.current?.offset ?? element.clientWidth / 2;
+      const ratio =
+        zoomAnchor.current?.ratio ?? (element.scrollLeft + offset) / previousWidth.current;
+      // 戻る・進むでは、その履歴の実際の横位置を倍率の逆算より優先する。
+      element.scrollLeft =
+        !zoomAnchor.current && initialScrollLeft !== undefined
+          ? initialScrollLeft
+          : Math.round(ratio * trackWidth - offset);
+      zoomAnchor.current = null;
+    }
+    previousWidth.current = trackWidth;
+  }, [trackWidth, initialScrollLeft]);
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return undefined;
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      const nextWidth = element.clientWidth;
+      if (nextWidth !== width) {
+        element.scrollLeft += (width - nextWidth) / 2;
+        width = nextWidth;
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const zoomWithWheel = useEffectEvent((event: WheelEvent) => {
+    const shortcut = detectPlatform() === "mac" ? event.metaKey : event.ctrlKey;
+    const element = viewport.current;
+    if (!shortcut || !element || !onZoomChange || event.deltaY === 0) return;
+    event.preventDefault();
+    if (event.timeStamp - lastWheel.current >= 300) {
+      wheelDelta.current = 0;
+      wheelGesture.current = false;
+    }
+    lastWheel.current = event.timeStamp;
+    wheelDelta.current +=
+      event.deltaY *
+      (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientHeight : 1);
+    const steps = Math.trunc(wheelDelta.current / 100);
+    if (!steps) return;
+    wheelDelta.current -= steps * 100;
+    const next = Math.min(300, Math.max(10, zoom - steps * 10));
+    if (next === zoom) return;
+    const offset = event.clientX - element.getBoundingClientRect().left;
+    zoomAnchor.current = {
+      offset,
+      ratio: Math.min(1, Math.max(0, (element.scrollLeft + offset) / trackWidth)),
+    };
+    onZoomChange(next, { replace: wheelGesture.current });
+    wheelGesture.current = true;
+  });
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return undefined;
+    const handleWheel = (event: WheelEvent) => zoomWithWheel(event);
+    element.addEventListener("wheel", handleWheel, { passive: false });
+    return () => element.removeEventListener("wheel", handleWheel);
+  }, []);
+  return viewport;
 }
 
 function visitLabel(
@@ -362,7 +463,9 @@ function VisitBand({
   const { t, locale } = useI18n();
   const position = visitPosition(session, page.startAt, page.endAt, now);
   const width = (position.width * trackWidth) / 100;
-  const duration = Math.max(0, Math.floor(((session.closedAt ?? now) - session.openedAt) / 60_000));
+  const currentLabel = current
+    ? ` · ${t(current.locale === "ja" ? "common_language_native_ja" : "common_language_native_en")} · ${timeLimitText(tableTimeLimit(current.plan, now), locale)}`
+    : "";
   if (position.width <= 0) return null;
   return (
     <VisitPreview
@@ -376,50 +479,81 @@ function VisitBand({
           variant="ghost"
           className={band({ tone: visitTone(session, current) })}
           style={{ left: `${position.left}%`, width: `${position.width}%` }}
-          aria-label={visitLabel(session, tableName, locale, t("admin_guests"), t("admin_open"))}
+          aria-label={`${visitLabel(session, tableName, locale, t("admin_guests"), t("admin_open"))}${currentLabel} · ${t("floor_show_summary")}`}
         >
           {width >= 72 && (
-            <span className="sticky left-28 w-0 shrink-0">
-              <span className="flex w-max flex-col gap-0.5 px-2 py-1">
-                <span className="flex min-w-0 items-center gap-2 whitespace-nowrap font-semibold">
-                  <span>
-                    {position.continuesBefore && "← "}
-                    {t(session.status === "open" ? "admin_open" : "admin_closed")}
-                    {position.continuesAfter && " →"}
-                  </span>
-                  <VisitAttention current={current} />
-                  {width >= 240 && current && (
-                    <span className="ml-auto tabular-nums">
-                      {t("admin_due")} {money(current.bill.due, locale)}
-                    </span>
-                  )}
-                </span>
-                <span className="flex items-center gap-3 whitespace-nowrap tabular-nums">
-                  <span className="inline-flex items-center gap-1">
-                    <Users aria-hidden className="size-3" />
-                    {session.guestCount}
-                  </span>
-                  {width >= 128 && (
-                    <span className="inline-flex items-center gap-1">
-                      <Clock3 aria-hidden className="size-3" />
-                      {duration} {t("kiosk_minutes")}
-                    </span>
-                  )}
-                  {width >= 240 && (
-                    <span className="text-muted-foreground">
-                      {time(session.openedAt, locale)}
-                      {session.closedAt !== null && ` → ${time(session.closedAt, locale)}`}
-                    </span>
-                  )}
-                </span>
-              </span>
-            </span>
+            <VisitBandLabel
+              session={session}
+              current={current}
+              now={now}
+              width={width}
+              position={position}
+            />
           )}
         </Button>
       }
     />
   );
 }
+function VisitBandLabel({
+  session,
+  current,
+  now,
+  width,
+  position,
+}: {
+  session: TimelineSession;
+  current?: TableState;
+  now: number;
+  width: number;
+  position: ReturnType<typeof visitPosition>;
+}) {
+  const { t, locale } = useI18n();
+  const duration = Math.max(0, Math.floor(((session.closedAt ?? now) - session.openedAt) / 60_000));
+  return (
+    <span className="sticky left-0 w-0 shrink-0">
+      <span className="flex w-max flex-col gap-0.5 px-2 py-1">
+        <span className="flex items-center gap-2 whitespace-nowrap font-semibold">
+          {current && <LanguageLabel locale={current.locale} compact />}
+          {current && <TableTimeLimit plan={current.plan} now={now} compact />}
+          <span>
+            {position.continuesBefore && "← "}
+            {t(session.status === "open" ? "admin_open" : "admin_closed")}
+            {position.continuesAfter && " →"}
+          </span>
+          <VisitAttention current={current} />
+        </span>
+        <span className="flex items-center gap-3 whitespace-nowrap tabular-nums">
+          <span className="inline-flex items-center gap-1">
+            <Users aria-hidden className="size-3" />
+            {session.guestCount}
+          </span>
+          {width >= 128 && (
+            <span className="inline-flex items-center gap-1">
+              <Clock3 aria-hidden className="size-3" />
+              {m.floor_elapsed({ minutes: duration }, { locale })}
+            </span>
+          )}
+          {width >= 240 && current && (
+            <span>{timeLimitText(tableTimeLimit(current.plan, now), locale)}</span>
+          )}
+          {width >= 400 && current && (
+            <span>
+              {t("admin_due")} {money(current.bill.due, locale)}
+            </span>
+          )}
+          {width >= 500 && (
+            <span className="text-muted-foreground">
+              {time(session.openedAt, locale)}
+              {session.closedAt !== null && ` → ${time(session.closedAt, locale)}`}
+            </span>
+          )}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 function VisitPreview({
   session,
   current,
@@ -470,7 +604,7 @@ function VisitPreview({
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <Popover.Title className="font-semibold">
-                {tableName} · {t("object_visit")}
+                {tableName} · {t("floor_summary")}
               </Popover.Title>
               <Popover.Close
                 render={<Button variant="ghost" size="icon-sm" />}
@@ -485,7 +619,7 @@ function VisitPreview({
               className="mt-4 w-full justify-between"
               onClick={() => onSelect(session.id)}
             >
-              {t("object_visit")}
+              {t("floor_open_details")}
               <ChevronRight aria-hidden />
             </Button>
           </Popover.Popup>
@@ -520,7 +654,7 @@ function VisitSummary({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Clock3 aria-hidden className="size-4 text-muted-foreground" />
-          {duration} {t("kiosk_minutes")}
+          {m.floor_elapsed({ minutes: duration }, { locale })}
         </span>
         {current && <LanguageLabel locale={current.locale} />}
       </div>
@@ -528,6 +662,7 @@ function VisitSummary({
         {dateTime(session.openedAt, locale)}
         {session.closedAt !== null && <> → {dateTime(session.closedAt, locale)}</>}
       </p>
+      <TableTimeLimit plan={current?.plan} now={now} detail />
       {current && (
         <dl className="space-y-2 border-t border-border pt-3 tabular-nums">
           <div className="flex items-baseline justify-between gap-3">
@@ -585,10 +720,12 @@ function VisitList({
   currentForSession,
   now,
   onSelect,
+  partial,
 }: {
   visits: TimelineSession[];
   tableName: string;
   currentForSession: (session: TimelineSession) => TableState | undefined;
+  partial: boolean;
   now: number;
   onSelect: (id: string) => void;
 }) {
@@ -596,11 +733,18 @@ function VisitList({
   return (
     <Popover.Root>
       <Popover.Trigger
-        render={<Button variant="ghost" size="sm" />}
-        aria-label={`${tableName} ${t("floor_visits")}`}
+        render={<Button variant="ghost" size="icon-sm" className="flex-col gap-0.5 text-xs" />}
+        aria-label={
+          partial
+            ? m.floor_visits_partial({ table: tableName, count: visits.length }, { locale })
+            : m.floor_visits({ table: tableName, count: visits.length }, { locale })
+        }
       >
-        <List aria-hidden />
-        <span className="tabular-nums">{visits.length}</span>
+        <History aria-hidden className="size-4" />
+        <span className="tabular-nums">
+          {visits.length}
+          {partial && "+"}
+        </span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
@@ -611,8 +755,11 @@ function VisitList({
             className={cn(popupClass, "max-h-[min(32rem,var(--available-height))] overflow-y-auto")}
           >
             <Popover.Title className="mb-3 font-semibold">
-              {tableName} · {t("floor_visit_count")}
+              {tableName} · {t("floor_history")}
             </Popover.Title>
+            {partial && (
+              <p className="mb-3 text-xs text-muted-foreground">{t("floor_history_loaded")}</p>
+            )}
             <div className="space-y-3">
               {visits.map((session) => (
                 <div key={session.id} className="rounded-lg bg-surface-subtle p-3">
@@ -621,16 +768,10 @@ function VisitList({
                     variant="outline"
                     size="sm"
                     className="mt-3 w-full justify-between"
-                    aria-label={visitLabel(
-                      session,
-                      tableName,
-                      locale,
-                      t("admin_guests"),
-                      t("admin_open"),
-                    )}
+                    aria-label={`${visitLabel(session, tableName, locale, t("admin_guests"), t("admin_open"))} · ${t("floor_open_details")}`}
                     onClick={() => onSelect(session.id)}
                   >
-                    {t("object_visit")}
+                    {t("floor_open_details")}
                     <ChevronRight aria-hidden />
                   </Button>
                 </div>

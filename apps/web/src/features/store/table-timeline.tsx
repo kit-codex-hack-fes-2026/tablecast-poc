@@ -18,6 +18,8 @@ import { Button } from "../../components/ui/button";
 import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { compareFloorRows, floorPriority, type FloorFilter, type FloorSort } from "./floor-model";
+import { TableTimeLimit } from "./table-time-limit";
+import { m } from "../../paraglide/messages";
 
 type FloorRow = { id: string; name: string; visit: TableState | null };
 export function TableTimeline({
@@ -146,12 +148,17 @@ export function TableTimeline({
                       </span>
                       <span className="inline-flex items-center gap-1.5 tabular-nums">
                         <Clock3 className="size-4 text-muted-foreground" aria-hidden="true" />
-                        {Math.max(0, Math.floor((now - visit.openedAt) / 60_000))}{" "}
-                        {t("kiosk_minutes")}
+                        {m.floor_elapsed(
+                          { minutes: Math.max(0, Math.floor((now - visit.openedAt) / 60_000)) },
+                          { locale },
+                        )}
                       </span>
                       <span className="text-muted-foreground">
                         <LanguageLabel locale={visit.locale} />
                       </span>
+                    </div>
+                    <div className="px-4 pb-4 text-sm">
+                      <TableTimeLimit plan={visit.plan} now={now} detail />
                     </div>
                     {attention && (
                       <div className="flex flex-wrap gap-2 border-y border-warning/15 bg-warning-soft/50 px-4 py-3">
@@ -199,9 +206,9 @@ export function TableTimeline({
                         variant="outline"
                         className="w-full justify-between"
                         onClick={() => onSelect(id)}
-                        aria-label={`${name} ${t("object_visit")}`}
+                        aria-label={`${name} ${t("floor_open_details")}`}
                       >
-                        <span>{t("object_visit")}</span>
+                        <span>{t("floor_open_details")}</span>
                         <ChevronRight />
                       </Button>
                     </div>

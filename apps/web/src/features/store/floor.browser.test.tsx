@@ -274,7 +274,7 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
       floorView: "list",
       floorQ: "T0",
       floorSort: "table:desc",
-      floorZoom: "compact",
+      floorZoom: 50,
     });
   await screen.getByRole("tab", { name: ja.admin_logs, exact: true }).click();
   await expect
@@ -291,7 +291,7 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   await expect.element(screen.getByRole("button", { name: /^T05/ })).not.toBeInTheDocument();
   await expect
     .poll(() => router.state.location.search)
-    .toMatchObject({ q: "T0", sort: "table:desc", zoom: "compact" });
+    .toMatchObject({ q: "T0", sort: "table:desc", zoom: 50 });
   await screen.getByRole("searchbox", { name: ja.floor_search, exact: true }).fill("T04");
   await screen.getByRole("button", { name: ja.collection_reset, exact: true }).click();
   await expect
@@ -303,7 +303,7 @@ it("指標から要対応の卓を絞り、来店詳細の表示を切り替え�
   await expect.element(screen.getByRole("button", { name: /^T05/ })).toBeVisible();
   expect(router.state.location.search.q).toBeUndefined();
   expect(router.state.location.search.sort).toBeUndefined();
-  expect(router.state.location.search.zoom).toBe("compact");
+  expect(router.state.location.search.zoom).toBe(50);
   await screen.getByRole("combobox", { name: ja.collection_sort, exact: true }).click();
   await page
     .getByRole("option", {

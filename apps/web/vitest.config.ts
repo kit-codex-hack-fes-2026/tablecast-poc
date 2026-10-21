@@ -76,6 +76,7 @@ export default defineConfig({
                 provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
                 include: [
                   "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/store/floor-timeline.browser.test.tsx",
                   "src/features/kiosk/voice-panel.browser.test.tsx",
                   "src/components/motion-system.browser.test.tsx",
                   "src/components/route-motion.browser.test.tsx",
@@ -87,6 +88,7 @@ export default defineConfig({
                 include: [
                   "src/features/store/device-qr-reader.browser.test.tsx",
                   "src/features/store/devices.browser.test.tsx",
+                  "src/features/store/floor-timeline.browser.test.tsx",
                   "src/features/shell/admin-shell.browser.test.tsx",
                   "src/features/shell/sidebar-preferences.browser.test.tsx",
                   "src/components/month-picker.browser.test.tsx",

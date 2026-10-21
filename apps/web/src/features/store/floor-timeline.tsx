@@ -1,23 +1,14 @@
 import type { TableState } from "@tablecast/api/schema";
+import { Slider } from "@base-ui/react/slider";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useElementScrollRestoration } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  ChevronRight,
-  LocateFixed,
-  ZoomIn,
-  ZoomOut,
-  ScanLine,
-  RotateCw,
-  ListPlus,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, LocateFixed, ZoomIn, RotateCw, ListPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { DatePicker } from "../../components/date-picker";
 import { dateTime } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { CollectionSort } from "../../components/collection-sort";
 import { storeDate, moveDate, type FloorSort, type FloorZoom } from "./floor-model";
 import { TableCalendar } from "./table-calendar";
 import { timelineOptions } from "./timeline-query";
@@ -33,7 +24,7 @@ export function FloorTimeline({
   onOpen,
   search = "",
   sort,
-  zoom = "normal",
+  zoom = 100,
   onZoomChange,
 }: {
   storeId: string;
@@ -47,17 +38,17 @@ export function FloorTimeline({
   search?: string;
   sort?: FloorSort;
   zoom?: FloorZoom;
-  onZoomChange?: (zoom: FloorZoom) => void;
+  onZoomChange?: (zoom: FloorZoom, options?: { replace?: boolean }) => void;
 }) {
   const { t, locale } = useI18n();
   const client = useQueryClient();
   const query = useInfiniteQuery(timelineOptions(storeId, date));
   const [now, setNow] = useState(initialNow);
   const [scrollRequest, setScrollRequest] = useState(0);
+  const sliderGesture = useRef(false);
   const restorationId = `tablecast-floor-${storeId}-${date}-${zoom}`;
   const restoration = useElementScrollRestoration({
     id: restorationId,
-    getKey: (location) => `${location.pathname}?date=${date}&zoom=${zoom}`,
   });
   useEffect(() => {
     const update = () => {
@@ -123,26 +114,42 @@ export function FloorTimeline({
           <LocateFixed className="size-4" />
           {t("floor_now")}
         </Button>
-        <div className="ml-auto grid min-w-48 gap-1">
-          <span className="flex items-center gap-2 text-sm font-medium">
-            <ZoomIn aria-hidden className="size-4" />
-            {t("floor_zoom")}
-          </span>
-          <CollectionSort
-            label={t("floor_zoom")}
-            value={zoom}
-            options={[
-              { value: "compact", label: t("floor_zoom_compact"), icon: ZoomOut },
-              { value: "normal", label: t("floor_zoom_normal"), icon: ScanLine },
-              { value: "detailed", label: t("floor_zoom_detailed"), icon: ZoomIn },
-            ]}
-            onValueChange={(next) => {
-              if (next === "compact" || next === "normal" || next === "detailed")
-                onZoomChange?.(next);
-            }}
-            disabled={!onZoomChange}
-          />
-        </div>
+        <Slider.Root
+          className="ml-auto grid min-w-48 flex-1 gap-1 sm:max-w-64"
+          value={zoom}
+          min={10}
+          max={300}
+          step={10}
+          disabled={!onZoomChange}
+          onValueChange={(next) => {
+            if (typeof next === "number") {
+              onZoomChange?.(next, { replace: sliderGesture.current });
+              sliderGesture.current = true;
+            }
+          }}
+          onValueCommitted={() => {
+            sliderGesture.current = false;
+          }}
+        >
+          <div className="flex items-center justify-between gap-3 text-sm font-medium">
+            <span className="inline-flex items-center gap-2">
+              <ZoomIn aria-hidden className="size-4" />
+              {t("floor_zoom")}
+            </span>
+            <Slider.Value className="tabular-nums">{(value) => `${Number(value)}%`}</Slider.Value>
+          </div>
+          <Slider.Control className="flex h-11 touch-none items-center px-2">
+            <Slider.Track className="relative h-1.5 w-full rounded-full bg-border">
+              <Slider.Indicator className="rounded-full bg-primary" />
+              <Slider.Thumb
+                aria-label={t("floor_zoom")}
+                getAriaValueText={(value) => `${Number(value)}%`}
+                className="size-5 rounded-full border-2 border-primary bg-card shadow-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              />
+            </Slider.Track>
+          </Slider.Control>
+          <span className="text-xs text-muted-foreground">⌘ / Ctrl + {t("floor_zoom_wheel")}</span>
+        </Slider.Root>
       </div>
       {storeDate(initialNow) !== storeDate(now) && date !== storeDate(now) && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -190,6 +197,7 @@ export function FloorTimeline({
               search={search}
               sort={sort}
               zoom={zoom}
+              onZoomChange={onZoomChange}
               partial={query.hasNextPage}
               scrollRequest={scrollRequest}
               restorationId={restorationId}
