@@ -15,7 +15,7 @@ flowchart LR
     API --> D1[(D1)]
     API --> DO[店舗DO]
     API --> R2[R2・Images]
-    Customer <-->|WebRTC| Voice[OpenAI GPT-Live 1.1]
+    Customer <-->|WebRTC| Voice[OpenAI GPT-Live 1]
     Customer -->|tool HTTP| Web
     Voice <--> Agent[Luna / Responses delegation]
 ```

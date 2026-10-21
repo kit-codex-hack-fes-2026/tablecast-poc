@@ -2,11 +2,11 @@
 
 ## 採用構成
 
-ブラウザーからGPT-Live 1.1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
+ブラウザーからGPT-Live 1へ標準WebRTCで接続する。GPT-Liveの標準Responses delegationにgpt-6-lunaを設定し、接続・会話文脈・推論の継続をOpenAIへ任せる。Mastra、LiveKit、hosted Agents API、独自STTは利用しない。
 
 ```mermaid
 flowchart LR
-    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1.1]
+    B[ブラウザー] <-->|WebRTC 音声・字幕| L[GPT-Live 1]
     L <-->|標準Responses delegation| R[Luna]
     B <-->|認証済みtool HTTP| H[Hono]
     H <--> D[D1]

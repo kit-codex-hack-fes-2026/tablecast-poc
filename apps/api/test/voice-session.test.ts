@@ -216,7 +216,7 @@ it.each([
       if (typeof init?.body !== "string") throw new Error("Liveの開始本文がない");
       expect(JSON.parse(init.body)).toMatchObject({
         session: {
-          model: "gpt-live-1.1",
+          model: "gpt-live-1",
           store: false,
           delegation: {
             type: "responses",

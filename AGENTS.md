@@ -40,7 +40,7 @@ PRタイトルは変更内容が分かる自然な日本語にし、`feat:`や`c
 - 音声停止は再生・送音・STT・応答生成を止め、明示再開まで再接続しない。GUI・カート・会計状態は維持し、客向けの接客チャット入力は作らない。会員本人による記憶CRUDの入力は[会員仕様](docs/membership.md)に従う。
 - 店舗・卓の境界を認可する。秘密情報をログへ出さず、生音声を既定保存しない。
 - D1の読み書きとfixtureは既存schemaとDrizzleを使う。[API skill](.agents/skills/tablecast-api/SKILL.md#db変更の設計と検証)でSQL断片の根拠と呼出し経路全体のDB往復を確認する。直接の`prepare()`を新設せず、複数操作は`db.batch()`、生SQLはmigration・PRAGMA・query builderで不足する部分に限る。
-- GPT-Live 1.1の標準WebRTCとResponses delegation（gpt-6-luna、Fast mode、reasoning medium）を使う。Mastra・LiveKit・hosted Agents APIを追加しない。独自STTクライアント、private monkeypatch、依存packageの直接編集をしない。
+- GPT-Live 1の標準WebRTCとResponses delegation（gpt-6-luna、Fast mode、reasoning medium）を使う。Mastra・LiveKit・hosted Agents APIを追加しない。独自STTクライアント、private monkeypatch、依存packageの直接編集をしない。
 - ゲームの制作・登録・公開・実行は[ゲームプラグイン仕様](docs/game-plugins.md)に従う。生成コードへ注文権限・認証情報を渡さない。Custom Voice、別モデルへの自動切替、実決済、POS本接続、声や顔による本人識別は対象外。明示ログインによる店舗会員・長期記憶は[会員仕様](docs/membership.md)を参照する。初期構成に汎用のdomain/contracts/ui packageや別Storybook appを追加しない。
 
 ## 配置と表現

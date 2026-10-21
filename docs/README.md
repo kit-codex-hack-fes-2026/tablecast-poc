@@ -12,7 +12,7 @@ clone・worktree・起動方法は [セットアップ](setup.md)、実施した
 
 客向け・店側UIとも日英対応。客向けは会話領域を主役にし、会話ログ、言語選択、音声停止・再開を常設する。自由文入力は置かない。
 Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接接続する。Bun + Turborepoを使い、業務・契約・UIを名目だけの共有packageに切り出さない。
-音声はGPT-Live 1.1の標準WebRTCを使い、標準Responses delegationの業務ツールをHonoへ接続する。既定ペルソナは親しみと丁寧さ、愛嬌を持つ若い成人女性の飲食店スタッフとする。
+音声はGPT-Live 1の標準WebRTCを使い、標準Responses delegationの業務ツールをHonoへ接続する。既定ペルソナは親しみと丁寧さ、愛嬌を持つ若い成人女性の飲食店スタッフとする。
 
 組織のキー発行・サブスク・利用料金・運営収支は [課金・請求](billing.md) を参照する。
 

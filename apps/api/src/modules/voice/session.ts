@@ -46,7 +46,7 @@ export async function startVoiceSession(
   const created = await client.live
     .create({
       session: {
-        model: "gpt-live-1.1",
+        model: "gpt-live-1",
         store: false,
         delegation: {
           type: "responses",
