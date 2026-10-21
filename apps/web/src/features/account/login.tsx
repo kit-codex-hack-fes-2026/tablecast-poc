@@ -81,84 +81,81 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
         </>
       }
     >
-      <form
-        noValidate
-        className="flex min-w-0 flex-col gap-5 [&_[type=submit]]:w-full"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        {evaluation && (
-          <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
-            <p>{t("evaluation_login_note")}</p>
-            <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
-            <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
-            <p>{t("evaluation_shared")}</p>
-          </aside>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          disabled={social.isPending}
-          onClick={() => social.mutate("google")}
-        >
-          <GoogleIcon className="size-5" />
-          {evaluation ? t("evaluation_login_button") : t("auth_google")}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={social.isPending}
-          onClick={() => social.mutate("passkey")}
-        >
-          {t("auth_passkey")}
-        </Button>
-        {social.error && (
-          <p role="alert" className="text-destructive">
-            {t("auth_failed")}
-          </p>
-        )}
-        <form.AppField name="email" validators={{ onChange: z.email({ error: t("form_email") }) }}>
-          {(field) => (
-            <field.TextField
-              label={t("auth_email")}
-              type="email"
-              autoComplete="username"
-              required
-              disabled={login.isPending}
-            />
+      <form.AppForm>
+        <form.Form noValidate className="flex min-w-0 flex-col gap-5 [&_[type=submit]]:w-full">
+          {evaluation && (
+            <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
+              <p>{t("evaluation_login_note")}</p>
+              <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
+              <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
+              <p>{t("evaluation_shared")}</p>
+            </aside>
           )}
-        </form.AppField>
-        <form.AppField
-          name="password"
-          validators={{ onChange: z.string().min(1, t("form_required")) }}
-        >
-          {(field) => (
-            <field.TextField
-              label={t("auth_password")}
-              type="password"
-              autoComplete="current-password"
-              required
-              disabled={login.isPending}
-            />
-          )}
-        </form.AppField>
-        {login.error && (
-          <p
-            className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
-            role="alert"
+          <Button
+            type="button"
+            variant="outline"
+            disabled={social.isPending}
+            onClick={() => social.mutate("google")}
           >
-            {t("auth_failed")}
-          </p>
-        )}
-        <form.AppForm>
+            <GoogleIcon className="size-5" />
+            {evaluation ? t("evaluation_login_button") : t("auth_google")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={social.isPending}
+            onClick={() => social.mutate("passkey")}
+          >
+            {t("auth_passkey")}
+          </Button>
+          {social.error && (
+            <p role="alert" className="text-destructive">
+              {t("auth_failed")}
+            </p>
+          )}
+          <form.AppField
+            name="email"
+            validators={{ onChange: z.email({ error: t("form_email") }) }}
+          >
+            {(field) => (
+              <field.TextField
+                label={t("auth_email")}
+                type="email"
+                autoComplete="username"
+                required
+                disabled={login.isPending}
+              />
+            )}
+          </form.AppField>
+          <form.AppField
+            name="password"
+            validators={{ onChange: z.string().min(1, t("form_required")) }}
+          >
+            {(field) => (
+              <field.TextField
+                label={t("auth_password")}
+                type="password"
+                autoComplete="current-password"
+                required
+                disabled={login.isPending}
+              />
+            )}
+          </form.AppField>
+          {login.error && (
+            <p
+              className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
+              role="alert"
+            >
+              {t("auth_failed")}
+            </p>
+          )}
+
           <form.SubmitButton size="lg" disabled={social.isPending}>
             {t("auth_sign_in")}
             <ArrowRight size={20} aria-hidden="true" />
           </form.SubmitButton>
-        </form.AppForm>
-      </form>
+        </form.Form>
+      </form.AppForm>
     </AuthLayout>
   );
 }

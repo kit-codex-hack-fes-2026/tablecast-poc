@@ -25,7 +25,6 @@ export function useAccount(pending: boolean) {
   return {
     t,
     session,
-    client,
     sessions,
     accounts,
     keys,

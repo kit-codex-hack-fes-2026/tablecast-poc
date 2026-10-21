@@ -33,7 +33,7 @@ export function Games() {
           </Link>
         }
       />
-      <ErrorNotice error={games.error} onRetry={() => void games.refetch()} />
+      <ErrorNotice query={games} />
       {games.data.games.length === 0 && <p>{t("games_empty")}</p>}
       <div className="flex flex-wrap gap-2">
         {games.data.games.map((game) => (
@@ -163,11 +163,7 @@ function GameDetails({ storeId, gameId }: { gameId: string; storeId: string }) {
         ].find(Boolean)}
         onRetry={() => void refresh()}
       />
-      <ErrorNotice
-        error={previewQuery.error}
-        onRetry={() => void previewQuery.refetch()}
-        retrying={previewQuery.isFetching}
-      />
+      <ErrorNotice query={previewQuery} retrying={previewQuery.isFetching} />
       {preview && (
         <div className="space-y-4">
           <div className="h-[65dvh] min-h-96">

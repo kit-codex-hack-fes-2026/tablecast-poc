@@ -1,20 +1,39 @@
-import { useHydrated } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, MessagesSquare, ReceiptText, Wallet } from "lucide-react";
+import { type Order, type TableState } from "@tablecast/api/schema";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Link, useHydrated } from "@tanstack/react-router";
+import {
+  Activity,
+  ArrowLeft,
+  Clock3,
+  LayoutDashboard,
+  MessagesSquare,
+  ReceiptText,
+  Table2,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { Suspense } from "react";
-import type { FloorSearch } from "./floor-model";
+import { CartLines } from "../../components/cart-lines";
+import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { LanguageLabel } from "../../components/language-label";
+import { PageHeader } from "../../components/page-header";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
 import * as Tabs from "../../components/ui/tabs";
-import { money } from "../../i18n/format";
+import { money, time } from "../../i18n/format";
+import { useI18n } from "../../i18n/locale";
+import { parseResponse, rpc } from "../../lib/api";
+import { useRealtime } from "../../lib/use-realtime";
+import { catalogOptions } from "../catalog/catalog-query";
 import { CouponVisit } from "../rewards/coupon-visit";
 import { PointVisit } from "../rewards/point-visit";
 import { ActivityLog } from "./events";
+import { type FloorSearch } from "./floor-model";
+import { tableDetailOptions } from "./floor-query";
 import { PaymentForm } from "./payment-form";
 import { SessionActivity } from "./session-activity";
-import { SessionOrders, TableDetailHeader } from "./table-detail-orders";
-import { useTableDetail } from "./table-detail-state";
-
 export function TableDetail({
   storeId,
   tableId,
@@ -29,15 +48,90 @@ export function TableDetail({
   view: "billing" | "diagnostics" | "logs" | "orders" | "overview";
 }) {
   const hydrated = useHydrated();
-  const { t, locale, detail, action, orderStatus, table } = useTableDetail({
-    storeId,
-    tableId,
-    view,
-    onViewChange,
+
+  const { t, locale } = useI18n();
+  const route = rpc.api.admin.stores[":storeId"];
+  const param = { storeId, id: tableId };
+  const detail = useSuspenseQuery(tableDetailOptions(storeId, tableId));
+  const client = useQueryClient();
+  useRealtime(detail.data.status === "open" ? { storeId } : undefined, detail.data.cursor, () => {
+    void client.invalidateQueries({ queryKey: ["tablecast-table-detail", storeId, tableId] });
+    void client.invalidateQueries({ queryKey: ["tablecast-session-events", storeId, tableId] });
   });
+  const action = useMutation({
+    mutationFn: async (
+      operation:
+        | { id: string; kind: "order"; status: Exclude<Order["status"], "submitted"> }
+        | { kind: "close" }
+        | { kind: "resolve" },
+    ) => {
+      if (operation.kind === "close")
+        return parseResponse(route.tables[":id"].close.$post({ param }));
+      if (operation.kind === "resolve")
+        return parseResponse(route.tables[":id"].call.resolve.$post({ param }));
+      return parseResponse(
+        route.orders[":id"].status.$post({
+          param: { storeId, id: operation.id },
+          json: { status: operation.status },
+        }),
+      );
+    },
+    onSuccess: () => {
+      void detail.refetch();
+    },
+  });
+  function orderStatus(order: Order, status: Exclude<Order["status"], "submitted">) {
+    action.mutate({ kind: "order", id: order.id, status });
+  }
+  const table = detail.data;
+  function renderHeader() {
+    return (
+      <>
+        <Button
+          nativeButton={false}
+          role="link"
+          variant="ghost"
+          render={
+            floorSearch ? (
+              <Link to="/admin/stores/$storeId/floor" params={{ storeId }} search={floorSearch} />
+            ) : (
+              <Link to="/admin/stores/$storeId/visits" params={{ storeId }} />
+            )
+          }
+        >
+          <ArrowLeft />
+          {t(floorSearch ? "admin_live" : "admin_history")}
+        </Button>
+        <PageHeader
+          title={table.tableName}
+          icon={<Table2 />}
+          status={
+            <Badge variant={table.status === "open" ? "info" : "inactive"}>
+              {t(table.status === "open" ? "admin_open" : "admin_closed")}
+            </Badge>
+          }
+          description={
+            <>
+              <span className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="size-4" aria-hidden="true" />
+                  {table.guestCount} {t("admin_guests")}
+                </span>
+                <LanguageLabel locale={table.locale} />
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock3 className="size-4" aria-hidden="true" />
+                  <DateTime value={table.openedAt} />
+                </span>
+              </span>
+            </>
+          }
+        />
+      </>
+    );
+  }
   return (
     <section className="space-y-5">
-      <TableDetailHeader table={table} storeId={storeId} floorSearch={floorSearch} />
+      {renderHeader()}
       <ErrorNotice error={detail.error || action.error} />
       {table && (
         <Tabs.Root
@@ -157,7 +251,7 @@ export function TableDetail({
                   </div>
                 }
               >
-                <SessionOrders table={table} action={action} orderStatus={orderStatus} />
+                <SessionOrders table={table} pending={action.isPending} orderStatus={orderStatus} />
               </Suspense>
             </Tabs.Panel>
             <Tabs.Panel value="billing">
@@ -213,5 +307,102 @@ export function TableDetail({
         </Tabs.Root>
       )}
     </section>
+  );
+}
+function SessionOrders({
+  table,
+  pending,
+  orderStatus,
+}: {
+  orderStatus: (order: Order, status: Exclude<Order["status"], "submitted">) => void;
+  pending: boolean;
+  table: TableState;
+}) {
+  const { t, locale } = useI18n();
+  const catalog = useSuspenseQuery(catalogOptions(table.storeId, table.configVersion));
+  const products =
+    catalog.data.version === table.configVersion ? catalog.data.configuration.products : [];
+  return (
+    <>
+      <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_cart")}</h3>
+      <CartLines lines={table.cart.lines} products={products} />
+      <h3 className="mt-5 mx-0 mb-3.5">{t("kiosk_orders")}</h3>
+      {table.orders.map((order) => (
+        <article
+          key={order.id}
+          data-ui="order-card"
+          className="border border-border rounded-md m-3.5 overflow-hidden"
+        >
+          <div className="flex justify-between items-center gap-2 py-3 px-3.5 border-b border-b-border bg-background text-sm">
+            <time>{time(order.createdAt, locale)}</time>
+            <Badge
+              variant={
+                order.status === "served"
+                  ? "success"
+                  : order.status === "cancelled"
+                    ? "inactive"
+                    : "info"
+              }
+            >
+              {t(`order_${order.status}`)}
+            </Badge>
+            <strong className="text-base">{money(order.total, locale)}</strong>
+          </div>
+          <CartLines lines={order.snapshot.lines} />
+          {table.status === "open" && (
+            <div className="flex gap-2.5 pt-0 px-3.5 pb-3.5 flex-wrap [&_[data-slot=button][data-variant=default]]:min-h-11 [&_[data-slot=button][data-variant=default]]:text-sm">
+              {order.status === "submitted" && (
+                <>
+                  <Button
+                    variant="default"
+                    size="lg"
+                    type="button"
+
+                    disabled={pending}
+                    onClick={() => orderStatus(order, "accepted")}
+                  >
+                    {t("admin_accept")}
+                  </Button>
+                  <Button
+                    size="text"
+                    variant="link"
+                    type="button"
+                    className="text-destructive"
+                    disabled={pending}
+                    onClick={() => orderStatus(order, "rejected")}
+                  >
+                    {t("admin_reject")}
+                  </Button>
+                </>
+              )}
+              {order.status === "accepted" && (
+                <Button
+                  variant="default"
+                  size="lg"
+                  type="button"
+
+                  disabled={pending}
+                  onClick={() => orderStatus(order, "served")}
+                >
+                  {t("admin_serve")}
+                </Button>
+              )}
+              {(order.status === "submitted" || order.status === "accepted") && (
+                <Button
+                  size="text"
+                  variant="link"
+                  type="button"
+                  className="text-destructive"
+                  disabled={pending}
+                  onClick={() => orderStatus(order, "cancelled")}
+                >
+                  {t("admin_cancel_order")}
+                </Button>
+              )}
+            </div>
+          )}
+        </article>
+      ))}
+    </>
   );
 }

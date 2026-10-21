@@ -7,8 +7,10 @@ import {
 } from "../src/db/rewards-schema";
 import { payments } from "../src/db/table-schema";
 import { listCustomerCoupons } from "../src/modules/customer-coupons/queries";
-import { applyCustomerCoupon } from "../src/modules/customer-coupons/use-cases/apply";
-import { cancelCustomerCouponUse } from "../src/modules/customer-coupons/use-cases/cancel";
+import {
+  applyCustomerCoupon,
+  cancelCustomerCouponUse,
+} from "../src/modules/customer-coupons/use-cases/apply";
 import {
   exchangeCustomerCoupon,
   issueCustomerCoupon,
@@ -19,14 +21,15 @@ import {
 } from "../src/modules/customer-coupons/use-cases/rules";
 import { requestCustomerCoupon } from "../src/modules/customer-coupons/use-cases/selection";
 import { getCustomerPoints, getPointVisit } from "../src/modules/customer-points/queries";
-import { confirmCustomerPoints } from "../src/modules/customer-points/use-cases/allocation";
-import { correctCustomerPoints } from "../src/modules/customer-points/use-cases/corrections";
+import {
+  confirmCustomerPoints,
+  correctCustomerPoints,
+} from "../src/modules/customer-points/use-cases/allocation";
 import { enrolCustomer } from "../src/modules/customers/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { recordPayment } from "../src/modules/orders/use-cases/payment";
 import { changeOrderStatus } from "../src/modules/orders/use-cases/status";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
 import { getTableState } from "../src/modules/tables/queries";
 import { closeTable } from "../src/modules/tables/use-cases/lifecycle";
 import { setupCouponCustomer as setup } from "./coupon-fixture";

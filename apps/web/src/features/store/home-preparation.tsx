@@ -30,11 +30,7 @@ export function HomePreparation({ storeId }: { storeId: string }) {
                 <CheckCircle2 aria-hidden="true" className="ml-auto size-4 text-success" />
               )}
             </h3>
-            <ErrorNotice
-              error={home.error}
-              onRetry={() => void home.refetch()}
-              retrying={home.isFetching}
-            />
+            <ErrorNotice query={home} retrying={home.isFetching} />
             {home.isPending ? (
               <Skeleton className="h-5 w-28" />
             ) : (
@@ -68,11 +64,7 @@ export function HomePreparation({ storeId }: { storeId: string }) {
                 <CheckCircle2 aria-hidden="true" className="ml-auto size-4 text-success" />
               )}
             </h3>
-            <ErrorNotice
-              error={home.error}
-              onRetry={() => void home.refetch()}
-              retrying={home.isFetching}
-            />
+            <ErrorNotice query={home} retrying={home.isFetching} />
             {home.isPending ? (
               <Skeleton className="h-5 w-28" />
             ) : (

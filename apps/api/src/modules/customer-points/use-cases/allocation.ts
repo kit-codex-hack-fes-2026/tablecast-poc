@@ -3,13 +3,17 @@ import { and, eq, exists, inArray, isNull, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
 import { customerMemberships } from "../../../db/customer-schema";
-import { customerPointAllocations, customerPointVisits } from "../../../db/rewards-schema";
+import {
+  customerPointAllocations,
+  customerPointEntries,
+  customerPointVisits,
+} from "../../../db/rewards-schema";
 import { tableSessions } from "../../../db/table-schema";
 import { ensure } from "../../../platform/errors";
 import { confirmedVisitCouponStatements } from "../../customer-coupons/issuance";
-import { eventStatement, notifyStore } from "../../tables/mutations";
+import { eventStatement, mutationGate, notifyStore } from "../../tables/mutations";
 import { getTableState } from "../../tables/queries";
-import { type confirmPointsSchema, noPointRules } from "../model";
+import { type confirmPointsSchema, noPointRules, type pointCorrectionSchema } from "../model";
 import { calculateAllocation, pointEntryStatement } from "../mutations";
 import { getPointVisit } from "../queries";
 
@@ -85,18 +89,7 @@ export async function confirmCustomerPoints(
   ensure(total >= 0, "POINT_AMOUNT_INVALID", 422);
   const token = crypto.randomUUID();
   const now = Date.now();
-  const changed = exists(
-    services.db
-      .select({ id: tableSessions.id })
-      .from(tableSessions)
-      .where(
-        and(
-          eq(tableSessions.id, visit.sessionId),
-          eq(tableSessions.store_id, actor.storeId),
-          eq(tableSessions.mutation_id, token),
-        ),
-      ),
-  );
+  const changed = mutationGate(services, actor, token);
   const validRecipients = services.db
     .select({ count: sql<number>`count(*)` })
     .from(customerMemberships)
@@ -215,4 +208,44 @@ export async function confirmCustomerPoints(
   }
   await notifyStore(services, actor.storeId, visit.sessionId);
   return getPointVisit(services, actor);
+}
+
+export async function correctCustomerPoints(
+  services: ApiServices,
+  actor: Actor,
+  input: z.infer<typeof pointCorrectionSchema>,
+) {
+  ensure(actor.kind === "staff" && actor.userId, "STAFF_REQUIRED", 403);
+  const reference = `manual:${input.idempotencyKey}`;
+  const existing = await services.db
+    .select()
+    .from(customerPointEntries)
+    .where(
+      and(
+        eq(customerPointEntries.storeId, actor.storeId),
+        eq(customerPointEntries.membershipId, input.membershipId),
+        eq(customerPointEntries.reference, reference),
+      ),
+    )
+    .get();
+  if (existing) {
+    ensure(
+      existing.delta === input.delta && existing.reason === input.reason,
+      "IDEMPOTENCY_CONFLICT",
+      409,
+    );
+    return { recorded: true };
+  }
+  const result = await pointEntryStatement(
+    services,
+    actor,
+    input.membershipId,
+    input.delta,
+    "correction",
+    reference,
+    input.reason,
+    undefined,
+  );
+  ensure(result.meta.changes === 1, "POINT_CORRECTION_CONFLICT", 409);
+  return { recorded: true };
 }

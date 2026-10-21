@@ -1,9 +1,9 @@
-import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { projectSchema } from "./tablecast-project";
+import { expect, test } from "@playwright/test";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { inspectLayout } from "./tablecast-layout.ts";
-import { projectSchema } from "./tablecast-project.ts";
+import { inspectLayout } from "./tablecast-layout";
 
 test.beforeEach(async ({ page }, testInfo) => {
   await page.goto(

@@ -23,11 +23,7 @@ export function IssuedCoupons({ storeId, canEdit }: { canEdit: boolean; storeId:
           {t("common_empty")}
         </p>
       )}
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {query.data?.pages.flatMap((page) =>
         page.coupons.map((coupon) => (
           <article key={coupon.id} className="space-y-3 rounded-xl border p-4">
@@ -79,25 +75,21 @@ function RevokeCoupon({ storeId, couponId }: { couponId: string; storeId: string
     },
   });
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <form.AppField name="reason">
-        {(field) => <field.TextField label={t("coupon_reason")} required />}
-      </form.AppField>
-      <form.AppForm>
+    <form.AppForm>
+      <form.Form className="space-y-3">
+        <form.AppField name="reason">
+          {(field) => <field.TextField label={t("coupon_reason")} required />}
+        </form.AppField>
+
         <form.SubmitButton>{t("coupon_revoke")}</form.SubmitButton>
-      </form.AppForm>
-      <ActionFeedback
-        pending={revoke.isPending}
-        error={revoke.error}
-        success={false}
-        successMessage={t("account_saved")}
-      />
-    </form>
+
+        <ActionFeedback
+          pending={revoke.isPending}
+          error={revoke.error}
+          success={false}
+          successMessage={t("account_saved")}
+        />
+      </form.Form>
+    </form.AppForm>
   );
 }

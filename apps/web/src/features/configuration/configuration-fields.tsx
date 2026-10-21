@@ -201,6 +201,9 @@ export function BilingualFields({
     { key: "speechName", label: t("admin_speech_name") },
     { key: "description", label: t("admin_description") },
   ] as const;
+  function updateText(language: keyof Product["text"], change: Partial<Product["text"]["ja"]>) {
+    onChange({ ...value, [language]: { ...value[language], ...change } });
+  }
   return (
     <LanguageFields>
       {(language, languageLabelId) => (
@@ -217,12 +220,7 @@ export function BilingualFields({
                     className="field-sizing-content min-h-24 w-full resize-y rounded-lg border border-input bg-background p-3 text-base"
                     maxLength={3000}
                     value={value[language][key]}
-                    onChange={(event) =>
-                      onChange({
-                        ...value,
-                        [language]: { ...value[language], [key]: event.target.value },
-                      })
-                    }
+                    onChange={(event) => updateText(language, { [key]: event.target.value })}
                   />
                 ) : (
                   <Input
@@ -231,12 +229,7 @@ export function BilingualFields({
                     required
                     maxLength={150}
                     value={value[language][key]}
-                    onChange={(event) =>
-                      onChange({
-                        ...value,
-                        [language]: { ...value[language], [key]: event.target.value },
-                      })
-                    }
+                    onChange={(event) => updateText(language, { [key]: event.target.value })}
                   />
                 )}
               </label>
@@ -246,9 +239,7 @@ export function BilingualFields({
             label={t("editor_aliases")}
             value={value[language].aliases}
             disabled={disabled}
-            onChange={(aliases) =>
-              onChange({ ...value, [language]: { ...value[language], aliases } })
-            }
+            onChange={(aliases) => updateText(language, { aliases })}
           />
         </fieldset>
       )}

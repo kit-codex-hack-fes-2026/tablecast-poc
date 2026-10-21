@@ -1,8 +1,10 @@
 import { createMenuSearch } from "@tablecast/api/catalog-search";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { CircleCheck, CircleSlash, List, Plus, Tags } from "lucide-react";
 import { useMemo } from "react";
+import { CollectionSort } from "../../components/collection-sort";
+import { DataTable } from "../../components/data-table";
 import { ErrorNotice } from "../../components/error-notice";
 import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
@@ -16,11 +18,11 @@ import {
   type MenuSection,
 } from "../configuration/menu-model";
 import { draftOptions } from "../configuration/menu-query";
+import { parseCollectionSort } from "../shell/collection-model";
 import { useStore } from "../store/store-context";
 import { catalogOptions } from "./catalog-query";
 import { menuCollectionColumns } from "./menu-collection-columns";
 import { matchesMenuFilters, menuCollectionRows } from "./menu-collection-model";
-import { MenuResults, ProductFilters } from "./menu-collection-results";
 
 export function MenuCollection({
   section,
@@ -37,7 +39,6 @@ export function MenuCollection({
     <MenuListCollection section={section} draftId={draftId} search={search} />
   );
 }
-
 function MenuListCollection({
   section,
   draftId,
@@ -91,6 +92,116 @@ function MenuListCollection({
     return row && matchesMenuFilters(row, section, search) ? [row] : [];
   });
 
+  function renderFilters() {
+    const categories = configuration?.categories ?? [];
+    return (
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))] gap-3">
+        <div className="flex flex-col gap-2 text-sm font-medium">
+          <span className="flex items-center gap-2">
+            <Tags aria-hidden className="size-4" />
+            {t("editor_category")}
+          </span>
+          <CollectionSort
+            label={t("editor_category")}
+            value={search.category ?? ""}
+            onValueChange={(value) =>
+              updateSearch({ category: value || undefined, page: undefined })
+            }
+            options={[
+              { value: "", label: t("menu_all_categories"), icon: List },
+              ...categories.map((category) => ({
+                value: category.id,
+                label: category.text[locale].displayName,
+                icon: Tags,
+              })),
+            ]}
+          />
+        </div>
+        <div className="flex flex-col gap-2 text-sm font-medium">
+          <span className="flex items-center gap-2">
+            <CircleCheck aria-hidden className="size-4" />
+            {t("menu_availability")}
+          </span>
+          <CollectionSort
+            label={t("menu_availability")}
+            value={search.availability ?? ""}
+            onValueChange={(value) =>
+              updateSearch({
+                availability: value === "available" || value === "sold-out" ? value : undefined,
+                page: undefined,
+              })
+            }
+            options={[
+              { value: "", label: t("menu_all_availability"), icon: List },
+              { value: "available", label: t("editor_available"), icon: CircleCheck },
+              { value: "sold-out", label: t("kiosk_sold_out"), icon: CircleSlash },
+            ]}
+          />
+        </div>
+      </div>
+    );
+  }
+  function renderResults() {
+    const sorting = parseCollectionSort(
+      search.sort,
+      columns.flatMap((column) =>
+        "accessorKey" in column &&
+        typeof column.accessorKey === "string" &&
+        column.enableSorting !== false
+          ? [column.accessorKey]
+          : [],
+      ),
+    );
+    const pagination = {
+      pageIndex: Math.min((search.page ?? 1) - 1, Math.max(0, Math.ceil(data.length / 20) - 1)),
+      pageSize: 20,
+    };
+    return (
+      <DataTable
+        data={data}
+        filters={section === "products" ? renderFilters() : undefined}
+        filtersActive={!!search.category || !!search.availability}
+        onReset={() =>
+          updateSearch({
+            q: undefined,
+            category: undefined,
+            availability: undefined,
+            page: undefined,
+            sort: undefined,
+          })
+        }
+        pending={!configuration}
+        columns={columns}
+        getRowId={(row) => row.id}
+        searchLabel={t("menu_search")}
+        searchPlaceholder={t("collection_search_menu_placeholder")}
+        state={{ globalFilter: search.q ?? "", pagination, sorting }}
+        onSortingChange={(next) => {
+          const value = (typeof next === "function" ? next(sorting) : next)[0];
+          updateSearch({
+            sort: value ? `${value.id}:${value.desc ? "desc" : "asc"}` : undefined,
+            page: undefined,
+          });
+        }}
+        onGlobalFilterChange={(next) =>
+          updateSearch({
+            q: (typeof next === "function" ? next(search.q ?? "") : next) || undefined,
+            page: undefined,
+          })
+        }
+        onPaginationChange={(next) => {
+          const value = typeof next === "function" ? next(pagination) : next;
+          updateSearch({ page: value.pageIndex ? value.pageIndex + 1 : undefined });
+        }}
+        manualFiltering
+        empty={t(
+          search.q || search.category || search.availability
+            ? "common_no_results"
+            : "menu_no_items",
+        )}
+      />
+    );
+  }
   return (
     <>
       <PageHeader
@@ -134,24 +245,7 @@ function MenuListCollection({
         error={error}
         onRetry={() => void (draftId ? draft.refetch() : catalog.refetch())}
       />
-      {(configuration || !error) && (
-        <MenuResults
-          filters={
-            section === "products" ? (
-              <ProductFilters
-                categories={configuration?.categories ?? []}
-                search={search}
-                onChange={updateSearch}
-              />
-            ) : undefined
-          }
-          data={data}
-          columns={columns}
-          search={search}
-          pending={!configuration}
-          onChange={updateSearch}
-        />
-      )}
+      {(configuration || !error) && renderResults()}
     </>
   );
 }

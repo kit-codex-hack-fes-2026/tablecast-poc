@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
@@ -9,8 +10,12 @@ import { configurationErrors } from "../../catalog/pricing";
 import { getCatalog } from "../../catalog/queries";
 import { requireConfigurationImages } from "../../media/service";
 import { voiceConfigurationErrors } from "../../voice/catalog";
-import { type Configuration, configurationSchema } from "../model";
-import { getDraft } from "../queries";
+import {
+  type configurationRestoreSchema,
+  configurationSchema,
+  type draftUpdateSchema,
+} from "../model";
+import { getConfigurationRelease, getDraft } from "../queries";
 
 export async function createDraft(services: ApiServices, actor: Actor) {
   const db = services.db;
@@ -37,7 +42,7 @@ export async function updateDraft(
   services: ApiServices,
   actor: Actor,
   id: string,
-  input: { configuration: Configuration; expectedVersion: number; instructionFormatVersion?: 1 },
+  input: z.infer<typeof draftUpdateSchema>,
 ) {
   const db = services.db;
 
@@ -148,4 +153,70 @@ export async function discardDraft(
     );
   ensure(result.meta.changes === 1, "DRAFT_CONFLICT");
   return getDraft(services, actor, id);
+}
+
+export async function restoreConfigurationRelease(
+  services: ApiServices,
+  actor: Actor,
+  version: number,
+  input: z.infer<typeof configurationRestoreSchema>,
+) {
+  requireManager(actor);
+  ensure(actor.userId, "LOGIN_REQUIRED", 401);
+  const release = await getConfigurationRelease(services, actor, version);
+  ensure(release.configuration, "CONFIGURATION_FORMAT_UNSUPPORTED", 422);
+  const { db } = services;
+  const now = Date.now();
+  const [, saved] = await db.batch([
+    db
+      .insert(business.configDrafts)
+      .select(
+        db
+          .select({
+            id: sql<string>`${input.draftId}`.as("id"),
+            store_id: business.stores.id,
+            base_version: business.stores.config_version,
+            version: sql<number>`1`.as("version"),
+            status: sql<string>`'draft'`.as("status"),
+            config_json: sql<string>`${JSON.stringify(release.configuration)}`.as("config_json"),
+            errors_json: sql<string>`'[]'`.as("errors_json"),
+            created_by: sql<string>`${actor.userId}`.as("created_by"),
+            publish_key: sql<null | string>`null`.as("publish_key"),
+            restored_from_version: sql<number>`${version}`.as("restored_from_version"),
+            created_at: sql<number>`${now}`.as("created_at"),
+            updated_at: sql<number>`${now}`.as("updated_at"),
+          })
+          .from(business.stores)
+          .where(
+            and(
+              eq(business.stores.id, actor.storeId),
+              eq(business.stores.config_version, input.baseVersion),
+            ),
+          ),
+      )
+      .onConflictDoNothing({ target: business.configDrafts.id }),
+    db
+      .select({
+        id: business.configDrafts.id,
+        createdBy: business.configDrafts.created_by,
+        baseVersion: business.configDrafts.base_version,
+        restoredFromVersion: business.configDrafts.restored_from_version,
+      })
+      .from(business.configDrafts)
+      .where(
+        and(
+          eq(business.configDrafts.id, input.draftId),
+          eq(business.configDrafts.store_id, actor.storeId),
+        ),
+      ),
+  ]);
+  const row = saved[0];
+  ensure(
+    row &&
+      row.createdBy === actor.userId &&
+      row.baseVersion === input.baseVersion &&
+      row.restoredFromVersion === version,
+    "DRAFT_CONFLICT",
+  );
+  return getDraft(services, actor, row.id);
 }

@@ -25,9 +25,18 @@ export type DatePickerProps = Omit<
   onValueChange: (value: string) => void;
   value: string;
 };
-
-/** 保存値はISO、表示は言語に沿う自然日付。直接入力とカレンダーで同じ値を編集する。 */
-function useCalendarField({ value, onValueChange, min, max, ref, ...props }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onValueChange,
+  label,
+  min,
+  max,
+  ref,
+  onBlur,
+  onInvalid,
+  className,
+  ...props
+}: DatePickerProps) {
   const { t, locale } = useI18n();
   const [editing, setEditing] = useState(() => ({
     source: value,
@@ -92,94 +101,55 @@ function useCalendarField({ value, onValueChange, min, max, ref, ...props }: Dat
     setShowError(false);
     setOpen(false);
   }
-  return {
-    t,
-    draft,
-    open,
-    setOpen,
-    showError,
-    setShowError,
-    input,
-    errorId,
-    error,
-    change,
-    finishEdit,
-    select,
-  };
-}
-
-export function DatePicker({
-  value,
-  onValueChange,
-  label,
-  min,
-  max,
-  ref,
-  onBlur,
-  onInvalid,
-  className,
-  ...props
-}: DatePickerProps) {
-  const {
-    t,
-    draft,
-    open,
-    setOpen,
-    showError,
-    setShowError,
-    input,
-    errorId,
-    error,
-    change,
-    finishEdit,
-    select,
-  } = useCalendarField({ value, onValueChange, label, min, max, ref, ...props });
-  return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <div className="min-w-0 space-y-2">
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-          <Input
-            {...props}
-            className={cn("flex-1 basis-72 px-2", className)}
-            ref={input}
-            type="text"
-            aria-label={label}
-            aria-describedby={
-              [props["aria-describedby"], showError && error ? errorId : undefined]
-                .filter(Boolean)
-                .join(" ") || undefined
-            }
-            aria-invalid={props["aria-invalid"] || (showError && Boolean(error))}
-            value={draft}
-            onChange={(event) => change(event.target.value)}
-            onBlur={(event) => {
-              finishEdit();
-              onBlur?.(event);
-            }}
-            onInvalid={(event) => {
-              setShowError(true);
-              onInvalid?.(event);
-            }}
-          />
-          <Popover.Trigger
-            render={<Button variant="outline" size="icon-sm" />}
-            disabled={props.disabled || props.readOnly}
-            aria-label={`${label}: ${t("calendar_open")}`}
-          >
-            <CalendarDays aria-hidden="true" />
-          </Popover.Trigger>
+  function renderInput() {
+    return (
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <div className="min-w-0 space-y-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
+            <Input
+              {...props}
+              className={cn("flex-1 basis-72 px-2", className)}
+              ref={input}
+              type="text"
+              aria-label={label}
+              aria-describedby={
+                [props["aria-describedby"], showError && error ? errorId : undefined]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
+              aria-invalid={props["aria-invalid"] || (showError && Boolean(error))}
+              value={draft}
+              onChange={(event) => change(event.target.value)}
+              onBlur={(event) => {
+                finishEdit();
+                onBlur?.(event);
+              }}
+              onInvalid={(event) => {
+                setShowError(true);
+                onInvalid?.(event);
+              }}
+            />
+            <Popover.Trigger
+              render={<Button variant="outline" size="icon-sm" />}
+              disabled={props.disabled || props.readOnly}
+              aria-label={`${label}: ${t("calendar_open")}`}
+            >
+              <CalendarDays aria-hidden="true" />
+            </Popover.Trigger>
+          </div>
+          {showError && error && (
+            <p id={errorId} className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
-        {showError && error && (
-          <p id={errorId} className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-      </div>
-      <Popover.Portal>
-        <Popover.Positioner align="start" sideOffset={8} className="z-50">
-          <CalendarPanel value={value} min={min} max={max} onSelect={select} finalFocus={input} />
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
-  );
+        <Popover.Portal>
+          <Popover.Positioner align="start" sideOffset={8} className="z-50">
+            <CalendarPanel value={value} min={min} max={max} onSelect={select} finalFocus={input} />
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+    );
+  }
+  return renderInput();
 }

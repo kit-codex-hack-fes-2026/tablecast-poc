@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
 import current from "../projects/tablecast-main-rerecord.json";
-import { recordingEdits } from "./tablecast-edit-plan.ts";
-import { type Project, projectSchema } from "./tablecast-project.ts";
-import { zoomRegions } from "./tablecast-zoom.ts";
+import { projectSchema, type Project } from "./tablecast-project";
+import { recordingEdits } from "./tablecast-edit-plan";
+import { zoomRegions } from "./tablecast-zoom";
 
 test("現行台本の日本語・英語テイクを各1回選び、全客側カットを残す", () => {
   const project = projectSchema.parse(current);

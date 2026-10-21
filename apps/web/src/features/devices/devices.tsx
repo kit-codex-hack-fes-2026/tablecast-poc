@@ -148,72 +148,65 @@ export function RegisterDevice({
           });
         }}
       />
-      <form
-        data-pwa-blocked={tableId !== initialTableId}
-        noValidate
-        className="space-y-5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <fieldset disabled={!hydrated} className="space-y-5">
-          <form.Field
-            name="userCode"
-            validators={{
-              onChange: zodFieldValidator(
-                z.string().trim().min(1, t("form_required")).max(30),
-                locale,
-              ),
-            }}
-          >
-            {(field) => (
-              <Field.Root
-                name={field.name}
-                invalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                className="flex max-w-sm flex-col gap-2"
-              >
-                <Field.Label>{t("admin_pair_code")}</Field.Label>
-                <Input
-                  autoComplete="off"
-                  required
-                  maxLength={30}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => {
-                    const code = event.target.value.toUpperCase();
-                    field.handleChange(code);
-                    void navigate({
-                      to: "/admin/stores/$storeId/devices/new",
-                      params: { storeId },
-                      search: (previous) => ({ ...previous, user_code: code, tableId }),
-                      replace: true,
-                    });
-                  }}
-                />
-                {field.state.meta.isTouched && <FieldErrors errors={field.state.meta.errors} />}
-              </Field.Root>
-            )}
-          </form.Field>
-          <DataTable
-            {...collection}
-            data={devices.data.tables}
-            columns={columns}
-            getRowId={(row) => row.id}
-            tableLabel={t("admin_pair_table")}
-            searchLabel={t("device_search_table")}
-            searchPlaceholder={t("collection_search_tables_placeholder")}
-          />
-          <ErrorNotice error={devices.error} onRetry={() => void devices.refetch()} />
-          <form.AppForm>
+      <form.AppForm>
+        <form.Form data-pwa-blocked={tableId !== initialTableId} noValidate className="space-y-5">
+          <fieldset disabled={!hydrated} className="space-y-5">
+            <form.Field
+              name="userCode"
+              validators={{
+                onChange: zodFieldValidator(
+                  z.string().trim().min(1, t("form_required")).max(30),
+                  locale,
+                ),
+              }}
+            >
+              {(field) => (
+                <Field.Root
+                  name={field.name}
+                  invalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                  className="flex max-w-sm flex-col gap-2"
+                >
+                  <Field.Label>{t("admin_pair_code")}</Field.Label>
+                  <Input
+                    autoComplete="off"
+                    required
+                    maxLength={30}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => {
+                      const code = event.target.value.toUpperCase();
+                      field.handleChange(code);
+                      void navigate({
+                        to: "/admin/stores/$storeId/devices/new",
+                        params: { storeId },
+                        search: (previous) => ({ ...previous, user_code: code, tableId }),
+                        replace: true,
+                      });
+                    }}
+                  />
+                  {field.state.meta.isTouched && <FieldErrors errors={field.state.meta.errors} />}
+                </Field.Root>
+              )}
+            </form.Field>
+            <DataTable
+              {...collection}
+              data={devices.data.tables}
+              columns={columns}
+              getRowId={(row) => row.id}
+              tableLabel={t("admin_pair_table")}
+              searchLabel={t("device_search_table")}
+              searchPlaceholder={t("collection_search_tables_placeholder")}
+            />
+            <ErrorNotice query={devices} />
+
             <form.FormErrors error={approve.error} />
             <form.SubmitButton disabled={!tableId}>
               <Check />
               {t("admin_approve")}
             </form.SubmitButton>
-          </form.AppForm>
-        </fieldset>
-      </form>
+          </fieldset>
+        </form.Form>
+      </form.AppForm>
     </section>
   );
 }

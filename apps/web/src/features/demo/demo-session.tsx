@@ -213,8 +213,8 @@ export function DemoSession({
           </p>
         )}
         <ErrorNotice error={query.error ?? update.error ?? reset.error} />
-        <ErrorNotice error={published.error} onRetry={() => void published.refetch()} />
-        <ErrorNotice error={drafts.error} onRetry={() => void drafts.refetch()} />
+        <ErrorNotice query={published} />
+        <ErrorNotice query={drafts} />
         {errors.success && (
           <ConfigurationErrors errors={errors.data} configuration={selectedConfiguration} />
         )}

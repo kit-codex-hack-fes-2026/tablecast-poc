@@ -46,32 +46,26 @@ export function AccountPasskeys({ controller }: { controller: AccountController 
         getRowId={(row) => row.id}
         empty={t("account_no_passkeys")}
       />
-      <form
-        noValidate
-        className="flex max-w-2xl flex-wrap items-end gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <div className="min-w-48 flex-1">
-          <form.AppField name="name" validators={{ onChange: z.string().max(100) }}>
-            {(field) => (
-              <field.TextField
-                label={t("account_key_name")}
-                maxLength={100}
-                disabled={controller.loading}
-              />
-            )}
-          </form.AppField>
-        </div>
-        <form.AppForm>
+      <form.AppForm>
+        <form.Form noValidate className="flex max-w-2xl flex-wrap items-end gap-3">
+          <div className="min-w-48 flex-1">
+            <form.AppField name="name" validators={{ onChange: z.string().max(100) }}>
+              {(field) => (
+                <field.TextField
+                  label={t("account_key_name")}
+                  maxLength={100}
+                  disabled={controller.loading}
+                />
+              )}
+            </form.AppField>
+          </div>
+
           <form.SubmitButton disabled={change.isPending || controller.loading}>
             <Plus />
             {t("account_add_passkey")}
           </form.SubmitButton>
-        </form.AppForm>
-      </form>
+        </form.Form>
+      </form.AppForm>
     </section>
   );
 }

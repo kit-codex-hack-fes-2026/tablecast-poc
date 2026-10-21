@@ -1,12 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { z } from "zod";
-import { type Project, projectSchema, root } from "./tablecast-project.ts";
+import { randomUUID } from "node:crypto";
+import { projectSchema, root, type Project } from "./tablecast-project";
 
 test("@technical 強調の初期状態・短い切替・再選択を順再生と逆seekで再現する", async ({
   page,
@@ -43,8 +43,6 @@ test("@technical 強調の初期状態・短い切替・再選択を順再生と
           cues: [{ id: "focus-cue", at: 0, text: "強調の検証", voice: false }],
           technical: {
             ...board,
-            // 描画fixtureの根拠はgeneratorとし、保存作品の旧runtime参照を引き継がない。
-            sources: ["apps/presentation/scripts/tablecast-technical.ts"],
             focus: focus.map((f) => ({ ...f, cue: "focus-cue", summary: f.targets.join(" / ") })),
           },
         },
@@ -274,13 +272,13 @@ test("@product 全表示形式をCLIで生成し、宣言した画像・録画�
     .parse(JSON.parse(await readFile(resolve(root, "dist", name, "timing.json"), "utf8")));
   for (const time of [0, 12, 24, 42, 43, 44, 45, 48, 53.9])
     await page.evaluate((at) => {
-      const timelines = window["__timelines"];
+      const timelines = Reflect.get(window, "__timelines");
       if (!timelines.tablecast) throw new Error("生成タイムラインがありません");
       timelines.tablecast.seek(at);
     }, time);
   for (const [point, at] of [42.4, 43.3, 44.2].entries()) {
     await page.evaluate((time) => {
-      const timeline = window["__timelines"].tablecast;
+      const timeline = Reflect.get(window, "__timelines").tablecast;
       if (!timeline) throw new Error("生成タイムラインがありません");
       timeline.seek(time);
     }, at);

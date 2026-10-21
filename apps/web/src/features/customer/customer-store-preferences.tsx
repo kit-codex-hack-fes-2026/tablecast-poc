@@ -1,3 +1,5 @@
+import type { customerPreferencesSchema } from "@tablecast/api/schema";
+import type { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -6,11 +8,12 @@ import { useAppForm } from "../../components/form";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { type InferResponseType, parseResponse, rpc } from "../../lib/api";
 import { customerStoreOptions } from "./customer-query";
 
-type CustomerStoreData = Awaited<
-  ReturnType<NonNullable<ReturnType<typeof customerStoreOptions>["queryFn"]>>
+type CustomerStoreData = InferResponseType<
+  (typeof rpc.api.customer.stores)[":storeId"]["$get"],
+  200
 >;
 
 export function CustomerPreferences({ data }: { data: CustomerStoreData }) {
@@ -21,12 +24,7 @@ export function CustomerPreferences({ data }: { data: CustomerStoreData }) {
   const leaveTrigger = useRef<HTMLButtonElement>(null);
   const membership = data.membership;
   const preferences = useMutation({
-    mutationFn: (json: {
-      revision: number;
-      saveMemories: boolean;
-      shareCompanions: boolean;
-      useMemories: boolean;
-    }) =>
+    mutationFn: (json: z.input<typeof customerPreferencesSchema>) =>
       parseResponse(
         rpc.api.customer.stores[":storeId"].preferences.$post({
           param: { storeId: data.store.id },
@@ -71,45 +69,36 @@ export function CustomerPreferences({ data }: { data: CustomerStoreData }) {
   });
   return (
     <section className="space-y-6 pt-4">
-      <form
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        {(["shareCompanions", "useMemories", "saveMemories"] as const).map((name) => (
-          <form.Field key={name} name={name}>
-            {(field) => (
-              <label className="flex min-h-12 items-center gap-3">
-                <Checkbox
-                  checked={field.state.value}
-                  onCheckedChange={(checked) => field.handleChange(checked)}
-                  disabled={preferences.isPending || leave.isPending}
-                />
-                {t(
-                  name === "shareCompanions"
-                    ? "customer_share_companions"
-                    : name === "useMemories"
-                      ? "customer_use_memories"
-                      : "customer_save_memories",
-                )}
-              </label>
-            )}
-          </form.Field>
-        ))}
-        <form.AppForm>
+      <form.AppForm>
+        <form.Form className="space-y-4">
+          {(["shareCompanions", "useMemories", "saveMemories"] as const).map((name) => (
+            <form.Field key={name} name={name}>
+              {(field) => (
+                <label className="flex min-h-12 items-center gap-3">
+                  <Checkbox
+                    checked={field.state.value}
+                    onCheckedChange={(checked) => field.handleChange(checked)}
+                    disabled={preferences.isPending || leave.isPending}
+                  />
+                  {t(
+                    name === "shareCompanions"
+                      ? "customer_share_companions"
+                      : name === "useMemories"
+                        ? "customer_use_memories"
+                        : "customer_save_memories",
+                  )}
+                </label>
+              )}
+            </form.Field>
+          ))}
+
           <form.SubmitButton disabled={leave.isPending}>
             {t("customer_save_preferences")}
           </form.SubmitButton>
-        </form.AppForm>
-        <ActionFeedback
-          pending={preferences.isPending}
-          error={preferences.error}
-          success={preferences.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </form>
+
+          <ActionFeedback mutation={preferences} successMessage={t("account_saved")} />
+        </form.Form>
+      </form.AppForm>
       <div className="space-y-3 border-t border-border pt-6">
         <Button
           ref={leaveTrigger}

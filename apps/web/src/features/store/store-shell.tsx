@@ -53,7 +53,7 @@ export function StoreShell({ storeId }: { storeId: string }) {
           )
         }
       >
-        <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
+        <ErrorNotice query={stores} />
         {stores.isPending ? (
           <LoadingState />
         ) : store ? (

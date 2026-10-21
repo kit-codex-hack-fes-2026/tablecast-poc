@@ -1,6 +1,6 @@
-import { Hono } from "hono";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validate, validateQuery } from "../../platform/validation";
+import { tableScope } from "../auth/middleware";
 import {
   applyCouponSchema,
   cancelCouponUseSchema,
@@ -11,11 +11,11 @@ import {
   rewardMembersSchema,
 } from "./model";
 import { getVisitCoupons, listCouponRules, listIssuedCoupons, listRewardMembers } from "./queries";
-import { applyCustomerCoupon } from "./use-cases/apply";
-import { cancelCustomerCouponUse } from "./use-cases/cancel";
+import { applyCustomerCoupon, cancelCustomerCouponUse } from "./use-cases/apply";
 import { issueCustomerCoupon } from "./use-cases/issue";
 import { revokeCustomerCoupon, saveCouponRule } from "./use-cases/rules";
-export const couponsAdminRoutes = new Hono<ApiEnv>()
+export const couponsAdminRoutes = apiFactory
+  .createApp()
   .get("/coupons/issued", validateQuery(couponPageSchema), async (c) =>
     c.json(await listIssuedCoupons(c.get("services"), c.get("actor"), c.req.valid("query")), 200),
   )
@@ -42,32 +42,15 @@ export const couponsAdminRoutes = new Hono<ApiEnv>()
       200,
     ),
   )
-  .get("/tables/:id/coupons", async (c) =>
-    c.json(
-      await getVisitCoupons(c.get("services"), {
-        ...c.get("actor"),
-        tableSessionId: c.req.param("id"),
-      }),
-      200,
-    ),
+  .get("/tables/:id/coupons", tableScope, async (c) =>
+    c.json(await getVisitCoupons(c.get("services"), c.get("actor")), 200),
   )
-  .post("/tables/:id/coupons/apply", validate(applyCouponSchema), async (c) =>
-    c.json(
-      await applyCustomerCoupon(
-        c.get("services"),
-        { ...c.get("actor"), tableSessionId: c.req.param("id") },
-        c.req.valid("json"),
-      ),
-      200,
-    ),
+  .post("/tables/:id/coupons/apply", validate(applyCouponSchema), tableScope, async (c) =>
+    c.json(await applyCustomerCoupon(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )
-  .post("/tables/:id/coupons/cancel", validate(cancelCouponUseSchema), async (c) =>
+  .post("/tables/:id/coupons/cancel", validate(cancelCouponUseSchema), tableScope, async (c) =>
     c.json(
-      await cancelCustomerCouponUse(
-        c.get("services"),
-        { ...c.get("actor"), tableSessionId: c.req.param("id") },
-        c.req.valid("json"),
-      ),
+      await cancelCustomerCouponUse(c.get("services"), c.get("actor"), c.req.valid("json")),
       200,
     ),
   );

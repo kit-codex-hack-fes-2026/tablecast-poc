@@ -43,7 +43,7 @@ export function PointVisit({ storeId, sessionId }: { sessionId: string; storeId:
     <section className="space-y-4 rounded-xl border p-5">
       <h3 className="font-semibold">{t("customer_points_confirm")}</h3>
       <p className="text-sm text-muted-foreground">{t("customer_points_allocation_note")}</p>
-      <ErrorNotice error={visit.error} onRetry={() => void visit.refetch()} />
+      <ErrorNotice query={visit} />
       {visit.data && (
         <>
           <ul className="space-y-3">
@@ -140,38 +140,29 @@ function PointCorrection({
         {t("customer_points_correct")}
       </Disclosure.Trigger>
       <Disclosure.Panel>
-        <form
-          className="mt-3 space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <form.AppField name="delta">
-            {(field) => (
-              <field.NumberField
-                label={t("customer_points_delta")}
-                min={-1000000}
-                max={1000000}
-                required
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="reason">
-            {(field) => (
-              <field.TextField label={t("customer_points_reason")} maxLength={500} required />
-            )}
-          </form.AppField>
-          <form.AppForm>
+        <form.AppForm>
+          <form.Form className="mt-3 space-y-3">
+            <form.AppField name="delta">
+              {(field) => (
+                <field.NumberField
+                  label={t("customer_points_delta")}
+                  min={-1000000}
+                  max={1000000}
+                  required
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="reason">
+              {(field) => (
+                <field.TextField label={t("customer_points_reason")} maxLength={500} required />
+              )}
+            </form.AppField>
+
             <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-          </form.AppForm>
-          <ActionFeedback
-            pending={save.isPending}
-            error={save.error}
-            success={save.isSuccess}
-            successMessage={t("account_saved")}
-          />
-        </form>
+
+            <ActionFeedback mutation={save} successMessage={t("account_saved")} />
+          </form.Form>
+        </form.AppForm>
       </Disclosure.Panel>
     </Disclosure.Root>
   );

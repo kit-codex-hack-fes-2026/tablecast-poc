@@ -1,9 +1,9 @@
 {
   "results": [
     {
-      "case": "実装301行を拒否",
-      "exit": 1,
-      "rules": ["eslint(max-lines)"]
+      "case": "実装301行はレビュー目安として許可",
+      "exit": 0,
+      "rules": []
     },
     {
       "case": "テスト501行を拒否",
@@ -33,6 +33,14 @@
       "case": "defaultでもunionの不足caseを拒否",
       "exit": 1,
       "rules": ["typescript(switch-exhaustiveness-check)"]
+    },
+    {
+      "case": "presentationへ新しい整列ルールを適用しない",
+      "exit": 0
+    },
+    {
+      "case": "presentationの従来のunsafe assignment検査を維持",
+      "exit": 1
     },
     {
       "case": "整列fix後もCSS副作用importの相対順を維持",

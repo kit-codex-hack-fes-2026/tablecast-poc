@@ -1,4 +1,5 @@
 import {
+  flexRender,
   type OnChangeFn,
   type PaginationState,
   type RowData,
@@ -6,24 +7,12 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { type ReactNode, useEffect, useEffectEvent, useMemo, useState } from "react";
-import type { DataTableColumn } from "./data-table-model";
 import { useI18n } from "../i18n/locale";
 import { TableControls, TablePagination } from "./data-table-controls";
-import { TableMarkup } from "./data-table-markup";
-import { features } from "./data-table-model";
+import { type DataTableColumn, features } from "./data-table-model";
 import { ErrorNotice } from "./error-notice";
-
-/**
- * 検索・ページ分割を備えた一覧。
- * data、columns、getRowIdが必須。
- * searchLabelで検索名、emptyで0件文、pending/error/onRetryで取得状態を指定する。
- * stateとonGlobalFilterChange/onPaginationChange/onSortingChangeでURL等へ同期できる。
- * searchPlaceholderは検索対象、tableLabelは横スクロール領域の名前を指定する。
- * 部分取得ではpagination=false、manualFilteringを実際のAPIに合わせる。
- * 取得した一部だけを全件集計と呼ばない。
- * 数値列はmeta.align=rightで見出しと値を右揃えにする。
- * 行全体をクリック領域にせず、対象名へリンクを置く。
- */
+import { Skeleton } from "./ui/skeleton";
+import { Table, TableCell, TableHead } from "./ui/table";
 export function DataTable<T extends RowData>({
   data,
   columns,
@@ -96,6 +85,80 @@ export function DataTable<T extends RowData>({
   });
   bounded.syncPageCount(table.getPageCount());
   const initialPending = pending && !data.length;
+  function renderTable() {
+    return (
+      <Table className="min-w-max text-sm">
+        <thead>
+          {table.getHeaderGroups().map((group) => (
+            <tr key={group.id}>
+              {group.headers.map((header) => (
+                <TableHead
+                  scope="col"
+                  aria-sort={
+                    header.column.getIsSorted() === "asc"
+                      ? "ascending"
+                      : header.column.getIsSorted() === "desc"
+                        ? "descending"
+                        : undefined
+                  }
+                  key={header.id}
+                  className={
+                    header.column.columnDef.meta?.align === "right"
+                      ? "text-right whitespace-nowrap"
+                      : "text-left whitespace-nowrap"
+                  }
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {initialPending ? (
+            ["first", "second"].map((id) => (
+              <tr key={id} aria-hidden="true">
+                {table.getVisibleLeafColumns().map((column) => (
+                  <TableCell key={column.id} className="h-16">
+                    <Skeleton className="h-8 w-full" />
+                  </TableCell>
+                ))}
+              </tr>
+            ))
+          ) : table.getRowModel().rows.length ? (
+            table.getRowModel().rows.map((row) => (
+              <tr key={row.id} data-row-id={row.id} className="hover:bg-secondary/50">
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    scope={cell.column.columnDef.meta?.rowHeader ? "row" : undefined}
+                    className={
+                      cell.column.columnDef.meta?.align === "right"
+                        ? "text-right tabular-nums"
+                        : "text-left"
+                    }
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <TableCell
+                colSpan={table.getVisibleLeafColumns().length}
+                className="h-32 text-center text-base text-muted-foreground"
+              >
+                {empty ?? t("common_no_results")}
+              </TableCell>
+            </tr>
+          )}
+        </tbody>
+      </Table>
+    );
+  }
   if (error && !data.length && !pending)
     return (
       <div className="min-h-80">
@@ -128,11 +191,7 @@ export function DataTable<T extends RowData>({
         aria-label={tableLabel}
         className="min-h-48 overflow-x-auto rounded-xl border border-border bg-card focus-visible:outline-2 focus-visible:outline-ring"
       >
-        <TableMarkup
-          table={table}
-          pending={initialPending}
-          empty={empty ?? t("common_no_results")}
-        />
+        {renderTable()}
       </div>
       {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
       {pagination && <TablePagination table={table} pending={pending} />}

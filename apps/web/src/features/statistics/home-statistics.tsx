@@ -45,11 +45,7 @@ export function HomeStatistics({ storeId, today }: { storeId: string; today: str
           <ArrowRight className="size-4" />
         </Button>
       </div>
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {query.isPending && (
         <div
           role="status"

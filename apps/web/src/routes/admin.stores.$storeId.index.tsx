@@ -5,19 +5,18 @@ import { floorOptions } from "../features/floor/floor-query";
 import { statisticsOptions } from "../features/statistics/statistics-query";
 import { homeOptions } from "../features/store/home-query";
 import { StoreHome } from "../features/store/store-home";
-import { storesOptions } from "../features/store/store-query";
+import { isStoreManager } from "../features/store/store-query";
 import { getLocale } from "../paraglide/runtime.js";
 
 export const Route = createFileRoute("/admin/stores/$storeId/")({
   staticData: { document: { title: "home_title", description: "head_home_description" } },
-  loader: async ({ context, params }) => {
+  loader: async ({ context }) => {
     const { queryClient } = context;
-    const stores = await queryClient.ensureQueryData(storesOptions);
-    const store = stores.stores.find((item) => item.id === params.storeId);
+    const { store } = context;
     const today = storeDate(Date.now());
     if (!store) return { today };
     await Promise.all(
-      ["owner", "admin"].includes(store.role)
+      isStoreManager(store)
         ? [
             queryClient.prefetchInfiniteQuery(
               statisticsOptions(store.id, { from: today, to: today }, "summary", getLocale()),

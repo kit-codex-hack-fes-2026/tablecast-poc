@@ -64,7 +64,7 @@
     "@types/bun": "1.4.3",
     "@types/node": "24.19.2",
     "cf": "1.0.0-beta.18",
-    "drizzle-orm": "0.45.4",
+    "drizzle-orm": "1.0.0-rc.5",
     "eslint-plugin-perfectionist": "5.12.1",
     "fallow": "3.34.1",
     "jsonc-parser": "3.3.1",

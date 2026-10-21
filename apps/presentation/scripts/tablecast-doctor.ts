@@ -1,10 +1,10 @@
-import { chromium } from "@playwright/test";
+import { openscreenPath } from "./tablecast-openscreen.ts";
 import { execFile } from "node:child_process";
 import process from "node:process";
 import { parseArgs, promisify } from "node:util";
 import { z } from "zod";
+import { chromium } from "@playwright/test";
 import { tablecastCaptureOrigin, tablecastHostArguments } from "./tablecast-app-capture.ts";
-import { openscreenPath } from "./tablecast-openscreen.ts";
 
 const run = promisify(execFile);
 

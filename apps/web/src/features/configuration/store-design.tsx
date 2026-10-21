@@ -1,5 +1,4 @@
 import { type ConfigDraft, type Configuration, configurationSchema } from "@tablecast/api/schema";
-import { useForm } from "@tanstack/react-form";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import {
   skipToken,
@@ -14,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActionFeedback } from "../../components/action-feedback";
 import { ConfirmAction } from "../../components/confirm-action";
 import { ErrorNotice } from "../../components/error-notice";
+import { useAppForm } from "../../components/form";
 import { LoadingState } from "../../components/loading-state";
 import { PageHeader } from "../../components/page-header";
 import { Button } from "../../components/ui/button";
@@ -27,7 +27,7 @@ import { ConfigurationToolbar } from "./configuration-toolbar";
 import { StartConfigurationEditing } from "./configuration-workflow";
 import { DesignEditor } from "./design-editor";
 import { designValidationIssues } from "./design-validation";
-import { configurationImageUploadKey, draftOptions } from "./menu-query";
+import { configurationImageUploadKey, draftOptions, saveDraftOptions } from "./menu-query";
 import { StoreDesignOverview } from "./store-design-overview";
 
 export function StoreDesign({ draftId }: { draftId?: string }) {
@@ -101,7 +101,7 @@ function DesignForm({ initial, draft }: { draft: ConfigDraft; initial: Configura
   const uploads = useIsMutating({ mutationKey: configurationImageUploadKey(store.id) });
   const editable =
     ["draft", "ready"].includes(draft.status) && ["owner", "admin"].includes(store.role);
-  const form = useForm({
+  const form = useAppForm({
     defaultValues: designValues(initial),
     onSubmit: async ({ value }) => {
       if (!staged.current.size && !uploads)
@@ -114,30 +114,23 @@ function DesignForm({ initial, draft }: { draft: ConfigDraft; initial: Configura
       ((form.state.isDirty || staged.current.size > 0) && !window.confirm(t("menu_leave_unsaved"))),
     enableBeforeUnload: () => form.state.isDirty || staged.current.size > 0,
   });
-  const save = useMutation({
-    mutationFn: async (configuration: Configuration) => {
-      const parsed = configurationSchema.safeParse(configuration);
-      setIssues(parsed.success ? [] : designValidationIssues(parsed.error.issues, locale, t));
-      if (!parsed.success) throw parsed.error;
-      return parseResponse(
-        rpc.api.admin.stores[":storeId"].drafts[":id"].$put({
-          param: { storeId: store.id, id: draft.id },
-          json: {
-            expectedVersion: version,
-            configuration: parsed.data,
-            instructionFormatVersion: 1,
-          },
-        }),
-      );
-    },
-    onSuccess: (next) => {
-      setVersion(next.version);
-      form.reset(designValues(next.configuration));
-      client.setQueryData(draftOptions(store.id, draft.id).queryKey, next);
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", store.id] });
-      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", store.id] });
-    },
-  });
+  const save = useMutation(
+    saveDraftOptions(client, {
+      storeId: store.id,
+      id: draft.id,
+      expectedVersion: version,
+      validate: (configuration) => {
+        const parsed = configurationSchema.safeParse(configuration);
+        setIssues(parsed.success ? [] : designValidationIssues(parsed.error.issues, locale, t));
+        if (!parsed.success) throw parsed.error;
+        return parsed.data;
+      },
+      onSaved: (next) => {
+        setVersion(next.version);
+        form.reset(designValues(next.configuration));
+      },
+    }),
+  );
   const preview = useMutation({
     mutationFn: async () => {
       if (form.state.isDirty) await save.mutateAsync({ ...initial, ...form.state.values });
@@ -182,97 +175,91 @@ function DesignForm({ initial, draft }: { draft: ConfigDraft; initial: Configura
     { enabled: editable, ignoreInputs: false },
   );
   return (
-    <form
-      id="tablecast-design-editor"
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-      className="space-y-5"
-    >
-      <ConfigurationToolbar slot="status">
-        <form.Subscribe selector={(state) => state.isDirty}>
-          {(dirty) => (
-            <SaveStatus
-              dirty={dirty || hasStaged}
-              pending={pending}
-              error={save.error || preview.error || reload.error}
+    <form.AppForm>
+      <form.Form id="tablecast-design-editor" stopPropagation className="space-y-5">
+        <ConfigurationToolbar slot="status">
+          <form.Subscribe selector={(state) => state.isDirty}>
+            {(dirty) => (
+              <SaveStatus
+                dirty={dirty || hasStaged}
+                pending={pending}
+                error={save.error || preview.error || reload.error}
+              />
+            )}
+          </form.Subscribe>
+        </ConfigurationToolbar>
+        <ConfigurationToolbar>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              form="tablecast-design-editor"
+              disabled={blocked}
+              aria-keyshortcuts="Control+s Meta+s"
+            >
+              {t("common_save")}
+            </Button>
+            <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
+              {t("theme_preview")}
+            </Button>
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={
+                <Link
+                  to="/admin/stores/$storeId/menu/changes/$draftId"
+                  params={{ storeId: store.id, draftId: draft.id }}
+                />
+              }
+            >
+              {t("theme_review")}
+            </Button>
+          </div>
+        </ConfigurationToolbar>
+        <ActionFeedback
+          pending={pending}
+          error={issues.length ? undefined : save.error || preview.error || reload.error}
+          success={save.isSuccess}
+          successMessage={t("account_saved")}
+        />
+        {editable && apiError(save.error)?.status === 409 && (
+          <ConfirmAction
+            label={t("workflow_conflict_reload")}
+            subject={t("workflow_conflict_reload_note")}
+            disabled={pending || !!uploads}
+            icon={<Undo2 />}
+            onConfirm={() => reload.mutate()}
+          />
+        )}
+        {!!issues.length && (
+          <ul
+            ref={issueSummary}
+            tabIndex={-1}
+            role="alert"
+            className="list-inside list-disc rounded-lg bg-destructive/10 p-4 text-sm text-destructive outline-none"
+          >
+            {issues.map((issue, index) => (
+              <li key={`${index}:${issue}`}>{issue}</li>
+            ))}
+          </ul>
+        )}
+        <form.Subscribe selector={(state) => state.values}>
+          {(configuration) => (
+            <DesignEditor
+              key={editorRevision}
+              organisationLogo={store.logo}
+              storeId={store.id}
+              value={{ ...initial, ...configuration }}
+              onChange={(value) => {
+                form.setFieldValue("branding", value.branding);
+                form.setFieldValue("appearance", value.appearance);
+                form.setFieldValue("banners", value.banners);
+              }}
+              disabled={!editable || pending}
+              onStagedChange={onStagedChange}
             />
           )}
         </form.Subscribe>
-      </ConfigurationToolbar>
-      <ConfigurationToolbar>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="submit"
-            form="tablecast-design-editor"
-            disabled={blocked}
-            aria-keyshortcuts="Control+s Meta+s"
-          >
-            {t("common_save")}
-          </Button>
-          <Button variant="outline" disabled={blocked} onClick={() => preview.mutate()}>
-            {t("theme_preview")}
-          </Button>
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={
-              <Link
-                to="/admin/stores/$storeId/menu/changes/$draftId"
-                params={{ storeId: store.id, draftId: draft.id }}
-              />
-            }
-          >
-            {t("theme_review")}
-          </Button>
-        </div>
-      </ConfigurationToolbar>
-      <ActionFeedback
-        pending={pending}
-        error={issues.length ? undefined : save.error || preview.error || reload.error}
-        success={save.isSuccess}
-        successMessage={t("account_saved")}
-      />
-      {editable && apiError(save.error)?.status === 409 && (
-        <ConfirmAction
-          label={t("workflow_conflict_reload")}
-          subject={t("workflow_conflict_reload_note")}
-          disabled={pending || !!uploads}
-          icon={<Undo2 />}
-          onConfirm={() => reload.mutate()}
-        />
-      )}
-      {!!issues.length && (
-        <ul
-          ref={issueSummary}
-          tabIndex={-1}
-          role="alert"
-          className="list-inside list-disc rounded-lg bg-destructive/10 p-4 text-sm text-destructive outline-none"
-        >
-          {issues.map((issue, index) => (
-            <li key={`${index}:${issue}`}>{issue}</li>
-          ))}
-        </ul>
-      )}
-      <form.Subscribe selector={(state) => state.values}>
-        {(configuration) => (
-          <DesignEditor
-            key={editorRevision}
-            organisationLogo={store.logo}
-            storeId={store.id}
-            value={{ ...initial, ...configuration }}
-            onChange={(value) => {
-              form.setFieldValue("branding", value.branding);
-              form.setFieldValue("appearance", value.appearance);
-              form.setFieldValue("banners", value.banners);
-            }}
-            disabled={!editable || pending}
-            onStagedChange={onStagedChange}
-          />
-        )}
-      </form.Subscribe>
-    </form>
+      </form.Form>
+    </form.AppForm>
   );
 }

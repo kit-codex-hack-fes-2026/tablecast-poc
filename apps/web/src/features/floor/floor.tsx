@@ -85,7 +85,7 @@ export function Floor({
           </span>
         }
       />
-      <ErrorNotice error={state.error} onRetry={() => void state.refetch()} />
+      <ErrorNotice query={state} />
 
       <section aria-label={t("floor_current")}>
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">{t("floor_current")}</h2>

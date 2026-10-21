@@ -44,7 +44,7 @@ export function CustomerMemberships() {
           <p className="text-balance">{t("customer_empty")}</p>
         </div>
       )}
-      <ErrorNotice error={memberships.error} onRetry={() => void memberships.refetch()} />
+      <ErrorNotice query={memberships} />
       {memberships.hasNextPage && (
         <Button
           variant="outline"

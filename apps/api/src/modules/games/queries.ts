@@ -4,7 +4,7 @@ import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { gamePlugins, gameRuns, gameVersions } from "../../db/games-schema";
 import { ensure } from "../../platform/errors";
-import { getSession } from "../tables/session";
+import { getSession } from "../tables/queries";
 import { gameManifestSchema, gamePackageSchema, gameStateSchema } from "./model";
 
 export async function listGames(services: ApiServices, actor: Actor, after = "") {

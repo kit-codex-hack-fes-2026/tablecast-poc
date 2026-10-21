@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { waitForTablecastState } from "./tablecast-app-capture";
+import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
-import { waitForTablecastState } from "./tablecast-app-capture.ts";
-import { captureShot, measureSubject, shotSchema } from "./tablecast-shot.ts";
+import { captureShot, measureSubject, shotSchema } from "./tablecast-shot";
 
 test("@product 撮影対象自身と祖先の非表示・透明化を検出する", async ({ page }) => {
   for (const style of ["visibility:hidden", "opacity:0", "display:none"]) {

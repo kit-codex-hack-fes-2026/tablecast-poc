@@ -8,7 +8,7 @@ import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
 import { InstructionView } from "./instruction-view";
 import { LanguageFields } from "./language-fields";
-import PromptEditorInput from "./prompt-editor-input";
+import { PromptEditor as PromptEditorInput } from "./prompt-editor";
 
 afterEach(cleanup);
 const changed = vi.fn<(value: CastInstruction) => void>();

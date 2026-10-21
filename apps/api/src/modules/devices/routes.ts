@@ -1,10 +1,10 @@
-import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validate } from "../../platform/validation";
 import { redeemDevice } from "./service";
-export const devicesRoutes = new Hono<ApiEnv>()
+export const devicesRoutes = apiFactory
+  .createApp()
   .post("/api/devices/request", async (c) =>
     c.json(
       await c.get("services").auth.api.deviceCode({

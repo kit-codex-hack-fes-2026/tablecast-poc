@@ -4,7 +4,6 @@ import { DateTime } from "../../components/date-time";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { billingMoney } from "./billing-format";
-import { Metric } from "./billing-monthly-usage";
 import { PlanFeatures } from "./billing-plan-features";
 import { type Billing } from "./billing-query";
 
@@ -220,5 +219,23 @@ export function PlanOptions({
         <p className="text-sm text-muted-foreground">{t("billing_not_configured")}</p>
       )}
     </section>
+  );
+}
+
+export function Metric({
+  label,
+  value,
+  detail,
+}: {
+  detail?: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-xl border border-border bg-card p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-2 wrap-break-word text-2xl font-semibold tabular-nums">{value}</p>
+      {detail && <p className="mt-2 text-sm text-muted-foreground">{detail}</p>}
+    </div>
   );
 }

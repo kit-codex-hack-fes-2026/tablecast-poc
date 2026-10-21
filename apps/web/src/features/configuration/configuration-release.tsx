@@ -16,7 +16,7 @@ import { apiError } from "../../lib/api-error";
 import { m } from "../../paraglide/messages";
 import { ConfigurationChanges } from "./configuration-changes";
 import { configurationReleaseOptions } from "./configuration-history-query";
-import { draftOptions } from "./menu-query";
+import { receiveDraft } from "./menu-query";
 
 export function ReleaseContent({ storeId, version }: { storeId: string; version: number }) {
   const { t, locale } = useI18n();
@@ -35,21 +35,15 @@ export function ReleaseContent({ storeId, version }: { storeId: string; version:
         }),
       ),
     onSuccess: (draft) => {
-      client.setQueryData(draftOptions(storeId, draft.id).queryKey, draft);
+      receiveDraft(client, storeId, draft);
       void client.invalidateQueries({ queryKey: ["tablecast-configuration-history", storeId] });
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
     },
   });
   const release = query.data;
   return (
     <>
       <DialogScroll className="space-y-5 pb-4">
-        <ErrorNotice
-          error={query.error}
-          onRetry={() => void query.refetch()}
-          retrying={query.isFetching}
-        />
+        <ErrorNotice query={query} retrying={query.isFetching} />
         {query.isPending && <LoadingState />}
         {release && (
           <>

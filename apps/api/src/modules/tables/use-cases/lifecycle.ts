@@ -1,7 +1,8 @@
+import type { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
-import type { Locale } from "../../../platform/model";
 import type { Actor } from "../../auth/model";
+import type { openTableSchema } from "../model";
 import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
@@ -86,7 +87,7 @@ export async function closeTable(services: ApiServices, actor: Actor) {
 export async function openTable(
   services: ApiServices,
   actor: Actor,
-  input: { guestCount: number; locale: Locale; planId?: string; tableId: string },
+  input: z.infer<typeof openTableSchema>,
 ) {
   return observeOperation(
     "tablecast.table.open",

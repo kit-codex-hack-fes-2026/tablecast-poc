@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Pull, ReleaseChange, ReleaseInput } from "./model.ts";
+import type { Pull, ReleaseChange, ReleaseInput } from "../tablecast-release.ts";
 import { deploymentTarget, tablecastRepository } from "../tablecast-deploy-config.ts";
 
 const clean = (value: string) => value.replace(/<!--[^]*?-->/g, "").trim();

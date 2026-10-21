@@ -15,7 +15,11 @@ import {
   deploymentSecrets,
   deploymentTarget,
 } from "./tablecast-deploy-config.ts";
-import { accessApplication, resources, verifyDurableNamespaces } from "./tablecast-deploy.ts";
+import {
+  accessApplication,
+  resources,
+  verifyDurableNamespaces,
+} from "./tablecast-deploy/resources.ts";
 import { reconcileAccess } from "./tablecast-infra-access.ts";
 import { assertWorkerOwner, canonical, workerConfigurationDiff } from "./tablecast-infra-diff.ts";
 

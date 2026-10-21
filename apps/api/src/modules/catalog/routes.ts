@@ -1,13 +1,14 @@
-import { Hono } from "hono";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { instructionResponse } from "../configuration/instruction-response";
 import { getCatalog } from "./queries";
-export const catalogAdminRoutes = new Hono<ApiEnv>().get("/catalog", async (c) =>
-  c.json(
-    instructionResponse(
-      await getCatalog(c.get("services"), c.get("actor").storeId),
-      c.req.header("X-Tablecast-Instructions"),
+export const catalogAdminRoutes = apiFactory
+  .createApp()
+  .get("/catalog", async (c) =>
+    c.json(
+      instructionResponse(
+        await getCatalog(c.get("services"), c.get("actor").storeId),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
     ),
-    200,
-  ),
-);
+  );

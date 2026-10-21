@@ -1,14 +1,13 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
 import { validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
 import { instructionResponse } from "../configuration/instruction-response";
 import { getHomeSummary } from "./home";
 import { getAdminState, listMemberStores } from "./queries";
 
-export const initialRoutes = new Hono<ApiEnv>().get(
+export const initialRoutes = apiFactory.createApp().get(
   "/api/admin/initial",
   validateQuery(
     z

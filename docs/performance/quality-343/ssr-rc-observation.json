@@ -1,0 +1,181 @@
+{
+  "kind": "current RC working-tree source observation",
+  "source": {
+    "headSha": "0b3ff9613ce11b929201771b7cb2ee7bc21531fa",
+    "workingTreeDirty": true,
+    "sourceRoot": "/Users/ReoHakase/.codex/worktrees/7233/tablecast-poc",
+    "sourceFilesSha256": "a7dd36570303a0055b47a07155f3fbfe39c9704b16ec94ab23e5946a45d63da7",
+    "hashDefinition": "SHA-256 of sorted path and per-file SHA-256 records; production source excluding tests/fixtures/generated Paraglide/routeTree, plus E2E support/specs and package/lock/build/tsconfig files"
+  },
+  "harness": [
+    {
+      "path": "/private/tmp/tablecast-rc-e2e-quality343/suite.spec.ts",
+      "sha256": "c481645c10726ec32e893c673c84d083f2723c3d3212da6961db954874f46126"
+    },
+    {
+      "path": "/private/tmp/tablecast-rc-e2e-quality343/playwright.config.ts",
+      "sha256": "378bb31c29c4049bd4c79bb70d979c7dc456248ac8808651cb25b4e1fbe1213d"
+    },
+    {
+      "path": "/private/tmp/tablecast-rc-e2e-quality343/global-setup.ts",
+      "sha256": "92ac3d35fbca9e12951301ac2aa7d8a7fb6d2712274c90c9e6f47aba1e665946"
+    }
+  ],
+  "legacyComparison": {
+    "artifact": "/Users/ReoHakase/.codex/worktrees/7233/tablecast-poc/docs/performance/quality-343/ssr-summary.json",
+    "baselineSha": "75d752a8deacbd95202f59c4b48f5b9e547313b4",
+    "afterSha": "065382ec0e37ddfe8f48e4610e092c0e91c074ed",
+    "reusedAsCurrentMeasurement": false
+  },
+  "conditions": {
+    "seedBaseTime": 1792609612697,
+    "staffIdentity": "haruka.sato@komorebi-shijo.com",
+    "cookieCondition": "Fresh real staff authentication per isolated test runtime, shared across its three sequential response reads; cookie values are not recorded",
+    "productFixture": "demo profile; 60 komorebi catalog products asserted before sampling",
+    "runtimeDirectory": "/Users/ReoHakase/.codex/worktrees/7233/tablecast-poc/.local/tablecast-e2e-rc343-s85ssond"
+  },
+  "sampleAllocation": "Chromium 3 + WebKit 3 sequential authenticated HTTP response-body observations; no latency comparison",
+  "sizeDefinition": {
+    "htmlBytes": "UTF-8 uncompressed full response-body bytes",
+    "hydrationScriptBodyBytes": "Same selector as legacy measurement: inline script bodies matching data-tsr-stream-part, $_TSR or $R[tsr]; includes router/query state and router/Seroval bootstrap/cleanup, excludes script tags",
+    "gzipBytes": "gzipSync level6 calculation on sampled text; not observed wire compression or transfer bytes"
+  },
+  "summary": {
+    "chromium": {
+      "htmlBytes": {
+        "min": 149016,
+        "median": 149016,
+        "max": 149016
+      },
+      "htmlGzipBytes": {
+        "min": 22454,
+        "median": 22455,
+        "max": 22455
+      },
+      "hydrationScriptBodyBytes": {
+        "min": 44609,
+        "median": 44609,
+        "max": 44609
+      },
+      "hydrationScriptBodyGzipBytes": {
+        "min": 9606,
+        "median": 9607,
+        "max": 9607
+      },
+      "hydrationScriptCount": {
+        "min": 4,
+        "median": 4,
+        "max": 4
+      }
+    },
+    "webkit": {
+      "htmlBytes": {
+        "min": 149005,
+        "median": 149005,
+        "max": 149005
+      },
+      "htmlGzipBytes": {
+        "min": 22450,
+        "median": 22451,
+        "max": 22457
+      },
+      "hydrationScriptBodyBytes": {
+        "min": 44598,
+        "median": 44598,
+        "max": 44598
+      },
+      "hydrationScriptBodyGzipBytes": {
+        "min": 9601,
+        "median": 9602,
+        "max": 9608
+      },
+      "hydrationScriptCount": {
+        "min": 4,
+        "median": 4,
+        "max": 4
+      }
+    }
+  },
+  "records": [
+    {
+      "stage": "rc-current",
+      "browserName": "chromium",
+      "path": "/admin/stores/tablecast-komorebi",
+      "seedBaseTime": 1792609612697,
+      "fixture": "fixed demo seed; same staff identity; fresh authenticated cookie per isolated runtime; komorebi 60 products asserted; local production Worker preview; voice disabled",
+      "sizeDefinition": "UTF-8 response body; gzip level6 computed for comparison, not observed wire compression; hydrationScriptBody includes serialized router/query state plus router/Seroval bootstrap and stream cleanup, excludes script tags; no latency claim",
+      "samples": [
+        {
+          "sample": 0,
+          "htmlBytes": 149016,
+          "htmlGzipBytes": 22455,
+          "hydrationScriptBodyBytes": 44609,
+          "hydrationScriptBodyGzipBytes": 9607,
+          "hydrationScriptCount": 4
+        },
+        {
+          "sample": 1,
+          "htmlBytes": 149016,
+          "htmlGzipBytes": 22455,
+          "hydrationScriptBodyBytes": 44609,
+          "hydrationScriptBodyGzipBytes": 9607,
+          "hydrationScriptCount": 4
+        },
+        {
+          "sample": 2,
+          "htmlBytes": 149016,
+          "htmlGzipBytes": 22454,
+          "hydrationScriptBodyBytes": 44609,
+          "hydrationScriptBodyGzipBytes": 9606,
+          "hydrationScriptCount": 4
+        }
+      ]
+    },
+    {
+      "stage": "rc-current",
+      "browserName": "webkit",
+      "path": "/admin/stores/tablecast-komorebi",
+      "seedBaseTime": 1792609612697,
+      "fixture": "fixed demo seed; same staff identity; fresh authenticated cookie per isolated runtime; komorebi 60 products asserted; local production Worker preview; voice disabled",
+      "sizeDefinition": "UTF-8 response body; gzip level6 computed for comparison, not observed wire compression; hydrationScriptBody includes serialized router/query state plus router/Seroval bootstrap and stream cleanup, excludes script tags; no latency claim",
+      "samples": [
+        {
+          "sample": 0,
+          "htmlBytes": 149005,
+          "htmlGzipBytes": 22457,
+          "hydrationScriptBodyBytes": 44598,
+          "hydrationScriptBodyGzipBytes": 9608,
+          "hydrationScriptCount": 4
+        },
+        {
+          "sample": 1,
+          "htmlBytes": 149005,
+          "htmlGzipBytes": 22450,
+          "hydrationScriptBodyBytes": 44598,
+          "hydrationScriptBodyGzipBytes": 9602,
+          "hydrationScriptCount": 4
+        },
+        {
+          "sample": 2,
+          "htmlBytes": 149005,
+          "htmlGzipBytes": 22451,
+          "hydrationScriptBodyBytes": 44598,
+          "hydrationScriptBodyGzipBytes": 9601,
+          "hydrationScriptCount": 4
+        }
+      ]
+    }
+  ],
+  "sourceUnchangedDuringRun": true,
+  "externalModelsCalled": false,
+  "testRun": {
+    "representativeCases": 12,
+    "sizeObservationCases": 2,
+    "log": "/private/tmp/tablecast-rc-e2e-quality343/run.log",
+    "result": "pass",
+    "totalCases": 14,
+    "playwrightReportedSeconds": 39.7,
+    "runnerExitCode": 0,
+    "runtimeCleanupArtifact": "/private/tmp/tablecast-rc-e2e-quality343/runtime-cleanup.json"
+  }
+}

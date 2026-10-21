@@ -55,64 +55,59 @@ export function EmailAccess({ register = false }: { register?: boolean }) {
       {submit.isSuccess ? (
         <output>{t(token ? "account_saved" : "auth_check_email")}</output>
       ) : (
-        <form
-          noValidate
-          className="space-y-5 [&_[type=submit]]:w-full"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          {register && (
-            <form.AppField
-              name="name"
-              validators={{ onChange: z.string().trim().min(1, t("form_required")) }}
-            >
-              {(field) => (
-                <field.TextField label={t("account_name")} autoComplete="name" required />
-              )}
-            </form.AppField>
-          )}
-          {!token && (
-            <form.AppField
-              name="email"
-              validators={{ onChange: z.email({ error: t("form_email") }) }}
-            >
-              {(field) => (
-                <field.TextField
-                  label={t("auth_email")}
-                  type="email"
-                  autoComplete="email"
-                  required
-                />
-              )}
-            </form.AppField>
-          )}
-          {(register || token) && (
-            <form.AppField
-              name="password"
-              validators={{ onChange: z.string().min(12, t("form_password")) }}
-            >
-              {(field) => (
-                <field.TextField
-                  label={t("auth_password")}
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  required
-                />
-              )}
-            </form.AppField>
-          )}
-          <form.AppForm>
+        <form.AppForm>
+          <form.Form noValidate className="space-y-5 [&_[type=submit]]:w-full">
+            {register && (
+              <form.AppField
+                name="name"
+                validators={{ onChange: z.string().trim().min(1, t("form_required")) }}
+              >
+                {(field) => (
+                  <field.TextField label={t("account_name")} autoComplete="name" required />
+                )}
+              </form.AppField>
+            )}
+            {!token && (
+              <form.AppField
+                name="email"
+                validators={{ onChange: z.email({ error: t("form_email") }) }}
+              >
+                {(field) => (
+                  <field.TextField
+                    label={t("auth_email")}
+                    type="email"
+                    autoComplete="email"
+                    required
+                  />
+                )}
+              </form.AppField>
+            )}
+            {(register || token) && (
+              <form.AppField
+                name="password"
+                validators={{ onChange: z.string().min(12, t("form_password")) }}
+              >
+                {(field) => (
+                  <field.TextField
+                    label={t("auth_password")}
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    required
+                  />
+                )}
+              </form.AppField>
+            )}
+
             <form.SubmitButton>{t(register ? "auth_register" : "auth_reset")}</form.SubmitButton>
-          </form.AppForm>
-          {submit.error && (
-            <p role="alert" className="text-destructive">
-              {t("account_failed")}
-            </p>
-          )}
-        </form>
+
+            {submit.error && (
+              <p role="alert" className="text-destructive">
+                {t("account_failed")}
+              </p>
+            )}
+          </form.Form>
+        </form.AppForm>
       )}
     </AuthLayout>
   );

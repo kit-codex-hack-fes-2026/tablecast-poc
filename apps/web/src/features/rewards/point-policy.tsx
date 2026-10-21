@@ -63,87 +63,82 @@ export function PointPolicy() {
         icon={<Gift />}
         description={t("customer_points_future")}
       />
-      <form
-        className="max-w-2xl space-y-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <RewardEditorStatus
-          version={defaults.version}
-          conflict={policy.version > defaults.version || apiError(save.error)?.status === 409}
-          pending={pending}
-          onReload={() => reload.mutate()}
-        />
-        <ErrorNotice
-          error={reload.error || query.error}
-          onRetry={() => (reload.error ? reload.mutate() : void query.refetch())}
-          retrying={pending || query.isFetching}
-        />
-        <fieldset disabled={!canEdit || pending} className="space-y-5">
-          <form.Field name="rules.enabled">
-            {(field) => (
-              <label className="flex items-center gap-3">
-                <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
-                {t("customer_points_enabled")}
-              </label>
-            )}
-          </form.Field>
-          <form.Field name="rules.kind">
-            {(field) => (
-              <label className="flex flex-col gap-2">
-                {t("customer_points_kind")}
-                <NativeSelect
-                  value={field.state.value}
-                  onChange={(e) =>
-                    field.handleChange(pointRulesSchema.shape.kind.parse(e.target.value))
-                  }
-                >
-                  <option value="visit">{t("customer_points_visit")}</option>
-                  <option value="spend">{t("customer_points_spend")}</option>
-                </NativeSelect>
-              </label>
-            )}
-          </form.Field>
-          <form.AppField
-            name="rules.points"
-            validators={{ onChange: pointRulesSchema.shape.points }}
-          >
-            {(field) => (
-              <field.NumberField label={t("customer_points_rate")} min={0} max={100000} required />
-            )}
-          </form.AppField>
-          <form.Subscribe selector={(state) => state.values.rules.kind}>
-            {(kind) =>
-              kind === "spend" && (
-                <form.AppField
-                  name="rules.unitYen"
-                  validators={{ onChange: pointRulesSchema.shape.unitYen }}
-                >
-                  {(field) => (
-                    <field.NumberField
-                      label={t("customer_points_unit")}
-                      min={1}
-                      max={1000000}
-                      required
-                    />
-                  )}
-                </form.AppField>
-              )
-            }
-          </form.Subscribe>
-          <form.AppForm>
+      <form.AppForm>
+        <form.Form className="max-w-2xl space-y-5">
+          <RewardEditorStatus
+            version={defaults.version}
+            conflict={policy.version > defaults.version || apiError(save.error)?.status === 409}
+            pending={pending}
+            onReload={() => reload.mutate()}
+          />
+          <ErrorNotice
+            error={reload.error || query.error}
+            onRetry={() => (reload.error ? reload.mutate() : void query.refetch())}
+            retrying={pending || query.isFetching}
+          />
+          <fieldset disabled={!canEdit || pending} className="space-y-5">
+            <form.Field name="rules.enabled">
+              {(field) => (
+                <label className="flex items-center gap-3">
+                  <Checkbox checked={field.state.value} onCheckedChange={field.handleChange} />
+                  {t("customer_points_enabled")}
+                </label>
+              )}
+            </form.Field>
+            <form.Field name="rules.kind">
+              {(field) => (
+                <label className="flex flex-col gap-2">
+                  {t("customer_points_kind")}
+                  <NativeSelect
+                    value={field.state.value}
+                    onChange={(e) =>
+                      field.handleChange(pointRulesSchema.shape.kind.parse(e.target.value))
+                    }
+                  >
+                    <option value="visit">{t("customer_points_visit")}</option>
+                    <option value="spend">{t("customer_points_spend")}</option>
+                  </NativeSelect>
+                </label>
+              )}
+            </form.Field>
+            <form.AppField
+              name="rules.points"
+              validators={{ onChange: pointRulesSchema.shape.points }}
+            >
+              {(field) => (
+                <field.NumberField
+                  label={t("customer_points_rate")}
+                  min={0}
+                  max={100000}
+                  required
+                />
+              )}
+            </form.AppField>
+            <form.Subscribe selector={(state) => state.values.rules.kind}>
+              {(kind) =>
+                kind === "spend" && (
+                  <form.AppField
+                    name="rules.unitYen"
+                    validators={{ onChange: pointRulesSchema.shape.unitYen }}
+                  >
+                    {(field) => (
+                      <field.NumberField
+                        label={t("customer_points_unit")}
+                        min={1}
+                        max={1000000}
+                        required
+                      />
+                    )}
+                  </form.AppField>
+                )
+              }
+            </form.Subscribe>
+
             <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-          </form.AppForm>
-        </fieldset>
-        <ActionFeedback
-          pending={save.isPending}
-          error={save.error}
-          success={save.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </form>
+          </fieldset>
+          <ActionFeedback mutation={save} successMessage={t("account_saved")} />
+        </form.Form>
+      </form.AppForm>
     </section>
   );
 }

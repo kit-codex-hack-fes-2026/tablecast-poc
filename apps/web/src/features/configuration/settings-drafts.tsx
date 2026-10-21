@@ -23,6 +23,7 @@ import { useCollectionSearch } from "../shell/collection-search";
 import { useStore } from "../store/store-context";
 import { DraftStatus } from "./configuration-status";
 import { draftsOptions } from "./drafts-query";
+import { receiveDraft } from "./menu-query";
 
 export function SettingsDrafts() {
   const collection = useCollectionSearch({
@@ -37,7 +38,7 @@ export function SettingsDrafts() {
     mutationFn: () =>
       parseResponse(rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId } })),
     onSuccess: (draft) => {
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
+      receiveDraft(client, storeId, draft);
       void navigate({
         to: "/admin/stores/$storeId/menu/changes/$draftId/$section",
         params: { storeId, draftId: draft.id, section: "products" },

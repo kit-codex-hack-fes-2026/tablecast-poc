@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./auth-schema";
+import { authRelations } from "./auth-relations";
 
 export function createDatabase(binding: D1Database) {
-  return drizzle(binding, { schema });
+  return drizzle(binding, { relations: authRelations });
 }
 export type Database = ReturnType<typeof createDatabase>;

@@ -11,16 +11,20 @@ import { ErrorNotice } from "./error-notice";
  * 音声Agentによる状態の読み上げを追加しない。
  */
 export function ActionFeedback({
-  pending,
-  error,
-  success,
+  mutation,
+  pending = mutation?.isPending ?? false,
+  error = mutation?.error,
+  success = mutation?.isSuccess ?? false,
   successMessage,
-}: {
-  error: unknown;
-  pending: boolean;
-  success: boolean;
-  successMessage: string;
-}) {
+}: (
+  | { error: unknown; mutation?: never; pending: boolean; success: boolean }
+  | {
+      error?: never;
+      mutation: { error: unknown; isPending: boolean; isSuccess: boolean };
+      pending?: never;
+      success?: never;
+    }
+) & { successMessage: string }) {
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const state = pending ? "pending" : error ? "error" : success ? "success" : null;

@@ -1,16 +1,21 @@
 import { and, eq, sql } from "drizzle-orm";
+import { createSelectSchema } from "drizzle-orm/zod";
+import { z } from "zod";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
 import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
 import { requireNoAppliedCoupon } from "../../customer-coupons/queries";
-import { pointBillingCorrectionStatements } from "../../customer-points/billing-correction";
+import { pointBillingCorrectionStatements } from "../../customer-points/mutations";
 import { eventStatement, invalidationStatement, notifyStore } from "../../tables/mutations";
-import { getTableState } from "../../tables/queries";
-import { getSession } from "../../tables/session";
+import { getSession, getTableState } from "../../tables/queries";
 import { orderValue } from "../../tables/values";
 import { type Order } from "../model";
+
+export const orderStatusSchema = z
+  .object({ status: createSelectSchema(business.orders).shape.status.exclude(["submitted"]) })
+  .strict();
 
 export async function changeOrderStatus(
   services: ApiServices,

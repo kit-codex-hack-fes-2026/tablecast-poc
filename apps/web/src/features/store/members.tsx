@@ -16,12 +16,10 @@ import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
 import { useCollectionSearch } from "../shell/collection-search";
-import { membershipOptions } from "./membership-query";
+import { type Membership, membershipOptions } from "./membership-query";
 import { useStore } from "./store-context";
 type Role = "admin" | "member" | "owner";
-const load = async (organizationId: string) =>
-  authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
-type Member = Awaited<ReturnType<typeof load>>["members"][number];
+type Member = Membership["members"][number];
 type Action = { kind: "remove"; memberId: string } | { kind: "role"; memberId: string; role: Role };
 export function Members() {
   const collection = useCollectionSearch({ sortIds: ["user", "role", "createdAt"] });

@@ -6,16 +6,17 @@ import { user } from "../src/db/identity-schema";
 import { customerPointEntries } from "../src/db/rewards-schema";
 import { tableSessions } from "../src/db/table-schema";
 import { getCustomerPoints, getPointVisit } from "../src/modules/customer-points/queries";
-import { confirmCustomerPoints } from "../src/modules/customer-points/use-cases/allocation";
-import { correctCustomerPoints } from "../src/modules/customer-points/use-cases/corrections";
+import {
+  confirmCustomerPoints,
+  correctCustomerPoints,
+} from "../src/modules/customer-points/use-cases/allocation";
 import { setPointPolicy } from "../src/modules/customer-points/use-cases/policy";
 import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
 import { enrolCustomer } from "../src/modules/customers/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { recordPayment } from "../src/modules/orders/use-cases/payment";
 import { changeOrderStatus } from "../src/modules/orders/use-cases/status";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
 import { getTableState } from "../src/modules/tables/queries";
 import { closeTable, openTable } from "../src/modules/tables/use-cases/lifecycle";
 import { type ApiServices, createApiServices } from "../src/platform/context";

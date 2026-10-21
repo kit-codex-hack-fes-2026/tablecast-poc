@@ -9,10 +9,11 @@ import { useAppForm } from "../../components/form";
 import { Button } from "../../components/ui/button";
 import { calendarDate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import { parseResponse, rpc } from "../../lib/api";
+import { type InferResponseType, parseResponse, rpc } from "../../lib/api";
 import { customerMemoriesOptions } from "./customer-memory-query";
-type Memory = Awaited<
-  ReturnType<NonNullable<ReturnType<typeof customerMemoriesOptions>["queryFn"]>>
+type Memory = InferResponseType<
+  (typeof rpc.api.customer.stores)[":storeId"]["memories"]["$get"],
+  200
 >["memories"][number];
 export function CustomerMemories({ storeId }: { storeId: string }) {
   const { t, locale } = useI18n();
@@ -63,7 +64,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
           }}
         />
       )}
-      <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
+      <ErrorNotice query={records} />
       <ul className="space-y-4">
         {records.data.pages.flatMap((page) =>
           page.memories.map((memory) => (
@@ -102,14 +103,7 @@ export function CustomerMemories({ storeId }: { storeId: string }) {
         )}
       </ul>
       {!records.data.pages[0]?.memories.length && <p>{t("common_empty")}</p>}
-      {!remove.isIdle && (
-        <ActionFeedback
-          pending={remove.isPending}
-          error={remove.error}
-          success={remove.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      )}
+      {!remove.isIdle && <ActionFeedback mutation={remove} successMessage={t("account_saved")} />}
       {records.hasNextPage && (
         <Button
           variant="outline"
@@ -154,40 +148,35 @@ function MemoryEditor({
     },
   });
   return (
-    <form
-      className="space-y-4 rounded-xl bg-secondary/60 p-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <form.AppField
-        name="content"
-        validators={{ onChange: customerMemoryInputSchema.shape.content }}
-      >
-        {(field) => (
-          <field.TextField
-            label={t("customer_memory_content")}
-            required
-            maxLength={1000}
-            disabled={save.isPending}
-          />
-        )}
-      </form.AppField>
-      <div className="flex flex-wrap gap-3">
-        <form.AppForm>
+    <form.AppForm>
+      <form.Form className="space-y-4 rounded-xl bg-secondary/60 p-4">
+        <form.AppField
+          name="content"
+          validators={{ onChange: customerMemoryInputSchema.shape.content }}
+        >
+          {(field) => (
+            <field.TextField
+              label={t("customer_memory_content")}
+              required
+              maxLength={1000}
+              disabled={save.isPending}
+            />
+          )}
+        </form.AppField>
+        <div className="flex flex-wrap gap-3">
           <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-        </form.AppForm>
-        <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
-          {t("common_cancel")}
-        </Button>
-      </div>
-      <ActionFeedback
-        pending={save.isPending}
-        error={save.error}
-        success={false}
-        successMessage={t("account_saved")}
-      />
-    </form>
+
+          <Button type="button" variant="outline" disabled={save.isPending} onClick={onClose}>
+            {t("common_cancel")}
+          </Button>
+        </div>
+        <ActionFeedback
+          pending={save.isPending}
+          error={save.error}
+          success={false}
+          successMessage={t("account_saved")}
+        />
+      </form.Form>
+    </form.AppForm>
   );
 }

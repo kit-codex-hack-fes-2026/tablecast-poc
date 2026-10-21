@@ -89,7 +89,7 @@ function VoiceOverview({
           <p className="text-sm text-muted-foreground">{t("cast_voice_unavailable_note")}</p>
         </>
       ) : null}
-      <ErrorNotice error={voices.error} onRetry={() => void voices.refetch()} />
+      <ErrorNotice query={voices} />
       {value && !voice && voices.hasNextPage && (
         <Button
           type="button"

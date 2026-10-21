@@ -1,4 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-orm/zod";
+import { z } from "zod";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
 import * as business from "../../../db/business-schema";
@@ -6,7 +8,7 @@ import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
 import { confirmedVisitCouponStatements } from "../../customer-coupons/issuance";
 import { requireNoAppliedCoupon } from "../../customer-coupons/queries";
-import { pointBillingCorrectionStatements } from "../../customer-points/billing-correction";
+import { pointBillingCorrectionStatements } from "../../customer-points/mutations";
 import {
   eventStatement,
   invalidationStatement,
@@ -15,10 +17,22 @@ import {
 } from "../../tables/mutations";
 import { getTableState } from "../../tables/queries";
 
+export const paymentSchema = createInsertSchema(business.payments, {
+  amount: (schema) =>
+    schema
+      .min(-10_000_000)
+      .max(10_000_000)
+      .refine((value) => value !== 0),
+  reason: (schema) => schema.min(1).max(500),
+})
+  .pick({ amount: true, kind: true, reason: true })
+  .extend({ idempotencyKey: z.string().min(8).max(100) })
+  .strict();
+
 export async function recordPayment(
   services: ApiServices,
   actor: Actor,
-  input: { amount: number; idempotencyKey: string; kind: "adjustment" | "payment"; reason: string },
+  input: z.infer<typeof paymentSchema>,
 ) {
   return observeOperation(
     "tablecast.payment.record",
@@ -26,20 +40,22 @@ export async function recordPayment(
       const db = services.db;
 
       ensure(actor.kind === "staff" && actor.userId, "STAFF_REQUIRED", 403);
-      const existing = await db
-        .select({
-          amount: business.payments.amount,
-          kind: business.payments.kind,
-          reason: business.payments.reason,
-        })
-        .from(business.payments)
-        .where(
-          and(
-            eq(business.payments.table_session_id, actor.tableSessionId ?? sql`null`),
-            eq(business.payments.idempotency_key, input.idempotencyKey),
-          ),
-        )
-        .get();
+      const findPayment = () =>
+        db
+          .select({
+            amount: business.payments.amount,
+            kind: business.payments.kind,
+            reason: business.payments.reason,
+          })
+          .from(business.payments)
+          .where(
+            and(
+              eq(business.payments.table_session_id, actor.tableSessionId ?? sql`null`),
+              eq(business.payments.idempotency_key, input.idempotencyKey),
+            ),
+          )
+          .get();
+      const existing = await findPayment();
       if (existing) {
         ensure(
           existing.amount === input.amount &&
@@ -100,20 +116,7 @@ export async function recordPayment(
         }),
       ]);
       if (result[0]?.meta.changes !== 1) {
-        const retry = await db
-          .select({
-            amount: business.payments.amount,
-            kind: business.payments.kind,
-            reason: business.payments.reason,
-          })
-          .from(business.payments)
-          .where(
-            and(
-              eq(business.payments.table_session_id, actor.tableSessionId ?? sql`null`),
-              eq(business.payments.idempotency_key, input.idempotencyKey),
-            ),
-          )
-          .get();
+        const retry = await findPayment();
         ensure(
           retry &&
             retry.amount === input.amount &&

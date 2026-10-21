@@ -21,7 +21,7 @@ import { m } from "../../paraglide/messages";
 import { useStore } from "../store/store-context";
 import { ConfigurationStatus } from "./configuration-status";
 import { menuLabels, type MenuSection } from "./menu-model";
-import { draftChoicesOptions, draftOptions } from "./menu-query";
+import { draftChoicesOptions, receiveDraft } from "./menu-query";
 
 export function StartConfigurationEditing({
   section,
@@ -76,9 +76,7 @@ export function StartConfigurationEditing({
         rpc.api.admin.stores[":storeId"].drafts.$post({ param: { storeId: source.storeId } }),
       ),
     onSuccess: (draft, source) => {
-      client.setQueryData(draftOptions(source.storeId, draft.id).queryKey, draft);
-      void client.invalidateQueries({ queryKey: ["tablecast-drafts", source.storeId] });
-      void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", source.storeId] });
+      receiveDraft(client, source.storeId, draft);
       if (source.interaction === interaction.current) select(draft.id);
     },
   });

@@ -9,13 +9,12 @@ import { createDraft, updateDraft } from "../src/modules/configuration/use-cases
 import { getDemo } from "../src/modules/demo/queries";
 import { createDemo, resetDemo, updateDemo } from "../src/modules/demo/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getAdminState, getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
 import { callStaff, requestBill } from "../src/modules/tables/use-cases/presentation";
 import { createCastTools } from "../src/modules/voice/agent";
-import { voiceActor } from "../src/modules/voice/queries";
+import { voiceContext } from "../src/modules/voice/queries";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
 import { demoSchema, tableStateSchema } from "../src/schema";
@@ -388,7 +387,7 @@ describe("卓を使わない会話注文デモ", () => {
     });
     await updateDemo(services(), actor, { expectedVersion: 1, sourceDraftId: draft.id });
     await setVoiceSession(services(), actor, "tablecast-demo-voice");
-    const voice = await voiceActor(services(), "tablecast-demo-voice");
+    const { actor: voice } = await voiceContext(services(), "tablecast-demo-voice");
     expect(voice.demoId).toBe(demo.id);
     expect(
       (await getCatalog(services(), voice.storeId, voice.demoId)).configuration.cast.proactive,
@@ -398,7 +397,7 @@ describe("卓を使わない会話注文デモ", () => {
       products: [expect.objectContaining({ id: "tea", price: 777 })],
     });
     await updateDemo(services(), actor, { expectedVersion: 2, proactive: false });
-    await expect(voiceActor(services(), "tablecast-demo-voice")).rejects.toMatchObject({
+    await expect(voiceContext(services(), "tablecast-demo-voice")).rejects.toMatchObject({
       code: "VOICE_SESSION_STALE",
     });
     await expect(

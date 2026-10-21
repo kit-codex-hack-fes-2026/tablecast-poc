@@ -50,7 +50,7 @@ async function seed() {
     args: process.argv.slice(2).filter((arg: string) => arg !== "--"),
     options: { reset: { type: "boolean" }, profile: { type: "string" } },
   });
-  const requestedProfile = z.enum(["smoke", "demo", "history"]).optional().parse(values.profile);
+  const requestedProfile = demoSchema.shape.profile.optional().parse(values.profile);
   await assertPrepared();
   const state = join(tablecastLocal, "state");
   const origin = process.env.TABLECAST_PUBLIC_ORIGIN;

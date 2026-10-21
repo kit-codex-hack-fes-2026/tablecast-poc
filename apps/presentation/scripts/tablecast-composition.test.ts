@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
 import sample from "../sample.json";
-import { musicEnvelope } from "./tablecast-composition.ts";
-import { audioPath, projectSchema, selectScenes, timeline } from "./tablecast-project.ts";
-import { technicalMarkup } from "./tablecast-technical.ts";
+import { musicEnvelope } from "./tablecast-composition";
+import { audioPath, projectSchema, selectScenes, timeline } from "./tablecast-project";
+
+import { technicalMarkup } from "./tablecast-technical";
 
 const project = projectSchema.parse(sample);
 

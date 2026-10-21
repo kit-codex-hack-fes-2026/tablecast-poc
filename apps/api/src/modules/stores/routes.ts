@@ -1,6 +1,5 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validateForm, validateQuery } from "../../platform/validation";
 import { requireStore } from "../auth/middleware";
 import { catalogAdminRoutes } from "../catalog/routes";
@@ -16,7 +15,8 @@ import { tablesAdminRoutes } from "../tables/admin-routes";
 import { voiceAdminRoutes } from "../voice/catalog-routes";
 import { getAdminState, getEvents } from "./queries";
 import { updateStoreIcon } from "./service";
-export const admin = new Hono<ApiEnv>()
+export const admin = apiFactory
+  .createApp()
   .use("*", requireStore)
   .get("/", async (c) => c.json(await getAdminState(c.get("services"), c.get("actor")), 200))
   .post("/icon", validateForm(z.object({ image: z.instanceof(File) })), async (c) => {

@@ -21,17 +21,19 @@ async function issueOneCoupon(
   key: string,
   exchange: boolean,
 ) {
-  const previous = await services.db
-    .select({ id: customerCoupons.id, ruleId: customerCoupons.ruleId })
-    .from(customerCoupons)
-    .where(
-      and(
-        eq(customerCoupons.storeId, actor.storeId),
-        eq(customerCoupons.membershipId, membershipId),
-        eq(customerCoupons.issuanceKey, key),
-      ),
-    )
-    .get();
+  const findIssuedCoupon = () =>
+    services.db
+      .select({ id: customerCoupons.id, ruleId: customerCoupons.ruleId })
+      .from(customerCoupons)
+      .where(
+        and(
+          eq(customerCoupons.storeId, actor.storeId),
+          eq(customerCoupons.membershipId, membershipId),
+          eq(customerCoupons.issuanceKey, key),
+        ),
+      )
+      .get();
+  const previous = await findIssuedCoupon();
   if (previous) {
     ensure(previous.ruleId === ruleId, "IDEMPOTENCY_CONFLICT", 409);
     return { id: previous.id };
@@ -125,17 +127,7 @@ async function issueOneCoupon(
       actor.userId,
     ),
   ]);
-  const coupon = await services.db
-    .select({ id: customerCoupons.id, ruleId: customerCoupons.ruleId })
-    .from(customerCoupons)
-    .where(
-      and(
-        eq(customerCoupons.storeId, actor.storeId),
-        eq(customerCoupons.membershipId, membershipId),
-        eq(customerCoupons.issuanceKey, key),
-      ),
-    )
-    .get();
+  const coupon = await findIssuedCoupon();
   ensure(coupon, "COUPON_EXCHANGE_UNAVAILABLE", 409);
   ensure(coupon.ruleId === ruleId, "IDEMPOTENCY_CONFLICT", 409);
   return { id: coupon.id };

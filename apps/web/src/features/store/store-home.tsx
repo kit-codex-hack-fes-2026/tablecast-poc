@@ -70,11 +70,7 @@ export function StoreHome({ today }: { today: string }) {
           </Button>
         }
       />
-      <ErrorNotice
-        error={floor.error}
-        onRetry={() => void floor.refetch()}
-        retrying={floor.isFetching}
-      />
+      <ErrorNotice query={floor} retrying={floor.isFetching} />
       <section
         className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6"
         aria-labelledby="tablecast-home-attention"

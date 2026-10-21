@@ -1,10 +1,9 @@
-import { Hono } from "hono";
 import { validate, validateQuery } from "../../platform/validation";
 import { customerCouponRoutes } from "../customer-coupons/routes";
 import { customerMemoryRoutes } from "../customer-memory/routes";
 import { customerPointsRoutes } from "../customer-points/routes";
 import { customerVisitRoutes } from "../customer-visits/routes";
-import { customerActor, type CustomerEnv, requireCustomerIdentity } from "./middleware";
+import { customerActor, customerFactory, requireCustomerIdentity } from "./middleware";
 import {
   customerMembershipPageSchema,
   customerPreferencesSchema,
@@ -14,7 +13,8 @@ import {
 import { getCustomerStore, listCustomerMemberships } from "./queries";
 import { enrolCustomer, leaveCustomerMembership, updateCustomerPreferences } from "./service";
 
-export const customerRoutes = new Hono<CustomerEnv>()
+export const customerRoutes = customerFactory
+  .createApp()
   .use("*", requireCustomerIdentity)
   .get("/memberships", validateQuery(customerMembershipPageSchema), async (c) => {
     return c.json(

@@ -34,7 +34,7 @@ export function SettingsShell({
       {session.data || (publicContent && session.isPending) ? (
         children
       ) : session.error ? (
-        <ErrorNotice error={session.error} onRetry={() => void session.refetch()} />
+        <ErrorNotice query={session} />
       ) : (
         <LoadingState />
       )}

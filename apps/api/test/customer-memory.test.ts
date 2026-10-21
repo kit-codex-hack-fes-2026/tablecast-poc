@@ -7,10 +7,10 @@ import { tableEvents, tableSessions } from "../src/db/table-schema";
 import {
   customerRecommendationContext,
   customerServiceTarget,
+  customerSuggestions,
   listCustomerConsumption,
   listCustomerMemories,
 } from "../src/modules/customer-memory/queries";
-import { customerSuggestions } from "../src/modules/customer-memory/suggestions";
 import { recordCustomerConsumption } from "../src/modules/customer-memory/use-cases/consumption";
 import {
   deleteCustomerMemory,
@@ -24,8 +24,7 @@ import { selectCustomerTarget } from "../src/modules/customer-memory/use-cases/t
 import { createCustomerVisitCode, joinCustomerVisit } from "../src/modules/customer-visits/service";
 import { enrolCustomer, updateCustomerPreferences } from "../src/modules/customers/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
 import { recordConversationItems } from "../src/modules/voice/conversation";
 import { createApiServices } from "../src/platform/context";

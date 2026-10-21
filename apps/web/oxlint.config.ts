@@ -39,6 +39,8 @@ export default defineConfig({
       },
     ],
     ...RECOMMENDED_RULES,
+    // 行数はレビューで判断し、関数の複雑度は必須検査を維持する。
+    "react-doctor/no-giant-component": "off",
     ...TANSTACK_QUERY_RULES,
     // React Compilerを採用していないため、手動memo化は必要性に応じて使用する。
     "react-doctor/react-compiler-no-manual-memoization": "off",

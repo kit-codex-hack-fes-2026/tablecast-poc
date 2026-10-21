@@ -6,26 +6,21 @@ import { BilingualFields, ConfigurationSection } from "../configuration/configur
 export function CategoriesEditor({ value, onChange, disabled, selectedId }: EditorProps) {
   const { t } = useI18n();
   const category = value.categories.find((item) => item.id === selectedId);
+  if (!category) return null;
   return (
-    <>
-      {category && (
-        <>
-          <ConfigurationSection title={t("editor_translation")} icon={Languages}>
-            <BilingualFields
-              value={category.text}
-              disabled={disabled}
-              onChange={(text) =>
-                onChange({
-                  ...value,
-                  categories: value.categories.map((item) =>
-                    item.id === selectedId ? { ...item, text } : item,
-                  ),
-                })
-              }
-            />
-          </ConfigurationSection>
-        </>
-      )}
-    </>
+    <ConfigurationSection title={t("editor_translation")} icon={Languages}>
+      <BilingualFields
+        value={category.text}
+        disabled={disabled}
+        onChange={(text) =>
+          onChange({
+            ...value,
+            categories: value.categories.map((item) =>
+              item.id === selectedId ? { ...item, text } : item,
+            ),
+          })
+        }
+      />
+    </ConfigurationSection>
   );
 }

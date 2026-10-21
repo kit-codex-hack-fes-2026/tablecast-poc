@@ -1,18 +1,20 @@
+import type { z } from "zod";
 import { and, asc, desc, eq, gt, isNull, like, lt, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
+import type { couponPageSchema, rewardMembersSchema } from "./model";
 import { customerMemberships } from "../../db/customer-schema";
 import { user } from "../../db/identity-schema";
 import { customerCouponRules, customerCoupons, customerCouponUses } from "../../db/rewards-schema";
 import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
-import { getSession } from "../tables/session";
+import { getSession } from "../tables/queries";
 import { couponRuleSchema } from "./model";
 export async function listCouponRules(
   services: ApiServices,
   actor: Actor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof couponPageSchema>,
 ) {
   ensure(actor.kind === "staff" || actor.kind === "mcp", "STAFF_REQUIRED", 403);
   const rows = await services.db
@@ -37,7 +39,7 @@ export async function listCouponRules(
 export async function listRewardMembers(
   services: ApiServices,
   actor: Actor,
-  query: { beforeId?: string; limit: number; query: string },
+  query: z.infer<typeof rewardMembersSchema>,
 ) {
   ensure(actor.kind === "staff" || actor.kind === "mcp", "STAFF_REQUIRED", 403);
   const rows = await services.db
@@ -66,7 +68,7 @@ export async function listRewardMembers(
 export async function listCustomerCoupons(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof couponPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const rows = await services.db
@@ -98,7 +100,7 @@ export async function listCustomerCoupons(
 export async function listCouponExchanges(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof couponPageSchema>,
 ) {
   await requireCustomer(services, actor);
   const rows = await services.db
@@ -190,7 +192,7 @@ export async function requireNoAppliedCoupon(services: ApiServices, actor: Actor
 export async function listIssuedCoupons(
   services: ApiServices,
   actor: Actor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof couponPageSchema>,
 ) {
   ensure(actor.kind === "staff" || actor.kind === "mcp", "STAFF_REQUIRED", 403);
   const rows = await services.db

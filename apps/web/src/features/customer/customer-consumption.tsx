@@ -20,7 +20,7 @@ export function CustomerConsumption({ storeId }: { storeId: string }) {
           {t("customer_consumption_note")}
         </p>
       </header>
-      <ErrorNotice error={records.error} onRetry={() => void records.refetch()} />
+      <ErrorNotice query={records} />
       {!records.data.pages[0]?.records.length && <p>{t("common_empty")}</p>}
       {records.data.pages.flatMap((page) =>
         page.records.map((record) => (
@@ -110,65 +110,55 @@ export function ConsumptionEditor({
         {revision ? ` · ${quantity}` : ""}
       </Button>
       {open && (
-        <form
-          id={editorId}
-          className="space-y-3 rounded-xl border border-border bg-surface-subtle p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <form.AppField name="quantity">
-            {(field) => (
-              <field.NumberField
-                disabled={save.isPending}
-                label={t("customer_consumption_quantity")}
-                min={0}
-                max={99}
-                required
-              />
-            )}
-          </form.AppField>
-          <form.Field name="shared">
-            {(field) => (
-              <label className="flex min-h-11 items-center gap-3">
-                <Checkbox
+        <form.AppForm>
+          <form.Form
+            id={editorId}
+            className="space-y-3 rounded-xl border border-border bg-surface-subtle p-4"
+          >
+            <form.AppField name="quantity">
+              {(field) => (
+                <field.NumberField
                   disabled={save.isPending}
-                  checked={field.state.value}
-                  onCheckedChange={field.handleChange}
+                  label={t("customer_consumption_quantity")}
+                  min={0}
+                  max={99}
+                  required
                 />
-                {t("customer_consumption_shared")}
-              </label>
-            )}
-          </form.Field>
-          <div className="flex flex-wrap gap-3">
-            <form.AppForm>
+              )}
+            </form.AppField>
+            <form.Field name="shared">
+              {(field) => (
+                <label className="flex min-h-11 items-center gap-3">
+                  <Checkbox
+                    disabled={save.isPending}
+                    checked={field.state.value}
+                    onCheckedChange={field.handleChange}
+                  />
+                  {t("customer_consumption_shared")}
+                </label>
+              )}
+            </form.Field>
+            <div className="flex flex-wrap gap-3">
               <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-            </form.AppForm>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={save.isPending}
-              onClick={() => {
-                form.reset();
-                save.reset();
-                setOpen(false);
-                requestAnimationFrame(() => trigger.current?.focus());
-              }}
-            >
-              {t("common_cancel")}
-            </Button>
-          </div>
-        </form>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={save.isPending}
+                onClick={() => {
+                  form.reset();
+                  save.reset();
+                  setOpen(false);
+                  requestAnimationFrame(() => trigger.current?.focus());
+                }}
+              >
+                {t("common_cancel")}
+              </Button>
+            </div>
+          </form.Form>
+        </form.AppForm>
       )}
-      {!save.isIdle && (
-        <ActionFeedback
-          pending={save.isPending}
-          error={save.error}
-          success={save.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      )}
+      {!save.isIdle && <ActionFeedback mutation={save} successMessage={t("account_saved")} />}
     </div>
   );
 }

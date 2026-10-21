@@ -14,7 +14,7 @@ it("有効なCookieのセッションとユーザーを一度に読み、取消�
   const { cookie } = await setupFixture();
   const queries: string[] = [];
   const db = drizzle(env.TABLECAST_DB, {
-    schema: authTables,
+    relations: authTables.authRelations,
     logger: { logQuery: (query) => queries.push(query) },
   });
   const auth = createAuth(env, undefined, db);

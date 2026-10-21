@@ -1,18 +1,21 @@
+import type { z } from "zod";
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
+import type { customerOrderPageSchema, customerVisitPageSchema } from "./model";
 import {
+  customerConsumption,
   customerContexts,
   customerMemberships,
   customerVisitCodes,
   customerVisitParticipants,
 } from "../../db/customer-schema";
 import { user } from "../../db/identity-schema";
-import { devices, restaurantTables, stores, tableSessions } from "../../db/table-schema";
+import { devices, orders, restaurantTables, stores, tableSessions } from "../../db/table-schema";
 import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
-import { customerOrderRows, customerOrderValue } from "./orders";
+import { snapshotSchema } from "../orders/model";
 
 export function validVisitCode(services: ApiServices, tokenHash: string) {
   return services.db
@@ -197,7 +200,7 @@ export async function getCustomerVisit(
 export async function listCustomerVisits(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; beforeJoinedAt?: number; limit: number },
+  query: z.infer<typeof customerVisitPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const rows = await services.db
@@ -245,12 +248,7 @@ export async function listCustomerVisits(
     visits.map((visit) => visit.sessionId),
     false,
   );
-  const companions = new Map<string, typeof participants>();
-  for (const participant of participants) {
-    const group = companions.get(participant.sessionId) ?? [];
-    group.push(participant);
-    companions.set(participant.sessionId, group);
-  }
+  const companions = Map.groupBy(participants, (participant) => participant.sessionId);
   return {
     visits: visits.map((visit) => ({
       ...visit,
@@ -267,7 +265,7 @@ export async function listCustomerOrders(
   services: ApiServices,
   actor: CustomerActor,
   sessionId: string,
-  query: { beforeCreatedAt?: number; beforeId?: string; limit: number },
+  query: z.infer<typeof customerOrderPageSchema>,
 ) {
   const { membership } = await requireCustomerVisit(services, actor, sessionId);
   return customerOrderValue(
@@ -277,4 +275,78 @@ export async function listCustomerOrders(
     await customerOrderRows(services, actor.storeId, sessionId, query),
     query.limit,
   );
+}
+
+function customerOrderRows(
+  services: ApiServices,
+  storeId: string,
+  sessionId: string,
+  query: z.infer<typeof customerOrderPageSchema>,
+) {
+  return services.db
+    .select({
+      id: orders.id,
+      createdAt: orders.created_at,
+      status: orders.status,
+      snapshot: orders.snapshot_json,
+    })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.store_id, storeId),
+        eq(orders.table_session_id, sessionId),
+        query.beforeCreatedAt !== undefined && query.beforeId
+          ? or(
+              lt(orders.created_at, query.beforeCreatedAt),
+              and(eq(orders.created_at, query.beforeCreatedAt), lt(orders.id, query.beforeId)),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(desc(orders.created_at), desc(orders.id))
+    .limit(query.limit + 1);
+}
+
+async function customerOrderValue(
+  services: ApiServices,
+  storeId: string,
+  membershipId: string,
+  rows: Awaited<ReturnType<typeof customerOrderRows>>,
+  limit: number,
+) {
+  const page = rows.slice(0, limit);
+  const last = page.at(-1);
+  const records = await services.db
+    .select({
+      orderId: customerConsumption.orderId,
+      lineId: customerConsumption.lineId,
+      quantity: customerConsumption.quantity,
+      shared: customerConsumption.shared,
+      revision: customerConsumption.revision,
+    })
+    .from(customerConsumption)
+    .where(
+      and(
+        eq(customerConsumption.storeId, storeId),
+        eq(customerConsumption.membershipId, membershipId),
+        inArray(
+          customerConsumption.orderId,
+          page.map((order) => order.id),
+        ),
+      ),
+    );
+  const byOrder = Map.groupBy(records, (record) => record.orderId);
+  return {
+    orders: page.map((order) => ({
+      id: order.id,
+      status: order.status,
+      snapshot: snapshotSchema.parse(JSON.parse(order.snapshot)),
+      personalRecords: byOrder.get(order.id) ?? [],
+    })),
+    nextOrderId: rows.length > limit ? (page.at(-1)?.id ?? null) : null,
+    nextOrderCursor:
+      rows.length > limit && last
+        ? { beforeCreatedAt: String(last.createdAt), beforeId: last.id }
+        : null,
+  };
 }

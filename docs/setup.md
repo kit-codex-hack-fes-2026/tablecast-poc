@@ -346,6 +346,14 @@ Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの�
 
 ## 静的品質ゲートの固定版
 
-rootにfallow 3.34.1とeslint-plugin-perfectionist 5.12.1を固定する。`bun install --frozen-lockfile`とcodegen後、`bun run check`でformat・型付きlint・型検査・fallow全体gate・既存テストを実行する。実装300行・テスト500行、import/export/type整列とWebの配列添字検査が有効になる。`exactOptionalPropertyTypes`は有効にしない。詳細と手動修正の順序は[静的解析](static-analysis.md)を参照する。
+rootにfallow 3.34.1とeslint-plugin-perfectionist 5.12.1を固定する。`bun install --frozen-lockfile`とcodegen後、`bun run check`でformat・型付きlint・型検査・fallow全体gate・既存テストを実行する。実装300行は責務を見直す目安とし、テスト500行、import/export/type整列とWebの配列添字検査を適用する。動画基盤は今回の厳格化の対象に含めず、従来の検査を維持する。`exactOptionalPropertyTypes`は有効にしない。詳細と手動修正の順序は[静的解析](static-analysis.md)を参照する。
 
 commit前はLefthookがcodegenを一度実行してlintとHEAD比較auditを行う。部分stageと作業ツリーの差分を自動stageしない。CIでは差分比較ではなく既存コード全体を検査する。Codex MCPは上記設定のworktree絶対cwdとローカル固定版を使用する。
+
+### Drizzle RCの固定と更新
+
+root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する。Zod連携は同版の`drizzle-orm/zod`を使い、別の`drizzle-zod`は追加しない。通常の導入はrootの`bun install --frozen-lockfile`で行う。
+
+認証のrelationsはRelations v2とBetter Authの`@better-auth/drizzle-adapter/relations-v2`を組み合わせる。DB生成はAPIの既存factoryへ集約し、joinを有効にした認証の実D1試験も更新時に実行する。配備CLIのSQLite proxyも同じ版のexecutors形式を使う。RC更新時は型検査に加え、`run`・`all`・`get`と配列・objectの返却を検証する。
+
+既存のD1 SQL migrationと適用履歴は維持する。通常の`db:migrate`・配備手順を使い、ORM更新だけを理由に`drizzle-kit up`・`push`で既存DBやmigrationを変換しない。[公式のRC移行](https://orm.drizzle.team/docs/relations-v1-v2)、[RC.5の変更点](https://github.com/drizzle-team/drizzle-orm/releases/tag/v1.0.0-rc.5)を更新時の確認先とする。

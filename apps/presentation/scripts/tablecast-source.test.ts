@@ -1,8 +1,8 @@
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { afterEach, expect, test } from "vitest";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, test } from "vitest";
-import { repositoryPath, resolveSource, sourcePathSchema } from "./tablecast-source.ts";
+import { resolveSource, sourcePathSchema, repositoryPath } from "./tablecast-source.ts";
 
 const temporary: string[] = [];
 test("共有レポートの入力名をリポジトリ相対へ変え、外部の入力は拒否する", () => {

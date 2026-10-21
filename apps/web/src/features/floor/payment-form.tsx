@@ -62,98 +62,95 @@ export function PaymentForm({
       </Button>
     );
   return (
-    <form
-      noValidate
-      className="flex max-w-2xl flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <form.Subscribe selector={(state) => state.values.kind}>
-        {(kind) => (
-          <>
-            <h3 className="flex items-center gap-2 font-semibold">
-              <CircleDollarSign aria-hidden="true" className="size-5" />
-              {t(kind === "payment" ? "admin_payment" : "admin_adjustment")}
-            </h3>
-            {kind === "payment" && (
-              <p className="text-sm text-muted-foreground">{t("admin_payment_note")}</p>
+    <form.AppForm>
+      <form.Form
+        noValidate
+        className="flex max-w-2xl flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5"
+      >
+        <form.Subscribe selector={(state) => state.values.kind}>
+          {(kind) => (
+            <>
+              <h3 className="flex items-center gap-2 font-semibold">
+                <CircleDollarSign aria-hidden="true" className="size-5" />
+                {t(kind === "payment" ? "admin_payment" : "admin_adjustment")}
+              </h3>
+              {kind === "payment" && (
+                <p className="text-sm text-muted-foreground">{t("admin_payment_note")}</p>
+              )}
+            </>
+          )}
+        </form.Subscribe>
+        <fieldset disabled={payment.isPending} className="space-y-4">
+          <form.Field name="kind">
+            {(field) => (
+              <RadioGroup
+                name="paymentKind"
+                value={field.state.value}
+                disabled={!hydrated || payment.isPending}
+                onValueChange={(value) => {
+                  if (value === "payment" || value === "adjustment") field.handleChange(value);
+                }}
+                className="flex flex-wrap gap-5"
+              >
+                <label className="flex min-h-11 items-center gap-2 text-base">
+                  <RadioGroupItem value="payment" />
+                  {t("admin_payment")}
+                </label>
+                <label className="flex min-h-11 items-center gap-2 text-base">
+                  <RadioGroupItem value="adjustment" />
+                  {t("admin_adjustment")}
+                </label>
+              </RadioGroup>
             )}
-          </>
-        )}
-      </form.Subscribe>
-      <fieldset disabled={payment.isPending} className="space-y-4">
-        <form.Field name="kind">
-          {(field) => (
-            <RadioGroup
-              name="paymentKind"
-              value={field.state.value}
-              disabled={!hydrated || payment.isPending}
-              onValueChange={(value) => {
-                if (value === "payment" || value === "adjustment") field.handleChange(value);
-              }}
-              className="flex flex-wrap gap-5"
-            >
-              <label className="flex min-h-11 items-center gap-2 text-base">
-                <RadioGroupItem value="payment" />
-                {t("admin_payment")}
-              </label>
-              <label className="flex min-h-11 items-center gap-2 text-base">
-                <RadioGroupItem value="adjustment" />
-                {t("admin_adjustment")}
-              </label>
-            </RadioGroup>
-          )}
-        </form.Field>
-        <form.AppField
-          name="amount"
-          validators={{
-            onChangeListenTo: ["kind"],
-            onChange: ({ value, fieldApi }) =>
-              Number.isNaN(value)
-                ? t("form_required")
-                : zodFieldValidator(
-                    fieldApi.form.getFieldValue("kind") === "payment"
-                      ? z.number().int().min(1)
-                      : z.number().int(),
-                    locale,
-                  )({ value }),
-          }}
-        >
-          {(field) => <field.NumberField label={t("admin_amount")} step={1} required />}
-        </form.AppField>
-        <form.AppField
-          name="reason"
-          validators={{
-            onChange: zodFieldValidator(
-              z.string().trim().min(1, t("form_required")).max(500),
-              locale,
-            ),
-          }}
-        >
-          {(field) => <field.TextField label={t("admin_reason")} required maxLength={500} />}
-        </form.AppField>
-        <form.AppForm>
+          </form.Field>
+          <form.AppField
+            name="amount"
+            validators={{
+              onChangeListenTo: ["kind"],
+              onChange: ({ value, fieldApi }) =>
+                Number.isNaN(value)
+                  ? t("form_required")
+                  : zodFieldValidator(
+                      fieldApi.form.getFieldValue("kind") === "payment"
+                        ? z.number().int().min(1)
+                        : z.number().int(),
+                      locale,
+                    )({ value }),
+            }}
+          >
+            {(field) => <field.NumberField label={t("admin_amount")} step={1} required />}
+          </form.AppField>
+          <form.AppField
+            name="reason"
+            validators={{
+              onChange: zodFieldValidator(
+                z.string().trim().min(1, t("form_required")).max(500),
+                locale,
+              ),
+            }}
+          >
+            {(field) => <field.TextField label={t("admin_reason")} required maxLength={500} />}
+          </form.AppField>
+
           <form.FormErrors error={payment.error} />
-        </form.AppForm>
-        <div className="flex flex-wrap items-center gap-3">
-          {closed && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                form.reset();
-                payment.reset();
-                setPaymentKey(crypto.randomUUID());
-                setEditing(false);
-                requestAnimationFrame(() => trigger.current?.focus());
-              }}
-            >
-              {t("common_cancel")}
-            </Button>
-          )}
-          <form.AppForm>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {closed && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  form.reset();
+                  payment.reset();
+                  setPaymentKey(crypto.randomUUID());
+                  setEditing(false);
+                  requestAnimationFrame(() => trigger.current?.focus());
+                }}
+              >
+                {t("common_cancel")}
+              </Button>
+            )}
+
             <form.Subscribe selector={(state) => state.values.kind}>
               {(kind) => (
                 <form.SubmitButton>
@@ -161,9 +158,9 @@ export function PaymentForm({
                 </form.SubmitButton>
               )}
             </form.Subscribe>
-          </form.AppForm>
-        </div>
-      </fieldset>
-    </form>
+          </div>
+        </fieldset>
+      </form.Form>
+    </form.AppForm>
   );
 }

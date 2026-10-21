@@ -1,7 +1,9 @@
+import type { z } from "zod";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
+import type { submitSchema } from "./model";
 import * as business from "../../db/business-schema";
 import { catalogQuery } from "../catalog/queries";
 
@@ -9,7 +11,7 @@ export async function orderPrerequisites(
   services: ApiServices,
   actor: Actor,
   session: TableRecord,
-  input: { idempotencyKey: string; snapshotId: string },
+  input: Pick<z.infer<typeof submitSchema>, "idempotencyKey" | "snapshotId">,
 ) {
   const { db } = services;
   const base = [

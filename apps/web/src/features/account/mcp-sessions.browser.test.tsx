@@ -16,7 +16,7 @@ import { LocaleProvider } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
 import "../../styles.css";
 import { storesOptions } from "../store/store-query";
-import { type loadMcpSessions } from "./account-query";
+import { type McpSessionsData } from "./account-query";
 import { McpSessions } from "./mcp-sessions";
 
 let client: QueryClient;
@@ -55,7 +55,7 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
   };
   client.setQueryData(sessionOptions.queryKey, login);
   client.setQueryData(storesOptions.queryKey, { stores: [], locale: "ja" });
-  let data: Awaited<ReturnType<typeof loadMcpSessions>> = {
+  let data: McpSessionsData = {
     sessions: [
       {
         id: "tablecast-mcp-consent",

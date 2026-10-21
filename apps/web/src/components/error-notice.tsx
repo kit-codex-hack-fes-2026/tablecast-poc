@@ -40,14 +40,18 @@ function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>[
  * 取得済み情報を消さず隣接して配置する。
  */
 export function ErrorNotice({
-  error,
-  onRetry,
+  query,
+  error = query?.error,
+  onRetry = query
+    ? () => {
+        void query.refetch();
+      }
+    : undefined,
   retrying = false,
-}: {
-  error: unknown;
-  onRetry?: () => void;
-  retrying?: boolean;
-}) {
+}: (
+  | { error: unknown; onRetry?: () => void; query?: never }
+  | { error?: never; onRetry?: never; query: { error: unknown; refetch: () => unknown } }
+) & { retrying?: boolean }) {
   const { t, locale } = useI18n();
   if (!error) return null;
   const message = t(errorMessageKey(error));

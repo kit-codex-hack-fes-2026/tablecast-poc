@@ -1,3 +1,4 @@
+import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
@@ -8,6 +9,15 @@ import {
 } from "./tablecast-deploy-config.ts";
 const execFileAsync = promisify(execFile);
 const responseSchema = z.object({ success: z.boolean(), result: z.unknown() });
+const databaseResponseSchema = z.tuple([
+  z.object({
+    success: z.literal(true),
+    results: z.object({
+      columns: z.array(z.string()),
+      rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))),
+    }),
+  }),
+]);
 
 async function cloudflareResponse(path: string, method = "GET", body?: unknown) {
   const token = process.env.CLOUDFLARE_API_TOKEN;
@@ -34,6 +44,53 @@ export async function cloudflare(
   const data = responseSchema.parse(await response.json());
   if (!data.success) throw new Error(`Cloudflare ${method} ${path.split("?")[0]}に失敗しました。`);
   return data.result;
+}
+
+export function deploymentDatabase(databaseId: string, request = cloudflare) {
+  async function raw(query: string, params: unknown[]) {
+    const [{ results }] = databaseResponseSchema.parse(
+      await request(`d1/database/${databaseId}/raw`, "POST", { sql: query, params }),
+    );
+    if (results.rows.some((row) => row.length !== results.columns.length))
+      throw new Error("D1の列と行の数が一致しません。");
+    return results;
+  }
+  function all(query: string, params: unknown[], rowMode?: "array"): Promise<unknown[][]>;
+  function all(
+    query: string,
+    params: unknown[],
+    rowMode: "object",
+  ): Promise<Record<string, unknown>[]>;
+  function all(
+    query: string,
+    params: unknown[],
+    rowMode?: "array" | "object",
+  ): Promise<(Record<string, unknown> | unknown[])[]>;
+  async function all(
+    query: string,
+    params: unknown[],
+    rowMode?: "array" | "object",
+  ): Promise<(Record<string, unknown> | unknown[])[]> {
+    const { columns, rows } = await raw(query, params);
+    return rowMode === "object"
+      ? rows.map((row) => Object.fromEntries(columns.map((column, index) => [column, row[index]])))
+      : rows;
+  }
+  function get(query: string, params: unknown[], rowMode?: "array"): Promise<undefined | unknown[]>;
+  function get(
+    query: string,
+    params: unknown[],
+    rowMode: "object",
+  ): Promise<Record<string, unknown> | undefined>;
+  function get(
+    query: string,
+    params: unknown[],
+    rowMode?: "array" | "object",
+  ): Promise<Record<string, unknown> | undefined | unknown[]>;
+  async function get(query: string, params: unknown[], rowMode?: "array" | "object") {
+    return (await all(query, params, rowMode))[0];
+  }
+  return drizzle({ all, get, run: raw }, { paramsInErrors: false });
 }
 
 export async function readBucketOwner(bucket: string) {

@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
 import { ArrowRight, Check, ShieldCheck, Store, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { loadStores } from "../store/store-query";
+import type { Store as StoreData } from "../store/store-query";
 import { Brand } from "../../components/brand";
 import { DataTable } from "../../components/data-table";
 import { type DataTableColumn } from "../../components/data-table-model";
@@ -146,7 +146,7 @@ export function Consent() {
   );
 }
 
-type ConsentStore = Awaited<ReturnType<typeof loadStores>>["stores"][number];
+type ConsentStore = StoreData;
 function consentStoreColumns(
   t: ReturnType<typeof useI18n>["t"],
   selected: string | undefined,

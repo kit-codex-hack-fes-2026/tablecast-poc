@@ -84,12 +84,7 @@ export function DesignEditor({
             {t("theme_import_icon")}
           </Button>
         )}
-        <ActionFeedback
-          pending={importIcon.isPending}
-          error={importIcon.error}
-          success={importIcon.isSuccess}
-          successMessage={t("account_saved")}
-        />
+        <ActionFeedback mutation={importIcon} successMessage={t("account_saved")} />
         <ThemeImageEditor
           storeId={storeId}
           value={value.branding?.logo ?? null}

@@ -1,8 +1,8 @@
-import type { Locator, Page } from "@playwright/test";
+import { z } from "zod";
 import { createHash } from "node:crypto";
+import type { Locator, Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { z } from "zod";
 import type { Project } from "./tablecast-project.ts";
 import { fitZoom, zoomMotion } from "./tablecast-zoom.ts";
 const capturePattern = z.string().refine((pattern) => {

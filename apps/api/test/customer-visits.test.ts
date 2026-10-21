@@ -21,8 +21,7 @@ import {
   updateCustomerPreferences,
 } from "../src/modules/customers/service";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { getTableState } from "../src/modules/tables/queries";
 import { createApiServices } from "../src/platform/context";
 import { fixtureDb } from "./database-fixture";

@@ -6,7 +6,7 @@ import {
   statisticsSearchSchema,
 } from "../features/statistics/statistics-query";
 import { StoreStatistics } from "../features/statistics/store-statistics";
-import { storesOptions } from "../features/store/store-query";
+import { isStoreManager } from "../features/store/store-query";
 import { getLocale } from "../paraglide/runtime.js";
 
 export const Route = createFileRoute("/admin/stores/$storeId/statistics")({
@@ -15,12 +15,11 @@ export const Route = createFileRoute("/admin/stores/$storeId/statistics")({
   },
   validateSearch: statisticsSearchSchema,
   loaderDeps: ({ search }) => search,
-  loader: async ({ context, params, deps }) => {
-    const stores = await context.queryClient.ensureQueryData(storesOptions);
-    const store = stores.stores.find((item) => item.id === params.storeId);
+  loader: async ({ context, deps }) => {
+    const { store } = context;
     const today = storeDate(Date.now());
     const range = statisticsRange(deps, today);
-    if (store && ["owner", "admin"].includes(store.role) && range) {
+    if (store && isStoreManager(store) && range) {
       const pending = context.queryClient.prefetchInfiniteQuery(
         statisticsOptions(store.id, range, deps.view, getLocale()),
       );

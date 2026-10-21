@@ -85,3 +85,36 @@ export function mergeConversation(lines: ConversationLine[], view: VoiceView, lo
   }
   return [...saved, ...merged].toSorted((a, b) => a.createdAt - b.createdAt);
 }
+
+export function voiceOperationState(events: TableEvent[]) {
+  const tools = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.tool" && typeof event.data.toolCallId === "string")
+      tools.set(event.data.toolCallId, event);
+  const turns = new Map<string, TableEvent>();
+  for (const event of events)
+    if (event.kind === "voice.turn" && typeof event.data.turnId === "string")
+      turns.set(event.data.turnId, event);
+  const failedTurns = new Set(
+    events.flatMap((event) => (event.kind === "voice.failed" ? [event.data.turnId] : [])),
+  );
+  for (const event of turns.values())
+    if (event.data.status === "failed") failedTurns.add(event.data.turnId);
+  const latestBusinessTurn =
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.turn" && event.data.status === "started")?.data
+      .turnId ??
+    [...events]
+      .toReversed()
+      .find((event) => event.kind === "voice.tool" || event.kind === "voice.failed")?.data.turnId;
+  const running = [...tools.values()].filter((event) => {
+    const turn = typeof event.data.turnId === "string" ? turns.get(event.data.turnId) : undefined;
+    return (
+      (event.data.state === "requested" || event.data.state === "running") &&
+      !failedTurns.has(event.data.turnId) &&
+      (!turn || turn.data.status === "started")
+    );
+  });
+  return { tools, turns, failedTurns, latestBusinessTurn, running };
+}

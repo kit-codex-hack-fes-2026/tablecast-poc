@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import type { loadInitial } from "../../lib/session-query";
 import { apiFetch } from "../../lib/api-fetch";
+import { loadInitial } from "../../lib/session-query";
 import { floorOptions } from "../floor/floor-query";
 import { homeOptions } from "./home-query";
 
@@ -41,3 +41,21 @@ it.each([undefined, 20])(
     expect(apiFetch).toHaveBeenCalledOnce();
   },
 );
+
+it("初期SSR取得へrouterの中断signalを引き継ぎ、homeとdefaultFloorのqueryを保つ", async () => {
+  const abort = new AbortController();
+  vi.mocked(apiFetch).mockImplementation(async (input, init) => {
+    const request = new Request(
+      input instanceof Request ? input : new URL(input, "http://tablecast.test"),
+      init,
+    );
+    expect(new URL(request.url).searchParams).toEqual(
+      new URLSearchParams({ defaultFloor: "true", view: "home" }),
+    );
+    expect(request.signal.aborted).toBe(false);
+    abort.abort();
+    expect(request.signal.aborted).toBe(true);
+    return Response.json({ home, floor, session: null, stores: [], catalog: null });
+  });
+  expect(await loadInitial(undefined, "true", "home", abort.signal)).toMatchObject({ home, floor });
+});

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { tablecastResponseComplete } from "./tablecast-app-capture.ts";
+import { tablecastResponseComplete } from "./tablecast-app-capture";
 
 test("分割発話の最後のターンへの応答完了を判定する", () => {
   const events = [

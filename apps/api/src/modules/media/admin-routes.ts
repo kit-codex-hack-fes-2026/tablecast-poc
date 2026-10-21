@@ -1,11 +1,10 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { validateForm } from "../../platform/validation";
 import { imageMetadataSchema } from "./model";
 import { saveMenuImage } from "./service";
 
-export const mediaAdminRoutes = new Hono<ApiEnv>().post(
+export const mediaAdminRoutes = apiFactory.createApp().post(
   "/images",
   validateForm(
     z

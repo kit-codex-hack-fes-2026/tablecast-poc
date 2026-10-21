@@ -5,10 +5,7 @@ import { z } from "zod";
 import { useI18n } from "../i18n/locale";
 import { ActionFeedback } from "./action-feedback";
 import { useAppForm } from "./form";
-import { FormErrors } from "./form/errors";
-import { NumberField } from "./form/number-field";
-import { SubmitButton } from "./form/submit-button";
-import { TextField } from "./form/text-field";
+import { FormErrors, NumberField, SubmitButton, TextField } from "./form/fields";
 
 /**
  * useAppFormがTanStack FormとBase UI Fieldを組み合わせる。
@@ -42,47 +39,43 @@ function FormExample({
   return (
     <main className="max-w-lg space-y-5 p-6">
       <h1 className="text-xl font-semibold">{t("org_invite")}</h1>
-      <form
-        noValidate
-        className="space-y-5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppField name="email" validators={{ onChange: z.email({ error: t("form_email") }) }}>
-          {(field) => (
-            <field.TextField label={t("auth_email")} type="email" required autoComplete="email" />
-          )}
-        </form.AppField>
-        <form.AppField
-          name="count"
-          validators={{
-            onChange: z
-              .number({ error: t("form_number") })
-              .int()
-              .min(1)
-              .max(30),
-          }}
-        >
-          {(field) => (
-            <field.NumberField label={t("admin_guest_count")} min={1} max={30} required />
-          )}
-        </form.AppField>
-        <form.AppForm>
+      <form.AppForm>
+        <form.Form noValidate className="space-y-5">
+          <form.AppField
+            name="email"
+            validators={{ onChange: z.email({ error: t("form_email") }) }}
+          >
+            {(field) => (
+              <field.TextField label={t("auth_email")} type="email" required autoComplete="email" />
+            )}
+          </form.AppField>
+          <form.AppField
+            name="count"
+            validators={{
+              onChange: z
+                .number({ error: t("form_number") })
+                .int()
+                .min(1)
+                .max(30),
+            }}
+          >
+            {(field) => (
+              <field.NumberField label={t("admin_guest_count")} min={1} max={30} required />
+            )}
+          </form.AppField>
           <form.SubmitButton>{t("account_save")}</form.SubmitButton>
-        </form.AppForm>
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(pending) => (
-            <ActionFeedback
-              pending={pending}
-              error={error}
-              success={saved}
-              successMessage={t("account_saved")}
-            />
-          )}
-        </form.Subscribe>
-      </form>
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(pending) => (
+              <ActionFeedback
+                pending={pending}
+                error={error}
+                success={saved}
+                successMessage={t("account_saved")}
+              />
+            )}
+          </form.Subscribe>
+        </form.Form>
+      </form.AppForm>
     </main>
   );
 }

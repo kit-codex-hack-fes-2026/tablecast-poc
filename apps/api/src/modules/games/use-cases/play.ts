@@ -1,11 +1,12 @@
+import type { z } from "zod";
 import { and, eq, exists, isNotNull, isNull, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
 import { gamePlugins, gameRuns, gameVersions } from "../../../db/games-schema";
 import { tableSessions } from "../../../db/table-schema";
 import { ensure } from "../../../platform/errors";
-import { getSession } from "../../tables/session";
-import { gameManifestSchema, type GameState } from "../model";
+import { getSession } from "../../tables/queries";
+import { gameManifestSchema, type GameState, type saveGameStateSchema } from "../model";
 import { getGameRun, readGamePackage } from "../queries";
 
 export async function startGame(services: ApiServices, actor: Actor, gameId: string) {
@@ -85,7 +86,7 @@ export async function saveGameState(
   services: ApiServices,
   actor: Actor,
   runId: string,
-  input: { expectedVersion: number; state: GameState },
+  input: z.infer<typeof saveGameStateSchema>,
 ) {
   const run = await getGameRun(services, actor, runId);
   ensure(run.manifest.capabilities.includes("state"), "GAME_CAPABILITY_FORBIDDEN", 403);

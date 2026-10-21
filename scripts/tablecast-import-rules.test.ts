@@ -24,7 +24,7 @@ it(
           'export { route } from "../orders/routes";',
           'export { Hono } from "hono";',
           'export type { ApiServices } from "../../platform/context";',
-          'export { submitOrder } from "../orders/use-cases/submit";',
+          'export { submitOrder } from "../orders/use-cases/confirmation";',
         ],
         rejectedLines: [1, 2, 3, 4, 5],
       },
@@ -40,7 +40,7 @@ it(
           'export { contract } from "../../schema.ts";',
           'export type { ApiServices } from "../../platform/context";',
           'export { orderSchema } from "../orders/model";',
-          'export { getSession } from "../tables/session";',
+          'export { getSession } from "../tables/queries";',
         ],
         rejectedLines: [1, 2, 3, 4, 5, 6, 7],
       },
@@ -60,7 +60,7 @@ it(
       {
         path: "modules/example/queries.ts",
         imports: [
-          'export { submitOrder } from "../orders/use-cases/submit";',
+          'export { submitOrder } from "../orders/use-cases/confirmation";',
           'export { notifyStore } from "../tables/mutations";',
           'export { sql } from "drizzle-orm";',
           'export type { ApiServices } from "../../platform/context";',
@@ -70,7 +70,7 @@ it(
       {
         path: "db/records.ts",
         imports: [
-          'export { submitOrder } from "../modules/orders/use-cases/submit";',
+          'export { submitOrder } from "../modules/orders/use-cases/confirmation";',
           'export { Hono } from "hono";',
           'export { sqliteTable } from "drizzle-orm/sqlite-core";',
           'export { orders } from "./business-schema";',
@@ -80,7 +80,7 @@ it(
       {
         path: "app.ts",
         imports: [
-          'export { submitOrder } from "./modules/orders/use-cases/submit";',
+          'export { submitOrder } from "./modules/orders/use-cases/confirmation";',
           'export { schema } from "./db/business-schema";',
           'export { routes } from "./modules/orders/routes";',
           'export { requestServices } from "./platform/context";',
@@ -92,8 +92,8 @@ it(
         imports: [
           'export { recordPayment } from "../../orders/use-cases/payment";',
           'export { changeOrderStatus } from "../../orders/use-cases/status";',
-          'export { submitOrder } from "../../orders/use-cases/submit";',
-          'export { getSession } from "../../tables/session";',
+          'export { submitOrder } from "../../orders/use-cases/confirmation";',
+          'export { getSession } from "../../tables/queries";',
           'export { Hono } from "hono";',
         ],
         rejectedLines: [1, 2, 3, 5],
@@ -364,7 +364,7 @@ it("分割後のseed・deploy CLIでも直接prepareを拒否し、batch呼出�
   const temporary = await mkdtemp(join(tmpdir(), "tablecast-cli-db-rules-"));
   const files = [
     "scripts/tablecast-seed-direct.ts",
-    "scripts/tablecast-seed/database.ts",
+    "scripts/tablecast-seed/session.ts",
     "scripts/tablecast-deploy/storage.ts",
   ];
   try {

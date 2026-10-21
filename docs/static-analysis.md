@@ -63,7 +63,9 @@ APIからWebのfeature・UIをimportしない。モデルはAPIの公式SDKを�
 
 すべての関数をarrowへ変更するルール、interface/typeの好み、すべての `as const` / satisfies禁止、固定の非常に短い行数budgetは採用しない。
 単純な関数をbudget回避のため複数ファイルへ分割しない。複雑さは分岐・責務・テスト難度で判断する。
-実装・設定・CLIは空行・コメントを除いて300行、テスト・Story・テスト専用fixtureは500行を上限とする。runtimeで使うseed/demoデータは実装として扱う。操作・データ所有者・I/Oの責務で分け、行数のためだけの中継層は作らない。複雑度と重複はfallowの警告で確認する。
+実装・設定・CLIの300行は、空行・コメントを除くレビューの目安とする。同じ状態・寿命・変更理由を持つ処理は所有者へまとめ、行数のためだけのファイル分割・中継型・facadeを作らない。公開契約、独立したI/O・mount・購読の境界で分け、関数・privateメソッド・表示componentによる整理も使う。React Doctorの行数だけの診断も必須ゲートにせず、制御フローの複雑度検査を維持する。テスト・Story・テスト専用fixtureは500行を上限とし、runtimeで使うseed/demoデータは実装として扱う。複雑度と重複はfallowの警告も確認する。
+
+今回追加したunsafe argument/member、switch網羅性、Perfectionistとテスト行数のルールは、rootのoverrideの`excludeFiles`で`apps/presentation/**`を対象外にする。これは新規ルールの適用範囲であり、動画基盤の従来の型付きlint・型検査・テストやfallowのworkspace認識は維持する。
 
 Perfectionist 5.12.1をOxlintのJS pluginとして固定し、import・named import・export・named export・interface・object type・union・intersectionの8規則をnatural昇順で必須にする。JSX props・実行時object key・class memberは並べ替えない。`sortSideEffects: false`で副作用・CSS import同士の相対順序を保つ。値importが副作用importをまたぐ場合もあるため、代表実行境界で初期化を確認する。Oxfmtとの二重所有を避け、Oxfmtのimport sortは有効にしない。手動修正では`oxlint --fix`を再実行して重なる修正を収束させ、Oxfmt・lintを確認する。hookは修正を行わない。
 

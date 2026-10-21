@@ -1,9 +1,9 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
 import { byteStream } from "../../platform/streams";
-export const mediaRoutes = new Hono<ApiEnv>()
+export const mediaRoutes = apiFactory
+  .createApp()
   .get("/api/avatars/:key", async (c) => {
     const key = z.uuid().parse(c.req.param("key"));
     const image = await c.env.TABLECAST_MEDIA.get(`tablecast/avatars/${key}`);

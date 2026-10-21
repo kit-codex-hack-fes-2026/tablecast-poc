@@ -16,7 +16,7 @@ import {
   type SessionEventsQuery,
   tablePlanSchema,
 } from "./model";
-import { getSession } from "./session";
+import { getSession } from "./queries";
 import { billValue, eventValue } from "./values";
 
 export async function getHistory(

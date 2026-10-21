@@ -1,15 +1,179 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { z } from "zod";
-import {
-  collect,
-  git,
-  github,
-  prefix,
-  validation,
-  validReleaseHead,
-} from "./tablecast-release/collect.ts";
-import { pullSchema, shaSchema } from "./tablecast-release/model.ts";
+import { deploymentTarget, tablecastRepository } from "./tablecast-deploy-config.ts";
 import { renderRelease } from "./tablecast-release/render.ts";
+
+const shaSchema = z.string().regex(/^[a-f0-9]{40}$/);
+
+const pullSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  body: z.string().nullable(),
+  html_url: z.string().url(),
+  merged_at: z.string().nullable(),
+  merge_commit_sha: z.string().nullable(),
+  head: z.object({
+    sha: shaSchema,
+    ref: z.string(),
+    repo: z.object({ full_name: z.string() }).nullable(),
+  }),
+  base: z.object({ ref: z.string(), sha: shaSchema }),
+});
+
+export type Pull = z.infer<typeof pullSchema>;
+
+export type ReleaseChange = { message: string; pulls: Pull[]; sha: string };
+
+export type ReleaseInput = {
+  base: string;
+  changes: ReleaseChange[];
+  head: string;
+  validation: string;
+};
+
+const exec = promisify(execFile);
+
+const prefix = `repos/${tablecastRepository}`;
+
+async function github(path: string, method = "GET", body?: unknown): Promise<unknown> {
+  let stdout: string;
+  try {
+    // stdinでJSONを渡し、本文やtokenをshell構文として扱わない。
+    const request = exec(
+      "gh",
+      [
+        "api",
+        path,
+        "--method",
+        method,
+        ...(body === undefined ? ["--paginate", "--slurp"] : ["--input", "-"]),
+      ],
+      { maxBuffer: Infinity },
+    );
+    request.child.stdin?.end(body === undefined ? undefined : JSON.stringify(body));
+    ({ stdout } = await request);
+  } catch {
+    throw new Error(`GitHub ${method} ${path.split("?")[0]}に失敗しました。`);
+  }
+  try {
+    const data: unknown = JSON.parse(stdout);
+    return body === undefined && Array.isArray(data) ? data.flat() : data;
+  } catch {
+    throw new Error("GitHub応答が不正です。");
+  }
+}
+
+async function git(...args: string[]) {
+  return (await exec("git", args)).stdout.trim();
+}
+
+export function supplementMergedPulls(changes: ReleaseChange[], closed: Pull[]): ReleaseChange[] {
+  return changes.map((change) => {
+    const pulls = new Map(change.pulls.map((pull) => [pull.number, pull]));
+    for (const pull of closed) {
+      if (
+        pull.merged_at &&
+        pull.head.repo?.full_name === tablecastRepository &&
+        pull.head.ref !== "staging" &&
+        pull.merge_commit_sha === change.sha &&
+        !pulls.has(pull.number)
+      )
+        pulls.set(pull.number, pull);
+    }
+    return { ...change, pulls: [...pulls.values()] };
+  });
+}
+
+async function collect(base: string, head: string): Promise<ReleaseChange[]> {
+  const commits = (await git("rev-list", "--reverse", `${base}..${head}`))
+    .split("\n")
+    .filter(Boolean);
+  const changes: ReleaseChange[] = [];
+  for (const sha of commits) {
+    const pulls = z
+      .array(pullSchema)
+      .parse(await github(`${prefix}/commits/${sha}/pulls?per_page=100`));
+    changes.push({ sha, message: await git("show", "-s", "--format=%B", sha), pulls });
+  }
+  // Stackの全段が同じmerge SHAを持っても、commit関連PR APIは下段だけを返す場合がある。
+  const closed = z
+    .array(pullSchema)
+    .parse(await github(`${prefix}/pulls?state=closed&per_page=100`));
+  return supplementMergedPulls(changes, closed);
+}
+
+async function validation(head: string) {
+  const runs = z
+    .array(
+      z.object({
+        workflow_runs: z.array(
+          z.object({
+            id: z.number(),
+            event: z.string(),
+            head_sha: z.string(),
+            head_branch: z.string(),
+            status: z.string(),
+            conclusion: z.string().nullable(),
+            html_url: z.string(),
+          }),
+        ),
+      }),
+    )
+    .parse(
+      await github(
+        `${prefix}/actions/workflows/ci.yml/runs?branch=staging&head_sha=${head}&per_page=100`,
+      ),
+    )
+    .flatMap((page) => page.workflow_runs);
+  const run = runs.find(
+    (r) =>
+      r.head_sha === head &&
+      r.head_branch === "staging" &&
+      ["push", "workflow_dispatch"].includes(r.event),
+  );
+  let served = "未確認";
+  try {
+    const response = await fetch(`${deploymentTarget(undefined, "staging").origin}/api/health`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(10000),
+      cache: "no-store",
+    });
+    if (response.ok)
+      served = z.object({ releaseSha: shaSchema }).parse(await response.json()).releaseSha;
+  } catch {
+    /* 到達できない配備版を前回の成功から推測しない。 */
+  }
+  return {
+    run,
+    served,
+    text: `- staging CI: ${run ? `[${run.conclusion ?? run.status}](${run.html_url})` : "未実行"}\n- 疎通で確認した配備SHA: ${served}`,
+  };
+}
+
+export function validReleaseSource(pr: {
+  base: { ref: string };
+  head: { ref: string; repo: null | { full_name: string } };
+}) {
+  return (
+    pr.base.ref !== "main" ||
+    (pr.head.ref === "staging" && pr.head.repo?.full_name === tablecastRepository)
+  );
+}
+
+export function validReleaseHead(pulls: Pull[], base: string, head: string) {
+  return (
+    pulls.length === 1 &&
+    pulls.every(
+      (pr) =>
+        pr.base.ref === "main" &&
+        validReleaseSource(pr) &&
+        pr.head.sha === head &&
+        pr.base.sha === base,
+    )
+  );
+}
 
 async function main() {
   const base = shaSchema.parse(await git("rev-parse", "origin/main"));
@@ -98,10 +262,4 @@ async function main() {
 
 if (import.meta.main) await main();
 
-export {
-  supplementMergedPulls,
-  validReleaseHead,
-  validReleaseSource,
-} from "./tablecast-release/collect.ts";
-export type { ReleaseChange } from "./tablecast-release/model.ts";
 export { changeSummary, releaseChanges, renderRelease } from "./tablecast-release/render.ts";

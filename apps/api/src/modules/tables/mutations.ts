@@ -41,7 +41,7 @@ export async function notifyStore(
           )
           .get()
       : undefined;
-    const row = await db.get<undefined | { cursor: null | number }>(
+    const row = await db.get<{ cursor: null | number }>(
       sql`SELECT MAX(cursor) AS cursor FROM table_events WHERE store_id=${storeId} AND ${demo ? sql`table_session_id=${demo.id}` : sql`(table_session_id IS NULL OR table_session_id IN (SELECT id FROM table_sessions WHERE kind='table'))`}`,
     );
     await services.env.TABLECAST_EVENTS.get(

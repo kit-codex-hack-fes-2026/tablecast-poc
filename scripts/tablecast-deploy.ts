@@ -270,9 +270,3 @@ if (import.meta.main) {
     );
   }
 }
-
-export {
-  accessApplication,
-  resources,
-  verifyDurableNamespaces,
-} from "./tablecast-deploy/resources.ts";

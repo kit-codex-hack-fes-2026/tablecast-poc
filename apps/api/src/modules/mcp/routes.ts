@@ -1,14 +1,13 @@
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { isAPIError } from "better-auth/api";
-import { Hono } from "hono";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { registerConfigurationTools } from "./configuration-tools";
 import { registerGamesTools } from "./games-tools";
 import { registerRewardsTools } from "./rewards-tools";
 import { resolveMcpActor } from "./service";
 
-export const mcpRoutes = new Hono<ApiEnv>().all("/", async (c) => {
+export const mcpRoutes = apiFactory.createApp().all("/", async (c) => {
   let principal;
   c.set("errorPhase", "mcp.authentication");
   try {

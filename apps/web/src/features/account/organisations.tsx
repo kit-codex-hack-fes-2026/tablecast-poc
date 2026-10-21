@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Plus, Settings2, ShieldCheck, Store, UsersRound } from "lucide-react";
 import { useMemo } from "react";
-import type { loadStores } from "../store/store-query";
+import type { Store as StoreData } from "../store/store-query";
 import { DataTable } from "../../components/data-table";
 import { type DataTableColumn } from "../../components/data-table-model";
 import { ErrorNotice } from "../../components/error-notice";
@@ -14,7 +14,7 @@ import { useI18n } from "../../i18n/locale";
 import { useCollectionSearch } from "../shell/collection-search";
 import { SettingsShell } from "../store/settings-shell";
 import { storesOptions } from "../store/store-query";
-type StoreRow = Awaited<ReturnType<typeof loadStores>>["stores"][number];
+type StoreRow = StoreData;
 export function Organisations() {
   const { t } = useI18n();
   const stores = useSuspenseQuery(storesOptions);
@@ -32,7 +32,7 @@ export function Organisations() {
           </Button>
         }
       />
-      <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
+      <ErrorNotice query={stores} />
       <DataTable
         {...collection}
         data={stores.data.stores}

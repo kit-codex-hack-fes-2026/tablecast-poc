@@ -6,7 +6,7 @@ import type { voiceConversationSchema } from "./model";
 import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
 import { notifyStore } from "../tables/mutations";
-import { getSession } from "../tables/session";
+import { getSession } from "../tables/queries";
 
 export async function recordConversationItems(
   services: ApiServices,

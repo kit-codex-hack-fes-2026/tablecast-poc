@@ -1,11 +1,11 @@
-import { Hono } from "hono";
 import { validate, validateQuery } from "../../platform/validation";
-import { customerActor, type CustomerEnv } from "../customers/middleware";
+import { customerActor, customerFactory } from "../customers/middleware";
 import { customerOrderPageSchema, customerVisitCodeSchema, customerVisitPageSchema } from "./model";
 import { getCustomerVisit, listCustomerOrders, listCustomerVisits } from "./queries";
 import { joinCustomerVisit, leaveCustomerVisit, resolveCustomerVisit } from "./service";
 
-export const customerVisitRoutes = new Hono<CustomerEnv>()
+export const customerVisitRoutes = customerFactory
+  .createApp()
   .post("/visits/resolve", validate(customerVisitCodeSchema), async (c) => {
     return c.json(
       await resolveCustomerVisit(

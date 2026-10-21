@@ -1,6 +1,8 @@
+import type { z } from "zod";
 import { and, eq, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
+import type { draftPublishSchema } from "../model";
 import * as business from "../../../db/business-schema";
 import { ensure } from "../../../platform/errors";
 import { observeOperation } from "../../../platform/telemetry";
@@ -17,7 +19,7 @@ export async function publishDraft(
   services: ApiServices,
   actor: Actor,
   id: string,
-  input: { approved: true; baseVersion: number; expectedVersion: number; idempotencyKey: string },
+  input: z.infer<typeof draftPublishSchema>,
 ) {
   return observeOperation(
     "tablecast.configuration.publish",
@@ -29,20 +31,22 @@ export async function publishDraft(
       ensure(input.approved, "APPROVAL_REQUIRED", 422);
       const draft = await getDraft(services, actor, id);
       const now = Date.now();
-      const previous = await db
-        .select({
-          id: business.configDrafts.id,
-          version: business.configDrafts.version,
-          base_version: business.configDrafts.base_version,
-        })
-        .from(business.configDrafts)
-        .where(
-          and(
-            eq(business.configDrafts.store_id, actor.storeId),
-            eq(business.configDrafts.publish_key, input.idempotencyKey),
-          ),
-        )
-        .get();
+      const findPublishedDraft = () =>
+        db
+          .select({
+            id: business.configDrafts.id,
+            version: business.configDrafts.version,
+            base_version: business.configDrafts.base_version,
+          })
+          .from(business.configDrafts)
+          .where(
+            and(
+              eq(business.configDrafts.store_id, actor.storeId),
+              eq(business.configDrafts.publish_key, input.idempotencyKey),
+            ),
+          )
+          .get();
+      const previous = await findPublishedDraft();
       if (previous) {
         ensure(
           previous.id === id &&
@@ -121,20 +125,7 @@ export async function publishDraft(
           ),
       ]);
       if (result[0]?.meta.changes !== 1) {
-        const retry = await db
-          .select({
-            id: business.configDrafts.id,
-            version: business.configDrafts.version,
-            base_version: business.configDrafts.base_version,
-          })
-          .from(business.configDrafts)
-          .where(
-            and(
-              eq(business.configDrafts.store_id, actor.storeId),
-              eq(business.configDrafts.publish_key, input.idempotencyKey),
-            ),
-          )
-          .get();
+        const retry = await findPublishedDraft();
         ensure(retry, "DRAFT_CONFLICT");
         ensure(
           retry.id === id &&

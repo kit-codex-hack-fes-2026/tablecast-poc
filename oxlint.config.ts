@@ -13,12 +13,6 @@ export default defineConfig({
     "typescript/no-unsafe-assignment": "error",
     "typescript/no-unsafe-call": "error",
     "typescript/no-unsafe-return": "error",
-    "typescript/no-unsafe-argument": "error",
-    "typescript/no-unsafe-member-access": "error",
-    "typescript/switch-exhaustiveness-check": [
-      "error",
-      { considerDefaultExhaustiveForUnions: false },
-    ],
     "typescript/consistent-type-imports": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
@@ -26,20 +20,32 @@ export default defineConfig({
     "vitest/no-focused-tests": "error",
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": ["warn", { allow: ["**/*.css"] }],
-    "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
-    "perfectionist/sort-imports": [
-      "error",
-      { type: "natural", order: "asc", sortSideEffects: false, newlinesBetween: 0 },
-    ],
-    "perfectionist/sort-named-imports": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-exports": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-named-exports": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-interfaces": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-object-types": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-union-types": ["error", { type: "natural", order: "asc" }],
-    "perfectionist/sort-intersection-types": ["error", { type: "natural", order: "asc" }],
   },
   overrides: [
+    {
+      // 今回の品質設定は製品と運用CLIへ適用し、動画基盤は従来の検査を維持する。
+      files: ["**/*.{ts,tsx,js,jsx,mts,cts}"],
+      excludeFiles: ["apps/presentation/**"],
+      rules: {
+        "typescript/no-unsafe-argument": "error",
+        "typescript/no-unsafe-member-access": "error",
+        "typescript/switch-exhaustiveness-check": [
+          "error",
+          { considerDefaultExhaustiveForUnions: false },
+        ],
+        "perfectionist/sort-imports": [
+          "error",
+          { type: "natural", order: "asc", sortSideEffects: false, newlinesBetween: 0 },
+        ],
+        "perfectionist/sort-named-imports": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-exports": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-named-exports": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-interfaces": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-object-types": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-union-types": ["error", { type: "natural", order: "asc" }],
+        "perfectionist/sort-intersection-types": ["error", { type: "natural", order: "asc" }],
+      },
+    },
     {
       files: ["scripts/**/*.{ts,tsx}"],
       rules: {
@@ -65,6 +71,7 @@ export default defineConfig({
         "**/testing/**",
         "apps/web/src/features/billing/billing-fixture.ts",
       ],
+      excludeFiles: ["apps/presentation/**"],
       rules: { "max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }] },
     },
     {

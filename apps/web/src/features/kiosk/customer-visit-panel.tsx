@@ -129,7 +129,7 @@ export function CustomerVisitPanel({
               </div>
             )}
             <ErrorNotice error={selectTarget.error} />
-            <ErrorNotice error={participants.error} onRetry={() => void participants.refetch()} />
+            <ErrorNotice query={participants} />
           </div>
           <div className="self-center">
             <div className="grid min-h-48 w-48 items-center justify-center">

@@ -63,11 +63,7 @@ export function CustomerJoin({ code }: { code: string }) {
             <p className="text-pretty leading-relaxed">{t("customer_scan_again")}</p>
           </div>
         ) : (
-          <ErrorNotice
-            error={destination.error}
-            onRetry={() => void destination.refetch()}
-            retrying={destination.isFetching}
-          />
+          <ErrorNotice query={destination} retrying={destination.isFetching} />
         )}
         <Button variant="outline" nativeButton={false} role="link" render={<Link to="/member" />}>
           <ArrowLeft aria-hidden="true" />

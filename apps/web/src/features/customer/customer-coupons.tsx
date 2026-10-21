@@ -56,18 +56,9 @@ function OwnedCoupons({
       <h2 id={title} className="text-xl font-semibold">
         {t("customer_coupons_owned")}
       </h2>
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {(coupons.length > 0 || request.status !== "idle") && (
-        <ActionFeedback
-          pending={request.isPending}
-          error={request.error}
-          success={request.isSuccess}
-          successMessage={t("coupon_requested")}
-        />
+        <ActionFeedback mutation={request} successMessage={t("coupon_requested")} />
       )}
       {query.isPending && <LoadingState />}
       {query.isSuccess && !coupons.length && <p>{t("customer_coupons_empty")}</p>}
@@ -127,18 +118,9 @@ function ExchangeCoupons({ storeId, onChanged }: CouponCollectionProps) {
       <h2 id={title} className="text-xl font-semibold">
         {t("coupon_exchange")}
       </h2>
-      <ErrorNotice
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
+      <ErrorNotice query={query} retrying={query.isFetching} />
       {(rules.length > 0 || exchange.status !== "idle") && (
-        <ActionFeedback
-          pending={exchange.isPending}
-          error={exchange.error}
-          success={exchange.isSuccess}
-          successMessage={t("account_saved")}
-        />
+        <ActionFeedback mutation={exchange} successMessage={t("account_saved")} />
       )}
       {query.isPending && <LoadingState />}
       {query.isSuccess && !rules.length && <p>{t("customer_exchanges_empty")}</p>}

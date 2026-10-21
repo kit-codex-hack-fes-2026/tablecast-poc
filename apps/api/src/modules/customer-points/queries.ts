@@ -1,7 +1,9 @@
+import type { z } from "zod";
 import { and, asc, desc, eq, isNotNull, lt, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import type { CustomerActor } from "../customers/model";
+import type { pointPageSchema } from "./model";
 import { customerMemberships, customerVisitParticipants } from "../../db/customer-schema";
 import { user } from "../../db/identity-schema";
 import {
@@ -12,7 +14,7 @@ import {
 } from "../../db/rewards-schema";
 import { ensure } from "../../platform/errors";
 import { requireCustomer } from "../customers/queries";
-import { getSession } from "../tables/session";
+import { getSession } from "../tables/queries";
 import { noPointRules, pointRulesSchema } from "./model";
 export function pointBalance(services: ApiServices, storeId: string, membershipId: string) {
   return services.db
@@ -107,7 +109,7 @@ export async function getPointVisit(services: ApiServices, actor: Actor) {
 export async function getCustomerPoints(
   services: ApiServices,
   actor: CustomerActor,
-  query: { beforeId?: string; limit: number },
+  query: z.infer<typeof pointPageSchema>,
 ) {
   const membership = await requireCustomer(services, actor);
   const [balance, rows, totals] = await services.db.batch([

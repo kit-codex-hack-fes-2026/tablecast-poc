@@ -1,8 +1,7 @@
 import { business } from "@tablecast/api/db";
 import { sql } from "drizzle-orm";
-import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { z } from "zod";
-import { cloudflare, readBucketOwner } from "../tablecast-deploy-api.ts";
+import { cloudflare, deploymentDatabase, readBucketOwner } from "../tablecast-deploy-api.ts";
 import {
   accessApplicationConfig,
   tablecastAdoptedResources,
@@ -40,22 +39,7 @@ export async function resources(create: boolean) {
     databaseCreated = true;
   }
   if (database) {
-    const databaseId = database.uuid;
-    // 管理APIでもDrizzleがSQLと結果の対応を所有する。D1の配列応答を標準proxyへ渡す。
-    const db = drizzleProxy(async (query, params, method) => {
-      const result = z
-        .array(
-          z.object({
-            success: z.literal(true),
-            results: z.object({
-              rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))),
-            }),
-          }),
-        )
-        .parse(await cloudflare(`d1/database/${databaseId}/raw`, "POST", { sql: query, params }));
-      const rows = result[0]?.results.rows ?? [];
-      return { rows: method === "get" ? (rows[0] ?? []) : rows };
-    });
+    const db = deploymentDatabase(database.uuid);
     if (databaseCreated) {
       await db.run(
         sql`CREATE TABLE tablecast_deployment_owner(repository TEXT NOT NULL, environment TEXT NOT NULL, seeded INTEGER NOT NULL DEFAULT 0)`,

@@ -14,7 +14,7 @@ import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import "../../styles.css";
-import { type loadStores, storesOptions } from "../store/store-query";
+import { type Store, storesOptions } from "../store/store-query";
 import { Organisations } from "./organisations";
 
 vi.mock("../store/settings-shell", () => ({
@@ -36,7 +36,7 @@ it.each(["ja", "en"] as const)(
       logo: null,
       role: "owner",
       organizationId: "tablecast-organisation",
-    } satisfies Awaited<ReturnType<typeof loadStores>>["stores"][number];
+    } satisfies Store;
     client = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });

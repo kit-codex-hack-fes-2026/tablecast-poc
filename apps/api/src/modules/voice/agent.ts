@@ -8,16 +8,13 @@ import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
 import { customerSuggestionsSchema, saveCustomerMemorySchema } from "../customer-memory/model";
-import { customerRecommendationContext } from "../customer-memory/queries";
-import { customerSuggestions } from "../customer-memory/suggestions";
+import { customerRecommendationContext, customerSuggestions } from "../customer-memory/queries";
 import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/sources";
 import { cartUpdateSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
-import { prepareConfirmation } from "../orders/use-cases/confirmation";
-import { submitOrder } from "../orders/use-cases/submit";
+import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
 import { uiSectionInputSchema } from "../tables/model";
-import { getTableState } from "../tables/queries";
-import { getSession } from "../tables/session";
+import { getSession, getTableState } from "../tables/queries";
 import {
   callStaff,
   changeLocale,

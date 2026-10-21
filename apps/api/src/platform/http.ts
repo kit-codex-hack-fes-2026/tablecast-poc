@@ -2,7 +2,7 @@ import type { ErrorHandler, MiddlewareHandler } from "hono";
 import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import { isAPIError } from "better-auth/api";
 import { bodyLimit } from "hono/body-limit";
-import { createMiddleware } from "hono/factory";
+import { createFactory, createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import { routePath } from "hono/route";
 import { STATUS_CODES } from "node:http";
@@ -10,6 +10,8 @@ import type { ApiEnv } from "./context";
 import { diagnosticSecrets, errorAttributes } from "./diagnostics";
 import { DomainError, ensure } from "./errors";
 import { requestLog, telemetryChannel } from "./telemetry";
+
+export const apiFactory = createFactory<ApiEnv>();
 
 export const requestTelemetry = createMiddleware<ApiEnv>(async (c, next) => {
   const started = performance.now();

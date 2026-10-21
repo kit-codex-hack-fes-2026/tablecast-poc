@@ -1,5 +1,3 @@
-import { Hono } from "hono";
-import type { ApiEnv } from "./platform/context";
 import { accountRoutes } from "./modules/account/routes";
 import { authRoutes } from "./modules/auth/routes";
 import { billingRoutes, operatingBillingRoutes } from "./modules/billing/routes";
@@ -15,13 +13,15 @@ import { systemRoutes } from "./modules/system/routes";
 import { table } from "./modules/tables/routes";
 import { requestServices } from "./platform/context";
 import {
+  apiFactory,
   handleError,
   handleRpcError,
   requestBodyLimit,
   requestSecurity,
   requestTelemetry,
 } from "./platform/http";
-const rpcRoutes = new Hono<ApiEnv>()
+const rpcRoutes = apiFactory
+  .createApp()
   .onError(handleRpcError)
   .route("/", billingRoutes)
   .route("/", accountRoutes)
@@ -32,7 +32,8 @@ const rpcRoutes = new Hono<ApiEnv>()
   .route("/api/admin/stores/:storeId/demo", demoRoutes)
   .route("/api/admin/stores/:storeId", admin)
   .route("/api/table", table);
-const app = new Hono<ApiEnv>()
+const app = apiFactory
+  .createApp()
   .use("*", requestTelemetry)
   .use("*", requestServices)
   .use("*", requestSecurity)

@@ -2,8 +2,8 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { tablecastGoogleMockIssuer } from "@tablecast/api/bootstrap";
 import { business, createDatabase, identity } from "@tablecast/api/db";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import type { SeedEnv } from "../tablecast-seed-data.ts";
 import type { DemoCredentials } from "../tablecast-seed.ts";
-import type { SeedEnv } from "./types.ts";
 import {
   tablecastDemoEmail,
   tablecastDemoIdentities,

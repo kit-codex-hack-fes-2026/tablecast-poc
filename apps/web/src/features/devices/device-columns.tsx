@@ -9,7 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { useI18n } from "../../i18n/locale";
-import type { loadDevices } from "./devices-query";
+import type { Device } from "./devices-query";
 import { ConfirmAction } from "../../components/confirm-action";
 import { type DataTableColumn } from "../../components/data-table-model";
 import { DateTime } from "../../components/date-time";
@@ -17,8 +17,6 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { UserIdentity } from "../../components/user-identity";
 import { selectionIcon } from "./devices-model";
-
-type Device = Awaited<ReturnType<typeof loadDevices>>["devices"][number];
 
 export function deviceColumns(
   t: ReturnType<typeof useI18n>["t"],

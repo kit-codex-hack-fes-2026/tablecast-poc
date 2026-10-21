@@ -27,7 +27,7 @@ import { getLocale } from "../paraglide/runtime.js";
 import stylesheet from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, abortController }) => {
     const panelCookies = await readPanelCookies();
     if (
       /^\/(admin|account|billing|organisations|stores|device|consent|invitations)(\/|$)/.test(
@@ -58,6 +58,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           storeId,
           defaultFloor ? "true" : undefined,
           catalogStoreId ? "catalog" : storePath?.home || defaultFloor ? "home" : undefined,
+          abortController.signal,
         );
         queryClient.setQueryData(sessionOptions.queryKey, initial.session);
         queryClient.setQueryData(storesOptions.queryKey, {

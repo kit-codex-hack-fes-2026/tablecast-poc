@@ -74,88 +74,82 @@ export function OpenTable({
         </Button>
       )}
       <PageHeader icon={<Table2 />} title={table.name} description={t("admin_open_table")} />
-      <form
-        noValidate
-        className="flex flex-col gap-4 pt-6"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppField
-          name="guests"
-          validators={{
-            onChange: zodFieldValidator(z.number().int().min(1).max(30), locale),
-          }}
-        >
-          {(field) => (
-            <field.NumberField label={t("admin_guest_count")} min={1} max={30} required />
-          )}
-        </form.AppField>
-        <form.Field name="guestLocale">
-          {(field) => (
-            <fieldset className="space-y-2">
-              <legend id={`${languageId}-label`} className="mb-2 text-base">
-                {t("admin_locale")}
-              </legend>
-              <RadioGroup
-                aria-labelledby={`${languageId}-label`}
-                name={field.name}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onValueChange={(value) => field.handleChange(value === "en" ? "en" : "ja")}
-                className="grid grid-cols-2 gap-3"
-              >
-                {(["ja", "en"] as const).map((language) => (
-                  <label
-                    key={language}
-                    htmlFor={`${languageId}-${language}`}
-                    className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 has-data-checked:border-primary has-data-checked:bg-control-selected has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
-                  >
-                    <RadioGroupItem
-                      className="focus-visible:outline-none"
-                      id={`${languageId}-${language}`}
-                      value={language}
-                    />
-                    <LanguageLabel locale={language} />
-                  </label>
-                ))}
-              </RadioGroup>
-              <FieldErrors errors={field.state.meta.errors} />
-            </fieldset>
-          )}
-        </form.Field>
-        <form.Field name="plan">
-          {(field) => (
-            <Field.Root name={field.name} invalid={!field.state.meta.isValid}>
-              <label className="flex flex-col gap-2 text-base">
-                {t("kiosk_plan")}
-                <NativeSelect
-                  aria-invalid={field.state.meta.errors.length > 0 || undefined}
+      <form.AppForm>
+        <form.Form noValidate className="flex flex-col gap-4 pt-6">
+          <form.AppField
+            name="guests"
+            validators={{
+              onChange: zodFieldValidator(z.number().int().min(1).max(30), locale),
+            }}
+          >
+            {(field) => (
+              <field.NumberField label={t("admin_guest_count")} min={1} max={30} required />
+            )}
+          </form.AppField>
+          <form.Field name="guestLocale">
+            {(field) => (
+              <fieldset className="space-y-2">
+                <legend id={`${languageId}-label`} className="mb-2 text-base">
+                  {t("admin_locale")}
+                </legend>
+                <RadioGroup
+                  aria-labelledby={`${languageId}-label`}
+                  name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
+                  onValueChange={(value) => field.handleChange(value === "en" ? "en" : "ja")}
+                  className="grid grid-cols-2 gap-3"
                 >
-                  <option value="">{t("admin_no_plan")}</option>
-                  {catalog.data.configuration.plans.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.text[locale].displayName}
-                    </option>
+                  {(["ja", "en"] as const).map((language) => (
+                    <label
+                      key={language}
+                      htmlFor={`${languageId}-${language}`}
+                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-input px-3 py-2 has-data-checked:border-primary has-data-checked:bg-control-selected has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring"
+                    >
+                      <RadioGroupItem
+                        className="focus-visible:outline-none"
+                        id={`${languageId}-${language}`}
+                        value={language}
+                      />
+                      <LanguageLabel locale={language} />
+                    </label>
                   ))}
-                </NativeSelect>
+                </RadioGroup>
                 <FieldErrors errors={field.state.meta.errors} />
-              </label>
-            </Field.Root>
-          )}
-        </form.Field>
-        <form.AppForm>
+              </fieldset>
+            )}
+          </form.Field>
+          <form.Field name="plan">
+            {(field) => (
+              <Field.Root name={field.name} invalid={!field.state.meta.isValid}>
+                <label className="flex flex-col gap-2 text-base">
+                  {t("kiosk_plan")}
+                  <NativeSelect
+                    aria-invalid={field.state.meta.errors.length > 0 || undefined}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  >
+                    <option value="">{t("admin_no_plan")}</option>
+                    {catalog.data.configuration.plans.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.text[locale].displayName}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  <FieldErrors errors={field.state.meta.errors} />
+                </label>
+              </Field.Root>
+            )}
+          </form.Field>
+
           <form.FormErrors error={open.error} fieldNames={openFieldNames} />
-        </form.AppForm>
-        <ErrorNotice error={catalog.error} />
-        <form.AppForm>
+
+          <ErrorNotice error={catalog.error} />
+
           <form.SubmitButton size="lg">{t("admin_open_table")}</form.SubmitButton>
-        </form.AppForm>
-      </form>
+        </form.Form>
+      </form.AppForm>
     </section>
   );
 }

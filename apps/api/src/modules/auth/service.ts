@@ -1,13 +1,12 @@
-import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { genericOAuth } from "better-auth/plugins";
-import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import type { Database } from "../../db/client";
 import type { MailEnv } from "../../emails/send";
 import * as schema from "../../db/auth-schema";
+import { createDatabase, type Database } from "../../db/client";
 import {
   invitationEmail,
   resetPasswordEmail,
@@ -26,7 +25,7 @@ export const tablecastCredentialIssuer = "local:credential";
 export function createAuth(
   env: AuthEnv,
   logger?: BetterAuthOptions["logger"],
-  db: Database = drizzle(env.TABLECAST_DB, { schema }),
+  db: Database = createDatabase(env.TABLECAST_DB),
   backgroundTasks?: NonNullable<BetterAuthOptions["advanced"]>["backgroundTasks"],
 ) {
   ensure(

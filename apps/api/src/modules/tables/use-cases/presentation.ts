@@ -18,8 +18,7 @@ import {
   notifyStore,
   voiceCondition,
 } from "../mutations";
-import { getTableState } from "../queries";
-import { getSession } from "../session";
+import { getSession, getTableState } from "../queries";
 
 export async function setUiSection(
   services: ApiServices,
@@ -98,9 +97,13 @@ export async function showProducts(
   return { productIds };
 }
 
-export async function callStaff(services: ApiServices, actor: Actor) {
+async function requestStaffAssistance(
+  services: ApiServices,
+  actor: Actor,
+  kind: "bill.requested" | "staff.called",
+) {
   return observeOperation(
-    "tablecast.staff.call",
+    kind === "staff.called" ? "tablecast.staff.call" : "tablecast.bill.request",
     async () => {
       const db = services.db;
 
@@ -112,7 +115,13 @@ export async function callStaff(services: ApiServices, actor: Actor) {
           .update(business.tableSessions)
           .set({ staff_called: 1, mutation_id: mutation })
           .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-        eventStatement(services, actor, mutation, "staff.called", { source: actor.kind }),
+        eventStatement(
+          services,
+          actor,
+          mutation,
+          kind,
+          kind === "staff.called" ? { source: actor.kind } : {},
+        ),
       ]);
       ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
       await notifyStore(services, actor.storeId, actor.tableSessionId, {
@@ -123,6 +132,10 @@ export async function callStaff(services: ApiServices, actor: Actor) {
     },
     { env: services.env, input: { actor } },
   );
+}
+
+export function callStaff(services: ApiServices, actor: Actor) {
+  return requestStaffAssistance(services, actor, "staff.called");
 }
 
 export async function changeLocale(services: ApiServices, actor: Actor, locale: Locale) {
@@ -173,31 +186,8 @@ export async function changeLocale(services: ApiServices, actor: Actor, locale: 
   });
 }
 
-export async function requestBill(services: ApiServices, actor: Actor) {
-  return observeOperation(
-    "tablecast.bill.request",
-    async () => {
-      const db = services.db;
-
-      const row = await getSession(services, actor);
-      const mutation = crypto.randomUUID();
-      const gate = voiceCondition(actor);
-      const result = await db.batch([
-        db
-          .update(business.tableSessions)
-          .set({ staff_called: 1, mutation_id: mutation })
-          .where(sql`id=${row.id} AND store_id=${actor.storeId} AND status='open'${gate}`),
-        eventStatement(services, actor, mutation, "bill.requested", {}),
-      ]);
-      ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-      await notifyStore(services, actor.storeId, actor.tableSessionId, {
-        cursor: result[1].meta.last_row_id,
-        demoId: row.kind === "demo" ? row.id : undefined,
-      });
-      return getTableState(services, actor);
-    },
-    { env: services.env, input: { actor } },
-  );
+export function requestBill(services: ApiServices, actor: Actor) {
+  return requestStaffAssistance(services, actor, "bill.requested");
 }
 
 export async function resolveCall(services: ApiServices, actor: Actor) {

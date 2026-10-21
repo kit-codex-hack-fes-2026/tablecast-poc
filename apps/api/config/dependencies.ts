@@ -28,7 +28,7 @@ export const dependencies = {
   email: ["email", "error"],
   runtime: ["telemetry"],
   "auth-factory": ["auth-factory", "model", "db", "email", "error"],
-  "auth-middleware": ["auth-middleware", "query", "model", "pure", "auth-factory", "error"],
+  "auth-middleware": ["auth-middleware", "query", "model", "pure", "auth-factory", "http", "error"],
   integration: ["pure", "model", "error"],
   "mcp-tools": ["service", "use-case", "query", "provider", "model", "pure", "error"],
   pure: ["model", "pure", "error"],

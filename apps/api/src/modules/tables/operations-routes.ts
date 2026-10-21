@@ -1,6 +1,5 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { localeSchema } from "../../platform/model";
 import { validate, validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
@@ -13,8 +12,7 @@ import { createCustomerVisitCode } from "../customer-visits/service";
 import { gamesTableRoutes } from "../games/routes";
 import { cartUpdateSchema, prepareSchema, submitSchema } from "../orders/model";
 import { updateCart } from "../orders/use-cases/cart";
-import { prepareConfirmation } from "../orders/use-cases/confirmation";
-import { submitOrder } from "../orders/use-cases/submit";
+import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
 import { getEvents } from "../stores/queries";
 import { speechSpeedInputSchema } from "../voice/model";
 import { voiceRoutes } from "../voice/routes";
@@ -22,7 +20,8 @@ import { setSpeechSpeed } from "../voice/service";
 import { uiSectionInputSchema } from "./model";
 import { getTableState } from "./queries";
 import { callStaff, changeLocale, requestBill, setUiSection } from "./use-cases/presentation";
-export const tableOperations = new Hono<ApiEnv>()
+export const tableOperations = apiFactory
+  .createApp()
   .post("/customer-target", validate(customerTargetSchema), async (c) =>
     c.json(await selectCustomerTarget(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
   )

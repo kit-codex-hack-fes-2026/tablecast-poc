@@ -37,7 +37,7 @@ import { ConfigurationChanges } from "./configuration-changes";
 import { ConfigurationErrors } from "./configuration-errors";
 import { ConfigurationToolbar } from "./configuration-toolbar";
 import { menuLabels, type MenuReviewSearch, menuSectionSchema } from "./menu-model";
-import { draftOptions } from "./menu-query";
+import { draftOptions, receiveDraft } from "./menu-query";
 
 export function DraftPage({ draftId, search }: { draftId: string; search: MenuReviewSearch }) {
   const { returnSection = "products", ...listSearch } = search;
@@ -54,9 +54,7 @@ export function DraftPage({ draftId, search }: { draftId: string; search: MenuRe
   const route = rpc.api.admin.stores[":storeId"].drafts[":id"];
   const param = { storeId, id: draftId };
   function saved(next: ConfigDraft) {
-    client.setQueryData(draftOptions(storeId, draftId).queryKey, next);
-    void client.invalidateQueries({ queryKey: ["tablecast-drafts", storeId] });
-    void client.invalidateQueries({ queryKey: ["tablecast-draft-choices", storeId] });
+    receiveDraft(client, storeId, next);
     void client.invalidateQueries({ queryKey: ["tablecast-configuration-history", storeId] });
     void client.invalidateQueries({ queryKey: ["tablecast-configuration-release", storeId] });
   }

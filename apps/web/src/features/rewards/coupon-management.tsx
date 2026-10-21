@@ -156,88 +156,83 @@ function ManualCouponIssue({
     },
   });
   return (
-    <form
-      className="space-y-4 rounded-xl border p-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <h2 className="text-xl font-semibold">{t("coupon_manual")}</h2>
-      <form.Field name="ruleId">
-        {(field) => (
-          <label className="grid gap-2">
-            {t("coupon_select_rule")}
-            <NativeSelect
-              required
-              value={field.state.value}
-              onChange={(e) => {
-                field.handleChange(e.target.value);
-                setKey(crypto.randomUUID());
-              }}
-            >
-              <option value="">—</option>
-              {rules.map((rule) => (
-                <option key={rule.id} value={rule.id}>
-                  {rule.title}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-        )}
-      </form.Field>
-      <label className="grid gap-2">
-        {t("coupon_search")}
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} />
-      </label>
-      <ErrorNotice error={members.error} onRetry={() => void members.refetch()} />
-      <form.Field name="membership">
-        {(field) => {
-          const selectedMember = field.state.value;
-          const choices = members.data?.pages.flatMap((page) => page.members) ?? [];
-          if (selectedMember && !choices.some((person) => person.id === selectedMember.id))
-            choices.unshift(selectedMember);
-          return (
-            <div className="grid gap-2">
-              <span id="tablecast-coupon-member-label">{t("coupon_member")}</span>
-              <Select
+    <form.AppForm>
+      <form.Form className="space-y-4 rounded-xl border p-5">
+        <h2 className="text-xl font-semibold">{t("coupon_manual")}</h2>
+        <form.Field name="ruleId">
+          {(field) => (
+            <label className="grid gap-2">
+              {t("coupon_select_rule")}
+              <NativeSelect
                 required
-                name="membershipId"
-                value={selectedMember?.id ?? null}
-                onValueChange={(value) => {
-                  field.handleChange(choices.find((person) => person.id === value) ?? null);
+                value={field.state.value}
+                onChange={(e) => {
+                  field.handleChange(e.target.value);
                   setKey(crypto.randomUUID());
                 }}
               >
-                <SelectTrigger aria-labelledby="tablecast-coupon-member-label">
-                  {selectedMember ? (
-                    <UserIdentity compact user={selectedMember} />
-                  ) : (
-                    t("common_select")
-                  )}
-                </SelectTrigger>
-                <SelectContent className="max-w-[min(28rem,calc(100vw-2rem))]">
-                  {choices.map((person) => (
-                    <SelectItem key={person.id} value={person.id}>
-                      <UserIdentity compact user={person} />
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          );
-        }}
-      </form.Field>
-      {members.hasNextPage && (
-        <Button
-          type="button"
-          disabled={members.isFetchingNextPage}
-          onClick={() => void members.fetchNextPage()}
-        >
-          {t("customer_more")}
-        </Button>
-      )}
-      <form.AppForm>
+                <option value="">—</option>
+                {rules.map((rule) => (
+                  <option key={rule.id} value={rule.id}>
+                    {rule.title}
+                  </option>
+                ))}
+              </NativeSelect>
+            </label>
+          )}
+        </form.Field>
+        <label className="grid gap-2">
+          {t("coupon_search")}
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} />
+        </label>
+        <ErrorNotice query={members} />
+        <form.Field name="membership">
+          {(field) => {
+            const selectedMember = field.state.value;
+            const choices = members.data?.pages.flatMap((page) => page.members) ?? [];
+            if (selectedMember && !choices.some((person) => person.id === selectedMember.id))
+              choices.unshift(selectedMember);
+            return (
+              <div className="grid gap-2">
+                <span id="tablecast-coupon-member-label">{t("coupon_member")}</span>
+                <Select
+                  required
+                  name="membershipId"
+                  value={selectedMember?.id ?? null}
+                  onValueChange={(value) => {
+                    field.handleChange(choices.find((person) => person.id === value) ?? null);
+                    setKey(crypto.randomUUID());
+                  }}
+                >
+                  <SelectTrigger aria-labelledby="tablecast-coupon-member-label">
+                    {selectedMember ? (
+                      <UserIdentity compact user={selectedMember} />
+                    ) : (
+                      t("common_select")
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[min(28rem,calc(100vw-2rem))]">
+                    {choices.map((person) => (
+                      <SelectItem key={person.id} value={person.id}>
+                        <UserIdentity compact user={person} />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          }}
+        </form.Field>
+        {members.hasNextPage && (
+          <Button
+            type="button"
+            disabled={members.isFetchingNextPage}
+            onClick={() => void members.fetchNextPage()}
+          >
+            {t("customer_more")}
+          </Button>
+        )}
+
         <form.Subscribe selector={(state) => state.values}>
           {(value) => (
             <form.SubmitButton disabled={!value.ruleId || !value.membership}>
@@ -245,13 +240,9 @@ function ManualCouponIssue({
             </form.SubmitButton>
           )}
         </form.Subscribe>
-      </form.AppForm>
-      <ActionFeedback
-        pending={issue.isPending}
-        error={issue.error}
-        success={issue.isSuccess}
-        successMessage={t("account_saved")}
-      />
-    </form>
+
+        <ActionFeedback mutation={issue} successMessage={t("account_saved")} />
+      </form.Form>
+    </form.AppForm>
   );
 }

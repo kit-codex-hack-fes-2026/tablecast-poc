@@ -46,36 +46,30 @@ export function AccountProfile({ controller }: { controller: ReturnType<typeof u
           />
         </label>
       </div>
-      <form
-        noValidate
-        className="flex max-w-2xl flex-wrap items-end gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <div className="min-w-48 flex-1">
-          <form.AppField
-            name="name"
-            validators={{ onChange: z.string().trim().min(1, t("form_required")).max(100) }}
-          >
-            {(field) => (
-              <field.TextField
-                label={t("account_name")}
-                required
-                maxLength={100}
-                autoComplete="name"
-                disabled={change.isPending || controller.loading}
-              />
-            )}
-          </form.AppField>
-        </div>
-        <form.AppForm>
+      <form.AppForm>
+        <form.Form noValidate className="flex max-w-2xl flex-wrap items-end gap-3">
+          <div className="min-w-48 flex-1">
+            <form.AppField
+              name="name"
+              validators={{ onChange: z.string().trim().min(1, t("form_required")).max(100) }}
+            >
+              {(field) => (
+                <field.TextField
+                  label={t("account_name")}
+                  required
+                  maxLength={100}
+                  autoComplete="name"
+                  disabled={change.isPending || controller.loading}
+                />
+              )}
+            </form.AppField>
+          </div>
+
           <form.SubmitButton disabled={change.isPending || controller.loading}>
             {t("account_save")}
           </form.SubmitButton>
-        </form.AppForm>
-      </form>
+        </form.Form>
+      </form.AppForm>
       {!session.data?.user.emailVerified && (
         <Button
           variant="outline"

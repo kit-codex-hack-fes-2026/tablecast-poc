@@ -28,7 +28,7 @@ export function CouponVisit({ storeId, sessionId }: { sessionId: string; storeId
     <section className="space-y-4 rounded-xl border p-5">
       <h3 className="font-semibold">{t("coupons")}</h3>
       <p className="text-sm text-muted-foreground">{t("coupon_bill_note")}</p>
-      <ErrorNotice error={query.error} onRetry={() => void query.refetch()} />
+      <ErrorNotice query={query} />
       {query.data?.requested.map((coupon) => (
         <div key={coupon.id} className="space-y-2">
           <h4 className="font-semibold">{coupon.rules.title[locale]}</h4>
@@ -51,12 +51,7 @@ export function CouponVisit({ storeId, sessionId }: { sessionId: string; storeId
           </Button>
         </div>
       ))}
-      <ActionFeedback
-        pending={apply.isPending}
-        error={apply.error}
-        success={apply.isSuccess}
-        successMessage={t("account_saved")}
-      />
+      <ActionFeedback mutation={apply} successMessage={t("account_saved")} />
       {query.data?.uses.map((use) => (
         <CancelCoupon
           key={use.id}
@@ -104,26 +99,22 @@ function CancelCoupon({
     },
   });
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <p>−¥{discount}</p>
-      <form.AppField name="reason">
-        {(field) => <field.TextField label={t("coupon_reason")} required />}
-      </form.AppField>
-      <form.AppForm>
+    <form.AppForm>
+      <form.Form className="space-y-3">
+        <p>−¥{discount}</p>
+        <form.AppField name="reason">
+          {(field) => <field.TextField label={t("coupon_reason")} required />}
+        </form.AppField>
+
         <form.SubmitButton>{t("coupon_cancel")}</form.SubmitButton>
-      </form.AppForm>
-      <ActionFeedback
-        pending={cancel.isPending}
-        error={cancel.error}
-        success={false}
-        successMessage={t("account_saved")}
-      />
-    </form>
+
+        <ActionFeedback
+          pending={cancel.isPending}
+          error={cancel.error}
+          success={false}
+          successMessage={t("account_saved")}
+        />
+      </form.Form>
+    </form.AppForm>
   );
 }

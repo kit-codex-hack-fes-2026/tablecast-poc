@@ -129,3 +129,46 @@ it("入力検証は項目の制約を日英で返し、入力値や正規表現�
     issues.every((issue) => Object.keys(issue).toSorted().join(",") === "code,messages,path"),
   ).toBe(true);
 });
+
+it("DB由来の会計・注文入力も従来の業務制約と未知項目の拒否を維持する", async () => {
+  // Given: 店舗の認証済みスタッフと、既存の会計入力制約。
+  const { cookie } = await setupFixture();
+  const payment = { amount: 1, kind: "payment", reason: "確認", idempotencyKey: "tablecast-input" };
+  const invalid = [
+    { ...payment, amount: 0 },
+    { ...payment, amount: 10_000_001 },
+    { ...payment, amount: -10_000_001 },
+    { ...payment, amount: 1.5 },
+    { ...payment, reason: "" },
+    { ...payment, reason: "あ".repeat(501) },
+    { ...payment, idempotencyKey: "short" },
+    { ...payment, kind: "refund" },
+    { ...payment, actor_id: "another-user" },
+  ];
+  // When: 金額・理由・種別・冪等キーと、サーバー所有項目の入力を検証する。
+  for (const input of invalid) {
+    const response = await app.request(
+      "/api/admin/stores/tablecast-store/tables/tablecast-session/payments",
+      {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+      env,
+    );
+    // Then: DBの型から生成しても、広い列定義をそのまま公開しない。
+    expect(response.status).toBe(422);
+    expect(apiErrorSchema.parse(await response.json()).error.code).toBe("INVALID_INPUT");
+  }
+  const status = await app.request(
+    "/api/admin/stores/tablecast-store/orders/tablecast-order/status",
+    {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "submitted" }),
+    },
+    env,
+  );
+  expect(status.status).toBe(422);
+  expect(apiErrorSchema.parse(await status.json()).error.code).toBe("INVALID_INPUT");
+});

@@ -1,20 +1,20 @@
-import { execFileSync } from "node:child_process";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import shippedCapturePlan from "../capture-plan.json";
-import example from "../examples/tablecast-booking/project.json";
+import { readCaptureProject, projectSchema, root } from "./tablecast-project";
+import { validatedPeakDb, videoPaths } from "./tablecast-video";
 import {
-  readTablecastGuestCapture,
   tablecastCaptureOrigin,
-  tablecastCaptureStorageState,
   tablecastHostArguments,
-} from "./tablecast-app-capture.ts";
-import { assertCaptureFrame } from "./tablecast-capture-types.ts";
+  readTablecastGuestCapture,
+  tablecastCaptureStorageState,
+} from "./tablecast-app-capture";
 import { openscreenPath } from "./tablecast-openscreen.ts";
-import { projectSchema, readCaptureProject, root } from "./tablecast-project.ts";
-import { validatedPeakDb, videoPaths } from "./tablecast-video.ts";
+import { assertCaptureFrame } from "./tablecast-capture-types.ts";
+import example from "../examples/tablecast-booking/project.json";
+import shippedCapturePlan from "../capture-plan.json";
+import { execFileSync } from "node:child_process";
 
 const temporaryDirectories: string[] = [];
 

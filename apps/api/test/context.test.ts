@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { expect, it, vi } from "vitest";
-import { staffActor, staffIdentity } from "../src/modules/auth/middleware";
+import { requireIdentity, staffActor, staffIdentity } from "../src/modules/auth/middleware";
 import { type ApiEnv, type ApiServices, requestServices } from "../src/platform/context";
 import { handleError } from "../src/platform/http";
 import { setupFixture } from "./fixture";
@@ -22,7 +22,7 @@ it("ログイン済みの要求で認証と店舗認可を重ねてもsession照
       read.mockRestore();
     })
     .onError(handleError)
-    .get("/staff", async (c) => {
+    .get("/staff", requireIdentity, async (c) => {
       const [first, second] = await Promise.all([staffIdentity(c), staffIdentity(c)]);
       const actor = await staffActor(c, staff.storeId);
       return c.json({ first: first.user.id, second: second.user.id, actor: actor.userId });

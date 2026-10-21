@@ -26,11 +26,9 @@ import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { useCollectionSearch } from "../shell/collection-search";
-import { membershipOptions } from "./membership-query";
+import { type Membership, membershipOptions } from "./membership-query";
 import { useStore } from "./store-context";
-const load = async (organizationId: string) =>
-  authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
-type Invitation = Awaited<ReturnType<typeof load>>["invitations"][number];
+type Invitation = Membership["invitations"][number];
 export function Invitations() {
   const collection = useCollectionSearch({ sortIds: ["email", "role", "status", "expiresAt"] });
   const store = useStore(),
@@ -194,46 +192,43 @@ export function InviteMember() {
         {t("invitations_title")}
       </Button>
       <PageHeader title={t("org_invite")} />
-      <form
-        noValidate
-        className="max-w-xl space-y-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <form.AppField name="email" validators={{ onChange: z.email({ error: t("form_email") }) }}>
-          {(field) => (
-            <field.TextField label={t("auth_email")} type="email" required autoComplete="email" />
-          )}
-        </form.AppField>
-        <form.Field name="role">
-          {(field) => (
-            <label className="flex flex-col gap-2">
-              {t("org_role")}
-              <NativeSelect
-                value={field.state.value}
-                onChange={(e) => {
-                  const role = e.target.value;
-                  if (role === "owner" || role === "admin" || role === "member")
-                    field.handleChange(role);
-                }}
-              >
-                <option value="member">{t("org_member")}</option>
-                <option value="admin">{t("org_admin")}</option>
-                {store.role === "owner" && <option value="owner">{t("org_owner")}</option>}
-              </NativeSelect>
-            </label>
-          )}
-        </form.Field>
-        <ErrorNotice error={invite.error} />
-        <form.AppForm>
+      <form.AppForm>
+        <form.Form noValidate className="max-w-xl space-y-5">
+          <form.AppField
+            name="email"
+            validators={{ onChange: z.email({ error: t("form_email") }) }}
+          >
+            {(field) => (
+              <field.TextField label={t("auth_email")} type="email" required autoComplete="email" />
+            )}
+          </form.AppField>
+          <form.Field name="role">
+            {(field) => (
+              <label className="flex flex-col gap-2">
+                {t("org_role")}
+                <NativeSelect
+                  value={field.state.value}
+                  onChange={(e) => {
+                    const role = e.target.value;
+                    if (role === "owner" || role === "admin" || role === "member")
+                      field.handleChange(role);
+                  }}
+                >
+                  <option value="member">{t("org_member")}</option>
+                  <option value="admin">{t("org_admin")}</option>
+                  {store.role === "owner" && <option value="owner">{t("org_owner")}</option>}
+                </NativeSelect>
+              </label>
+            )}
+          </form.Field>
+          <ErrorNotice error={invite.error} />
+
           <form.SubmitButton>
             <MailPlus />
             {t("org_send_invitation")}
           </form.SubmitButton>
-        </form.AppForm>
-      </form>
+        </form.Form>
+      </form.AppForm>
     </>
   );
 }

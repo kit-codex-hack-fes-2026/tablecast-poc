@@ -148,11 +148,7 @@ function CustomerBenefits({ storeId }: { storeId: string }) {
             </p>
           )
         )}
-        <ErrorNotice
-          error={points.error}
-          onRetry={() => void points.refetch()}
-          retrying={points.isFetching}
-        />
+        <ErrorNotice query={points} retrying={points.isFetching} />
         <Link
           to="/member/$storeId/points"
           params={{ storeId }}
@@ -184,11 +180,7 @@ function CustomerBenefits({ storeId }: { storeId: string }) {
         {recentCoupons?.length === 0 && !coupons.error && (
           <p className="text-sm text-muted-foreground">{t("customer_owned_coupons_empty")}</p>
         )}
-        <ErrorNotice
-          error={coupons.error}
-          onRetry={() => void coupons.refetch()}
-          retrying={coupons.isFetching}
-        />
+        <ErrorNotice query={coupons} retrying={coupons.isFetching} />
         <Link
           to="/member/$storeId/coupons"
           params={{ storeId }}

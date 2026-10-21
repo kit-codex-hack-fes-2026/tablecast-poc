@@ -1,16 +1,17 @@
+import type { z } from "zod";
 import { and, eq, exists, isNull, sql } from "drizzle-orm";
 import type { ApiServices } from "../../../platform/context";
 import type { Actor } from "../../auth/model";
+import type { publishGameSchema, registerGameSchema } from "../model";
 import { gamePlugins, gameRuns, gameVersions } from "../../../db/games-schema";
 import { ensure } from "../../../platform/errors";
 import { requireManager } from "../../auth/policy";
-import { type GamePackage } from "../model";
 import { getGame, getGameVersion, readGamePackage } from "../queries";
 
 export async function registerGame(
   services: ApiServices,
   actor: Actor,
-  input: { gameId: string; package: GamePackage },
+  input: z.infer<typeof registerGameSchema>,
 ) {
   requireManager(actor);
   const id = crypto.randomUUID();
@@ -101,7 +102,7 @@ export async function publishGame(
   services: ApiServices,
   actor: Actor,
   gameId: string,
-  input: { approved: true; expectedRevision: number; versionId: string },
+  input: z.infer<typeof publishGameSchema>,
 ) {
   requireManager(actor);
   ensure(actor.kind === "staff" && actor.userId, "HUMAN_APPROVAL_REQUIRED", 403);

@@ -1,11 +1,11 @@
+import { z } from "zod";
 import type { Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { z } from "zod";
 import { captureEvents } from "./tablecast-capture-types.ts";
 import { repositoryRoot } from "./tablecast-source.ts";
 
-export function tablecastCaptureStorageState(role: "admin" | "guest" | "staff") {
+export function tablecastCaptureStorageState(role: "guest" | "staff" | "admin") {
   const variables = {
     guest: "TABLECAST_CAPTURE_STORAGE_STATE_GUEST",
     staff: "TABLECAST_CAPTURE_STORAGE_STATE_STAFF",

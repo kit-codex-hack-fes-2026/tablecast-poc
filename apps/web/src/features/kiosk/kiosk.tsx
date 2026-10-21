@@ -5,7 +5,7 @@ import { ErrorNotice } from "../../components/error-notice";
 import { KioskPending } from "../../components/kiosk-pending";
 import { useI18n } from "../../i18n/locale";
 import { tableEndpoint, type TableEndpoint } from "../../lib/api";
-import { TableSession } from "./kiosk-session-view";
+import { TableSession } from "./kiosk-session";
 import { Pairing } from "./pairing";
 import { tableOptions, tableQueryKey } from "./table-query";
 

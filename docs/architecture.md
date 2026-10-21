@@ -49,7 +49,7 @@ tablecast/
 │   │   │   ├── voice/                # 停止意思・認可・利用量・委任
 │   │   │   ├── auth/                 # 認証runtimeと認可
 │   │   │   └── その他の所有業務/
-│   │   ├── emails/                   # 文面・template・render・transport
+│   │   ├── emails/                   # 文面・template・送信時の描画とtransport
 │   │   ├── integrations/             # 解決済み入力を受ける外部protocol
 │   │   ├── platform/                 # request依存・エラー・観測
 │   │   └── realtime/                 # DO通知
@@ -79,11 +79,15 @@ rootのBun workspacesは `apps/*`。`@tablecast/web`、`@tablecast/api`、開発
 ## 業務moduleと依存の寿命
 
 Webは機能単位のfeature、APIは業務単位のmoduleを基本にする。小さな処理にcontroller/service/repository/interfaceを一組ずつ生成しない。
+同じ状態・寿命・変更理由を持つ処理は同じ所有者へまとめる。一回しか使わないhookとviewの間で多数の状態を返して再展開するだけなら、同じ編集・接続・表示の処理へ戻す。ファイル内の関数・privateメソッド・表示componentで役割を整理し、公開契約・独立したI/O・mount・購読の境界は維持する。実装300行は分割を強制する上限ではなくレビューの目安とする。
 APIではroute・音声のfunction・MCPが同じ注文操作関数を呼び、必要なDrizzle queryと純粋な価格・条件判定をそこから利用する。
+HTTPはHono公式のfactoryでEnvとmiddlewareの型を共有し、パスと操作を登録するchainからHono Clientへ型を伝える。共通のrequest準備はrootだけで行い、入力検証と認証の順序は各入口の契約として維持する。店舗・卓・本人のscopeを確定するguardを再利用し、GUI・音声・MCPから直に呼ばれる業務側の認可も保つ。
 価格計算等を `pricing.ts` に切り出すことは有用だが、そのための共有domain packageは不要。
 DB queryが十分短ければ操作関数内に置いてよい。複雑なqueryの所有ファイルを分ける場合も、単なる引数の中継層を追加しない。
 
 `app.ts`はHonoの共通middlewareとmoduleを組み立てる。`platform/context.ts`の`requestServices`がHTTPリクエストごとにDrizzleを一度生成し、同じ`ApiServices`をroute・service・Agentツールへ渡す。`db/client.ts`のDB factoryが認証schemaの関連queryを有効にする。schemaとfactoryはHonoや認証runtimeへ依存せず、D1 handleの寿命はWorkerまたは運用CLIが所有する。Better Authは最初の利用時に同じDBで生成し、スタッフsessionの取得PromiseはHono Contextで共有する。次のリクエストへDB・Auth・sessionを持ち越さず、healthや画像はAuth設定に依存しない。
+
+Drizzle ORM・Kitは`1.0.0-rc.5`を使い、認証のRelations v2とBetter Authの対応adapterを同時に扱う。DB列と同義の入力は`drizzle-orm/zod`から必要なfieldだけを選び、業務の制約を重ねる。JSON列内の設定・snapshot等は業務Zod schemaを正本にし、DBの文字列列から生成しない。行型はDrizzle、公開HTTPの入出力型はZodとHono Clientから推論する。WebへDB schemaのruntime依存を渡さない。
 
 | 所有者                                                                                  | 責務                                                                       |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -103,6 +107,7 @@ HTTP入力schemaは所有moduleに置く。Web向けのHono RPC clientは `@tabl
 メニュー検索の純粋関数は `@tablecast/api/catalog-search` から公開し、音声ツールと店側で共有する。`modules/catalog/search.ts` だけがFuse.jsへ依存し、Webは取得済みの公開版・下書きの設定ごとに索引を再利用する。DB・認証・価格判定・モデル実行をこの公開入口へ含めない。
 これはAPI自身の公開面であり、別のcontracts packageではない。WebがAPIのDB・auth・モデル実行コードをruntime importしないことをbuildで確認する。
 型はtype-only importで扱い、画面専用のstateと業務契約を無理に一つにしない。音声のブラウザーとAPIの契約も同じ公開schemaを使う。全APIの巨大SDKは生成しない。
+Webの取得定義は既存の`queryOptions`・`infiniteQueryOptions`、更新定義は共有する処理がある場合の`mutationOptions`を使う。応答型を得るためだけのload関数を作らず、公開clientの成功応答から推論する。cache key・版・cursor・取消signalを定義と一緒に保ち、共通cache更新と画面固有の入力・focus・遷移をそれぞれの所有者で扱う。
 
 共有packageを作るのは、実在する独立した複数consumerと、切り出した方が変更箇所を減らす根拠がある場合だけ。
 
@@ -132,7 +137,7 @@ flowchart TD
 
 `@tablecast/api/db`は運用CLI向けのschema・DB生成・型、`@tablecast/api/bootstrap`は初期化に限定した公開入口とする。CLIから任意のAPI内部ファイルへ到達させず、Webは両入口を利用しない。認証schemaを認証runtime配下へ移してdb→auth→dbの循環を作らない。DB切り出しは複数の実consumerがあるため将来候補だが、今回は`packages/*`を追加しない。auth client・React Email・WebのUIは変更理由と利用者が異なるため、現在のapp内の所有を保つ。
 
-メールはtemplate・文面・送信transportを分け、React Email rendererの遅延importを保つ。外部protocol adapterへは資格情報を解決済みの入力を渡し、APIの認可・DBやHonoへ逆依存させない。Oxlint boundariesは所有業務・読取/更新/HTTPの役割・公開入口を検査し、未知の配置も拒否する。行数だけで分割の妥当性を判断しない。
+メールはtemplate・文面を独立させ、送信を所有する`emails/send.ts`が描画とtransportを選ぶ。React Email rendererとtemplateは送信時だけ遅延importする。外部protocol adapterへは資格情報を解決済みの入力を渡し、APIの認可・DBやHonoへ逆依存させない。Oxlint boundariesは所有業務・読取/更新/HTTPの役割・公開入口を検査し、未知の配置も拒否する。行数だけで分割の妥当性を判断しない。
 
 ## 単一オリジン
 

@@ -21,9 +21,9 @@ import { Badge } from "../../components/ui/badge";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
 import { useCollectionSearch } from "../shell/collection-search";
-import { type loadMcpSessions, mcpSessionsOptions } from "./account-query";
+import { type McpSessionsData, mcpSessionsOptions } from "./account-query";
 import { IntegrationsShell } from "./integrations-shell";
-type Session = Awaited<ReturnType<typeof loadMcpSessions>>["sessions"][number];
+type Session = McpSessionsData["sessions"][number];
 export function McpSessions() {
   const { t } = useI18n(),
     client = useQueryClient();

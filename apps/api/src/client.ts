@@ -12,3 +12,5 @@ export { DetailedError, parseResponse } from "hono/client";
 
 export const createTableSessionClient = (baseUrl: string, options?: Parameters<typeof hc>[1]) =>
   hc<ApplyGlobalResponse<typeof tableOperations, RpcErrors>>(baseUrl, options);
+
+export type { InferRequestType, InferResponseType } from "hono/client";

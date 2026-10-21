@@ -40,6 +40,9 @@ export type ApiEnv = {
     errorPhase?: "mcp.authentication" | "mcp.registration" | "mcp.store" | "mcp.transport";
     services: ApiServices;
     session?: ReturnType<ReturnType<typeof createAuth>["api"]["getSession"]>;
+    staffSession: NonNullable<
+      Awaited<ReturnType<ReturnType<typeof createAuth>["api"]["getSession"]>>
+    >;
     traceId: string;
   };
 };

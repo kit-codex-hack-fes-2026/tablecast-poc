@@ -1,12 +1,6 @@
 import { expect, test } from "vitest";
 import sample from "../sample.json";
-import {
-  audioPath,
-  escapeHtml,
-  projectSchema,
-  speechRequest,
-  timeline,
-} from "./tablecast-project.ts";
+import { audioPath, escapeHtml, projectSchema, speechRequest, timeline } from "./tablecast-project";
 
 const file = "assets/demo/tablecast-voice-consult.mp4";
 const project = projectSchema.parse({

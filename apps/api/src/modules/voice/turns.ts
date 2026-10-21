@@ -7,9 +7,8 @@ import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
 import { recordCustomerMemorySource } from "../customer-memory/use-cases/sources";
 import { notifyStore, voiceTurnEvent } from "../tables/mutations";
-import { getSession } from "../tables/session";
 import { logVoiceTurn } from "./diagnostics";
-import { proactiveReservationCondition, voiceActor } from "./queries";
+import { proactiveReservationCondition, voiceContext } from "./queries";
 
 export async function finishVoiceTurn(
   services: ApiServices,
@@ -122,14 +121,13 @@ export async function startVoiceTurn(
   waitUntil: (promise: Promise<unknown>) => void,
 ) {
   const db = services.db;
-  const actor = await voiceActor(services, input.voiceSessionId);
+  const { actor, session } = await voiceContext(services, input.voiceSessionId);
   Object.assign(diagnostics, {
     storeId: actor.storeId,
     tableSessionId: actor.tableSessionId,
     voiceSessionId: actor.voiceSessionId,
     turnId: input.turnId,
   });
-  const session = await getSession(services, actor);
   ensure(input.locale === session.locale, "VOICE_LOCALE_STALE", 409);
   const proactive = input.trigger === "proactive";
   requestSignal.throwIfAborted();

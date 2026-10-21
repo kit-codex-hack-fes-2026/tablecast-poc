@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import type { InferResponseType } from "../../lib/api";
 import { parseResponse, rpc } from "../../lib/api";
 import { authClient, authResult } from "../../lib/auth-client";
 export const accountSessionsOptions = queryOptions({
@@ -14,9 +15,12 @@ export const accountKeysOptions = queryOptions({
   queryFn: async () => authResult(await authClient.passkey.listUserPasskeys()),
 });
 
-export const loadMcpSessions = (signal?: AbortSignal) =>
-  parseResponse(rpc.api.account["mcp-sessions"].$get({}, { init: { signal } }));
+export type McpSessionsData = InferResponseType<
+  (typeof rpc.api.account)["mcp-sessions"]["$get"],
+  200
+>;
 export const mcpSessionsOptions = queryOptions({
   queryKey: ["tablecast-mcp-sessions"],
-  queryFn: ({ signal }) => loadMcpSessions(signal),
+  queryFn: ({ signal }) =>
+    parseResponse(rpc.api.account["mcp-sessions"].$get({}, { init: { signal } })),
 });

@@ -4,7 +4,7 @@ import type { Actor } from "../auth/model";
 import type { VoiceTrigger } from "./model";
 import * as business from "../../db/business-schema";
 import { ensure } from "../../platform/errors";
-import { getSession, validateSession } from "../tables/session";
+import { getSession, validateSession } from "../tables/queries";
 function proactiveCondition(now: number) {
   return sql`AND json_array_length(cart_json)=0 AND staff_called=0 AND coalesce((SELECT json_extract(config_json,'$.cast.proactive') FROM demo_sessions WHERE session_id=table_sessions.id),(SELECT json_extract(config_json,'$.cast.proactive') FROM stores WHERE id=table_sessions.store_id))=1 AND NOT EXISTS(SELECT 1 FROM confirmations WHERE table_session_id=table_sessions.id AND status IN ('pending','read') AND expires_at>${now})`;
 }
@@ -26,7 +26,7 @@ export async function currentVoiceTurn(
   if (trigger === "proactive")
     ensure(
       (
-        await db.get<undefined | { id: number | string }>(
+        await db.get<{ id: number | string }>(
           sql`SELECT id FROM table_sessions WHERE id=${session.id} AND active_turn_id=${actor.turnId ?? null} ${proactiveCondition(Date.now())}`,
         )
       )?.id,
@@ -74,12 +74,4 @@ export async function voiceContext(services: ApiServices, voiceSessionId: string
   };
   await validateSession(services, actor, row);
   return { actor, session: row, proactive: Boolean(result.proactive) };
-}
-
-export async function voiceActor(
-  services: ApiServices,
-  voiceSessionId: string,
-  turnId?: string,
-): Promise<Actor> {
-  return (await voiceContext(services, voiceSessionId, turnId)).actor;
 }

@@ -55,12 +55,7 @@ export function StoreProfile() {
           )}
         </div>
         {!manager && <p className="text-sm text-muted-foreground">{t("store_icon_permission")}</p>}
-        <ActionFeedback
-          pending={upload.isPending}
-          error={upload.error}
-          success={upload.isSuccess}
-          successMessage={t("account_saved")}
-        />
+        <ActionFeedback mutation={upload} successMessage={t("account_saved")} />
       </ConfigurationSection>
     </>
   );

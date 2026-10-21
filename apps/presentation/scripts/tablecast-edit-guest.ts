@@ -1,22 +1,22 @@
+import { openscreenPath } from "./tablecast-openscreen.ts";
 // OpenScreenの標準version 2 projectを編集し、同じCLIで書き出す。
 // 元録画・実際のイベントを保ち、画面と音声の開始時刻だけを合わせる。
 import { execFile } from "node:child_process";
-import { access, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, access } from "node:fs/promises";
 import { resolve, win32 } from "node:path";
 import { promisify } from "node:util";
-import { z } from "zod";
 import {
-  assertCaptureFrame,
-  captureEvents,
   screenProject,
+  captureEvents,
   videoDimensions,
+  assertCaptureFrame,
 } from "./tablecast-capture-types.ts";
-import { composeCursor } from "./tablecast-cursor.ts";
-import { recordingEdits } from "./tablecast-edit-plan.ts";
-import { openscreenPath } from "./tablecast-openscreen.ts";
-import { projectPath, readProject } from "./tablecast-project.ts";
-import { bindShotZoom } from "./tablecast-shot.ts";
 import { zoomRegions } from "./tablecast-zoom.ts";
+import { readProject, projectPath } from "./tablecast-project.ts";
+import { bindShotZoom } from "./tablecast-shot.ts";
+import { z } from "zod";
+import { recordingEdits } from "./tablecast-edit-plan.ts";
+import { composeCursor } from "./tablecast-cursor.ts";
 const run = promisify(execFile);
 const root = resolve(import.meta.dirname, "..");
 const project = await readProject();

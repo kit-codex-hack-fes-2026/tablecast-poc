@@ -16,8 +16,8 @@ export const videoDimensions = z.object({
   streams: z.tuple([z.object({ width: z.number(), height: z.number() })]),
 });
 export function assertCaptureFrame(
-  frame: { height: number; width: number },
-  viewport: { height: number; width: number },
+  frame: { width: number; height: number },
+  viewport: { width: number; height: number },
 ) {
   if (frame.width !== viewport.width + 2 || frame.height !== viewport.height + 82)
     throw new Error(`Chrome client領域が実測済み配置と異なります: ${JSON.stringify(frame)}`);
@@ -43,19 +43,19 @@ export const captureEvents = z.looseObject({
     .optional(),
 });
 
-type SpeechEvent = { at: number; duration: number; id: string };
+type SpeechEvent = { id: string; at: number; duration: number };
 declare global {
   interface Window {
-    tablecastCapture: {
-      dump(): Promise<string>;
-      events: SpeechEvent[];
-      speak(base64: string, id: string): Promise<void>;
-      start(): Promise<number>;
-      startedAt: number;
-      stop(): Promise<string>;
-    };
     tablecastPointerEvents: z.infer<typeof pointerEvent>[];
     tablecastScreenEvents: { at: number; text: string }[];
+    tablecastCapture: {
+      startedAt: number;
+      events: SpeechEvent[];
+      start(): Promise<number>;
+      speak(base64: string, id: string): Promise<void>;
+      dump(): Promise<string>;
+      stop(): Promise<string>;
+    };
   }
 }
 

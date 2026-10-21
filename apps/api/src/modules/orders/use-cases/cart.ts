@@ -13,9 +13,7 @@ import {
   notifyStore,
   voiceCondition,
 } from "../../tables/mutations";
-import { getPricingContext } from "../../tables/pricing";
-import { getTableState } from "../../tables/queries";
-import { getSession } from "../../tables/session";
+import { getPricingContext, getSession, getTableState } from "../../tables/queries";
 import { type CartUpdate } from "../model";
 
 export async function updateCart(

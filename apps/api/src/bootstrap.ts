@@ -1,8 +1,7 @@
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/d1";
 import { z } from "zod";
-import * as schema from "./db/auth-schema";
 import * as business from "./db/business-schema";
+import { createDatabase } from "./db/client";
 import { type AuthEnv, createAuth } from "./modules/auth/service";
 import { configurationErrors } from "./modules/catalog/pricing";
 import { configurationSchema } from "./modules/configuration/model";
@@ -82,14 +81,14 @@ export async function bootstrapDatabase(
   const parsed = bootstrapInputSchema.safeParse(rawInput);
   ensure(parsed.success, "BOOTSTRAP_INVALID", 422);
   const input = parsed.data;
-  const db = drizzle(env.TABLECAST_DB, { schema });
+  const db = createDatabase(env.TABLECAST_DB);
   const progress: {
     organizationId: null | string;
     stage: "administrator" | "organization" | "preflight" | "store";
     userId: null | string;
   } = { stage: "preflight", userId: null, organizationId: null };
   try {
-    const conflict = await db.get<Record<string, unknown> | undefined>(
+    const conflict = await db.get(
       sql`SELECT 1 FROM user WHERE lower(email)=${input.admin.email} UNION ALL SELECT 1 FROM organization WHERE slug=${input.organization.slug} UNION ALL SELECT 1 FROM stores WHERE id=${input.store.id} UNION ALL SELECT 1 FROM restaurant_tables WHERE id IN (SELECT value FROM json_each(${JSON.stringify(input.tables.map((table) => table.id))})) LIMIT 1`,
     );
     ensure(!conflict, "BOOTSTRAP_CONFLICT", 409, progress);

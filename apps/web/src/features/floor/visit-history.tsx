@@ -34,12 +34,7 @@ export function VisitHistory({
   });
   return (
     <section>
-      <ErrorNotice
-        error={history.error}
-        onRetry={() => {
-          void history.refetch();
-        }}
-      />
+      <ErrorNotice query={history} />
       {(history.isPending || history.data) && (
         <VisitHistoryTable
           sessions={history.data?.pages.flatMap((page) => page.sessions) ?? []}

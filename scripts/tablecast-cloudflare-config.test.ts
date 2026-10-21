@@ -6,12 +6,14 @@ import {
   writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { InputWorkerSchema, resolveAndParseConfig } from "@cloudflare/config";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 import { apiCloudflareConfig } from "../apps/api/cloudflare.config.ts";
 import { webCloudflareConfig } from "../apps/web/cloudflare.config.ts";
+import { cleanBuild } from "./tablecast-clean-build.ts";
 import {
   accessApplicationConfig,
   bindDeploymentDatabase,
@@ -26,6 +28,38 @@ import { reconcileAccess } from "./tablecast-infra-access.ts";
 import { assertWorkerOwner } from "./tablecast-infra-diff.ts";
 
 describe("cfの環境解決と実資源の採用", () => {
+  test.each(["preview", "staging", "production"])(
+    "%sでは全Worker成果物のdotenvだけを除き、開発時と通常assetは保持する",
+    async (mode) => {
+      const root = await mkdtemp(join(tmpdir(), "tablecast-clean-build-test-"));
+      const names = [
+        ".env",
+        ".env.preview",
+        ".dev.vars",
+        ".dev.vars.preview",
+        "index.js",
+        "env.json",
+      ];
+      try {
+        for (const worker of ["default", "tablecast_api"]) {
+          const directory = join(root, ".cloudflare/output/v0/workers", worker);
+          await mkdir(directory, { recursive: true });
+          await Promise.all(names.map((name) => writeFile(join(directory, name), name)));
+          await cleanBuild(root, "development");
+          expect((await readdir(directory)).sort()).toEqual([...names].sort());
+        }
+        await cleanBuild(root, mode);
+        for (const worker of ["default", "tablecast_api"])
+          expect(await readdir(join(root, ".cloudflare/output/v0/workers", worker))).toEqual([
+            "env.json",
+            "index.js",
+          ]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   test.each(["production", "staging", "preview"] as const)(
     "%sの資源・SQLite exports・secret宣言を解決する",
     async (environment) => {
@@ -204,6 +238,12 @@ describe("cfの環境解決と実資源の採用", () => {
           });
         }
       }
+      const bundle = getWorkerBundleDir(root, "default");
+      await writeFile(join(bundle, ".env.preview"), "tablecast-build-test-secret");
+      execFileSync(process.execPath, [resolve(import.meta.dirname, "tablecast-clean-build.ts")], {
+        cwd: root,
+      });
+      expect(await readdir(bundle)).not.toContain(".env.preview");
       const output = await readBuildOutput(root);
       expect(deploymentBuildOutput(output, target, sha)).toHaveLength(2);
       expect(() => deploymentBuildOutput(output, target, "b".repeat(40))).toThrow("Invalid input");

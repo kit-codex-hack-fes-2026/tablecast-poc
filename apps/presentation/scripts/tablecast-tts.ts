@@ -1,21 +1,21 @@
 import { constants } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
-import { parseArgs, parseEnv } from "node:util";
+import { parseEnv, parseArgs } from "node:util";
 import { z } from "zod";
 import {
-  audioPath,
-  needsVoice,
-  type Project,
   readAudioDuration,
+  audioPath,
   readProject,
   root,
-  selectScenes,
-  type SpeechCue,
-  speechHash,
   speechRequest,
-} from "./tablecast-project.ts";
+  speechHash,
+  type Project,
+  type SpeechCue,
+  needsVoice,
+  selectScenes,
+} from "./tablecast-project";
 
 export async function requestSpeech(project: Project, item: SpeechCue, apiKey: string) {
   const response = await fetch("https://api.inworld.ai/tts/v1/voice", {

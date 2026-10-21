@@ -1,7 +1,8 @@
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { execFileSync } from "node:child_process";
-import { copyFile, cp, readdir, rm } from "node:fs/promises";
+import { copyFile, cp, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { cleanBuild } from "./tablecast-clean-build.ts";
 import { modeOptions } from "./tablecast-deploy-config.ts";
 import { readSeedTemplate } from "./tablecast-seed-template.ts";
 
@@ -82,16 +83,7 @@ export async function buildTablecast(
       resolve(webRoot, ".cloudflare/output/v0/containers", container.config.name),
       { recursive: true },
     );
-  if (["preview", "staging", "production"].includes(mode)) {
-    // 公式Vite pluginがpreview用に生成するdotenvはCI成果物へ含めない。
-    const output = resolve(webRoot, ".cloudflare/output");
-    for (const path of await readdir(output, { recursive: true }))
-      if (
-        path.split("/").at(-1)?.startsWith(".dev.vars") ||
-        path.split("/").at(-1)?.startsWith(".env")
-      )
-        await rm(resolve(output, path), { force: true });
-  }
+  await cleanBuild(webRoot, mode);
   // SerwistはViteの全environment終了後に生成するため、Build Outputのassetsにも反映する。
   if (!web.workers.default.assetsDir) throw new Error("Webの静的assetsがありません。");
   // 同じSHAのWorkers成果物へ同梱し、seed専用の取得stepを増やさない。

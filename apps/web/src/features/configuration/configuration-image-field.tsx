@@ -263,12 +263,7 @@ export function ConfigurationImageField({
           {t(error)}
         </p>
       )}
-      <ActionFeedback
-        pending={upload.isPending}
-        error={upload.error}
-        success={upload.isSuccess}
-        successMessage={t("editor_image_uploaded")}
-      />
+      <ActionFeedback mutation={upload} successMessage={t("editor_image_uploaded")} />
     </fieldset>
   );
 }

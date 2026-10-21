@@ -119,17 +119,8 @@ export const configurationIssueSchema = z.discriminatedUnion("code", [
 
 export type ConfigurationIssue = z.infer<typeof configurationIssueSchema>;
 
-export type ConfigDraft = {
-  baseVersion: number;
+export type ConfigDraft = Omit<z.infer<typeof configDraftSchema>, "changes"> & {
   changes: { after: unknown; before: unknown; path: string; sensitive: boolean }[];
-  configuration: Configuration;
-  createdAt: number;
-  errors: ConfigurationIssue[];
-  id: string;
-  status: "discarded" | "draft" | "published" | "ready";
-  storeId: string;
-  updatedAt: number;
-  version: number;
 };
 
 export const draftChoicesQuerySchema = z
@@ -173,7 +164,7 @@ const configurationChangesSchema = z.array(
   z.object({ path: z.string(), before: z.json(), after: z.json(), sensitive: z.boolean() }),
 );
 
-export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
+export const configDraftSchema = z.object({
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   id: z.string(),
@@ -186,14 +177,9 @@ export const configDraftSchema: z.ZodType<ConfigDraft> = z.object({
   changes: configurationChangesSchema,
 });
 
-export type Catalog = {
-  configuration: Configuration;
-  storeId: string;
-  storeName: string;
-  version: number;
-};
+export type Catalog = z.infer<typeof catalogSchema>;
 
-export const catalogSchema: z.ZodType<Catalog> = z.object({
+export const catalogSchema = z.object({
   storeId: z.string(),
   storeName: z.string(),
   version: z.number().int(),
@@ -264,3 +250,19 @@ export type ConfigurationHistoryEntry = z.infer<typeof configurationHistoryEntry
 export type ConfigurationHistoryPage = z.infer<typeof configurationHistoryPageSchema>;
 export type ConfigurationRelease = Omit<z.infer<typeof configurationReleaseSchema>, "changes"> &
   Pick<ConfigDraft, "changes">;
+
+export const draftUpdateSchema = z
+  .object({
+    expectedVersion: z.number().int(),
+    configuration: configurationSchema,
+    instructionFormatVersion: z.literal(1).optional(),
+  })
+  .strict();
+export const draftPublishSchema = z
+  .object({
+    expectedVersion: z.number().int(),
+    baseVersion: z.number().int(),
+    idempotencyKey: z.string().min(8).max(100),
+    approved: z.literal(true),
+  })
+  .strict();

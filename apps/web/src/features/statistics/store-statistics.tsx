@@ -149,23 +149,19 @@ function PeriodForm({
     onSubmit: ({ value }) => onSubmit(value),
   });
   return (
-    <form
-      className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-end gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <form.AppField name="from">
-        {(field) => <field.DateField required label={t("statistics_from")} />}
-      </form.AppField>
-      <form.AppField name="to">
-        {(field) => <field.DateField ref={endInput} required label={t("statistics_to")} />}
-      </form.AppField>
-      <Button type="submit" variant="outline" className="col-span-full justify-self-start">
-        <Check aria-hidden />
-        {t("statistics_apply")}
-      </Button>
-    </form>
+    <form.AppForm>
+      <form.Form className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-end gap-3">
+        <form.AppField name="from">
+          {(field) => <field.DateField required label={t("statistics_from")} />}
+        </form.AppField>
+        <form.AppField name="to">
+          {(field) => <field.DateField ref={endInput} required label={t("statistics_to")} />}
+        </form.AppField>
+        <Button type="submit" variant="outline" className="col-span-full justify-self-start">
+          <Check aria-hidden />
+          {t("statistics_apply")}
+        </Button>
+      </form.Form>
+    </form.AppForm>
   );
 }

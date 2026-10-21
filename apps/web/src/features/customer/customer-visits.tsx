@@ -33,7 +33,7 @@ export function CustomerVisits({ storeId }: { storeId: string }) {
         <LoadingState />
       ) : (
         <>
-          <ErrorNotice error={visits.error} onRetry={() => void visits.refetch()} />
+          <ErrorNotice query={visits} />
           {!visits.data?.pages[0]?.visits.length && !visits.error && (
             <p className="text-muted-foreground">{t("customer_visits_empty")}</p>
           )}
@@ -176,7 +176,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
         {t("customer_owned_coupons")}
         <ArrowRight aria-hidden className="size-4 shrink-0" />
       </Link>
-      <ErrorNotice error={visit.error} onRetry={() => void visit.refetch()} />
+      <ErrorNotice query={visit} />
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-semibold">
           <Users aria-hidden className="size-5" />
@@ -222,7 +222,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
             </section>
           )),
         )}
-        <ErrorNotice error={orderPages.error} onRetry={() => void orderPages.refetch()} />
+        <ErrorNotice query={orderPages} />
         {orderPages.hasNextPage && (
           <Button
             variant="outline"
@@ -239,12 +239,7 @@ export function CustomerVisit({ storeId, sessionId }: { sessionId: string; store
         </Button>
       )}
       {!leave.isIdle && (
-        <ActionFeedback
-          pending={leave.isPending}
-          error={leave.error}
-          success={leave.isSuccess}
-          successMessage={t("customer_disconnected")}
-        />
+        <ActionFeedback mutation={leave} successMessage={t("customer_disconnected")} />
       )}
       <Link
         className="inline-flex min-h-11 items-center text-sm underline underline-offset-4"

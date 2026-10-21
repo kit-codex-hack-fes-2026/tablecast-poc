@@ -1,8 +1,9 @@
 import type { TableEvent } from "@tablecast/api/schema";
 import { CircleAlert, LoaderCircle, Mic, MicOff, Pause, ShoppingBag } from "lucide-react";
 import { lazy, Suspense } from "react";
+import type { voiceOperationState } from "./conversation-model";
 import type { VoiceView } from "./voice-connection";
-import type { voiceOperationState, VoicePanelProps } from "./voice-panel-state";
+import type { VoicePanelProps } from "./voice-panel";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { MicrophoneNotice, MicrophoneSettings } from "./microphone-settings";

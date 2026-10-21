@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import sample from "../sample.json";
-import { projectSchema } from "./tablecast-project.ts";
-import { fitZoom, zoomMotion, zoomRegions } from "./tablecast-zoom.ts";
+import { projectSchema } from "./tablecast-project";
+import { fitZoom, zoomRegions, zoomMotion } from "./tablecast-zoom";
 
 const project = projectSchema.parse(sample);
 const viewport = { x: 240, y: 0, width: 1440, height: 1080 };

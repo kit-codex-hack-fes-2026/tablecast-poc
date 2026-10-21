@@ -7,9 +7,8 @@ import {
 } from "../src/modules/configuration/use-cases/drafts";
 import { publishDraft } from "../src/modules/configuration/use-cases/publish";
 import { updateCart } from "../src/modules/orders/use-cases/cart";
-import { prepareConfirmation } from "../src/modules/orders/use-cases/confirmation";
+import { prepareConfirmation, submitOrder } from "../src/modules/orders/use-cases/confirmation";
 import { recordPayment } from "../src/modules/orders/use-cases/payment";
-import { submitOrder } from "../src/modules/orders/use-cases/submit";
 import { getEvents } from "../src/modules/stores/queries";
 import { getTableState } from "../src/modules/tables/queries";
 import { callStaff } from "../src/modules/tables/use-cases/presentation";

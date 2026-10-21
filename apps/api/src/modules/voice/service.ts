@@ -12,8 +12,7 @@ import {
   notifyStore,
   voiceCondition,
 } from "../tables/mutations";
-import { getTableState } from "../tables/queries";
-import { getSession } from "../tables/session";
+import { getSession, getTableState } from "../tables/queries";
 import { speechSpeedInputSchema, voiceToolEventSchema } from "./model";
 
 // 会話画面へ公開する引数はメニュー検索語だけに限る。
