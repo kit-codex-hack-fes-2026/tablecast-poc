@@ -1,0 +1,6 @@
+{
+  "scopedRuntimeDirectoriesRemaining": [],
+  "scopedRuntimeProcessIdsRemaining": [],
+  "tablecastWorkerMailpitContainersRemaining": [],
+  "verification": "Successful standard fixture teardown verifies owned process groups, removes owned worker/template directories and Mailpit containers; independent cwd-scoped process and container readback follows."
+}

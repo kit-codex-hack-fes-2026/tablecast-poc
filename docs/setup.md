@@ -343,3 +343,9 @@ Viteの開発起動ではAPIを補助Workerとして同時実行するため、`
 部品の用途・props・使用例はWeb内の公式 `@storybook/addon-docs@10.6.2` によるDocs/Autodocsで確認する。通常の `bun install --frozen-lockfile` と `bun run storybook` で利用できる。MCP登録は [開発環境](development.md#storybook-mcp) に従い、起動したworktreeの実URLを既存のGit管理外 `.codex/config.toml` へ統合する。ユーザー共通設定、API、DB、秘密情報の追加は不要。
 
 Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。
+
+## 静的品質ゲートの固定版
+
+rootにfallow 3.34.1とeslint-plugin-perfectionist 5.12.1を固定する。`bun install --frozen-lockfile`とcodegen後、`bun run check`でformat・型付きlint・型検査・fallow全体gate・既存テストを実行する。実装300行・テスト500行、import/export/type整列とWebの配列添字検査が有効になる。`exactOptionalPropertyTypes`は有効にしない。詳細と手動修正の順序は[静的解析](static-analysis.md)を参照する。
+
+commit前はLefthookがcodegenを一度実行してlintとHEAD比較auditを行う。部分stageと作業ツリーの差分を自動stageしない。CIでは差分比較ではなく既存コード全体を検査する。Codex MCPは上記設定のworktree絶対cwdとローカル固定版を使用する。

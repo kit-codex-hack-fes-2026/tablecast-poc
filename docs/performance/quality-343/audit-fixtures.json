@@ -1,0 +1,110 @@
+[
+  {
+    "case": "既存の未使用コードがあっても差分なしは成功",
+    "exit": 0,
+    "verdict": "pass",
+    "summary": {
+      "dead_code_issues": 0,
+      "dead_code_has_errors": false,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "変更ファイルにある既存の指摘は継承扱い",
+    "exit": 0,
+    "verdict": "pass",
+    "summary": {
+      "dead_code_issues": 1,
+      "dead_code_has_errors": true,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "新規の未使用ファイルは失敗",
+    "exit": 1,
+    "verdict": "fail",
+    "summary": {
+      "dead_code_issues": 1,
+      "dead_code_has_errors": true,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "部分stageの有効な変更は成功",
+    "exit": 0,
+    "verdict": "pass",
+    "summary": {
+      "dead_code_issues": 0,
+      "dead_code_has_errors": false,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "未stageで増えた未使用exportも判定へ影響する",
+    "exit": 1,
+    "verdict": "fail",
+    "summary": {
+      "dead_code_issues": 1,
+      "dead_code_has_errors": true,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "実Lefthookは部分stageの未stage差分を退避して成功し全差分を復元する",
+    "exit": 0
+  },
+  {
+    "case": "実Lefthookはstageされた新規エラーをfallowで拒否しcodegenは各回一度だけ実行",
+    "exit": 1
+  },
+  {
+    "case": "stage対象外のファイルの未stageエラーも実Lefthookのauditへ影響する",
+    "exit": 1
+  },
+  {
+    "case": "新規の複雑度超過は警告で成功",
+    "exit": 0,
+    "verdict": "warn",
+    "summary": {
+      "dead_code_issues": 0,
+      "dead_code_has_errors": false,
+      "complexity_findings": 1,
+      "max_cyclomatic": 26,
+      "duplication_clone_groups": 0
+    }
+  },
+  {
+    "case": "新規の重複は警告で成功",
+    "exit": 0,
+    "verdict": "warn",
+    "summary": {
+      "dead_code_issues": 0,
+      "dead_code_has_errors": false,
+      "complexity_findings": 0,
+      "max_cyclomatic": null,
+      "duplication_clone_groups": 1
+    }
+  },
+  {
+    "case": "比較元の不備は失敗",
+    "exit": 2,
+    "verdict": null,
+    "summary": null
+  },
+  {
+    "case": "解析設定の不備は失敗",
+    "exit": 2,
+    "verdict": null,
+    "summary": null
+  }
+]
