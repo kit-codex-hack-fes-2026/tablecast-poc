@@ -168,16 +168,12 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
   const platforms: { dispose(): Promise<void> }[] = [];
   const credentials: DemoCredentials = {
     email: "haruka.sato@komorebi-shijo.com",
-    password: "tablecast-template-first-owner-password",
     otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-    otherPassword: "tablecast-template-first-other-password",
     baseTime: Date.UTC(2026, 8, 6, 0),
     profile: "demo",
   };
   const otherCredentials: DemoCredentials = {
     ...credentials,
-    password: "tablecast-template-second-owner-password",
-    otherPassword: "tablecast-template-second-other-password",
     baseTime: credentials.baseTime + 7 * 86_400_000,
   };
   try {
@@ -263,10 +259,7 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       ).toEqual([[], [], [], [], []]);
       expect(await database.db.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
       const auth = createAuth({ ...database.env, TABLECAST_ENV: "production" });
-      for (const [email, password] of [
-        [current.email, current.password],
-        [current.otherEmail, current.otherPassword],
-      ]) {
+      for (const email of [current.email, current.otherEmail]) {
         const response = await auth.handler(
           new Request(`${database.env.TABLECAST_PUBLIC_ORIGIN}/api/auth/sign-in/email`, {
             method: "POST",
@@ -274,7 +267,7 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
               "Content-Type": "application/json",
               Origin: database.env.TABLECAST_PUBLIC_ORIGIN,
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ email, password: "tablecast-retired-test-password" }),
           }),
         );
         expect(response.status).toBe(403);
@@ -282,11 +275,7 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       }
     }
 
-    // 完了済みの再配備は、編集した店舗・注文・資格情報を成果物で戻さない。
-    const auth = createAuth({ ...first.env, TABLECAST_ENV: "production" });
-    const updatedHash = await (
-      await auth.$context
-    ).password.hash("tablecast-template-edited-owner-password");
+    // 完了済みの再配備は、編集した店舗・注文・追加したGoogle連携を成果物で戻さない。
     const owner = firstBase.users.find((person) => person.email === credentials.email);
     if (!owner) throw new Error("初期投入した管理者がありません。");
     const orderId = "tablecast-komorebi-table-04-session-confirmation-1-order";
@@ -300,15 +289,21 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
         .update(business.orders)
         .set({ status: "accepted", updated_at: credentials.baseTime })
         .where(eq(business.orders.id, orderId)),
-      first.db
-        .update(identity.account)
-        .set({ password: updatedHash })
-        .where(eq(identity.account.userId, owner.id)),
+      first.db.insert(identity.account).values({
+        id: "tablecast-template-linked-google",
+        accountId: "tablecast-template-google-subject",
+        providerId: "google",
+        userId: owner.id,
+        updatedAt: new Date(credentials.baseTime),
+      }),
     ]);
     const before = await first.db.batch([
       first.db.select().from(business.stores),
       first.db.select().from(business.orders),
       first.db.select().from(identity.account),
+    ]);
+    expect(before[2]).toEqual([
+      expect.objectContaining({ providerId: "google", userId: owner.id, password: null }),
     ]);
     expect(
       await seedPreviewDatabase(

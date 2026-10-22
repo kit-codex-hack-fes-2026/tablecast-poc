@@ -7,6 +7,7 @@ import {
 } from "@tablecast/api/schema";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { signInDemoOwner } from "./tablecast-demo-auth.ts";
 import { assertPrepared } from "./tablecast-runtime.ts";
 import { demoCredentials, sampleLine } from "./tablecast-seed.ts";
 
@@ -17,6 +18,7 @@ async function main() {
   await assertPrepared();
   const credentials = await demoCredentials();
   const origin = new URL(z.url().parse(process.env.TABLECAST_PUBLIC_ORIGIN));
+  const mailpit = z.url().parse(process.env.TABLECAST_MAILPIT_URL);
   async function request(path: string, cookie = "", body?: unknown, method = "POST") {
     const response = await fetch(new URL(path, origin), {
       method: body === undefined ? "GET" : method,
@@ -37,13 +39,8 @@ async function main() {
       .map((cookie) => cookie.split(";")[0])
       .join("; ");
   let advanced = 0;
-  for (const account of [
-    { email: credentials.email, password: credentials.password },
-    { email: credentials.otherEmail, password: credentials.otherPassword },
-  ]) {
-    const login = await request("/api/auth/sign-in/email", "", account);
-    const staffCookie = cookieOf(login);
-    if (!staffCookie) throw new Error("デモ管理者の認証が成立していません。");
+  for (const email of [credentials.email, credentials.otherEmail]) {
+    const staffCookie = await signInDemoOwner(origin.origin, mailpit, email);
     const stores = z
       .object({ stores: z.array(z.object({ id: z.string() })) })
       .parse(await (await request("/api/admin/stores", staffCookie)).json());

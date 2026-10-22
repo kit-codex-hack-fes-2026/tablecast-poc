@@ -48,9 +48,7 @@ it("隔離した実D1へ30日の600履歴と2400注文を投入し、再実行�
   );
   const credentials: DemoCredentials = {
     email: "haruka.sato@komorebi-shijo.com",
-    password: "tablecast-local-seed-test-password",
     otherEmail: "tablecast-other@example.test",
-    otherPassword: "tablecast-local-other-test-password",
     baseTime: Date.UTC(2026, 8, 6, 0),
     profile: "history",
   };

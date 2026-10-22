@@ -1,11 +1,28 @@
 import { expect } from "@playwright/test";
 import { z } from "zod";
+import { signInDemoOwner } from "../../../scripts/tablecast-demo-auth";
 import { credentials } from "./support/runtime";
 import { readMagicLink, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // 認証・招待・メールの実HTTP接続を確認する。
 test.use({ trace: "off", serviceWorkers: "block" });
+
+test("背景デモは新しい実メールで再認証し、パスキー未登録なら業務操作前に停止する", async ({
+  request,
+  runtime,
+}) => {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const cookie = await signInDemoOwner(runtime.origin, runtime.mailpitUrl, credentials.email);
+    const stores = await request.get(`${runtime.origin}/api/admin/stores`, {
+      headers: { Cookie: cookie },
+    });
+    expect(stores.status()).toBe(200);
+  }
+  await expect(
+    signInDemoOwner(runtime.origin, runtime.mailpitUrl, "tablecast-demo-unregistered@example.test"),
+  ).rejects.toThrow("パスキーを登録");
+});
 
 test("メールログインは外部として解釈される戻り先を使わず指定店舗の下書きへ復帰する", async ({
   page,

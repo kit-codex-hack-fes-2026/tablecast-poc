@@ -119,12 +119,9 @@ async function populateDemoDatabase(env: SeedEnv, credentials: DemoCredentials) 
   if (firstRepair) await db.batch([firstRepair, ...remainingRepairs]);
   const staff = demoStaff(credentials);
   const owners: string[] = [];
-  for (const [email, password] of [
-    [credentials.email, credentials.password],
-    [credentials.otherEmail, credentials.otherPassword],
-  ]) {
+  for (const email of [credentials.email, credentials.otherEmail]) {
     const person = staff.find((candidate) => candidate.email === email);
-    if (!email || !password || !person) throw new Error("デモ認証情報が不正です。");
+    if (!email || !person) throw new Error("デモ認証情報が不正です。");
     const existing = await db
       .select({ id: identity.user.id })
       .from(identity.user)

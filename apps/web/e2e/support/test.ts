@@ -9,7 +9,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { startGateway } from "./gateway";
-import { type CaseRuntime, createWorkerRuntime, credentials, runtime as template } from "./runtime";
+import { type CaseRuntime, createWorkerRuntime, runtime as template } from "./runtime";
 import { registerTestMailpit } from "./session";
 
 // API client由来のWorker global型ではprocessがanyになる。fixtureの実行環境はNodeである。
@@ -62,8 +62,6 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
       const errors: unknown[] = [];
       const secrets = [
         ...diagnosticSecrets(parentEnv),
-        credentials.password,
-        credentials.otherPassword,
         "tablecast-isolated-e2e-auth-secret-never-used-outside-tests",
         "tablecast-local-google-secret",
       ];
