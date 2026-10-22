@@ -144,7 +144,7 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## メールカタログの検証
 
-既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
+既存APIのReact Emailテンプレートから、一覧と招待・メール確認・マジックリンク・招待状態と認証設定変更の通知の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
 
 生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
 

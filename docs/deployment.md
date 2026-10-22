@@ -82,7 +82,7 @@ PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だ
 
 buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、既存の`tablecast-workers-<SHA>` artifactへ同梱する。`v0`内の公開assetsへは入れず、production buildではこのJSONを取り除く。配備は取得済みWorkers artifact内の同じpathを明示して検証する。seed専用のartifact転送step・job・依存導入は増やさない。
 
-固定JSONの適用は、所有確認済みで`seeded=0`の空DBへ標準demoを初回投入する場合に限定する。時刻とBetter Authのパスワードhashは配備時に生成し、認証・組織・所属・店舗・公開設定・卓の行を既存Drizzle schemaによる一つの`db.batch()`で投入する。営業中の卓の注文・イベントは続くbatchへ分け、D1の制限に合わせて分割する。固定JSONは任意SQLやDB dumpとして実行しない。
+固定JSONの適用は、所有確認済みで`seeded=0`の空DBへ標準demoを初回投入する場合に限定する。時刻は配備時に生成し、パスワードとhashを作らず、認証・組織・所属・店舗・公開設定・卓の行を既存Drizzle schemaによる一つの`db.batch()`で投入する。営業中の卓の注文・イベントは続くbatchへ分け、D1の制限に合わせて分割する。固定JSONは任意SQLやDB dumpとして実行しない。
 
 商品画像は最大4件の処理枠を使い、完了した枠へ次を投入する。条件付きput・内容照合・既存のretry上限を保ち、失敗後は新規投入を止め、開始済みI/Oの終了を回収する。ログの`商品画像の投入`、`固定seedのDrizzle batch`、`営業中の卓のseed`、`DB・画像の配備準備`、`検証済みイメージの送信`で区間時間を確認する。旧経路での初回配備はDB・画像準備102.189秒、そのうち商品画像40.157秒だった。固定JSONの生成はローカル約200ms、cache hitは約22msであり、初回投入の主な短縮対象は認証API・DBとの直列往復をDrizzle batchへまとめる部分である。cacheだけで初回R2への31,068,514 Bの転送は省けない。新経路の遠隔初回配備はローカル資格のD1権限不足により未計測で、短縮量は確定していない。
 
@@ -96,7 +96,7 @@ buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へ�
 
 記録前の中断、`0`のまま残った部分seed、所有情報の欠落は失敗として止め、自動修復しない。管理者が該当PRの所有情報・D1全件数・外部キー・配備ログを照合し、DB投入完了が証明できる場合だけ`0`から`2`へ進捗を補正する。未証明のデータや営業中データへresetを流用しない。
 
-本番はmigrationのみ自動適用し、実在管理者のメールと店舗設定を確定してから既存bootstrapで初期化する。PRの架空ユーザーは本番へ投入しない。実Googleログインと初期組織への所属確認は公開受入に残る。
+本番はmigrationのみ自動適用し、実在管理者のメールと店舗設定を確定してから既存bootstrapで初期化する。PRの架空ユーザーは本番へ投入しない。実Googleログイン、パスキー登録と初期組織への所属確認は公開受入に残る。
 
 ### 本番bootstrap
 
@@ -108,13 +108,13 @@ TypeScript設定から解決したaccount ID・Worker名・`TABLECAST_ENV`・HTT
 
 入力は所有者だけが読める通常JSONファイル（例: `.local/tablecast-production-bootstrap.json`、mode `0600`）として作る。次の項目を持ち、秘密を含むためGit・チャット・コマンド引数へ内容を貼らない。
 
-| JSON項目       | 内容                                                                   |
-| -------------- | ---------------------------------------------------------------------- |
-| `authSecret`   | 対象APIへ登録したものと同じ認証secret。32文字以上                      |
-| `admin`        | `name`、`email`、12文字以上の `password`、`locale`（`ja` または `en`） |
-| `organization` | `name`、新規の `slug`                                                  |
-| `store`        | 新規の `id`、`name`、レビュー済みの `configuration`                    |
-| `tables`       | 新規の `{ "id": "...", "name": "T01" }` の配列                         |
+| JSON項目       | 内容                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `authSecret`   | 対象APIへ登録したものと同じ認証secret。32文字以上                                       |
+| `admin`        | `name`、`email`、`locale`（`ja` または `en`）。旧入力の `password` は任意で、保存しない |
+| `organization` | `name`、新規の `slug`                                                                   |
+| `store`        | 新規の `id`、`name`、レビュー済みの `configuration`                                     |
+| `tables`       | 新規の `{ "id": "...", "name": "T01" }` の配列                                          |
 
 `configuration` は [APIの正本schema](../apps/api/src/schema.ts) と同じ日英カテゴリ・商品・プラン・キャスト設定である。初期voiceは `ja`、`en` とも `null` にする。実音声の確認後に通常の下書き検証・明示公開で設定する。価格・参照関係・卓IDの重複も書込み前に検証する。
 
