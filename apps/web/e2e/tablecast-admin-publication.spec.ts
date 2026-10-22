@@ -57,7 +57,8 @@ test("商品を保存・再読込し、明示公開した価格だけを実際�
 
     const reviewPath = `/admin/stores/${storeId}/menu/changes/${draft.id}`;
     await page.goto(`/admin/live?storeId=${storeId}&draftId=${draft.id}`);
-    await page.getByRole("button", { name: "日本語", exact: true }).click();
+    await page.getByRole("combobox", { name: /言語|language/i }).click();
+    await page.getByRole("option", { name: "日本語", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${reviewPath}$`));
     const configurationHeader = page.getByRole("region", { name: ja.workflow_context });
     const validate = configurationHeader.getByRole("button", {

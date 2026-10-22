@@ -98,7 +98,7 @@ it.each([390, 1024])(
     await userEvent.keyboard("{Escape}");
     await expect.element(trigger).toHaveFocus();
     expect(trigger.element().getBoundingClientRect().x).toBe(triggerRect.x);
-    for (const flag of document.querySelectorAll<HTMLImageElement>('img[src^="/flags/"]')) {
+    for (const flag of document.querySelectorAll<HTMLImageElement>('img[aria-hidden="true"]')) {
       expect(flag.getBoundingClientRect().width).toBeLessThanOrEqual(20);
     }
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(width);

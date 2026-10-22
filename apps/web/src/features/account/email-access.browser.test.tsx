@@ -211,13 +211,8 @@ it("日本語のログインをキーボードで送信し、失敗後も入力�
   });
   await page.viewport(1024, 768);
   await show(locale, false);
-  for (const name of [
-    "日本語",
-    "English",
-    labels.auth_google,
-    labels.auth_passkey,
-    labels.auth_sign_in,
-  ])
+  await expectReadableControl(page.getByRole("combobox", { name: /言語|language/i }));
+  for (const name of [labels.auth_google, labels.auth_passkey, labels.auth_sign_in])
     await expectReadableControl(page.getByRole("button", { name, exact: true }));
   const email = page.getByLabelText(labels.auth_email, { exact: true });
   const password = page.getByLabelText(labels.auth_password, { exact: true });

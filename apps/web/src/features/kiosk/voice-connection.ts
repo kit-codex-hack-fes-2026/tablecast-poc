@@ -1,5 +1,6 @@
 import {
   displayCurrencyActionSchema,
+  type DisplayCurrencyContext,
   type Locale,
   voiceToolNameSchema,
 } from "@tablecast/api/schema";
@@ -15,7 +16,6 @@ import {
   transcriptEvent,
 } from "./voice-events-model";
 import {
-  type CurrencyController,
   initialMicrophone,
   type MicrophoneError,
   type MicrophoneView,
@@ -59,7 +59,13 @@ export class VoiceConnection {
     private onChange: (view: VoiceView) => void,
     private onSync: () => void,
     private client: TableClient = tableEndpoint.client,
-    private displayCurrency?: CurrencyController,
+    private displayCurrency?: {
+      getContext?: () => DisplayCurrencyContext;
+      setCurrency?: (
+        currency: DisplayCurrencyContext["currency"],
+        expectedRevision?: number,
+      ) => boolean;
+    },
   ) {}
   private listeners = new Set<() => void>();
   getSnapshot = () => this.view;
@@ -574,7 +580,7 @@ export class VoiceConnection {
                   turnId,
                   toolCallId: call.callId,
                   ...tool,
-                  displayCurrency: this.displayCurrency?.getContext(),
+                  displayCurrency: this.displayCurrency?.getContext?.(),
                 },
               },
               {
@@ -590,7 +596,7 @@ export class VoiceConnection {
             !controller.signal.aborted
           ) {
             const action = displayCurrencyActionSchema.parse(result.displayCurrencyAction);
-            if (!this.displayCurrency?.apply(action))
+            if (!this.displayCurrency?.setCurrency?.(action.currency, action.revision))
               output = { error: "DISPLAY_CURRENCY_CHANGED" };
           }
         } catch (error) {

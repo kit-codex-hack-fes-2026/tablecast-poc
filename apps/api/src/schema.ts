@@ -57,9 +57,9 @@ export type {
 } from "./modules/configuration/model";
 export {
   displayCurrencyActionSchema,
+  displayCurrencyCodes,
   displayCurrencyCodeSchema,
   displayCurrencyContextSchema,
-  displayCurrencyPreferenceSchema,
   exchangeRatesSchema,
 } from "./modules/currency/model";
 export type {

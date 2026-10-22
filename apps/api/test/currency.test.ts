@@ -12,32 +12,14 @@ import { initialiseExchangeRates } from "../src/modules/currency/service";
 import { getTableState } from "../src/modules/tables/queries";
 import { createCastTools } from "../src/modules/voice/agent";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
-import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { configuration, device, deviceToken, setupFixture } from "./fixture";
+import { configuration, device, deviceToken, setupFixture, setupVoiceFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 const services = () => createApiServices(env);
 const source = { date: "2026-10-22", jpy: { jpy: 1, aud: 0.00967, usd: 0.0065, krw: 9.12 } };
-async function setupVoice() {
-  await setupFixture();
-  await setVoiceSession(services(), device, "tablecast-currency-voice");
-  await services()
-    .db.insert(business.voiceTurns)
-    .values({
-      id: "tablecast-currency-turn",
-      voice_session_id: "tablecast-currency-voice",
-      table_session_id: device.tableSessionId ?? "",
-      store_id: device.storeId,
-      status: "started",
-      started_at: Date.now(),
-      locale: "ja",
-    });
-  await services()
-    .db.update(business.tableSessions)
-    .set({ active_turn_id: "tablecast-currency-turn" })
-    .where(eq(business.tableSessions.id, device.tableSessionId ?? ""));
-}
+const setupVoice = () => setupVoiceFixture("tablecast-currency-voice", "tablecast-currency-turn");
+
 const tool = (
   name: z.infer<typeof voiceToolNameSchema>,
   args: Record<string, unknown>,

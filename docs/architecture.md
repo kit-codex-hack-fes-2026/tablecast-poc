@@ -237,6 +237,6 @@ APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの�
 
 ## 外貨参考表示の境界
 
-`modules/currency/model.ts`が公開schema・通貨定義、`display.ts`が副作用のない換算・書式、`service.ts`が公開レートの初期取得を所有する。`@tablecast/api/currency-display`からWebとAPIへ同じ換算処理を公開する。currencyのmodule公開面はmodel・display・serviceに限定する。
+`modules/currency/model.ts`が公開schema・通貨定義、`display.ts`が音声tool用の副作用のない換算、`service.ts`が公開レートの初期取得を所有する。Webの金額・通貨書式は既存の`i18n/format.ts`へ集約する。currencyのmodule公開面はmodel・display・serviceに限定する。
 
-外部レートは既存の課金原価用為替から独立した公開参考データである。初期化APIが取得し、Webの来店ごとのProviderが保持する。共有Moneyは読取専用の表示Contextだけを使い、Provider外は従来の円表示となる。通貨の手動選択は端末のlocalStorage、レートはページ内メモリーに限定し、D1・注文snapshot・実決済へ追加しない。
+外部レートは既存の課金原価用為替から独立した公開参考データである。初期化APIが取得し、Webの来店ごとのQuery cacheをレート・選択設定の正本とする。1つのContextで表示へ渡し、音声も同じcacheを直接読む。レートのrefへのコピーや言語変更の同期effectは持たない。共有MoneyはProvider外では従来の円表示となる。通貨の手動選択は端末のlocalStorage、レートはページ内メモリーに限定し、D1・注文snapshot・実決済へ追加しない。

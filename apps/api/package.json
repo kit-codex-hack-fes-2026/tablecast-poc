@@ -10,8 +10,7 @@
     "./speech": "./src/modules/voice/prompt.ts",
     "./telemetry": "./src/platform/telemetry.ts",
     "./db": "./src/db/public.ts",
-    "./bootstrap": "./src/bootstrap.ts",
-    "./currency-display": "./src/modules/currency/display.ts"
+    "./bootstrap": "./src/bootstrap.ts"
   },
   "scripts": {
     "typecheck": "node ../../node_modules/@tablecast/typescript-native/bin/tsc --noEmit",

@@ -26,30 +26,6 @@ export const displayCurrencyCodes = [
 ] as const;
 export const displayCurrencyCodeSchema = z.enum(displayCurrencyCodes);
 export type DisplayCurrencyCode = z.infer<typeof displayCurrencyCodeSchema>;
-export const currencyFlags: Record<DisplayCurrencyCode, string> = {
-  USD: "us",
-  GBP: "gb",
-  EUR: "eu",
-  AUD: "au",
-  NZD: "nz",
-  CNY: "cn",
-  HKD: "hk",
-  TWD: "tw",
-  KRW: "kr",
-  MOP: "mo",
-  MNT: "mn",
-  KPW: "kp",
-  SGD: "sg",
-  THB: "th",
-  VND: "vn",
-  MYR: "my",
-  IDR: "id",
-  PHP: "ph",
-  BND: "bn",
-  KHR: "kh",
-  LAK: "la",
-  MMK: "mm",
-};
 export const exchangeRatesSchema = z.object({
   base: z.literal("JPY"),
   date: z.iso.date(),
@@ -69,12 +45,5 @@ export const displayCurrencyActionSchema = z
   .object({
     currency: displayCurrencyCodeSchema.nullable(),
     revision: z.number().int().nonnegative(),
-  })
-  .strict();
-export const displayCurrencyPreferenceSchema = z
-  .object({
-    sessionId: z.string(),
-    currency: displayCurrencyCodeSchema.nullable(),
-    manual: z.boolean(),
   })
   .strict();

@@ -13,7 +13,8 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
   const storeId = "tablecast-komorebi";
   await signInStaff(page.request, baseURL);
   await page.goto(`/admin/stores/${storeId}/floor`);
-  await page.getByRole("button", { name: "日本語", exact: true }).click();
+  await page.getByRole("combobox", { name: /言語|language/i }).click();
+  await page.getByRole("option", { name: "日本語", exact: true }).click();
   const opened = page.waitForEvent("popup");
   await page.getByRole("link", { name: ja.demo_open, exact: true }).click();
   const demo = await opened;
@@ -30,11 +31,9 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
     ).toBe(true);
     const frame = demo.getByTitle(ja.demo_screen, { exact: true }).contentFrame();
     await expect(frame.getByRole("tab", { name: ja.kiosk_menu, exact: true })).toBeVisible();
-    await frame.getByRole("button", { name: "English", exact: true }).click();
-    await expect(frame.getByRole("button", { name: "English", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await frame.getByRole("combobox", { name: /言語|language/i }).click();
+    await frame.getByRole("option", { name: "English", exact: true }).click();
+    await expect(frame.getByRole("combobox", { name: /言語|language/i })).toHaveText("English");
     await expect(frame.locator("html")).toHaveAttribute("lang", "en");
     await expect(demo.locator("html")).toHaveAttribute("lang", "ja");
     await expect(page.locator("html")).toHaveAttribute("lang", "ja");
@@ -47,10 +46,7 @@ test("店側から開いたデモのiframeだけで客言語を変更し、再�
     await expect(rotate).toHaveAttribute("aria-pressed", "true");
     await expect(frame.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("button", { name: "日本語", exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(page.getByRole("combobox", { name: /言語|language/i })).toHaveText("日本語");
     const reopened = page.waitForEvent("popup");
     await page.getByRole("link", { name: ja.demo_open, exact: true }).click();
     const independent = await reopened;

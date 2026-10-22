@@ -1,4 +1,4 @@
-import type { DisplayCurrencyCode, DisplayCurrencyContext, Locale } from "@tablecast/api/schema";
+import type { Locale } from "@tablecast/api/schema";
 export type VoiceStatus =
   | "connecting"
   | "error"
@@ -42,9 +42,4 @@ export type VoiceView = {
   microphone?: MicrophoneView;
   outputTrack?: MediaStreamTrack;
   status: VoiceStatus;
-};
-
-export type CurrencyController = {
-  apply: (action: { currency: DisplayCurrencyCode | null; revision: number }) => boolean;
-  getContext: () => DisplayCurrencyContext;
 };

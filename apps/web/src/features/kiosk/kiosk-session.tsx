@@ -19,7 +19,7 @@ import {
   Utensils,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
@@ -38,6 +38,7 @@ import {
   ResizablePanelGroup,
 } from "../../components/ui/resizable";
 import * as Tabs from "../../components/ui/tabs";
+import { CurrencyContext } from "../../i18n/currency-context";
 import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
@@ -45,7 +46,6 @@ import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
 import { conversationLines } from "./conversation-model";
-import { useCurrencyControls } from "./currency-provider";
 import { CurrencySelector } from "./currency-selector";
 import { CustomerOrderAttribution } from "./customer-order-attribution";
 import { CustomerVisitPanel } from "./customer-visit-panel";
@@ -80,13 +80,13 @@ export function TableSession({
       savedSize === undefined ? (horizontal ? "240px" : "360px") : `${savedSize}%`,
     );
   }, [conversationPanel, defaultLayout, horizontal]);
-  const currencyControls = useCurrencyControls();
+  const currencyControls = useContext(CurrencyContext);
   const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
   const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion, endpoint));
   const [voice] = useState(
-    () => new VoiceConnection(() => {}, refresh, endpoint.client, currencyControls?.controller),
+    () => new VoiceConnection(() => {}, refresh, endpoint.client, currencyControls),
   );
   const view = useVoiceControls(voice);
   useEffect(() => voice.observeMicrophones(), [voice]);

@@ -1,4 +1,6 @@
 import { vi } from "vitest";
+import type { VoiceConnection } from "../voice-connection";
+import { apiFetch } from "../../../lib/api-fetch";
 
 class VoiceChannel extends EventTarget {
   readyState = "open";
@@ -110,4 +112,58 @@ export function peer() {
   const value = VoicePeer.instances.at(-1);
   if (!value) throw new Error("音声接続がまだ作成されていない");
   return value;
+}
+
+export function voiceFixture() {
+  vi.clearAllMocks();
+  const requests: { body: unknown; path: string; signal: AbortSignal | null | undefined }[] = [];
+  const connections: VoiceConnection[] = [];
+  const capture = vi
+    .fn<() => Promise<VoiceMediaStream>>()
+    .mockResolvedValue(new VoiceMediaStream());
+  VoicePeer.instances = [];
+  VoiceAudio.instances = [];
+  vi.stubGlobal("RTCPeerConnection", VoicePeer);
+  vi.stubGlobal("Audio", VoiceAudio);
+  vi.stubGlobal("MediaStream", VoiceMediaStream);
+  vi.stubGlobal("navigator", { mediaDevices: { getUserMedia: capture } });
+  let issued = 0;
+  vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+    const path = input instanceof Request ? input.url : String(input);
+    requests.push({
+      path,
+      body: typeof options?.body === "string" ? JSON.parse(options.body) : undefined,
+      signal: options?.signal,
+    });
+    if (path.endsWith("/start"))
+      return Response.json({
+        voiceSessionId: `live_tablecast_${++issued}`,
+        sdp: "tablecast-answer",
+        proactive: false,
+      });
+    if (path.endsWith("/delegations"))
+      return Response.json({ kind: "accepted", turnId: "tablecast-turn" });
+    if (path.endsWith("/tools")) return Response.json({ result: { products: [] } });
+    if (["/finish", "/stop", "/conversation"].some((ending) => path.endsWith(ending)))
+      return Response.json({ ok: true });
+    return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
+  });
+  return {
+    requests,
+    connections,
+    capture,
+    dispose: async () => {
+      for (const value of connections) await value.stop();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      const unexpected = requests.filter(
+        ({ path }) =>
+          !["/start", "/stop", "/conversation", "/delegations", "/tools", "/finish"].some(
+            (ending) => path.endsWith(ending),
+          ),
+      );
+      if (unexpected.length)
+        throw new Error(`未定義の要求: ${unexpected.map(({ path }) => path).join(", ")}`);
+    },
+  };
 }

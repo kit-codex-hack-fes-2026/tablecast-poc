@@ -1,21 +1,4 @@
-import type { Locale } from "../../platform/model";
 import type { DisplayCurrencyCode, ExchangeRates } from "./model";
-import { displayCurrencyCodes } from "./model";
-export { currencyFlags, displayCurrencyCodes } from "./model";
-
-const currencyLocales: Record<Locale, string> = { ja: "ja-JP", en: "en-GB" };
-const defaultCurrencies: Record<Locale, DisplayCurrencyCode | null> = { ja: null, en: "USD" };
-const currencySymbols = new Map<string, string>(
-  displayCurrencyCodes.map((currency) => [
-    currency,
-    new Intl.NumberFormat("en-GB", { style: "currency", currency })
-      .formatToParts(0)
-      .find((part) => part.type === "currency")?.value ?? currency,
-  ]),
-);
-export const currencySymbol = (currency: "JPY" | DisplayCurrencyCode) =>
-  currency === "JPY" ? "¥" : (currencySymbols.get(currency) ?? currency);
-export const defaultDisplayCurrency = (locale: Locale) => defaultCurrencies[locale];
 
 export function convertedAmount(yen: number, currency: DisplayCurrencyCode, rate: number) {
   const digits = new Intl.NumberFormat("en-GB", { style: "currency", currency }).resolvedOptions()
@@ -26,16 +9,6 @@ export function convertedAmount(yen: number, currency: DisplayCurrencyCode, rate
       minimumFractionDigits: digits,
       maximumFractionDigits: digits,
     }).format(yen * rate),
-  );
-}
-export function foreignMoney(amount: number, currency: DisplayCurrencyCode, locale: Locale) {
-  return new Intl.NumberFormat(currencyLocales[locale], { style: "currency", currency }).format(
-    amount,
-  );
-}
-export function currencyName(currency: DisplayCurrencyCode, locale: Locale) {
-  return (
-    new Intl.DisplayNames([currencyLocales[locale]], { type: "currency" }).of(currency) ?? currency
   );
 }
 export function currencyMetadata(currency: DisplayCurrencyCode | null, snapshot?: ExchangeRates) {

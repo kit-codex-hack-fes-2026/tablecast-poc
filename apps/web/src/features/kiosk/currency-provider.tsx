@@ -1,29 +1,21 @@
-import type { DisplayCurrencyCode, ExchangeRates, Locale } from "@tablecast/api/schema";
-import { defaultDisplayCurrency } from "@tablecast/api/currency-display";
-import { displayCurrencyPreferenceSchema, exchangeRatesSchema } from "@tablecast/api/schema";
-import { useQuery } from "@tanstack/react-query";
+import type { DisplayCurrencyCode, Locale, TableState } from "@tablecast/api/schema";
+import { displayCurrencyCodeSchema } from "@tablecast/api/schema";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { CurrencyController } from "./voice-model";
-import { CurrencyContext } from "../../i18n/currency-context";
-import { parseResponse, type TableEndpoint } from "../../lib/api";
+import { type ReactNode, useMemo } from "react";
+import { z } from "zod";
+import type { TableEndpoint } from "../../lib/api";
+import { CurrencyContext, type CurrencyDisplay } from "../../i18n/currency-context";
+import { exchangeRateOptions, tableQueryKey } from "./table-query";
 
-type Preference = { currency: DisplayCurrencyCode | null; manual: boolean; revision: number };
-const Controls = createContext<null | {
-  choose: (currency: DisplayCurrencyCode | null) => void;
-  controller: CurrencyController;
-  pending: boolean;
-  snapshot?: ExchangeRates;
-}>(null);
+type Preference = { currency: DisplayCurrencyCode | null | undefined; revision: number };
+const automatic: Preference = { currency: undefined, revision: 0 };
+const savedPreference = z.object({
+  sessionId: z.string(),
+  currency: displayCurrencyCodeSchema.nullable(),
+  manual: z.boolean(),
+});
+const defaultCurrency = (locale: Locale) => (locale === "en" ? ("USD" as const) : null);
 
 export function CurrencyProvider({
   children,
@@ -36,113 +28,73 @@ export function CurrencyProvider({
   locale: Locale;
   sessionId: string;
 }) {
+  const client = useQueryClient();
   const hydrated = useHydrated();
-  const query = useQuery({
-    queryKey: ["tablecast-exchange-rates", endpoint.key, sessionId],
-    queryFn: async ({ signal }) =>
-      exchangeRatesSchema.parse(
-        await parseResponse(endpoint.client["exchange-rates"].$get({}, { init: { signal } })),
-      ),
-    enabled: hydrated,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: false,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-  const [preference, setPreference] = useState<Preference>(() => ({
-    currency: defaultDisplayCurrency(locale),
-    manual: false,
-    revision: 0,
-  }));
-  const current = useRef(preference);
-  const rates = useRef(query.data);
-  useEffect(() => {
-    rates.current = query.data;
-  }, [query.data]);
-  const initialLocale = useRef(locale);
+  const rateOptions = exchangeRateOptions(endpoint, sessionId);
   const storageKey = `tablecast-display-currency:${endpoint.key}`;
-  const update = useCallback(
-    (next: Preference) => {
-      current.current = next;
-      setPreference(next);
+  const preferenceKey = [storageKey, sessionId];
+  const preference = useQuery({
+    queryKey: preferenceKey,
+    enabled: hydrated,
+    staleTime: "static",
+    gcTime: Infinity,
+    queryFn: (): Preference => {
       try {
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({ sessionId, currency: next.currency, manual: next.manual }),
+        const saved = savedPreference.safeParse(
+          JSON.parse(localStorage.getItem(storageKey) ?? "null"),
         );
+        if (saved.success && saved.data.sessionId === sessionId && saved.data.manual)
+          return { currency: saved.data.currency, revision: 0 };
       } catch {
-        // 保存できなくても画面内の選択と円の注文は継続する。
+        /* 保存できなくても円の注文と画面内の選択は利用できる。 */
       }
+      return automatic;
     },
-    [sessionId, storageKey],
-  );
-  const choose = useCallback(
-    (currency: DisplayCurrencyCode | null) => {
-      update({ currency, manual: true, revision: current.current.revision + 1 });
-    },
-    [update],
-  );
-  useEffect(() => {
-    let next: Preference = {
-      currency: defaultDisplayCurrency(initialLocale.current),
-      manual: false,
-      revision: 0,
-    };
-    try {
-      const saved = displayCurrencyPreferenceSchema.safeParse(
-        JSON.parse(localStorage.getItem(storageKey) ?? "null"),
-      );
-      if (saved.success && saved.data.sessionId === sessionId) {
-        next = {
-          currency: saved.data.manual
-            ? saved.data.currency
-            : defaultDisplayCurrency(initialLocale.current),
-          manual: saved.data.manual,
-          revision: 0,
-        };
-      }
-    } catch {
-      // 保存不可・破損時も画面内の通貨選択は利用できる。
-    }
-    update(next);
-  }, [sessionId, storageKey, update]);
-  useEffect(() => {
-    const previous = current.current;
-    const currency = defaultDisplayCurrency(locale);
-    if (!previous.manual && previous.currency !== currency)
-      update({ ...previous, currency, revision: previous.revision + 1 });
-  }, [locale, update]);
-  const controller = useMemo<CurrencyController>(
+  });
+  const rates = useQuery({ ...rateOptions, enabled: hydrated });
+  const selectedCurrency = preference.data?.currency;
+  const value = useMemo<CurrencyDisplay>(
     () => ({
-      getContext: () => ({
-        currency: current.current.currency,
-        revision: current.current.revision,
-        ...(rates.current ? { rates: rates.current } : {}),
-      }),
-      apply: (action) => {
-        if (action.revision !== current.current.revision) return false;
-        choose(action.currency);
+      currency: selectedCurrency === undefined ? defaultCurrency(locale) : selectedCurrency,
+      rates: rates.data,
+      pending: rates.isPending,
+
+      getContext: () => {
+        const selection = client.getQueryData<Preference>([storageKey, sessionId]) ?? automatic;
+        const currentLocale =
+          client.getQueryData<TableState>(tableQueryKey(endpoint))?.locale ?? locale;
+        return {
+          currency:
+            selection.currency === undefined ? defaultCurrency(currentLocale) : selection.currency,
+          revision: selection.revision,
+          rates: client.getQueryData(exchangeRateOptions(endpoint, sessionId).queryKey),
+        };
+      },
+      setCurrency: (currency: DisplayCurrencyCode | null, expectedRevision?: number) => {
+        const previous = client.getQueryData<Preference>([storageKey, sessionId]) ?? automatic;
+        if (expectedRevision !== undefined && previous.revision !== expectedRevision) return false;
+        client.setQueryData<Preference>([storageKey, sessionId], {
+          currency,
+          revision: previous.revision + 1,
+        });
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ sessionId, currency, manual: true }));
+        } catch {
+          /* 選択はcache内で保持する。 */
+        }
         return true;
       },
     }),
-    [choose],
+    [
+      client,
+      endpoint,
+      sessionId,
+      storageKey,
+      locale,
+      selectedCurrency,
+      rates.data,
+      rates.isPending,
+    ],
   );
-  const controls = useMemo(
-    () => ({ controller, choose, pending: query.isPending, snapshot: query.data }),
-    [controller, choose, query.isPending, query.data],
-  );
-  const display = useMemo(
-    () => ({ currency: preference.currency, rates: query.data }),
-    [preference.currency, query.data],
-  );
-  return (
-    <Controls.Provider value={controls}>
-      <CurrencyContext.Provider value={display}>{children}</CurrencyContext.Provider>
-    </Controls.Provider>
-  );
-}
-export function useCurrencyControls() {
-  return useContext(Controls);
+  return <CurrencyContext.Provider value={value}>{children}</CurrencyContext.Provider>;
 }

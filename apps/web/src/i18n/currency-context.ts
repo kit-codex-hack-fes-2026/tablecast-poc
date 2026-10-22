@@ -1,8 +1,15 @@
-import type { DisplayCurrencyCode, ExchangeRates } from "@tablecast/api/schema";
+import type {
+  DisplayCurrencyCode,
+  DisplayCurrencyContext,
+  ExchangeRates,
+} from "@tablecast/api/schema";
 import { createContext } from "react";
 
-/** 共通表示部品へ渡す読取専用の参考表示。取得と選択操作は客向けfeatureが所有する。 */
-export const CurrencyContext = createContext<{
+export type CurrencyDisplay = {
   currency: DisplayCurrencyCode | null;
+  getContext?: () => DisplayCurrencyContext;
+  pending?: boolean;
   rates?: ExchangeRates;
-}>({ currency: null });
+  setCurrency?: (currency: DisplayCurrencyCode | null, expectedRevision?: number) => boolean;
+};
+export const CurrencyContext = createContext<CurrencyDisplay>({ currency: null });

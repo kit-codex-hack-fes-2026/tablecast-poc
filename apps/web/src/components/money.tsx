@@ -1,4 +1,3 @@
-import { convertedAmount, foreignMoney } from "@tablecast/api/currency-display";
 import { useContext } from "react";
 import { CurrencyContext } from "../i18n/currency-context";
 import { money } from "../i18n/format";
@@ -9,10 +8,7 @@ export function Money({ value }: { value: number }) {
   const { locale, t } = useI18n();
   const { currency, rates } = useContext(CurrencyContext);
   const rate = currency ? rates?.rates[currency] : undefined;
-  const estimate =
-    currency && rate
-      ? foreignMoney(convertedAmount(value, currency, rate), currency, locale)
-      : undefined;
+  const estimate = currency && rate ? money(value * rate, locale, currency) : undefined;
   return (
     <span className="whitespace-nowrap tabular-nums">
       <span>{money(value, locale)}</span>
