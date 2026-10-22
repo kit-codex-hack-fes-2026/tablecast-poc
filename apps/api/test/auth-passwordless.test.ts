@@ -6,64 +6,24 @@ import { member, passkey, user, verification } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { resolveMcpActor } from "../src/modules/mcp/service";
 import { createApiServices } from "../src/platform/context";
+import { authOrigin, authPost, captureAuthMail, magicLinkUrl, mailAuthEnv } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
-import { responseCookies, setupFixture } from "./fixture";
+import { addFixturePasskey, responseCookies, setupFixture } from "./fixture";
 
 function mailAt<T>(mails: T[], index: number): T {
   const mail = mails[index];
   if (!mail) throw new Error("期待したメールがありません");
   return mail;
 }
-const origin = "http://localhost:3000";
-const mailEnv = {
-  ...env,
-  TABLECAST_ENV: "development",
-  TABLECAST_EMAIL_FROM: "tablecast@example.test",
-  TABLECAST_MAILPIT_URL: "http://localhost:8025",
-};
 afterEach(() => vi.restoreAllMocks());
-function captureMail() {
-  const mails: { HTML: string; Subject: string; Text: string; To: { Email: string }[] }[] = [];
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const request = new Request(input, init);
-    expect(request.url).toBe("http://localhost:8025/api/v1/send");
-    mails.push(
-      z
-        .object({
-          HTML: z.string(),
-          Text: z.string(),
-          Subject: z.string(),
-          To: z.array(z.object({ Email: z.string() })),
-        })
-        .parse(await request.json()),
-    );
-    return Response.json({ ID: "tablecast-mail" });
-  });
-  return mails;
-}
-const post = (auth: ReturnType<typeof createAuth>, path: string, body: unknown, cookie = "") =>
-  auth.handler(
-    new Request(`${origin}/api/auth${path}`, {
-      method: "POST",
-      headers: { Origin: origin, "Content-Type": "application/json", Cookie: cookie },
-      body: JSON.stringify(body),
-    }),
-  );
-function loginUrl(html: string) {
-  const url = html
-    .match(/href="([^"]*\/api\/auth\/magic-link\/verify[^"]+)"/)?.[1]
-    ?.replaceAll("&amp;", "&");
-  if (!url) throw new Error("ログインリンクが届いていません");
-  return url;
-}
 it("マジックリンクは実D1で一度だけ消費し、パスキー未登録では業務・組織・MCPを拒否する", async () => {
-  const mails = captureMail();
-  const auth = createAuth(mailEnv);
-  await post(auth, "/sign-in/magic-link", {
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
+  await authPost(auth, "/sign-in/magic-link", {
     email: "new@example.test",
     callbackURL: "/invitations/sample",
   });
-  const url = loginUrl(mailAt(mails, 0).HTML);
+  const url = magicLinkUrl(mails[0]);
   const token = new URL(url).searchParams.get("token");
   expect(JSON.stringify(await fixtureDb.select().from(verification))).not.toContain(token);
   const results = await Promise.all([
@@ -74,44 +34,46 @@ it("マジックリンクは実D1で一度だけ消費し、パスキー未登�
   expect(success).toHaveLength(1);
   const [completed] = success;
   if (!completed) throw new Error("セッションがありません");
-  expect(completed.headers.get("location")).toBe(`${origin}/invitations/sample`);
+  expect(completed.headers.get("location")).toBe(`${authOrigin}/invitations/sample`);
   const cookie = responseCookies(completed);
   expect(cookie).toContain("tablecast.last_login_method=magic-link");
   const state = await exports.default.fetch(
-    new Request(`${origin}/api/account/auth-state`, { headers: { Cookie: cookie } }),
+    new Request(`${authOrigin}/api/account/auth-state`, { headers: { Cookie: cookie } }),
   );
   expect(await state.json()).toMatchObject({
     passkeyRequired: true,
     user: { emailVerified: true },
   });
   const initial = await exports.default.fetch(
-    new Request(`${origin}/api/admin/initial?defaultFloor=true`, { headers: { Cookie: cookie } }),
+    new Request(`${authOrigin}/api/admin/initial?defaultFloor=true`, {
+      headers: { Cookie: cookie },
+    }),
   );
   expect(await initial.json()).toMatchObject({
     session: { passkeyRequired: true },
     stores: [],
     floor: null,
   });
-  await post(auth, "/update-user", { passkeyRegistered: true }, cookie);
+  await authPost(auth, "/update-user", { passkeyRegistered: true }, cookie);
   const denied = await exports.default.fetch(
-    new Request(`${origin}/api/admin/stores`, { headers: { Cookie: cookie } }),
+    new Request(`${authOrigin}/api/admin/stores`, { headers: { Cookie: cookie } }),
   );
   expect(denied.status).toBe(403);
   expect(await denied.json()).toMatchObject({ error: { code: "PASSKEY_REGISTRATION_REQUIRED" } });
   expect(
     (
       await auth.handler(
-        new Request(`${origin}/api/auth/organization/list`, { headers: { Cookie: cookie } }),
+        new Request(`${authOrigin}/api/auth/organization/list`, { headers: { Cookie: cookie } }),
       )
     ).status,
   ).toBe(403);
   const authorizePath =
     "/api/auth/oauth2/authorize?client_id=sample&state=a%2Bb&ba_param=first&ba_param=second";
   const onboarding = await auth.handler(
-    new Request(origin + authorizePath, { headers: { Cookie: cookie } }),
+    new Request(authOrigin + authorizePath, { headers: { Cookie: cookie } }),
   );
   expect(onboarding.status).toBe(302);
-  const onboardingUrl = new URL(onboarding.headers.get("location") ?? "", origin);
+  const onboardingUrl = new URL(onboarding.headers.get("location") ?? "", authOrigin);
   expect(onboardingUrl.pathname).toBe("/passkey-setup");
   expect(onboardingUrl.searchParams.get("returnTo")).toBe(authorizePath);
   const person = await fixtureDb
@@ -129,21 +91,21 @@ it("マジックリンクは実D1で一度だけ消費し、パスキー未登�
   ).rejects.toMatchObject({ code: "PASSKEY_REGISTRATION_REQUIRED", status: 403 });
 });
 it("期限切れのマジックリンクではセッションを発行せず、再送したリンクでログインできる", async () => {
-  const mails = captureMail();
-  const auth = createAuth(mailEnv);
-  await post(auth, "/sign-in/magic-link", { email: "expired@example.test" });
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
+  await authPost(auth, "/sign-in/magic-link", { email: "expired@example.test" });
   await fixtureDb.update(verification).set({ expiresAt: new Date(0) });
-  const expired = await auth.handler(new Request(loginUrl(mailAt(mails, 0).HTML)));
+  const expired = await auth.handler(new Request(magicLinkUrl(mails[0])));
   expect(responseCookies(expired)).not.toContain("session_token");
-  await post(auth, "/sign-in/magic-link", { email: "expired@example.test" });
-  expect(
-    responseCookies(await auth.handler(new Request(loginUrl(mailAt(mails, 1).HTML)))),
-  ).toContain("session_token");
+  await authPost(auth, "/sign-in/magic-link", { email: "expired@example.test" });
+  expect(responseCookies(await auth.handler(new Request(magicLinkUrl(mails[1]))))).toContain(
+    "session_token",
+  );
 });
 it("パスキーの最後の1件はHTTPと同時DB削除の両方で保持する", async () => {
   const { cookie, staff } = await setupFixture();
   const auth = createAuth(env);
-  const denied = await post(
+  const denied = await authPost(
     auth,
     "/passkey/delete-passkey",
     { id: "tablecast-fixture-passkey" },
@@ -151,15 +113,7 @@ it("パスキーの最後の1件はHTTPと同時DB削除の両方で保持する
   );
   expect(denied.status).toBe(403);
   expect(await denied.json()).toMatchObject({ message: "LAST_PASSKEY_REQUIRED" });
-  await fixtureDb.insert(passkey).values({
-    id: "second",
-    userId: staff.userId,
-    credentialID: "second-credential",
-    publicKey: "fixture",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-  });
+  await addFixturePasskey(staff.userId, "second");
   const results = await Promise.allSettled([
     fixtureDb.delete(passkey).where(eq(passkey.id, "second")),
     fixtureDb.delete(passkey).where(eq(passkey.id, "tablecast-fixture-passkey")),
@@ -171,9 +125,9 @@ it("パスキーの最後の1件はHTTPと同時DB削除の両方で保持する
 });
 it("招待メールに役割・招待者・期限を含め、承諾時に本人と招待者へ通知する", async () => {
   const { cookie } = await setupFixture();
-  const mails = captureMail();
-  const auth = createAuth(mailEnv);
-  const invited = await post(
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
+  const invited = await authPost(
     auth,
     "/organization/invite-member",
     { email: "invitee@example.test", role: "member", organizationId: "tablecast-org" },
@@ -184,8 +138,8 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
   expect(mailAt(mails, 0).Text).toContain("tablecast-staff@example.test");
   expect(mailAt(mails, 0).Text).toContain("Member");
   expect(mailAt(mails, 0).Text).toContain("Expires");
-  await post(auth, "/sign-in/magic-link", { email: "invitee@example.test" });
-  const signedIn = await auth.handler(new Request(loginUrl(mailAt(mails, 1).HTML)));
+  await authPost(auth, "/sign-in/magic-link", { email: "invitee@example.test" });
+  const signedIn = await auth.handler(new Request(magicLinkUrl(mails[1])));
   const inviteeCookie = responseCookies(signedIn);
   const person = await fixtureDb
     .select()
@@ -193,16 +147,8 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
     .where(eq(user.email, "invitee@example.test"))
     .get();
   if (!person) throw new Error("ユーザーがありません");
-  await fixtureDb.insert(passkey).values({
-    id: "invitee-key",
-    userId: person.id,
-    credentialID: "invitee-credential",
-    publicKey: "fixture",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-  });
-  const accepted = await post(
+  await addFixturePasskey(person.id, "invitee-key");
+  const accepted = await authPost(
     auth,
     "/organization/accept-invitation",
     { invitationId: invitation.id },
@@ -219,8 +165,8 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
 
 it("パスキー削除とGoogle連携の通知は実際の変更時だけ送り、配送失敗でも変更を維持する", async () => {
   const { cookie, staff } = await setupFixture();
-  const mails = captureMail();
-  const auth = createAuth(mailEnv);
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
   const account = await (
     await auth.$context
   ).internalAdapter.createAccount({
@@ -229,18 +175,12 @@ it("パスキー削除とGoogle連携の通知は実際の変更時だけ送り�
     userId: staff.userId,
   });
   expect(mailAt(mails, 0).Subject).toContain("Google");
-  expect((await post(auth, "/unlink-account", { accountId: account.id }, cookie)).status).toBe(200);
+  expect((await authPost(auth, "/unlink-account", { accountId: account.id }, cookie)).status).toBe(
+    200,
+  );
   expect(mailAt(mails, 1).Subject).toContain("解除");
-  await fixtureDb.insert(passkey).values({
-    id: "notification-second",
-    userId: staff.userId,
-    credentialID: "notification-second",
-    publicKey: "fixture",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-  });
-  const removed = await post(
+  await addFixturePasskey(staff.userId, "notification-second");
+  const removed = await authPost(
     auth,
     "/passkey/delete-passkey",
     { id: "notification-second" },
@@ -256,15 +196,15 @@ it("パスキー削除とGoogle連携の通知は実際の変更時だけ送り�
     accountId: "notification-google-retry",
     userId: staff.userId,
   });
-  expect((await post(auth, "/unlink-account", { accountId: retryAccount.id }, cookie)).status).toBe(
-    200,
-  );
+  expect(
+    (await authPost(auth, "/unlink-account", { accountId: retryAccount.id }, cookie)).status,
+  ).toBe(200);
 });
 
 it("招待の辞退は招待者だけへ通知し、取消後のリンクは参加できない", async () => {
   const { cookie, staff } = await setupFixture();
-  const mails = captureMail();
-  const auth = createAuth(mailEnv);
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
   // 招待者が別店舗のownerである前提を作る。
   await fixtureDb.insert(member).values({
     id: "other-owner",
@@ -273,7 +213,7 @@ it("招待の辞退は招待者だけへ通知し、取消後のリンクは参�
     role: "owner",
     createdAt: new Date(),
   });
-  const sent = await post(
+  const sent = await authPost(
     auth,
     "/organization/invite-member",
     {
@@ -284,24 +224,16 @@ it("招待の辞退は招待者だけへ通知し、取消後のリンクは参�
     cookie,
   );
   const invitation = z.object({ id: z.string() }).parse(await sent.json());
-  await post(auth, "/sign-in/magic-link", { email: "decline@example.test" });
-  const signedIn = await auth.handler(new Request(loginUrl(mailAt(mails, 1).HTML)));
+  await authPost(auth, "/sign-in/magic-link", { email: "decline@example.test" });
+  const signedIn = await auth.handler(new Request(magicLinkUrl(mails[1])));
   const person = await fixtureDb
     .select()
     .from(user)
     .where(eq(user.email, "decline@example.test"))
     .get();
   if (!person) throw new Error("招待先ユーザーがありません");
-  await fixtureDb.insert(passkey).values({
-    id: "decline-key",
-    userId: person.id,
-    credentialID: "decline-key",
-    publicKey: "fixture",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-  });
-  const rejected = await post(
+  await addFixturePasskey(person.id, "decline-key");
+  const rejected = await authPost(
     auth,
     "/organization/reject-invitation",
     { invitationId: invitation.id },
@@ -309,7 +241,7 @@ it("招待の辞退は招待者だけへ通知し、取消後のリンクは参�
   );
   expect(rejected.status).toBe(200);
   expect(mailAt(mails, 2).To.map((item) => item.Email)).toEqual(["tablecast-staff@example.test"]);
-  const newInvite = await post(
+  const newInvite = await authPost(
     auth,
     "/organization/invite-member",
     {
@@ -321,13 +253,13 @@ it("招待の辞退は招待者だけへ通知し、取消後のリンクは参�
   );
   const renewed = z.object({ id: z.string() }).parse(await newInvite.json());
   expect(
-    (await post(auth, "/organization/cancel-invitation", { invitationId: renewed.id }, cookie))
+    (await authPost(auth, "/organization/cancel-invitation", { invitationId: renewed.id }, cookie))
       .status,
   ).toBe(200);
   expect(mailAt(mails, 4).To.map((item) => item.Email)).toEqual(["decline@example.test"]);
   expect(
     (
-      await post(
+      await authPost(
         auth,
         "/organization/accept-invitation",
         { invitationId: renewed.id },
@@ -354,10 +286,10 @@ it("本番のマジックリンク送信制限は別の認証インスタンス�
   for (let attempt = 0; attempt < 6; attempt++) {
     const auth = createAuth(settings);
     const response = await auth.handler(
-      new Request(`${origin}/api/auth/sign-in/magic-link`, {
+      new Request(`${authOrigin}/api/auth/sign-in/magic-link`, {
         method: "POST",
         headers: {
-          Origin: origin,
+          Origin: authOrigin,
           "Content-Type": "application/json",
           "x-forwarded-for": "192.0.2.38",
           "cf-connecting-ip": "192.0.2.38",

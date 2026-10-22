@@ -96,7 +96,7 @@ it.each(["ja", "en"] as const)(
     });
   },
 );
-it("前回の方法を表示し、パスキーのアイコンと主ボタンをキーボードで操作できる", async () => {
+it("Google・パスキー・区切り線・メールの順に並び、前回の方法をキーボードで選べる", async () => {
   requests((path) => {
     unexpected.push(path);
     return Response.json({}, { status: 500 });
@@ -108,9 +108,21 @@ it("前回の方法を表示し、パスキーのアイコンと主ボタンを�
   });
   await expect.element(passkey).toBeVisible();
   expect(passkey.element().querySelector("svg")).not.toBeNull();
-  expect(document.querySelectorAll(".text-primary svg, svg.text-primary").length).toBeGreaterThan(
-    0,
-  );
+  const google = page.getByRole("button", { name: ja.auth_google, exact: true }).element();
+  const divider = page.getByRole("separator").element();
+  const email = page.getByRole("textbox", { name: ja.auth_email, exact: true }).element();
+  for (const [before, after] of [
+    [google, passkey.element()],
+    [passkey.element(), divider],
+    [divider, email],
+  ] as const)
+    expect(Boolean(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(
+      true,
+    );
+  expect(document.body.textContent).not.toContain(ja.auth_passkey_description);
+  await expect
+    .element(page.getByRole("button", { name: ja.auth_send_magic_link, exact: true }))
+    .toHaveStyle({ backgroundColor: "rgb(255, 255, 255)" });
   for (let i = 0; i < 8 && passkey.element() !== document.activeElement; i++)
     await userEvent.keyboard("{Tab}");
   await expect.element(passkey).toHaveFocus();

@@ -1,5 +1,6 @@
-import { type APIRequestContext, expect } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
 import { z } from "zod";
+import ja from "../../messages/ja.json" with { type: "json" };
 import { credentials } from "./runtime";
 
 const mailpitOrigins = new Map<string, string>();
@@ -63,6 +64,17 @@ export async function signInStaff(
     maxRedirects: 0,
   });
   expect(verified.status()).toBe(302);
+}
+
+// 認証画面がWhenのjourneyは実フォーム・配送・Cookie・document遷移を通す。
+export async function signInFromLogin(
+  page: Page,
+  origin: string | undefined,
+  email = credentials.email,
+) {
+  await page.getByLabel(ja.auth_email, { exact: true }).fill(email);
+  await page.getByRole("button", { name: ja.auth_send_magic_link }).click();
+  await page.goto(await readMagicLink(page.request, origin, email));
 }
 
 // 端末承認がGivenの試験用。実HTTPとguest自身のCookieを使い、代表journeyはUI操作を残す。

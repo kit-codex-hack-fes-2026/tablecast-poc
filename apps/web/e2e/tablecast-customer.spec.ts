@@ -3,7 +3,7 @@ import { adminStateSchema, customerConsentVersion, tableStateSchema } from "@tab
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
-import { approveGuestDevice, readMagicLink, signInStaff } from "./support/session";
+import { approveGuestDevice, signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 test.use({ viewport: { width: 390, height: 844 }, trace: "off", serviceWorkers: "block" });
@@ -104,9 +104,7 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     // OSのカメラがQRのURLを開いた後から、実アプリの認証・同意・自動参加を検証する。
     await first.goto(code.url);
     await expect(first).toHaveURL(/\/login\?returnTo=/);
-    await first.getByLabel(ja.auth_email).fill(credentials.email);
-    await first.getByRole("button", { name: /^ログインリンクを送信/ }).click();
-    await first.goto(await readMagicLink(first.request, baseURL, credentials.email));
+    await signInFromLogin(first, baseURL);
     await first.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
     await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(

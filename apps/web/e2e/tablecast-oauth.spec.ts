@@ -1,8 +1,7 @@
 import { expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { credentials } from "./support/runtime";
-import { readMagicLink, signInStaff } from "./support/session";
+import { signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // callbackを差し替えるHTTP境界をSWに迂回させない。
@@ -54,9 +53,7 @@ test("MCP接続は実ログインと明示同意を経て外部callbackへ認可
     code_challenge_method: "S256",
   });
   await page.goto(`/api/auth/oauth2/authorize?${query}`);
-  await page.getByLabel("メールアドレス").fill(credentials.email);
-  await page.getByRole("button", { name: /^ログインリンクを送信/ }).click();
-  await page.goto(await readMagicLink(page.request, baseURL, credentials.email));
+  await signInFromLogin(page, baseURL);
   await expect(page).toHaveURL(/\/consent\?/);
   const organisationDocument = page.url();
   // 店舗選択のCookie更新で認証handlerが自動転送する。旧documentのボタン表示とは区別する。

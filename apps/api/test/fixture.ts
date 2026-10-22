@@ -25,6 +25,19 @@ export function responseCookies(response: Response) {
     .join("; ");
 }
 
+// 業務の前提だけに使い、登録・ログイン自体の保証は実WebAuthnの試験へ置く。
+export function addFixturePasskey(userId: string, id = "tablecast-fixture-passkey") {
+  return fixtureDb.insert(authTables.passkey).values({
+    id,
+    userId,
+    credentialID: btoa(id),
+    publicKey: "tablecast-fixture-public-key",
+    counter: 0,
+    deviceType: "multiDevice",
+    backedUp: true,
+  });
+}
+
 export async function setupFixture() {
   const auth = createAuth(env);
   const ctx = await auth.$context;
@@ -33,16 +46,7 @@ export async function setupFixture() {
     { method: "admin" },
   );
   const session = await ctx.internalAdapter.createSession(user.id);
-  await fixtureDb.insert(authTables.passkey).values({
-    id: "tablecast-fixture-passkey",
-    userId: user.id,
-    credentialID: "tablecast-fixture-credential",
-    publicKey: "tablecast-fixture-public-key",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-    createdAt: new Date(),
-  });
+  await addFixturePasskey(user.id);
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     insertFixture(authTables.organization, {

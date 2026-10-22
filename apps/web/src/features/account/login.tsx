@@ -98,22 +98,6 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
             {t("evaluation_login_note")}
           </aside>
         )}
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
-          <Fingerprint className="size-12 text-primary" aria-hidden="true" />
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {t("auth_passkey_description")}
-          </p>
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={social.isPending}
-            onClick={() => social.mutate("passkey")}
-          >
-            <Fingerprint className="size-6" />
-            {t("auth_passkey")}
-            {last("passkey")}
-          </Button>
-        </div>
         <Button
           variant="outline"
           className="w-full"
@@ -124,11 +108,22 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
           {evaluation ? t("evaluation_login_button") : t("auth_google")}
           {last("google")}
         </Button>
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={social.isPending}
+          onClick={() => social.mutate("passkey")}
+        >
+          <Fingerprint className="size-6" />
+          {t("auth_passkey")}
+          {last("passkey")}
+        </Button>
         {social.error && (
           <p role="alert" className="text-destructive">
             {t("auth_failed")}
           </p>
         )}
+        <hr className="border-border" />
         <form.AppForm>
           <form.Form noValidate className="space-y-5 [&_[type=submit]]:w-full">
             <form.AppField
@@ -145,7 +140,7 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
                 />
               )}
             </form.AppField>
-            <form.SubmitButton disabled={social.isPending}>
+            <form.SubmitButton variant="outline" disabled={social.isPending}>
               <Mail />
               {t("auth_send_magic_link")}
               {last("magic-link")}

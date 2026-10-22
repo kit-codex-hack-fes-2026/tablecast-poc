@@ -2,7 +2,7 @@ import { expect } from "@playwright/test";
 import { z } from "zod";
 import { signInDemoOwner } from "../../../scripts/tablecast-demo-auth";
 import { credentials } from "./support/runtime";
-import { readMagicLink, signInStaff } from "./support/session";
+import { signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // 認証・招待・メールの実HTTP接続を確認する。
@@ -47,9 +47,7 @@ test("メールログインは外部として解釈される戻り先を使わ�
     returnDraftId: draft.id,
   });
   await page.goto(`/login?${query}`);
-  await page.getByLabel("メールアドレス").fill(credentials.email);
-  await page.getByRole("button", { name: /^ログインリンクを送信/ }).click();
-  await page.goto(await readMagicLink(page.request, baseURL, credentials.email));
+  await signInFromLogin(page, baseURL);
   await expect(page).toHaveURL(`${baseURL}/admin/stores/${storeId}/menu/changes/${draft.id}`);
   await expect(page.getByRole("heading", { name: "変更内容を確認", exact: true })).toBeVisible();
 });
@@ -264,9 +262,7 @@ test("招待からメールログインした新規ユーザーはパスキー�
     await page.setViewportSize({ width, height });
     await page.screenshot({ path: testInfo.outputPath(`tablecast-login-${name}.png`) });
   }
-  await page.getByLabel("メールアドレス", { exact: true }).fill(email);
-  await page.getByRole("button", { name: /^ログインリンクを送信/ }).click();
-  await page.goto(await readMagicLink(page.request, baseURL, email));
+  await signInFromLogin(page, baseURL, email);
   await expect(page).toHaveURL(/\/passkey-setup\?/);
   const denied = await page.request.get("/api/admin/stores");
   expect(denied.status()).toBe(403);

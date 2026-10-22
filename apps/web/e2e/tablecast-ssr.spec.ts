@@ -3,8 +3,7 @@ import { adminStateSchema, catalogSchema } from "@tablecast/api/schema";
 import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
-import { credentials } from "./support/runtime";
-import { approveGuestDevice, readMagicLink, signInStaff } from "./support/session";
+import { approveGuestDevice, signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
@@ -239,11 +238,9 @@ test("メールリンクからホームをSSRし、フォーカス復帰でも�
   baseURL,
 }) => {
   await page.goto("/login");
-  await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(new URL(request.url()).pathname));
-  await page.getByRole("button", { name: /^ログインリンクを送信/ }).click();
-  await page.goto(await readMagicLink(page.request, baseURL, credentials.email));
+  await signInFromLogin(page, baseURL);
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/?$/);
   await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();

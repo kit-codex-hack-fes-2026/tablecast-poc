@@ -14,7 +14,7 @@ import { createAuth } from "../src/modules/auth/service";
 import { DomainError } from "../src/platform/errors";
 import { configurationSchema } from "../src/schema";
 import { fixtureDb } from "./database-fixture";
-import { configuration, setupFixture } from "./fixture";
+import { addFixturePasskey, configuration, setupFixture } from "./fixture";
 
 const request = (storeId: string, sessionCookie: string) =>
   exports.default.fetch(
@@ -103,15 +103,7 @@ it("新規登録すると公式認証の所有者を持つ店舗・初期公開�
   await fixtureDb.update(authTables.user).set({ emailVerified: true });
   const auth = createAuth(bootstrapEnv);
   const session = await (await auth.$context).internalAdapter.createSession(result.userId);
-  await fixtureDb.insert(authTables.passkey).values({
-    id: "bootstrap-key",
-    userId: result.userId,
-    credentialID: "bootstrap-credential",
-    publicKey: "fixture-public-key",
-    counter: 0,
-    deviceType: "multiDevice",
-    backedUp: true,
-  });
+  await addFixturePasskey(result.userId, "bootstrap-key");
   const cookie = `tablecast.session_token=${encodeURIComponent(`${session.token}.${await makeSignature(session.token, bootstrapEnv.TABLECAST_AUTH_SECRET)}`)}`;
 
   expect((await request(result.storeId, cookie)).status).toBe(200);

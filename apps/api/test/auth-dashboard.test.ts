@@ -5,6 +5,7 @@ import { afterEach, expect, inject, test, vi } from "vitest";
 import app from "../src/app";
 import { session, user } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { captureAuthMail, magicLinkUrl, mailAuthEnv } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
 import { setupFixture } from "./fixture";
 
@@ -45,44 +46,19 @@ test.each([200, 503])(
     expect(await fixtureDb.select({ lastActiveAt: user.lastActiveAt }).from(user).get()).toEqual({
       lastActiveAt: null,
     });
-    let magicUrl = "";
-    const outbound = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const request = new Request(input, init);
-      if (request.url === "http://localhost:8025/api/v1/send") {
-        const content = await request.text();
-        const mail: unknown = JSON.parse(content);
-        if (
-          typeof mail !== "object" ||
-          mail === null ||
-          !("HTML" in mail) ||
-          typeof mail.HTML !== "string"
-        )
-          throw new Error("メール形式が不正です");
-        magicUrl =
-          mail.HTML.match(/href="([^"]*\/api\/auth\/magic-link\/verify[^"]+)"/)?.[1]?.replaceAll(
-            "&amp;",
-            "&",
-          ) ?? "";
-        return Response.json({ ID: "tablecast-dashboard-mail" });
-      }
-      return Response.json({ success: status === 200 }, { status });
-    });
-    await createAuth({
-      ...env,
-      TABLECAST_ENV: "development",
-      TABLECAST_EMAIL_FROM: "tablecast@example.test",
-      TABLECAST_MAILPIT_URL: "http://localhost:8025",
-    }).api.signInMagicLink({
+    const { mails, outbound } = captureAuthMail(() =>
+      Response.json({ success: status === 200 }, { status }),
+    );
+    await createAuth(mailAuthEnv).api.signInMagicLink({
       body: { email: "tablecast-staff@example.test" },
       headers: new Headers({ Origin: origin }),
     });
-    if (!magicUrl) throw new Error("ログインリンクがありません");
     const context = createExecutionContext();
     const waitUntil = vi.spyOn(context, "waitUntil");
     const startedAt = Date.now();
 
     // When: 本番のHono経路でマジックリンクを検証する
-    const response = await app.fetch(new Request(magicUrl), configured, context);
+    const response = await app.fetch(new Request(magicLinkUrl(mails[0])), configured, context);
     await waitOnExecutionContext(context);
 
     // Then: 外部送信の成否によらずログインでき、既存セッションを保持して日時を更新する

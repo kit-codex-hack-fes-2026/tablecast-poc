@@ -1,26 +1,19 @@
-import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { account, user } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { authOrigin, authPost, captureAuthMail, magicLinkUrl, mailAuthEnv } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
 import { responseCookies } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 
 it("実認証の確認メールとGoogle往復は同じユーザーへ接続し、providerを重複させない", async () => {
-  const origin = "http://localhost:3000";
   const email = "tablecast-linking@example.test";
-  const mails: { HTML: string; Text: string }[] = [];
   const userinfoHeaders: (null | string)[] = [];
   // メール配送とIdPの外側だけを固定し、token・state・Cookie・D1は実認証を通す。
-  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-    const request = new Request(input, init);
-    if (request.url === "http://localhost:8025/api/v1/send") {
-      mails.push(z.object({ HTML: z.string(), Text: z.string() }).parse(await request.json()));
-      return Response.json({ ID: "tablecast-verification-mail" });
-    }
+  const { mails } = captureAuthMail((request) => {
     if (request.url === "http://tablecast-google.localhost/oauth2/token")
       return Response.json({
         access_token: "tablecast-idp-token",
@@ -39,21 +32,10 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
     throw new Error(`未定義の外部要求: ${request.url}`);
   });
   const auth = createAuth({
-    ...env,
-    TABLECAST_ENV: "development",
-    TABLECAST_EMAIL_FROM: "tablecast@example.test",
-    TABLECAST_MAILPIT_URL: "http://localhost:8025",
+    ...mailAuthEnv,
     TABLECAST_GOOGLE_EMULATOR_URL: "http://tablecast-google.localhost",
   });
-  const post = (path: string, body: unknown, cookie = "") =>
-    auth.handler(
-      new Request(origin + path, {
-        method: "POST",
-        headers: { Origin: origin, "Content-Type": "application/json", Cookie: cookie },
-        body: JSON.stringify(body),
-      }),
-    );
-  const signup = await post("/api/auth/sign-in/magic-link", {
+  const signup = await authPost(auth, "/sign-in/magic-link", {
     email,
     name: "連携会員",
     callbackURL: "/account",
@@ -61,28 +43,24 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
   expect(signup.status).toBe(200);
   expect(responseCookies(signup)).not.toContain("session_token");
   const verification = mails[0];
-  expect(verification?.HTML).toContain(`src="${origin}/brand/tablecast-logo.png"`);
+  expect(verification?.HTML).toContain(`src="${authOrigin}/brand/tablecast-logo.png"`);
   expect(verification?.Text).toMatch(/^TableCast\n/);
-  const href = verification?.HTML.match(
-    /href="([^"]*\/api\/auth\/magic-link\/verify[^"]+)"/u,
-  )?.[1]?.replaceAll("&amp;", "&");
-  if (!href) throw new Error("ログインリンクがありません");
-  const login = await auth.handler(new Request(href));
+  const login = await auth.handler(new Request(magicLinkUrl(verification)));
   expect(login.status).toBe(302);
   const session = z.object({ user: z.object({ id: z.string(), emailVerified: z.boolean() }) });
   const emailSession = session.parse(
     await (
       await auth.handler(
-        new Request(`${origin}/api/auth/get-session`, {
+        new Request(`${authOrigin}/api/auth/get-session`, {
           headers: { Cookie: responseCookies(login) },
         }),
       )
     ).json(),
   );
   expect(emailSession.user.emailVerified).toBe(true);
-  expect((await post("/api/auth/sign-out", {}, responseCookies(login))).status).toBe(200);
+  expect((await authPost(auth, "/sign-out", {}, responseCookies(login))).status).toBe(200);
   for (let attempt = 0; attempt < 2; attempt++) {
-    const social = await post("/api/auth/sign-in/social", {
+    const social = await authPost(auth, "/sign-in/social", {
       provider: "google",
       callbackURL: "/organisations",
     });
@@ -95,13 +73,13 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
       new Request(callback, { headers: { Cookie: responseCookies(social) } }),
     );
     expect(returned.status).toBe(302);
-    expect(new URL(returned.headers.get("location") ?? "", origin).href).toBe(
-      `${origin}/organisations`,
+    expect(new URL(returned.headers.get("location") ?? "", authOrigin).href).toBe(
+      `${authOrigin}/organisations`,
     );
     const googleSession = session.parse(
       await (
         await auth.handler(
-          new Request(`${origin}/api/auth/get-session`, {
+          new Request(`${authOrigin}/api/auth/get-session`, {
             headers: { Cookie: responseCookies(returned) },
           }),
         )

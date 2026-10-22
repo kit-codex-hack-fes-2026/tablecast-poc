@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
 import { account } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { authPost } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
 import { resetFixtureStorage } from "./fixture";
 
@@ -39,13 +40,7 @@ it("パスワード廃止の移行は既存アカウントを維持してハッ�
   );
   expect(await fixtureDb.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
   const auth = createAuth(env);
-  const response = await auth.handler(
-    new Request("http://localhost:3000/api/auth/sign-in/email", {
-      method: "POST",
-      headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    }),
-  );
+  const response = await authPost(auth, "/sign-in/email", { email, password });
   expect(response.status).toBe(403);
   expect(response.headers.getSetCookie().join(";")).not.toContain("session_token");
 });
