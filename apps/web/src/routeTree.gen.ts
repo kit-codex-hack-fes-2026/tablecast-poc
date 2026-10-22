@@ -16,6 +16,7 @@ import { Route as DeviceRouteImport } from './routes/device'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MemberRouteImport } from './routes/member'
 import { Route as OrganisationsRouteImport } from './routes/organisations'
+import { Route as PasskeySetupRouteImport } from './routes/passkey-setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AccountMcpSessionsRouteImport } from './routes/account_.mcp-sessions'
@@ -94,6 +95,11 @@ const MemberRoute = MemberRouteImport.update({
 const OrganisationsRoute = OrganisationsRouteImport.update({
   id: '/organisations',
   path: '/organisations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasskeySetupRoute = PasskeySetupRouteImport.update({
+  id: '/passkey-setup',
+  path: '/passkey-setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -350,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByTo {
   '/device': typeof DeviceRoute
   '/login': typeof LoginRoute
   '/organisations': typeof OrganisationsRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account/mcp-sessions': typeof AccountMcpSessionsRoute
@@ -454,6 +462,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/member': typeof MemberRouteWithChildren
   '/organisations': typeof OrganisationsRoute
+  '/passkey-setup': typeof PasskeySetupRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/account_/mcp-sessions': typeof AccountMcpSessionsRoute
@@ -509,6 +518,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/member'
     | '/organisations'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account/mcp-sessions'
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | '/device'
     | '/login'
     | '/organisations'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account/mcp-sessions'
@@ -612,6 +623,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/member'
     | '/organisations'
+    | '/passkey-setup'
     | '/register'
     | '/reset-password'
     | '/account_/mcp-sessions'
@@ -666,6 +678,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MemberRoute: typeof MemberRouteWithChildren
   OrganisationsRoute: typeof OrganisationsRoute
+  PasskeySetupRoute: typeof PasskeySetupRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   AccountMcpSessionsRoute: typeof AccountMcpSessionsRoute
@@ -729,6 +742,13 @@ declare module '@tanstack/react-router' {
       path: '/organisations'
       fullPath: '/organisations'
       preLoaderRoute: typeof OrganisationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passkey-setup': {
+      id: '/passkey-setup'
+      path: '/passkey-setup'
+      fullPath: '/passkey-setup'
+      preLoaderRoute: typeof PasskeySetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -1150,6 +1170,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MemberRoute: MemberRouteWithChildren,
   OrganisationsRoute: OrganisationsRoute,
+  PasskeySetupRoute: PasskeySetupRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   AccountMcpSessionsRoute: AccountMcpSessionsRoute,

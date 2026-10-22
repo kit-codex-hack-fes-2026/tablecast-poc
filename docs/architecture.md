@@ -234,3 +234,5 @@ APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts
 ### 店舗テーマの境界
 
 APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの入力契約を所有する。CSS解析はcss-treeの公式subpath parser/generatorを使い、Node.js専用のデータ読込を含むルート入口を避け、当該modelだけに外部依存を許可する。WebのStoreThemeはその契約から店舗内のCSS変数と部品スタイルを生成する。UI非依存のStyleScopeBoundaryがPortalにも適用範囲を引き継ぎ、UI primitiveは店舗設定やAPIへ依存しない。設定は既存のconfig_jsonと版管理へ格納し、追加テーブルやmigrationは不要。
+
+認証の共通パスキー条件は`auth/passkey-policy.ts`がDBから読み、認証factory・middleware・初期取得・MCPで共有する。通知の設定は`auth/notifications.ts`が既存メール送信へ接続する。認証factoryからのDB読取はこの条件ファイルに限定した境界として公開する。

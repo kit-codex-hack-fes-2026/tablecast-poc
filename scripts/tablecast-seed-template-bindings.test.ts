@@ -8,7 +8,6 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import { getPlatformProxy } from "wrangler";
-import { z } from "zod";
 import type { DemoCredentials } from "./tablecast-seed.ts";
 import { type SeedEnv, seedPreviewDatabase } from "./tablecast-seed-data.ts";
 import { createSeedTemplate } from "./tablecast-seed-template.ts";
@@ -243,17 +242,8 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
       first.db.select().from(identity.account).orderBy(identity.account.id),
       second.db.select().from(identity.account).orderBy(identity.account.id),
     ]);
-    expect(firstAccounts).toHaveLength(8);
-    expect(secondAccounts).toHaveLength(8);
-    for (const firstAccount of firstAccounts) {
-      const secondAccount = secondAccounts.find((account) => account.id === firstAccount.id);
-      expect(secondAccount?.userId).toBe(firstAccount.userId);
-      const firstHash = z.string().min(1).parse(firstAccount.password);
-      const secondHash = z.string().min(1).parse(secondAccount?.password);
-      expect(firstHash).not.toBe(secondHash);
-      expect(firstHash.split(":")[0]).not.toBe(secondHash.split(":")[0]);
-      expect(firstAccount).toMatchObject({ accessToken: null, refreshToken: null, idToken: null });
-    }
+    expect(firstAccounts).toEqual([]);
+    expect(secondAccounts).toEqual([]);
 
     for (const [database, current] of [
       [first, credentials],
@@ -287,12 +277,8 @@ it("同じ固定seedを実D1へ原子的に投入し、基礎データを揃え�
             body: JSON.stringify({ email, password }),
           }),
         );
-        expect(response.status).toBe(200);
-        expect(response.headers.getSetCookie().join(";")).toContain("tablecast.session_token");
-        expect(
-          z.object({ user: z.object({ email: z.email() }) }).parse(await response.json()).user
-            .email,
-        ).toBe(email);
+        expect(response.status).toBe(403);
+        expect(response.headers.getSetCookie().join(";")).not.toContain("tablecast.session_token");
       }
     }
 

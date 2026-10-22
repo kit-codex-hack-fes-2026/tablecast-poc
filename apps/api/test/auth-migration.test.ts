@@ -8,7 +8,7 @@ import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
 import { resetFixtureStorage } from "./fixture";
 
-it("認証のissuer必須制約を外しても既存の資格情報とログインを保持する", async () => {
+it("パスワード廃止の移行は既存アカウントを維持してハッシュを消去する", async () => {
   await resetFixtureStorage();
   const migrations = inject("tablecastMigrations");
   const index = migrations.findIndex((migration) =>
@@ -34,7 +34,9 @@ it("認証のissuer必須制約を外しても既存の資格情報とログイ�
 
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(index));
 
-  expect(await fixtureDb.select().from(account)).toEqual(before);
+  expect(await fixtureDb.select().from(account)).toEqual(
+    before.map((row) => ({ ...row, password: null })),
+  );
   expect(await fixtureDb.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
   const auth = createAuth(env);
   const response = await auth.handler(
@@ -44,8 +46,8 @@ it("認証のissuer必須制約を外しても既存の資格情報とログイ�
       body: JSON.stringify({ email, password }),
     }),
   );
-  expect(response.status).toBe(200);
-  expect(response.headers.getSetCookie().join(";")).toContain("session_token");
+  expect(response.status).toBe(403);
+  expect(response.headers.getSetCookie().join(";")).not.toContain("session_token");
 });
 
 it("異なるissuerで識別子が重複する場合は既存行と必須制約を保持して移行を拒否する", async () => {

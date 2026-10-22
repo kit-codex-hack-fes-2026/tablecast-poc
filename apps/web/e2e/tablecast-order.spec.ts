@@ -5,6 +5,7 @@ import en from "../messages/en.json" with { type: "json" };
 import ja from "../messages/ja.json" with { type: "json" };
 import { fixtureValue } from "../src/test-support/fixture-value";
 import { credentials } from "./support/runtime";
+import { readMagicLink } from "./support/session";
 import { test } from "./support/test";
 
 // スタッフの認証入力を含むため、通信traceを保存しない。
@@ -27,8 +28,8 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
     await staff.getByRole("button", { name: "日本語", exact: true }).click();
     await staff.getByLabel(labels.auth_email).fill(credentials.email);
-    await staff.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
-    await staff.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
+    await staff.getByRole("button", { name: /^ログインリンクを送信/ }).click();
+    await staff.goto(await readMagicLink(staff.request, baseURL, credentials.email));
     await expect(staff).toHaveURL(new RegExp(`/admin/stores/${storeId}/floor$`));
     await expect(staff.getByRole("main")).toBeVisible();
     const current = adminStateSchema.parse(

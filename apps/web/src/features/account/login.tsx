@@ -1,59 +1,73 @@
-import { useMutation } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useHydrated, useLocation } from "@tanstack/react-router";
+import { Fingerprint, Mail } from "lucide-react";
 import { useEffect } from "react";
 import { z } from "zod";
 import { useAppForm } from "../../components/form";
 import { GoogleIcon } from "../../components/google-icon";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
-import { authClient, authResult } from "../../lib/auth-client";
+import { parseResponse, rpc } from "../../lib/api";
+import { authClient, authResult, promptGoogleOneTap } from "../../lib/auth-client";
 import { AuthLayout } from "./auth-layout";
 import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t, setLocale } = useI18n();
-  const navigate = useNavigate();
-  const { returnStoreId, returnDraftId } = useSearch({ from: "/login" });
-  const social = useMutation({
-    mutationFn: async (method: "google" | "passkey") => {
-      const callbackURL = loginReturnUrl(searchStr, window.location.origin) ?? "/organisations";
-      if (method === "passkey") {
-        authResult(await authClient.signIn.passkey());
-        window.location.assign(callbackURL);
-      } else
-        authResult(
-          await authClient.signIn.social({
-            provider: "google",
-            callbackURL,
-          }),
-        );
-    },
-  });
+  const hydrated = useHydrated();
+  const client = useQueryClient();
+  const lastMethod = hydrated ? authClient.getLastUsedLoginMethod() : null;
+  const callback = () => loginReturnUrl(searchStr, window.location.origin) ?? "/admin/live";
   useEffect(() => {
     const saved = localStorage.getItem("tablecast_staff_locale");
     if (saved === "ja" || saved === "en") setLocale(saved);
-  }, [setLocale]);
-  const login = useMutation({
-    mutationFn: async (value: { email: string; password: string }) =>
-      authResult(await authClient.signIn.email(value)),
-    onSuccess: () => {
-      const returnUrl = loginReturnUrl(searchStr, window.location.origin);
-      if (returnUrl) window.location.assign(returnUrl);
-      else
-        void navigate({
-          to: "/admin/live",
-          search: { storeId: returnStoreId, draftId: returnDraftId },
-        });
+    let active = true;
+    void parseResponse(rpc.api.account["auth-config"].$get())
+      .then(async (config) => {
+        if (!active || !config.googleOneTapClientId) return;
+        const session = await authClient.getSession();
+        if (active && !session.data)
+          await promptGoogleOneTap(
+            config.googleOneTapClientId,
+            loginReturnUrl(searchStr, window.location.origin) ?? "/admin/live",
+          );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [setLocale, searchStr]);
+  const social = useMutation({
+    mutationFn: async (method: "google" | "passkey") => {
+      if (method === "passkey") {
+        authResult(await authClient.signIn.passkey());
+        window.location.assign(callback());
+      } else
+        authResult(await authClient.signIn.social({ provider: "google", callbackURL: callback() }));
     },
   });
+  const login = useMutation({
+    onSuccess: () => client.invalidateQueries({ queryKey: ["tablecast-session"] }),
+    mutationFn: async ({ email }: { email: string }) =>
+      authResult(
+        await authClient.signIn.magicLink({
+          email,
+          callbackURL: callback(),
+          newUserCallbackURL: callback(),
+          errorCallbackURL: `/login${searchStr}`,
+        }),
+      ),
+  });
   const form = useAppForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "" },
     onSubmit: async ({ value }) => {
       await login.mutateAsync(value).catch(() => undefined);
     },
   });
+  const last = (method: string) =>
+    lastMethod === method ? <Badge variant="secondary">{t("auth_last_used")}</Badge> : null;
   return (
     <AuthLayout
       title={evaluation ? t("evaluation_login_title") : t("auth_subtitle")}
@@ -62,100 +76,83 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
         localStorage.setItem("tablecast_staff_locale", next);
       }}
       footer={
-        <>
-          <a
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-            href={`/register${searchStr}`}
-          >
-            {t("auth_register")}
-          </a>
-          <a
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-            href="/reset-password"
-          >
-            {t("auth_reset")}
-          </a>
-          <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
-            {t("auth_guest")}
-          </Link>
-        </>
+        <Link to="/" className="inline-flex min-h-11 items-center underline underline-offset-4">
+          {t("auth_guest")}
+        </Link>
       }
     >
-      <form.AppForm>
-        <form.Form noValidate className="flex min-w-0 flex-col gap-5 [&_[type=submit]]:w-full">
-          {evaluation && (
-            <aside className="rounded-xl bg-secondary p-5 space-y-3 text-base leading-relaxed">
-              <p>{t("evaluation_login_note")}</p>
-              <p className="font-semibold">佐藤 晴香 / Haruka Sato</p>
-              <p className="break-all text-sm">haruka.sato@komorebi-shijo.com</p>
-              <p>{t("evaluation_shared")}</p>
-            </aside>
-          )}
+      <div className="space-y-6">
+        {new URLSearchParams(searchStr).has("error") && (
+          <p role="alert" className="text-destructive">
+            {t("auth_magic_invalid")}
+          </p>
+        )}
+        {evaluation && (
+          <aside className="rounded-xl bg-secondary p-5 text-base leading-relaxed">
+            {t("evaluation_login_note")}
+          </aside>
+        )}
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+          <Fingerprint className="size-12 text-primary" aria-hidden="true" />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("auth_passkey_description")}
+          </p>
           <Button
-            type="button"
-            variant="outline"
-            disabled={social.isPending}
-            onClick={() => social.mutate("google")}
-          >
-            <GoogleIcon className="size-5" />
-            {evaluation ? t("evaluation_login_button") : t("auth_google")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
+            className="w-full"
+            size="lg"
             disabled={social.isPending}
             onClick={() => social.mutate("passkey")}
           >
+            <Fingerprint className="size-6" />
             {t("auth_passkey")}
+            {last("passkey")}
           </Button>
-          {social.error && (
-            <p role="alert" className="text-destructive">
-              {t("auth_failed")}
-            </p>
-          )}
-          <form.AppField
-            name="email"
-            validators={{ onChange: z.email({ error: t("form_email") }) }}
-          >
-            {(field) => (
-              <field.TextField
-                label={t("auth_email")}
-                type="email"
-                autoComplete="username"
-                required
-                disabled={login.isPending}
-              />
-            )}
-          </form.AppField>
-          <form.AppField
-            name="password"
-            validators={{ onChange: z.string().min(1, t("form_required")) }}
-          >
-            {(field) => (
-              <field.TextField
-                label={t("auth_password")}
-                type="password"
-                autoComplete="current-password"
-                required
-                disabled={login.isPending}
-              />
-            )}
-          </form.AppField>
-          {login.error && (
-            <p
-              className="text-destructive flex items-start gap-2.5 py-3 px-3.5 rounded-md bg-accent-soft text-base leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0"
-              role="alert"
+        </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={social.isPending}
+          onClick={() => social.mutate("google")}
+        >
+          <GoogleIcon className="size-5" />
+          {evaluation ? t("evaluation_login_button") : t("auth_google")}
+          {last("google")}
+        </Button>
+        {social.error && (
+          <p role="alert" className="text-destructive">
+            {t("auth_failed")}
+          </p>
+        )}
+        <form.AppForm>
+          <form.Form noValidate className="space-y-5 [&_[type=submit]]:w-full">
+            <form.AppField
+              name="email"
+              validators={{ onChange: z.email({ error: t("form_email") }) }}
             >
-              {t("auth_failed")}
-            </p>
-          )}
-
-          <form.SubmitButton size="lg" disabled={social.isPending}>
-            {t("auth_sign_in")}
-            <ArrowRight size={20} aria-hidden="true" />
-          </form.SubmitButton>
-        </form.Form>
-      </form.AppForm>
+              {(field) => (
+                <field.TextField
+                  label={t("auth_email")}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  disabled={login.isPending}
+                />
+              )}
+            </form.AppField>
+            <form.SubmitButton disabled={social.isPending}>
+              <Mail />
+              {t("auth_send_magic_link")}
+              {last("magic-link")}
+            </form.SubmitButton>
+            {login.isSuccess && <output className="block text-sm">{t("auth_magic_sent")}</output>}
+            {login.error && (
+              <p role="alert" className="text-destructive">
+                {t("account_failed")}
+              </p>
+            )}
+          </form.Form>
+        </form.AppForm>
+      </div>
     </AuthLayout>
   );
 }

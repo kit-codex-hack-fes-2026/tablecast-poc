@@ -44,6 +44,10 @@ export default defineConfig({
         checkAllOrigins: true,
         checkInternals: true,
         policies: [
+          {
+            from: { file: { categories: "auth-factory" } },
+            allow: { to: { file: { path: "src/modules/auth/passkey-policy.ts" } } },
+          },
           ...Object.entries(dependencies).map(([from, to]) => ({
             from: { file: { categories: from } },
             allow: { to: { file: { categories: to } } },

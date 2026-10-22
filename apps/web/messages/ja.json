@@ -127,7 +127,7 @@
   "pair_begin": "端末を接続する",
   "pair_waiting": "スタッフの承認を待っています",
   "pair_expired": "コードの有効期限が切れました。新しいコードを発行してください。",
-  "auth_subtitle": "TableCast スタッフログイン",
+  "auth_subtitle": "TableCastにログイン",
   "auth_email": "メールアドレス",
   "auth_password": "パスワード",
   "auth_sign_in": "ログイン",
@@ -1423,5 +1423,18 @@
   "floor_zoom_wheel": "スクロール",
   "floor_summary": "利用の概要",
   "floor_show_summary": "利用の概要を表示",
-  "floor_limit_start": "プラン開始"
+  "floor_limit_start": "プラン開始",
+  "auth_last_used": "前回使用",
+  "auth_passkey_description": "登録済みのパスキーで、すばやく安全にログインできます。",
+  "auth_send_magic_link": "ログインリンクを送信",
+  "auth_magic_sent": "ログインリンクを送信しました。5分以内にメールを開いてください。再送する場合はもう一度送信してください。",
+  "auth_passkey_required": "パスキーを登録してください",
+  "auth_passkey_setup_description": "TableCastを利用するにはパスキーの登録が必要です。端末の顔認証・指紋認証・画面ロック、またはセキュリティキーを使って登録できます。",
+  "auth_passkey_setup_failed": "登録を完了できませんでした。キャンセルした場合は再試行してください。",
+  "auth_passkey_supported_device": "この端末で登録できない場合は、対応端末またはセキュリティキーを利用してください。登録完了までサービスを利用できません。",
+  "invite_resend": "招待を再送",
+  "invite_expired": "有効期限切れ",
+  "invite_wrong_email": "招待先のメールアドレスでログインしてください。",
+  "invite_unavailable": "この招待は利用できません。招待者に再送を依頼してください。",
+  "auth_magic_invalid": "ログインリンクが無効か、有効期限が切れています。メールアドレスを入力して新しいリンクを送信してください。"
 }

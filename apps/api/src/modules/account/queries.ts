@@ -1,5 +1,7 @@
 import { and, desc, eq, isNull, max, or, sql } from "drizzle-orm";
 import type { Database } from "../../db/client";
+import type { ApiServices } from "../../platform/context";
+import * as authTables from "../../db/identity-schema";
 import {
   oauthAccessToken,
   oauthClient,
@@ -76,4 +78,23 @@ export async function getMcpSessions(
         : [];
     }),
   };
+}
+
+export async function getInvitationDetails(services: ApiServices, id: string) {
+  return services.db
+    .select({
+      id: authTables.invitation.id,
+      email: authTables.invitation.email,
+      role: authTables.invitation.role,
+      status: authTables.invitation.status,
+      expiresAt: authTables.invitation.expiresAt,
+      organizationName: authTables.organization.name,
+    })
+    .from(authTables.invitation)
+    .innerJoin(
+      authTables.organization,
+      eq(authTables.organization.id, authTables.invitation.organizationId),
+    )
+    .where(eq(authTables.invitation.id, id))
+    .get();
 }

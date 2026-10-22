@@ -5,7 +5,9 @@ import { createElement } from "react";
 import { catalogRelease } from "../../../scripts/tablecast-catalog-config";
 import {
   invitationEmail,
-  resetPasswordEmail,
+  invitationStatusEmail,
+  magicLinkEmail,
+  securityEmail,
   verificationEmail,
 } from "../src/emails/account-content";
 import { AccountEmail } from "../src/emails/account-email";
@@ -15,7 +17,25 @@ const samples = [
   {
     name: "invitation",
     label: "店舗への招待 / Invitation",
-    content: invitationEmail("TableCast サンプル店", "https://example.invalid/invitations/sample"),
+    content: invitationEmail("TableCast サンプル店", "https://example.invalid/invitations/sample", {
+      inviter: "佐藤 晴香 <sample@example.invalid>",
+      role: "admin",
+      expiresAt: new Date("2026-10-24T12:00:00Z"),
+    }),
+  },
+  {
+    name: "invitation-en",
+    label: "店舗への招待 / English",
+    content: invitationEmail(
+      "TableCast Sample Restaurant",
+      "https://example.invalid/invitations/sample",
+      {
+        inviter: "Haruka Sato <sample@example.invalid>",
+        role: "admin",
+        expiresAt: new Date("2026-10-24T12:00:00Z"),
+      },
+      "en",
+    ),
   },
   {
     name: "verify-email",
@@ -23,10 +43,27 @@ const samples = [
     content: verificationEmail("https://example.invalid/verify-email/sample"),
   },
   {
-    name: "reset-password",
-    label: "パスワード再設定 / Reset password",
-    content: resetPasswordEmail("https://example.invalid/reset-password/sample"),
+    name: "magic-link",
+    label: "ログインリンク / Sign-in link",
+    content: magicLinkEmail("https://example.invalid/sign-in/sample"),
   },
+  ...(["accepted", "rejected", "canceled"] as const).map((status) => ({
+    name: `invitation-${status}`,
+    label: `招待 / ${status}`,
+    content: invitationStatusEmail(
+      "TableCast サンプル店",
+      status,
+      "sample@example.invalid",
+      "https://example.invalid/organisations",
+    ),
+  })),
+  ...(["passkey-added", "passkey-removed", "google-linked", "google-unlinked"] as const).map(
+    (event) => ({
+      name: event,
+      label: event,
+      content: securityEmail(event, "https://example.invalid/account"),
+    }),
+  ),
 ];
 
 await rm(directory, { recursive: true, force: true });

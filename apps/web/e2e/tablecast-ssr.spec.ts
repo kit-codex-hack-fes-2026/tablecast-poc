@@ -4,7 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
-import { approveGuestDevice, signInStaff } from "./support/session";
+import { approveGuestDevice, readMagicLink, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // 再試行を検証するHTTP境界をSWに迂回させない。
@@ -234,19 +234,20 @@ test("認証済みの店舗と卓メニューをJavaScriptなしでSSRし、匿�
   }
 });
 
-test("戻り先なしのログインはホームで使うフロアを一括取得し、フォーカス復帰でもセッションを更新する", async ({
+test("メールリンクからホームをSSRし、フォーカス復帰でもセッションを更新する", async ({
   page,
+  baseURL,
 }) => {
   await page.goto("/login");
   await page.getByLabel("メールアドレス", { exact: true }).fill(credentials.email);
-  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
   const requests: string[] = [];
   page.on("request", (request) => requests.push(new URL(request.url()).pathname));
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await page.getByRole("button", { name: /^ログインリンクを送信/ }).click();
+  await page.goto(await readMagicLink(page.request, baseURL, credentials.email));
   await expect(page).toHaveURL(/\/admin\/stores\/[^/]+\/?$/);
   await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "ナビゲーション", exact: true })).toBeEnabled();
-  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(1);
+  expect(requests.filter((path) => path === "/api/admin/initial")).toHaveLength(0);
   expect(requests.filter((path) => /^\/api\/admin\/stores(?:\/[^/]+)?$/.test(path))).toEqual([]);
 
   const main = page.locator("#tablecast-admin-main");
@@ -267,11 +268,11 @@ test("戻り先なしのログインはホームで使うフロアを一括取�
   await page.clock.fastForward(31_000);
   requests.length = 0;
   const focused = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth/get-session",
+    (response) => new URL(response.url()).pathname === "/api/account/auth-state",
   );
   await page.evaluate(() => window.dispatchEvent(new Event("visibilitychange")));
   expect((await focused).ok()).toBe(true);
-  expect(requests.filter((path) => path === "/api/auth/get-session")).toHaveLength(1);
+  expect(requests.filter((path) => path === "/api/account/auth-state")).toHaveLength(1);
   expect(requests.filter((path) => path === "/api/admin/initial")).toEqual([]);
   expect(requests.filter((path) => path === "/api/admin/stores").length).toBeLessThanOrEqual(1);
 });

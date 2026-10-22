@@ -18,15 +18,21 @@ export function AccountEmail({
   action,
   url,
   logoUrl,
+  details = [],
+  footer,
+  language = "ja",
 }: {
   action: string;
+  details?: string[];
+  footer?: string;
+  language?: "en" | "ja";
   logoUrl: string;
   message: string;
   title: string;
   url: string;
 }) {
   return (
-    <Html lang="ja">
+    <Html lang={language}>
       <Head />
       <Preview>{title}</Preview>
       <Tailwind>
@@ -35,6 +41,9 @@ export function AccountEmail({
             <Img src={logoUrl} width="200" height="48" alt="TableCast" />
             <Heading className="text-2xl">{title}</Heading>
             <Text className="text-base leading-7">{message}</Text>
+            {details.map((detail) => (
+              <Text key={detail}>{detail}</Text>
+            ))}
             <Section className="my-8">
               <Button
                 href={url}
@@ -44,6 +53,7 @@ export function AccountEmail({
               </Button>
             </Section>
             <Text className="text-xs text-zinc-600">{url}</Text>
+            {footer && <Text className="text-sm text-zinc-600">{footer}</Text>}
           </Container>
         </Body>
       </Tailwind>

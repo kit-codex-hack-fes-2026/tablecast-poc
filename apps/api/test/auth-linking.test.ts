@@ -12,7 +12,6 @@ afterEach(() => vi.restoreAllMocks());
 it("実認証の確認メールとGoogle往復は同じユーザーへ接続し、providerを重複させない", async () => {
   const origin = "http://localhost:3000";
   const email = "tablecast-linking@example.test";
-  const password = "tablecast-linking-verification-password";
   const mails: { HTML: string; Text: string }[] = [];
   const userinfoHeaders: (null | string)[] = [];
   // メール配送とIdPの外側だけを固定し、token・state・Cookie・D1は実認証を通す。
@@ -54,31 +53,24 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
         body: JSON.stringify(body),
       }),
     );
-  const signup = await post("/api/auth/sign-up/email", {
+  const signup = await post("/api/auth/sign-in/magic-link", {
     email,
-    password,
     name: "連携会員",
     callbackURL: "/account",
   });
   expect(signup.status).toBe(200);
   expect(responseCookies(signup)).not.toContain("session_token");
-  expect((await post("/api/auth/sign-in/email", { email, password })).status).toBe(403);
   const verification = mails[0];
-  expect(verification).toBeDefined();
   expect(verification?.HTML).toContain(`src="${origin}/brand/tablecast-logo.png"`);
-  expect(verification?.HTML).toContain('alt="TableCast"');
   expect(verification?.Text).toMatch(/^TableCast\n/);
   const href = verification?.HTML.match(
-    /href="([^"]*\/api\/auth\/verify-email[^"]+)"/u,
+    /href="([^"]*\/api\/auth\/magic-link\/verify[^"]+)"/u,
   )?.[1]?.replaceAll("&amp;", "&");
-  expect(href).toBeTruthy();
-  if (!href) throw new Error("確認メールのURLがありません");
-  const verified = await auth.handler(new Request(href));
-  expect(verified.status).toBe(302);
-  const login = await post("/api/auth/sign-in/email", { email, password });
-  expect(login.status).toBe(200);
+  if (!href) throw new Error("ログインリンクがありません");
+  const login = await auth.handler(new Request(href));
+  expect(login.status).toBe(302);
   const session = z.object({ user: z.object({ id: z.string(), emailVerified: z.boolean() }) });
-  const passwordSession = session.parse(
+  const emailSession = session.parse(
     await (
       await auth.handler(
         new Request(`${origin}/api/auth/get-session`, {
@@ -87,7 +79,7 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
       )
     ).json(),
   );
-  expect(passwordSession.user.emailVerified).toBe(true);
+  expect(emailSession.user.emailVerified).toBe(true);
   expect((await post("/api/auth/sign-out", {}, responseCookies(login))).status).toBe(200);
   for (let attempt = 0; attempt < 2; attempt++) {
     const social = await post("/api/auth/sign-in/social", {
@@ -115,14 +107,14 @@ it("実認証の確認メールとGoogle往復は同じユーザーへ接続し�
         )
       ).json(),
     );
-    expect(googleSession.user.id).toBe(passwordSession.user.id);
+    expect(googleSession.user.id).toBe(emailSession.user.id);
   }
   expect(await fixtureDb.select().from(user).where(eq(user.email, email))).toHaveLength(1);
   const links = await fixtureDb
     .select()
     .from(account)
-    .where(eq(account.userId, passwordSession.user.id));
+    .where(eq(account.userId, emailSession.user.id));
   expect(links.filter((link) => link.providerId === "google")).toHaveLength(1);
-  expect(links.filter((link) => link.providerId === "credential")).toHaveLength(1);
+  expect(links.filter((link) => link.providerId === "credential")).toHaveLength(0);
   expect(userinfoHeaders).toEqual(["Bearer tablecast-idp-token", "Bearer tablecast-idp-token"]);
 });

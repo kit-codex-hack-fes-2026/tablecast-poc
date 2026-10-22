@@ -1,21 +1,20 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
-import { genericOAuth } from "better-auth/plugins";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { genericOAuth, lastLoginMethod, magicLink, oneTap } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import type { MailEnv } from "../../emails/send";
 import * as schema from "../../db/auth-schema";
 import { createDatabase, type Database } from "../../db/client";
-import {
-  invitationEmail,
-  resetPasswordEmail,
-  verificationEmail,
-} from "../../emails/account-content";
+import { magicLinkEmail, verificationEmail } from "../../emails/account-content";
 import { sendAccountEmail } from "../../emails/send";
 import { ensure } from "../../platform/errors";
 import { billingPlugin } from "../billing/stripe";
+import { authNotifications } from "./notifications";
 import { authOptions } from "./options";
+import { needsPasskey } from "./passkey-policy";
 import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./preview";
 
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
@@ -33,19 +32,12 @@ export function createAuth(
     "AUTH_NOT_CONFIGURED",
     503,
   );
+  const criticalMailTasks: Promise<void>[] = [];
+  const notifications = authNotifications(env, db, criticalMailTasks);
   const options = authOptions(
     env.TABLECAST_PUBLIC_ORIGIN,
     env.TABLECAST_AUTH_SECRET,
-    async (data) => {
-      await sendAccountEmail(
-        env,
-        data.email,
-        invitationEmail(
-          data.organization.name,
-          `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
-        ),
-      );
-    },
+    notifications.organization,
   );
   const emulator = env.TABLECAST_GOOGLE_EMULATOR_URL;
   if (emulator)
@@ -64,6 +56,11 @@ export function createAuth(
   return betterAuth({
     ...options,
     onAPIError: { throw: true },
+    rateLimit: {
+      ...options.rateLimit,
+      enabled: env.TABLECAST_ENV === "production",
+      customRules: { "/organization/invite-member": { window: 60, max: 5 } },
+    },
     advanced: {
       ...options.advanced,
       backgroundTasks: dashboardApiKey ? backgroundTasks : undefined,
@@ -71,6 +68,27 @@ export function createAuth(
     plugins: [
       ...billingPlugin(env, db),
       ...options.plugins,
+      lastLoginMethod({ cookieName: "tablecast.last_login_method" }),
+      magicLink({
+        expiresIn: 300,
+        storeToken: "hashed",
+        rateLimit: { window: 60, max: 5 },
+        sendMagicLink: ({ email, url }) => {
+          const delivery = (async () => {
+            const user = await db
+              .select({ locale: schema.user.locale })
+              .from(schema.user)
+              .where(eq(schema.user.email, email))
+              .get();
+            await sendAccountEmail(env, email, magicLinkEmail(url, user?.locale));
+          })();
+          criticalMailTasks.push(delivery);
+          return delivery;
+        },
+      }),
+      ...(!emulator && env.TABLECAST_GOOGLE_CLIENT_ID && env.TABLECAST_GOOGLE_CLIENT_SECRET
+        ? [oneTap({ clientId: env.TABLECAST_GOOGLE_CLIENT_ID })]
+        : []),
       ...(dashboardApiKey
         ? [
             dash({
@@ -132,13 +150,48 @@ export function createAuth(
       sendVerificationEmail: async ({ user, url }) =>
         sendAccountEmail(env, user.email, verificationEmail(url)),
     },
-    emailAndPassword: {
-      ...options.emailAndPassword,
-      sendResetPassword: async ({ user, url }) =>
-        sendAccountEmail(env, user.email, resetPasswordEmail(url)),
-    },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (
+          [
+            "/sign-in/email",
+            "/sign-up/email",
+            "/request-password-reset",
+            "/reset-password",
+            "/change-password",
+            "/set-password",
+          ].includes(ctx.path)
+        )
+          throw new APIError("FORBIDDEN", { message: "PASSWORD_AUTH_DISABLED" });
+        if (
+          ctx.headers &&
+          (ctx.path.startsWith("/organization/") ||
+            ctx.path.startsWith("/subscription/") ||
+            ctx.path.startsWith("/oauth2/"))
+        ) {
+          const current = await getSessionFromCtx(ctx);
+          if (current && (await needsPasskey(db, current.user.id))) {
+            if (ctx.path === "/oauth2/authorize" && ctx.request) {
+              const request = new URL(ctx.request.url);
+              throw ctx.redirect(
+                `${env.TABLECAST_PUBLIC_ORIGIN}/passkey-setup?${new URLSearchParams({ returnTo: request.pathname + request.search }).toString()}`,
+              );
+            }
+            throw new APIError("FORBIDDEN", { message: "PASSKEY_REGISTRATION_REQUIRED" });
+          }
+        }
+        if (ctx.path === "/passkey/delete-passkey") {
+          const current = await getSessionFromCtx(ctx);
+          if (current) {
+            const keys = await db
+              .select({ id: schema.passkey.id })
+              .from(schema.passkey)
+              .where(eq(schema.passkey.userId, current.user.id))
+              .limit(2);
+            if (keys.length <= 1)
+              throw new APIError("FORBIDDEN", { message: "LAST_PASSKEY_REQUIRED" });
+          }
+        }
         if (ctx.path.startsWith("/subscription/") && ctx.path !== "/subscription/success") {
           const record = z.record(z.string(), z.unknown());
           const body = record.safeParse(ctx.body);
@@ -150,6 +203,31 @@ export function createAuth(
             throw new APIError("BAD_REQUEST", { message: "ORGANIZATION_BILLING_REQUIRED" });
         }
       }),
+      after: createAuthMiddleware(async (ctx) => {
+        await Promise.all(criticalMailTasks.splice(0));
+        if (ctx.context.returned instanceof APIError) return;
+        const current = ctx.context.session;
+        if (current && ctx.path === "/passkey/verify-registration")
+          await notifications.security(current.user.id, "passkey-added");
+        if (current && ctx.path === "/passkey/delete-passkey")
+          await notifications.security(current.user.id, "passkey-removed");
+      }),
+    },
+    databaseHooks: {
+      account: {
+        create: {
+          after: async (account) => {
+            if (account.providerId === "google")
+              await notifications.security(account.userId, "google-linked");
+          },
+        },
+        delete: {
+          after: async (account) => {
+            if (account.providerId === "google")
+              await notifications.security(account.userId, "google-unlinked");
+          },
+        },
+      },
     },
     logger,
     database: drizzleAdapter(db, { provider: "sqlite", schema }),

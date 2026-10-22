@@ -7,11 +7,10 @@ import { z } from "zod";
 export function authOptions(
   origin: string,
   secret: string,
-  sendInvitationEmail?: (data: {
-    email: string;
-    id: string;
-    organization: { name: string };
-  }) => Promise<void>,
+  notifications: Pick<
+    NonNullable<Parameters<typeof organization>[0]>,
+    "organizationHooks" | "sendInvitationEmail"
+  > = {},
 ) {
   const oauth = {
     // 連携取消を即時反映するため、標準のDB管理アクセストークンを使用する。
@@ -46,12 +45,14 @@ export function authOptions(
     basePath: "/api/auth",
     secret,
     trustedOrigins: [origin],
-    emailAndPassword: { enabled: true, minPasswordLength: 12, requireEmailVerification: true },
+    rateLimit: { storage: "database" },
+    emailAndPassword: { enabled: false },
     account: {
-      accountLinking: { enabled: true, allowDifferentEmails: false, allowUnlinkingAll: false },
+      accountLinking: { enabled: true, allowDifferentEmails: false, allowUnlinkingAll: true },
     },
     user: {
       additionalFields: {
+        passkeyRegistered: { type: "boolean", required: false, defaultValue: false, input: false },
         stripeCustomerId: { type: "string", required: false, input: false, returned: false },
         locale: { type: ["ja", "en"], required: false, defaultValue: "ja" },
       },
@@ -72,7 +73,7 @@ export function authOptions(
             },
           },
         },
-        sendInvitationEmail,
+        ...notifications,
         requireEmailVerificationOnInvitation: true,
       }),
       passkey({ rpID: new URL(origin).hostname, rpName: "TableCast", origin }),

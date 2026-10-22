@@ -3,7 +3,7 @@ import { adminStateSchema, customerConsentVersion, tableStateSchema } from "@tab
 import { z } from "zod";
 import ja from "../messages/ja.json" with { type: "json" };
 import { credentials } from "./support/runtime";
-import { approveGuestDevice, signInStaff } from "./support/session";
+import { approveGuestDevice, readMagicLink, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 test.use({ viewport: { width: 390, height: 844 }, trace: "off", serviceWorkers: "block" });
@@ -105,21 +105,14 @@ test("二人がスマホで来店QRを開き、初回同意後の再来店では
     await first.goto(code.url);
     await expect(first).toHaveURL(/\/login\?returnTo=/);
     await first.getByLabel(ja.auth_email).fill(credentials.email);
-    await first.getByLabel(ja.auth_password, { exact: true }).fill(credentials.password);
-    await first.getByRole("button", { name: ja.auth_sign_in, exact: true }).click();
+    await first.getByRole("button", { name: /^ログインリンクを送信/ }).click();
+    await first.goto(await readMagicLink(first.request, baseURL, credentials.email));
     await first.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(first).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));
     await expect(first.getByRole("article").locator("header").getByRole("status")).toHaveText(
       ja.customer_connected,
     );
-    expect(
-      (
-        await second.request.post("/api/auth/sign-in/email", {
-          headers: { Origin: baseURL ?? "" },
-          data: { email: credentials.otherEmail, password: credentials.otherPassword },
-        })
-      ).ok(),
-    ).toBe(true);
+    await signInStaff(second.request, baseURL, credentials.otherEmail);
     await second.goto(code.url);
     await second.getByRole("button", { name: ja.customer_enrol, exact: true }).click();
     await expect(second).toHaveURL(new RegExp(`/member/${storeId}/visits/${visit.id}$`));

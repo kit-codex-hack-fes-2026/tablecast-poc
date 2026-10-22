@@ -9,7 +9,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import type { authClient } from "../../lib/auth-client";
+import type { loadInitial } from "../../lib/session-query";
 import ja from "../../../messages/ja.json";
 import { MotionProvider } from "../../components/motion-provider";
 import { LocaleProvider } from "../../i18n/locale";
@@ -32,23 +32,26 @@ afterEach(async () => {
 it("MCP連携のscopeと日時を表示し、取消確認を承認した後だけ再取得して行を消す", async () => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   const now = new Date();
-  const login: typeof authClient.$Infer.Session = {
+  const login: NonNullable<Awaited<ReturnType<typeof loadInitial>>["session"]> = {
+    passkeyRequired: false,
     user: {
       id: "tablecast-mcp-user",
       name: "連携検証利用者",
       email: "mcp@example.test",
       emailVerified: true,
+      passkeyRegistered: true,
+      locale: "ja",
       image: null,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     },
     session: {
       id: "tablecast-mcp-login",
       userId: "tablecast-mcp-user",
       token: "tablecast-browser-only-session",
-      expiresAt: new Date(now.getTime() + 3600000),
-      createdAt: now,
-      updatedAt: now,
+      expiresAt: new Date(now.getTime() + 3600000).toISOString(),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
       ipAddress: null,
       userAgent: null,
     },

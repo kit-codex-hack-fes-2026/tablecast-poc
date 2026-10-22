@@ -127,7 +127,7 @@
   "pair_begin": "Pair device",
   "pair_waiting": "Waiting for staff approval",
   "pair_expired": "This code has expired. Please request a new one.",
-  "auth_subtitle": "TableCast staff sign in",
+  "auth_subtitle": "Sign in to TableCast",
   "auth_email": "Email address",
   "auth_password": "Password",
   "auth_sign_in": "Sign in",
@@ -1423,5 +1423,18 @@
   "floor_zoom_wheel": "scroll",
   "floor_summary": "Table summary",
   "floor_show_summary": "Show table summary",
-  "floor_limit_start": "Plan starts"
+  "floor_limit_start": "Plan starts",
+  "auth_last_used": "Last used",
+  "auth_passkey_description": "Sign in quickly and securely with your registered passkey.",
+  "auth_send_magic_link": "Send sign-in link",
+  "auth_magic_sent": "Sign-in link sent. Open your email within 5 minutes. To resend, select the button again.",
+  "auth_passkey_required": "Register a passkey",
+  "auth_passkey_setup_description": "A passkey is required to use TableCast. Register using face recognition, your fingerprint, your screen lock or a security key.",
+  "auth_passkey_setup_failed": "Registration could not be completed. If you cancelled, please try again.",
+  "auth_passkey_supported_device": "If this device cannot register a passkey, use a supported device or a security key. Registration is required before you can continue.",
+  "invite_resend": "Resend invitation",
+  "invite_expired": "Expired",
+  "invite_wrong_email": "Sign in with the email address this invitation was sent to.",
+  "invite_unavailable": "This invitation is unavailable. Ask the person who invited you to send a new one.",
+  "auth_magic_invalid": "This sign-in link is invalid or has expired. Enter your email address to request a new link."
 }

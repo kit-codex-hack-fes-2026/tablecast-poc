@@ -30,12 +30,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   beforeLoad: async ({ context, location, abortController }) => {
     const panelCookies = await readPanelCookies();
     if (
-      /^\/(admin|account|billing|organisations|stores|device|consent|invitations)(\/|$)/.test(
+      /^\/(admin|account|billing|organisations|stores|device|consent|invitations|member|passkey-setup)(\/|$)/.test(
         location.pathname,
       )
     ) {
       const { queryClient } = context;
-      if (
+      if (/^\/(member|passkey-setup)(\/|$)/.test(location.pathname)) {
+        await queryClient.ensureQueryData(sessionOptions);
+      } else if (
         queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
@@ -79,6 +81,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       }
       const session = queryClient.getQueryData(sessionOptions.queryKey);
       if (!session) throw redirect({ to: "/login", search: { returnTo: location.href } });
+      if (session.passkeyRequired && location.pathname !== "/passkey-setup")
+        throw redirect({ to: "/passkey-setup", search: { returnTo: location.href } });
     }
     return { panelCookies };
   },

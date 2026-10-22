@@ -1,12 +1,12 @@
 # 認証とアカウント
 
-Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider、端末コードの認証状態を所有する。同一メールの Google アカウントは検証済みメールだけを既存ユーザーへ連携する。異なるメールへの連携と最後のログイン手段の解除は許可しない。メールとパスワードのログインにはメール確認が必要。
+Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider、端末コードの認証状態を所有する。同一メールの Google アカウントは検証済みメールだけを既存ユーザーへ連携する。異なるメールへの連携と最後のログイン手段の解除は許可しない。メールログインはマジックリンクによる所有確認を使う。
 
 ## ローカル
 
 `bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。ホスト開発は `http://oauth.<worktree名>.tablecast-poc.localhost` と `http://mailpit.<worktree名>.tablecast-poc.localhost` を使い、APIも同じ名前へ接続する。APIは開発環境に限り `.localhost` の模擬OAuthを許可する。Dockerの実ポートはPortless aliasへ渡し、runtimeへ保存しない。名前の変更時はdevと旧Composeを停止し、`bun run demo:reset` でこのworktreeの開発データを作り直す。
 
-Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedではパスワードと手動メールを維持し、既知の旧デモメールだけを移行する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
+Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedでは手動メールを維持し、既知の旧デモメールだけを移行する。明示リセットではownerのメールを共通名簿へ揃え、既存ユーザーを維持する。デモseedだけが開発用管理者のメールを確認済みにする。
 
 `/account` で名前・画像・ログイン中の端末・Google連携・パスキーを管理する。店舗とBetter Authの組織は1対1で、チーム階層を使わない。`/organisations` は店舗一覧、`/stores/new` は店舗作成、`/admin/stores/:storeId/members` はその店舗のメンバー、`/admin/stores/:storeId/invitations` は招待一覧である。
 
@@ -40,7 +40,7 @@ Activity Trackingは `user.lastActiveAt` を記録する。Drizzleの `last_acti
 
 Google Cloud の OAuth Web クライアントのリダイレクトURIを `TABLECAST_PUBLIC_ORIGIN/api/auth/callback/google` に登録し、`TABLECAST_GOOGLE_CLIENT_ID` と `TABLECAST_GOOGLE_CLIENT_SECRET` を Wrangler の secret として設定する。`TABLECAST_GOOGLE_EMULATOR_URL` と `TABLECAST_MAILPIT_URL` は公開環境で設定しない。開発環境以外での利用はAPIが拒否する。
 
-Cloudflare Email Service で送信ドメインを検証し、送信可能なメールアドレスを `TABLECAST_EMAIL_FROM` に設定する。`apps/api/wrangler.jsonc` の `TABLECAST_EMAIL` binding で React Email の HTML とテキストを送信する。招待、メール確認、パスワード再設定は同じテンプレートを使用する。
+Cloudflare Email Service で送信ドメインを検証し、送信可能なメールアドレスを `TABLECAST_EMAIL_FROM` に設定する。`apps/api/wrangler.jsonc` の `TABLECAST_EMAIL` binding で React Email の HTML とテキストを送信する。招待、メール確認、マジックリンク、認証設定変更の通知は共通のブランド付きテンプレートを使用する。
 
 パスキーは origin/RP ID に結びつく。localhost と本番ドメイン間では再登録が必要。HTTPSで提供し、実機の認証器でも公開前に登録とログインを確認する。
 
@@ -50,7 +50,7 @@ GoogleモックとDBの初期seedは[共通名簿](../apps/emulate/src/tablecast
 
 デモ店舗IDは`tablecast-komorebi`・`tablecast-koharu`・`tablecast-hanul`である。ハヌルのadminは`naoko.kobayashi@hanul-sanjo.com`、memberは`yuma.mori@hanul-sanjo.com`を使う。
 
-各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・パスワード・手動メールを上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
+各組織3所属は新規DBまたは明示リセットの初期状態である。通常のseedは既存メンバーを削除せず、編集済みの名前・画像・手動メールを上書きしない。OAuth画面の名前・役割ラベルはデモ選択用の表示であり、権限は認証後のDB所属から判断する。
 
 seedはユーザー画像と店舗アイコンをローカルで生成し、R2へ保存する。未設定の場合だけ補い、保存済みの画像を保持する。店舗アイコンはBetter Authの組織の`logo`を使用し、`/admin/stores/$storeId/profile`で責任者・管理者が変更できる。ユーザー画像と共通の形式・サイズ検証を行う。
 
@@ -81,3 +81,19 @@ stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する
 ## 組織課金の認可
 
 Better Auth公式Stripe pluginは組織をreferenceにする。店舗作成serviceのD1 batchが組織・owner・店舗とAIキー発行待ちを保存する。memberは利用量だけ、owner/adminは契約操作と請求を利用する。pluginの`authorizeReference`もowner/adminに限定し、ユーザー個人の契約要求は拒否する。Stripe顧客IDはuserとorganizationの追加fieldで入力不可・公開応答へ非返却とする。運営収支は別のユーザーID allowlistで認可する。詳細は [課金・請求](billing.md) を参照する。
+
+## パスワードレス認証と必須パスキー
+
+メール認証はBetter Auth公式Magic Linkへ移行する。新規登録と既存ログインを共通化し、5分有効・一度限りのリンクを送る。トークンはハッシュ保存し、公式DB rate limit storageでWorker間の送信制限を共有する。既存のメールユーザーは同じメール宛のリンクでログインできる。旧パスワードAPIは拒否し、0028 migrationで保存済みハッシュを消去する。旧CLIのpassword入力は互換性のため受理するが保存しない。
+
+Googleの通常OAuthに加え、実Google設定がある環境だけで公式One Tapを利用する。Google Cloud Consoleの許可済みJavaScript生成元へ公開originを登録する。One Tapを閉じた場合や非対応時は通常のGoogle・メール・パスキーから続ける。emulatorでOne Tapを模擬しない。別途CSPを設定する配備ではGoogle Identity Servicesのscript・frame・connect先（https://accounts.google.com）を許可する。ゲームiframeの独立CSPは変更しない。
+
+新規・既存、スタッフ・会員ともパスキー未登録時は通常利用を拒否し、`/passkey-setup`へ誘導する。非対応端末にも例外はなく、対応端末やセキュリティキーを案内する。認証・パスキー登録・ログアウトは利用できる。登録状態の正本はpasskeyテーブルで、`/api/account/auth-state`と管理画面初期取得は`passkeyRequired`を返す。SSR、業務API、組織操作、OAuth同意、既存MCPの業務操作が同じ制約を確認する。未登録の業務APIは`403 PASSKEY_REGISTRATION_REQUIRED`を返す。公開の客向け機能と登録済み卓端末には人のパスキーを要求しない。
+
+最後のパスキー削除は認証hookとDB triggerの両方で拒否する。紛失時はGoogleかマジックリンクでログインして新しいパスキーを登録後、古いものを削除する。Google連携解除はメールログインと必須パスキーが残るため許可する。前回のログイン方法は公式Last Login Methodの`tablecast.last_login_method` Cookieでブラウザー単位に記録し、ログイン画面に表示する。DBの履歴は追加しない。
+
+招待は店舗名・招待者・役割・期限・手順をメールに含める。承諾は本人と招待者、辞退は招待者、取消は招待先へ通知する。招待一覧から再送でき、期限切れは旧招待を取り消して新規発行する。参加はメール所有確認とパスキー登録後の明示操作で確定する。設定済み言語を使い、言語不明の招待先は日英併記する。パスキー登録/削除とGoogle連携/解除も通知する。送信に必要な招待・ログインメールの失敗は再試行可能なエラーとし、操作後の通知失敗は操作を巻き戻さず資格を含めず記録する。
+
+配備前にCloudflare Email Serviceの送信ドメイン・送信元・bindingを確認する。0028 migrationと新認証コードを同じリリースで適用する。ハッシュ消去後に旧パスワード方式へ戻すことはできない。通常のデモseedはパスキーを偽造せず、初回ログイン後に登録を求める。業務E2Eだけは専用fixtureの登録状態を使い、必須登録の代表経路は未登録ユーザーと仮想WebAuthnで確認する。
+
+管理画面初期取得と業務APIはセッションのuserと同時に`passkey_registered`を読む。この列はパスキー表のinsert/delete triggerで更新し、既存キーもmigrationで反映する。ユーザー入力からは変更できない。登録チェックのための追加binding往復を作らず、パスキー一覧・登録・削除の正本は引き続きpasskey表とする。

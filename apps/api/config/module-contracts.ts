@@ -4,7 +4,7 @@ import { dependencies } from "./dependencies.ts";
 const moduleContracts = {
   account: [],
   appearance: ["model"],
-  auth: ["middleware", "model", "policy", "token"],
+  auth: ["middleware", "model", "policy", "token", "passkey-policy"],
   billing: ["credentials", "stripe", "usage"],
   catalog: ["conditions", "model", "pricing", "queries", "search"],
   configuration: [
