@@ -1423,5 +1423,12 @@
   "floor_zoom_wheel": "scroll",
   "floor_summary": "Table summary",
   "floor_show_summary": "Show table summary",
-  "floor_limit_start": "Plan starts"
+  "floor_limit_start": "Plan starts",
+  "currency_approximate": "Approximate foreign amount",
+  "currency_select": "Display currency",
+  "currency_none": "Japanese yen only",
+  "currency_note": "Foreign amounts are estimates. Payment is in Japanese yen.",
+  "currency_date": "Rate date",
+  "currency_loading": "Loading rates",
+  "currency_unavailable": "Reference rate unavailable"
 }

@@ -2,9 +2,9 @@ import type { Catalog, Product } from "@tablecast/api/schema";
 import { ImageOff, Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { tv } from "tailwind-variants";
-import { money } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 import { MenuBanners } from "./menu-banners";
+import { Money } from "./money";
 import { ProductImage } from "./product-image";
 import { StoreLogo } from "./store-logo";
 import { Button } from "./ui/button";
@@ -147,7 +147,7 @@ export const ProductMenu = memo(function ProductMenu({
                 {product.text[locale].displayName}
               </strong>
               <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">
-                {money(product.price, locale)}
+                <Money value={product.price} />
                 <span
                   className="flex items-center justify-center rounded-full bg-muted size-7"
                   aria-hidden="true"

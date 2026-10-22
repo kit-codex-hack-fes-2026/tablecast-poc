@@ -1423,5 +1423,12 @@
   "floor_zoom_wheel": "スクロール",
   "floor_summary": "利用の概要",
   "floor_show_summary": "利用の概要を表示",
-  "floor_limit_start": "プラン開始"
+  "floor_limit_start": "プラン開始",
+  "currency_approximate": "外貨の参考額",
+  "currency_select": "通貨の補助表示",
+  "currency_none": "日本円のみ",
+  "currency_note": "外貨は目安です。お支払いは日本円となります。",
+  "currency_date": "レート基準日",
+  "currency_loading": "レートを取得中",
+  "currency_unavailable": "参考レートを取得できません"
 }

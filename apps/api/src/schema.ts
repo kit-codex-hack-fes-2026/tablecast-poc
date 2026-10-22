@@ -56,6 +56,18 @@ export type {
   ConfigurationRelease,
 } from "./modules/configuration/model";
 export {
+  displayCurrencyActionSchema,
+  displayCurrencyCodeSchema,
+  displayCurrencyContextSchema,
+  displayCurrencyPreferenceSchema,
+  exchangeRatesSchema,
+} from "./modules/currency/model";
+export type {
+  DisplayCurrencyCode,
+  DisplayCurrencyContext,
+  ExchangeRates,
+} from "./modules/currency/model";
+export {
   applyCouponSchema,
   cancelCouponUseSchema,
   couponDefinitionSchema,
@@ -106,6 +118,7 @@ export {
   snapshotSchema,
   submitSchema,
 } from "./modules/orders/model";
+
 export type {
   Bill,
   Cart,
@@ -115,6 +128,7 @@ export type {
   PricedLine,
   Snapshot,
 } from "./modules/orders/model";
+
 export {
   type StatisticsQuery,
   statisticsQuerySchema,
@@ -176,7 +190,6 @@ export {
 } from "./modules/voice/model";
 
 export type { VoiceListQuery, VoicePage, VoiceSummary, VoiceTrigger } from "./modules/voice/model";
-
 export { showProductsSchema } from "./modules/voice/model";
 
 export { apiErrorSchema, localeSchema, validationIssuesSchema } from "./platform/model";

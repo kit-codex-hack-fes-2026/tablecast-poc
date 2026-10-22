@@ -1,4 +1,8 @@
-import { type Locale, voiceToolNameSchema } from "@tablecast/api/schema";
+import {
+  displayCurrencyActionSchema,
+  type Locale,
+  voiceToolNameSchema,
+} from "@tablecast/api/schema";
 import { z } from "zod";
 import { parseResponse, type TableClient, tableEndpoint } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
@@ -11,6 +15,7 @@ import {
   transcriptEvent,
 } from "./voice-events-model";
 import {
+  type CurrencyController,
   initialMicrophone,
   type MicrophoneError,
   type MicrophoneView,
@@ -54,6 +59,7 @@ export class VoiceConnection {
     private onChange: (view: VoiceView) => void,
     private onSync: () => void,
     private client: TableClient = tableEndpoint.client,
+    private displayCurrency?: CurrencyController,
   ) {}
   private listeners = new Set<() => void>();
   getSnapshot = () => this.view;
@@ -568,6 +574,7 @@ export class VoiceConnection {
                   turnId,
                   toolCallId: call.callId,
                   ...tool,
+                  displayCurrency: this.displayCurrency?.getContext(),
                 },
               },
               {
@@ -576,6 +583,16 @@ export class VoiceConnection {
             ),
           );
           output = result.result;
+          if (
+            result.displayCurrencyAction &&
+            this.current(attempt) &&
+            this.activeDelegation === id &&
+            !controller.signal.aborted
+          ) {
+            const action = displayCurrencyActionSchema.parse(result.displayCurrencyAction);
+            if (!this.displayCurrency?.apply(action))
+              output = { error: "DISPLAY_CURRENCY_CHANGED" };
+          }
         } catch (error) {
           output = { error: apiError(error)?.code ?? "VOICE_TOOL_FAILED" };
         }

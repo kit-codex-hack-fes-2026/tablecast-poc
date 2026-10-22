@@ -4,12 +4,12 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
+import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
-import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { ProductAllergens } from "./product-allergens";
 import { OptionContent } from "./product-option-content";
@@ -69,7 +69,9 @@ export function ProductPage({
           {product.text[locale].displayName}
         </h2>
         <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
-        <div className="my-3 text-lg font-semibold">{money(product.price, locale)}</div>
+        <div className="my-3 text-lg font-semibold">
+          <Money value={product.price} />
+        </div>
         {product.modifiers.map((group, groupIndex) => (
           <fieldset className="border-t border-t-border pt-5 px-0 pb-0.5 mb-4" key={group.id}>
             <legend className="flex items-center justify-between gap-3 w-full text-sm font-semibold pt-3.5">
@@ -129,11 +131,13 @@ export function ProductPage({
                       id={`${id}-${groupIndex}-${optionIndex}-price`}
                       className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
                     >
-                      {!option.available
-                        ? t("kiosk_sold_out")
-                        : option.priceDelta !== 0
-                          ? money(option.priceDelta, locale)
-                          : ""}
+                      {!option.available ? (
+                        t("kiosk_sold_out")
+                      ) : option.priceDelta !== 0 ? (
+                        <Money value={option.priceDelta} />
+                      ) : (
+                        ""
+                      )}
                     </small>
                   </label>
                 ))}
@@ -177,11 +181,13 @@ export function ProductPage({
                       id={`${id}-${groupIndex}-${optionIndex}-price`}
                       className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
                     >
-                      {!option.available
-                        ? t("kiosk_sold_out")
-                        : option.priceDelta !== 0
-                          ? money(option.priceDelta, locale)
-                          : ""}
+                      {!option.available ? (
+                        t("kiosk_sold_out")
+                      ) : option.priceDelta !== 0 ? (
+                        <Money value={option.priceDelta} />
+                      ) : (
+                        ""
+                      )}
                     </small>
                     {group.kind === "quantity" && (
                       <div
