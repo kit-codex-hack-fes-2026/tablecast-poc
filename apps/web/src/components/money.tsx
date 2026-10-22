@@ -14,15 +14,18 @@ export function Money({ value }: { value: number }) {
       ? foreignMoney(convertedAmount(value, currency, rate), currency, locale)
       : undefined;
   return (
-    <span className="inline-flex min-w-0 flex-col align-middle tabular-nums">
+    <span className="whitespace-nowrap tabular-nums">
       <span>{money(value, locale)}</span>
       {estimate && (
-        <span
-          className="text-xs font-normal leading-normal text-muted-foreground"
-          aria-label={`${t("currency_approximate")}: ${estimate}`}
-        >
-          ≈ {estimate}
-        </span>
+        <>
+          {" "}
+          <span
+            className="text-muted-foreground"
+            aria-label={`${t("currency_approximate")}: ${estimate}`}
+          >
+            ≈ {estimate}
+          </span>
+        </>
       )}
     </span>
   );
