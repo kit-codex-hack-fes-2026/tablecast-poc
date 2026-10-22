@@ -19,7 +19,8 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const hydrated = useHydrated();
   const client = useQueryClient();
   const lastMethod = hydrated ? authClient.getLastUsedLoginMethod() : null;
-  const callback = () => loginReturnUrl(searchStr, window.location.origin) ?? "/admin/live";
+  const callback = (fallback = "/admin/live") =>
+    loginReturnUrl(searchStr, window.location.origin) ?? fallback;
   useEffect(() => {
     const saved = localStorage.getItem("tablecast_staff_locale");
     if (saved === "ja" || saved === "en") setLocale(saved);
@@ -31,7 +32,7 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
         if (active && !session.data)
           await promptGoogleOneTap(
             config.googleOneTapClientId,
-            loginReturnUrl(searchStr, window.location.origin) ?? "/admin/live",
+            loginReturnUrl(searchStr, window.location.origin) ?? "/organisations",
           );
       })
       .catch(() => undefined);
@@ -43,9 +44,14 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
     mutationFn: async (method: "google" | "passkey") => {
       if (method === "passkey") {
         authResult(await authClient.signIn.passkey());
-        window.location.assign(callback());
+        window.location.assign(callback("/organisations"));
       } else
-        authResult(await authClient.signIn.social({ provider: "google", callbackURL: callback() }));
+        authResult(
+          await authClient.signIn.social({
+            provider: "google",
+            callbackURL: callback("/organisations"),
+          }),
+        );
     },
   });
   const login = useMutation({
