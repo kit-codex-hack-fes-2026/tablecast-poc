@@ -89,8 +89,7 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
   await expect.element(page.getByText("A$ AUD · オーストラリア ドル")).toBeVisible();
   await page.getByRole("option", { name: /AUD/ }).click();
   await expect.element(page.getByText("≈ A$9.67", { exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("A$ AUD");
@@ -99,10 +98,8 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("£ GBP");
   await select("JPY");
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "日本語", exact: true }).click();
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "日本語", exact: true }).click();
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("¥ JPY");
@@ -114,13 +111,11 @@ it("円を主表示に保ち、通貨の選択後は言語連動と再取得を�
 it("未操作なら言語に連動し、最初から英語の場合もUSDを表示する", async () => {
   await mount("tablecast-currency-english", "en");
   await expect.element(page.getByText("≈ US$6.50", { exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "日本語", exact: true }).click();
+  await page.getByRole("button", { name: "日本語", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("¥ JPY");
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "English", exact: true }).click();
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await expect
     .element(page.getByRole("combobox", { name: /通貨|currency/i }))
     .toHaveTextContent("US$ USD");

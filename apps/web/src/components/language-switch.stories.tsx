@@ -15,15 +15,14 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Languages: Story = {
-  name: "日英をメニューから選択",
+  name: "日英を直接選択",
   play: async ({ canvasElement, args, globals }) => {
     const canvas = within(canvasElement);
     const english = globals.locale === "en";
-    const trigger = canvas.getByRole("combobox");
-    await expect(trigger).toHaveTextContent(english ? "English" : "日本語");
-    await userEvent.click(trigger);
-    await userEvent.keyboard(english ? "{Home}{Enter}" : "{End}{Enter}");
-    await expect(trigger).toHaveFocus();
+    await expect(
+      canvas.getByRole("button", { name: english ? "English" : "日本語" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(canvas.getByRole("button", { name: english ? "日本語" : "English" }));
     await expect(args.onChange).toHaveBeenCalledWith(english ? "ja" : "en");
   },
 };

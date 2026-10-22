@@ -1,4 +1,4 @@
-import type { DisplayCurrencyCode } from "@tablecast/api/schema";
+import type { DisplayCurrencyCode, Locale } from "@tablecast/api/schema";
 import au from "flag-icons/flags/4x3/au.svg?url";
 import bn from "flag-icons/flags/4x3/bn.svg?url";
 import cn from "flag-icons/flags/4x3/cn.svg?url";
@@ -22,7 +22,8 @@ import th from "flag-icons/flags/4x3/th.svg?url";
 import tw from "flag-icons/flags/4x3/tw.svg?url";
 import us from "flag-icons/flags/4x3/us.svg?url";
 import vn from "flag-icons/flags/4x3/vn.svg?url";
-export { gb, jp };
+export { jp };
+export const languageFlags: Partial<Record<Locale, string>> = { ja: jp, en: gb };
 export const currencyFlags: Record<DisplayCurrencyCode, string> = {
   USD: us,
   GBP: gb,

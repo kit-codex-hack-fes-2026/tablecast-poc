@@ -25,8 +25,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
   const storeId = "tablecast-komorebi";
   try {
     await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
-    await staff.getByRole("combobox", { name: /言語|language/i }).click();
-    await staff.getByRole("option", { name: "日本語", exact: true }).click();
+    await staff.getByRole("button", { name: "日本語", exact: true }).click();
     await staff.getByLabel(labels.auth_email).fill(credentials.email);
     await staff.getByLabel(labels.auth_password, { exact: true }).fill(credentials.password);
     await staff.getByRole("button", { name: labels.auth_sign_in, exact: true }).click();
@@ -44,8 +43,7 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(opened.ok()).toBeTruthy();
     tableStateSchema.parse(await opened.json());
     await guest.goto("/");
-    await guest.getByRole("combobox", { name: /言語|language/i }).click();
-    await guest.getByRole("option", { name: "English", exact: true }).click();
+    await guest.getByRole("button", { name: "English", exact: true }).click();
     await guest.getByRole("button", { name: en.pair_begin, exact: true }).click();
     const pairingCode = guest.getByLabel(en.admin_pair_code);
     await expect(pairingCode).toHaveText(/\S+/);

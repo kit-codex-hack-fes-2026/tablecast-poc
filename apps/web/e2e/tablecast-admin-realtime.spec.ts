@@ -54,8 +54,7 @@ test("管理画面が実通知の切断中と再接続後の会計イベント�
   expect(opened.status()).toBe(200);
   sessionId = tableStateSchema.parse(await opened.json()).id;
   await page.goto(`/admin/stores/${storeId}/floor`);
-  await page.getByRole("combobox", { name: /言語|language/i }).click();
-  await page.getByRole("option", { name: "日本語", exact: true }).click();
+  await page.getByRole("button", { name: "日本語", exact: true }).click();
   await expect.poll(() => connected).toBeGreaterThan(0);
   const table = page
     .getByRole("listitem")
