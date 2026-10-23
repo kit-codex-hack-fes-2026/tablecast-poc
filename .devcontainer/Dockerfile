@@ -1,8 +1,8 @@
-FROM oven/bun:1.4.3 AS tablecast-bun
-FROM axllent/mailpit:v1.31.6 AS tablecast-mailpit
+FROM oven/bun:1.4.4 AS tablecast-bun
+FROM axllent/mailpit:v1.32.0 AS tablecast-mailpit
 FROM caddy:2.11.7 AS tablecast-caddy
-FROM grafana/mcp-grafana:2.0.2 AS tablecast-grafana-mcp
-FROM node:24.22.0-bookworm-slim
+FROM grafana/mcp-grafana:2.1.1 AS tablecast-grafana-mcp
+FROM node:24.22.1-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git procps curl ffmpeg libatomic1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libasound2 && rm -rf /var/lib/apt/lists/*
 COPY --from=tablecast-bun /usr/local/bin/bun /usr/local/bin/bun
 RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx

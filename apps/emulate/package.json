@@ -9,6 +9,6 @@
     "lint": "oxlint . --type-aware --deny-warnings"
   },
   "dependencies": {
-    "emulate": "0.12.2"
+    "emulate": "0.12.3"
   }
 }
