@@ -1,0 +1,121 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "vitest-browser-react";
+import { page } from "vitest/browser";
+import ja from "../../../messages/ja.json";
+import { LocaleProvider } from "../../i18n/locale";
+import "../../styles.css";
+import { PaymentForm } from "./payment-form";
+
+let client: QueryClient;
+let requests: unknown[];
+let unexpected: string[];
+beforeEach(() => {
+  requests = [];
+  unexpected = [];
+  client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    if (
+      request.method !== "POST" ||
+      new URL(request.url).pathname !==
+        "/api/admin/stores/tablecast-store/tables/tablecast-session/payments"
+    ) {
+      unexpected.push(request.url);
+      return new Response(null, { status: 500 });
+    }
+    requests.push(await request.json());
+    return Response.json({});
+  });
+});
+afterEach(async () => {
+  await cleanup();
+  client.clear();
+  vi.unstubAllGlobals();
+  if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
+});
+
+describe("日本語の会計入力", () => {
+  const labels = ja;
+  beforeEach(async () => {
+    await render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initialLocale="ja" persist={false}>
+          <main className="max-w-2xl space-y-5 p-8">
+            <PaymentForm storeId="tablecast-store" sessionId="tablecast-session" />
+          </main>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  });
+
+  it("空欄には必須入力を案内し、入力修正後に送信できる", async () => {
+    await page.getByRole("button", { name: labels.admin_payment, exact: true }).click();
+    const amount = page.getByRole("spinbutton", { name: labels.admin_amount });
+    await expect.element(amount).toHaveAttribute("aria-invalid", "true");
+    await expect.element(amount).toHaveAccessibleDescription(labels.form_required);
+    await expect
+      .element(page.getByRole("textbox", { name: labels.admin_reason }))
+      .toHaveAccessibleDescription(labels.form_required);
+    expect(requests).toHaveLength(0);
+
+    await page.getByRole("spinbutton").fill("720");
+    await page.getByRole("textbox", { name: labels.admin_reason }).fill("店頭受領");
+    await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
+    await page.getByRole("button", { name: labels.admin_payment, exact: true }).click();
+    await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
+    expect(requests).toHaveLength(1);
+    expect(requests).toMatchObject([{ amount: 720, kind: "payment", reason: "店頭受領" }]);
+  });
+
+  it.each([
+    { kind: "payment", value: "0" },
+    { kind: "payment", value: "-1" },
+    { kind: "payment", value: "1.5" },
+    { kind: "adjustment", value: "1.5" },
+    { kind: "adjustment", value: "" },
+  ] as const)("$kindの金額$valueを拒否して送信しない", async ({ kind, value }) => {
+    const action = kind === "payment" ? labels.admin_payment : labels.admin_adjustment;
+    await page.getByRole("radio", { name: action, exact: true }).click();
+    await page.getByRole("spinbutton").fill(value);
+    await page.getByRole("textbox", { name: labels.admin_reason }).fill("確認用");
+    await page.getByRole("button", { name: action, exact: true }).click();
+    await expect.element(page.getByRole("spinbutton")).toHaveAttribute("aria-invalid", "true");
+    await expect.element(page.getByRole("alert")).toBeVisible();
+    expect(requests).toHaveLength(0);
+  });
+
+  it.each([-100, 100])("整数の調整額%iを送信できる", async (amount) => {
+    await page.getByRole("radio", { name: labels.admin_adjustment, exact: true }).click();
+    await page.getByRole("spinbutton").fill(String(amount));
+    await page.getByRole("textbox", { name: labels.admin_reason }).fill("会計調整");
+    await page.getByRole("button", { name: labels.admin_adjustment, exact: true }).click();
+    await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
+    expect(requests).toHaveLength(1);
+    expect(requests).toMatchObject([{ amount, kind: "adjustment", reason: "会計調整" }]);
+  });
+});
+
+it("終了した来店の会計調整を取り消すと送信せず、開始ボタンへフォーカスを戻す", async () => {
+  await render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initialLocale="ja" persist={false}>
+        <PaymentForm storeId="tablecast-store" sessionId="tablecast-session" closed />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await page.getByRole("button", { name: ja.admin_adjustment, exact: true }).click();
+  await expect
+    .element(page.getByRole("heading", { name: ja.admin_adjustment, exact: true }))
+    .toBeVisible();
+  await page.getByRole("spinbutton", { name: ja.admin_amount }).fill("-100");
+  await page.getByRole("textbox", { name: ja.admin_reason }).fill("入力を取り消す");
+  await page.getByRole("button", { name: ja.common_cancel, exact: true }).click();
+  await expect.element(page.getByRole("spinbutton")).not.toBeInTheDocument();
+  await expect
+    .element(page.getByRole("button", { name: ja.admin_adjustment, exact: true }))
+    .toHaveFocus();
+  expect(requests).toHaveLength(0);
+  await page.getByRole("button", { name: ja.admin_adjustment, exact: true }).click();
+  await expect.element(page.getByRole("spinbutton")).toHaveValue(null);
+});

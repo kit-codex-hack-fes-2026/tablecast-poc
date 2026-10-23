@@ -1,9 +1,10 @@
-import { observeOperation } from "../../platform/telemetry";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { Database } from "../../db/client";
+import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
-import type { ApiServices, Database } from "../../platform/context";
 import { ensure } from "../../platform/errors";
-import { configurationSchema, type Catalog } from "../configuration/model";
+import { observeOperation } from "../../platform/telemetry";
+import { type Catalog, configurationSchema } from "../configuration/model";
 export async function getCatalog(
   services: ApiServices,
   storeId: string,

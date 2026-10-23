@@ -1,13 +1,20 @@
+import type * as childProcess from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { beforeEach, expect, it, vi } from "vitest";
-import { cleanupCatalogs } from "./tablecast-catalog-deploy";
-import { cloudflare, currentRevision } from "./tablecast-deploy-api";
+import { cleanupCatalogs } from "./tablecast-catalog-deploy.ts";
+import { cloudflare, currentRevision } from "./tablecast-deploy-api.ts";
 vi.mock("./tablecast-deploy-api", () => ({
   cloudflare: vi.fn<typeof cloudflare>(),
   currentRevision: vi.fn<typeof currentRevision>(),
 }));
 
+vi.mock("node:child_process", async (original) => ({
+  ...(await original<typeof childProcess>()),
+  execFileSync: vi.fn<typeof execFileSync>(),
+}));
+
 let workers: Set<string>;
-let apps: Map<string, { id: string; name: string; domain: string }>;
+let apps: Map<string, { domain: string; id: string; name: string }>;
 let failWorker: boolean;
 beforeEach(() => {
   vi.resetAllMocks();
@@ -26,17 +33,17 @@ beforeEach(() => {
     ),
   ]);
   failWorker = false;
+  vi.mocked(execFileSync).mockImplementation(() => {
+    if (failWorker) throw new Error("Cloudflare HTTP 403");
+    workers.delete("tablecast-email-pr-129");
+    return "";
+  });
   vi.mocked(cloudflare).mockImplementation(async (path, method) => {
     if (path === "workers/scripts" && method === undefined)
       return [...workers].map((id) => ({ id }));
     if (path === "access/apps?per_page=1000") return [...apps.values()];
     if (path.startsWith("workers/workers/"))
       return { id: "worker-id", name: path.split("/").at(-1) };
-    if (method === "DELETE" && path.startsWith("workers/scripts/")) {
-      if (failWorker) throw new Error("Cloudflare HTTP 403");
-      workers.delete(path.split("/").at(-1) ?? "");
-      return null;
-    }
     if (method === "DELETE" && path.startsWith("access/apps/")) {
       apps.delete(path.split("/").at(-1) ?? "");
       return null;
@@ -47,6 +54,17 @@ beforeEach(() => {
 it("製品DBがなくても対象カタログだけを削除し、再実行できる", async () => {
   await cleanupCatalogs("129");
   await cleanupCatalogs("129");
+  expect(execFileSync).toHaveBeenCalledWith(
+    "node",
+    [
+      expect.stringContaining("node_modules/cf/bin/cf"),
+      "workers",
+      "delete",
+      "tablecast-email-pr-129",
+      "--force",
+    ],
+    expect.objectContaining({ stdio: "inherit" }),
+  );
   expect([...workers]).toEqual(["tablecast", "tablecast-email-pr-130"]);
   expect([...apps.keys()]).toEqual(["app-130"]);
 });
@@ -61,4 +79,11 @@ it("PRが再開していたら資源を変更しない", async () => {
   await expect(cleanupCatalogs("129")).rejects.toThrow("open");
   expect(workers.has("tablecast-email-pr-129")).toBe(true);
   expect(apps.has("app-129")).toBe(true);
+});
+
+it("所有Access applicationのないWorkerを名前だけで削除しない", async () => {
+  apps.delete("app-129");
+  await expect(cleanupCatalogs("129")).rejects.toThrow("自動削除せず");
+  expect(execFileSync).not.toHaveBeenCalled();
+  expect(workers.has("tablecast-email-pr-129")).toBe(true);
 });

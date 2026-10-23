@@ -19,11 +19,11 @@ export function AccountEmail({
   url,
   logoUrl,
 }: {
-  title: string;
-  message: string;
   action: string;
-  url: string;
   logoUrl: string;
+  message: string;
+  title: string;
+  url: string;
 }) {
   return (
     <Html lang="ja">

@@ -1,5 +1,6 @@
-import { resolve } from "node:path";
-import { readRuntime, tablecastContainer, tablecastLocal } from "./tablecast-runtime";
+import { $ } from "bun";
+import { join, resolve } from "node:path";
+import { tablecastContainer, tablecastLocal } from "./tablecast-runtime.ts";
 
 const target = process.argv[2];
 if (target !== "local" && target !== "cloud")
@@ -9,9 +10,13 @@ const environment: Record<string, string> = {};
 if (target === "local") {
   if (tablecastContainer) environment.GRAFANA_URL = "http://tablecast-lgtm:3000";
   else {
-    const runtime = await readRuntime();
-    if (!runtime.ports.grafana) throw new Error("bun run devでLGTMを起動してください。");
-    environment.GRAFANA_URL = `http://host.docker.internal:${runtime.ports.grafana}`;
+    const port = (
+      await $`docker compose --env-file ${join(tablecastLocal, ".env")} port tablecast-lgtm 3000`.text()
+    )
+      .trim()
+      .split(":")
+      .at(-1);
+    environment.GRAFANA_URL = `http://host.docker.internal:${port}`;
   }
 } else {
   const token = resolve(tablecastLocal, "tablecast-grafana-read-token");
@@ -35,7 +40,7 @@ const flags = [
 for (const [key, value] of Object.entries(environment)) args.push("-e", `${key}=${value}`);
 const command = tablecastContainer
   ? ["mcp-grafana", ...flags]
-  : ["docker", ...args, "grafana/mcp-grafana:1.3.0", ...flags];
+  : ["docker", ...args, "grafana/mcp-grafana:2.0.2", ...flags];
 const child = Bun.spawn(command, {
   env: { ...process.env, ...environment },
   stdin: "inherit",

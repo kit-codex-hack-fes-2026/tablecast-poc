@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import { member } from "../../db/auth-schema";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import type { Demo } from "./model";
+import * as business from "../../db/business-schema";
+import { member } from "../../db/identity-schema";
+import { ensure } from "../../platform/errors";
 import { configurationSchema } from "../configuration/model";
 import { tablePlanSchema } from "../tables/model";
-import type { Demo } from "./model";
 
 export async function getDemoRecord(services: ApiServices, actor: Actor) {
   ensure(actor.demoId && actor.demoId === actor.tableSessionId, "DEMO_NOT_FOUND", 404);

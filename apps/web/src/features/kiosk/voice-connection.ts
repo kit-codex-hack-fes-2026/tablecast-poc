@@ -1,67 +1,27 @@
 import {
+  displayCurrencyActionSchema,
+  type DisplayCurrencyContext,
+  type Locale,
+  voiceToolNameSchema,
+} from "@tablecast/api/schema";
+import { z } from "zod";
+import { parseResponse, type TableClient, tableEndpoint } from "../../lib/api";
+import { apiError } from "../../lib/api-error";
+import {
+  type Caption,
+  delegationEvent,
+  type PendingResponse,
+  responseEnvelope,
+  type SavedCaption,
+  transcriptEvent,
+} from "./voice-events-model";
+import {
   initialMicrophone,
   type MicrophoneError,
   type MicrophoneView,
-  type LiveMessage,
   type VoiceView,
 } from "./voice-model";
-export type { VoiceStatus, VoiceView, LiveMessage } from "./voice-model";
-import { voiceToolNameSchema } from "@tablecast/api/schema";
-import type { Locale } from "@tablecast/api/schema";
-import { z } from "zod";
-import { parseResponse, tableEndpoint, type TableClient } from "../../lib/api";
-import { apiError } from "../../lib/api-error";
-
-const transcriptEvent = z.object({
-  type: z.enum(["session.input_transcript.delta", "session.output_transcript.delta"]),
-  event_id: z.string(),
-  delta: z.string().max(10000),
-  start_ms: z.number().nonnegative(),
-  end_ms: z.number().nonnegative(),
-});
-const delegationEvent = z.object({
-  type: z.literal("session.delegation.created"),
-  delegation: z.object({ id: z.string().max(200), target: z.literal("responses") }),
-});
-const responseEnvelope = z.object({
-  type: z.literal("response.event"),
-  delegation_id: z.string(),
-  event: z.discriminatedUnion("type", [
-    z.object({ type: z.literal("response.created"), response: z.object({ id: z.string() }) }),
-    z.object({
-      type: z.literal("response.output_item.done"),
-      response_id: z.string().optional(),
-      item: z.object({
-        type: z.string(),
-        call_id: z.string().optional(),
-        name: z.string().optional(),
-        arguments: z.string().optional(),
-      }),
-    }),
-    z.object({
-      type: z.enum(["response.completed", "response.failed", "response.incomplete"]),
-      response: z.object({ id: z.string() }),
-    }),
-  ]),
-});
-type PendingResponse = {
-  calls: { callId: string; name: string; arguments: string }[];
-  handled: boolean;
-};
-type Caption = {
-  message: LiveMessage;
-  start: number;
-  end: number;
-  fragments: { text: string; start: number; end: number }[];
-  timer?: ReturnType<typeof setTimeout>;
-};
-type SavedCaption = {
-  itemId: string;
-  role: "user" | "assistant";
-  text: string;
-  interrupted: boolean;
-};
-
+export type { VoiceStatus, VoiceView } from "./voice-model";
 export class VoiceConnection {
   private attempt = 0;
   private view: VoiceView = { status: "idle" };
@@ -92,148 +52,29 @@ export class VoiceConnection {
   private locale: Locale = "ja";
   private speechSpeed = 1;
   private requestedSpeechSpeed = 1;
-
+  private microphoneView = initialMicrophone;
+  private deviceRequest = 0;
+  private microphoneErrorSource?: "capture" | "devices";
   constructor(
     private onChange: (view: VoiceView) => void,
     private onSync: () => void,
     private client: TableClient = tableEndpoint.client,
+    private displayCurrency?: {
+      getContext?: () => DisplayCurrencyContext;
+      setCurrency?: (
+        currency: DisplayCurrencyContext["currency"],
+        expectedRevision?: number,
+      ) => boolean;
+    },
   ) {}
-
-  private microphoneView = initialMicrophone;
-  private deviceRequest = 0;
-  private microphoneErrorSource?: "devices" | "capture";
-
-  observeMicrophones() {
-    const refresh = () => {
-      void this.refreshMicrophones();
-    };
-    navigator.mediaDevices?.addEventListener("devicechange", refresh);
-    refresh();
+  private listeners = new Set<() => void>();
+  getSnapshot = () => this.view;
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
     return () => {
-      ++this.deviceRequest;
-      navigator.mediaDevices?.removeEventListener("devicechange", refresh);
+      this.listeners.delete(listener);
     };
-  }
-
-  async refreshMicrophones() {
-    const request = ++this.deviceRequest;
-    if (!navigator.mediaDevices?.enumerateDevices) {
-      this.updateMicrophone({ error: "unsupported", loading: false }, "devices");
-      return;
-    }
-    this.updateMicrophone({ loading: true });
-    try {
-      const all = await navigator.mediaDevices.enumerateDevices();
-      if (request !== this.deviceRequest) return;
-      const devices = all.filter((device) => device.kind === "audioinput");
-      const named = devices.some((device) => Boolean(device.label));
-      const missing =
-        named &&
-        this.microphoneView.selectedId !== "default" &&
-        !devices.some((device) => device.deviceId === this.microphoneView.selectedId);
-      let error: MicrophoneError | undefined;
-      if (missing) {
-        error = "disconnected";
-      } else if (devices.length === 0) {
-        error = "empty";
-      }
-      this.updateMicrophone(
-        {
-          devices: devices.filter((device) => device.deviceId),
-          loading: false,
-          permissionRequired: !named,
-          limited:
-            !navigator.mediaDevices.getSupportedConstraints().deviceId ||
-            (named && devices.filter((device) => device.deviceId !== "default").length < 2),
-          ...(error || this.microphoneErrorSource === "devices" ? { error } : {}),
-        },
-        "devices",
-      );
-      if (missing && this.desired) await this.stop();
-    } catch (error) {
-      if (request === this.deviceRequest)
-        this.updateMicrophone({ loading: false, error: microphoneError(error) }, "devices");
-    }
-  }
-
-  async selectMicrophone(deviceId: string) {
-    if (this.view.status === "connecting" || this.microphoneView.switching) return;
-    const microphone = this.microphone;
-    const sender = this.microphoneSender;
-    if (!this.desired || !microphone || !sender) {
-      this.updateMicrophone({ selectedId: deviceId, error: undefined });
-      return;
-    }
-    const attempt = this.attempt;
-    this.updateMicrophone({ switching: true, error: undefined });
-    let replacement: MediaStream | undefined;
-    try {
-      replacement = await this.captureMicrophone(deviceId);
-      if (!this.current(attempt)) {
-        replacement.getTracks().forEach((source) => source.stop());
-        return;
-      }
-      this.switchingMicrophone = replacement;
-      const track = replacement.getAudioTracks()[0];
-      await sender.replaceTrack(track);
-      if (!this.current(attempt)) {
-        replacement.getTracks().forEach((source) => source.stop());
-        return;
-      }
-      this.microphone = replacement;
-      this.observeMicrophone(replacement, attempt);
-      microphone.getTracks().forEach((source) => source.stop());
-      this.updateMicrophone({ selectedId: deviceId, activeLabel: track.label });
-      this.emit({ inputTrack: track });
-      void this.refreshMicrophones();
-    } catch (error) {
-      replacement?.getTracks().forEach((track) => track.stop());
-      if (!this.current(attempt)) return;
-      await this.stop();
-      this.updateMicrophone({ error: microphoneError(error) });
-    } finally {
-      if (this.switchingMicrophone === replacement) this.switchingMicrophone = undefined;
-      if (this.current(attempt)) this.updateMicrophone({ switching: false });
-    }
-  }
-
-  private async captureMicrophone(deviceId: string) {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        ...(deviceId === "default" ? {} : { deviceId: { exact: deviceId } }),
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    });
-    if (deviceId !== "default" && stream.getAudioTracks()[0].getSettings().deviceId !== deviceId) {
-      stream.getTracks().forEach((track) => track.stop());
-      throw new DOMException("Microphone selection was not applied", "NotSupportedError");
-    }
-    return stream;
-  }
-
-  private observeMicrophone(stream: MediaStream, attempt: number) {
-    stream.getAudioTracks()[0].addEventListener(
-      "ended",
-      () => {
-        if (!this.current(attempt) || this.microphone !== stream) return;
-        void this.stop();
-        this.updateMicrophone({ error: "disconnected" });
-      },
-      { once: true },
-    );
-  }
-
-  private updateMicrophone(
-    change: Partial<MicrophoneView>,
-    errorSource: "devices" | "capture" = "capture",
-  ) {
-    if ("error" in change) this.microphoneErrorSource = change.error ? errorSource : undefined;
-    this.microphoneView = { ...this.microphoneView, ...change };
-    this.emit({ microphone: this.microphoneView });
-  }
-
+  };
   async start(locale: Locale, speechSpeed = 1) {
     if (this.desired || this.stopping) return;
     this.desired = true;
@@ -251,96 +92,9 @@ export class VoiceConnection {
     const attempt = ++this.attempt;
     this.emit({ status: "connecting", messages: [] });
     try {
-      const peer = new RTCPeerConnection();
-      this.peer = peer;
-      const audio = new Audio();
-      audio.autoplay = true;
-      this.audio = audio;
-      peer.addEventListener("track", ({ track }) => {
-        if (!this.current(attempt) || track.kind !== "audio") return;
-        audio.srcObject = new MediaStream([track]);
-        this.emit({ outputTrack: track });
-        void audio.play().catch(() => this.fail(attempt));
-      });
-      peer.addEventListener("connectionstatechange", () => {
-        if (peer.connectionState === "failed" || peer.connectionState === "closed")
-          void this.fail(attempt);
-      });
-      const channel = peer.createDataChannel("oai-events");
-      this.channel = channel;
-      channel.addEventListener("message", ({ data }) => {
-        if (!this.current(attempt) || typeof data !== "string" || data.length > 64000) return;
-        let event: unknown;
-        try {
-          event = JSON.parse(data);
-        } catch {
-          return;
-        }
-        if (!event || typeof event !== "object" || !("type" in event)) return;
-        if (event.type === "session.started") {
-          clearTimeout(this.readyTimer);
-          this.ready = true;
-          this.emit({ status: "listening" });
-          this.updateSpeechSpeed();
-          this.scheduleProactive(attempt);
-        } else if (event.type === "session.closed" || event.type === "error") {
-          void this.fail(attempt);
-        } else {
-          const transcript = transcriptEvent.safeParse(event);
-          if (transcript.success) this.receiveCaption(transcript.data, attempt);
-          else {
-            const delegation = delegationEvent.safeParse(event);
-            if (delegation.success) {
-              const id = delegation.data.delegation.id;
-              if (!this.delegations.has(id)) {
-                this.activeDelegation = id;
-                this.delegation?.abort();
-                this.delegation = undefined;
-                this.delegations.set(id, this.registerDelegation(id, "user", attempt));
-              }
-            } else {
-              const envelope = responseEnvelope.safeParse(event);
-              if (envelope.success) void this.receiveResponse(envelope.data, attempt);
-            }
-          }
-        }
-      });
-      channel.addEventListener("close", () => void this.fail(attempt));
-      channel.addEventListener("error", () => void this.fail(attempt));
-      const microphone = await this.captureMicrophone(this.microphoneView.selectedId);
-      if (!this.current(attempt)) {
-        microphone.getTracks().forEach((track) => track.stop());
-        peer.close();
-        return;
-      }
-      this.microphone = microphone;
-      const track = microphone.getAudioTracks()[0];
-      this.microphoneSender = peer.addTrack(track, microphone);
-      this.observeMicrophone(microphone, attempt);
-      this.updateMicrophone({ activeLabel: track.label, error: undefined });
-      this.emit({ inputTrack: track });
-      void this.refreshMicrophones();
-      await peer.setLocalDescription(await peer.createOffer());
-      if (peer.iceGatheringState !== "complete")
-        await new Promise<void>((resolve, reject) => {
-          const done = () => {
-            clearTimeout(timeout);
-            peer.removeEventListener("icegatheringstatechange", changed);
-            resolve();
-          };
-          const changed = () => {
-            if (peer.iceGatheringState === "complete") done();
-          };
-          const timeout = setTimeout(() => {
-            peer.removeEventListener("icegatheringstatechange", changed);
-            reject(new Error("音声接続候補の取得が期限を超えた"));
-          }, 10000);
-          peer.addEventListener("icegatheringstatechange", changed);
-          changed();
-        });
-      if (!this.current(attempt)) return;
-      const sdp = peer.localDescription?.sdp;
-      if (!sdp) throw new Error("音声接続候補を取得できなかった");
+      const transport = await this.openTransport(attempt);
+      if (!transport) return;
+      const { peer, sdp } = transport;
       const controller = new AbortController();
       this.startingRequest = controller;
       const created = await parseResponse(
@@ -367,31 +121,25 @@ export class VoiceConnection {
               ? "unconfigured"
               : "connection";
       await this.stop();
-      if (error instanceof DOMException) this.updateMicrophone({ error: microphoneError(error) });
+      if (error instanceof DOMException)
+        this.updateMicrophone({ error: this.microphoneError(error) });
       this.emit({ status: "error", error: reason });
     }
   }
-
-  synchronise(sessionId: string | null, active: boolean, speechSpeed: number) {
+  synchronise(sessionId: null | string, active: boolean, speechSpeed: number) {
     this.requestedSpeechSpeed = speechSpeed;
     if (this.sessionId && (!active || this.sessionId !== sessionId))
       void this.stop({ serverStopped: true });
     else if (this.sessionId === sessionId && active) this.updateSpeechSpeed();
   }
-
-  private updateSpeechSpeed() {
-    if (!this.ready || !this.desired || this.speechSpeed === this.requestedSpeechSpeed) return;
-    this.channel?.send(
-      JSON.stringify({
-        type: "session.instructions.append",
-        event_id: crypto.randomUUID(),
-        delegation_id: null,
-        content: `話速の希望は${this.requestedSpeechSpeed}倍相当です。次の発話から反映してください。`,
-      }),
-    );
-    this.speechSpeed = this.requestedSpeechSpeed;
+  clearCustomerContext() {
+    void this.stop({ serverStopped: true });
+    for (const caption of this.captions) clearTimeout(caption.timer);
+    this.captions = [];
+    this.pendingCaptions.clear();
+    this.transcriptEvents.clear();
+    this.emit({ messages: [] });
   }
-
   stop({
     existingSession = false,
     serverStopped = false,
@@ -414,7 +162,10 @@ export class VoiceConnection {
       clearTimeout(caption.timer);
       if (!caption.message.final) this.finishCaption(caption, caption.message.role === "assistant");
     }
-    this.emit({ status: "stopping", messages: this.captions.map((row) => row.message) });
+    this.emit({
+      status: "stopping",
+      messages: this.captions.map((row) => row.message),
+    });
     this.microphone?.getTracks().forEach((track) => track.stop());
     this.microphone = undefined;
     this.microphoneSender = undefined;
@@ -453,7 +204,167 @@ export class VoiceConnection {
       });
     return this.stopping;
   }
-
+  private async fail(attempt: number) {
+    if (!this.current(attempt)) return;
+    await this.stop();
+    this.emit({ status: "error", error: "connection" });
+  }
+  private emit(change: Partial<VoiceView>) {
+    this.view = { ...this.view, ...change };
+    if (change.status === "connecting") this.view.error = undefined;
+    if (["stopping", "paused", "error"].includes(change.status ?? "")) {
+      this.view.inputTrack = undefined;
+      this.view.outputTrack = undefined;
+      this.view.messages = this.view.messages?.map((message) =>
+        message.final ? message : { ...message, final: true, interrupted: true },
+      );
+    }
+    this.onChange(this.view);
+    for (const listener of this.listeners) listener();
+  }
+  private current(attempt: number) {
+    return this.desired && this.attempt === attempt;
+  }
+  private async retire(voiceSessionId?: string) {
+    await parseResponse(
+      this.client.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
+    );
+  }
+  observeMicrophones() {
+    const refresh = () => {
+      void this.refreshMicrophones();
+    };
+    navigator.mediaDevices?.addEventListener("devicechange", refresh);
+    refresh();
+    return () => {
+      ++this.deviceRequest;
+      navigator.mediaDevices?.removeEventListener("devicechange", refresh);
+    };
+  }
+  async refreshMicrophones() {
+    const request = ++this.deviceRequest;
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      this.updateMicrophone({ error: "unsupported", loading: false }, "devices");
+      return;
+    }
+    this.updateMicrophone({ loading: true });
+    try {
+      const all = await navigator.mediaDevices.enumerateDevices();
+      if (request !== this.deviceRequest) return;
+      const devices = all.filter((device) => device.kind === "audioinput");
+      const named = devices.some((device) => Boolean(device.label));
+      const missing =
+        named &&
+        this.microphoneView.selectedId !== "default" &&
+        !devices.some((device) => device.deviceId === this.microphoneView.selectedId);
+      let error: MicrophoneError | undefined;
+      if (missing) {
+        error = "disconnected";
+      } else if (devices.length === 0) {
+        error = "empty";
+      }
+      this.updateMicrophone(
+        {
+          devices: devices.filter((device) => device.deviceId),
+          loading: false,
+          permissionRequired: !named,
+          limited:
+            !navigator.mediaDevices.getSupportedConstraints().deviceId ||
+            (named && devices.filter((device) => device.deviceId !== "default").length < 2),
+          ...(error || this.microphoneErrorSource === "devices" ? { error } : {}),
+        },
+        "devices",
+      );
+      if (missing && this.desired) await this.stop();
+    } catch (error) {
+      if (request === this.deviceRequest)
+        this.updateMicrophone({ loading: false, error: this.microphoneError(error) }, "devices");
+    }
+  }
+  async selectMicrophone(deviceId: string) {
+    if (this.view.status === "connecting" || this.microphoneView.switching) return;
+    const microphone = this.microphone;
+    const sender = this.microphoneSender;
+    if (!this.desired || !microphone || !sender) {
+      this.updateMicrophone({ selectedId: deviceId, error: undefined });
+      return;
+    }
+    const attempt = this.attempt;
+    this.updateMicrophone({ switching: true, error: undefined });
+    let replacement: MediaStream | undefined;
+    try {
+      replacement = await this.captureMicrophone(deviceId);
+      if (!this.current(attempt)) {
+        replacement.getTracks().forEach((source) => source.stop());
+        return;
+      }
+      this.switchingMicrophone = replacement;
+      const track = replacement.getAudioTracks()[0];
+      if (!track) throw new DOMException("Microphone has no audio track", "NotFoundError");
+      await sender.replaceTrack(track);
+      if (!this.current(attempt)) {
+        replacement.getTracks().forEach((source) => source.stop());
+        return;
+      }
+      this.microphone = replacement;
+      this.observeMicrophone(replacement, attempt);
+      microphone.getTracks().forEach((source) => source.stop());
+      this.updateMicrophone({ selectedId: deviceId, activeLabel: track.label });
+      this.emit({ inputTrack: track });
+      void this.refreshMicrophones();
+    } catch (error) {
+      replacement?.getTracks().forEach((track) => track.stop());
+      if (!this.current(attempt)) return;
+      await this.stop();
+      this.updateMicrophone({ error: this.microphoneError(error) });
+    } finally {
+      if (this.switchingMicrophone === replacement) this.switchingMicrophone = undefined;
+      if (this.current(attempt)) this.updateMicrophone({ switching: false });
+    }
+  }
+  private async captureMicrophone(deviceId: string) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        ...(deviceId === "default" ? {} : { deviceId: { exact: deviceId } }),
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+    if (deviceId !== "default" && stream.getAudioTracks()[0]?.getSettings().deviceId !== deviceId) {
+      stream.getTracks().forEach((track) => track.stop());
+      throw new DOMException("Microphone selection was not applied", "NotSupportedError");
+    }
+    return stream;
+  }
+  private observeMicrophone(stream: MediaStream, attempt: number) {
+    stream.getAudioTracks()[0]?.addEventListener(
+      "ended",
+      () => {
+        if (!this.current(attempt) || this.microphone !== stream) return;
+        void this.stop();
+        this.updateMicrophone({ error: "disconnected" });
+      },
+      { once: true },
+    );
+  }
+  private updateMicrophone(
+    change: Partial<MicrophoneView>,
+    errorSource: "capture" | "devices" = "capture",
+  ) {
+    if ("error" in change) this.microphoneErrorSource = change.error ? errorSource : undefined;
+    this.microphoneView = { ...this.microphoneView, ...change };
+    this.emit({ microphone: this.microphoneView });
+  }
+  private microphoneError(error: unknown): MicrophoneError {
+    if (error instanceof DOMException) {
+      if (error.name === "NotAllowedError" || error.name === "SecurityError") return "permission";
+      if (error.name === "NotSupportedError") return "unsupported";
+      if (error.name === "NotFoundError") return "empty";
+      if (error.name === "OverconstrainedError") return "disconnected";
+    }
+    return "failed";
+  }
   private receiveCaption(event: z.infer<typeof transcriptEvent>, attempt: number) {
     if (this.transcriptEvents.has(event.event_id) || event.end_ms < event.start_ms || !event.delta)
       return;
@@ -518,7 +429,6 @@ export class VoiceConnection {
     });
     this.scheduleProactive(attempt);
   }
-
   private finishCaption(caption: Caption, interrupted: boolean) {
     clearTimeout(caption.timer);
     caption.message = { ...caption.message, final: true, interrupted };
@@ -529,7 +439,6 @@ export class VoiceConnection {
       interrupted,
     });
   }
-
   private scheduleSave() {
     if (this.saveTimer || !this.sessionId) return;
     this.saveTimer = setTimeout(() => {
@@ -537,7 +446,6 @@ export class VoiceConnection {
       if (this.sessionId) void this.saveCaptions(this.sessionId).catch(() => this.onSync());
     }, 1500);
   }
-
   private async saveCaptions(sessionId: string): Promise<void> {
     if (this.saving) await this.saving;
     if (!this.pendingCaptions.size) return;
@@ -560,10 +468,9 @@ export class VoiceConnection {
     }
     if (this.pendingCaptions.size) await this.saveCaptions(sessionId);
   }
-
   private async registerDelegation(
-    id: string | null,
-    trigger: "user" | "proactive",
+    id: null | string,
+    trigger: "proactive" | "user",
     attempt: number,
   ): Promise<string | undefined> {
     if (!this.current(attempt) || !this.sessionId) return undefined;
@@ -587,7 +494,6 @@ export class VoiceConnection {
       return undefined;
     }
   }
-
   private async receiveResponse(envelope: z.infer<typeof responseEnvelope>, attempt: number) {
     const event = envelope.event;
     const id = envelope.delegation_id;
@@ -674,6 +580,7 @@ export class VoiceConnection {
                   turnId,
                   toolCallId: call.callId,
                   ...tool,
+                  displayCurrency: this.displayCurrency?.getContext?.(),
                 },
               },
               {
@@ -682,6 +589,16 @@ export class VoiceConnection {
             ),
           );
           output = result.result;
+          if (
+            result.displayCurrencyAction &&
+            this.current(attempt) &&
+            this.activeDelegation === id &&
+            !controller.signal.aborted
+          ) {
+            const action = displayCurrencyActionSchema.parse(result.displayCurrencyAction);
+            if (!this.displayCurrency?.setCurrency?.(action.currency, action.revision))
+              output = { error: "DISPLAY_CURRENCY_CHANGED" };
+          }
         } catch (error) {
           output = { error: apiError(error)?.code ?? "VOICE_TOOL_FAILED" };
         }
@@ -721,7 +638,6 @@ export class VoiceConnection {
       this.scheduleProactive(attempt);
     }
   }
-
   private reportFailure() {
     this.channel?.send(
       JSON.stringify({
@@ -736,7 +652,6 @@ export class VoiceConnection {
     );
     this.emit({ status: "listening" });
   }
-
   private scheduleProactive(attempt: number) {
     clearTimeout(this.proactiveTimer);
     if (!this.proactive || !this.ready || !this.current(attempt)) return;
@@ -744,7 +659,6 @@ export class VoiceConnection {
       if (!this.delegation) void this.proactiveSuggestion(attempt);
     }, 180000);
   }
-
   private async proactiveSuggestion(attempt: number) {
     const delegationId = this.activeDelegation;
     const turnId = await this.registerDelegation(null, "proactive", attempt);
@@ -793,7 +707,18 @@ export class VoiceConnection {
       this.onSync();
     }
   }
-
+  private updateSpeechSpeed() {
+    if (!this.ready || !this.desired || this.speechSpeed === this.requestedSpeechSpeed) return;
+    this.channel?.send(
+      JSON.stringify({
+        type: "session.instructions.append",
+        event_id: crypto.randomUUID(),
+        delegation_id: null,
+        content: `話速の希望は${this.requestedSpeechSpeed}倍相当です。次の発話から反映してください。`,
+      }),
+    );
+    this.speechSpeed = this.requestedSpeechSpeed;
+  }
   private async closeTransport(peer?: RTCPeerConnection, channel?: RTCDataChannel) {
     try {
       if (channel?.readyState === "open")
@@ -829,41 +754,99 @@ export class VoiceConnection {
       peer?.close();
     }
   }
-
-  private async fail(attempt: number) {
-    if (!this.current(attempt)) return;
-    await this.stop();
-    this.emit({ status: "error", error: "connection" });
-  }
-
-  private emit(change: Partial<VoiceView>) {
-    this.view = { ...this.view, ...change };
-    if (change.status === "connecting") this.view.error = undefined;
-    if (["stopping", "paused", "error"].includes(change.status ?? "")) {
-      this.view.inputTrack = undefined;
-      this.view.outputTrack = undefined;
-      this.view.messages = this.view.messages?.map((message) =>
-        message.final ? message : { ...message, final: true, interrupted: true },
-      );
+  private async openTransport(attempt: number) {
+    const peer = new RTCPeerConnection();
+    this.peer = peer;
+    const audio = new Audio();
+    audio.autoplay = true;
+    this.audio = audio;
+    peer.addEventListener("track", ({ track }) => {
+      if (!this.current(attempt) || track.kind !== "audio") return;
+      audio.srcObject = new MediaStream([track]);
+      this.emit({ outputTrack: track });
+      void audio.play().catch(() => this.fail(attempt));
+    });
+    peer.addEventListener("connectionstatechange", () => {
+      if (peer.connectionState === "failed" || peer.connectionState === "closed")
+        void this.fail(attempt);
+    });
+    const channel = peer.createDataChannel("oai-events");
+    this.channel = channel;
+    channel.addEventListener("message", ({ data }) => {
+      if (!this.current(attempt) || typeof data !== "string" || data.length > 64000) return;
+      let event: unknown;
+      try {
+        event = JSON.parse(data);
+      } catch {
+        return;
+      }
+      if (!event || typeof event !== "object" || !("type" in event)) return;
+      if (event.type === "session.started") {
+        clearTimeout(this.readyTimer);
+        this.ready = true;
+        this.emit({ status: "listening" });
+        this.updateSpeechSpeed();
+        this.scheduleProactive(attempt);
+      } else if (event.type === "session.closed" || event.type === "error") {
+        void this.fail(attempt);
+      } else {
+        const transcript = transcriptEvent.safeParse(event);
+        if (transcript.success) this.receiveCaption(transcript.data, attempt);
+        else {
+          const delegation = delegationEvent.safeParse(event);
+          if (delegation.success) {
+            const id = delegation.data.delegation.id;
+            if (!this.delegations.has(id)) {
+              this.activeDelegation = id;
+              this.delegation?.abort();
+              this.delegation = undefined;
+              this.delegations.set(id, this.registerDelegation(id, "user", attempt));
+            }
+          } else {
+            const envelope = responseEnvelope.safeParse(event);
+            if (envelope.success) void this.receiveResponse(envelope.data, attempt);
+          }
+        }
+      }
+    });
+    channel.addEventListener("close", () => void this.fail(attempt));
+    channel.addEventListener("error", () => void this.fail(attempt));
+    const microphone = await this.captureMicrophone(this.microphoneView.selectedId);
+    if (!this.current(attempt)) {
+      microphone.getTracks().forEach((track) => track.stop());
+      peer.close();
+      return undefined;
     }
-    this.onChange(this.view);
-  }
-  private current(attempt: number) {
-    return this.desired && this.attempt === attempt;
-  }
-  private async retire(voiceSessionId?: string) {
-    await parseResponse(
-      this.client.voice.stop.$post({ json: voiceSessionId ? { voiceSessionId } : {} }),
-    );
-  }
-}
+    this.microphone = microphone;
+    const track = microphone.getAudioTracks()[0];
+    if (!track) throw new DOMException("Microphone has no audio track", "NotFoundError");
+    this.microphoneSender = peer.addTrack(track, microphone);
+    this.observeMicrophone(microphone, attempt);
+    this.updateMicrophone({ activeLabel: track.label, error: undefined });
+    this.emit({ inputTrack: track });
+    void this.refreshMicrophones();
+    await peer.setLocalDescription(await peer.createOffer());
+    if (peer.iceGatheringState !== "complete")
+      await new Promise<void>((resolve, reject) => {
+        const done = () => {
+          clearTimeout(timeout);
+          peer.removeEventListener("icegatheringstatechange", changed);
+          resolve();
+        };
+        const changed = () => {
+          if (peer.iceGatheringState === "complete") done();
+        };
+        const timeout = setTimeout(() => {
+          peer.removeEventListener("icegatheringstatechange", changed);
+          reject(new Error("音声接続候補の取得が期限を超えた"));
+        }, 10000);
+        peer.addEventListener("icegatheringstatechange", changed);
+        changed();
+      });
+    if (!this.current(attempt)) return undefined;
+    const sdp = peer.localDescription?.sdp;
+    if (!sdp) throw new Error("音声接続候補を取得できなかった");
 
-function microphoneError(error: unknown): MicrophoneError {
-  if (error instanceof DOMException) {
-    if (error.name === "NotAllowedError" || error.name === "SecurityError") return "permission";
-    if (error.name === "NotSupportedError") return "unsupported";
-    if (error.name === "NotFoundError") return "empty";
-    if (error.name === "OverconstrainedError") return "disconnected";
+    return { peer, sdp };
   }
-  return "failed";
 }

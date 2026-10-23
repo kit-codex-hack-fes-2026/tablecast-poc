@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { catalogReleaseSchema, catalogTarget } from "./tablecast-catalog-config";
-import { ownedCatalogApplication } from "./tablecast-catalog-deploy";
+import { catalogReleaseSchema, catalogTarget } from "./tablecast-catalog-config.ts";
+import { ownedCatalogApplication } from "./tablecast-catalog-deploy.ts";
 
 describe("カタログの対象境界", () => {
   it.each(["", "0", "../1", "1/production", "1000000000"])("不正PR %s を資源名にしない", (pr) => {

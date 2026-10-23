@@ -1,27 +1,28 @@
-import { useMutation, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
-import { MailPlus, Trash2 } from "lucide-react";
+import { CalendarDays, MailPlus, ShieldCheck, Trash2, Users } from "lucide-react";
 import { useMemo } from "react";
 import { ConfirmAction } from "../../components/confirm-action";
 import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { DateTime } from "../../components/date-time";
 import { ErrorNotice } from "../../components/error-notice";
+import { PageHeader } from "../../components/page-header";
+import { RoleBadge } from "../../components/role-badge";
 import { Button } from "../../components/ui/button";
 import { NativeSelect } from "../../components/ui/native-select";
 import { UserIdentity } from "../../components/user-identity";
 import { useI18n } from "../../i18n/locale";
 import { authClient, authResult } from "../../lib/auth-client";
 import { sessionOptions } from "../../lib/session-query";
-import { membershipOptions } from "./membership-query";
-import { RoleBadge } from "../../components/role-badge";
-import { useStore } from "./store-shell";
-type Role = "owner" | "admin" | "member";
-const load = async (organizationId: string) =>
-  authResult(await authClient.organization.getFullOrganization({ query: { organizationId } }));
-type Member = Awaited<ReturnType<typeof load>>["members"][number];
-type Action = { kind: "role"; memberId: string; role: Role } | { kind: "remove"; memberId: string };
+import { useCollectionSearch } from "../shell/collection-search";
+import { type Membership, membershipOptions } from "./membership-query";
+import { useStore } from "./store-context";
+type Role = "admin" | "member" | "owner";
+type Member = Membership["members"][number];
+type Action = { kind: "remove"; memberId: string } | { kind: "role"; memberId: string; role: Role };
 export function Members() {
+  const collection = useCollectionSearch({ sortIds: ["user", "role", "createdAt"] });
   const store = useStore(),
     { t } = useI18n(),
     client = useQueryClient(),
@@ -54,26 +55,34 @@ export function Members() {
   );
   return (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t("org_members")}</h1>
-        {store.role !== "member" && (
-          <Button
-            nativeButton={false}
-            role="link"
-            render={<Link to="/admin/stores/$storeId/invitations" params={{ storeId: store.id }} />}
-          >
-            <MailPlus />
-            {t("invitations_title")}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t("org_members")}
+        icon={<Users />}
+        actions={
+          store.role !== "member" && (
+            <Button
+              nativeButton={false}
+              role="link"
+              render={
+                <Link to="/admin/stores/$storeId/invitations" params={{ storeId: store.id }} />
+              }
+            >
+              <MailPlus />
+              {t("invitations_title")}
+            </Button>
+          )
+        }
+      />
       <ErrorNotice error={query.error || change.error} onRetry={() => void query.refetch()} />
 
       <DataTable
+        {...collection}
         data={query.data.members}
         columns={columns}
         getRowId={(member) => member.id}
-        searchLabel={t("auth_email")}
+        tableLabel={t("org_members")}
+        searchLabel={t("collection_search_members")}
+        searchPlaceholder={t("collection_search_members_placeholder")}
       />
     </>
   );
@@ -84,30 +93,42 @@ function memberColumns(
   userId: string | undefined,
   pending: boolean,
   change: (action: Action) => void,
-): ColumnDef<Member>[] {
+): DataTableColumn<Member>[] {
   return [
     {
       id: "user",
       accessorFn: (row) => `${row.user.name} ${row.user.email}`,
       header: t("org_members"),
-      cell: ({ row }) => <UserIdentity user={row.original.user} />,
+      meta: { icon: Users, rowHeader: true },
+      cell: ({ row }) => (
+        <div className="min-w-56 max-w-sm">
+          <UserIdentity user={row.original.user} />
+        </div>
+      ),
     },
     {
-      accessorKey: "role",
+      id: "role",
+      accessorFn: (row) => (row.role === "owner" ? 0 : row.role === "admin" ? 1 : 2),
+      enableGlobalFilter: false,
+      meta: { icon: ShieldCheck },
       header: t("org_role"),
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
     {
-      accessorKey: "createdAt",
+      id: "createdAt",
+      accessorFn: (row) => new Date(row.createdAt).getTime(),
+      enableGlobalFilter: false,
+      meta: { icon: CalendarDays },
       header: t("members_created_at"),
       cell: ({ row }) => <DateTime value={row.original.createdAt} />,
     },
     {
       id: "actions",
+      meta: { align: "right" },
       header: t("common_actions"),
       cell: ({ row }) =>
         myRole !== "member" && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <NativeSelect
               className="w-36"
               aria-label={`${t("org_role")} ${row.original.user.email}`}

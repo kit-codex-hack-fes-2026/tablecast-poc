@@ -1,12 +1,11 @@
-import { render, toPlainText } from "@react-email/render";
-import { createElement, type ComponentProps } from "react";
+import { type ComponentProps, createElement } from "react";
+import type { AccountEmail } from "./account-email";
 import { ensure } from "../platform/errors";
-import { AccountEmail } from "./account-email";
 
 export type MailEnv = Partial<
   Pick<
     TablecastEnv,
-    "TABLECAST_EMAIL" | "TABLECAST_EMAIL_FROM" | "TABLECAST_MAILPIT_URL" | "TABLECAST_ENV"
+    "TABLECAST_EMAIL" | "TABLECAST_EMAIL_FROM" | "TABLECAST_ENV" | "TABLECAST_MAILPIT_URL"
   >
 > &
   Pick<TablecastEnv, "TABLECAST_PUBLIC_ORIGIN">;
@@ -15,8 +14,12 @@ export async function sendAccountEmail(
   to: string,
   content: Omit<ComponentProps<typeof AccountEmail>, "logoUrl">,
 ) {
-  const { title } = content;
   ensure(env.TABLECAST_EMAIL_FROM, "EMAIL_NOT_CONFIGURED", 503);
+  // 認証・業務操作の初期化では描画せず、送信時だけ描画ライブラリとテンプレートを読む。
+  const [{ render, toPlainText }, { AccountEmail }] = await Promise.all([
+    import("@react-email/render"),
+    import("./account-email"),
+  ]);
   const html = await render(
     createElement(AccountEmail, {
       ...content,
@@ -28,7 +31,8 @@ export async function sendAccountEmail(
     const target = new URL(env.TABLECAST_MAILPIT_URL);
     ensure(
       env.TABLECAST_ENV === "development" &&
-        ["127.0.0.1", "localhost", "tablecast-mailpit"].includes(target.hostname),
+        (["127.0.0.1", "localhost", "tablecast-mailpit"].includes(target.hostname) ||
+          target.hostname.endsWith(".localhost")),
       "MAILPIT_LOCAL_ONLY",
       503,
     );
@@ -38,7 +42,7 @@ export async function sendAccountEmail(
       body: JSON.stringify({
         From: { Email: env.TABLECAST_EMAIL_FROM, Name: "TableCast" },
         To: [{ Email: to }],
-        Subject: title,
+        Subject: content.title,
         HTML: html,
         Text: text,
       }),
@@ -50,7 +54,7 @@ export async function sendAccountEmail(
   await env.TABLECAST_EMAIL.send({
     from: { email: env.TABLECAST_EMAIL_FROM, name: "TableCast" },
     to,
-    subject: title,
+    subject: content.title,
     html,
     text,
   });

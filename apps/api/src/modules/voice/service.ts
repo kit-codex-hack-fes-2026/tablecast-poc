@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
-import { telemetryContent } from "../../platform/telemetry";
 import type { Actor } from "../auth/model";
 import type { TableState } from "../tables/model";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
+import { telemetryContent } from "../../platform/telemetry-content";
 import {
   eventStatement,
   interruptVoiceTurns,
@@ -42,14 +42,17 @@ export async function setSpeechSpeed(
     eventStatement(services, actor, mutation, "voice.speed", parsed.data),
   ]);
   ensure(result[0]?.meta.changes === 1, "TABLE_CONFLICT");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId, {
+    cursor: result[1].meta.last_row_id,
+    demoId: session.kind === "demo" ? session.id : undefined,
+  });
   return getTableState(services, actor);
 }
 
 export async function recordVoiceEvent(
   services: ApiServices,
   actor: Actor,
-  event: { kind: "voice.tool"; data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId"> },
+  event: { data: Omit<z.infer<typeof voiceToolEventSchema>, "turnId">; kind: "voice.tool" },
   reserve = false,
   waitUntil?: (promise: Promise<unknown>) => void,
 ) {
@@ -86,7 +89,7 @@ export async function recordVoiceEvent(
 export async function setVoiceSession(
   services: ApiServices,
   actor: Actor,
-  voiceSessionId: string | null,
+  voiceSessionId: null | string,
   expectedVoiceSessionId?: string,
   expectedVoiceVersion?: number,
 ) {
@@ -120,6 +123,9 @@ export async function setVoiceSession(
     }),
   ]);
   ensure(result[0]?.meta.changes === 1, "SESSION_STALE");
-  await notifyStore(services, actor.storeId, actor.tableSessionId);
+  await notifyStore(services, actor.storeId, actor.tableSessionId, {
+    cursor: result[4].meta.last_row_id,
+    demoId: row.kind === "demo" ? row.id : undefined,
+  });
   return getTableState(services, actor);
 }

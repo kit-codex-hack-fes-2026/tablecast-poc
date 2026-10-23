@@ -1,6 +1,6 @@
+import type { BetterAuthOptions } from "better-auth";
 import { getOAuthProviderApi, oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
-import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { deviceAuthorization, jwt, organization, redeemDeviceCode } from "better-auth/plugins";
 import { z } from "zod";
@@ -8,8 +8,8 @@ export function authOptions(
   origin: string,
   secret: string,
   sendInvitationEmail?: (data: {
-    id: string;
     email: string;
+    id: string;
     organization: { name: string };
   }) => Promise<void>,
 ) {
@@ -51,7 +51,10 @@ export function authOptions(
       accountLinking: { enabled: true, allowDifferentEmails: false, allowUnlinkingAll: false },
     },
     user: {
-      additionalFields: { locale: { type: ["ja", "en"], required: false, defaultValue: "ja" } },
+      additionalFields: {
+        stripeCustomerId: { type: "string", required: false, input: false, returned: false },
+        locale: { type: ["ja", "en"], required: false, defaultValue: "ja" },
+      },
     },
     advanced: {
       database: { joins: true },
@@ -62,6 +65,13 @@ export function authOptions(
     plugins: [
       organization({
         allowUserToCreateOrganization: false,
+        schema: {
+          organization: {
+            additionalFields: {
+              stripeCustomerId: { type: "string", required: false, input: false, returned: false },
+            },
+          },
+        },
         sendInvitationEmail,
         requireEmailVerificationOnInvitation: true,
       }),

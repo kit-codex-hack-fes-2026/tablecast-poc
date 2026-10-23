@@ -1,8 +1,9 @@
-import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "@tanstack/react-router";
 import { Serwist } from "@serwist/window";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useI18n } from "../i18n/locale";
+import { canReloadPwaClient } from "../lib/pwa-update";
 
 export function Pwa() {
   const client = useQueryClient();
@@ -14,23 +15,31 @@ export function Pwa() {
     let disposed = false;
     let reloading = false;
     let locked = false;
+    let preparedController: null | ServiceWorker | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const release = () => {
       clearTimeout(timer);
       if (locked) document.body.inert = false;
       locked = false;
     };
-    const message = (event: MessageEvent) => {
-      if (event.data?.type === "TABLECAST_CANCEL_UPDATE") release();
-      if (!["TABLECAST_CHECK_UPDATE", "TABLECAST_PREPARE_UPDATE"].includes(event.data?.type))
+    const readyToUpdate = () =>
+      navigator.onLine &&
+      !client.isMutating() &&
+      router.state.status === "idle" &&
+      !document.querySelector('[data-pwa-blocked="true"]') &&
+      [...document.forms].every((form) => form.querySelector("[data-pwa-blocked]"));
+    const message = (event: MessageEvent<unknown>) => {
+      const data = event.data;
+      if (!data || typeof data !== "object" || !("type" in data) || typeof data.type !== "string")
         return;
-      const ready =
-        navigator.onLine &&
-        !client.isMutating() &&
-        router.state.status === "idle" &&
-        !document.querySelector('[data-pwa-blocked="true"]') &&
-        [...document.forms].every((form) => form.querySelector("[data-pwa-blocked]"));
-      if (ready && event.data.type === "TABLECAST_PREPARE_UPDATE") {
+      if (data.type === "TABLECAST_CANCEL_UPDATE") {
+        preparedController = undefined;
+        release();
+      }
+      if (!["TABLECAST_CHECK_UPDATE", "TABLECAST_PREPARE_UPDATE"].includes(data.type)) return;
+      const ready = readyToUpdate();
+      if (ready && data.type === "TABLECAST_PREPARE_UPDATE") {
+        preparedController = navigator.serviceWorker.controller;
         locked = true;
         document.body.inert = true;
         clearTimeout(timer);
@@ -38,9 +47,26 @@ export function Pwa() {
       }
       event.ports[0]?.postMessage(ready);
     };
+    const controlling = () => {
+      if (
+        !canReloadPwaClient({
+          preparedController,
+          controller: navigator.serviceWorker.controller,
+          locked,
+          ready: readyToUpdate(),
+          reloading,
+        })
+      )
+        return;
+      reloading = true;
+      window.location.reload();
+    };
     const apply = () => {
-      if (!document.hidden && navigator.onLine)
+      if (!document.hidden && navigator.onLine) {
+        // ロック期限後の切替でも、未保存入力・送信中を再確認してから旧画面を更新する。
+        controlling();
         registration?.waiting?.postMessage({ type: "TABLECAST_REQUEST_UPDATE" });
+      }
     };
     const check = async () => {
       if (document.hidden || !navigator.onLine || !registration) return;
@@ -52,11 +78,6 @@ export function Pwa() {
       }
     };
     worker.addEventListener("waiting", apply);
-    const controlling = () => {
-      if (!locked || reloading) return;
-      reloading = true;
-      window.location.reload();
-    };
     navigator.serviceWorker.addEventListener("controllerchange", controlling);
     navigator.serviceWorker.addEventListener("message", message);
     void worker
@@ -93,14 +114,21 @@ export function Pwa() {
 
 export function PwaInstallHelp() {
   const { t } = useI18n();
+  const customer = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/member"),
+  });
   return (
-    <details data-pwa-install className="m-3 text-sm text-muted-foreground print:hidden">
-      <summary className="cursor-pointer">{t("pwa_install_title")}</summary>
-      <p className="mt-2">{t("pwa_install_steps")}</p>
-      <div className="mt-2 flex gap-4">
-        <a href="/">{t("pwa_kiosk")}</a>
-        <a href="/admin/live">{t("pwa_staff")}</a>
-      </div>
-    </details>
+    <aside data-pwa-install className="m-3 text-sm text-muted-foreground print:hidden">
+      <h2 className="text-sm font-medium">
+        {t(customer ? "customer_install_title" : "pwa_install_title")}
+      </h2>
+      <p className="mt-2">{t(customer ? "customer_install_steps" : "pwa_install_steps")}</p>
+      {!customer && (
+        <div className="mt-2 flex gap-4">
+          <a href="/">{t("pwa_kiosk")}</a>
+          <a href="/admin/live">{t("pwa_staff")}</a>
+        </div>
+      )}
+    </aside>
   );
 }

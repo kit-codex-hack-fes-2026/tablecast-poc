@@ -8,14 +8,14 @@ import { join, resolve as resolvePath } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
 import { z } from "zod";
-import { startGateway } from "../apps/web/e2e/support/gateway";
+import { startGateway } from "../apps/web/e2e/support/gateway.ts";
 
 it("四つのケースの転送先を分離し、停止中もoriginのポートを保持する", async () => {
   const directory = await mkdtemp(join(tmpdir(), "tablecast-gateway-test-"));
   const cases: {
-    server: ReturnType<typeof createServer>;
     gateway: Awaited<ReturnType<typeof startGateway>>;
     id: number;
+    server: ReturnType<typeof createServer>;
   }[] = [];
   try {
     for (let id = 0; id < 4; id++) {
@@ -110,7 +110,7 @@ it("指定ポートのOAuth起動完了後にdiscoveryと公開URLが一致す�
 
 it("OAuthのbind失敗を起動成功にせず、既存の待受を保つ", async () => {
   const server = createServer((_request, response) => response.end("tablecast-existing"));
-  await new Promise<void>((done) => server.listen(0, done));
+  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("待受がありません。");
   const child = spawn("bun", ["--no-env-file", resolvePath("apps/emulate/src/index.ts")], {

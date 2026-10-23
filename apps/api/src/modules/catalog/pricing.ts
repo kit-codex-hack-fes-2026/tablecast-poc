@@ -1,8 +1,9 @@
-import { ensure } from "../../platform/errors";
 import type { Locale } from "../../platform/model";
 import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { Cart, CartLine, PricedLine, Snapshot } from "../orders/model";
 import type { Plan } from "./model";
+import { ensure } from "../../platform/errors";
+import { evaluateCondition, productConditionErrors } from "./conditions";
 export function configurationErrors(config: Configuration): ConfigurationIssue[] {
   const errors: ConfigurationIssue[] = [];
   const unique = (items: { id: string }[], path: ConfigurationIssue["path"]) => {
@@ -20,10 +21,23 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
   unique(config.categories, ["categories"]);
   unique(config.products, ["products"]);
   unique(config.plans, ["plans"]);
+  unique(config.banners ?? [], ["banners"]);
   const categories = new Set(config.categories.map((c) => c.id));
   const products = new Set(config.products.map((p) => p.id));
+  for (const [bannerIndex, banner] of (config.banners ?? []).entries()) {
+    unique(banner.hotspots, ["banners", bannerIndex, "hotspots"]);
+    for (const [spotIndex, spot] of banner.hotspots.entries()) {
+      if (!products.has(spot.productId))
+        errors.push({
+          code: "PRODUCT_NOT_FOUND",
+          path: ["banners", bannerIndex, "hotspots", spotIndex, "productId"],
+          params: { productId: spot.productId },
+        });
+    }
+  }
   for (const [productIndex, product] of config.products.entries()) {
     const productPath = ["products", productIndex];
+    errors.push(...productConditionErrors(product, productPath));
     if (!categories.has(product.categoryId))
       errors.push({
         code: "CATEGORY_NOT_FOUND",
@@ -114,18 +128,18 @@ export function configurationErrors(config: Configuration): ConfigurationIssue[]
 }
 
 export type PlanContext = {
-  id: string;
-  startedAt: number;
-  rules: Plan;
   guestCount: number;
+  id: string;
+  lastOrderAt: null | number;
   orderedQuantity: number;
-  lastOrderAt: number | null;
+  rules: Plan;
+  startedAt: number;
 };
 export function priceCart(
-  config: Configuration,
+  config: Pick<Configuration, "products">,
   lines: CartLine[],
   version: number,
-  plan?: PlanContext | null,
+  plan?: null | PlanContext,
   now = Date.now(),
 ): Cart {
   ensure(new Set(lines.map((line) => line.id)).size === lines.length, "DUPLICATE_LINE", 422);
@@ -140,6 +154,7 @@ export function priceCart(
     );
     const selectedIds = new Set(line.selections.map((s) => s.optionId));
     const missing: string[] = [];
+    const conditionIssues: NonNullable<PricedLine["conditionIssues"]> = [];
     const options: PricedLine["options"] = [];
     for (const selection of line.selections) {
       const group = product.modifiers.find((g) =>
@@ -160,6 +175,18 @@ export function priceCart(
       );
       for (const required of option.requires)
         if (!selectedIds.has(required)) missing.push(required);
+      const conditions = option.conditions;
+      if (conditions?.excludes)
+        ensure(!evaluateCondition(conditions.excludes, selectedIds), "OPTION_COMBINATION", 422, {
+          optionId: option.id,
+          relation: "excludes",
+          expression: conditions.excludes,
+        });
+      if (conditions?.requires && !evaluateCondition(conditions.requires, selectedIds))
+        conditionIssues.push({
+          optionId: option.id,
+          relation: "requires",
+        });
       options.push({
         id: option.id,
         name: { ja: option.text.ja.displayName, en: option.text.en.displayName },
@@ -199,6 +226,7 @@ export function priceCart(
       unitPrice,
       total: unitPrice * line.quantity,
       missing: [...new Set(missing)],
+      ...(conditionIssues.length ? { conditionIssues } : {}),
       planCovered: covered,
     };
   });
@@ -229,7 +257,9 @@ export function priceCart(
     version,
     lines: priced,
     total: priced.reduce((sum, line) => sum + line.total, 0),
-    complete: priced.length > 0 && priced.every((line) => line.missing.length === 0),
+    complete:
+      priced.length > 0 &&
+      priced.every((line) => line.missing.length === 0 && !line.conditionIssues?.length),
   };
 }
 

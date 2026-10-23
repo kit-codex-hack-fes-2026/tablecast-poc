@@ -1,23 +1,24 @@
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
-import { createMiddleware } from "hono/factory";
 import type { ApiEnv } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "./model";
+import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
 import { findDeviceSession, findStoreMembership } from "./queries";
-import { hashDeviceToken } from "./service";
-export async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
+import { hashDeviceToken } from "./token";
+async function deviceActor(c: Context<ApiEnv>): Promise<Actor> {
   const token = getCookie(c, "tablecast.device");
   ensure(token, "DEVICE_REQUIRED", 401);
   const row = await findDeviceSession(c.get("services"), await hashDeviceToken(token));
   ensure(row, "DEVICE_NOT_ASSIGNED", 401);
-  return { kind: "device", storeId: row.store_id, tableSessionId: row.id };
+  return { kind: "device", storeId: row.store_id, tableSessionId: row.id, deviceId: row.deviceId };
 }
 
-export async function staffIdentity(c: Context<ApiEnv>) {
-  let pending = c.get("session");
+export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
+  let pending: ApiEnv["Variables"]["session"] = c.get("session");
   if (!pending) {
-    pending = c.get("services").auth.api.getSession({ headers: c.req.raw.headers });
+    const services: ApiEnv["Variables"]["services"] = c.get("services");
+    pending = services.auth.api.getSession({ headers: c.req.raw.headers });
     c.set("session", pending);
   }
   const session = await pending;
@@ -37,13 +38,25 @@ export async function staffActor(
   return { kind: "staff", storeId, userId: session.user.id, role: membership.role };
 }
 
-export const requireStore = createMiddleware<ApiEnv>(async (c, next) => {
+const actorGuard = (resolve: (c: Context<ApiEnv>) => Actor | Promise<Actor>) =>
+  apiFactory.createMiddleware(async (c, next) => {
+    c.set("actor", await resolve(c));
+    await next();
+  });
+
+export const requireIdentity = apiFactory.createMiddleware(async (c, next) => {
+  c.set("staffSession", await staffIdentity(c));
+  await next();
+});
+
+export const tableScope = actorGuard((c) => ({
+  ...c.get("actor"),
+  tableSessionId: c.req.param("id"),
+}));
+
+export const requireStore = actorGuard(async (c) => {
   const storeId = c.req.param("storeId");
   ensure(storeId, "STORE_REQUIRED", 400);
-  c.set("actor", await staffActor(c, storeId));
-  await next();
+  return staffActor(c, storeId);
 });
-export const requireDevice = createMiddleware<ApiEnv>(async (c, next) => {
-  c.set("actor", await deviceActor(c));
-  await next();
-});
+export const requireDevice = actorGuard(deviceActor);

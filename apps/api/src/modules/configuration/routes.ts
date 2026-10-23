@@ -1,83 +1,149 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
-import { validate } from "../../platform/validation";
-import { configurationSchema } from "./model";
+import { apiFactory } from "../../platform/http";
+import { validate, validateQuery } from "../../platform/validation";
+import { previewConditions } from "./conditions";
+import { instructionResponse } from "./instruction-response";
+import {
+  conditionPreviewSchema,
+  configurationHistoryQuerySchema,
+  configurationRestoreSchema,
+  draftChoicesQuerySchema,
+  draftPublishSchema,
+  draftUpdateSchema,
+} from "./model";
+import {
+  getConfigurationHistory,
+  getConfigurationRelease,
+  getDraft,
+  listDraftChoices,
+  listDrafts,
+} from "./queries";
 import {
   createDraft,
   discardDraft,
-  getDraft,
-  listDrafts,
-  publishDraft,
+  restoreConfigurationRelease,
   updateDraft,
   validateDraft,
-} from "./service";
+} from "./use-cases/drafts";
+import { publishDraft } from "./use-cases/publish";
 const versionSchema = z.object({ expectedVersion: z.number().int().nonnegative() }).strict();
 
-export const configurationAdminRoutes = new Hono<ApiEnv>()
-  .get("/drafts", async (c) => c.json(await listDrafts(c.get("services"), c.get("actor")), 200))
-  .post("/drafts", async (c) => c.json(await createDraft(c.get("services"), c.get("actor")), 200))
-  .get("/drafts/:id", async (c) =>
-    c.json(await getDraft(c.get("services"), c.get("actor"), c.req.param("id")), 200),
+export const configurationAdminRoutes = apiFactory
+  .createApp()
+  .get("/configuration/history", validateQuery(configurationHistoryQuerySchema), async (c) =>
+    c.json(await getConfigurationHistory(c.var.services, c.var.actor, c.req.valid("query")), 200),
   )
-  .put(
-    "/drafts/:id",
-    validate(
-      z.object({ expectedVersion: z.number().int(), configuration: configurationSchema }).strict(),
+  .get("/configuration/releases/:version", async (c) =>
+    c.json(
+      await getConfigurationRelease(c.var.services, c.var.actor, Number(c.req.param("version"))),
+      200,
     ),
+  )
+  .post(
+    "/configuration/releases/:version/restore",
+    validate(configurationRestoreSchema),
     async (c) =>
       c.json(
+        instructionResponse(
+          await restoreConfigurationRelease(
+            c.var.services,
+            c.var.actor,
+            Number(c.req.param("version")),
+            c.req.valid("json"),
+          ),
+          c.req.header("X-Tablecast-Instructions"),
+        ),
+        200,
+      ),
+  )
+  .post("/conditions/preview", validate(conditionPreviewSchema), (c) =>
+    c.json(previewConditions(c.get("actor"), c.req.valid("json")), 200),
+  )
+  .get("/drafts", async (c) => {
+    const result = await listDrafts(c.get("services"), c.get("actor"));
+    return c.json(
+      {
+        drafts: result.drafts.map((draft) =>
+          instructionResponse(draft, c.req.header("X-Tablecast-Instructions")),
+        ),
+      },
+      200,
+    );
+  })
+  .post("/drafts", async (c) =>
+    c.json(
+      instructionResponse(
+        await createDraft(c.get("services"), c.get("actor")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
+  )
+  .get("/drafts/choices", validateQuery(draftChoicesQuerySchema), async (c) =>
+    c.json(await listDraftChoices(c.get("services"), c.get("actor"), c.req.valid("query")), 200),
+  )
+  .get("/drafts/:id", async (c) =>
+    c.json(
+      instructionResponse(
+        await getDraft(c.get("services"), c.get("actor"), c.req.param("id")),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
+  )
+  .put("/drafts/:id", validate(draftUpdateSchema), async (c) =>
+    c.json(
+      instructionResponse(
         await updateDraft(
           c.get("services"),
           c.get("actor"),
           c.req.param("id"),
           c.req.valid("json"),
         ),
-        200,
+        c.req.header("X-Tablecast-Instructions"),
       ),
+      200,
+    ),
   )
   .post("/drafts/:id/validate", validate(versionSchema), async (c) =>
     c.json(
-      await validateDraft(
-        c.get("services"),
-        c.get("actor"),
-        c.req.param("id"),
-        c.req.valid("json").expectedVersion,
+      instructionResponse(
+        await validateDraft(
+          c.get("services"),
+          c.get("actor"),
+          c.req.param("id"),
+          c.req.valid("json").expectedVersion,
+        ),
+        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),
   )
   .post("/drafts/:id/discard", validate(versionSchema), async (c) =>
     c.json(
-      await discardDraft(
-        c.get("services"),
-        c.get("actor"),
-        c.req.param("id"),
-        c.req.valid("json").expectedVersion,
+      instructionResponse(
+        await discardDraft(
+          c.get("services"),
+          c.get("actor"),
+          c.req.param("id"),
+          c.req.valid("json").expectedVersion,
+        ),
+        c.req.header("X-Tablecast-Instructions"),
       ),
       200,
     ),
   )
-  .post(
-    "/drafts/:id/publish",
-    validate(
-      z
-        .object({
-          expectedVersion: z.number().int(),
-          baseVersion: z.number().int(),
-          idempotencyKey: z.string().min(8).max(100),
-          approved: z.literal(true),
-        })
-        .strict(),
-    ),
-    async (c) =>
-      c.json(
+  .post("/drafts/:id/publish", validate(draftPublishSchema), async (c) =>
+    c.json(
+      instructionResponse(
         await publishDraft(
           c.get("services"),
           c.get("actor"),
           c.req.param("id"),
           c.req.valid("json"),
         ),
-        200,
+        c.req.header("X-Tablecast-Instructions"),
       ),
+      200,
+    ),
   );

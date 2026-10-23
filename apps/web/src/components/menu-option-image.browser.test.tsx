@@ -7,7 +7,7 @@ import { MenuOptionImage } from "./menu-option-image";
 
 it("hydration前に失敗したSSR画像も代替表示へ切り替える", async () => {
   const content = (
-    <LocaleProvider initialLocale="ja">
+    <LocaleProvider initialLocale="ja" persist={false}>
       <MenuOptionImage
         imageKey="tablecast/images/tablecast-missing-before-hydration.webp"
         imageKind="illustration"

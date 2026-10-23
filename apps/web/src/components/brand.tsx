@@ -13,6 +13,12 @@ const source = {
   symbol: { black: "tablecast-icon.svg", white: "tablecast-symbol-white.svg" },
 };
 
+/**
+ * TableCastの識別。
+ * variantはlogo/symbol、toneはblack/white。
+ * 文字入りか記号のみかを選び、背景とのコントラストを保つ。
+ * 店舗のロゴはStoreLogoへ渡す。
+ */
 export function Brand({
   variant = "logo",
   tone = "black",

@@ -1,7 +1,41 @@
+import { access, readFile } from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
-import { preparePwaClients } from "./pwa-update";
+import { z } from "zod";
+import { canReloadPwaClient, preparePwaClients } from "./pwa-update";
 
 afterEach(() => vi.useRealTimers());
+
+it("承認したSWの切替がロック期限後でも、安全な画面へ一度だけ反映する", () => {
+  const previous = {};
+  const next = {};
+  const state = {
+    preparedController: previous,
+    controller: next,
+    locked: false,
+    ready: true,
+    reloading: false,
+  };
+  expect(canReloadPwaClient(state)).toBe(true);
+  // 期限後に未保存入力や送信が始まった画面は、その完了まで待つ。
+  expect(canReloadPwaClient({ ...state, ready: false })).toBe(false);
+  expect(canReloadPwaClient({ ...state, reloading: true })).toBe(false);
+});
+
+it("初回のcontroller取得・切替前・取消済みの更新ではreloadしない", () => {
+  const previous = {};
+  const state = {
+    preparedController: previous,
+    controller: previous,
+    locked: false,
+    ready: true,
+    reloading: false,
+  };
+  expect(canReloadPwaClient(state)).toBe(false);
+  expect(canReloadPwaClient({ ...state, preparedController: undefined, controller: {} })).toBe(
+    false,
+  );
+  expect(canReloadPwaClient({ ...state, controller: null })).toBe(false);
+});
 function client(id: string, answer: unknown) {
   return {
     id,
@@ -30,4 +64,30 @@ it("休止中など応答のない画面があると更新を待機する", asyn
   await vi.advanceTimersByTimeAsync(3000);
   // Then: 応答なしを安全と見なさない。
   expect(await result).toBe(false);
+});
+
+it.each([
+  { kind: "kiosk", start: "/" },
+  { kind: "staff", start: "/admin/live" },
+  { kind: "customer", start: "/member" },
+])("$kindのmanifestは入口と識別子を分け、実在するPNGを参照する", async ({ kind, start }) => {
+  const directory = new URL("../../public/", import.meta.url);
+  const manifest = z
+    .object({
+      id: z.string(),
+      start_url: z.string(),
+      display: z.string(),
+      icons: z.array(z.object({ src: z.string(), type: z.string() })).min(1),
+    })
+    .parse(JSON.parse(await readFile(new URL(`tablecast-${kind}.webmanifest`, directory), "utf8")));
+  expect(manifest).toMatchObject({
+    id: `/tablecast-${kind}`,
+    start_url: start,
+    display: "standalone",
+  });
+  for (const icon of manifest.icons) {
+    expect(icon.src).toMatch(/^\/icons\/tablecast-\d+\.png$/);
+    expect(icon.type).toBe("image/png");
+    await access(new URL(`.${icon.src}`, directory));
+  }
 });

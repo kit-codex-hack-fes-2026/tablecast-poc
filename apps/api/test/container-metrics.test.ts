@@ -1,5 +1,6 @@
-import { z } from "zod";
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { deploymentOptions, deploymentTarget } from "../../../scripts/tablecast-deploy-config";
 import { collectContainerMetrics } from "../src/platform/container-metrics";
 
 const bindings = {
@@ -39,80 +40,108 @@ const exportSchema = z.object({
 
 afterEach(() => vi.restoreAllMocks());
 
-it("実指標を取得したときPR・instance・観測時刻を保ち、未報告値だけを送信しない", async () => {
-  // Given: CPUの実測ゼロと未報告のメモリ、ミリ秒単位の稼働時間。
-  const fetch = vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValueOnce(Response.json({ success: true, result: [application] }))
-    .mockResolvedValueOnce(
-      Response.json({
-        data: { viewer: { accounts: [{ containersMetricsAdaptiveGroups: [row] }] } },
-        errors: null,
+it.each([deploymentTarget("123"), deploymentTarget(undefined, "staging")])(
+  "$environment配備で生成したContainer名から実指標を取得し、環境・instance・観測時刻を保つ",
+  async (target) => {
+    // Given: 実際の配備設定が生成する対象名と環境属性。
+    const { vars } = deploymentOptions(
+      target,
+      bindings.TABLECAST_RELEASE_SHA,
+      "00000000-0000-4000-8000-000000000000",
+    ).api;
+    const env = {
+      ...bindings,
+      TABLECAST_ENV: vars.TABLECAST_ENV,
+      TABLECAST_PR_NUMBER: vars.TABLECAST_PR_NUMBER,
+      TABLECAST_CONTAINER_METRICS_APPLICATIONS: vars.TABLECAST_CONTAINER_METRICS_APPLICATIONS,
+    };
+    const name = z
+      .tuple([z.string()])
+      .parse(JSON.parse(env.TABLECAST_CONTAINER_METRICS_APPLICATIONS ?? "[]"))[0];
+    const deployedApplication = { ...application, name };
+    // Given: CPUの実測ゼロと未報告のメモリ、ミリ秒単位の稼働時間。
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ success: true, result: [deployedApplication] }))
+      .mockResolvedValueOnce(
+        Response.json({
+          data: { viewer: { accounts: [{ containersMetricsAdaptiveGroups: [row] }] } },
+          errors: null,
+        }),
+      )
+      .mockImplementationOnce(async () => {
+        // 全件受理が返る前には成功heartbeatを送らない。
+        expect(fetch).toHaveBeenCalledTimes(3);
+        return Response.json({});
+      })
+      .mockResolvedValueOnce(Response.json({}));
+    // When: 5分遅延した完了済みの窓を収集する。
+    await collectContainerMetrics(env, scheduledTime);
+    // Then: Container自身へリクエストせず、正式なmetrics APIからOTLPへ送る。
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      `https://api.cloudflare.com/client/v4/accounts/${bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID}/containers/applications?name=${name}`,
+      "https://api.cloudflare.com/client/v4/graphql",
+      "https://tablecast-collector.test/otlp/v1/metrics",
+      "https://tablecast-collector.test/otlp/v1/metrics",
+    ]);
+    const query = z
+      .object({ query: z.string(), variables: z.unknown() })
+      .parse(JSON.parse(z.string().parse(fetch.mock.calls[1]?.[1]?.body)));
+    expect(query.variables).toEqual({
+      account: bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID,
+      start: "2026-09-10T14:20:00Z",
+      end: "2026-09-10T14:25:00Z",
+      applications: [application.id],
+    });
+    expect(query.query).toContain("containersMetricsAdaptiveGroups");
+    expect(query.query).not.toContain("containersUsageAdaptiveGroups");
+    const body = z.string().parse(fetch.mock.calls[2]?.[1]?.body);
+    const exported = exportSchema.parse(JSON.parse(body));
+    expect(exported.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "tablecast_container_cpu_utilization",
+          gauge: {
+            dataPoints: [
+              expect.objectContaining({ asDouble: 0, timeUnixNano: "1789050000000000000" }),
+            ],
+          },
+        }),
+        expect.objectContaining({
+          name: "tablecast_container_uptime_seconds",
+          gauge: { dataPoints: [expect.objectContaining({ asDouble: 120 })] },
+        }),
+      ]),
+    );
+    expect(body).toContain(
+      JSON.stringify({ key: "tablecast_pr_number", value: { stringValue: target.pr ?? "prod" } }),
+    );
+    expect(body).toContain(
+      JSON.stringify({
+        key: "deployment_environment_name",
+        value: { stringValue: target.environment },
       }),
-    )
-    .mockImplementationOnce(async () => {
-      // 全件受理が返る前には成功heartbeatを送らない。
-      expect(fetch).toHaveBeenCalledTimes(3);
-      return Response.json({});
-    })
-    .mockResolvedValueOnce(Response.json({}));
-  // When: 5分遅延した完了済みの窓を収集する。
-  await collectContainerMetrics(bindings, scheduledTime);
-  // Then: Container自身へリクエストせず、正式なmetrics APIからOTLPへ送る。
-  expect(fetch.mock.calls.map(([url]) => url)).toEqual([
-    `https://api.cloudflare.com/client/v4/accounts/${bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID}/containers/applications?name=${application.name}`,
-    "https://api.cloudflare.com/client/v4/graphql",
-    "https://tablecast-collector.test/otlp/v1/metrics",
-    "https://tablecast-collector.test/otlp/v1/metrics",
-  ]);
-  const query = z
-    .object({ query: z.string(), variables: z.unknown() })
-    .parse(JSON.parse(z.string().parse(fetch.mock.calls[1]?.[1]?.body)));
-  expect(query.variables).toEqual({
-    account: bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID,
-    start: "2026-09-10T14:20:00Z",
-    end: "2026-09-10T14:25:00Z",
-    applications: [application.id],
-  });
-  expect(query.query).toContain("containersMetricsAdaptiveGroups");
-  expect(query.query).not.toContain("containersUsageAdaptiveGroups");
-  const body = z.string().parse(fetch.mock.calls[2]?.[1]?.body);
-  const exported = exportSchema.parse(JSON.parse(body));
-  expect(exported.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        name: "tablecast_container_cpu_utilization",
-        gauge: {
-          dataPoints: [
-            expect.objectContaining({ asDouble: 0, timeUnixNano: "1789050000000000000" }),
-          ],
-        },
+    );
+    expect(body).toContain(
+      JSON.stringify({
+        key: "cloudflare_instance_id",
+        value: { stringValue: "tablecast-instance" },
       }),
-      expect.objectContaining({
-        name: "tablecast_container_uptime_seconds",
-        gauge: { dataPoints: [expect.objectContaining({ asDouble: 120 })] },
-      }),
-    ]),
-  );
-  expect(body).toContain(
-    JSON.stringify({ key: "tablecast_pr_number", value: { stringValue: "123" } }),
-  );
-  expect(body).toContain(
-    JSON.stringify({ key: "cloudflare_instance_id", value: { stringValue: "tablecast-instance" } }),
-  );
-  expect(body).not.toContain("memory_bytes");
-  expect(body).not.toContain("secret");
-  expect(body).not.toContain("collector_success");
-  const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[3]?.[1]?.body)));
-  expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        name: "tablecast_container_collector_success",
-        gauge: { dataPoints: [expect.objectContaining({ asDouble: 1 })] },
-      }),
-    ]),
-  );
-});
+    );
+    expect(body).not.toContain("memory_bytes");
+    expect(body).not.toContain("secret");
+    expect(body).not.toContain("collector_success");
+    const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[3]?.[1]?.body)));
+    expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "tablecast_container_collector_success",
+          gauge: { dataPoints: [expect.objectContaining({ asDouble: 1 })] },
+        }),
+      ]),
+    );
+  },
+);
 
 it.each([
   "停止中でサンプルなし",
@@ -190,6 +219,61 @@ it.each(["HTTP拒否", "部分拒否", "送信例外"])("OTLPの%sを成功と�
   expect(fetch).toHaveBeenCalledTimes(4);
   expect(z.string().parse(fetch.mock.calls[2]?.[1]?.body)).not.toContain("collector_success");
   const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[3]?.[1]?.body)));
+  expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual([
+    expect.objectContaining({
+      name: "tablecast_container_collector_success",
+      gauge: { dataPoints: [expect.objectContaining({ asDouble: 0 })] },
+    }),
+  ]);
+});
+
+it.each([
+  "other-api-staging-tablecastemulate",
+  "tablecast-api-staging-other",
+  "tablecast-api-staging-pr-123-tablecastemulate",
+  "tablecast-api-pr-0-tablecastemulate",
+  "tablecast-api-staging-tablecastemulate-extra",
+])("対象外の名前 %s はCloudflareへ送らず収集失敗を報告する", async (name) => {
+  // Given: 配備規約に合わない対象名。送信先だけは失敗状態を受理する。
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(Response.json({}));
+  // When / Then: 名前検証で止まり、成功heartbeatも実指標も送らない。
+  await expect(
+    collectContainerMetrics(
+      {
+        ...bindings,
+        TABLECAST_CONTAINER_METRICS_APPLICATIONS: JSON.stringify([name]),
+      },
+      scheduledTime,
+    ),
+  ).rejects.toThrow("Container指標を取得できませんでした。");
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(fetch.mock.calls[0]?.[0]).toBe("https://tablecast-collector.test/otlp/v1/metrics");
+  const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[0]?.[1]?.body)));
+  expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual([
+    expect.objectContaining({
+      name: "tablecast_container_collector_success",
+      gauge: { dataPoints: [expect.objectContaining({ asDouble: 0 })] },
+    }),
+  ]);
+});
+
+it("Cloudflareの認証拒否を成功として扱わず、失敗状態だけを送る", async () => {
+  // Given: Application一覧取得の認証が拒否される。
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const fetch = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(new Response(null, { status: 403 }))
+    .mockResolvedValueOnce(Response.json({}));
+  // When / Then: GraphQLへ進まず、収集失敗をOTLPへ送る。
+  await expect(collectContainerMetrics(bindings, scheduledTime)).rejects.toThrow(
+    "Container指標を取得できませんでした。",
+  );
+  expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+    `https://api.cloudflare.com/client/v4/accounts/${bindings.TABLECAST_CLOUDFLARE_ACCOUNT_ID}/containers/applications?name=${application.name}`,
+    "https://tablecast-collector.test/otlp/v1/metrics",
+  ]);
+  const health = exportSchema.parse(JSON.parse(z.string().parse(fetch.mock.calls[1]?.[1]?.body)));
   expect(health.resourceMetrics[0]?.scopeMetrics[0]?.metrics).toEqual([
     expect.objectContaining({
       name: "tablecast_container_collector_success",

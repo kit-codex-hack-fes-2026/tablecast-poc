@@ -3,9 +3,9 @@ import { expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   bootstrapDatabase,
-  bootstrapInputSchema,
   type BootstrapEnv,
   type BootstrapInput,
+  bootstrapInputSchema,
 } from "../src/bootstrap";
 import * as authTables from "../src/db/auth-schema";
 import { createAuth } from "../src/modules/auth/service";

@@ -1,6 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   resolve: { dedupe: ["react", "react-dom"] },
@@ -8,7 +8,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
     include: [
+      "@base-ui/react/popover",
       "@base-ui/react/slider",
+      "@better-auth/infra/client",
+      "@better-auth/stripe/client",
       "react",
       "react-dom",
       "react-dom/client",

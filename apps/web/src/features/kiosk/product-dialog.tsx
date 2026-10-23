@@ -1,68 +1,19 @@
-import { RadioGroup } from "@base-ui/react/radio-group";
 import type { CartLine, Product } from "@tablecast/api/schema";
+import { RadioGroup } from "@base-ui/react/radio-group";
 import { ArrowLeft, Minus, Plus } from "lucide-react";
-import { useId, useState } from "react";
-import { tv } from "tailwind-variants";
-import { MenuOptionImage } from "../../components/menu-option-image";
+import { useEffect, useId, useRef, useState } from "react";
+import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
+import { Money } from "../../components/money";
 import { ProductImage } from "../../components/product-image";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { RadioGroupItem } from "../../components/ui/radio-group";
-import { money } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
-import type { m } from "../../paraglide/messages.js";
-
-const allergenLabels: Partial<Record<string, keyof typeof m>> = {
-  crustaceans: "kiosk_allergen_crustaceans",
-  molluscs: "kiosk_allergen_molluscs",
-  buckwheat: "kiosk_allergen_buckwheat",
-  peanuts: "kiosk_allergen_peanuts",
-  mustard: "kiosk_allergen_mustard",
-  fish: "kiosk_allergen_fish",
-  wheat: "kiosk_allergen_wheat",
-  soya: "kiosk_allergen_soya",
-  egg: "kiosk_allergen_egg",
-  sesame: "kiosk_allergen_sesame",
-  prawn: "kiosk_allergen_prawn",
-  barley: "kiosk_allergen_barley",
-  milk: "kiosk_allergen_milk",
-};
-
-const optionRow = tv({
-  base: "flex min-h-14 min-w-0 items-center gap-3 rounded-lg border border-transparent p-3 text-base",
-  variants: { selected: { true: "border-primary bg-surface-subtle" } },
-});
-
-function OptionContent({
-  option,
-  locale,
-  id,
-}: {
-  option: Product["modifiers"][number]["options"][number];
-  locale: "ja" | "en";
-  id: string;
-}) {
-  return (
-    <span className="flex min-w-0 flex-1 items-center gap-3">
-      <MenuOptionImage imageKey={option.imageKey} imageKind={option.imageKind} />
-      <span className="min-w-0">
-        <span id={`${id}-name`} className="block font-medium wrap-break-word">
-          {option.text[locale].displayName}
-        </span>
-        {option.text[locale].description && (
-          <span
-            id={`${id}-description`}
-            className="mt-1 block text-sm leading-relaxed text-muted-foreground wrap-break-word"
-          >
-            {option.text[locale].description}
-          </span>
-        )}
-      </span>
-    </span>
-  );
-}
+import { ProductAllergens } from "./product-allergens";
+import { OptionContent } from "./product-option-content";
+import { optionRow } from "./product-option-model";
 
 export function ProductPage({
   product,
@@ -72,15 +23,19 @@ export function ProductPage({
   onClose,
   onSave,
 }: {
-  product: Product;
-  initial?: CartLine;
   busy: boolean;
   error?: unknown;
+  initial?: CartLine;
   onClose: () => void;
   onSave: (line: CartLine) => void;
+  product: Product;
 }) {
   const { locale, t } = useI18n();
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const [selections, setSelections] = useState<CartLine["selections"]>(initial?.selections ?? []);
   function select(optionId: string, amount: number, replaceIds: string[] = []) {
@@ -104,15 +59,19 @@ export function ProductPage({
             priority
             width={640}
             height={640}
-            sizes="(min-width: 640px) 70vw, 100vw"
+            sizes="(min-width: 640px) 80vw, 100vw"
             className="mb-3 aspect-square w-full rounded-xl object-contain"
             src={`/media/${product.imageKey}`}
             alt={product.text[locale].displayName}
           />
         )}
-        <h2 className="text-lg font-semibold">{product.text[locale].displayName}</h2>
+        <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
+          {product.text[locale].displayName}
+        </h2>
         <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
-        <div className="my-3 text-lg font-semibold">{money(product.price, locale)}</div>
+        <div className="my-3 text-lg font-semibold">
+          <Money value={product.price} />
+        </div>
         {product.modifiers.map((group, groupIndex) => (
           <fieldset className="border-t border-t-border pt-5 px-0 pb-0.5 mb-4" key={group.id}>
             <legend className="flex items-center justify-between gap-3 w-full text-sm font-semibold pt-3.5">
@@ -172,11 +131,13 @@ export function ProductPage({
                       id={`${id}-${groupIndex}-${optionIndex}-price`}
                       className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
                     >
-                      {!option.available
-                        ? t("kiosk_sold_out")
-                        : option.priceDelta !== 0
-                          ? money(option.priceDelta, locale)
-                          : ""}
+                      {!option.available ? (
+                        t("kiosk_sold_out")
+                      ) : option.priceDelta !== 0 ? (
+                        <Money value={option.priceDelta} />
+                      ) : (
+                        ""
+                      )}
                     </small>
                   </label>
                 ))}
@@ -220,11 +181,13 @@ export function ProductPage({
                       id={`${id}-${groupIndex}-${optionIndex}-price`}
                       className="ml-auto text-sm whitespace-nowrap text-muted-foreground"
                     >
-                      {!option.available
-                        ? t("kiosk_sold_out")
-                        : option.priceDelta !== 0
-                          ? money(option.priceDelta, locale)
-                          : ""}
+                      {!option.available ? (
+                        t("kiosk_sold_out")
+                      ) : option.priceDelta !== 0 ? (
+                        <Money value={option.priceDelta} />
+                      ) : (
+                        ""
+                      )}
                     </small>
                     {group.kind === "quantity" && (
                       <div
@@ -232,7 +195,7 @@ export function ProductPage({
                         className="inline-flex items-center border border-border rounded-md shrink-0"
                       >
                         <Button
-                          className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+                          className="flex items-center justify-center w-11 min-h-14"
                           variant="ghost"
                           type="button"
                           aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -244,7 +207,7 @@ export function ProductPage({
                         </Button>
                         <output className="text-center text-base min-w-7">{amount}</output>
                         <Button
-                          className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+                          className="flex items-center justify-center w-11 min-h-14"
                           variant="ghost"
                           type="button"
                           aria-describedby={`${id}-${groupIndex}-${optionIndex}-price ${option.text[locale].description ? `${id}-${groupIndex}-${optionIndex}-description` : ""}`}
@@ -262,40 +225,40 @@ export function ProductPage({
             )}
           </fieldset>
         ))}
-        <div className="bg-surface-subtle rounded-md p-4 mt-1">
-          <h3 className="text-xs mb-2">{t("kiosk_allergens")}</h3>
-          <p className="mb-2 text-sm font-semibold">
-            {product.allergens.contains
-              .map((item) => {
-                const key = allergenLabels[item];
-                return key ? t(key) : item;
-              })
-              .join(t("kiosk_allergen_separator")) ||
-              (product.allergens.evidence === "verified"
-                ? t("kiosk_allergens_none")
-                : t("kiosk_unknown"))}
-          </p>
-          <p className="block text-xs leading-loose text-muted-foreground">
-            {product.allergens.note[locale] || t("kiosk_unknown")}
-          </p>
-          {product.allergens.vegan === "yes" && (
-            <p className="block text-xs leading-loose text-muted-foreground">{t("kiosk_vegan")}</p>
-          )}
-          {product.allergens.crossContact !== "controlled" && !product.allergens.note[locale] && (
-            <p className="block text-xs leading-loose text-muted-foreground">
-              {t("kiosk_cross_contact")}
-            </p>
-          )}
-        </div>
+        <ProductAllergens product={product} />
       </div>
+      {product.modifiers.flatMap((group) =>
+        group.options.map((option) =>
+          option.conditions && selections.some((selection) => selection.optionId === option.id) ? (
+            <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
+              <p className="font-semibold">{option.text[locale].displayName}</p>
+              {option.conditions?.requires && (
+                <p>
+                  {t("condition_requires")}：
+                  <ConditionSummary expression={option.conditions.requires} product={product} />
+                </p>
+              )}
+              {option.conditions?.excludes && (
+                <p>
+                  {t("condition_excludes")}：
+                  <ConditionSummary expression={option.conditions.excludes} product={product} />
+                </p>
+              )}
+            </div>
+          ) : null,
+        ),
+      )}
       <ErrorNotice error={error} />
-      <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3">
+      <div
+        data-theme-part="checkout"
+        className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3"
+      >
         <div
           data-ui="quantity-control"
           className="inline-flex items-center border border-border rounded-md shrink-0"
         >
           <Button
-            className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+            className="flex items-center justify-center w-11 min-h-14"
             variant="ghost"
             type="button"
             aria-label={t("common_decrease")}
@@ -308,7 +271,7 @@ export function ProductPage({
             {quantity}
           </output>
           <Button
-            className="flex items-center justify-center w-11 min-h-14 max-sm:w-9"
+            className="flex items-center justify-center w-11 min-h-14"
             variant="ghost"
             type="button"
             aria-label={t("common_increase")}
@@ -319,6 +282,8 @@ export function ProductPage({
           </Button>
         </div>
         <Button
+          data-theme-part="action-button"
+          className="h-auto min-h-14 min-w-0 flex-1 shrink whitespace-normal px-3 py-2"
           variant="default"
           size="lg"
           type="button"

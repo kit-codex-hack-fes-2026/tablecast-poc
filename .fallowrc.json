@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "entry": [
+    "apps/*/cloudflare.config.ts",
+    "apps/*/oxlint.config.ts",
+    "apps/api/auth.config.ts",
+    "apps/api/test/setup.ts",
+    "apps/presentation/styles.css",
+    "apps/web/src/sw.ts",
+    "scripts/tablecast-changed-vitest.ts",
+    "scripts/tablecast-demo.ts",
+    "scripts/tablecast-grafana-mcp.ts",
+    "scripts/tablecast-plugin.ts",
+    "apps/api/src/worker.ts"
+  ],
+  "ignorePatterns": [
+    "**/worker-configuration.d.ts",
+    "**/src/cloudflare-env.d.ts",
+    "**/src/routeTree.gen.ts",
+    "**/src/paraglide/**"
+  ],
+  "usedClassMembers": [
+    {
+      "extends": "DurableObject",
+      "members": ["start", "notify"]
+    }
+  ],
+  "ignoreDependencies": [
+    "@tablecast/typescript-native",
+    "eslint-import-resolver-typescript",
+    "portless"
+  ],
+  "rules": {
+    "complexity-cyclomatic": "warn",
+    "complexity-cognitive": "warn",
+    "complexity-crap": "warn"
+  },
+  "audit": {
+    "gate": "new-only"
+  },
+  "failOnParseError": true,
+  "ignoreExports": [
+    {
+      "file": "apps/web/src/components/ui/disclosure.tsx",
+      "exports": ["Root", "Panel"]
+    },
+    {
+      "file": "apps/web/src/components/ui/tabs.tsx",
+      "exports": ["Root", "Panel"]
+    }
+  ]
+}

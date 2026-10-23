@@ -4,7 +4,7 @@ Better Auth がメール、Google OAuth、パスキー、組織、OAuth Provider
 
 ## ローカル
 
-`bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。URL・ポートは `.local/runtime.json`、メール一覧はその `ports.mailpit` の `http://127.0.0.1:<port>`。既存データは保持する。
+`bun run dev:parity` または `bun run dev` が vercel/emulate の Google サービスと Mailpit を起動する。実 Google アカウントや SMTP 認証情報は不要。ホスト開発は `http://oauth.<worktree名>.tablecast-poc.localhost` と `http://mailpit.<worktree名>.tablecast-poc.localhost` を使い、APIも同じ名前へ接続する。APIは開発環境に限り `.localhost` の模擬OAuthを許可する。Dockerの実ポートはPortless aliasへ渡し、runtimeへ保存しない。名前の変更時はdevと旧Composeを停止し、`bun run demo:reset` でこのworktreeの開発データを作り直す。
 
 Googleの選択画面では[デモの共通名簿](../apps/emulate/src/tablecast-demo-identities.ts)にある架空の8人と、未所属の連携確認用ユーザーを、氏名・所属役割・アイコン付きで選べる。新規のローカル管理者資格情報は名簿のメールを使い、`.local/demo.json`へ保存する。通常の再seedではパスワードと手動メールを維持し、既知の旧デモメールだけを移行する。明示リセットではownerのメールを共通名簿へ揃え、パスワードは維持する。デモseedだけが開発用管理者のメールを確認済みにする。
 
@@ -72,4 +72,12 @@ PWAの新規ドキュメント起動は転送元のセッション・所属店�
 
 ## stagingの認証
 
-stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[Accessの経路分離](deployment.md#remote-mcpのaccess)を参照する。
+stagingはPR previewと共通のGoogle emulatorを専用Containerで利用する。固定originと環境名を照合し、本番へのemulator混入は拒否する。通常配備ではD1と認証secretを保持するためログイン・MCP認可が維持される。全体リセット後は旧tokenを拒否し、再ログインと再認可が必要。[stagingの公開](deployment.md#stagingの公開とremote-mcp)を参照する。
+
+## 客向け会員
+
+`/member`は共通のBetter Authログインから利用する。`customer_memberships`の店舗別会員はスタッフの組織所属と別で、入会で管理権限を付与しない。初回同意の版と各許可・更新版を保存する。入会の再送は既存の同意撤回を変更しない。設定の更新・退会は会員本人と店舗・更新版を確認する。会員APIとSSRはprivate/no-storeで応答する。[会員仕様](membership.md)を参照する。
+
+## 組織課金の認可
+
+Better Auth公式Stripe pluginは組織をreferenceにする。店舗作成serviceのD1 batchが組織・owner・店舗とAIキー発行待ちを保存する。memberは利用量だけ、owner/adminは契約操作と請求を利用する。pluginの`authorizeReference`もowner/adminに限定し、ユーザー個人の契約要求は拒否する。Stripe顧客IDはuserとorganizationの追加fieldで入力不可・公開応答へ非返却とする。運営収支は別のユーザーID allowlistで認可する。詳細は [課金・請求](billing.md) を参照する。

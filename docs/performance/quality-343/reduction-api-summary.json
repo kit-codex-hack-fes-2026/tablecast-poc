@@ -1,0 +1,1292 @@
+{
+  "baselineSha": "0b3ff9613ce11b929201771b7cb2ee7bc21531fa",
+  "after": "final RC5 implementation; final commit in PR #344",
+  "environment": "macOS arm64; local workerd real migrated D1/DO; Node24.22.0; Bun1.4.3; before Drizzle0.45.4, after Drizzle1.0.0-rc.5; separate locked dependencies; no paid model",
+  "conditions": "Identical tracked fixture per source revision; maxWorkers=1; five independent runner/Worker launches per version. Per scale and path first observation +30 warm observations per launch. Scale100 follows fixture reset within same file Worker, not five process-cold observations. Same fixture/cache policy, no concurrent performance benchmark.",
+  "summary": [
+    {
+      "stage": "before",
+      "target": "home",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 13,
+          "p95": 15,
+          "min": 12,
+          "max": 15
+        },
+        "bindingMs": {
+          "p50": 3,
+          "p95": 5,
+          "min": 2,
+          "max": 5
+        },
+        "nonBindingWallMs": {
+          "p50": 11,
+          "p95": 12,
+          "min": 7,
+          "max": 12
+        },
+        "sqlMsFromBatches": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 6.0,
+          "p95": 13,
+          "min": 4,
+          "max": 15
+        },
+        "bindingMs": {
+          "p50": 3.0,
+          "p95": 9,
+          "min": 1,
+          "max": 11
+        },
+        "nonBindingWallMs": {
+          "p50": 3.0,
+          "p95": 5,
+          "min": 1,
+          "max": 6
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19.0,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13.0,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491.0,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "target": "home",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 8,
+          "p95": 8,
+          "min": 7,
+          "max": 8
+        },
+        "bindingMs": {
+          "p50": 4,
+          "p95": 6,
+          "min": 3,
+          "max": 6
+        },
+        "nonBindingWallMs": {
+          "p50": 4,
+          "p95": 5,
+          "min": 2,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 1,
+          "p95": 1,
+          "min": 1,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 6.0,
+          "p95": 12,
+          "min": 5,
+          "max": 15
+        },
+        "bindingMs": {
+          "p50": 3.0,
+          "p95": 9,
+          "min": 1,
+          "max": 10
+        },
+        "nonBindingWallMs": {
+          "p50": 3.0,
+          "p95": 5,
+          "min": 1,
+          "max": 6
+        },
+        "sqlMsFromBatches": {
+          "p50": 1.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19.0,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13.0,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491.0,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "target": "order",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 9,
+          "p95": 12,
+          "min": 8,
+          "max": 12
+        },
+        "bindingMs": {
+          "p50": 4,
+          "p95": 5,
+          "min": 1,
+          "max": 5
+        },
+        "nonBindingWallMs": {
+          "p50": 6,
+          "p95": 9,
+          "min": 3,
+          "max": 9
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 892,
+          "p95": 892,
+          "min": 892,
+          "max": 892
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 3.0,
+          "p95": 5,
+          "min": 2,
+          "max": 11
+        },
+        "bindingMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 0,
+          "max": 7
+        },
+        "nonBindingWallMs": {
+          "p50": 2.0,
+          "p95": 4,
+          "min": 0,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 15.0,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12.0,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 894.0,
+          "p95": 894,
+          "min": 892,
+          "max": 894
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "target": "order",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "bindingMs": {
+          "p50": 3,
+          "p95": 4,
+          "min": 1,
+          "max": 4
+        },
+        "nonBindingWallMs": {
+          "p50": 2,
+          "p95": 4,
+          "min": 1,
+          "max": 4
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 30590,
+          "p95": 30590,
+          "min": 30590,
+          "max": 30590
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 4.0,
+          "p95": 7,
+          "min": 3,
+          "max": 10
+        },
+        "bindingMs": {
+          "p50": 2.0,
+          "p95": 4,
+          "min": 0,
+          "max": 6
+        },
+        "nonBindingWallMs": {
+          "p50": 2.0,
+          "p95": 4,
+          "min": 0,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 15.0,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12.0,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 30592.0,
+          "p95": 30592,
+          "min": 30590,
+          "max": 30592
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "target": "table.read",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 5,
+          "p95": 7,
+          "min": 5,
+          "max": 7
+        },
+        "bindingMs": {
+          "p50": 2,
+          "p95": 2,
+          "min": 1,
+          "max": 2
+        },
+        "nonBindingWallMs": {
+          "p50": 4,
+          "p95": 5,
+          "min": 3,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 10,
+          "p95": 10,
+          "min": 10,
+          "max": 10
+        },
+        "roundtrips": {
+          "p50": 2,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 2609,
+          "p95": 2609,
+          "min": 2609,
+          "max": 2609
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 1,
+          "max": 9
+        },
+        "bindingMs": {
+          "p50": 1.0,
+          "p95": 2,
+          "min": 0,
+          "max": 9
+        },
+        "nonBindingWallMs": {
+          "p50": 1.0,
+          "p95": 3,
+          "min": 0,
+          "max": 3
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 10.0,
+          "p95": 10,
+          "min": 10,
+          "max": 10
+        },
+        "roundtrips": {
+          "p50": 2.0,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8.0,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 2609.0,
+          "p95": 2609,
+          "min": 2609,
+          "max": 2609
+        }
+      }
+    },
+    {
+      "stage": "before",
+      "target": "table.read",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 4,
+          "p95": 4,
+          "min": 3,
+          "max": 4
+        },
+        "bindingMs": {
+          "p50": 1,
+          "p95": 2,
+          "min": 1,
+          "max": 2
+        },
+        "nonBindingWallMs": {
+          "p50": 3,
+          "p95": 3,
+          "min": 2,
+          "max": 3
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0
+        },
+        "rowsReadFromBatches": {
+          "p50": 307,
+          "p95": 307,
+          "min": 307,
+          "max": 307
+        },
+        "roundtrips": {
+          "p50": 2,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 86930,
+          "p95": 86930,
+          "min": 86930,
+          "max": 86930
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 3.0,
+          "p95": 6,
+          "min": 2,
+          "max": 7
+        },
+        "bindingMs": {
+          "p50": 1.0,
+          "p95": 3,
+          "min": 1,
+          "max": 6
+        },
+        "nonBindingWallMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 0,
+          "max": 6
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 307.0,
+          "p95": 307,
+          "min": 307,
+          "max": 307
+        },
+        "roundtrips": {
+          "p50": 2.0,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8.0,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 86930.0,
+          "p95": 86930,
+          "min": 86930,
+          "max": 86930
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "home",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 12,
+          "p95": 14,
+          "min": 11,
+          "max": 14
+        },
+        "bindingMs": {
+          "p50": 3,
+          "p95": 4,
+          "min": 1,
+          "max": 4
+        },
+        "nonBindingWallMs": {
+          "p50": 10,
+          "p95": 11,
+          "min": 7,
+          "max": 11
+        },
+        "sqlMsFromBatches": {
+          "p50": 1,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 5.0,
+          "p95": 14,
+          "min": 4,
+          "max": 26
+        },
+        "bindingMs": {
+          "p50": 3.0,
+          "p95": 11,
+          "min": 0,
+          "max": 23
+        },
+        "nonBindingWallMs": {
+          "p50": 3.0,
+          "p95": 4,
+          "min": 1,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19.0,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13.0,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491.0,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "home",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 8,
+          "p95": 16,
+          "min": 7,
+          "max": 16
+        },
+        "bindingMs": {
+          "p50": 4,
+          "p95": 13,
+          "min": 2,
+          "max": 13
+        },
+        "nonBindingWallMs": {
+          "p50": 4,
+          "p95": 5,
+          "min": 3,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 1,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 19,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 5.0,
+          "p95": 12,
+          "min": 4,
+          "max": 45
+        },
+        "bindingMs": {
+          "p50": 3.0,
+          "p95": 9,
+          "min": 1,
+          "max": 13
+        },
+        "nonBindingWallMs": {
+          "p50": 2.0,
+          "p95": 4,
+          "min": 0,
+          "max": 41
+        },
+        "sqlMsFromBatches": {
+          "p50": 1.0,
+          "p95": 1,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 19.0,
+          "p95": 19,
+          "min": 19,
+          "max": 19
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 13.0,
+          "p95": 13,
+          "min": 13,
+          "max": 13
+        },
+        "bytes": {
+          "p50": 1491.0,
+          "p95": 1491,
+          "min": 1491,
+          "max": 1491
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "order",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 9,
+          "p95": 11,
+          "min": 8,
+          "max": 11
+        },
+        "bindingMs": {
+          "p50": 3,
+          "p95": 4,
+          "min": 0,
+          "max": 4
+        },
+        "nonBindingWallMs": {
+          "p50": 5,
+          "p95": 11,
+          "min": 4,
+          "max": 11
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 2,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 892,
+          "p95": 892,
+          "min": 892,
+          "max": 892
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 3.0,
+          "p95": 4,
+          "min": 2,
+          "max": 5
+        },
+        "bindingMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 0,
+          "max": 3
+        },
+        "nonBindingWallMs": {
+          "p50": 1.0,
+          "p95": 3,
+          "min": 0,
+          "max": 3
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 15.0,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12.0,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 894.0,
+          "p95": 894,
+          "min": 892,
+          "max": 894
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "order",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 4,
+          "p95": 6,
+          "min": 4,
+          "max": 6
+        },
+        "bindingMs": {
+          "p50": 2,
+          "p95": 4,
+          "min": 1,
+          "max": 4
+        },
+        "nonBindingWallMs": {
+          "p50": 2,
+          "p95": 3,
+          "min": 1,
+          "max": 3
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 15,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 30590,
+          "p95": 30590,
+          "min": 30590,
+          "max": 30590
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 4.0,
+          "p95": 6,
+          "min": 3,
+          "max": 7
+        },
+        "bindingMs": {
+          "p50": 2.0,
+          "p95": 4,
+          "min": 1,
+          "max": 5
+        },
+        "nonBindingWallMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 0,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 2
+        },
+        "rowsReadFromBatches": {
+          "p50": 15.0,
+          "p95": 15,
+          "min": 15,
+          "max": 15
+        },
+        "roundtrips": {
+          "p50": 5.0,
+          "p95": 5,
+          "min": 5,
+          "max": 5
+        },
+        "statements": {
+          "p50": 12.0,
+          "p95": 12,
+          "min": 12,
+          "max": 12
+        },
+        "bytes": {
+          "p50": 30592.0,
+          "p95": 30592,
+          "min": 30590,
+          "max": 30592
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "table.read",
+      "count": 1,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 6,
+          "p95": 6,
+          "min": 4,
+          "max": 6
+        },
+        "bindingMs": {
+          "p50": 1,
+          "p95": 2,
+          "min": 0,
+          "max": 2
+        },
+        "nonBindingWallMs": {
+          "p50": 4,
+          "p95": 5,
+          "min": 4,
+          "max": 5
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 0,
+          "min": 0,
+          "max": 0
+        },
+        "rowsReadFromBatches": {
+          "p50": 10,
+          "p95": 10,
+          "min": 10,
+          "max": 10
+        },
+        "roundtrips": {
+          "p50": 2,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 2609,
+          "p95": 2609,
+          "min": 2609,
+          "max": 2609
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 1.5,
+          "p95": 3,
+          "min": 1,
+          "max": 7
+        },
+        "bindingMs": {
+          "p50": 1.0,
+          "p95": 2,
+          "min": 0,
+          "max": 7
+        },
+        "nonBindingWallMs": {
+          "p50": 1.0,
+          "p95": 2,
+          "min": 0,
+          "max": 7
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 0,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 10.0,
+          "p95": 10,
+          "min": 10,
+          "max": 10
+        },
+        "roundtrips": {
+          "p50": 2.0,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8.0,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 2609.0,
+          "p95": 2609,
+          "min": 2609,
+          "max": 2609
+        }
+      }
+    },
+    {
+      "stage": "after",
+      "target": "table.read",
+      "count": 100,
+      "firstObservation": {
+        "n": 5,
+        "elapsedMs": {
+          "p50": 3,
+          "p95": 4,
+          "min": 3,
+          "max": 4
+        },
+        "bindingMs": {
+          "p50": 1,
+          "p95": 2,
+          "min": 1,
+          "max": 2
+        },
+        "nonBindingWallMs": {
+          "p50": 2,
+          "p95": 3,
+          "min": 1,
+          "max": 3
+        },
+        "sqlMsFromBatches": {
+          "p50": 0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 307,
+          "p95": 307,
+          "min": 307,
+          "max": 307
+        },
+        "roundtrips": {
+          "p50": 2,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 86930,
+          "p95": 86930,
+          "min": 86930,
+          "max": 86930
+        }
+      },
+      "warm": {
+        "n": 150,
+        "elapsedMs": {
+          "p50": 3.0,
+          "p95": 6,
+          "min": 2,
+          "max": 11
+        },
+        "bindingMs": {
+          "p50": 2.0,
+          "p95": 3,
+          "min": 1,
+          "max": 7
+        },
+        "nonBindingWallMs": {
+          "p50": 1.0,
+          "p95": 2,
+          "min": 0,
+          "max": 9
+        },
+        "sqlMsFromBatches": {
+          "p50": 0.0,
+          "p95": 1,
+          "min": 0,
+          "max": 1
+        },
+        "rowsReadFromBatches": {
+          "p50": 307.0,
+          "p95": 307,
+          "min": 307,
+          "max": 307
+        },
+        "roundtrips": {
+          "p50": 2.0,
+          "p95": 2,
+          "min": 2,
+          "max": 2
+        },
+        "statements": {
+          "p50": 8.0,
+          "p95": 8,
+          "min": 8,
+          "max": 8
+        },
+        "bytes": {
+          "p50": 86930.0,
+          "p95": 86930,
+          "min": 86930,
+          "max": 86930
+        }
+      }
+    }
+  ]
+}

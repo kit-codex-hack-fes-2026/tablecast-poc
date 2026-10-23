@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -9,7 +10,13 @@ import {
 } from "@tanstack/react-router";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
-import { Pwa } from "./pwa";
+import { page } from "vitest/browser";
+import { catalog, table } from "../../.storybook/tablecast-fixtures";
+import ja from "../../messages/ja.json";
+import { Kiosk } from "../features/kiosk/kiosk";
+import { LocaleProvider } from "../i18n/locale";
+import "../styles.css";
+import { Pwa, PwaInstallHelp } from "./pwa";
 
 // Worker登録だけを省略し、ページの判定・Query・Router・MessageChannelは実物を使う
 vi.mock("@serwist/window", () => ({
@@ -28,9 +35,10 @@ afterEach(async () => {
   client.clear();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
-async function mount(loader = async () => {}) {
+async function mount(loader = async () => {}, content: ReactNode = <main />, path = "/") {
   vi.stubEnv("PROD", true);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const root = createRootRoute({
@@ -41,11 +49,11 @@ async function mount(loader = async () => {}) {
       </>
     ),
   });
-  const home = createRoute({ getParentRoute: () => root, path: "/", component: () => <main /> });
+  const home = createRoute({ getParentRoute: () => root, path, component: () => content });
   const next = createRoute({ getParentRoute: () => root, path: "/login", loader });
   const router = createRouter({
     routeTree: root.addChildren([home, next]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();
   await render(
@@ -55,6 +63,67 @@ async function mount(loader = async () => {}) {
   );
   return router;
 }
+
+it("実Kioskの接客中はPWA更新を拒否し、閉卓した取得結果を表示してから許可する", async () => {
+  const current = structuredClone(table);
+  const unexpected: string[] = [];
+  vi.stubGlobal(
+    "WebSocket",
+    class extends EventTarget {
+      close() {}
+    },
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      if (request.method === "GET" && path === "/api/table") return Response.json(current);
+      if (request.method === "GET" && path === "/api/table/catalog") return Response.json(catalog);
+      if (request.method === "GET" && path === "/api/table/exchange-rates")
+        return Response.json({
+          base: "JPY",
+          date: "2026-10-22",
+          source: "currency-api",
+          rates: { USD: 0.0065 },
+        });
+      if (request.method === "GET" && path === "/api/table/participants")
+        return Response.json({ participants: [], context: null });
+      if (request.method === "POST" && path === "/api/table/customer-code")
+        return Response.json({
+          code: "a".repeat(64),
+          expiresAt: Date.now() + 300000,
+          url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
+        });
+      if (request.method === "GET" && path === "/api/table/events")
+        return Response.json({ events: [], cursor: current.cursor });
+      if (request.method === "POST" && path === "/api/table/voice/stop")
+        return Response.json({ ok: true });
+      unexpected.push(`${request.method} ${path}`);
+      return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
+    }),
+  );
+  const router = await mount(
+    undefined,
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <Kiosk />
+    </LocaleProvider>,
+  );
+  await expect
+    .element(page.getByRole("button", { name: ja.kiosk_voice_resume, exact: true }))
+    .toBeVisible();
+  await expect.poll(() => router.state.status).toBe("idle");
+  await expect.poll(() => client.isMutating()).toBe(0);
+  expect(await decision("TABLECAST_CHECK_UPDATE")).toBe(false);
+  current.status = "closed";
+  current.cursor += 1;
+  await client.invalidateQueries({ queryKey: ["tablecast-table"] });
+  await expect
+    .element(page.getByRole("heading", { name: ja.kiosk_closed, exact: true }))
+    .toBeVisible();
+  expect(await decision("TABLECAST_CHECK_UPDATE")).toBe(true);
+  expect(unexpected).toEqual([]);
+});
 
 async function decision(type: string) {
   const channel = new MessageChannel();
@@ -172,4 +241,39 @@ it("オフラインでは更新を拒否し、通信復帰後に許可する", a
   expect(await decision("TABLECAST_PREPARE_UPDATE")).toBe(false);
   online.mockRestore();
   expect(await decision("TABLECAST_CHECK_UPDATE")).toBe(true);
+});
+
+it.each([
+  {
+    path: "/",
+    title: ja.pwa_install_title,
+    steps: ja.pwa_install_steps,
+    links: [
+      { text: ja.pwa_kiosk, href: "/" },
+      { text: ja.pwa_staff, href: "/admin/live" },
+    ],
+  },
+  {
+    path: "/member",
+    title: ja.customer_install_title,
+    steps: ja.customer_install_steps,
+    links: [],
+  },
+])("$pathのPWA案内は対象の入口の近くへ手順を常設する", async ({ path, title, steps, links }) => {
+  await mount(
+    undefined,
+    <LocaleProvider initialLocale="ja" persist={false}>
+      <PwaInstallHelp />
+    </LocaleProvider>,
+    path,
+  );
+  const instructions = page.getByText(steps, { exact: true });
+  await expect.element(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  await expect.element(instructions).toBeVisible();
+  expect(
+    [...document.querySelectorAll("[data-pwa-install] a")].map((link) => ({
+      text: link.textContent,
+      href: link.getAttribute("href"),
+    })),
+  ).toEqual(links);
 });

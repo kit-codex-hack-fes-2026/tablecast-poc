@@ -7,6 +7,13 @@ function transformImage(src: string | URL, { width = 640 }: { width?: number }) 
   return `${path}?width=${Math.min(1600, Math.max(1, Math.round(width)))}`;
 }
 
+/**
+ * 商品写真と画像の失敗時表示。
+ * src・alt・width・heightが必須。
+ * sizesは実際の表示幅、priorityは先頭の重要画像のみ、blurDataURLは生成済みplaceholder、onErrorは代替表示の通知に使う。
+ * 表示幅に合う画像を既存の配送経路から取得し、無意味な別URLや原寸画像を指定しない。
+ * 写真は商品名・価格の代替ではない。
+ */
 export function ProductImage({
   src,
   alt,
@@ -18,15 +25,15 @@ export function ProductImage({
   blurDataURL,
   onError,
 }: {
-  src: string;
   alt: string;
-  width: number;
-  height: number;
-  sizes?: string;
-  className?: string;
-  priority?: boolean;
   blurDataURL?: `data:image/${string}`;
+  className?: string;
+  height: number;
   onError?: () => void;
+  priority?: boolean;
+  sizes?: string;
+  src: string;
+  width: number;
 }) {
   const [settledSrc, setSettledSrc] = useState<string>();
   const background = blurDataURL && settledSrc !== src ? blurDataURL : undefined;
@@ -67,7 +74,7 @@ export function ProductImage({
           className,
         )}
         transformer={transformImage}
-        breakpoints={[64, 96, 128, 192, 256, 384, 512, 640, 768, 960, 1280, 1600]}
+        breakpoints={[64, 96, 128, 192, 256, 384, 416, 512, 640, 768, 960, 1280, 1600]}
       />
     </span>
   );

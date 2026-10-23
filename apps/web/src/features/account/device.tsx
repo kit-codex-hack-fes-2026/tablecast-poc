@@ -1,21 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Store as StoreIcon } from "lucide-react";
 import { useMemo } from "react";
+import type { Store } from "../store/store-query";
 import { DataTable } from "../../components/data-table";
+import { type DataTableColumn } from "../../components/data-table-model";
 import { ErrorNotice } from "../../components/error-notice";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
 import { sessionOptions } from "../../lib/session-query";
-import type { loadStores } from "../store/store-query";
+import { useCollectionSearch } from "../shell/collection-search";
+import { SettingsShell } from "../store/settings-shell";
 import { storesOptions } from "../store/store-query";
 
-import { SettingsShell } from "../shell/settings-shell";
-type Store = Awaited<ReturnType<typeof loadStores>>["stores"][number];
 export function DeviceApproval() {
   const searchStr = useLocation({ select: (location) => location.searchStr });
   const { t } = useI18n();
+  const collection = useCollectionSearch({ prefix: "approvalStores", sortIds: ["name"] });
   const session = useQuery(sessionOptions);
   const userCode = new URLSearchParams(searchStr).get("user_code") ?? "";
   const stores = useQuery({ ...storesOptions, enabled: !!session.data });
@@ -24,8 +25,11 @@ export function DeviceApproval() {
     <SettingsShell>
       <h1 className="text-2xl font-semibold">{t("admin_pair")}</h1>
       <p>{t("admin_store")}</p>
-      <ErrorNotice error={stores.error} onRetry={() => void stores.refetch()} />
+      <ErrorNotice query={stores} />
       <DataTable
+        {...collection}
+        searchLabel={t("stores_search")}
+        searchPlaceholder={t("stores_search")}
         data={
           stores.data?.stores.filter((store) => store.role === "owner" || store.role === "admin") ??
           []
@@ -41,9 +45,9 @@ export function DeviceApproval() {
 function deviceApprovalColumns(
   t: ReturnType<typeof useI18n>["t"],
   userCode: string,
-): ColumnDef<Store>[] {
+): DataTableColumn<Store>[] {
   return [
-    { accessorKey: "name", header: t("admin_store") },
+    { accessorKey: "name", header: t("admin_store"), meta: { icon: StoreIcon } },
     {
       id: "actions",
       header: () => <span className="sr-only">{t("admin_pair")}</span>,

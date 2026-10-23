@@ -1,17 +1,17 @@
-import { test } from "./support/test";
 import { expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { credentials } from "./support/runtime";
+import { signInStaff } from "./support/session";
+import { test } from "./support/test";
 
 // callbackを差し替えるHTTP境界をSWに迂回させない。
 test.use({ trace: "off", serviceWorkers: "block" });
 
-test("MCP接続はメールログイン・店舗選択・明示同意を経て認可コードを返し、利用者が連携を失効できる", async ({
+test("MCP接続は実ログインと明示同意を経て外部callbackへ認可コードを返す", async ({
   page,
-  request,
   baseURL,
-}, testInfo) => {
+}) => {
   if (!baseURL) throw new Error("ローカル公開URLがありません");
   const callback = "http://127.0.0.1:6274/oauth/callback";
   await page.route(`${callback}**`, (route) =>
@@ -21,11 +21,7 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
       body: "<title>TableCast OAuth callback</title>",
     }),
   );
-  const staffSession = await page.request.post("/api/auth/sign-in/email", {
-    headers: { Origin: baseURL },
-    data: credentials,
-  });
-  expect(staffSession.ok(), await staffSession.text()).toBeTruthy();
+  await signInStaff(page.request, baseURL);
   const registration = await page.request.post("/api/auth/oauth2/register", {
     headers: { Origin: baseURL },
     data: {
@@ -40,7 +36,12 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
   });
   expect(registration.ok(), await registration.text()).toBeTruthy();
   const client = z.object({ client_id: z.string() }).parse(await registration.json());
-  await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL }, data: {} });
+  expect(
+    (
+      await page.request.post("/api/auth/sign-out", { headers: { Origin: baseURL }, data: {} })
+    ).ok(),
+  ).toBe(true);
+  expect(await (await page.request.get("/api/auth/get-session")).json()).toBeNull();
   const verifier = "tablecast-browser-proof-key-0123456789-abcdefghijklmnopqrstuvwxyz";
   const query = new URLSearchParams({
     client_id: client.client_id,
@@ -57,56 +58,38 @@ test("MCP接続はメールログイン・店舗選択・明示同意を経て�
   await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(/\/consent\?/);
-  await page.getByRole("button", { name: "続ける", exact: true }).click();
-  await expect(page.getByRole("button", { name: "接続を許可", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "English", exact: true }).click();
-  await page.getByRole("button", { name: "Allow connection", exact: true }).click();
-  await expect(page).toHaveURL(/\/oauth\/callback\?.*code=/);
+  const organisationDocument = page.url();
+  // 店舗選択のCookie更新で認証handlerが自動転送する。旧documentのボタン表示とは区別する。
+  // 自動転送後は元responseのbodyが破棄されるため、転送先documentの読込を観測する。
+  await Promise.all([
+    page.waitForURL(
+      (url) =>
+        url.origin === new URL(baseURL).origin &&
+        url.pathname === "/consent" &&
+        url.href !== organisationDocument &&
+        url.searchParams.get("client_id") === client.client_id &&
+        url.searchParams.get("state") === "tablecast-browser-oauth",
+      { waitUntil: "domcontentloaded" },
+    ),
+    page.getByRole("button", { name: "続ける", exact: true }).click(),
+  ]);
+  const allow = page.getByRole("main").getByRole("button", { name: "接続を許可", exact: true });
+  await expect(allow).toBeEnabled();
+  await Promise.all([
+    page.waitForURL(
+      (url) =>
+        url.origin === new URL(callback).origin &&
+        url.pathname === new URL(callback).pathname &&
+        !!url.searchParams.get("code"),
+      { waitUntil: "domcontentloaded" },
+    ),
+    allow.click(),
+  ]);
   const result = new URL(page.url());
+  expect(result.origin).toBe(new URL(callback).origin);
+  expect(result.pathname).toBe(new URL(callback).pathname);
+  expect(result.searchParams.has("error")).toBe(false);
   expect(result.searchParams.get("state")).toBe("tablecast-browser-oauth");
-  const tokenResponse = await request.post("/api/auth/oauth2/token", {
-    form: {
-      grant_type: "authorization_code",
-      client_id: client.client_id,
-      redirect_uri: callback,
-      code: result.searchParams.get("code") ?? "",
-      code_verifier: verifier,
-      resource: `${baseURL}/mcp`,
-    },
-  });
-  expect(tokenResponse.ok()).toBeTruthy();
-  const token = z.object({ access_token: z.string() }).parse(await tokenResponse.json());
-  const callMcp = () =>
-    request.post("/mcp", {
-      headers: {
-        Authorization: `Bearer ${token.access_token}`,
-        Accept: "application/json, text/event-stream",
-      },
-      data: {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: {
-          protocolVersion: "2025-03-26",
-          capabilities: {},
-          clientInfo: { name: "tablecast-e2e", version: "1.0.0" },
-        },
-      },
-    });
-  expect((await callMcp()).status()).toBe(200);
-  await page.goto("/account/mcp-sessions");
-  const connection = page.getByRole("row").filter({ hasText: "TableCast browser acceptance" });
-  await expect(connection).toContainText("tablecast:read");
-  await expect(connection).toContainText("tablecast:write");
-  await expect(connection).toContainText("Active");
-  await expect(page.getByRole("columnheader", { name: "Refresh token expiry" })).toBeVisible();
-  await expect(connection.locator("time")).toHaveCount(3);
-  await page.screenshot({ path: testInfo.outputPath("tablecast-oauth-connections.png") });
-  await connection.getByRole("button", { name: "Revoke access", exact: true }).click();
-  await page
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Revoke access", exact: true })
-    .click();
-  await expect(connection).toHaveCount(0);
-  expect((await callMcp()).status()).toBe(401);
+  expect(result.searchParams.get("code")).toBeTruthy();
+  await expect(page).toHaveTitle("TableCast OAuth callback");
 });

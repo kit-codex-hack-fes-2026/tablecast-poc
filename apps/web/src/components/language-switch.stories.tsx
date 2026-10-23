@@ -3,9 +3,13 @@ import { expect, fn, userEvent, within } from "storybook/test";
 import { LanguageSwitch } from "./language-switch";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "共通/言語切替",
   component: LanguageSwitch,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+  },
   args: { onChange: fn() },
 } satisfies Meta<typeof LanguageSwitch>;
 export default meta;
@@ -25,6 +29,7 @@ export const Languages: Story = {
 export const English: Story = {
   ...Languages,
   name: "英語から日本語を選択",
+  tags: ["!test"],
   globals: { locale: "en" },
 };
 export const Disabled: Story = { name: "言語を更新中", args: { disabled: true } };

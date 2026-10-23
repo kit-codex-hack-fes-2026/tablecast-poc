@@ -33,7 +33,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # worktree固有の状態と秘密情報
 .local/
 .wrangler/
+.cloudflare/
 .turbo/
+.fallow/
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

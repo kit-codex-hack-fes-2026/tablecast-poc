@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/tanstack-react";
 import { expect, waitFor } from "storybook/test";
-import { ProductImage } from "./product-image";
 import transparent from "../../.storybook/tablecast-transparent.svg?url&no-inline";
+import { ProductImage } from "./product-image";
 
 const meta = {
+  tags: ["autodocs"],
+
   title: "共通/商品画像",
   component: ProductImage,
   args: {
@@ -14,7 +16,9 @@ const meta = {
     sizes: "192px",
     priority: true,
   },
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+  },
 } satisfies Meta<typeof ProductImage>;
 export default meta;
 type Story = StoryObj<typeof meta>;

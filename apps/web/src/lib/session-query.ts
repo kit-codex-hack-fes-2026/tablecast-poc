@@ -1,8 +1,15 @@
 import { queryOptions } from "@tanstack/react-query";
 import { parseResponse, rpc } from "./api";
 import { authClient } from "./auth-client";
-export const loadInitial = (storeId?: string, defaultFloor?: "true", view?: "catalog") =>
-  parseResponse(rpc.api.admin.initial.$get({ query: { storeId, defaultFloor, view } }));
+export const loadInitial = (
+  storeId?: string,
+  defaultFloor?: "true",
+  view?: "catalog" | "home",
+  signal?: AbortSignal,
+) =>
+  parseResponse(
+    rpc.api.admin.initial.$get({ query: { storeId, defaultFloor, view } }, { init: { signal } }),
+  );
 export const sessionOptions = queryOptions<
   Awaited<ReturnType<typeof loadInitial>>["session"] | typeof authClient.$Infer.Session
 >({

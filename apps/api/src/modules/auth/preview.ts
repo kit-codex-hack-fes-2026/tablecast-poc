@@ -1,6 +1,6 @@
 import { z } from "zod";
-type PreviewEnv = Pick<TablecastEnv, "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN"> &
-  Partial<Pick<TablecastEnv, "TABLECAST_EMULATE">>;
+type PreviewEnv = Partial<Pick<TablecastEnv, "TABLECAST_EMULATE">> &
+  Pick<TablecastEnv, "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN">;
 
 export function isHostedEmulator(env: { TABLECAST_ENV?: string; TABLECAST_PUBLIC_ORIGIN: string }) {
   return (
@@ -22,7 +22,7 @@ export function previewOAuthFetch(env: PreviewEnv, path: string, init?: RequestI
 }
 
 export function previewGoogleToken(env: PreviewEnv) {
-  return async (data: { code: string; redirectURI: string; codeVerifier?: string }) => {
+  return async (data: { code: string; codeVerifier?: string; redirectURI: string }) => {
     const response = await previewOAuthFetch(env, "/oauth2/token", {
       method: "POST",
       body: new URLSearchParams({

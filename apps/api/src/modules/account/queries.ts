@@ -1,12 +1,12 @@
 import { and, desc, eq, isNull, max, or, sql } from "drizzle-orm";
+import type { Database } from "../../db/client";
 import {
   oauthAccessToken,
   oauthClient,
   oauthConsent,
   oauthRefreshToken,
-} from "../../db/auth-schema";
-import { stores } from "../../db/business-schema";
-import type { Database } from "../../platform/context";
+} from "../../db/oauth-schema";
+import { stores } from "../../db/table-schema";
 export async function getMcpSessions(
   db: Database,
   userId: string,
@@ -48,8 +48,8 @@ export async function getMcpSessions(
       storeName: stores.name,
       createdAt: oauthConsent.createdAt,
       updatedAt: oauthConsent.updatedAt,
-      expiresAt: sql<number | null>`(${accessExpiry})`.mapWith(Number),
-      refreshExpiresAt: sql<number | null>`(${refreshExpiry})`.mapWith(Number),
+      expiresAt: sql<null | number>`(${accessExpiry})`.mapWith(Number),
+      refreshExpiresAt: sql<null | number>`(${refreshExpiry})`.mapWith(Number),
     })
     .from(oauthConsent)
     .innerJoin(oauthClient, eq(oauthClient.clientId, oauthConsent.clientId))

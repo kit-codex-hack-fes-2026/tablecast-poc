@@ -6,7 +6,7 @@ import { z } from "zod";
 import * as authTables from "../src/db/auth-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { fixtureDb } from "./database-fixture";
-import { setupFixture } from "./fixture";
+import { responseCookies, setupFixture } from "./fixture";
 
 const origin = "http://localhost:3000";
 it("有効なCookieのセッションとユーザーを一度に読み、取消後は拒否する", async () => {
@@ -14,7 +14,7 @@ it("有効なCookieのセッションとユーザーを一度に読み、取消�
   const { cookie } = await setupFixture();
   const queries: string[] = [];
   const db = drizzle(env.TABLECAST_DB, {
-    schema: authTables,
+    relations: authTables.authRelations,
     logger: { logQuery: (query) => queries.push(query) },
   });
   const auth = createAuth(env, undefined, db);
@@ -156,7 +156,7 @@ it("OAuthのPKCEと人の同意でMCPへ接続し、店舗下書きを実DBへ�
   const { cookie } = await setupFixture();
   const auth = createAuth(env);
   const headers = new Headers({ Cookie: cookie, Origin: origin });
-  await auth.api.setActiveOrganization({ body: { organizationId: "tablecast-org" }, headers });
+  expect((await auth.api.getSession({ headers }))?.session.activeOrganizationId).toBeNull();
   const client = await auth.api.createOAuthClient({
     body: {
       client_name: "TableCast Inspector",
@@ -200,10 +200,27 @@ it("OAuthのPKCEと人の同意でMCPへ接続し、店舗下書きを実DBへ�
     redirected.searchParams.get("error_description") ?? redirected.searchParams.get("error"),
   ).toBeNull();
   expect(redirected.pathname).toBe("/consent");
+  // 店舗選択によるCookie更新が署名済みOAuth要求を再開し、同意画面へ転送する。
+  const selected = await json(
+    "/api/auth/organization/set-active",
+    { organizationId: "tablecast-org", oauth_query: redirected.search.slice(1) },
+    cookie,
+  );
+  expect(selected.status).toBe(200);
+  const selection = z
+    .object({ redirect: z.literal(true), url: z.string().min(1) })
+    .parse(await selected.json());
+  const consentRedirect = new URL(selection.url, origin);
+  expect(consentRedirect.origin).toBe(origin);
+  expect(consentRedirect.pathname).toBe("/consent");
+  expect(consentRedirect.href).not.toBe(redirected.href);
+  expect(consentRedirect.searchParams.get("client_id")).toBe(client.client_id);
+  expect(consentRedirect.searchParams.get("state")).toBe("tablecast-oauth-state");
+  const selectedCookie = responseCookies(selected);
   const consentResponse = await json(
     "/api/auth/oauth2/consent",
-    { accept: true, oauth_query: new URL(redirect, origin).search.slice(1) },
-    cookie,
+    { accept: true, oauth_query: consentRedirect.search.slice(1) },
+    selectedCookie,
   );
   expect(consentResponse.status).toBe(200);
   const consent: unknown = await consentResponse.json();
@@ -252,6 +269,38 @@ it("OAuthのPKCEと人の同意でMCPへ接続し、店舗下書きを実DBへ�
       }>()
     )?.count,
   ).toBe(1);
+
+  // 既存の同意があっても、明示的な再同意要求では拒否してコードを発行しない。
+  query.set("prompt", "consent");
+  query.set("state", "tablecast-oauth-denied-state");
+  const reauthorised = await exports.default.fetch(
+    new Request(`${origin}/api/auth/oauth2/authorize?${query.toString()}`, {
+      headers: { Cookie: selectedCookie, Origin: origin },
+      redirect: "manual",
+    }),
+  );
+  expect([200, 302, 303]).toContain(reauthorised.status);
+  const denialRedirect = new URL(
+    reauthorised.headers.get("Location") ??
+      z.object({ url: z.string() }).parse(await reauthorised.json()).url,
+    origin,
+  );
+  expect(denialRedirect.pathname).toBe("/consent");
+  const refused = await json(
+    "/api/auth/oauth2/consent",
+    { accept: false, oauth_query: denialRedirect.search.slice(1) },
+    selectedCookie,
+  );
+  expect(refused.status).toBe(200);
+  const refusal = z
+    .object({ redirect: z.literal(true), url: z.string().url() })
+    .parse(await refused.json());
+  const refusedCallback = new URL(refusal.url);
+  expect(refusedCallback.origin).toBe("http://127.0.0.1:6274");
+  expect(refusedCallback.pathname).toBe("/oauth/callback");
+  expect(refusedCallback.searchParams.get("state")).toBe("tablecast-oauth-denied-state");
+  expect(refusedCallback.searchParams.get("error")).toBe("access_denied");
+  expect(refusedCallback.searchParams.has("code")).toBe(false);
 });
 
 it("端末の承認待ちは正常な待機状態を返す", async () => {

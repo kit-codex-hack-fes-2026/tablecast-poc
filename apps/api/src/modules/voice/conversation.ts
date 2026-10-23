@@ -1,12 +1,12 @@
-import { and, eq, exists, notExists, sql } from "drizzle-orm";
 import type { z } from "zod";
-import * as business from "../../db/business-schema";
+import { and, eq, exists, notExists, sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import type { voiceConversationSchema } from "./model";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
 import { notifyStore } from "../tables/mutations";
 import { getSession } from "../tables/queries";
-import type { voiceConversationSchema } from "./model";
 
 export async function recordConversationItems(
   services: ApiServices,
@@ -20,6 +20,18 @@ export async function recordConversationItems(
     409,
   );
   const db = services.db;
+  // 会員参加後の字幕は接続中の端末内だけに置き、卓全体の通知へ保存しない。
+  const personal = await db
+    .select({ id: business.customerContexts.sessionId })
+    .from(business.customerContexts)
+    .where(
+      and(
+        eq(business.customerContexts.sessionId, session.id),
+        eq(business.customerContexts.storeId, actor.storeId),
+      ),
+    )
+    .get();
+  if (personal) return { ok: true };
   const current = and(
     eq(business.tableSessions.id, session.id),
     eq(business.tableSessions.store_id, actor.storeId),

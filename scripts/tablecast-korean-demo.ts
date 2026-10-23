@@ -1,29 +1,24 @@
-import { configurationSchema } from "../apps/api/src/schema";
-import type { Modifier, Product } from "../apps/api/src/schema";
-import { demoImageKey } from "./tablecast-seed-media";
-import { demoOptionImageKey } from "./tablecast-demo-option-images";
-
-export const koreanDemoStoreId = "tablecast-hanul";
-export const koreanDemoStoreName = "韓国食堂ハヌル三条店";
+import { configurationSchema, type Modifier, type Product } from "@tablecast/api/schema";
+import { demoOptionImageKey } from "./tablecast-demo-option-images.ts";
+import { demoImageKey } from "./tablecast-seed-media.ts";
 
 type KoreanMenuItem = {
-  key: string;
-  ja: string;
-  en: string;
-  price: number;
-  category: string;
-  ingredients: readonly [string, string];
-  contains: string[];
-  spice: "none" | "mild" | "medium";
-  groups: string[];
-  tabletop?: boolean;
-  hotVessel?: boolean;
   available?: boolean;
+  category: string;
+  contains: string[];
+  en: string;
+  groups: string[];
+  hotVessel?: boolean;
+  ingredients: readonly [string, string];
+  ja: string;
+  key: string;
   photo: string;
+  price: number;
+  spice: "medium" | "mild" | "none";
+  tabletop?: boolean;
 };
 
-// 材料・辛さ・商品写真の被写体を一か所で定義する。店舗や蔵元はすべて架空。
-export const koreanDemoMenu: KoreanMenuItem[] = [
+const mains: KoreanMenuItem[] = [
   {
     key: "samgyeopsal",
     ja: "サムギョプサル 卓上焼きセット 二人前",
@@ -170,6 +165,9 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     photo:
       "One orange-red cabbage kimchi pancake, cut into exactly SIX clearly separate wedges. No seafood pieces, cheese or extra plates.",
   },
+];
+
+const sides: KoreanMenuItem[] = [
   {
     key: "gimbap",
     ja: "野菜と卵のキンパ 八切れ",
@@ -349,6 +347,9 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
     photo:
       "Exactly TWO golden round hotteok pancakes on one small plate, one slightly opened to show brown-sugar cinnamon syrup and peanut filling. No ice cream, fruit, powder or extra garnish.",
   },
+];
+
+const drinks: KoreanMenuItem[] = [
   {
     key: "hanul-soju",
     ja: "ハヌル 清らか焼酎",
@@ -509,6 +510,12 @@ export const koreanDemoMenu: KoreanMenuItem[] = [
   },
 ];
 
+const koreanDemoStoreId = "tablecast-hanul";
+
+const koreanDemoStoreName = "韓国食堂ハヌル三条店";
+
+const koreanDemoMenu: KoreanMenuItem[] = [...mains, ...sides, ...drinks];
+
 function text(ja: string, en: string, descriptionJa = "", descriptionEn = ""): Product["text"] {
   return {
     ja: { displayName: ja, speechName: ja, description: descriptionJa, aliases: [ja] },
@@ -522,6 +529,7 @@ function text(ja: string, en: string, descriptionJa = "", descriptionEn = ""): P
 }
 
 type Choice = readonly [string, string, string, number];
+
 function group(
   key: string,
   ja: string,
@@ -551,7 +559,7 @@ function group(
   };
 }
 
-export const koreanDemoModifierGroups: Record<string, Modifier> = {
+const koreanDemoModifierGroups: Record<string, Modifier> = {
   spice: group("spice", "辛さ", "Chilli level", [
     ["mild", "控えめ・辛味あり", "Milder, still contains chilli", 0],
     ["standard", "通常", "Standard", 0],
@@ -646,7 +654,7 @@ const commonNote = {
   en: "These are recorded ingredients for a fictional demo. Full condiment ingredients, changes from options and cross-contact are unverified. Halal, kosher and other religious certification, and vegan suitability, are unverified. Ingredients or removing meat do not guarantee suitability; ask staff.",
 };
 
-export function koreanDemoStore(profile: "smoke" | "demo" | "history") {
+export function koreanDemoStore(profile: "demo" | "history" | "smoke") {
   const featured = ["samgyeopsal", "bibimbap", "fried-chicken", "yuja-tea"];
   const products: Product[] = koreanDemoMenu
     .filter((item) => profile !== "smoke" || featured.includes(item.key))

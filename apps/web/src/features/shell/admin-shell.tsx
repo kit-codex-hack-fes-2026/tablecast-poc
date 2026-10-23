@@ -1,6 +1,8 @@
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { PanelLeft, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, type SyntheticEvent, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
+import type { SidebarSelection } from "./sidebar-model";
 import { LanguageSwitch } from "../../components/language-switch";
 import { Button } from "../../components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
@@ -12,19 +14,39 @@ import {
 import { useI18n } from "../../i18n/locale";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
-
 import { AdminSidebar, type AdminSidebarProps } from "./admin-sidebar";
+import { useSidebarPreferences } from "./sidebar-preferences";
 
 export function AdminShell({
   children,
   header,
+  storeName,
+  selection,
   ...sidebar
-}: AdminSidebarProps & { children: ReactNode; header?: ReactNode }) {
+}: AdminSidebarProps & {
+  children: ReactNode;
+  header?: ReactNode;
+  selection: SidebarSelection;
+  storeName?: string;
+}) {
   const { t, setLocale } = useI18n();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { preferences, update } = useSidebarPreferences(selection.user?.id);
+  const collapsed = preferences.collapsed ?? false;
   const desktop = useMediaQuery("(min-width: 48rem)");
   const panel = usePanelRef();
+  const sidebarInteraction = useRef(false);
+  const [sidebarTransition, setSidebarTransition] = useState(false);
+  const resizeDirectly = (event: SyntheticEvent<HTMLDivElement>) => {
+    if (event.target instanceof Element && event.target.closest("[data-separator]"))
+      setSidebarTransition(false);
+  };
+  const toggleSidebar = () => {
+    setSidebarTransition(true);
+    sidebarInteraction.current = true;
+    if (panel.current?.isCollapsed()) panel.current.expand();
+    else panel.current?.collapse();
+  };
+  useHotkey("Mod+B", toggleSidebar, { enabled: desktop, ignoreInputs: true });
   const { defaultLayout, onLayoutChanged } = usePanelLayout({
     id: "tablecast-admin-layout",
     panelIds: desktop
@@ -35,9 +57,26 @@ export function AdminShell({
     <>
       <ResizablePanelGroup
         orientation="horizontal"
-        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden"
+        className="h-dvh! bg-secondary/50 md:p-2 max-md:[&>#tablecast-admin-sidebar]:hidden motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:transition-[flex-grow] motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:duration-(--motion-state) motion-safe:data-[sidebar-transition=true]:[&>[data-panel]]:ease-(--motion-ease-out) motion-reduce:[&>[data-panel]]:transition-none"
+        data-sidebar-transition={sidebarTransition}
+        onPointerDownCapture={resizeDirectly}
+        onKeyDownCapture={resizeDirectly}
+        onTransitionEnd={(event) => {
+          if (
+            event.propertyName === "flex-grow" &&
+            event.target instanceof Element &&
+            event.target.parentElement === event.currentTarget
+          )
+            setSidebarTransition(false);
+        }}
         defaultLayout={defaultLayout}
-        onLayoutChanged={onLayoutChanged}
+        onLayoutChanged={(layout, meta) => {
+          onLayoutChanged(layout, {
+            ...meta,
+            isUserInteraction: meta.isUserInteraction || sidebarInteraction.current,
+          });
+          sidebarInteraction.current = false;
+        }}
       >
         {desktop && (
           <ResizablePanel
@@ -49,10 +88,10 @@ export function AdminShell({
             maxSize="24rem"
             collapsedSize="4.5rem"
             collapsible
-            onResize={() => setCollapsed(panel.current?.isCollapsed() ?? false)}
+            onResize={() => update({ collapsed: panel.current?.isCollapsed() ?? false })}
           >
             <aside className="flex h-full min-w-0 flex-col px-2">
-              <AdminSidebar {...sidebar} collapsed={collapsed} />
+              <AdminSidebar {...sidebar} selection={selection} collapsed={collapsed} />
             </aside>
           </ResizablePanel>
         )}
@@ -65,62 +104,86 @@ export function AdminShell({
           key="tablecast-admin-content"
           minSize={desktop ? "20rem" : 0}
         >
-          <main className="h-full min-w-0 overflow-y-auto bg-white md:rounded-2xl md:border md:border-border">
-            <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-border bg-white/95 px-4 backdrop-blur-sm md:rounded-t-2xl">
+          <main
+            id="tablecast-admin-main"
+            data-scroll-restoration-id="tablecast-admin-main"
+            className="h-full min-w-0 overflow-y-auto bg-card md:rounded-2xl md:shadow-surface"
+          >
+            <header className="sticky top-0 z-20 flex min-h-18 flex-wrap items-center gap-3 border-b border-border bg-glass px-4 py-3 backdrop-blur-xl @container md:rounded-t-2xl">
               <Button
                 size="icon"
                 variant="ghost"
                 className="hidden md:inline-flex"
                 aria-label={t("admin_navigation")}
                 aria-expanded={!collapsed}
-                onClick={() => {
-                  if (panel.current?.isCollapsed()) panel.current.expand();
-                  else panel.current?.collapse();
-                }}
+                title={`${t("admin_navigation")} (⌘/Ctrl+B)`}
+                aria-keyshortcuts="Control+B Meta+B"
+                onClick={toggleSidebar}
               >
                 <PanelLeft />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="md:hidden"
-                aria-label={t("admin_navigation")}
-                aria-expanded={mobileOpen}
-                onClick={() => setMobileOpen(true)}
-              >
-                <PanelLeft />
-              </Button>
-              <div className="min-w-0 flex-1 truncate border-l border-border pl-3 text-base font-medium">
-                {header ??
-                  t(
-                    sidebar.tab === "organisations"
-                      ? "stores_title"
-                      : sidebar.tab === "mcp"
-                        ? "mcp_sessions"
-                        : "account_title",
-                  )}
+              <MobileNavigation
+                key={desktop ? "desktop" : "mobile"}
+                {...sidebar}
+                selection={selection}
+              />
+              {storeName && (!desktop || collapsed) && (
+                <span
+                  className={`min-w-0 truncate text-sm font-medium ${header ? "max-w-40" : "flex-1"}`}
+                >
+                  {storeName}
+                </span>
+              )}
+              {header && (
+                <div className="order-last min-w-0 basis-full text-base font-medium @3xl:order-0 @3xl:flex-1 @3xl:basis-72">
+                  {header}
+                </div>
+              )}
+              <div className="ml-auto">
+                <LanguageSwitch onChange={setLocale} />
               </div>
-              <LanguageSwitch onChange={setLocale} />
             </header>
-            <div className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+            <div
+              data-page-motion
+              className="mx-auto w-full min-w-0 max-w-7xl space-y-6 @container p-4 sm:p-6 lg:p-8 [view-transition-name:tablecast-page]"
+            >
               {children}
             </div>
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>
-      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-        <DialogContent side="left" className="max-w-72 p-3">
+    </>
+  );
+}
+
+function MobileNavigation(sidebar: AdminSidebarProps & { selection: SidebarSelection }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="md:hidden"
+        aria-label={t("admin_navigation")}
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+      >
+        <PanelLeft />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent side="left" className="relative max-w-72 p-3">
           <DialogTitle className="sr-only">{t("admin_navigation")}</DialogTitle>
           <Button
             className="absolute right-2 top-3"
             size="icon"
             variant="ghost"
             aria-label={t("common_close")}
-            onClick={() => setMobileOpen(false)}
+            onClick={() => setOpen(false)}
           >
             <X />
           </Button>
-          <AdminSidebar {...sidebar} onNavigate={() => setMobileOpen(false)} />
+          <AdminSidebar {...sidebar} onNavigate={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </>

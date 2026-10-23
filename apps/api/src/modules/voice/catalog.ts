@@ -1,11 +1,11 @@
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
 import type { Configuration, ConfigurationIssue } from "../configuration/model";
 import type { VoiceListQuery, VoicePage } from "./model";
+import { ensure } from "../../platform/errors";
 
 // GPT-Liveの標準音声。既存のInworld設定は保存したままMarinで接続する。
 const voices = ["marin", "cedar"] as const;
-export function liveVoice(value: string | null): string {
+export function liveVoice(value: null | string): string {
   return voices.find((voice) => voice === value) ?? "marin";
 }
 

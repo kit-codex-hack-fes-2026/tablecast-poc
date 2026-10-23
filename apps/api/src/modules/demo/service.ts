@@ -1,22 +1,22 @@
 import { and, eq, sql } from "drizzle-orm";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
-import { ensure } from "../../platform/errors";
 import type { Actor } from "../auth/model";
+import type { DemoUpdate } from "./model";
+import * as business from "../../db/business-schema";
+import { ensure } from "../../platform/errors";
 import { requireManager } from "../auth/policy";
-import { getCatalog } from "../catalog/queries";
 import { configurationErrors } from "../catalog/pricing";
+import { getCatalog } from "../catalog/queries";
 import { configurationSchema } from "../configuration/model";
-import { getDraft } from "../configuration/service";
+import { getDraft } from "../configuration/queries";
+import { tablePlanSchema } from "../tables/model";
 import {
   eventStatement,
   interruptVoiceTurns,
   invalidationStatement,
   notifyStore,
 } from "../tables/mutations";
-import { tablePlanSchema } from "../tables/model";
 import { stopVoiceRoom } from "../voice/runtime";
-import type { DemoUpdate } from "./model";
 import { getDemo, getDemoRecord } from "./queries";
 
 export async function createDemo(services: ApiServices, actor: Actor) {
@@ -146,6 +146,7 @@ export async function resetDemo(services: ApiServices, actor: Actor, expectedVer
         sql`id=${session.id} AND kind='demo' AND cart_version=${session.cart_version} AND voice_version=${session.voice_version} AND EXISTS(SELECT 1 FROM demo_sessions WHERE session_id=${session.id} AND config_version=${expectedVersion})`,
       ),
     ...[
+      business.gameRuns,
       business.payments,
       business.orders,
       business.confirmations,

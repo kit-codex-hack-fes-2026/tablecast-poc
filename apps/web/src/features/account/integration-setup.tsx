@@ -1,19 +1,23 @@
+import type { ReactNode } from "react";
 import {
   Blocks,
   Download,
   ExternalLink,
   FolderGit2,
   Globe,
+  MessagesSquare,
   ShieldCheck,
   Terminal,
 } from "lucide-react";
-import type { ReactNode } from "react";
-import { integrationConnection } from "./integration-query";
+import advisorSkill from "../../../../../plugins/tablecast/skills/tablecast-advisor/SKILL.md?raw";
+import analyticsSkill from "../../../../../plugins/tablecast/skills/tablecast-analytics/SKILL.md?raw";
+import themeSkill from "../../../../../plugins/tablecast/skills/tablecast-theme/SKILL.md?raw";
 import skill from "../../../../../plugins/tablecast/skills/tablecast/SKILL.md?raw";
 import { CopyValue } from "../../components/copy-value";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "../../i18n/locale";
+import { type integrationConnection, readIntegrationConnection } from "./integration-query";
 import { IntegrationsShell } from "./integrations-shell";
 
 const repository = "https://github.com/kit-codex-hack-fes-2026/tablecast-poc";
@@ -26,10 +30,10 @@ function Guide({
   children,
   source,
 }: {
-  title: string;
-  icon: ReactNode;
   children: ReactNode;
+  icon: ReactNode;
   source?: string;
+  title: string;
 }) {
   const { t } = useI18n();
   return (
@@ -56,18 +60,30 @@ function Guide({
 
 export function IntegrationSetup({
   mode,
-  connection = integrationConnection(""),
+  connection = readIntegrationConnection(),
 }: {
-  mode: "plugins" | "manual";
   connection?: ReturnType<typeof integrationConnection>;
+  mode: "manual" | "plugins";
 }) {
   const { t } = useI18n();
   const { endpoint, name, staging } = connection;
   return (
-    <IntegrationsShell>
+    <IntegrationsShell publicGuide>
       {staging && <p>{t("mcp_staging_connection")}</p>}
       {mode === "plugins" ? (
         <>
+          <Guide
+            title={t("mcp_remote_connection")}
+            icon={<Globe className="size-5" />}
+            source={connectionDocs}
+          >
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>{t("mcp_remote_add")}</li>
+              <li>{t("mcp_remote_sign_in")}</li>
+              <li>{t("mcp_remote_approve")}</li>
+            </ol>
+            <CopyValue label={t("mcp_endpoint")} value={endpoint} />
+          </Guide>
           <Guide
             title="Marketplace · Codex"
             icon={<Blocks className="size-5" />}
@@ -90,18 +106,6 @@ export function IntegrationSetup({
               GitHub
             </a>
           </Guide>
-          <Guide
-            title={t("mcp_remote_connection")}
-            icon={<Globe className="size-5" />}
-            source={connectionDocs}
-          >
-            <ol className="list-decimal space-y-2 pl-5">
-              <li>{t("mcp_remote_add")}</li>
-              <li>{t("mcp_remote_sign_in")}</li>
-              <li>{t("mcp_remote_approve")}</li>
-            </ol>
-            <CopyValue label={t("mcp_endpoint")} value={endpoint} />
-          </Guide>
         </>
       ) : (
         <>
@@ -123,24 +127,65 @@ export function IntegrationSetup({
           </Guide>
           <Guide title="Agent Skills" icon={<Download className="size-5" />}>
             <p>{t("mcp_skill_steps")}</p>
-            <Button
-              nativeButton={false}
-              role="link"
-              render={
-                <a
-                  aria-label={t("mcp_skill_download")}
-                  download="SKILL.md"
-                  href={`data:text/markdown;charset=utf-8,${encodeURIComponent(skill)}`}
-                />
-              }
-            >
-              <Download />
-              {t("mcp_skill_download")}
-            </Button>
+            <div className="space-y-4">
+              {[
+                {
+                  name: "tablecast",
+                  title: t("mcp_scenario_setup"),
+                  label: t("mcp_skill_download"),
+                  content: skill,
+                },
+                {
+                  name: "tablecast-advisor",
+                  title: t("mcp_scenario_advisor"),
+                  label: t("mcp_skill_advisor_download"),
+                  content: advisorSkill,
+                },
+                {
+                  name: "tablecast-theme",
+                  title: t("theme_title"),
+                  label: t("theme_skill_download"),
+                  content: themeSkill,
+                },
+                {
+                  name: "tablecast-analytics",
+                  title: t("mcp_scenario_analytics"),
+                  label: t("mcp_skill_analytics_download"),
+                  content: analyticsSkill,
+                },
+              ].map(({ name: skillName, title, label, content }) => (
+                <div key={skillName} className="space-y-2">
+                  <h3 className="font-medium">{title}</h3>
+                  <Button
+                    nativeButton={false}
+                    role="link"
+                    variant="outline"
+                    render={
+                      <a
+                        aria-label={label}
+                        download="SKILL.md"
+                        href={`data:text/markdown;charset=utf-8,${encodeURIComponent(content)}`}
+                      />
+                    }
+                  >
+                    <Download />
+                    {label}
+                  </Button>
+                </div>
+              ))}
+            </div>
             <p className="text-sm text-muted-foreground">{t("mcp_skill_requirement")}</p>
           </Guide>
         </>
       )}
+      <Guide title={t("mcp_scenarios_title")} icon={<MessagesSquare className="size-5" />}>
+        <p className="text-sm text-muted-foreground">{t("mcp_scenarios_hint")}</p>
+        <div className="space-y-5">
+          <CopyValue label={t("mcp_scenario_setup")} value={t("mcp_prompt_setup")} />
+          <CopyValue label={t("mcp_scenario_advisor")} value={t("mcp_prompt_advisor")} />
+          <CopyValue label={t("mcp_scenario_analytics")} value={t("mcp_prompt_analytics")} />
+        </div>
+      </Guide>
       <Guide title={t("mcp_scopes")} icon={<ShieldCheck className="size-5" />}>
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <dt>

@@ -29,3 +29,11 @@ url = "http://127.0.0.1:6006/mcp"
 # 登録後に codex mcp login tablecast-cloudflare でOAuth認可する。
 # [mcp_servers.tablecast-cloudflare]
 # url = "https://mcp.cloudflare.com/mcp"
+
+[mcp_servers.tablecast-fallow]
+command = "bun"
+args = ["--no-env-file", "x", "--no-install", "--package", "fallow", "fallow-mcp"]
+# Codexが動くホスト上のworktree絶対パスへ置き換える。
+cwd = "/absolute/path/to/tablecast-poc"
+startup_timeout_sec = 60
+tool_timeout_sec = 60

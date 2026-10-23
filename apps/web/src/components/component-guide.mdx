@@ -1,0 +1,45 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="デザインシステム/使い分けと組合せ" />
+
+# 部品の使い分けと組合せ
+
+低水準のUI部品にはそれぞれ隣接StoryとAutodocsがある。型から抽出されるPropsとSourceを併読する。Base UIやTanStackのpropsを想像で追加しない。
+
+| 目的             | 部品                                                   | 使い分け・主要props                                                                           |
+| ---------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| 実行・遷移       | Button                                                 | 実行はonClick、遷移はrender + nativeButton=false。選択状態はaria-pressed                      |
+| 状態             | Badge / RoleBadge                                      | Badgeはvariant + children。RoleBadgeはrole。権限判断はAPI                                     |
+| 入力             | Input / useAppForm                                     | 単体入力以外はAppFieldのTextField/NumberFieldでlabelと検証を関連付ける                        |
+| 選択             | NativeSelect / Select                                  | 単純な文字候補は前者。装飾した候補は後者のRoot/Trigger/Value/Content/Item                     |
+| 真偽・一つの選択 | Checkbox / RadioGroup                                  | Checkboxはchecked、RadioGroupはvalue。集合にはlegendを付ける                                  |
+| エラー           | FieldErrors / FormErrors / ErrorNotice                 | 項目、フォーム全体、通信・権限を分ける                                                        |
+| 結果             | ActionFeedback                                         | pending/error/success/successMessage。非同期状態は呼出し元が所有                              |
+| 初回読込         | LoadingState / Skeleton                                | 意味を持つstatusは前者、形状だけは後者                                                        |
+| 詳細・確認       | Dialog / ConfirmAction                                 | 関連詳細はDialog、破棄の確認はConfirmAction。注文確定や公開は専用フロー                       |
+| 表               | Table / DataTable                                      | 静的構造は前者、検索・ページ分割・取得状態は後者。安定IDを使う                                |
+| 見出し           | PageHeader                                             | title/description/status/actions。対象名を先に示す                                            |
+| 言語・日時       | LanguageSwitch / DateTime                              | LocaleProviderに従う。日時valueには有効な値かnullを渡す                                       |
+| コピー           | CopyValue                                              | label/value。失敗時もtextareaから選択できる                                                   |
+| 人・店舗         | UserIdentity / StoreIcon / StoreLogo / Brand           | userは名前等、StoreIconは一覧用、StoreLogoは元の縦横比、BrandはTableCast                      |
+| 画像             | ProductImage / MenuOptionImage                         | ProductImageはsrc/alt/width/height/sizes。MenuOptionImageはimageKey/imageKindで装飾画像と注記 |
+| メニュー         | ProductMenu / CartLines / MenuBanners                  | 商品選択、API計算済みの注文行、画像案内。客向けStoryを参照し、価格計算を複製しない            |
+| 条件説明         | ConditionSummary                                       | expressionと任意のproductから選択肢名を読む。条件編集はfeatureで行う                          |
+| 店舗テーマ       | StoreTheme / StyleScopeProvider / StyleScopeBoundary   | appearanceをschema検証して適用。低水準scopeへ外部CSSを直接渡さない                            |
+| 分割             | ResizablePanelGroup / ResizablePanel / ResizableHandle | orientation、defaultSize/minSize、aria-label。幅を変えても会話やカートを作り直さない          |
+| 経路状態         | RoutePending / RouteError                              | Router/Query provider下で利用。RouteErrorはerror/resetを受け、invalidateして再試行            |
+| 動き             | MotionProvider                                         | childrenを包み、LazyMotionとreduced motionを共通適用                                          |
+
+## フォーム
+
+フォームStoryのSourceに、実際の `useAppForm`、`AppField`、`AppForm` と失敗後の再送例を置く。TextField/NumberFieldはAppFieldのcontext、SubmitButton/FormErrorsはAppFormのcontextが必要。単独で切り出して表示しない。label/descriptionは呼出し元で翻訳し、required、autoComplete、min/max/stepを入力内容に合わせる。FormErrorsはerrorと任意のfieldNamesからAPI検証結果を各入力へ関連付ける。対応しない失敗はErrorNoticeで示す。SubmitButtonはisSubmittingで二重送信を防ぎ、未保存の変更と処理中の状態をPWA更新制御へ伝える。
+
+## 画像・店舗の表現
+
+店舗ロゴはStoreLogoのlogo（ThemeImage）、width、heightへ渡す。枠のサイズを指定してもobject-containで比率を維持する。読込失敗は隠し、TableCastブランドや本文の店舗名を残す。StoreIconはname、任意のlogo URL、classNameを受け、画像なしは頭文字を表示する。
+
+ProductMenuはcatalog、onChoose、任意のproductIdsを受け、対象の選択を通知する。CartLinesはAPI計算済みのlines、products、onEdit/onRemove/onQuantity、disabledを受ける。MenuBannersの画像リンクとConditionSummaryの条件説明はそれぞれのfeatureで使い、見た目のために業務計算を移さない。これらの具体的な組合せは客向けメニュー・注文確認・店舗テーマの既存Storyで確認する。
+
+## アクセシビリティを確認する順序
+
+まず意味と順序、次にラベル・状態・キー操作、最後に色・サイズ・動きを確認する。DocsのControlsは開発者向けの検査用であり、製品のカスタマイズUIとして持ち込まない。

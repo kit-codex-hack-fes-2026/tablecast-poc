@@ -1,4 +1,4 @@
-import { configurationSchema, type Configuration } from "../src/schema";
+import { type Configuration, configurationSchema } from "../src/schema";
 
 export const text = (ja: string, en: string) => ({
   ja: { displayName: ja, speechName: ja, description: `${ja}の説明`, aliases: [] },

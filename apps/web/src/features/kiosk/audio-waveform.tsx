@@ -1,4 +1,3 @@
-import { tv } from "tailwind-variants";
 import { SmokeRing } from "@paper-design/shaders-react";
 import {
   AudioLines,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { animate, mix } from "motion";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { tv } from "tailwind-variants";
 import type { VoiceStatus } from "./voice-connection";
 
 const waveformIcon = tv({
@@ -21,8 +21,26 @@ const waveformIcon = tv({
     connecting: { true: "motion-safe:animate-spin" },
   },
 });
+const waveformLayout = tv({
+  slots: {
+    root: "flex items-center gap-3 py-1 text-foreground",
+    caption: "flex items-center gap-2 text-xs font-semibold",
+    orb: "relative size-20 shrink-0 rounded-full bg-card shadow-sm ring-1 ring-border",
+    waveform: "h-7 w-full min-w-0",
+  },
+  variants: {
+    compact: {
+      true: {
+        root: "w-full max-w-96 shrink-0 gap-2 py-0",
+        caption: "block font-medium",
+        orb: "size-12",
+        waveform: "h-4",
+      },
+    },
+  },
+});
 
-export type VoiceVisualState = VoiceStatus | "tool";
+export type VoiceVisualState = "tool" | VoiceStatus;
 
 // 色だけに依存せず、中心の記号・輪郭・流れを状態へ対応付ける。
 const states = {
@@ -64,13 +82,16 @@ export function AudioWaveform({
   label,
   state,
   toolLabel,
+  compact = false,
 }: {
-  track?: MediaStreamTrack;
+  compact?: boolean;
   label: string;
   state: VoiceVisualState;
   toolLabel?: string;
+  track?: MediaStreamTrack;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const layout = waveformLayout({ compact });
   const [audio, setAudio] = useState({ volume: 0, brightness: 0 });
   const still = useSyncExternalStore(subscribeMotion, motionPaused, () => true);
   const preset = states[state];
@@ -92,8 +113,8 @@ export function AudioWaveform({
     };
     const interpolate = mix(shapeRef.current, target);
     const animation = animate(0, 1, {
-      duration: still || !preset.speed ? 0 : 0.45,
-      ease: "easeInOut",
+      duration: still || !preset.speed ? 0 : 0.2,
+      ease: [0.23, 1, 0.32, 1],
       onUpdate: (progress) => {
         shapeRef.current = interpolate(progress);
         setShape(shapeRef.current);
@@ -179,14 +200,11 @@ export function AudioWaveform({
   }, [track, reactive]);
   return (
     <figure
-      className="flex items-center gap-3 py-1 text-foreground"
+      className={layout.root()}
       data-voice-state={state}
       data-motion={still || !preset.speed ? "still" : "animated"}
     >
-      <div
-        aria-hidden="true"
-        className="relative size-20 shrink-0 rounded-full bg-white shadow-sm ring-1 ring-black/5"
-      >
+      <div aria-hidden="true" className={layout.orb()}>
         <SmokeRing
           className="absolute inset-0 rounded-full blur-xs"
           colors={state === "error" ? errorColors : preset.speed ? pearlColors : monochrome}
@@ -215,9 +233,9 @@ export function AudioWaveform({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <figcaption className="flex items-center gap-2 text-xs font-semibold">
+        <figcaption className={layout.caption()} data-ui="voice-status">
           {label}
-          {toolLabel && (
+          {toolLabel && toolLabel !== label && (
             <span className="flex items-center gap-1 font-normal">
               <Wrench className="size-3" />
               {toolLabel}
@@ -225,10 +243,11 @@ export function AudioWaveform({
           )}
         </figcaption>
         <canvas
+          data-ui="audio-waveform"
           ref={canvas}
           width={240}
           height={48}
-          className="h-7 w-full min-w-0"
+          className={layout.waveform()}
           aria-hidden="true"
         />
       </div>

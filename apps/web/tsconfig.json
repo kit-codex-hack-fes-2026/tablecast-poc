@@ -10,11 +10,19 @@
     "allowJs": true,
     "noEmit": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "types": ["vite/client", "node"],
+    "types": ["vite/client", "node", "@cloudflare/workers-types"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", ".storybook", "e2e", "*.ts", "../api/src/cloudflare-env.d.ts"]
+  "include": [
+    "src",
+    ".storybook",
+    "e2e",
+    "*.ts",
+    "../api/src/cloudflare-env.d.ts",
+    "../api/src/modules/appearance/css-tree.d.ts"
+  ]
 }

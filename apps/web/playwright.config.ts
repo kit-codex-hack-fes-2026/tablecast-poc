@@ -9,6 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   retries: 0,
   reporter: "list",
+  // 差分選択とは別のreport用fetchを避け、浅いcheckoutでも不足baseを取得しない。
+  captureGitInfo: { diff: false },
   use: {
     viewport: { width: 1024, height: 768 },
     trace: "retain-on-failure",

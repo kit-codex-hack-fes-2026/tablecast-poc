@@ -1,5 +1,7 @@
 import { dash } from "@better-auth/infra";
+import { stripe } from "@better-auth/stripe";
 import { betterAuth } from "better-auth";
+import { Stripe } from "stripe";
 import { authOptions } from "./src/modules/auth/options";
 
 // schema生成のCLIだけが読み込み、Workerの公開入口からは参照しない。
@@ -9,5 +11,14 @@ const options = authOptions(
 );
 export const auth = betterAuth({
   ...options,
-  plugins: [...options.plugins, dash({ activityTracking: { enabled: true } })],
+  plugins: [
+    stripe({
+      stripeClient: new Stripe("sk_test_tablecast_schema_only"),
+      stripeWebhookSecret: "whsec_tablecast_schema_only",
+      organization: { enabled: true },
+      subscription: { enabled: true, plans: [] },
+    }),
+    ...options.plugins,
+    dash({ activityTracking: { enabled: true } }),
+  ],
 });

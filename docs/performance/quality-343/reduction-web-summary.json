@@ -1,0 +1,516 @@
+{
+  "baseline": "0b3ff961",
+  "after": "frozen working tree after Drizzle RC5/Hono/query/form/guard refactor",
+  "environment": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "node": "v24.22.0",
+    "bun": "1.4.3"
+  },
+  "protocol": {
+    "warmSamplesPerCase": 30,
+    "freshBrowserLaunches": 5,
+    "casesPerSide": 4,
+    "totalObservations": 280,
+    "viewport": "414x896",
+    "screenshotViewport": "402x874",
+    "motionProvider": true,
+    "duration": "Kiosk: subtitle emit to matching DOM text detection; Menu: router query change through two requestAnimationFrame callbacks. Excludes opacity/animation completion and audio playback.",
+    "commitMs": "Raw field name retained: sum of React Profiler actualDuration (render CPU), not commit-phase time.",
+    "commits": "React Profiler update callbacks per sample.",
+    "percentile": "Linear interpolation at (n - 1) * 0.95. Fresh-browser n=5 is descriptive only.",
+    "sourceManifest": "reduction-web-source-manifest.json"
+  },
+  "cases": [
+    {
+      "profile": "freshBrowser",
+      "target": "kiosk",
+      "size": 24,
+      "before": {
+        "duration": {
+          "n": 5,
+          "p50": 22.09999990463257,
+          "p95": 23.099999952316285,
+          "min": 21.799999952316284,
+          "max": 23.299999952316284
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 16.5,
+          "p95": 17.240000104904176,
+          "min": 15.799999713897705,
+          "max": 17.40000009536743
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 5,
+          "p50": 22,
+          "p95": 23.680000066757202,
+          "min": 21.399999856948853,
+          "max": 23.700000047683716
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 16.299999713897705,
+          "p95": 17.180000162124635,
+          "min": 15.800000190734863,
+          "max": 17.300000190734863
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "freshBrowser",
+      "target": "kiosk",
+      "size": 120,
+      "before": {
+        "duration": {
+          "n": 5,
+          "p50": 12.400000095367432,
+          "p95": 12.560000133514404,
+          "min": 11.699999809265137,
+          "max": 12.600000143051147
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 7,
+          "p95": 7.1800000190734865,
+          "min": 6.599999904632568,
+          "max": 7.200000047683716
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 5,
+          "p50": 12.5,
+          "p95": 12.880000066757201,
+          "min": 11.800000190734863,
+          "max": 12.900000095367432
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 7.200000047683716,
+          "p95": 7.380000114440918,
+          "min": 6.799999952316284,
+          "max": 7.400000095367432
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "freshBrowser",
+      "target": "menu",
+      "size": 120,
+      "before": {
+        "duration": {
+          "n": 5,
+          "p50": 19.300000190734863,
+          "p95": 27.22000012397766,
+          "min": 17.600000143051147,
+          "max": 28.600000143051147
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 12.5,
+          "p95": 13.239999961853027,
+          "min": 11.799999713897705,
+          "max": 13.299999952316284
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 5,
+          "p50": 25.299999952316284,
+          "p95": 46.65999999046325,
+          "min": 19.700000047683716,
+          "max": 50.799999952316284
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 13.700000047683716,
+          "p95": 16.259999990463257,
+          "min": 13.5,
+          "max": 16.799999952316284
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "freshBrowser",
+      "target": "menu",
+      "size": 2000,
+      "before": {
+        "duration": {
+          "n": 5,
+          "p50": 24.799999952316284,
+          "p95": 30.33999991416931,
+          "min": 23.200000047683716,
+          "max": 31.59999990463257
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 18.899999856948853,
+          "p95": 19.85999994277954,
+          "min": 17.700000047683716,
+          "max": 20.09999990463257
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 5,
+          "p50": 24.40000009536743,
+          "p95": 52.55999994277954,
+          "min": 24.200000047683716,
+          "max": 52.799999952316284
+        },
+        "commitMs": {
+          "n": 5,
+          "p50": 19.90000009536743,
+          "p95": 21.460000038146973,
+          "min": 19.200000286102295,
+          "max": 21.700000047683716
+        },
+        "commits": {
+          "n": 5,
+          "p50": 1,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "warm",
+      "target": "kiosk",
+      "size": 24,
+      "before": {
+        "duration": {
+          "n": 30,
+          "p50": 3.0500000715255737,
+          "p95": 5.3199999213218625,
+          "min": 2.200000047683716,
+          "max": 25.299999952316284
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 1.9000000953674316,
+          "p95": 3.4250000119209245,
+          "min": 1.5,
+          "max": 16.99999976158142
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 30,
+          "p50": 2.75,
+          "p95": 4.754999852180475,
+          "min": 2.0999999046325684,
+          "max": 22.100000143051147
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 1.7999999523162842,
+          "p95": 3.269999921321865,
+          "min": 1.4000000953674316,
+          "max": 16.299999952316284
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "warm",
+      "target": "kiosk",
+      "size": 120,
+      "before": {
+        "duration": {
+          "n": 30,
+          "p50": 2.4000000953674316,
+          "p95": 3.5400000095367408,
+          "min": 2,
+          "max": 9.5
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 0.5999999046325684,
+          "p95": 1.4050000309944122,
+          "min": 0.39999985694885254,
+          "max": 2.8999998569488525
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 30,
+          "p50": 2.350000023841858,
+          "p95": 3.4299999833106978,
+          "min": 2,
+          "max": 8.200000047683716
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 0.5999999046325684,
+          "p95": 1.339999961853025,
+          "min": 0.39999985694885254,
+          "max": 3.299999952316284
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "warm",
+      "target": "menu",
+      "size": 120,
+      "before": {
+        "duration": {
+          "n": 30,
+          "p50": 33.299999952316284,
+          "p95": 34.0099998831749,
+          "min": 29.09999990463257,
+          "max": 34.299999952316284
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 4.2500001192092896,
+          "p95": 9.485000169277189,
+          "min": 2.9000000953674316,
+          "max": 12.399999856948853
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 30,
+          "p50": 33.450000047683716,
+          "p95": 34.11000002622605,
+          "min": 30.100000143051147,
+          "max": 34.299999952316284
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 8.549999833106995,
+          "p95": 10.094999957084653,
+          "min": 3.5999996662139893,
+          "max": 13.399999856948853
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    },
+    {
+      "profile": "warm",
+      "target": "menu",
+      "size": 2000,
+      "before": {
+        "duration": {
+          "n": 30,
+          "p50": 33.39999985694885,
+          "p95": 42.65999997854229,
+          "min": 24.200000047683716,
+          "max": 49.799999952316284
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 11.450000047683716,
+          "p95": 15.799999845027923,
+          "min": 10,
+          "max": 16.40000009536743
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      },
+      "after": {
+        "duration": {
+          "n": 30,
+          "p50": 33.39999997615814,
+          "p95": 34.0,
+          "min": 16.09999990463257,
+          "max": 34
+        },
+        "commitMs": {
+          "n": 30,
+          "p50": 11.600000023841858,
+          "p95": 16.755000126361846,
+          "min": 10.299999952316284,
+          "max": 18.09999990463257
+        },
+        "commits": {
+          "n": 30,
+          "p50": 1.0,
+          "p95": 1.0,
+          "min": 1,
+          "max": 1
+        }
+      }
+    }
+  ],
+  "supplement": {
+    "reason": "The primary menu120 CPU median differed because tiered JIT changed phase at different sample positions (baseline around sample15; after around sample20). Preserve the original values and add a separate descriptive check after 30 unrecorded warmup interactions.",
+    "target": "menu",
+    "size": 120,
+    "unrecordedWarmupPerSide": 30,
+    "recordedSamplesPerSide": 30,
+    "totalAdditionalObservations": 60,
+    "before": {
+      "duration": {
+        "n": 30,
+        "p50": 33.299999952316284,
+        "p95": 33.86500002145767,
+        "min": 32.799999952316284,
+        "max": 34.09999990463257
+      },
+      "commitMs": {
+        "n": 30,
+        "p50": 4.25,
+        "p95": 9.110000026226043,
+        "min": 2.6999998092651367,
+        "max": 10.400000095367432
+      },
+      "commits": {
+        "n": 30,
+        "p50": 1.0,
+        "p95": 1.0,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "after": {
+      "duration": {
+        "n": 30,
+        "p50": 33.40000009536743,
+        "p95": 33.8549998998642,
+        "min": 32.69999980926514,
+        "max": 33.90000009536743
+      },
+      "commitMs": {
+        "n": 30,
+        "p50": 4.5,
+        "p95": 9.465000057220458,
+        "min": 3.299999952316284,
+        "max": 10
+      },
+      "commits": {
+        "n": 30,
+        "p50": 1.0,
+        "p95": 1.0,
+        "min": 1,
+        "max": 1
+      }
+    }
+  },
+  "screenshots": {
+    "before": {
+      "kiosk24": "/private/tmp/tablecast-quality-reduction-before-343/apps/web/test-results/tablecast-web-rc-before-kiosk-24-402x874.png",
+      "kiosk120": "/private/tmp/tablecast-quality-reduction-before-343/apps/web/test-results/tablecast-web-rc-before-kiosk-120-402x874.png",
+      "menu120": "/private/tmp/tablecast-quality-reduction-before-343/apps/web/test-results/tablecast-web-rc-before-menu-120-402x874.png",
+      "menu2000": "/private/tmp/tablecast-quality-reduction-before-343/apps/web/test-results/tablecast-web-rc-before-menu-2000-402x874.png"
+    },
+    "after": {
+      "kiosk24": "/private/tmp/tablecast-quality-reduction-after-343/apps/web/test-results/tablecast-web-rc-after-kiosk-24-402x874.png",
+      "kiosk120": "/private/tmp/tablecast-quality-reduction-after-343/apps/web/test-results/tablecast-web-rc-after-kiosk-120-402x874.png",
+      "menu120": "/private/tmp/tablecast-quality-reduction-after-343/apps/web/test-results/tablecast-web-rc-after-menu-120-402x874.png",
+      "menu2000": "/private/tmp/tablecast-quality-reduction-after-343/apps/web/test-results/tablecast-web-rc-after-menu-2000-402x874.png"
+    }
+  },
+  "evidenceNotes": [
+    "All 280 primary performance observations succeeded, plus 60 separate supplementary observations. No paid voice/model calls.",
+    "Both screenshot suites passed four cases. After-side screenshot first attempt failed before collecting Kiosk tests due to a transient dynamic-module fetch; screenshot-only retry passed 2 files / 4 tests. Both logs retained.",
+    "Kiosk screenshots explicitly asserted conversation entry computed opacity=1. Timed samples measure DOM text detection and do not include the animation completion.",
+    "All Web runtime sources match: baseline379 files against exact git0b3ff961; after354 files against frozen working tree. Only test fixtures/configs are instrumented.",
+    "FreshBrowser means a new Vitest/Vite/browser process, with existing disk dependency caches retained. n=5 is descriptive.",
+    "Menu120 primary React median4.25→8.55ms is retained. Supplement after30 warmup:4.25→4.50ms. This does not establish statistical equivalence."
+  ],
+  "publishedScreenshots": {
+    "beforeKiosk120": "https://github.com/user-attachments/assets/fde49364-659a-47f6-ba18-610114b573c3",
+    "afterKiosk120": "https://github.com/user-attachments/assets/a939e180-a2b5-4b51-88d0-e8775fe62d7b",
+    "beforeMenu2000": "https://github.com/user-attachments/assets/980398c1-be2f-4608-8110-1c050f8fb6e5",
+    "afterMenu2000": "https://github.com/user-attachments/assets/6425989f-4de3-4c81-8eff-3f17adf9a1cf"
+  },
+  "rawSamples": "reduction-web-samples.csv; dataset column separates primary280 and supplement60"
+}

@@ -2,11 +2,11 @@ import {
   oauthProviderAuthServerMetadata,
   oauthProviderOpenIdConfigMetadata,
 } from "@better-auth/oauth-provider";
-import { Hono } from "hono";
-import type { ApiEnv } from "../../platform/context";
 import { ensure } from "../../platform/errors";
+import { apiFactory } from "../../platform/http";
 import { isHostedEmulator, previewOAuthFetch } from "./preview";
-export const authRoutes = new Hono<ApiEnv>()
+export const authRoutes = apiFactory
+  .createApp()
   .on(["GET", "POST"], ["/_tablecast/oauth/*", "/o/oauth2/v2/auth/*", "/_emulate/*"], (c) => {
     if (!isHostedEmulator(c.env)) return c.notFound();
     const url = new URL(c.req.url);

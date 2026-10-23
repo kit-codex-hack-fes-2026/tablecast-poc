@@ -5,23 +5,23 @@
 ## 基本構成
 
 BunでJS依存とタスクを管理し、Turborepoでworkspace間の順序・キャッシュを扱う。
-Bunを使っても本番Workersのruntimeはworkerdであり、Wrangler/Vite/Storybookの実行要件を勝手に変更しない。
+Bunを使っても本番Workersのruntimeはworkerdであり、cf/Vite/Storybookの実行要件を勝手に変更しない。
 互換性のため公式CLIにNodeが必要なら使う。Bunの採用を理由にVitestをbun testへ置換しない。[S13](sources.md#s13)
 
 ローカル対象はWeb、Hono、D1、DO、R2、Imagesの対応範囲、MCP、Storybook。
-通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはgpt-5.6-luna、、音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
+通常音声はブラウザーからGPT-Live 1へ直接WebRTC接続し、業務委任はGPT-Liveの標準Responses delegationからLunaへ接続する。外部キーはAPIだけが持つ。業務モデルはTABLECAST_MODELで指定し、雛形はgpt-6-luna、Fast mode、reasoning mediumとする。音声モデルはgpt-live-1に固定する。OAuthプロバイダー・ChatGPT到達性の確認は別の統合試験とする。
 ローカルの従業員認証には実Better Authとローカルメール受信箱等の最小の開発経路を使い、常設の認証bypassを作らない。
 
 ## 通常開発と本番相当試験
 
-| モード   | 起動方式                                                       | 用途                                             |
-| -------- | -------------------------------------------------------------- | ------------------------------------------------ |
-| 通常     | TanStack Start + Cloudflare Vite Plugin、APIをauxiliary Worker | UIのHMRと実Binding                               |
-| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動               | Service Binding、build、stream、Cookieの接続確認 |
-| UI部品   | apps/web内のStorybook                                          | 固定状態とブラウザー操作検証                     |
-| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続                          | 字幕、取消、業務委任                             |
+| モード   | 起動方式                                         | 用途                                             |
+| -------- | ------------------------------------------------ | ------------------------------------------------ |
+| 通常     | cf dev + Cloudflare Vite PluginでWeb/APIを起動   | UIのHMRと実Binding                               |
+| 本番相当 | build済みWebとAPIをCloudflare Vite previewで起動 | Service Binding、build、stream、Cookieの接続確認 |
+| UI部品   | apps/web内のStorybook                            | 固定状態とブラウザー操作検証                     |
+| 音声     | ブラウザーWebRTCとHonoのtool HTTP接続            | 字幕、取消、業務委任                             |
 
-Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、同じAPI WorkerをVite補助と独立Wranglerで二重起動しない。[S11](sources.md#s11)
+Cloudflareはmultiworkerのローカル起動と資源の永続化を提供する。公式の対応版を揃え、WebのVite pluginがAPIをauxiliary Workerとして一度だけ起動し、Service Bindingでつなぐ。[S11](sources.md#s11)
 DB用の常駐サーバーや別のImages Workerを必要なく追加しない。Images bindingのローカル実装は全機能の完全エミュレーションではない。[S16](sources.md#s16)
 D1 migration・seedのCLIにも同じローカル保存先と同じ生成configを渡す。別ディレクトリの空DBへ投入する事故を防ぐ。
 
@@ -35,18 +35,19 @@ hookは各checkoutの `bunx --no-install lefthook` を使う。グローバル�
 
 ## worktree識別子
 
-ブラウザー用のドメインは `<worktree>.<repo>.localhost`。メインcheckoutは `main.tablecast-poc.localhost`、`voice-ui` という追加worktreeは `voice-ui.tablecast-poc.localhost` になる。repo名はGit共通ディレクトリの親フォルダー名から取得し、detached HEADでも変わらない。各ラベルを小文字化し、英数字・ハイフン以外をハイフンに置換する。名前の重複は起動時に拒否する。
-内部リソースの識別子は正規化したworktree実パスとrepository識別子から作る短いhashを維持し、ドメイン変更で保存済みD1・R2を失わない。Git commitが変わってもドメインは変わらない。
+ホスト開発のURLは `<service>.<worktree名>.tablecast-poc.localhost`。branch末尾を小文字・英数字・ハイフンへ正規化し、先頭47文字へ切り取り、末尾のハイフンを除く。branchがない場合は `git rev-parse --short=8 HEAD` を使う。たとえば `codex/268-portless-dev` のWebは `http://web.268-portless-dev.tablecast-poc.localhost`。名前の衝突はPortlessで拒否し、自動suffixや上書きを使わない。
+Dev Containerは引き続き `<worktree>.<repo>.container.localhost:<port>` とCaddyを使う。コンテナの命名と公開ポートは [Dev Containerの構成](devcontainer.md) を参照する。
+Worker・D1・R2・Composeもworktree名を使う。保存先は常にこのworktreeの `.local/state` とし、名前別ディレクトリを作らない。branch名の変更やdetachedのcommit更新で名前が変わった場合、通常起動は自動消去せず停止する。変更前に `bun run services:down` で旧Composeを停止し、変更後に `bun run demo:reset` で開発データを作り直す。認証secretとデモ資格情報は維持する。
 独自リソース名には `tablecast` を含める。
 
-| 対象        | 例・分離内容                                         |
-| ----------- | ---------------------------------------------------- |
-| Webのホスト | `<worktree>.<repo>.localhost`                        |
-| Worker      | `tablecast-<id>-web`、`tablecast-<id>-api`           |
-| 公開環境値  | `TABLECAST_PUBLIC_ORIGIN` 等                         |
-| 保存先      | `<worktree>/.local/state`、生成設定とログも `.local` |
-| JS依存      | worktree固有node_modules、Bunの不変cacheは共有可     |
-| 認証        | worktree固有secret、正確な公開origin                 |
+| 対象        | 例・分離内容                                               |
+| ----------- | ---------------------------------------------------------- |
+| Webのホスト | `web.<worktree名>.tablecast-poc.localhost`                 |
+| Worker      | `tablecast-<worktree名>-web`、`tablecast-<worktree名>-api` |
+| 公開環境値  | `TABLECAST_PUBLIC_ORIGIN` 等                               |
+| 保存先      | `<worktree>/.local/state`、生成設定とログも `.local`       |
+| JS依存      | worktree固有node_modules、Bunの不変cacheは共有可           |
+| 認証        | worktree固有secret、正確な公開origin                       |
 
 Cookieはポートでは分離されないため、worktreeごとにホスト名を分ける。同一worktreeのコンテナは `<worktree>.<repo>.container.localhost` とし、通常起動とのCookie共有を防ぐ。host-only Cookieを維持する。[S18](sources.md#s18)
 `.localhost` の解決・HTTPS・ブラウザー対応は環境ごとに起動診断する。iPadには到達可能なLANホスト名と信頼された証明書が別途必要。
@@ -56,6 +57,8 @@ Cookieはポートでは分離されないため、worktreeごとにホスト名
 ### Storybook MCP
 
 ルートで `bun run setup`、`bun run storybook` を順に実行する。Storybook公式CLIを直接使い、DB・runtimeの準備やWorkersの起動は不要である。
+
+StorybookのViewportメニューには、PR確認用のiPhone 17（402×874）、11インチiPad横（1180×820）、MacBook Pro 14インチ（1512×982）を用意する。CSS viewportの検証と実機検証は区別する。
 
 Storybookの起動ログのURLへ `/mcp` を付け、Git管理外の `.codex/config.toml` に登録する。標準ポートは6006で、他worktreeが使う場合は `bun run storybook --port 6007` などで指定する。既存のCodex設定は保持して次のテーブルを統合する。
 
@@ -74,19 +77,14 @@ CodexのMCP接続を再起動して設定を読み直す。Storybookを起動し
 
 ### 共通の割当て
 
-小さなbootstrapでWeb、Inspector、OAuth、Mailpit、Grafanaをまとめて割り当てる。Storybookは上記の公式CLIでportを指定する。
-既存のポート割当て機能を先に使い、worktree間の予約だけを補う。汎用process supervisorや独自reverse proxy、独立したtopology packageは作らない。
-一つのruntime manifestにホスト、port、state、生成configを記録する。ポートを複数package.jsonへ直書きしない。
-同時初期化時の予約はgit common directory内の小さな台帳を排他更新し、TCPとUDPの両方を確認する。秘密情報は共通台帳へ置かない。
-空き確認後にも競合し得るため、bind失敗時は別の予約で起動し直す。既存プロセスをkillしてポートを奪わない。
-フレームワークの自動port繰上げを無効にし、古いOAuth callbackや間違ったworktreeへ接続しないようにする。
+ホストではrootのpackage scriptがPortlessからTurboを起動し、名前の衝突を設定生成・Compose起動前に拒否する。Portlessが `PORT` を割り当て、route登録とプロセスの終了を所有する。共有proxyはHTTPの80番を使い、worktree固有のproxy・ポート台帳・予約ロックを作らない。WorkersのInspectorは0番を指定して実行時の割当てを使う。
+LGTM・Mailpitの公開ポートはComposeの `127.0.0.1::コンテナポート` でDockerへ任せる。`services:aliases` が公式の `docker compose port` と `portless alias` でGrafana・Mailpit・Tempo・OTLPの名前を登録する。APIからMailpit・OTLPへの通信もこの名前を使う。
+`.local/.env` に名前・origin・実Webポートを通常のenvとしてまとめる。Portlessが渡したWebポートを `dev:prepare` で保存し、起動前の0は未起動を表す。`runtime.json` とローカル用 `TABLECAST_CONFIG` は生成しない。保存先・configパスは実worktreeから決め、seed・demo・pluginは設定の名前と所属を確認する。Cloudflare設定はenvから直接読み、SDK用API設定だけを正本から生成する。
+通常の起動前に [setupのPortless初期設定](setup.md) を済ませる。別のproxyを全消去・停止せず、停止時はこのworktreeのrouteだけを片付ける。[S19](sources.md#s19)
 
-ホストalias・TLS・proxyは既存のPortless等のツールを利用する。導入時に対応OSと公式の起動方法を確認し、参照スターターの独自topologyシステムを丸ごとコピーしない。[S19](sources.md#s19)
-共有proxyを個別worktreeから強制終了・全消去しない。自分が作ったalias・process・stateだけを操作する。
+cf・SDKの接続台帳は`CLOUDFLARE_REGISTRY_PATH`・`MINIFLARE_REGISTRY_PATH`・`WRANGLER_REGISTRY_PATH`を同じ`.local/tablecast-wrangler-registry`へ設定してworktree間を分離する。通常開発をCtrl+Cで停止してから`dev:parity`を実行する。`dev:prepare`が生成した設定をbuildへ渡し、build・起動時に設定を再生成しない。APIは`cf build`、WebはViteの公式buildで`.cloudflare/output/v0`を生成し、Web側へAPIの成果物を集める。Vite plugin v2のpreviewはこのBuild OutputからAPI・Webを一緒に起動する。APIをpreview時に再bundleしない。cfのTanStack Start検出は`--mode`を転送できないため、Webのbuildだけはpackage scriptからViteへ明示する。
 
-Wranglerの接続台帳は `WRANGLER_REGISTRY_PATH` で `.local/tablecast-wrangler-registry` に分離する。通常開発をCtrl+Cで停止してから `dev:parity` を実行し、`TABLECAST_LOCAL_BUILD=1` とworktree固有のconfigを渡してWebの公式buildを直接実行する。生成された `.wrangler/deploy/config.json` から2 Workersをpreviewで起動し、同じD1・R2・DOの保存先を使う。configを手製で再構築したり、APIを再bundleしたりしない。
-
-公式pluginはpreview用の `.dev.vars` をserver成果物へコピーするため、開発プロセスのumaskを077とし、ローカルbuildはTurboの共有cacheへ入れない。通常の `bun run build` はリポジトリの配備configを使い、成果物とdeploy manifestを一緒にcacheする。公開時は[CI/CD手順](deployment.md)で生成した環境別configをbuildへ渡し、ローカルpreview成果物を配備しない。[公式previewと設定](https://developers.cloudflare.com/workers/vite-plugin/reference/api/)、[秘密情報の読込み](https://developers.cloudflare.com/workers/vite-plugin/reference/secrets/)
+公式pluginはpreview用dotenvを成果物へコピーするため、local buildのumaskは077とし、Turbo cacheへの書込みを無効にする。E2Eは成果物を実行固有の`build/.cloudflare`へ複製する。公開buildは各workspaceのtaskが終了する前にdotenvを除外し、公式Build Output全体をcache・CI artifactへ保存する。環境・PR・SHA・DB・Container参照を配備前に再検査し、local preview成果物を公開配備しない。[公式Build Output](https://developers.cloudflare.com/cf/ci/)
 
 ## Service BindingとCookie
 
@@ -103,7 +101,7 @@ PORT、PUBLIC_ORIGIN、state path、認証secret、Cloudflare本番資格、TLS�
 これらはworktree初期化で生成し `.local` に置く。envをshellとしてevalせず、標準env読込みで必要な値だけ各runtimeへ渡す。
 
 `.worktreeinclude` はCodexのローカルworktree機能であり、Git標準ではない。通常のgit worktreeでは自動コピーされない。[S15](sources.md#s15)
-.gitignoreで無視される同一ファイルだけを対象とし、node_modules、.wrangler、DB、ログ、証明書をコピーしない。
+.gitignoreで無視される同一ファイルだけを対象とし、node_modules、.cloudflare、.wrangler、DB、ログ、証明書をコピーしない。
 手動worktreeでは既存のsecret管理から同じファイルを安全に配置する。汎用glob同期やsymlink追跡の再実装はしない。
 Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保存する。
 
@@ -111,17 +109,17 @@ Bunのlockfile、migration、fixtureソース、必要な上流patchはGitへ保
 
 以下のコマンドを実装済み。初回はDockerを起動して依存を導入する。外部音声設定が未登録でもGUI注文は起動する。
 
-| コマンド                                   | 役割                                                      |
-| ------------------------------------------ | --------------------------------------------------------- |
-| `bun install`                              | 固定方針に従ってJS依存を導入                              |
-| `bun run dev:prepare`                      | worktree ID・ports・config・local migration・初期seed     |
-| `bun run dev`                              | TurboでWeb/API・OAuth・proxy、Composeで周辺サービスを起動 |
-| `bun run dev:parity`                       | build済みWorkersのローカル疎通                            |
-| `bun run services:status`                  | Composeサービスの状態と公開port                           |
-| `bun run storybook`                        | Web内のStorybookだけを起動                                |
-| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                    |
-| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                  |
-| Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する               |
+| コマンド                                   | 役割                                                         |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `bun install`                              | 固定方針に従ってJS依存を導入                                 |
+| `bun run dev:prepare`                      | worktree名・env・DB migration・初期seed                      |
+| `bun run dev`                              | TurboとPortlessでWeb/API・OAuth、Composeで周辺サービスを起動 |
+| `bun run dev:parity`                       | build済みWorkersのローカル疎通                               |
+| `bun run services:status`                  | Composeサービスの状態と公開port                              |
+| `bun run storybook`                        | Web内のStorybookだけを起動                                   |
+| `bun run db:seed -- --profile demo`        | 自worktreeのlocal seed                                       |
+| `bun run demo:reset` / `bun run demo:play` | ローカル状態の再現・進行                                     |
+| Ctrl+C / `bun run services:down`           | Web・音声とDockerサービスをそれぞれ停止する                  |
 
 起動順は `turbo.json`、実行するCLIは各 `package.json` に定義する。 ホストの外部サービスはルート `compose.yaml`、Dev Container固有の構成は `.devcontainer/compose.yaml` に置く。worktree固有設定だけを `scripts/tablecast-runtime.ts` で生成する。
 
@@ -140,16 +138,44 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## タスクの所有者
 
-`package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthとproxyを併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
+`package.json` はCLI、`turbo.json` は依存と同時実行を所有する。Webのdevは `dependsOn` で初期化とCompose起動を待ち、`with` でOAuthを併走させる。WebはrootのPortlessから起動し、OAuthだけを別のPortlessで併走させる。常駐タスクは `persistent: true` / `cache: false`、データを書き込む初期化とlocal buildもcacheしない。Paraglide生成は入力と出力を指定してcacheする。Turborepoのstrict envを維持し、各workspaceのBunが生成された `.local/.env` を読む。API WorkerはViteの補助Workerとして一度だけ起動する。
 
 独自のdev daemonは持たない。WebはCtrl+C、ホストのDockerサービスは `bun run services:down` で終了する。具体的なコマンドは [setup.md](setup.md) にまとめる。
 
 ## メールカタログの検証
 
-既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`bunx --no-install wrangler dev --assets apps/api/email-static`で確認し、終了時はWranglerと子workerdを停止する。
+既存APIのReact Emailテンプレートから、一覧と招待・メール確認・パスワード再設定の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
 
 生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
 
 ## 統合先とrelease
 
 作業branchは`origin/staging`から作成し、stagingへPRを出す。共用stagingは[配備手順](deployment.md#stagingとreleaseの運用)に従って利用し、ローカル終了処理で停止・リセットしない。実装Issueの開発完了とmainへの本番releaseを区別する。
+
+## Renovateによる依存更新
+
+設定は[Renovate設定](../.github/renovate.json5)で管理し、標準Mend Renovate GitHub Appをこのリポジトリへ接続する。botが作成・更新するDependency Dashboardに検出した依存、PR、保留・エラー・再実行を集約する。手動の追跡Issueや専用のIssue作成workflowは使わない。`.agents/skills/**`は更新対象から除き、skill内の参考workflowを実際のCI依存として更新しない。
+
+通常更新は日本時間の月曜6〜12時、非majorは一つのPR、majorはReact・Vitest・Storybook等の互換単位で分ける。lockfileも週次で更新する。セキュリティ更新は通常の時間帯制限から除外する。PRはstaging向けDraft、buildラベル、日本語の4項目の本文とし、自動マージしない。
+
+commitは英語のConventional CommitsとGitmoji一つ、英語本文を維持する。標準テンプレートはDashboardの数値IDをcommitへ展開しないため、標準Appが作成した[Dependency Dashboard #302](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/issues/302)をPR・commitのRefsで明示参照する。Dashboardを再作成した場合は、設定とこの参照番号を同期する。Dashboardは自動更新PRで閉じない。commitlintの免除は追加しない。
+
+TypeScriptのJavaScript API用6系とCLI用安定7系を分け、Nodeと型定義は24系を使う。cfとCloudflare Vite plugin v2だけは既採用betaを追跡し、新しい先行版系列を導入しない。設定の検証とAppの稼働は別に確認し、実PRの作成は設定がstagingへ入った後のApp実行で確認する。
+
+RenovateのPRタイトルは、推奨設定に従って英語のcommit件名から生成する。`prTitle`は個別指定せず、`commitMessageAction`や`commitMessageTopic`でcommitと共通の表現を設定する。自動更新PRは日本語タイトル規約の例外とし、本文は既存の日本語4項目を維持する。
+
+### Storybookの部品ドキュメント
+
+デザインシステムのはじめにと使い分けはWeb内のMDX、各UI・主要共通部品の用途とpropsは隣接StoryのAutodocsで読む。色の値は `apps/web/src/styles.css`、variantは既存のTailwind Variantsが正本で、文書へ別の対応表を実装しない。DocsのSourceから組合せを確認し、Controlsを製品のテーマ編集UIとして流用しない。
+
+`@storybook/addon-docs` は既存Storybookと同じ10.6.2を使用する。rootの `bun.lock` と `bun install --frozen-lockfile` で導入する。StorybookはAPI・DB・実モデルを使わず起動できる。部品を追加する場合は用途・props・使い分け・隣接Storyを一緒に更新し、MCPの `docs-show` でも説明と使用例を確認する。
+
+MCPの接続確認では `initialize`、`tools/list` の成功を先に確認する。続いて返されたschemaに従い `docs-list`、`docs-show`、`docs-show-story` または `stories-preview` を呼ぶ。サーバー名・接続URL・対象SHA・成功したtoolとStory IDをPRへ記録する。Git管理外の設定を追加しただけでは接続成功としない。Codexの既存チャットが設定を再読込しない場合は、その状態と標準MCP clientでの直接疎通結果を分けて報告する。
+
+Docs内のMarkdown表は公式の `remark-gfm@4.0.1` で描画する。propsの抽出は既存依存のreact-docgen-typescriptを使う。用途・使い分けの説明は部品のJSDocを正本にし、AutodocsとMCPの両方へ渡す。MCPの自動生成例はpackage名のimportを示すことがあるため、Web内部では対応する隣接Storyの相対importを使う。`@tablecast/web` は部品を配布する公開packageではない。
+
+### ページ遷移・HMR時の計測
+
+`@inference-net/otel-cf-workers`は設定のcontext keyをmodule内に持つ。Viteの依存再最適化などでWorker全体を再評価する際は、共有telemetryの`vite:beforeFullReload`でOpenTelemetryのtrace・context・propagation登録を解除し、新しいSDK評価に合わせて登録し直す。通常のリクエストで計測を停止したり、例外後に業務処理を再実行したりしない。production buildにはこの開発用hookを含めない。
+
+回帰確認はWebの`src/server/telemetry-hmr.test.ts`で実ViteとCloudflare Workerを起動し、複数回の全再評価後にもHTTP 200、要求ごとのtrace分離、親子spanの相関を確認する。デモDBや稼働中の開発サーバーは使わない。

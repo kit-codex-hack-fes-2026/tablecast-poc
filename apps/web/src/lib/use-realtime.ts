@@ -3,7 +3,7 @@ import { parseResponse, rpc, tableEndpoint } from "./api";
 import { apiError } from "./api-error";
 
 export function useRealtime(
-  scope: "table" | { storeId: string } | undefined,
+  scope: "table" | undefined | { storeId: string },
   snapshotCursor: number,
   onChange: () => void,
   tableClient = tableEndpoint.client,
@@ -22,7 +22,7 @@ export function useRealtime(
     let fetching = false;
     let queued = false;
     let lastSync = 0;
-    let socket: WebSocket | undefined;
+    let socket: undefined | WebSocket;
     let retry: ReturnType<typeof setTimeout> | undefined;
     const controller = new AbortController();
     async function synchronise() {

@@ -1,9 +1,5 @@
-import { Brand } from "../components/brand";
-import { Pwa, PwaInstallHelp } from "../components/pwa";
-import { MotionProvider } from "../components/motion-provider";
-import { readPanelCookies } from "../lib/use-panel-layout";
-import { PanelLayoutProvider } from "../lib/panel-layout";
 import type { QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -12,20 +8,29 @@ import {
   Scripts,
   useMatchRoute,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { floorOptions, storesOptions } from "../features/store/store-query";
-import { catalogOptions } from "../features/store/menu-query";
-import { menuSectionSchema } from "../features/store/menu-model";
+import { Brand } from "../components/brand";
+import { DocumentHead } from "../components/document-head";
+import { MotionProvider } from "../components/motion-provider";
+import { Pwa } from "../components/pwa";
+import { RouteMotion } from "../components/route-motion";
+import { catalogOptions } from "../features/catalog/catalog-query";
+import { menuSectionSchema } from "../features/configuration/menu-model";
+import { floorOptions } from "../features/floor/floor-query";
+import { homeOptions } from "../features/store/home-query";
+import { storesOptions } from "../features/store/store-query";
 import { LocaleProvider } from "../i18n/locale";
+import { initialStorePath } from "../lib/initial-store-path";
+import { PanelLayoutProvider } from "../lib/panel-layout";
 import { loadInitial, sessionOptions } from "../lib/session-query";
+import { readPanelCookies } from "../lib/use-panel-layout";
 import { getLocale } from "../paraglide/runtime.js";
 import stylesheet from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  beforeLoad: async ({ context, location }) => {
+  beforeLoad: async ({ context, location, abortController }) => {
     const panelCookies = await readPanelCookies();
     if (
-      /^\/(admin|account|organisations|stores|device|consent|invitations)(\/|$)/.test(
+      /^\/(admin|account|billing|organisations|stores|device|consent|invitations)(\/|$)/.test(
         location.pathname,
       )
     ) {
@@ -34,15 +39,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         queryClient.getQueryData(sessionOptions.queryKey) === undefined ||
         queryClient.getQueryData(storesOptions.queryKey) === undefined
       ) {
-        const floorMatch = /^\/admin\/stores\/([^/]+)\/floor\/?$/.exec(location.pathname);
+        const storePath = initialStorePath(location.pathname);
         const menuMatch = /^\/admin\/stores\/([^/]+)\/menu\/([^/]+)\/?$/.exec(location.pathname);
         const catalogStoreId =
-          menuMatch && menuSectionSchema.safeParse(menuMatch[2]).success
+          menuMatch?.[1] && menuSectionSchema.safeParse(menuMatch[2]).success
             ? decodeURIComponent(menuMatch[1])
             : undefined;
-        const storeId = floorMatch ? decodeURIComponent(floorMatch[1]) : catalogStoreId;
+        const storeId = storePath?.storeId ?? catalogStoreId;
         const search = new URLSearchParams(location.searchStr);
-        // SSRの転送先は別のQueryClientになるため、既定フロアの先読みはクライアントだけで行う。
+        // SSRの転送先は別のQueryClientになるため、ホームでも使うフロアの先読みはクライアントだけで行う。
         const defaultFloor =
           typeof window !== "undefined" &&
           location.pathname === "/admin/live" &&
@@ -52,7 +57,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         const initial = await loadInitial(
           storeId,
           defaultFloor ? "true" : undefined,
-          catalogStoreId ? "catalog" : undefined,
+          catalogStoreId ? "catalog" : storePath?.home || defaultFloor ? "home" : undefined,
+          abortController.signal,
         );
         queryClient.setQueryData(sessionOptions.queryKey, initial.session);
         queryClient.setQueryData(storesOptions.queryKey, {
@@ -62,6 +68,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         if (initial.floor) {
           queryClient.setQueryData(floorOptions(initial.floor.store.id).queryKey, initial.floor);
         }
+        if (initial.home)
+          queryClient.setQueryData(homeOptions(initial.home.storeId).queryKey, initial.home);
         if (initial.catalog) {
           queryClient.setQueryData(
             catalogOptions(initial.catalog.storeId).queryKey,
@@ -80,14 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#f7f7f2" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
-      { title: "TableCast" },
     ],
     links: [
       { rel: "stylesheet", href: stylesheet },
       {
         rel: "manifest",
-        href:
-          matches.at(-1)?.pathname === "/"
+        href: matches.at(-1)?.pathname.startsWith("/member")
+          ? "/tablecast-customer.webmanifest"
+          : matches.at(-1)?.pathname === "/"
             ? "/tablecast-kiosk.webmanifest"
             : "/tablecast-staff.webmanifest",
       },
@@ -120,6 +128,7 @@ function Root({ children }: { children: ReactNode }) {
       </head>
       <body>
         <LocaleProvider key={demo ? `${demo.storeId}/${demo.demoId}` : "app"} persist={!demo}>
+          <DocumentHead />
           <MotionProvider>{children}</MotionProvider>
         </LocaleProvider>
         <Scripts />
@@ -132,9 +141,9 @@ function RootContent() {
   const { panelCookies } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>
+      <RouteMotion />
       <Pwa />
       <Outlet />
-      <PwaInstallHelp />
     </PanelLayoutProvider>
   );
 }

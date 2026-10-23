@@ -1,44 +1,72 @@
+import { validationIssuesSchema } from "@tablecast/api/schema";
 import { AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useI18n } from "../i18n/locale";
 import { apiError } from "../lib/api-error";
-import { validationIssuesSchema } from "@tablecast/api/schema";
 
+function errorMessageKey(error: unknown): Parameters<ReturnType<typeof useI18n>["t"]>[0] {
+  const failure = apiError(error);
+  if (!failure) return error instanceof TypeError ? "common_connection_error" : "common_error";
+  if (failure.code === "CONFIGURATION_FORMAT_UNSUPPORTED") return "condition_upgrade_error";
+  switch (failure.status) {
+    case undefined:
+      return "common_error";
+    case 401:
+      return "common_session_error";
+    case 403:
+      return "common_forbidden";
+    case 404:
+      return "common_not_found";
+    case 409:
+    case 410:
+      return "common_conflict";
+    case 400:
+    case 422:
+      return "common_invalid_input";
+    case 413:
+      return "common_too_large";
+    case 429:
+      return "common_rate_limited";
+    default:
+      return failure.status && failure.status >= 500 ? "common_unavailable" : "common_error";
+  }
+}
+
+/**
+ * 通信・認可・競合など画面全体の失敗を表示する。
+ * errorはunknownで受けAPIエラーを翻訳し、生の内部エラーを表示しない。
+ * onRetryを渡す場合は呼出し元が再取得し、retryingで二重操作を防ぐ。
+ * 入力エラーにはFieldErrorsを使う。
+ * 取得済み情報を消さず隣接して配置する。
+ */
 export function ErrorNotice({
-  error,
-  onRetry,
+  query,
+  error = query?.error,
+  onRetry = query
+    ? () => {
+        void query.refetch();
+      }
+    : undefined,
   retrying = false,
-}: {
-  error: unknown;
-  onRetry?: () => void;
-  retrying?: boolean;
-}) {
+}: (
+  | { error: unknown; onRetry?: () => void; query?: never }
+  | { error?: never; onRetry?: never; query: { error: unknown; refetch: () => unknown } }
+) & { retrying?: boolean }) {
   const { t, locale } = useI18n();
   if (!error) return null;
-  let message = t("common_error");
-  if (error instanceof TypeError) message = t("common_connection_error");
+  const message = t(errorMessageKey(error));
   const failure = apiError(error);
   const validation =
     failure?.code === "INVALID_INPUT"
       ? validationIssuesSchema.safeParse(failure.details)
       : undefined;
-  if (failure) {
-    if (failure.status === 401) message = t("common_session_error");
-    else if (failure.status === 403) message = t("common_forbidden");
-    else if (failure.status === 404) message = t("common_not_found");
-    else if (failure.status === 409 || failure.status === 410) message = t("common_conflict");
-    else if (failure.status === 400 || failure.status === 422) message = t("common_invalid_input");
-    else if (failure.status === 413) message = t("common_too_large");
-    else if (failure.status === 429) message = t("common_rate_limited");
-    else if (failure.status && failure.status >= 500) message = t("common_unavailable");
-  }
   return (
     <div
-      className="flex items-start gap-2.5 py-3 px-3.5 rounded-md text-sm leading-relaxed [&_svg]:shrink-0 [&_svg]:mt-0.5 [&_[data-slot=button][data-size=text]]:min-h-6 [&_[data-slot=button][data-size=text]]:ml-auto [&_[data-slot=button][data-size=text]]:shrink-0 text-destructive bg-destructive/10"
+      className="motion-safe:animate-tablecast-state flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-sm leading-relaxed text-destructive"
       role="alert"
     >
-      <AlertCircle size={20} aria-hidden="true" />
-      <div>
+      <AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" />
+      <div className="min-w-0 flex-1 wrap-anywhere">
         <span>{message}</span>
         {validation?.success && validation.data.length > 0 && (
           <ul className="mt-2 list-disc pl-5">
@@ -53,6 +81,7 @@ export function ErrorNotice({
       </div>
       {onRetry && (
         <Button
+          className="ml-auto"
           size="text"
           variant="link"
           type="button"

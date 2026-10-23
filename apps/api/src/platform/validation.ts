@@ -1,5 +1,5 @@
-import { zValidator } from "@hono/zod-validator";
 import type { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
 import { en, ja } from "zod/locales";
 import { DomainError } from "./errors";
 
@@ -21,7 +21,7 @@ function message(issue: z.core.$ZodIssue, locale: keyof typeof locales) {
   return typeof result === "string" ? result : (result?.message ?? "Invalid input");
 }
 
-const validator = <Target extends "json" | "query" | "form", Output, Input>(
+const validator = <Target extends "form" | "json" | "query", Output, Input>(
   target: Target,
   schema: z.ZodType<Output, Input>,
 ) =>

@@ -1,9 +1,9 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, it } from "vitest";
 import * as businessTables from "../src/db/business-schema";
-import { updateCart } from "../src/modules/orders/service";
+import { updateCart } from "../src/modules/orders/use-cases/cart";
 import { getTableState } from "../src/modules/tables/queries";
-import { openTable } from "../src/modules/tables/service";
+import { openTable } from "../src/modules/tables/use-cases/lifecycle";
 import { createApiServices } from "../src/platform/context";
 import { tableStateSchema } from "../src/schema";
 import { insertFixture } from "./database-fixture";

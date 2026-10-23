@@ -1,10 +1,12 @@
-import { reset } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import * as authTables from "../src/db/auth-schema";
 import * as businessTables from "../src/db/business-schema";
 import { type Actor } from "../src/modules/auth/model";
-import { createAuth, hashDeviceToken } from "../src/modules/auth/service";
+import { createAuth } from "../src/modules/auth/service";
+import { hashDeviceToken } from "../src/modules/auth/token";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
 import { ensure } from "../src/platform/errors";
 import { configuration } from "./configuration-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
@@ -16,10 +18,14 @@ export const device = {
 } satisfies Actor;
 export const deviceToken = "tablecast-fixture-device-token";
 export { configuration, text } from "./configuration-fixture";
-export async function resetFixtureStorage() {
-  // workerd 1.20260903.1は停止中のD1をreset対象から漏らすため、直前に起動する。
-  await env.TABLECAST_DB.prepare("SELECT 1").first();
-  await reset();
+export { resetFixtureStorage } from "./storage-fixture";
+
+// 実認証handlerが発行したCookieを、その後のHTTP要求へ渡す。
+export function responseCookies(response: Response) {
+  return response.headers
+    .getSetCookie()
+    .map((value) => value.split(";")[0])
+    .join("; ");
 }
 
 export async function setupFixture() {
@@ -46,6 +52,7 @@ export async function setupFixture() {
     body: { email: "tablecast-staff@example.test", password: "tablecast-local-fixture-password" },
     asResponse: true,
   });
+  ensure(response.ok, "FIXTURE_LOGIN_FAILED", 503);
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     insertFixture(authTables.organization, {
@@ -104,9 +111,27 @@ export async function setupFixture() {
       role: "owner",
       tableSessionId: "tablecast-session",
     } satisfies Actor,
-    cookie: response.headers
-      .getSetCookie()
-      .map((value) => value.split(";")[0])
-      .join("; "),
+    cookie: responseCookies(response),
   };
+}
+
+export async function setupVoiceFixture(voiceSessionId: string, turnId: string) {
+  await setupFixture();
+  const services = createApiServices(env);
+  await setVoiceSession(services, device, voiceSessionId);
+  await services.db.batch([
+    services.db.insert(businessTables.voiceTurns).values({
+      id: turnId,
+      voice_session_id: voiceSessionId,
+      table_session_id: device.tableSessionId,
+      store_id: device.storeId,
+      status: "started",
+      started_at: Date.now(),
+      locale: "ja",
+    }),
+    services.db
+      .update(businessTables.tableSessions)
+      .set({ active_turn_id: turnId })
+      .where(eq(businessTables.tableSessions.id, device.tableSessionId)),
+  ]);
 }

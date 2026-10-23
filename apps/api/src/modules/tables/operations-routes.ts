@@ -1,22 +1,55 @@
-import { Hono } from "hono";
 import { z } from "zod";
-import type { ApiEnv } from "../../platform/context";
+import { apiFactory } from "../../platform/http";
 import { localeSchema } from "../../platform/model";
 import { validate, validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
+import { instructionResponse } from "../configuration/instruction-response";
+import { initialiseExchangeRates } from "../currency/service";
+import { customerAttributionSchema, customerTargetSchema } from "../customer-memory/model";
+import { attributeCustomerConsumption } from "../customer-memory/use-cases/consumption";
+import { selectCustomerTarget } from "../customer-memory/use-cases/target";
+import { getDeviceParticipants } from "../customer-visits/queries";
+import { createCustomerVisitCode } from "../customer-visits/service";
+import { gamesTableRoutes } from "../games/routes";
 import { cartUpdateSchema, prepareSchema, submitSchema } from "../orders/model";
-import { prepareConfirmation, submitOrder, updateCart } from "../orders/service";
+import { updateCart } from "../orders/use-cases/cart";
+import { prepareConfirmation, submitOrder } from "../orders/use-cases/confirmation";
 import { getEvents } from "../stores/queries";
 import { speechSpeedInputSchema } from "../voice/model";
-import { setSpeechSpeed } from "../voice/service";
 import { voiceRoutes } from "../voice/routes";
+import { setSpeechSpeed } from "../voice/service";
 import { uiSectionInputSchema } from "./model";
 import { getTableState } from "./queries";
-import { callStaff, changeLocale, requestBill, setUiSection } from "./service";
-export const tableOperations = new Hono<ApiEnv>()
+import { callStaff, changeLocale, requestBill, setUiSection } from "./use-cases/presentation";
+export const tableOperations = apiFactory
+  .createApp()
+  .post("/customer-target", validate(customerTargetSchema), async (c) =>
+    c.json(await selectCustomerTarget(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
+  )
+  .post("/customer-consumption", validate(customerAttributionSchema), async (c) =>
+    c.json(
+      await attributeCustomerConsumption(c.get("services"), c.get("actor"), c.req.valid("json")),
+      200,
+    ),
+  )
+  .post("/customer-code", async (c) =>
+    c.json(await createCustomerVisitCode(c.get("services"), c.get("actor")), 200),
+  )
+  .get("/participants", async (c) =>
+    c.json(await getDeviceParticipants(c.get("services"), c.get("actor")), 200),
+  )
   .get("/", async (c) => c.json(await getTableState(c.get("services"), c.get("actor")), 200))
+  .get("/exchange-rates", async (c) =>
+    c.json(await initialiseExchangeRates(c.get("services"), c.get("actor")), 200),
+  )
   .get("/catalog", async (c) =>
-    c.json(await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId), 200),
+    c.json(
+      instructionResponse(
+        await getCatalog(c.get("services"), c.get("actor").storeId, c.get("actor").demoId),
+        c.req.header("X-Tablecast-Instructions"),
+      ),
+      200,
+    ),
   )
   .patch("/ui", validate(uiSectionInputSchema), async (c) =>
     c.json(await setUiSection(c.get("services"), c.get("actor"), c.req.valid("json")), 200),
@@ -52,6 +85,7 @@ export const tableOperations = new Hono<ApiEnv>()
     c.json(await changeLocale(c.get("services"), c.get("actor"), c.req.valid("json").locale), 200),
   )
   .route("/voice", voiceRoutes)
+  .route("/games", gamesTableRoutes)
   .get(
     "/events",
     validateQuery(z.object({ after: z.coerce.number().int().nonnegative().default(0) })),

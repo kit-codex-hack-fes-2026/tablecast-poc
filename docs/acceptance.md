@@ -4,6 +4,8 @@
 
 2026-09-06のローカル受入では、ビルド済みWeb/APIのService Bindingを使い、Chromium/WebKitの日英注文・提供・会計・OAuth同意・通知復旧・設定公開・文字拡大・キーボード操作に加え、商品編集・明示公開と管理画面の通知復旧と設定の手動編集・外部カートの不足補完と競合・閉卓履歴を含む32件が成功した。APIは開卓と設定公開の競合・rollback・通知境界、MCP認可・自発接客・診断・標準音声を含む131件成功。3worktreeの同時稼働、Cookie・DB・LiveKit分離、片方のreset/stop後の状態保持と一時環境の後片付けも確認した。ローカルLiveKitの合成音声送受信とRoom削除による切断は成功し、実マイク・外部AI・iPadの試験とは区別する。詳細は[実装・検証記録](progress.md)。以下の未実施項目はこの結果で自動的に受入済みとはしない。
 
+2026-10-19の利用者指定により、文字200%試験は廃止した。以下の文字拡大の記述は当時の実施履歴であり、現在の受入条件・継続試験を意味しない。
+
 以下は実装の完了条件であり、文書の存在だけで達成済みとはしない。未測定を合格扱いにしない。
 
 | ID           | 合格条件                                                                                                                       |
@@ -11,7 +13,7 @@
 | UI-01        | 客・店側・認証・主要エラーが日英で使え、管理者localeと卓localeが独立する                                                       |
 | UI-02        | 1024×768の初期画面で会話が主要領域を占め、ログ・言語・停止再開が常設される                                                     |
 | UI-03        | 客向けに自由文入力欄がなく、全商品・カスタマイズ・注文をタッチだけで操作できる                                                 |
-| UI-04        | 長い英語、拡大文字、縦画面、reduced motion、キーボードfocusで主要操作が壊れない                                                |
+| UI-04        | 長い英語、縦画面、reduced motion、キーボードfocusで主要操作が壊れない                                                          |
 | VOICE-01     | 日本語と英語で検索・説明・カスタマイズ・注文でき、音声入出力にGPT-Live 1を使う                                                 |
 | VOICE-02     | 演技は状況に合い、好評には嬉しさ、売切には申し訳なさを表し、過度な笑い・フィラーを避ける                                       |
 | VOICE-03     | 日本語の外来語と金額を自然に読み、タグ・break・URL・IDを読み上げや字幕へ漏らさない                                             |
@@ -45,6 +47,19 @@
 | DEPLOY-01    | Web/APIを公開環境へ配置しGPT-Live・Agents APIと接続して、日英実音声・MCP・ダッシュボードが連動する                             |
 | OPS-01       | 生音声を既定保存せず、Secretがログ・ブラウザー・session名へ漏れず、診断用IDで追跡できる                                        |
 
+## CIで確認するブラウザー範囲
+
+PRのマージ前はChromium E2Eの2 shardを必須とする。WebKit E2Eはstaging/mainへのpushと手動CIで実行するため、WebKit固有の回帰はstaging統合後に検出される。PRのCI成功だけではWebKit・iPad実機の受入完了としない。releaseの受入判定では対象staging SHAのChromium・WebKit両方の成功を確認し、実機・実音声等の未実施項目は別途残す。配備gateと実行範囲は[テスト戦略](testing.md#ciのジョブとキャッシュ)に従う。以下の過去の両ブラウザー確認記録は、最新PRでの実施結果を意味しない。
+
+## 現在の保証の配置
+
+Issue #272でE2Eの表示分岐を下位へ移した。下記は試験の所有先であり、今回の全試験成功・実機受入・性能改善を表さない。実行結果は対象SHAと未実施範囲をIssue/PRへ記録する。後続の過去の件数・成功記録は当時の証拠として保持し、E2E参照は移行前baseline `cd15eb6dfbfa3f70cbc482aff46f4f69af15264d`へ固定する。
+
+- UIの設定・保存・日英・失敗/再試行・focusは[保証の所有層と移行対応](testing.md#保証の所有層とe2eへの昇格)にあるStorybook/Browserが担当する。メニュー編集/voice値/公開の版/価格/認可はfeature Browserと実D1のAPIで分担する。
+- 会員の設定・記憶・ポイント・クーポンUIは[会員Browser](../apps/web/src/features/customer/customer-features.browser.test.tsx)と[店舗特典Browser](../apps/web/src/features/store/rewards.browser.test.tsx)、実HTTP→D1の接続は[会員特典API](../apps/api/test/customer-rewards-http.test.ts)が担当する。実QR URL・login returnTo・二人のCookie・同意・卓の通知・再来店は[代表会員E2E](../apps/web/e2e/tablecast-customer.spec.ts)へ残す。
+- ゲームの公開前提・権限・版・カート不変は[実D1のAPI](../apps/api/test/games.test.ts)、日英/通信復旧/開始遅着は店側と客側のBrowser、実iframe・公開・SDK保存/終了は[代表ゲームE2E](../apps/web/e2e/tablecast-games.spec.ts)で確認する。
+- [画像性能](../apps/web/e2e/tablecast-image-performance.spec.ts)の24/120商品予算と[runtime隔離](../apps/web/e2e/tablecast-runtime-isolation.spec.ts)、実Service Worker・Cookie・Service Bindingの保証は維持する。CI workflow・cache・差分選択・shard数は変更していない。Browser/Storybook projectのworker予算は各2へ設定した。
+
 ## ローカルUI受入の記録
 
 更新: 2026-09-06。外部Inworld・LLM・公開環境を接続せずに確認した範囲を記録する。部品試験、SDK境界の単体試験、実DBのブラウザー試験を区別し、この記録だけで音声・実機・公開環境を含む合格とは判定しない。
@@ -68,20 +83,33 @@ ADMIN-01の卓経過時間と会計待ちは、最新100件の表示ログから
 
 自発接客（PROACTIVE-01）は、実workerd/D1/Mastraで有効設定・204・180秒間隔・同時開始・参照専用ツール・最新状態の失効を検証した。Pythonの実AgentSessionでも一度だけの開始、204で履歴を作らないこと、客の発話・停止による取消、通常応答への復帰、503を再試行しないことを確認した。HTTP応答はfixtureであり、実マイク・STT/TTSによる無言検出と再生の受入は後続である。
 
-[外部カートの不足選択](../apps/web/e2e/tablecast-missing-choice.spec.ts)は、実DBから不足行を受け取り、編集中の入力保持、旧版保存の409、画面内エラー、同版の再表示抑止、同じ行の補完、次版での再表示をChromium/WebKitで確認した。任意単一選択の解除は日英Storybookで確認する。
+[外部カートの不足選択](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-missing-choice.spec.ts)は、実DBから不足行を受け取り、編集中の入力保持、旧版保存の409、画面内エラー、同版の再表示抑止、同じ行の補完、次版での再表示をChromium/WebKitで確認した。任意単一選択の解除は日英Storybookで確認する。
 
-閉卓履歴（ADMIN-01・AUTH-01）は、一覧とセッション別ログを既存staff認可で取得する。APIでは同時刻のページ送り・205件のログ・他店舗と端末の拒否・所属取消・会計不変を検証した。[来店履歴E2E](../apps/web/e2e/tablecast-history.spec.ts)は実APIのページサイズを2へ変更し、日英・両ブラウザーで追加取得、原文保持、変更操作非表示、店舗切替を確認した。試験は既存の閉卓済み合成データを読み取り、DBへ履歴を書き足さない。
+閉卓履歴（ADMIN-01・AUTH-01）は、一覧とセッション別ログを既存staff認可で取得する。APIでは同時刻のページ送り・205件のログ・他店舗と端末の拒否・所属取消・会計不変を検証した。[来店履歴E2E](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-history.spec.ts)は実APIのページサイズを2へ変更し、日英・両ブラウザーで追加取得、原文保持、変更操作非表示、店舗切替を確認した。試験は既存の閉卓済み合成データを読み取り、DBへ履歴を書き足さない。
 
 確認コマンドと所有する試験:
 
 - `bun run --cwd apps/web typecheck`、`bunx oxlint apps/web --deny-warnings`、Web対象のOxfmtは最新UIで成功。
 - `bun run --cwd apps/web test:browser`: 部品に隣接するStorybook 39件成功。実音声・実DBの代用にはしない。
-- `bun run --cwd apps/web test`: [音声接続の単体試験](../apps/web/src/features/kiosk/voice-connection.test.ts)6件成功。LiveKit SDKの通信・capture境界はテスト用に置き換えている。
+- `bun run --cwd apps/web test`: [当時の音声接続の単体試験](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/b6b533ec56590b213c32f93e593f73093bf4f165/apps/web/src/features/kiosk/voice-connection.test.ts)6件成功。LiveKit SDKの通信・capture境界はテスト用に置き換えている。
 - `bun --no-env-file run test:e2e`: 公式Vite previewと新居酒屋デモの実DBを使い、Chromium/WebKitの32件が成功。その後の縦画面の言語切替幅・長文ダイアログ修正では、影響する注文・文字拡大・不足選択・設定公開の12件を再実行して成功した。1024×768と768×1024、客・管理画面の日英200%文字の画像も確認した。
-- [注文フロー](../apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](../apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](../apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](../apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](../apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のハヌルT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のハヌルT12は変更しない。
-- 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](../apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](../apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。実Inworldの標準voice一覧と外部MCPクライアントの接続は後続である。
+- [注文フロー](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-order.spec.ts)、[OAuth同意](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-oauth.spec.ts)、[通知復旧・確認期限](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-realtime.spec.ts)、[文字拡大・キーボード](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-accessibility.spec.ts)、[設定公開](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-publication.spec.ts)を検証する。注文と通知復旧はこもれびT12、設定公開は空席確認後のハヌルT10を使う。設定公開試験は元の設定を新しい版として復元し、試験卓を閉じる。T01と既存のハヌルT12は変更しない。
+- 設定公開では実HTTPの下書き作成・一商品価格変更・検証・明示公開を通し、WebSocket遮断中にも公開通知をHTTPで回収した。古い商品ダイアログの閉鎖と新価格のカード・ダイアログ表示を確認した。[管理画面の編集・公開](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-admin-publication.spec.ts)も日英・両ブラウザーで確認した。[設定の手動編集](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-configuration.spec.ts)はカテゴリ・商品・安全情報・3方式の選択肢・依存/排他・プラン・cast指示の保存/再表示、検証理由の修正、下書き破棄を日英で通し、公開catalogを変更しないことを確認した。実Inworldの標準voice一覧と外部MCPクライアントの接続は後続である。
 
-管理通知の実画面試験は [管理画面の通知復旧](../apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
+管理通知の実画面試験は [管理画面の通知復旧](https://github.com/kit-codex-hack-fes-2026/tablecast-poc/blob/cd15eb6dfbfa3f70cbc482aff46f4f69af15264d/apps/web/e2e/tablecast-admin-realtime.spec.ts)、実MCP境界の試験は [MCP統合](../apps/api/test/mcp.test.ts) を参照する。管理の価格公開試験はハヌル一商品の価格だけを一時変更し、元設定を新しい版として復元する。
+
+## 卓上ゲーム（Issue #191）
+
+[ゲームプラグイン仕様](game-plugins.md)に従う。画面で完結するv1はAI評価・発話を使わない。
+
+| ID      | 条件                                                                                                                        |
+| ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| GAME-01 | Codexの実MCPで仕様を取得し、生成パッケージを下書き登録・検証できる。人間の試遊・承認前は卓へ公開しない                      |
+| GAME-02 | 生成コードを本体から隔離し、親DOM・Cookie・外部リソース読込・接続・注文APIへ到達させない。店舗・卓・要求権限をAPIで認可する |
+| GAME-03 | 公開版をプレイ中に固定し、公開停止・旧版への切替・状態の競合を処理する                                                      |
+| GAME-04 | モックゲームを日英・複数人で開始し、交代・スキップ・結果発表・終了まで遊べる。カートと音声停止意思を維持する                |
+
+今回のゲーム制作はモックで基盤を検証する。Codexからの実ゲーム制作・stagingでの試遊は別セッションで行う。ローカルのAPI/ブラウザー試験を実Codex接続・staging・実iPad検証の代わりにしない。
 
 ## 診断と音声候補の追加検証
 
@@ -111,3 +139,55 @@ TTS自然さは人手試聴、タグ漏れ・数値欠落は機械検査、echo�
 二画面のうち一画面が編集中なら旧版を維持し、入力を既定値へ戻すと両画面が新版へ移る。接客中は新版を待機させ、価格・画像のメニュー公開だけを再読込なしで反映し、閉卓後に自動適用する。応答のない画面を安全と見なさない条件はMessageChannelを使う単体試験が所有する。日英の端末登録・注文・提供・会計の代表E2Eも両ブラウザーの4件が成功した。
 
 実iPadの両アプリ追加・起動・再起動・縦横表示・マイク、OSの休止・保存領域削除、遠隔配備後の更新は未実施である。実機では接客中と編集中の更新待機、前景・通信復帰後の更新、通信断で注文を成功表示せず復帰後に端末登録とカートを保持することも確認する。実機受入を自動試験で代替したとは扱わない。
+
+## 店舗会員
+
+- CUSTOMER-01: 会員登録はスタッフ権限を付与せず、同意更新・退会は本人・店舗・更新版を検証する。
+- CUSTOMER-02: 二人がスマホでiPadのQRを読み、初回同意後の来店は追加ボタンなしで参加する。
+- CUSTOMER-03: 同行履歴と個人飲食記録を区別し、共有撤回・退出・会員切替・終了で権限外の個人情報を残さない。
+- CUSTOMER-04: 記憶の編集・削除・同意撤回を遅着処理が上書きせず、過去の記憶から注文を自動確定しない。
+- CUSTOMER-05: ポイント均等配分・訂正・交換とクーポン発行・使用は二重処理を拒否する。
+
+詳細条件は[会員仕様](membership.md)、実施証拠はEpic #232と子IssueのPRを参照する。
+
+### 会員の記憶と飲食記録
+
+- 記憶の作成・編集・削除と編集競合、他会員・他店舗の拒否を実D1で確認する。
+- 複数人の未選択状態では個人記憶を返さず、対象選択・参加者変更・許可撤回で音声と遅着保存が失効する。
+- 個人の飲食数量を編集しても注文・会計原本は変化せず、数量0は未体験判定に反映する。
+- 会員参加後の字幕本文を卓全体の状態・通知へ保存しない。
+- 実カメラのQR読取りと実モデルの話者曖昧性・保存判断は、自動テストの代用とせず別途受入記録を残す。
+
+### 会員特典の受入
+
+- ポイント交換の同時要求で残高を超えず、同じ再送キーは同じ券を返す。
+- 券面と条件は発行時に固定し、ルール変更や無効化で遡及変更しない。
+- 本人の申請をスタッフが会計へ適用し、一会計一枚・期限・最低金額・割合上限をAPIで検証する。
+- 会計への適用取消を元の使用IDで行い、割引と会員別ポイント配分を差分訂正する。
+- 入会・スタッフ確認済みの累計条件から一ルール一会員一度だけ発行する。QR参加だけでは来店特典を確定しない。
+- 店舗の券面設定、スマホでの交換・利用申請、スタッフによる適用・取消はfeature Browserでフォーム・送信・再取得を、実HTTP/D1/R2のAPI統合で永続化・金額・券状態を確認する。実カメラ・実モデルの受入は別記する。
+
+### 会員の競合回帰
+
+- 対象取得後・最終読取り前に同意を撤回し、記憶と個人履歴に基づく提案が拒否される。
+- 文脈解除batchの完了後に別の解除が完了しても、最初の音声セッションを停止する。
+- 同日時の100件を超える店舗一覧と、ID順に依存しない注文履歴のページ境界で欠落・重複を作らない。
+- 会計訂正キーを別来店で再利用しても残高と配分が一致し、同じクーポン取消の同時再送は両方成功して会計を一度だけ戻す。
+- 同意保存の成功表示、来店中の注文更新、付与対象ゼロ確定後の理由付き訂正を画面で確認する。
+
+### 組織のAIキーと課金
+
+- BILLING-01: 組織と発行待ちを同じbatchで作り、外部失敗でもGUIを利用できる。並行発行・応答消失・保存失敗を回収できる。
+- BILLING-02: 音声開始・sideband・停止は開始時の組織キーを使い、鍵・原価・為替・倍率を顧客のAPI/SSRへ返さない。
+- BILLING-03: 初期15秒、累積秒、response ID再送、cached input、実際のtierを扱い、料金版を固定して円未満の精度を保持する。
+- BILLING-04: memberは利用量だけ、owner/adminは契約・料金・請求を利用する。組織切替で期間・検索・ページと遅い応答を分離する。
+- BILLING-05: Costsは全ページ取得して当月・前月を置換し、未取得・未帰属を0円にせず、確定請求額を変更しない。
+- BILLING-06: 専用OpenAI ProjectとStripe Sandboxで発行・Checkout・Meters・請求書・Portalを確認する。固定外部境界のCI成功と実接続の受入を分ける。
+
+## 外貨参考表示
+
+- FX-01: 円を先に置き、客向けと注文デモの価格・追加料金・カート・確認・会計を「円 ≈ 外貨」の1行で表示する。文字サイズ・太さは既存表示を引き継ぎ、外貨は補助色で区別する。言語の右のセレクタに国旗・記号・コード、候補に正式名・レート・日付・円払いの説明を示す。
+- FX-02: 日本語は外貨なし、英語はUSDが初期値。手動選択を言語より優先し、端末・来店単位で保持する。新来店と別デモへ混同しない。
+- FX-03: 初期化時だけJPY基準レートを取得し、画面と音声ツールが同じ公開参考データを使う。署名やトークンを追加せず、外部障害時も円の注文は継続する。
+- FX-04: toolは円と外貨参考額を区別して返す。quoteCurrencyは照会だけ、setDisplayCurrencyは明示依頼だけで端末表示を変更する。遅着指示で手動選択を上書きせず、数量・件数・版を換算しない。
+- FX-05: 音声は外貨を質問された時だけ円の後に取得済み参考額を伝える。通貨変更で音声・カート・確認snapshotを失効せず、円の注文額・請求通貨を変えない。通常CIは固定モデル応答で確認し、実モデル会話の証明とは区別する。

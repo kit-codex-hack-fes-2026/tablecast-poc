@@ -1,8 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { voiceBindings, runVoiceTurn } from "./voice-fixture";
 import { device, setupFixture } from "./fixture";
+import { runVoiceTurn, voiceBindings } from "./voice-fixture";
 afterEach(() => vi.restoreAllMocks());
 it("委任登録のログへ会話本文や資格を含めない", async () => {
   await setupFixture();

@@ -1,9 +1,6 @@
 import { z } from "zod";
-import type { Locale } from "../../platform/model";
 import { decimalQuerySchema, id, localeSchema, pageLimitSchema } from "../../platform/model";
-import type { Plan } from "../catalog/model";
 import { planSchema } from "../catalog/model";
-import type { Bill, Cart, Order, Snapshot } from "../orders/model";
 import { billSchema, cartSchema, orderSchema, snapshotSchema } from "../orders/model";
 import { speechSpeedSchema } from "../voice/model";
 export const uiSectionSchema = z.enum(["menu", "cart", "orders", "bill"]);
@@ -16,42 +13,9 @@ export const uiSectionInputSchema = z
 
 export type UiSectionInput = z.infer<typeof uiSectionInputSchema>;
 
-export type TableEvent = {
-  cursor: number;
-  storeId: string;
-  tableSessionId: string | null;
-  kind: string;
-  data: Record<string, unknown>;
-  createdAt: number;
-};
+export type TableEvent = z.infer<typeof tableEventSchema>;
 
-export type TableState = {
-  id: string;
-  tableId: string | null;
-  kind: "table" | "demo";
-  tableName: string;
-  storeId: string;
-  storeName: string;
-  configVersion: number;
-  locale: Locale;
-  status: "open" | "closed";
-  voiceState: "stopped" | "active" | "error";
-  voiceSessionId: string | null;
-  uiSection: UiSection;
-  selectedProductId: string | null;
-  speechSpeed: number;
-  guestCount: number;
-  openedAt: number;
-  cart: Cart;
-  orders: Order[];
-  bill: Bill;
-  billRequested: boolean;
-  events: TableEvent[];
-  cursor: number;
-  plan: { id: string; startedAt: number; rules: Plan } | null;
-  staffCalled: boolean;
-  snapshot: Snapshot | null;
-};
+export type TableState = z.infer<typeof tableStateSchema>;
 
 export const historyQuerySchema = z
   .object({
@@ -75,6 +39,54 @@ export const sessionEventsQuerySchema = z
 
 export type HistoryQuery = z.infer<typeof historyQuerySchema>;
 
+// 現行PoCの店舗日は日英とも日本時間。端末のタイムゾーンとは独立する。
+export const storeTimeZone = "Asia/Tokyo";
+export const storeDateSchema = z.iso.date();
+export const timelineQuerySchema = z
+  .object({
+    date: storeDateSchema,
+    beforeOpenedAt: z
+      .string()
+      .regex(/^-?\d+$/)
+      .transform(Number)
+      .pipe(z.number().int())
+      .optional(),
+    beforeId: id.refine((value) => value.trim().length > 0).optional(),
+    limit: decimalQuerySchema.pipe(z.number().int().min(1).max(200)).default(100),
+  })
+  .strict()
+  .refine((query) => (query.beforeOpenedAt === undefined) === (query.beforeId === undefined), {
+    path: ["beforeId"],
+  });
+
+export const timelineSessionSchema = z
+  .object({
+    id,
+    tableId: id,
+    guestCount: z.number().int().positive(),
+    status: z.enum(["open", "closed"]),
+    openedAt: z.number().int(),
+    closedAt: z.number().int().nullable(),
+  })
+  .refine((session) =>
+    session.status === "open"
+      ? session.closedAt === null
+      : session.closedAt !== null && session.closedAt >= session.openedAt,
+  );
+
+export const timelinePageSchema = z.object({
+  date: storeDateSchema,
+  timeZone: z.literal(storeTimeZone),
+  startAt: z.number().int(),
+  endAt: z.number().int(),
+  observedAt: z.number().int(),
+  sessions: z.array(timelineSessionSchema),
+  nextCursor: z.object({ openedAt: z.number().int(), id }).nullable(),
+});
+export type TimelineQuery = z.infer<typeof timelineQuerySchema>;
+export type TimelinePage = z.infer<typeof timelinePageSchema>;
+export type TimelineSession = z.infer<typeof timelineSessionSchema>;
+
 export type SessionEventsQuery = z.infer<typeof sessionEventsQuerySchema>;
 
 export const tablePlanSchema = z.object({
@@ -85,7 +97,7 @@ export const tablePlanSchema = z.object({
 
 export const eventDataSchema = z.record(z.string(), z.unknown());
 
-export const tableEventSchema: z.ZodType<TableEvent> = z.object({
+export const tableEventSchema = z.object({
   cursor: z.number().int(),
   storeId: z.string(),
   tableSessionId: z.string().nullable(),
@@ -121,7 +133,7 @@ export type HistoryPage = z.infer<typeof historyPageSchema>;
 
 export type SessionEventsPage = z.infer<typeof sessionEventsPageSchema>;
 
-export const tableStateSchema: z.ZodType<TableState> = z.object({
+export const tableStateSchema = z.object({
   id: z.string(),
   tableId: z.string().nullable(),
   kind: z.enum(["table", "demo"]),
@@ -153,3 +165,12 @@ export const eventsSchema = z.object({
   events: z.array(tableEventSchema),
   cursor: z.number().int(),
 });
+
+export const openTableSchema = z
+  .object({
+    tableId: z.string(),
+    guestCount: z.number().int().min(1).max(30),
+    locale: localeSchema,
+    planId: z.string().optional(),
+  })
+  .strict();

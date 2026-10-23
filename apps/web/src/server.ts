@@ -1,7 +1,7 @@
-import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { instrument } from "@inference-net/otel-cf-workers";
 import { context, propagation } from "@opentelemetry/api";
-import { telemetryConfig, requestLog, type TelemetryEnv } from "@tablecast/api/telemetry";
+import { requestLog, telemetryConfig, type TelemetryEnv } from "@tablecast/api/telemetry";
+import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { paraglideMiddleware } from "./paraglide/server.js";
 
 const start = createServerEntry({

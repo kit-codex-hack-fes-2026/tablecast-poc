@@ -1,8 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { apiFetch } from "../../lib/api-fetch";
 import { demoTableEndpoint } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
+import { apiFetch } from "../../lib/api-fetch";
 import { tableOptions } from "./table-query";
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 afterEach(() => vi.resetAllMocks());

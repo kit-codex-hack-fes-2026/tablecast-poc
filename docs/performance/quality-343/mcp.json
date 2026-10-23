@@ -1,0 +1,34 @@
+{
+  "server": {
+    "name": "fallow-mcp",
+    "version": "3.34.1",
+    "description": "Codebase analysis for TypeScript/JavaScript projects"
+  },
+  "tools": 43,
+  "root": "<worktree>",
+  "file_count": 956,
+  "entry_point_count": 429,
+  "workspace_count": 4,
+  "workspaces": [
+    {
+      "name": "@tablecast/api",
+      "path": "apps/api",
+      "is_internal_dependency": true
+    },
+    {
+      "name": "@tablecast/emulate",
+      "path": "apps/emulate",
+      "is_internal_dependency": false
+    },
+    {
+      "name": "@tablecast-poc/presentation",
+      "path": "apps/presentation",
+      "is_internal_dependency": false
+    },
+    {
+      "name": "@tablecast/web",
+      "path": "apps/web",
+      "is_internal_dependency": false
+    }
+  ]
+}

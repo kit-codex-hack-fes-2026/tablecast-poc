@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { uploadPreviewImage } from "./tablecast-seed-media";
+import { uploadPreviewImage } from "./tablecast-seed-media.ts";
 
 function iconUrl(content: string | Uint8Array) {
   const hash = createHash("sha256").update(content).digest("hex");
@@ -9,7 +9,7 @@ function iconUrl(content: string | Uint8Array) {
 }
 
 // 旧seedの固定URLだけを識別し、手動設定された画像を更新対象にしない。
-export function legacyIdentityIconUrl(kind: "user" | "store", identity: string) {
+export function legacyIdentityIconUrl(kind: "store" | "user", identity: string) {
   return iconUrl(`tablecast-icon-${kind}-${identity}`);
 }
 

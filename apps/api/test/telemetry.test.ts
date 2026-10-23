@@ -1,24 +1,19 @@
+import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { instrument, OTLPExporter, OTLPTransport } from "@inference-net/otel-cf-workers";
+import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import { z } from "zod";
-import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
-import { resourceFromAttributes } from "@opentelemetry/resources";
-import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  measured,
-  observeOperation,
-  requestLog,
-  telemetryContent,
-  telemetryConfig,
-  telemetryAttributes,
-} from "../src/platform/telemetry";
+import { z } from "zod";
+import type { ApiEnv } from "../src/platform/context";
 import { errorAttributes } from "../src/platform/diagnostics";
 import { DomainError } from "../src/platform/errors";
 import { handleError, requestTelemetry } from "../src/platform/http";
-import type { ApiEnv } from "../src/platform/context";
+import { measured, observeOperation, requestLog } from "../src/platform/telemetry";
+import { telemetryAttributes, telemetryContent } from "../src/platform/telemetry-content";
+import { telemetryConfig } from "../src/platform/telemetry-export";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -154,10 +149,10 @@ it("完了spanを送信境界で秘匿化し、再flushで再送せずpreviewの
   await processor.forceFlush();
   await processor.forceFlush();
   // Then: 値・例外を除去し、クエリと相関に必要な識別情報を維持する。
-  const sent = send.mock.calls[0]?.[0];
+  const sent: unknown = send.mock.calls[0]?.[0];
   expect(send).toHaveBeenCalledTimes(1);
   expect(JSON.stringify(sent)).not.toContain("tablecast-secret");
-  expect(sent?.[0]?.events).toHaveLength(1);
+  expect(sent).toMatchObject([{ events: [expect.objectContaining({ name: "exception" })] }]);
   expect(sent).toMatchObject([
     {
       name: "HTTP",
@@ -207,7 +202,14 @@ it("構造化イベントだけを送信しprodへpreviewのPR番号を混入さ
     () => {},
   );
   expect(send).toHaveBeenCalledTimes(1);
-  const sent = send.mock.calls[0]?.[0];
+  const sent = z
+    .array(
+      z.object({
+        body: z.unknown(),
+        resource: z.object({ attributes: z.record(z.string(), z.unknown()) }),
+      }),
+    )
+    .parse(send.mock.calls[0]?.[0]);
   expect(sent).toHaveLength(2);
   expect(sent?.filter((entry) => entry.body === "tablecast.request_completed")).toHaveLength(1);
   expect(JSON.stringify(sent)).toContain("connection refused");

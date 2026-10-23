@@ -13,7 +13,7 @@ runs:
         bun -e 'console.log("playwright=" + require("@playwright/test/package.json").version)' >> "$GITHUB_OUTPUT"
         echo "image=$ImageOS" >> "$GITHUB_OUTPUT"
         echo "revision=$ImageVersion" >> "$GITHUB_OUTPUT"
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: /tmp/tablecast-apt/*.deb
         key: tablecast-apt-${{ runner.arch }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.playwright }}-${{ inputs.browsers }}-${{ steps.version.outputs.revision }}
@@ -23,4 +23,10 @@ runs:
       run: |
         mkdir -p /tmp/tablecast-apt
         echo 'Dir::Cache::archives "/tmp/tablecast-apt";' | sudo tee /etc/apt/apt.conf.d/99-tablecast-cache > /dev/null
+        if [ "$RUNNER_ENVIRONMENT" = github-hosted ]; then
+          # 破棄されるVMのOS依存展開だけに適用し、dpkg DBと試験中のI/Oは変更しない。
+          tablecast_apt_io_config=/etc/apt/apt.conf.d/99-tablecast-install-io
+          trap 'sudo rm -f "$tablecast_apt_io_config"' EXIT
+          echo 'DPkg::Options { "--force-unsafe-io"; };' | sudo tee "$tablecast_apt_io_config" > /dev/null
+        fi
         bunx --no-install playwright install-deps ${{ inputs.browsers }}

@@ -1,10 +1,11 @@
 import { trace } from "@opentelemetry/api";
-import { observeOperation } from "../../platform/telemetry";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
-import * as business from "../../db/business-schema";
 import type { ApiServices } from "../../platform/context";
+import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
+import { observeOperation } from "../../platform/telemetry";
+import { displayCurrencyActionSchema } from "../currency/model";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
@@ -23,12 +24,23 @@ export async function conversationHistory(
         eq(business.tableEvents.store_id, actor.storeId),
         eq(business.tableEvents.table_session_id, actor.tableSessionId ?? ""),
         inArray(business.tableEvents.kind, ["voice.user", "voice.assistant"]),
+        notExists(
+          services.db
+            .select({ id: business.customerContexts.sessionId })
+            .from(business.customerContexts)
+            .where(
+              and(
+                eq(business.customerContexts.sessionId, actor.tableSessionId ?? ""),
+                eq(business.customerContexts.storeId, actor.storeId),
+              ),
+            ),
+        ),
         sql`length(trim(json_extract(${business.tableEvents.data_json},'$.text')))>0`,
       ),
     )
     .orderBy(desc(business.tableEvents.cursor))
     .limit(40);
-  const history: { role: "user" | "assistant"; content: string; interrupted: boolean }[] = [];
+  const history: { content: string; interrupted: boolean; role: "assistant" | "user" }[] = [];
   let characters = 0;
   for (const row of rows) {
     const data = z
@@ -66,9 +78,16 @@ export async function invokeVoiceTool(
       );
       const trigger = proactive ? "proactive" : "user";
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
-      const tools = createCastTools(services, actor, signal, trigger, session);
+      const tools = createCastTools(
+        services,
+        actor,
+        signal,
+        trigger,
+        session,
+        input.displayCurrency,
+      );
       const tool = tools[input.toolName];
-      const record = async (state: "running" | "completed" | "error", errorCode?: string) =>
+      const record = async (state: "completed" | "error" | "running", errorCode?: string) =>
         recordVoiceEvent(
           services,
           actor,
@@ -97,7 +116,17 @@ export async function invokeVoiceTool(
             new TextEncoder().encode(JSON.stringify(result)).byteLength,
           );
         await record("completed");
-        return { result };
+        return {
+          result,
+          ...(input.toolName === "setDisplayCurrency"
+            ? {
+                displayCurrencyAction: displayCurrencyActionSchema.parse({
+                  currency: input.arguments.currency,
+                  revision: input.displayCurrency?.revision,
+                }),
+              }
+            : {}),
+        };
       } catch (error) {
         const code = voiceToolEventSchema.shape.errorCode.safeParse(
           error instanceof DomainError ? error.code : "VOICE_TOOL_FAILED",

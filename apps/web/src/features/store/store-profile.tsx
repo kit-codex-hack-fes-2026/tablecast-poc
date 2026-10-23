@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Store } from "lucide-react";
+import { ImagePlus } from "lucide-react";
 import { ActionFeedback } from "../../components/action-feedback";
+import { PageHeader } from "../../components/page-header";
 import { StoreIcon } from "../../components/store-icon";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, rpc } from "../../lib/api";
-import { useStore } from "./store-shell";
+import { ConfigurationSection } from "../configuration/configuration-fields";
+import { useStore } from "./store-context";
 
 export function StoreProfile() {
   const store = useStore();
@@ -26,23 +28,17 @@ export function StoreProfile() {
   });
   return (
     <>
-      <h1 className="flex items-center gap-2 text-2xl font-semibold">
-        <Store />
-        {t("store_profile")}
-      </h1>
-      <section
-        aria-label={t("store_profile")}
-        className="space-y-5 rounded-2xl border border-border bg-card p-5"
-      >
+      <PageHeader title={t("store_profile")} />
+      <ConfigurationSection title={t("editor_images")} icon={ImagePlus}>
         <div className="flex flex-wrap items-center gap-4">
           <StoreIcon name={store.name} logo={store.logo} className="size-20 rounded-2xl text-2xl" />
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold">{store.name}</h2>
+            <h3 className="text-lg font-semibold">{store.name}</h3>
             <p className="text-sm text-muted-foreground">{t("store_icon_hint")}</p>
           </div>
           {manager && (
             <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-input px-4 hover:bg-secondary focus-within:outline-3 focus-within:outline-offset-2">
-              <ImagePlus className="size-5" />
+              <ImagePlus aria-hidden="true" className="size-5" />
               {t("store_icon_change")}
               <input
                 className="sr-only"
@@ -59,13 +55,8 @@ export function StoreProfile() {
           )}
         </div>
         {!manager && <p className="text-sm text-muted-foreground">{t("store_icon_permission")}</p>}
-        <ActionFeedback
-          pending={upload.isPending}
-          error={upload.error}
-          success={upload.isSuccess}
-          successMessage={t("account_saved")}
-        />
-      </section>
+        <ActionFeedback mutation={upload} successMessage={t("account_saved")} />
+      </ConfigurationSection>
     </>
   );
 }

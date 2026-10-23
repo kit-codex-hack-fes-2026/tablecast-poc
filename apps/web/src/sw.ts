@@ -1,11 +1,11 @@
 /// <reference lib="webworker" />
 import {
-  CacheFirst,
   CacheableResponsePlugin,
+  CacheFirst,
   ExpirationPlugin,
   NetworkOnly,
-  Serwist,
   type PrecacheEntry,
+  Serwist,
 } from "serwist";
 import { preparePwaClients } from "./lib/pwa-update";
 
@@ -44,7 +44,15 @@ const serwist = new Serwist({
 serwist.addEventListeners();
 let updating = false;
 self.addEventListener("message", (event: ExtendableMessageEvent) => {
-  if (event.data?.type !== "TABLECAST_REQUEST_UPDATE" || updating) return;
+  const data: unknown = event.data;
+  if (
+    !data ||
+    typeof data !== "object" ||
+    !("type" in data) ||
+    data.type !== "TABLECAST_REQUEST_UPDATE" ||
+    updating
+  )
+    return;
   updating = true;
   event.waitUntil(
     (async () => {

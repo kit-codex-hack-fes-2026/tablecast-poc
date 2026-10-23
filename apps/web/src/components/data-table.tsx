@@ -1,57 +1,164 @@
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
+  type OnChangeFn,
+  type PaginationState,
+  type RowData,
+  type SortingState,
+  useTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useI18n } from "../i18n/locale";
+import { TableControls, TablePagination } from "./data-table-controls";
+import { type DataTableColumn, features } from "./data-table-model";
 import { ErrorNotice } from "./error-notice";
 import { Skeleton } from "./ui/skeleton";
-
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { Table, TableCell, TableHead } from "./ui/table";
-
-export function DataTable<T>({
+export function DataTable<T extends RowData>({
   data,
   columns,
   getRowId,
   searchLabel,
+  searchPlaceholder,
+  tableLabel,
   empty,
   pagination = true,
   pending = false,
   error,
   onRetry,
+  state,
+  onGlobalFilterChange,
+  onPaginationChange,
+  onPaginationClamp,
+  onSortingChange,
+  manualFiltering,
+  filters,
+  filtersActive = false,
+  onReset,
 }: {
+  columns: DataTableColumn<T>[];
   data: T[];
-  columns: ColumnDef<T>[];
-  getRowId: (row: T) => string;
-  searchLabel?: string;
   empty?: string;
+  error?: unknown;
+  filters?: ReactNode;
+  filtersActive?: boolean;
+  getRowId: (row: T) => string;
+  manualFiltering?: boolean;
+  onGlobalFilterChange?: OnChangeFn<string>;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  onPaginationClamp?: (pagination: PaginationState) => void;
+  onReset?: () => void;
+  onRetry?: () => void;
+  onSortingChange?: OnChangeFn<SortingState>;
   pagination?: boolean;
   pending?: boolean;
-  error?: unknown;
-  onRetry?: () => void;
+  searchLabel?: string;
+  searchPlaceholder?: string;
+  state?: { globalFilter?: string; pagination?: PaginationState; sorting?: SortingState };
+  tableLabel?: string;
 }) {
   const { t } = useI18n();
   const [filter, setFilter] = useState("");
-  const table = useReactTable({
+  const bounded = useBoundedPagination({
+    enabled: pagination,
+    ready: !pending && !error,
+    requested: state?.pagination,
+    onChange: onPaginationChange,
+    onClamp: onPaginationClamp,
+  });
+  const table = useTable({
+    features,
     data,
     columns,
     getRowId,
-    state: { globalFilter: filter },
-    onGlobalFilterChange: setFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: pagination ? getPaginationRowModel() : undefined,
-    initialState: { pagination: { pageSize: 20 } },
+    state: {
+      globalFilter: filter,
+      ...state,
+      ...bounded.state,
+    },
+    onGlobalFilterChange: onGlobalFilterChange ?? setFilter,
+    ...bounded.options,
+    ...(onSortingChange ? { onSortingChange } : {}),
+    manualFiltering,
+    globalFilterFn: "includesString",
+    manualPagination: !pagination,
+    initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
   });
+  bounded.syncPageCount(table.getPageCount());
+  const initialPending = pending && !data.length;
+  function renderTable() {
+    return (
+      <Table className="min-w-max text-sm">
+        <thead>
+          {table.getHeaderGroups().map((group) => (
+            <tr key={group.id}>
+              {group.headers.map((header) => (
+                <TableHead
+                  scope="col"
+                  aria-sort={
+                    header.column.getIsSorted() === "asc"
+                      ? "ascending"
+                      : header.column.getIsSorted() === "desc"
+                        ? "descending"
+                        : undefined
+                  }
+                  key={header.id}
+                  className={
+                    header.column.columnDef.meta?.align === "right"
+                      ? "text-right whitespace-nowrap"
+                      : "text-left whitespace-nowrap"
+                  }
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {initialPending ? (
+            ["first", "second"].map((id) => (
+              <tr key={id} aria-hidden="true">
+                {table.getVisibleLeafColumns().map((column) => (
+                  <TableCell key={column.id} className="h-16">
+                    <Skeleton className="h-8 w-full" />
+                  </TableCell>
+                ))}
+              </tr>
+            ))
+          ) : table.getRowModel().rows.length ? (
+            table.getRowModel().rows.map((row) => (
+              <tr key={row.id} data-row-id={row.id} className="hover:bg-secondary/50">
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell
+                    key={cell.id}
+                    scope={cell.column.columnDef.meta?.rowHeader ? "row" : undefined}
+                    className={
+                      cell.column.columnDef.meta?.align === "right"
+                        ? "text-right tabular-nums"
+                        : "text-left"
+                    }
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <TableCell
+                colSpan={table.getVisibleLeafColumns().length}
+                className="h-32 text-center text-base text-muted-foreground"
+              >
+                {empty ?? t("common_no_results")}
+              </TableCell>
+            </tr>
+          )}
+        </tbody>
+      </Table>
+    );
+  }
   if (error && !data.length && !pending)
     return (
       <div className="min-h-80">
@@ -65,107 +172,74 @@ export function DataTable<T>({
           {t("common_loading")}
         </span>
       )}
-      {searchLabel && (
-        <label className="relative block max-w-sm">
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-3 size-5 text-muted-foreground"
-          />
-          <span className="sr-only">{searchLabel}</span>
-          <Input
-            type="search"
-            disabled={pending && !data.length}
-            className="pl-10"
-            placeholder={searchLabel}
-            value={filter}
-            onChange={(event) => {
-              setFilter(event.target.value);
-              table.setPageIndex(0);
-            }}
-          />
-        </label>
-      )}
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
-        <Table className="text-base">
-          <thead>
-            {table.getHeaderGroups().map((group) => (
-              <tr key={group.id}>
-                {group.headers.map((header) => (
-                  <TableHead scope="col" key={header.id} className="whitespace-nowrap text-sm">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {pending && !data.length ? (
-              ["first", "second"].map((id) => (
-                <tr key={id} aria-hidden="true">
-                  {table.getVisibleLeafColumns().map((column) => (
-                    <TableCell key={column.id}>
-                      <Skeleton className="h-11 w-full" />
-                    </TableCell>
-                  ))}
-                </tr>
-              ))
-            ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} data-row-id={row.id} className="hover:bg-secondary/50">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="text-base">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center text-base text-muted-foreground"
-                >
-                  {empty ?? t("common_no_results")}
-                </TableCell>
-              </tr>
-            )}
-          </tbody>
-        </Table>
+      <TableControls
+        table={table}
+        searchLabel={searchLabel}
+        searchPlaceholder={searchPlaceholder}
+        searchValue={state?.globalFilter ?? filter}
+        filters={filters}
+        filtersActive={filtersActive}
+        pending={initialPending}
+        onReset={onReset}
+        resetPageOnSearch={!onGlobalFilterChange}
+        resetPageOnSort={!onSortingChange}
+      />
+      {/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- 横スクロール領域をSafariでもキーボード操作できるようにする。 */}
+      <div
+        tabIndex={tableLabel ? 0 : undefined}
+        role={tableLabel ? "region" : undefined}
+        aria-label={tableLabel}
+        className="min-h-48 overflow-x-auto rounded-xl border border-border bg-card focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        {renderTable()}
       </div>
-      {pagination && (
-        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-          <span>
-            {pending
-              ? t("common_loading")
-              : `${table.getFilteredRowModel().rows.length} ${t("common_records")}`}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_previous_page")}
-              disabled={pending || !table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              <ChevronLeft />
-            </Button>
-            <span className="min-w-16 text-center tabular-nums">
-              {table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-            </span>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label={t("common_next_page")}
-              disabled={pending || !table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              <ChevronRight />
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */}
+      {pagination && <TablePagination table={table} pending={pending} />}
     </div>
   );
+}
+
+function useBoundedPagination({
+  enabled,
+  ready,
+  requested,
+  onChange,
+  onClamp,
+}: {
+  enabled: boolean;
+  onChange?: OnChangeFn<PaginationState>;
+  onClamp?: (pagination: PaginationState) => void;
+  ready: boolean;
+  requested?: PaginationState;
+}) {
+  const [lastPageIndex, setLastPageIndex] = useState<null | number>(null);
+  const effective = useMemo(
+    () =>
+      enabled && requested && lastPageIndex !== null
+        ? { ...requested, pageIndex: Math.min(requested.pageIndex, lastPageIndex) }
+        : requested,
+    [enabled, requested, lastPageIndex],
+  );
+  const normalizeUrl = useEffectEvent((value: PaginationState) => (onClamp ?? onChange)?.(value));
+  // URLという外部状態の正規化だけをcommit後に行う。取得中・失敗時は元のURLを維持する。
+  useEffect(() => {
+    if (enabled && ready && requested && effective && requested.pageIndex !== effective.pageIndex)
+      // oxlint-disable-next-line react-doctor/no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent -- 表示用stateの転送ではなく、描画中に変更できないRouterのURLを正規化する。
+      normalizeUrl(effective);
+  }, [enabled, ready, requested, effective]);
+  return {
+    state: effective ? { pagination: effective } : {},
+    options: onChange
+      ? {
+          onPaginationChange: (next: Parameters<OnChangeFn<PaginationState>>[0]) =>
+            onChange(typeof next === "function" && effective ? next(effective) : next),
+          autoResetPageIndex: false,
+        }
+      : {},
+    syncPageCount: (count: number) => {
+      const next = Math.max(0, count - 1);
+      // Reactの条件付きlocal state調整で再描画し、SSRも空ページを確定しない。
+      if (enabled && ready && requested && lastPageIndex !== next) setLastPageIndex(next);
+    },
+  };
 }

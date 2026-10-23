@@ -1,4 +1,4 @@
-import type { Configuration } from "../apps/api/src/schema";
+import type { Configuration } from "@tablecast/api/schema";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
@@ -46,43 +46,63 @@ export async function seedMenuImages(
   console.time("商品画像の投入");
   try {
     const existing = new Map<string, R2Object>();
-    for (const prefix of legacy
-      ? ["tablecast/images/", "tablecast/demo/"]
-      : ["tablecast/images/"]) {
-      let cursor: string | undefined;
-      do {
-        const page = await bucket.list({ prefix, limit: 1000, cursor });
-        for (const object of page.objects) existing.set(object.key, object);
-        cursor = page.truncated ? page.cursor : undefined;
-      } while (cursor);
+    console.time("商品画像の既存一覧");
+    try {
+      for (const prefix of legacy
+        ? ["tablecast/images/", "tablecast/demo/"]
+        : ["tablecast/images/"]) {
+        let cursor: string | undefined;
+        do {
+          const page = await bucket.list({ prefix, limit: 1000, cursor });
+          for (const object of page.objects) existing.set(object.key, object);
+          cursor = page.truncated ? page.cursor : undefined;
+        } while (cursor);
+      }
+    } finally {
+      console.timeEnd("商品画像の既存一覧");
     }
     let uploaded = 0;
     let confirmed = 0;
     let uploadedBytes = 0;
-    for (let offset = 0; offset < files.length; offset += 4) {
-      // 失敗した場合も開始済みのR2操作を回収してからbindingを解放する。
+    const remaining = files.values();
+    let failed = false;
+    console.time("商品画像の照合・送信");
+    try {
+      // 空いた枠から次の画像を送り、失敗時は未開始の処理を止めて開始済みを回収する。
       const results = await Promise.allSettled(
-        files.slice(offset, offset + 4).map(async (file) => {
-          const bytes = await readFile(resolve(directory, file));
-          const key = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
-          if (required && !required.has(key)) return;
-          for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {
-            const result = await uploadPreviewImage(
-              bucket,
-              target,
-              bytes,
-              undefined,
-              existing.get(target) ?? null,
-            );
-            if (result === "uploaded") {
-              uploaded++;
-              uploadedBytes += bytes.length;
-            } else confirmed++;
+        Array.from({ length: 4 }, async () => {
+          while (!failed) {
+            const file = remaining.next().value;
+            if (!file) return;
+            try {
+              const bytes = await readFile(resolve(directory, file));
+              const key = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
+              if (required && !required.has(key)) continue;
+              for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {
+                if (failed) return;
+                const result = await uploadPreviewImage(
+                  bucket,
+                  target,
+                  bytes,
+                  undefined,
+                  existing.get(target) ?? null,
+                );
+                if (result === "uploaded") {
+                  uploaded++;
+                  uploadedBytes += bytes.length;
+                } else confirmed++;
+              }
+            } catch (error) {
+              failed = true;
+              throw error;
+            }
           }
         }),
       );
       const failure = results.find((result) => result.status === "rejected");
       if (failure) throw failure.reason;
+    } finally {
+      console.timeEnd("商品画像の照合・送信");
     }
     const result = { uploaded, confirmed, uploadedBytes };
     console.info(`商品画像: 投入 ${uploaded}件・既存 ${confirmed}件・送信 ${uploadedBytes} B`);
@@ -98,12 +118,12 @@ export async function uploadPreviewImage(
       key: string,
       bytes: Uint8Array,
       options: R2PutOptions & { onlyIf: R2Conditional },
-    ): Promise<R2Object | null>;
+    ): Promise<null | R2Object>;
   },
   key: string,
   bytes: Uint8Array,
   contentType: "image/png" | "image/webp" = key.endsWith(".webp") ? "image/webp" : "image/png",
-  known?: Pick<R2Object, "etag" | "size"> | null,
+  known?: null | Pick<R2Object, "etag" | "size">,
 ) {
   const md5 = createHash("md5").update(bytes).digest("hex");
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -126,12 +146,13 @@ export async function uploadPreviewImage(
       return "uploaded";
     } catch (error) {
       const code = error instanceof Error ? /\((\d+)\)$/.exec(error.message)?.[1] : undefined;
-      if (code !== "10001" || attempt === 3)
+      // code0はHTTP分類を失った応答なので、既存の上限内だけ保存結果を再確認する。
+      if ((code !== "10001" && code !== "0") || attempt === 3)
         throw new Error(
           `R2画像投入失敗: ${key} (code=${code ?? "整合性・接続"}, attempt=${attempt})`,
           { cause: error },
         );
-      console.warn(`R2一時障害: ${key} (code=${code}, attempt=${attempt}/3)`);
+      console.warn(`R2画像投入を再試行: ${key} (code=${code}, attempt=${attempt}/3)`);
       await new Promise((complete) => setTimeout(complete, 1_000 * 2 ** (attempt - 1)));
     }
   }

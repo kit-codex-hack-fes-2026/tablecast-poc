@@ -1,11 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { Login } from "../features/account/login";
+import { readEvaluationEnvironment } from "../lib/evaluation-environment";
 
 export const Route = createFileRoute("/login")({
+  staticData: { document: { title: "auth_sign_in", description: "head_login_description" } },
   validateSearch: z.looseObject({
     returnStoreId: z.string().optional().catch(undefined),
     returnDraftId: z.string().optional().catch(undefined),
   }),
-  component: () => <Login />,
+  loader: async () => ({ evaluation: await readEvaluationEnvironment() }),
+  component: LoginPage,
 });
+
+function LoginPage() {
+  const { evaluation } = Route.useLoaderData();
+  return <Login evaluation={evaluation} />;
+}

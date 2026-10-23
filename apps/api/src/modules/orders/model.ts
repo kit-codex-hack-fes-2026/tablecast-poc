@@ -1,6 +1,12 @@
 import { z } from "zod";
-import type { Locale } from "../../platform/model";
 import { id, localeSchema } from "../../platform/model";
+
+export const conditionIssueSchema = z
+  .object({
+    optionId: id,
+    relation: z.enum(["requires", "excludes"]),
+  })
+  .strict();
 export const selectionSchema = z
   .object({ optionId: id, quantity: z.number().int().min(1).max(20) })
   .strict();
@@ -25,59 +31,15 @@ export type CartLine = z.infer<typeof cartLineSchema>;
 
 export type CartUpdate = z.infer<typeof cartUpdateSchema>;
 
-export type PricedLine = CartLine & {
-  name: Record<Locale, string>;
-  speechName: Record<Locale, string>;
-  options: {
-    id: string;
-    name: Record<Locale, string>;
-    speechName: Record<Locale, string>;
-    quantity: number;
-    priceDelta: number;
-  }[];
-  unitPrice: number;
-  total: number;
-  missing: string[];
-  planCovered: boolean;
-};
+export type PricedLine = z.infer<typeof pricedLineSchema>;
 
-export type Cart = { version: number; lines: PricedLine[]; total: number; complete: boolean };
+export type Cart = z.infer<typeof cartSchema>;
 
-export type Snapshot = {
-  id: string;
-  tableSessionId: string;
-  cartVersion: number;
-  configVersion: number;
-  lines: PricedLine[];
-  total: number;
-  locale: Locale;
-  text: string;
-  expiresAt: number;
-  channel: "gui" | "voice";
-  status: "pending" | "read" | "invalid" | "submitted";
-  createdTurnId: string | null;
-  plan: { id: string; name: Record<Locale, string> } | null;
-};
+export type Snapshot = z.infer<typeof snapshotSchema>;
 
-export type Order = {
-  id: string;
-  tableSessionId: string;
-  snapshotId: string;
-  idempotencyKey: string;
-  status: "submitted" | "accepted" | "served" | "cancelled" | "rejected";
-  snapshot: Snapshot;
-  total: number;
-  createdAt: number;
-};
+export type Order = z.infer<typeof orderSchema>;
 
-export type Bill = {
-  orderedTotal: number;
-  adjustmentTotal: number;
-  paidTotal: number;
-  due: number;
-  cartTotal: number;
-  planTotal: number;
-};
+export type Bill = z.infer<typeof billSchema>;
 
 export const prepareSchema = z
   .object({
@@ -90,7 +52,7 @@ export const submitSchema = z
   .object({ snapshotId: id, idempotencyKey: z.string().min(8).max(100), approved: z.literal(true) })
   .strict();
 
-export const pricedLineSchema: z.ZodType<PricedLine> = cartLineSchema.extend({
+export const pricedLineSchema = cartLineSchema.extend({
   name: z.object({ ja: z.string(), en: z.string() }),
   speechName: z.object({ ja: z.string(), en: z.string() }),
   options: z.array(
@@ -105,10 +67,11 @@ export const pricedLineSchema: z.ZodType<PricedLine> = cartLineSchema.extend({
   unitPrice: z.number().int().nonnegative(),
   total: z.number().int().nonnegative(),
   missing: z.array(z.string()),
+  conditionIssues: z.array(conditionIssueSchema).optional(),
   planCovered: z.boolean(),
 });
 
-export const snapshotSchema: z.ZodType<Snapshot> = z.object({
+export const snapshotSchema = z.object({
   id: z.string(),
   tableSessionId: z.string(),
   cartVersion: z.number().int(),
@@ -124,14 +87,14 @@ export const snapshotSchema: z.ZodType<Snapshot> = z.object({
   plan: z.object({ id: z.string(), name: z.object({ ja: z.string(), en: z.string() }) }).nullable(),
 });
 
-export const cartSchema: z.ZodType<Cart> = z.object({
+export const cartSchema = z.object({
   version: z.number().int(),
   lines: z.array(pricedLineSchema),
   total: z.number().int().nonnegative(),
   complete: z.boolean(),
 });
 
-export const orderSchema: z.ZodType<Order> = z.object({
+export const orderSchema = z.object({
   id: z.string(),
   tableSessionId: z.string(),
   snapshotId: z.string(),
@@ -142,7 +105,7 @@ export const orderSchema: z.ZodType<Order> = z.object({
   createdAt: z.number(),
 });
 
-export const billSchema: z.ZodType<Bill> = z.object({
+export const billSchema = z.object({
   orderedTotal: z.number().int(),
   adjustmentTotal: z.number().int(),
   paidTotal: z.number().int(),

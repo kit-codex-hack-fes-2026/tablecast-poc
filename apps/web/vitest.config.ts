@@ -1,9 +1,9 @@
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
-import { playwright } from "@vitest/browser-playwright";
-import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vitest/config";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -15,19 +15,40 @@ export default defineConfig({
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
           include: [
+            "@base-ui/react/popover",
+            "@base-ui/react/tooltip",
+            "@tablecast/api > css-tree/parser",
+            "@tablecast/api > css-tree/generator",
             "react",
             "react-dom/client",
             "react/jsx-runtime",
             "react/jsx-dev-runtime",
+            "vitest-browser-react",
+            "@tanstack/react-query",
+            "@tablecast/api > hono/client",
+            "lucide-react",
+            "react-resizable-panels",
+            "tailwind-variants",
+            "zod",
+            "@paper-design/shaders-react",
+            "motion",
+            "motion/react",
+            "motion/react-m",
             "@tanstack/react-table",
             "@base-ui/react/avatar",
+            "@base-ui/react/button",
+            "@base-ui/react/checkbox",
             "@base-ui/react/collapsible",
             "@base-ui/react/dialog",
             "@base-ui/react/input",
             "@base-ui/react/menu",
+            "@base-ui/react/merge-props",
             "@base-ui/react/select",
+            "@base-ui/react/use-render",
+            "@better-auth/infra/client",
             "@better-auth/oauth-provider/client",
             "@better-auth/passkey/client",
+            "@better-auth/stripe/client",
             "better-auth/client/plugins",
             "better-auth/react",
           ],
@@ -39,19 +60,54 @@ export default defineConfig({
         ],
         test: {
           name: "browser",
+          maxWorkers: 2,
           include: ["src/**/*.browser.test.tsx"],
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),
             instances: [
               { browser: "chromium" },
               {
-                browser: "webkit",
+                browser: "chromium",
+                name: "chromium-reduced-motion",
+                provider: playwright({ contextOptions: { reducedMotion: "reduce" } }),
                 include: [
-                  "src/features/store/device-qr-reader.browser.test.tsx",
+                  "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/floor/floor-timeline.browser.test.tsx",
+                  "src/features/floor/floor-calendar-layout.browser.test.tsx",
+                  "src/features/kiosk/voice-panel.browser.test.tsx",
+                  "src/features/kiosk/voice-panel-video.browser.test.tsx",
+                  "src/components/motion-system.browser.test.tsx",
+                  "src/components/route-motion.browser.test.tsx",
+                ],
+              },
+              {
+                browser: "webkit",
+                provider: playwright({ contextOptions: { permissions: ["camera"] } }),
+                include: [
+                  "src/features/devices/device-qr-reader.browser.test.tsx",
+                  "src/features/devices/devices.browser.test.tsx",
+                  "src/features/floor/floor-timeline.browser.test.tsx",
+                  "src/features/floor/floor-calendar-layout.browser.test.tsx",
+                  "src/features/shell/admin-shell.browser.test.tsx",
+                  "src/features/shell/sidebar-preferences.browser.test.tsx",
+                  "src/components/month-picker.browser.test.tsx",
+                  "src/components/date-picker.browser.test.tsx",
+                  "src/components/design-system.browser.test.tsx",
+                  "src/components/motion-system.browser.test.tsx",
+                  "src/components/route-motion.browser.test.tsx",
+                  "src/features/account/email-access.browser.test.tsx",
+                  "src/features/kiosk/store-theme.browser.test.tsx",
+                  "src/features/kiosk/kiosk.browser.test.tsx",
+                  "src/features/kiosk/kiosk-layout.browser.test.tsx",
+                  "src/features/kiosk/kiosk-voice.browser.test.tsx",
+                  "src/features/kiosk/kiosk-realtime.browser.test.tsx",
+                  "src/features/kiosk/local-camera.browser.test.tsx",
                   "src/components/product-image.browser.test.tsx",
+                  "src/components/game-frame.browser.test.tsx",
                   "src/components/menu-option-image.browser.test.tsx",
                 ],
               },
@@ -63,13 +119,26 @@ export default defineConfig({
         resolve: { dedupe: ["react", "react-dom"] },
         optimizeDeps: {
           exclude: ["cloudflare:workers", "@tanstack/react-start/server"],
-          include: ["react", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
+          include: [
+            "@base-ui/react/popover",
+            "@base-ui/react/tooltip",
+            "react",
+            "react-dom/client",
+            "react/jsx-runtime",
+            "react/jsx-dev-runtime",
+            "@paper-design/shaders-react",
+            "motion",
+            "@better-auth/infra/client",
+            "@better-auth/stripe/client",
+          ],
         },
         plugins: [tailwindcss(), storybookTest({ configDir: "./.storybook" })],
         test: {
           name: "storybook",
+          maxWorkers: 2,
           browser: {
             screenshotDirectory: "test-results/browser",
+            screenshotFailures: true,
             enabled: true,
             headless: true,
             provider: playwright(),

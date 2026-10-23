@@ -1,100 +1,34 @@
-import { z } from "zod";
+import { type DisplayCurrencyContext, displayCurrencyContextSchema } from "@tablecast/api/schema";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { VoiceConnection, type VoiceView } from "./voice-connection";
+import { z } from "zod";
 import { apiFetch } from "../../lib/api-fetch";
+import {
+  deferred,
+  peer,
+  track,
+  VoiceAudio,
+  voiceFixture,
+  VoiceMediaStream,
+  VoicePeer,
+} from "./test-support/voice-transport-fixture";
+import { VoiceConnection, type VoiceView } from "./voice-connection";
 
 vi.mock("../../lib/api-fetch", () => ({ apiFetch: vi.fn<typeof apiFetch>() }));
 
-class VoiceChannel extends EventTarget {
-  readyState = "open";
-  send = vi.fn<(data: string) => void>((data: string) => {
-    const event: unknown = JSON.parse(data);
-    if (event && typeof event === "object" && "type" in event && event.type === "session.close")
-      this.receive({ type: "session.closed" });
-  });
-  close = vi.fn<() => void>(() => {
-    this.readyState = "closed";
-    this.dispatchEvent(new Event("close"));
-  });
-  receive(data: unknown) {
-    this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(data) }));
-  }
-}
-class VoicePeer extends EventTarget {
-  static instances: VoicePeer[] = [];
-  channel = new VoiceChannel();
-  iceGatheringState = "complete";
-  connectionState = "new";
-  localDescription?: { type: string; sdp: string };
-  addTrack = vi.fn<(track: unknown, stream: unknown) => void>();
-  createDataChannel = vi.fn<() => VoiceChannel>(() => this.channel);
-  createOffer = vi.fn<() => Promise<{ type: string; sdp: string }>>(async () => ({
-    type: "offer",
-    sdp: "tablecast-offer",
-  }));
-  setLocalDescription = vi.fn<(description: { type: string; sdp: string }) => Promise<void>>(
-    async (description: { type: string; sdp: string }) => {
-      this.localDescription = description;
-    },
-  );
-  setRemoteDescription = vi.fn<() => Promise<void>>(async () => {
-    this.connectionState = "connected";
-    this.channel.receive({ type: "session.started" });
-  });
-  close = vi.fn<() => void>(() => {
-    this.connectionState = "closed";
-    this.dispatchEvent(new Event("connectionstatechange"));
-  });
-  constructor() {
-    super();
-    VoicePeer.instances.push(this);
-  }
-}
-class VoiceAudio {
-  static instances: VoiceAudio[] = [];
-  autoplay = false;
-  srcObject: unknown = null;
-  play = vi.fn<() => Promise<void>>(async () => undefined);
-  pause = vi.fn<() => void>();
-  constructor() {
-    VoiceAudio.instances.push(this);
-  }
-}
-const track = {
-  kind: "audio",
-  label: "Built-in",
-  addEventListener: vi.fn<() => void>(),
-  stop: vi.fn<() => void>(),
-};
-class VoiceMediaStream {
-  getTracks = () => [track];
-  getAudioTracks = () => [track];
-}
-const ignoreResolution = () => undefined;
-function deferred<T>() {
-  let resolve: (value: T) => void = ignoreResolution;
-  const promise = new Promise<T>((complete) => {
-    resolve = complete;
-  });
-  return { promise, resolve };
-}
+let fixture: ReturnType<typeof voiceFixture>;
+let requests: ReturnType<typeof voiceFixture>["requests"];
+let connections: ReturnType<typeof voiceFixture>["connections"];
+let capture: ReturnType<typeof voiceFixture>["capture"];
 
-let requests: { path: string; body: unknown; signal: AbortSignal | null | undefined }[];
-let connections: VoiceConnection[];
-const capture = vi.fn<() => Promise<VoiceMediaStream>>();
 function connection() {
   const changes: VoiceView[] = [];
   const value = new VoiceConnection((view) => changes.push(view), vi.fn<() => void>());
   connections.push(value);
   return { value, changes };
 }
-function peer() {
-  const value = VoicePeer.instances.at(-1);
-  if (!value) throw new Error("音声接続がまだ作成されていない");
-  return value;
-}
+
 function caption(
-  role: "user" | "assistant",
+  role: "assistant" | "user",
   text: string,
   start: number,
   end: number,
@@ -108,6 +42,7 @@ function caption(
     end_ms: end,
   });
 }
+
 function sentEvent(data: string) {
   return z
     .object({
@@ -116,6 +51,7 @@ function sentEvent(data: string) {
     })
     .parse(JSON.parse(data));
 }
+
 function delegate(id = "item_tablecast_delegation") {
   peer().channel.receive({
     type: "session.delegation.created",
@@ -124,52 +60,10 @@ function delegate(id = "item_tablecast_delegation") {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  requests = [];
-  connections = [];
-  VoicePeer.instances = [];
-  VoiceAudio.instances = [];
-  vi.stubGlobal("RTCPeerConnection", VoicePeer);
-  vi.stubGlobal("Audio", VoiceAudio);
-  vi.stubGlobal("MediaStream", VoiceMediaStream);
-  vi.stubGlobal("navigator", { mediaDevices: { getUserMedia: capture } });
-  capture.mockResolvedValue(new VoiceMediaStream());
-  let issued = 0;
-  vi.mocked(apiFetch).mockImplementation(async (input, options) => {
-    const path = input instanceof Request ? input.url : String(input);
-    requests.push({
-      path,
-      body: typeof options?.body === "string" ? JSON.parse(options.body) : undefined,
-      signal: options?.signal,
-    });
-    if (path.endsWith("/start"))
-      return Response.json({
-        voiceSessionId: `live_tablecast_${++issued}`,
-        sdp: "tablecast-answer",
-        proactive: false,
-      });
-    if (path.endsWith("/delegations"))
-      return Response.json({ kind: "accepted", turnId: "tablecast-turn" });
-    if (path.endsWith("/tools")) return Response.json({ result: { products: [] } });
-    if (path.endsWith("/finish")) return Response.json({ ok: true });
-    if (path.endsWith("/stop") || path.endsWith("/conversation"))
-      return Response.json({ ok: true });
-    return Response.json({ error: { code: "UNEXPECTED_TEST_REQUEST" } }, { status: 500 });
-  });
+  fixture = voiceFixture();
+  ({ requests, connections, capture } = fixture);
 });
-afterEach(async () => {
-  for (const value of connections) await value.stop();
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-  const unexpected = requests.filter(
-    ({ path }) =>
-      !["/start", "/stop", "/conversation", "/delegations", "/tools", "/finish"].some((ending) =>
-        path.endsWith(ending),
-      ),
-  );
-  if (unexpected.length)
-    throw new Error(`未定義の要求: ${unexpected.map(({ path }) => path).join(", ")}`);
-});
+afterEach(async () => fixture.dispose());
 
 describe("GPT-Live音声の明示的な停止と再開", () => {
   it("マイク許可待ちに停止した場合は遅れて取得したトラックを送信せず終了する", async () => {
@@ -396,12 +290,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_tools" } });
     for (const [call_id, name] of [
       ["call_catalog", "getCatalog"],
@@ -452,12 +341,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_error" } });
     receive({
       type: "response.output_item.done",
@@ -488,12 +372,7 @@ describe("逐次字幕と標準Responsesへの委任", () => {
     const { value } = connection();
     await value.start("ja");
     delegate();
-    const receive = (event: unknown) =>
-      peer().channel.receive({
-        type: "response.event",
-        delegation_id: "item_tablecast_delegation",
-        event,
-      });
+
     receive({ type: "response.created", response: { id: "resp_old" } });
     receive({
       type: "response.output_item.done",
@@ -519,4 +398,89 @@ describe("逐次字幕と標準Responsesへの委任", () => {
       peer().channel.send.mock.calls.some(([data]) => sentEvent(data).type === "response.create"),
     ).toBe(false);
   });
+});
+
+const receive = (event: unknown) =>
+  peer().channel.receive({
+    type: "response.event",
+    delegation_id: "item_tablecast_delegation",
+    event,
+  });
+
+it("通貨変更を適用した後の設定を次のtoolへ送り、全通貨レートはモデルへ返さない", async () => {
+  let context: DisplayCurrencyContext = {
+    currency: "USD",
+    revision: 0,
+    rates: {
+      base: "JPY",
+      source: "currency-api",
+      date: "2026-10-22",
+      rates: { USD: 0.0065, AUD: 0.00967 },
+    },
+  };
+  const setCurrency = vi.fn<
+    (currency: DisplayCurrencyContext["currency"], revision?: number) => boolean
+  >((currency) => {
+    context = { ...context, currency, revision: context.revision + 1 };
+    return true;
+  });
+  const value = new VoiceConnection(vi.fn<() => void>(), vi.fn<() => void>(), undefined, {
+    getContext: () => context,
+    setCurrency,
+  });
+  connections.push(value);
+  const fallback = vi.mocked(apiFetch).getMockImplementation();
+  if (!fallback) throw new Error("HTTP fixtureが必要です");
+  const contexts: DisplayCurrencyContext[] = [];
+  vi.mocked(apiFetch).mockImplementation(async (input, options) => {
+    const path = input instanceof Request ? input.url : String(input);
+    if (!path.endsWith("/tools")) return fallback(input, options);
+    const body = z
+      .object({ toolName: z.string(), displayCurrency: displayCurrencyContextSchema })
+      .parse(JSON.parse(typeof options?.body === "string" ? options.body : "null"));
+    contexts.push(body.displayCurrency);
+    return Response.json(
+      body.toolName === "setDisplayCurrency"
+        ? {
+            result: { displayCurrency: { currency: "AUD", status: "ready" } },
+            displayCurrencyAction: { currency: "AUD", revision: 0 },
+          }
+        : {
+            result: { products: [], displayCurrency: { currency: body.displayCurrency.currency } },
+          },
+    );
+  });
+  await value.start("ja");
+  delegate();
+  receive({ type: "response.created", response: { id: "resp_currency" } });
+  for (const [call_id, name] of [
+    ["call_currency", "setDisplayCurrency"],
+    ["call_price", "getCatalog"],
+  ])
+    receive({
+      type: "response.output_item.done",
+      item: {
+        type: "function_call",
+        call_id,
+        name,
+        arguments: name === "setDisplayCurrency" ? '{"currency":"AUD"}' : "{}",
+      },
+    });
+  receive({
+    type: "response.completed",
+    response: { id: "resp_currency", output: [] },
+  });
+  await vi.waitFor(() =>
+    expect(
+      peer().channel.send.mock.calls.filter(([data]) => sentEvent(data).type === "response.create"),
+    ).toHaveLength(1),
+  );
+  expect(setCurrency).toHaveBeenCalledExactlyOnceWith("AUD", 0);
+  expect(contexts.map((item) => item.currency)).toEqual(["USD", "AUD"]);
+  const outputs = peer()
+    .channel.send.mock.calls.map(([data]) => sentEvent(data))
+    .filter((event) => event.type === "response.item.create")
+    .map((event) => event.item?.output);
+  expect(outputs).toHaveLength(2);
+  expect(outputs.join(" ")).not.toContain("rates");
 });

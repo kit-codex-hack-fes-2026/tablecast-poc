@@ -1,12 +1,17 @@
+import { convertToWranglerConfig, loadAndParseConfig } from "@cloudflare/config";
+import { bootstrapDatabase, bootstrapInputSchema, DomainError } from "@tablecast/api/bootstrap";
+import { parse, type ParseError } from "jsonc-parser";
 import { constants } from "node:fs";
 import { mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { parse, type ParseError } from "jsonc-parser";
 import { z } from "zod";
-import { bootstrapDatabase, bootstrapInputSchema } from "../apps/api/src/bootstrap";
-import { DomainError } from "../apps/api/src/platform/errors";
+import {
+  deploymentOptions,
+  deploymentTarget,
+  tablecastAdoptedResources,
+} from "./tablecast-deploy-config.ts";
 
 const environmentSchema = z.enum(["staging", "production"]);
 const originSchema = z
@@ -25,7 +30,7 @@ const configSchema = z.object({
   account_id: z.string().regex(/^[a-f0-9]{32}$/),
   compatibility_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   compatibility_flags: z.array(z.string()).refine((flags) => flags.includes("nodejs_compat")),
-  env: z.record(z.string(), z.unknown()),
+  env: z.record(z.string(), z.unknown()).optional(),
 });
 const environmentConfigSchema = z.object({
   name: z.string().regex(/^tablecast[a-z0-9-]*$/),
@@ -71,12 +76,12 @@ export function bootstrapOptions(args: string[]) {
   };
 }
 
-export function bootstrapTarget(text: string, environment: "staging" | "production") {
+export function bootstrapTarget(text: string, environment: "production" | "staging") {
   const errors: ParseError[] = [];
   const parsed: unknown = parse(text, errors, { allowTrailingComma: true });
   if (errors.length) throw new Error("Wrangler設定のJSONが不正です。");
   const config = configSchema.parse(parsed);
-  const selected = environmentConfigSchema.parse(config.env[environment]);
+  const selected = environmentConfigSchema.parse(config.env ? config.env[environment] : parsed);
   if (selected.vars.TABLECAST_ENV !== environment)
     throw new Error("指定環境とTABLECAST_ENVが一致しません。");
   const [database] = selected.d1_databases;
@@ -111,7 +116,23 @@ export async function readBootstrapInput(path: string) {
 
 async function main() {
   const options = bootstrapOptions(process.argv.slice(2));
-  const target = bootstrapTarget(await readFile(options.config, "utf8"), options.environment);
+  let configText = await readFile(options.config, "utf8");
+  if (options.config.endsWith(".ts")) {
+    process.env.TABLECAST_CONFIG ??= JSON.stringify(
+      deploymentOptions(
+        deploymentTarget(undefined, options.environment),
+        process.env.TABLECAST_RELEASE_SHA ?? "",
+        tablecastAdoptedResources[options.environment].database,
+      ),
+    );
+    const { result } = await loadAndParseConfig(options.config, {
+      mode: options.environment,
+      isPreview: false,
+    });
+    if (!result.success) throw new Error("TypeScriptのCloudflare設定を解決できません。");
+    configText = JSON.stringify(convertToWranglerConfig(result.data));
+  }
+  const target = bootstrapTarget(configText, options.environment);
   const { authSecret, ...input } = await readBootstrapInput(options.input);
   console.info(
     JSON.stringify(

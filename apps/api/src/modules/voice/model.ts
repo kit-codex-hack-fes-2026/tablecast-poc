@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { id, localeSchema } from "../../platform/model";
+import { displayCurrencyContextSchema } from "../currency/model";
 export const showProductsSchema = z.object({ productIds: z.array(id).min(1).max(4) }).strict();
 export const speechSpeedSchema = z.number().min(0.5).max(1.5).multipleOf(0.1);
 
@@ -7,6 +8,9 @@ export const speechSpeedInputSchema = z.object({ speed: speechSpeedSchema }).str
 
 export const voiceToolNameSchema = z.enum([
   "getCatalog",
+  "getCustomerContext",
+  "getCustomerSuggestions",
+  "saveCustomerMemory",
   "getTableState",
   "updateCart",
   "prepareConfirmation",
@@ -15,6 +19,7 @@ export const voiceToolNameSchema = z.enum([
   "setUiSection",
   "setLanguage",
   "setSpeechSpeed",
+  "setDisplayCurrency",
   "showProducts",
 ]);
 
@@ -81,8 +86,6 @@ export const voiceTurnSchema = z
   })
   .strict();
 
-export { id } from "../../platform/model";
-
 export const toolSchema = z
   .object({
     voiceSessionId: id,
@@ -90,6 +93,7 @@ export const toolSchema = z
     toolName: voiceToolNameSchema,
     toolCallId: id,
     arguments: z.record(z.string(), z.unknown()),
+    displayCurrency: displayCurrencyContextSchema.optional(),
   })
   .strict();
 

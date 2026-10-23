@@ -1,16 +1,14 @@
-import { drizzle } from "drizzle-orm/d1";
+import { isHostedEmulator } from "@tablecast/api/bootstrap";
+import { business, createDatabase, identity } from "@tablecast/api/db";
 import { is, sql } from "drizzle-orm";
 import { SQLiteTable } from "drizzle-orm/sqlite-core";
-import * as identity from "../apps/api/src/db/auth-schema";
-import * as business from "../apps/api/src/db/business-schema";
-import { isHostedEmulator } from "../apps/api/src/modules/auth/preview";
 
 export async function resetStagingDatabase(
   env: Pick<TablecastEnv, "TABLECAST_DB" | "TABLECAST_ENV" | "TABLECAST_PUBLIC_ORIGIN">,
 ) {
   if (env.TABLECAST_ENV !== "staging" || !isHostedEmulator(env))
     throw new Error("staging以外はリセットできません。");
-  const db = drizzle(env.TABLECAST_DB);
+  const db = createDatabase(env.TABLECAST_DB);
   const owner = await db.select().from(business.deploymentOwner);
   if (
     owner.length !== 1 ||

@@ -1,13 +1,14 @@
 import { eq } from "drizzle-orm";
+import type { ApiServices } from "../../platform/context";
+import type { Actor } from "../auth/model";
+import type { CreateStore } from "./model";
 import * as authTables from "../../db/auth-schema";
 import * as business from "../../db/business-schema";
-import type { ApiServices } from "../../platform/context";
 import { ensure } from "../../platform/errors";
-import type { Actor } from "../auth/model";
 import { requireManager } from "../auth/policy";
+import { pendingOrganizationKey, provisionOrganizationKey } from "../billing/credentials";
 import { configurationSchema } from "../configuration/model";
 import { saveIdentityImage } from "../media/service";
-import type { CreateStore } from "./model";
 export async function createStore(services: ApiServices, userId: string, input: CreateStore) {
   const id = crypto.randomUUID(),
     now = Date.now();
@@ -35,6 +36,7 @@ export async function createStore(services: ApiServices, userId: string, input: 
       slug: input.slug,
       createdAt: new Date(now),
     }),
+    pendingOrganizationKey(services, id),
     db.insert(authTables.member).values({
       id: crypto.randomUUID(),
       organizationId: id,
@@ -64,6 +66,7 @@ export async function createStore(services: ApiServices, userId: string, input: 
       }),
     ),
   ]);
+  await provisionOrganizationKey(services, id);
   return { id, organizationId: id };
 }
 export async function updateStoreIcon(

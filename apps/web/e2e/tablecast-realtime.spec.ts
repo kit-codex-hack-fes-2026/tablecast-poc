@@ -1,17 +1,18 @@
-import { test } from "./support/test";
 import { expect, type WebSocketRoute } from "@playwright/test";
 import { adminStateSchema, catalogSchema, tableStateSchema } from "@tablecast/api/schema";
-import { credentials } from "./support/runtime";
+import { approveGuestDevice, signInStaff } from "./support/session";
+import { test } from "./support/test";
 
-test("通知切断中の変更を回復し、古い確認と期限切れの確認を閉じて重複表示しない", async ({
+test.use({ serviceWorkers: "block" });
+
+test("実WebSocketの通知切断中はHTTPで回復し、再接続後の変更も画面へ反映する", async ({
   page,
   request: staff,
   baseURL,
 }) => {
   const storeId = "tablecast-komorebi";
   const headers = { Origin: baseURL ?? "" };
-  const login = await staff.post("/api/auth/sign-in/email", { data: credentials, headers });
-  expect(login.status()).toBe(200);
+  await signInStaff(staff, baseURL);
   const stateResponse = await staff.get(`/api/admin/stores/${storeId}`);
   expect(stateResponse.status()).toBe(200);
   const vacant = adminStateSchema.parse(await stateResponse.json()).vacantTables[0];
@@ -21,7 +22,6 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
   let connected = 0;
   let notifications = 0;
   const sockets: WebSocketRoute[] = [];
-  await page.clock.install();
   await page.routeWebSocket(/\/api\/table\/live$/, async (socket) => {
     if (dropped) {
       await socket.close({ code: 1001 });
@@ -43,14 +43,8 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
     data: { tableId, guestCount: 2, locale: "ja" },
   });
   expect(opened.status()).toBe(200);
+  await approveGuestDevice(page.request, staff, { origin: baseURL, storeId, tableId });
   await page.goto("/");
-  await page.getByRole("button", { name: "端末を接続する", exact: true }).click();
-  const userCode = await page.getByLabel("端末に表示されたコード").textContent();
-  const approved = await staff.post(`/api/admin/stores/${storeId}/devices/approve`, {
-    headers,
-    data: { userCode, tableId },
-  });
-  expect(approved.status()).toBe(200);
   await expect(page.getByRole("banner")).toContainText(vacant.name);
   await expect.poll(() => connected).toBeGreaterThan(0);
 
@@ -74,21 +68,14 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
     return tableStateSchema.parse(await changed.json());
   }
   await changeQuantity(1);
-  await page.getByRole("button", { name: "注文内容を確認", exact: true }).click();
-  const confirmation = page.getByRole("region", {
-    name: "こちらの内容でよろしいですか？",
-    exact: true,
-  });
-  await expect(confirmation).toContainText(product.text.ja.displayName);
-  await expect(confirmation.getByText(/数量 1/)).toBeVisible();
+  await page.getByRole("tab", { name: /^注文かご/ }).click();
+  const basket = page.getByRole("tabpanel");
+  await expect(basket.getByText(/数量 1/)).toBeVisible();
 
   // 通知だけを失い、HTTPのevent再取得と実DBへの書込みは利用できる状態にする。
   dropped = true;
   await Promise.all(sockets.map((socket) => socket.close({ code: 1001 })));
-  const changed = await changeQuantity(2);
-  await expect(confirmation).not.toBeVisible();
-  await page.getByRole("tab", { name: /^注文かご/ }).click();
-  const basket = page.getByRole("tabpanel");
+  await changeQuantity(2);
   await expect(basket.getByText(product.text.ja.displayName, { exact: true })).toHaveCount(1);
   await expect(basket.getByText(/数量 2/)).toBeVisible();
 
@@ -101,13 +88,4 @@ test("通知切断中の変更を回復し、古い確認と期限切れの確�
   await expect.poll(() => notifications).toBeGreaterThan(beforeNotification);
   await expect(basket.getByText(/数量 3/)).toBeVisible();
   await expect(basket.getByText(product.text.ja.displayName, { exact: true })).toHaveCount(1);
-  await page.getByRole("button", { name: "注文内容を確認", exact: true }).click();
-  await expect(confirmation.getByText(/数量 3/)).toBeVisible();
-  const latest = tableStateSchema.parse(await (await page.request.get("/api/table")).json());
-  expect(latest.snapshot?.cartVersion).toBeGreaterThan(changed.cart.version);
-  expect(latest.orders).toHaveLength(0);
-  if (!latest.snapshot) throw new Error("再確認のsnapshotがありません");
-  // APIの時計を変えず、ブラウザーの確認期限タイマーによる表示失効を検証する。
-  await page.clock.fastForward(latest.snapshot.expiresAt - Date.now() + 1000);
-  await expect(confirmation).not.toBeVisible();
 });

@@ -1,0 +1,39 @@
+{
+  "runtimeDirectory": "/Users/ReoHakase/.codex/worktrees/7233/tablecast-poc/.local/tablecast-e2e-rc343-s85ssond",
+  "runtimeDirectoryExists": false,
+  "ownedWorkerNames": [
+    "tablecast-worker-0-kki7md-chromium",
+    "tablecast-worker-0-sal3eq-webkit",
+    "tablecast-worker-1-m2bxsm-webkit",
+    "tablecast-worker-1-tbyh7p-chromium",
+    "tablecast-worker-2-gsiyh3-chromium",
+    "tablecast-worker-3-gtermz-webkit",
+    "tablecast-worker-3-ijmfpd-chromium"
+  ],
+  "ownedProcessGroupIds": [
+    90323, 90328, 90332, 90334, 90359, 90398, 90459, 90509, 90754, 90772, 90781, 90795, 90836,
+    90866, 90880, 90992, 91017, 91082, 91098, 91123, 91174, 91314, 91328, 91342, 91409, 91426,
+    91461, 91475
+  ],
+  "ownedProcessGroupsRemaining": [],
+  "ownedMailpitContainerNames": [
+    "tablecast-mailpit-extract-tablecast-e2e-rc343-s85ssond",
+    "tablecast-worker-0-kki7md-chromium-mailpit",
+    "tablecast-worker-0-sal3eq-webkit-mailpit",
+    "tablecast-worker-1-m2bxsm-webkit-mailpit",
+    "tablecast-worker-1-tbyh7p-chromium-mailpit",
+    "tablecast-worker-2-gsiyh3-chromium-mailpit",
+    "tablecast-worker-3-gtermz-webkit-mailpit",
+    "tablecast-worker-3-ijmfpd-chromium-mailpit"
+  ],
+  "ownedMailpitContainersRemaining": [],
+  "preexistingRuntimePreserved": true,
+  "verification": "Read-only post-run signal0/ps of only worker groups captured in redacted current-run logs; exact owned Docker names; current-run directory removal. No unrelated runtime/container/proxy stopped.",
+  "ownedListenPorts": [
+    33000, 33001, 33002, 33003, 33569, 33570, 33571, 33572, 33573, 33574, 33575, 61373, 61374,
+    61375, 61376, 61396, 61397, 61398, 61400, 64728, 64772, 64773, 64790, 64797, 64800
+  ],
+  "ownedListenPortsRemaining": [],
+  "playwrightConfigProcessesRemaining": [],
+  "playwrightRunnerExitCode": 0
+}
