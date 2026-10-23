@@ -20,6 +20,7 @@ import type { AccountEmailContent } from "./account-content";
 
 // WebのRadix Gray・書体・Buttonの静的な値をReact Emailでインライン化する。
 const theme = {
+  borderRadius: { sm: "6px", md: "8px", lg: "10px", xl: "14px" },
   colors: {
     background: "#fcfcfc",
     card: "#ffffff",
