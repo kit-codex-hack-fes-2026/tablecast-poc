@@ -123,16 +123,28 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
 async function main() {
   const pr = process.env.TABLECAST_PR_NUMBER || "";
   if (process.argv.includes("--cleanup")) return cleanupCatalogs(pr);
-  if (process.argv.includes("--prepare-storybook")) {
-    const directory = resolve(root, "apps/web/storybook-static");
+  const email = process.argv.includes("--prepare-email");
+  if (email || process.argv.includes("--prepare-storybook")) {
+    const directory = resolve(root, email ? "apps/api/email-static" : "apps/web/storybook-static");
     const files = await readdir(directory, { recursive: true });
     const script = files.find((path) => path.endsWith(".js"));
-    if (!script) throw new Error("Storybookの静的JSがありません。");
-    const release = catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
+    if (!email && !script) throw new Error("Storybookの静的JSがありません。");
+    const release = email
+      ? catalogRelease("email", [
+          "/",
+          ...files.filter((path) => path.endsWith(".html")).map((path) => `/${path}`),
+        ])
+      : catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
     await mkdir(resolve(directory, "_tablecast"), { recursive: true });
     await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
-    await writeFile(resolve(directory, "_headers"), "/*\n  Cache-Control: no-store\n");
-    await writeFile(resolve(directory, "_redirects"), "/ /index.html 200\n");
+    await writeFile(
+      resolve(directory, "_headers"),
+      `/*\n  Cache-Control: no-store\n${email ? "  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'\n" : ""}`,
+    );
+    await writeFile(
+      resolve(directory, "_redirects"),
+      `/ /${email ? "invitation-ja" : "index"}.html 200\n`,
+    );
     return;
   }
   const sha = z

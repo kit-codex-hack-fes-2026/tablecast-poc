@@ -286,7 +286,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+メールカタログはAPIの開発依存`react-email` 6.11.3の公式CLIで静的HTMLを生成する。`email export`を使い、`email build`で生成されるサーバー用プレビューアプリは配備しない。追加後はrootで`bun install --frozen-lockfile`を実行する。追加workspace・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
 
 ## stagingと本番release
 

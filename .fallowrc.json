@@ -11,7 +11,8 @@
     "scripts/tablecast-demo.ts",
     "scripts/tablecast-grafana-mcp.ts",
     "scripts/tablecast-plugin.ts",
-    "apps/api/src/worker.ts"
+    "apps/api/src/worker.ts",
+    "apps/api/emails/*.tsx"
   ],
   "ignorePatterns": [
     "**/worker-configuration.d.ts",

@@ -20,23 +20,28 @@ import type { AccountEmailContent } from "./account-content";
 
 // WebのRadix Gray・書体・Buttonの静的な値をReact Emailでインライン化する。
 const theme = {
-  borderRadius: { sm: "6px", md: "8px", lg: "10px", xl: "14px" },
+  borderRadius: { sm: "6px", md: "8px", lg: "10px", xl: "14px", "2xl": "18px" },
   colors: {
     background: "#fcfcfc",
     card: "#ffffff",
     muted: "#f9f9f9",
-    border: "#e8e8e8",
-    edge: "#d9d9d9",
+    border: "#d9d9d9",
+    edge: "#cecece",
     primary: "#202020",
     secondary: "#646464",
   },
   fontFamily: {
     sans: '-apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif',
   },
+  backgroundImage: {
+    "control-sheen": "linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent)",
+    "surface-sheen": "linear-gradient(to bottom, rgba(255, 255, 255, 0.6), transparent)",
+  },
   boxShadow: {
-    surface: "0 2px 8px -4px #00000010, 0 12px 32px -16px #00000015",
-    control: "0 1px 2px #00000010, inset 0 1px 0 #ffffff",
-    dark: "0 1px 2px #00000018, inset 0 1px 0 #ffffff25",
+    surface: "0 2px 8px -4px #00000017, 0 12px 32px -16px #0000001f",
+    control:
+      "0 1px 2px #00000017, 0 3px 6px -3px #0000001f, inset 0 1px 0 rgba(255, 255, 255, 0.95)",
+    dark: "0 1px 2px #0000001f, 0 4px 8px -4px #00000031, inset 0 1px 0 rgba(255, 255, 255, 0.3)",
   },
 };
 export function AccountEmail({
@@ -132,12 +137,12 @@ export function AccountEmail({
               <Section className="my-7">
                 <Button
                   href={url}
-                  className={`rounded-xl border border-solid px-5 py-3.5 text-center text-base font-medium leading-[22px] ${outline ? "border-edge bg-card text-primary shadow-control" : "border-primary bg-primary text-card shadow-dark"}`}
+                  className={`box-border min-h-12 rounded-xl border border-solid bg-clip-padding px-4 py-3 text-center text-base font-medium leading-[22px] ${outline ? "border-edge bg-card bg-surface-sheen text-primary shadow-control" : "border-primary bg-primary bg-control-sheen text-card shadow-dark"}`}
                 >
                   <Img
-                    src={asset(`email/${icon}${outline ? "" : "-white"}.png`)}
-                    width="16"
-                    height="16"
+                    src={asset(`email/${icon}${outline || icon === "google" ? "" : "-white"}.png`)}
+                    width={icon === "google" ? "20" : "16"}
+                    height={icon === "google" ? "20" : "16"}
                     alt=""
                     className="mr-2 inline-block align-middle"
                   />

@@ -1,6 +1,6 @@
 type Locale = "en" | "ja";
 type EmailLocale = Locale | null | undefined;
-type EmailIcon = "arrow-right" | "circle-check" | "fingerprint" | "mail" | "shield-check";
+type EmailIcon = "arrow-right" | "circle-check" | "fingerprint" | "google" | "mail";
 type EmailIdentity = {
   description?: string;
   image?: null | string;
@@ -188,26 +188,21 @@ export function securityEmail(
   } as const;
   const [ja, en] = messages[event];
   return {
-    ...content(
-      locale,
-      url,
-      event.startsWith("passkey") ? "fingerprint" : "shield-check",
-      (language) => ({
-        title: choose(language, ja, en),
-        message: choose(
-          language,
-          "アカウントのログイン手段が変更されました。心当たりがない場合は、アカウント設定で登録情報とログイン中の端末を確認してください。",
-          "Your sign-in methods have changed. If this was not you, review your sign-in methods and active sessions in your account settings.",
-        ),
-        details: [
-          {
-            label: choose(language, "変更日時", "Changed at"),
-            value: dateTime(occurredAt, language, "UTC"),
-          },
-        ],
-        action: choose(language, "アカウントを確認", "Review account"),
-      }),
-    ),
+    ...content(locale, url, event.startsWith("passkey") ? "fingerprint" : "google", (language) => ({
+      title: choose(language, ja, en),
+      message: choose(
+        language,
+        "アカウントのログイン手段が変更されました。心当たりがない場合は、アカウント設定で登録情報とログイン中の端末を確認してください。",
+        "Your sign-in methods have changed. If this was not you, review your sign-in methods and active sessions in your account settings.",
+      ),
+      details: [
+        {
+          label: choose(language, "変更日時", "Changed at"),
+          value: dateTime(occurredAt, language, "UTC"),
+        },
+      ],
+      action: choose(language, "アカウントを確認", "Review account"),
+    })),
     actionVariant: "outline" as const,
   };
 }

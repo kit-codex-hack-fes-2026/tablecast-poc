@@ -144,9 +144,9 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## メールカタログの検証
 
-既存APIのReact Emailテンプレートから、一覧と招待・メール確認・マジックリンク・招待状態と認証設定変更の通知の静的HTMLを生成する。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
+React Email公式CLIの`email export --dir emails --outDir email-static`で、招待・メール確認・マジックリンク・招待状態と認証設定変更の通知を静的HTMLへ書き出す。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
 
-生成HTMLは編集せず、レイアウト・日英文言はAPIのメール実装、架空データと一覧は`apps/api/scripts/tablecast-email-build.ts`を変更する。編集・診断・送信機能は持たない。追加の依存導入やDev ContainerのRebuildは不要。
+`/invitation-ja.html`、`/invitation-en.html`、`/invitation.html`（日英併記）など33例を直接開く。独自の一覧ページは生成しない。生成HTMLは編集せず、レイアウト・日英文言は`apps/api/src/emails`、固定の架空データは`apps/api/emails/_samples.tsx`、CLI用の入口は同じディレクトリの各テンプレートを変更する。画像はWebの正本を生成用の`emails/static`へコピーし、公式CLIが出力先へ配置する。CLI依存の追加後は`bun install --frozen-lockfile`を実行する。
 
 ## 統合先とrelease
 
