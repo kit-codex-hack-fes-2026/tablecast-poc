@@ -458,7 +458,7 @@ export function TableSession({
         data-theme-part="header"
         className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-[56rem]:grid max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:px-3"
       >
-        <div className="mr-auto flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <a
             className="text-xl font-bold tracking-tight max-lg:hidden"
             href={data.kind === "demo" ? "#" : "/"}
