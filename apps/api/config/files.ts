@@ -25,7 +25,7 @@ export const files = [
   ["runtime", "src/{containers,realtime/store-events}.ts"],
   ["store-routes", "src/modules/stores/routes.ts"],
   ["auth-middleware", "src/modules/{auth,customers}/middleware.ts"],
-  ["auth-factory", "src/modules/auth/{service,options,preview}.ts"],
+  ["auth-factory", "src/modules/auth/{service,options,preview,notifications}.ts"],
   [
     "voice-operation",
     "src/modules/voice/{agent,realtime,turns,session,observability,conversation}.ts",
@@ -58,6 +58,7 @@ export const files = [
 
   ["model", "src/modules/appearance/css-tree.d.ts"],
   ["model", "src/modules/*/model.ts"],
+  ["query", "src/modules/auth/passkey-policy.ts"],
   ["query", "src/modules/*/queries.ts"],
   ["service", "src/modules/*/service.ts"],
   ["route", "src/modules/*/*routes.ts"],

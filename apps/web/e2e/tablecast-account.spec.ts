@@ -1,11 +1,35 @@
 import { expect } from "@playwright/test";
 import { z } from "zod";
+import { signInDemoOwner } from "../../../scripts/tablecast-demo-auth";
 import { credentials } from "./support/runtime";
-import { signInStaff } from "./support/session";
+import { signInFromLogin, signInStaff } from "./support/session";
 import { test } from "./support/test";
 
 // 認証・招待・メールの実HTTP接続を確認する。
 test.use({ trace: "off", serviceWorkers: "block" });
+
+test("背景デモは新しい実メールで再認証し、パスキーなしでも本人の範囲で利用できる", async ({
+  request,
+  runtime,
+}) => {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const cookie = await signInDemoOwner(runtime.origin, runtime.mailpitUrl, credentials.email);
+    const stores = await request.get(`${runtime.origin}/api/admin/stores`, {
+      headers: { Cookie: cookie },
+    });
+    expect(stores.status()).toBe(200);
+  }
+  const cookie = await signInDemoOwner(
+    runtime.origin,
+    runtime.mailpitUrl,
+    "tablecast-demo-unregistered@example.test",
+  );
+  const empty = await request.get(`${runtime.origin}/api/admin/stores`, {
+    headers: { Cookie: cookie },
+  });
+  expect(empty.status()).toBe(200);
+  expect(await empty.json()).toMatchObject({ stores: [] });
+});
 
 test("メールログインは外部として解釈される戻り先を使わず指定店舗の下書きへ復帰する", async ({
   page,
@@ -30,9 +54,7 @@ test("メールログインは外部として解釈される戻り先を使わ�
     returnDraftId: draft.id,
   });
   await page.goto(`/login?${query}`);
-  await page.getByLabel("メールアドレス").fill(credentials.email);
-  await page.getByLabel("パスワード", { exact: true }).fill(credentials.password);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await signInFromLogin(page, baseURL);
   await expect(page).toHaveURL(`${baseURL}/admin/stores/${storeId}/menu/changes/${draft.id}`);
   await expect(page.getByRole("heading", { name: "変更内容を確認", exact: true })).toBeVisible();
 });
@@ -119,7 +141,7 @@ test("Googleログインから店舗作成・招待メールの参加まで接�
         .parse(await messages.json())
         .messages.find(
           (item) =>
-            item.Subject.includes("Restaurant invitation") &&
+            (item.Subject.includes("招待") || item.Subject.includes("Invitation")) &&
             item.To.some((to) => to.Address === "ren.tanaka@komorebi-shijo.com"),
         )?.ID;
       return mailId;
@@ -183,7 +205,6 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   const keyName = `TableCast Chromium ${Date.now()}`;
   await passkeys.getByLabel("パスキーの名前", { exact: true }).fill(keyName);
   await passkeys.getByRole("button", { name: "パスキーを追加", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("更新しました");
   await expect(passkeys.getByRole("cell").filter({ hasText: keyName })).toBeVisible();
   // APIで認証方式を切り替える間は、元の画面のセッション監視を停止する。
   await page.goto("about:blank");
@@ -196,11 +217,57 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
     ).ok(),
   ).toBe(true);
   expect(await (await page.request.get("/api/auth/get-session")).json()).toBeNull();
-  await page.goto("/login");
+  await page.goto("/login?returnTo=%2Forganisations");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
   await expect(page).toHaveURL(/\/organisations$/);
   await expect(page.getByRole("heading", { name: "店舗", exact: true })).toBeVisible();
   const after = sessionSchema.parse(await (await page.request.get("/api/auth/get-session")).json());
   expect(after.user.id).toBe(before.user.id);
   expect(after.session.id).not.toBe(before.session.id);
+});
+
+test("招待から登録したユーザーはパスキーを後回しにして参加できる", async ({
+  page,
+  context,
+  baseURL,
+}, testInfo) => {
+  await signInStaff(page.request, baseURL);
+  const email = "tablecast-new-invitee@example.test";
+  const stores = z
+    .object({ stores: z.array(z.object({ id: z.string(), organizationId: z.string() })) })
+    .parse(await (await page.request.get("/api/admin/stores")).json());
+  const store = stores.stores.find((item) => item.id === "tablecast-komorebi");
+  if (!store) throw new Error("fixtureの店舗がありません。");
+  const invited = await page.request.post("/api/auth/organization/invite-member", {
+    headers: { Origin: baseURL ?? "" },
+    data: { email, role: "member", organizationId: store.organizationId },
+  });
+  expect(invited.ok()).toBe(true);
+  const invitation = z.object({ id: z.string() }).parse(await invited.json());
+  await context.clearCookies();
+  await page.goto(`/invitations/${invitation.id}`);
+  await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
+  for (const [name, width, height] of [
+    ["iphone", 402, 874],
+    ["ipad", 1180, 820],
+    ["macbook", 1512, 982],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await page.screenshot({ path: testInfo.outputPath(`tablecast-login-${name}.png`) });
+  }
+  await signInFromLogin(page, baseURL, email);
+  await expect(page).toHaveURL(/\/passkey-setup\?/);
+  const permitted = await page.request.get("/api/admin/stores");
+  expect(permitted.status()).toBe(200);
+  await page.screenshot({ path: testInfo.outputPath("tablecast-passkey-optional.png") });
+  await page.getByRole("button", { name: "あとで設定", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/invitations/${invitation.id}$`));
+  await page.getByRole("button", { name: "参加する", exact: true }).click();
+  await expect(page).toHaveURL(/\/organisations$/);
+  const memberships = z
+    .object({ stores: z.array(z.object({ id: z.string(), role: z.string() })) })
+    .parse(await (await page.request.get("/api/admin/stores")).json());
+  expect(memberships.stores).toContainEqual(
+    expect.objectContaining({ id: "tablecast-komorebi", role: "member" }),
+  );
 });

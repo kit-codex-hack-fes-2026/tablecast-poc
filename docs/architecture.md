@@ -219,7 +219,7 @@ Motionは共通`MotionProvider`から`LazyMotion`の機能を遅延ロードす�
 
 ### 開発者用メールカタログ
 
-APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts/tablecast-email-build.ts`が架空データを使った静的HTMLと一覧を生成する。カタログ専用workspace・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。
+APIの`src/emails`が共通レイアウトと日英文言を所有する。`apps/api/scripts/tablecast-email-preview.ts`の固定サンプルからCLIの入力を`.local/tablecast-email`へ一時生成し、React Email公式CLIの`email export`で静的HTMLへ書き出す。サンプルごとの薄い入口はGit管理しない。`static/`の画像コピーも公式CLIへ任せ、独自のrenderer・一覧ページ・実行サーバー・送信機能は設けない。生成・Access配備・終了時の削除は[CI/CD](deployment.md#prのstorybookメールカタログ)で管理する。
 
 店舗統計はAPIの `modules/statistics` が期間・母数・集計を所有する。管理HTTPとMCPから同じserviceと公開schemaを使い、クライアント側は比較・可視化・提案を担当する。[統計の定義](statistics.md)を参照する。
 
@@ -234,6 +234,8 @@ APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts
 ### 店舗テーマの境界
 
 APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの入力契約を所有する。CSS解析はcss-treeの公式subpath parser/generatorを使い、Node.js専用のデータ読込を含むルート入口を避け、当該modelだけに外部依存を許可する。WebのStoreThemeはその契約から店舗内のCSS変数と部品スタイルを生成する。UI非依存のStyleScopeBoundaryがPortalにも適用範囲を引き継ぎ、UI primitiveは店舗設定やAPIへ依存しない。設定は既存のconfig_jsonと版管理へ格納し、追加テーブルやmigrationは不要。
+
+認証の共通パスキー条件は`auth/passkey-policy.ts`がDBから読み、認証factory・middleware・初期取得・MCPで共有する。通知の設定は`auth/notifications.ts`が既存メール送信へ接続する。認証factoryからのDB読取はこの条件ファイルに限定した境界として公開する。
 
 ## 外貨参考表示の境界
 

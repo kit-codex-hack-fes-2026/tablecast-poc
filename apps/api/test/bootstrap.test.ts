@@ -1,4 +1,6 @@
+import { makeSignature } from "better-auth/crypto";
 import { env, exports } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -99,15 +101,9 @@ it("新規登録すると公式認証の所有者を持つ店舗・初期公開�
       .first("count"),
   ).toBe(0);
   await fixtureDb.update(authTables.user).set({ emailVerified: true });
-  const login = await createAuth(bootstrapEnv).api.signInEmail({
-    body: { email: initial.admin.email.toLowerCase(), password: initial.admin.password },
-    asResponse: true,
-  });
-  expect(login.status).toBe(200);
-  const cookie = login.headers
-    .getSetCookie()
-    .map((value) => value.split(";")[0])
-    .join("; ");
+  const auth = createAuth(bootstrapEnv);
+  const session = await (await auth.$context).internalAdapter.createSession(result.userId);
+  const cookie = `tablecast.session_token=${encodeURIComponent(`${session.token}.${await makeSignature(session.token, bootstrapEnv.TABLECAST_AUTH_SECRET)}`)}`;
 
   expect((await request(result.storeId, cookie)).status).toBe(200);
   expect((await request("tablecast-store", cookie)).status).toBe(403);
@@ -135,11 +131,17 @@ it("成功後に入力を変えて再実行しても既存設定・所有者・�
     initial.store.configuration,
   );
   await fixtureDb.update(authTables.user).set({ emailVerified: true });
-  const login = await createAuth(bootstrapEnv).api.signInEmail({
-    body: { email: initial.admin.email, password: initial.admin.password },
-  });
-  expect(login.user.id).toBe(result.userId);
-  expect(login.user.locale).toBe("en");
+  const [storedUser] = await fixtureDb
+    .select()
+    .from(authTables.user)
+    .where(eq(authTables.user.id, result.userId));
+  expect(storedUser?.locale).toBe("en");
+  expect(
+    await fixtureDb
+      .select()
+      .from(authTables.account)
+      .where(eq(authTables.account.userId, result.userId)),
+  ).toEqual([]);
 });
 
 it.each([

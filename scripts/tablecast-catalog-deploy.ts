@@ -120,21 +120,36 @@ export async function inspectCatalog(origin: string, pr: string, kind: CatalogKi
   return release;
 }
 
+async function prepareCatalog(kind: CatalogKind) {
+  const email = kind === "email";
+  const directory = resolve(root, email ? "apps/api/email-static" : "apps/web/storybook-static");
+  const files = await readdir(directory, { recursive: true });
+  const script = files.find((path) => path.endsWith(".js"));
+  if (!email && !script) throw new Error("Storybookの静的JSがありません。");
+  if (email && !files.includes("invitation-ja.html"))
+    throw new Error("招待メールの静的HTMLがありません。");
+  const release = email
+    ? catalogRelease("email", [
+        "/",
+        ...files.filter((path) => path.endsWith(".html")).map((path) => `/${path}`),
+      ])
+    : catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
+  await mkdir(resolve(directory, "_tablecast"), { recursive: true });
+  await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
+  await writeFile(
+    resolve(directory, "_headers"),
+    `/*\n  Cache-Control: no-store\n${email ? "  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'\n" : ""}`,
+  );
+  await writeFile(
+    resolve(directory, "_redirects"),
+    `/ /${email ? "invitation-ja" : "index"}.html 200\n`,
+  );
+}
+
 async function main() {
   const pr = process.env.TABLECAST_PR_NUMBER || "";
   if (process.argv.includes("--cleanup")) return cleanupCatalogs(pr);
-  if (process.argv.includes("--prepare-storybook")) {
-    const directory = resolve(root, "apps/web/storybook-static");
-    const files = await readdir(directory, { recursive: true });
-    const script = files.find((path) => path.endsWith(".js"));
-    if (!script) throw new Error("Storybookの静的JSがありません。");
-    const release = catalogRelease("storybook", ["/", "/iframe.html", "/index.json", `/${script}`]);
-    await mkdir(resolve(directory, "_tablecast"), { recursive: true });
-    await writeFile(resolve(directory, "_tablecast/release.json"), JSON.stringify(release));
-    await writeFile(resolve(directory, "_headers"), "/*\n  Cache-Control: no-store\n");
-    await writeFile(resolve(directory, "_redirects"), "/ /index.html 200\n");
-    return;
-  }
+  if (process.argv.includes("--prepare-storybook")) return prepareCatalog("storybook");
   const sha = z
     .string()
     .regex(/^[a-f0-9]{40}$/)
@@ -155,6 +170,7 @@ async function main() {
         kind === "email"
           ? resolve(root, "apps/api/email-static")
           : resolve(root, "apps/web/storybook-static");
+      if (kind === "email") await prepareCatalog(kind);
       const releasePath = "_tablecast/release.json";
       const release = catalogReleaseSchema.parse(
         JSON.parse(await readFile(resolve(artifact, releasePath), "utf8")),

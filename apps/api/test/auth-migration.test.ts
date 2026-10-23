@@ -5,10 +5,11 @@ import { sql } from "drizzle-orm";
 import { expect, inject, it } from "vitest";
 import { account } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
+import { authPost } from "./auth-fixture";
 import { fixtureDb } from "./database-fixture";
 import { resetFixtureStorage } from "./fixture";
 
-it("認証のissuer必須制約を外しても既存の資格情報とログインを保持する", async () => {
+it("パスワード廃止の移行は既存アカウントを維持してハッシュを消去する", async () => {
   await resetFixtureStorage();
   const migrations = inject("tablecastMigrations");
   const index = migrations.findIndex((migration) =>
@@ -34,18 +35,14 @@ it("認証のissuer必須制約を外しても既存の資格情報とログイ�
 
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(index));
 
-  expect(await fixtureDb.select().from(account)).toEqual(before);
+  expect(await fixtureDb.select().from(account)).toEqual(
+    before.map((row) => ({ ...row, password: null })),
+  );
   expect(await fixtureDb.all(sql`PRAGMA foreign_key_check`)).toEqual([]);
   const auth = createAuth(env);
-  const response = await auth.handler(
-    new Request("http://localhost:3000/api/auth/sign-in/email", {
-      method: "POST",
-      headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    }),
-  );
-  expect(response.status).toBe(200);
-  expect(response.headers.getSetCookie().join(";")).toContain("session_token");
+  const response = await authPost(auth, "/sign-in/email", { email, password });
+  expect(response.status).toBe(403);
+  expect(response.headers.getSetCookie().join(";")).not.toContain("session_token");
 });
 
 it("異なるissuerで識別子が重複する場合は既存行と必須制約を保持して移行を拒否する", async () => {

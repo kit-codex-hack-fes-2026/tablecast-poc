@@ -169,7 +169,7 @@ Codexの受付反応とレビュー結果を確認する。指摘への対応と
 2. `/admin/live` へログインする。開発用の資格情報は、その環境の `.local/demo.json` にある。
    `emulate@0.11.1`は未改変の配布物を使い、選択画面の写真表示・表示順は拡張しない。E2Eでは[指定ポートの設定](testing.md)を使用する。ランダムスタッフ生成を廃止し、Fakerへの依存を削除した。
    プロフィールは[生成WebP](demo/identities.md)を共通名簿から読み込む。`apps/emulate/Dockerfile`は実行ファイルを`apps/emulate/dist/index.js`へ配置し、`assets/demo/identities/*.webp`と同じ相対位置を維持する。フォントは実行ファイル隣の`fonts`へ同梱する。`.dockerignore`でも12点のWebPをビルドコンテキストに含める。
-   新規seedのGoogle選択画面では、店舗・氏名・役割から8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBの既知の旧デモメールだけを通常の再seedで人名@店舗名.comへ移行し、DB投入成功後に`.local/demo.json`も更新する。パスワード・手動のメール・所属は保持する。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻し、パスワードを保持する。
+   新規seedのGoogle選択画面では、店舗・氏名・役割から8人のデモメンバーを選べる。各組織は3所属で、共通ownerが2店舗を担当する。名簿と動画シナリオは[デモ資料](demo/README.md)を参照する。新規local/PR seedのownerメールは共通名簿に揃え、既存DBの既知の旧デモメールだけを通常の再seedで人名@店舗名.comへ移行し、DB投入成功後に`.local/demo.json`も更新する。パスキー・手動のメール・所属は保持する。古い構成から今回のデモへ切り替える場合は、必要なデータを保全して対象worktreeを停止し、既存の`demo:reset`手順を使う。明示リセットはownerのメールも共通名簿へ戻す。
 3. 客向け画面の端末コードを卓へ割り当てる。
 4. 日英表示、商品追加、確認、注文を試す。メールはMailpitで確認する。
 
@@ -286,7 +286,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-メールカタログはAPIで既に利用しているReact Emailのrender/componentsで静的HTMLを生成する。追加workspace・依存・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+メールカタログはAPIの開発依存`react-email` 6.11.3の公式CLIで静的HTMLを生成する。固定サンプルを`apps/api/scripts/tablecast-email-preview.ts`へ集約し、CLI入力をGit管理外の`.local/tablecast-email`へ一時生成する。描画は`email export`を使い、`email build`で生成されるサーバー用プレビューアプリは配備しない。追加後はrootで`bun install --frozen-lockfile`を実行する。追加workspace・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
 
 ## stagingと本番release
 
@@ -357,3 +357,7 @@ root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する�
 認証のrelationsはRelations v2とBetter Authの`@better-auth/drizzle-adapter/relations-v2`を組み合わせる。DB生成はAPIの既存factoryへ集約し、joinを有効にした認証の実D1試験も更新時に実行する。配備CLIのSQLite proxyも同じ版のexecutors形式を使う。RC更新時は型検査に加え、`run`・`all`・`get`と配列・objectの返却を検証する。
 
 既存のD1 SQL migrationと適用履歴は維持する。通常の`db:migrate`・配備手順を使い、ORM更新だけを理由に`drizzle-kit up`・`push`で既存DBやmigrationを変換しない。[公式のRC移行](https://orm.drizzle.team/docs/relations-v1-v2)、[RC.5の変更点](https://github.com/drizzle-team/drizzle-orm/releases/tag/v1.0.0-rc.5)を更新時の確認先とする。
+
+## パスワードレス認証への移行
+
+0028 migrationはパスワードハッシュを消去し、認証の制限記録とパスキー登録状態を追加する。続けて0029を適用し、旧0028の最後のパスキー保護を解除する。デモseedはパスワードを作成しない。Google emulatorかMailpitのマジックリンクでログイン後、パスキー登録は任意で案内する。One Tapの実Google設定と公開前のメール送信確認は[認証仕様](authentication.md#パスワードレス認証と任意のパスキー)に従う。

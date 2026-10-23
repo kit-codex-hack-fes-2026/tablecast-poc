@@ -22,7 +22,8 @@ export const bootstrapInputSchema = z
         .email()
         .max(254)
         .transform((value) => value.toLowerCase()),
-      password: z.string().min(12).max(128),
+      // 旧CLI入力の互換性だけを保ち、パスワードは保存しない。
+      password: z.string().min(12).max(128).optional(),
       locale: localeSchema,
     }),
     organization: z.strictObject({
@@ -96,7 +97,17 @@ export async function bootstrapDatabase(
     // 認証API間は同一トランザクションにできないため、例外には判明したIDだけを残す。
     progress.stage = "administrator";
     const auth = createAuth(env, { disabled: true }, db);
-    const { user } = await auth.api.signUpEmail({ body: input.admin });
+    const user = await (
+      await auth.$context
+    ).internalAdapter.createUser(
+      {
+        name: input.admin.name,
+        email: input.admin.email,
+        locale: input.admin.locale,
+        emailVerified: false,
+      },
+      { method: "admin" },
+    );
     progress.userId = user.id;
     progress.stage = "organization";
     const organization = await auth.api.createOrganization({

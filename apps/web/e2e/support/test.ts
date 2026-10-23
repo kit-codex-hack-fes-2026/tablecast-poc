@@ -1,6 +1,6 @@
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { test as base } from "@playwright/test";
-import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { type ChildProcess, execFile, execFileSync, spawn } from "node:child_process";
 import { access, constants, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -9,7 +9,8 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { diagnosticSecrets, redactCredentials } from "../../../api/src/platform/diagnostics";
 import { startGateway } from "./gateway";
-import { type CaseRuntime, createWorkerRuntime, credentials, runtime as template } from "./runtime";
+import { type CaseRuntime, createWorkerRuntime, runtime as template } from "./runtime";
+import { registerTestMailpit } from "./session";
 
 // API client由来のWorker global型ではprocessがanyになる。fixtureの実行環境はNodeである。
 declare const process: NodeJS.Process;
@@ -21,6 +22,18 @@ function signalGroup(child: ChildProcess, signal: 0 | NodeJS.Signals) {
   if (!child.pid) return false;
   try {
     process.kill(-child.pid, signal);
+    if (signal === 0 && process.platform === "linux") {
+      // コンテナのPID 1が回収しないzombieには待受や子processの実行が残っていない。
+      const states = execFileSync("ps", ["-eo", "pgid=,stat="], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .trim()
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/))
+        .filter(([group]) => group === String(child.pid));
+      if (states.every(([, state]) => state?.startsWith("Z"))) return false;
+    }
     return true;
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ESRCH") return false;
@@ -49,8 +62,6 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
       const errors: unknown[] = [];
       const secrets = [
         ...diagnosticSecrets(parentEnv),
-        credentials.password,
-        credentials.otherPassword,
         "tablecast-isolated-e2e-auth-secret-never-used-outside-tests",
         "tablecast-local-google-secret",
       ];
@@ -384,6 +395,7 @@ export const test = base.extend<{ runtime: RuntimeHandles }, { workerRuntime: Ru
           }),
         );
         await waitUntilReady(ingress.origin);
+        registerTestMailpit(origin, mailpitUrl);
         const handles: RuntimeHandles = {
           ...runtime,
           origin,

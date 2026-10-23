@@ -37,8 +37,10 @@ it.each([
   expect(loginReturnUrl(returnSearch(path), origin)).toBeUndefined();
 });
 
-it("戻り先がない場合は認証方式ごとの既存の復帰先へ委ねる", () => {
-  expect(loginReturnUrl("?returnStoreId=store-1&returnDraftId=draft-1", origin)).toBeUndefined();
+it("戻り先がない場合は指定店舗と下書きを保持する", () => {
+  expect(loginReturnUrl("?returnStoreId=store-1&returnDraftId=draft-1", origin)).toBe(
+    "/admin/live?storeId=store-1&draftId=draft-1",
+  );
 });
 
 it("正規化で先頭が//になるpathも遷移時に同一originを維持する", () => {

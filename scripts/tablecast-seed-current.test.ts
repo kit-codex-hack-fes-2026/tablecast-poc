@@ -43,9 +43,7 @@ it("再投入で別IDの営業中卓と閉じた初期卓と未会計を保ち�
   );
   const credentials: DemoCredentials = {
     email: "haruka.sato@komorebi-shijo.com",
-    password: "tablecast-current-seed-owner-password",
     otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-    otherPassword: "tablecast-current-seed-other-password",
     baseTime: Date.UTC(2026, 8, 6, 0),
     profile: "demo",
   };

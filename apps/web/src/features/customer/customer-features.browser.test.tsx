@@ -107,7 +107,13 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   await show(<CustomerStore storeId="tablecast-store" />, locale);
   await page.getByRole("button", { name: labels.customer_enrol, exact: true }).click();
   await page.getByText(labels.customer_preferences, { exact: true }).click();
-  await page.getByRole("checkbox", { name: labels.customer_save_memories, exact: true }).click();
+  const saveMemories = page.getByRole("checkbox", {
+    name: labels.customer_save_memories,
+    exact: true,
+  });
+  await expect.element(saveMemories).toBeChecked();
+  await saveMemories.click();
+  await expect.element(saveMemories).not.toBeChecked();
   await page.getByRole("button", { name: labels.customer_save_preferences }).click();
   await expect
     .element(page.getByRole("status").filter({ hasText: labels.account_saved }))
@@ -123,9 +129,7 @@ it("日本語で初回同意後の設定を保存し、新しい画面でも撤�
   client.clear();
   await show(<CustomerStore storeId="tablecast-store" />, locale);
   await page.getByText(labels.customer_preferences, { exact: true }).click();
-  await expect
-    .element(page.getByRole("checkbox", { name: labels.customer_save_memories, exact: true }))
-    .not.toBeChecked();
+  await expect.element(saveMemories).not.toBeChecked();
   await expect
     .element(page.getByRole("button", { name: labels.customer_enrol, exact: true }))
     .not.toBeInTheDocument();

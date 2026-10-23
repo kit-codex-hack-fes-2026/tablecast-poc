@@ -40,7 +40,7 @@ export function AccountConnections({ controller }: { controller: AccountControll
         {...collection}
         searchLabel={t("account_connections_search")}
         searchPlaceholder={t("account_connections_search")}
-        data={accounts.data ?? []}
+        data={accounts.data?.filter((item) => item.providerId === "google") ?? []}
         pending={accounts.isPending}
         error={accounts.error}
         onRetry={() => void accounts.refetch()}

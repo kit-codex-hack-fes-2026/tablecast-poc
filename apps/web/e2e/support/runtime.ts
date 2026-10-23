@@ -40,9 +40,7 @@ export const runtime = schema.parse(
 );
 export const credentials = {
   email: "haruka.sato@komorebi-shijo.com",
-  password: "tablecast-isolated-test-password",
   otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-  otherPassword: "tablecast-isolated-other-password",
   baseTime: Date.now(),
   profile: "demo" as const,
 };

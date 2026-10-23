@@ -14,6 +14,12 @@ it("履歴の由来を記録する列を追加しても旧snapshotを変えず�
   );
   if (index < 1) throw new Error("履歴のmigrationが必要です");
   await applyD1Migrations(env.TABLECAST_DB, migrations.slice(0, index));
+  // 履歴列は旧状態のまま、現行fixtureに必要な独立した認証schemaを先行する。
+  const authCompatibility = migrations.find((migration) =>
+    migration.name.includes("0028_tablecast_passwordless"),
+  );
+  if (!authCompatibility) throw new Error("パスワードレス認証のmigrationが必要です");
+  await applyD1Migrations(env.TABLECAST_DB, [authCompatibility]);
   const { staff } = await setupFixture();
   const snapshot = JSON.stringify(configuration);
   // 移行前の列だけで既存の公開版と破棄下書きを再現する。

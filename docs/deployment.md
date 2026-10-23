@@ -82,7 +82,7 @@ PRは所有情報を確認した空DBへ架空3店舗・商品画像を一度だ
 
 buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へコピーし、既存の`tablecast-workers-<SHA>` artifactへ同梱する。`v0`内の公開assetsへは入れず、production buildではこのJSONを取り除く。配備は取得済みWorkers artifact内の同じpathを明示して検証する。seed専用のartifact転送step・job・依存導入は増やさない。
 
-固定JSONの適用は、所有確認済みで`seeded=0`の空DBへ標準demoを初回投入する場合に限定する。時刻とBetter Authのパスワードhashは配備時に生成し、認証・組織・所属・店舗・公開設定・卓の行を既存Drizzle schemaによる一つの`db.batch()`で投入する。営業中の卓の注文・イベントは続くbatchへ分け、D1の制限に合わせて分割する。固定JSONは任意SQLやDB dumpとして実行しない。
+固定JSONの適用は、所有確認済みで`seeded=0`の空DBへ標準demoを初回投入する場合に限定する。時刻は配備時に生成し、パスワードとhashを作らず、認証・組織・所属・店舗・公開設定・卓の行を既存Drizzle schemaによる一つの`db.batch()`で投入する。営業中の卓の注文・イベントは続くbatchへ分け、D1の制限に合わせて分割する。固定JSONは任意SQLやDB dumpとして実行しない。
 
 商品画像は最大4件の処理枠を使い、完了した枠へ次を投入する。条件付きput・内容照合・既存のretry上限を保ち、失敗後は新規投入を止め、開始済みI/Oの終了を回収する。ログの`商品画像の投入`、`固定seedのDrizzle batch`、`営業中の卓のseed`、`DB・画像の配備準備`、`検証済みイメージの送信`で区間時間を確認する。旧経路での初回配備はDB・画像準備102.189秒、そのうち商品画像40.157秒だった。固定JSONの生成はローカル約200ms、cache hitは約22msであり、初回投入の主な短縮対象は認証API・DBとの直列往復をDrizzle batchへまとめる部分である。cacheだけで初回R2への31,068,514 Bの転送は省けない。新経路の遠隔初回配備はローカル資格のD1権限不足により未計測で、短縮量は確定していない。
 
@@ -96,7 +96,7 @@ buildは検証済みJSONを`apps/web/.cloudflare/output/tablecast-seed.json`へ�
 
 記録前の中断、`0`のまま残った部分seed、所有情報の欠落は失敗として止め、自動修復しない。管理者が該当PRの所有情報・D1全件数・外部キー・配備ログを照合し、DB投入完了が証明できる場合だけ`0`から`2`へ進捗を補正する。未証明のデータや営業中データへresetを流用しない。
 
-本番はmigrationのみ自動適用し、実在管理者のメールと店舗設定を確定してから既存bootstrapで初期化する。PRの架空ユーザーは本番へ投入しない。実Googleログインと初期組織への所属確認は公開受入に残る。
+本番はmigrationのみ自動適用し、実在管理者のメールと店舗設定を確定してから既存bootstrapで初期化する。PRの架空ユーザーは本番へ投入しない。実Googleログイン、パスキー登録と初期組織への所属確認は公開受入に残る。
 
 ### 本番bootstrap
 
@@ -108,13 +108,13 @@ TypeScript設定から解決したaccount ID・Worker名・`TABLECAST_ENV`・HTT
 
 入力は所有者だけが読める通常JSONファイル（例: `.local/tablecast-production-bootstrap.json`、mode `0600`）として作る。次の項目を持ち、秘密を含むためGit・チャット・コマンド引数へ内容を貼らない。
 
-| JSON項目       | 内容                                                                   |
-| -------------- | ---------------------------------------------------------------------- |
-| `authSecret`   | 対象APIへ登録したものと同じ認証secret。32文字以上                      |
-| `admin`        | `name`、`email`、12文字以上の `password`、`locale`（`ja` または `en`） |
-| `organization` | `name`、新規の `slug`                                                  |
-| `store`        | 新規の `id`、`name`、レビュー済みの `configuration`                    |
-| `tables`       | 新規の `{ "id": "...", "name": "T01" }` の配列                         |
+| JSON項目       | 内容                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `authSecret`   | 対象APIへ登録したものと同じ認証secret。32文字以上                                       |
+| `admin`        | `name`、`email`、`locale`（`ja` または `en`）。旧入力の `password` は任意で、保存しない |
+| `organization` | `name`、新規の `slug`                                                                   |
+| `store`        | 新規の `id`、`name`、レビュー済みの `configuration`                                     |
+| `tables`       | 新規の `{ "id": "...", "name": "T01" }` の配列                                          |
 
 `configuration` は [APIの正本schema](../apps/api/src/schema.ts) と同じ日英カテゴリ・商品・プラン・キャスト設定である。初期voiceは `ja`、`en` とも `null` にする。実音声の確認後に通常の下書き検証・明示公開で設定する。価格・参照関係・卓IDの重複も書込み前に検証する。
 
@@ -195,7 +195,7 @@ DBとの直列往復が多いAPI Workerに `placement.mode: smart` を設定す�
 
 ## PRのStorybook・メールカタログ
 
-同一repositoryのPRでは、要求されたカタログを`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`へWorkers Static Assetsで配信する。通常のPR更新では生成・再配備しない。メールはAPIの既存レイアウトと3用途の日英文言を使い、架空の店舗名と`example.invalid`だけで静的HTMLと一覧を生成する。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
+同一repositoryのPRでは、要求されたカタログを`tablecast-storybook-pr-番号.kit-codex.workers.dev`と`tablecast-email-pr-番号.kit-codex.workers.dev`へWorkers Static Assetsで配信する。通常のPR更新では生成・再配備しない。メールはReact Email公式CLIの`email export`でAPIの既存レイアウトと全通知の日英文言を静的HTMLへ書き出す。架空の店舗名と`example.invalid`だけを使い、独自のHTML生成や一覧ページは追加しない。編集・診断・送信機能や実行Workerコードは追加しない。メールHTMLのCSPはスクリプト・外部接続・form送信を禁止する。
 
 PR通知の表内でStorybook・React Emailのビルド・デプロイをチェックすると、`catalog-preview.yml`が選択した種別だけを実行する。コメントコマンドは受け付けない。起動した利用者のwrite/admin権限、同一repositoryのopenな通常PR、最新head SHAを確認する。チェック操作はgithub-actionsの固定通知と対象SHAが一致する場合だけ受け付け、受付後に選択を戻す。古い通知からの要求は拒否する。
 
@@ -207,9 +207,9 @@ PR通知の表内でStorybook・React Emailのビルド・デプロイをチェ�
 
 既存の2つのAccess policyを参照する専用applicationを作り、初回はhostname保護の後、workers.devとpreview URLを無効にしてWorkerを作る。Worker IDの`worker` destinationで全経路を保護したことを管理APIで再確認してから正規workers.devを有効にする。既存Workerの更新は、配備前に同じWorker IDのAccess保護を確認し、workers.devを無効化せず維持する。配備後は管理APIから公開有効・preview URL無効を読み戻し、実HTTPのSHA・Accessと併せて検証する。独自認証やaccount全体のAccess変更は行わない。必要権限は既存のWorkers ScriptsとAccess Apps and Policies・Access Service Tokensの管理権限で、Worker ID取得APIも読取り可能であることを確認する。
 
-両カタログは`html_handling: none`でHTMLパスをそのまま配信し、`_redirects`の`/ /index.html 200`でトップページだけを書き換える。
+両カタログは`html_handling: none`でHTMLパスをそのまま配信する。`_redirects`はStorybookのトップを`/index.html`、メールのトップを公式CLIが出力した`/invitation-ja.html`へ書き換える。メールの各種類・言語は出力された`/*.html`へ直接アクセスする。
 
-`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品と手動カタログの各配備jobが、公式`actions/github-script`を使う共通actionで同じ固定コメント1件を更新する。製品buildを必要としない文書・テストだけのPR更新は軽量の通知jobから同じactionを使い、最新headの要求欄と確認できた現在版を表示する。いずれも手動カタログの終了は待たない。TableCast・Storybook・React Emailを同じ表にまとめ、ビルド・デプロイの操作、確認できたデプロイ版とJSTのデプロイ日時を表示する。日時はCloudflareの最新deploymentの`created_on`を使い、通知時刻やビルド時刻で代用しない。デプロイ版が対象SHAと同じ場合は緑、前の版は黄、現在版や日時を取得できない場合は`—`を表示する。投稿直前にPR/headを照合し、古い実行からの更新を防ぐ。forkはsecretなしの検証だけを実施し、配備・コメント要求の対象外とする。
+`/_tablecast/release.json`にrepository・PR・種別・SHA・確認対象パスを記録する。メールのrelease・headers・redirectsは配備処理自身が公式CLIの出力から作り、呼出し側workflowの事前準備stepへ依存しない。既定ブランチのチェックボックス起動でも、対象PRの配備処理が同じ成果物を用意する。配備後はservice tokenでreleaseと全ページを確認し、未認証の同じパスがAccessで拒否されることを検査する。製品と手動カタログの各配備jobが、公式`actions/github-script`を使う共通actionで同じ固定コメント1件を更新する。製品buildを必要としない文書・テストだけのPR更新は軽量の通知jobから同じactionを使い、最新headの要求欄と確認できた現在版を表示する。いずれも手動カタログの終了は待たない。TableCast・Storybook・React Emailを同じ表にまとめ、ビルド・デプロイの操作、確認できたデプロイ版とJSTのデプロイ日時を表示する。日時はCloudflareの最新deploymentの`created_on`を使い、通知時刻やビルド時刻で代用しない。デプロイ版が対象SHAと同じ場合は緑、前の版は黄、現在版や日時を取得できない場合は`—`を表示する。投稿直前にPR/headを照合し、古い実行からの更新を防ぐ。forkはsecretなしの検証だけを実施し、配備・コメント要求の対象外とする。
 
 製品の再配備は最新headのCI runを再実行し、カタログは表内のチェック項目・Run workflowから再要求する。古いrunの再実行は公開前のSHA検査で止まる。close/merge時の`pull_request_target`は既定ブランチだけをcheckoutし、カタログを製品D1/R2の有無と独立して削除する。Workerを削除できないときはAccessを残す。カタログ削除が失敗しても、セットアップが成功しworkflowがキャンセルされていなければ製品側の削除を試行する。カタログ側の失敗はjob結果に残す。削除後の再実行は安全に終了する。reopen後は製品を通常CIで、カタログを手動要求で再作成する。手動復旧はセットアップ済みのホスト環境で行い、GitHub CLI `gh` と対象repositoryを読める認証（`gh auth status`）、配備用のCloudflare tokenを用意する。Dev Containerには `gh` を同梱しない。対象PRがclosedであることを確認し、同じ排他が空いている状態で`TABLECAST_PR_NUMBER=番号 bun --no-env-file run deploy:catalog --cleanup`を使う。他PR・本番・共有policyを削除しない。
 

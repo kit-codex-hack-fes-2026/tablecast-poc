@@ -25,7 +25,7 @@ Apple用のファイル名・サイズは[AppleのWeb Clip仕様](https://develo
 | `apps/web/public/icons/tablecast-{180,167,152}.png` | 対応するApple用PNGをコピー                                        |
 | `apps/web/public/icons/tablecast-{192,512}.png`     | 下記条件で正本シンボルSVGから直接生成                             |
 | `plugins/tablecast/assets`                          | 黒・白の透過シンボルPNG、192px白背景のcomposer用PNG               |
-| `apps/api/email-static/assets`                      | メールカタログのビルド時に正本の文字付きPNGをコピー               |
+| `apps/api/email-static/static/brand`                | メールカタログのビルド時に正本の文字付きPNGをコピー               |
 
 PWA用は正本SVGのviewBoxを`-24 -24 168 168`へ拡張し、同じ領域に白の背景rectを追加する。幅・高さを168としてSharpで192px・512pxへ直接ラスタライズする。線幅・pathを変更せず、角丸を焼き込まない。composer用は192px版をそのままコピーする。[W3Cのmaskable仕様](https://www.w3.org/TR/appmanifest/#icon-masks)の中央・半径40%の円内に図形全体を収める。
 

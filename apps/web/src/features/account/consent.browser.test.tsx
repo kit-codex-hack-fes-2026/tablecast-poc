@@ -39,6 +39,7 @@ it.each([true, false])(
         name: "接続確認",
         email: "owner@example.test",
         emailVerified: true,
+        passkeyRegistered: true,
         locale: "ja",
         image: null,
         createdAt: new Date(0).toISOString(),
@@ -86,7 +87,8 @@ it.each([true, false])(
         payloads.push(await request.json());
         return Response.json({ redirect: false });
       }
-      if (new URL(request.url).pathname === "/api/auth/get-session") return Response.json(session);
+      if (new URL(request.url).pathname === "/api/account/auth-state")
+        return Response.json(session);
       throw new Error(`未定義の要求: ${request.method} ${new URL(request.url).pathname}`);
     });
     const root = createRootRoute();

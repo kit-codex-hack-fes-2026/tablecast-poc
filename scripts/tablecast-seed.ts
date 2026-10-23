@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import process from "node:process";
@@ -17,9 +16,7 @@ export { sampleLine } from "./tablecast-seed-data.ts";
 
 const demoSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(12),
   otherEmail: z.string().email(),
-  otherPassword: z.string().min(12),
   baseTime: z.number().int(),
   profile: z.enum(["smoke", "demo", "history"]),
 });
@@ -34,9 +31,7 @@ export async function demoCredentials(profile: DemoCredentials["profile"] = "dem
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     const data: DemoCredentials = {
       email: "haruka.sato@komorebi-shijo.com",
-      password: randomUUID().replaceAll("-", ""),
       otherEmail: "tsubasa.yamamoto@westward-burgers-kyoto.com",
-      otherPassword: randomUUID().replaceAll("-", ""),
       baseTime: Date.now(),
       profile,
     };
