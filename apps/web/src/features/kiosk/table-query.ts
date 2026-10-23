@@ -1,4 +1,5 @@
 import type { TableState } from "@tablecast/api/schema";
+import { exchangeRatesSchema } from "@tablecast/api/schema";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { parseResponse, tableEndpoint, type TableEndpoint } from "../../lib/api";
 import { apiError } from "../../lib/api-error";
@@ -31,3 +32,16 @@ export const tableCatalogOptions = (
   });
 
 export { demoTableEndpoint } from "../../lib/api";
+
+export const exchangeRateOptions = (endpoint: TableEndpoint, sessionId: string) =>
+  queryOptions({
+    queryKey: ["tablecast-exchange-rates", endpoint.key, sessionId],
+    queryFn: async ({ signal }) =>
+      exchangeRatesSchema.parse(
+        await parseResponse(endpoint.client["exchange-rates"].$get({}, { init: { signal } })),
+      ),
+    staleTime: "static",
+    gcTime: Infinity,
+    retry: false,
+    retryOnMount: false,
+  });

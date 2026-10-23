@@ -5,6 +5,7 @@ import type { ApiServices } from "../../platform/context";
 import * as business from "../../db/business-schema";
 import { DomainError, ensure } from "../../platform/errors";
 import { observeOperation } from "../../platform/telemetry";
+import { displayCurrencyActionSchema } from "../currency/model";
 import { createCastTools } from "./agent";
 import { type toolSchema, voiceToolEventSchema } from "./model";
 import { currentVoiceTurn, voiceContext } from "./queries";
@@ -77,7 +78,14 @@ export async function invokeVoiceTool(
       );
       const trigger = proactive ? "proactive" : "user";
       if (trigger === "proactive") await currentVoiceTurn(services, actor, session.locale, trigger);
-      const tools = createCastTools(services, actor, signal, trigger, session);
+      const tools = createCastTools(
+        services,
+        actor,
+        signal,
+        trigger,
+        session,
+        input.displayCurrency,
+      );
       const tool = tools[input.toolName];
       const record = async (state: "completed" | "error" | "running", errorCode?: string) =>
         recordVoiceEvent(
@@ -108,7 +116,17 @@ export async function invokeVoiceTool(
             new TextEncoder().encode(JSON.stringify(result)).byteLength,
           );
         await record("completed");
-        return { result };
+        return {
+          result,
+          ...(input.toolName === "setDisplayCurrency"
+            ? {
+                displayCurrencyAction: displayCurrencyActionSchema.parse({
+                  currency: input.arguments.currency,
+                  revision: input.displayCurrency?.revision,
+                }),
+              }
+            : {}),
+        };
       } catch (error) {
         const code = voiceToolEventSchema.shape.errorCode.safeParse(
           error instanceof DomainError ? error.code : "VOICE_TOOL_FAILED",

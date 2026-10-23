@@ -2,11 +2,14 @@ import { z } from "zod";
 import type { TableRecord } from "../../db/records";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
+import type { DisplayCurrencyContext } from "../currency/model";
 import { ensure } from "../../platform/errors";
 import { type Locale, localeSchema } from "../../platform/model";
 import { getCatalog } from "../catalog/queries";
 import { createMenuSearch } from "../catalog/search";
 import { maxConfigurationProducts } from "../configuration/model";
+import { approximateAmounts, currencyMetadata } from "../currency/display";
+import { displayCurrencyCodeSchema } from "../currency/model";
 import { customerSuggestionsSchema, saveCustomerMemorySchema } from "../customer-memory/model";
 import { customerRecommendationContext, customerSuggestions } from "../customer-memory/queries";
 import { saveAutomaticCustomerMemory } from "../customer-memory/use-cases/sources";
@@ -37,8 +40,11 @@ export function createCastTools(
   signal: AbortSignal,
   trigger: VoiceTrigger = "user",
   currentSession?: TableRecord,
+  displayContext?: DisplayCurrencyContext,
 ) {
   const guard = () => signal.throwIfAborted();
+  const rates = displayContext?.rates;
+  const selectedCurrency = displayContext?.currency ?? null;
   return {
     getCustomerSuggestions: castTool({
       id: "getCustomerSuggestions",
@@ -84,17 +90,28 @@ export function createCastTools(
           offset: z.number().int().min(0).max(maxConfigurationProducts).optional(),
           limit: z.number().int().min(1).max(8).optional(),
           show: z.boolean().optional(),
+          quoteCurrency: displayCurrencyCodeSchema
+            .optional()
+            .describe("表示設定を変えず、この照会だけ外貨の参考額を返す"),
           includePlans: z
             .boolean()
             .describe("プランの料金・時間・対象・注文制限を質問されたときだけtrue")
             .optional(),
         })
         .strict(),
-      execute: async ({ query, offset = 0, limit = 8, show = false, includePlans = false }) => {
+      execute: async ({
+        query,
+        offset = 0,
+        limit = 8,
+        show = false,
+        includePlans = false,
+        quoteCurrency,
+      }) => {
         guard();
         const session = currentSession ?? (await getSession(services, actor));
         const catalog = await getCatalog(services, actor.storeId, actor.demoId);
         const locale = session.locale;
+        const currency = quoteCurrency ?? selectedCurrency;
         const { ids, detail } = createMenuSearch(catalog.configuration)(query);
         const byId = new Map(
           catalog.configuration.products.map((product) => [product.id, product]),
@@ -115,6 +132,7 @@ export function createCastTools(
             );
         }
         return {
+          displayCurrency: currencyMetadata(currency, rates),
           total: matches.length,
           more: offset + products.length < matches.length,
           ...(show
@@ -127,6 +145,7 @@ export function createCastTools(
                 plans: catalog.configuration.plans.map((plan) => ({
                   ...plan,
                   text: plan.text[locale],
+                  ...approximateAmounts({ pricePerPerson: plan.pricePerPerson }, currency, rates),
                 })),
               }
             : {}),
@@ -139,6 +158,7 @@ export function createCastTools(
             id: product.id,
             categoryId: product.categoryId,
             price: product.price,
+            ...approximateAmounts({ price: product.price }, currency, rates),
             available: product.available,
             displayName: product.text[locale].displayName,
             speechName: product.text[locale].speechName,
@@ -157,6 +177,7 @@ export function createCastTools(
                     options: modifier.options.map((option) => ({
                       id: option.id,
                       priceDelta: option.priceDelta,
+                      ...approximateAmounts({ priceDelta: option.priceDelta }, currency, rates),
                       available: option.available,
                       maxQuantity: option.maxQuantity,
                       ...(option.conditions
@@ -177,10 +198,14 @@ export function createCastTools(
       id: "getTableState",
       description:
         "現在の卓、locale（言語）・speechSpeed（話速）、画面のuiSection、表示中の商品詳細のselectedProductId（nullなら詳細なし）、カート版、確認、注文、請求状態を取得する。話者番号から人数や席を推定しない。",
-      inputSchema: z.object({}).strict(),
-      execute: async () => {
+      inputSchema: z.object({ quoteCurrency: displayCurrencyCodeSchema.optional() }).strict(),
+      execute: async ({ quoteCurrency }) => {
         guard();
-        return voiceTableState(await getTableState(services, actor));
+        return voiceTableState(
+          await getTableState(services, actor),
+          quoteCurrency ?? selectedCurrency,
+          rates,
+        );
       },
     }),
     ...(trigger === "user"
@@ -194,6 +219,17 @@ export function createCastTools(
               guard();
               const state = await changeLocale(services, actor, input.locale);
               return { locale: state.locale, voiceState: state.voiceState };
+            },
+          }),
+          setDisplayCurrency: castTool({
+            id: "setDisplayCurrency",
+            description:
+              "客の明示依頼で、この端末の外貨参考表示を変更する。currencyは対応ISOコード、nullは円のみ。価格の外貨質問だけならgetCatalog/getTableStateのquoteCurrencyを使い表示は変更しない。円の注文・会計、音声接続は変更しない。",
+            inputSchema: z.object({ currency: displayCurrencyCodeSchema.nullable() }).strict(),
+            execute: async ({ currency }) => {
+              guard();
+              ensure(displayContext, "DISPLAY_CONTEXT_REQUIRED", 422);
+              return { displayCurrency: currencyMetadata(currency, rates) };
             },
           }),
           setSpeechSpeed: castTool({
@@ -239,7 +275,11 @@ export function createCastTools(
             inputSchema: cartUpdateSchema,
             execute: async (input) => {
               guard();
-              return voiceTableState(await updateCart(services, actor, input));
+              return voiceTableState(
+                await updateCart(services, actor, input),
+                selectedCurrency,
+                rates,
+              );
             },
           }),
           prepareConfirmation: castTool({
@@ -254,6 +294,8 @@ export function createCastTools(
                 channel: "voice",
               });
               return {
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+                ...approximateAmounts({ total: snapshot.total }, selectedCurrency, rates),
                 snapshotId: snapshot.id,
                 text: snapshot.text,
                 total: snapshot.total,
@@ -271,7 +313,13 @@ export function createCastTools(
               guard();
               ensure(input.approved, "APPROVAL_REQUIRED", 422);
               const order = await submitOrder(services, actor, input);
-              return { orderId: order.id, status: order.status, total: order.total };
+              return {
+                orderId: order.id,
+                status: order.status,
+                total: order.total,
+                displayCurrency: currencyMetadata(selectedCurrency, rates),
+                ...approximateAmounts({ total: order.total }, selectedCurrency, rates),
+              };
             },
           }),
           callStaff: castTool({

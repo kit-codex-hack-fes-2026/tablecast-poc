@@ -8,9 +8,8 @@ import * as business from "../src/db/business-schema";
 import { configurationSchema } from "../src/modules/configuration/model";
 import { getTableState } from "../src/modules/tables/queries";
 import { invokeVoiceTool } from "../src/modules/voice/realtime";
-import { setVoiceSession } from "../src/modules/voice/service";
 import { createApiServices } from "../src/platform/context";
-import { configuration, text as configurationText, device, setupFixture } from "./fixture";
+import { configuration, text as configurationText, device, setupVoiceFixture } from "./fixture";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -18,27 +17,7 @@ const voiceId = "tablecast-tool-voice";
 
 const services = () => createApiServices(env);
 
-async function setup() {
-  await setupFixture();
-  await setVoiceSession(services(), device, voiceId);
-  await services().db.batch([
-    services()
-      .db.insert(business.voiceTurns)
-      .values({
-        id: "tablecast-turn",
-        voice_session_id: voiceId,
-        table_session_id: device.tableSessionId ?? "",
-        store_id: device.storeId,
-        status: "started",
-        started_at: Date.now(),
-        locale: "ja",
-      }),
-    services()
-      .db.update(business.tableSessions)
-      .set({ active_turn_id: "tablecast-turn" })
-      .where(eq(business.tableSessions.id, device.tableSessionId ?? "")),
-  ]);
-}
+const setup = () => setupVoiceFixture(voiceId, "tablecast-turn");
 
 const tool = (
   toolName: z.infer<typeof voiceToolNameSchema>,

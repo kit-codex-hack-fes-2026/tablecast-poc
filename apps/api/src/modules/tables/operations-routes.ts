@@ -4,6 +4,7 @@ import { localeSchema } from "../../platform/model";
 import { validate, validateQuery } from "../../platform/validation";
 import { getCatalog } from "../catalog/queries";
 import { instructionResponse } from "../configuration/instruction-response";
+import { initialiseExchangeRates } from "../currency/service";
 import { customerAttributionSchema, customerTargetSchema } from "../customer-memory/model";
 import { attributeCustomerConsumption } from "../customer-memory/use-cases/consumption";
 import { selectCustomerTarget } from "../customer-memory/use-cases/target";
@@ -38,6 +39,9 @@ export const tableOperations = apiFactory
     c.json(await getDeviceParticipants(c.get("services"), c.get("actor")), 200),
   )
   .get("/", async (c) => c.json(await getTableState(c.get("services"), c.get("actor")), 200))
+  .get("/exchange-rates", async (c) =>
+    c.json(await initialiseExchangeRates(c.get("services"), c.get("actor")), 200),
+  )
   .get("/catalog", async (c) =>
     c.json(
       instructionResponse(

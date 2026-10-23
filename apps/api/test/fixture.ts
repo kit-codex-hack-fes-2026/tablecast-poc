@@ -1,10 +1,13 @@
 import { makeSignature } from "better-auth/crypto";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import * as authTables from "../src/db/auth-schema";
 import * as businessTables from "../src/db/business-schema";
 import { type Actor } from "../src/modules/auth/model";
 import { createAuth } from "../src/modules/auth/service";
 import { hashDeviceToken } from "../src/modules/auth/token";
+import { setVoiceSession } from "../src/modules/voice/service";
+import { createApiServices } from "../src/platform/context";
 import { configuration } from "./configuration-fixture";
 import { fixtureDb, insertFixture } from "./database-fixture";
 
@@ -107,4 +110,25 @@ export async function setupFixture() {
     } satisfies Actor,
     cookie: `tablecast.session_token=${encodeURIComponent(`${session.token}.${await makeSignature(session.token, env.TABLECAST_AUTH_SECRET)}`)}`,
   };
+}
+
+export async function setupVoiceFixture(voiceSessionId: string, turnId: string) {
+  await setupFixture();
+  const services = createApiServices(env);
+  await setVoiceSession(services, device, voiceSessionId);
+  await services.db.batch([
+    services.db.insert(businessTables.voiceTurns).values({
+      id: turnId,
+      voice_session_id: voiceSessionId,
+      table_session_id: device.tableSessionId,
+      store_id: device.storeId,
+      status: "started",
+      started_at: Date.now(),
+      locale: "ja",
+    }),
+    services.db
+      .update(businessTables.tableSessions)
+      .set({ active_turn_id: turnId })
+      .where(eq(businessTables.tableSessions.id, device.tableSessionId)),
+  ]);
 }
