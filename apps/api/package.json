@@ -17,7 +17,7 @@
     "test": "vitest run",
     "cf:typegen": "cf workers types --mode development --include-runtime=false",
     "lint": "oxlint . --type-aware --deny-warnings",
-    "build:email": "rm -rf emails/static && mkdir -p emails/static && cp -R ../web/public/brand emails/static/brand && cp ../../assets/demo/identities/haruka-sato.webp emails/static/inviter.webp && cp ../../docs/design/themes/gomen/logo.png emails/static/store.png && email export --dir emails --outDir email-static",
+    "build:email": "bun --no-env-file scripts/tablecast-email-preview.ts && email export --dir .local/tablecast-email --outDir email-static",
     "cf:build": "cf build --mode ${TABLECAST_MODE:-development} && node ../../scripts/tablecast-clean-build.ts"
   },
   "dependencies": {

@@ -286,7 +286,7 @@ iPadはHTTPSの配備先をSafariで開き、客向け `/` と店側 `/admin/liv
 
 ### メールプレビュー依存
 
-メールカタログはAPIの開発依存`react-email` 6.11.3の公式CLIで静的HTMLを生成する。`email export`を使い、`email build`で生成されるサーバー用プレビューアプリは配備しない。追加後はrootで`bun install --frozen-lockfile`を実行する。追加workspace・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
+メールカタログはAPIの開発依存`react-email` 6.11.3の公式CLIで静的HTMLを生成する。固定サンプルを`apps/api/scripts/tablecast-email-preview.ts`へ集約し、CLI入力をGit管理外の`.local/tablecast-email`へ一時生成する。描画は`email export`を使い、`email build`で生成されるサーバー用プレビューアプリは配備しない。追加後はrootで`bun install --frozen-lockfile`を実行する。追加workspace・patch・サービス契約は不要。ビルドとローカル確認は[メールカタログの検証](development.md#メールカタログの検証)、限定公開は[カタログ配備](deployment.md#prのstorybookメールカタログ)を参照する。
 
 ## stagingと本番release
 
@@ -360,4 +360,4 @@ root・APIの`drizzle-orm`とAPIの`drizzle-kit`は`1.0.0-rc.5`へ固定する�
 
 ## パスワードレス認証への移行
 
-0028 migrationはパスワードハッシュを消去し、認証の制限記録と最後のパスキー保護を追加する。デモseedはパスワードを作成しない。Google emulatorかMailpitのマジックリンクでログイン後、対応ブラウザーでパスキーを登録する。One Tapの実Google設定と公開前のメール送信確認は[認証仕様](authentication.md#パスワードレス認証と必須パスキー)に従う。
+0028 migrationはパスワードハッシュを消去し、認証の制限記録とパスキー登録状態を追加する。続けて0029を適用し、旧0028の最後のパスキー保護を解除する。デモseedはパスワードを作成しない。Google emulatorかMailpitのマジックリンクでログイン後、パスキー登録は任意で案内する。One Tapの実Google設定と公開前のメール送信確認は[認証仕様](authentication.md#パスワードレス認証と任意のパスキー)に従う。

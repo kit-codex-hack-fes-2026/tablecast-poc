@@ -23,7 +23,6 @@ export async function staffIdentity<E extends ApiEnv>(c: Context<E>) {
   }
   const session = await pending;
   ensure(session, "LOGIN_REQUIRED", 401);
-  ensure(session.user.passkeyRegistered === true, "PASSKEY_REGISTRATION_REQUIRED", 403);
   return session;
 }
 

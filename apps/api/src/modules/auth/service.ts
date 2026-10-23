@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { dash } from "@better-auth/infra";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
-import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { genericOAuth, lastLoginMethod, magicLink, oneTap } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -14,7 +14,6 @@ import { ensure } from "../../platform/errors";
 import { billingPlugin } from "../billing/stripe";
 import { authNotifications } from "./notifications";
 import { authOptions } from "./options";
-import { needsPasskey } from "./passkey-policy";
 import { isHostedEmulator, previewGoogleToken, previewOAuthFetch } from "./preview";
 
 export const tablecastGoogleMockIssuer = "https://tablecast-google.localhost";
@@ -173,35 +172,6 @@ export function createAuth(
           ].includes(ctx.path)
         )
           throw new APIError("FORBIDDEN", { message: "PASSWORD_AUTH_DISABLED" });
-        if (
-          ctx.headers &&
-          (ctx.path.startsWith("/organization/") ||
-            ctx.path.startsWith("/subscription/") ||
-            ctx.path.startsWith("/oauth2/"))
-        ) {
-          const current = await getSessionFromCtx(ctx);
-          if (current && (await needsPasskey(db, current.user.id))) {
-            if (ctx.path === "/oauth2/authorize" && ctx.request) {
-              const request = new URL(ctx.request.url);
-              throw ctx.redirect(
-                `${env.TABLECAST_PUBLIC_ORIGIN}/passkey-setup?${new URLSearchParams({ returnTo: request.pathname + request.search }).toString()}`,
-              );
-            }
-            throw new APIError("FORBIDDEN", { message: "PASSKEY_REGISTRATION_REQUIRED" });
-          }
-        }
-        if (ctx.path === "/passkey/delete-passkey") {
-          const current = await getSessionFromCtx(ctx);
-          if (current) {
-            const keys = await db
-              .select({ id: schema.passkey.id })
-              .from(schema.passkey)
-              .where(eq(schema.passkey.userId, current.user.id))
-              .limit(2);
-            if (keys.length <= 1)
-              throw new APIError("FORBIDDEN", { message: "LAST_PASSKEY_REQUIRED" });
-          }
-        }
         if (ctx.path.startsWith("/subscription/") && ctx.path !== "/subscription/success") {
           const record = z.record(z.string(), z.unknown());
           const body = record.safeParse(ctx.body);

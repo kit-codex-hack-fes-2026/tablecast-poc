@@ -34,7 +34,6 @@ it.each([true, false])(
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     const session: NonNullable<Awaited<ReturnType<typeof loadInitial>>["session"]> = {
-      passkeyRequired: false,
       user: {
         id: "tablecast-user",
         name: "接続確認",

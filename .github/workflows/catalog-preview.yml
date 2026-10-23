@@ -110,9 +110,7 @@ jobs:
           bun --no-env-file run deploy:catalog --prepare-storybook
       - name: メールの生成
         if: env.TABLECAST_CATALOG_KIND == 'email' || env.TABLECAST_CATALOG_KIND == 'all'
-        run: |
-          bun --no-env-file run build:email
-          bun --no-env-file run deploy:catalog --prepare-email
+        run: bun --no-env-file run build:email
       - name: Access保護・対象SHAの配備
         id: deploy
         run: bun --no-env-file run deploy:catalog

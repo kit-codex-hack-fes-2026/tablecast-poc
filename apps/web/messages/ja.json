@@ -1428,10 +1428,9 @@
   "auth_passkey_description": "登録済みのパスキーで、すばやく安全にログインできます。",
   "auth_send_magic_link": "ログインリンクを送信",
   "auth_magic_sent": "ログインリンクを送信しました。5分以内にメールを開いてください。再送する場合はもう一度送信してください。",
-  "auth_passkey_required": "パスキーを登録してください",
-  "auth_passkey_setup_description": "TableCastを利用するにはパスキーの登録が必要です。端末の顔認証・指紋認証・画面ロック、またはセキュリティキーを使って登録できます。",
-  "auth_passkey_setup_failed": "登録を完了できませんでした。キャンセルした場合は再試行してください。",
-  "auth_passkey_supported_device": "この端末で登録できない場合は、対応端末またはセキュリティキーを利用してください。登録完了までサービスを利用できません。",
+  "auth_passkey_setup_description": "顔認証や指紋認証で、次回からすばやくログインできます。登録は任意です。あとからアカウント設定でも追加できます。",
+  "auth_passkey_setup_failed": "登録を完了できませんでした。再試行するか、あとで設定してください。",
+  "auth_passkey_supported_device": "この端末がパスキーに対応していない場合も、Googleやメールで利用できます。",
   "invite_resend": "招待を再送",
   "invite_expired": "有効期限切れ",
   "invite_wrong_email": "招待先のメールアドレスでログインしてください。",
@@ -1443,5 +1442,7 @@
   "currency_note": "外貨は目安です。お支払いは日本円となります。",
   "currency_date": "レート基準日",
   "currency_loading": "レートを取得中",
-  "currency_unavailable": "参考レートを取得できません"
+  "currency_unavailable": "参考レートを取得できません",
+  "auth_passkey_title": "パスキーでかんたんログイン",
+  "auth_passkey_later": "あとで設定"
 }

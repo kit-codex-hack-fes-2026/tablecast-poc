@@ -14,13 +14,8 @@ export function AccountPasskeys({ controller }: { controller: AccountController 
   const { t, keys, change, section } = controller;
   const collection = useCollectionSearch({ prefix: "passkeys", sortIds: ["name", "createdAt"] });
   const columns = useMemo(
-    () =>
-      passkeyColumns(
-        t,
-        change.isPending || controller.loading || (keys.data?.length ?? 0) <= 1,
-        change.mutate,
-      ),
-    [t, change.isPending, controller.loading, keys.data?.length, change.mutate],
+    () => passkeyColumns(t, change.isPending || controller.loading, change.mutate),
+    [t, change.isPending, controller.loading, change.mutate],
   );
   const form = useAppForm({
     defaultValues: { name: "" },

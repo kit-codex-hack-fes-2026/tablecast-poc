@@ -21,6 +21,8 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const lastMethod = hydrated ? authClient.getLastUsedLoginMethod() : null;
   const callback = (fallback = "/admin/live") =>
     loginReturnUrl(searchStr, window.location.origin) ?? fallback;
+  const registrationCallback = (fallback = "/organisations") =>
+    `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: callback(fallback) }).toString()}`;
   useEffect(() => {
     const saved = localStorage.getItem("tablecast_staff_locale");
     if (saved === "ja" || saved === "en") setLocale(saved);
@@ -50,6 +52,7 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
           await authClient.signIn.social({
             provider: "google",
             callbackURL: callback("/organisations"),
+            newUserCallbackURL: registrationCallback(),
           }),
         );
     },
@@ -62,7 +65,7 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
           email,
           metadata: { locale },
           callbackURL: callback(),
-          newUserCallbackURL: callback(),
+          newUserCallbackURL: registrationCallback("/admin/live"),
           errorCallbackURL: `/login${searchStr}`,
         }),
       ),

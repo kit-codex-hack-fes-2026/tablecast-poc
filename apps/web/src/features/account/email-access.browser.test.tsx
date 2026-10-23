@@ -13,9 +13,10 @@ import en from "../../../messages/en.json";
 import ja from "../../../messages/ja.json";
 import { LocaleProvider } from "../../i18n/locale";
 import { parseFlatSearch, stringifyFlatSearch } from "../../lib/router-search";
+import { sessionOptions } from "../../lib/session-query";
 import "../../styles.css";
 import { Login } from "./login";
-import { PasskeySetup } from "./passkey-setup";
+import { PasskeyPrompt, PasskeySetup } from "./passkey-setup";
 
 let client: QueryClient;
 let unexpected: string[] = [];
@@ -26,25 +27,32 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   document.cookie = "tablecast.last_login_method=; Max-Age=0; Path=/";
   localStorage.removeItem("tablecast_staff_locale");
+  localStorage.removeItem("tablecast.passkey-reminder:tablecast-passkey-prompt");
   if (unexpected.length) throw new Error(`未定義の要求: ${unexpected.join(", ")}`);
 });
-async function show(locale: "en" | "ja", search = "", setup = false) {
-  unexpected = [];
+async function show(
+  locale: "en" | "ja",
+  search = "",
+  mode: "login" | "prompt" | "setup" = "login",
+) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  if (mode !== "login") await client.ensureQueryData(sessionOptions);
+  const path =
+    mode === "setup" ? "/passkey-setup" : mode === "prompt" ? "/organisations" : "/login";
   const root = createRootRoute();
   const route = createRoute({
     getParentRoute: () => root,
-    path: setup ? "/passkey-setup" : "/login",
-    component: setup ? PasskeySetup : Login,
+    path,
+    component: mode === "setup" ? PasskeySetup : mode === "prompt" ? PasskeyPrompt : Login,
   });
   const router = createRouter({
     routeTree: root.addChildren([route]),
     parseSearch: parseFlatSearch,
     stringifySearch: stringifyFlatSearch,
     history: createMemoryHistory({
-      initialEntries: [`${setup ? "/passkey-setup" : "/login"}${search}`],
+      initialEntries: [`${path}${search}`],
     }),
   });
   await render(
@@ -55,10 +63,19 @@ async function show(locale: "en" | "ja", search = "", setup = false) {
     </QueryClientProvider>,
   );
 }
-function requests(handler: (path: string, request: Request) => Promise<Response> | Response) {
+function requests(
+  handler: (path: string, request: Request) => Promise<Response> | Response,
+  registered = false,
+) {
+  unexpected = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const path = new URL(request.url).pathname;
+    if (path === "/api/account/auth-state")
+      return Response.json({
+        session: { id: "tablecast-session" },
+        user: { id: "tablecast-passkey-prompt", passkeyRegistered: registered },
+      });
     if (path === "/api/account/auth-config") return Response.json({ googleOneTapClientId: null });
     return handler(path, request);
   });
@@ -91,6 +108,7 @@ it.each(["ja", "en"] as const)(
     await expect.element(page.getByRole("status")).toHaveTextContent(labels.auth_magic_sent);
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toMatchObject({
+      newUserCallbackURL: `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: `${window.location.origin}/invitations/sample` }).toString()}`,
       email: "staff@example.test",
       metadata: { locale },
       callbackURL: `${window.location.origin}/invitations/sample`,
@@ -128,18 +146,61 @@ it("Google・パスキー・区切り線・メールの順に並び、前回の�
     await userEvent.keyboard("{Tab}");
   await expect.element(passkey).toHaveFocus();
 });
-it("パスキー登録をキャンセルすると必須登録画面に留まり再試行を案内する", async () => {
+it("パスキー登録をキャンセルしても後回しと再試行を選べる", async () => {
   requests((path) => {
     if (path === "/api/auth/passkey/generate-register-options")
       return Response.json({ message: "CANCELLED" }, { status: 400 });
     unexpected.push(path);
     return Response.json({}, { status: 500 });
   });
-  await show("ja", "?returnTo=%2Finvitations%2Fsample", true);
+  await show("ja", "?returnTo=%2Finvitations%2Fsample", "setup");
   await page.getByRole("button", { name: ja.account_add_passkey, exact: true }).click();
   await expect.element(page.getByRole("alert")).toHaveTextContent(ja.auth_passkey_setup_failed);
   await expect
     .element(page.getByRole("button", { name: ja.account_add_passkey, exact: true }))
     .toBeEnabled();
   await expect.element(page.getByText(ja.auth_passkey_supported_device)).toBeVisible();
+  await expect.element(page.getByRole("button", { name: ja.auth_passkey_later })).toBeEnabled();
+});
+
+it.each(["ja", "en"] as const)(
+  "%s: パスキーの案内は閉じられ、後回しにしたブラウザーでは再表示しない",
+  async (locale) => {
+    const labels = locale === "ja" ? ja : en;
+    requests((path) => {
+      unexpected.push(path);
+      return Response.json({}, { status: 500 });
+    });
+    await show(locale, "", "prompt");
+    await expect
+      .element(page.getByRole("dialog", { name: labels.auth_passkey_title }))
+      .toBeVisible();
+    await page.getByRole("button", { name: labels.auth_passkey_later }).click();
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      Number(localStorage.getItem("tablecast.passkey-reminder:tablecast-passkey-prompt")),
+    ).toBeGreaterThan(Date.now());
+    await cleanup();
+    client.clear();
+    await show(locale, "", "prompt");
+    await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  },
+);
+it("登録済みユーザーにはパスキーの案内を表示しない", async () => {
+  requests((path) => {
+    unexpected.push(path);
+    return Response.json({}, { status: 500 });
+  }, true);
+  await show("ja", "", "prompt");
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+});
+it("パスキーの案内はEscapeでも閉じられる", async () => {
+  requests((path) => {
+    unexpected.push(path);
+    return Response.json({}, { status: 500 });
+  });
+  await show("ja", "", "prompt");
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 });

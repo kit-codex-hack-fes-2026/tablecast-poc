@@ -16,7 +16,7 @@ function mailAt<T>(mails: T[], index: number): T {
   return mail;
 }
 afterEach(() => vi.restoreAllMocks());
-it("マジックリンクは実D1で一度だけ消費し、パスキー未登録では業務・組織・MCPを拒否する", async () => {
+it("マジックリンクは実D1で一度だけ消費し、パスキー未登録でもログインでき、所属のない店舗にはアクセスできない", async () => {
   const { mails } = captureAuthMail();
   const auth = createAuth(mailAuthEnv);
   await authPost(auth, "/sign-in/magic-link", {
@@ -41,8 +41,7 @@ it("マジックリンクは実D1で一度だけ消費し、パスキー未登�
     new Request(`${authOrigin}/api/account/auth-state`, { headers: { Cookie: cookie } }),
   );
   expect(await state.json()).toMatchObject({
-    passkeyRequired: true,
-    user: { emailVerified: true },
+    user: { emailVerified: true, passkeyRegistered: false },
   });
   const initial = await exports.default.fetch(
     new Request(`${authOrigin}/api/admin/initial?defaultFloor=true`, {
@@ -50,45 +49,37 @@ it("マジックリンクは実D1で一度だけ消費し、パスキー未登�
     }),
   );
   expect(await initial.json()).toMatchObject({
-    session: { passkeyRequired: true },
+    session: { user: { passkeyRegistered: false } },
     stores: [],
     floor: null,
   });
   await authPost(auth, "/update-user", { passkeyRegistered: true }, cookie);
-  const denied = await exports.default.fetch(
+  const permitted = await exports.default.fetch(
     new Request(`${authOrigin}/api/admin/stores`, { headers: { Cookie: cookie } }),
   );
-  expect(denied.status).toBe(403);
-  expect(await denied.json()).toMatchObject({ error: { code: "PASSKEY_REGISTRATION_REQUIRED" } });
+  expect(permitted.status).toBe(200);
+  expect(await permitted.json()).toMatchObject({ stores: [] });
   expect(
     (
       await auth.handler(
         new Request(`${authOrigin}/api/auth/organization/list`, { headers: { Cookie: cookie } }),
       )
     ).status,
-  ).toBe(403);
-  const authorizePath =
-    "/api/auth/oauth2/authorize?client_id=sample&state=a%2Bb&ba_param=first&ba_param=second";
-  const onboarding = await auth.handler(
-    new Request(authOrigin + authorizePath, { headers: { Cookie: cookie } }),
-  );
-  expect(onboarding.status).toBe(302);
-  const onboardingUrl = new URL(onboarding.headers.get("location") ?? "", authOrigin);
-  expect(onboardingUrl.pathname).toBe("/passkey-setup");
-  expect(onboardingUrl.searchParams.get("returnTo")).toBe(authorizePath);
+  ).toBe(200);
   const person = await fixtureDb
     .select()
     .from(user)
     .where(eq(user.email, "new@example.test"))
     .get();
   if (!person) throw new Error("ユーザーがありません");
+  expect(person.passkeyRegistered).toBe(false);
   await expect(
     resolveMcpActor(createApiServices(env), {
       userId: person.id,
       organizationId: "unrelated",
       canWrite: true,
     }),
-  ).rejects.toMatchObject({ code: "PASSKEY_REGISTRATION_REQUIRED", status: 403 });
+  ).rejects.toMatchObject({ code: "STORE_FORBIDDEN", status: 403 });
 });
 it("期限切れのマジックリンクではセッションを発行せず、再送したリンクでログインできる", async () => {
   const { mails } = captureAuthMail();
@@ -102,26 +93,44 @@ it("期限切れのマジックリンクではセッションを発行せず、�
     "session_token",
   );
 });
-it("パスキーの最後の1件はHTTPと同時DB削除の両方で保持する", async () => {
+it("最後のパスキーも削除でき、未登録の所属ユーザーは業務・MCPを利用できる", async () => {
   const { cookie, staff } = await setupFixture();
+  await addFixturePasskey(staff.userId);
   const auth = createAuth(env);
-  const denied = await authPost(
+  const removed = await authPost(
     auth,
     "/passkey/delete-passkey",
     { id: "tablecast-fixture-passkey" },
     cookie,
   );
-  expect(denied.status).toBe(403);
-  expect(await denied.json()).toMatchObject({ message: "LAST_PASSKEY_REQUIRED" });
-  await addFixturePasskey(staff.userId, "second");
-  const results = await Promise.allSettled([
-    fixtureDb.delete(passkey).where(eq(passkey.id, "second")),
-    fixtureDb.delete(passkey).where(eq(passkey.id, "tablecast-fixture-passkey")),
-  ]);
-  expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+  expect(removed.status).toBe(200);
   expect(
     await fixtureDb.select().from(passkey).where(eq(passkey.userId, staff.userId)),
-  ).toHaveLength(1);
+  ).toHaveLength(0);
+  expect(await fixtureDb.select().from(user).where(eq(user.id, staff.userId)).get()).toMatchObject({
+    passkeyRegistered: false,
+  });
+  const stores = await exports.default.fetch(
+    new Request(`${authOrigin}/api/admin/stores`, { headers: { Cookie: cookie } }),
+  );
+  expect(stores.status).toBe(200);
+  expect(await stores.json()).toMatchObject({ stores: [{ id: "tablecast-store", role: "owner" }] });
+  await expect(
+    resolveMcpActor(createApiServices(env), {
+      userId: staff.userId,
+      organizationId: "tablecast-org",
+      canWrite: true,
+    }),
+  ).resolves.toMatchObject({ storeId: "tablecast-store", role: "owner" });
+  await addFixturePasskey(staff.userId, "first");
+  await addFixturePasskey(staff.userId, "second");
+  await Promise.all([
+    fixtureDb.delete(passkey).where(eq(passkey.id, "first")),
+    fixtureDb.delete(passkey).where(eq(passkey.id, "second")),
+  ]);
+  expect(await fixtureDb.select().from(user).where(eq(user.id, staff.userId)).get()).toMatchObject({
+    passkeyRegistered: false,
+  });
 });
 it("招待メールに役割・招待者・期限を含め、承諾時に本人と招待者へ通知する", async () => {
   const { cookie, staff } = await setupFixture();
@@ -158,13 +167,6 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
   await authPost(auth, "/sign-in/magic-link", { email: "invitee@example.test" });
   const signedIn = await auth.handler(new Request(magicLinkUrl(mails[1])));
   const inviteeCookie = responseCookies(signedIn);
-  const person = await fixtureDb
-    .select()
-    .from(user)
-    .where(eq(user.email, "invitee@example.test"))
-    .get();
-  if (!person) throw new Error("ユーザーがありません");
-  await addFixturePasskey(person.id, "invitee-key");
   const accepted = await authPost(
     auth,
     "/organization/accept-invitation",
@@ -243,13 +245,6 @@ it("招待の辞退は招待者だけへ通知し、取消後のリンクは参�
   const invitation = z.object({ id: z.string() }).parse(await sent.json());
   await authPost(auth, "/sign-in/magic-link", { email: "decline@example.test" });
   const signedIn = await auth.handler(new Request(magicLinkUrl(mails[1])));
-  const person = await fixtureDb
-    .select()
-    .from(user)
-    .where(eq(user.email, "decline@example.test"))
-    .get();
-  if (!person) throw new Error("招待先ユーザーがありません");
-  await addFixturePasskey(person.id, "decline-key");
   const rejected = await authPost(
     auth,
     "/organization/reject-invitation",

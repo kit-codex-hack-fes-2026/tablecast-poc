@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// ローカルの実メールを使う。既存メールの再利用やパスキー必須条件の迂回はしない。
+// ローカルの実メールを使う。既存メールや固定Cookieを再利用しない。
 export async function signInDemoOwner(origin: string, mailpit: string, email: string) {
   const app = new URL(origin);
   const inbox = new URL(mailpit);
@@ -56,10 +56,9 @@ export async function signInDemoOwner(origin: string, mailpit: string, email: st
   });
   if (!state.ok) throw new Error("背景デモの認証状態を確認できません。");
   const session = z
-    .object({ passkeyRequired: z.boolean() })
+    .object({ user: z.object({ id: z.string() }) })
     .nullable()
     .parse(await state.json());
-  if (!session || session.passkeyRequired)
-    throw new Error(`${email}でブラウザーにログインし、パスキーを登録してから再実行してください。`);
+  if (!session) throw new Error(`${email}のセッションを確認できません。`);
   return cookie;
 }

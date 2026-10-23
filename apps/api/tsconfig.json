@@ -17,7 +17,6 @@
     "auth.config.ts",
     "oxlint.config.ts",
     "src/**/*.tsx",
-    "scripts/**/*.ts",
-    "emails/**/*.tsx"
+    "scripts/**/*.ts"
   ]
 }

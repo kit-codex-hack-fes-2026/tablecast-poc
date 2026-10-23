@@ -8,6 +8,7 @@ import {
   Scripts,
   useMatchRoute,
 } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 import { Brand } from "../components/brand";
 import { DocumentHead } from "../components/document-head";
 import { MotionProvider } from "../components/motion-provider";
@@ -26,9 +27,14 @@ import { readPanelCookies } from "../lib/use-panel-layout";
 import { getLocale } from "../paraglide/runtime.js";
 import stylesheet from "../styles.css?url";
 
+const PasskeyPrompt = lazy(() =>
+  import("../features/account/passkey-setup").then((module) => ({ default: module.PasskeyPrompt })),
+);
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ context, location, abortController }) => {
     const panelCookies = await readPanelCookies();
+    let promptPasskey = false;
     if (
       /^\/(admin|account|billing|organisations|stores|device|consent|invitations|member|passkey-setup)(\/|$)/.test(
         location.pathname,
@@ -81,10 +87,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       }
       const session = queryClient.getQueryData(sessionOptions.queryKey);
       if (!session) throw redirect({ to: "/login", search: { returnTo: location.href } });
-      if (session.passkeyRequired && location.pathname !== "/passkey-setup")
-        throw redirect({ to: "/passkey-setup", search: { returnTo: location.href } });
+      promptPasskey = location.pathname !== "/passkey-setup" && !session.user.passkeyRegistered;
     }
-    return { panelCookies };
+    return { panelCookies, promptPasskey };
   },
   head: ({ matches }) => ({
     meta: [
@@ -142,12 +147,17 @@ function Root({ children }: { children: ReactNode }) {
 }
 
 function RootContent() {
-  const { panelCookies } = Route.useRouteContext();
+  const { panelCookies, promptPasskey } = Route.useRouteContext();
   return (
     <PanelLayoutProvider cookies={panelCookies}>
       <RouteMotion />
       <Pwa />
       <Outlet />
+      {promptPasskey && (
+        <Suspense fallback={null}>
+          <PasskeyPrompt />
+        </Suspense>
+      )}
     </PanelLayoutProvider>
   );
 }

@@ -144,9 +144,9 @@ Cloudの強化音声処理は必要な追加比較として分離し、日常開
 
 ## メールカタログの検証
 
-React Email公式CLIの`email export --dir emails --outDir email-static`で、招待・メール確認・マジックリンク・招待状態と認証設定変更の通知を静的HTMLへ書き出す。`TABLECAST_RELEASE_SHA=$(git rev-parse HEAD) bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
+React Email公式CLIの`email export --dir .local/tablecast-email --outDir email-static`で、招待・メール確認・マジックリンク・招待状態と認証設定変更の通知を静的HTMLへ書き出す。`bun --no-env-file run build:email`で`apps/api/email-static`へ出力する。`cd apps/api`の後に`bun ../web/node_modules/.bin/vite preview --outDir email-static --port 6007`で静的HTMLを確認し、終了時はViteを停止する。
 
-`/invitation-ja.html`、`/invitation-en.html`、`/invitation.html`（日英併記）など39例を直接開く。独自の一覧ページは生成しない。生成HTMLは編集せず、レイアウト・日英文言は`apps/api/src/emails`、固定の架空データは`apps/api/emails/_samples.tsx`、CLI用の入口は同じディレクトリの各テンプレートを変更する。画像はWebの正本を生成用の`emails/static`へコピーし、公式CLIが出力先へ配置する。CLI依存の追加後は`bun install --frozen-lockfile`を実行する。
+`/invitation-ja.html`、`/invitation-en.html`、`/invitation.html`（日英併記）など39例を直接開く。独自の一覧ページは生成しない。生成HTMLは編集せず、レイアウト・日英文言は`apps/api/src/emails`、固定の架空データは`apps/api/scripts/tablecast-email-preview.ts`を変更する。各サンプルの入口とWebの正本画像はGit管理外の`.local/tablecast-email`へ一時生成し、公式CLIが描画と画像コピーを行う。入口を手書きで管理しない。CLI依存の追加後は`bun install --frozen-lockfile`を実行する。
 
 ## 統合先とrelease
 

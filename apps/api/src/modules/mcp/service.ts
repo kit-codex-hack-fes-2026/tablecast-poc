@@ -2,14 +2,12 @@ import { sql } from "drizzle-orm";
 import type { ApiServices } from "../../platform/context";
 import type { Actor } from "../auth/model";
 import { ensure } from "../../platform/errors";
-import { requirePasskey } from "../auth/passkey-policy";
 export async function resolveMcpActor(
   services: ApiServices,
   principal: Awaited<ReturnType<ApiServices["auth"]["api"]["tablecastMcpPrincipal"]>>,
   requestedStoreId?: string,
 ) {
   const db = services.db;
-  await requirePasskey(db, principal.userId);
   const rows = await db.all<{ id: string; role: string }>(
     sql`SELECT s.id,m.role FROM stores s JOIN member m ON m.organization_id=s.organization_id WHERE s.organization_id=${principal.organizationId} AND m.user_id=${principal.userId} ORDER BY s.id`,
   );

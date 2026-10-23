@@ -1428,10 +1428,9 @@
   "auth_passkey_description": "Sign in quickly and securely with your registered passkey.",
   "auth_send_magic_link": "Send sign-in link",
   "auth_magic_sent": "Sign-in link sent. Open your email within 5 minutes. To resend, select the button again.",
-  "auth_passkey_required": "Register a passkey",
-  "auth_passkey_setup_description": "A passkey is required to use TableCast. Register using face recognition, your fingerprint, your screen lock or a security key.",
-  "auth_passkey_setup_failed": "Registration could not be completed. If you cancelled, please try again.",
-  "auth_passkey_supported_device": "If this device cannot register a passkey, use a supported device or a security key. Registration is required before you can continue.",
+  "auth_passkey_setup_description": "Use face recognition, a fingerprint or a security key to sign in quickly. Registration is optional. You can add a passkey later in your account settings.",
+  "auth_passkey_setup_failed": "Registration could not be completed. Please try again or set it up later.",
+  "auth_passkey_supported_device": "If this device does not support passkeys, you can continue with Google or email.",
   "invite_resend": "Resend invitation",
   "invite_expired": "Expired",
   "invite_wrong_email": "Sign in with the email address this invitation was sent to.",
@@ -1443,5 +1442,7 @@
   "currency_note": "Foreign amounts are estimates. Payment is in Japanese yen.",
   "currency_date": "Rate date",
   "currency_loading": "Loading rates",
-  "currency_unavailable": "Reference rate unavailable"
+  "currency_unavailable": "Reference rate unavailable",
+  "auth_passkey_title": "Sign in more easily with a passkey",
+  "auth_passkey_later": "Maybe later"
 }

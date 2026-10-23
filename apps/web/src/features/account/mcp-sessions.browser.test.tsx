@@ -33,7 +33,6 @@ it("MCP連携のscopeと日時を表示し、取消確認を承認した後だ�
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   const now = new Date();
   const login: NonNullable<Awaited<ReturnType<typeof loadInitial>>["session"]> = {
-    passkeyRequired: false,
     user: {
       id: "tablecast-mcp-user",
       name: "連携検証利用者",

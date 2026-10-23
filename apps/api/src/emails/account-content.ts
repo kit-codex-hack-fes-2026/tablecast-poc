@@ -77,8 +77,8 @@ export function invitationEmail(
       title: choose(language, "店舗チームへの招待", "Join your restaurant team"),
       message: choose(
         language,
-        "店舗チームへの招待が届いています。ログインし、パスキーを登録した後に招待を確認して参加してください。",
-        "You have been invited to the restaurant team. Sign in, register a passkey, then review and accept your invitation.",
+        "店舗チームへの招待が届いています。ログインした後に招待を確認して参加してください。",
+        "You have been invited to the restaurant team. Sign in, then review and accept your invitation.",
       ),
       details: details
         ? [

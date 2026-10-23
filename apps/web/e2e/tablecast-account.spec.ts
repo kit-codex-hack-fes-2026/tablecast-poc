@@ -8,7 +8,7 @@ import { test } from "./support/test";
 // 認証・招待・メールの実HTTP接続を確認する。
 test.use({ trace: "off", serviceWorkers: "block" });
 
-test("背景デモは新しい実メールで再認証し、パスキー未登録なら業務操作前に停止する", async ({
+test("背景デモは新しい実メールで再認証し、パスキーなしでも本人の範囲で利用できる", async ({
   request,
   runtime,
 }) => {
@@ -19,9 +19,16 @@ test("背景デモは新しい実メールで再認証し、パスキー未登�
     });
     expect(stores.status()).toBe(200);
   }
-  await expect(
-    signInDemoOwner(runtime.origin, runtime.mailpitUrl, "tablecast-demo-unregistered@example.test"),
-  ).rejects.toThrow("パスキーを登録");
+  const cookie = await signInDemoOwner(
+    runtime.origin,
+    runtime.mailpitUrl,
+    "tablecast-demo-unregistered@example.test",
+  );
+  const empty = await request.get(`${runtime.origin}/api/admin/stores`, {
+    headers: { Cookie: cookie },
+  });
+  expect(empty.status()).toBe(200);
+  expect(await empty.json()).toMatchObject({ stores: [] });
 });
 
 test("メールログインは外部として解釈される戻り先を使わず指定店舗の下書きへ復帰する", async ({
@@ -219,25 +226,11 @@ test("仮想パスキーで登録と再ログインができる", async ({ page,
   expect(after.session.id).not.toBe(before.session.id);
 });
 
-test("招待からメールログインした新規ユーザーはパスキー登録後だけ参加できる", async ({
+test("招待から登録したユーザーはパスキーを後回しにして参加できる", async ({
   page,
   context,
-  browserName,
   baseURL,
 }, testInfo) => {
-  test.skip(browserName !== "chromium", "実WebAuthnの仮想認証器はChromiumのCDPで確認する");
-  const cdp = await context.newCDPSession(page);
-  await cdp.send("WebAuthn.enable");
-  await cdp.send("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "internal",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
   await signInStaff(page.request, baseURL);
   const email = "tablecast-new-invitee@example.test";
   const stores = z
@@ -264,10 +257,10 @@ test("招待からメールログインした新規ユーザーはパスキー�
   }
   await signInFromLogin(page, baseURL, email);
   await expect(page).toHaveURL(/\/passkey-setup\?/);
-  const denied = await page.request.get("/api/admin/stores");
-  expect(denied.status()).toBe(403);
-  await page.screenshot({ path: testInfo.outputPath("tablecast-passkey-required.png") });
-  await page.getByRole("button", { name: "パスキーを追加", exact: true }).click();
+  const permitted = await page.request.get("/api/admin/stores");
+  expect(permitted.status()).toBe(200);
+  await page.screenshot({ path: testInfo.outputPath("tablecast-passkey-optional.png") });
+  await page.getByRole("button", { name: "あとで設定", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/invitations/${invitation.id}$`));
   await page.getByRole("button", { name: "参加する", exact: true }).click();
   await expect(page).toHaveURL(/\/organisations$/);

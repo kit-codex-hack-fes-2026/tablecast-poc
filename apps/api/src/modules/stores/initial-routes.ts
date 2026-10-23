@@ -42,18 +42,6 @@ export const initialRoutes = apiFactory.createApp().get(
         },
         200,
       );
-    const passkeyRequired = session.user.passkeyRegistered !== true;
-    if (passkeyRequired)
-      return c.json(
-        {
-          session: { ...session, passkeyRequired },
-          stores: [],
-          floor: null,
-          catalog: null,
-          home: null,
-        },
-        200,
-      );
     const stores = await listMemberStores(services, session.user.id);
     const { storeId, defaultFloor, view } = c.req.valid("query");
     const membership = storeId
@@ -88,9 +76,6 @@ export const initialRoutes = apiFactory.createApp().get(
             role: membership.role,
           })
         : null;
-    return c.json(
-      { session: { ...session, passkeyRequired }, passkeyRequired, stores, floor, catalog, home },
-      200,
-    );
+    return c.json({ session, stores, floor, catalog, home }, 200);
   },
 );

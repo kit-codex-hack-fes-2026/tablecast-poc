@@ -49,7 +49,6 @@ export async function setupFixture() {
     { method: "admin" },
   );
   const session = await ctx.internalAdapter.createSession(user.id);
-  await addFixturePasskey(user.id);
   const now = Date.now();
   await env.TABLECAST_DB.batch([
     insertFixture(authTables.organization, {

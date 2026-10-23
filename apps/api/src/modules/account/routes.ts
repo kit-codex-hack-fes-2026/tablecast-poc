@@ -23,10 +23,7 @@ export const accountRoutes = apiFactory
       .get("services")
       .auth.api.getSession({ headers: c.req.raw.headers, returnHeaders: true });
     for (const cookie of headers.getSetCookie()) c.header("set-cookie", cookie, { append: true });
-    return c.json(
-      session ? { ...session, passkeyRequired: session.user.passkeyRegistered !== true } : null,
-      200,
-    );
+    return c.json(session, 200);
   })
   .get("/api/account/invitations/:id", requireIdentity, async (c) => {
     const invitation = await getInvitationDetails(c.get("services"), c.req.param("id"));

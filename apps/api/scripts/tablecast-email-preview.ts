@@ -1,3 +1,5 @@
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import {
   invitationEmail,
   invitationStatusEmail,
@@ -5,7 +7,6 @@ import {
   securityEmail,
   verificationEmail,
 } from "../src/emails/account-content";
-import { AccountEmail } from "../src/emails/account-email";
 
 type Locale = "en" | "ja" | undefined;
 const url = "https://example.invalid/invitations/sample";
@@ -70,9 +71,28 @@ const samples = {
     ),
 };
 
-// 公式CLIがpropsなしで描画できるテンプレートを、固定の架空データで用意する。
-export function preview(name: keyof typeof samples, locale?: Locale) {
-  return function PreviewEmail() {
-    return <AccountEmail {...samples[name](locale)} assetBaseUrl="/static/brand" />;
-  };
+// 公式CLIはファイルごとに書き出すため、架空データを渡す入口だけを一時生成する。
+const directory = resolve(import.meta.dirname, "../.local/tablecast-email");
+await rm(directory, { recursive: true, force: true });
+await mkdir(resolve(directory, "static"), { recursive: true });
+await cp(
+  resolve(import.meta.dirname, "../../web/public/brand"),
+  resolve(directory, "static/brand"),
+  { recursive: true },
+);
+await cp(
+  resolve(import.meta.dirname, "../../../assets/demo/identities/haruka-sato.webp"),
+  resolve(directory, "static/inviter.webp"),
+);
+await cp(
+  resolve(import.meta.dirname, "../../../docs/design/themes/gomen/logo.png"),
+  resolve(directory, "static/store.png"),
+);
+for (const locale of [undefined, "ja", "en"] as const) {
+  for (const [name, content] of Object.entries(samples)) {
+    await writeFile(
+      resolve(directory, `${name}${locale ? `-${locale}` : ""}.tsx`),
+      `import { AccountEmail } from "../../src/emails/account-email";\nexport default function Email() { return <AccountEmail {...${JSON.stringify(content(locale))}} assetBaseUrl="/static/brand" />; }\n`,
+    );
+  }
 }
