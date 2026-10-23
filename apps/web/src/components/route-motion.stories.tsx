@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { MessageSquare, Package } from "lucide-react";
 import { useMemo } from "react";
-import { expect, userEvent } from "storybook/test";
+import { expect, userEvent, waitFor } from "storybook/test";
 import { useI18n } from "../i18n/locale";
 import { routeMotionDirection, supportsPageTransition } from "../lib/route-motion";
 import { RouteMotion } from "./route-motion";
@@ -114,15 +114,24 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const 標準: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
+    // 本文のcommitとnative遷移の完了は別。次の操作・cleanupでsnapshotを中断しない。
+    const waitForTransition = () =>
+      waitFor(() =>
+        expect(canvasElement.ownerDocument.documentElement.matches(":active-view-transition")).toBe(
+          false,
+        ),
+      );
     const input = await canvas.findByRole("textbox", { name: "店舗名" });
     await userEvent.clear(input);
     await userEvent.type(input, "四条店");
     await userEvent.click(canvas.getByRole("button", { name: "接客" }));
     await expect(await canvas.findByRole("heading", { name: "接客" })).toBeVisible();
     await expect(input).toHaveValue("四条店");
+    await waitForTransition();
     await userEvent.click(canvas.getByRole("button", { name: "メニュー" }));
     await expect(await canvas.findByRole("heading", { name: "メニュー" })).toBeVisible();
+    await waitForTransition();
   },
 };
 export const 英語: Story = { globals: { locale: "en" } };
