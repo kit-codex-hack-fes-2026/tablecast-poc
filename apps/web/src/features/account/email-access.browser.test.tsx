@@ -92,6 +92,7 @@ it.each(["ja", "en"] as const)(
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toMatchObject({
       email: "staff@example.test",
+      metadata: { locale },
       callbackURL: `${window.location.origin}/invitations/sample`,
     });
   },

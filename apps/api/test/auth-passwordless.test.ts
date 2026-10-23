@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { member, passkey, user, verification } from "../src/db/identity-schema";
+import { member, organization, passkey, user, verification } from "../src/db/identity-schema";
 import { createAuth } from "../src/modules/auth/service";
 import { resolveMcpActor } from "../src/modules/mcp/service";
 import { createApiServices } from "../src/platform/context";
@@ -124,7 +124,15 @@ it("パスキーの最後の1件はHTTPと同時DB削除の両方で保持する
   ).toHaveLength(1);
 });
 it("招待メールに役割・招待者・期限を含め、承諾時に本人と招待者へ通知する", async () => {
-  const { cookie } = await setupFixture();
+  const { cookie, staff } = await setupFixture();
+  await fixtureDb
+    .update(user)
+    .set({ image: "/api/avatars/11111111-1111-4111-8111-111111111111" })
+    .where(eq(user.id, staff.userId));
+  await fixtureDb
+    .update(organization)
+    .set({ logo: "https://example.test/store.png" })
+    .where(eq(organization.id, "tablecast-org"));
   const { mails } = captureAuthMail();
   const auth = createAuth(mailAuthEnv);
   const invited = await authPost(
@@ -138,6 +146,13 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
   expect(mailAt(mails, 0).Text).toContain("tablecast-staff@example.test");
   expect(mailAt(mails, 0).Text).toContain("Member");
   expect(mailAt(mails, 0).Text).toContain("Expires");
+  expect(mailAt(mails, 0).HTML).toContain('src="https://example.test/store.png"');
+  expect(mailAt(mails, 0).HTML).toContain(
+    `src="${authOrigin}/api/avatars/11111111-1111-4111-8111-111111111111"`,
+  );
+  expect(mailAt(mails, 0).HTML).toContain('lang="ja"');
+  expect(mailAt(mails, 0).HTML).toContain('lang="en"');
+  expect(mailAt(mails, 0).Text).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
   await authPost(auth, "/sign-in/magic-link", { email: "invitee@example.test" });
   const signedIn = await auth.handler(new Request(magicLinkUrl(mails[1])));
   const inviteeCookie = responseCookies(signedIn);
@@ -301,4 +316,74 @@ it("本番のマジックリンク送信制限は別の認証インスタンス�
   }
   expect(statuses).toEqual([200, 200, 200, 200, 200, 429]);
   expect(delivered).toBe(5);
+});
+
+it.each([
+  { selected: "en", saved: "ja", expected: "Sign in to TableCast" },
+  { selected: "ja", saved: "en", expected: "TableCastへのログイン" },
+  { selected: undefined, saved: "en", expected: "Sign in to TableCast" },
+  { selected: "invalid", saved: "en", expected: "Sign in to TableCast" },
+] as const)(
+  "マジックリンクの言語は画面指定$selected・保存済み$savedから選び、設定を書き換えない",
+  async ({ selected, saved, expected }) => {
+    const { staff } = await setupFixture();
+    await fixtureDb.update(user).set({ locale: saved }).where(eq(user.id, staff.userId));
+    const { mails } = captureAuthMail();
+    const response = await authPost(createAuth(mailAuthEnv), "/sign-in/magic-link", {
+      email: "tablecast-staff@example.test",
+      metadata: { locale: selected },
+    });
+    expect(response.status).toBe(200);
+    expect(mailAt(mails, 0).Subject).toBe(expected);
+    expect(mailAt(mails, 0).HTML).toContain(`lang="${expected.startsWith("Sign") ? "en" : "ja"}"`);
+    expect(
+      (
+        await fixtureDb
+          .select({ locale: user.locale })
+          .from(user)
+          .where(eq(user.id, staff.userId))
+          .get()
+      )?.locale,
+    ).toBe(saved);
+  },
+);
+it("新規ユーザーへ選択言語のリンクを送り、確認メールも保存済み言語を使う", async () => {
+  const { mails } = captureAuthMail();
+  const auth = createAuth(mailAuthEnv);
+  await authPost(auth, "/sign-in/magic-link", {
+    email: "new-english@example.test",
+    metadata: { locale: "en" },
+  });
+  expect(mailAt(mails, 0).Subject).toBe("Sign in to TableCast");
+  const { staff } = await setupFixture();
+  await fixtureDb
+    .update(user)
+    .set({ locale: "en", emailVerified: false })
+    .where(eq(user.id, staff.userId));
+  const response = await authPost(auth, "/send-verification-email", {
+    email: "tablecast-staff@example.test",
+  });
+  expect(response.status).toBe(200);
+  expect(mailAt(mails, 1).Subject).toBe("Verify your email");
+});
+
+it("マジックリンクと招待の配送失敗を成功として返さない", async () => {
+  const { cookie } = await setupFixture();
+  const { outbound } = captureAuthMail();
+  outbound.mockResolvedValue(Response.json({}, { status: 503 }));
+  const auth = createAuth(mailAuthEnv);
+  await expect(
+    authPost(auth, "/sign-in/magic-link", {
+      email: "delivery@example.test",
+      metadata: { locale: "en" },
+    }),
+  ).rejects.toThrow("EMAIL_DELIVERY_FAILED");
+  await expect(
+    authPost(
+      auth,
+      "/organization/invite-member",
+      { email: "delivery@example.test", role: "member", organizationId: "tablecast-org" },
+      cookie,
+    ),
+  ).rejects.toThrow("EMAIL_DELIVERY_FAILED");
 });

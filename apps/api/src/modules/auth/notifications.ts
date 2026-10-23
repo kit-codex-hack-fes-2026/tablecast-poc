@@ -8,6 +8,7 @@ import {
   securityEmail,
 } from "../../emails/account-content";
 import { sendAccountEmail } from "../../emails/send";
+import { storeTimeZone } from "../tables/model";
 
 export function authNotifications(env: MailEnv, db: Database, criticalMailTasks: Promise<void>[]) {
   const accountUrl = `${env.TABLECAST_PUBLIC_ORIGIN}/account`;
@@ -26,7 +27,10 @@ export function authNotifications(env: MailEnv, db: Database, criticalMailTasks:
       .get();
   }
   async function invitationStatus(
-    data: { invitation: { email: string; inviterId: string }; organization: { name: string } },
+    data: {
+      invitation: { email: string; inviterId: string };
+      organization: { logo?: null | string; name: string };
+    },
     status: "accepted" | "canceled" | "rejected",
   ) {
     try {
@@ -41,12 +45,26 @@ export function authNotifications(env: MailEnv, db: Database, criticalMailTasks:
       if (status !== "rejected")
         await notify(
           invitation.email,
-          invitationStatusEmail(organization.name, status, invitation.email, url, invitee?.locale),
+          invitationStatusEmail(
+            organization.name,
+            status,
+            invitation.email,
+            url,
+            invitee?.locale,
+            organization.logo,
+          ),
         );
       if (status !== "canceled" && inviter)
         await notify(
           inviter.email,
-          invitationStatusEmail(organization.name, status, invitation.email, url, inviter.locale),
+          invitationStatusEmail(
+            organization.name,
+            status,
+            invitation.email,
+            url,
+            inviter.locale,
+            organization.logo,
+          ),
         );
     } catch {
       console.error("TABLECAST_ACCOUNT_NOTIFICATION_FAILED");
@@ -58,8 +76,8 @@ export function authNotifications(env: MailEnv, db: Database, criticalMailTasks:
         email: string;
         id: string;
         invitation: { expiresAt: Date };
-        inviter: { user: { email: string; name: string } };
-        organization: { name: string };
+        inviter: { user: { email: string; image?: null | string; name: string } };
+        organization: { logo?: null | string; name: string };
         role: string;
       }) => {
         const delivery = (async () => {
@@ -75,7 +93,11 @@ export function authNotifications(env: MailEnv, db: Database, criticalMailTasks:
               data.organization.name,
               `${env.TABLECAST_PUBLIC_ORIGIN}/invitations/${data.id}`,
               {
-                inviter: `${data.inviter.user.name} <${data.inviter.user.email}>`,
+                inviter: data.inviter.user.name,
+                inviterEmail: data.inviter.user.email,
+                inviterImage: data.inviter.user.image,
+                logo: data.organization.logo,
+                timeZone: storeTimeZone,
                 role: data.role,
                 expiresAt: data.invitation.expiresAt,
               },

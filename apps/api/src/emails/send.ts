@@ -12,7 +12,7 @@ export type MailEnv = Partial<
 export async function sendAccountEmail(
   env: MailEnv,
   to: string,
-  content: Omit<ComponentProps<typeof AccountEmail>, "logoUrl">,
+  content: Omit<ComponentProps<typeof AccountEmail>, "assetBaseUrl">,
 ) {
   ensure(env.TABLECAST_EMAIL_FROM, "EMAIL_NOT_CONFIGURED", 503);
   // 認証・業務操作の初期化では描画せず、送信時だけ描画ライブラリとテンプレートを読む。
@@ -23,7 +23,13 @@ export async function sendAccountEmail(
   const html = await render(
     createElement(AccountEmail, {
       ...content,
-      logoUrl: new URL("/brand/tablecast-logo.png", env.TABLECAST_PUBLIC_ORIGIN).href,
+      identities: content.identities?.map((identity) => ({
+        ...identity,
+        image: identity.image
+          ? new URL(identity.image, env.TABLECAST_PUBLIC_ORIGIN).href
+          : undefined,
+      })),
+      assetBaseUrl: new URL("/brand", env.TABLECAST_PUBLIC_ORIGIN).href,
     }),
   );
   const text = `TableCast\n\n${toPlainText(html)}`;

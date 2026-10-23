@@ -73,17 +73,20 @@ export function createAuth(
         expiresIn: 300,
         storeToken: "hashed",
         rateLimit: { window: 60, max: 5 },
-        sendMagicLink: ({ email, url }) => {
-          const delivery = (async () => {
-            const user = await db
-              .select({ locale: schema.user.locale })
-              .from(schema.user)
-              .where(eq(schema.user.email, email))
-              .get();
-            await sendAccountEmail(env, email, magicLinkEmail(url, user?.locale));
-          })();
-          criticalMailTasks.push(delivery);
-          return delivery;
+        sendMagicLink: async ({ email, url, metadata }) => {
+          const selectedLocale = z.enum(["ja", "en"]).safeParse(metadata?.locale);
+          const user = selectedLocale.success
+            ? undefined
+            : await db
+                .select({ locale: schema.user.locale })
+                .from(schema.user)
+                .where(eq(schema.user.email, email))
+                .get();
+          await sendAccountEmail(
+            env,
+            email,
+            magicLinkEmail(url, selectedLocale.success ? selectedLocale.data : user?.locale),
+          );
         },
       }),
       ...(!emulator && env.TABLECAST_GOOGLE_CLIENT_ID && env.TABLECAST_GOOGLE_CLIENT_SECRET
@@ -148,7 +151,14 @@ export function createAuth(
     emailVerification: {
       sendOnSignUp: Boolean(env.TABLECAST_EMAIL_FROM),
       sendVerificationEmail: async ({ user, url }) =>
-        sendAccountEmail(env, user.email, verificationEmail(url)),
+        sendAccountEmail(
+          env,
+          user.email,
+          verificationEmail(
+            url,
+            z.object({ locale: z.enum(["ja", "en"]).optional() }).parse(user).locale,
+          ),
+        ),
     },
     hooks: {
       before: createAuthMiddleware(async (ctx) => {

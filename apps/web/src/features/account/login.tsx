@@ -15,7 +15,7 @@ import { loginReturnUrl } from "./login-model";
 
 export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const searchStr = useLocation({ select: (location) => location.searchStr });
-  const { t, setLocale } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const hydrated = useHydrated();
   const client = useQueryClient();
   const lastMethod = hydrated ? authClient.getLastUsedLoginMethod() : null;
@@ -60,6 +60,7 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
       authResult(
         await authClient.signIn.magicLink({
           email,
+          metadata: { locale },
           callbackURL: callback(),
           newUserCallbackURL: callback(),
           errorCallbackURL: `/login${searchStr}`,
