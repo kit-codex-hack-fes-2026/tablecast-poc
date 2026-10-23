@@ -8,7 +8,7 @@ clone・worktree・起動方法は [セットアップ](setup.md)、実施した
 
 ## 最新の決定
 
-デモは日本酒28種を含む和食居酒屋3店舗。UIはshadcn、Base UI、Tailwind、Lucide、Simple Flagsで統一する。商品画像35点は内蔵imagegenで生成したイメージ画像として扱う。
+デモは日本酒28種を含む和食居酒屋3店舗。UIはshadcn、Base UI、Tailwind、Lucide、flag-iconsで統一する。商品画像35点は内蔵imagegenで生成したイメージ画像として扱う。
 
 客向け・店側UIとも日英対応。客向けは会話領域を主役にし、会話ログ、言語選択、音声停止・再開を常設する。自由文入力は置かない。
 Web/APIを2 Workersに保ち、音声はブラウザーからGPT-Liveへ直接接続する。Bun + Turborepoを使い、業務・契約・UIを名目だけの共有packageに切り出さない。

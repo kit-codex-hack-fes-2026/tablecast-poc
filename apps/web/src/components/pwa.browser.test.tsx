@@ -80,6 +80,13 @@ it("実Kioskの接客中はPWA更新を拒否し、閉卓した取得結果を�
       const path = new URL(request.url).pathname;
       if (request.method === "GET" && path === "/api/table") return Response.json(current);
       if (request.method === "GET" && path === "/api/table/catalog") return Response.json(catalog);
+      if (request.method === "GET" && path === "/api/table/exchange-rates")
+        return Response.json({
+          base: "JPY",
+          date: "2026-10-22",
+          source: "currency-api",
+          rates: { USD: 0.0065 },
+        });
       if (request.method === "GET" && path === "/api/table/participants")
         return Response.json({ participants: [], context: null });
       if (request.method === "POST" && path === "/api/table/customer-code")

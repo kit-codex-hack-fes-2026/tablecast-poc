@@ -111,6 +111,13 @@ beforeEach(() => {
           url: `${window.location.origin}/member/join?code=${"a".repeat(64)}`,
         });
       if (request.method === "GET" && path === "/api/table") return Response.json(current);
+      if (request.method === "GET" && path === "/api/table/exchange-rates")
+        return Response.json({
+          base: "JPY",
+          source: "currency-api",
+          date: "2026-10-22",
+          rates: { USD: 0.0065, AUD: 0.00967 },
+        });
       if (request.method === "GET" && path === "/api/table/catalog") return catalogResponse.clone();
       if (request.method === "GET" && path.endsWith("/events")) {
         const after = Number(new URL(request.url).searchParams.get("after"));

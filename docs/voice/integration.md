@@ -25,6 +25,14 @@ Liveのresponse.event内のresponse.createdでresponse IDを記録し、response
 
 商品検索は最大8件とtotal/moreを返し、offsetで続きへ進む。商品紹介はgetCatalog(show=true)で検索と最大4枚のカード表示をまとめる。注文する商品を特定したら必要な詳細を取得する。ツール結果からGUIのイベント履歴・二言語の注文snapshotの重複を除き、価格・版・必須選択・認可の検査は維持する。
 
+### 外貨参考額と端末の表示設定
+
+`getCatalog`・`getTableState`・`updateCart`・`prepareConfirmation`・`submitOrder`は、円のフィールドを保持し、`displayCurrency`へ通貨・レート・基準日・状態、金額のあるobjectの`approximate`へ参考額を返す。数量・件数・版は換算しない。読取2toolの`quoteCurrency`は今回の回答だけを指定し、画面の通貨は変更しない。`setDisplayCurrency({ currency })`は明示依頼時だけ使い、nullは円のみとする。自発接客へ変更toolを公開しない。
+
+初期化APIの公開レートをHTTP envelopeの`displayCurrency`（currency・revision・rates）で受け取り、画面と同じ参考レートで計算する。レートは補助表示だけに使い、円の価格・注文・会計の根拠にはしない。呼出しのたびに外部レートを取得せず、全通貨データをモデルへ複製しない。署名・トークン・レートの永続化は設けない。
+
+表示変更の応答には`displayCurrencyAction`を添える。ブラウザーは現行音声・委任とrevisionを確認して端末内の選択を適用し、その後にtool結果を返す。手動変更後の遅着指示を破棄し、後続toolへ新しい表示設定を送る。通貨変更で音声停止・カート更新・注文確認失効を起こさない。取得不能時の参考額はunavailableとし、円の業務処理を維持する。
+
 ## 字幕・保存・停止
 
 session.input_transcript.delta / session.output_transcript.deltaを受信時に表示する。字幕の表示順は追加後に入れ替えず、保存したD1履歴を再開時に復元する。強い会話履歴の整合性や字幕の到着を注文承認の証明にはしない。生音声は既定で保存しない。

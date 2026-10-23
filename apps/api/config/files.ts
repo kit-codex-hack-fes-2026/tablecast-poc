@@ -18,6 +18,7 @@ export const files = [
   ["db", "src/db/*.ts"],
   ["billing-runtime", "src/modules/billing/observer.ts"],
   ["auth-factory", "src/modules/billing/stripe.ts"],
+  ["pure", "src/modules/currency/display.ts"],
   ["service", "src/modules/billing/{credentials,usage,sync}.ts"],
   ["pure", "src/modules/billing/pricing.ts"],
   ["email", "src/emails/*.{ts,tsx}"],

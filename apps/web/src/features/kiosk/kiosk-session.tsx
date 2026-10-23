@@ -19,13 +19,14 @@ import {
   Utensils,
   Wallet,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
+import { Money } from "../../components/money";
 import { ProductMenu } from "../../components/product-menu";
 import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
@@ -37,13 +38,15 @@ import {
   ResizablePanelGroup,
 } from "../../components/ui/resizable";
 import * as Tabs from "../../components/ui/tabs";
-import { money, time } from "../../i18n/format";
+import { CurrencyContext } from "../../i18n/currency-context";
+import { time } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 import { parseResponse, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
 import { conversationLines } from "./conversation-model";
+import { CurrencySelector } from "./currency-selector";
 import { CustomerOrderAttribution } from "./customer-order-attribution";
 import { CustomerVisitPanel } from "./customer-visit-panel";
 import { KioskGames } from "./games";
@@ -77,11 +80,14 @@ export function TableSession({
       savedSize === undefined ? (horizontal ? "240px" : "360px") : `${savedSize}%`,
     );
   }, [conversationPanel, defaultLayout, horizontal]);
+  const currencyControls = useContext(CurrencyContext);
   const tableKey = useMemo(() => tableQueryKey(endpoint), [endpoint]);
   const { locale, setLocale, t } = useI18n();
   const client = useQueryClient();
   const catalog = useQuery(tableCatalogOptions(data.storeId, data.configVersion, endpoint));
-  const [voice] = useState(() => new VoiceConnection(() => {}, refresh, endpoint.client));
+  const [voice] = useState(
+    () => new VoiceConnection(() => {}, refresh, endpoint.client, currencyControls),
+  );
   const view = useVoiceControls(voice);
   useEffect(() => voice.observeMicrophones(), [voice]);
   const [chosen, setChosen] = useState<{
@@ -318,7 +324,9 @@ export function TableSession({
             )}
             <div className="my-3 flex justify-between text-lg font-semibold">
               <span>{t("common_total")}</span>
-              <strong>{money(snapshot.total, locale)}</strong>
+              <strong>
+                <Money value={snapshot.total} />
+              </strong>
             </div>
           </section>
         ) : (
@@ -418,7 +426,7 @@ export function TableSession({
               <span className="min-w-0 text-sm leading-normal text-muted-foreground">
                 {t("kiosk_cart")}
                 <strong className="block wrap-break-word text-lg font-semibold tracking-tight text-foreground">
-                  {money(data.cart.total, locale)}
+                  <Money value={data.cart.total} />
                 </strong>
               </span>
             </Button>
@@ -471,18 +479,19 @@ export function TableSession({
         <Button
           variant="outline"
           size="lg"
-          className="h-auto whitespace-normal py-2 max-[56rem]:text-sm"
+          className="h-auto whitespace-normal py-2 max-[56rem]:col-span-2 max-[56rem]:text-sm"
           onClick={() => call.mutate(false)}
           disabled={call.isPending || data.staffCalled}
         >
           <Bell />
           {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
         </Button>
-        <div className="[&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-14">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 max-[56rem]:col-span-2 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-14">
           <LanguageSwitch
             onChange={(next) => language.mutate(next)}
             disabled={language.isPending}
           />
+          <CurrencySelector />
         </div>
       </header>
     );
@@ -568,27 +577,37 @@ export function TableSession({
           <dl>
             <div>
               <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
-              <dd>{money(data.bill.orderedTotal, locale)}</dd>
+              <dd>
+                <Money value={data.bill.orderedTotal} />
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_plan_charge")}</dt>
-              <dd>{money(data.bill.planTotal, locale)}</dd>
+              <dd>
+                <Money value={data.bill.planTotal} />
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_adjustment")}</dt>
-              <dd>{money(data.bill.adjustmentTotal, locale)}</dd>
+              <dd>
+                <Money value={data.bill.adjustmentTotal} />
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("kiosk_paid")}</dt>
-              <dd>{money(data.bill.paidTotal, locale)}</dd>
+              <dd>
+                <Money value={data.bill.paidTotal} />
+              </dd>
             </div>
             <div data-ui="bill-total" className="">
               <dt className="text-muted-foreground">{t("kiosk_due")}</dt>
-              <dd>{money(data.bill.due, locale)}</dd>
+              <dd>
+                <Money value={data.bill.due} />
+              </dd>
             </div>
           </dl>
           <p className="text-muted-foreground text-xs mt-2.5">
-            {t("kiosk_not_sent")}: {money(data.bill.cartTotal, locale)}
+            {t("kiosk_not_sent")}: <Money value={data.bill.cartTotal} />
           </p>
           {data.billRequested ? (
             <div

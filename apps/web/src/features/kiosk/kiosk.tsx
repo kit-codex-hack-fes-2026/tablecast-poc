@@ -5,6 +5,7 @@ import { ErrorNotice } from "../../components/error-notice";
 import { KioskPending } from "../../components/kiosk-pending";
 import { useI18n } from "../../i18n/locale";
 import { tableEndpoint, type TableEndpoint } from "../../lib/api";
+import { CurrencyProvider } from "./currency-provider";
 import { TableSession } from "./kiosk-session";
 import { Pairing } from "./pairing";
 import { tableOptions, tableQueryKey } from "./table-query";
@@ -53,7 +54,14 @@ export function Kiosk({
     );
   return (
     <div className="contents" data-pwa-blocked="true">
-      <TableSession key={table.data.id} endpoint={endpoint} data={table.data} refresh={refresh} />
+      <CurrencyProvider
+        key={`${endpoint.key}/${table.data.id}`}
+        endpoint={endpoint}
+        sessionId={table.data.id}
+        locale={table.data.locale}
+      >
+        <TableSession key={table.data.id} endpoint={endpoint} data={table.data} refresh={refresh} />
+      </CurrencyProvider>
     </div>
   );
 }

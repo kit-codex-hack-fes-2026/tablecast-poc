@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Simple Flagsとその言語の名称を併記する。localeにja/enを渡す。国籍を示す用途には使わない。表示のみで、切替操作にはLanguageSwitchを使う。旗は装飾扱いにして支援技術で重複読み上げしない。",
+          "flag-iconsとその言語の名称を併記する。localeにja/enを渡す。国籍を示す用途には使わない。表示のみで、切替操作にはLanguageSwitchを使う。旗は装飾扱いにして支援技術で重複読み上げしない。",
       },
     },
   },

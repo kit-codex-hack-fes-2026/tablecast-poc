@@ -234,3 +234,9 @@ APIの`src/emails`が共通レイアウトと日英文言を所有し、`scripts
 ### 店舗テーマの境界
 
 APIのappearance modelが構造化ロゴ・テーマ・チラシと追加CSSの入力契約を所有する。CSS解析はcss-treeの公式subpath parser/generatorを使い、Node.js専用のデータ読込を含むルート入口を避け、当該modelだけに外部依存を許可する。WebのStoreThemeはその契約から店舗内のCSS変数と部品スタイルを生成する。UI非依存のStyleScopeBoundaryがPortalにも適用範囲を引き継ぎ、UI primitiveは店舗設定やAPIへ依存しない。設定は既存のconfig_jsonと版管理へ格納し、追加テーブルやmigrationは不要。
+
+## 外貨参考表示の境界
+
+`modules/currency/model.ts`が公開schema・通貨定義、`display.ts`が音声tool用の副作用のない換算、`service.ts`が公開レートの初期取得を所有する。Webの金額・通貨書式は既存の`i18n/format.ts`へ集約する。currencyのmodule公開面はmodel・display・serviceに限定する。
+
+外部レートは既存の課金原価用為替から独立した公開参考データである。初期化APIが取得し、Webの来店ごとのQuery cacheをレート・選択設定の正本とする。1つのContextで表示へ渡し、音声も同じcacheを直接読む。レートのrefへのコピーや言語変更の同期effectは持たない。共有MoneyはProvider外では従来の円表示となる。通貨の手動選択は端末のlocalStorage、レートはページ内メモリーに限定し、D1・注文snapshot・実決済へ追加しない。

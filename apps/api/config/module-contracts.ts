@@ -25,6 +25,7 @@ const moduleContracts = {
   ],
   "customer-points": ["mutations", "model", "queries", "use-cases/policy"],
   "customer-visits": ["queries", "service"],
+  currency: ["model", "display", "service"],
   customers: ["middleware", "model", "queries"],
   demo: ["queries"],
   devices: [],

@@ -3,9 +3,9 @@ import { ChevronRight, Minus, Plus, ShoppingBag } from "lucide-react";
 import { AnimatePresence, useIsPresent, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { forwardRef, type ReactNode } from "react";
-import { money } from "../i18n/format";
 import { useI18n } from "../i18n/locale";
 import { ConditionSummary } from "./condition-summary";
+import { Money } from "./money";
 import { ProductImage } from "./product-image";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -63,7 +63,9 @@ export function CartLines({
                 <strong className="min-w-0 flex-1 wrap-anywhere font-medium">
                   {line.name[locale]}
                 </strong>
-                <span className="whitespace-nowrap">{money(line.total, locale)}</span>
+                <span className="whitespace-nowrap">
+                  <Money value={line.total} />
+                </span>
               </div>
               <div className="flex flex-wrap gap-1">
                 {line.options.map((option) => (
@@ -73,13 +75,18 @@ export function CartLines({
                   >
                     {option.name[locale]}
                     {option.quantity > 1 && ` × ${option.quantity}`}
-                    {option.priceDelta !== 0 && ` (${money(option.priceDelta, locale)})`}
+                    {option.priceDelta !== 0 && (
+                      <>
+                        {" "}
+                        (<Money value={option.priceDelta} />)
+                      </>
+                    )}
                   </span>
                 ))}
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="text-sm text-muted-foreground">
-                  {t("common_quantity")} {line.quantity} · {money(line.unitPrice, locale)}
+                  {t("common_quantity")} {line.quantity} · <Money value={line.unitPrice} />
                 </span>
                 {onQuantity && (
                   <div className="flex items-center rounded-lg border border-border">

@@ -41,6 +41,7 @@
     "@tanstack/react-table": "9.3.1",
     "@unpic/react": "1.0.2",
     "better-auth": "1.7.10",
+    "flag-icons": "7.6.0",
     "lucide-react": "1.59.0",
     "motion": "14.3.0",
     "qr-scanner": "1.4.2",
