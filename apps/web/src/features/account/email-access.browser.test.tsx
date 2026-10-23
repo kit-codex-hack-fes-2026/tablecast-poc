@@ -108,7 +108,7 @@ it.each(["ja", "en"] as const)(
     await expect.element(page.getByRole("status")).toHaveTextContent(labels.auth_magic_sent);
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toMatchObject({
-      newUserCallbackURL: `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: `${window.location.origin}/invitations/sample` }).toString()}`,
+      newUserCallbackURL: `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: "/invitations/sample" }).toString()}`,
       email: "staff@example.test",
       metadata: { locale },
       callbackURL: `${window.location.origin}/invitations/sample`,

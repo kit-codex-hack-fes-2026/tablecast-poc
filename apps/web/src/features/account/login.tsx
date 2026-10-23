@@ -21,8 +21,10 @@ export function Login({ evaluation = false }: { evaluation?: boolean }) {
   const lastMethod = hydrated ? authClient.getLastUsedLoginMethod() : null;
   const callback = (fallback = "/admin/live") =>
     loginReturnUrl(searchStr, window.location.origin) ?? fallback;
-  const registrationCallback = (fallback = "/organisations") =>
-    `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: callback(fallback) }).toString()}`;
+  const registrationCallback = (fallback = "/organisations") => {
+    const destination = new URL(callback(fallback), window.location.origin);
+    return `${window.location.origin}/passkey-setup?${new URLSearchParams({ returnTo: destination.pathname + destination.search + destination.hash }).toString()}`;
+  };
   useEffect(() => {
     const saved = localStorage.getItem("tablecast_staff_locale");
     if (saved === "ja" || saved === "en") setLocale(saved);
