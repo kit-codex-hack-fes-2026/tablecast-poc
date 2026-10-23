@@ -20,6 +20,8 @@ const details = {
   expiresAt: new Date("2026-10-24T12:00:00Z"),
   timeZone: "Asia/Tokyo",
 };
+const invitation = (locale: Locale, role = "admin") =>
+  invitationEmail(store(locale), url, { ...details, role }, locale);
 const status = (value: "accepted" | "canceled" | "rejected") => (locale: Locale) =>
   invitationStatusEmail(
     store(locale),
@@ -39,7 +41,9 @@ const security =
       new Date("2026-10-23T09:30:00Z"),
     );
 const samples = {
-  invitation: (locale: Locale) => invitationEmail(store(locale), url, details, locale),
+  invitation: (locale: Locale) => invitation(locale),
+  "invitation-owner": (locale: Locale) => invitation(locale, "owner"),
+  "invitation-member": (locale: Locale) => invitation(locale, "member"),
   "verify-email": (locale: Locale) =>
     verificationEmail("https://example.invalid/verify-email/sample", locale),
   "magic-link": (locale: Locale) =>

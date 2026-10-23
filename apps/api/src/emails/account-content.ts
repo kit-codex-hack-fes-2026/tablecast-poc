@@ -10,7 +10,11 @@ type EmailIdentity = {
 };
 type EmailSection = {
   action: string;
-  details?: { label: string; value: string }[];
+  details?: {
+    badge?: "accepted" | "admin" | "canceled" | "member" | "owner" | "pending" | "rejected";
+    label: string;
+    value: string;
+  }[];
   footer?: string;
   language: Locale;
   message: string;
@@ -26,12 +30,23 @@ export type AccountEmailContent = {
 };
 const choose = (locale: EmailLocale, ja: string, en: string) =>
   locale === "en" ? en : locale === "ja" ? ja : `${ja} / ${en}`;
-const dateTime = (date: Date, locale: Locale, timeZone: string) =>
-  new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ja-JP", {
-    dateStyle: "long",
-    timeStyle: "long",
+const dateTime = (date: Date, locale: Locale, timeZone: string) => {
+  const language = locale === "en" ? "en-GB" : "ja-JP";
+  const calendar = new Intl.DateTimeFormat(language, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: locale === "en" ? "long" : "short",
     timeZone,
   }).format(date);
+  const time = new Intl.DateTimeFormat(language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone,
+  }).format(date);
+  return `${calendar}${locale === "en" ? "," : ""} ${time}`;
+};
 function content(
   locale: EmailLocale,
   url: string,
@@ -56,6 +71,7 @@ export function invitationEmail(
   },
   locale?: EmailLocale,
 ) {
+  const role = details?.role === "owner" ? "owner" : details?.role === "admin" ? "admin" : "member";
   return {
     ...content(locale, url, "arrow-right", (language) => ({
       title: choose(language, "店舗チームへの招待", "Join your restaurant team"),
@@ -68,19 +84,17 @@ export function invitationEmail(
         ? [
             {
               label: choose(language, "役割", "Role"),
+              badge: role,
               value: choose(
                 language,
-                details.role === "owner"
-                  ? "責任者"
-                  : details.role === "admin"
-                    ? "管理者"
-                    : "メンバー",
-                details.role === "owner"
-                  ? "Owner"
-                  : details.role === "admin"
-                    ? "Administrator"
-                    : "Member",
+                role === "owner" ? "オーナー" : role === "admin" ? "管理者" : "スタッフ",
+                role === "owner" ? "Owner" : role === "admin" ? "Admin" : "Member",
               ),
+            },
+            {
+              label: choose(language, "状態", "Status"),
+              badge: "pending" as const,
+              value: choose(language, "招待中", "Pending"),
             },
             {
               label: choose(language, "有効期限", "Expires"),
@@ -166,6 +180,17 @@ export function invitationStatusEmail(
       return {
         title: `${store}: ${state}`,
         message: `${email} — ${state}`,
+        details: [
+          {
+            label: choose(language, "状態", "Status"),
+            badge: status,
+            value: choose(
+              language,
+              status === "accepted" ? "参加済み" : status === "rejected" ? "辞退" : "取消済み",
+              status === "accepted" ? "Accepted" : status === "rejected" ? "Declined" : "Cancelled",
+            ),
+          },
+        ],
         action: choose(language, "店舗一覧を確認", "View restaurants"),
       };
     }),

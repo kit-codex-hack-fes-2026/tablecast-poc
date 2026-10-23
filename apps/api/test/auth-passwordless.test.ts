@@ -145,6 +145,8 @@ it("招待メールに役割・招待者・期限を含め、承諾時に本人�
   const invitation = z.object({ id: z.string() }).parse(await invited.json());
   expect(mailAt(mails, 0).Text).toContain("tablecast-staff@example.test");
   expect(mailAt(mails, 0).Text).toContain("Member");
+  expect(mailAt(mails, 0).Text).toContain("スタッフ");
+  expect(mailAt(mails, 0).HTML).toContain("/email/user-round-badge.png");
   expect(mailAt(mails, 0).Text).toContain("Expires");
   expect(mailAt(mails, 0).HTML).toContain('src="https://example.test/store.png"');
   expect(mailAt(mails, 0).HTML).toContain(
