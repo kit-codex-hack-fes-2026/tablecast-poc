@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 const productGrid = tv({
   base: "grid grid-cols-1 @xs/tablecast-menu:grid-cols-2 @2xl/tablecast-menu:grid-cols-3",
   variants: {
-    recommended: { true: "gap-3", false: "gap-y-5 gap-x-4 px-4 pb-5" },
+    recommended: { true: "gap-3", false: "gap-4 px-4 pb-4" },
   },
 });
 
@@ -112,7 +112,7 @@ export const ProductMenu = memo(function ProductMenu({
             onClick={() => onChoose(product)}
             disabled={!product.available}
           >
-            <span className="flex aspect-square w-full max-w-64 [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-md bg-muted">
+            <span className="flex aspect-square w-full [content-visibility:auto] self-center items-center justify-center overflow-hidden rounded-md bg-muted">
               {product.imageKey ? (
                 <ProductImage
                   className="size-full object-contain"
@@ -143,7 +143,7 @@ export const ProductMenu = memo(function ProductMenu({
                   )}
                 </span>
               )}
-              <strong className="block flex-1 text-base leading-snug font-semibold wrap-anywhere">
+              <strong className="block min-h-12 flex-1 text-base leading-snug font-semibold wrap-anywhere">
                 {product.text[locale].displayName}
               </strong>
               <span className="mt-3 flex items-center justify-between gap-2 text-base font-semibold tabular-nums">

@@ -25,21 +25,25 @@ export async function seedMenuImages(
   legacy = false,
   configurations?: readonly Configuration[],
 ) {
-  const files = (await readdir(directory))
-    .filter((name) => /^[a-z0-9-]+\.(png|webp)$/.test(name))
-    .sort();
+  const files = [
+    ...(await readdir(directory)).filter((name) => /^[a-z0-9-]+\.(png|webp)$/.test(name)),
+    ...(await readdir(resolve(directory, "identities")))
+      .filter((name) => name.endsWith("-logo.webp"))
+      .map((name) => `identities/${name}`),
+  ].sort();
   const required =
     configurations && !legacy
       ? new Set(
           configurations.flatMap((config) =>
-            config.products
-              .flatMap((product) => [
+            [
+              config.branding?.logo?.imageKey,
+              ...config.products.flatMap((product) => [
                 product.imageKey,
                 ...product.modifiers.flatMap((modifier) =>
                   modifier.options.map((option) => option.imageKey),
                 ),
-              ])
-              .filter((key): key is string => Boolean(key)),
+              ]),
+            ].filter((key): key is string => Boolean(key)),
           ),
         )
       : undefined;
@@ -48,9 +52,7 @@ export async function seedMenuImages(
     const existing = new Map<string, R2Object>();
     console.time("商品画像の既存一覧");
     try {
-      for (const prefix of legacy
-        ? ["tablecast/images/", "tablecast/demo/"]
-        : ["tablecast/images/"]) {
+      for (const prefix of legacy ? ["tablecast/images/", "tablecast/demo/"] : ["tablecast/"]) {
         let cursor: string | undefined;
         do {
           const page = await bucket.list({ prefix, limit: 1000, cursor });
@@ -76,7 +78,10 @@ export async function seedMenuImages(
             if (!file) return;
             try {
               const bytes = await readFile(resolve(directory, file));
-              const key = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
+              const contentKey = imageKey(bytes, extname(file) === ".webp" ? "webp" : "png");
+              const key = file.startsWith("identities/")
+                ? contentKey.replace("tablecast/images/", "tablecast/uploads/")
+                : contentKey;
               if (required && !required.has(key)) continue;
               for (const target of legacy ? [key, `tablecast/demo/${file}`] : [key]) {
                 if (failed) return;

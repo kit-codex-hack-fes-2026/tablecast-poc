@@ -15,13 +15,14 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
   page: staff,
   browser,
   baseURL,
-}) => {
-  const guestContext = await browser.newContext({
+  browserName,
+}, testInfo) => {
+  let guestContext = await browser.newContext({
     baseURL,
     viewport: { width: 1024, height: 768 },
     serviceWorkers: "block",
   });
-  const guest = await guestContext.newPage();
+  let guest = await guestContext.newPage();
   const storeId = "tablecast-komorebi";
   try {
     await staff.goto(`/login?returnTo=${encodeURIComponent(`/admin/stores/${storeId}/floor`)}`);
@@ -63,6 +64,48 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await staff.getByRole("button", { name: labels.admin_approve, exact: true }).click();
     await expect(guest.getByRole("banner").getByText(vacant.name, { exact: true })).toBeVisible();
     await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
+    // 認証入力・ペアリングコードを映さず、承認済みの注文画面から収録する。
+    const recording = await browser.newContext({
+      baseURL,
+      storageState: await guestContext.storageState(),
+      viewport: { width: 1024, height: 768 },
+      serviceWorkers: "block",
+      recordVideo: {
+        dir: testInfo.outputPath("tablecast-order-ui-video"),
+        size: { width: 1024, height: 768 },
+      },
+    });
+    await guestContext.close();
+    guestContext = recording;
+    guest = await guestContext.newPage();
+    await guest.emulateMedia({
+      reducedMotion: browserName === "webkit" ? "reduce" : "no-preference",
+    });
+    await guest.goto("/");
+    await guest.evaluate(() => {
+      document.documentElement.dataset.tablecastCartFlights = "0";
+      new MutationObserver((records) => {
+        for (const record of records)
+          for (const node of record.addedNodes) {
+            if (node instanceof Element && node.matches('[data-ui="cart-flight"]'))
+              document.documentElement.dataset.tablecastCartFlights = String(
+                Number(document.documentElement.dataset.tablecastCartFlights) + 1,
+              );
+          }
+      }).observe(document.body, { childList: true, subtree: true });
+    });
+    await expect(guest.getByRole("tab", { name: en.kiosk_menu, exact: true })).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toBeVisible();
+    await expect(guest.locator('[data-ui="store-logo-banner"] img')).toHaveJSProperty(
+      "complete",
+      true,
+    );
+    expect(
+      await guest
+        .locator('[data-ui="store-logo-banner"] img')
+        .evaluate((image: HTMLImageElement) => image.naturalWidth),
+    ).toBeGreaterThan(0);
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-menu.png") });
     const catalogue = catalogSchema.parse(
       await (await guest.request.get("/api/table/catalog")).json(),
     );
@@ -93,7 +136,10 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
           exact: true,
         });
         await expect(productPage).toBeVisible();
-        await expect(guest.getByRole("dialog")).toHaveCount(0);
+        await expect(
+          guest.getByRole("dialog", { name: product.text.en.displayName, exact: true }),
+        ).toBeVisible();
+        await guest.screenshot({ path: testInfo.outputPath("tablecast-product-dialog.png") });
         const selections: CartLine["selections"] = [];
         for (const modifier of product.modifiers) {
           const options = modifier.options.filter(
@@ -120,6 +166,13 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
         chosen.push({ productId: product.id, quantity, selections });
       });
     }
+    await expect(guest.getByText(en.kiosk_cart_added, { exact: true })).toBeVisible();
+    await expect(guest.getByText(en.kiosk_cart_empty, { exact: true })).not.toBeVisible();
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-basket-toast.png") });
+    const flights = await guest.evaluate(() =>
+      Number(document.documentElement.dataset.tablecastCartFlights),
+    );
+    expect(flights).toBe(browserName === "webkit" ? 0 : 1);
     const basket = tableStateSchema.parse(
       await (await guest.request.get("/api/table")).json(),
     ).cart;
@@ -141,10 +194,10 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     await guest.getByRole("button", { name: "Review order", exact: true }).click();
     const review = guest.getByRole("region", { name: en.kiosk_review_title, exact: true });
     await expect(review).toBeVisible();
-    await expect(guest.getByRole("dialog")).toHaveCount(0);
+    await expect(guest.locator('[data-theme-part="dialog"]')).toHaveCount(0);
     for (const product of products) await expect(review).toContainText(product.text.en.displayName);
     await guest.getByRole("button", { name: en.kiosk_confirm, exact: true }).click();
-    const orderNotice = guest.getByRole("status").filter({ hasText: en.kiosk_ordered });
+    const orderNotice = guest.getByRole("dialog", { name: en.kiosk_ordered, exact: true });
     await expect(orderNotice).toBeVisible();
     await orderNotice.getByRole("button", { name: en.common_close, exact: true }).click();
     const ordered = tableStateSchema.parse(await (await guest.request.get("/api/table")).json());
@@ -152,6 +205,25 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(ordered.orders).toHaveLength(1);
     expect(ordered.orders[0]?.snapshot.lines).toEqual(basket.lines);
     expect(ordered.billRequested).toBe(false);
+    await guest.getByRole("tab", { name: new RegExp(`^${en.kiosk_orders}`) }).click();
+    const history = guest.locator('[data-ui="order-card"]');
+    await expect(history).toBeVisible();
+    // snapshotの名称・金額を保ったまま現在カタログの写真を添える。
+    const historyImages = basket.lines.reduce((sum, line) => {
+      const product = catalogue.configuration.products.find((item) => item.id === line.productId);
+      return (
+        sum +
+        (product?.imageKey ? 1 : 0) +
+        line.options.filter((option) =>
+          product?.modifiers
+            .flatMap((group) => group.options)
+            .some((item) => item.id === option.id && item.imageKey),
+        ).length
+      );
+    }, 0);
+    expect(historyImages).toBeGreaterThan(1);
+    await expect(history.locator("img")).toHaveCount(historyImages);
+    await guest.screenshot({ path: testInfo.outputPath("tablecast-history.png") });
     await staff.goto(`/admin/stores/${storeId}/floor`);
     const billingMetric = staff
       .getByRole("region", { name: labels.floor_current, exact: true })
@@ -220,6 +292,12 @@ test("日本語のスタッフと英語の客が端末認可・カスタマイ�
     expect(closed.status).toBe("closed");
   } finally {
     // DBとWorkerはcase専用fixtureが破棄する。後片付けのHTTPで元の失敗を上書きしない。
+    const video = guest.video();
     await guestContext.close();
+    if (video)
+      await testInfo.attach("tablecast-order-ui", {
+        path: await video.path(),
+        contentType: "video/webm",
+      });
   }
 });

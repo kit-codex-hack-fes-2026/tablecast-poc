@@ -182,6 +182,7 @@ it("日本語で画像読込失敗後も説明と売切を確認し、3種類の
         { optionId: "tablecast-cheddar", quantity: 2 },
       ],
     }),
+    true,
   );
   await expect.element(screen.getByRole("textbox")).not.toBeInTheDocument();
   for (const [width, height] of [

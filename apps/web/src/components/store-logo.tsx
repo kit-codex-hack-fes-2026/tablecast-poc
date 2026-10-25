@@ -15,7 +15,7 @@ export function StoreLogo({
   if (!logo || failed === logo.imageKey) return null;
   return (
     <img
-      src={`/media/${logo.imageKey}?width=768`}
+      src={`/media/${logo.imageKey}?width=${Math.min(768, width * 2)}`}
       alt={logo.alt[locale]}
       className="max-w-full shrink-0 object-contain"
       style={{ width, height }}

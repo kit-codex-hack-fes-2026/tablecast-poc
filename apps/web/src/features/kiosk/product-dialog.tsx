@@ -1,6 +1,6 @@
 import type { CartLine, Product } from "@tablecast/api/schema";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ConditionSummary } from "../../components/condition-summary";
 import { ErrorNotice } from "../../components/error-notice";
@@ -27,7 +27,7 @@ export function ProductPage({
   error?: unknown;
   initial?: CartLine;
   onClose: () => void;
-  onSave: (line: CartLine) => void;
+  onSave: (line: CartLine, pointer: boolean) => void;
   product: Product;
 }) {
   const { locale, t } = useI18n();
@@ -46,31 +46,39 @@ export function ProductPage({
     ]);
   }
   return (
-    <section className="flex min-h-0 flex-col" aria-label={product.text[locale].displayName}>
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card px-3 py-2">
+    <section
+      data-ui="product-detail"
+      className="flex h-full min-h-0 flex-col"
+      aria-label={product.text[locale].displayName}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 py-2">
         <Button variant="ghost" onClick={onClose} disabled={busy}>
-          <ArrowLeft />
-          {t("kiosk_menu")}
+          <X />
+          {t("common_close")}
         </Button>
       </div>
-      <div className="p-4">
-        {product.imageKey && (
-          <ProductImage
-            priority
-            width={640}
-            height={640}
-            sizes="(min-width: 640px) 80vw, 100vw"
-            className="mb-3 aspect-square w-full rounded-xl object-contain"
-            src={`/media/${product.imageKey}`}
-            alt={product.text[locale].displayName}
-          />
-        )}
-        <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
-          {product.text[locale].displayName}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
-        <div className="my-3 text-lg font-semibold">
-          <Money value={product.price} />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 scrollbar-thin">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">
+              {product.text[locale].displayName}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed">{product.text[locale].description}</p>
+            <div className="my-3 text-lg font-semibold">
+              <Money value={product.price} />
+            </div>
+          </div>
+          {product.imageKey && (
+            <ProductImage
+              priority
+              width={160}
+              height={160}
+              sizes="(min-width: 640px) 160px, 96px"
+              className="size-24 shrink-0 rounded-xl object-contain sm:size-40"
+              src={`/media/${product.imageKey}`}
+              alt={product.text[locale].displayName}
+            />
+          )}
         </div>
         {product.modifiers.map((group, groupIndex) => (
           <fieldset className="border-t border-t-border pt-5 px-0 pb-0.5 mb-4" key={group.id}>
@@ -226,32 +234,33 @@ export function ProductPage({
           </fieldset>
         ))}
         <ProductAllergens product={product} />
+        {product.modifiers.flatMap((group) =>
+          group.options.map((option) =>
+            option.conditions &&
+            selections.some((selection) => selection.optionId === option.id) ? (
+              <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
+                <p className="font-semibold">{option.text[locale].displayName}</p>
+                {option.conditions?.requires && (
+                  <p>
+                    {t("condition_requires")}：
+                    <ConditionSummary expression={option.conditions.requires} product={product} />
+                  </p>
+                )}
+                {option.conditions?.excludes && (
+                  <p>
+                    {t("condition_excludes")}：
+                    <ConditionSummary expression={option.conditions.excludes} product={product} />
+                  </p>
+                )}
+              </div>
+            ) : null,
+          ),
+        )}
+        <ErrorNotice error={error} />
       </div>
-      {product.modifiers.flatMap((group) =>
-        group.options.map((option) =>
-          option.conditions && selections.some((selection) => selection.optionId === option.id) ? (
-            <div key={option.id} className="my-3 space-y-2 rounded-lg bg-muted p-3 text-sm">
-              <p className="font-semibold">{option.text[locale].displayName}</p>
-              {option.conditions?.requires && (
-                <p>
-                  {t("condition_requires")}：
-                  <ConditionSummary expression={option.conditions.requires} product={product} />
-                </p>
-              )}
-              {option.conditions?.excludes && (
-                <p>
-                  {t("condition_excludes")}：
-                  <ConditionSummary expression={option.conditions.excludes} product={product} />
-                </p>
-              )}
-            </div>
-          ) : null,
-        ),
-      )}
-      <ErrorNotice error={error} />
       <div
         data-theme-part="checkout"
-        className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-card p-3"
+        className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card p-3"
       >
         <div
           data-ui="quantity-control"
@@ -289,13 +298,16 @@ export function ProductPage({
           type="button"
 
           disabled={busy || !product.available}
-          onClick={() =>
-            onSave({
-              id: initial?.id ?? crypto.randomUUID(),
-              productId: product.id,
-              quantity,
-              selections,
-            })
+          onClick={(event) =>
+            onSave(
+              {
+                id: initial?.id ?? crypto.randomUUID(),
+                productId: product.id,
+                quantity,
+                selections,
+              },
+              event.detail > 0,
+            )
           }
         >
           {initial ? t("common_update") : t("kiosk_add")}

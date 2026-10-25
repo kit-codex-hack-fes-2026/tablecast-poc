@@ -192,7 +192,7 @@ it.each(["ja", "en"] as const)(
       .element(page.getByRole("button", { name: labels.kiosk_history_show }))
       .not.toBeInTheDocument();
     for (const tab of page.getByRole("tab").elements()) {
-      expect(tab.getBoundingClientRect().height).toBe(56);
+      expect(tab.getBoundingClientRect().height).toBe(64);
       expect(tab.scrollWidth).toBeLessThanOrEqual(tab.clientWidth);
     }
     await page.viewport(1024, 768);

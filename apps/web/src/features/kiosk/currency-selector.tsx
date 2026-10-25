@@ -7,7 +7,7 @@ import { CurrencyContext } from "../../i18n/currency-context";
 import { currencyName, currencySymbol, yenRate } from "../../i18n/format";
 import { useI18n } from "../../i18n/locale";
 
-export function CurrencySelector() {
+export function CurrencySelector({ compact = false }: { compact?: boolean }) {
   const { currency, rates, pending, setCurrency } = useContext(CurrencyContext);
   const { locale, t } = useI18n();
   if (!setCurrency) return null;
@@ -21,7 +21,11 @@ export function CurrencySelector() {
     >
       <SelectTrigger
         aria-label={t("currency_select")}
-        className="min-h-14 w-auto shrink-0 gap-2 rounded-lg text-sm"
+        className={
+          compact
+            ? "h-11 min-h-11 w-auto shrink-0 gap-2 rounded-lg text-sm"
+            : "min-h-14 w-auto shrink-0 gap-2 rounded-lg text-sm"
+        }
       >
         <Flag src={currency ? currencyFlags[currency] : jp} />
         <span>

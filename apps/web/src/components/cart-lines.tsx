@@ -70,9 +70,24 @@ export function CartLines({
               <div className="flex flex-wrap gap-1">
                 {line.options.map((option) => (
                   <span
-                    className="rounded-sm bg-background px-1.5 py-0.5 text-sm text-muted-foreground"
+                    className="inline-flex items-center gap-2 rounded-md bg-background p-1.5 text-sm text-muted-foreground"
                     key={option.id}
                   >
+                    {(() => {
+                      const image = product?.modifiers
+                        .flatMap((group) => group.options)
+                        .find((item) => item.id === option.id);
+                      return image?.imageKey ? (
+                        <ProductImage
+                          src={`/media/${image.imageKey}`}
+                          width={40}
+                          height={40}
+                          sizes="40px"
+                          alt=""
+                          className="size-10 shrink-0 rounded object-contain"
+                        />
+                      ) : null;
+                    })()}
                     {option.name[locale]}
                     {option.quantity > 1 && ` × ${option.quantity}`}
                     {option.priceDelta !== 0 && (

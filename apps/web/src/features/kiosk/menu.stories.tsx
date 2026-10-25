@@ -115,10 +115,13 @@ export const OptionalCustomisation: Story = {
     });
     await step("結果: 商品と数量を保ち、選択肢を除去して保存する", async () => {
       await expect(saveOptional).toHaveBeenCalledTimes(1);
-      await expect(saveOptional).toHaveBeenCalledWith({
-        ...optionalLine,
-        selections: [],
-      });
+      await expect(saveOptional).toHaveBeenCalledWith(
+        {
+          ...optionalLine,
+          selections: [],
+        },
+        true,
+      );
     });
   },
 };
@@ -236,13 +239,16 @@ export const RelatedCustomisation: Story = {
       await expect(chocolate).not.toBeChecked();
       await expect(yoghurt).toBeChecked();
       await expect(saveRelated).toHaveBeenCalledTimes(1);
-      await expect(saveRelated).toHaveBeenCalledWith({
-        ...relatedLine,
-        selections: [
-          { optionId: "tablecast-yoghurt", quantity: 1 },
-          { optionId: "tablecast-berries", quantity: 2 },
-        ],
-      });
+      await expect(saveRelated).toHaveBeenCalledWith(
+        {
+          ...relatedLine,
+          selections: [
+            { optionId: "tablecast-yoghurt", quantity: 1 },
+            { optionId: "tablecast-berries", quantity: 2 },
+          ],
+        },
+        true,
+      );
       await expect(body.queryByRole("textbox")).not.toBeInTheDocument();
     });
   },
@@ -291,7 +297,7 @@ export const LongDescription: Story = {
       name: globals.locale === "en" ? "Add to basket" : "注文かごに追加",
     });
     const back = body.getByRole("button", {
-      name: globals.locale === "en" ? "Our menu" : "おしながき",
+      name: globals.locale === "en" ? "Close" : "閉じる",
     });
     const firstOption = body.getByRole("radio", { name: "60 mL" });
     const scroll = body.getByTestId("product-page-scroll");
@@ -328,6 +334,7 @@ export const LongDescription: Story = {
           quantity: 1,
           selections: [{ optionId: "tablecast-glass", quantity: 1 }],
         }),
+        false,
       );
     });
   },

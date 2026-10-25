@@ -103,7 +103,7 @@ export function KioskGames({
           onClick={() => enter.mutate()}
         >
           <Gamepad2 />
-          {t("games_title")}
+          <span className="max-sm:sr-only">{t("games_title")}</span>
         </Button>
       </div>
       <Dialog.Root

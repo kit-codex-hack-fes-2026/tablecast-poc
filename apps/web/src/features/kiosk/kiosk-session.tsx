@@ -1,3 +1,5 @@
+import { Dialog as PaneDialog } from "@base-ui/react/dialog";
+import { Toast } from "@base-ui/react/toast";
 import {
   type CartLine,
   type Locale,
@@ -19,14 +21,17 @@ import {
   Utensils,
   Wallet,
 } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
+import { ActionToasts } from "../../components/action-toasts";
 import { Brand } from "../../components/brand";
 import { CartLines } from "../../components/cart-lines";
 import { ErrorNotice } from "../../components/error-notice";
 import { LanguageSwitch } from "../../components/language-switch";
 import { LoadingState } from "../../components/loading-state";
 import { Money } from "../../components/money";
+import { ProductImage } from "../../components/product-image";
 import { ProductMenu } from "../../components/product-menu";
 import { StoreLogo } from "../../components/store-logo";
 import { StoreTheme } from "../../components/store-theme";
@@ -45,6 +50,7 @@ import { parseResponse, type TableEndpoint } from "../../lib/api";
 import { useMediaQuery } from "../../lib/use-media-query";
 import { usePanelLayout } from "../../lib/use-panel-layout";
 import { useRealtime } from "../../lib/use-realtime";
+import { type CartFlight, CartFlightImage } from "./cart-flight";
 import { conversationLines } from "./conversation-model";
 import { CurrencySelector } from "./currency-selector";
 import { CustomerOrderAttribution } from "./customer-order-attribution";
@@ -56,15 +62,21 @@ import { latestTable } from "./table-cache";
 import { tableCatalogOptions, tableQueryKey } from "./table-query";
 import { VoiceConnection } from "./voice-connection";
 import { useVoiceControls } from "./voice-subscription";
-export function TableSession({
-  data,
-  refresh,
-  endpoint,
-}: {
+type TableSessionProps = {
   data: TableState;
   endpoint: TableEndpoint;
   refresh: () => void;
-}) {
+};
+
+export function TableSession(props: TableSessionProps) {
+  return (
+    <Toast.Provider timeout={4000} limit={1}>
+      <TableSessionContent {...props} />
+    </Toast.Provider>
+  );
+}
+
+function TableSessionContent({ data, refresh, endpoint }: TableSessionProps) {
   const horizontal = useMediaQuery("(min-width: 56rem)");
   const conversationPanel = usePanelRef();
   const orientation = useRef(horizontal);
@@ -98,7 +110,11 @@ export function TableSession({
   }>();
   const [prepared, setSnapshot] = useState<Snapshot>();
   const confirmationHeading = useRef<HTMLHeadingElement>(null);
-  const [ordered, setOrdered] = useState(false);
+  const toasts = Toast.useToastManager();
+  const [flight, setFlight] = useState<CartFlight>();
+  const reducedMotion = useReducedMotion();
+  const orderPane = useRef<HTMLElement>(null);
+  const detailTrigger = useRef<HTMLElement | null>(null);
   const receive = (updated: TableState) =>
     client.setQueryData<TableState>(tableKey, (current) => latestTable(current, updated));
   const screen = useMutation({
@@ -194,10 +210,25 @@ export function TableSession({
     }
   }, [customerContextCursor, voice]);
   const updateCart = useMutation({
-    mutationFn: ({ lines, expectedVersion }: { expectedVersion: number; lines: CartLine[] }) =>
-      parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
-    onSuccess: (updated) => {
+    mutationFn: ({
+      lines,
+      expectedVersion,
+    }: {
+      addition?: { from: DOMRect; imageKey: string };
+      expectedVersion: number;
+      lines: CartLine[];
+      message?: string;
+    }) => parseResponse(endpoint.client.cart.$put({ json: { expectedVersion, lines } })),
+    onSuccess: (updated, input) => {
       receive(updated);
+      if (input.message) toasts.add({ title: input.message });
+      const target = orderPane.current?.querySelector('[data-ui="cart-tab"]');
+      if (input.addition && target && !reducedMotion)
+        setFlight({
+          ...input.addition,
+          to: target.getBoundingClientRect(),
+          id: crypto.randomUUID(),
+        });
       setChosen(undefined);
       screen.mutate({ section: "cart", productId: null });
       setSnapshot(undefined);
@@ -208,6 +239,8 @@ export function TableSession({
   const choose = useCallback(
     (product: Product) => {
       resetCart();
+      detailTrigger.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setChosen({ product, configVersion: data.configVersion, cartVersion: data.cart.version });
       changeScreen({ section: "menu", productId: product.id });
     },
@@ -240,7 +273,7 @@ export function TableSession({
     },
     onSuccess: () => {
       setSnapshot(undefined);
-      setOrdered(true);
+      toasts.add({ title: t("kiosk_ordered") });
       void client.invalidateQueries({ queryKey: tableKey });
       refresh();
     },
@@ -249,7 +282,10 @@ export function TableSession({
   const call = useMutation({
     mutationFn: (bill: boolean) =>
       parseResponse(bill ? endpoint.client.bill.request.$post() : endpoint.client.call.$post()),
-    onSuccess: receive,
+    onSuccess: (updated, bill) => {
+      receive(updated);
+      toasts.add({ title: t(bill ? "kiosk_bill_requested" : "kiosk_called_staff") });
+    },
   });
   const language = useMutation({
     mutationFn: async (next: Locale) => {
@@ -259,6 +295,7 @@ export function TableSession({
     onSuccess: (updated) => {
       receive(updated);
       setLocale(updated.locale);
+      toasts.add({ title: t("kiosk_language_changed") });
     },
     onError: refresh,
   });
@@ -275,6 +312,8 @@ export function TableSession({
   function edit(line: PricedLine) {
     const product = catalog.data?.configuration.products.find((item) => item.id === line.productId);
     if (product) {
+      detailTrigger.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
       updateCart.reset();
       screen.mutate({ section: "menu", productId: product.id });
       setChosen({
@@ -294,15 +333,6 @@ export function TableSession({
   function renderCart() {
     return (
       <Tabs.Panel value="cart">
-        {ordered && (
-          <output className="m-3 flex items-center gap-3 rounded-xl border border-success-border bg-success-soft p-3 text-success motion-safe:animate-tablecast-state">
-            <Check />
-            <strong className="flex-1">{t("kiosk_ordered")}</strong>
-            <Button variant="ghost" onClick={() => setOrdered(false)}>
-              {t("common_close")}
-            </Button>
-          </output>
-        )}
         {snapshot ? (
           <section
             className="p-4 motion-safe:animate-tablecast-state"
@@ -363,22 +393,7 @@ export function TableSession({
   function renderMenu() {
     return (
       <Tabs.Panel value="menu">
-        {selection ? (
-          <ProductPage
-            key={selection.line?.id ?? selection.product.id}
-            product={selection.product}
-            initial={selection.line}
-            busy={updateCart.isPending}
-            error={updateCart.error}
-            onClose={() => setSection("menu")}
-            onSave={(line) =>
-              updateCart.mutate({
-                lines: [...currentLines().filter((item) => item.id !== line.id), line],
-                expectedVersion: selection.cartVersion,
-              })
-            }
-          />
-        ) : catalog.data ? (
+        {catalog.data ? (
           <ProductMenu catalog={catalog.data} onChoose={choose} />
         ) : catalog.isPending ? (
           <div className="p-4">
@@ -416,21 +431,6 @@ export function TableSession({
         ) : (
           <div className="flex flex-wrap items-center gap-3">
             <Button
-              variant="ghost"
-              type="button"
-              data-ui="basket-total"
-              className="h-auto min-h-14 min-w-0 flex-1 justify-start gap-2 whitespace-normal px-1 py-2 text-left"
-              onClick={() => setSection("cart")}
-            >
-              <ShoppingBag size={20} aria-hidden="true" />
-              <span className="min-w-0 text-sm leading-normal text-muted-foreground">
-                {t("kiosk_cart")}
-                <strong className="block wrap-break-word text-lg font-semibold tracking-tight text-foreground">
-                  <Money value={data.cart.total} />
-                </strong>
-              </span>
-            </Button>
-            <Button
               type="button"
               className="h-auto min-h-14 min-w-0 flex-1 justify-between whitespace-normal px-3 py-2"
               disabled={
@@ -456,16 +456,18 @@ export function TableSession({
     return (
       <header
         data-theme-part="header"
-        className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-4 py-2 max-[56rem]:grid max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:px-3"
+        className="grid h-16 shrink-0 grid-cols-[minmax(0,1fr)_auto_21rem] items-center gap-2 border-b border-border bg-card px-4 max-[56rem]:h-28 max-[56rem]:grid-cols-[minmax(0,1fr)_auto] max-[56rem]:grid-rows-2 max-[56rem]:gap-y-0 max-[56rem]:px-3"
       >
         <div className="flex min-w-0 items-center gap-3">
           <a
-            className="text-xl font-bold tracking-tight max-lg:hidden"
+            className="text-xl font-bold tracking-tight max-xl:hidden"
             href={data.kind === "demo" ? "#" : "/"}
           >
             <Brand />
           </a>
-          <StoreLogo logo={logo} />
+          <span data-ui="store-logo-banner" className="hidden w-40 shrink-0 sm:block">
+            <StoreLogo logo={logo} width={160} height={40} />
+          </span>
           <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm max-[56rem]:flex-col max-[56rem]:items-start max-[56rem]:gap-0">
             <span className="max-w-48 truncate max-[56rem]:max-w-full">
               {storeName ?? data.storeName}
@@ -475,23 +477,25 @@ export function TableSession({
             </strong>
           </div>
         </div>
-        <div className="max-[56rem]:justify-self-end">{renderVisitTools()}</div>
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-auto whitespace-normal py-2 max-[56rem]:col-span-2 max-[56rem]:text-sm"
-          onClick={() => call.mutate(false)}
-          disabled={call.isPending || data.staffCalled}
-        >
-          <Bell />
-          {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
-        </Button>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 max-[56rem]:col-span-2 [&_[data-slot=button]]:h-auto [&_[data-slot=button]]:min-h-14">
+        <div className="flex items-center justify-end gap-2 max-[56rem]:col-span-2 max-[56rem]:row-start-2 max-[56rem]:justify-between">
+          {renderVisitTools()}
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-11 min-h-11 whitespace-nowrap px-3 py-2 text-sm"
+            onClick={() => call.mutate(false)}
+            disabled={call.isPending || data.staffCalled}
+          >
+            <Bell />
+            {data.staffCalled ? t("kiosk_called_staff") : t("kiosk_call_staff")}
+          </Button>
+        </div>
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 max-[56rem]:col-start-2 max-[56rem]:row-start-1 [&_[data-slot=button]]:h-11 [&_[data-slot=button]]:min-h-11 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:min-h-11">
           <LanguageSwitch
             onChange={(next) => language.mutate(next)}
             disabled={language.isPending}
           />
-          <CurrencySelector />
+          <CurrencySelector compact />
         </div>
       </header>
     );
@@ -578,7 +582,7 @@ export function TableSession({
             <div>
               <dt className="text-muted-foreground">{t("admin_ordered")}</dt>
               <dd>
-                <Money value={data.bill.orderedTotal} />
+                <Money value={data.bill.orderedTotal} compact />
               </dd>
             </div>
             <div>
@@ -686,8 +690,9 @@ export function TableSession({
               <ResizableHandle aria-label={t("kiosk_resize_panes")} />
               <ResizablePanel id="tablecast-order" minSize="30%" className="h-full">
                 <aside
+                  ref={orderPane}
                   data-theme-part="menu"
-                  className="isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
+                  className="relative isolate overflow-hidden h-full min-w-0 min-h-0 flex flex-col bg-card"
                 >
                   {renderPlanSummary()}
                   <ErrorNotice error={screen.error} />
@@ -704,9 +709,8 @@ export function TableSession({
                         setSection(value);
                     }}
                   >
-                    <KioskMenuTabs data={data} />
                     <div
-                      key={`${section}:${selectedProductId ?? ""}`}
+                      inert={Boolean(selection)}
                       className="flex-1 min-h-0 overflow-y-auto scrollbar-thin"
                     >
                       {renderMenu()}
@@ -714,7 +718,70 @@ export function TableSession({
                       {renderOrders()}
                       {renderBilling()}
                     </div>
+                    <div inert={Boolean(selection)} className="shrink-0">
+                      {renderCheckout()}
+                      <KioskMenuTabs data={data} products={catalog.data?.configuration.products} />
+                    </div>
                   </Tabs.Root>
+                  <PaneDialog.Root
+                    open={Boolean(selection)}
+                    modal={false}
+                    disablePointerDismissal
+                    onOpenChange={(open) => {
+                      if (!open && !updateCart.isPending) setSection("menu");
+                    }}
+                  >
+                    <PaneDialog.Portal container={orderPane}>
+                      <PaneDialog.Popup
+                        aria-label={selection?.product.text[locale].displayName}
+                        initialFocus={false}
+                        finalFocus={() =>
+                          detailTrigger.current?.isConnected
+                            ? detailTrigger.current
+                            : (orderPane.current?.querySelector<HTMLElement>(
+                                '[data-ui="cart-tab"]',
+                              ) ?? false)
+                        }
+                        data-theme-part="dialog"
+                        className="absolute inset-2 z-30 flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl sm:inset-3"
+                      >
+                        {selection && (
+                          <ProductPage
+                            key={selection.line?.id ?? selection.product.id}
+                            product={selection.product}
+                            initial={selection.line}
+                            busy={updateCart.isPending}
+                            error={updateCart.error}
+                            onClose={() => setSection("menu")}
+                            onSave={(line, pointer) => {
+                              const image = orderPane.current?.querySelector(
+                                '[data-ui="product-detail"] img',
+                              );
+                              updateCart.mutate({
+                                lines: [
+                                  ...currentLines().filter((item) => item.id !== line.id),
+                                  line,
+                                ],
+                                expectedVersion: selection.cartVersion,
+                                message: t(
+                                  selection.line ? "kiosk_cart_updated" : "kiosk_cart_added",
+                                ),
+                                addition:
+                                  pointer && !selection.line && selection.product.imageKey && image
+                                    ? {
+                                        imageKey: selection.product.imageKey,
+                                        from: image.getBoundingClientRect(),
+                                      }
+                                    : undefined,
+                              });
+                            }}
+                          />
+                        )}
+                      </PaneDialog.Popup>
+                    </PaneDialog.Portal>
+                  </PaneDialog.Root>
+                  <CartFlightImage flight={flight} onComplete={() => setFlight(undefined)} />
+                  <ActionToasts />
                   <ErrorNotice
                     error={
                       updateCart.error ||
@@ -724,7 +791,6 @@ export function TableSession({
                       speed.error
                     }
                   />
-                  {renderCheckout()}
                 </aside>
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -735,32 +801,89 @@ export function TableSession({
   }
   return renderSession();
 }
-function KioskMenuTabs({ data }: { data: TableState }) {
+function KioskMenuTabs({ data, products = [] }: { data: TableState; products?: Product[] }) {
   const hydrated = useHydrated();
   const { t } = useI18n();
+  const images = [
+    ...new Set(
+      data.cart.lines
+        .map((line) => products.find((product) => product.id === line.productId)?.imageKey)
+        .filter((key): key is string => Boolean(key)),
+    ),
+  ].slice(0, 3);
   const quantity = data.cart.lines.reduce((sum, line) => sum + line.quantity, 0);
   return (
-    <Tabs.List data-ui="menu-tabs" className="grid w-full grid-cols-2 sm:flex sm:w-fit">
-      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="menu">
+    <Tabs.List
+      data-ui="menu-tabs"
+      className="grid w-full grid-cols-4 gap-1 rounded-none border-t border-border p-2"
+    >
+      <Tabs.Tab
+        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
+        size="guest"
+        data-theme-part="menu-tab"
+        disabled={!hydrated}
+        value="menu"
+      >
         <Utensils aria-hidden />
         {t("kiosk_menu")}
       </Tabs.Tab>
-      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="cart">
-        <ShoppingBag aria-hidden />
-        {t("kiosk_cart")}
-        <span
-          key={quantity}
-          data-ui="count"
-          className="rounded-2xl py-px px-1 text-xs bg-secondary text-secondary-foreground motion-safe:animate-tablecast-confirm"
-        >
-          {quantity}
+      <Tabs.Tab
+        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
+        size="guest"
+        data-theme-part="menu-tab"
+        data-ui="cart-tab"
+        disabled={!hydrated}
+        value="cart"
+      >
+        <span className="flex items-center gap-1">
+          <ShoppingBag aria-hidden className="max-sm:hidden" />
+          {t("kiosk_cart")} <span className="text-xs">{quantity}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span aria-hidden data-ui="cart-preview" className="hidden -space-x-2 sm:flex">
+            {images.map((key) => (
+              <span
+                key={key}
+                className="inline-flex size-6 shrink-0 overflow-hidden rounded-full border-2 border-card bg-card"
+              >
+                <ProductImage
+                  src={`/media/${key}`}
+                  width={24}
+                  height={24}
+                  sizes="24px"
+                  alt=""
+                  className="size-full object-cover"
+                />
+              </span>
+            ))}
+          </span>
+          <span className="text-xs tabular-nums">
+            <Money value={data.cart.total} compact />
+          </span>
         </span>
       </Tabs.Tab>
-      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="orders">
-        <ReceiptText aria-hidden />
-        {t("kiosk_orders")}
+      <Tabs.Tab
+        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
+        size="guest"
+        data-theme-part="menu-tab"
+        disabled={!hydrated}
+        value="orders"
+      >
+        <span className="flex items-center gap-1">
+          <ReceiptText aria-hidden className="max-sm:hidden" />
+          {t("kiosk_orders")}
+        </span>
+        <span className="text-xs tabular-nums">
+          <Money value={data.bill.orderedTotal} compact />
+        </span>
       </Tabs.Tab>
-      <Tabs.Tab size="guest" data-theme-part="menu-tab" disabled={!hydrated} value="bill">
+      <Tabs.Tab
+        className="h-16 min-w-0 flex-col gap-1 p-1 text-xs [&_svg]:size-4"
+        size="guest"
+        data-theme-part="menu-tab"
+        disabled={!hydrated}
+        value="bill"
+      >
         <Wallet aria-hidden />
         {t("kiosk_bill")}
       </Tabs.Tab>
